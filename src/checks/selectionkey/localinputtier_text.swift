@@ -388,16 +388,12 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   message: "node prompt opens on the inserted point")
     report.expect(ccFixture.page.acceptPrompt(displayedValue: -64), cppID: ccID,
                   message: "displayed -64 commits through the stored offset")
-    report.expect(ccFixture.lanePoints(ccFixture.panLane).contains { $0.tick == 96 }, cppID: ccID,
-                  message: "A049 lowered node found at tick 96")
     report.expectEqual(expected: 0, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
                        cppID: ccID, what: "A050 displayed -64 stores 0")
     report.expect(ccFixture.page.openPrompt(tick: 96, value: 0), cppID: ccID,
                   message: "node prompt reopens on the lowered point")
     report.expect(ccFixture.page.acceptPrompt(displayedValue: 63), cppID: ccID,
                   message: "displayed 63 commits through the stored offset")
-    report.expect(ccFixture.lanePoints(ccFixture.panLane).contains { $0.tick == 96 }, cppID: ccID,
-                  message: "A054 raised node found at tick 96")
     report.expectEqual(expected: 127, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
                        cppID: ccID, what: "A055 displayed 63 stores 127")
     report.expectEqual(expected: ccBaseRevision + 3, actual: ccFixture.document.revision, cppID: ccID,
@@ -447,12 +443,8 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                                     points: [LaneWrite(tick: 48, value: 32)])
     report.expect(!focusFixture.page.promptOpen, cppID: focusID,
                   message: "document change cancels the pending prompt")
-    report.expect(focusFixture.lanePoints(focusFixture.panLane).contains { $0.tick == 24 }, cppID: focusID,
-                  message: "A080 original node found after the cancel")
     report.expectEqual(expected: 64, actual: focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 24 }?.value ?? -1,
                        cppID: focusID, what: "A081 cancelled prompt keeps the original value 64")
-    report.expect(focusFixture.lanePoints(focusFixture.panLane).contains { $0.tick == 48 }, cppID: focusID,
-                  message: "A082 added point found at tick 48")
     report.expectEqual(expected: 32, actual: focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 48 }?.value ?? -1,
                        cppID: focusID, what: "A083 added point stores 32")
     report.expectEqual(expected: ["24:64", "48:32"], actual: focusFixture.values(focusFixture.panLane), cppID: focusID,

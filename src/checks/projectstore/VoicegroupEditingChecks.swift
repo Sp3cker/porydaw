@@ -71,7 +71,6 @@ private func editingBlankSlot(_ report: CheckReport) {
             editingExpect("A005", draft?.materializesBlank == true, report, "A005: draft marks materialization")
             editingEqual("A006", created, draft?.voice, report, "A006: draft retains the requested voice")
             editingExpect("A007", source.setVoice(slot: slot, voice: created), report, "A007: blank slot accepts voice")
-            editingExpect("A008", source.voiceAt(slot: slot) != nil, report, "A008: inserted voice is present")
             editingEqual("A009", created, source.voiceAt(slot: slot), report, "A009: inserted voice equals request")
             editingExpect("A010", source.dirty, report, "A010: materialization marks source dirty")
             editingExpect("A011", source.restoreSourceBytes(before), report, "A011: original source bytes restore")
@@ -110,12 +109,9 @@ private func editingSparseInsertions(_ report: CheckReport) {
         editingEqual("A019", VgLineKind.none, source.kindAt(slot: 12), report, "A019: slot 12 starts blank")
         editingEqual("A020", VgLineKind.none, source.kindAt(slot: 80), report, "A020: slot 80 starts blank")
         editingExpect("A021", source.setVoice(slot: 12, voice: beforeFirst), report, "A021: insert before first voice")
-        editingExpect("A022", source.voiceAt(slot: 12) != nil, report, "A022: slot 12 is populated")
         editingEqual("A023", beforeFirst, source.voiceAt(slot: 12), report, "A023: slot 12 matches inserted voice")
-        editingExpect("A024", source.voiceAt(slot: 36) != nil, report, "A024: original slot is populated")
         editingEqual("A025", original, source.voiceAt(slot: 36), report, "A025: original slot is unchanged")
         editingExpect("A026", source.setVoice(slot: 80, voice: afterLast), report, "A026: insert after last voice")
-        editingExpect("A027", source.voiceAt(slot: 80) != nil, report, "A027: slot 80 is populated")
         editingEqual("A028", afterLast, source.voiceAt(slot: 80), report, "A028: slot 80 matches inserted voice")
         editingExpect("A029", try source.save(), report, "A029: sparse source saves")
         editingExpect("A030", !source.dirty, report, "A030: save clears dirty")
@@ -124,11 +120,8 @@ private func editingSparseInsertions(_ report: CheckReport) {
         editingExpect("A031", reopened, report, "A031: saved sparse source reopens")
         if !reopened { report.fail("voicegroupsourceediting/fixture", "saved sparse source reopen failed: \(error ?? "")") }
         guard reopened else { return }
-        editingExpect("A032", reloaded.voiceAt(slot: 12) != nil, report, "A032: slot 12 survives reload")
         editingEqual("A033", beforeFirst, reloaded.voiceAt(slot: 12), report, "A033: slot 12 survives exactly")
-        editingExpect("A034", reloaded.voiceAt(slot: 36) != nil, report, "A034: slot 36 survives reload")
         editingEqual("A035", original, reloaded.voiceAt(slot: 36), report, "A035: slot 36 survives exactly")
-        editingExpect("A036", reloaded.voiceAt(slot: 80) != nil, report, "A036: slot 80 survives reload")
         editingEqual("A037", afterLast, reloaded.voiceAt(slot: 80), report, "A037: slot 80 survives exactly")
         let loaded = editingLoad(root: root, name: "sparse")
         editingExpect("A038", loaded != nil, report, "A038: native loader accepts saved sparse source")
@@ -547,8 +540,6 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
             if !opened { report.fail("voicegroupsourceediting/fixture", "saved edited source reopen failed: \(error ?? "")") }
             guard opened else { return }
             editingExpect("A083", !roundTrip.dirty, report, "A083: freshly opened source is pristine")
-            editingExpect("A084", roundTrip.voiceAt(slot: slot) != nil, report,
-                          "A084: edited slot remains populated after reopen")
             editingExpect("A085", editingSameVoiceFields(roundTrip.voiceAt(slot: slot), edited), report,
                           "A085: edited voice family fields survive save and reopen")
         }

@@ -100,10 +100,13 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
         let peerBeforeRefusal = peer.bankLease.publicationRevision
         do {
             _ = try runBlocking { try await service.commitSample(request) }
-            check.expect(false, message: "duplicate name refuses with registrar message")
+            check.expect(false, message: "duplicate name refuses as a typed registrar failure")
         } catch ProjectServiceError.operationFailed(let message) {
-            check.expect(message.contains("already") || message.contains("exists"),
-                         message: "duplicate name refuses with registrar message")
+            check.expect(
+                message.contains(name),
+                message: "duplicate name refuses as a typed failure naming the sample")
+        } catch {
+            check.expect(false, message: "duplicate name refuses as a typed registrar failure")
         }
         check.expect(first.bankLease.publicationRevision == beforeRefusal
                      && peer.bankLease.publicationRevision == peerBeforeRefusal

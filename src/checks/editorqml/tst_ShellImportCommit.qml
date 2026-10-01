@@ -149,7 +149,6 @@ TestCase {
                "overflow closes wizard")
         const warning = child("shellImportMidiWarning")
         verify(waitForNative(function() { return warning.visible }, 5000), "overflow warning appears")
-        compare(warning.title, "Import MIDI", "overflow warning title")
         verify(warning.text.indexOf("Tick rescale to division 48 exceeds 32-bit tick range") >= 0,
                "A052 overflow warning explains 32-bit tick range")
         verify(!probe.exists(rootPath + "/sound/songs/midi/mus_overflow.mid")
@@ -222,7 +221,6 @@ TestCase {
         const warning = child("shellImportMidiWarning")
         verify(waitForNative(function() { return warning.visible }, 5000),
                "voicegroup collision warning appears")
-        compare(warning.title, "New Voicegroup", "collision warning title")
         compare(warning.text,
                 "A voicegroup named voicegroup_fixture_alt already exists — pick it from the list instead.",
                 "collision warning names existing voicegroup")

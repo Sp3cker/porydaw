@@ -148,19 +148,22 @@ internal func voiceListDraftsAndEditIntents(_ report: CheckReport) {
     report.expectEqual(expected: 3, actual: edits.count, cppID: cppID,
                        what: "unchanged and draft-less edits emit no request")
 
-    // The edit path requires an explicit session binding: a bank-bound
-    // list without bindSession/refresh refuses applyVoiceEdit instead of
-    // silently editing nothing.
-    var unboundEditError: String = ""
+    // Bank-only binding cannot commit an edit without a document session.
+    let unboundVoice = list.voiceDraft(0)?.voice
+    var unboundEditRejected = false
     do {
         _ = try runBlocking {
             try await list.applyVoiceEdit(slot: 0, voice: scalar)
         }
+    } catch ProjectServiceError.operationFailed(_) {
+        unboundEditRejected = true
     } catch {
-        unboundEditError = "\(error)"
+        report.fail(cppID, "unexpected unbound edit failure: \(error)")
     }
-    report.expect(!unboundEditError.isEmpty, cppID: cppID,
-                  message: "applyVoiceEdit without a bound session fails explicitly")
+    report.expect(
+        unboundEditRejected && list.voiceDraft(0)?.voice == unboundVoice
+            && edits.count == 3, cppID: cppID,
+        message: "an unbound edit is refused without changing the voice or emitting an intent")
 
     // Intent emission only; the owner flows (dialog, file writes, undoable
     // assignment) stay NATIVE with the shell.

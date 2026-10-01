@@ -73,8 +73,6 @@ internal func runVoicegroupCreationChecks(_ report: CheckReport, fixtureRoot: St
         voicegroup_free(created)
         voicegroup_free(source)
     }
-    report.expect(true, cppID: "voicegroupsourceediting/A088",
-                  message: "A088: voicegroup_load resolves the created _qtest_copy group")
     let namesMatch = (0..<3).allSatisfy {
         creationVoiceName(created, $0) == creationVoiceName(source, $0)
     }

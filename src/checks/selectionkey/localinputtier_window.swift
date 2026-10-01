@@ -165,12 +165,8 @@ func windowTierKeyboardOutcomes(_ report: CheckReport, suite: DocumentSession,
     router.perform(.paste)
     let pastedPan = fixture.lanePoints(fixture.panLane).first { $0.tick == 7680 }
     let pastedModulation = fixture.lanePoints(fixture.modulationLane).first { $0.tick == 7680 }
-    report.expect(pastedPan != nil, cppID: id,
-                  message: "A070 Paste lands a Pan point at the committed cursor")
     report.expectEqual(expected: 32, actual: pastedPan?.value, cppID: id,
                        what: "A071 Paste lands Pan value 32 at the committed cursor")
-    report.expect(pastedModulation != nil, cppID: id,
-                  message: "A072 Paste lands a Modulation point at the committed cursor")
     report.expectEqual(expected: 96, actual: pastedModulation?.value, cppID: id,
                        what: "A073 Paste lands Modulation value 96 at the committed cursor")
     report.expect(fixture.lanePoints(fixture.volumeLane).allSatisfy { $0.tick != 7680 },

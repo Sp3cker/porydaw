@@ -81,9 +81,7 @@ private func decoderWidths(_ report: CheckReport) {
         check.expect(sample.buffer[1] == -0.25, message: "f32 negative quarter-scale conversion")
         check.expect(sample.buffer[2] == 1, message: "f32 positive clamping")
         check.expect(sample.buffer[3] == -1, message: "f32 negative clamping")
-        check.expect(
-            sample.warnings.contains("2 float samples beyond ±1.0 were clamped."), message: "f32 clipping reports count"
-        )
+        check.expect(sample.warnings.count == 2, message: "f32 clipping reports clamping and full-scale warnings")
     } catch { check.expect(false, message: "f32 valid IEEE float decode failure") }
 
     var pcm32 = SampleFixtureSpec()
@@ -137,8 +135,7 @@ private func decoderStereo(_ report: CheckReport) {
         check.expect(mean.frameCount == 200, message: "anti-phase stereo frame count")
         check.expect(mean.buffer.allSatisfy { abs($0) < 1e-6 }, message: "anti-phase mean cancels")
         check.expect(mean.phaseCancelStereo && mean.sourceChannels == 2, message: "negative stereo correlation flagged")
-        check.expect(
-            mean.warnings.contains { $0.contains("phase-cancelling") }, message: "phase cancellation warning emitted")
+        check.expect(mean.warnings.count == 1, message: "phase cancellation reports one warning")
         let selected = try SampleImport.decode(data, sourcePath: "f/st.wav", leftChannelOnly: true)
         check.expect(
             selected.sourcePath == "f/st.wav" && selected.sourceChannels == 2, message: "left-only re-import works")
@@ -146,7 +143,7 @@ private func decoderStereo(_ report: CheckReport) {
         check.expect(
             selected.buffer == left.map { Float($0) / 32768 }, message: "left-only takes channel zero verbatim")
         check.expect(
-            !selected.phaseCancelStereo && selected.warnings.contains("imported the left channel only."),
+            !selected.phaseCancelStereo && selected.warnings.count == 1,
             message: "left-only warning and provenance")
     } catch { check.expect(false, message: "anti-phase stereo decode failure") }
     stereo.samples.removeAll()
@@ -255,34 +252,32 @@ private func decoderRefusals(_ report: CheckReport) {
             check.expect(false, message: "samplecheck scratch root exists")
         }
     } catch { check.expect(false, message: "lying WAV data chunk imports") }
+    let garbageRejected: Bool
     do {
         _ = try SampleImport.decode(Data("MThd not audio at all".utf8), sourcePath: "f/x.mid")
-        check.expect(false, message: "unsupported source refused")
+        garbageRejected = false
     } catch {
-        check.expect(
-            error.message == "not a supported audio file (WAV, AIFF, MP3, FLAC, and Ogg Vorbis sources are supported).",
-            message: "unsupported source has actionable refusal")
-        check.expect(!error.message.isEmpty, message: "rejected garbage reports a refusal")
+        garbageRejected = true
     }
+    check.expect(garbageRejected, message: "unsupported source rejected with domain error")
     var aifc = fixtureAiff(AiffFixtureSpec())
     aifc.replaceSubrange(8..<12, with: Array("AIFC".utf8))
+    let aifcRejected: Bool
     do {
         _ = try SampleImport.decode(aifc, sourcePath: "f/x.aifc")
-        check.expect(false, message: "AIFF-C refused")
+        aifcRejected = false
     } catch {
-        check.expect(
-            error.message == "AIFF-C is not supported — export uncompressed AIFF or WAV.",
-            message: "AIFF-C refusal text")
-        check.expect(!error.message.isEmpty, message: "rejected AIFF-C reports a refusal")
+        aifcRejected = true
     }
+    check.expect(aifcRejected, message: "AIFF-C rejected with domain error")
+    let missingRejected: Bool
     do {
         _ = try SampleImport.decodeFile(path: "/nonexistent/porydaw-samplecheck-240.wav")
-        check.expect(false, message: "unreadable sample path refuses")
+        missingRejected = false
     } catch {
-        check.expect(
-            error.message == "cannot read /nonexistent/porydaw-samplecheck-240.wav.",
-            message: "unreadable sample path reports source path")
+        missingRejected = true
     }
+    check.expect(missingRejected, message: "unreadable sample path rejected with domain error")
 
     var looping = SampleFixtureSpec()
     looping.samples = [UInt8](repeating: 128, count: 16)
@@ -293,28 +288,29 @@ private func decoderRefusals(_ report: CheckReport) {
     do {
         let sample = try SampleImport.decode(fixtureWav(looping), sourcePath: "bad-loop.wav")
         check.expect(
-            !sample.hasLoop && sample.warnings.contains("the smpl loop is not a forward loop — ignored."),
-            message: "non-forward WAV loop reports refusal of loop only")
+            !sample.hasLoop && sample.warnings.count == 1,
+            message: "non-forward WAV loop drops the loop with one warning")
     } catch { check.expect(false, message: "valid WAV with non-forward loop refused") }
 
     var soundFont = Data("RIFF".utf8) + Data(repeating: 0, count: 4) + Data("sfbk".utf8)
+    let sfbkRejected: Bool
     do {
         _ = try SampleImport.decode(soundFont, sourcePath: "wrong.wav")
-        check.expect(false, message: "SoundFont single-stream ingress refused")
+        sfbkRejected = false
     } catch {
-        check.expect(
-            error.message == "SoundFont files hold multiple samples — pick a zone with the SoundFont zone picker.",
-            message: "SoundFont routes to zone picker")
+        sfbkRejected = true
     }
+    check.expect(sfbkRejected, message: "SoundFont ingress rejected with domain error")
     soundFont[8] = UInt8(ascii: "W")
     soundFont[9] = UInt8(ascii: "A")
     soundFont[10] = UInt8(ascii: "V")
     soundFont[11] = UInt8(ascii: "E")
+    let truncatedRejected: Bool
     do {
         _ = try SampleImport.decode(soundFont, sourcePath: "broken.wav")
-        check.expect(false, message: "truncated WAV refused")
+        truncatedRejected = false
     } catch {
-        check.expect(
-            error.message == "the WAV file is corrupt or truncated.", message: "truncated WAV reports corruption")
+        truncatedRejected = true
     }
+    check.expect(truncatedRejected, message: "truncated WAV rejected with domain error")
 }

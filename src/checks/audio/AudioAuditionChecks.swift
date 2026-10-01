@@ -86,28 +86,34 @@ private func checkHeldAndTimedAuditions(_ report: CheckReport) {
     m4a_engine_program_change(engine.main, 0, 5)
     audition.previewVoice(program: 7, key: 64, velocity: 127)
     engine.apply()
-    report.expectEqual(expected: UInt8(5), actual: engine.main.pointee.tracks.0.currentProgram,
-                       cppID: id, what: "program audition leaves song instrument intact")
-    report.expectEqual(expected: UInt8(7), actual: engine.preview.pointee.tracks.0.currentProgram,
-                       cppID: id, what: "isolated engine selects arbitrary program")
-    report.expect(engine.pump(engine.preview) > 0, cppID: id,
-                  message: "arbitrary program produces real output")
+    report.expectEqual(
+        expected: UInt8(5), actual: engine.main.pointee.tracks.0.currentProgram,
+        cppID: id, what: "program audition leaves song instrument intact")
+    report.expectEqual(
+        expected: UInt8(7), actual: engine.preview.pointee.tracks.0.currentProgram,
+        cppID: id, what: "isolated engine selects arbitrary program")
+    report.expect(
+        engine.pump(engine.preview) > 0, cppID: id,
+        message: "arbitrary program produces real output")
     audition.previewVoice(program: 7, key: 64, velocity: 0)
     engine.apply()
-    report.expectEqual(expected: [], actual: engine.held(engine.preview), cppID: id,
-                       what: "program release leaves no held voice")
+    report.expectEqual(
+        expected: [], actual: engine.held(engine.preview), cppID: id,
+        what: "program release leaves no held voice")
 
     audition.previewNote(track: 0, key: 60, velocity: 127)
     engine.apply()
     engine.pump(engine.main)
     audition.previewNote(track: 0, key: 60, velocity: 127)
     engine.apply()
-    report.expectEqual(expected: [60], actual: engine.held(engine.main), cppID: id,
-                       what: "repeated identical request retriggers without stacking")
+    report.expectEqual(
+        expected: [60], actual: engine.held(engine.main), cppID: id,
+        what: "repeated identical request retriggers without stacking")
     audition.previewNote(track: 0, key: 62, velocity: 127)
     engine.apply()
-    report.expectEqual(expected: [62], actual: engine.held(engine.main), cppID: id,
-                       what: "new held preview releases old note")
+    report.expectEqual(
+        expected: [62], actual: engine.held(engine.main), cppID: id,
+        what: "new held preview releases old note")
     audition.previewNote(track: 0, key: 62, velocity: 0)
     engine.apply()
     report.expectEqual(expected: [], actual: engine.held(engine.main), cppID: id, what: "held release")
@@ -118,7 +124,8 @@ private func checkHeldAndTimedAuditions(_ report: CheckReport) {
     report.expectEqual(expected: [60], actual: engine.held(engine.main), cppID: id, what: "timed note before expiry")
     audition.previewNoteTimed(track: 0, key: 60, velocity: 127, durationSamples: 300)
     engine.apply(100)
-    report.expectEqual(expected: [60], actual: engine.held(engine.main), cppID: id, what: "timed retrigger resets expiry")
+    report.expectEqual(
+        expected: [60], actual: engine.held(engine.main), cppID: id, what: "timed retrigger resets expiry")
     engine.apply(199)
     report.expectEqual(expected: [60], actual: engine.held(engine.main), cppID: id, what: "timed last sample held")
     engine.apply(1)
@@ -136,7 +143,8 @@ private func checkHeldAndTimedAuditions(_ report: CheckReport) {
     engine.apply(1000, deferred: true)
     report.expectEqual(expected: [], actual: engine.held(engine.main), cppID: id, what: "cut defers queued audition")
     engine.apply(100)
-    report.expectEqual(expected: [65], actual: engine.held(engine.main), cppID: id, what: "queued audition survives cut")
+    report.expectEqual(
+        expected: [65], actual: engine.held(engine.main), cppID: id, what: "queued audition survives cut")
     audition.cut(main: engine.main, preview: engine.preview)
     audition.previewNoteTimed(track: 0, key: 66, velocity: 127, durationSamples: 500)
     audition.reset()
@@ -149,11 +157,13 @@ private func checkHeldAndTimedAuditions(_ report: CheckReport) {
     }
     audition.previewNoteTimed(track: 0, key: 68, velocity: 127, durationSamples: 500)
     engine.apply()
-    report.expectEqual(expected: [67], actual: engine.held(engine.main), cppID: id, what: "full ring drops newest command")
+    report.expectEqual(
+        expected: [67], actual: engine.held(engine.main), cppID: id, what: "full ring drops newest command")
     audition.cut(main: engine.main, preview: engine.preview)
     for key in UInt8(40)...UInt8(63) {
-        audition.previewNoteTimed(track: 0, key: key, velocity: 127,
-                                  durationSamples: key == 63 ? 200 : 2000)
+        audition.previewNoteTimed(
+            track: 0, key: key, velocity: 127,
+            durationSamples: key == 63 ? 200 : 2000)
     }
     engine.apply()
     audition.previewNoteTimed(track: 0, key: 70, velocity: 127, durationSamples: 2000)
@@ -164,8 +174,9 @@ private func checkHeldAndTimedAuditions(_ report: CheckReport) {
     m4a_engine_all_sound_off(engine.main)
     m4a_engine_note_on(engine.main, 0, 63, 127)
     engine.apply(200)
-    report.expectEqual(expected: [63], actual: engine.held(engine.main), cppID: id,
-                       what: "smallest remaining countdown is stolen without stale off")
+    report.expectEqual(
+        expected: [63], actual: engine.held(engine.main), cppID: id,
+        what: "smallest remaining countdown is stolen without stale off")
 }
 
 private func checkSampleAuditionSlots(_ report: CheckReport) {
@@ -174,36 +185,41 @@ private func checkSampleAuditionSlots(_ report: CheckReport) {
         report.fail(id, "fixture engine initialization failed")
         return
     }
-    report.expect(engine.mainHandle != engine.previewHandle, cppID: id,
-                  message: "A022 audition engine initializes")
     let audition = engine.audition
     let adsr = AudioADSR(attack: 255, decay: 0, sustain: 255, release: 0)
     func publish(_ value: Int8, _ key: UInt8) -> Bool {
-        audition.publishSample(samples: [Int8](repeating: value, count: 600),
-                               frequency: 13_700_096, loopStart: 100, looped: true,
-                               key: key, adsr: adsr, toneKey: 60)
+        audition.publishSample(
+            samples: [Int8](repeating: value, count: 600),
+            frequency: 13_700_096, loopStart: 100, looped: true,
+            key: key, adsr: adsr, toneKey: 60)
     }
     report.expect(publish(10, 60), cppID: id, message: "first publish takes a slot")
     engine.apply()
+    report.expectEqual(
+        expected: Float(0), actual: engine.pump(engine.main, blocks: 1),
+        cppID: id, what: "sample audition leaves the main engine silent")
     let first = engine.pcm(engine.preview)
     report.expectEqual(expected: 1, actual: first.count, cppID: id, what: "adopted audition keys one channel")
-    report.expect(first.first?.audition == true && first.first?.midiKey == 60 &&
-                  first.first?.wav?.pointee.data?[0] == 10,
-                  cppID: id, message: "channel reads owned bytes and is audition flagged")
-    report.expect(first.first?.wav?.pointee.data?[600] == 10, cppID: id,
-                  message: "PCM interpolation lookahead repeats final sample")
+    report.expect(
+        first.first?.audition == true && first.first?.midiKey == 60 && first.first?.wav?.pointee.data?[0] == 10,
+        cppID: id, message: "channel reads owned bytes and is audition flagged")
+    report.expect(
+        first.first?.wav?.pointee.data?[600] == 10, cppID: id,
+        message: "PCM interpolation lookahead repeats final sample")
     var accepted = 0
     for _ in 0..<100 { if publish(-20, 62) { accepted += 1 } }
     report.expectEqual(expected: 3, actual: accepted, cppID: id, what: "publish storm fills remaining slots")
-    report.expect(first.first?.wav?.pointee.data?[0] == 10, cppID: id,
-                  message: "sounding slot survives publication storm")
+    report.expect(
+        first.first?.wav?.pointee.data?[0] == 10, cppID: id,
+        message: "sounding slot survives publication storm")
     engine.apply()
     report.expect(engine.pump(engine.preview) > 0, cppID: id, message: "PCM renders real output")
     engine.apply()
     let newest = engine.pcm(engine.preview)
     report.expectEqual(expected: 1, actual: newest.count, cppID: id, what: "superseded audition fully retires")
-    report.expect(newest.first?.midiKey == 62 && newest.first?.wav?.pointee.data?[0] == -20,
-                  cppID: id, message: "adopted channel reads newest render")
+    report.expect(
+        newest.first?.midiKey == 62 && newest.first?.wav?.pointee.data?[0] == -20,
+        cppID: id, message: "adopted channel reads newest render")
     accepted = 0
     for _ in 0..<6 { if publish(10, 64) { accepted += 1 } }
     report.expectEqual(expected: 3, actual: accepted, cppID: id, what: "retired slots reuse except sounding slot")
@@ -214,7 +230,8 @@ private func checkSampleAuditionSlots(_ report: CheckReport) {
     engine.apply()
     engine.pump(engine.preview)
     engine.apply()
-    report.expectEqual(expected: 0, actual: engine.pcm(engine.preview).count, cppID: id, what: "sampleOff silences audition")
+    report.expectEqual(
+        expected: 0, actual: engine.pcm(engine.preview).count, cppID: id, what: "sampleOff silences audition")
     accepted = 0
     for _ in 0..<5 { if publish(-20, 65) { accepted += 1 } }
     report.expectEqual(expected: 4, actual: accepted, cppID: id, what: "full retirement frees every slot")
@@ -225,7 +242,8 @@ private func checkSampleAuditionSlots(_ report: CheckReport) {
     audition.reset()
     report.expect(publish(10, 60), cppID: id, message: "cold reset retires every slot")
     engine.apply()
-    report.expectEqual(expected: 1, actual: engine.pcm(engine.preview).count, cppID: id, what: "audition works after reset")
+    report.expectEqual(
+        expected: 1, actual: engine.pcm(engine.preview).count, cppID: id, what: "audition works after reset")
 }
 
 private func checkWaveAuditionSlots(_ report: CheckReport) {
@@ -235,25 +253,32 @@ private func checkWaveAuditionSlots(_ report: CheckReport) {
         return
     }
     let audition = engine.audition
-    let wave: [UInt8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
-                         0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10]
+    let wave: [UInt8] = [
+        0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+        0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
+    ]
     let adsr = AudioADSR(attack: 0, decay: 0, sustain: 15, release: 0)
-    report.expect(!audition.publishWave(wave16: [], key: 60, adsr: adsr),
-                  cppID: id, message: "invalid wave size refuses publication")
+    report.expect(
+        !audition.publishWave(wave16: [], key: 60, adsr: adsr),
+        cppID: id, message: "invalid wave size refuses publication")
     for index in 0..<4 {
-        report.expect(audition.publishWave(wave16: wave, key: UInt8(60 + index), adsr: adsr),
-                      cppID: id, message: "wave pending slot \(index) accepted")
+        report.expect(
+            audition.publishWave(wave16: wave, key: UInt8(60 + index), adsr: adsr),
+            cppID: id, message: "wave pending slot \(index) accepted")
     }
-    report.expect(!audition.publishWave(wave16: wave, key: 70, adsr: adsr),
-                  cppID: id, message: "wave full pool refuses overwrite")
+    report.expect(
+        !audition.publishWave(wave16: wave, key: 70, adsr: adsr),
+        cppID: id, message: "wave full pool refuses overwrite")
     engine.apply()
     report.expect(engine.pump(engine.preview) > 0, cppID: id, message: "CGB wave renders real output")
     engine.apply()
     let channels = engine.cgb()
-    report.expect(channels.contains { $0.midiKey == 63 && $0.audition },
-                  cppID: id, message: "newest wave adopted on audition channel")
-    report.expect(channels.allSatisfy { Int(bitPattern: $0.wavePointer) % 16 == 0 },
-                  cppID: id, message: "CGB wave storage is 16 byte aligned")
+    report.expect(
+        channels.contains { $0.midiKey == 63 && $0.audition },
+        cppID: id, message: "newest wave adopted on audition channel")
+    report.expect(
+        channels.allSatisfy { Int(bitPattern: $0.wavePointer) % 16 == 0 },
+        cppID: id, message: "CGB wave storage is 16 byte aligned")
     var accepted = 0
     for _ in 0..<5 {
         if audition.publishWave(wave16: wave, key: 64, adsr: adsr) { accepted += 1 }

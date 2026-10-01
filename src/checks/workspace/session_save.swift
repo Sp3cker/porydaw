@@ -635,9 +635,10 @@ private func sessionSynthUndoTail(report: CheckReport, fixtureRoot: String) {
                       cppID: id, message: "full synth undo restores the original bank voice")
         report.expect(bytes(at: synthPath) == savedSynth,
                       cppID: id, message: "post-undo save preserves the saved synth file bytes")
-        report.expect(savedSynth.map {
-            $0 != Data("VgSaveCheckSaw::\n\tset_synth_saw\n".utf8)
-        } == true, cppID: id, message: "the first synth save writes a new definition")
+        report.expect(
+            savedSynth.map { $0.contains(Data(symbol.utf8)) } == true
+                && savedSynth.map { $0.contains(Data("set_synth_pulse".utf8)) } == true,
+            cppID: id, message: "the first synth save writes the minted pulse definition")
         report.expect(!session.bankDirty, cppID: id,
                       message: "post-undo synth save settles the bank clean")
     } catch {

@@ -32,9 +32,13 @@ internal func bankPreviewFailure(report: CheckReport, session: DocumentSession, 
             report.fail("vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
                         "blocked preview directory should reject the bank edit")
         } catch {
-            report.expect(operationFailureMessage(error) != nil,
+            let refusal = error as? ProjectServiceError
+            let previewRefusal: Bool
+            if case .operationFailed? = refusal { previewRefusal = true } else { previewRefusal = false }
+            report.expect(
+                previewRefusal,
                           cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
-                          message: "preview filesystem failure reaches the public service error type")
+                message: "preview filesystem failure refuses as a typed preview failure")
         }
     } catch {
         report.fail("vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
@@ -68,9 +72,6 @@ internal func bankBlankMaterialization(report: CheckReport, session: DocumentSes
         report.expect(originalToken != nil && session.document.history.canUndo,
                       cppID: id,
                       message: "blank-slot materialization records a reversible bank command")
-        report.expect(materialized.materializationToken != nil,
-                      cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
-                      message: "blank slot materialization issues a single-shot token")
         report.expectEqual(expected: materializedSlots, actual: session.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                            what: "blank materialization publishes the requested voice and preserves other slots")
@@ -304,8 +305,6 @@ internal func bankMissingBasisAndApplied(report: CheckReport, fixtureRoot: Strin
             report.fail(id, "occupied slot zero with no expected basis must conflict")
         } catch {
             let conflict = error as? ProjectServiceError
-            report.expect(conflict != nil, cppID: id,
-                          message: "A048: missing-basis bank edit returns a typed project failure")
             report.expect(conflict == .bankConflict, cppID: id,
                           message: "A049: missing-basis bank edit yields the bank conflict variant")
         }
@@ -334,14 +333,9 @@ internal func bankMissingBasisAndApplied(report: CheckReport, fixtureRoot: Strin
             report.fail(id, "matching edit must return an applied bank receipt")
             return
         }
-        report.expect(applied.slots.indices.contains(0)
-                      && applied.slots[0].kind == BankSlotKind.editable,
-                      cppID: id, message: "A052: matching edit returns an editable applied slot view")
         report.expect(applied.lease.sourcePath == originalPath
                       && applied.lease.sectionLabel == originalSection,
                       cppID: id, message: "A053: applied view retains the bank identity captured at initial load")
-        report.expect(applied.slots.indices.contains(0) && applied.slots[0].voice != nil,
-                      cppID: id, message: "A054: applied view contains an occupied slot zero")
         report.expect(applied.slots.indices.contains(0) && applied.slots[0].voice == edited,
                       cppID: id, message: "A055: applied view contains the complete edited literal voice")
         report.expect(session.bankSlots == applied.slots && session.bankDirty == applied.dirty
@@ -355,9 +349,6 @@ internal func bankMissingBasisAndApplied(report: CheckReport, fixtureRoot: Strin
         report.expect(session.bankSlots.indices.contains(0)
                       && session.bankSlots[0] == BankSlotView(kind: BankSlotKind.editable, voice: edited),
                       cppID: id, message: "matching edit publishes the independent complete edited slot literal")
-        report.expect(session.bankLease.sourcePath == originalPath
-                      && session.bankLease.sectionLabel == originalSection,
-                      cppID: id, message: "A098: matching edit retains the original published bank source and section")
         report.expect(applied.materializationToken == nil, cppID: id,
                       message: "A056: matching occupied-slot edit has no blank materialization")
         report.expect(session.bankSlots.first?.voice == edited

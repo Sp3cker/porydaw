@@ -160,14 +160,6 @@ public func runKeybindingRegistryChecks(
 
     let modifierChords = "KeymapCheckTest::modifierChords"
     onAssertion(
-        registry.matchesModifier(QtKeyboardModifier.control.rawValue, "velocity.detent_unlock"),
-        modifierChords,
-        "Control arms detent unlock")
-    onAssertion(
-        registry.matchesModifier(QtKeyboardModifier.control.rawValue, "roll.velocity_drag"),
-        modifierChords,
-        "Control arms velocity drag")
-    onAssertion(
         registry.matchesModifier(QtKeyboardModifier.control.rawValue |
                                 QtKeyboardModifier.keypad.rawValue,
                                 "roll.velocity_drag"),

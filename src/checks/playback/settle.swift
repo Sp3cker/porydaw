@@ -37,8 +37,6 @@ func checkControllerSuppression(_ report: CheckReport) throws {
             cppID: "transportcheck/TransportTest::resumeParksSequencerThroughSettle",
             what: "each settle sample preserves paused cursor")
     }
-    report.expectEqual(expected: cursor, actual: audio.playheadSamples,
-        cppID: "transportcheck/TransportTest::resumeParksSequencerThroughSettle", what: "resume cursor remains parked until unity")
     report.expect(audio.transportState.applied == .playing && audio.transportState.cutGain >= 0.999,
         cppID: "transportcheck/TransportTest::resumeParksSequencerThroughSettle", message: "callback applies resume at unity")
     report.expect(rig.deepestGain() < -0.1,

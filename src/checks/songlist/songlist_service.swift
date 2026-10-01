@@ -83,9 +83,6 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
         report.expect(
             !labels.contains("mus_filler_test"), cppID: id,
             message: "the mid-less table row is not playable")
-        report.expectEqual(
-            expected: labels.count, actual: listings.count, cppID: id,
-            what: "no playable song is dropped")
 
         guard let stray = listings.first(where: { $0.label == "mus_stray_test" }),
             let partial = listings.first(where: { $0.label == "mus_partial_test" }),

@@ -94,7 +94,7 @@ TestCase {
         const edit = child("vgEditSampleButton")
         mouseClick(edit)
         verify(nativeWait(function() { return !!child("sampleStudioDialog") }, 15000), "edit reopens")
-        compare(child("sampleStudioDialog").title, "Edit Sample — voice_hires")
+        compare(workflow.editor().sampleName, "voice_hires", "edit reopens the registered sample")
         verify(child("sampleStudioName").readOnly, "registered name stays fixed")
         compare(workflow.editor().loopStart, 1000, "provenance restores edited loop start")
         const old = disk.fingerprint(wav)
@@ -129,8 +129,12 @@ TestCase {
         compare(controller.editorModel().macro, 3, "destination uses CGB voice")
         controller.requestEditSample(4)
         verify(app.sampleStudio().alertRevision > 0, "non-project voice gives edit warning")
-        compare(app.sampleStudio().alertTitle, "Edit Sample")
-        compare(app.sampleStudio().alertText, "This voice does not reference a project sample.")
+        verify(nativeWait(function() {
+            const alert = child("shellSampleStudioAlert")
+            return alert && alert.visible
+        }, 5000), "non-project voice displays its refusal")
+        verify(!child("sampleStudioDialog") && !child("sf2ZonePickerDialog"),
+               "refusal opens neither an editor nor a zone picker")
         child("shellSampleStudioAlert").close()
         app.sampleStudio().requestImport(4)
         selectSource(rootPath + "/samplesources/hires_tone.wav")
@@ -151,7 +155,6 @@ TestCase {
                + " / zoneOpen=" + app.sampleStudio().zonePickerOpen)
         const workflow = app.sampleStudio()
         const model = workflow.zonePicker()
-        compare(child("sf2ZonePickerDialog").title, "Import Sample — pick a SoundFont zone")
         compare(model.columnTitles.join("|"), "Sample|Key|Rate|Frames|Loop|Notes")
         model.select(0)
         verify(!model.canAccept && !child("sf2ZoneAccept").enabled, "group cannot be accepted")

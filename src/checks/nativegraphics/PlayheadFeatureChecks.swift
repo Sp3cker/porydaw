@@ -164,9 +164,6 @@ private func checkPlayheadGuides(_ report: CheckReport, suite: DocumentSession,
                     && !playheadNear(guides.hover.contentX, hoverBeforeScroll),
                   cppID: playheadCppID(playheadGuidesID, "A029"),
                   message: "camera scrolling changes both retained guide projections")
-    report.expect(!playheadNear(guides.edit.contentX, editBeforeScroll),
-                  cppID: playheadCppID(playheadGuidesID, "A030"),
-                  message: "camera scrolling reprojects the edit guide")
     report.expect(playheadNear(guides.edit.contentX,
                                session.camera.contentX(tick: editTick), tolerance: 1.0)
                     && playheadNear(guides.hover.contentX,

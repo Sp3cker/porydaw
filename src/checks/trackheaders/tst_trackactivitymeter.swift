@@ -83,7 +83,6 @@ func trackActivityPhysicalPixelPredicates(
         h.advanceActivity(levels: levels, elapsedSeconds: 60, playing: true)
         report.expect(h.rows[0] !== driven && h.rows[1] === untouched,
                       cppID: id, message: "a level change republishes exactly the driven row")
-        report.expect(h.rows[1] === untouched, cppID: id, message: "activity does not publish another track")
         func physical(_ level: UInt8) -> Int {
             Int((Double(Float(level) / 255) * Double(height) * dpr).rounded())
         }
@@ -101,7 +100,6 @@ func trackActivityPhysicalPixelPredicates(
         levels[0] = AudioActivityLevel(left: UInt8(shared + 1), right: UInt8(shared + 1))
         let quietNeighbor = h.rows[1]
         h.advanceActivity(levels: levels, elapsedSeconds: 60, playing: true)
-        report.expect(h.rows[0] === within, cppID: id, message: "same physical pixel publishes no row")
         report.expect(h.rows[0] === within && h.rows[1] === quietNeighbor,
                       cppID: id, message: "a pixel-identical level republishes nothing")
         guard let across = ((shared + 2)...255).first(where: { physical(UInt8($0)) > physical(UInt8(shared + 1)) }) else {

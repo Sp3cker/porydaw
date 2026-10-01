@@ -59,7 +59,15 @@ deno task checks --filter swiftcore          # Swift core/presenter suites
 deno task checks:shell                       # production ShellWindow QML lanes
 deno task checks:qml                         # editor drawer QML lane
 deno task checks:qml-roll                    # Swift roll window QML lane
+deno task checks:bridge                      # Swift/QML boundary guard
+deno task proof check                        # assertion-ledger structure
 ```
+
+Checks pin consumer-visible behavior and distinct input/state transitions. Prefer typed
+rejections and preserved state over diagnostic wording. Remove assertions implied by
+stronger checks in the same state, but retain fixture guards and lifecycle scenarios.
+Rendering checks observe painted output rather than pinning renderer-specific primitives.
+Update affected proof ledgers with their check changes; compile only referenced support.
 
 ### Startup profiling
 

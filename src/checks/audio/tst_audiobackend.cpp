@@ -32,8 +32,6 @@ void AudioBackendTest::forcedNullBackendIsReportable()
              qUtf8Printable(QStringLiteral("forced null audio init failed: %1").arg(error)));
 
     const QString backend = engine.backendName();
-    QVERIFY2(!backend.isEmpty(), "the resolved backend name must be reported");
-    QCOMPARE(engine.usingNullBackend(), backend == QStringLiteral("Null"));
     QVERIFY2(engine.nullBackendForced(), "the forced null request must be visible");
     QVERIFY2(engine.usingNullBackend(), "a forced null run must land on the Null backend");
     QCOMPARE(backend, QStringLiteral("Null"));

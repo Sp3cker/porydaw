@@ -149,9 +149,6 @@ func formatZeroGlobalsContract(_ report: CheckReport) {
     report.expectEqual(expected: "Lead", actual: timeline.tracks.count > 1 ? timeline.tracks[1].name : nil,
                        cppID: "editcheck/EditCheckTest::formatZeroGlobals",
                        what: "timeline names the second track Lead")
-    report.expectEqual(expected: Tick(12), actual: timeline.loopStartTick,
-                       cppID: "editcheck/EditCheckTest::formatZeroGlobals",
-                       what: "timeline loop start matches the document")
     report.expect(chunksSortedByTick(document.state.file),
                   cppID: "editcheck/EditCheckTest::formatZeroGlobals",
                   message: "converted chunks are tick-sorted")

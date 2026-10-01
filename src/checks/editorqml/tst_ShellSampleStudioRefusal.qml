@@ -35,8 +35,6 @@ TestCase {
         mouseClick(action, action.width / 2, action.height / 2)
         const alert = child("shellSampleStudioAlert")
         verify(waitForNative(function() { return alert.visible }, 5000), "missing rule warns")
-        compare(alert.title, "Import Sample")
-        verify(alert.text.indexOf("cannot find a wav2agb build rule") !== -1, "fork refusal")
         verify(!picker.visible && !child("sampleStudioDialog"), "no editor or picker")
         verify(!disk.exists(bootstrap.projectRoot + "/sound/direct_sound_samples/hires_tone.wav"),
                "refusal writes no sample")

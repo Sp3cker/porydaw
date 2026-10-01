@@ -32,8 +32,6 @@ func drawerAutomationPencilOwnershipAndShift(_ report: CheckReport, suite: Docum
                   cppID: id, message: "a pencil press outside the selection starts")
     report.expect(page.isPainting && page.isPencilMode && !page.isPanning && !page.hasBand,
                   cppID: id, message: "a pencil press owns the stroke and starts no pan or band")
-    report.expect(page.isPainting && page.isPencilMode, cppID: id,
-                  message: "the stroke runs in pencil mode")
     report.expect(page.documentRevision == revisionBefore
                       && page.frozenRevision == revisionBefore
                       && fixture.session.editCursor == cursorBefore,

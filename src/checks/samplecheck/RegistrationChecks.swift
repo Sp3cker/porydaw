@@ -54,22 +54,14 @@ private func registrationNames(_ report: CheckReport, root: String) {
     let symbols = VoicegroupSource.directSoundSymbols(root)
     check.expect(SampleRegistrar.validate(projectRoot: root, name: "fresh_tone", existingSymbols: symbols) == nil,
         message: "A016 fresh sample name accepted")
-    check.expect(SampleRegistrar.validate(projectRoot: root, name: "", existingSymbols: symbols) == "sample name is empty.",
-        message: "A017 empty name refused")
     check.expect(SampleRegistrar.validate(projectRoot: root, name: "", existingSymbols: symbols) != nil,
         message: "A018 rejected empty name reports refusal")
     check.expect(SampleRegistrar.validate(projectRoot: root, name: "Bad Name", existingSymbols: symbols) != nil,
         message: "A019 invalid grammar refused")
-    check.expect(SampleRegistrar.validate(projectRoot: root, name: "Bad Name", existingSymbols: symbols) != nil,
-        message: "A020 rejected grammar reports refusal")
     check.expect(SampleRegistrar.validate(projectRoot: root, name: "existing", existingSymbols: symbols) != nil,
         message: "A021 duplicate symbol refused")
-    check.expect(SampleRegistrar.validate(projectRoot: root, name: "existing", existingSymbols: symbols) != nil,
-        message: "A022 duplicate symbol reports refusal")
     check.expect(SampleRegistrar.validate(projectRoot: root, name: "orphan", existingSymbols: symbols) != nil,
         message: "A023 orphan source refused")
-    check.expect(SampleRegistrar.validate(projectRoot: root, name: "orphan", existingSymbols: symbols) != nil,
-        message: "A024 orphan source reports refusal")
 }
 
 private func registrationWrites(_ report: CheckReport, root: String) {
