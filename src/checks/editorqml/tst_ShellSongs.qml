@@ -325,7 +325,8 @@ TestCase {
         mouseClick(row(id), 4, 4, Qt.RightButton)
         menuAction("delete")
         verify(waitForNative(function() {
-            return findChild(shell, "shellCriticalDialog").visible
+            const dialog = findChild(shell, "shellCriticalDialog")
+            return dialog !== null && dialog.visible
                 && shell.shellPresenter.statusText.indexOf("mus_dummy") >= 0
         }, 5000), "A035: fallback deletion raises a refusal identifying mus_dummy")
         const refusal = findChild(shell, "shellCriticalDialog")

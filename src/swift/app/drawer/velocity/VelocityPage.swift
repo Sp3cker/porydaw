@@ -34,6 +34,7 @@ import QtBridge
 /// `GridCameraPolicy.seedBaseFontPx`, which is internal to this module.
 public enum VelocityPagePolicy {
     public static let seedBaseFontPx: Double = 13
+    static let handleMarginViewportWidths: Double = 1
 }
 
 /// Where a pointer event landed in the page body. Mirrors the legacy
@@ -217,7 +218,7 @@ public final class VelocityPage: EditorDrawerPage {
     public var axisGraduations: QListModel<SceneRect> = QListModel()
     public var axisMarkers: QListModel<SceneRect> = QListModel()
     public var axisLabels: QListModel<SceneText> = QListModel()
-    /// Handle rows remain scroll-stable; QML translates their container with the grid camera.
+    /// Retained tick-space rows translate with the camera; overscan edges admit and retire rows.
     public var handles: QListModel<VelocityHandle> = QListModel()
 
     /// Distinct content rebuilds: shared-playhead movement inside one voice
@@ -260,6 +261,7 @@ public final class VelocityPage: EditorDrawerPage {
     @QtIgnored var axis = VelocityAxisModel()
     @QtIgnored var resolvedContextValue = VelocityVoiceContext(status: .unresolvedVoice)
     @QtIgnored var publishedHandles: [VelocityHandle] = []
+    @QtIgnored var publishedHandleWindow: ClosedRange<Double>?
     @QtIgnored var drawingBands: [DrawerStaticRect] = []
     // Retained display-list buffers (list 0 grid + bands, list 1 transient)
     // and the writer reused across frames; lists rebuild together with one bump.
@@ -316,6 +318,7 @@ public final class VelocityPage: EditorDrawerPage {
     public func attach(session: DocumentSession, palette: GridPalette) {
         metricsCache = nil
         handleGeometryKey = nil
+        publishedHandleWindow = nil
         self.session = session
         self.palette = palette
         contextTick = session.editCursor
@@ -333,6 +336,7 @@ public final class VelocityPage: EditorDrawerPage {
         hovered = nil
         metricsCache = nil
         handleGeometryKey = nil
+        publishedHandleWindow = nil
         paintCandidates = []
         refreshInteractionPublished()
         publishHandles([])

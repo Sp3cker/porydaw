@@ -96,11 +96,15 @@ extension VelocityPage {
             axis: axis, previousHandles: handlesByID)
     }
 
-    /// Camera-only publication: handle rows are tick-space and stay put while
-    /// their Swift hit-test x moves in place; transients follow the camera.
+    /// Camera movement keeps retained rows stable until the viewport leaves
+    /// their overscan window, then republishes handles without rebuilding axes.
     @QtIgnored
     public func refreshCamera() {
         guard session != nil else { return }
+        let window = handleWindowForCamera()
+        if window != publishedHandleWindow {
+            publishHandles(projectHandles())
+        }
         let projection = self.projection
         for handle in publishedHandles {
             let x = projection.stableXForTick(handle.tick)
@@ -124,12 +128,29 @@ extension VelocityPage {
         return reuse
     }
 
+    /// Keep the current overscan until the visible ticks escape it.
+    private func handleWindowForCamera() -> ClosedRange<Double>? {
+        guard let camera = session?.camera else { return nil }
+        let width = plotWidth > 0 ? plotWidth : camera.snapshot.viewportWidth
+        let start = projection.scrollOffsetX / camera.pixelsPerTick
+        let end = start + width / camera.pixelsPerTick
+        if let publishedHandleWindow,
+            start >= publishedHandleWindow.lowerBound,
+            end <= publishedHandleWindow.upperBound
+        {
+            return publishedHandleWindow
+        }
+        let margin = width / camera.pixelsPerTick * VelocityPagePolicy.handleMarginViewportWidths
+        return (start - margin)...(end + margin)
+    }
+
     /// Everything one scene build reads, as values: the session's document facts,
     /// the page's live interaction snapshot and its cached grid metrics.
     func sceneInput(reuseGeometry: Bool) -> VelocitySceneInput {
         let session = self.session
         return VelocitySceneInput(
             camera: session?.camera,
+            handleTickWindow: handleWindowForCamera(),
             context: resolvedContextValue,
             notes: VelocityScene.trackNotes(session),
             selectedNotes: VelocityScene.selectedTrackNotes(session),
@@ -189,8 +210,21 @@ extension VelocityPage {
     /// Publishes one handle projection. The page's own array is the authoritative
     /// copy the hit tests and the checks read, so it moves with the model.
     @QtIgnored func publishHandles(_ values: [VelocityHandle]) {
+        let nextByID = Dictionary(uniqueKeysWithValues: values.map { ($0.noteID, $0) })
+        // Remove outgoing rows before adding incoming ones so the retained
+        // overlap is a shared prefix or suffix for syncModel on a window slide.
+        let retained: [VelocityHandle]? =
+            publishedHandles.contains(where: { nextByID[$0.noteID] == nil })
+            ? publishedHandles.filter { nextByID[$0.noteID] != nil } : nil
         publishedHandles = values
-        handlesByID = Dictionary(uniqueKeysWithValues: values.map { ($0.noteID, $0) })
+        handlesByID = nextByID
+        publishedHandleWindow = handleWindowForCamera()
+        let selected = session?.selectedNotes ?? []
+        let count = VelocityScene.trackNotes(session).reduce(0) {
+            $0 + (selected.contains($1.id) ? 1 : 0)
+        }
+        setPublished(&selectedCount, count)
+        if let retained { syncModel(handles, retained, matches: { $0.matches($1) }) }
         syncModel(handles, values, matches: { $0.matches($1) })
     }
 
@@ -378,7 +412,6 @@ extension VelocityPage {
         setPublished(&readoutVisible, visible)
         setPublished(&readoutX, x)
         setPublished(&readoutY, y)
-        setPublished(&selectedCount, publishedHandles.filter(\.selected).count)
         setPublished(&hoveredNoteText, hovered.map(velocityNoteText) ?? "")
     }
 

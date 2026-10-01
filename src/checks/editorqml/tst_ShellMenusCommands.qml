@@ -104,6 +104,7 @@ ShellMenusSupport {
 
         // About opens the dialog.
         var aboutItem = findChild(shell, "shellAction_help.about")
+        findChild(shell, "shellAboutLoader").active = true
         var aboutDialog = findChild(shell, "shellAboutDialog")
         verify(aboutDialog !== null, "the About dialog is mounted")
         compare(aboutDialog.visible, false, "About starts hidden")

@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 internal struct BankBindingIdentity: Hashable {
     let owner: UUID
@@ -56,19 +57,37 @@ internal final class SharedBankState {
     }
 }
 
-@MainActor
-internal final class ProjectBankViews {
-    private var owner: UUID?
-    private var states: [BankBindingIdentity: SharedBankState] = [:]
+internal final class ProjectBankViews: Sendable {
+    private let owner = Mutex<UUID?>(nil)
+    @MainActor private var statesOwner: UUID?
+    @MainActor private var states: [BankBindingIdentity: SharedBankState] = [:]
 
     nonisolated init() {}
 
-    func reset(owner: UUID? = nil) {
-        states.removeAll()
-        self.owner = owner
+    nonisolated func setOwner(_ owner: UUID?) {
+        self.owner.withLock { $0 = owner }
     }
 
+    @MainActor
+    private func currentOwner() -> UUID? {
+        let current = owner.withLock { $0 }
+        if current != statesOwner {
+            states.removeAll()
+            statesOwner = current
+        }
+        return current
+    }
+
+    /// Close releases the pinned leases now rather than on the next access.
+    @MainActor
+    func purge() {
+        states.removeAll()
+        statesOwner = owner.withLock { $0 }
+    }
+
+    @MainActor
     func state(for value: AppliedBankEdit) -> SharedBankState {
+        let owner = currentOwner()
         let identity = BankBindingIdentity(value.lease)
         guard identity.owner == owner else { return SharedBankState(value) }
         if let state = states[identity] {
@@ -80,13 +99,17 @@ internal final class ProjectBankViews {
         return state
     }
 
+    @MainActor
     func publish(_ value: AppliedBankEdit) {
+        let owner = currentOwner()
         guard BankBindingIdentity(value.lease).owner == owner else { return }
         _ = state(for: value)
     }
 
+    @MainActor
     func dirtyBanks() -> [AppliedBankEdit] {
-        states.values.map(\.value).filter(\.dirty).sorted {
+        _ = currentOwner()
+        return states.values.map(\.value).filter(\.dirty).sorted {
             ($0.lease.sourcePath, $0.lease.sectionLabel) < ($1.lease.sourcePath, $1.lease.sectionLabel)
         }
     }

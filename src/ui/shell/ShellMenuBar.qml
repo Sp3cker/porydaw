@@ -94,6 +94,13 @@ MenuBar {
             objectName: "shellEditMenu"
             title: qsTr("&Edit")
             onAboutToShow: ++root.windowRoot.actionRevision
+            // Nested submenu titles render through this delegate; null the
+            // arrow/indicator like the item delegates to skip image loads.
+            delegate: MenuItem {
+                arrow: null
+                indicator: null
+                text: subMenu ? subMenu.title : ""
+            }
             Instantiator {
                 model: shell.editTopActionIds
                 delegate: MenuItem {

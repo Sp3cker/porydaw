@@ -133,7 +133,9 @@ public final class NewSongController {
                 guard !Task.isCancelled, self.service === service else { return }
                 self.session?.operationFailed(message: Self.failureText(error))
                 if let root = self.session?.projectRoot, !root.isEmpty {
-                    do { try await service.open(root: root) } catch {
+                    do {
+                        try await service.open(root: root)
+                    } catch {
                         // The refusal is already reported. Keep the prior catalog.
                     }
                 }

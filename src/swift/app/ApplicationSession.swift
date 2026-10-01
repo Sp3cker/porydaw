@@ -63,7 +63,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     var audioReadiness: AudioReadiness = .idle
     @QtIgnored
-    var audioFactory: @MainActor () async throws -> NativeAudio = { try await NativeAudio() }
+    var audioFactory: @Sendable () async throws -> NativeAudio = { try await NativeAudio.make() }
     @QtIgnored
     var engineSettings = EngineSettings()
     @QtIgnored
@@ -118,6 +118,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     var startupRestoreTask: Task<Void, Never>?
     @QtIgnored
     var pendingProjectSwitch: ProjectSwitchCandidate?
+    @QtIgnored
+    var prefetchedProject: (path: String, read: Task<ProjectRead, Error>)?
+    @QtIgnored
+    var prefetchedSong: (service: ProjectService, load: PrefetchedSongLoad)?
     @QtIgnored
     let preferences = PreferencesStore()
     @QtIgnored

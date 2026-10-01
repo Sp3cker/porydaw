@@ -173,14 +173,15 @@ ThemedWindow {
         target: shell
         function onPolyphonyVisibleChanged() { ++root.actionRevision }
         function onEventListGateChanged() { ++root.actionRevision }
-        function onChooseProjectRequested() { projectPicker.open() }
-        function onAboutRequested() { aboutDialog.open() }
-        function onSettingsRequested(songFirst) { settingsDialog.showSettings(songFirst) }
+        function onChooseProjectRequested() { ensureProjectPicker().open() }
+        function onAboutRequested() { ensureAboutDialog().open() }
+        function onSettingsRequested(songFirst) { ensureSettingsDialog().showSettings(songFirst) }
         function onQuitRequested() { root.close() }
         function onCriticalRequested(title, message) {
-            criticalDialog.text = title
-            criticalDialog.informativeText = message
-            criticalDialog.open()
+            const dialog = ensureCriticalDialog()
+            dialog.text = title
+            dialog.informativeText = message
+            dialog.open()
         }
     }
     onActiveChanged: {
@@ -251,20 +252,46 @@ ThemedWindow {
         windowRoot: root
         actionRevision: root.actionRevision
     }
-    SettingsDialog {
-        id: settingsDialog
-        objectName: "shellSettingsDialog"
-        transientParent: root
-        store: shell.settingsStore
-        presenter: shell
-        colors: root.colors
-        applicationSession: shell.session
+    // Deferred chrome: dialogs instantiate on first use, so startup never
+    // pays for their font/button work; Loaders complete synchronously.
+    function ensureSettingsDialog() {
+        settingsDialogLoader.active = true
+        return settingsDialogLoader.item
     }
-    AboutDialog {
-        id: aboutDialog
-        colors: root.colors
-        applicationSession: shell.session
-        baseFontPx: shell.session.baseFontPx
+    function ensureAboutDialog() {
+        aboutDialogLoader.active = true
+        return aboutDialogLoader.item
+    }
+    function ensureProjectPicker() {
+        projectPickerLoader.active = true
+        return projectPickerLoader.item
+    }
+    function ensureCriticalDialog() {
+        criticalDialogLoader.active = true
+        return criticalDialogLoader.item
+    }
+    Loader {
+        id: settingsDialogLoader
+        objectName: "shellSettingsLoader"
+        active: false
+        sourceComponent: SettingsDialog {
+            objectName: "shellSettingsDialog"
+            transientParent: root
+            store: shell.settingsStore
+            presenter: shell
+            colors: root.colors
+            applicationSession: shell.session
+        }
+    }
+    Loader {
+        id: aboutDialogLoader
+        objectName: "shellAboutLoader"
+        active: false
+        sourceComponent: AboutDialog {
+            colors: root.colors
+            applicationSession: shell.session
+            baseFontPx: shell.session.baseFontPx
+        }
     }
     MidiImportHost {
         controller: shell.session.songDockController().midiImportController()
@@ -439,87 +466,96 @@ ThemedWindow {
     }
     // Save-conflict prompt: modal, so local Space is allowed. The name field
     // reuses the New Song label law; Register stays disabled until valid.
-    Dialog {
-        id: saveConflictDialog
-        objectName: "saveConflictDialog"
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        modal: true
-        focus: true
-        title: qsTr("Song Changed on Disk")
-        closePolicy: Popup.CloseOnEscape
-        visible: shell.session.saveConflictSongLabel.length > 0
-        onOpened: {
-            saveConflictNameField.text = ""
-            saveConflictNameField.forceActiveFocus()
-        }
-        onRejected: shell.session.cancelSaveConflict()
-        onClosed: {
-            if (shell.session.saveConflictSongLabel.length > 0)
-                shell.session.cancelSaveConflict()
-        }
-        contentItem: ColumnLayout {
-            spacing: root.chromeSpacing.four
-            Label {
-                objectName: "saveConflictMessage"
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                text: shell.session.saveConflictDetail
+    // Loader-gated like songConfirmation above; handlers and objectNames
+    // inside are unchanged.
+    Loader {
+        id: saveConflictLoader
+        objectName: "saveConflictLoader"
+        active: shell.session.saveConflictSongLabel.length > 0
+        sourceComponent: Dialog {
+            objectName: "saveConflictDialog"
+            parent: Overlay.overlay
+            anchors.centerIn: parent
+            modal: true
+            focus: true
+            title: qsTr("Song Changed on Disk")
+            closePolicy: Popup.CloseOnEscape
+            onOpened: {
+                saveConflictNameField.text = ""
+                saveConflictNameField.forceActiveFocus()
             }
-            TextField {
-                id: saveConflictNameField
-                objectName: "saveConflictNewName"
-                Layout.fillWidth: true
-                placeholderText: qsTr("mus_new_song")
-                onTextChanged: {
-                    const previous = shell.session.saveConflictNewSongLabel
-                    const proposed = text
-                    const cursor = cursorPosition
-                    const accepted = shell.session.acceptSaveConflictLabelEdit(previous, proposed)
-                    if (accepted !== proposed) {
-                        text = accepted
-                        cursorPosition = Math.min(cursor, accepted.length)
+            onRejected: shell.session.cancelSaveConflict()
+            onClosed: {
+                if (shell.session.saveConflictSongLabel.length > 0)
+                    shell.session.cancelSaveConflict()
+            }
+            contentItem: ColumnLayout {
+                spacing: root.chromeSpacing.four
+                Label {
+                    objectName: "saveConflictMessage"
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: shell.session.saveConflictDetail
+                }
+                TextField {
+                    id: saveConflictNameField
+                    objectName: "saveConflictNewName"
+                    Layout.fillWidth: true
+                    placeholderText: qsTr("mus_new_song")
+                    onTextChanged: {
+                        const previous = shell.session.saveConflictNewSongLabel
+                        const proposed = text
+                        const cursor = cursorPosition
+                        const accepted = shell.session.acceptSaveConflictLabelEdit(previous, proposed)
+                        if (accepted !== proposed) {
+                            text = accepted
+                            cursorPosition = Math.min(cursor, accepted.length)
+                        }
+                        shell.session.saveConflictNewSongLabel = accepted
                     }
-                    shell.session.saveConflictNewSongLabel = accepted
+                    onAccepted: {
+                        if (saveConflictForkButton.enabled)
+                            shell.session.resolveSaveConflictFork()
+                    }
                 }
-                onAccepted: {
-                    if (saveConflictForkButton.enabled)
-                        shell.session.resolveSaveConflictFork()
+                Label {
+                    objectName: "saveConflictTaken"
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: qsTr("A song named %1 already exists.").arg(saveConflictNameField.text)
+                    visible: saveConflictNameField.text.length > 0
+                        && shell.session.saveConflictLabelTaken(saveConflictNameField.text)
                 }
             }
-            Label {
-                objectName: "saveConflictTaken"
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                text: qsTr("A song named %1 already exists.").arg(saveConflictNameField.text)
-                visible: saveConflictNameField.text.length > 0
-                    && shell.session.saveConflictLabelTaken(saveConflictNameField.text)
+            footer: DialogButtonBox {
+                Button {
+                    id: saveConflictOverwriteButton
+                    objectName: "saveConflictOverwrite"
+                    text: qsTr("Overwrite")
+                    DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+                    onClicked: shell.session.resolveSaveConflictOverwrite()
+                }
+                Button {
+                    id: saveConflictForkButton
+                    objectName: "saveConflictFork"
+                    text: qsTr("Register changes as New Song...")
+                    DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+                    enabled: saveConflictNameField.text.length > 0
+                        && shell.session.saveConflictLabelValid(saveConflictNameField.text)
+                        && !shell.session.saveConflictLabelTaken(saveConflictNameField.text)
+                    onClicked: shell.session.resolveSaveConflictFork()
+                }
+                Button {
+                    objectName: "saveConflictCancel"
+                    text: qsTr("Cancel")
+                    DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+                    onClicked: shell.session.cancelSaveConflict()
+                }
             }
         }
-        footer: DialogButtonBox {
-            Button {
-                id: saveConflictOverwriteButton
-                objectName: "saveConflictOverwrite"
-                text: qsTr("Overwrite")
-                DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
-                onClicked: shell.session.resolveSaveConflictOverwrite()
-            }
-            Button {
-                id: saveConflictForkButton
-                objectName: "saveConflictFork"
-                text: qsTr("Register changes as New Song...")
-                DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
-                enabled: saveConflictNameField.text.length > 0
-                    && shell.session.saveConflictLabelValid(saveConflictNameField.text)
-                    && !shell.session.saveConflictLabelTaken(saveConflictNameField.text)
-                onClicked: shell.session.resolveSaveConflictFork()
-            }
-            Button {
-                objectName: "saveConflictCancel"
-                text: qsTr("Cancel")
-                DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
-                onClicked: shell.session.cancelSaveConflict()
-            }
+        onLoaded: {
+            if (status === Loader.Ready)
+                item.open()
         }
     }
     header: TransportBar {
@@ -550,15 +586,23 @@ ThemedWindow {
         bodyMetrics: bodyMetrics
     }
 
-    FolderDialog {
-        id: projectPicker
-        objectName: "shellProjectPicker"
-        title: qsTr("Open Project")
-        onAccepted: shell.chooseProject(selectedFolder.toString())
+    Loader {
+        id: projectPickerLoader
+        objectName: "shellProjectPickerLoader"
+        active: false
+        sourceComponent: FolderDialog {
+            objectName: "shellProjectPicker"
+            title: qsTr("Open Project")
+            onAccepted: shell.chooseProject(selectedFolder.toString())
+        }
     }
-    MessageDialog {
-        id: criticalDialog
-        objectName: "shellCriticalDialog"
-        buttons: MessageDialog.Ok
+    Loader {
+        id: criticalDialogLoader
+        objectName: "shellCriticalLoader"
+        active: false
+        sourceComponent: MessageDialog {
+            objectName: "shellCriticalDialog"
+            buttons: MessageDialog.Ok
+        }
     }
 }

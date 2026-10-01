@@ -9,20 +9,16 @@ ShellWindowSupport {
 
     Component { id: hiddenShellComponent; ShellWindow { visible: false } }
 
-    function test_savedSongRestoresOnlyAfterWindowRenders() {
+    function test_chromeRestoredStartsRestorationWithoutAFrame() {
         bootstrap.resetPreferences()
         verify(bootstrap.seedStartupSong(bootstrap.projectRoot, "mus_route101"))
         shell = hiddenShellComponent.createObject(null)
         verify(shell !== null)
-        wait(50)
-        compare(shell.shellPresenter.session.projectOpen, false,
-                "hidden completed chrome does not start project restoration")
-        compare(shell.shellPresenter.session.songTabs.tabCount, 0)
-        shell.show()
+        // No show(): chrome restoration alone starts startup; no frame needed.
         verify(waitForNative(function() {
             return shell.shellPresenter.session.songOpen
                 || shell.shellPresenter.session.lastSaveError.length > 0
-        }, 30000), "the rendered production window restores its saved song")
+        }, 30000), "the hidden production window restores its saved song at chrome restoration")
         compare(shell.shellPresenter.session.lastSaveError, "")
         compare(shell.shellPresenter.session.songTabs.selectedPage.title, "mus_route101")
         compare(shell.shellPresenter.session.songTabs.tabCount, 1)

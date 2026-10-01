@@ -195,6 +195,8 @@ TestCase {
                 "the published Two token rounds half of the captured base")
         compare(session.layoutSpaces.eight, session.baseFontPx * 2,
                 "the published Eight token doubles the captured base")
+        findChild(shell, "shellSettingsLoader").active = true
+        findChild(shell, "shellAboutLoader").active = true
         var settings = findChild(shell, "shellSettingsDialog")
         var about = findChild(shell, "shellAboutDialog")
         verify(settings !== null && about !== null,

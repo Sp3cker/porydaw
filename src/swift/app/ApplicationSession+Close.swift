@@ -159,6 +159,7 @@ extension ApplicationSession {
             pendingProjectSwitch = nil
             Task { await pending.service.close() }
         }
+        discardPrefetchedProject()
         mouseHints.setWindowActive(active: false)
         activeReplacementTask?.cancel()
         // Cancel while the scene exists: every tab's resize session and every

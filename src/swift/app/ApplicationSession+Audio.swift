@@ -17,20 +17,28 @@ extension ApplicationSession {
     func prepareAudio() {
         guard !isDisposed, case .idle = audioReadiness else { return }
         let factory = audioFactory
-        let task = Task { [weak self] in
+        let task = Task { @concurrent [weak self] in
             do {
                 try Task.checkCancellation()
                 let owner = try await factory()
-                guard let self, !self.isDisposed, !Task.isCancelled else { return }
-                self.adoptAudio(owner)
+                await self?.adoptPreparedAudio(owner)
             } catch {
-                guard let self, !self.isDisposed, !Task.isCancelled else { return }
-                let message = String(describing: error)
-                self.audioReadiness = .failed(message)
-                self.lastSaveError = message
+                await self?.failAudioPreparation(error)
             }
         }
         audioReadiness = .preparing(task)
+    }
+
+    private func adoptPreparedAudio(_ owner: NativeAudio) {
+        guard !isDisposed, !Task.isCancelled else { return }
+        adoptAudio(owner)
+    }
+
+    private func failAudioPreparation(_ error: Error) {
+        guard !isDisposed, !Task.isCancelled else { return }
+        let message = String(describing: error)
+        audioReadiness = .failed(message)
+        lastSaveError = message
     }
 
     func preparedAudio() async -> NativeAudio? {

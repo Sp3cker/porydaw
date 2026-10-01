@@ -5,7 +5,8 @@ import PorydawProject
 
 extension ProjectService {
 
-    /// Opens the project root in the project-store actor.
+    /// Opens the project root in the project-store actor. Bank view ownership
+    /// changes synchronously; main-side views invalidate on their next access.
     public func open(root: String) async throws {
         guard !closed else { throw ProjectServiceError.serviceClosed }
         let candidate = ProjectStore(projectRoot: URL(filePath: root, directoryHint: .isDirectory))
@@ -13,9 +14,9 @@ extension ProjectService {
             let opened = try await candidate.open()
             guard !closed else { throw ProjectServiceError.serviceClosed }
             store = candidate
+            bankViews.setOwner(candidate.publicationOwner)
             snapshot = opened
             projectRoot = root
-            await bankViews.reset(owner: candidate.publicationOwner)
         } catch {
             throw projectFailure(error)
         }

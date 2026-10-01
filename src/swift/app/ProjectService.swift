@@ -368,7 +368,8 @@ public actor ProjectService {
         store = nil
         snapshot = nil
         closed = true
-        await bankViews.reset()
+        bankViews.setOwner(nil)
+        await bankViews.purge()
     }
 }
 

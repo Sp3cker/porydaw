@@ -99,13 +99,28 @@ public struct EditorDrawerLayout {
     /// attach changes no state. Replacing content is an explicit detach followed by
     /// an attach, and the URL is resolved once and never re-pointed.
     public mutating func attachPage(_ page: EditorDrawerPage) -> EditorDrawerChangeSet {
+        guard registerPage(page) else { return .untouched(snapshot) }
+        return publish()
+    }
+
+    /// Attaches accepted pages in order, then resolves their combined layout once.
+    public mutating func attachPages(_ pages: [EditorDrawerPage]) -> EditorDrawerChangeSet {
+        var attached = false
+        for page in pages {
+            if registerPage(page) { attached = true }
+        }
+        guard attached else { return .untouched(snapshot) }
+        return publish()
+    }
+
+    private mutating func registerPage(_ page: EditorDrawerPage) -> Bool {
         let kind = page.sectionKind
-        guard sections[kind].page == nil else { return .untouched(snapshot) }
+        guard sections[kind].page == nil else { return false }
         let url = Self.resolvedContentUrl(page.contentUrl)
-        guard !url.isEmpty else { return .untouched(snapshot) }
+        guard !url.isEmpty else { return false }
         sections[kind].page = page
         sections[kind].contentUrl = url
-        return publish()
+        return true
     }
 
     /// Cancels `page` synchronously, then drops its slot, URL and rectangles. The

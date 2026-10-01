@@ -269,6 +269,12 @@ public final class EditorDrawerPresenter {
         publish(layout.attachPage(page))
     }
 
+    /// Swift-only page attachment: publishes only the combined final layout.
+    @QtIgnored
+    public func attachSections(_ pages: [EditorDrawerPage]) {
+        publish(layout.attachPages(pages))
+    }
+
     /// Swift-only page detachment: cancels `page` synchronously, then publishes the
     /// kind as unavailable.
     @QtIgnored

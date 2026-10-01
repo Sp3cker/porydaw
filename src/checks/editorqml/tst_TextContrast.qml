@@ -149,6 +149,7 @@ TestCase {
     }
 
     function auditSettings(context) {
+        findChild(shell, "shellSettingsLoader").active = true
         const dialog = findChild(shell, "shellSettingsDialog")
         verify(dialog !== null, "settings window exists")
         shell.shellPresenter.activate("edit.engine_settings")

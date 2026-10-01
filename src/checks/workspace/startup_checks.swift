@@ -55,6 +55,16 @@ private final class StartupAudioGate {
 }
 
 @MainActor
+private final class StartupAudioFailureProbe {
+    private(set) var attempts = 0
+
+    func make(failure: Error) async throws -> NativeAudio {
+        attempts += 1
+        throw failure
+    }
+}
+
+@MainActor
 internal func runWorkspaceStartupChecks(_ report: CheckReport) {
     startupSingleFlightConsumers(report)
     startupPendingEngineSettings(report)
@@ -271,11 +281,8 @@ private func startupPreparationFailureRetainsCause(_ report: CheckReport) {
     let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-startup-audio-failure")
     let session = ApplicationSession()
     let failure = NativeAudioError.initializationFailed("The audio backend rejected device preparation.")
-    var attempts = 0
-    session.audioFactory = {
-        attempts += 1
-        throw failure
-    }
+    let probe = StartupAudioFailureProbe()
+    session.audioFactory = { try await probe.make(failure: failure) }
     defer {
         session.hostClosing()
         session.acknowledgeGridDetached()
@@ -300,7 +307,7 @@ private func startupPreparationFailureRetainsCause(_ report: CheckReport) {
                 cppID: id, what: "the song-open failure keeps its preparation cause instead of a generic fallback")
             await session.openTab(label: "mus_session_test", at: nil)
             report.expectEqual(
-                expected: 1, actual: attempts, cppID: id,
+                expected: 1, actual: await probe.attempts, cppID: id,
                 what: "a second song-open consumer does not restart terminally failed preparation")
             report.expectEqual(
                 expected: String(describing: failure), actual: session.lastSaveError,
