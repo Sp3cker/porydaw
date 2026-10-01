@@ -381,7 +381,8 @@ target_link_libraries(porydaw_checks PRIVATE
     QtBridgeCpp
 )
 porydaw_link_linux_swift_runtime(porydaw_checks
-    swift_core_check PorydawApp QtBridge PorydawProject PorydawPlayback PorydawCore)
+    swift_core_check PorydawApp QtBridge PorydawProject PorydawPlayback PorydawCore
+    PorydawSample BinaryParsing)
 target_precompile_headers(porydaw_checks PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/src/porydaw_pch.hpp>")
 target_compile_definitions(porydaw_checks PRIVATE

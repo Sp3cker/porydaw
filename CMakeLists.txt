@@ -460,7 +460,8 @@ target_link_libraries(porydaw PRIVATE
     PorydawApp
 )
 porydaw_link_linux_swift_runtime(porydaw
-    porydaw_shell_entry PorydawApp QtBridge PorydawProject PorydawPlayback PorydawCore)
+    porydaw_shell_entry PorydawApp QtBridge PorydawProject PorydawPlayback PorydawCore
+    PorydawSample BinaryParsing)
 
 if(PORYDAW_BUILD_CHECKS)
     add_subdirectory(src/checks)
