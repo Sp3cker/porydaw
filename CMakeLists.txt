@@ -101,15 +101,17 @@ else()
     message(WARNING "Release IPO/LTO disabled: ${PORYDAW_IPO_ERROR}")
 endif()
 
-# AddressSanitizer build for the harness sweep (deno task checks): memory
-# bugs abort with a stack trace instead of corrupting silently. GCC/Clang
-# only. Use a separate build dir, e.g.:
-#   cmake -B build-asan -DPORYDAW_ASAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+# AddressSanitizer instruments both Swift and native code in an isolated tree.
+# Configure and build with: deno task build:checks --asan
 option(PORYDAW_ASAN "Build with AddressSanitizer" OFF)
 option(PORYDAW_BUILD_CHECKS "Build the porydaw check executable" ON)
 if(PORYDAW_ASAN)
-    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
-    add_link_options(-fsanitize=address)
+    add_compile_options(
+        "$<$<COMPILE_LANGUAGE:C,CXX>:-fsanitize=address;-fno-omit-frame-pointer>"
+        "$<$<COMPILE_LANGUAGE:Swift>:-sanitize=address>")
+    add_link_options(
+        "$<$<LINK_LANGUAGE:C,CXX>:-fsanitize=address>"
+        "$<$<LINK_LANGUAGE:Swift>:-sanitize=address>")
 endif()
 
 find_package(Qt6 6.11 REQUIRED COMPONENTS Qml Quick QuickControls2 Svg Widgets)

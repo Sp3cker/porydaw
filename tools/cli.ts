@@ -46,7 +46,7 @@ function help(command?: Subcommand): string {
     case "build:app":
     case "build:checks":
     case "build:render":
-      return `usage: deno task ${command} [--release] [--help]
+      return `usage: deno task ${command} [--release | --asan] [--help]
   ${
         command === "build:app"
           ? "build the application"
@@ -56,6 +56,7 @@ function help(command?: Subcommand): string {
       }
   --release  configure and build Release in build/release; default is Debug
              in build/debug
+  --asan     configure and build Debug with AddressSanitizer in build/asan
   --help     show this help without building
 
 A failed build prints its errors and the path of the complete log
@@ -108,9 +109,15 @@ function showHelp(command?: Subcommand): never {
 }
 
 function buildConfig(args: string[], command: Subcommand): BuildConfig {
-  const unknown = args.find((arg) => arg !== "--release" && arg !== "--help");
+  const unknown = args.find((arg) =>
+    arg !== "--release" && arg !== "--asan" && arg !== "--help"
+  );
   if (unknown) usage(command, `unknown argument ${unknown}`);
   if (args.includes("--help")) showHelp(command);
+  if (args.includes("--release") && args.includes("--asan")) {
+    usage(command, "--release and --asan are mutually exclusive");
+  }
+  if (args.includes("--asan")) return "asan";
   return args.includes("--release") ? "release" : "debug";
 }
 
