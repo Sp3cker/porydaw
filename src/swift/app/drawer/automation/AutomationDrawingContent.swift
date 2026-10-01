@@ -7,6 +7,7 @@ extension AutomationPage {
     /// plus sticky chrome, ghost/curve/selection statics, preview draft.
     func publishDrawingContent() {
         guard let session else {
+            previewNodes.replaceSubrange(0..<previewNodes.count, with: [])
             let empty = retainedEmptyDisplayList()
             let fresh = [empty, empty, empty]
             guard fresh != displayLists else { return }
@@ -74,10 +75,12 @@ extension AutomationPage {
             }
             if let edit = previewEdit, edit.parameter == lane.parameter {
                 // A live draw paints the lane it would commit.
+                let stroke: Double
+                if case .pencil = gesture { stroke = 2 } else { stroke = 1 }
                 appendDrawingCurve(
                     Self.previewCurve(lane, replacedBy: edit), metadata: lane.metadata,
                     projection: curveProjection, argb: curveArgb,
-                    runs: &runs, edges: &curveEdges)
+                    stroke: stroke, edgeStroke: 1, runs: &runs, edges: &curveEdges)
             } else if !lane.points.isEmpty {
                 appendDrawingCurve(
                     lane.segments, metadata: lane.metadata, projection: curveProjection,
@@ -104,10 +107,10 @@ extension AutomationPage {
                     dx: -1, width: 1, y: 0, height: Float(plotHeight), argb: edgeColor, flags: 1))
         }
         var previewRuns: [DrawerStaticRect] = []
-        var previewNodes: [DrawerAnchoredRect] = []
+        var draftNodes: [AutomationNodeHandle] = []
         if let facts = frozen, !previewPoints.isEmpty {
             let previewProjection = makeProjection(facts: facts, camera: gestureCamera)
-            let extent = Float(nodePaint.nodeRadius)
+            let paint = nodePaint
             let phantomPreview: Bool
             let ink: UInt32
             switch gesture {
@@ -122,16 +125,26 @@ extension AutomationPage {
                 phantomPreview = false
                 ink = curveArgb
             }
-            for point in previewPoints {
-                previewNodes.append(
-                    DrawerAnchoredRect(
-                        tick: point.tick,
-                        dx: phantomPreview ? -Float(previewProjection.x(point.tick)) - extent : -extent,
-                        width: 2 * extent,
-                        y: Float(
-                            (previewProjection.y(point.value, metadata: facts.metadata)
-                                - Double(extent)).rounded()),
-                        height: 2 * extent, argb: ink, flags: 1))
+            let showMarkers: Bool
+            if case .pencil = gesture {
+                showMarkers = previewProjection.markersVisible()
+            } else {
+                showMarkers = true
+            }
+            for point in previewPoints where showMarkers {
+                let node = AutomationNodeHandle()
+                node.x = phantomPreview ? 0 : previewProjection.x(point.tick)
+                node.y = previewProjection.y(point.value, metadata: facts.metadata)
+                node.tick = Double(point.tick)
+                node.value = point.value
+                node.radius = paint.nodeRadius
+                node.ringRadius = paint.ringRadius
+                node.outlineWidth = paint.outlineWidth
+                node.outlineColor = ink == curveArgb ? palette.automationNodeInk : palette.selectionEdge
+                node.ringColor = palette.selectionRing
+                node.primitiveName = "automationPreviewNode"
+                node.refreshSpec()
+                draftNodes.append(node)
             }
             if case .phantom(let transaction) = gesture, transaction.drag.exceeded {
                 let next = facts.snapshot.displaySeries.first { $0.tick > transaction.target.original.tick }
@@ -142,9 +155,16 @@ extension AutomationPage {
                         y: Float(
                             (previewProjection.y(
                                 transaction.target.current.value,
-                                metadata: facts.metadata) - 1).rounded()),
-                        height: 2, argb: ink))
+                                metadata: facts.metadata) - 0.5).rounded()),
+                        height: 1, argb: ink))
             }
+        }
+        let common = min(previewNodes.count, draftNodes.count)
+        for index in 0..<common where !previewNodes[index].matches(draftNodes[index]) {
+            previewNodes[index] = draftNodes[index]
+        }
+        if previewNodes.count != draftNodes.count {
+            previewNodes.replaceSubrange(common..<previewNodes.count, with: draftNodes[common...])
         }
         // Viewport-space lists through the Task 6a builders; record order is
         // the paint order inside each list, matching the legacy layer order.
@@ -177,9 +197,6 @@ extension AutomationPage {
             into: &staticsListWriter, rects: selectionEdges, camera: camera, dpr: dpr,
             viewport: viewport)
         let staticsData = staticsListWriter.finish()
-        DrawerStaticsContent.buildAnchored(
-            into: &previewListWriter, rects: previewNodes, camera: camera, dpr: dpr,
-            viewport: viewport)
         DrawerStaticsContent.buildTickRects(
             into: &previewListWriter, rects: previewRuns, camera: camera, dpr: dpr,
             viewport: viewport)
@@ -202,6 +219,7 @@ extension AutomationPage {
     private func appendDrawingCurve(
         _ segments: [AutomationCurveSegment], metadata: AutomationParameterMetadata,
         projection: AutomationProjection, argb: UInt32,
+        stroke: Double = 2, edgeStroke: Double = 2,
         runs: inout [DrawerStaticRect], edges: inout [DrawerAnchoredRect]
     ) {
         for (index, segment) in segments.enumerated() {
@@ -210,7 +228,7 @@ extension AutomationPage {
                 DrawerStaticRect(
                     tickStart: segment.tickBegin,
                     tickEnd: segment.tickEnd ?? TimeDefaults.maxTick,
-                    y: Float((fromY - 1).rounded()), height: 2, argb: argb))
+                    y: Float((fromY - stroke / 2).rounded()), height: Float(stroke), argb: argb))
             let next = index + 1 < segments.count ? segments[index + 1] : nil
             if segment.kind == .step, let next, next.fromValue != segment.fromValue,
                 let end = segment.tickEnd
@@ -218,9 +236,9 @@ extension AutomationPage {
                 let nextY = projection.y(next.fromValue, metadata: metadata)
                 edges.append(
                     DrawerAnchoredRect(
-                        tick: end, dx: -1, width: 2,
+                        tick: end, dx: -Float(edgeStroke / 2), width: Float(edgeStroke),
                         y: Float(min(fromY, nextY).rounded()),
-                        height: Float(max(2, abs(nextY - fromY))), argb: argb, flags: 1))
+                        height: Float(max(edgeStroke, abs(nextY - fromY))), argb: argb, flags: 1))
             }
         }
     }

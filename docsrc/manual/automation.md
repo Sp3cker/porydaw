@@ -18,8 +18,10 @@
   pointer will write, using the lane's ink. Existing nodes covered by the draw
   are hidden until the gesture finishes. Escape cancels the draft and restores
   the unchanged lane.
-- Node markers are hollow and remain visible farther out when zooming. Their
-  positions update with the curve in the same frame.
+- Live drafts and committed nodes use hollow circular markers with the same
+  font-relative radius and outline. Selection adds a larger circular ring.
+  Normal curves are two logical pixels wide; drag and sweep preview lines
+  are one logical pixel wide.
 - Right-click an insertion ghost between nodes to enter the value to insert
   at that position.
 

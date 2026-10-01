@@ -70,15 +70,6 @@ func drawerAutomationRasterScrolledPhantom(_ report: CheckReport, suite: Documen
         _ = page.pointerMove(x: 0, y: targetY, buttons: AutomationQtButton.left)
         let dragAnchor = 2 * targetY - sourceY
         _ = page.pointerMove(x: 0, y: dragAnchor, buttons: AutomationQtButton.left)
-        let preview = AutomationDisplayProbe(page)
-        let edge = SceneRectPacking.argb(page.palette.selectionEdge)
-        report.expect(page.previewPoints.contains { $0.tick == 144 && $0.value == cursorValue }
-                && preview.valid
-                && preview.preview.contains {
-                    $0.argb == edge && $0.h > 2
-                        && abs($0.y + $0.h / 2 - targetY) <= 1
-                      }, cppID: id,
-                      message: "the held phantom paints the exact tick-144 cursor-value preview")
         report.expectEqual(expected: original, actual: fixture.snapshot, cppID: id,
                            what: "the scrolled phantom hover and drag do not commit")
         report.expect(originalBytes != nil

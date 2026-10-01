@@ -15,8 +15,8 @@ ShellDrawerParitySupport {
         var model = automationModel()
         var fills = collectByName(page, "automationNodeFill", [])
         var node = null
-        var preview = findChild(page, "automationPreviewRects")
-        verify(preview && preview.width > 0, "the mounted plot has a transient preview renderer")
+        var preview = automationPlotInput()
+        verify(preview && preview.width > 0, "the mounted plot has a transient preview surface")
         function previewAt(x, y) {
             var frame = RollNoteFaces.grab(testCase, preview)
             var sx = frame.width / preview.width

@@ -116,6 +116,7 @@ public final class AutomationPage: EditorDrawerPage {
     /// published count beside the model for the same reason as the tabs.
     public var nodes: QListModel<AutomationNodeHandle> = QListModel()
     public var nodeCount: Int = 0
+    public var previewNodes: QListModel<AutomationNodeHandle> = QListModel()
     @QtTracked public var displayRevision = 0
     /// Viewport-space display list `list`: 0 axis, 1 statics, 2 preview.
     public func displayList(list: Int) -> Data {

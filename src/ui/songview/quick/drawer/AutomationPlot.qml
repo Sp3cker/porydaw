@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Shapes
 import Porydaw.Ui
 
 Item {
@@ -143,64 +144,88 @@ Item {
         Accessible.ignored: true
     }
 
+    component NodeVisual: Item {
+        id: node
+        required property var model
+        required property color fillColor
+        property bool hovered: false
+        readonly property var s: model ? model.spec : ({})
+        objectName: node.s.primitiveName + (node.s.phantom ? "Phantom" : "")
+        Accessible.ignored: true
+
+        Shape {
+            objectName: "automationNodeRing"
+            visible: node.s.selected
+            x: node.s.x - node.s.ringOuterRadius
+            y: node.s.y - node.s.ringOuterRadius
+            width: 2 * node.s.ringOuterRadius
+            height: width
+            ShapePath {
+                fillColor: "transparent"
+                strokeColor: node.s.ringColor
+                strokeWidth: node.s.ringWidth
+                PathAngleArc {
+                    centerX: node.s.ringOuterRadius
+                    centerY: node.s.ringOuterRadius
+                    radiusX: node.s.ringRadius
+                    radiusY: radiusX
+                    startAngle: 0
+                    sweepAngle: 360
+                }
+            }
+        }
+        Shape {
+            objectName: "automationNodeHover"
+            visible: node.hovered && !node.s.selected
+            x: node.s.x - node.s.hoverOuterRadius
+            y: node.s.y - node.s.hoverOuterRadius
+            width: 2 * node.s.hoverOuterRadius
+            height: width
+            ShapePath {
+                fillColor: "transparent"
+                strokeColor: node.s.ringColor
+                strokeWidth: 2
+                PathAngleArc {
+                    centerX: node.s.hoverOuterRadius
+                    centerY: node.s.hoverOuterRadius
+                    radiusX: node.s.hoverOuterRadius - 1
+                    radiusY: radiusX
+                    startAngle: 0
+                    sweepAngle: 360
+                }
+            }
+        }
+        Shape {
+            objectName: "automationNodeFill"
+            x: node.s.x - node.s.outerRadius
+            y: node.s.y - node.s.outerRadius
+            width: 2 * node.s.outerRadius
+            height: width
+            ShapePath {
+                fillColor: node.fillColor
+                strokeColor: node.s.outlineColor
+                strokeWidth: 2 * node.s.outlineWidth
+                PathAngleArc {
+                    centerX: node.s.outerRadius
+                    centerY: node.s.outerRadius
+                    radiusX: node.s.radius
+                    radiusY: radiusX
+                    startAngle: 0
+                    sweepAngle: 360
+                }
+            }
+        }
+    }
     // Draw published nodes and the origin phantom with selected/hover rings.
     Repeater {
         model: (plot.pageModel ? plot.pageModel.nodes : [])
 
-        delegate: Item {
-            id: node
-
-            required property var model
-            // One packed spec per node: every child binding reads the local
-            // map instead of paying a metaCall per property.
-            readonly property var s: model ? model.spec : ({})
-
-            objectName: node.s.primitiveName + (node.s.phantom ? "Phantom" : "")
-            x: 0
-            y: 0
+        delegate: NodeVisual {
+            fillColor: plot.gridPalette.windowBackground
+            hovered: plot.pageModel.hoverDisplay.hasNode
+                     && plot.pageModel.hoverDisplay.nodeTick === s.tick
             width: plot.width
             height: plot.height
-            Accessible.ignored: true
-
-            Rectangle {
-                objectName: "automationNodeRing"
-                visible: node.s.selected
-                x: node.s.x - node.s.ringRadius
-                y: node.s.y - node.s.ringRadius
-                width: 2 * node.s.ringRadius
-                height: 2 * node.s.ringRadius
-                radius: node.s.ringRadius
-                color: "transparent"
-                border.width: Math.max(1, node.s.outlineWidth)
-                border.color: node.s.ringColor
-            }
-
-            Rectangle {
-                objectName: "automationNodeHover"
-                visible: plot.pageModel.hoverDisplay.hasNode
-                         && plot.pageModel.hoverDisplay.nodeTick === node.s.tick
-                         && !node.s.selected
-                x: node.s.x - node.s.ringRadius
-                y: node.s.y - node.s.ringRadius
-                width: 2 * node.s.ringRadius
-                height: 2 * node.s.ringRadius
-                radius: node.s.ringRadius
-                color: "transparent"
-                border.width: Math.max(1, node.s.outlineWidth)
-                border.color: node.s.ringColor
-            }
-
-            Rectangle {
-                objectName: "automationNodeFill"
-                x: node.s.x - node.s.radius
-                y: node.s.y - node.s.radius
-                width: 2 * node.s.radius
-                height: 2 * node.s.radius
-                radius: node.s.radius
-                color: "transparent"
-                border.width: Math.max(1, node.s.outlineWidth)
-                border.color: node.s.outlineColor
-            }
         }
     }
 
@@ -227,6 +252,14 @@ Item {
         source: plot.pageModel
         list: 2
         revision: plot.pageModel ? plot.pageModel.displayRevision : 0
+    }
+    Repeater {
+        model: plot.pageModel ? plot.pageModel.previewNodes : []
+        delegate: NodeVisual {
+            fillColor: plot.gridPalette.windowBackground
+            width: plot.width
+            height: plot.height
+        }
     }
 
     // The hover value label and the live gesture's own readout.

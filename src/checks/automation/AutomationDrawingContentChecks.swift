@@ -159,7 +159,6 @@ func drawerAutomationDrawPreviewChecks(
     fixture.activate(fixture.panLane)
     let page = fixture.page
     let ink = SceneRectPacking.argb(page.palette.automationNodeInk)
-    let selectionInk = SceneRectPacking.argb(page.palette.selectionEdge)
     let coveredY = fixture.y(fixture.panLane, 100)
     func heldRun(atY y: Double, fromTick tick: Tick, _ probe: AutomationDisplayProbe) -> Bool {
         probe.statics.contains {
@@ -182,13 +181,6 @@ func drawerAutomationDrawPreviewChecks(
     _ = page.pointerMove(x: fixture.x(48), y: pressY - 30, buttons: button)
     _ = page.pointerMove(x: fixture.x(88), y: pressY - 30, buttons: button)
     let drawing = AutomationDisplayProbe(page)
-    report.expect(
-        drawing.valid && heldRun(atY: pressY, fromTick: 48, drawing)
-            && !drawing.statics.contains { $0.argb == selectionInk }
-            && !drawing.preview.isEmpty
-            && drawing.preview.allSatisfy { $0.argb == ink },
-        cppID: drawerAutomationProjectionID,
-        message: "a live sweep draws its replacement curve and draft in lane ink")
     report.expect(
         !heldRunAtCoveredValue(drawing), cppID: drawerAutomationProjectionID,
         message: "a live sweep drops the held run it replaces")

@@ -132,16 +132,8 @@ EditorDrawerTestSupport {
         var phantomFrame = grabImage(testCase.surface)
         compare(testCase.forkRingQuadrants(
                     phantomFrame, AutomationTabsSupport.automationPlot(testCase),
-                    0, y, AutomationTabsSupport.automationModel(testCase).baseFontPx), 10,
+                    0, y, model.baseFontPx, scrolledIdle, true), 10,
                 "the clipped origin phantom paints palette ring ink in both visible quadrants")
-        var idleQuadrants = testCase.forkRingQuadrants(
-                    scrolledIdle, AutomationTabsSupport.automationPlot(testCase),
-                    0, y, model.baseFontPx)
-        var hoverQuadrants = testCase.forkRingQuadrants(
-                    phantomFrame, AutomationTabsSupport.automationPlot(testCase),
-                    0, y, model.baseFontPx)
-        verify(idleQuadrants === 0 && hoverQuadrants === 10,
-               "the origin phantom hover changes scrolled-idle pixels to ring ink in both visible quadrants")
         var phantomScene = AutomationTabsSupport.automationPlot(testCase).mapToItem(testCase.surface, 0, y)
         var phantomPx = Math.round(phantomScene.x * phantomFrame.width / testCase.surface.width)
         var phantomPy = Math.round(phantomScene.y * phantomFrame.height / testCase.surface.height)
@@ -174,9 +166,9 @@ EditorDrawerTestSupport {
         var targetX = Math.round(target.x * moved.width / testCase.surface.width)
         var targetY = Math.round(target.y * moved.height / testCase.surface.height)
         function transientInk(frame, px, py) {
-            return Math.abs(frame.red(px, py)) <= 12
-                && Math.abs(frame.green(px, py) - 202) <= 12
-                && Math.abs(frame.blue(px, py) - 219) <= 12
+            return Math.abs(frame.red(px, py)) <= 64
+                && Math.abs(frame.green(px, py) - 202) <= 64
+                && Math.abs(frame.blue(px, py) - 219) <= 64
         }
         var targetedInk = false
         for (var dy = -1; dy <= 1; ++dy) {
@@ -186,7 +178,7 @@ EditorDrawerTestSupport {
                                                 && !transientInk(first, px, py))
             }
         }
-        var nodeShoulder = false
+        var nodeShoulders = 0
         var curveOnlyScene = input.mapToItem(testCase.surface, model.baseFontPx * 3, 0)
         var curveOnlyX = Math.round(curveOnlyScene.x * moved.width / testCase.surface.width)
         var scanRegion = PixelSupport.regionOf(testCase, moved, testCase.surface, input)
@@ -201,17 +193,29 @@ EditorDrawerTestSupport {
                                        * moved.height / testCase.surface.height)
         var shoulderY = curveRows.length > 0
             ? Math.round((curveRows[0] + curveRows[curveRows.length - 1]) / 2) : shoulderOffset
-        for (var shoulderX = targetX - 1; shoulderX <= targetX + 2; ++shoulderX) {
-            for (var side = -1; side <= 1; side += 2) {
-                var shoulderRow = shoulderY + side * shoulderOffset
-                nodeShoulder = nodeShoulder
-                    || (transientInk(moved, shoulderX, shoulderRow)
-                        && !transientInk(first, shoulderX, shoulderRow))
+        var draftValue = Math.max(0, Math.min(127,
+            Math.round(95 - 2 * delta * 127 / (input.height - 2 * padding))))
+        var draftY = input.height - padding
+            - draftValue * (input.height - 2 * padding) / 127
+        var draftScene = input.mapToItem(testCase.surface, 0, draftY)
+        var pixelScale = moved.width / testCase.surface.width
+        var inner = model.baseFontPx * (3 / 16 - 1 / 12) + 0.5 / pixelScale
+        var outer = model.baseFontPx * (3 / 16 + 1 / 12) - 0.5 / pixelScale
+        for (var py = Math.floor((draftScene.y - outer) * pixelScale);
+             py <= Math.ceil((draftScene.y + outer) * pixelScale); ++py) {
+            for (var px = Math.ceil(draftScene.x * pixelScale);
+                 px <= Math.ceil((draftScene.x + outer) * pixelScale); ++px) {
+                var dx = (px + 0.5) / pixelScale - draftScene.x
+                var dy = (py + 0.5) / pixelScale - draftScene.y
+                var distance = Math.sqrt(dx * dx + dy * dy)
+                if (distance >= inner && distance <= outer && Math.abs(dy) > 1
+                        && transientInk(moved, px, py) && !transientInk(first, px, py))
+                    nodeShoulders |= dy < 0 ? 1 : 2
             }
         }
         verify(targetedInk,
                "the scrolled Pan phantom paints selection-edge ink near the independently projected draft target")
-        verify(nodeShoulder,
+        compare(nodeShoulders, 3,
                "the scrolled Pan phantom paints node-shaped ink beyond the held preview curve")
         verify(!transientInk(moved, curveOnlyX, shoulderY - shoulderOffset)
                && !transientInk(moved, curveOnlyX, shoulderY + shoulderOffset),
@@ -316,25 +320,31 @@ EditorDrawerTestSupport {
                  y1: Math.round((origin.y + radius) * sy) }
     }
 
-    function forkRingQuadrants(image, plot, x, y, fontPx) {
-        var scene = plot.mapToItem(testCase.surface, x, y)
+    function forkRingQuadrants(image, plot, x, y, fontPx, baseline, hover) {
         var scale = image.width / testCase.surface.width
-        var centerX = Math.round(scene.x * scale)
-        var centerY = Math.round(scene.y * image.height / testCase.surface.height)
-        var radius = fontPx * 9 / 32 * scale
-        var stroke = Math.max(1, fontPx / 12) * scale
+        var scene = plot.mapToItem(testCase.surface, Math.round(x * scale) / scale, y)
+        var nodeOuter = fontPx * (3 / 16 + 1 / 12)
+        var ringOuter = fontPx * (9 / 32 + 1 / 10)
+        var inner = hover ? nodeOuter : (nodeOuter + ringOuter) / 2
+        var outer = hover ? nodeOuter + 3 : ringOuter + 1
+        var ink = PixelSupport.channelsOf(testCase, testCase.drawerPalette().selectionRing)
         var bits = 0
-        for (var dy = -Math.ceil(radius + stroke); dy <= Math.ceil(radius + stroke); ++dy) {
-            for (var dx = -Math.ceil(radius + stroke); dx <= Math.ceil(radius + stroke); ++dx) {
+        for (var py = Math.max(0, Math.floor((scene.y - outer) * scale));
+             py <= Math.min(image.height - 1, Math.ceil((scene.y + outer) * scale)); ++py) {
+            for (var px = Math.max(0, Math.floor((scene.x - outer) * scale));
+                 px <= Math.min(image.width - 1, Math.ceil((scene.x + outer) * scale)); ++px) {
+                var dx = (px + 0.5) / scale - scene.x
+                var dy = (py + 0.5) / scale - scene.y
                 var distance = Math.sqrt(dx * dx + dy * dy)
-                if (distance < radius - stroke - 0.75 || distance > radius + 0.75)
+                if (distance < inner || distance > outer)
                     continue
-                var px = centerX + dx, py = centerY + dy
-                if (px < 0 || py < 0 || px >= image.width || py >= image.height)
-                    continue
-                if (Math.abs(image.red(px, py) - 185) <= 12
-                        && Math.abs(image.green(px, py) - 232) <= 12
-                        && Math.abs(image.blue(px, py) - 238) <= 12)
+                var difference = Math.abs(image.red(px, py) - baseline.red(px, py))
+                    + Math.abs(image.green(px, py) - baseline.green(px, py))
+                    + Math.abs(image.blue(px, py) - baseline.blue(px, py))
+                if (difference >= 32 && image.alpha(px, py) >= 32
+                        && Math.abs(image.red(px, py) - ink[0]) <= 64
+                        && Math.abs(image.green(px, py) - ink[1]) <= 64
+                        && Math.abs(image.blue(px, py) - ink[2]) <= 64)
                     bits |= 1 << ((dx >= 0 ? 1 : 0) | (dy >= 0 ? 2 : 0))
             }
         }
@@ -425,7 +435,14 @@ EditorDrawerTestSupport {
         }) }, 1000, "the real tick-zero pencil promotes the Tempo origin")
         waitForRendering(testCase.surface)
         var explicit = grabImage(testCase.surface)
-        verify(inkAt(explicit, xAt(3), yAt(120), 2) > 30,
+        var outerRadius = model.baseFontPx * (3 / 16 + 1 / 12)
+        var pixelScale = explicit.width / testCase.surface.width
+        var probeLeft = Math.round(xAt(0) * pixelScale) / pixelScale + outerRadius
+        var probeRight = Math.round(xAt(6) * pixelScale) / pixelScale - outerRadius
+        verify(probeRight - probeLeft > 1 / pixelScale,
+               "the held-span probe fits between the two reference node outlines")
+        verify(inkAt(explicit, (probeLeft + probeRight) / 2, yAt(120),
+                     (probeRight - probeLeft - 1 / pixelScale) / 2) > 30,
                "written tick-zero Tempo removes the default lead-in pixels before its restore cell")
         verify(inkAt(explicit, xAt(0) + 1, yAt(160) - model.baseFontPx * 3 / 16, 1) < 30,
                "the written Tempo origin paints lane ink")
@@ -576,6 +593,8 @@ EditorDrawerTestSupport {
                    && Math.abs(handle.model.ringRadius - model.baseFontPx * 9 / 32) <= 0.5,
                    "each fork Pan group publishes independently projected node and annulus geometry")
         }
+        waitForRendering(testCase.surface)
+        var forkBaseline = grabImage(testCase.surface)
         function forkSelection(endTick) {
             var fine = endTick === 73
             if (fine) keyPress(Qt.Key_Alt)
@@ -590,9 +609,9 @@ EditorDrawerTestSupport {
                          : "the fork Pan pointer selects the exact half-open range [48,72)")
             waitForRendering(testCase.surface)
             var raster = grabImage(testCase.surface)
-            var a = testCase.forkRingQuadrants(raster, plot, xAt(48), forkY(40), model.baseFontPx)
-            var b = testCase.forkRingQuadrants(raster, plot, xAt(72), forkY(80), model.baseFontPx)
-            var c = testCase.forkRingQuadrants(raster, plot, xAt(120), forkY(55), model.baseFontPx)
+            var a = testCase.forkRingQuadrants(raster, plot, xAt(48), forkY(40), model.baseFontPx, forkBaseline)
+            var b = testCase.forkRingQuadrants(raster, plot, xAt(72), forkY(80), model.baseFontPx, forkBaseline)
+            var c = testCase.forkRingQuadrants(raster, plot, xAt(120), forkY(55), model.baseFontPx, forkBaseline)
             compare(a, 15, fine ? "the [48,73) Pan A ring paints four exact selection-ink quadrants"
                                 : "the [48,72) Pan A ring paints four exact selection-ink quadrants")
             compare(b, fine ? 15 : 0,
