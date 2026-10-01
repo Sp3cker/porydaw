@@ -29,8 +29,6 @@ internal func runProvenanceChecks(_ report: CheckReport) {
             message: "A048 sample-update high-resolution source imports")
         report.scoped(cppID: "samplecheck/SampleProcessingTest::sampleUpdateRefusals").expect(source.frameCount > 0,
             message: "A056 sample-update-refusals high-resolution source imports")
-        report.scoped(cppID: "samplecheck/SampleProcessingTest::sidecarRemove").expect(source.frameCount > 0,
-            message: "A067 sidecar-remove high-resolution source imports")
         var params = SampleDocument.defaultParams(for: source)
         params.cropStart = 150; params.targetRate = 13379; params.baseKey = 59; params.fineTuneCents = 25
         var document = SampleDocument(source: source)
@@ -41,51 +39,49 @@ internal func runProvenanceChecks(_ report: CheckReport) {
         try SampleRegistrar.register(projectRoot: project, name: name, wav: committed)
         roundtrip.expect((try? SampleRegistrar.readCommitted(projectRoot: project, name: name).wav) == committed,
             message: "A017 provenance sample registers")
-        var sidecar = SampleSidecar()
-        sidecar.sourcePath = sourcePath
-        sidecar.sourceSha256 = SampleSourceHash.sha256Hex(sourceBytes)
-        sidecar.params = params
-        try SampleRegistrar.writeSidecar(projectRoot: project, name: name, sidecar)
-        roundtrip.expect(FileManager.default.fileExists(atPath: SampleRegistrar.sidecarPath(projectRoot: project, name: name)),
-            message: "A018 sidecar writes")
-        let back = SampleRegistrar.readSidecar(projectRoot: project, name: name)
-        roundtrip.expect(back != nil, message: "A019 sidecar reads back")
-        roundtrip.expect(back == sidecar, message: "A020 sidecar round-trips every field")
+        var provenance = SampleProvenance()
+        provenance.sourcePath = sourcePath
+        provenance.sourceSha256 = SampleSourceHash.sha256Hex(sourceBytes)
+        provenance.params = params
+        roundtrip.expect(
+            SampleProvenance.decode(provenance.jsonData()) == provenance,
+            message: "stored provenance record round-trips every field")
         let rerender = report.scoped(cppID: "samplecheck/SampleProcessingTest::sidecarRerender")
         rerender.expect((try? SampleRegistrar.readCommitted(projectRoot: project, name: name).wav) == committed,
             message: "A025 provenance sample registers")
-        rerender.expect(back != nil, message: "A026 sidecar writes")
-        rerender.expect(back == sidecar, message: "A027 sidecar reads back")
-        rerender.expect((try? Data(contentsOf: URL(filePath: sourcePath))).map(SampleSourceHash.sha256Hex) == back?.sourceSha256,
-            message: "A028 reread source matches sidecar hash")
-        let resolved = try SampleReopen.resolve(wav: committed, wavPath: project + "/sound/direct_sound_samples/\(name).wav", sidecar: back)
+        rerender.expect(
+            (try? Data(contentsOf: URL(filePath: sourcePath))).map(SampleSourceHash.sha256Hex)
+                == provenance.sourceSha256,
+            message: "A028 reread source matches provenance hash")
+        let resolved = try SampleReopen.resolve(
+            wav: committed, wavPath: project + "/sound/direct_sound_samples/\(name).wav", provenance: provenance)
         rerender.expect(resolved.fromSource && resolved.sample.sourcePath == sourcePath,
-            message: "A029 sidecar source re-imports")
+            message: "A029 provenance source re-imports")
         var redoc = SampleDocument(source: resolved.sample)
         redoc.setParams(resolved.restoredParams ?? SampleEditParams())
         rerender.expect(SampleWavWriter.bytes(for: redoc.processed) == committed,
-            message: "A030 sidecar re-render equals committed WAV")
+            message: "A030 provenance re-render equals committed WAV")
         let touched = report.scoped(cppID: "samplecheck/SampleProcessingTest::sidecarTouchedSource")
         touched.expect((try? SampleRegistrar.readCommitted(projectRoot: project, name: name).wav) == committed,
             message: "A035 provenance sample registers")
-        touched.expect(SampleRegistrar.readSidecar(projectRoot: project, name: name) == sidecar,
-            message: "A036 sidecar writes")
         try (sourceBytes + Data(repeating: 0, count: 4)).write(to: URL(filePath: sourcePath))
-        touched.expect((try? Data(contentsOf: URL(filePath: sourcePath))).map(SampleSourceHash.sha256Hex) != sidecar.sourceSha256,
-            message: "A038 touched source no longer matches sidecar hash")
-        let stale = try SampleReopen.resolve(wav: committed, wavPath: "x/\(name).wav", sidecar: sidecar)
+        touched.expect(
+            (try? Data(contentsOf: URL(filePath: sourcePath))).map(SampleSourceHash.sha256Hex)
+                != provenance.sourceSha256,
+            message: "A038 touched source no longer matches provenance hash")
+        let stale = try SampleReopen.resolve(wav: committed, wavPath: "x/\(name).wav", provenance: provenance)
         report.scoped(cppID: "swiftcore/SampleReopen::changedSource").expect(
             !stale.fromSource && stale.restoredParams == nil,
             message: "touched source falls back without stale params")
         try FileManager.default.removeItem(atPath: sourcePath)
-        let missing = try SampleReopen.resolve(wav: committed, wavPath: "x/\(name).wav", sidecar: sidecar)
+        let missing = try SampleReopen.resolve(wav: committed, wavPath: "x/\(name).wav", provenance: provenance)
         report.scoped(cppID: "swiftcore/SampleReopen::missingSource").expect(
-            !missing.fromSource && missing.sidecar == nil,
+            !missing.fromSource && missing.provenance == nil,
             message: "missing source falls back to committed WAV")
         let fallback = report.scoped(cppID: "samplecheck/SampleProcessingTest::sidecarFallback")
         fallback.expect((try? SampleRegistrar.readCommitted(projectRoot: project, name: name).wav) == committed,
             message: "A042 provenance sample registers")
-        let plain = try SampleReopen.resolve(wav: committed, wavPath: "x/\(name).wav", sidecar: nil)
+        let plain = try SampleReopen.resolve(wav: committed, wavPath: "x/\(name).wav", provenance: nil)
         fallback.expect(!plain.fromSource && plain.sample.frameCount > 0, message: "A043 committed WAV re-imports")
         fallback.expect(plain.sample.gbaReady, message: "A044 committed WAV re-imports GBA-ready")
         var fallbackDoc = SampleDocument(source: plain.sample)
@@ -120,76 +116,47 @@ internal func runProvenanceChecks(_ report: CheckReport) {
             message: "bin-only registered sample refuses update")
         binOnly.expect({ if case .failure(let error) = second { return (error as? SampleRegistrationError)?.message.contains(".wav source") == true }; return false }(),
             message: "bin-only refusal names missing WAV")
-        let remove = report.scoped(cppID: "samplecheck/SampleProcessingTest::sidecarRemove")
-        let removeName = "remove_tone"
-        let removalRegistration = Result {
-            try SampleRegistrar.register(projectRoot: project, name: removeName, wav: committed)
-        }
-        remove.expect({ if case .success = removalRegistration { return true }; return false }(),
-            message: "A069 provenance sample registers for removal")
-        let rewrite = Result { try SampleRegistrar.writeSidecar(projectRoot: project, name: removeName, sidecar) }
-        remove.expect({ if case .success = rewrite { return true }; return false }(),
-            message: "A070 sidecar writes")
-        report.scoped(cppID: "swiftcore/SampleRegistrar::sidecarRemoval").expect(
-            SampleRegistrar.readSidecar(projectRoot: project, name: removeName) == sidecar,
-            message: "sidecar present before removal")
-        SampleRegistrar.removeSidecar(projectRoot: project, name: removeName)
-        remove.expect(SampleRegistrar.readSidecar(projectRoot: project, name: removeName) == nil,
-            message: "A071 removed sidecar no longer reads")
         let sf2 = soundFontFixture()
         let sf2Path = root + "/sources/zone.sf2"
         try sf2.bytes.write(to: URL(filePath: sf2Path))
-        var sf2Sidecar = sidecar
-        sf2Sidecar.sourcePath = sf2Path
-        sf2Sidecar.sourceSha256 = SampleSourceHash.sha256Hex(sf2.bytes)
-        sf2Sidecar.sf2Zone = 0
-        let zoned = try SampleReopen.resolve(wav: committed, wavPath: "x/\(name).wav", sidecar: sf2Sidecar)
+        var sf2Provenance = provenance
+        sf2Provenance.sourcePath = sf2Path
+        sf2Provenance.sourceSha256 = SampleSourceHash.sha256Hex(sf2.bytes)
+        sf2Provenance.sf2Zone = 0
+        let zoned = try SampleReopen.resolve(wav: committed, wavPath: "x/\(name).wav", provenance: sf2Provenance)
         report.scoped(cppID: "swiftcore/SampleReopen::soundFont").expect(
-            zoned.fromSource && zoned.sample.sourceKind == .sf2 && zoned.restoredParams == sidecar.params,
+            zoned.fromSource && zoned.sample.sourceKind == .sf2 && zoned.restoredParams == provenance.params,
             message: "unchanged SoundFont source reopens the selected zone and parameters")
-        sf2Sidecar.sf2Zone = 10_000
-        let invalidZone = try SampleReopen.resolve(wav: committed, wavPath: "x/\(name).wav", sidecar: sf2Sidecar)
+        sf2Provenance.sf2Zone = 10_000
+        let invalidZone = try SampleReopen.resolve(wav: committed, wavPath: "x/\(name).wav", provenance: sf2Provenance)
         report.scoped(cppID: "swiftcore/SampleReopen::soundFont").expect(
             !invalidZone.fromSource && invalidZone.sample.gbaReady && invalidZone.restoredParams == nil,
             message: "invalid SoundFont zone falls back to committed WAV")
-        provenanceCodecChecks(report, root: root, sidecar: sidecar)
+        provenanceCodecChecks(report)
     } catch {
         report.scoped(cppID: "swiftcore/SampleProvenance::fixture").expect(false,
             message: "provenance fixture failed: \(error)")
     }
 }
 
-private func provenanceCodecChecks(_ report: CheckReport, root: String, sidecar: SampleSidecar) {
-    let check = report.scoped(cppID: "swiftcore/SampleSidecar::codec")
+private func provenanceCodecChecks(_ report: CheckReport) {
+    let check = report.scoped(cppID: "swiftcore/SampleProvenance::codec")
     let literal = """
     {"version":1,"source":{"path":"/tmp/source.wav","sha256":"abc","leftOnly":true,"sf2Zone":2.0},"params":{"cropStart":150.0,"cropEnd":5e2,"loopOn":true,"loopStart":180.0,"loopEnd":4.5e2,"baseKey":59.0,"fineTuneCents":25,"targetRate":13379,"normalizeMode":99.0,"dcRemove":-3.0,"exactPitchOverride":4294967295.0}}
     """
-    let decoded = SampleSidecar.decode(Data(literal.utf8))
+    let decoded = SampleProvenance.decode(Data(literal.utf8))
     check.expect(decoded?.params.normalizeMode == .off && decoded?.params.dcRemove == .auto
         && decoded?.params.fadeIn == true && decoded?.params.fadeOut == true
         && decoded?.params.exactPitchOverride == UInt32.max && decoded?.leftOnly == true && decoded?.sf2Zone == 2,
-        message: "fork JSON literal restores defaults, bounds, channel, zone, and pitch")
+        message: "version-one JSON literal restores defaults, bounds, channel, zone, and pitch")
     check.expect(decoded?.params.cropStart == 150 && decoded?.params.cropEnd == 500
         && decoded?.params.loopStart == 180 && decoded?.params.loopEnd == 450
         && decoded?.params.baseKey == 59,
-        message: "fork JSON floating-point and exponent numeric tokens preserve integer parameters")
-    check.expect(SampleSidecar.decode(Data("{\"version\":2}".utf8)) == nil,
-        message: "unsupported sidecar version refuses")
-    check.expect(SampleSidecar.decode(Data("{\"version\":1,\"source\":{},\"params\":{}}".utf8)) == nil,
+        message: "version-one JSON floating-point and exponent numeric tokens preserve integer parameters")
+    check.expect(
+        SampleProvenance.decode(Data("{\"version\":2}".utf8)) == nil,
+        message: "unsupported provenance version refuses")
+    check.expect(
+        SampleProvenance.decode(Data("{\"version\":1,\"source\":{},\"params\":{}}".utf8)) == nil,
         message: "missing source identity refuses")
-    let project = root + "/gitignoreproject"
-    do {
-        try FileManager.default.createDirectory(atPath: project + "/.git", withIntermediateDirectories: true)
-        try Data("build/\r\nlast-pattern".utf8).write(to: URL(filePath: project + "/.gitignore"))
-        try SampleRegistrar.writeSidecar(projectRoot: project, name: "one", sidecar)
-        try SampleRegistrar.writeSidecar(projectRoot: project, name: "two", sidecar)
-        check.expect((try? Data(contentsOf: URL(filePath: project + "/.gitignore"))) == Data("build/\r\nlast-pattern\r\n.porydaw/\r\n".utf8),
-            message: "gitignore retains CRLF, repairs newline, and adds rule once")
-        let noGit = root + "/no-git-project"
-        try SampleRegistrar.writeSidecar(projectRoot: noGit, name: "one", sidecar)
-        check.expect(!FileManager.default.fileExists(atPath: noGit + "/.gitignore"),
-            message: "non-git project leaves gitignore untouched")
-    } catch {
-        check.expect(false, message: "gitignore fixture failed: \(error)")
-    }
 }

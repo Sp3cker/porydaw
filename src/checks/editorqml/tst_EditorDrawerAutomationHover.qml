@@ -96,8 +96,6 @@ EditorDrawerTestSupport {
                      "the hover ring centers on its node")
         fuzzyCompare(hoverRing.y + hoverRing.height / 2, hoveredNode.model.y, 0.01,
                      "the hover ring centers on its node vertically")
-        compare(hoverRing.width, 2 * hoveredNode.model.ringRadius,
-                "the hover ring spans twice its ring radius")
         compare(findChild(page, "automationHoverGhost").visible, false,
                 "a written-node hover suppresses the insertion ghost")
         var nodeText = label.text

@@ -31,9 +31,14 @@ sound/direct_sound_data.inc entry; immediate (not undoable). -->
 
 ## Porydaw's own files
 
-<!-- TODO: The .porydaw/ sidecar directory (view state, sample provenance)
-— safe to gitignore or commit?; where app settings live per-platform
-(QSettings paths). -->
+Porydaw writes nothing of its own inside your project. App settings, editor
+view state, and the source record that **Edit…** uses to reopen a sample live
+in Porydaw's preferences (on macOS, the `com.sp3cker.porydaw` defaults domain).
+
+Deleting a song deletes its `.mid`. Porydaw keeps no copy, so only a Git
+commit can bring it back.
+
+<!-- TODO: where app settings live on Windows and Linux. -->
 
 ## Round-trip guarantee
 

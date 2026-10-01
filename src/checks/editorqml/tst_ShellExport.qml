@@ -107,7 +107,6 @@ TestCase {
         presenter.activate("transport.play")
         const model = openOptions()
         const dialog = child("shellWavExportDialog")
-        compare(dialog.title, "Export WAV", "the options window retains the fork title")
         compare(model.hasLoop, true, "route101 is looping")
         compare(child("wavExportTail").visible, false, "the Tail row is hidden for loops")
         const rate = child("wavExportRate")

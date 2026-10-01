@@ -297,9 +297,18 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
             report.fail("swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
                         "unwritable bank destination should fail")
         } catch {
-            report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
+            let refusal = error as? ProjectServiceError
+            let namesUnwritableBank: Bool
+            if case let .operationFailed(message)? = refusal {
+                namesUnwritableBank = message.contains(
+                    URL(fileURLWithPath: roundtripSession.bankLease.sourcePath).lastPathComponent)
+            } else {
+                namesUnwritableBank = false
+            }
+            report.expect(
+                namesUnwritableBank,
                           cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
-                          message: "failed bank save reports its unwritable source")
+                message: "failed bank save refuses as a typed failure naming its bank source")
             report.expectEqual(expected: true, actual: roundtripSession.bankDirty,
                                cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
                                what: "failed bank save retains the dirty bank record")

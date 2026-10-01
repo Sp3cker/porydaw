@@ -445,10 +445,10 @@ private func checkReplacementAndPolling(_ report: CheckReport, session: Document
     presenter.attach(session: session, audio: nil, grid: grid, drawer: drawer)
     presenter.startPolling()
     report.expect(presenter.isPolling, cppID: pollingID,
-                  message: "an attached document starts one polling task")
+        message: "an attached document starts polling")
     presenter.startPolling()
     report.expect(presenter.isPolling, cppID: pollingID,
-                  message: "a second start runs no second task")
+        message: "repeated start keeps polling active")
     presenter.stopPolling()
     report.expect(!presenter.isPolling && presenter.timelineAttached, cppID: pollingID,
                   message: "stopping polling keeps the attached presentation")

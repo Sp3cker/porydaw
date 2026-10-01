@@ -307,8 +307,6 @@ func drawerAutomationPointIdentityAndStaleness(_ report: CheckReport, suite: Doc
                        what: "a live source tick resolves against the frozen revision")
     report.expect(!AutomationCommit.apply(live!, in: fixture.document), cppID: drawerAutomationIdentityID,
                   message: "a plan at a superseded revision writes nothing")
-    report.expectEqual(expected: ["24:30", "24:90", "120:0"], actual: ["24:30", "24:90", "120:0"], cppID: drawerAutomationIdentityID,
-                       what: "the stale plan left the lane alone")
     report.expectEqual(expected: ["24:30", "24:90"], actual: fixture.values(fixture.panLane), cppID: drawerAutomationIdentityID,
                        what: "the lane still holds what the delete and the failed plan left")
 

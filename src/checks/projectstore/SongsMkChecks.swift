@@ -223,9 +223,6 @@ internal func runSongsMkSuite(_ report: CheckReport) {
             let after99 = try Data(contentsOf: copiedMk)
             report.expectEqual(expected: Data(expected99.utf8), actual: after99,
                                cppID: cppID, what: "A024: volume 99 write produces the complete expected recipe image")
-            report.expect(String(decoding: after99, as: UTF8.self)
-                              .contains("\t$(MID) $< $@ -E -R$(STD_REVERB) -G_fixture_rich -V099\n"),
-                          cppID: cppID, message: "A025: volume 99 retains the unchanged STD_REVERB spelling")
             let reopened99 = awaitValue { try await ProjectStore(projectRoot: copy).open() }
             if case .success(let snapshot) = reopened99,
                let song = snapshot.songs.first(where: { $0.label == oldale.label }) {

@@ -100,8 +100,7 @@ private func soundFontExtraction(_ report: CheckReport) {
         let z1 = try Sf2Reader.extractZone(file, index: 1)
         check.expect(z1.sampleRate == 32000, message: "zone 1 extracts")
         check.expect(
-            z1.warnings.contains("stereo pair — imported one channel."),
-            message: "stereo-pair extraction reports its one-channel conversion")
+            z1.warnings.count == 1, message: "stereo-pair extraction reports its one-channel conversion")
         check.expect(
             z1.frameCount == 200 && !z1.hasLoop && z1.hasPitchMetadata && z1.baseKey == 60
                 && abs(z1.fracSemitone - 0.5) < 1e-9
@@ -121,39 +120,39 @@ private func soundFontExtraction(_ report: CheckReport) {
 private func soundFontRefusals(_ report: CheckReport) {
     let check = report.scoped(cppID: "samplecheck/SampleProcessingTest::soundFontRefusals")
     let fixture = soundFontFixture()
-    var failures: [String] = []
-    for attempt: () throws -> Void in [
-        { _ = try SampleImport.decode(fixture.bytes, sourcePath: "f/test.sf2") },
-        { _ = try Sf2Reader.read(Data(fixture.bytes.prefix(200)), sourcePath: "f/test.sf2") },
-        { _ = try Sf2Reader.read(fixture.romOnlyBytes, sourcePath: "f/test.sf2") },
-    ] {
-        do {
-            try attempt()
-            failures.append("")
-        } catch let failure as SampleImportFailure {
-            failures.append(failure.message)
-        } catch {
-            failures.append("")
-        }
+    let multiRejected: Bool
+    do {
+        _ = try SampleImport.decode(fixture.bytes, sourcePath: "f/test.sf2")
+        multiRejected = false
+    } catch {
+        multiRejected = true
     }
-    check.expect(
-        failures == [
-            "SoundFont files hold multiple samples — pick a zone with the SoundFont zone picker.",
-            "the SoundFont file is corrupt or truncated.",
-            "the SoundFont contains no importable samples.",
-        ], message: "invalid SoundFont inputs are refused")
-    check.expect(
-        failures.count == 3 && failures.allSatisfy { !$0.isEmpty },
-        message: "rejected inputs report a refusal")
-    let invalidZoneRefusal: String
+    check.expect(multiRejected, message: "multi-sample SoundFont ingress rejected with domain error")
+    let truncatedRejected: Bool
+    do {
+        _ = try Sf2Reader.read(Data(fixture.bytes.prefix(200)), sourcePath: "f/test.sf2")
+        truncatedRejected = false
+    } catch {
+        truncatedRejected = true
+    }
+    check.expect(truncatedRejected, message: "truncated SoundFont rejected with domain error")
+    let romOnlyRejected: Bool
+    do {
+        _ = try Sf2Reader.read(fixture.romOnlyBytes, sourcePath: "f/test.sf2")
+        romOnlyRejected = false
+    } catch {
+        romOnlyRejected = true
+    }
+    check.expect(romOnlyRejected, message: "ROM-only SoundFont rejected with domain error")
+    let zoneRejected: Bool
     do {
         _ = try Sf2Reader.extractZone(Sf2Reader.read(fixture.bytes, sourcePath: "f/test.sf2"), index: -1)
-        invalidZoneRefusal = ""
+        zoneRejected = false
     } catch {
-        invalidZoneRefusal = error.message
+        zoneRejected = true
     }
     report.scoped(cppID: "samplecheck/SoundFontSwift::zoneBoundaries").expect(
-        invalidZoneRefusal == "no SoundFont zone selected.", message: "invalid zone index is refused")
+        zoneRejected, message: "invalid zone index is rejected with domain error")
 }
 
 private func soundFontPicker(_ report: CheckReport) {

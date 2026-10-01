@@ -15,6 +15,10 @@ private func importFixture(_ root: String, _ name: String) -> ImportFixture {
     ImportFixture(root: stageTestProject(in: root, projectName: "swiftcore-import-" + name))
 }
 
+private enum ByteIdentityFixtureError: Error {
+    case missingFixture
+}
+
 private func importRequest(_ label: String, createVoicegroup: Bool = false) -> SongImportRequest {
     SongImportRequest(
         label: label, constant: label.uppercased(), player: "MUSIC_PLAYER_BGM",
@@ -25,36 +29,22 @@ private func importRequest(_ label: String, createVoicegroup: Bool = false) -> S
         createVoicegroup: createVoicegroup, midi: makeMidiFixture(division: 96))
 }
 
-@MainActor
-private func importFailure(_ service: ProjectService, _ request: SongImportRequest) -> String {
-    do {
-        _ = try runBlocking { try await service.importSong(request) }
-        return "<succeeded>"
-    } catch ProjectServiceError.operationFailed(let message) {
-        return message
-    } catch {
-        return "<unexpected error: \(error)>"
-    }
-}
-
 private let importCfg = "sound/songs/midi/midi.cfg"
 private let importHub = "sound/voice_groups.inc"
 private let importTable = "sound/song_table.inc"
 private let importHeader = "include/constants/songs.h"
 
 @MainActor
-private func importWithBlockedHeader(
-    _ service: ProjectService, _ request: SongImportRequest,
-    fixture: ImportFixture
-) throws -> String {
-    let path = fixture.path(importHeader)
-    let original = try fixture.read(importHeader)
-    try FileManager.default.removeItem(atPath: path)
-    try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: false)
-    let failure = importFailure(service, request)
-    try FileManager.default.removeItem(atPath: path)
-    try fixture.write(importHeader, original)
-    return failure
+private func importTypedFailure(_ service: ProjectService, _ request: SongImportRequest) throws -> ProjectServiceError?
+{
+    do {
+        _ = try runBlocking { try await service.importSong(request) }
+        return nil
+    } catch let error as ProjectServiceError {
+        return error
+    } catch {
+        throw error
+    }
 }
 
 @MainActor
@@ -93,6 +83,65 @@ internal func runSongImportChecks(_ report: CheckReport, fixtureRoot: String) {
             expected: [String](), actual: song?.registrationGaps, cppID: successID,
             what: "imported song has no registration gaps")
     } catch { report.fail(successID, "import scenario failed: \(error)") }
+    let byteID = "swiftcore/SongImport::byteIdentity"
+    do {
+        let fixture = importFixture(fixtureRoot, "byteexact")
+        guard let sourcePath = CheckEnvironment.fixturePath("test_midis/external_import.mid") else {
+            report.fail(byteID, "missing --swiftcore fixture root for test_midis/external_import.mid")
+            throw ByteIdentityFixtureError.missingFixture
+        }
+        let original: Data
+        do {
+            original = try Data(contentsOf: URL(fileURLWithPath: sourcePath))
+        } catch {
+            report.fail(byteID, "original fixture could not be read: \(sourcePath): \(error)")
+            throw error
+        }
+        let decoded = try MidiFile.decode(Array(original))
+        report.expectEqual(
+            expected: UInt16(400), actual: decoded.division, cppID: byteID,
+            what: "byte-identity source retains division 400")
+        report.expectEqual(
+            expected: 3, actual: decoded.chunks.count, cppID: byteID,
+            what: "byte-identity source retains three chunks")
+        // Preparation always deduplicates; this fixture must make that pass a no-op.
+        var dedupProbe = decoded
+        report.expectEqual(
+            expected: 0, actual: MidiImport.removeRedundantSetters(&dedupProbe), cppID: byteID,
+            what: "byte-identity fixture has no duplicate setters to remove")
+        let prepared = try MidiImport.prepareImportedSong(
+            decoded, rescale: false, extendedClocks: false)
+        report.expectEqual(
+            expected: UInt16(400), actual: prepared.division, cppID: byteID,
+            what: "rescale-off import retains division 400")
+        var request = importRequest("mus_import_byteexact")
+        request.midi = prepared
+        let service = ProjectService()
+        defer { try? runBlocking { await service.close() } }
+        try runBlocking { try await service.open(root: fixture.root) }
+        _ = try runBlocking { try await service.importSong(request) }
+        let written: Data
+        do {
+            written = try fixture.read("sound/songs/midi/\(request.label).mid")
+        } catch {
+            report.fail(byteID, "imported destination could not be read: \(error)")
+            throw error
+        }
+        if written != original {
+            let first =
+                zip(written, original).enumerated().first(where: { $0.element.0 != $0.element.1 })?.offset
+                ?? min(written.count, original.count)
+            report.fail(
+                byteID,
+                "imported bytes differ from test_midis/external_import.mid: "
+                    + "written \(written.count) bytes vs source \(original.count) bytes, "
+                    + "first difference at offset \(first)")
+        } else {
+            report.expectEqual(
+                expected: original, actual: written, cppID: byteID,
+                what: "rescale-off import preserves original source bytes exactly")
+        }
+    } catch { report.fail(byteID, "byte-identity scenario failed: \(error)") }
 
     let newID = "swiftcore/SongImport::newVoicegroup"
     do {
@@ -143,17 +192,16 @@ internal func runSongImportChecks(_ report: CheckReport, fixtureRoot: String) {
             let service = ProjectService()
             defer { try? runBlocking { await service.close() } }
             try runBlocking { try await service.open(root: fixture.root) }
-            let message = importFailure(service, importRequest(label, createVoicegroup: true))
-            let expected =
-                scenario == "midi"
-                ? "MIDI file already exists: \(fixture.path(midiPath))"
-                : scenario == "label"
-                    ? "A song named \(label) already exists."
-                    : scenario == "invalid"
-                        ? "Invalid song label: \(label)." : "A voicegroup named \(label) already exists."
-            report.expectEqual(
-                expected: expected, actual: message, cppID: id,
-                what: "refusal reports the exact reason before a write")
+            let failure = try importTypedFailure(service, importRequest(label, createVoicegroup: true))
+            let blockedComponent = scenario == "midi" ? "\(label).mid" : label
+            if case .operationFailed(let message) = failure {
+                report.expect(
+                    message.contains(blockedComponent), cppID: id,
+                    message: "refusal rejects the \(scenario) case at \(blockedComponent)")
+            } else {
+                report.fail(
+                    id, "refusal rejects the \(scenario) case at \(blockedComponent): \(String(describing: failure))")
+            }
             for (index, path) in tracked.enumerated() {
                 report.expectEqual(
                     expected: before[index], actual: try fixture.read(path), cppID: id,
@@ -196,19 +244,31 @@ internal func runSongImportChecks(_ report: CheckReport, fixtureRoot: String) {
             let service = ProjectService()
             defer { try? runBlocking { await service.close() } }
             try runBlocking { try await service.open(root: fixture.root) }
-            let message: String
+            let failure: ProjectServiceError?
             if scenario == "registration" {
-                message = try importWithBlockedHeader(service, request, fixture: fixture)
+                let blockedPath = fixture.path(importHeader)
+                let original = try fixture.read(importHeader)
+                try FileManager.default.removeItem(atPath: blockedPath)
+                try FileManager.default.createDirectory(atPath: blockedPath, withIntermediateDirectories: false)
+                failure = try importTypedFailure(service, request)
+                try FileManager.default.removeItem(atPath: blockedPath)
+                try fixture.write(importHeader, original)
             } else {
                 try FileManager.default.removeItem(atPath: fixture.path(importCfg))
                 try FileManager.default.createDirectory(
                     atPath: fixture.path(importCfg),
                     withIntermediateDirectories: false)
-                message = importFailure(service, request)
+                failure = try importTypedFailure(service, request)
             }
-            report.expect(
-                message != "<succeeded>" && !message.hasPrefix("<unexpected"), cppID: id,
-                message: "unwritable stage rejects the import")
+            let blockedComponent = scenario == "registration" ? "songs.h" : "midi.cfg"
+            if case .operationFailed(let message) = failure {
+                report.expect(
+                    message.contains(blockedComponent), cppID: id,
+                    message: "unwritable stage rejects the import at \(blockedComponent)")
+            } else {
+                report.fail(
+                    id, "unwritable stage rejects the import at \(blockedComponent): \(String(describing: failure))")
+            }
             report.expect(
                 fixture.exists("sound/songs/midi/\(request.label).mid"), cppID: id,
                 message: "MIDI write survives later failure")

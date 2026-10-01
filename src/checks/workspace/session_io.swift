@@ -46,15 +46,12 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
         return
     }
     report.expect(
-        !app.lastSaveError.isEmpty, cppID: id,
-        message: "A007 failed project open publishes a nonempty explanation")
+        app.lastSaveError.contains("missing-project"), cppID: id,
+        message: "A007 failed project open names the missing project in its explanation")
     store.synchronize()
     report.expectEqual(
         expected: seed, actual: EditorViewStateCodec.loadTabs(store: store),
         cppID: id, what: "A008 failed initial open preserves the seeded complete tab recipe")
-    report.expectEqual(
-        expected: false, actual: app.projectOpen,
-        cppID: id, what: "failed initial open does not publish a project")
 
     app.openProjectAndSong(path: projectDir, label: "mus_session_test")
     let firstReady = until { app.songOpen }
@@ -623,8 +620,8 @@ internal func sessionOpenAndRecovery(
         } catch let error as ProjectServiceError {
             if case .operationFailed(let message) = error {
                 report.expect(
-                    !message.isEmpty, cppID: failedOpenID,
-                    message: "failed replacement returns a nonempty project-open failure")
+                    message.contains("nonexistent_subfolder"), cppID: failedOpenID,
+                    message: "failed replacement names the missing replacement root")
             } else {
                 report.fail(failedOpenID, "failed replacement returned a non-project-open failure: \(error)")
                 return nil

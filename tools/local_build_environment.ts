@@ -10,7 +10,7 @@ export type QtInstallation = {
   architecture: string;
 };
 
-export type BuildConfig = "debug" | "release";
+export type BuildConfig = "debug" | "release" | "asan";
 
 // Each configuration owns its tree, so switching never reconfigures in place.
 export function buildDirectory(config: BuildConfig): string {
@@ -22,6 +22,7 @@ type CmakeConfigureOptions = {
   poryaaaaArgument: string;
   qtPrefix?: string;
   buildChecks?: boolean;
+  asan?: boolean;
   // Single-config generators only. Multi-config selects at build time.
   buildType?: "Debug" | "Release";
 };
@@ -202,6 +203,7 @@ export async function cmakeConfigureArgs({
   poryaaaaArgument,
   qtPrefix,
   buildChecks,
+  asan,
   buildType = "Debug",
 }: CmakeConfigureOptions): Promise<string[]> {
   const generatorArguments =
@@ -209,6 +211,10 @@ export async function cmakeConfigureArgs({
       ? []
       : defaultGeneratorArguments();
   const swiftToolchain = await swiftToolchainArgument();
+  // Apple's Clang and downloaded Swift toolchains have different ASAN ABIs.
+  const nativeBin = asan && Deno.build.os === "darwin" && swiftToolchain
+    ? dirname(swiftToolchain.slice("-DCMAKE_Swift_COMPILER=".length))
+    : undefined;
   return [
     "-S",
     ".",
@@ -219,6 +225,7 @@ export async function cmakeConfigureArgs({
     ...(buildChecks === undefined
       ? []
       : [`-DPORYDAW_BUILD_CHECKS=${buildChecks ? "ON" : "OFF"}`]),
+    ...(asan === undefined ? [] : [`-DPORYDAW_ASAN=${asan ? "ON" : "OFF"}`]),
     ...(qtPrefix
       ? [
         "-UQt6*_DIR",
@@ -227,6 +234,13 @@ export async function cmakeConfigureArgs({
       ]
       : []),
     ...(swiftToolchain ? [swiftToolchain] : []),
+    ...(nativeBin
+      ? [
+        `-DCMAKE_C_COMPILER=${join(nativeBin, "clang")}`,
+        `-DCMAKE_CXX_COMPILER=${join(nativeBin, "clang++")}`,
+        `-DCMAKE_OBJCXX_COMPILER=${join(nativeBin, "clang++")}`,
+      ]
+      : []),
     poryaaaaArgument,
   ];
 }

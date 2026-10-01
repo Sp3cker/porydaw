@@ -465,6 +465,49 @@ TestCase {
                 "expanded responsive panel restores zero vertical scroll range")
     }
 
+    function test_polyphonyLayoutScales() {
+        const presenter = createShell()
+        const session = presenter.session
+        const em = session.baseFontPx
+        const fixture = probe.fixturePresenter()
+        fixture.setInvertChecked(true)
+        referencePane = referenceComponent.createObject(shell.contentItem, {
+            presenter: fixture, colors: session.palette,
+            typography: session.typographyFonts, layoutSpaces: session.layoutSpaces,
+            baseFontPx: em, width: Math.round(em * 48), height: Math.round(em * 70)
+        })
+        const pane = referencePane
+        verify(pane && fixture.showingShadow,
+               "font-scaled layout mounts the production panel with the shadow snapshot")
+        verify(responsiveGeometry(pane).cellsFit, "font-scaled 48x70 em panel settles its channel cells")
+        tryCompare(pane, "wideLayout", false, 3000, "font-scaled 48x70 em panel keeps the narrow layout")
+        tryVerify(function() {
+            return pane.overflowSectionRect.y >= pane.usageSectionRect.y + pane.usageSectionRect.height
+        }, 3000, "font-scaled narrow panel stacks the overflow section below usage")
+        tryVerify(function() { return pane.gridFullyVisible }, 3000,
+                  "font-scaled narrow panel shows the complete channel grid")
+
+        pane.width = Math.round(em * 75)
+        pane.height = Math.round(em * 50)
+        verify(responsiveGeometry(pane).cellsFit, "font-scaled 75x50 em panel settles its channel cells")
+        tryCompare(pane, "wideLayout", true, 3000, "font-scaled 75x50 em panel activates the wide layout")
+        tryVerify(function() {
+            return pane.overflowSectionRect.x >= pane.usageSectionRect.x + pane.usageSectionRect.width
+        }, 3000, "font-scaled wide panel places the overflow section right of usage")
+        tryVerify(function() { return pane.gridFullyVisible }, 3000,
+                  "font-scaled wide panel shows the complete channel grid")
+
+        pane.width = Math.round(em * 32)
+        pane.height = Math.round(em * 20)
+        verify(responsiveGeometry(pane).cellsFit, "font-scaled 32x20 em panel settles its channel cells")
+        tryCompare(pane, "wideLayout", false, 3000, "font-scaled 32x20 em panel falls back to the narrow layout")
+        tryVerify(function() { return pane.gridFullyVisible }, 3000,
+                  "font-scaled small panel shows the complete channel grid")
+        tryVerify(function() { return pane.vScrollRange > 0 }, 3000,
+                  "font-scaled small panel exposes a vertical scroll range")
+        fixture.setInvertChecked(false)
+    }
+
     function compareRegion(reference, name, target, tolerance) {
         var expected = reference.regions.filter(function(region) { return region.name === name })[0]
         verify(expected, "widget baseline contains " + name)

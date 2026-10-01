@@ -48,7 +48,6 @@ Item {
         objectName: "shellWavExportDialog"
         transientParent: surface.windowRoot
         colors: surface.colors
-        modality: Qt.ApplicationModal
         title: qsTr("Export WAV")
         visible: false
         width: metrics.averageCharacterWidth * 47
@@ -161,12 +160,13 @@ Item {
     FileDialog {
         id: shellWavExportFileDialog
         objectName: "shellWavExportFileDialog"
+        parentWindow: surface.windowRoot
         title: qsTr("Export WAV")
         fileMode: FileDialog.SaveFile
         nameFilters: [qsTr("WAV files (*.wav)")]
         currentFolder: surface.presenter.startFolder
         selectedFile: surface.presenter.suggestedFile
-        modality: Qt.ApplicationModal
+        modality: Qt.WindowModal
         onAccepted: surface.presenter.choosePath(selectedFile.toString())
         onRejected: surface.presenter.rejectPath()
     }

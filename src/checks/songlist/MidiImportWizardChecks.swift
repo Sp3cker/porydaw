@@ -59,9 +59,19 @@ internal func runMidiImportWizardChecks(_ report: CheckReport, fixtureRoot: Stri
         report.expectEqual(
             expected: "(create a new voicegroup for this song)",
             actual: state.voicegroupOptions[0], cppID: id, what: "create choice first")
+        let volumeEvents = state.controllerRows.first { $0.controller == "CC 7" }?.events
+        let modulationEvents = state.controllerRows.first { $0.controller == "CC 1" }?.events
+        let reverbEvents = state.controllerRows.first { $0.controller == "CC 91" }?.events
+        let hasVolumeController = volumeEvents == "1"
+        let hasModulationController = modulationEvents == "1"
+        let hasReverbController = reverbEvents == "1"
+        let hasNoXcmdRow = state.controllerRows.first { $0.controller == "XCMD" } == nil
+        report.expectEqual(
+            expected: 3, actual: state.controllerRows.count, cppID: id,
+            what: "external fixture exposes three controller rows")
         report.expect(
-            state.controllerRows.allSatisfy { $0.controller.hasPrefix("CC ") || $0.controller == "XCMD" },
-            cppID: id, message: "controller rows use CC or XCMD column labels")
+            hasVolumeController && hasModulationController && hasReverbController && hasNoXcmdRow,
+            cppID: id, message: "external fixture binds CC 7, CC 1 and CC 91 once each with no XCMD")
         state.selectPlayer(2)
         report.expectEqual(
             expected: 2, actual: state.playerIndex, cppID: id,

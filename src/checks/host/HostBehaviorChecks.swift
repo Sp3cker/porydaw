@@ -376,10 +376,6 @@ private func hostVelocityExactGestures(_ report: CheckReport, session: DocumentS
                   message: "A070: only the external edit advances the stale revision")
     report.expect(document.history.undoIndex == undoIndex + 2, cppID: id,
                   message: "A071: the stale rejection adds no history entry after the external edit")
-    report.expect(document.note(firstID) != nil, cppID: id,
-                  message: "A072: the stale first note remains findable after rejection")
-    report.expect(document.note(secondID) != nil, cppID: id,
-                  message: "A073: the externally edited second note remains findable after rejection")
     report.expect(document.note(firstID)?.velocity == 1, cppID: id,
                   message: "A074: stale rejection leaves the first note at velocity one")
     report.expect(document.note(secondID)?.velocity == 66, cppID: id,

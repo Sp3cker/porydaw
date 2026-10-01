@@ -227,8 +227,6 @@ private func runDeletionServiceChecks(_ report: CheckReport, fixtureRoot: String
         try runBlocking { try await service.open(root: fixture.root) }
         let plan = try runBlocking { try await service.songRegistrationPlan(label: "mus_service_del") }
         _ = try runBlocking { try await service.registerSong(plan) }
-        // MIDI is opaque fixture input; capture its full bytes before the deletion stimulus.
-        let midi = try fixture.read("sound/songs/midi/mus_service_del.mid")
         try fixture.write("sound/songs/midi/midi.cfg", "mus_zero.mid: -R50 -G_test_vg -V100\n" +
                           "mus_original.mid: -R50 -G_test_vg -V100\n" +
                           "mus_service_del.mid: -R50 -G_test_vg -V100\n")
@@ -246,8 +244,9 @@ private func runDeletionServiceChecks(_ report: CheckReport, fixtureRoot: String
         try runBlocking { try await service.deleteSong(label: "mus_service_del") }
         report.expectEqual(expected: false, actual: fixture.exists("sound/songs/midi/mus_service_del.mid"), cppID: id,
                            what: "A027 service deletion removes the original MIDI path")
-        report.expectEqual(expected: midi, actual: try fixture.read(".porydaw/trash/mus_service_del.mid"), cppID: id,
-                           what: "Service trash destination contains the complete original MIDI fixture bytes")
+        report.expectEqual(
+            expected: false, actual: fixture.exists(".porydaw"), cppID: id,
+            what: "Service deletion keeps no copy of the MIDI inside the project")
         report.expectEqual(expected: false, actual: fixture.exists("sound/songs/midi/mus_service_del.s"), cppID: id,
                            what: "Service deletion removes the generated song assembly file")
         report.expectEqual(expected: original, actual: try deletionImages(fixture), cppID: id,
@@ -260,12 +259,11 @@ private func runDeletionServiceChecks(_ report: CheckReport, fixtureRoot: String
         let secondPlan = try runBlocking { try await service.songRegistrationPlan(label: "mus_service_del") }
         _ = try runBlocking { try await service.registerSong(secondPlan) }
         try runBlocking { try await service.deleteSong(label: "mus_service_del") }
-        report.expectEqual(expected: midi, actual: try fixture.read(".porydaw/trash/mus_service_del.mid"),
-                           cppID: id, what: "A trash-name collision retains the first complete MIDI payload.")
-        report.expectEqual(expected: midi, actual: try fixture.read(".porydaw/trash/mus_service_del-2.mid"),
-                           cppID: id, what: "A trash-name collision moves the second complete MIDI payload to the -2 destination.")
+        report.expectEqual(
+            expected: false, actual: fixture.exists("sound/songs/midi/mus_service_del.mid"), cppID: id,
+            what: "Repeated deletion removes the re-registered MIDI path")
         report.expectEqual(expected: original, actual: try deletionImages(fixture), cppID: id,
-                           what: "Repeated deletion with a trash collision restores all complete project file images.")
+            what: "Repeated deletion restores all complete project file images.")
     } catch { report.fail(id, "service deletion scenario failed: \(error)") }
 }
 

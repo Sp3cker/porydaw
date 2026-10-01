@@ -214,7 +214,9 @@ func drawerAutomationDuplicatePromptAndParameterSwitch(_ report: CheckReport, su
     report.expect(routed.page.promptOpen, cppID: id, message: "the Set Value pick opens the value prompt")
     report.expectEqual(expected: AutomationPromptKind.value.rawValue, actual: routed.page.promptKind, cppID: id, what: "the Set Value pick opens the value form")
     report.expect(routed.page.interactionActive, cppID: id, message: "the open value prompt marks the page interacting")
-    report.expect(!routed.page.promptDraft.isEmpty, cppID: id, message: "the value prompt carries its initial draft")
+    report.expectEqual(
+        expected: Optional(0), actual: Int(routed.page.promptDraft),
+        cppID: id, what: "the Pan prompt displays stored center 64 as zero")
     routed.page.cancelPrompt()
     report.expect(!routed.page.hasPrompt && !routed.page.interactionActive, cppID: id, message: "cancelling the routed prompt drops the prompt and the interaction")
 }

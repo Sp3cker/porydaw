@@ -4,7 +4,7 @@ import PorydawProject
 import QtBridgeCpp
 
 /// The historical QSettings workspace recipe. These keys are application-wide,
-/// not part of a project's MIDI sidecar or the document's revision/history.
+/// not part of a project's files or the document's revision/history.
 public struct WorkspaceTabRecipe: Equatable, Sendable {
     public var projectPath: String
     public var orderedSongs: [String]

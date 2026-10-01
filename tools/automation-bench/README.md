@@ -35,9 +35,11 @@ a separate lane selection.
 
 ## Instruments
 
+Run from the worktree root:
+
 ```sh
-cd /Users/sallegrezza/dev/cProjects/porydaw/.worktrees/automation-bench
-xctrace record --template 'Time Profiler' \
+xcrun xctrace record --template 'Time Profiler' \
+  --instrument 'Points of Interest' \
   --output /tmp/automation-overwrite.trace \
   --launch -- "$PWD/build/release/automation-bench" \
   --filter nodeScaling.releaseOverwriteOccupied --lane pan --nodes 1024 \
@@ -124,6 +126,25 @@ Time Profiler call stacks expose resolver, event-array mutation, history,
 `PlaybackTimeline.build`, projection and display-list work without production
 timing hooks. Workspace sibling presenters, QML and engine submission remain
 excluded: this harness cannot establish whole-application frame latency.
+
+### Swift-side publication costs
+
+A successful pointer release reuses content already published for the committed
+document revision by the synchronous session callback. A page without that
+callback still refreshes before returning. Release does not build another
+display list when the callback already cleared and published the gesture.
+
+Node publication retains unchanged visible handles and their spec maps. Position,
+paint, hover, selection, phantom status and occurrence identity must all match;
+changed rows still publish complete replacements. The typed identity stays at
+the current revision, while its capture text remains revision-independent.
+
+Use `nodeScaling.releaseOverwriteOccupied` to measure these commit-path costs,
+and `nodeScaling.pointerCadenceOccupied` as a pointer-only control. Keep notes,
+tracks, zoom and lane identical between builds. Report CSV elapsed time
+separately from sampled CPU inside the `Automation edit` signposts.
+Compare builds from the same grid revision: plot-relative node positions,
+hollow-node specs and preview-span filtering must remain identical.
 
 ## Timing and correctness
 

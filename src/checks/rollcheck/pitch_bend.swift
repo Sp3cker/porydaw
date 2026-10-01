@@ -102,6 +102,7 @@ func runPitchBendChecks(_ report: CheckReport, session: DocumentSession) {
                   cppID: "swiftcore/PitchBendEditingTest::vertexCreation",
                   message: "modulation uses the oracle's QRect-height scaling at the top pixel and clamps below zero")
     pitchBendSharedGridPredicates(report, session: session)
+    pitchBendGridRulePredicates(report, suite: session)
     pitchBendReadoutPredicates(report, session: session)
     pitchBendDocumentPredicates(report, session: session)
     pitchBendOwnerLifetimePredicates(report, suite: session)

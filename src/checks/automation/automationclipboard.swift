@@ -203,8 +203,6 @@ func drawerAutomationTrackScopedSelectionClipboard(_ report: CheckReport, suite:
                   cppID: copyID, message: "the committed time selection is active over its exact range")
     report.expect(single.session.timeSelection?.scope == .tracks([0]), cppID: copyID,
                   message: "the committed scope is track-scoped")
-    report.expect(single.session.timeSelection?.scope == .tracks([0]), cppID: copyID,
-                  message: "the stored track scope keeps the swept tracks")
     report.expect(!single.page.selectionCommandAvailable(command: .paste), cppID: copyID,
                   message: "Paste is unavailable without native clip bytes")
     report.expect(single.page.consumeSelectionCommand(command: .copy), cppID: copyID,
@@ -245,8 +243,6 @@ func drawerAutomationTrackScopedSelectionClipboard(_ report: CheckReport, suite:
                   cppID: scopedID, message: "the committed time selection is active over its exact range")
     report.expect(scoped.session.timeSelection?.scope == .tracks([0, 1, 2]), cppID: scopedID,
                   message: "the committed scope is track-scoped")
-    report.expect(scoped.session.timeSelection?.scope == .tracks([0, 1, 2]), cppID: scopedID,
-                  message: "the stored track scope keeps the swept tracks")
     report.expect(scoped.page.consumeSelectionCommand(command: .copy), cppID: scopedID,
                   message: "Copy consumes the three-track selection")
     let scopedClip = clipboard.read()

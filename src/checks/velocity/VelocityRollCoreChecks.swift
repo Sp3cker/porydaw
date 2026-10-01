@@ -112,8 +112,6 @@ func drawerVelocityRollCoreDragDefersAndCommits(_ report: CheckReport, session: 
     report.expectEqual(expected: baseline.revision + 1, actual: committed.revision, cppID: drawerVelocityRollCoreDragID, what: "one release advances the revision once")
     report.expect(committed.identity != baseline.identity && committed.canUndo && !baseline.canUndo, cppID: drawerVelocityRollCoreDragID, message: "one release makes exactly one undoable history entry")
     report.expect(document.history.undoCount == baselineCount + 1, cppID: drawerVelocityRollCoreDragID, message: "one release records one history entry")
-    report.expectEqual(expected: baselineCount + 1, actual: document.history.undoCount,
-                       cppID: drawerVelocityRollCoreDragID, what: "one release grows the undo depth by exactly one")
     report.expectEqual(expected: 1, actual: publications.document, cppID: drawerVelocityRollCoreDragID, what: "one release publishes exactly one document change")
     report.expectEqual(expected: 1, actual: publications.dirty, cppID: drawerVelocityRollCoreDragID, what: "one release publishes exactly one dirty change")
     report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRollCoreDragID, message: "the released gesture clears its preview")
@@ -275,8 +273,6 @@ func drawerVelocityRollCoreRollCommit(_ report: CheckReport, session: DocumentSe
     report.expectEqual(expected: baseline.revision + 1, actual: committed.revision, cppID: drawerVelocityRollCoreRollID, what: "one roll release advances the revision once")
     report.expect(committed.identity != baseline.identity && committed.canUndo && !baseline.canUndo, cppID: drawerVelocityRollCoreRollID, message: "one roll release makes exactly one undoable history entry")
     report.expect(document.history.undoCount == baselineCount + 1, cppID: drawerVelocityRollCoreRollID, message: "one roll release records one history entry")
-    report.expectEqual(expected: baselineCount + 1, actual: document.history.undoCount,
-                       cppID: drawerVelocityRollCoreRollID, what: "one release grows the undo depth by exactly one")
     report.expectEqual(expected: 1, actual: publications.document, cppID: drawerVelocityRollCoreRollID, what: "one release publishes exactly one document change")
     report.expectEqual(expected: 1, actual: publications.dirty, cppID: drawerVelocityRollCoreRollID, what: "one release publishes exactly one dirty change")
     report.expect(grid.previewVelocity(notes[0].id) == nil && grid.previewVelocity(notes[1].id) == nil && grid.previewVelocity(notes[2].id) == nil && !grid.interactionActive, cppID: drawerVelocityRollCoreRollID, message: "the released roll gesture clears every preview")

@@ -50,8 +50,9 @@ say so clearly. ROM size note: samples cost space. -->
 ## Re-editing later
 
 <!-- TODO: "Edit…" reopens your original hi-res source exactly where you
-left off (provenance sidecar); what happens if the source file moved or
-changed (falls back to the committed .wav, still editable). -->
+left off (source record kept in Porydaw's preferences, not the project); what
+happens if the source file moved or changed (falls back to the committed .wav,
+still editable). -->
 
 ## Requirements & limitations
 

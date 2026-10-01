@@ -1,4 +1,4 @@
-// Configures and builds one configuration tree (build/debug or build/release)
+// Configures and builds an isolated debug, release, or ASAN tree under build/
 // and prints only what an agent can act on; build.log in the tree keeps the rest.
 import { join, resolve } from "node:path";
 import {
@@ -81,30 +81,43 @@ async function configure(
   const poryaaaa = await poryaaaaConfiguration(directory);
   const buildType = config === "release" ? "Release" : "Debug";
   const cache = await readCache(directory);
+  const args = await cmakeConfigureArgs({
+    buildDirectory: directory,
+    poryaaaaArgument: poryaaaa.cmakeArgument,
+    qtPrefix: await localQtPrefix(Deno.cwd(), undefined, undefined, directory),
+    buildType,
+    buildChecks,
+    asan: config === "asan",
+  });
+  const compilersMatch = args.filter((arg) =>
+    /^-DCMAKE_(C|CXX|OBJCXX)_COMPILER=/.test(arg)
+  ).every((arg) => {
+    const [key, value] = arg.slice(2).split("=");
+    return cache?.split(/\r?\n/).some((line) =>
+      line.startsWith(`${key}:`) && line.endsWith(`=${value}`)
+    );
+  });
   const typeMatches = (await usesMultiConfigBuild(directory)) ||
     /^CMAKE_BUILD_TYPE:STRING=(.*)$/m.exec(cache ?? "")?.[1] === buildType;
   const cachedChecks = /^PORYDAW_BUILD_CHECKS:BOOL=(.*)$/m.exec(cache ?? "")
     ?.[1];
   const checksMatch = buildChecks === undefined ||
     cachedChecks === (buildChecks ? "ON" : "OFF");
+  const asanMatches = /^PORYDAW_ASAN:BOOL=(.*)$/m.exec(cache ?? "")?.[1] ===
+    (config === "asan" ? "ON" : "OFF");
   if (
     (await hasBuildSystem(directory)) && poryaaaa.cacheMatches &&
-    typeMatches && checksMatch
+    typeMatches && checksMatch && asanMatches && compilersMatch
   ) return undefined;
+  if (cache !== undefined && !compilersMatch) {
+    // Replacing compilers resets CMake's cache; retain all requested options.
+    const generator = /^CMAKE_GENERATOR:INTERNAL=(.*)$/m.exec(cache)?.[1];
+    args.push("--fresh");
+    if (generator) args.push("-G", generator);
+  }
   return await command(
     "cmake",
-    await cmakeConfigureArgs({
-      buildDirectory: directory,
-      poryaaaaArgument: poryaaaa.cmakeArgument,
-      qtPrefix: await localQtPrefix(
-        Deno.cwd(),
-        undefined,
-        undefined,
-        directory,
-      ),
-      buildType,
-      buildChecks,
-    }),
+    args,
   );
 }
 
@@ -225,9 +238,8 @@ function printCapped(lines: string[], log: string): void {
 async function warnLegacyTree(): Promise<void> {
   if (!(await exists(join("build", "CMakeCache.txt")))) return;
   console.error(
-    "build: build/ still holds an unused pre-split tree; builds use build/debug " +
-      "and build/release. Remove it: find build -mindepth 1 -maxdepth 1 " +
-      "! -name debug ! -name release -exec rm -rf {} +",
+    "build: build/ still holds an unused pre-split tree; builds use build/debug, " +
+      "build/release, and build/asan.",
   );
 }
 

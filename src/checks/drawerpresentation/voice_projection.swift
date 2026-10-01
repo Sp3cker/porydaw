@@ -54,8 +54,11 @@ func drawerVoiceMarkerProjection(_ report: CheckReport, suite: DocumentSession,
                            + "(timeline ends at \(fixture.session.timeline.lengthTicks))")
     report.expect(page.trackAvailable, cppID: drawerVoiceProjectionID,
                   message: "a resolved track publishes the band's tracking facts")
-    report.expect(!page.readoutText.isEmpty, cppID: drawerVoiceProjectionID,
-                  message: "the context readout names the program at the context tick")
+    let readoutProgram = Int(page.readoutText.prefix { !$0.isWhitespace })
+    report.expectEqual(
+        expected: Optional(programs[0]), actual: readoutProgram,
+        cppID: drawerVoiceProjectionID,
+        what: "the context readout identifies the program at the initial cursor")
     report.expect(page.readoutVisible, cppID: drawerVoiceProjectionID,
                   message: "the readout is published for a presented track")
     report.expect((page.readoutRect["width"] as? Double ?? 0) > 0 &&

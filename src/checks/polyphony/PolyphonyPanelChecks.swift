@@ -60,12 +60,14 @@ func runPolyphonyPanelChecks(_ report: CheckReport) {
     snapshot.eventTotal = 3
     panel.update(snapshot)
     report.expectEqual(expected: 3, actual: panel.eventCount, cppID: eventID, what: "ring drains oldest first")
-    report.expect(panel.events[0].text.contains("live") && panel.events[0].text.contains("dropped"),
+    report.expect(
+        panel.events[0].kind == 0 && panel.events[0].tick == -1,
                   cppID: eventID, message: "newest live drop appears first")
     report.expect(panel.events[1].text.contains("3:2.0"), cppID: eventID,
                   message: "middle tail-cut event formats tick 216 as bar 3 beat 2")
-    report.expect(panel.events[1].text.contains("tail cut"), cppID: eventID,
-                  message: "middle tail-cut event identifies the shortened release")
+    report.expect(
+        panel.events[1].kind == 2 && panel.events[1].tick == 216,
+        cppID: eventID, message: "middle event identifies the positioned tail cut")
     report.expect(panel.events[2].text.contains("2:1.0")
         && panel.events[2].text.contains("Trk 3")
         && panel.events[2].text.contains("C4")
@@ -80,8 +82,6 @@ func runPolyphonyPanelChecks(_ report: CheckReport) {
     }
     panel.activateEvent(index: 0, devicePixelRatio: 2)
     report.expect(jumped == nil, cppID: eventID, message: "live sentinel cannot jump")
-    report.expect(jumpCount == 0, cppID: eventID,
-                  message: "live sentinel emits no jump callback")
     panel.activateEvent(index: 2, devicePixelRatio: 2)
     report.expect(jumped?.0 == 96 && jumped?.1 == 2 && jumped?.2 == 60 && jumped?.3 == 2,
                   cppID: eventID, message: "positioned row jumps to the precise note")

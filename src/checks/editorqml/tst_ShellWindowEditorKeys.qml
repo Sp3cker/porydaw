@@ -16,6 +16,11 @@ ShellWindowSupport {
         var firstTrack = headers.itemAt(surface.gridModel.trackIndex)
         verify(firstTrack && !firstTrack.isAddTrack, "the selected track is actionable")
         selectDrawnVelocityNote(surface)
+        var session = shell.shellPresenter.session
+        var beforeRoute = session.songMidiBytes("mus_route101")
+        var beforeLittle = session.songMidiBytes("mus_littleroot_test")
+        verify(beforeRoute.length > 0 && beforeLittle.length > 0,
+               "both open songs expose SMF bytes before the foreign key")
         compare(firstTrack.soloChecked, false, "Solo starts off on the selected track")
         var soloShortcut = windowShortcut("shellShortcut_roll.solo_tracks")
         verify(soloShortcut, "the production window Solo shortcut is mounted")
@@ -39,6 +44,10 @@ ShellWindowSupport {
                     "a foreign-window S does not Solo the main song")
             compare(soloActivatedSpy.count, 0,
                     "a foreign-window S never activates the main window shortcut")
+            compare(session.songMidiBytes("mus_littleroot_test"), beforeLittle,
+                    "foreign-window keys leave Littleroot SMF bytes unchanged")
+            compare(session.songMidiBytes("mus_route101"), beforeRoute,
+                    "foreign-window keys leave Route 101 SMF bytes unchanged")
         } finally {
             foreign.destroy()
         }

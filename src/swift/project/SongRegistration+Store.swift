@@ -92,19 +92,8 @@ extension ProjectStore {
             }
         }
         let midiDir = projectRoot + "/sound/songs/midi"
-        let midiPath = midiDir + "/\(label).mid"
-        if ProjectFileStore.exists(midiPath) {
-            let trash = projectRoot + "/.porydaw/trash"
-            do { try ProjectFileStore.mkpath(trash) }
-            catch { problems.append("Could not create .porydaw/trash.") }
-            var target = trash + "/\(label).mid"
-            var suffix = 2
-            while ProjectFileStore.exists(target) {
-                target = trash + "/\(label)-\(suffix).mid"
-                suffix += 1
-            }
-            do { try ProjectFileStore.move(from: midiPath, to: target) }
-            catch { problems.append("Could not move \(midiPath) to \(target)") }
+        do { try ProjectFileStore.remove(midiDir + "/\(label).mid") } catch {
+            problems.append(error.localizedDescription)
         }
         do { try ProjectFileStore.remove(midiDir + "/\(label).s") }
         catch { problems.append(error.localizedDescription) }

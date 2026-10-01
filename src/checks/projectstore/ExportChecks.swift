@@ -170,10 +170,6 @@ internal func runExportChecks(_ report: CheckReport) {
             message: "S008: progress strictly increases and ends at one")
         let wav = try Data(contentsOf: path)
         report.expect(
-            wav.count >= 44,
-            cppID: "exportcheck/MidiExportTest::offlineExportProducesValidRiffPcm",
-            message: "S005: exported WAV reads back with a complete header")
-        report.expect(
             wav.count == 44 + Int(totals.totalFrames) * 4,
             cppID: "exportcheck/MidiExportTest::offlineExportProducesValidRiffPcm",
             message: "S010: WAV byte count equals header plus stereo frames")
@@ -298,10 +294,6 @@ internal func runExportChecks(_ report: CheckReport) {
             firstFraction == 0 && result == .cancelled,
             cppID: "exportcheck/MidiExportTest::cancelledExportRemovesPartialFile",
             message: "S021: progress-zero cancellation returns cancelled")
-        report.expect(
-            result == .cancelled,
-            cppID: "exportcheck/MidiExportTest::cancelledExportRemovesPartialFile",
-            message: "S009: cancellation reports no error")
         report.expect(
             !FileManager.default.fileExists(atPath: path.path),
             cppID: "exportcheck/MidiExportTest::cancelledExportRemovesPartialFile",

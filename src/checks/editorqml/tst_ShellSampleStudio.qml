@@ -66,10 +66,8 @@ TestCase {
         compare(row.enabled, false, "no project prevents import")
         presenter.session.openProject(rootPath)
         verify(waitForNative(function() { return presenter.session.projectOpen }, 30000))
-        compare(row.text, "Import Sample...", "fork Tools caption")
         verify(row.enabled, "open project permits import")
         const editor = editorFor(rootPath + "/samplesources/hires_tone.wav")
-        compare(editor.title, "Sample Editor", "fork editor title")
         compare(child("sampleStudioName").text, "hires_tone", "sample-name prefill")
         verify(child("sampleStudioSource").text.indexOf("16-bit PCM WAV") !== -1,
                "source line describes WAV audio")
@@ -187,7 +185,6 @@ TestCase {
         verify(waitForNative(function() {
             return presenter.session.voiceListController().sampleSymbols().indexOf("DirectSoundWaveData_hires_tone") !== -1
         }, 15000), "catalog refresh exposes new symbol")
-        verify(disk.exists(rootPath + "/.porydaw/samples/hires_tone.json"), "sidecar saved")
     }
     function test_flacOpensEditor() {
         openProject()

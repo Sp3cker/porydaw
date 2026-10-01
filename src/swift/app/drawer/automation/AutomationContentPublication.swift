@@ -202,53 +202,94 @@ extension AutomationPage {
         }
     }
 
-    /// The active parameter's nodes and its projected origin phantom. Node markers
-    /// are drawn only at a zoom that can show them, exactly as production's
-    /// `nodeMarkersVisible` decides.
+    /// The active parameter's nodes and origin phantom, minus those a live draw
+    /// replaces; markers draw only at a zoom that can show them.
     func nodeHandles(_ lane: AutomationLaneProjection,
                              projection: AutomationProjection) -> [AutomationNodeHandle] {
         guard projection.markersVisible() else { return [] }
         let paint = nodePaint
-        var values: [AutomationNodeHandle] = []
-        if let phantom = lane.originPhantom {
-            values.append(nodeHandle(phantom.point, paint: paint, parameter: lane.parameter,
-                                     projection: projection, phantom: true))
+        let replaced = previewEdit.flatMap { edit in
+            edit.parameter == lane.parameter ? edit.tickBegin...edit.tickEnd : nil
+        }
+        var values = nodeSnapshots
+        var count = 0
+        func append(_ point: AutomationProjectedPoint, phantom: Bool) {
+            let previous = count < values.count ? values[count] : nil
+            let node = nodeHandle(
+                point, paint: paint, parameter: lane.parameter,
+                phantom: phantom, reusing: previous)
+            if let previous {
+                if previous !== node { values[count] = node }
+            } else {
+                values.append(node)
+            }
+            count += 1
+        }
+        if let phantom = lane.originPhantom, !(replaced?.contains(phantom.point.tick) ?? false) {
+            append(phantom.point, phantom: true)
         }
         let radius = max(paint.nodeRadius, paint.ringRadius) + paint.outlineWidth
         let begin = automationPartitionIndex(lane.points) { $0.x < -radius }
         let end = automationPartitionIndex(lane.points) { $0.x <= plotWidth + radius }
-        for point in lane.points[begin..<end] {
-            values.append(nodeHandle(point, paint: paint, parameter: lane.parameter,
-                                     projection: projection, phantom: false))
+        for point in lane.points[begin..<end] where !(replaced?.contains(point.tick) ?? false) {
+            append(point, phantom: false)
         }
+        if count < values.count { values.removeSubrange(count...) }
         return values
+    }
+
+    /// Republishes only the active node handles, for a live draw's coverage change.
+    func syncActiveNodes() {
+        guard let session, let lane = projection else { return }
+        let cameraProjection = makeProjection(
+            facts: facts(parameter: lane.parameter, modifiers: .init(), session: session),
+            camera: session.camera)
+        syncNodes(nodeHandles(lane, projection: cameraProjection))
     }
 
     func nodeHandle(_ point: AutomationProjectedPoint, paint: AutomationNodePaint,
                             parameter: AutomationParameter,
-                            projection: AutomationProjection,
-                            phantom: Bool) -> AutomationNodeHandle {
+        phantom: Bool, reusing existing: AutomationNodeHandle?
+    ) -> AutomationNodeHandle {
+        // Plot-relative x rides the row, so a zoom's x and scroll land in one frame.
+        let x = phantom ? 0 : point.x
+        let hovered =
+            hover?.hasPoint == true && hover?.parameter == parameter
+            && hover?.tick == point.tick
+        if let existing, let identity = existing.pointIdentity,
+            identity.parameter == point.identity.parameter,
+            identity.tick == point.identity.tick,
+            identity.occurrence == point.identity.occurrence,
+            identity.value == point.identity.value,
+            existing.x == x, existing.y == point.y, existing.tick == Double(point.tick),
+            existing.value == point.value, existing.radius == paint.nodeRadius,
+            existing.ringRadius == paint.ringRadius, existing.outlineWidth == paint.outlineWidth,
+            existing.outlineColor == palette.automationNodeInk,
+            existing.ringColor == palette.selectionRing, existing.selected == point.selected,
+            existing.hovered == hovered, existing.projected == point.projected,
+            existing.phantom == phantom, existing.primitiveName == "automationNode"
+        {
+            if identity.revision != point.identity.revision {
+                existing.pointIdentity = point.identity
+            }
+            return existing
+        }
         let node = AutomationNodeHandle()
-        node.x =
-            phantom
-            ? 0
-            : projection.camera.contentTickX(
-                tick: Double(point.tick), dpr: devicePixelRatio)
+        node.x = x
         node.y = point.y
         node.tick = Double(point.tick)
         node.value = point.value
         node.radius = paint.nodeRadius
         node.ringRadius = paint.ringRadius
         node.outlineWidth = paint.outlineWidth
-        node.fillColor = point.projected ? palette.secondaryText : palette.primaryText
         node.outlineColor = palette.automationNodeInk
         node.ringColor = palette.selectionRing
         node.selected = point.selected
-        node.hovered = hover?.hasPoint == true && hover?.parameter == parameter
-            && hover?.tick == point.tick
+        node.hovered = hovered
         node.projected = point.projected
         node.phantom = phantom
         node.identity = Self.identityText(point.identity)
+        node.pointIdentity = point.identity
         node.refreshSpec()
         return node
     }

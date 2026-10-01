@@ -59,7 +59,24 @@ deno task checks --filter swiftcore          # Swift core/presenter suites
 deno task checks:shell                       # production ShellWindow QML lanes
 deno task checks:qml                         # editor drawer QML lane
 deno task checks:qml-roll                    # Swift roll window QML lane
+deno task checks:bridge                      # Swift/QML boundary guard
+deno task proof check                        # assertion-ledger structure
 ```
+
+`deno task build:checks --asan` builds the app and native checks with AddressSanitizer
+in `build/asan`, separate from normal Debug and Release builds. On macOS it uses
+Clang from the selected Swift toolchain so both languages share an ASAN runtime.
+Run its native checks with:
+
+```bash
+deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,PORYDAW_SAMPLE_CORPUS tools/run_checks.ts build/asan/porydaw_checks
+```
+
+Checks pin consumer-visible behavior and distinct input/state transitions. Prefer typed
+rejections and preserved state over diagnostic wording. Remove assertions implied by
+stronger checks in the same state, but retain fixture guards and lifecycle scenarios.
+Rendering checks observe painted output rather than pinning renderer-specific primitives.
+Update affected proof ledgers with their check changes; compile only referenced support.
 
 ### Startup profiling
 

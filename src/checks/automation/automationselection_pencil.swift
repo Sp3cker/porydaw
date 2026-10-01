@@ -32,8 +32,6 @@ func drawerAutomationPencilOwnershipAndShift(_ report: CheckReport, suite: Docum
                   cppID: id, message: "a pencil press outside the selection starts")
     report.expect(page.isPainting && page.isPencilMode && !page.isPanning && !page.hasBand,
                   cppID: id, message: "a pencil press owns the stroke and starts no pan or band")
-    report.expect(page.isPainting && page.isPencilMode, cppID: id,
-                  message: "the stroke runs in pencil mode")
     report.expect(page.documentRevision == revisionBefore
                       && page.frozenRevision == revisionBefore
                       && fixture.session.editCursor == cursorBefore,
@@ -137,6 +135,12 @@ func drawerAutomationDetailThresholdPrecedence(_ report: CheckReport, suite: Doc
     }
     report.expect(markersVisible(), cppID: id, message: "markers are visible at default zoom")
     let zoomAnchor = fixture.x(24)
+    _ = fixture.session.mutateCamera {
+        $0.zoomAroundContentX(factor: 0.25, anchorContentX: zoomAnchor)
+    }
+    report.expect(
+        markersVisible(), cppID: id,
+        message: "markers stay visible at a quarter of the default zoom")
     _ = fixture.session.mutateCamera {
         $0.zoomAroundContentX(factor: 0.02, anchorContentX: zoomAnchor)
     }

@@ -42,8 +42,6 @@ qt_add_executable(porydaw_checks
     audio/tst_audiobackend.h
     support/checkstartup.cpp
     support/checkstartup.h
-    support/songfixture.cpp
-    support/songfixture.h
     ${PROJECT_SOURCE_DIR}/resources/fonts.qrc
 )
 set_target_properties(porydaw_checks PROPERTIES
@@ -319,6 +317,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/session_io.swift
         workspace/session_playback.swift
         workspace/session_save.swift
+        workspace/session_save_delta.swift
         workspace/bank_history_probes.swift
         workspace/bank_undo_publication.swift
         workspace/voicegroup_creation.swift

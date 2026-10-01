@@ -22,6 +22,7 @@ extension AutomationPage {
     /// primitives, preserving the page's lifecycle and publication order.
     func rebuildContent(selectionOnly: Bool = false) {
         let session = self.session
+        let revision = session?.document.revision
         let snapshot = session.map {
             AutomationSceneSnapshot.build(
                 session: $0, cache: projectionFacts,
@@ -73,6 +74,7 @@ extension AutomationPage {
         publishOverlays()
         publishReadoutGeometry()
         publishContext()
+        publishedContentRevision = revision
     }
 
     // MARK: Owned state application
@@ -80,6 +82,15 @@ extension AutomationPage {
     func applyPreviewDraft(_ draft: AutomationPreviewDraft) {
         previewPoints = draft.parameter == activeParameter ? draft.points : []
         previewText = draft.parameter == activeParameter ? draft.text : ""
+    }
+
+    func applyPreviewEdit(_ edit: AutomationLaneEdit?) {
+        let next = edit?.parameter == activeParameter ? edit : nil
+        let coverageChanged =
+            next?.tickBegin != previewEdit?.tickBegin
+            || next?.tickEnd != previewEdit?.tickEnd
+        previewEdit = next
+        if coverageChanged { syncActiveNodes() }
     }
 
     @discardableResult

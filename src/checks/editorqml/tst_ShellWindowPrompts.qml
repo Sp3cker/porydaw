@@ -153,6 +153,11 @@ ShellWindowSupport {
 
     function test_eStandaloneInsertTimeOpensMountedPrompt() {
         var firstId = openTwoSongShell()
+        var session = shell.shellPresenter.session
+        var beforeRoute = session.songMidiBytes("mus_route101")
+        var beforeLittle = session.songMidiBytes("mus_littleroot_test")
+        verify(beforeRoute.length > 0 && beforeLittle.length > 0,
+               "both open songs expose SMF bytes before Insert Time")
         var surface = selectedSurface()
         var grid = surface.gridModel
         var menu = surface.rulerMenu
@@ -199,6 +204,10 @@ ShellWindowSupport {
                   3000, "Cancel unmounts the old prompt before another command")
         compare(grid.appliedRevisionText, before,
                 "Cancel leaves the selected document unchanged")
+        compare(session.songMidiBytes("mus_littleroot_test"), beforeLittle,
+                "Insert Time Cancel leaves Littleroot SMF bytes unchanged")
+        compare(session.songMidiBytes("mus_route101"), beforeRoute,
+                "Insert Time Cancel leaves Route 101 SMF bytes unchanged")
         var editMenu = findChild(shell, "shellEditMenu")
         editMenu.open()
         timeMenu.open()

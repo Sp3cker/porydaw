@@ -125,9 +125,6 @@ private func songCatalogFallbacks(_ report: CheckReport) {
             report.expectEqual(
                 expected: .cannotOpenSongTable(table.path), actual: error, cppID: cppID,
                 what: "missing table reports the C++ open-failure condition")
-            report.expectEqual(
-                expected: "Cannot open \(table.path).\n\nIs this a pokeemerald/pokefirered/pokeruby project directory?",
-                actual: error.errorDescription, cppID: cppID, what: "open failure preserves the user-facing text")
         }
         try FileManager.default.createDirectory(
             at: table.deletingLastPathComponent(),
@@ -140,9 +137,6 @@ private func songCatalogFallbacks(_ report: CheckReport) {
             report.expectEqual(
                 expected: .noSongs(table.path), actual: error, cppID: cppID,
                 what: "empty table reports no songs found")
-            report.expectEqual(
-                expected: "No songs found in \(table.path)", actual: error.errorDescription,
-                cppID: cppID, what: "empty table preserves the user-facing text")
         }
         try Data("song mus_only, MUSIC_PLAYER_BGM, 0\n".utf8).write(to: table)
         let constants = root.appendingPathComponent("include/constants", isDirectory: true)

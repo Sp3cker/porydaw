@@ -10,7 +10,6 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
                                      service: ProjectService, projectDir: String) {
     sessionSaveConflictGate(report: report, fixtureRoot: projectDir)
     sessionSaveReceipts(report: report, fixtureRoot: projectDir)
-    sessionLegacySidecarPersistence(report: report, fixtureRoot: projectDir)
     sessionSaveJourney(report: report, fixtureRoot: projectDir)
     sessionSynthUndoTail(report: report, fixtureRoot: projectDir)
     session.document.setLoop(end: false, tick: 72)
@@ -22,6 +21,23 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
 
 
     let preSaveFile = session.document.state.file
+    let preSaveBytes: [UInt8]
+    let otherSongBytes: [UInt8]
+    do {
+        preSaveBytes = try preSaveFile.encoded()
+        otherSongBytes = try runBlocking {
+            let other = try await DocumentSession.open(
+                service: service, label: "mus_session_test2", sampleRate: 48_000)
+            let bytes = try other.document.state.file.encoded()
+            _ = await other.close()
+            return bytes
+        }
+    } catch {
+        report.fail(
+            "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+            "could not encode both songs before save: \(error)")
+        return
+    }
     let preSaveConfig = session.document.state.config
     let preSaveLoopStart = session.timeline.loopStartTick
     let preSaveLoopEnd = session.timeline.loopEndTick
@@ -91,6 +107,22 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
         report.expectEqual(expected: preSaveFile, actual: reopened.document.state.file,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "note and non-tempo metadata streams survive save/reopen")
+        let reopenedBytes = try reopened.document.state.file.encoded()
+        report.expectEqual(
+            expected: preSaveBytes, actual: reopenedBytes,
+            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+            what: "reopened song SMF bytes match the bytes saved")
+        let reopenedOtherBytes = try runBlocking {
+            let other = try await DocumentSession.open(
+                service: service, label: "mus_session_test2", sampleRate: 48_000)
+            let bytes = try other.document.state.file.encoded()
+            _ = await other.close()
+            return bytes
+        }
+        report.expectEqual(
+            expected: otherSongBytes, actual: reopenedOtherBytes,
+            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+            what: "the other song's SMF bytes survive the edited song's save and reopen")
         report.expectEqual(expected: preSaveLoopStart, actual: reopened.timeline.loopStartTick,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "loop-start marker survives save/reopen")
@@ -397,103 +429,6 @@ private func sessionSaveReceipts(report: CheckReport, fixtureRoot: String) {
 }
 
 @MainActor
-private func sessionLegacySidecarPersistence(report: CheckReport, fixtureRoot: String) {
-    let id = "project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload"
-    let label = "mus_session_test"
-    let source = URL(fileURLWithPath: fixtureRoot, isDirectory: true)
-    let root = source.deletingLastPathComponent()
-        .appendingPathComponent("legacy-sidecar-\(UUID().uuidString)", isDirectory: true)
-    let fileManager = FileManager.default
-    do {
-        try fileManager.copyItem(at: source, to: root)
-    } catch {
-        report.fail(id, "Copying the isolated sidecar fixture failed")
-        return
-    }
-    defer { try? fileManager.removeItem(at: root) }
-
-    let service = ProjectService()
-    defer {
-        do {
-            try runBlocking { await service.close() }
-        } catch {
-            report.fail(id, "closing the isolated sidecar project failed")
-        }
-    }
-    let session: DocumentSession
-    do {
-        try runBlocking { try await service.open(root: root.path) }
-        session = try runBlocking { try await DocumentSession.open(service: service, label: label) }
-    } catch {
-        report.fail(id, "Opening the copied sidecar song failed")
-        return
-    }
-
-    let sidecar = root.appendingPathComponent(".porydaw/\(label).json")
-    let seed = Data(#"{"editor":{"laneHeight":96},"view":{"pxPerBeat":48,"selectedTrack":2}}"#.utf8)
-    do {
-        try fileManager.createDirectory(at: sidecar.deletingLastPathComponent(),
-                                        withIntermediateDirectories: true)
-        try seed.write(to: sidecar)
-    } catch {
-        report.fail(id, "Writing the literal legacy sidecar failed")
-        return
-    }
-
-    do {
-        var config = session.document.state.config
-        config.priority += 1
-        session.document.setConfig(config)
-        try runBlocking { try await session.save() }
-    } catch {
-        report.fail(id, "The bare document save failed")
-        return
-    }
-    let afterBare: Data
-    do {
-        afterBare = try Data(contentsOf: sidecar)
-    } catch {
-        report.fail(id, "Reading the legacy sidecar after bare save failed")
-        return
-    }
-    report.expect(afterBare == seed, cppID: id,
-                  message: "A033 bare document save preserves every literal legacy sidecar byte")
-
-    do {
-        let snapshot = try session.document.captureSave()
-        _ = try runBlocking { try await service.save(snapshot, bank: session.bankLease) }
-    } catch {
-        report.fail(id, "Saving the song with its bank lease failed")
-        return
-    }
-    let afterRecipe: Data
-    do {
-        afterRecipe = try Data(contentsOf: sidecar)
-    } catch {
-        report.fail(id, "Reading the legacy sidecar after bank-lease save failed")
-        return
-    }
-    report.expect(afterRecipe == seed, cppID: id,
-                  message: "A038 bank-lease song save preserves every literal legacy sidecar byte")
-
-    do {
-        _ = try runBlocking { try await DocumentSession.open(service: service, label: label) }
-    } catch {
-        report.fail(id, "Reopening the saved sidecar song failed")
-        return
-    }
-    let afterReload: Data
-    do {
-        afterReload = try Data(contentsOf: sidecar)
-    } catch {
-        report.fail(id, "Reading the legacy sidecar after reopen failed")
-        return
-    }
-    report.expect(afterReload == seed, cppID: id,
-                  message: "A041 reopening the saved song preserves every literal legacy sidecar byte")
-}
-
-@MainActor
 private func sessionSaveJourney(report: CheckReport, fixtureRoot: String) {
     let id = "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank"
     let root = stageTestProject(in: fixtureRoot, projectName: "save-journey")
@@ -700,9 +635,10 @@ private func sessionSynthUndoTail(report: CheckReport, fixtureRoot: String) {
                       cppID: id, message: "full synth undo restores the original bank voice")
         report.expect(bytes(at: synthPath) == savedSynth,
                       cppID: id, message: "post-undo save preserves the saved synth file bytes")
-        report.expect(savedSynth.map {
-            $0 != Data("VgSaveCheckSaw::\n\tset_synth_saw\n".utf8)
-        } == true, cppID: id, message: "the first synth save writes a new definition")
+        report.expect(
+            savedSynth.map { $0.contains(Data(symbol.utf8)) } == true
+                && savedSynth.map { $0.contains(Data("set_synth_pulse".utf8)) } == true,
+            cppID: id, message: "the first synth save writes the minted pulse definition")
         report.expect(!session.bankDirty, cppID: id,
                       message: "post-undo synth save settles the bank clean")
     } catch {

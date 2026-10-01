@@ -267,6 +267,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     public func settingsSongLabel() -> String { songTabs.selectedPage?.title ?? "" }
 
+    /// Serialized SMF of an open song, the observation `smf().write()` made.
+    public func songMidiBytes(label: String) -> String {
+        guard
+            let bytes = try? songTabs.tab(label: label)?
+                .workspace.session.document.state.file.encoded()
+        else { return "" }
+        return Data(bytes).base64EncodedString()
+    }
+
     @QtIgnored
     public func setEngineSettings(_ settings: EngineSettings) {
         audio?.setEngineSettings(settings, config: workspace?.session.document.state.config)

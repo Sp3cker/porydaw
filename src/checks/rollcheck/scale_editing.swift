@@ -144,8 +144,6 @@ private func runFoldScaleIntegrationChecks(
         session.setSelectedNotes(originalSelection)
         report.expect(bytes != nil && (try? document.state.file.encoded()) == bytes,
                       cppID: id, message: "scale editing leaves the fixture MIDI unchanged")
-        report.expect(bytes != nil && (try? document.state.file.encoded()) == bytes,
-                      cppID: id, message: "fold edits restore the fixture MIDI bytes")
     }
 
     session.setScale(root: 0)

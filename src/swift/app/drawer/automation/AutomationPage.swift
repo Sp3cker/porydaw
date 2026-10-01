@@ -75,6 +75,9 @@ public final class AutomationPage: EditorDrawerPage {
     /// The live gesture draft: points only, never a document write.
     @QtIgnored public internal(set) var previewPoints: [AutomationLanePoint] = []
     @QtIgnored public internal(set) var previewText = ""
+    /// The span replacement a live pencil or sweep would commit: the plot draws
+    /// the lane through it and hides the nodes it replaces.
+    @QtIgnored public internal(set) var previewEdit: AutomationLaneEdit?
     /// The captured value prompt (`Set Value` / empty-lane insertion).
     @QtIgnored public internal(set) var prompt: AutomationPromptTransaction?
     /// The effective editing context: the shared playhead while playing, the
@@ -113,6 +116,7 @@ public final class AutomationPage: EditorDrawerPage {
     /// published count beside the model for the same reason as the tabs.
     public var nodes: QListModel<AutomationNodeHandle> = QListModel()
     public var nodeCount: Int = 0
+    public var previewNodes: QListModel<AutomationNodeHandle> = QListModel()
     @QtTracked public var displayRevision = 0
     /// Viewport-space display list `list`: 0 axis, 1 statics, 2 preview.
     public func displayList(list: Int) -> Data {
@@ -246,6 +250,8 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored var tabSnapshots: [AutomationTabHandle] = []
     @QtIgnored var nodeSnapshots: [AutomationNodeHandle] = []
     @QtIgnored var curveRunSnapshots: [SceneRect] = []
+    // Stamped only after complete content, overlays and readout publication.
+    @QtIgnored var publishedContentRevision: UInt64?
     @QtIgnored var displayLists: [Data] = []
     @QtIgnored var axisListWriter = DisplayListWriter()
     @QtIgnored var staticsListWriter = DisplayListWriter()

@@ -81,21 +81,23 @@ public final class SampleStudioWorkflow {
         }
         let name = String(symbol.dropFirst(prefix.count))
         destinationSlot = -1
+        let provenance = SampleProvenanceStore(preferences: session.preferences)
+            .load(projectRoot: session.projectRoot, name: name)
         pendingTask = Task { [weak self] in
             defer { self?.pendingTask = nil }
             do {
                 let committed = try await service.readCommittedSample(name: name)
                 let result = try SampleReopen.resolve(wav: committed.wav,
                                                       wavPath: committed.wavPath,
-                                                      sidecar: committed.sidecar)
+                    provenance: provenance)
                 guard let self, self.session?.catalogService === service else { return }
                 self.editName = name
                 self.reopenFromSource = result.fromSource
-                if let sidecar = result.sidecar {
-                    self.sourcePath = sidecar.sourcePath
-                    self.sourceBytes = try Data(contentsOf: URL(fileURLWithPath: sidecar.sourcePath))
-                    self.leftOnly = sidecar.leftOnly
-                    self.selectedZone = sidecar.sf2Zone
+                if let provenance = result.provenance {
+                    self.sourcePath = provenance.sourcePath
+                    self.sourceBytes = try Data(contentsOf: URL(fileURLWithPath: provenance.sourcePath))
+                    self.leftOnly = provenance.leftOnly
+                    self.selectedZone = provenance.sf2Zone
                 } else {
                     self.sourcePath = committed.wavPath
                     self.sourceBytes = committed.wav
@@ -172,30 +174,32 @@ public final class SampleStudioWorkflow {
               let presenter, presenter.canCommit else { return }
         committing = true
         player?.close()
-        var sidecar = SampleSidecar()
-        sidecar.sourcePath = sourcePath
-        sidecar.sourceSha256 = SampleSourceHash.sha256Hex(sourceBytes)
-        sidecar.leftOnly = leftOnly
-        sidecar.sf2Zone = selectedZone
-        sidecar.params = presenter.params
+        var provenance = SampleProvenance()
+        provenance.sourcePath = sourcePath
+        provenance.sourceSha256 = SampleSourceHash.sha256Hex(sourceBytes)
+        provenance.leftOnly = leftOnly
+        provenance.sf2Zone = selectedZone
+        provenance.params = presenter.params
         let name = presenter.sampleName
         let editing = editName != nil
+        let keepsProvenance = !editing || reopenFromSource
         let destination = destinationSlot
-        let request = SampleCommitRequest(name: name, wav: presenter.wavBytes(),
-                                          sidecar: editing && !reopenFromSource ? nil : sidecar,
-                                          removeSidecar: editing && !reopenFromSource,
-                                          update: editing)
+        let root = session.projectRoot
+        let provenanceStore = SampleProvenanceStore(preferences: session.preferences)
+        let request = SampleCommitRequest(name: name, wav: presenter.wavBytes(), update: editing)
         pendingTask = Task { [weak self] in
             defer {
                 self?.pendingTask = nil
                 self?.committing = false
             }
             do {
-                let receipt = try await service.commitSample(request)
-                guard let self, self.session?.catalogService === service else { return }
-                if !receipt.sidecarSaved {
-                    session.statusMessage(message: "Sample imported, but saving its edit history failed: \(receipt.sidecarError)")
+                try await service.commitSample(request)
+                if keepsProvenance {
+                    provenanceStore.save(provenance, projectRoot: root, name: name)
+                } else {
+                    provenanceStore.remove(projectRoot: root, name: name)
                 }
+                guard let self, self.session?.catalogService === service else { return }
                 _ = await session.refreshVoicegroupCatalog()
                 guard self.session?.catalogService === service else { return }
                 if !editing && destination >= 0 {

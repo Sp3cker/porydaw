@@ -207,7 +207,6 @@ private func checkPolyChannelModes(_ report: CheckReport) {
             ], endTick: 96),
         ])
         let timeline = PlaybackTimeline.build(file: file, sampleRate: 48_000)
-        report.expect(!timeline.events.isEmpty, cppID: id, message: "channel-mode timeline built")
         guard let engine = polyEngine(report, cppID: id) else { continue }
         var sequencer = Sequencer()
         var left = [Float](repeating: 0, count: polyChunk)
@@ -235,13 +234,7 @@ func runPolyphonyEngineChecks(_ report: CheckReport) {
                   message: "overflow timeline built")
     checkPolyOverflow(timeline, report)
     checkPolyLiveSentinel(report)
-    report.expect(!timeline.events.isEmpty,
-                  cppID: polyPrefix + "normalPlaybackKeepsShadowPoolOff",
-                  message: "normal timeline built")
     checkPolyNormal(timeline, report)
-    report.expect(!timeline.events.isEmpty,
-                  cppID: polyPrefix + "invertSilencesUntilOverflowAndClearsShadow",
-                  message: "invert timeline built")
     checkPolyInvert(timeline, report)
     checkPolyAudition(report)
     checkPolyChannelModes(report)

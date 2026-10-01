@@ -22,7 +22,6 @@ private func renderDeterminism(_ report: CheckReport) {
         check.expect(false, message: "high resolution fixture imports for determinism")
         return
     }
-    check.expect(true, message: "high resolution fixture imports for determinism")
     check.expect(SampleDocument.defaultParams(for: source).targetRate == 13379, message: "fresh high-rate default caps at 13379")
     var low = source
     low.sampleRate = 8000
@@ -67,7 +66,6 @@ private func renderLoopGeometry(_ report: CheckReport) {
         check.expect(false, message: "high resolution fixture imports for loop geometry")
         return
     }
-    check.expect(true, message: "high resolution fixture imports for loop geometry")
     var document = SampleDocument(source: source)
     document.setParams(parityParams(.a, sourceRate: source.sampleRate, params: document.params))
     let sample = document.processed
@@ -104,7 +102,6 @@ private func renderRiffPadding(_ report: CheckReport) {
         check.expect(false, message: "high resolution fixture imports for RIFF padding")
         return
     }
-    check.expect(true, message: "high resolution fixture imports for RIFF padding")
     var document = SampleDocument(source: source)
     document.setParams(parityParams(.f, sourceRate: source.sampleRate, params: document.params))
     let sample = document.processed
@@ -133,7 +130,6 @@ private func renderRetune(_ report: CheckReport) {
         check.expect(false, message: "flat WAV fixture imports for retune vectors")
         return
     }
-    check.expect(true, message: "flat WAV fixture imports for retune vectors")
     let vectors: [(Double, Int, Double, UInt32)] = [
         (13379, 60, 0, 13700096), (13379, 72, 0, 6850048),
         (13379, 57, 0, 16292252), (13379, 58, 25, 15157369),
@@ -166,7 +162,6 @@ private func renderCrossfade(_ report: CheckReport) {
         check.expect(false, message: "crossfade fixture imports")
         return
     }
-    check.expect(true, message: "crossfade fixture imports")
     var params = SampleDocument.defaultParams(for: source)
     params.loopOn = true
     params.loopStart = 4000
@@ -204,7 +199,6 @@ private func renderCompressed(_ report: CheckReport) {
         check.expect(false, message: "FLAC source imports for render")
         return
     }
-    check.expect(true, message: "FLAC source imports for render")
     var document = SampleDocument(source: source)
     let output = document.processed
     check.expect(output.size > 0 && output.s8.count == output.size && output.freq > 0,

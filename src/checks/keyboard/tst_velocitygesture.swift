@@ -78,7 +78,6 @@ func runVelocityGestureParityChecks(_ report: CheckReport) {
     let lifecycle = frozenGesture(notes: [frozenNote(liveSecond, velocity: 120),
                                           frozenNote(liveFirst, velocity: 40)], revision: live.0.revision)
     report.expect(lifecycle.notes.count == 2, cppID: lifecycleID, message: "A013 freeze accepts an unsorted target pair")
-    report.expect(lifecycle.notes.count > 0, cppID: lifecycleID, message: "A014 captured freeze reports active")
     report.expectEqual(expected: Optional(UInt8(40)), actual: lifecycle.previewVelocity(liveFirst), cppID: lifecycleID, what: "A015 first frozen target holds its begin value")
     report.expectEqual(expected: Optional(UInt8(120)), actual: lifecycle.previewVelocity(liveSecond), cppID: lifecycleID, what: "A016 second frozen target holds its begin value")
     guard let atomic = gestureDocument() else {
@@ -141,7 +140,6 @@ func runVelocityGestureParityChecks(_ report: CheckReport) {
     report.expectEqual(expected: Optional(UInt8(30)), actual: completion!.preview[finishingFirst], cppID: completionID, what: "A032 first preview measures the delta from its origin")
     report.expectEqual(expected: Optional(UInt8(110)), actual: completion!.preview[finishingSecond], cppID: completionID, what: "A033 second preview measures the delta from its origin")
     let payload = VelocityGesturePolicy.updates(completion!)
-    report.expect(!payload.isEmpty, cppID: completionID, message: "A034 completion exists after edits")
     report.expectEqual(expected: finishingRevision, actual: completion!.revision, cppID: completionID, what: "A035 completion carries the begin revision")
     report.expectEqual(expected: 2, actual: payload.count, cppID: completionID, what: "A036 completion carries both targets")
     report.expectEqual(expected: finishingFirst, actual: payload.first?.noteID ?? NoteID(), cppID: completionID, what: "A037 completion orders the first target by note")
