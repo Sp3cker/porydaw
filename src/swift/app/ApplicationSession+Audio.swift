@@ -5,8 +5,53 @@ import QtBridge
 import PorydawAppAudio
 import PorydawAppCommands
 
+enum AudioReadiness {
+    case idle
+    case preparing(Task<Void, Never>)
+    case ready(NativeAudio)
+    case failed(String)
+}
+
 @MainActor
 extension ApplicationSession {
+    func prepareAudio() {
+        guard !isDisposed, case .idle = audioReadiness else { return }
+        let factory = audioFactory
+        let task = Task { [weak self] in
+            do {
+                try Task.checkCancellation()
+                let owner = try await factory()
+                guard let self, !self.isDisposed, !Task.isCancelled else { return }
+                self.adoptAudio(owner)
+            } catch {
+                guard let self, !self.isDisposed, !Task.isCancelled else { return }
+                let message = String(describing: error)
+                self.audioReadiness = .failed(message)
+                self.lastSaveError = message
+            }
+        }
+        audioReadiness = .preparing(task)
+    }
+
+    func preparedAudio() async -> NativeAudio? {
+        guard !isDisposed, !Task.isCancelled else { return nil }
+        prepareAudio()
+        await audioPreparationSettled()
+        guard !isDisposed, !Task.isCancelled else { return nil }
+        return audio
+    }
+
+    func audioPreparationSettled() async {
+        if case .preparing(let task) = audioReadiness { await task.value }
+    }
+
+    private func adoptAudio(_ owner: NativeAudio) {
+        owner.setEngineSettings(engineSettings, config: nil)
+        audioReadiness = .ready(owner)
+        transportBar.audioBecameReady(owner)
+        polyphony.attach(audio: owner)
+    }
+
     func connectPolyphonyJump() {
         polyphony.onJump = { [weak self] tick, track, key, dpr in
             guard let session = self?.workspace?.session else { return }
@@ -92,14 +137,14 @@ extension ApplicationSession {
                     sustain: UInt8(truncatingIfNeeded: adsr.sustain),
                     release: UInt8(truncatingIfNeeded: adsr.release))
                 switch sound {
-                case let .sample(bytes, frequency, loopStart, looped, toneKey, envelope):
+                case .sample(let bytes, let frequency, let loopStart, let looped, let toneKey, let envelope):
                     let envelope = envelope.map {
                         AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
                     } ?? chosen
                     _ = audio.auditionSample(samples: bytes, frequency: frequency,
                                              loopStart: loopStart, looped: looped,
                                              key: 60, adsr: envelope, toneKey: toneKey)
-                case let .wave(bytes, envelope):
+                case .wave(let bytes, let envelope):
                     let envelope = envelope.map {
                         AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
                     } ?? chosen

@@ -43,9 +43,23 @@ internal func runTransportBarChecks(_ report: CheckReport) {
 private func checkTransportTogglePreferences(_ report: CheckReport) {
     let id = "swiftcore/TransportBar::togglePreferences"
     let store = PreferencesStore()
+    let originalFollow =
+        store.hasValue(key: "followPlayhead")
+        ? store.bool(key: "followPlayhead", fallback: true) : nil
+    let originalResonance =
+        store.hasValue(key: "dsp.resonanceSuppression")
+        ? store.bool(key: "dsp.resonanceSuppression", fallback: false) : nil
     defer {
-        store.remove(key: "followPlayhead")
-        store.remove(key: "dsp.resonanceSuppression")
+        if let originalFollow {
+            store.setBool(key: "followPlayhead", value: originalFollow)
+        } else {
+            store.remove(key: "followPlayhead")
+        }
+        if let originalResonance {
+            store.setBool(key: "dsp.resonanceSuppression", value: originalResonance)
+        } else {
+            store.remove(key: "dsp.resonanceSuppression")
+        }
         store.synchronize()
     }
     store.setBool(key: "followPlayhead", value: false)
@@ -56,12 +70,12 @@ private func checkTransportTogglePreferences(_ report: CheckReport) {
         session.hostClosing()
         session.acknowledgeGridDetached()
     }
-    guard let audio = session.transportAudio else {
+    let presenter = session.transportBarPresenter()
+    presenter.restoreTransportToggles()
+    guard let audio = try? runBlocking({ await session.preparedAudio() }) else {
         report.fail(id, "native audio failed to initialize: \(session.lastSaveError)")
         return
     }
-    let presenter = session.transportBarPresenter()
-    presenter.restoreTransportToggles()
     report.expectEqual(expected: false, actual: presenter.followPlayhead, cppID: id,
                        what: "stored follow-playhead preference restores into the transport presenter")
     report.expectEqual(expected: true, actual: audio.resonanceSuppression, cppID: id,
@@ -73,12 +87,18 @@ private func checkTransportTogglePreferences(_ report: CheckReport) {
     report.expectEqual(expected: false,
                        actual: store.bool(key: "dsp.resonanceSuppression", fallback: true),
                        cppID: id, what: "toggling resonance suppression stores its preference on change")
+    report.expectEqual(
+        expected: false, actual: audio.resonanceSuppression,
+        cppID: id, what: "toggling resonance suppression updates the real audio engine")
 }
 
 @MainActor
 private func checkTransportVolumeIsolation(_ report: CheckReport, fixtureRoot: String?) {
     let id = "swiftcore/TransportBar::volumeIsolation"
-    guard let fixtureRoot else { report.fail(id, "missing transport fixture root"); return }
+    guard let fixtureRoot else {
+        report.fail(id, "missing transport fixture root")
+        return
+    }
     let store = PreferencesStore()
     let original = store.hasValue(key: "outputVolume") ? store.int(key: "outputVolume", fallback: 100) : nil
     defer {
@@ -94,12 +114,12 @@ private func checkTransportVolumeIsolation(_ report: CheckReport, fixtureRoot: S
         app.hostClosing()
         app.acknowledgeGridDetached()
     }
-    guard let audio = app.transportAudio else {
+    let bar = app.transportBarPresenter()
+    bar.restoreOutputVolume()
+    guard let audio = try? runBlocking({ await app.preparedAudio() }) else {
         report.fail(id, "native audio failed to initialize: \(app.lastSaveError)")
         return
     }
-    let bar = app.transportBarPresenter()
-    bar.restoreOutputVolume()
     report.expectEqual(expected: 37, actual: bar.outputVolume, cppID: id,
                        what: "staged 37 output preference restores into selected toolbar")
     report.expectEqual(expected: 37, actual: audio.outputVolume, cppID: id,
@@ -193,22 +213,22 @@ private func checkRestoredOutputVolumeAfterAttachment(_ report: CheckReport) {
     }
     store.setInt(key: "outputVolume", value: 37)
     store.synchronize()
-    let presenter = TransportBarPresenter()
-    presenter.restoreOutputVolume()
-    report.expectEqual(expected: 37, actual: presenter.outputVolume, cppID: id,
-                       what: "stored output volume survives before audio attachment")
     let app = ApplicationSession()
     defer {
         app.hostClosing()
         app.acknowledgeGridDetached()
     }
-    guard let audio = app.transportAudio else {
+    let presenter = app.transportBarPresenter()
+    presenter.restoreOutputVolume()
+    report.expectEqual(
+        expected: 37, actual: presenter.outputVolume, cppID: id,
+        what: "stored output volume survives before audio readiness")
+    guard let audio = try? runBlocking({ await app.preparedAudio() }) else {
         report.fail(id, "native audio failed to initialize: \(app.lastSaveError)")
         return
     }
-    presenter.attach(session: app)
     report.expectEqual(expected: 37, actual: audio.outputVolume, cppID: id,
-                       what: "stored output volume survives late audio attachment")
+        what: "stored output volume reaches the real engine when audio becomes ready")
 
     store.setInt(key: "outputVolume", value: 145)
     presenter.restoreOutputVolume()
@@ -235,7 +255,7 @@ private func checkSelectedWorkspaceAudio(_ report: CheckReport, fixtureRoot: Str
         app.hostClosing()
         app.acknowledgeGridDetached()
     }
-    guard let audio = app.transportAudio else {
+    guard let audio = try? runBlocking({ await app.preparedAudio() }) else {
         report.fail(id, "native audio failed to initialize: \(app.lastSaveError)")
         return
     }

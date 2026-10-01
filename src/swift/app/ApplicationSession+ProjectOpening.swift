@@ -19,13 +19,14 @@ extension ApplicationSession {
 
     @QtIgnored
     func restoreStartup() {
-        guard persistenceConfigured else { return }
+        guard persistenceConfigured, !deliberateOpenRequested, !isDisposed else { return }
         let recipe = EditorViewStateCodec.loadTabs(store: preferences)
         guard !recipe.projectPath.isEmpty else { return }
         startProjectSwitch(path: recipe.projectPath, label: nil, restore: recipe)
     }
 
     func requestProjectSwitch(path: String, label: String?) {
+        deliberateOpenRequested = true
         // A deliberate open wins over a recipe still loading in the background.
         startupRestoreTask?.cancel()
         startupRestoreTask = nil

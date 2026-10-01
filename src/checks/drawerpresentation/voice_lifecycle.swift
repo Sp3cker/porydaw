@@ -238,7 +238,9 @@ private func drawerVoiceWorkspaceHideShow(_ report: CheckReport,
                                           fixture: drawerVoiceVoiceChangesFixture) {
     let audio: NativeAudio
     do {
-        audio = try NativeAudio()
+        audio = try runBlocking {
+            try await NativeAudio()
+        }
     } catch {
         report.fail(drawerVoiceCancellationID, "section visibility cannot create audio: \(error)")
         return
@@ -311,7 +313,8 @@ func drawerVoiceAuditionCapability(_ report: CheckReport, suite: DocumentSession
     page.releasePickerAudition()
     report.expectEqual(expected: [[first, 60, 112], [first, 60, 0],
                         [first, 60, 112], [first, 60, 0],
-                        [second, 60, 112], [second, 60, 0]], actual: calls,
+            [second, 60, 112], [second, 60, 0],
+        ], actual: calls,
                        cppID: drawerVoiceAuditionID, what: "held program replacement releases once before the next note")
 
     calls.removeAll()
@@ -337,7 +340,8 @@ func drawerVoiceAuditionCapability(_ report: CheckReport, suite: DocumentSession
     hold(programs[1])
     page.onAuditionVoice = nil
     report.expectEqual(expected: [[first, 60, 112], [first, 60, 0],
-                        [second, 60, 112], [second, 60, 0]], actual: calls,
+            [second, 60, 112], [second, 60, 0],
+        ], actual: calls,
                        cppID: drawerVoiceAuditionID, what: "picker and callback replacement release through the old owner")
     report.expect(!page.auditionAvailable, cppID: drawerVoiceAuditionID,
                   message: "removing the real callback removes audition availability")

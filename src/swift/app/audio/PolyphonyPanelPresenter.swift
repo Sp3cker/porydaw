@@ -86,7 +86,8 @@ public final class PolyphonyPanelPresenter {
     @QtIgnored
     public func attach(audio: NativeAudio?) {
         self.audio = audio
-        invertChecked = audio?.polyDebugInvert ?? false
+        audio?.setPolyDebugInvert(visible && invertChecked)
+        if visible { poll() }
     }
 
     /// Rebind the selected document, without carrying its diagnostic rows to a new song.
@@ -178,7 +179,9 @@ public final class PolyphonyPanelPresenter {
             }
         }
         for i in 0..<count {
-            let drop = snapshot.drop[i], steal = snapshot.steal[i], tail = snapshot.tailCut[i]
+            let drop = snapshot.drop[i]
+            let steal = snapshot.steal[i]
+            let tail = snapshot.tailCut[i]
             let previous = previousCounters[i]
             if drop > previous.0 || steal > previous.1 || tail > previous.2 {
                 flashUntil[i] = now.advanced(by: .seconds(1))
@@ -284,7 +287,10 @@ public final class PolyphonyPanelPresenter {
     }
 
     private func formatPosition(_ tick: UInt32) -> String {
-        var start: UInt64 = 0, numerator: UInt64 = 4, denominatorPower = 2, bar: UInt64 = 1
+        var start: UInt64 = 0
+        var numerator: UInt64 = 4
+        var denominatorPower = 2
+        var bar: UInt64 = 1
         for signature in signatures where signature.tick <= tick {
             let beat = max(UInt64(1), UInt64(ticksPerBeat) * 4 >> denominatorPower)
             let barLength = numerator * beat

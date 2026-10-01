@@ -21,7 +21,7 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
     var chunkMetasStripped = true
     for chunk in session.document.state.file.chunks {
         for event in chunk.events {
-            if case let .meta(type, _) = event.payload, type == 0x51 {
+            if case .meta(let type, _) = event.payload, type == 0x51 {
                 chunkMetasStripped = false
             }
         }
@@ -252,7 +252,7 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
         app.hostClosing()
         app.acknowledgeGridDetached()
     }
-    guard let audio = app.transportAudio else {
+    guard let audio = try? runBlocking({ await app.preparedAudio() }) else {
         report.fail(timelineID, "native audio failed to initialize: \(app.lastSaveError)")
         return
     }
@@ -376,8 +376,8 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
                       expectedEvent(tick: 0, type: 0x9, data0: 60,
                                     data1: 100, noteID: noteID),
                       expectedEvent(tick: 0, type: 0xB, data0: 7, data1: 100),
-                      expectedEvent(tick: 24, type: 0x8, data0: 60, data1: 0)
-                  ]),
+                expectedEvent(tick: 24, type: 0x8, data0: 60, data1: 0),
+            ]),
                   cppID: timelineID,
                   message: "live edit publishes the independently scheduled C4 onset and release to playing audio")
     report.expect(document.note(noteID)?.tick == 0 && document.note(noteID)?.pitch == 60,
@@ -391,8 +391,8 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
                       expectedEvent(tick: 0, type: 0xB, data0: 7, data1: 100),
                       expectedEvent(tick: 24, type: 0x9, data0: 61,
                                     data1: 100, noteID: noteID),
-                      expectedEvent(tick: 48, type: 0x8, data0: 61, data1: 0)
-                  ]),
+                expectedEvent(tick: 48, type: 0x8, data0: 61, data1: 0),
+            ]),
                   cppID: timelineID,
                   message: "live move publishes the independently scheduled C sharp onset and release")
     report.expect(document.note(noteID)?.tick == 24 && document.note(noteID)?.pitch == 61,

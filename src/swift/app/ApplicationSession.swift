@@ -61,7 +61,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored var catalogRefreshIssued: UInt64 = 0
     @QtIgnored var catalogRefreshApplied: UInt64 = 0
     @QtIgnored
-    var audio: NativeAudio?
+    var audioReadiness: AudioReadiness = .idle
+    @QtIgnored
+    var audioFactory: @MainActor () async throws -> NativeAudio = { try await NativeAudio() }
+    @QtIgnored
+    var engineSettings = EngineSettings()
+    @QtIgnored
+    var audio: NativeAudio? {
+        if case .ready(let owner) = audioReadiness { owner } else { nil }
+    }
     /// The empty presenter the surface binds while no document is presented.
     /// Drawer chrome belongs to the document, so this one is never attached to:
     /// it is the stable object QML may hold before the first open and after the
@@ -115,6 +123,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     var persistenceConfigured = false
     @QtIgnored
+    var deliberateOpenRequested = false
+    @QtIgnored
     var editorViewState = EditorViewState()
     @QtIgnored
     public var editorChrome: EditorDrawerChromeState { editorViewState.chrome }
@@ -153,12 +163,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
         emptyOtherEventsBand.configure(session: nil, palette: palette,
                                       baseFontPx: GridCameraPolicy.seedBaseFontPx,
             appFontLineSpacing: 0)
-        do {
-            audio = try NativeAudio()
-        } catch {
-            lastSaveError = String(describing: error)
-        }
-        polyphony.attach(audio: audio)
         connectPolyphonyJump()
         eventList.onRevealVoiceRequested = { [voiceList] program in
             voiceList.revealSlot(slot: program)
@@ -278,6 +282,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     @QtIgnored
     public func setEngineSettings(_ settings: EngineSettings) {
+        engineSettings = settings
         audio?.setEngineSettings(settings, config: workspace?.session.document.state.config)
     }
 

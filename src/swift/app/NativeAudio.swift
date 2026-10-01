@@ -19,9 +19,9 @@ public final class NativeAudio {
     private var bankLease: NativeBankLease?
     private var engineSettings = AudioSettings()
 
-    public init() throws {
+    public init() async throws {
         do {
-            device = try AudioDevice()
+            device = try await AudioDevice.prepare()
         } catch AudioRenderEngine.InitializationError.engine {
             throw NativeAudioError.initializationFailed(
                 "Failed to allocate the M4A audio engines. Free memory and try again.")

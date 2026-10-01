@@ -466,7 +466,9 @@ func drawerAutomationSharedPopupArbitration(_ report: CheckReport, suite: Docume
                                                     pan: [(24, 64), (120, 40)])
     let audio: NativeAudio
     do {
-        audio = try NativeAudio()
+        audio = try runBlocking {
+            try await NativeAudio()
+        }
     } catch {
         report.fail(id, "the shared-popup fixture cannot create audio: \(error)")
         return

@@ -40,7 +40,13 @@ public final class TransportBarPresenter {
 
     @QtIgnored public func attach(session: ApplicationSession) {
         self.session = session
-        session.transportAudio?.setOutputVolume(outputVolume)
+        refresh()
+    }
+
+    @QtIgnored
+    func audioBecameReady(_ audio: NativeAudio) {
+        audio.setOutputVolume(outputVolume)
+        audio.setResonanceSuppression(resonanceSuppression)
         refresh()
     }
 
@@ -180,9 +186,11 @@ public final class TransportBarPresenter {
     }
 
     public func setResonanceSuppression(enabled: Bool) {
-        guard let audio = session?.transportAudio else { return }
-        audio.setResonanceSuppression(enabled)
+        let changed = resonanceSuppression != enabled
+        resonanceSuppression = enabled
+        session?.transportAudio?.setResonanceSuppression(enabled)
         refresh()
+        if changed { onAvailabilityChanged?() }
         let store = PreferencesStore()
         store.setBool(key: "dsp.resonanceSuppression", value: resonanceSuppression)
         store.synchronize()
@@ -262,7 +270,7 @@ public final class TransportBarPresenter {
         var result: [(tick: Tick, label: String)] = []
         for chunk in document.state.file.chunks {
             for event in chunk.events {
-                guard case let .meta(type, data) = event.payload,
+                guard case .meta(let type, let data) = event.payload,
                       type == 0x59, data.count == 2 else { continue }
                 let fifths = Int(Int8(bitPattern: data[0]))
                 let names = fifths < 0 ? flat : sharp

@@ -23,7 +23,15 @@ public final class AudioDevice {
     public private(set) var periodSizeFrames = 0
     public private(set) var periodCount = 0
 
-    public init() throws {
+    @concurrent
+    public static func prepare() async throws -> sending AudioDevice {
+        try Task.checkCancellation()
+        let device = try AudioDevice()
+        try Task.checkCancellation()
+        return device
+    }
+
+    private init() throws {
         let environment = ProcessInfo.processInfo.environment
         nullBackendForced = environment["PORYDAW_AUDIO_BACKEND"] == "null"
         do {

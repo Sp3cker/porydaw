@@ -26,7 +26,7 @@ Rectangle {
             anchors.topMargin: parent.statusTopInset
             anchors.bottomMargin: parent.statusBottomInset
             anchors.leftMargin: root.chromeSpacing.two
-            text: shell.statusText
+            text: shell.sceneActive ? shell.statusText : qsTr("Closing…")
             font: Qt.font(root.chromeTypography.caption)
             color: root.colors.windowText
             verticalAlignment: Text.AlignVCenter

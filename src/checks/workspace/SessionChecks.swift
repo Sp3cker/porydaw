@@ -26,6 +26,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     runTypographyLayoutChecks(report)
     mouseHintOwnershipChecks(report)
 
+    runWorkspaceStartupChecks(report)
     runTransportBarChecks(report)
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
         report.fail(

@@ -154,6 +154,7 @@ extension ApplicationSession {
     func hostClosingImpl() {
         closeSampleStudio()
         isDisposed = true
+        if case .preparing(let task) = audioReadiness { task.cancel() }
         if let pending = pendingProjectSwitch {
             pendingProjectSwitch = nil
             Task { await pending.service.close() }

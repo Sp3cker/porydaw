@@ -209,7 +209,7 @@ internal func bankBackgroundEditReachesSelectedAudio(report: CheckReport, fixtur
         app.hostClosing()
         app.acknowledgeGridDetached()
     }
-    guard let audio = app.transportAudio else {
+    guard let audio = try? runBlocking({ await app.preparedAudio() }) else {
         report.fail(id, "native audio unavailable: \(app.lastSaveError)")
         return
     }
@@ -306,7 +306,7 @@ internal func mountedEditReachesPeerTabAudio(report: CheckReport, fixtureRoot: S
         app.hostClosing()
         app.acknowledgeGridDetached()
     }
-    guard let audio = app.transportAudio else {
+    guard let audio = try? runBlocking({ await app.preparedAudio() }) else {
         report.fail(id, "native audio unavailable: \(app.lastSaveError)")
         return
     }

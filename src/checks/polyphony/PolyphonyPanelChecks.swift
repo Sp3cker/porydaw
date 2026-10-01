@@ -109,15 +109,13 @@ func runPolyphonyPanelChecks(_ report: CheckReport) {
                        what: "newest retained event is first")
 
     let invertID = "swiftcore/PolyphonyPanel::invertVisibilityGate"
+    panel.setVisible(showing: false)
+    panel.setInvertChecked(checked: true)
     do {
-        let audio = try NativeAudio()
+        let audio = try runBlocking { try await NativeAudio() }
         panel.attach(audio: audio)
-        report.expect(!audio.polyDebugInvert, cppID: invertID,
-                      message: "a fresh attach leaves renderer invert off")
-        panel.setVisible(showing: false)
-        panel.setInvertChecked(checked: true)
         report.expect(!audio.polyDebugInvert && panel.invertChecked,
-                      cppID: invertID, message: "hidden checkbox retains state without inverting audio")
+            cppID: invertID, message: "hidden pre-attachment checkbox retains state without inverting audio")
         panel.setVisible(showing: true)
         report.expect(audio.polyDebugInvert, cppID: invertID,
                       message: "reopening checked panel enables audio invert")

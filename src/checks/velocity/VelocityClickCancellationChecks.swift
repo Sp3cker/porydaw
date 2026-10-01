@@ -184,7 +184,8 @@ func drawerVelocityPrimaryTrackSwitchCancels(_ report: CheckReport, session: Doc
 func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: DocumentSession,
                                          service: ProjectService) {
     let routes = ["page-switch", "drawer-hide", "pointer-ungrabbed", "focus-loss",
-                  "window-deactivated", "hidden", "escape"]
+        "window-deactivated", "hidden", "escape",
+    ]
     let preferences = PreferencesStore()
     for route in routes {
         let fixture = drawerVelocityVelocityFixture(session: session, service: service)
@@ -272,7 +273,9 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
     }
     let audio: NativeAudio
     do {
-        audio = try NativeAudio()
+        audio = try runBlocking {
+            try await NativeAudio()
+        }
     } catch {
         report.fail(drawerVelocityCancellationID, "bank transition cannot create audio: \(error)")
         return
@@ -380,7 +383,9 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
     }
     let switchAudio: NativeAudio
     do {
-        switchAudio = try NativeAudio()
+        switchAudio = try runBlocking {
+            try await NativeAudio()
+        }
     } catch {
         report.fail(drawerVelocityCancellationID, "voicegroup switch cannot create audio: \(error)")
         return

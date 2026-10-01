@@ -310,6 +310,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/session_view_state.swift
         workspace/session_view_state_fanout.swift
         workspace/transport_checks.swift
+        workspace/startup_checks.swift
         workspace/session_fixtures.swift
         workspace/session_editor_semantics.swift
         workspace/session_time_routing.swift

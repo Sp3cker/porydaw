@@ -163,10 +163,20 @@ extension ApplicationSession {
             failOpen("Open a project before opening a song.")
             return
         }
-        guard let audio else {
+        guard let audio = await preparedAudio() else {
+            if isDisposed || Task.isCancelled {
+                if let tab { songTabs.cancelReload(tabId: tab.tabId) }
+                return
+            }
             if let tab { songTabs.failReload(restoring: tab) }
-            failOpen(String(describing:
-                NativeAudioError.initializationFailed("Audio service is unavailable.")))
+            guard case .failed(let message) = audioReadiness else {
+                preconditionFailure("Audio preparation completed without an owner or failure.")
+            }
+            failOpen(message)
+            return
+        }
+        guard !isDisposed, !Task.isCancelled else {
+            if let tab { songTabs.cancelReload(tabId: tab.tabId) }
             return
         }
         lastSaveError = ""

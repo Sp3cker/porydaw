@@ -43,7 +43,7 @@ private func checkNativeAudioLifetime(_ report: CheckReport) throws {
                 return try await service.openSong(label: "mus_route101")
             }
             do {
-                let owner = try NativeAudio()
+                let owner = try runBlocking { try await NativeAudio() }
                 let midi = try MidiFile.decode(song.midiBytes)
                 let timeline = PlaybackTimeline.build(file: midi, sampleRate: owner.sampleRate)
                 try owner.bind(timeline: timeline, bank: song.bank, config: song.config)

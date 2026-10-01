@@ -28,6 +28,7 @@ ThemedWindow {
     visible: true
     color: shell.session.palette.windowBackground
     font: Qt.font(root.chromeTypography.body)
+    contentItem.enabled: shell.sceneActive
 
     ShellPresenter {
         id: shell
@@ -96,7 +97,13 @@ ThemedWindow {
         transportBar.presenter.restoreTransportToggles()
         shell.settingsStore.restoreFromPreferences()
         shell.restoreAppearance()
-        shell.openStartup()
+        shell.chromeRestored()
+    }
+
+    Connections {
+        target: root
+        enabled: !shell.startupBegun
+        function onFrameSwapped() { shell.firstFrameRendered() }
     }
 
     Connections {
@@ -518,6 +525,7 @@ ThemedWindow {
     header: TransportBar {
         id: transportBar
         width: root.width
+        enabled: shell.sceneActive
         songAvailable: shell.session.songOpen
         baseFontPx: root.chromeBaseFontPx
         presenter: shell.session.transportBarPresenter()

@@ -173,6 +173,10 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     @QtTracked public var closeReady = false
     @QtTracked public var sceneActive = true
+    @QtTracked public var startupBegun = false
+    @QtIgnored var hasRestoredChrome = false
+    @QtIgnored var hasRenderedFirstFrame = false
+    @QtIgnored var closeSettlementTask: Task<Void, Never>?
     @QtTracked public var themeMode = "vanilla"
     @QtTracked public var gridLineContrast = 50
     @QtTracked public var dockColumnWidth = 280
@@ -250,14 +254,13 @@ public final class ShellPresenter: QmlInstantiableStatus {
     }
 
     public func actionEnabled(id: String) -> Bool {
-        guard let action = Self.byId[id] else { return false }
+        guard sceneActive, let action = Self.byId[id] else { return false }
         if session.wavExportPresenter().active { return false }
         if id == "view.polyphony_debugger" || id == "edit.preferences"
             || id == "edit.engine_settings"
         {
             return true
         }
-        guard sceneActive else { return false }
         if id == "eventlist.move_up" || id == "eventlist.move_down" {
             guard session.songOpen else {
                 lastEventListGate = nil
@@ -471,6 +474,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     public func closeCancelled() {
         closePending = false
+        beginStartupIfReady()
     }
 
     private func finishClose() {
@@ -486,9 +490,40 @@ public final class ShellPresenter: QmlInstantiableStatus {
     /// its item. Qt emits Component.onDestruction before that invalidation
     /// completes; physical QObject deletion may follow later.
     public func sceneDestroyed() {
-        guard closing, !closeReady else { return }
+        guard closing, !closeReady, closeSettlementTask == nil else { return }
         session.acknowledgeGridDetached()
-        closeReady = true
+        guard case .preparing = session.audioReadiness else {
+            closeReady = true
+            return
+        }
+        let session = session
+        closeSettlementTask = Task { @MainActor [weak self] in
+            await session.audioPreparationSettled()
+            guard let self, self.closing, !self.closeReady else { return }
+            self.closeReady = true
+            self.closeSettlementTask = nil
+        }
+    }
+
+    /// Records completion of chrome and persisted preference restoration.
+    public func chromeRestored() {
+        hasRestoredChrome = true
+        beginStartupIfReady()
+    }
+
+    /// Records a presented frame, independently of chrome completion ordering.
+    public func firstFrameRendered() {
+        hasRenderedFirstFrame = true
+        beginStartupIfReady()
+    }
+
+    private func beginStartupIfReady() {
+        guard hasRestoredChrome, hasRenderedFirstFrame, !startupBegun,
+            sceneActive, !closing, !closePending
+        else { return }
+        startupBegun = true
+        session.prepareAudio()
+        openStartup()
     }
 
     public func openStartup() {
