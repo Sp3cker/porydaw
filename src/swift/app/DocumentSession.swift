@@ -176,7 +176,6 @@ public final class DocumentSession {
     /// Borrowed from ApplicationSession, which owns the project service.
     internal unowned let service: ProjectService
     internal let inbox = BankResultInbox()
-    internal let sampleRate: Double
     internal var sharedBank: SharedBankState
     internal var pendingBankNotification = false
     /// A queued bank write owns the session's bank/history lifecycle, but not
@@ -196,7 +195,6 @@ public final class DocumentSession {
         sharedBank = service.bankViews.state(for: AppliedBankEdit(
             lease: lease, slots: slots, dirty: dirty, loadName: loadName,
             materializationToken: nil))
-        self.sampleRate = sampleRate
         let timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
         self.timeline = timeline
         let limits = GridCameraPolicy.limits(baseFontPx: GridCameraPolicy.seedBaseFontPx)
