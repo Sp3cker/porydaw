@@ -366,7 +366,7 @@ Item {
         }
         footer: DialogButtonBox {
             id: closeButtons
-            // Fusion's contentItem plus currentIndex -1: stock highlight animates frames while hidden.
+            // Kept deliberately: stock contentItem animates ~350ms while hidden (accf62cf); silencing the residual transient costs a line for zero visible gain.
             contentItem: ListView {
                 implicitWidth: saveButton.implicitWidth + discardButton.implicitWidth
                                + cancelButton.implicitWidth + 2 * closeButtons.spacing
