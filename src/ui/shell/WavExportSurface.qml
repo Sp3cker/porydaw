@@ -2,10 +2,11 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
+import PorydawApp
 
 Item {
     id: surface
-    required property QtObject presenter
+    required property WavExportPresenter presenter
     required property QtObject colors
     required property var windowRoot
     required property var typography

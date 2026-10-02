@@ -2,16 +2,17 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Porydaw.Ui
+import PorydawApp
 
 DialogWindow {
     id: dialog
     objectName: "sampleStudioDialog"
-    required property QtObject workflow
-    required property QtObject applicationSession
-    required property QtObject editor
-    required property QtObject tools
-    required property QtObject waveformModel
-    required property QtObject audition
+    required property SampleStudioWorkflow workflow
+    required property ApplicationSession applicationSession
+    required property SampleStudioPresenter editor
+    required property SampleLoopTools tools
+    required property SampleWaveformModel waveformModel
+    required property SampleStudioAudition audition
     readonly property real unit: applicationSession.baseFontPx
     readonly property real spacing: applicationSession.layoutSpaces.one
     modality: Qt.ApplicationModal

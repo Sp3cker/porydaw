@@ -16,7 +16,7 @@ extension NativeAudio: SampleAuditionOutput {}
 
 @MainActor
 @QtBridgeable
-public final class SampleStudioAudition {
+public final class SampleStudioAudition: QmlUncreatable {
     private let presenter: SampleStudioPresenter
     private weak var output: (any SampleAuditionOutput)?
     private let destinationAdsr: VoiceListAdsr?

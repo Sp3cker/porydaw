@@ -51,7 +51,10 @@ TestCase {
         tryCompare(shell.shellPresenter.settingsStore, "mixer", "sappy")
         return shell.shellPresenter
     }
-    function dialog() { return findChild(shell, "shellSettingsDialog") }
+    function dialog() {
+        findChild(shell, "shellSettingsLoader").active = true
+        return findChild(shell, "shellSettingsDialog")
+    }
     function reference(profile, page) {
         return JSON.parse(bootstrap.settingsReferenceJson(profile, page))
     }

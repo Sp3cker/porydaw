@@ -3,11 +3,12 @@ import QtQuick.Controls
 import QtQuick.Controls.Basic as Basic
 import QtQuick.Layouts
 import Porydaw.Ui
+import PorydawApp
 
 Basic.Dialog {
     id: dialog
     objectName: "voicegroupNewDialog"
-    required property var controller
+    required property VoiceListController controller
     required property real baseFontPx
     required property var layoutSpaces
     readonly property bool hasCopySource: controller.newVoicegroupCopyLabel.length > 0

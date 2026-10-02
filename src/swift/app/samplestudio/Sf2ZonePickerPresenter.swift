@@ -29,7 +29,7 @@ public final class Sf2ZonePickerRow {
 
 @MainActor
 @QtBridgeable
-public final class Sf2ZonePickerPresenter {
+public final class Sf2ZonePickerPresenter: QmlUncreatable {
     private var model: Sf2ZonePickerModel
     public var rows: QListModel<Sf2ZonePickerRow> = QListModel()
     /// QML changes this through setFilter(text:) so the published rows stay in sync.

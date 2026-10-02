@@ -31,7 +31,7 @@ public enum QtScrollPhase: Int {
 
 @MainActor
 @QtBridgeable
-public final class PianoGrid {
+public final class PianoGrid: QmlUncreatable {
     @QtIgnored
     let session: DocumentSession
     @QtIgnored

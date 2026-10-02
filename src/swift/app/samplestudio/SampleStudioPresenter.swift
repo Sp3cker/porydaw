@@ -5,7 +5,7 @@ import QtBridge
 
 @MainActor
 @QtBridgeable
-public final class SampleStudioPresenter {
+public final class SampleStudioPresenter: QmlUncreatable {
     // fceecd88:src/ui/enginesettingsdialog.cpp:16–17, kGbaMixRates.
     private static let rates = [5734, 7884, 10512, 13379, 15768, 18157, 21024, 26758, 31536, 36314, 40137, 42048]
     private let validateNewName: (String) -> String?

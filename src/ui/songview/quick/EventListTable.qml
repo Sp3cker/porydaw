@@ -1,11 +1,12 @@
 import QtQuick
 import Qt.labs.qmlmodels
+import PorydawApp
 
 Item {
     id: table
 
     required property Item page
-    required property QtObject controller
+    required property EventListPresenter controller
     required property FontMetrics tableFontMetrics
     required property FontMetrics headerFontMetrics
     property bool tableLayoutPending: false

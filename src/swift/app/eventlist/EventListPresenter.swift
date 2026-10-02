@@ -32,7 +32,7 @@ public final class EventListRowHandle {
 /// request only when native follow-playhead suppression permits it.
 @MainActor
 @QtBridgeable
-public final class EventListPresenter {
+public final class EventListPresenter: QmlUncreatable {
     private static let defaultWidthSeeds = [70.0, 120.0, 36.0, 56.0, 56.0, 140.0]
     public var rows: QListModel<EventListRowHandle> = QListModel()
     @QtTracked public var tableRevision = 0

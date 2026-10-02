@@ -2,11 +2,12 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls.Basic as Basic
 import Porydaw.Ui
+import PorydawApp
 
 Rectangle {
     id: bar
     objectName: "transportToolbar"
-    required property QtObject presenter
+    required property TransportBarPresenter presenter
     required property QtObject shell
     required property int actionRevision
     required property QtObject colors

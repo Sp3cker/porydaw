@@ -166,6 +166,7 @@ ShellWindowSupport {
                 && session.songTabs.selectedPage.isReady, true,
                 "A091: two fixture songs occupy distinct ready tabs")
 
+        findChild(shell, "shellProjectPickerLoader").active = true
         const picker = findChild(shell, "shellProjectPicker")
         verify(picker !== null, "the mounted File Open Project picker exists")
         projectReadySpy.target = session

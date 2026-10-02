@@ -82,8 +82,9 @@ TestCase {
     function finish() {
         mouseClick(child("importWizardFinish"))
         verify(waitForNative(function() {
+            const critical = child("shellCriticalDialog")
             return child("shellImportMidiWarning").visible
-                || child("shellCriticalDialog").visible
+                || (critical !== null && critical.visible)
                 || !child("midiImportWizard").visible
         }, 30000), "Finish produces a visible outcome")
         verify(waitForNative(function() {
@@ -107,8 +108,10 @@ TestCase {
         const action = child("shellAction_edit.song_settings")
         verify(action && action.enabled, "Song Settings is enabled")
         mouseClick(action, action.width / 2, action.height / 2)
-        verify(waitForNative(function() { return child("shellSettingsDialog").visible }, 5000),
-               "Song Settings opens")
+        verify(waitForNative(function() {
+            const dialog = child("shellSettingsDialog")
+            return dialog !== null && dialog.visible
+        }, 5000), "Song Settings opens")
     }
     function cleanup() {
         if (permissionPath) {

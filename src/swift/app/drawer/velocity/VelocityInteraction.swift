@@ -260,8 +260,8 @@ extension VelocityPage {
                                      draft: String(initial))
         promptOpen = true
         promptDraft = String(initial)
-        setPublished(&promptError, "")
-        setPublished(&promptInitialValue, initial)
+        setPublished(promptError, "") { promptError = $0 }
+        setPublished(promptInitialValue, initial) { promptInitialValue = $0 }
         refreshInteractionPublished()
         publishHandles(projectHandles())
         return true
@@ -273,20 +273,20 @@ extension VelocityPage {
         live.error = VelocityPromptPolicy.error(draft: live.draft)
         prompt = live
         if promptDraft != live.draft { promptDraft = live.draft }
-        setPublished(&promptError, live.error)
+        setPublished(promptError, live.error) { promptError = $0 }
     }
 
     @discardableResult
     func dispatchAcceptPrompt() -> Bool {
         guard let session, let live = prompt else { return false }
         guard let value = VelocityPromptPolicy.value(draft: live.draft) else {
-            setPublished(&promptError, VelocityPromptPolicy.error(draft: live.draft))
+            setPublished(promptError, VelocityPromptPolicy.error(draft: live.draft)) { promptError = $0 }
             return false
         }
         prompt = nil
         promptOpen = false
         promptDraft = ""
-        setPublished(&promptError, "")
+        setPublished(promptError, "") { promptError = $0 }
         refreshInteractionPublished()
         defer { publishHandles(projectHandles()) }
         guard live.revision == session.document.revision,
@@ -309,7 +309,7 @@ extension VelocityPage {
         prompt = nil
         promptOpen = false
         promptDraft = ""
-        setPublished(&promptError, "")
+        setPublished(promptError, "") { promptError = $0 }
         refreshInteractionPublished()
         publishHandles(projectHandles())
     }

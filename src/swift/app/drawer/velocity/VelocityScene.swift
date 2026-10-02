@@ -111,6 +111,8 @@ struct VelocitySceneInput: Sendable {
     /// The shared camera at the page's device pixel ratio, or `nil` while the
     /// page has no session: camera-derived rows are then empty and x reads zero.
     var camera: EditorCamera?
+    /// The retained overscan window; live interaction notes bypass this range.
+    var handleTickWindow: ClosedRange<Double>? = nil
     /// The presented voice context the page resolved for this build.
     var context: VelocityVoiceContext
     /// The primary track's notes, its selected notes in selection order, and the
@@ -196,7 +198,7 @@ struct VelocitySceneSnapshot {
         let handles = handleRows(input, axis: axis, projection: projection,
                                  previousHandles: previousHandles)
         let relativeGesture = input.interaction.relativeActivated
-            || handles.filter(\.selected).count > 1 || input.interaction.hovered != nil
+            || input.selectedNotes.count > 1 || input.interaction.hovered != nil
         let rows = VelocityScene.axisRows(input, axis: axis, relativeGesture: relativeGesture)
         return (axis, projection, handles, rows)
     }
@@ -226,12 +228,21 @@ struct VelocitySceneSnapshot {
         let notes = input.notes
         let trackColor = PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(input.track)]
         let stemColor = ThemeColorTables.velocityStemColors[PaletteMath.trackIdentityIndex(input.track)]
-        let selectedCount = notes.filter { selected.contains($0.id) }.count
+        let selectedCount = notes.reduce(0) { $0 + (selected.contains($1.id) ? 1 : 0) }
         let dimUnselected = selectedCount > 1
         let resolve = input.source.resolver()
+        let candidates = notes.lazy.filter { note in
+            guard let window = input.handleTickWindow else { return true }
+            return
+                (Double(note.tick) <= window.upperBound
+                && Double(note.tick) + Double(note.duration) >= window.lowerBound)
+                || input.interaction.frozenNote(note.id) != nil
+                || input.interaction.hovered == note.id
+                || input.interaction.preview[note.id] != nil
+        }
         var result: [VelocityHandle] = []
         result.reserveCapacity(notes.count)
-        for note in notes {
+        for note in candidates {
             let frozen = input.interaction.frozenNote(note.id)
             let map = frozen?.map ?? resolve(note.tick, Int(note.pitch)).map
             let previewValue = input.interaction.preview[note.id]

@@ -226,9 +226,7 @@ public final class DocumentWorkspace {
             _ = self.trackHeaders.advanceActivity(levels: levels,
                                                   elapsedSeconds: elapsed, playing: playing)
         }
-        drawer.attachSection(velocityPage)
-        drawer.attachSection(voiceChangesPage)
-        drawer.attachSection(automationPage)
+        drawer.attachSections([velocityPage, voiceChangesPage, automationPage])
         for kind in [DrawerSectionKind.velocity, .voiceChanges, .automation] {
             flushDeferredCamera(kind)
         }

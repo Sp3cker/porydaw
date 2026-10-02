@@ -1,9 +1,10 @@
 import QtQuick
+import PorydawApp
 
 Item {
     id: toolbar
     required property Item page
-    required property QtObject controller
+    required property EventListPresenter controller
 
     component ToolbarButton: Item {
         id: control

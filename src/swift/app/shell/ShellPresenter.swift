@@ -175,7 +175,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var sceneActive = true
     @QtTracked public var startupBegun = false
     @QtIgnored var hasRestoredChrome = false
-    @QtIgnored var hasRenderedFirstFrame = false
     @QtIgnored var closeSettlementTask: Task<Void, Never>?
     @QtTracked public var themeMode = "vanilla"
     @QtTracked public var gridLineContrast = 50
@@ -199,6 +198,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
         let settingsStore = EngineSettingsStore()
         self.settingsStore = settingsStore
         settingsStore.attach(session: session)
+        session.prepareAudio()
+        session.prefetchStartup(arguments: CommandLine.arguments)
         session.onVoicegroupCatalogChanged = { [weak settingsStore] in
             settingsStore?.refreshVoicegroups()
         }
@@ -511,14 +512,14 @@ public final class ShellPresenter: QmlInstantiableStatus {
         beginStartupIfReady()
     }
 
-    /// Records a presented frame, independently of chrome completion ordering.
+    /// Records a presented frame. Startup no longer waits for a frame; either
+    /// event may start it once chrome is restored.
     public func firstFrameRendered() {
-        hasRenderedFirstFrame = true
         beginStartupIfReady()
     }
 
     private func beginStartupIfReady() {
-        guard hasRestoredChrome, hasRenderedFirstFrame, !startupBegun,
+        guard hasRestoredChrome, !startupBegun,
             sceneActive, !closing, !closePending
         else { return }
         startupBegun = true
@@ -527,29 +528,19 @@ public final class ShellPresenter: QmlInstantiableStatus {
     }
 
     public func openStartup() {
-        let arguments = CommandLine.arguments
-        var project = ""
-        var song = ""
-        var index = 1
-        while index < arguments.count {
-            let argument = arguments[index]
-            if argument == "--project" || argument == "--song" {
-                if index + 1 < arguments.count {
-                    index += 1
-                    if argument == "--project" { project = arguments[index] } else { song = arguments[index] }
-                }
-            } else if argument.hasPrefix("--project=") {
-                project = String(argument.dropFirst("--project=".count))
-            } else if argument.hasPrefix("--song=") {
-                song = String(argument.dropFirst("--song=".count))
-            }
-            index += 1
-        }
-        if !project.isEmpty {
-            if song.isEmpty {
-                session.openProject(path: project)
+        let cli = parseStartupArguments(CommandLine.arguments)
+        if !cli.project.isEmpty {
+            if cli.song.isEmpty {
+                session.openProject(path: cli.project)
             } else {
-                session.openProjectAndSong(path: project, label: song)
+                session.openProjectAndSong(path: cli.project, label: cli.song)
+            }
+        } else if !cli.song.isEmpty {
+            let recipe = EditorViewStateCodec.loadTabs(store: session.preferences)
+            if !recipe.projectPath.isEmpty {
+                session.openProjectAndSong(path: recipe.projectPath, label: cli.song)
+            } else {
+                session.restoreStartup()
             }
         } else {
             session.restoreStartup()
@@ -724,3 +715,4 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtSignal public func eventListGateChanged()
     @QtSignal public func criticalRequested(title: String, message: String)
 }
+

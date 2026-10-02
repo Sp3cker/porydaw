@@ -176,7 +176,6 @@ public final class DocumentSession {
     /// Borrowed from ApplicationSession, which owns the project service.
     internal unowned let service: ProjectService
     internal let inbox = BankResultInbox()
-    internal let sampleRate: Double
     internal var sharedBank: SharedBankState
     internal var pendingBankNotification = false
     /// A queued bank write owns the session's bank/history lifecycle, but not
@@ -196,7 +195,6 @@ public final class DocumentSession {
         sharedBank = service.bankViews.state(for: AppliedBankEdit(
             lease: lease, slots: slots, dirty: dirty, loadName: loadName,
             materializationToken: nil))
-        self.sampleRate = sampleRate
         let timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
         self.timeline = timeline
         let limits = GridCameraPolicy.limits(baseFontPx: GridCameraPolicy.seedBaseFontPx)
@@ -304,6 +302,24 @@ public final class DocumentSession {
         }
     }
 
+    /// Composes a session from an already-opened song and its decoded MIDI,
+    /// for the startup prefetch. The throwing open below funnels through this;
+    /// decode failure still throws before anything is adopted.
+    public static func open(
+        loaded: LoadedSong, file: MidiFile, service: ProjectService,
+        sampleRate: Double
+    ) -> DocumentSession {
+        let document = SongDocument(
+            file: file, config: loaded.config,
+            source: loaded.source, trackBudget: loaded.trackBudget)
+        let session = DocumentSession(
+            document: document, service: service, lease: loaded.bank,
+            slots: loaded.bankSlots, dirty: loaded.bankDirty,
+            loadName: loaded.bankLoadName, sampleRate: sampleRate)
+        session.lastKnownMidiBytes = loaded.midiBytes
+        return session
+    }
+
     /// Opens a song through the service, adopts it as the document (tempo
     /// metas stripped, authoritative tempo held by state), and composes the
     /// session. MIDI decode failure throws; nothing half-adopted is kept.
@@ -312,14 +328,7 @@ public final class DocumentSession {
         let loaded = try await service.openSong(label: label)
         let midiBytes = loaded.midiBytes
         let file = try await Task { @concurrent in try MidiFile.decode(midiBytes) }.value
-        let document = SongDocument(file: file, config: loaded.config,
-                                    source: loaded.source, trackBudget: loaded.trackBudget)
-        let session = DocumentSession(
-            document: document, service: service, lease: loaded.bank,
-            slots: loaded.bankSlots, dirty: loaded.bankDirty,
-            loadName: loaded.bankLoadName, sampleRate: sampleRate)
-        session.lastKnownMidiBytes = midiBytes
-        return session
+        return open(loaded: loaded, file: file, service: service, sampleRate: sampleRate)
     }
 
     /// Writes the song MIDI unless it changed on disk since the last load or

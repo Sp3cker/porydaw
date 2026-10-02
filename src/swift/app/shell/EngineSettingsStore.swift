@@ -40,7 +40,7 @@ public struct EngineSettings: Equatable {
 /// the audio owner and to the selected document's ordinary save snapshot.
 @MainActor
 @QtBridgeable
-public final class EngineSettingsStore: QmlInstantiableStatus {
+public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
     @QtTracked public var mixer = "ipatix"
     @QtTracked public var maximumPcmChannels = Int(MAX_PCM_CHANNELS)
     @QtTracked public var maxPcmChannels = 5

@@ -3,13 +3,14 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import PorydawApp
 
 Item {
     id: picker
-    required property QtObject controller
-    required property QtObject draft
+    required property VoiceListController controller
+    required property VoiceEditorController draft
     required property var colors
-    required property QtObject applicationSession
+    required property ApplicationSession applicationSession
     readonly property real baseFontPx: applicationSession.baseFontPx
     required property bool waveMode
     property string clickedSymbol: ""

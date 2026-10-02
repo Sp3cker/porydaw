@@ -5,7 +5,7 @@ import QtBridge
 
 @MainActor
 @QtBridgeable
-public final class SampleWaveformModel {
+public final class SampleWaveformModel: QmlUncreatable {
     private let presenter: SampleStudioPresenter
     private let palette: GridPalette
     private let pyramid: SamplePeakPyramid

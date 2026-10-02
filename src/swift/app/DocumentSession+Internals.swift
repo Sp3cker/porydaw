@@ -185,7 +185,7 @@ extension DocumentSession {
                 }
             }
             if scaleProjection.fold { refreshScaleProjection() }
-            timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
+            timeline = PlaybackTimeline.build(state: document.state, sampleRate: timeline.sampleRate)
             camera.updateTimeDomain(
                 ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
                 lengthTicks: UInt64(timeline.lengthTicks))

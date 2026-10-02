@@ -49,3 +49,21 @@ Constructor callers and readiness-dependent checks migrated to the async contrac
 Spec, GUI, and independent thermo-nuclear reviews found no blockers. The reviewer accepted `ShellPresenter.swift` at 726 lines because startup and close share its existing lifecycle ownership, and the 668-line checks CMake source catalog received only one registration line. No touched file exceeded 1,000 lines.
 
 Startup timing captures were single runs with uncontrolled cache state and did not measure process-to-screen latency. They do not establish a quantified speedup. Generated profiling reports were deleted at the user's request; raw captures remain local and are not part of this change.
+
+## Superseded 2026-10-01
+
+Startup no longer waits for the first frame. `ShellPresenter` prefetches at
+construction (`prepareAudio` + project/song read) and `openStartup` runs at
+`chromeRestored`; `firstFrameRendered` only re-offers startup. Measured
+cause: both loaders serialized behind QML construction by MainActor hops —
+`prepareAudio`'s task inherited MainActor and `ProjectService.open` awaited a
+MainActor bank-views reset. Now `NativeAudio.make` prepares off-main with
+main-side adoption, `open` never hops (adoption sites reset bank views
+explicitly), and the project/song read runs in a `@concurrent` task whose
+result a matching switch adopts; unused prefetches close their service.
+`--song` without `--project` now opens in the recipe's project. Failure,
+cancellation, and settlement semantics above are unchanged. `MidiFile` and
+`LoadedSong` are `Sendable`, so the song prefetch keeps bytes and decode
+off-main; the song composes on the main actor at `openTab`. Residual: the
+prefetch's `openSong` still publishes bank views through the main actor (a
+no-op before adoption) — a later change can defer that publish to adoption.

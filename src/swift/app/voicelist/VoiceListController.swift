@@ -98,7 +98,7 @@ struct VoiceListEditOrigin {
 /// setCurrentVoicegroupArg/voiceChanged when its own change seam fires.
 @MainActor
 @QtBridgeable
-public final class VoiceListController {
+public final class VoiceListController: QmlUncreatable {
     public static let slotCount = 128
 
     /// The 128 stable row handles, always present; content rewrites in place.

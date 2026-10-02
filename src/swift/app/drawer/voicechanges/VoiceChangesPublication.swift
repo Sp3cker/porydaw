@@ -245,14 +245,14 @@ extension VoiceChangesPage {
     @QtIgnored
     func publishTransient() {
         guard let live = drag, live.active else {
-            setPublished(&previewVisible, false)
-            setPublished(&previewX, 0)
-            setPublished(&previewTick, 0)
+            setPublished(previewVisible, false) { previewVisible = $0 }
+            setPublished(previewX, 0) { previewX = $0 }
+            setPublished(previewTick, 0) { previewTick = $0 }
             return
         }
-        setPublished(&previewVisible, true)
-        setPublished(&previewX, xForTick(live.previewTick))
-        setPublished(&previewTick, Double(live.previewTick))
+        setPublished(previewVisible, true) { previewVisible = $0 }
+        setPublished(previewX, xForTick(live.previewTick)) { previewX = $0 }
+        setPublished(previewTick, Double(live.previewTick)) { previewTick = $0 }
     }
 
     /// The current legacy lane hint: marker-specific while the pointer hits a
@@ -302,11 +302,11 @@ extension VoiceChangesPage {
     /// right-aligned in the plot. The page always publishes them; the QML draws
     /// them while a track is presented, exactly as the legacy band does.
     private func publishReadout(_ values: VoiceReadoutValues) {
-        setPublished(&contextSlot, values.slot)
-        setPublished(&contextBlank, values.blank)
-        setPublished(&contextSymbol, values.symbol)
-        setPublished(&readoutText, values.text)
-        setPublished(&readoutVisible, trackAvailable)
+        setPublished(contextSlot, values.slot) { contextSlot = $0 }
+        setPublished(contextBlank, values.blank) { contextBlank = $0 }
+        setPublished(contextSymbol, values.symbol) { contextSymbol = $0 }
+        setPublished(readoutText, values.text) { readoutText = $0 }
+        setPublished(readoutVisible, trackAvailable) { readoutVisible = $0 }
         setPublishedRect(
             &readoutRect,
             VoiceMarkerHandle.rect(values.x, values.y, values.width, values.height))
@@ -323,9 +323,9 @@ extension VoiceChangesPage {
         pickerCache.resolve(filter: live.filter)
         pickerCache.releaseIfFilteredOut(audition: onAuditionVoice)
         syncPickerRows(pickerCache.selectedRows(program: live.program))
-        setPublished(&pickerFilter, live.filter)
-        setPublished(&pickerIndex, pickerCache.indices[live.program] ?? -1)
-        setPublished(&pickerHasMatch, live.program >= 0)
+        setPublished(pickerFilter, live.filter) { pickerFilter = $0 }
+        setPublished(pickerIndex, pickerCache.indices[live.program] ?? -1) { pickerIndex = $0 }
+        setPublished(pickerHasMatch, live.program >= 0) { pickerHasMatch = $0 }
     }
 
     /// A bank publication while the picker is open: the captured target still
@@ -340,7 +340,7 @@ extension VoiceChangesPage {
         pickerCache.resolve(filter: live.filter)
         live.program = pickerCache.initialProgram(live.program)
         picker = live
-        setPublished(&pickerTitle, live.title)
+        setPublished(pickerTitle, live.title) { pickerTitle = $0 }
         publishPicker()
     }
 
@@ -384,12 +384,6 @@ extension VoiceChangesPage {
             pickerRows, snapshots: &pickerRowSnapshots, values: values)
     }
 
-    /// Writes one published primitive only when it really changed, so a repeated
-    /// equal publication emits nothing.
-    @QtIgnored
-    func setPublished<Value: Equatable>(_ storage: inout Value, _ value: Value) {
-        if storage != value { storage = value }
-    }
 
     /// The variant-typed records compare through their published spelling:
     /// `[String: QVariantSettable]` is not `Equatable`, and an equal record must

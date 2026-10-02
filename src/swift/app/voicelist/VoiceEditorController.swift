@@ -6,7 +6,7 @@ import QtBridge
 /// lease after the preceding operation finishes, never replaying a stale copy.
 @MainActor
 @QtBridgeable
-public final class VoiceEditorController {
+public final class VoiceEditorController: QmlUncreatable {
     @QtTracked public var editable = false
     @QtTracked public var notice = ""
     @QtTracked public var macro = Int(BankVoiceMacro.directSound)
@@ -33,39 +33,41 @@ public final class VoiceEditorController {
     @QtIgnored
     public func refresh() {
         guard let owner, owner.isBound, !owner.isLoading else {
-            isSynth = false
-            editable = false
-            notice = ""
+            setPublished(isSynth, false) { isSynth = $0 }
+            setPublished(editable, false) { editable = $0 }
+            setPublished(notice, "") { notice = $0 }
             return
         }
         let slot = owner.currentSlot
         guard let draft = owner.voiceDraft(slot) else {
-            editable = false
-            isSynth = false
-            notice = owner.noticeForSlot(slot)
+            setPublished(editable, false) { editable = $0 }
+            setPublished(isSynth, false) { isSynth = $0 }
+            let slotNotice = owner.noticeForSlot(slot)
+            setPublished(notice, slotNotice) { notice = $0 }
             return
         }
         let voice = draft.voice
-        editable = true
-        notice = ""
-        materializesBlank = draft.materializesBlank
-        macro = Int(voice.macro)
-        symbol = voice.symbol
+        setPublished(editable, true) { editable = $0 }
+        setPublished(notice, "") { notice = $0 }
+        setPublished(materializesBlank, draft.materializesBlank) { materializesBlank = $0 }
+        setPublished(macro, Int(voice.macro)) { macro = $0 }
+        setPublished(symbol, voice.symbol) { symbol = $0 }
         let descriptor = owner.synthDescriptor(symbol: voice.symbol)
-        isSynth = descriptor != nil
+        let synthesized = descriptor != nil
+        setPublished(isSynth, synthesized) { isSynth = $0 }
         let synth = descriptor ?? VgSynthDesc()
-        waveform = synth.waveform
-        baseDuty = synth.baseDuty
-        dutyStep = synth.dutyStep
-        modDepth = synth.modDepth
-        phase = synth.phase
-        attack = Int(voice.attack)
-        decay = Int(voice.decay)
-        sustain = Int(voice.sustain)
-        release = Int(voice.release)
-        sweep = Int(voice.sweep)
-        duty = Int(voice.duty)
-        period = Int(voice.period)
+        setPublished(waveform, synth.waveform) { waveform = $0 }
+        setPublished(baseDuty, synth.baseDuty) { baseDuty = $0 }
+        setPublished(dutyStep, synth.dutyStep) { dutyStep = $0 }
+        setPublished(modDepth, synth.modDepth) { modDepth = $0 }
+        setPublished(phase, synth.phase) { phase = $0 }
+        setPublished(attack, Int(voice.attack)) { attack = $0 }
+        setPublished(decay, Int(voice.decay)) { decay = $0 }
+        setPublished(sustain, Int(voice.sustain)) { sustain = $0 }
+        setPublished(release, Int(voice.release)) { release = $0 }
+        setPublished(sweep, Int(voice.sweep)) { sweep = $0 }
+        setPublished(duty, Int(voice.duty)) { duty = $0 }
+        setPublished(period, Int(voice.period)) { period = $0 }
     }
 
     /// Commits one editor field as a bank history action. Values outside the

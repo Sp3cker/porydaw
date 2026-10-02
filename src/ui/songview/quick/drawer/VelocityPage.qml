@@ -384,8 +384,8 @@ FocusScope {
             Repeater {
                 model: (page.pageModel ? page.pageModel.handles : [])
 
-                // Handles publish tick-space rows; scroll and zoom move positions,
-                // never each row's model.
+                // Retained handles stay tick-space stable; rows enter and leave
+                // only when the camera escapes the published overscan window.
                 delegate: Item {
                     id: node
 

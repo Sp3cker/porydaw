@@ -55,7 +55,7 @@ public final class PolyphonyEventRow {
 /// UI-thread projection of the renderer's diagnostic ring. Poll only while visible.
 @MainActor
 @QtBridgeable
-public final class PolyphonyPanelPresenter {
+public final class PolyphonyPanelPresenter: QmlUncreatable {
     public var pcm: QListModel<PolyphonyChannelRow> = QListModel()
     public var cgb: QListModel<PolyphonyChannelRow> = QListModel()
     public var shadowPcm: QListModel<PolyphonyChannelRow> = QListModel()
@@ -219,9 +219,9 @@ public final class PolyphonyPanelPresenter {
         shadowPcm.reset(to: [])
         lastChannelSnapshot = nil
         shadowCgb.reset(to: [])
-        counterCount = 0
-        eventCount = 0
-        showingShadow = false
+        setPublished(counterCount, 0) { counterCount = $0 }
+        setPublished(eventCount, 0) { eventCount = $0 }
+        setPublished(showingShadow, false) { showingShadow = $0 }
     }
 
     private static func sameChannels(_ old: AudioPolySnapshot,

@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import PorydawPlaybackNative
+import Synchronization
 
 @testable import PorydawApp
 
@@ -51,6 +52,16 @@ private final class StartupAudioGate {
         released = true
         for waiter in publicationWaiters { waiter.resume() }
         publicationWaiters.removeAll()
+    }
+}
+
+private final class StartupAudioFailureProbe: Sendable {
+    private let counter = Mutex<Int>(0)
+    var attempts: Int { counter.withLock { $0 } }
+
+    func make(failure: Error) async throws -> NativeAudio {
+        counter.withLock { $0 += 1 }
+        throw failure
     }
 }
 
@@ -271,11 +282,8 @@ private func startupPreparationFailureRetainsCause(_ report: CheckReport) {
     let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-startup-audio-failure")
     let session = ApplicationSession()
     let failure = NativeAudioError.initializationFailed("The audio backend rejected device preparation.")
-    var attempts = 0
-    session.audioFactory = {
-        attempts += 1
-        throw failure
-    }
+    let probe = StartupAudioFailureProbe()
+    session.audioFactory = { try await probe.make(failure: failure) }
     defer {
         session.hostClosing()
         session.acknowledgeGridDetached()
@@ -300,7 +308,7 @@ private func startupPreparationFailureRetainsCause(_ report: CheckReport) {
                 cppID: id, what: "the song-open failure keeps its preparation cause instead of a generic fallback")
             await session.openTab(label: "mus_session_test", at: nil)
             report.expectEqual(
-                expected: 1, actual: attempts, cppID: id,
+                expected: 1, actual: probe.attempts, cppID: id,
                 what: "a second song-open consumer does not restart terminally failed preparation")
             report.expectEqual(
                 expected: String(describing: failure), actual: session.lastSaveError,

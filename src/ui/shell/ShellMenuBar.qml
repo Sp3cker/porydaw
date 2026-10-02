@@ -94,6 +94,13 @@ MenuBar {
             objectName: "shellEditMenu"
             title: qsTr("&Edit")
             onAboutToShow: ++root.windowRoot.actionRevision
+            // Configure submenu titles for non-native menus; macOS native
+            // menu rendering does not use this delegate.
+            delegate: MenuItem {
+                arrow: null
+                indicator: null
+                text: subMenu ? subMenu.title : ""
+            }
             Instantiator {
                 model: shell.editTopActionIds
                 delegate: MenuItem {

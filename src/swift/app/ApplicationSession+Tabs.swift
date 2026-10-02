@@ -13,7 +13,8 @@ extension ApplicationSession {
     /// and the surface read.
     @QtIgnored
     func tabsDidChange() {
-        headerVoicePickerOpen = workspace?.headerVoicePicker.pickerOpen ?? false
+        let pickerOpen = workspace?.headerVoicePicker.pickerOpen ?? false
+        setPublished(headerVoicePickerOpen, pickerOpen) { headerVoicePickerOpen = $0 }
         polyphony.setContext(session: workspace?.session)
         transportBar.refresh()
         refreshDocumentState()
@@ -181,8 +182,15 @@ extension ApplicationSession {
         }
         lastSaveError = ""
         do {
-            let session = try await DocumentSession.open(
-                service: service, label: label, sampleRate: audio.sampleRate)
+            let session: DocumentSession
+            if let prefetched = takePrefetchedSong(label: label, service: service) {
+                session = DocumentSession.open(
+                    loaded: prefetched.loaded, file: prefetched.file,
+                    service: service, sampleRate: audio.sampleRate)
+            } else {
+                session = try await DocumentSession.open(
+                    service: service, label: label, sampleRate: audio.sampleRate)
+            }
             if let tab {
                 let usedTracks = 0..<session.document.engineTracks.usedTrackCount
                 session.selectedTrack = tab.selectedTrack.flatMap {

@@ -29,7 +29,7 @@ public final class ImportControllerRow {
 /// Owns the import wizard's source lifetime and publishes only bridged choices.
 @MainActor
 @QtBridgeable
-public final class MidiImportController {
+public final class MidiImportController: QmlUncreatable {
     @QtTracked public var wizardOpen = false
     @QtTracked public var busy = false
     @QtTracked public var page = 0

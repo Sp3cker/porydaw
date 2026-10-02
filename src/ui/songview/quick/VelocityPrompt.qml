@@ -2,11 +2,12 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Porydaw.Ui
+import PorydawApp
 
 Item {
     id: promptRoot
     objectName: "velocityPrompt"
-    required property var model
+    required property VelocityPage model
     required property var promptPalette
     required property var focusOrigin
     property var hintService: null

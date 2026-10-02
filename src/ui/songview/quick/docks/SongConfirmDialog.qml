@@ -3,11 +3,12 @@ import QtQuick.Controls
 import QtQuick.Controls.Basic as Basic
 import QtQuick.Layouts
 import Porydaw.Ui
+import PorydawApp
 
 Basic.Dialog {
     id: dialog
     objectName: "songConfirmationDialog"
-    required property var controller
+    required property SongDockController controller
     required property real baseFontPx
     required property var layoutSpaces
     parent: Overlay.overlay

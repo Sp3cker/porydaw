@@ -5,7 +5,7 @@ import QtBridge
 
 @MainActor
 @QtBridgeable
-public final class SampleLoopTools {
+public final class SampleLoopTools: QmlUncreatable {
     private let presenter: SampleStudioPresenter
     private var pitchTried = false
     private var pitch = SampleDsp.PitchResult()

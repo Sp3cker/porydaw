@@ -1,4 +1,5 @@
 import QtQuick
+import PorydawApp
 
 Rectangle {
     required property var root
@@ -60,7 +61,7 @@ Rectangle {
             anchors.verticalCenterOffset: (parent.statusTopInset - parent.statusBottomInset) / 2
             spacing: bodyMetrics.advanceWidth(" ") / 2
             visible: presenter.polyMeterVisible
-            readonly property var presenter: shell.session.transportBarPresenter()
+            readonly property TransportBarPresenter presenter: shell.session.transportBarPresenter()
             Text {
                 objectName: "shellPolyPcmCaption"
                 text: qsTr("PCM")

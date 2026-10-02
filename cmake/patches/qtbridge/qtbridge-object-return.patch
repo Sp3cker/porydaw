@@ -22,7 +22,7 @@ index b1ce5e6..509fb00 100644
  add_subdirectory(Sources/QtBridge)
 -
 diff --git a/Sources/QtBridge/QAbstractListModel.swift b/Sources/QtBridge/QAbstractListModel.swift
-index 07004bc..4eebb7b 100644
+index 07004bc..8e33ded 100644
 --- a/Sources/QtBridge/QAbstractListModel.swift
 +++ b/Sources/QtBridge/QAbstractListModel.swift
 @@ -146,7 +146,29 @@ internal final class QAbstractListModel {
@@ -71,8 +71,41 @@ index 07004bc..4eebb7b 100644
      internal func beginRemoveRows(_ parent: QModelIndex, _ first: Int32, _ last: Int32) -> Void {
          return getCppModel().beginRemoveRows(parent.cppModel, first, last)
      }
+diff --git a/Sources/QtBridge/QApp.swift b/Sources/QtBridge/QApp.swift
+index 0830a84..788ef51 100644
+--- a/Sources/QtBridge/QApp.swift
++++ b/Sources/QtBridge/QApp.swift
+@@ -130,12 +130,17 @@ internal class QMLApp {
+     /// Each type must conform to ``QmlInstantiable``
+     /// and be annotated with the ``QtBridgeable()`` macro.
+     var instantiableTypes: [QmlInstantiable.Type] { get }
++
++    /// Swift-owned types available for QML property declarations, not construction.
++    /// Each type must conform to `QmlUncreatable` and use `QtBridgeable`.
++    var uncreatableTypes: [QmlUncreatable.Type] { get }
+ }
+ 
+ @MainActor public extension QApp {
+     var bundle: Bundle { .main }
+     var initialProperties: [String: QObjectBuildable] { [:] }
+     var instantiableTypes: [QmlInstantiable.Type] { [] }
++    var uncreatableTypes: [QmlUncreatable.Type] { [] }
+ 
+     /// Starts the application.
+     ///
+@@ -164,6 +169,10 @@ internal class QMLApp {
+             type.registerQmlElement()
+         }
+ 
++        for type in qApp.uncreatableTypes {
++            type.registerUncreatableQmlElement()
++        }
++
+         for (name, property) in qApp.initialProperties {
+             property.addInitialProperty(to: app, name: name)
+         }
 diff --git a/Sources/QtBridge/QListModel.swift b/Sources/QtBridge/QListModel.swift
-index 1705eed..c7164ee 100644
+index 1705eed..00f5cd1 100644
 --- a/Sources/QtBridge/QListModel.swift
 +++ b/Sources/QtBridge/QListModel.swift
 @@ -109,6 +109,33 @@ public final class QListModel<Element: QVariantGettable>: @MainActor RandomAcces
@@ -129,8 +162,25 @@ index 1705eed..c7164ee 100644
      /// Returns the contents of the list as a Swift array.
      public var asArray: [Element] { storage }
  }
+diff --git a/Sources/QtBridge/QMetaObjectBuilder.swift b/Sources/QtBridge/QMetaObjectBuilder.swift
+index 102c863..fc39501 100644
+--- a/Sources/QtBridge/QMetaObjectBuilder.swift
++++ b/Sources/QtBridge/QMetaObjectBuilder.swift
+@@ -78,6 +78,12 @@ public class QMetaObjectBuilder
+         qmlElementBuilder.registerQmlElement()
+     }
+ 
++    internal func registerUncreatableQmlElement(from type: QmlUncreatable.Type) {
++        type.registerMetaTypeInterface(for: self)
++        qmlElementBuilder.setMetaObjectFrom(self.builder)
++        qmlElementBuilder.registerUncreatableQmlElement()
++    }
++
+     internal func setMetaObjectTo(objectHolder: QObjectHolder) {
+         builder.setMetaObjectTo(objectHolder.proxy)
+     }
 diff --git a/Sources/QtBridge/QVariant.swift b/Sources/QtBridge/QVariant.swift
-index c69ec15..47fa5ef 100644
+index c69ec15..360ee80 100644
 --- a/Sources/QtBridge/QVariant.swift
 +++ b/Sources/QtBridge/QVariant.swift
 @@ -1,6 +1,7 @@
@@ -203,10 +253,10 @@ index c69ec15..47fa5ef 100644
      public func toVariant() -> QVariant { QVariant(value: self) }
      public static func value(from variant: QVariant) -> Bool { variant.toBool() }
 diff --git a/Sources/QtBridge/QmlInstantiable.swift b/Sources/QtBridge/QmlInstantiable.swift
-index 077729f..7e81b4a 100644
+index 077729f..06dcaac 100644
 --- a/Sources/QtBridge/QmlInstantiable.swift
 +++ b/Sources/QtBridge/QmlInstantiable.swift
-@@ -50,7 +50,7 @@ extension QmlInstantiable {
+@@ -50,8 +50,18 @@ extension QmlInstantiable {
  }
  
  extension QmlInstantiable {
@@ -215,6 +265,17 @@ index 077729f..7e81b4a 100644
          metaObjectBuilder.registerInitializer(initFn: self.init)
          metaObjectBuilder.registerQmlElement(from: Self.self)
      }
+ }
++
++/// A Swift-owned QML type that can be referenced but not constructed in QML.
++/// Register annotated types in `QApp.uncreatableTypes`.
++public protocol QmlUncreatable: QObjectBuildable {}
++
++extension QmlUncreatable {
++    public static func registerUncreatableQmlElement() {
++        metaObjectBuilder.registerUncreatableQmlElement(from: Self.self)
++    }
++}
 diff --git a/Sources/QtBridgeCpp/abstractlistmodel.cpp b/Sources/QtBridgeCpp/abstractlistmodel.cpp
 index 3c5db0e..57fc6f7 100644
 --- a/Sources/QtBridgeCpp/abstractlistmodel.cpp
@@ -333,15 +394,23 @@ index d55dd45..ad0b7aa 100644
  
      using DeleterFn = void(*)(void *swiftObj);
      QObjectProxyImpl(void *swiftObj, DeleterFn deleter)
+diff --git a/Sources/QtBridgeCpp/include/swiftqmlelementbuilder.h b/Sources/QtBridgeCpp/include/swiftqmlelementbuilder.h
+index b87590b..b4f304e 100644
+--- a/Sources/QtBridgeCpp/include/swiftqmlelementbuilder.h
++++ b/Sources/QtBridgeCpp/include/swiftqmlelementbuilder.h
+@@ -20,6 +20,7 @@ public:
+     void registerCreateFn(void *builderPtr, CreateFn fn);
+ 
+     void registerQmlElement();
++    void registerUncreatableQmlElement();
+ 
+ private:
+     class Impl;
 diff --git a/Sources/QtBridgeCpp/qappcpp.cpp b/Sources/QtBridgeCpp/qappcpp.cpp
-index 7e91abd..1922e24 100644
+index 7e91abd..02e9132 100644
 --- a/Sources/QtBridgeCpp/qappcpp.cpp
 +++ b/Sources/QtBridgeCpp/qappcpp.cpp
-@@ -2,12 +2,19 @@
- // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
- 
- #include "qappcpp.h"
- 
+@@ -6,6 +6,13 @@
  #include <QtGui/qguiapplication.h>
  #include <QtQml/qqmlapplicationengine.h>
  
@@ -355,8 +424,6 @@ index 7e91abd..1922e24 100644
  QAppCpp::QAppCpp()
  {
  }
- 
- QAppCpp::~QAppCpp()
 @@ -44,7 +51,10 @@ int QAppCpp::run(int argc, char **argv)
          engine.addImportPath(path);
  
@@ -400,19 +467,6 @@ index 43b202c..0172a58 100644
  };
  
  QObjectProxy::QObjectProxy(void *owner)
-diff --git a/Sources/QtBridgeMacros/Extensions.swift b/Sources/QtBridgeMacros/Extensions.swift
-index acce22e..ad3c8c5 100644
---- a/Sources/QtBridgeMacros/Extensions.swift
-+++ b/Sources/QtBridgeMacros/Extensions.swift
-@@ -124,7 +124,7 @@ extension TypeSyntax {
-     }
- 
-     var isSupportedReturnType: Bool {
--        return isSupportedSettableType || isVoid
-+        return isSupportedSettableType || isVoid || self.is(IdentifierTypeSyntax.self)
-     }
- 
-     var isVoid: Bool {
 diff --git a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
 index 6dd803f..51ee057 100644
 --- a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
@@ -500,3 +554,50 @@ index 6dd803f..51ee057 100644
          QMetaObject::invokeMethod(obj, [obj, signalIndex, args = std::move(convertedArgs)]() mutable {
              std::vector<void*> argv;
              argv.reserve(args.size() + 1);
+diff --git a/Sources/QtBridgeCpp/swiftqmlelementbuilder.cpp b/Sources/QtBridgeCpp/swiftqmlelementbuilder.cpp
+index cd53797..43698ed 100644
+--- a/Sources/QtBridgeCpp/swiftqmlelementbuilder.cpp
++++ b/Sources/QtBridgeCpp/swiftqmlelementbuilder.cpp
+@@ -32,7 +32,7 @@ public:
+         m_createFn = createFn;
+     }
+ 
+-    void registerQmlElement()
++    void registerQmlElement(bool creatable = true)
+     {
+         registerMetaTypeInterface();
+ 
+@@ -41,9 +41,9 @@ public:
+         rt.typeId = QMetaType(m_metaTypeInterface);
+         rt.listId = QMetaType::fromType<QQmlListProperty<QObjectProxyImpl>>();
+         rt.objectSize = sizeof(QObjectProxyImpl);
+-        rt.create = Impl::createFn;
++        rt.create = creatable ? Impl::createFn : nullptr;
+         rt.userdata = this;
+-        rt.noCreationReason = QString();
++        rt.noCreationReason = creatable ? QString() : QStringLiteral("This type is owned by Swift and cannot be created in QML.");
+         rt.createValueType = nullptr;
+         rt.uri = m_moduleName.data();
+         rt.version = QTypeRevision::fromVersion(1, 0);
+@@ -182,3 +182,8 @@ void SwiftQmlElementBuilder::registerQmlElement()
+ {
+     m_impl->registerQmlElement();
+ }
++
++void SwiftQmlElementBuilder::registerUncreatableQmlElement()
++{
++    m_impl->registerQmlElement(false);
++}
+diff --git a/Sources/QtBridgeMacros/Extensions.swift b/Sources/QtBridgeMacros/Extensions.swift
+index acce22e..ad3c8c5 100644
+--- a/Sources/QtBridgeMacros/Extensions.swift
++++ b/Sources/QtBridgeMacros/Extensions.swift
+@@ -124,7 +124,7 @@ extension TypeSyntax {
+     }
+ 
+     var isSupportedReturnType: Bool {
+-        return isSupportedSettableType || isVoid
++        return isSupportedSettableType || isVoid || self.is(IdentifierTypeSyntax.self)
+     }
+ 
+     var isVoid: Bool {

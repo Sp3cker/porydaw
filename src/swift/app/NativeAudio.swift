@@ -5,7 +5,7 @@ import PorydawPlaybackNative
 import PorydawAudioDeviceNative
 import PorydawAppAudio
 
-public enum NativeAudioError: Error, Equatable {
+public enum NativeAudioError: Error, Equatable, Sendable {
     case initializationFailed(String)
     case bindFailed
     case publishFailed
@@ -20,14 +20,30 @@ public final class NativeAudio {
     private var engineSettings = AudioSettings()
 
     public init() async throws {
+        device = try await Self.prepareDevice()
+    }
+
+    /// Device preparation starts on the pool without waiting for the main
+    /// actor; only adoption hops to MainActor.
+    @concurrent
+    public static func make() async throws -> NativeAudio {
+        let device = try await prepareDevice()
+        return await NativeAudio(adopting: device)
+    }
+
+    private static func prepareDevice() async throws -> sending AudioDevice {
         do {
-            device = try await AudioDevice.prepare()
+            return try await AudioDevice.prepare()
         } catch AudioRenderEngine.InitializationError.engine {
             throw NativeAudioError.initializationFailed(
                 "Failed to allocate the M4A audio engines. Free memory and try again.")
         } catch {
             throw NativeAudioError.initializationFailed(error.localizedDescription)
         }
+    }
+
+    private init(adopting device: sending AudioDevice) {
+        self.device = device
     }
 
     isolated deinit {

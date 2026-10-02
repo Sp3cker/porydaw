@@ -1,13 +1,14 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import Porydaw.Ui
+import PorydawApp
 
 DialogWindow {
     id: dialog
     objectName: "settingsDialog"
-    required property QtObject store
-    required property QtObject presenter
-    required property QtObject applicationSession
+    required property EngineSettingsStore store
+    required property ShellPresenter presenter
+    required property ApplicationSession applicationSession
     readonly property real unit: applicationSession.baseFontPx / 12
     property int selectedTab: 0
     width: 560
