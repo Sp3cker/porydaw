@@ -6,7 +6,7 @@ import QtBridge
 
 @MainActor
 @QtBridgeable
-public final class SampleStudioWorkflow {
+public final class SampleStudioWorkflow: QmlUncreatable {
     private weak var session: ApplicationSession?
     private var presenter: SampleStudioPresenter?
     private var tools: SampleLoopTools?

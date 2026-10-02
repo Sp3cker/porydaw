@@ -1,12 +1,13 @@
 import QtQuick
 import Porydaw.Ui
+import PorydawApp
 
 Item {
     id: root
 
     required property Item bandSide
     required property Item plotSide
-    required property QtObject gridModel
+    required property PianoGrid gridModel
 
     DisplayList {
         parent: root.plotSide

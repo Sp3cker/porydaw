@@ -2,11 +2,12 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Porydaw.Ui
+import PorydawApp
 
 DialogWindow {
     id: wizard
-    required property QtObject controller
-    required property QtObject applicationSession
+    required property MidiImportController controller
+    required property ApplicationSession applicationSession
     readonly property var typography: applicationSession.typographyFonts
     readonly property var layoutSpaces: applicationSession.layoutSpaces
     readonly property int baseFontPx: applicationSession.baseFontPx

@@ -1,12 +1,13 @@
 import QtQuick
 import QtQuick.Dialogs
 import Porydaw.Ui
+import PorydawApp
 
 Item {
     id: host
-    required property QtObject workflow
+    required property SampleStudioWorkflow workflow
     required property Window hostWindow
-    required property QtObject applicationSession
+    required property ApplicationSession applicationSession
     required property QtObject colors
 
     FileDialog {

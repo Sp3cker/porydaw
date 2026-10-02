@@ -1,9 +1,10 @@
 import QtQuick
 import Porydaw.Ui
+import PorydawApp
 
 Item {
     id: surface
-    required property QtObject model
+    required property SampleWaveformModel model
     required property QtObject colors
     required property real baseFontPx
     property bool dragging: false

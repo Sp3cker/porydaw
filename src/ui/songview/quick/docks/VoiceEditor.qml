@@ -4,13 +4,14 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Porydaw.Ui
+import PorydawApp
 
 ColumnLayout {
     id: editor
     objectName: "voicegroupEditor"
-    required property QtObject controller
+    required property VoiceListController controller
     required property var colors
-    required property QtObject applicationSession
+    required property ApplicationSession applicationSession
     readonly property real baseFontPx: applicationSession.baseFontPx
     readonly property var draft: controller.editorModel()
     readonly property int spacingPx: Math.max(1, Math.round(baseFontPx * 0.16))

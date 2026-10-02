@@ -2,11 +2,12 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Basic as Basic
 import Porydaw.Ui
+import PorydawApp
 
 Item {
     id: panel
     objectName: "polyphonyPanel"
-    required property var presenter
+    required property PolyphonyPanelPresenter presenter
     required property var colors
     required property var typography
     required property var layoutSpaces

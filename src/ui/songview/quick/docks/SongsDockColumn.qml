@@ -1,13 +1,14 @@
 import QtQuick
 import QtQuick.Controls
 import Porydaw.Ui
+import PorydawApp
 
 SplitView {
     id: dock
     objectName: "swiftDockColumn"
     orientation: Qt.Vertical
-    required property var controller
-    required property QtObject applicationSession
+    required property SongDockController controller
+    required property ApplicationSession applicationSession
     required property var colors
     readonly property real baseFontPx: applicationSession.baseFontPx
     // Normalized fraction of this split's usable height assigned to Songs.

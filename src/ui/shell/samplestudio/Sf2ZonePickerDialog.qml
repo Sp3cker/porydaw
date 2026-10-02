@@ -2,13 +2,14 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Porydaw.Ui
+import PorydawApp
 
 DialogWindow {
     id: dialog
     objectName: "sf2ZonePickerDialog"
-    required property QtObject workflow
-    required property QtObject picker
-    required property QtObject applicationSession
+    required property SampleStudioWorkflow workflow
+    required property Sf2ZonePickerPresenter picker
+    required property ApplicationSession applicationSession
     readonly property real unit: applicationSession.baseFontPx
     modality: Qt.ApplicationModal
     width: 60 * unit

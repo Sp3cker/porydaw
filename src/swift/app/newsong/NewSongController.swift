@@ -6,7 +6,7 @@ import QtBridge
 /// Owns the blank-song wizard choices and creation lifetime.
 @MainActor
 @QtBridgeable
-public final class NewSongController {
+public final class NewSongController: QmlUncreatable {
     @QtTracked public var wizardOpen = false
     @QtTracked public var busy = false
     @QtTracked public var page = 0

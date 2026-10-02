@@ -55,7 +55,7 @@ public final class PolyphonyEventRow {
 /// UI-thread projection of the renderer's diagnostic ring. Poll only while visible.
 @MainActor
 @QtBridgeable
-public final class PolyphonyPanelPresenter {
+public final class PolyphonyPanelPresenter: QmlUncreatable {
     public var pcm: QListModel<PolyphonyChannelRow> = QListModel()
     public var cgb: QListModel<PolyphonyChannelRow> = QListModel()
     public var shadowPcm: QListModel<PolyphonyChannelRow> = QListModel()

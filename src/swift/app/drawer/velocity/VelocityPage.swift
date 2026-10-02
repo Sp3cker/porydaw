@@ -143,7 +143,7 @@ public final class VelocityHandle {
 /// entry is produced per completed gesture or accepted prompt.
 @MainActor
 @QtBridgeable
-public final class VelocityPage: EditorDrawerPage {
+public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     /// The fixed production QML URL, resolved once by the container at attach.
     public static let contentUrl = QmlEngineAccess.moduleResourcePrefix + "src/ui/songview/quick/drawer/VelocityPage.qml"
 

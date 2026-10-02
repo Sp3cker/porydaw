@@ -5,7 +5,7 @@ import QtBridge
 /// Owns the modal export workflow and its captured offline render.
 @MainActor
 @QtBridgeable
-public final class WavExportPresenter {
+public final class WavExportPresenter: QmlUncreatable {
     private weak var session: ApplicationSession?
     private var job: Task<Void, Never>?
     private var progressJob: Task<Void, Never>?

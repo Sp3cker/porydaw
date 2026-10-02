@@ -1,10 +1,11 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import PorydawApp
 
 Flickable {
     id: page
-    required property QtObject controller
+    required property MidiImportController controller
     required property QtObject colors
     required property var typography
     required property var layoutSpaces

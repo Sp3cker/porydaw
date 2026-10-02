@@ -6,7 +6,7 @@ import QtBridge
 /// lease after the preceding operation finishes, never replaying a stale copy.
 @MainActor
 @QtBridgeable
-public final class VoiceEditorController {
+public final class VoiceEditorController: QmlUncreatable {
     @QtTracked public var editable = false
     @QtTracked public var notice = ""
     @QtTracked public var macro = Int(BankVoiceMacro.directSound)

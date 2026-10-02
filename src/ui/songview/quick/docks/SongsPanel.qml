@@ -4,13 +4,14 @@ import QtQuick.Controls
 import QtQuick.Controls.Basic as Basic
 import QtQuick.Layouts
 import Porydaw.Ui
+import PorydawApp
 
 FocusScope {
     id: root
     objectName: "swiftSongsPanel"
-    required property var controller
+    required property SongDockController controller
     required property var colors
-    required property QtObject applicationSession
+    required property ApplicationSession applicationSession
     readonly property real baseFontPx: applicationSession.baseFontPx
     readonly property var songs: controller.songListPresenter()
     readonly property int pad: applicationSession.layoutSpaces.one

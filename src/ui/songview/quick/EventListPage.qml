@@ -1,4 +1,5 @@
 import QtQuick
+import PorydawApp
 
 FocusScope {
     id: page
@@ -6,8 +7,8 @@ FocusScope {
     anchors.fill: parent
     clip: true
 
-    required property QtObject presenter
-    readonly property QtObject controller: presenter
+    required property EventListPresenter presenter
+    readonly property EventListPresenter controller: presenter
     readonly property var appearance: controller ? controller.appearance : ({})
     readonly property var headerLabels: controller ? controller.headerLabels : []
     // Revision invalidates membership bindings without copying selection into QML.

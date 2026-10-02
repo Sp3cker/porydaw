@@ -6,7 +6,7 @@ import QtBridge
 /// display strings are never used as navigation identity.
 @MainActor
 @QtBridgeable
-public final class SongDockController {
+public final class SongDockController: QmlUncreatable {
     @QtIgnored public let presenter = SongListPresenter()
     @QtIgnored public let midiImport = MidiImportController()
     @QtIgnored public let newSong = NewSongController()

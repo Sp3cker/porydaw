@@ -1,10 +1,11 @@
 import QtQuick
+import PorydawApp
 
 Loader {
     id: menuLoader
 
     required property Item page
-    required property QtObject controller
+    required property EventListPresenter controller
     required property FontMetrics headerFontMetrics
     required property FontMetrics controlFontMetrics
         z: 10

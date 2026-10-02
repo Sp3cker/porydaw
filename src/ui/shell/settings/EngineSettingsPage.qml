@@ -1,9 +1,10 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import PorydawApp
 
 Item {
     id: page
-    required property QtObject store
+    required property EngineSettingsStore store
     required property QtObject colors
     required property real unit
     required property var typography

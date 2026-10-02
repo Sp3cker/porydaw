@@ -1,10 +1,11 @@
 import QtQuick
+import PorydawApp
 
 Item {
     id: cell
     required property Item page
     required property Item tableOwner
-    required property QtObject controller
+    required property EventListPresenter controller
 
         required property int row
         required property int column
