@@ -54,7 +54,6 @@ FocusScope {
 
         readonly property var tabs: []
         readonly property var nodes: []
-        readonly property var curveRuns: []
         readonly property var gridLines: []
         readonly property var valueLines: []
         readonly property var valueLabels: []

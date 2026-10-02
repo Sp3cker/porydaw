@@ -39,6 +39,14 @@ import PorydawCore
     /// Full-height axis records: the time-grid lines.
     var gridLines: [Rect] { axis.filter { $0.h == plotHeight } }
 
+    func hasHeldCurve(atX x: Double, y: Double, ink: UInt32) -> Bool {
+        valid
+            && statics.contains {
+                $0.argb == ink && $0.w > $0.h && $0.x <= x && $0.x + $0.w > x
+                    && abs($0.y + $0.h / 2 - y) <= 1
+            }
+    }
+
     private static func decode(_ data: Data) -> (Bool, [Rect]) {
         data.withUnsafeBytes { raw -> (Bool, [Rect]) in
             var view = PdDlView()

@@ -650,13 +650,6 @@ private func themeColorTableChecks(_ report: CheckReport) {
                 state.table == expected, cppID: themeTableID,
                 message: "\(tag): header \(state.name) ink table matches the dimmed-ink rule")
         }
-        let nodeChannels = PaletteMath.channels(palette.automationNodeInk)
-        let expectedGhost = PaletteMath.hex(
-            r: nodeChannels.r, g: nodeChannels.g, b: nodeChannels.b, a: 128)
-        report.expect(
-            AutomationPage.ghostCurveInk[preset] == expectedGhost,
-            cppID: themeTableID,
-            message: "\(tag): automation ghost ink table matches node ink at alpha 128")
     }
     let hexRows: [(hex: String, argb: UInt32, channels: (Int, Int, Int, Int))] = [
         ("#CD5454", 0xFFCD5454, (205, 84, 84, 255)),

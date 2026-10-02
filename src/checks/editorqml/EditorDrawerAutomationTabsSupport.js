@@ -35,13 +35,6 @@
                                        ["automationNode", "automationNodePhantom"], [])
     }
 
-    /// The drawn curve runs, in tree order: ghost runs first, the active curve
-    /// second, exactly as the page publishes them.
-    function automationCurveItems(testCase) {
-        return PageSupport.collectByNames(testCase, automationPageItem(testCase),
-                                       ["automationCurve", "automationGhostCurve"], [])
-    }
-
     function mountProductionAutomation(testCase, location, values) {
         testCase.verify(testCase.bootstrap.attachProductionSection(testCase.automationKind),
                "the production Automation page attaches to its slot")

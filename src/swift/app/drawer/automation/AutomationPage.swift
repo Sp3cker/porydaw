@@ -249,7 +249,6 @@ public final class AutomationPage: EditorDrawerPage {
     // Published-model snapshots: the lane reads the same values the QML renders.
     @QtIgnored var tabSnapshots: [AutomationTabHandle] = []
     @QtIgnored var nodeSnapshots: [AutomationNodeHandle] = []
-    @QtIgnored var curveRunSnapshots: [SceneRect] = []
     @QtIgnored var displayLists: [Data] = []
     @QtIgnored var axisListWriter = DisplayListWriter()
     @QtIgnored var staticsListWriter = DisplayListWriter()

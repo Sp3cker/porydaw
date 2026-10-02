@@ -27,6 +27,10 @@
 
 ## The value axis and zooming
 
+Pinned reference curves draw behind the active curve in half-opacity automation
+ink. Each reference uses its own value range, including Tempo's BPM scale,
+regardless of which parameter is active.
+
 - **LFO type (MODT):** edits are limited to 0–2. Imported values of 3 or
   higher remain stored until edited, but modulate no axis.
 - **Fine tune (TUNE):** the value editor shows −64–63, with 0 as the
@@ -42,3 +46,7 @@ value-range zoom.
 ## Tempo changes
 
 <!-- TODO: Explain editing song-global Tempo in the shared plot, BPM limits, position display, and loops. -->
+
+A first Tempo event after tick zero draws a 120 BPM lead-in up to that event.
+A written tick-zero event supplies the starting tempo instead. An empty Tempo
+store draws no curve or origin marker.

@@ -103,12 +103,11 @@ extension AutomationPage {
         syncTabs(values)
     }
 
-    /// Every drawn primitive of one build.
+    /// Publishes the value labels, ghost names and active node handles.
     func publishContent(_ session: DocumentSession?) {
         guard let session, let lane = projection else {
             syncTexts(ghostNameLabels, [])
             syncTexts(valueLabels, [])
-            curveRunSnapshots = []
             syncNodes([])
             return
         }
@@ -117,12 +116,6 @@ extension AutomationPage {
             camera: session.camera)
         publishValueAxis(lane)
         publishGhostNames(session)
-        var runs: [SceneRect] = []
-        for ghost in ghostProjections(session) {
-            appendCurve(ghost, projection: projection, isGhost: true, into: &runs)
-        }
-        appendCurve(lane, projection: projection, isGhost: false, into: &runs)
-        curveRunSnapshots = runs
         syncNodes(nodeHandles(lane, projection: projection))
     }
 
@@ -138,14 +131,6 @@ extension AutomationPage {
         }
         projection = lane
         publishGhostNames(session)
-        var runs: [SceneRect] = []
-        for ghost in ghostProjections(session) {
-            appendCurve(ghost, projection: cameraProjection, isGhost: true,
-                        into: &runs)
-        }
-        appendCurve(lane, projection: cameraProjection, isGhost: false,
-                    into: &runs)
-        curveRunSnapshots = runs
         syncNodes(nodeHandles(lane, projection: cameraProjection))
         publishOverlays()
     }
@@ -165,41 +150,6 @@ extension AutomationPage {
                                     font: captionFont))
         }
         syncTexts(valueLabels, labels)
-    }
-
-    // Ghost curve ink per ThemePreset.rawValue: automationNodeInk at alpha
-    // 128, precomputed; verified by themeColorTableChecks.
-    static let ghostCurveInk = ["#80EA3C3C", "#80FF4D47", "#80FF91C3"]
-
-    func appendCurve(_ lane: AutomationLaneProjection, projection: AutomationProjection,
-                     isGhost: Bool, into runs: inout [SceneRect]) {
-        guard !lane.points.isEmpty else { return }
-        let stroke = 2.0
-        // Theme-only lookup: the ghost ink is automationNodeInk at alpha 128.
-        let color = isGhost ? Self.ghostCurveInk[palette.theme.rawValue] : palette.automationNodeInk
-        let name = isGhost ? "automationGhostCurve" : "automationCurve"
-        let limit = max(0, plotWidth)
-        func x(_ tick: Tick) -> Double { projection.x(tick) }
-        func y(_ value: Int) -> Double { projection.y(value, metadata: lane.metadata) }
-        for (index, segment) in lane.segments.enumerated() {
-            let x0 = min(max(0, x(segment.tickBegin)), limit)
-            let x1 = min(max(0, segment.tickEnd.map(x) ?? limit), limit)
-            guard x1 >= x0 else { continue }
-            let fromY = y(segment.fromValue)
-            if x1 > x0 {
-                runs.append(SceneRect(x: x0, y: (fromY - stroke / 2).rounded(), width: x1 - x0,
-                                      height: stroke, fillColor: color, primitiveName: name))
-            }
-            let next = index + 1 < lane.segments.count ? lane.segments[index + 1] : nil
-            if segment.kind == .step, let next, next.fromValue != segment.fromValue,
-               let end = segment.tickEnd, x(end) >= -stroke / 2, x(end) <= limit + stroke / 2 {
-                let nextY = y(next.fromValue)
-                runs.append(SceneRect(x: (x1 - stroke / 2).rounded(),
-                                      y: min(fromY, nextY).rounded(), width: stroke,
-                                      height: max(stroke, abs(nextY - fromY)), fillColor: color,
-                                      primitiveName: name))
-            }
-        }
     }
 
     /// The active parameter's nodes and origin phantom, minus those a live draw
@@ -258,27 +208,6 @@ extension AutomationPage {
         node.identity = Self.identityText(point.identity)
         node.refreshSpec()
         return node
-    }
-
-    /// The explicit selection's band: a fill over the covered range with the two
-    /// edge rules, clamped to the plot.
-    func selectionBand(_ lane: AutomationLaneProjection,
-                               projection: AutomationProjection) -> [SceneRect] {
-        guard let selection, selection.isActive,
-              selection.covers(lane.parameter, usedTracks: usedTracks()) else { return [] }
-        let limit = max(0, plotWidth)
-        let x0 = min(max(0, projection.x(selection.range.startTick)), limit)
-        let x1 = min(max(0, projection.x(selection.range.endTick)), limit)
-        guard x1 > x0 else { return [] }
-        let stroke = 1.0
-        return [
-            SceneRect(x: x0, y: 0, width: x1 - x0, height: plotHeight,
-                      fillColor: palette.selectionFill, primitiveName: "automationSelectionFill"),
-            SceneRect(x: x0, y: 0, width: stroke, height: plotHeight,
-                      fillColor: palette.selectionEdge, primitiveName: "automationSelectionEdge"),
-            SceneRect(x: (x1 - stroke).rounded(), y: 0, width: stroke, height: plotHeight,
-                      fillColor: palette.selectionEdge, primitiveName: "automationSelectionEdge"),
-        ]
     }
 
     func ghostProjections(_ session: DocumentSession) -> [AutomationLaneProjection] {

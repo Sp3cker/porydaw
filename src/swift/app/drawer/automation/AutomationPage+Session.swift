@@ -24,7 +24,6 @@ extension AutomationPage {
     @QtIgnored public var publishedTabs: [AutomationTabHandle] { tabSnapshots }
     @QtIgnored public var publishedNodes: [AutomationNodeHandle] { nodeSnapshots }
     @QtIgnored public var publishedMenuRows: [AutomationMenuRowHandle] { menuRowSnapshots }
-    @QtIgnored public var publishedCurveRuns: [SceneRect] { curveRunSnapshots }
 
     /// The first catalog index whose parameter satisfies `predicate`, so a lane
     /// reads the same selector order the page publishes.

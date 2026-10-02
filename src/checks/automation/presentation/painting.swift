@@ -212,25 +212,31 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
     report.expect(page.publishedNodes.allSatisfy { !$0.projected },
                   cppID: drawerAutomationPaintingModelID,
                   message: "a fully written lane shows no synthetic nodes")
-    report.expect(!page.publishedCurveRuns.isEmpty, cppID: drawerAutomationPaintingModelID,
-                  message: "a lane with events draws its curve")
-    report.expect(page.publishedCurveRuns.allSatisfy { $0.primitiveName == "automationCurve" },
+    let curveInk = SceneRectPacking.argb(page.palette.automationNodeInk)
+    let ghostInk = (curveInk & 0x00FF_FFFF) | 0x8000_0000
+    let curveX = fixture.x(72)
+    let volumeY = fixture.y(fixture.volumeLane, 127)
+    let activeDrawing = AutomationDisplayProbe(page)
+    report.expect(
+        activeDrawing.hasHeldCurve(atX: curveX, y: volumeY, ink: curveInk),
                   cppID: drawerAutomationPaintingModelID,
-                  message: "an unpinned lane draws no ghost curve")
-    report.expect(page.publishedCurveRuns.contains { $0.primitiveName == "automationCurve" }
-                      && page.publishedCurveRuns.allSatisfy { $0.fillColor == "#EA3C3C" },
+        message: "Volume draws its held value in lane ink at the projected height")
+    report.expect(
+        !activeDrawing.statics.contains { $0.argb == ghostInk },
                   cppID: drawerAutomationPaintingModelID,
-                  message: "active vanilla automation curve runs use #EA3C3C node ink")
+        message: "an unpinned lane draws no ghost ink")
     fixture.activate(fixture.modulationLane)
     report.expectEqual(expected: 0, actual: page.nodeCount, cppID: drawerAutomationPaintingModelID,
                        what: "an empty lane draws no markers")
-    report.expect(page.publishedCurveRuns.isEmpty, cppID: drawerAutomationPaintingModelID,
-                  message: "an empty lane draws no curve")
+    let emptyDrawing = AutomationDisplayProbe(page)
+    report.expect(
+        emptyDrawing.valid
+            && !emptyDrawing.statics.contains {
+                $0.argb == curveInk || $0.argb == ghostInk
+            }, cppID: drawerAutomationPaintingModelID,
+        message: "an empty lane draws no active or ghost curve ink")
     fixture.activate(fixture.volumeLane)
     let tempoIndex = AutomationCatalog.index(of: .tempo, track: 0) ?? 0
-    let activeRuns = page.publishedCurveRuns.count
-    report.expect(activeRuns > 0, cppID: drawerAutomationPaintingModelID,
-                  message: "the active lane draws its own runs")
     report.expect(page.toggleGhostParameter(index: tempoIndex), cppID: drawerAutomationPaintingModelID,
                   message: "Tempo pins as a ghost under the active lane")
     report.expectEqual(expected: ["Tempo (BPM) · 2 Events"], actual: page.ghostLabels, cppID: drawerAutomationPaintingModelID,
@@ -273,25 +279,37 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
                       + (ghostHoverRect["height"] as? Double ?? 0) <= ghostHoverY,
                   cppID: drawerAutomationPaintingModelID,
                   message: "the pinned Tempo hover sits above its own curve")
-    report.expect(page.publishedCurveRuns.count > activeRuns, cppID: drawerAutomationPaintingModelID,
-                  message: "pinning a ghost adds its curve under the active lane")
-    report.expect(page.publishedCurveRuns.last?.primitiveName == "automationCurve",
-                  cppID: drawerAutomationPaintingModelID,
-                  message: "the active lane keeps the top curve run")
-    report.expect(page.publishedCurveRuns.dropLast(activeRuns)
-        .allSatisfy { $0.primitiveName == "automationGhostCurve" },
-                  cppID: drawerAutomationPaintingModelID,
-                  message: "every earlier run is the pinned ghost's curve")
-    report.expect(page.publishedCurveRuns.suffix(activeRuns)
-        .allSatisfy { $0.primitiveName == "automationCurve" },
-                  cppID: drawerAutomationPaintingModelID,
-                  message: "the active tail keeps its own runs on top")
-    report.expect(page.publishedCurveRuns.dropLast(activeRuns).contains {
-        $0.primitiveName == "automationGhostCurve"
-    } && page.publishedCurveRuns.dropLast(activeRuns).allSatisfy {
-        $0.fillColor == "#80EA3C3C"
-    }, cppID: drawerAutomationPaintingModelID,
-                  message: "pinned vanilla ghost curve runs use #80EA3C3C half-alpha ink")
+    for theme in themePresetRows {
+        ShellAppearance.apply(to: page.palette, mode: theme.mode, contrast: 50)
+        page.refreshFromDocument()
+        let drawing = AutomationDisplayProbe(page)
+        let ink = SceneRectPacking.argb(page.palette.automationNodeInk)
+        let channels = PaletteMath.channels(page.palette.automationNodeInk)
+        let ghost = SceneRectPacking.argb(
+            PaletteMath.hex(r: channels.r, g: channels.g, b: channels.b, a: 128))
+        let lastGhost = drawing.statics.lastIndex { $0.argb == ghost }
+        let firstActive = drawing.statics.firstIndex { $0.argb == ink }
+        guard drawing.valid, let lastGhost, let firstActive else {
+            report.fail(
+                drawerAutomationPaintingModelID,
+                "\(theme.mode): pinned Tempo and active Volume must both draw")
+            continue
+        }
+        report.expect(
+            lastGhost < firstActive, cppID: drawerAutomationPaintingModelID,
+            message: "\(theme.mode): all ghost ink paints before active curve ink")
+        let ghostY = fixture.y(.tempo, 150)
+        report.expect(
+            drawing.hasHeldCurve(atX: curveX, y: ghostY, ink: ghost),
+            cppID: "themelayout/ThemeLayoutTest::themeColorTables",
+            message: "\(theme.mode): Tempo ghost uses its own height and node ink at alpha 128")
+        report.expect(
+            drawing.hasHeldCurve(atX: curveX, y: volumeY, ink: ink),
+            cppID: drawerAutomationPaintingModelID,
+            message: "\(theme.mode): pinning Tempo preserves the active Volume curve")
+    }
+    ShellAppearance.apply(to: page.palette, mode: "vanilla", contrast: 50)
+    page.refreshFromDocument()
     report.expect(page.toggleGhostParameter(index: tempoIndex), cppID: drawerAutomationPaintingModelID,
                   message: "the ghost unpins")
     report.expect(page.ghostNameLabels.count == 0,
@@ -300,8 +318,12 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
     report.expect(page.hoverText != "Tempo",
                   cppID: drawerAutomationPaintingModelID,
                   message: "unpinning Tempo removes the hovered ghost name")
-    report.expectEqual(expected: activeRuns, actual: page.publishedCurveRuns.count, cppID: drawerAutomationPaintingModelID,
-                       what: "unpinning drops the ghost curve")
+    let unpinnedDrawing = AutomationDisplayProbe(page)
+    report.expect(
+        !unpinnedDrawing.statics.contains { $0.argb == ghostInk }
+            && unpinnedDrawing.hasHeldCurve(atX: curveX, y: volumeY, ink: curveInk),
+        cppID: drawerAutomationPaintingModelID,
+        message: "unpinning removes ghost ink and retains the active Volume curve")
     let tempoProjection = fixture.makeProjection(.tempo)
     let volumeProjection = fixture.makeProjection(fixture.volumeLane)
     report.expectEqual(expected: volumeProjection.points.first?.x ?? -1, actual: tempoProjection.points.first?.x ?? -2,
@@ -334,14 +356,12 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
     let volumeHeight = page.plotHeight
     let volumeGrid = AutomationDisplayProbe(page).gridLines.map(\.x)
     fixture.activate(.tempo)
-    report.expect(page.publishedCurveRuns.contains {
-        $0.primitiveName == "automationCurve" && $0.fillColor == "#EA3C3C"
-    }, cppID: drawerAutomationPaintingModelID,
-                  message: "active Tempo draws its full curve in independent vanilla node ink")
-    report.expect(page.publishedCurveRuns.allSatisfy {
-        $0.fillColor != "#CD5454"
-    }, cppID: drawerAutomationPaintingModelID,
-                  message: "active Tempo never substitutes track-identity ink for its curve")
+    let activeTempoDrawing = AutomationDisplayProbe(page)
+    let tempoY = fixture.y(.tempo, 150)
+    report.expect(
+        activeTempoDrawing.hasHeldCurve(atX: curveX, y: tempoY, ink: curveInk),
+        cppID: drawerAutomationPaintingModelID,
+        message: "active Tempo draws its held value in independent lane ink")
     report.expectEqual(expected: volumeWidth, actual: page.plotWidth, cppID: drawerAutomationPaintingModelID,
                        what: "Tempo shares the active lane's plot width")
     report.expectEqual(expected: volumeHeight, actual: page.plotHeight, cppID: drawerAutomationPaintingModelID,
@@ -485,9 +505,13 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
                   cppID: drawerAutomationPaintingModelID,
                   message: "an empty tempo store composes no lead-in")
     emptyTempo.activate(.tempo)
-    report.expect(emptyTempo.page.publishedCurveRuns.isEmpty,
-                  cppID: drawerAutomationPaintingModelID,
-                  message: "an empty Tempo lane publishes no curve ink")
+    let emptyTempoDrawing = AutomationDisplayProbe(emptyTempo.page)
+    report.expect(
+        emptyTempoDrawing.valid
+            && !emptyTempoDrawing.statics.contains {
+                $0.argb == curveInk || $0.argb == ghostInk
+            }, cppID: drawerAutomationPaintingModelID,
+        message: "an empty Tempo lane draws no active or ghost curve ink")
     report.expect(emptyTempo.page.publishedNodes.isEmpty,
                   cppID: drawerAutomationPaintingModelID,
                   message: "an empty Tempo lane publishes no origin marker")
@@ -503,12 +527,11 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
     implicitTempo.activate(.tempo)
     let leadY = implicitTempo.y(.tempo, 120)
     let leadX = implicitTempo.x(48)
-    report.expect(implicitTempo.page.publishedCurveRuns.contains {
-        $0.x <= leadX && $0.x + $0.width > leadX
-            && abs($0.y + $0.height / 2 - leadY) <= 2
-            && $0.fillColor == implicitTempo.page.palette.automationNodeInk
-    }, cppID: drawerAutomationPaintingModelID,
-                  message: "the first nonzero Tempo point publishes 120 BPM lead-in ink")
+    let implicitDrawing = AutomationDisplayProbe(implicitTempo.page)
+    report.expect(
+        implicitDrawing.hasHeldCurve(atX: leadX, y: leadY, ink: curveInk),
+        cppID: drawerAutomationPaintingModelID,
+        message: "the first nonzero Tempo point draws 120 BPM lead-in ink")
     report.expect(!implicitTempo.page.publishedNodes.contains { $0.tick == 0 },
                   cppID: drawerAutomationPaintingModelID,
                   message: "the implicit Tempo lead-in publishes no origin marker")
@@ -530,11 +553,15 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
             && $0.outlineColor == explicitTempo.page.palette.automationNodeInk
     }, cppID: drawerAutomationPaintingModelID,
                   message: "the written tick-zero Tempo marker carries lane ink")
-    report.expect(!explicitTempo.page.publishedCurveRuns.contains {
-        $0.x <= explicitTempo.x(48) && $0.x + $0.width > explicitTempo.x(48)
-            && abs($0.y + $0.height / 2 - explicitTempo.y(.tempo, 120)) <= 2
-    }, cppID: drawerAutomationPaintingModelID,
-                  message: "a written tick-zero Tempo point removes the default lead-in ink")
+    let explicitDrawing = AutomationDisplayProbe(explicitTempo.page)
+    let explicitX = explicitTempo.x(48)
+    let defaultTempoY = explicitTempo.y(.tempo, 120)
+    let writtenTempoY = explicitTempo.y(.tempo, 160)
+    report.expect(
+        !explicitDrawing.hasHeldCurve(atX: explicitX, y: defaultTempoY, ink: curveInk)
+            && explicitDrawing.hasHeldCurve(atX: explicitX, y: writtenTempoY, ink: curveInk),
+        cppID: drawerAutomationPaintingModelID,
+        message: "a written tick-zero Tempo point replaces default lead-in ink")
     let stepComposition = fixture.makeProjection(fixture.panLane)
     report.expectEqual(expected: [Tick(0), 24, 120],
                        actual: stepComposition.segments.map(\.tickBegin),
@@ -545,10 +572,15 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
                        cppID: drawerAutomationPaintingModelID,
                        what: "step curves compose their nodes")
     fixture.activate(fixture.panLane)
-    report.expect(page.publishedCurveRuns.contains {
-        $0.fillColor == page.palette.automationNodeInk && $0.width > 0
-    }, cppID: drawerAutomationPaintingModelID,
-                  message: "written CC steps publish the lane's curve ink")
+    let stepDrawing = AutomationDisplayProbe(page)
+    let stepX = fixture.x(72)
+    let resizedPan = fixture.makeProjection(
+        fixture.panLane, width: page.plotWidth, height: page.plotHeight)
+    let stepPoint = resizedPan.points.first { $0.tick == 24 }
+    report.expect(
+        stepPoint.map { stepDrawing.hasHeldCurve(atX: stepX, y: $0.y, ink: curveInk) } == true,
+        cppID: drawerAutomationPaintingModelID,
+        message: "written CC steps draw their held value in lane ink")
     report.expect(page.publishedNodes.contains {
         $0.tick == 24 && $0.outlineColor == page.palette.automationNodeInk
     }, cppID: drawerAutomationPaintingModelID,
