@@ -116,32 +116,27 @@
             var container = testCase.drawer()
             var band = testCase.rollBand()
             var bar = testCase.bar()
-            var status = testCase.hintStatus()
             var timeline = testCase.findChild(testCase.surface, "timelineHorizontalScrollBar")
             var other = testCase.findChild(testCase.surface, "timelineOtherEventsBand")
-            if (!presenter || !container || !band || !bar || !status || !timeline || !other)
+            if (!presenter || !container || !band || !bar || !timeline || !other)
                 return false
             if (container.height !== presenter.height)
                 return false
             var rollOrigin = band.mapToItem(testCase.surface, 0, 0)
             var drawerOrigin = container.mapToItem(testCase.surface, 0, 0)
-            var statusOrigin = status.mapToItem(testCase.surface, 0, 0)
             var timelineOrigin = timeline.mapToItem(testCase.surface, 0, 0)
             var otherOrigin = other.mapToItem(testCase.surface, 0, 0)
-            if (!status.visible || status.height <= 0
-                || rollOrigin.x !== 0 || rollOrigin.y !== 0
-                || drawerOrigin.x !== 0 || statusOrigin.x !== 0
+            if (rollOrigin.x !== 0 || rollOrigin.y !== 0
+                || drawerOrigin.x !== 0
                 || band.width !== testCase.surface.width
                 || container.width !== testCase.surface.width
-                || status.width !== testCase.surface.width
                 || band.height !== drawerOrigin.y
                 || drawerOrigin.y + container.height !== otherOrigin.y
                 || otherOrigin.y + other.height !== timelineOrigin.y
                 || other.height !== testCase.surface.otherEventsPresenter.bandHeight
-                || timelineOrigin.y + timeline.height !== statusOrigin.y
                 || !timeline.visible || timeline.width <= 0
                 || timeline.height !== testCase.surface.headersModel.scrollbarWidth
-                || statusOrigin.y + status.height !== testCase.surface.height)
+                || timelineOrigin.y + timeline.height !== testCase.surface.height)
                 return false
             if (bar.visible !== presenter.barVisible)
                 return false

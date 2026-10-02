@@ -228,7 +228,6 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/swiftroll/TrackHeaderScrollbar.qml
         src/ui/songview/quick/swiftroll/SharedPlayhead.qml
         src/ui/songview/quick/swiftroll/SwiftRollOverlay.qml
-        src/ui/songview/quick/swiftroll/MouseHintStatus.qml
         src/ui/songview/quick/docks/SongsPanel.qml
         src/ui/songview/quick/docks/SongsDockColumn.qml
         src/ui/songview/quick/docks/SongConfirmDialog.qml

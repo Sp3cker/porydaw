@@ -85,6 +85,10 @@ TestCase {
                "the capacity song shows no add row")
         var input = item("timelineTrackHeadersInput")
         var first = rows.itemAt(0)
+        tryVerify(function() {
+            return h.viewportHeight > 0 && first.titleRect.width > 0
+                   && first.titleRect.height > 0
+        }, 5000, "the capacity header has a measured title hit target")
         mouseClick(input, first.titleRect.x + first.titleRect.width / 2,
                    first.titleRect.y + first.titleRect.height / 2, Qt.RightButton)
         tryCompare(h, "menuOpen", true)

@@ -60,6 +60,7 @@ SwiftRollTrackHeadersSupport {
         compare(undriven.pixels, silentNeighbor.pixels,
                 "an undriven neighbor row's meter stays unpainted")
         var activity = item("timelineHeaderActivity_0")
+        waitForRendering(activity)
         var before = grabImage(testCase)
         verify(before.width > 0, "the mounted activity meter captures a raster image")
         verify(before.height > 0, "the activity raster has physical rows")

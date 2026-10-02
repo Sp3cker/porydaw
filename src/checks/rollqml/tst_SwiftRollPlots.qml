@@ -151,11 +151,10 @@ TestCase {
     function canonicalBand() {
         var s = surface()
         var drawer = findChild(s, "editorDrawer")
-        var hint = findChild(s, "mouseHintStatus")
         var other = findChild(s, "timelineOtherEventsBand")
-        verify(drawer && hint && other, "the drawer, event band and hint strip are mounted")
+        verify(drawer && other, "the drawer and event band are mounted")
         return Qt.rect(0, 0, s.width,
-                       Math.max(s.height - drawer.height - other.height - hint.height
+                       Math.max(s.height - drawer.height - other.height
                                 - s.headersModel.scrollbarWidth, 0))
     }
 
@@ -200,8 +199,7 @@ TestCase {
         var right = s.width - s.headersModel.scrollbarWidth
         var canonical = canonicalBand()
         var eventHeight = s.otherEventsPresenter.bandHeight
-        var eventY = s.height - findChild(s, "mouseHintStatus").height
-                     - s.headersModel.scrollbarWidth - eventHeight
+        var eventY = s.height - s.headersModel.scrollbarWidth - eventHeight
         var ruler = findChild(s, "timelineQuickRuler")
         var rulerInput = findChild(s, "timelineRulerInput")
         var rollPlot = findChild(s, "timelineQuickRollPlot")

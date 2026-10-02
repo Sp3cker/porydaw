@@ -248,8 +248,6 @@ TestCase {
 
     function rollInput() { return findChild(testCase.surface, "swiftRollInput") }
 
-    function hintStatus() { return findChild(testCase.surface, "mouseHintStatus") }
-
     function editorHeight() {
         return findChild(testCase.surface, "timelineOtherEventsBand")
             .mapToItem(testCase.surface, 0, 0).y

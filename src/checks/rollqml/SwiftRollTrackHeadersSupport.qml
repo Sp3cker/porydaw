@@ -67,6 +67,13 @@ TestCase {
         }, 5000))
         var drawer = findChild(mounted, "editorDrawer")
         verify(drawer !== null)
+        tryVerify(function() {
+            var rows = findChild(mounted, "timelineTrackHeaderRows")
+            var row = rows && rows.itemAt(0)
+            return row && mounted.headersModel.viewportHeight > 0
+                   && row.titleRect.width > 0 && row.titleRect.height > 0
+                   && row.subtitleRect.width > 0 && row.subtitleRect.height > 0
+        }, 5000, "the mounted header has measured title and voice hit targets")
         session.configurePersistence()
     }
 

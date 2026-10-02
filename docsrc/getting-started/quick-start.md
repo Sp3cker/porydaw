@@ -48,6 +48,8 @@ In my case, I changed those three intro flute notes to descend from the C6 note.
 
 ![Edited Notes](../img/quick-start-littleroot-flute-edit.png)
 
+The single status bar at the bottom of the window shows mouse hints, save status, and polyphony.
+
 ## 5. Save
 
 To save the song's changes, `Ctrl+S` (or `File → Save Song`). Porydaw directly saves those changes to `mus_littleroot.mid` in your decomp project.

@@ -100,14 +100,13 @@ SwiftRollTrackHeadersSupport {
                   expected: Qt.rect(h.trackHeaderWidth, 0,
                                     right - h.trackHeaderWidth,
                                     s.height - s.drawerPresenter.height
-                                    - s.otherEventsPresenter.bandHeight
-                                    - item("mouseHintStatus").height - h.scrollbarWidth),
+                                    - s.otherEventsPresenter.bandHeight - h.scrollbarWidth),
                   plotTopOffset: s.gridModel.rulerHeight, expectedVisible: true },
                 { band: other, plot: otherInput, gutter: otherGutter,
                   published: Qt.rect(0, drawerRect.y + s.drawerPresenter.height,
                                      s.width, s.otherEventsPresenter.bandHeight),
-                  expected: Qt.rect(0, s.height - item("mouseHintStatus").height
-                                    - h.scrollbarWidth - s.otherEventsPresenter.bandHeight,
+                  expected: Qt.rect(0, s.height - h.scrollbarWidth
+                                    - s.otherEventsPresenter.bandHeight,
                                     s.width, s.otherEventsPresenter.bandHeight),
                   plotRight: right, expectedVisible: true }
             ]

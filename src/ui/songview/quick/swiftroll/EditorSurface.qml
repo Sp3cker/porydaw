@@ -102,7 +102,6 @@ Item {
     property alias menus: surfaceMenus
     property alias drawerItem: editorDrawer
     property alias eventBand: otherEventsBand
-    property alias hintStatusItem: hintStatus
     property alias fontMetrics: bodyFontMetrics
     function retargetNoteMenu(x, y) {
         const point = rollInput.mapFromItem(null, x, y)
@@ -173,7 +172,6 @@ Item {
         root: parent
         editorDrawer: parent.drawerItem
         otherEventsBand: parent.eventBand
-        hintStatus: parent.hintStatusItem
     }
 
     // One scroll row: its frame updates in the same dataChanged sweep as the
@@ -203,7 +201,7 @@ Item {
         objectName: "timelineHorizontalScrollBar"
         z: 2
         x: root.timelineSplitX
-        y: root.height - hintStatus.height - height
+        y: root.height - height
         width: Math.max(root.width - x, 0)
         height: root.scrollbarBreadth
         orientation: Qt.Horizontal
@@ -319,17 +317,6 @@ Item {
     }
 
 
-    MouseHintStatus {
-        id: hintStatus
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        height: implicitHeight
-        captionFont: root.captionFont
-        presenter: root.hintService
-        statusPalette: root.gridModel.palette
-        onHeightChanged: root.configureViewport()
-    }
 
     // One input-transparent playhead paints the roll and drawer above both.
     SharedPlayhead {
@@ -363,7 +350,7 @@ Item {
         // Drawer plots share the roll viewport, not the scrollbar strips;
         // the container still spans the full surface behind that chrome.
         root.drawerPresenter.configureLayout(Math.max(0, root.width - root.scrollbarBreadth),
-                                             Math.max(0, root.height - hintStatus.height
+                                             Math.max(0, root.height
                                                       - root.scrollbarBreadth - otherEventsBand.height),
                                              root.timelineSplitX,
                                              root.baseFontPx,

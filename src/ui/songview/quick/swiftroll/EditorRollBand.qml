@@ -6,7 +6,6 @@ Item {
     required property Item root
     required property Item editorDrawer
     required property Item otherEventsBand
-    required property Item hintStatus
     property alias trackHeaders: trackHeaders
     property alias rollStack: rollStack
     property alias rollPlot: rollPlot
@@ -18,7 +17,7 @@ Item {
     objectName: "swiftRollBand"
     width: root.width
     height: Math.max(root.height - editorDrawer.height - otherEventsBand.height
-                     - hintStatus.height - root.scrollbarBreadth, 0)
+                     - root.scrollbarBreadth, 0)
     z: 1
 
         TrackHeaderBand {
