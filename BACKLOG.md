@@ -36,10 +36,11 @@ Items explicitly deferred out of it:
 - **Audio device selection page** (SPEC §7: "device output via miniaudio
   ... with a small device-selection settings page"). The Engine Settings
   dialog (Edit menu) is the natural home; needs ma_context device
-  enumeration and a device-switch path in AudioEngine — init() currently
-  opens the default device once for the app's lifetime, and sampleRate()
-  feeds every built timeline, so switching devices must rebuild the engines
-  and the loaded timeline the way a song reload does.
+  enumeration and a device-switch path in the Swift `AudioDevice` — it
+  opens the default device once for the app's lifetime, and the device
+  sample rate feeds every built timeline, so switching devices must
+  rebuild `AudioRenderEngine` and the loaded timeline the way a song
+  reload does.
 
 ## Deferred infrastructure
 

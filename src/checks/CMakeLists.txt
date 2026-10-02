@@ -38,8 +38,6 @@ qt_add_executable(porydaw_checks
     fixturecatalog.cpp
     fixturecatalog.hpp
     fwd.hpp
-    audio/tst_audiobackend.cpp
-    audio/tst_audiobackend.h
     support/checkstartup.cpp
     support/checkstartup.h
     ${PROJECT_SOURCE_DIR}/resources/fonts.qrc

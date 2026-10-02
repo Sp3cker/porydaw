@@ -25,12 +25,6 @@ const QString &argumentAt(const QStringList &arguments, qsizetype index)
     return index < arguments.size() ? arguments.at(index) : empty;
 }
 
-template <auto Run>
-int qtOnly(QApplication &, const QStringList &, const QStringList &qtArguments)
-{
-    return Run(qtArguments);
-}
-
 #if defined(__APPLE__) || defined(__linux__)
 int swiftCore(QApplication &, const QStringList &arguments, const QStringList &qtArguments)
 {
@@ -106,12 +100,6 @@ const std::vector<CheckDefinition> &catalog()
         // The scale, activity, transport, telemetry, click, resonance and MIDI
         // engine lanes now run under swiftcore; their retired native originals
         // are recorded in their proof ledgers.
-        // Forced-null backend initialization and backend-name reporting.
-        result.push_back(
-            {.name = "audiocheck-backend",
-             .argv = strings({"--audiocheck-backend"}),
-             .handler = qtOnly<runAudioBackendCheck>,
-             .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}}});
         // The suites below had no dedicated entry and previously ran only
         // inside the bare `swiftcore` entry, whose unfiltered QTest::qExec
         // executed every slot — re-running each suite that also has a

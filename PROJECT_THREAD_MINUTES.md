@@ -49,11 +49,17 @@ This boundary is intentionally about project filesystem work. Moving only a `QFi
 
 ## Verified Current Architecture
 
+> Snapshot (2026-09, pre-Swift tree). These facts were verified against the
+> C++ application on `fork-main`. `MainWindow`, `SongSession`, `AudioEngine`
+> and the rest of `src/ui/*.cpp` were since removed in the Swift/QML cutover;
+> the decisions above still stand, with the current owners under
+> `src/swift/app/` and `src/swift/project/`.
+
 ### Production ownership and thread boundary
 
-- `CMakeLists.txt` defines `porydaw_app` and includes `src/mainwindow.cpp`, `src/core/songdocument.cpp`, `src/core/smf.cpp`, the modules under `src/project/`, the sample/audio import and export modules, `src/ui/newsongwizard.cpp`, and `src/ui/viewsidecar.cpp`.
+- `CMakeLists.txt` defines `porydaw_app` and, at the time of this snapshot, built `src/mainwindow.cpp`, `src/core/songdocument.cpp`, `src/core/smf.cpp`, the modules under `src/project/`, the sample/audio import and export modules, `src/ui/newsongwizard.cpp`, and `src/ui/viewsidecar.cpp`. Every C++ entry in that list has since been removed.
 - Current local `fork-main` has no production `QThread` or `moveToThread` use. Project operations are called synchronously from `MainWindow` actions, tab activation, project restore, and wizard code. Therefore the GUI-thread labels below are verified from the direct production call path unless marked as an inference.
-- `MainWindow` is the current orchestration owner. `DecompProject` stores the open project's song/player snapshot. Each `SongSession` owns a `SongDocument`, editable `VoicegroupSource`, timeline, and `LoadedVoiceGroup`; `AudioEngine` borrows active playback state.
+- `MainWindow` was the orchestration owner. `DecompProject` stores the open project's song/player snapshot. Each `SongSession` owns a `SongDocument`, editable `VoicegroupSource`, timeline, and `LoadedVoiceGroup`; `AudioEngine` borrowed active playback state. The Swift successors are `DocumentWorkspace`/`ApplicationSession` for session ownership and `AudioRenderEngine` for the borrowed playback timeline.
 - There is no production `QFileSystemWatcher`. Voicegroup staleness is polled with `QFileInfo::lastModified()` when a tab becomes active.
 
 ### Qt execution semantics
@@ -187,9 +193,9 @@ The 31 write/mutation-capable source locations above belong to these production 
 - `QFileDialog` calls in `src/mainwindow.cpp` are modal GUI interaction and must remain on the GUI thread. They choose paths; they are not the worker's filesystem implementation.
 - `QSettings` in `src/mainwindow.cpp` and theme/keymap modules stores app-local preferences and session labels. It is not project filesystem I/O and is outside this project's stated scope unless the scope changes.
 - MIDI and sample import first read a user-selected external source file. Sample edit may reread the external provenance path. These reads can also block the GUI, but they are not project-root I/O; whether the same worker owns them is open.
-- `src/audio/wavexport.{h,cpp}` writes a user-selected destination and performs synchronous rendering. The destination may be outside the project and the main cost may be rendering rather than filesystem I/O. It is not silently included in the project-I/O worker scope.
-- `src/audio/sampleimport.cpp` and `src/audio/sf2reader.cpp` expose direct file helpers, but the current `MainWindow` path reads source bytes itself and uses byte-based decoding. These helpers are not current project-root I/O owners.
-- `src/audio/audioengine.cpp` reads `/proc/sys/kernel/osrelease` on Linux/WSL. `src/ui/theme/themeruntime.cpp` creates a cache under the system temporary directory and can write glyph PNG files there. Neither is project I/O.
+- `src/audio/wavexport.{h,cpp}` (since removed; the Swift `WavExport` renders offline) wrote a user-selected destination and performed synchronous rendering. The destination may be outside the project and the main cost may be rendering rather than filesystem I/O. It is not silently included in the project-I/O worker scope.
+- `src/audio/sampleimport.cpp` and `src/audio/sf2reader.cpp` (since removed; the Swift importers under `src/swift/sample/` own this) exposed direct file helpers, but the `MainWindow` path read source bytes itself and used byte-based decoding. These helpers are not current project-root I/O owners.
+- `src/swift/app/audio/AudioDevice.swift` reads `/proc/sys/kernel/osrelease` on Linux/WSL to detect WSL (it replaced the C++ engine's copy). `src/ui/theme/themeruntime.cpp` created a glyph cache under the system temporary directory. Neither is project I/O.
 - The linked Porya loader contains an optional append-mode diagnostic log write, but current Porydaw does not call `voicegroup_loader_set_log_path()`. It is not an active project write in this inventory.
 
 ### Test-only fixtures

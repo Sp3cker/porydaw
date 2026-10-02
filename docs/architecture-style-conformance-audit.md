@@ -1,6 +1,8 @@
 # Lifecycle & State-Ownership Conformance Audit
 
 > Scope note (2026-09): this audit covers the retained native C++ seam. Porydaw is now a Swift 6 + QML application: Swift owns behavior and exposes it to QML through QtBridge, with no QWidgets and no new C++ outside the native boundaries. The application entry point is the Swift shell (`src/swift/app/shell/PorydawShellApp.swift` → `src/ui/shell/*.qml`). Findings below still govern the named native owners until they migrate to Swift.
+>
+> Those owners have since been removed in that cutover: `MainWindow`, `WorkspaceUi`, `SongTab`, `ProjectIo` and the rest of `src/ui/*.cpp` gave way to the Swift session/project services, and `AudioEngine` with the C++ audio host gave way to `src/swift/app/audio/` (`AudioRenderEngine`, `AudioDevice`). Read the ownership map and lifecycle sections below as the record of the C++ seam the Swift ports were written against.
 
 This document is the bounded conformance audit of mutable-state ownership
 and lifecycle across the `ProjectWorkspace → WorkspaceUi/SongTab →
@@ -35,7 +37,8 @@ publication atomicity, stale-work defense, and teardown discipline across:
 - `src/mainwindow.{h,cpp}` — composition root, audio handoff, teardown
   order.
 - `src/audio/audioengine.{h,cpp}` — read-only, to verify borrow
-  lifetimes at the handoff boundary.
+  lifetimes at the handoff boundary. (Removed with the C++ audio host;
+  `src/swift/app/audio/AudioRenderEngine.swift` owns rendering now.)
 
 **Out of scope:** audio DSP correctness, MIDI/SMF semantics, rendering,
 and any file not reachable through the lifecycle paths above. No
@@ -66,7 +69,7 @@ false positive). Only adjudicated results appear below.
 | Project state | `ProjectWorkspace` | published `ProjectState` value | `WorkspaceUi::applyProjectState` |
 | Command queue | `ProjectIo` | `m_queue` FIFO gated by `m_active` | worker thread |
 | Dialog/mutation gates | `WorkspaceUi` | `m_dialogOps`, `m_inFlight*`, pending fields | action enablement, reconciliation |
-| Audio session | `MainWindow`/`AudioEngine` | borrowed timeline `shared_ptr`, `VoicegroupLease` pin | playback |
+| Audio session | `MainWindow`/`AudioEngine` (Swift: `DocumentWorkspace`/`AudioRenderEngine`) | borrowed timeline `shared_ptr`, `VoicegroupLease` pin | playback |
 
 ## 4. Lifecycle / transition map
 
@@ -80,7 +83,7 @@ false positive). Only adjudicated results appear below.
   placeholders for the new snapshot.
 - **Close:** `requestCloseTab` → dirty check → optional save →
   `removeTab` → `publishSelectedIfChanged` → `MainWindow` rebinds or
-  unloads `AudioEngine`.
+  unloads `AudioEngine` (Swift: the session rebinds `AudioRenderEngine`).
 - **Mutation:** dialog op increments `m_dialogOps` → `ProjectOperation`
   → worker executes serially → staged `ProjectEvent`/`SongUpdate` +
   terminal snapshot → `reconcileSnapshot` consumes pending fields and
@@ -235,7 +238,8 @@ lifecycle.
   atomically; conflict handling invalidates history entries correctly.
 - **Borrow-safe swaps.** `SongTab` lease/timeline swaps keep old
   resources alive until the new ones are installed; `AudioEngine`
-  borrows are pinned by `shared_ptr` timeline and `VoicegroupLease`.
+  borrows are pinned by `shared_ptr` timeline and `VoicegroupLease`
+  (in the Swift port, `AudioTimelineHandoff` pins the published timeline).
 - **Explicit teardown ordering.** `destroyAllTabs` publishes
   `selectedSongTabChanged(nullptr)` before destruction; `~MainWindow`
   runs an explicit shutdown/reset sequence rather than relying on

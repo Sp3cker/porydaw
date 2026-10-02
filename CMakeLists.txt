@@ -72,19 +72,16 @@ function(porydaw_enable_swift_batch_mode target)
         "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:-enable-batch-mode>")
 endfunction()
 
-# Optimize the audio path even in debug builds: the miniaudio converter and
-# engine callbacks dominate audio-thread cost, and profile/listening sessions
-# with a debug app must not measure inflated audio DSP. -g stays on.
+# Optimize the native audio path even in debug builds: the miniaudio converter
+# dominates audio-thread cost and the sample codec dominates import decode time.
 set(PORYDAW_AUDIO_ALWAYS_OPTIMIZE_SRCS
     src/audio/miniaudio_impl.c
-    src/audio/sample_codec.c
-    src/audio/audioengine.cpp)
+    src/audio/sample_codec.c)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     foreach(PORYDAW_AUDIO_SRC IN LISTS PORYDAW_AUDIO_ALWAYS_OPTIMIZE_SRCS)
         set_source_files_properties(
             "${PORYDAW_AUDIO_SRC}"
-            PROPERTIES COMPILE_OPTIONS "-O2"
-                       SKIP_PRECOMPILE_HEADERS ON)
+            PROPERTIES COMPILE_OPTIONS "-O2")
     endforeach()
 endif()
 
@@ -194,15 +191,6 @@ qt_add_library(porydaw_app STATIC
     src/render/display_list_item.cpp
     src/ui/songview/quick/swiftroll/native/font_metrics.cpp
     src/ui/songview/quick/swiftroll/native/font_metrics.h
-    src/audio/audioengine.cpp
-    src/audio/audioengine.h
-    src/audio/auditionslots.cpp
-    src/audio/auditionslots.h
-    src/audio/resonance_suppressor.cpp
-    src/audio/resonance_suppressor.h
-    src/audio/swift_playback.h
-    src/audio/timeline_handoff.h
-    src/audio/trackactivitylevel.h
     src/audio/miniaudio_impl.c
     src/audio/sample_codec.h
     src/audio/sample_codec.c
