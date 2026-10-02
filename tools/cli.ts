@@ -62,18 +62,19 @@ function help(command?: Subcommand): string {
 A failed build prints its errors and the path of the complete log
 (build/<config>/build.log). Read that log; rebuilding adds no detail.`;
     case "format":
-      return `usage: deno task format [--check] [--base <ref>] [files...] [--help]
+      return `usage: deno task format [--check] [--base <ref>] [--whole] [files...] [--help]
   default: Swift lines changed since --base, and TypeScript under tools/
   --check       report unformatted code without editing
   --base <ref>  measure Swift changes from merge-base(<ref>, HEAD) to the
                 working tree; default HEAD (uncommitted changes only)
-  files         format these .swift/.ts files whole
+  files         restrict to these .swift/.ts files (still changed lines only)
+  --whole       reflow the named files entirely (requires files)
   --help        show this help without running formatters
 
 Examples:
   deno task format
   deno task format --check --base origin/fork-main
-  deno task format src/swift/core/Xcmd.swift`;
+  deno task format --whole src/swift/core/Xcmd.swift`;
     default:
       return `usage: deno task <command> [options]
   build            this help (deno task build, not a real build)
@@ -280,11 +281,13 @@ async function runChecks(rawArgs: string[], command: Lane): Promise<void> {
 async function runFormat(args: string[]): Promise<void> {
   if (args.includes("--help")) showHelp("format");
   let check = false;
+  let whole = false;
   let base = "HEAD";
   const files: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === "--check") check = true;
+    else if (arg === "--whole") whole = true;
     else if (arg.startsWith("--base=")) base = arg.slice("--base=".length);
     else if (arg === "--base") {
       const next = args[++i];
@@ -296,8 +299,9 @@ async function runFormat(args: string[]): Promise<void> {
     else files.push(arg);
   }
   if (!base) usage("format", "--base requires a ref");
+  if (whole && files.length === 0) usage("format", "--whole requires files");
   try {
-    Deno.exit(await formatSources({ check, base, files }));
+    Deno.exit(await formatSources({ check, base, files, whole }));
   } catch (error) {
     console.error(`format: ${error instanceof Error ? error.message : error}`);
     Deno.exit(2);

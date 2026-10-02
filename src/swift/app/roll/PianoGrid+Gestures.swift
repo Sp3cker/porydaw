@@ -1,7 +1,7 @@
 import Foundation
+import PorydawAppCommands
 import PorydawCore
 import QtBridge
-import PorydawAppCommands
 
 @MainActor
 extension PianoGrid {
@@ -23,7 +23,8 @@ extension PianoGrid {
     func addSelectedNoteFromLeftPointer(_ id: NoteID) {
         session.addSelectedNote(id)
         if case .band = rightGesture, !rightBandDemoted,
-           !selectionAtRightPress.contains(id) {
+            !selectionAtRightPress.contains(id)
+        {
             selectionAtRightPress.append(id)
         }
     }
@@ -50,15 +51,18 @@ extension PianoGrid {
                 var changes: [NoteVelocity] = []
                 for id in session.selectedNoteOrder {
                     guard let current = session.document.note(id) else { continue }
-                    changes.append(NoteVelocity(
-                        noteID: id, velocity: Int(current.velocity) + state.delta))
+                    changes.append(
+                        NoteVelocity(
+                            noteID: id, velocity: Int(current.velocity) + state.delta))
                 }
                 if changes.isEmpty {
-                    changes.append(NoteVelocity(
-                        noteID: state.noteId, velocity: state.original + state.delta))
+                    changes.append(
+                        NoteVelocity(
+                            noteID: state.noteId, velocity: state.original + state.delta))
                 }
                 if session.document.setVelocities(
-                    changes, expectedRevision: session.document.revision) != nil {
+                    changes, expectedRevision: session.document.revision) != nil
+                {
                     lastVelocity = min(127, max(1, state.original + state.delta))
                 }
             }
@@ -73,8 +77,9 @@ extension PianoGrid {
                 session.document.moveNotes(ids, byTicks: Int64(state.dTick), byKeys: state.dKey)
             }
         case .resize(let state):
-            session.document.resizeNotes(ids, edge: state.leading ? .leading : .trailing,
-                                         byTicks: Int64(state.delta))
+            session.document.resizeNotes(
+                ids, edge: state.leading ? .leading : .trailing,
+                byTicks: Int64(state.delta))
         case .pendingMenu, .band, .pan:
             break
         }
@@ -83,13 +88,16 @@ extension PianoGrid {
     @QtIgnored
     private func addNote(tick: Int, duration: Int, pitch: Int) {
         guard session.selectedTrack != nil, tick >= 0, duration > 0,
-              (0...127).contains(pitch), tick < Int(TimeDefaults.maxTick),
-              Int64(tick) + Int64(duration) <= Int64(TimeDefaults.maxTick)
+            (0...127).contains(pitch),
+            Int64(tick) + Int64(duration) <= Int64(TimeDefaults.maxTick)
         else { return }
-        guard let ids = try? session.document.addNotes([
-            NewNote(track: trackIndex, tick: Tick(tick), pitch: UInt8(pitch),
+        guard
+            let ids = try? session.document.addNotes([
+                NewNote(
+                    track: trackIndex, tick: Tick(tick), pitch: UInt8(pitch),
                     duration: Tick(duration), velocity: UInt8(min(127, max(1, lastVelocity))))
-        ]), let id = ids.first else { return }
+            ]), let id = ids.first
+        else { return }
         session.setSelectedNotes([id])
         activeNoteId = id.rawValue
     }
@@ -158,7 +166,8 @@ extension PianoGrid {
         if let hit = hitNote(x: x, y: y) {
             let note = notes[hit.index]
             let control = modifiers & QtFact.controlModifier != 0
-            pendingControlToggle = control && session.selectedNotes.contains(note.noteId)
+            pendingControlToggle =
+                control && session.selectedNotes.contains(note.noteId)
                 ? note.noteId : nil
             activeNoteId = note.noteId.rawValue
             lastVelocity = note.velocity
@@ -166,8 +175,9 @@ extension PianoGrid {
             keyboardAuditionTrack = trackIndex
             onAudition?(trackIndex, note.pitch, note.velocity)
             if control && hit.zone == .body {
-                gesture = .velocity(GridGesture.Velocity(
-                    noteId: note.noteId, pressY: y, original: note.velocity))
+                gesture = .velocity(
+                    GridGesture.Velocity(
+                        noteId: note.noteId, pressY: y, original: note.velocity))
                 pendingVelocityReanchor =
                     session.selectedNotes.contains(note.noteId) ? nil : note.noteId
                 if hoverKey != note.pitch {
@@ -178,28 +188,32 @@ extension PianoGrid {
                 applyPressSelection(note.noteId, modifiers: modifiers)
                 switch hit.zone {
                 case .leftEdge:
-                    gesture = .resize(pressTick: pressTick, gripTick: note.tick,
-                                      oppositeTick: note.tick + note.duration, leading: true)
+                    gesture = .resize(
+                        pressTick: pressTick, gripTick: note.tick,
+                        oppositeTick: note.tick + note.duration, leading: true)
                 case .rightEdge:
-                    gesture = .resize(pressTick: pressTick, gripTick: note.tick + note.duration,
-                                      oppositeTick: note.tick, leading: false)
+                    gesture = .resize(
+                        pressTick: pressTick, gripTick: note.tick + note.duration,
+                        oppositeTick: note.tick, leading: false)
                 default:
                     gesture = .move(pressTick: pressTick, pressKey: pressKey)
                 }
             }
             if case .band(let band) = rightGesture, !control {
                 rightBandDemoted = true
-                rightGesture = .pendingMenu(GridGesture.PendingMenu(
-                    pressX: band.pressX, pressY: band.pressY,
-                    threshold: .infinity, hitNoteId: NoteID()))
+                rightGesture = .pendingMenu(
+                    GridGesture.PendingMenu(
+                        pressX: band.pressX, pressY: band.pressY,
+                        threshold: .infinity, hitNoteId: NoteID()))
                 releaseBandAudition()
             }
         } else {
             guard !session.scaleProjection.fold || session.scaleProjection.contains(pressKey)
             else { return }
             session.clearSelectedNotes()
-            gesture = .pendingDraw(GridGesture.PendingDraw(
-                pressX: x, pressY: y, pressTick: pressTick, pressKey: pressKey))
+            gesture = .pendingDraw(
+                GridGesture.PendingDraw(
+                    pressX: x, pressY: y, pressTick: pressTick, pressKey: pressKey))
             keyboardAuditionKey = pressKey
             keyboardAuditionTrack = trackIndex
             onAudition?(trackIndex, pressKey, min(127, max(1, lastVelocity)))
@@ -244,11 +258,15 @@ extension PianoGrid {
         pointerModifiers = modifiers
         guard let gesture, !gesture.isRight else { return }
         if case .velocity(let state) = gesture, state.preview == nil,
-           abs(y - state.pressY) < dragDistance { return }
+            abs(y - state.pressY) < dragDistance
+        {
+            return
+        }
         if case .pendingDraw = gesture {
             let key = pitch(atY: y)
-            if key >= 0, (!session.scaleProjection.fold || session.scaleProjection.contains(key)),
-               key != keyboardAuditionKey {
+            if key >= 0, !session.scaleProjection.fold || session.scaleProjection.contains(key),
+                key != keyboardAuditionKey
+            {
                 stopAudition()
                 keyboardAuditionKey = key
                 keyboardAuditionTrack = trackIndex
@@ -285,8 +303,9 @@ extension PianoGrid {
                     stopAudition()
                 } else {
                     if let selection = session.timeSelection, selection.isActive,
-                       session.timeSelectionCoversTrack(trackIndex),
-                       selection.contains(Tick(max(0, Int(session.camera.tickAtContentX(x))))) {
+                        session.timeSelectionCoversTrack(trackIndex),
+                        selection.contains(Tick(max(0, Int(session.camera.tickAtContentX(x)))))
+                    {
                         session.clearTimeSelection()
                     }
                     let tick = session.grid.snapTick(state.pressTick, camera: session.camera)
@@ -316,7 +335,8 @@ extension PianoGrid {
                 break
             }
         } else if case .velocity(let state) = self.gesture, state.preview == nil,
-                  !suppressedLeftRelease {
+            !suppressedLeftRelease
+        {
             addSelectedNoteFromLeftPointer(state.noteId)
         }
         pendingControlToggle = nil
@@ -342,9 +362,10 @@ extension PianoGrid {
         case .velocity(let state): blockedByLeft = state.preview != nil
         default: blockedByLeft = true
         }
-        rightGesture = .pendingMenu(GridGesture.PendingMenu(
-            pressX: x, pressY: y, threshold: blockedByLeft ? .infinity : dragDistance,
-            hitNoteId: hit.map { notes[$0.index].noteId } ?? NoteID()))
+        rightGesture = .pendingMenu(
+            GridGesture.PendingMenu(
+                pressX: x, pressY: y, threshold: blockedByLeft ? .infinity : dragDistance,
+                hitNoteId: hit.map { notes[$0.index].noteId } ?? NoteID()))
         publishOutputs()
     }
 
@@ -379,9 +400,12 @@ extension PianoGrid {
             suppressedLeftRelease = true
             pendingVelocityReanchor = nil
         }
-        let updated = rightBandDemoted ? rightGesture : rightGesture.updated(
-            x: x, y: y, metrics: metrics, grid: session.grid,
-            camera: session.camera, scale: session.scaleProjection)
+        let updated =
+            rightBandDemoted
+            ? rightGesture
+            : rightGesture.updated(
+                x: x, y: y, metrics: metrics, grid: session.grid,
+                camera: session.camera, scale: session.scaleProjection)
         self.rightGesture = updated
         if case .band = updated, !rightBandDemoted {
             applyBandSelection()
@@ -421,11 +445,13 @@ extension PianoGrid {
         guard key >= 0, !session.scaleProjection.fold || session.scaleProjection.contains(key)
         else { return }
         session.clearSelectedNotes()
-        let tick = session.grid.snapTickDown(session.camera.tickAtContentX(x),
-                                             camera: session.camera)
-        gesture = .draw(GridGesture.Draw(
-            anchorTick: Int(tick), tick: Int(tick),
-            duration: Int(session.grid.snapTicksAt(tick, camera: session.camera)), key: key))
+        let tick = session.grid.snapTickDown(
+            session.camera.tickAtContentX(x),
+            camera: session.camera)
+        gesture = .draw(
+            GridGesture.Draw(
+                anchorTick: Int(tick), tick: Int(tick),
+                duration: Int(session.grid.snapTicksAt(tick, camera: session.camera)), key: key))
         refreshNotes()
     }
 
@@ -461,7 +487,8 @@ extension PianoGrid {
 
     func finishKeyboardTransposeAuditionImpl() -> Bool {
         guard keyboardTransposeAuditionActive, keyboardAuditionKey != nil,
-              keyboardAuditionTrack != nil else { return false }
+            keyboardAuditionTrack != nil
+        else { return false }
         stopAudition()
         return true
     }

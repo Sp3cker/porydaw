@@ -20,6 +20,7 @@ public enum ProjectFileStore {
     public static func read(_ path: String) throws -> Data {
         do {
             let handle = try FileHandle(forReadingFrom: URL(filePath: path))
+            // Best-effort close of a read-only handle; failure cannot change bytes already read.
             defer { try? handle.close() }
             return try handle.readToEnd() ?? Data()
         } catch {

@@ -1,6 +1,6 @@
 // Formats Swift with the toolchain's swift-format (config: .swift-format) and
 // TypeScript with deno fmt. Swift is formatted only on lines changed since the
-// base, so untouched code keeps its style; files named explicitly are whole.
+// base, so untouched code keeps its style; --whole reflows named files entirely.
 import { extname } from "node:path";
 import { buildDirectory } from "./local_build_environment.ts";
 import { selectedSwiftCompiler, swiftDriver } from "./swift_toolchain.ts";
@@ -10,6 +10,8 @@ export interface FormatRequest {
   /** Changes are measured from merge-base(base, HEAD) to the working tree. */
   readonly base: string;
   readonly files: string[];
+  /** Reflow named files entirely instead of only their changed lines. */
+  readonly whole: boolean;
 }
 
 type LineRanges = [number, number][] | "whole";
@@ -139,9 +141,18 @@ export async function formatSources(request: FormatRequest): Promise<number> {
   ) return 1;
 
   const swiftFiles = request.files.filter((file) => extname(file) === ".swift");
-  const targets = request.files.length > 0
-    ? new Map<string, LineRanges>(swiftFiles.map((file) => [file, "whole"]))
-    : await changedSwift(request.base);
+  let targets: Map<string, LineRanges>;
+  if (request.whole) {
+    targets = new Map(swiftFiles.map((file) => [file, "whole"]));
+  } else {
+    targets = await changedSwift(request.base);
+    if (swiftFiles.length > 0) {
+      const named = new Set(swiftFiles);
+      for (const path of targets.keys()) {
+        if (!named.has(path)) targets.delete(path);
+      }
+    }
+  }
   if (targets.size === 0) return 0;
 
   const swift = swiftDriver(
