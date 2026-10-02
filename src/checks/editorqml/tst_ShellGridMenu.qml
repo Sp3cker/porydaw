@@ -3,6 +3,7 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import Porydaw.Icons
 
 ShellGridMenuSupport {
     id: testCase
@@ -166,7 +167,7 @@ ShellGridMenuSupport {
             verify(Qt.colorEqual(background.color, palette.buttonHoverBackground))
             var arrow = findChild(item, "gridControlArrow")
             verify(arrow !== null)
-            compare(arrow.text, "▾")
+            compare(arrow.icon, Icons.comboArrow, "the dropdown arrow is the combo-box arrow glyph")
             verify(Qt.colorEqual(arrow.color, palette.buttonText))
             var label = findChild(item, "gridControlLabel")
             verify(label !== null)

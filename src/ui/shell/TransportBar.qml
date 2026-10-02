@@ -1,8 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Controls.Basic as Basic
+import QtQuick.Controls as Controls
 import Porydaw.Ui
 import PorydawApp
+import Porydaw.Icons
 
 Rectangle {
     id: bar
@@ -83,7 +84,7 @@ Rectangle {
             objectName: "transport.go-to-start"
             colors: bar.colors; baseFontPx: bar.baseFontPx
             typography: bar.typography
-            label: qsTr("Go to Start"); symbol: ""; iconSource: "qrc:/icons/transport-gotostart.svg"
+            label: qsTr("Go to Start"); icon: Icons.goToStart
             actionable: {
                 bar.actionRevision
                 return bar.shell.actionEnabled("transport.go_to_start")
@@ -96,7 +97,7 @@ Rectangle {
             objectName: "transport.play"
             colors: bar.colors; baseFontPx: bar.baseFontPx
             typography: bar.typography
-            label: qsTr("Play"); symbol: "▶"; iconSource: "qrc:/icons/transport-play.svg"
+            label: qsTr("Play"); icon: Icons.play
             actionable: {
                 bar.actionRevision
                 return bar.shell.actionEnabled("transport.play")
@@ -109,7 +110,7 @@ Rectangle {
             objectName: "transport.pause"
             colors: bar.colors; baseFontPx: bar.baseFontPx
             typography: bar.typography
-            label: qsTr("Pause"); symbol: "Ⅱ"; iconSource: "qrc:/icons/transport-pause.svg"
+            label: qsTr("Pause"); icon: Icons.pause
             actionable: {
                 bar.actionRevision
                 return bar.shell.actionEnabled("transport.pause")
@@ -122,7 +123,7 @@ Rectangle {
             objectName: "transport.stop"
             colors: bar.colors; baseFontPx: bar.baseFontPx
             typography: bar.typography
-            label: qsTr("Stop"); symbol: ""; iconSource: "qrc:/icons/transport-stop.svg"
+            label: qsTr("Stop"); icon: Icons.stop
             actionable: {
                 bar.actionRevision
                 return bar.shell.actionEnabled("transport.stop")
@@ -135,7 +136,7 @@ Rectangle {
             objectName: "transport.loop"
             colors: bar.colors; baseFontPx: bar.baseFontPx
             typography: bar.typography
-            label: qsTr("Loop"); symbol: "⟲"; iconSource: "qrc:/icons/transport-loop.svg"
+            label: qsTr("Loop"); icon: Icons.loop
             checked: {
                 bar.actionRevision
                 return bar.shell.actionChecked("transport.loop")
@@ -152,7 +153,7 @@ Rectangle {
             objectName: "transport.follow-playhead"
             colors: bar.colors; baseFontPx: bar.baseFontPx
             typography: bar.typography
-            label: qsTr("Follow Playhead"); symbol: "▶▶"; iconSource: "qrc:/icons/transport-follow.svg"
+            label: qsTr("Follow Playhead"); icon: Icons.followPlayhead
             checked: {
                 bar.actionRevision
                 return bar.shell.actionChecked("transport.follow_playhead")
@@ -169,7 +170,7 @@ Rectangle {
             objectName: "transport.resonance"
             colors: bar.colors; baseFontPx: bar.baseFontPx
             typography: bar.typography
-            label: qsTr("Suppress Resonances"); symbol: ""; iconSource: "qrc:/icons/transport-resonance.svg"
+            label: qsTr("Suppress Resonances"); icon: Icons.resonance
             checked: {
                 bar.actionRevision
                 bar.presenter.resonanceSuppression
@@ -202,8 +203,8 @@ Rectangle {
                                         .arg(bar.presenter.measureText)
                                         .arg(bar.presenter.loopBounds)
                                         .arg(bar.presenter.tempo)
-            Basic.ToolTip.text: qsTr("Tempo: %1 BPM. Drag vertically to scrub.").arg(bar.presenter.tempo)
-            Basic.ToolTip.visible: clockHover.hovered && bar.presenter.state !== 0
+            Controls.ToolTip.text: qsTr("Tempo: %1 BPM. Drag vertically to scrub.").arg(bar.presenter.tempo)
+            Controls.ToolTip.visible: clockHover.hovered && bar.presenter.state !== 0
             HoverHandler { id: clockHover }
             MouseArea {
                 anchors.fill: parent
@@ -235,7 +236,7 @@ Rectangle {
             Layout.preferredWidth: Layout.maximumWidth
             Layout.preferredHeight: bar.toolExtent
 
-            Basic.ComboBox {
+            Controls.ComboBox {
                 id: scaleRoot
                 objectName: "transportScaleRoot"
                 x: 0
@@ -248,7 +249,7 @@ Rectangle {
                 enabled: bar.songAvailable
                 activeFocusOnTab: false
                 font: Qt.font(bar.typography.body)
-                Basic.ToolTip.text: qsTr("Scale root note")
+                Controls.ToolTip.text: qsTr("Scale root note")
                 Accessible.name: qsTr("Scale root note")
                 background: Rectangle {
                     color: bar.colors.buttonBackground
@@ -256,7 +257,7 @@ Rectangle {
                     radius: bar.inset / 2
                 }
             }
-            Basic.ComboBox {
+            Controls.ComboBox {
                 id: scaleType
                 objectName: "transportScaleType"
                 x: transportScaleSlot.rootWidth + 1
@@ -269,7 +270,7 @@ Rectangle {
                 enabled: bar.songAvailable
                 activeFocusOnTab: false
                 font: Qt.font(bar.typography.body)
-                Basic.ToolTip.text: qsTr("Scale type")
+                Controls.ToolTip.text: qsTr("Scale type")
                 Accessible.name: qsTr("Scale type")
                 background: Rectangle {
                     color: bar.colors.buttonBackground
@@ -286,8 +287,7 @@ Rectangle {
                 baseFontPx: bar.baseFontPx
                 typography: bar.typography
                 label: qsTr("Highlight")
-                symbol: ""
-                iconSource: "qrc:/icons/flat-music.svg"
+                icon: Icons.flat
                 checked: bar.presenter.scaleHighlight
                 actionable: bar.songAvailable
                 activeFocusOnTab: false
@@ -308,7 +308,7 @@ Rectangle {
                 Accessible.role: Accessible.CheckBox
                 Accessible.name: qsTr("Fold")
                 Accessible.checked: bar.presenter.scaleFold
-                Basic.ToolTip.text: qsTr("Fold piano roll to pitches used by the selected track")
+                Controls.ToolTip.text: qsTr("Fold piano roll to pitches used by the selected track")
                 Text {
                     anchors.centerIn: parent
                     text: qsTr("Fold")

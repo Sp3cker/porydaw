@@ -102,6 +102,14 @@ requires every launch, including that first run, to stay strictly below 300 ms.
 Only the benchmark's own processes are terminated. `--help` lists run-count,
 budget, and timeout options.
 
+The three bundled Atkinson faces ship as plain files beside the shell QML
+(`Contents/Resources` in the macOS bundle, the executable's directory elsewhere).
+`FontLoader` registers them by local path, so Qt uses file-backed registration on
+every platform instead of copying and parsing compressed qrc data.
+First-post-link launches can still exceed 300 ms: ordinary-launch improvements
+are not a cold-start guarantee. The [startup audit](docs/old/first-frame-audio-startup.md)
+records retained changes, rejected experiments, and verification.
+
 `bash autoresearch.sh` measures the configured live-project cold launch on a
 Debug build, including song restoration and a settled rendered window. It is
 not a portable fixture-based check.
@@ -116,6 +124,26 @@ files live.
 Settings pages are constructed only while the dialog is visible. Opening
 the dialog initializes controls from the current settings draft; reopening
 after Cancel discards uncommitted field edits.
+
+### UI icons
+
+Every UI icon is a glyph in one generated font, `resources/icons/PorydawIcons.otf`:
+Font Awesome outlines copied from their style's face plus custom artwork compiled from
+`resources/icons/sources/*.svg`. QML draws them through `AppIcon { icon: Icons.<key> }`.
+The Quick Controls style `PorydawStyle` (`src/ui/style/`) is Fusion with its image-backed
+indicators (combo and spin arrows, check marks, submenu arrows) drawn as the same glyphs
+and its progress bar without an image mask, so startup loads no Qt image plugins.
+
+To add or change an icon, edit `resources/icons/manifest.json` and regenerate the font
+and the `Icons` singleton (requires fontTools):
+
+```bash
+python3 tools/gen_ui_icons.py --fontawesome /path/to/fontawesome-pro-5.15.4-desktop
+```
+
+- The Font Awesome Pro desktop package is a local download; it is never committed.
+- Codepoints stay pinned in the manifest's `codepoints`; a new key gets the next one.
+- Custom SVGs may use only `path` elements, `matrix()` transforms and `fill-rule`.
 
 ## License
 

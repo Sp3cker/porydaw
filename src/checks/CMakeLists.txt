@@ -40,7 +40,6 @@ qt_add_executable(porydaw_checks
     fwd.hpp
     support/checkstartup.cpp
     support/checkstartup.h
-    ${PROJECT_SOURCE_DIR}/resources/fonts.qrc
 )
 set_target_properties(porydaw_checks PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
@@ -363,6 +362,10 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
             MACOSX_BUNDLE_GUI_IDENTIFIER com.sp3cker.porydaw.checks
             NO_SYSTEM_FROM_IMPORTED ON
         )
+        # The bundle's resources, like the app's: checkstartup loads the staged faces.
+        target_sources(porydaw_checks PRIVATE ${porydaw_fonts})
+        set_source_files_properties(${porydaw_fonts} PROPERTIES
+            MACOSX_PACKAGE_LOCATION Resources)
         add_custom_command(TARGET porydaw_checks POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E rm -f "${PROJECT_BINARY_DIR}/porydaw_checks"
             COMMAND ${CMAKE_COMMAND} -E create_symlink
@@ -475,7 +478,6 @@ if(APPLE)
         editorqml/EditorDrawerAutomationMenuSupport.js
         editorqml/EditorDrawerVoiceSupport.js
         editorqml/RollNoteFaces.js
-        "${PROJECT_SOURCE_DIR}/resources/fonts.qrc"
     )
     set_target_properties(editor_qml_tests PROPERTIES
         AUTOMOC OFF
@@ -534,7 +536,6 @@ if(APPLE)
         # suites import it as "../editorqml/NativeWait.js", which Qt Quick Test
         # resolves against the importing file's source directory at runtime.
         editorqml/NativeWait.js
-        "${PROJECT_SOURCE_DIR}/resources/fonts.qrc"
     )
     set_target_properties(roll_qml_tests PROPERTIES
         AUTOMOC ON
@@ -649,7 +650,6 @@ if(APPLE)
         editorqml/tst_ShellVoicegroupEditing.qml
         editorqml/tst_ShellVoicegroupPicker.qml
         editorqml/tst_ShellVoicegroupSave.qml
-        "${PROJECT_SOURCE_DIR}/resources/fonts.qrc"
     )
     set_target_properties(shell_qml_tests PROPERTIES
         AUTOMOC OFF

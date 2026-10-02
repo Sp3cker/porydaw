@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls
 import Porydaw.Ui
 import PorydawApp
 
@@ -158,8 +158,7 @@ DialogWindow {
             font: Qt.font(dialog.applicationSession.typographyFonts.body)
             checked: dialog.presenter.themeMode === "vanilla"
             onClicked: dialog.presenter.previewThemeMode("vanilla")
-            // Basic CheckLabel offsets its glyphs by the 28px indicator, so the
-            // label below carries the visible text in the themed windowText ink.
+            // The label below carries the visible text in the themed windowText ink.
             contentItem: Item {}
             Text {
                 objectName: "vanillaModeLabel"

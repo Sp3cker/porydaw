@@ -125,6 +125,8 @@ TestCase {
         editor.height = 24 * presenter.session.baseFontPx
         const scroll = child("sampleStudioControlsScroll")
         const initial = scroll.contentItem.contentY
+        verify(waitForNative(function() { return scroll.contentHeight > scroll.availableHeight }, 2000),
+               "the shortened editor leaves the control column taller than its viewport")
         mouseWheel(scroll, scroll.width - 4, scroll.height / 2, 0, -120)
         verify(waitForNative(function() { return scroll.contentItem.contentY > initial }, 2000),
                "A100 short control column scrolls")

@@ -119,11 +119,11 @@
                 + ", expected tint " + tint.join("/") + ")"
     }
 
-    function verifyToggleRendering(testCase, kind, background, message, maxTintDistance) {
+    function verifyToggleRendering(testCase, kind, background, ink, message, maxTintDistance) {
         var tintLimit = maxTintDistance === undefined ? 24 : maxTintDistance
         var control = testCase.toggle(kind)
         var anchor = testCase.surface
-        var tint = channelsOf(testCase, testCase.drawerPalette().keyboardLabel)
+        var tint = channelsOf(testCase, ink)
         var base = channelsOf(testCase, background)
         var channel = widestChannel(testCase, base, tint)
         testCase.verify(Math.abs(base[channel] - tint[channel]) > 2,

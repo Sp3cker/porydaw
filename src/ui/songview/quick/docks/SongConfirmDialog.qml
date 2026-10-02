@@ -1,11 +1,10 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.Basic as Basic
 import QtQuick.Layouts
 import Porydaw.Ui
 import PorydawApp
 
-Basic.Dialog {
+Dialog {
     id: dialog
     objectName: "songConfirmationDialog"
     required property SongDockController controller

@@ -3,8 +3,8 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import QtQuick.Effects
 import Porydaw.Ui
+import Porydaw.Icons
 
 ColumnLayout {
     id: panel
@@ -17,10 +17,9 @@ ColumnLayout {
     readonly property int headerHeight: Math.round(baseFontPx * 1.83)
     readonly property int typeWidth: Math.round(baseFontPx * 3.75)
     readonly property int adsrWidth: Math.round(baseFontPx * 8.33)
-    readonly property var iconNames: ["waveform.svg", "waveform.svg",
-                                      "wave-square.svg", "wave-triangle.svg",
-                                      "wave-sine.svg", "waveform-path.svg",
-                                      "piano-keyboard.svg", "drum.svg"]
+    // Indexed by VoiceListGlyph; the reverse sample reuses the sample glyph rotated.
+    readonly property var typeIcons: [Icons.sample, Icons.sample, Icons.square1, Icons.square2,
+                                      Icons.wave, Icons.noise, Icons.keysplit, Icons.drumkit]
     spacing: 0
 
     RowLayout {
@@ -172,25 +171,16 @@ ColumnLayout {
                             color: Qt.tint(panel.colors.windowBackground, "#59666666")
                             visible: row.altChip
                         }
-                        Image {
-                            id: sourceGlyph
+                        AppIcon {
                             anchors.centerIn: parent
                             width: panel.baseFontPx * 1.25
                             height: width
-                            sourceSize: Qt.size(width, height)
-                            source: row.typeIconKey < 0 ? ""
-                                    : "qrc:/porydaw/voiceicons/"
-                                      + panel.iconNames[Math.floor(row.typeIconKey / 2)]
+                            icon: row.typeIconKey < 0 ? ({})
+                                  : panel.typeIcons[Math.floor(row.typeIconKey / 2)]
                             rotation: Math.floor(row.typeIconKey / 2) === 1 ? 180 : 0
-                            visible: false
-                        }
-                        MultiEffect {
-                            anchors.fill: sourceGlyph
-                            source: sourceGlyph
-                            visible: row.typeIconKey >= 0
-                            colorization: 1
-                            colorizationColor: row.altChip ? panel.colors.windowBackground
-                                                           : panel.colors.primaryText
+                            color: row.altChip ? panel.colors.windowBackground
+                                   : panel.controller.currentSlot === row.slot
+                                     ? panel.colors.selectionText : panel.colors.primaryText
                         }
                         ToolTip.text: row.typeName
                         ToolTip.visible: iconHover.hovered && row.typeName.length > 0

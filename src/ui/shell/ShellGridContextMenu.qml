@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.Basic as Basic
 import QtQml.Models
 
 Item {
@@ -13,7 +12,7 @@ Item {
     readonly property alias menu: gridContextMenu
     Component {
         id: contextRow
-        Basic.MenuItem {
+        MenuItem {
             id: contextAction
             required property string modelData
             objectName: "shellContextAction_" + modelData
@@ -85,14 +84,14 @@ Item {
             onCanceled: Qt.callLater(() => contextRoot.noteMenuSwallowingRelease = false)
         }
     }
-    Basic.Menu {
+    Menu {
         id: gridContextMenu
         objectName: "shellGridContextMenu"
         parent: Overlay.overlay
         popupType: Popup.Item
         z: 2
         font: Qt.font(root.chromeTypography.body)
-        closePolicy: Basic.Popup.CloseOnEscape
+        closePolicy: Popup.CloseOnEscape
         palette.window: root.colors.menuBackground
         palette.dark: root.colors.outline
         onAboutToShow: ++root.actionRevision
@@ -102,7 +101,7 @@ Item {
             onObjectAdded: (index, object) => gridContextMenu.insertItem(index, object)
             onObjectRemoved: (index, object) => gridContextMenu.removeItem(object)
         }
-        Basic.MenuSeparator {}
+        MenuSeparator {}
         Instantiator {
             model: shell.contextBodyActionIds
             delegate: contextRow

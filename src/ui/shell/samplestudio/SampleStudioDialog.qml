@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls
 import QtQuick.Layouts
 import Porydaw.Ui
 import PorydawApp
@@ -188,7 +188,8 @@ DialogWindow {
                         id: advanced
                         objectName: "sampleStudioAdvanced"
                         checkable: true
-                        text: checked ? qsTr("Advanced ▾") : qsTr("Advanced ▸")
+                        text: qsTr("Advanced")
+                        contentItem: DisclosureLabel { control: advanced; expanded: advanced.checked }
                     }
                     ColumnLayout {
                         visible: advanced.checked

@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.Basic as Basic
 import QtQuick.Layouts
 
 // Help > About porydaw: the QMessageBox::about body from the old MainWindow
@@ -11,10 +10,10 @@ import QtQuick.Layouts
 //
 // Sizing follows the settings-dialog convention: fixed font-derived geometry
 // instead of content-driven implicit sizes. The body lays out bottom-up in a
-// ColumnLayout (the SongConfirmDialog pattern in the same Basic.Dialog
+// ColumnLayout (the SongConfirmDialog pattern in the same Dialog
 // family) and never reads the dialog's available width, so the dialog's
 // implicitHeight no longer feeds back into its own content.
-Basic.Dialog {
+Dialog {
     id: about
     objectName: "shellAboutDialog"
     required property QtObject colors

@@ -65,15 +65,19 @@ TestCase {
 
     FontLoader {
         id: drawerRegularFont
-        source: "qrc:/fonts/AtkinsonHyperlegibleNext-Regular.ttf"
+        source: drawerBootstrap.regularFontSource
     }
     FontLoader {
         id: drawerSemiboldFont
-        source: "qrc:/fonts/AtkinsonHyperlegibleNext-SemiBold.ttf"
+        source: drawerBootstrap.semiboldFontSource
     }
     FontLoader {
         id: drawerMonoFont
-        source: "qrc:/fonts/AtkinsonHyperlegibleMono-Regular.ttf"
+        source: drawerBootstrap.monoFontSource
+    }
+    FontLoader {
+        id: drawerIconsFont
+        source: drawerBootstrap.iconsFontSource
     }
 
     Shortcut {

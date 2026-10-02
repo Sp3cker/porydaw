@@ -53,11 +53,18 @@ bool initializeCheckApplication(QApplication &application)
         qWarning() << "Cannot resolve the application font pixel size:" << application.font();
         return false;
     }
-    for (const auto *file : {":/fonts/AtkinsonHyperlegibleNext-Regular.ttf",
-                             ":/fonts/AtkinsonHyperlegibleNext-SemiBold.ttf",
-                             ":/fonts/AtkinsonHyperlegibleMono-Regular.ttf"}) {
-        if (QFontDatabase::addApplicationFont(QString::fromLatin1(file)) < 0) {
-            qWarning() << "Cannot load bundled font:" << file;
+    // The app's staged files: bundle Resources on macOS, beside the binary elsewhere.
+#if defined(Q_OS_MACOS)
+    const auto fontDirectory =
+        QCoreApplication::applicationDirPath() + QStringLiteral("/../Resources");
+#else
+    const auto fontDirectory = QCoreApplication::applicationDirPath();
+#endif
+    for (const auto *file : {"/AtkinsonHyperlegibleNext-Regular.ttf",
+                             "/AtkinsonHyperlegibleNext-SemiBold.ttf",
+                             "/AtkinsonHyperlegibleMono-Regular.ttf"}) {
+        if (QFontDatabase::addApplicationFont(fontDirectory + QLatin1StringView(file)) < 0) {
+            qWarning() << "Cannot load bundled font:" << fontDirectory + QLatin1StringView(file);
             return false;
         }
     }

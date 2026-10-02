@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.Basic as Basic
 import QtQuick.Layouts
 import Porydaw.Ui
 import PorydawApp
@@ -213,7 +212,7 @@ FocusScope {
         }
     }
 
-    Basic.Popup {
+    Popup {
         id: songMenu
         objectName: "songListContextMenu"
         parent: Overlay.overlay

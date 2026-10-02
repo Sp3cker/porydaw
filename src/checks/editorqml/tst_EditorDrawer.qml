@@ -162,26 +162,27 @@ EditorDrawerTestSupport {
         compare(testCase.spacePropagations, 1, "bare Space propagates unclaimed")
         compare(testCase.section(testCase.automationKind).visible, true, "Space does not toggle")
 
-        // Rendered theme: the unchecked control is the window background behind
-        // the tinted glyph, the checked one is the selection ring behind it.
+        // Rendered theme: the unchecked control is window text on the window background,
+        // the checked one selection text on the selection ring.
         LayoutSupport.clickToggle(testCase, testCase.automationKind)
         compare(testCase.section(testCase.automationKind).visible, false, "a click hides the section")
         LayoutSupport.awaitRenderedLayout(testCase)
         compare(testCase.toggle(testCase.automationKind).Accessible.checked, false,
                 "the accessible state follows the hidden section")
-        PixelSupport.verifyToggleRendering(testCase, testCase.automationKind, testCase.drawerPalette().windowBackground,
-                                       "unchecked toggle")
+        const colors = testCase.drawerPalette()
+        PixelSupport.verifyToggleRendering(testCase, testCase.automationKind, colors.windowBackground,
+                                           colors.windowText, "unchecked toggle")
 
         LayoutSupport.clickToggle(testCase, testCase.automationKind)
         compare(testCase.section(testCase.automationKind).visible, true, "a click shows the section")
         LayoutSupport.awaitRenderedLayout(testCase)
         compare(testCase.toggle(testCase.automationKind).Accessible.checked, true,
                 "the accessible state follows the shown section")
-        PixelSupport.verifyToggleRendering(testCase, testCase.automationKind, testCase.drawerPalette().selectionRing,
-                                       "checked toggle")
-        PixelSupport.verifyToggleRendering(testCase, testCase.velocityKind, testCase.drawerPalette().windowBackground,
-                                       "unchecked velocity toggle")
-        PixelSupport.verifyToggleRendering(testCase, testCase.voiceChangesKind, testCase.drawerPalette().windowBackground,
-                                       "unchecked voice-changes toggle", 40)
+        PixelSupport.verifyToggleRendering(testCase, testCase.automationKind, colors.selectionRing,
+                                           colors.selectionText, "checked toggle")
+        PixelSupport.verifyToggleRendering(testCase, testCase.velocityKind, colors.windowBackground,
+                                           colors.windowText, "unchecked velocity toggle")
+        PixelSupport.verifyToggleRendering(testCase, testCase.voiceChangesKind, colors.windowBackground,
+                                           colors.windowText, "unchecked voice-changes toggle", 40)
     }
 }
