@@ -1,6 +1,6 @@
 import Foundation
-import PorydawCore
 import PorydawAppCommands
+import PorydawCore
 
 @MainActor
 final class NoteCommands {
@@ -21,11 +21,11 @@ final class NoteCommands {
     func isAvailable(_ command: EditCommand) -> Bool {
         switch command {
         case .copy, .cut, .duplicate, .delete, .transposeUp, .transposeDown,
-             .transposeUpOctave, .transposeDownOctave, .nudgeLeft, .nudgeRight,
-             .split, .join, .lengthenNote, .shortenNote, .setVelocity, .pitchBend:
+            .transposeUpOctave, .transposeDownOctave, .nudgeLeft, .nudgeRight,
+            .split, .join, .lengthenNote, .shortenNote, .setVelocity, .pitchBend:
             return !selectedNotes().isEmpty
         case .selectAll, .muteTracks, .soloTracks,
-             .pencilMode, .gridNarrow, .gridWiden, .gridTriplet:
+            .pencilMode, .gridNarrow, .gridWiden, .gridTriplet:
             return selectedTrack != nil
         case .setLoopStart, .setLoopEnd:
             return true
@@ -38,8 +38,10 @@ final class NoteCommands {
     }
 
     @discardableResult
-    func execute(_ command: EditCommand, snapTicks: Tick, editCursor: Tick,
-                 nextSubdivision: (Tick) -> Tick) -> Bool {
+    func execute(
+        _ command: EditCommand, snapTicks: Tick, editCursor: Tick,
+        nextSubdivision: (Tick) -> Tick
+    ) -> Bool {
         // Set Velocity is a prompt transaction, not a value commit: the row's
         // dispatch asks the document-bound page to open its captured prompt and
         // never touches the document here.
@@ -103,7 +105,7 @@ final class NoteCommands {
 
     private var selectedTrack: Int? {
         guard let track = session.selectedTrack,
-              track >= 0, track < session.document.engineTracks.usedTrackCount
+            track >= 0, track < session.document.engineTracks.usedTrackCount
         else { return nil }
         return track
     }
@@ -116,8 +118,8 @@ final class NoteCommands {
 
     private func copySelection(snapTicks: Tick) -> Bool {
         guard let track = selectedTrack,
-              let clip = ClipboardSemantics.copyNotes(
-                  selectedNotes(), from: track, unterminatedDuration: snapTicks)
+            let clip = ClipboardSemantics.copyNotes(
+                selectedNotes(), from: track, unterminatedDuration: snapTicks)
         else { return false }
         return clipboard.write(clip, ticksPerBeat: UInt32(session.document.ticksPerBeat))
     }
@@ -134,7 +136,8 @@ final class NoteCommands {
         guard let start = notes.map(\.tick).min() else { return }
         var end = UInt64(start)
         for note in notes {
-            let noteEnd = UInt64(note.tick)
+            let noteEnd =
+                UInt64(note.tick)
                 + UInt64(note.isUnterminated ? max(1, snapTicks) : max(1, note.duration))
             if noteEnd > end { end = noteEnd }
         }
@@ -142,18 +145,19 @@ final class NoteCommands {
         var additions: [NewNote] = []
         additions.reserveCapacity(notes.count)
         for note in notes {
-            let destination = UInt64(note.tick) + span
-            guard destination < UInt64(TimeDefaults.maxTick) else { continue }
-            additions.append(NewNote(track: track, tick: Tick(destination), pitch: note.pitch,
-                                     duration: note.isUnterminated ? max(1, snapTicks)
-                                                                   : max(1, note.duration),
-                                     velocity: note.velocity))
+            guard let tick = Tick(exactly: UInt64(note.tick) + span) else { return }
+            additions.append(
+                NewNote(
+                    track: track, tick: tick, pitch: note.pitch,
+                    duration: note.isUnterminated ? max(1, snapTicks) : max(1, note.duration),
+                    velocity: note.velocity))
         }
-        guard !additions.isEmpty, let inserted = try? session.document.addNotes(additions),
-              !inserted.isEmpty else { return }
+        // addNotes refuses the whole batch (overflow, conflict); a refused duplicate is a no-op.
+        guard let inserted = try? session.document.addNotes(additions), !inserted.isEmpty else {
+            return
+        }
         session.setSelectedNotes(inserted)
     }
-
 
     private func selectAll() {
         guard let track = selectedTrack else { return }
@@ -171,7 +175,10 @@ final class NoteCommands {
             var canTranspose = true
             for note in notes {
                 let shifted = Int(note.pitch) + semitones
-                if shifted < 0 || shifted > 127 { canTranspose = false; break }
+                if shifted < 0 || shifted > 127 {
+                    canTranspose = false
+                    break
+                }
             }
             guard canTranspose else { return }
             session.document.nudgeNotes(notes.map(\.id), byTicks: 0, byKeys: semitones)
@@ -209,7 +216,8 @@ final class NoteCommands {
         guard selectedTrack != nil else { return }
         let scope = session.selectedTracks
         guard !scope.isEmpty else { return }
-        session.mutedTracks = scope.isSubset(of: session.mutedTracks)
+        session.mutedTracks =
+            scope.isSubset(of: session.mutedTracks)
             ? session.mutedTracks.subtracting(scope) : session.mutedTracks.union(scope)
     }
 
@@ -217,7 +225,8 @@ final class NoteCommands {
         guard selectedTrack != nil else { return }
         let scope = session.selectedTracks
         guard !scope.isEmpty else { return }
-        session.soloedTracks = scope.isSubset(of: session.soloedTracks)
+        session.soloedTracks =
+            scope.isSubset(of: session.soloedTracks)
             ? session.soloedTracks.subtracting(scope) : session.soloedTracks.union(scope)
     }
 
@@ -236,33 +245,47 @@ final class NoteCommands {
             removals.append(note)
             var partTick = note.tick
             while boundary > partTick, UInt64(boundary) < end {
-                additions.append(NewNote(track: track, tick: partTick, pitch: note.pitch,
-                                         duration: boundary - partTick, velocity: note.velocity))
+                additions.append(
+                    NewNote(
+                        track: track, tick: partTick, pitch: note.pitch,
+                        duration: boundary - partTick, velocity: note.velocity))
                 selectedPositions.insert(FragmentPosition(tick: partTick, pitch: note.pitch))
                 partTick = boundary
                 boundary = nextSubdivision(partTick)
             }
-            additions.append(NewNote(track: track, tick: partTick, pitch: note.pitch,
-                                     duration: Tick(end - UInt64(partTick)), velocity: note.velocity))
+            additions.append(
+                NewNote(
+                    track: track, tick: partTick, pitch: note.pitch,
+                    duration: Tick(end - UInt64(partTick)), velocity: note.velocity))
             selectedPositions.insert(FragmentPosition(tick: partTick, pitch: note.pitch))
         }
         for note in session.document.notes(in: track)
         where !note.isUnterminated && !selectedIDs.contains(note.id)
-            && editCursor > note.tick && UInt64(editCursor) < UInt64(note.tick) + UInt64(note.duration) {
+            && editCursor > note.tick && UInt64(editCursor) < UInt64(note.tick) + UInt64(note.duration)
+        {
             removals.append(note)
-            additions.append(NewNote(track: track, tick: note.tick, pitch: note.pitch,
-                                     duration: editCursor - note.tick, velocity: note.velocity))
-            additions.append(NewNote(track: track, tick: editCursor, pitch: note.pitch,
-                                     duration: note.duration - (editCursor - note.tick),
-                                     velocity: note.velocity))
+            additions.append(
+                NewNote(
+                    track: track, tick: note.tick, pitch: note.pitch,
+                    duration: editCursor - note.tick, velocity: note.velocity))
+            additions.append(
+                NewNote(
+                    track: track, tick: editCursor, pitch: note.pitch,
+                    duration: note.duration - (editCursor - note.tick),
+                    velocity: note.velocity))
         }
         guard !removals.isEmpty else { return }
         let oldIDs = Set(session.document.notes(in: track).map(\.id))
-        guard session.document.applyRangeEdit(RangeEdit(removeNotes: removals,
-                                                        addNotes: additions)) else { return }
+        guard
+            session.document.applyRangeEdit(
+                RangeEdit(
+                    removeNotes: removals,
+                    addNotes: additions))
+        else { return }
         for note in session.document.notes(in: track)
         where !oldIDs.contains(note.id)
-            && selectedPositions.contains(FragmentPosition(tick: note.tick, pitch: note.pitch)) {
+            && selectedPositions.contains(FragmentPosition(tick: note.tick, pitch: note.pitch))
+        {
             session.addSelectedNote(note.id)
         }
     }
@@ -281,14 +304,20 @@ final class NoteCommands {
                 if noteEnd > end { end = noteEnd }
             }
             removals.append(contentsOf: sorted)
-            additions.append(NewNote(track: track, tick: first.tick, pitch: pitch,
-                                     duration: Tick(min(UInt64(UInt32.max), end - UInt64(first.tick))),
-                                     velocity: first.velocity))
+            additions.append(
+                NewNote(
+                    track: track, tick: first.tick, pitch: pitch,
+                    duration: Tick(min(UInt64(UInt32.max), end - UInt64(first.tick))),
+                    velocity: first.velocity))
         }
         guard !additions.isEmpty else { return }
         let oldIDs = Set(session.document.notes(in: track).map(\.id))
-        guard session.document.applyRangeEdit(RangeEdit(removeNotes: removals,
-                                                        addNotes: additions)) else { return }
+        guard
+            session.document.applyRangeEdit(
+                RangeEdit(
+                    removeNotes: removals,
+                    addNotes: additions))
+        else { return }
         for note in session.document.notes(in: track) where !oldIDs.contains(note.id) {
             session.addSelectedNote(note.id)
         }

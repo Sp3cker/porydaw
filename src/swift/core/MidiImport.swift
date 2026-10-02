@@ -48,7 +48,7 @@ public enum MidiImportError: Error, Equatable, CustomStringConvertible {
     public var description: String {
         switch self {
         case .invalidDivision: return "MIDI division must be nonzero"
-        case let .tickOverflow(division):
+        case .tickOverflow(let division):
             return "Tick rescale to division \(division) exceeds 32-bit tick range"
         }
     }
@@ -91,8 +91,10 @@ public enum MidiImport {
     public static let instrumentFallbackNoticeText =
         "Some notes start before the MIDI data selects an instrument. These notes use instrument 0."
 
-    public static func analyze(_ file: MidiFile, trackBudget: Int = TrackLimits.hardwareCapacity,
-                               playerName: String = "") -> ImportAnalysis {
+    public static func analyze(
+        _ file: MidiFile, trackBudget: Int = TrackLimits.hardwareCapacity,
+        playerName: String = ""
+    ) -> ImportAnalysis {
         let map = file.engineTracks()
         var tracks: [ImportTrackInfo] = []
         tracks.reserveCapacity(map.usedTrackCount)
@@ -103,32 +105,43 @@ public enum MidiImport {
         for engineTrack in 0..<map.usedTrackCount {
             guard let chunkIndex = map.tracks[engineTrack].midiChunk else { continue }
             let chunk = file.chunks[chunkIndex]
-            var info = ImportTrackInfo(chunk: chunkIndex, name: "", noteCount: 0,
-                                       programs: [], notesBeforeProgram: false)
+            var info = ImportTrackInfo(
+                chunk: chunkIndex, name: "", noteCount: 0,
+                programs: [], notesBeforeProgram: false)
             var nameScanner = TrackNameScan()
             for event in chunk.events {
                 let isTrackName = nameScanner.consume(event)
-                if info.name.isEmpty, isTrackName, case let .meta(_, data) = event.payload {
-                    info.name = String(bytes: data, encoding: .isoLatin1)?
+                if info.name.isEmpty, isTrackName, case .meta(_, let data) = event.payload {
+                    info.name =
+                        String(bytes: data, encoding: .isoLatin1)?
                         .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                 }
-                guard case let .channel(status, data0, data1) = event.payload else { continue }
+                guard case .channel(let status, let data0, let data1) = event.payload else { continue }
                 switch status >> 4 {
                 case 0x9 where data1 != 0:
                     info.noteCount += 1
                     if info.programs.isEmpty { info.notesBeforeProgram = true }
-                    edges.append(NoteEdge(tick: event.tick, on: true,
-                                          track: engineTrack, key: data0))
+                    edges.append(
+                        NoteEdge(
+                            tick: event.tick, on: true,
+                            track: engineTrack, key: data0))
                 case 0x8, 0x9:
-                    edges.append(NoteEdge(tick: event.tick, on: false,
-                                          track: engineTrack, key: data0))
+                    edges.append(
+                        NoteEdge(
+                            tick: event.tick, on: false,
+                            track: engineTrack, key: data0))
                 case 0xB:
-                    if data0 == Xcmd.selectorController || data0 == Xcmd.payloadController ||
-                        data0 == Xcmd.alternatePayloadController {
-                        xcmdEvents.append(Xcmd.Event(index: UInt64(xcmdEvents.count),
-                            tick: event.tick, stream: UInt8(engineTrack), controller: data0,
-                            value: data1, channel: status & 0x0F))
-                    } else { counts[data0, default: 0] += 1 }
+                    if data0 == Xcmd.selectorController || data0 == Xcmd.payloadController
+                        || data0 == Xcmd.alternatePayloadController
+                    {
+                        xcmdEvents.append(
+                            Xcmd.Event(
+                                index: UInt64(xcmdEvents.count),
+                                tick: event.tick, stream: UInt8(engineTrack), controller: data0,
+                                value: data1, channel: status & 0x0F))
+                    } else {
+                        counts[data0, default: 0] += 1
+                    }
                 case 0xC:
                     if !info.programs.contains(data0) { info.programs.append(data0) }
                 default: break
@@ -152,31 +165,39 @@ public enum MidiImport {
                 active += 1
                 peak = max(peak, active)
             } else if (sounding[key] ?? 0) > 0 {
-                sounding[key]! -= 1
+                sounding[key, default: 0] -= 1
                 active -= 1
             }
         }
 
         var controllers: [ImportCCUsage] = []
-        for controller in counts.keys.sorted() {
+        for (controller, count) in counts.sorted(by: { $0.key < $1.key }) {
             let info = m4aClassifyCC(controller)
-            controllers.append(ImportCCUsage(
-                controller: controller, count: counts[controller]!,
-                label: "\(info.name) — \(info.display)",
-                support: m4aExportSupport(controller) == .supported ? .supported : .notExported))
+            controllers.append(
+                ImportCCUsage(
+                    controller: controller, count: count,
+                    label: "\(info.name) — \(info.display)",
+                    support: m4aExportSupport(controller) == .supported ? .supported : .notExported))
         }
 
         let assessment = Xcmd.assess(xcmdEvents)
         var xcmd: [ImportXcmdUsage] = []
         if assessment.echoVolumePoints > 0 {
-            xcmd.append(ImportXcmdUsage(label: "Echo volume",
-                                       count: assessment.echoVolumePoints, support: .supported))
+            xcmd.append(
+                ImportXcmdUsage(
+                    label: "Echo volume",
+                    count: assessment.echoVolumePoints, support: .supported))
         }
         if assessment.echoLengthPoints > 0 {
-            xcmd.append(ImportXcmdUsage(label: "Echo length",
-                                       count: assessment.echoLengthPoints, support: .supported))
+            xcmd.append(
+                ImportXcmdUsage(
+                    label: "Echo length",
+                    count: assessment.echoLengthPoints, support: .supported))
         }
-        struct Group { var count = 0; var support = ImportSupport.supported }
+        struct Group {
+            var count = 0
+            var support = ImportSupport.supported
+        }
         var unknown: [UInt8: Group] = [:]
         var dangling: [UInt8: Group] = [:]
         var stray = Group()
@@ -200,32 +221,40 @@ public enum MidiImport {
                 stray.support = support
             }
         }
-        for selector in unknown.keys.sorted() {
-            let group = unknown[selector]!
-            xcmd.append(ImportXcmdUsage(
-                label: String(format: "Unknown XCMD selector 0x%02x", selector),
-                count: group.count, support: group.support))
+        for (selector, group) in unknown.sorted(by: { $0.key < $1.key }) {
+            xcmd.append(
+                ImportXcmdUsage(
+                    label: String(format: "Unknown XCMD selector 0x%02x", selector),
+                    count: group.count, support: group.support))
         }
-        for selector in dangling.keys.sorted() {
-            let group = dangling[selector]!
-            xcmd.append(ImportXcmdUsage(label: Xcmd.descriptor(forSelector: selector)?.displayName ??
-                "XCMD selector", count: group.count, support: group.support))
+        for (selector, group) in dangling.sorted(by: { $0.key < $1.key }) {
+            xcmd.append(
+                ImportXcmdUsage(
+                    label: Xcmd.descriptor(forSelector: selector)?.displayName ?? "XCMD selector", count: group.count,
+                    support: group.support))
         }
         if stray.count > 0 {
-            xcmd.append(ImportXcmdUsage(label: "XCMD payload without a selector",
-                                       count: stray.count, support: stray.support))
+            xcmd.append(
+                ImportXcmdUsage(
+                    label: "XCMD payload without a selector",
+                    count: stray.count, support: stray.support))
         }
 
-        let silent = trackBudget >= 0 && trackBudget < TrackLimits.hardwareCapacity ?
-            max(0, map.usedTrackCount - trackBudget) : 0
+        let silent =
+            trackBudget >= 0 && trackBudget < TrackLimits.hardwareCapacity
+            ? max(0, map.usedTrackCount - trackBudget) : 0
         var warnings: [String] = []
         if map.droppedTracks > 0 {
-            warnings.append("Porydaw will not import \(importTrackCountPhrase(map.droppedTracks)). The MIDI file contains more than 16 tracks.")
+            warnings.append(
+                "Porydaw will not import \(importTrackCountPhrase(map.droppedTracks)). The MIDI file contains more than 16 tracks."
+            )
         }
         if silent > 0 {
-            let player = playerName.isEmpty ? "the selected audio player" :
-                importPlayerRoleName(playerName, includeSymbol: true)
-            warnings.append("The game will not play \(importTrackCountPhrase(silent)) for \(player). This player can play \(importTrackCountPhrase(trackBudget)).")
+            let player =
+                playerName.isEmpty ? "the selected audio player" : importPlayerRoleName(playerName, includeSymbol: true)
+            warnings.append(
+                "The game will not play \(importTrackCountPhrase(silent)) for \(player). This player can play \(importTrackCountPhrase(trackBudget))."
+            )
         }
         if file.division % 24 != 0 {
             warnings.append("Porydaw will adjust the note timing. The source timing value is \(file.division).")
@@ -236,7 +265,8 @@ public enum MidiImport {
         if tracks.contains(where: { $0.noteCount > 0 && $0.notesBeforeProgram }) {
             warnings.append(instrumentFallbackNoticeText)
         }
-        return ImportAnalysis(division: file.division, chunkCount: file.chunks.count,
+        return ImportAnalysis(
+            division: file.division, chunkCount: file.chunks.count,
             mappedTracks: map.usedTrackCount, droppedTracks: map.droppedTracks,
             silentTracks: silent, peakConcurrentNotes: peak, sampleNoteLimit: 5,
             tracks: tracks, controllers: controllers, xcmd: xcmd, warnings: warnings)
@@ -274,9 +304,15 @@ public enum MidiImport {
             var lastForSlot: [Int: Int] = [:]
             var runTick: Tick?
             for (index, event) in events.enumerated() {
-                if runTick != event.tick { lastForSlot.removeAll(keepingCapacity: true); runTick = event.tick }
+                if runTick != event.tick {
+                    lastForSlot.removeAll(keepingCapacity: true)
+                    runTick = event.tick
+                }
                 guard let slot = setterSlot(event) else { continue }
-                if let previous = lastForSlot[slot] { drop[previous] = true; removed += 1 }
+                if let previous = lastForSlot[slot] {
+                    drop[previous] = true
+                    removed += 1
+                }
                 lastForSlot[slot] = index
             }
             file.chunks[chunk].events = events.enumerated().compactMap {
@@ -293,7 +329,12 @@ public enum MidiImport {
     public static func trackCountPhrase(_ count: Int) -> String { importTrackCountPhrase(count) }
 }
 
-private struct NoteEdge { let tick: Tick; let on: Bool; let track: Int; let key: UInt8 }
+private struct NoteEdge {
+    let tick: Tick
+    let on: Bool
+    let track: Int
+    let key: UInt8
+}
 
 private func importSupport(_ value: Xcmd.ExportClass) -> ImportSupport {
     switch value {
@@ -304,11 +345,14 @@ private func importSupport(_ value: Xcmd.ExportClass) -> ImportSupport {
 }
 private func importPlayerRoleName(_ symbol: String, includeSymbol: Bool) -> String {
     let role: String
-    if symbol == "MUSIC_PLAYER_BGM" { role = "Background music" }
-    else if symbol.hasPrefix("MUSIC_PLAYER_SE") {
+    if symbol == "MUSIC_PLAYER_BGM" {
+        role = "Background music"
+    } else if symbol.hasPrefix("MUSIC_PLAYER_SE") {
         let number = String(symbol.dropFirst("MUSIC_PLAYER_SE".count))
         role = number.isEmpty ? "Sound effect" : "Sound effect \(number)"
-    } else { return symbol }
+    } else {
+        return symbol
+    }
     return includeSymbol ? "\(role) (\(symbol))" : role
 }
 private func importTrackCountPhrase(_ count: Int) -> String {
@@ -316,16 +360,17 @@ private func importTrackCountPhrase(_ count: Int) -> String {
 }
 
 private func setterSlot(_ event: MidiEvent) -> Int? {
-    if case let .meta(type, _) = event.payload {
+    if case .meta(let type, _) = event.payload {
         return type == 0x51 || type == 0x58 ? 0x10000 | Int(type) : nil
     }
-    guard case let .channel(status, data0, _) = event.payload else { return nil }
+    guard case .channel(let status, let data0, _) = event.payload else { return nil }
     let type = status >> 4
     let channel = Int(status & 0x0F)
     switch type {
     case 0xB:
-        if (0x0C...0x11).contains(data0) || data0 == Xcmd.selectorController ||
-            data0 == Xcmd.payloadController || data0 == Xcmd.alternatePayloadController {
+        if (0x0C...0x11).contains(data0) || data0 == Xcmd.selectorController || data0 == Xcmd.payloadController
+            || data0 == Xcmd.alternatePayloadController
+        {
             return nil
         }
         return Int(type) << 12 | channel << 7 | Int(data0)

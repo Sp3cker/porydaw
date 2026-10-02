@@ -1,11 +1,10 @@
-import CoreFoundation
 import Foundation
-import PorydawCore
 import PorydawBankLease
+import PorydawCore
 
 public let porydawClipMimeType = "application/x-porydaw-clip"
 
-public struct ClipNote: Equatable, Sendable {
+public struct ClipNote: Equatable, Sendable, Codable {
     public var relTick: UInt32
     public var key: UInt8
     public var duration: UInt32
@@ -19,7 +18,7 @@ public struct ClipNote: Equatable, Sendable {
     }
 }
 
-public struct ClipTrack: Equatable, Sendable {
+public struct ClipTrack: Equatable, Sendable, Codable {
     public var track: Int
     public var notes: [ClipNote]
 
@@ -29,7 +28,8 @@ public struct ClipTrack: Equatable, Sendable {
     }
 }
 
-public struct ClipLanePoint: Equatable, Sendable {
+/// Wire shape is the positional pair `[relTick, value]`.
+public struct ClipLanePoint: Equatable, Sendable, Codable {
     public var relTick: UInt32
     public var value: Int
 
@@ -37,9 +37,25 @@ public struct ClipLanePoint: Equatable, Sendable {
         self.relTick = relTick
         self.value = value
     }
+
+    public init(from decoder: any Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        guard container.count == 2 else {
+            throw DecodingError.dataCorruptedError(
+                in: container, debugDescription: "lane point must be [relTick, value]")
+        }
+        relTick = try container.decode(UInt32.self)
+        value = try container.decode(Int.self)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.unkeyedContainer()
+        try container.encode(relTick)
+        try container.encode(value)
+    }
 }
 
-public struct ClipLane: Equatable, Sendable {
+public struct ClipLane: Equatable, Sendable, Codable {
     public var track: Int
     public var cc: UInt8
     public var points: [ClipLanePoint]
@@ -51,7 +67,7 @@ public struct ClipLane: Equatable, Sendable {
     }
 }
 
-public struct ClipTempo: Equatable, Sendable {
+public struct ClipTempo: Equatable, Sendable, Codable {
     public var relTick: Tick
     public var microsecondsPerQuarterNote: UInt32
 
@@ -61,14 +77,16 @@ public struct ClipTempo: Equatable, Sendable {
     }
 }
 
-public struct PorydawClip: Equatable, Sendable {
+public struct PorydawClip: Equatable, Sendable, Codable {
     public var span: Tick
     public var tracks: [ClipTrack]
     public var lanes: [ClipLane]
     public var tempo: [ClipTempo]
 
-    public init(span: Tick = 0, tracks: [ClipTrack] = [], lanes: [ClipLane] = [],
-                tempo: [ClipTempo] = []) {
+    public init(
+        span: Tick = 0, tracks: [ClipTrack] = [], lanes: [ClipLane] = [],
+        tempo: [ClipTempo] = []
+    ) {
         self.span = span
         self.tracks = tracks
         self.lanes = lanes
@@ -76,7 +94,9 @@ public struct PorydawClip: Equatable, Sendable {
     }
 }
 
-public struct DecodedPorydawClip: Equatable, Sendable {
+/// The MIME envelope: `format` and `ticksPerBeat` beside the clip's fields in one
+/// object. `wholeLane` is written for wire compatibility and ignored on read.
+public struct DecodedPorydawClip: Equatable, Sendable, Codable {
     public var ticksPerBeat: UInt32
     public var clip: PorydawClip
 
@@ -84,114 +104,64 @@ public struct DecodedPorydawClip: Equatable, Sendable {
         self.ticksPerBeat = ticksPerBeat
         self.clip = clip
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case format, ticksPerBeat, wholeLane
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        guard try container.decode(UInt8.self, forKey: .format) == 1 else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .format, in: container, debugDescription: "unsupported clip format")
+        }
+        ticksPerBeat = try container.decode(UInt32.self, forKey: .ticksPerBeat)
+        guard ticksPerBeat != 0 else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .ticksPerBeat, in: container, debugDescription: "zero ticksPerBeat")
+        }
+        clip = try PorydawClip(from: decoder)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(1 as UInt8, forKey: .format)
+        try container.encode(ticksPerBeat, forKey: .ticksPerBeat)
+        try container.encode(false, forKey: .wholeLane)
+        try clip.encode(to: encoder)
+    }
 }
 
 public enum ClipboardCodec {
-    private static let largestExactJSONInteger = 9_007_199_254_740_991.0
-
     public static func encode(_ clip: PorydawClip, ticksPerBeat: UInt32) -> Data? {
         guard ticksPerBeat != 0 else { return nil }
-        let object: [String: Any] = [
-            "format": 1,
-            "ticksPerBeat": ticksPerBeat,
-            "span": clip.span,
-            "wholeLane": false,
-            "tracks": clip.tracks.map { track in
-                ["track": track.track,
-                 "notes": track.notes.map { note in
-                     ["relTick": note.relTick, "key": note.key,
-                      "duration": note.duration, "velocity": note.velocity]
-                 }] as [String: Any]
-            },
-            "lanes": clip.lanes.map { lane in
-                ["track": lane.track, "cc": lane.cc,
-                 "points": lane.points.map { [$0.relTick, $0.value] }] as [String: Any]
-            },
-            "tempo": clip.tempo.map { point in
-                ["relTick": point.relTick,
-                 "microsecondsPerQuarterNote": point.microsecondsPerQuarterNote]
-            },
-        ]
-        return try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return try? encoder.encode(DecodedPorydawClip(ticksPerBeat: ticksPerBeat, clip: clip))
     }
 
+    /// Malformed bytes decode to nil; the paste surface then reads an empty clipboard.
     public static func decode(_ data: Data) -> DecodedPorydawClip? {
-        guard let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              let format = unsigned(object["format"], maximum: 1), format == 1,
-              let ticks = unsigned(object["ticksPerBeat"], maximum: UInt64(UInt32.max)),
-              ticks != 0,
-              let span = unsigned(object["span"], maximum: UInt64(TimeDefaults.maxTick)),
-              let tracksJSON = object["tracks"] as? [Any],
-              let lanesJSON = object["lanes"] as? [Any],
-              let tempoJSON = object["tempo"] as? [Any]
+        guard let decoded = try? JSONDecoder().decode(DecodedPorydawClip.self, from: data),
+            decoded.clip.span <= TimeDefaults.maxTick,
+            decoded.clip.tempo.allSatisfy({ $0.relTick <= TimeDefaults.maxTick })
         else { return nil }
-
-        var tracks: [ClipTrack] = []
-        tracks.reserveCapacity(tracksJSON.count)
-        for value in tracksJSON {
-            guard let object = value as? [String: Any],
-                  let track = signed(object["track"]),
-                  let notesJSON = object["notes"] as? [Any]
-            else { return nil }
-            var notes: [ClipNote] = []
-            notes.reserveCapacity(notesJSON.count)
-            for noteValue in notesJSON {
-                guard let note = noteValue as? [String: Any],
-                      let relTick = unsigned(note["relTick"], maximum: UInt64(UInt32.max)),
-                      let key = unsigned(note["key"], maximum: UInt64(UInt8.max)),
-                      let duration = unsigned(note["duration"], maximum: UInt64(UInt32.max)),
-                      let velocity = unsigned(note["velocity"], maximum: UInt64(UInt8.max))
-                else { return nil }
-                notes.append(ClipNote(relTick: UInt32(relTick), key: UInt8(key),
-                                      duration: UInt32(duration), velocity: UInt8(velocity)))
-            }
-            tracks.append(ClipTrack(track: track, notes: notes))
-        }
-
-        var lanes: [ClipLane] = []
-        lanes.reserveCapacity(lanesJSON.count)
-        for value in lanesJSON {
-            guard let object = value as? [String: Any],
-                  let track = signed(object["track"]),
-                  let cc = unsigned(object["cc"], maximum: UInt64(UInt8.max)),
-                  let pointsJSON = object["points"] as? [Any]
-            else { return nil }
-            var points: [ClipLanePoint] = []
-            points.reserveCapacity(pointsJSON.count)
-            for pointValue in pointsJSON {
-                guard let point = pointValue as? [Any], point.count == 2,
-                      let relTick = unsigned(point[0], maximum: UInt64(UInt32.max)),
-                      let laneValue = signed(point[1])
-                else { return nil }
-                points.append(ClipLanePoint(relTick: UInt32(relTick), value: laneValue))
-            }
-            lanes.append(ClipLane(track: track, cc: UInt8(cc), points: points))
-        }
-
-        var tempo: [ClipTempo] = []
-        tempo.reserveCapacity(tempoJSON.count)
-        for value in tempoJSON {
-            guard let point = value as? [String: Any],
-                  let relTick = unsigned(point["relTick"], maximum: UInt64(TimeDefaults.maxTick)),
-                  let microseconds = unsigned(point["microsecondsPerQuarterNote"],
-                                              maximum: UInt64(UInt32.max))
-            else { return nil }
-            tempo.append(ClipTempo(relTick: Tick(relTick),
-                                   microsecondsPerQuarterNote: UInt32(microseconds)))
-        }
-        return DecodedPorydawClip(ticksPerBeat: UInt32(ticks),
-                                  clip: PorydawClip(span: Tick(span), tracks: tracks,
-                                                    lanes: lanes, tempo: tempo))
+        return decoded
     }
 
-    public static func rescale(_ clip: PorydawClip, sourceTicksPerBeat: UInt32,
-                               destinationTicksPerBeat: UInt32) -> PorydawClip {
+    public static func rescale(
+        _ clip: PorydawClip, sourceTicksPerBeat: UInt32,
+        destinationTicksPerBeat: UInt32
+    ) -> PorydawClip {
         precondition(sourceTicksPerBeat != 0 && destinationTicksPerBeat != 0)
         guard sourceTicksPerBeat != destinationTicksPerBeat else { return clip }
         var result = clip
         if result.span != 0 {
-            result.span = max(1, scale(result.span, sourceTicksPerBeat, destinationTicksPerBeat,
-                                       maximum: TimeDefaults.maxTick))
+            result.span = max(
+                1,
+                scale(
+                    result.span, sourceTicksPerBeat, destinationTicksPerBeat,
+                    maximum: TimeDefaults.maxTick))
         }
         for trackIndex in result.tracks.indices {
             for noteIndex in result.tracks[trackIndex].notes.indices {
@@ -200,9 +170,11 @@ public enum ClipboardCodec {
                     sourceTicksPerBeat, destinationTicksPerBeat, maximum: UInt32.max)
                 if result.tracks[trackIndex].notes[noteIndex].duration != 0 {
                     result.tracks[trackIndex].notes[noteIndex].duration = max(
-                        1, scale(result.tracks[trackIndex].notes[noteIndex].duration,
-                                 sourceTicksPerBeat, destinationTicksPerBeat,
-                                 maximum: UInt32.max))
+                        1,
+                        scale(
+                            result.tracks[trackIndex].notes[noteIndex].duration,
+                            sourceTicksPerBeat, destinationTicksPerBeat,
+                            maximum: UInt32.max))
                 }
             }
         }
@@ -216,38 +188,19 @@ public enum ClipboardCodec {
                 result.lanes[laneIndex].points, tick: \.relTick)
         }
         for index in result.tempo.indices {
-            result.tempo[index].relTick = scale(result.tempo[index].relTick,
-                                                sourceTicksPerBeat, destinationTicksPerBeat,
-                                                maximum: TimeDefaults.maxTick)
+            result.tempo[index].relTick = scale(
+                result.tempo[index].relTick,
+                sourceTicksPerBeat, destinationTicksPerBeat,
+                maximum: TimeDefaults.maxTick)
         }
         result.tempo = deduplicate(result.tempo, tick: \.relTick)
         return result
     }
 
-    private static func unsigned(_ value: Any?, maximum: UInt64) -> UInt64? {
-        guard let number = value as? NSNumber,
-              CFGetTypeID(number) != CFBooleanGetTypeID()
-        else { return nil }
-        let value = number.doubleValue
-        guard value.isFinite, value >= 0, value <= largestExactJSONInteger,
-              value <= Double(maximum), floor(value) == value
-        else { return nil }
-        return UInt64(value)
-    }
-
-    private static func signed(_ value: Any?) -> Int? {
-        guard let number = value as? NSNumber,
-              CFGetTypeID(number) != CFBooleanGetTypeID()
-        else { return nil }
-        let value = number.doubleValue
-        guard value.isFinite, value >= Double(Int32.min), value <= Double(Int32.max),
-              floor(value) == value
-        else { return nil }
-        return Int(value)
-    }
-
-    private static func scale(_ value: UInt32, _ source: UInt32, _ destination: UInt32,
-                              maximum: UInt32) -> UInt32 {
+    private static func scale(
+        _ value: UInt32, _ source: UInt32, _ destination: UInt32,
+        maximum: UInt32
+    ) -> UInt32 {
         let tick = UInt64(value)
         let source = UInt64(source)
         let destination = UInt64(destination)
@@ -297,48 +250,64 @@ public struct ClipboardPasteResult: Equatable, Sendable {
 /// A zero-span clip is a note selection. A nonzero-span clip is a time range
 /// whose notes, lanes, and tempo merge through one atomic `RangeEdit`.
 public enum ClipboardSemantics {
-    public static func copyNotes(_ notes: [Note], from sourceTrack: Int,
-                                 unterminatedDuration: Tick) -> PorydawClip? {
+    public static func copyNotes(
+        _ notes: [Note], from sourceTrack: Int,
+        unterminatedDuration: Tick
+    ) -> PorydawClip? {
         guard !notes.isEmpty, notes.allSatisfy({ $0.track == sourceTrack }),
-              let base = notes.map(\.tick).min() else { return nil }
+            let base = notes.map(\.tick).min()
+        else { return nil }
         let copied = notes.map { note in
-            ClipNote(relTick: note.tick - base, key: note.pitch,
-                     duration: note.isUnterminated ? max(1, unterminatedDuration)
-                                                   : max(1, note.duration),
-                     velocity: note.velocity)
+            ClipNote(
+                relTick: note.tick - base, key: note.pitch,
+                duration: note.isUnterminated
+                    ? max(1, unterminatedDuration)
+                    : max(1, note.duration),
+                velocity: note.velocity)
         }
         return PorydawClip(tracks: [ClipTrack(track: sourceTrack, notes: copied)])
     }
 
     @MainActor
-    public static func extractTimeRange(_ range: TimeRange, scope: TimeScope,
-                                        from document: SongDocument,
-                                        unterminatedDuration: Tick) -> PorydawClip? {
+    public static func extractTimeRange(
+        _ range: TimeRange, scope: TimeScope,
+        from document: SongDocument,
+        unterminatedDuration: Tick
+    ) -> PorydawClip? {
         guard !range.isEmpty, !range.hasReservedEndpoint else { return nil }
         let contents = gather(range, scope: scope, from: document)
         let tracks = contents.tracks.map { track, notes in
-            ClipTrack(track: track, notes: notes.map { note in
-                ClipNote(relTick: note.tick - range.startTick, key: note.pitch,
-                         duration: note.isUnterminated ? max(1, unterminatedDuration)
-                                                       : max(1, note.duration),
-                         velocity: note.velocity)
-            })
+            ClipTrack(
+                track: track,
+                notes: notes.map { note in
+                    ClipNote(
+                        relTick: note.tick - range.startTick, key: note.pitch,
+                        duration: note.isUnterminated
+                            ? max(1, unterminatedDuration)
+                            : max(1, note.duration),
+                        velocity: note.velocity)
+                })
         }
         let lanes = contents.lanes.map { track, lane, points in
-            ClipLane(track: track, cc: encoded(lane), points: points.map {
-                ClipLanePoint(relTick: $0.tick - range.startTick, value: $0.value)
-            })
+            ClipLane(
+                track: track, cc: encoded(lane),
+                points: points.map {
+                    ClipLanePoint(relTick: $0.tick - range.startTick, value: $0.value)
+                })
         }
         let tempo = contents.tempo.map {
-            ClipTempo(relTick: $0.tick - range.startTick,
-                      microsecondsPerQuarterNote: $0.microsecondsPerQuarterNote)
+            ClipTempo(
+                relTick: $0.tick - range.startTick,
+                microsecondsPerQuarterNote: $0.microsecondsPerQuarterNote)
         }
         return PorydawClip(span: range.span, tracks: tracks, lanes: lanes, tempo: tempo)
     }
 
     @MainActor
-    public static func gather(_ range: TimeRange, scope: TimeScope,
-                       from document: SongDocument) -> RangeContents {
+    public static func gather(
+        _ range: TimeRange, scope: TimeScope,
+        from document: SongDocument
+    ) -> RangeContents {
         let scopedTracks: [Int]
         if scope.wholeSong {
             scopedTracks = Array(0..<document.engineTracks.usedTrackCount)
@@ -355,9 +324,10 @@ public enum ClipboardSemantics {
 
         var lanes = scope.lanes
         for track in scopedTracks where track >= 0 && track < document.engineTracks.usedTrackCount {
-            lanes.formUnion(discoveredLanes(track: track, document: document).map {
-                TimeScope.ScopedLane(track: track, lane: $0)
-            })
+            lanes.formUnion(
+                discoveredLanes(track: track, document: document).map {
+                    TimeScope.ScopedLane(track: track, lane: $0)
+                })
         }
         var gatheredLanes: [(Int, Lane, [LanePoint])] = []
         for scoped in lanes.sorted(by: { left, right in
@@ -365,12 +335,14 @@ public enum ClipboardSemantics {
             return encoded(left.lane) < encoded(right.lane)
         }) {
             guard scoped.track >= 0,
-                  scoped.track < document.engineTracks.usedTrackCount else { continue }
+                scoped.track < document.engineTracks.usedTrackCount
+            else { continue }
             let points = document.lanePoints(track: scoped.track, lane: scoped.lane)
                 .filter { range.contains($0.tick) }
             gatheredLanes.append((scoped.track, scoped.lane, points))
         }
-        let tempo = scope.coversTempo
+        let tempo =
+            scope.coversTempo
             ? document.state.tempo.filter { range.contains($0.tick) } : []
         return RangeContents(tracks: tracks, lanes: gatheredLanes, tempo: tempo)
     }
@@ -379,14 +351,17 @@ public enum ClipboardSemantics {
     private static func discoveredLanes(track: Int, document: SongDocument) -> Set<Lane> {
         var lanes: Set<Lane> = [.voice]
         guard document.engineTracks.tracks.indices.contains(track),
-              let chunk = document.engineTracks.tracks[track].midiChunk,
-              document.rawChunks.indices.contains(chunk) else { return lanes }
+            let chunk = document.engineTracks.tracks[track].midiChunk,
+            document.rawChunks.indices.contains(chunk)
+        else { return lanes }
         let channel = document.engineTracks.tracks[track].channel
         for event in document.rawChunks[chunk].events {
-            guard case let .channel(status, data0, _) = event.payload,
-                  status & 0x0F == channel else { continue }
+            guard case .channel(let status, let data0, _) = event.payload,
+                status & 0x0F == channel
+            else { continue }
             switch status >> 4 {
-            case 0xB where data0 != Xcmd.selectorController
+            case 0xB
+            where data0 != Xcmd.selectorController
                 && data0 != Xcmd.payloadController
                 && data0 != Xcmd.alternatePayloadController:
                 lanes.insert(.controller(data0))
@@ -405,7 +380,7 @@ public enum ClipboardSemantics {
 
     private static func encoded(_ lane: Lane) -> UInt8 {
         switch lane {
-        case let .controller(controller): return controller
+        case .controller(let controller): return controller
         case .voice: return TimeDefaults.laneCCVoice
         case .pitchBend: return TimeDefaults.laneCCBend
         }
@@ -430,11 +405,15 @@ public final class GridClipboard {
 
     public func addChangeObserver(_ observer: @escaping () -> Void) -> UUID {
         if nativeObserver == nil {
-            guard let observerToken = pd_clipboard_observe(Unmanaged.passUnretained(self).toOpaque(), { context in
-                guard let context else { return }
-                let clipboard = Unmanaged<GridClipboard>.fromOpaque(context).takeUnretainedValue()
-                for callback in clipboard.changeObservers.values { callback() }
-            }) else { return UUID() }
+            guard
+                let observerToken = pd_clipboard_observe(
+                    Unmanaged.passUnretained(self).toOpaque(),
+                    { context in
+                        guard let context else { return }
+                        let clipboard = Unmanaged<GridClipboard>.fromOpaque(context).takeUnretainedValue()
+                        for callback in clipboard.changeObservers.values { callback() }
+                    })
+            else { return UUID() }
             nativeObserver = observerToken
         }
         let token = UUID()
@@ -461,11 +440,15 @@ public final class GridClipboard {
     public func read() -> DecodedPorydawClip? {
         let box = ClipboardReadBox()
         let context = Unmanaged.passUnretained(box).toOpaque()
-        guard pd_clipboard_read(context, { rawContext, bytes, count in
-            guard let rawContext, let bytes else { return }
-            let box = Unmanaged<ClipboardReadBox>.fromOpaque(rawContext).takeUnretainedValue()
-            box.data = Data(bytes: bytes, count: count)
-        }), let data = box.data else { return nil }
+        guard
+            pd_clipboard_read(
+                context,
+                { rawContext, bytes, count in
+                    guard let rawContext, let bytes else { return }
+                    let box = Unmanaged<ClipboardReadBox>.fromOpaque(rawContext).takeUnretainedValue()
+                    box.data = Data(bytes: bytes, count: count)
+                }), let data = box.data
+        else { return nil }
         return ClipboardCodec.decode(data)
     }
 }

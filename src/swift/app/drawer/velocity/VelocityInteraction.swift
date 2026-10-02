@@ -1,5 +1,5 @@
-import PorydawCore
 import PorydawAppCommands
+import PorydawCore
 
 // Pointer, prompt and gesture machinery for the drawer's Velocity section: the
 // four pointer entries, the local Escape and cancellation seam, the Set Velocity
@@ -35,8 +35,10 @@ extension VelocityPage {
     // MARK: Pointer input
 
     @discardableResult
-    func dispatchPointerPress(x: Double, y: Double, surface: Int, button: Int,
-                              modifiers: Int) -> Bool {
+    func dispatchPointerPress(
+        x: Double, y: Double, surface: Int, button: Int,
+        modifiers: Int
+    ) -> Bool {
         guard let session, let input = VelocityInputSurface(rawValue: surface) else { return false }
         guard gesture == nil else { return false }
         if prompt != nil { cancelPrompt() }
@@ -48,12 +50,14 @@ extension VelocityPage {
             else { return false }
             guard !contextUnsupported else { return true }
             let unlock = detentsUnlocked(modifiers: modifiers, allowShift: false)
-            let velocity = unlock
+            let velocity =
+                unlock
                 ? Int(clampVelocity(axis.yToVelocity(y)))
                 : axis.rulerVelocityAt(y: y, labelHeight: axis.geometry.labelHeight)
             guard velocity >= 1 else { return true }
-            beginGesture(kind: .relative, x: x, y: y, detentUnlock: unlock,
-                         notes: VelocityScene.selectedTrackNotes(session), modifiers: modifiers)
+            beginGesture(
+                kind: .relative, x: x, y: y, detentUnlock: unlock,
+                notes: VelocityScene.selectedTrackNotes(session), modifiers: modifiers)
             guard var live = gesture else { return true }
             _ = live.updatePreview(live.notes.map { NoteVelocity(noteID: $0.noteID, velocity: velocity) })
             gesture = live
@@ -62,19 +66,23 @@ extension VelocityPage {
             if button == VelocityQtButton.middle {
                 // The shared camera's pan, requested from the band that renders
                 // its projection: one delta per move, clamped by the camera.
-                beginGesture(kind: .pan, x: x, y: y, detentUnlock: false, notes: [],
-                             modifiers: modifiers)
+                beginGesture(
+                    kind: .pan, x: x, y: y, detentUnlock: false, notes: [],
+                    modifiers: modifiers)
                 return true
             }
             if button == VelocityQtButton.right {
-                beginGesture(kind: .pendingBand, x: x, y: y, detentUnlock: false, notes: [],
-                             modifiers: modifiers)
-                if let hit = projection.hitTest(x: x, y: y, includeStems: true,
-                                                handles: publishedHandles) {
+                beginGesture(
+                    kind: .pendingBand, x: x, y: y, detentUnlock: false, notes: [],
+                    modifiers: modifiers)
+                if let hit = projection.hitTest(
+                    x: x, y: y, includeStems: true,
+                    handles: publishedHandles)
+                {
                     pressedNote = hit
                 }
                 if let pressed = pressedNote, !isControl(modifiers),
-                   !selectionBeforePress.contains(pressed)
+                    !selectionBeforePress.contains(pressed)
                 {
                     setSelection([pressed])
                 }
@@ -84,18 +92,21 @@ extension VelocityPage {
             let unlock = detentsUnlocked(modifiers: modifiers, allowShift: true)
             if isShift(modifiers) {
                 guard !contextUnsupported else { return true }
-                beginGesture(kind: .ramp, x: x, y: y, detentUnlock: unlock,
-                             notes: VelocityScene.selectedTrackNotes(session), modifiers: modifiers)
+                beginGesture(
+                    kind: .ramp, x: x, y: y, detentUnlock: unlock,
+                    notes: VelocityScene.selectedTrackNotes(session), modifiers: modifiers)
                 updateRampPreview(x: x, y: y)
                 return true
             }
-            let hit = projection.hitTest(x: x, y: y, includeStems: true,
-                                         handles: publishedHandles)
+            let hit = projection.hitTest(
+                x: x, y: y, includeStems: true,
+                handles: publishedHandles)
             pressedNote = hit
             if hit == nil {
                 guard !contextUnsupported else { return true }
-                beginGesture(kind: .paint, x: x, y: y, detentUnlock: unlock, notes: [],
-                             modifiers: modifiers)
+                beginGesture(
+                    kind: .paint, x: x, y: y, detentUnlock: unlock, notes: [],
+                    modifiers: modifiers)
                 paintBetween(fromX: x, fromY: y, toX: x, toY: y)
                 return true
             }
@@ -110,8 +121,9 @@ extension VelocityPage {
             // gesture itself needs the exact map, so an unknown context refuses
             // to freeze one.
             guard !contextUnsupported else { return true }
-            beginGesture(kind: .relative, x: x, y: y, detentUnlock: unlock,
-                         notes: VelocityScene.selectedTrackNotes(session), modifiers: modifiers)
+            beginGesture(
+                kind: .relative, x: x, y: y, detentUnlock: unlock,
+                notes: VelocityScene.selectedTrackNotes(session), modifiers: modifiers)
         }
         return true
     }
@@ -120,37 +132,44 @@ extension VelocityPage {
     func dispatchPointerMove(x: Double, y: Double, buttons: Int) -> Bool {
         guard session != nil else { return false }
         _ = buttons
-        guard gesture != nil else {
+        guard var live = gesture else {
             updateHover(x: x, y: y)
             return true
         }
-        switch gesture!.kind {
+        switch live.kind {
         case .relative:
-            gesture?.bandX = x
-            gesture?.bandY = y
-            VelocityGesturePolicy.applyRelative(&gesture!, y: y)
-            gesture?.previousX = x
-            gesture?.previousY = y
+            live.bandX = x
+            live.bandY = y
+            VelocityGesturePolicy.applyRelative(&live, y: y)
+            live.previousX = x
+            live.previousY = y
+            gesture = live
             refreshAxisAndHandles()
         case .paint:
-            paintBetween(fromX: gesture!.previousX, fromY: gesture!.previousY, toX: x, toY: y)
-            gesture?.previousX = x
-            gesture?.previousY = y
+            paintBetween(fromX: live.previousX, fromY: live.previousY, toX: x, toY: y)
+            // paintBetween rewrites the gesture; re-read it before advancing the stroke origin.
+            if var updated = gesture {
+                updated.previousX = x
+                updated.previousY = y
+                gesture = updated
+            }
         case .ramp:
             updateRampPreview(x: x, y: y)
         case .pendingBand:
-            if abs(x - gesture!.pressX) + abs(y - gesture!.pressY) >= dragDistance {
-                gesture?.kind = .band
-                gesture?.bandX = x
-                gesture?.bandY = y
+            if abs(x - live.pressX) + abs(y - live.pressY) >= dragDistance {
+                live.kind = .band
+                live.bandX = x
+                live.bandY = y
+                gesture = live
                 updateBandPreview(x: x, y: y)
             }
         case .band:
             updateBandPreview(x: x, y: y)
         case .pan:
-            let delta = x - gesture!.previousX
-            gesture?.previousX = x
-            gesture?.previousY = y
+            let delta = x - live.previousX
+            live.previousX = x
+            live.previousY = y
+            gesture = live
             if delta != 0, let session {
                 session.mutateCamera { $0.setHScroll($0.snapshot.scrollX - delta) }
             }
@@ -161,7 +180,8 @@ extension VelocityPage {
     @discardableResult
     func dispatchPointerRelease(x: Double, y: Double, button: Int) -> Bool {
         guard session != nil, let live = gesture else { return false }
-        guard (button == VelocityQtButton.middle && live.kind == .pan)
+        guard
+            (button == VelocityQtButton.middle && live.kind == .pan)
                 || (button == VelocityQtButton.right && (live.kind == .band || live.kind == .pendingBand))
                 || (button == VelocityQtButton.left && live.kind != .pan
                     && live.kind != .band && live.kind != .pendingBand)
@@ -254,10 +274,11 @@ extension VelocityPage {
         let ids = notes.map(\.id)
         let before = notes.map(\.velocity)
         let initial = Int(notes[0].velocity)
-        prompt = VelocityPromptState(revision: session.document.revision,
-                                     track: session.selectedTrack ?? -1,
-                                     noteIDs: ids, beforeValues: before, initialValue: initial,
-                                     draft: String(initial))
+        prompt = VelocityPromptState(
+            revision: session.document.revision,
+            track: session.selectedTrack ?? -1,
+            noteIDs: ids, beforeValues: before, initialValue: initial,
+            draft: String(initial))
         promptOpen = true
         promptDraft = String(initial)
         setPublished(promptError, "") { promptError = $0 }
@@ -290,7 +311,7 @@ extension VelocityPage {
         refreshInteractionPublished()
         defer { publishHandles(projectHandles()) }
         guard live.revision == session.document.revision,
-              live.track == (session.selectedTrack ?? -1)
+            live.track == (session.selectedTrack ?? -1)
         else { return false }
         var updates: [NoteVelocity] = []
         updates.reserveCapacity(live.noteIDs.count)
@@ -360,14 +381,18 @@ extension VelocityPage {
         setUseDetents(enabled: !detentsEnabled)
     }
 
-    private func beginGesture(kind: VelocityGestureKind, x: Double, y: Double,
-                              detentUnlock: Bool, notes: [Note], modifiers: Int) {
+    private func beginGesture(
+        kind: VelocityGestureKind, x: Double, y: Double,
+        detentUnlock: Bool, notes: [Note], modifiers: Int
+    ) {
         let candidates = kind == .paint ? VelocityScene.selectedTrackNotes(session) : []
-        guard let frozen = VelocityGestureState(
-            kind: kind, revision: session?.document.revision ?? 0,
-            track: session?.selectedTrack ?? -1, notes: freeze(notes), axis: axis,
-            detentUnlock: detentUnlock, activationDistance: geometry.dragActivationDistance,
-            pressX: x, pressY: y, controlPress: isControl(modifiers)) else { return }
+        guard
+            let frozen = VelocityGestureState(
+                kind: kind, revision: session?.document.revision ?? 0,
+                track: session?.selectedTrack ?? -1, notes: freeze(notes), axis: axis,
+                detentUnlock: detentUnlock, activationDistance: geometry.dragActivationDistance,
+                pressX: x, pressY: y, controlPress: isControl(modifiers))
+        else { return }
         paintCandidates = candidates
         gesture = frozen
         refreshInteractionPublished()
@@ -380,9 +405,10 @@ extension VelocityPage {
     }
 
     private func freeze(_ note: Note, map: VelocityMap) -> VelocityFrozenNote {
-        VelocityFrozenNote(noteID: note.id, tick: note.tick, duration: note.duration,
-                           pitch: note.pitch, velocity: note.velocity,
-                           map: map, exactOrigin: note.velocity)
+        VelocityFrozenNote(
+            noteID: note.id, tick: note.tick, duration: note.duration,
+            pitch: note.pitch, velocity: note.velocity,
+            map: map, exactOrigin: note.velocity)
     }
 
     private func cancelGesture() {
@@ -393,7 +419,8 @@ extension VelocityPage {
         pressedNote = nil
         selectionBeforePress = []
         if let session, gesture.track == (session.selectedTrack ?? -1),
-           session.selectedNoteOrder != selectionBefore {
+            session.selectedNoteOrder != selectionBefore
+        {
             session.setSelectedNotes(selectionBefore)
         }
         refreshInteractionPublished()
@@ -410,8 +437,9 @@ extension VelocityPage {
         pressedNote = nil
         selectionBeforePress = []
         if commit, let session, live.revision == session.document.revision {
-            commitVelocities(VelocityGesturePolicy.updates(live),
-                             expectedRevision: live.revision)
+            commitVelocities(
+                VelocityGesturePolicy.updates(live),
+                expectedRevision: live.revision)
         }
         refreshInteractionPublished()
         refreshAxisAndHandles()
@@ -432,14 +460,15 @@ extension VelocityPage {
     }
 
     private func updateRampPreview(x: Double, y: Double) {
-        guard gesture != nil else { return }
+        guard var live = gesture else { return }
         // The swept column and the frozen note columns share scroll-stable
         // handle space, so the ramp interpolates without a plot conversion.
-        VelocityGesturePolicy.applyRamp(&gesture!, x: x, y: y, hitRadius: geometry.hitRadius) { note in
+        VelocityGesturePolicy.applyRamp(&live, x: x, y: y, hitRadius: geometry.hitRadius) { note in
             projection.stableXForTick(Double(note.tick))
         }
-        gesture?.previousX = x
-        gesture?.previousY = y
+        live.previousX = x
+        live.previousY = y
+        gesture = live
         publishHandles(projectHandles())
         publishTransient()
     }
@@ -447,30 +476,38 @@ extension VelocityPage {
     /// One paint step. The first step freezes the selection; later steps add the
     /// notes the swept column reaches, exactly like `paintSelectedNodesBetween`.
     private func paintBetween(fromX: Double, fromY: Double, toX: Double, toY: Double) {
-        guard gesture != nil else { return }
+        guard var live = gesture else { return }
         let radius = geometry.hitRadius
         let deltaX = toX - fromX
         // The swept column arrives in published-handle (scroll-stable) space,
         // exactly like the note columns below, so both sides compare directly.
         let resolve = VelocityScene.contextResolver(session)
-        for note in paintCandidates where gesture?.frozenNote(note.id) == nil {
+        for note in paintCandidates where live.frozenNote(note.id) == nil {
             let x = projection.stableXForTick(Double(note.tick))
-            let inSpan = deltaX == 0
+            let inSpan =
+                deltaX == 0
                 ? abs(x - toX) <= radius
                 : (x >= min(fromX, toX) - radius && x <= max(fromX, toX) + radius)
             if inSpan {
-                gesture?.append(freeze(note, map: resolve(note.tick, Int(note.pitch)).map))
+                live.append(freeze(note, map: resolve(note.tick, Int(note.pitch)).map))
             }
         }
-        guard !gesture!.notes.isEmpty else { return }
+        guard !live.notes.isEmpty else {
+            gesture = live
+            return
+        }
         let updates = VelocityGesturePolicy.paint(
-            axis: gesture!.axis, detentUnlock: gesture!.detentUnlock,
-            candidates: gesture!.notes.map {
+            axis: live.axis, detentUnlock: live.detentUnlock,
+            candidates: live.notes.map {
                 (note: $0, x: projection.stableXForTick(Double($0.tick)))
             },
             from: (fromX, fromY), to: (toX, toY), hitRadius: radius)
-        guard !updates.isEmpty else { return }
-        _ = gesture?.updatePreview(updates)
+        guard !updates.isEmpty else {
+            gesture = live
+            return
+        }
+        _ = live.updatePreview(updates)
+        gesture = live
         publishHandles(projectHandles())
     }
 
@@ -500,8 +537,9 @@ extension VelocityPage {
     }
 
     private func updateHover(x: Double, y: Double) {
-        let hit = projection.hitTest(x: x, y: y, includeStems: false,
-                                     handles: publishedHandles)
+        let hit = projection.hitTest(
+            x: x, y: y, includeStems: false,
+            handles: publishedHandles)
         guard hit != hovered else { return }
         hovered = hit
         refreshAxisAndHandles()
