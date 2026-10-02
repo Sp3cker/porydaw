@@ -1,12 +1,13 @@
 import Foundation
 import PorydawApp
 import PorydawAppCommands
-import PorydawCore
-@testable import PorydawAppAudio
-import PorydawPlaybackNative
 import PorydawBankLease
+import PorydawCore
+import PorydawPlaybackNative
 import QtBridge
 import QtBridgeCpp
+
+@testable import PorydawAppAudio
 
 /// Hosts the actual production ShellWindow through Qt Quick Test. Each entry
 /// is one TestCase file with its own staged decomp-project fixture; the runner
@@ -17,15 +18,17 @@ enum ShellQmlLane {
     private static var manifestLine: String {
         let checks = ShellQmlRegistry.entries.map { entry in
             let files = entry.fixtureFiles.map { "\"" + $0 + "\"" }.joined(separator: ",")
-            return #"{"name":"\#(entry.name)","argv":["\#(entry.name)","{scratch}"],"binary":"checks","windowing":"\#(entry.windowing)","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
+            return
+                #"{"name":"\#(entry.name)","argv":["\#(entry.name)","{scratch}"],"binary":"checks","windowing":"\#(entry.windowing)","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
         }
         return #"{"checks":[\#(checks.joined(separator: ","))]}"#
     }
 
     static func main() {
-        exit(MainActor.assumeIsolated {
-            run(arguments: Array(CommandLine.arguments.dropFirst()))
-        })
+        exit(
+            MainActor.assumeIsolated {
+                run(arguments: Array(CommandLine.arguments.dropFirst()))
+            })
     }
 
     @MainActor
@@ -36,7 +39,7 @@ enum ShellQmlLane {
         }
         let usage = "usage: shell_qml_tests <entry> <staged-project-directory> [--qt <Qt args>]"
         guard arguments.count >= 2,
-              let entry = ShellQmlRegistry.entries.first(where: { $0.name == arguments[0] })
+            let entry = ShellQmlRegistry.entries.first(where: { $0.name == arguments[0] })
         else {
             return fail(usage)
         }
@@ -57,14 +60,16 @@ enum ShellQmlLane {
             return fail("\(entry.name) owns its -input file: \(entry.inputFileName)")
         }
         ShellQmlBootstrap.stage(projectRoot: scratch)
-        PreferencesStore.stageShared(plistPath: URL(fileURLWithPath: scratch, isDirectory: true)
-            .appendingPathComponent("settings.plist").path)
+        PreferencesStore.stageShared(
+            plistPath: URL(fileURLWithPath: scratch, isDirectory: true)
+                .appendingPathComponent("settings.plist").path)
         var app = QTestAppCpp()
         app.setInputDir(EditorQmlPaths.testDirectory)
         app.setImportPath(EditorQmlPaths.qmlImportPath)
         app.setPluginsPath(EditorQmlPaths.pluginPath)
         ApplicationSession.registerQmlElement()
         ShellPresenter.registerQmlElement()
+        TransportBarPresenter.registerUncreatableQmlElement()
         PreferencesStore.registerQmlElement()
         ShellQmlBootstrap.registerQmlElement()
         GridInputClipProbe.registerQmlElement()
@@ -82,7 +87,8 @@ enum ShellQmlLane {
         defer { argv.forEach { free($0) } }
         let status = app.runQtQuickTests(Int32(arguments.count), &argv)
         if status == 0, entry.name == "shell-note-visuals",
-           ProcessInfo.processInfo.environment["PORYDAW_NOTE_VISUAL_DPR2"] == nil {
+            ProcessInfo.processInfo.environment["PORYDAW_NOTE_VISUAL_DPR2"] == nil
+        {
             let child = Process()
             child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
             child.arguments = [entry.name, scratch, "--qt", "ShellNoteVisuals::test_dpr2SmallFontThinning"]
@@ -99,8 +105,9 @@ enum ShellQmlLane {
             } catch {
                 return fail("note visuals dpr2: child failed to start: \(error)")
             }
-            let log = String(decoding: output.fileHandleForReading.readDataToEndOfFile(),
-                             as: UTF8.self)
+            let log = String(
+                decoding: output.fileHandleForReading.readDataToEndOfFile(),
+                as: UTF8.self)
             child.waitUntilExit()
             print("note visuals dpr2: \(log)")
             guard child.terminationStatus == 0 else {
@@ -119,11 +126,14 @@ enum ShellQmlLane {
             return 0
         }
         if status == 0, entry.name == "shell-drawer-parity",
-           ProcessInfo.processInfo.environment["PORYDAW_DRAWER_RASTER_DPR2"] == nil {
+            ProcessInfo.processInfo.environment["PORYDAW_DRAWER_RASTER_DPR2"] == nil
+        {
             let child = Process()
             child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
-            child.arguments = [entry.name, scratch, "--qt",
-                               "ShellDrawerParity::test_dpr2AutomationHoverRaster"]
+            child.arguments = [
+                entry.name, scratch, "--qt",
+                "ShellDrawerParity::test_dpr2AutomationHoverRaster",
+            ]
             var environment = ProcessInfo.processInfo.environment
             environment["PORYDAW_DRAWER_RASTER_DPR2"] = "1"
             environment["QT_SCALE_FACTOR"] = "2"
@@ -137,8 +147,9 @@ enum ShellQmlLane {
             } catch {
                 return fail("drawer raster dpr2: child failed to start: \(error)")
             }
-            let log = String(decoding: output.fileHandleForReading.readDataToEndOfFile(),
-                             as: UTF8.self)
+            let log = String(
+                decoding: output.fileHandleForReading.readDataToEndOfFile(),
+                as: UTF8.self)
             child.waitUntilExit()
             print("drawer raster dpr2: \(log)")
             guard child.terminationStatus == 0 else {
@@ -146,7 +157,7 @@ enum ShellQmlLane {
             }
         }
         guard status == 0, entry.name == "shell-polyphony",
-              ProcessInfo.processInfo.environment["PORYDAW_POLYPHONY_PROFILE"] == nil
+            ProcessInfo.processInfo.environment["PORYDAW_POLYPHONY_PROFILE"] == nil
         else { return status }
         for profile in ["dpr1-font12", "dpr1-font16", "dpr2-font12", "dpr2-font16"] {
             let child = Process()
@@ -165,15 +176,18 @@ enum ShellQmlLane {
             } catch {
                 return fail("polyphony \(profile): child failed to start: \(error)")
             }
-            let log = String(decoding: output.fileHandleForReading.readDataToEndOfFile(),
-                             as: UTF8.self)
+            let log = String(
+                decoding: output.fileHandleForReading.readDataToEndOfFile(),
+                as: UTF8.self)
             child.waitUntilExit()
             print("polyphony \(profile): \(log)")
             guard child.terminationStatus == 0 else {
                 return fail("polyphony \(profile): capture failed (\(child.terminationStatus))")
             }
-            for state in ["narrow-vanilla", "wide-vanilla",
-                          "narrow-darkneutralhigh", "wide-darkneutralhigh"] {
+            for state in [
+                "narrow-vanilla", "wide-vanilla",
+                "narrow-darkneutralhigh", "wide-darkneutralhigh",
+            ] {
                 let image = URL(fileURLWithPath: scratch)
                     .appendingPathComponent("polyphony-\(profile)-\(state).png").path
                 guard FileManager.default.fileExists(atPath: image) else {
@@ -207,7 +221,6 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
 
     public func componentComplete() {}
 
-
     public func resetPreferences() -> Bool {
         preferences.resetPreferences()
     }
@@ -222,7 +235,6 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
             WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: songs, selectedSong: selected),
             store: preferences)
     }
-
 
     /// Widget oracle geometry for the standalone production voicegroup panel.
     public func voicegroupReferenceJson(variant: String) -> String {
@@ -298,17 +310,20 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
                 try FileManager.default.removeItem(at: target)
             }
             try FileManager.default.copyItem(at: source, to: target)
-            for relative in ["sound/song_table.inc", "include/constants/songs.h",
-                             "sound/songs/midi/midi.cfg", "ld_script.ld", "src/debug.c",
-                             "sound/voicegroups/dummy.inc"] {
+            for relative in [
+                "sound/song_table.inc", "include/constants/songs.h",
+                "sound/songs/midi/midi.cfg", "ld_script.ld", "src/debug.c",
+                "sound/voicegroups/dummy.inc",
+            ] {
                 let bytes = try Data(contentsOf: fixture.appendingPathComponent(relative))
                 let destination = target.appendingPathComponent(relative)
                 try FileManager.default.createDirectory(
                     at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
                 try bytes.write(to: destination)
             }
-            for relative in ["sound/songs/midi/mus_stray_test.mid",
-                             "sound/songs/midi/mus_partial_test.mid",
+            for relative in [
+                "sound/songs/midi/mus_stray_test.mid",
+                "sound/songs/midi/mus_partial_test.mid",
                 "sound/voicegroups/fixture_songs_dock.inc",
             ] {
                 let leftover = target.appendingPathComponent(relative)
@@ -346,8 +361,9 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     }
 
     public func actionMidiExists() -> Bool {
-        FileManager.default.fileExists(atPath:
-            projectRoot + "/sound/songs/midi/mus_route101.mid")
+        FileManager.default.fileExists(
+            atPath:
+                projectRoot + "/sound/songs/midi/mus_route101.mid")
     }
 
     /// Creates a stray and a partial song in this entry's isolated scratch project.
@@ -365,12 +381,16 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
             try (originalConfig + "\nmus_stray_test.mid: -E -R50 -G_fixture_songs_dock -V100\n")
                 .write(to: config, atomically: true, encoding: .utf8)
             let groups = root.appendingPathComponent("sound/voicegroups", isDirectory: true)
-            let originalVoicegroup = try String(contentsOf: groups.appendingPathComponent("fixture_rich.inc"),
-                                                encoding: .utf8)
-            try originalVoicegroup.replacingOccurrences(of: "voice_group fixture_rich",
-                                                        with: "voice_group fixture_songs_dock")
-                .write(to: groups.appendingPathComponent("fixture_songs_dock.inc"),
-                       atomically: true, encoding: .utf8)
+            let originalVoicegroup = try String(
+                contentsOf: groups.appendingPathComponent("fixture_rich.inc"),
+                encoding: .utf8)
+            try originalVoicegroup.replacingOccurrences(
+                of: "voice_group fixture_rich",
+                with: "voice_group fixture_songs_dock"
+            )
+            .write(
+                to: groups.appendingPathComponent("fixture_songs_dock.inc"),
+                atomically: true, encoding: .utf8)
             let original = try String(contentsOf: table, encoding: .utf8)
             if !original.contains("song mus_partial_test,") {
                 try (original + "\n    song mus_partial_test, MUSIC_PLAYER_BGM, 0\n")
@@ -381,13 +401,15 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     }
 
     public func dockVoicegroupExists() -> Bool {
-        FileManager.default.fileExists(atPath:
-            projectRoot + "/sound/voicegroups/fixture_songs_dock.inc")
+        FileManager.default.fileExists(
+            atPath:
+                projectRoot + "/sound/voicegroups/fixture_songs_dock.inc")
     }
 
     public func dockSongMidiExists() -> Bool {
-        FileManager.default.fileExists(atPath:
-            projectRoot + "/sound/songs/midi/mus_stray_test.mid")
+        FileManager.default.fileExists(
+            atPath:
+                projectRoot + "/sound/songs/midi/mus_stray_test.mid")
     }
 
     public func projectPorydawFolderExists() -> Bool {
@@ -397,7 +419,7 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     /// Selects the frozen widget geometry for the actual mounted display
     /// profile rather than assuming that shell tests run at DPR 2/font 12.
     public func songListBaselineJson(dpr: Int, fontPx: Int) -> String {
-        guard (dpr == 1 || dpr == 2), (fontPx == 12 || fontPx == 16) else { return "" }
+        guard dpr == 1 || dpr == 2, fontPx == 12 || fontPx == 16 else { return "" }
         let root = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .deletingLastPathComponent()
         let url = root.appendingPathComponent(
@@ -412,7 +434,7 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     }
     /// The QWidget widget baseline uses logical item coordinates for both DPRs.
     public func transportReferenceJson(dpr: Int, fontPx: Int) -> String {
-        guard (dpr == 1 || dpr == 2), (fontPx == 12 || fontPx == 16) else { return "" }
+        guard dpr == 1 || dpr == 2, fontPx == 12 || fontPx == 16 else { return "" }
         let path = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .deletingLastPathComponent()
             .appendingPathComponent("fixtures/visual/macos-dpr\(dpr)-font\(fontPx)/transportbar/vanilla.json")
@@ -426,7 +448,8 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
 
     public func settingsReferenceJson(profile: String, page: String) -> String {
         guard ["macos-dpr1-font12", "macos-dpr2-font16"].contains(profile),
-              ["engine", "song"].contains(page) else { return "" }
+            ["engine", "song"].contains(page)
+        else { return "" }
         let path = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .deletingLastPathComponent()
             .appendingPathComponent("fixtures/visual/\(profile)/settings/\(page)-vanilla.json")
@@ -458,11 +481,15 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     public func copiedClipSummary() -> String {
         let box = ShellClipboardReadBox()
         let context = Unmanaged.passUnretained(box).toOpaque()
-        guard pd_clipboard_read(context, { rawContext, bytes, count in
-            guard let rawContext, let bytes else { return }
-            Unmanaged<ShellClipboardReadBox>.fromOpaque(rawContext)
-                .takeUnretainedValue().data = Data(bytes: bytes, count: count)
-        }), let data = box.data, let decoded = ClipboardCodec.decode(data) else { return "[]" }
+        guard
+            pd_clipboard_read(
+                context,
+                { rawContext, bytes, count in
+                    guard let rawContext, let bytes else { return }
+                    Unmanaged<ShellClipboardReadBox>.fromOpaque(rawContext)
+                        .takeUnretainedValue().data = Data(bytes: bytes, count: count)
+                }), let data = box.data, let decoded = ClipboardCodec.decode(data)
+        else { return "[]" }
         let tracks = decoded.clip.tracks
         let notes = tracks.first?.notes ?? []
         return "[\(tracks.count),\(notes.count),\(notes.first.map { Int($0.key) } ?? -1)]"

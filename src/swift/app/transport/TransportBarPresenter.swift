@@ -6,10 +6,10 @@ import QtBridge
 /// The clock is sampled from the audio device, never extrapolated from wall time.
 @MainActor
 @QtBridgeable
-public final class TransportBarPresenter {
+public final class TransportBarPresenter: QmlUncreatable {
     private weak var session: ApplicationSession?
 
-    @QtTracked public var state = 0 // unavailable, stopped, paused, playing
+    @QtTracked public var state = 0  // unavailable, stopped, paused, playing
     @QtTracked public var timeText = "0:00.0 / 0:00.0"
     @QtTracked public var measureText = "1:1"
     @QtTracked public var loopEnabled = true
@@ -63,7 +63,8 @@ public final class TransportBarPresenter {
         setPublished(scaleHighlight, scale.highlight) { scaleHighlight = $0 }
         setPublished(scaleFold, scale.fold) { scaleFold = $0 }
         guard let session, session.songOpen, let document = session.selectedDocument,
-              let audio = session.transportAudio, audio.songLoaded else {
+            let audio = session.transportAudio, audio.songLoaded
+        else {
             setPublished(state, 0) { state = $0 }
             setPublished(timeText, "0:00.0 / 0:00.0") { timeText = $0 }
             setPublished(measureText, "1:1") { measureText = $0 }
@@ -114,7 +115,8 @@ public final class TransportBarPresenter {
         setPublished(loopEnabled, audio.loopEnabled) { loopEnabled = $0 }
         setPublished(resonanceSuppression, audio.resonanceSuppression) { resonanceSuppression = $0 }
         let tempoPoint = document.document.state.tempo.last { $0.tick <= tick }
-        let micros = tempoPoint?.microsecondsPerQuarterNote
+        let micros =
+            tempoPoint?.microsecondsPerQuarterNote
             ?? TimeDefaults.defaultTempoMicrosecondsPerQuarterNote
         let bpm = Int((Double(TimeDefaults.microsecondsPerMinute) / Double(max(1, micros))).rounded())
         setPublished(tempo, bpm) { tempo = $0 }
@@ -135,7 +137,8 @@ public final class TransportBarPresenter {
 
     public func setScaleType(type: Int) {
         guard session?.songOpen == true, let document = session?.selectedDocument,
-              let scale = ScaleID(rawValue: type) else { return }
+            let scale = ScaleID(rawValue: type)
+        else { return }
         document.setScale(type: scale)
         refresh()
     }
@@ -243,10 +246,12 @@ public final class TransportBarPresenter {
 
     public func setTempo(bpm: Int) {
         guard (TimeDefaults.minimumTempoBPM...TimeDefaults.maximumTempoBPM).contains(bpm),
-              let document = session?.selectedDocument?.document else { return }
+            let document = session?.selectedDocument?.document
+        else { return }
         let tick = TimeDefaults.tick(from: session?.playheadPresenter().tick ?? 0)
         let prior = document.state.tempo.last { $0.tick <= tick }
-        let target = TempoPoint(tick: prior?.tick ?? 0,
+        let target = TempoPoint(
+            tick: prior?.tick ?? 0,
             microsecondsPerQuarterNote: TimeDefaults.microsecondsPerQuarterNote(forBPM: bpm))
         document.editTempo(TempoEdit(remove: prior.map { [$0] } ?? [], add: [target]))
         refresh()
@@ -269,8 +274,10 @@ public final class TransportBarPresenter {
                 bars += (beats + beatsPerBar - 1) / beatsPerBar
             }
             segmentStart = signature.tick
-            beatTicks = max(1, Int(timeline.ticksPerBeat) * 4
-                >> min(Int(signature.denominatorPowerOfTwo), 31))
+            beatTicks = max(
+                1,
+                Int(timeline.ticksPerBeat) * 4
+                    >> min(Int(signature.denominatorPowerOfTwo), 31))
             beatsPerBar = max(1, Int(signature.numerator))
         }
         let beats = Int(tick - segmentStart) / beatTicks
@@ -284,7 +291,8 @@ public final class TransportBarPresenter {
         for chunk in document.state.file.chunks {
             for event in chunk.events {
                 guard case .meta(let type, let data) = event.payload,
-                      type == 0x59, data.count == 2 else { continue }
+                    type == 0x59, data.count == 2
+                else { continue }
                 let fifths = Int(Int8(bitPattern: data[0]))
                 let names = fifths < 0 ? flat : sharp
                 let position = min(names.count - 1, abs(fifths))
