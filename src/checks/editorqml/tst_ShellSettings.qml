@@ -171,6 +171,9 @@ TestCase {
         verify(waitForNative(function() { return app.songOpen || app.lastSaveError.length > 0 }, 30000),
                "grid contrast fixture song loads: " + app.lastSaveError)
         verify(app.songOpen, "grid contrast fixture opens a mounted song")
+        verify(waitForNative(function() {
+            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the grid contrast fixture mounts its editor scene")
         const page = findChild(shell.sceneLoader.item, "songTab_" + app.songTabs.selectedId)
         const surface = page ? findChild(page, "swiftRollOverlay") : null
         verify(surface && surface.gridModel, "the grid contrast journey has a mounted roll")

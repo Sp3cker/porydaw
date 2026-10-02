@@ -236,6 +236,7 @@ ShellWindowSupport {
     }
 
     function test_zWindowTitleAndStatusMeter() {
+        bootstrap.seedStartupRecipe("", [], "")
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production shell is mounted for chrome state")
         waitForShellScene()
@@ -252,6 +253,9 @@ ShellWindowSupport {
         session.openProject(bootstrap.projectRoot)
         verify(waitForNative(function() { return session.projectOpen }, 30000),
                "the fixture project opens without selecting a tab" + openDiagnostics(session))
+        verify(waitForNative(function() {
+            return shell.title === projectName + " — porydaw"
+        }, 5000), "the project-only title reaches the mounted shell chrome")
         compare(shell.title, projectName + " — porydaw",
                 "an empty project title names the project directory")
         compare(meter.visible, false, "a project without a tab has no audio meter")

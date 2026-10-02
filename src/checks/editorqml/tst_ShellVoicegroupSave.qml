@@ -8,10 +8,7 @@ import Porydaw.Ui
 
 ShellVoicegroupSupport {
     function test_zzzzzUnifiedSaveAndUndoRestorationReceipts() {
-        fullShell = fullShellComponent.createObject(null)
-        const shell = fullShell
-        shell.requestActivate()
-        tryCompare(shell, "active", true)
+        const shell = createFullShell()
         const session = shell.shellPresenter.session
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         verify(waitForNative(function() {
@@ -51,6 +48,16 @@ ShellVoicegroupSupport {
         const editor = findChild(shell, "voicegroupEditorSurface")
         const save = findChild(editor, "vgSaveButton")
         verify(save && save.enabled, "mounted bank Save handles the unified dirty journey")
+        const scroll = findChild(shell, "voiceEditorScrollView")
+        verify(scroll !== null, "the mounted Save belongs to its editor viewport")
+        waitForFullShellScene()
+        scroll.contentY = Math.max(0, scroll.contentHeight - scroll.height)
+        waitForFullShellScene()
+        const saveCenter = save.mapToItem(scroll, save.width / 2, save.height / 2)
+        verify(save.visible && save.width > 0 && save.height > 0
+               && saveCenter.x >= 0 && saveCenter.x < scroll.width
+               && saveCenter.y >= 0 && saveCenter.y < scroll.height,
+               "the Save click targets the real button inside its clipped editor viewport")
         const beforeStarts = shellSaveStarts
         const beforeFinishes = shellSaveFinishes
         mouseClick(save)
@@ -121,10 +128,7 @@ ShellVoicegroupSupport {
     }
 
     function test_zzzzzzReleaseBoundaryEditsLeaveSongClean() {
-        fullShell = fullShellComponent.createObject(null)
-        const shell = fullShell
-        shell.requestActivate()
-        tryCompare(shell, "active", true)
+        const shell = createFullShell()
         const session = shell.shellPresenter.session
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         verify(waitForNative(function() {

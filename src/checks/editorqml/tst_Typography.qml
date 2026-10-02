@@ -299,7 +299,7 @@ TestCase {
         var space = session.layoutSpaces
         var gridLabel = findChild(surface, "timelineRulerGridLabel")
         var control = findChild(surface, "timelineRulerDivisionControl")
-        var hint = findChild(surface, "mouseHintStatusText")
+        var hint = findChild(shell, "shellMouseHintText")
         verify(gridLabel && control && hint, "the ruler controls and status hint are mounted")
         compare(gridLabel.font.family, body.family, "the ruler control resolves the body face")
         compare(gridLabel.font.pixelSize, body.pixelSize, "the ruler control resolves the body size")
@@ -345,7 +345,13 @@ TestCase {
         surface.gridModel.openGridMenu(1)
         tryVerify(function() {
             var menu = findChild(surface, "quickMenuPanelRoot")
-            return menu && menu.rowCount > 0
+            if (!menu || menu.rowCount === 0)
+                return false
+            for (var realized = 0; realized < menu.rowCount; ++realized) {
+                if (!menu.rowItem(realized))
+                    return false
+            }
+            return true
         }, 5000, "the real grid-division menu paints its typed rows")
         var menu = findChild(surface, "quickMenuPanelRoot")
         var widest = 0

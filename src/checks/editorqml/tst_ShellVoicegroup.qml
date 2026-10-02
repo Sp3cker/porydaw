@@ -296,11 +296,7 @@ ShellVoicegroupSupport {
     }
 
     function test_zMountedSongReloadPresentsResolvedBank() {
-        fullShell = fullShellComponent.createObject(null)
-        const shell = fullShell
-        verify(shell !== null, "the production shell creates the voicegroup dock")
-        shell.requestActivate()
-        tryCompare(shell, "active", true)
+        const shell = createFullShell()
         const session = shell.shellPresenter.session
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         verify(waitForNative(function() {

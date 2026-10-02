@@ -1,31 +1,40 @@
-// Measures a fresh Release process through its native first-frame trace marker.
+// Measures a fresh Release process through a selected native submitted-frame marker.
 import { join, resolve } from "node:path";
 import { usesMultiConfigBuild } from "./build.ts";
 
 const HELP = `usage: deno task bench:startup [options]
   --runs <count>       fresh process launches (default 11)
+  --until <stage>      first-frame|chrome-frame|workspace-frame (default first-frame)
   --project <path>     project root passed to the app (optional)
   --song <label>       song label passed to the app (optional)
-  --budget-ms <ms>     strict first-frame ceiling (default 300)
+  --budget-ms <ms>     user-set selected-frame ceiling (default 300)
   --timeout-ms <ms>    deadline per launch (default 10000)
   --check             exit 1 if ANY run misses the budget, including run 1
   --help              show this help without launching
 
 Requires an existing Release app: deno task build:app --release
 Does not build or use 'open'; only its own spawned processes are terminated.
-Measures monotonic process-spawn to receipt of the native first-frame marker.
-The marker is QQuickWindow::frameSwapped: a frame queued for presentation,
+Measures monotonic process-spawn to receipt of the selected native frame marker.
+Each frame marker is QQuickWindow::frameSwapped: a frame queued for presentation,
 not physical display scanout. Process creation and dynamic loading are included.
+content-ready/workspace-ready record construction, not submitted frames.
+chrome-frame follows shell mounting; workspace-frame follows workspace mounting.
+Neither guarantees restored-song, editor or audio readiness.
 Run 1 is reported separately (not guaranteed cold); subsequent runs are warm.
 All-run compliance includes run 1. Exit/timeout/launch failures always exit 2.
+The budget is a chosen ceiling, not a performance guarantee; 300 is retained
+as the compatibility default.
 Omitted project/song options retain the app's normal saved-session behavior.
-The app is stopped at first frame: this does not measure editor readiness.
+The app is stopped at the selected frame.
 
 Example:
-  deno task bench:startup --project /path/to/project --song mus_title --check`;
+  deno task bench:startup --until workspace-frame --project /path/to/project --song mus_title --check`;
+
+type FrameStage = "first-frame" | "chrome-frame" | "workspace-frame";
 
 interface Options {
   runs: number;
+  until: FrameStage;
   budgetMs: number;
   timeoutMs: number;
   project?: string;
@@ -41,6 +50,7 @@ type Outcome =
 function parseOptions(args: string[]): Options {
   const options: Options = {
     runs: 11,
+    until: "first-frame",
     budgetMs: 300,
     timeoutMs: 10000,
     check: false,
@@ -52,7 +62,14 @@ function parseOptions(args: string[]): Options {
       continue;
     }
     if (
-      !["--runs", "--budget-ms", "--timeout-ms", "--project", "--song"]
+      ![
+        "--runs",
+        "--until",
+        "--budget-ms",
+        "--timeout-ms",
+        "--project",
+        "--song",
+      ]
         .includes(flag)
     ) throw new Error(`unknown argument ${args[i]}`);
     const value = inline.length ? inline.join("=") : args[++i];
@@ -61,7 +78,17 @@ function parseOptions(args: string[]): Options {
     }
     if (flag === "--project") options.project = resolve(value);
     else if (flag === "--song") options.song = value;
-    else {
+    else if (flag === "--until") {
+      if (
+        value !== "first-frame" && value !== "chrome-frame" &&
+        value !== "workspace-frame"
+      ) {
+        throw new Error(
+          "--until requires first-frame, chrome-frame, or workspace-frame",
+        );
+      }
+      options.until = value;
+    } else {
       const number = Number(value);
       if (!Number.isFinite(number) || number <= 0) {
         throw new Error(`${flag} requires a positive finite number`);
@@ -130,7 +157,8 @@ async function measure(
   const interrupt = () =>
     result.resolve({
       kind: "interrupted",
-      message: "interrupted; stopped the spawned app",
+      message:
+        `interrupted before ${options.until} marker; stopped the spawned app`,
     });
   Deno.addSignalListener("SIGINT", interrupt);
   if (Deno.build.os !== "windows") {
@@ -139,17 +167,18 @@ async function measure(
   const deadline = setTimeout(() =>
     result.resolve({
       kind: "failure",
-      message: `TIMEOUT: no first-frame marker within ${options.timeoutMs} ms`,
+      message:
+        `TIMEOUT: no ${options.until} marker within ${options.timeoutMs} ms`,
     }), Math.max(0, options.timeoutMs - (performance.now() - started)));
 
   function line(text: string): void {
     const marker = text.replace(/\r?\n$/, "");
-    if (marker === "PORYDAW_STARTUP_TRACE first-frame") {
+    if (marker === `PORYDAW_STARTUP_TRACE ${options.until}`) {
       const ms = performance.now() - started;
       result.resolve(
         ms < options.timeoutMs ? { kind: "frame", ms } : {
           kind: "failure",
-          message: `TIMEOUT: first-frame marker arrived after ${
+          message: `TIMEOUT: ${options.until} marker arrived after ${
             ms.toFixed(2)
           } ms`,
         },
@@ -177,7 +206,7 @@ async function measure(
       diagnostics.push(`stderr read failed: ${error}\n`);
       result.resolve({
         kind: "failure",
-        message: `stderr read failed: ${error}`,
+        message: `stderr read failed before ${options.until} marker: ${error}`,
       });
     }
   })();
@@ -186,7 +215,7 @@ async function measure(
     await consume;
     result.resolve({
       kind: "failure",
-      message: `EXIT before first-frame marker: code ${status.code}` +
+      message: `EXIT before ${options.until} marker: code ${status.code}` +
         (status.signal ? ` (${status.signal})` : ""),
     });
   });
@@ -225,7 +254,12 @@ async function measure(
   return outcome;
 }
 
-function summary(label: string, outcomes: Outcome[], budget: number): boolean {
+function summary(
+  label: string,
+  outcomes: Outcome[],
+  budget: number,
+  stage: FrameStage,
+): boolean {
   const samples = outcomes.flatMap((outcome) =>
     outcome.kind === "frame" ? [outcome.ms] : []
   ).sort((a, b) => a - b);
@@ -238,12 +272,12 @@ function summary(label: string, outcomes: Outcome[], budget: number): boolean {
       ? samples[middle]
       : (samples[middle - 1] + samples[middle]) / 2;
     console.log(
-      `${label}: ${samples.length}/${outcomes.length} frames; ` +
+      `${label}: ${samples.length}/${outcomes.length} ${stage} frames; ` +
         `median ${median.toFixed(2)} ms, min ${samples[0].toFixed(2)} ms, ` +
         `max ${samples.at(-1)!.toFixed(2)} ms`,
     );
   } else {console.log(
-      `${label}: no first-frame samples (${outcomes.length} runs)`,
+      `${label}: no ${stage} samples (${outcomes.length} runs)`,
     );}
   console.log(
     `  Budget <${budget} ms: ${pass ? "PASS" : "FAIL"}; ` +
@@ -271,7 +305,7 @@ async function main(): Promise<number> {
     if (!(await Deno.stat(binary)).isFile) throw new Error("not a file");
   } catch (error) {
     throw new Error(
-      `Release executable unavailable: ${binary}\n` +
+      `Release executable unavailable for ${options.until}: ${binary}\n` +
         `Build first: deno task build:app --release\n${error}`,
     );
   }
@@ -282,10 +316,14 @@ async function main(): Promise<number> {
     }`,
   );
   console.log(
-    "Metric: spawn to native frameSwapped (queued presentation, not display scanout)",
+    `Metric: spawn to ${options.until} native frameSwapped (queued presentation, not display scanout)`,
   );
   console.log(
-    `Fresh launches: ${options.runs}; first-frame budget <${options.budgetMs} ms`,
+    `Fresh launches: ${options.runs}; ${options.until} budget <${options.budgetMs} ms`,
+  );
+  console.log(
+    "Construction markers content-ready/workspace-ready are not submitted frames; " +
+      "workspace-frame does not guarantee restored-song, editor or audio readiness.",
   );
   const outcomes: Outcome[] = [];
   for (let run = 1; run <= options.runs; run++) {
@@ -295,7 +333,7 @@ async function main(): Promise<number> {
     } catch (error) {
       outcome = {
         kind: "failure",
-        message: `LAUNCH/CLEANUP failure: ${error}`,
+        message: `LAUNCH/CLEANUP failure for ${options.until}: ${error}`,
       };
     }
     outcomes.push(outcome);
@@ -303,21 +341,22 @@ async function main(): Promise<number> {
     console.log(
       `Run ${run} (${label}): ` +
         (outcome.kind === "frame"
-          ? `${outcome.ms.toFixed(2)} ms ${
+          ? `${options.until} ${outcome.ms.toFixed(2)} ms ${
             outcome.ms < options.budgetMs ? "PASS" : "FAIL budget"
           }`
           : outcome.message),
     );
     if (outcome.kind === "interrupted") break;
   }
-  summary("First run", outcomes.slice(0, 1), options.budgetMs);
+  summary("First run", outcomes.slice(0, 1), options.budgetMs, options.until);
   if (outcomes.length > 1) {
-    summary("Warm runs", outcomes.slice(1), options.budgetMs);
+    summary("Warm runs", outcomes.slice(1), options.budgetMs, options.until);
   } else console.log("Warm runs: none");
   const pass = summary(
     "All runs (including first)",
     outcomes,
     options.budgetMs,
+    options.until,
   );
   if (outcomes.some((outcome) => outcome.kind !== "frame")) return 2;
   return options.check && !pass ? 1 : 0;

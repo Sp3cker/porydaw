@@ -64,12 +64,23 @@ TestCase {
     function panel() { return findChild(shell, "swiftSongsPanel") }
     function list() { return findChild(shell, "songList") }
     function row(id) {
-        const view = list()
-        for (let index = 0; index < view.count; ++index) {
-            if (presenter().songId(index) !== id)
+        const model = presenter()
+        for (let index = 0; index < model.rowCount; ++index) {
+            if (model.songId(index) !== id)
                 continue
-            view.positionViewAtIndex(index, ListView.Contain)
-            return view.itemAtIndex(index)
+            let mounted = null
+            verify(waitForNative(function() {
+                const view = list()
+                if (!view || !view.visible || view.width <= 0 || view.height <= 0
+                        || view.count <= index)
+                    return false
+                view.forceLayout()
+                view.positionViewAtIndex(index, ListView.Contain)
+                mounted = view.itemAtIndex(index)
+                return mounted !== null && mounted.song && mounted.song.songId === id
+                    && mounted.visible && mounted.width > 0 && mounted.height > 0
+            }, 5000), "the requested song delegate mounts with visible geometry")
+            return mounted
         }
         return null
     }
@@ -139,6 +150,7 @@ TestCase {
                    "the mounted deletion project opens before dialog input")
             verify(waitForNative(function() { return presenter().rowCount === 10 }, 5000),
                    "the deletion fixture exposes its stray MIDI in the mounted list")
+            waitForShellScene()
             let deletedId = -1
             for (let index = 0; index < presenter().rowCount; ++index) {
                 const candidate = presenter().songId(index)
@@ -206,6 +218,7 @@ TestCase {
         session.openProject(root)
         verify(waitForNative(function() { return session.projectOpen && presenter().rowCount === 8 }, 30000),
                "the charmap-only project loads its eight playable registered songs")
+        waitForShellScene()
         const id = 2
         verify(row(id) !== null, "the registered route song is listed")
         compare(row(id).song.text, "mus_route101  ⚠ not fully registered",
@@ -276,6 +289,7 @@ TestCase {
         session.openProject(root)
         verify(waitForNative(function() { return session.projectOpen && presenter().rowCount === 8 }, 30000),
                "the deletion fixture lists all eight playable originals")
+        waitForShellScene()
         const id = 2
         mouseDoubleClickSequence(row(id), row(id).width / 2, row(id).height / 2, Qt.LeftButton)
         verify(waitForNative(function() {
@@ -321,6 +335,7 @@ TestCase {
         session.openProject(root)
         verify(waitForNative(function() { return session.projectOpen && presenter().rowCount === 9 }, 30000),
                "the project lists its newly playable ID-zero fallback")
+        waitForShellScene()
         const id = 0
         mouseDoubleClickSequence(row(id), row(id).width / 2, row(id).height / 2, Qt.LeftButton)
         verify(waitForNative(function() {
@@ -632,6 +647,7 @@ TestCase {
                "the filter fixture project opens")
         verify(waitForNative(function() { return presenter().totalCount > 0 }, 5000),
                "the Songs dock catalog is ready before selecting a category")
+        waitForShellScene()
         const search = findChild(shell, "songListSearch")
         const sort = findChild(shell, "songListSort")
         verify(search && sort && findChild(shell, "songListCategory"),
@@ -653,6 +669,7 @@ TestCase {
         verify(waitForNative(function() { return restored.projectOpen }, 30000))
         verify(waitForNative(function() { return presenter().totalCount > 0 }, 5000),
                "the reopened Songs dock catalog is ready before checking restored filters")
+        waitForShellScene()
         tryVerify(function() {
             return findChild(shell, "songListSearch").text === "route"
                 && presenter().searchText === "route"
@@ -702,6 +719,8 @@ TestCase {
         verify(waitForNative(function() { return session.songOpen || session.lastSaveError.length > 0 },
                              30000), "the fixture bank loads: " + session.lastSaveError)
         compare(session.lastSaveError, "")
+        waitForShellScene()
+        verify(waitForRendering(shell.contentItem), "the constrained dock completes its mounted layout")
         const dock = findChild(shell, "swiftDockColumn")
         const scroll = findChild(shell, "voiceEditorScrollView")
         const editor = findChild(shell, "voicegroupEditorSurface")
@@ -777,6 +796,7 @@ TestCase {
         const session = shell.shellPresenter.session
         session.openProjectAndSong(bootstrap.projectRoot, label)
         verify(waitForNative(function() { return session.songOpen && session.songTabs.selectedPage && session.songTabs.selectedPage.isReady }, 30000), "the song is ready before the conflict journey")
+        waitForShellScene()
         return session
     }
 
@@ -900,6 +920,7 @@ TestCase {
         verify(waitForNative(function() { return session.songTabs.pendingCloseId === onlyId }, 5000), "the dirty close raises the gate")
         verify(waitForNative(function() { const gateSave = findChild(shell, "songTabSave"); return gateSave !== null && gateSave.visible }, 5000), "the close gate shows its Save")
         const save = findChild(shell, "songTabSave")
+        verify(waitForRendering(save), "the close gate's Save button is drawn before the click")
         mouseClick(save)
         waitConflictPrompt()
         compare(fileProbe.fileFingerprint(midi), modified, "the close-time save writes nothing before the answer")

@@ -11,7 +11,6 @@ ThemedWindow {
     colors: shell.session.palette
     property bool establishApplicationIdentity: false
     property int actionRevision: 0
-    property bool dockSettingsReady: false
     property var normalFrame: null
     property bool sessionStatePersisted: false
     property bool windowPrepared: false
@@ -107,7 +106,7 @@ ThemedWindow {
         id: applicationContent
         objectName: "shellContentLoader"
         anchors.fill: parent
-        // Preserve synchronous delegate ordering and on-demand dialog creation.
+        // Chrome mounts synchronously; its workspace incubates independently.
         asynchronous: false
         focus: true
         active: shell.contentRequested && shell.sceneActive

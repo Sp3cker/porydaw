@@ -19,17 +19,16 @@ EditorDrawerTestSupport {
         var point = AutomationGestureSupport.automationNodePoint(testCase, node)
         verify(point, "the written node has a drawn hit target")
         var input = AutomationTabsSupport.automationPlotInput(testCase)
-        var status = findChild(testCase.surface, "mouseHintStatus")
-        var text = findChild(status, "mouseHintStatusText")
-        verify(status && text, "the production status strip is drawn")
+        var text = testCase.surface.hintService
         tryCompare(testCase.surface, "hintWindowActive", true)
-        mouseMove(status, status.width / 2, status.height / 2)
+        mouseMove(testCase.surface, testCase.surface.width / 2, testCase.surface.height + 10)
         tryCompare(text, "text", "")
         mouseMove(input, point.x, point.y)
         tryVerify(function() { return text.text.length > 0 }, 1000,
                   "the node advertises its interaction before the grab")
         var instructions = text.text
-        var outside = input.mapFromItem(status, status.width / 2, status.height / 2)
+        var outside = input.mapFromItem(testCase.surface, testCase.surface.width / 2,
+                                        testCase.surface.height + 10)
         mousePress(input, point.x, point.y, Qt.MiddleButton)
         tryCompare(text, "text", instructions, 1000,
                    "starting a grab retains the originating node instructions")
@@ -307,9 +306,7 @@ EditorDrawerTestSupport {
         mouseClick(input, point.x, point.y, Qt.RightButton)
         tryVerify(function() { return bootstrap.automationMenuOpen() === true }, 2000,
                   "the right click opened the node menu")
-        var status = findChild(testCase.surface, "mouseHintStatus")
-        var hintStatusText = status ? findChild(status, "mouseHintStatusText") : null
-        verify(hintStatusText, "the production status strip is drawn")
+        var hintStatusText = testCase.surface.hintService
         tryVerify(function() { return hintStatusText.text === "" }, 2000,
                   "the open menu mutes the underlay hint")
         tryCompare(testCase.surface.hintService, "text", "")

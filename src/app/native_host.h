@@ -19,6 +19,8 @@ void pd_clipboard_unobserve(void *token);
 void pd_startup_trace_mark(const char *stage);
 void pd_startup_trace_window(void);
 
+void pd_startup_trace_next_frame(const char *stage);
+
 #ifdef __cplusplus
 }
 #endif

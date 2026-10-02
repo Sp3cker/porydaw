@@ -33,6 +33,10 @@ TestCase {
         const controller = app.voiceListController()
         verify(nativeWait(function() { return controller.isBound && !controller.isLoading }, 30000),
                "voicegroup bank ready")
+        const chrome = child("shellContentLoader")
+        verify(nativeWait(function() {
+            return chrome && chrome.status === Loader.Ready && chrome.item !== null
+        }, 10000), "sample-dialog chrome mounts before workflow actions")
         return app
     }
     function cleanup() {
@@ -60,8 +64,14 @@ TestCase {
         const controller = app.voiceListController()
         controller.selectSlot(0)
         const original = String(controller.editorModel().symbol)
-        const add = child("vgNewSampleButton")
-        verify(nativeWait(function() { return add && add.visible }, 5000), "voice + mounted")
+        let add = null
+        verify(nativeWait(function() {
+            add = child("vgNewSampleButton")
+            return add && add.visible && add.width > 0 && add.height > 0
+        }, 5000), "voice + mounted")
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) },
+                                               add.Window.window, 5000),
+               "the selected voice editor submits its layout before clicking voice +")
         mouseClick(add)
         selectSource(rootPath + "/samplesources/hires_tone.wav")
         verify(nativeWait(function() { return !!child("sampleStudioDialog") }, 15000), "editor opens")

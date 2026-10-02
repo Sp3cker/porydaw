@@ -22,6 +22,7 @@ ShellEventListSupport {
             return session.songOpen || session.lastSaveError.length > 0
         }, 30000), "song load settles")
         verify(session.songOpen, session.lastSaveError)
+        waitForShellScene()
         verify(shellPresenter.actionEnabled("view.event_list"),
                "the ready tab enables MIDI Event List")
         const tab = findChild(shell.sceneLoader.item, "songTab_" + session.songTabs.selectedId)
@@ -81,14 +82,13 @@ ShellEventListSupport {
         const controls = findChild(surface, "timelineRulerControls")
         const headers = findChild(surface, "timelineQuickTrackHeaders")
         const horizontal = findChild(surface, "timelineHorizontalScrollBar")
-        const status = findChild(surface, "mouseHintStatus")
         const rollGutter = findChild(surface, "timelineQuickRollGutter")
         const rollPlot = findChild(surface, "timelineQuickRollPlot")
         const rollInput = findChild(surface, "swiftRollInput")
         const rollContent = findChild(surface, "rollContentBand")
         const vertical = findChild(surface, "timelineRollScrollBar")
         verify(band && drawer && ruler && rulerMarks && rulerMarks.list === 2
-               && controls && headers && horizontal && status
+               && controls && headers && horizontal
                && rollGutter && rollPlot && rollInput && rollContent && vertical,
                "editor bands remain addressable when the list replaces the roll")
         verify(waitForNative(function() {
@@ -100,8 +100,8 @@ ShellEventListSupport {
         }, 3000), "event list occupies only the roll band up to the drawer")
         verify(waitForNative(function() {
             return ruler.visible && rulerMarks.visible && controls.visible && headers.visible
-                && drawer.visible && horizontal.visible && status.visible
-        }, 3000), "ruler with Grid controls, headers, drawer, scrollbar and status remain visible")
+                && drawer.visible && horizontal.visible
+        }, 3000), "ruler with Grid controls, headers, drawer and scrollbar remain visible")
         verify(waitForNative(function() {
             return !rollGutter.visible && !rollPlot.visible && !rollInput.visible
                 && !rollContent.visible && !vertical.externalVisible

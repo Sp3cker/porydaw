@@ -77,6 +77,27 @@ TestCase {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
+    function createFullShell() {
+        bootstrap.preferences.setString("lastProjectDir", "")
+        fullShell = fullShellComponent.createObject(null)
+        verify(fullShell !== null, "the production full-shell fixture creates")
+        fullShell.requestActivate()
+        tryCompare(fullShell, "active", true)
+        waitForFullShellScene()
+        return fullShell
+    }
+
+    function waitForFullShellScene() {
+        verify(waitForNative(function() {
+            return fullShell.visible && fullShell.sceneLoader !== null
+                && fullShell.sceneLoader.status === Loader.Ready
+                && fullShell.contentItem.width > 0 && fullShell.contentItem.height > 0
+        }, 10000), "the full shell mounts its workspace before fixture input")
+        verify(waitForPolish(fullShell), "the full-shell layout finishes its pending polish")
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, fullShell, 5000),
+               "the exposed full shell submits the requested frame before fixture input")
+    }
+
     function initTestCase() {
         compare(panel.baseFontPx, app.baseFontPx,
                 "voicegroup pane derives its base before a song opens")

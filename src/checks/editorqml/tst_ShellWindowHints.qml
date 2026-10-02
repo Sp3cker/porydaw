@@ -4,6 +4,7 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "NativeWait.js" as NativeWait
 
 ShellWindowSupport {
     function test_pMouseHintTargetClaims() {
@@ -92,7 +93,9 @@ ShellWindowSupport {
         tryVerify(function() { return rename && rename.visible }, 3000)
         // Visibility can still describe the previous row until queued bindings and the scene settle.
         tryCompare(rename.parent, "rowIndex", 1, 3000)
-        verify(waitForRendering(rename, 3000))
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) },
+                                               rename.Window.window, 3000),
+               "the renamed header row submits its frame before hover input")
         mouseMove(rename, rename.width / 2, rename.height / 2)
         tryVerify(function() { return hints.text.length > 0 }, 3000)
         var renameHint = hints.text

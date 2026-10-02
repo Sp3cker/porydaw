@@ -73,7 +73,7 @@ TestCase {
     }
 
     function selectedSurface() {
-        if (!shell || !shell.sceneLoader || !shell.sceneLoader.item)
+        if (!shell || !shell.sceneLoader || shell.sceneLoader.status !== Loader.Ready)
             return null
         var tabs = shell.shellPresenter.session.songTabs
         var page = findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId)
@@ -112,7 +112,13 @@ TestCase {
     }
 
     function noteCenter(roll, surface, id) {
-        return RollNoteFaces.center(findChild(surface, "timelineRendererPlot"), roll, id)
+        var renderer = findChild(surface, "timelineRendererPlot")
+        var grid = surface.gridModel
+        if (!waitForNative(function() {
+            return renderer && renderer.fetchedRevision === grid.scene.displayRevision
+        }, 8000))
+            return null
+        return RollNoteFaces.center(renderer, roll, id)
     }
 
     function pastedAt(grid, sourceId, tick, source) {

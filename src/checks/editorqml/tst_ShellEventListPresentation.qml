@@ -17,6 +17,7 @@ ShellEventListSupport {
             return session.songOpen || session.lastSaveError.length > 0
         }, 30000), "song load settles")
         verify(session.songOpen, session.lastSaveError)
+        waitForShellScene()
         shell.shellPresenter.activate("view.event_list")
         tryCompare(session.songTabs, "selectedTabShowsEvents", true, 3000)
         let page = null

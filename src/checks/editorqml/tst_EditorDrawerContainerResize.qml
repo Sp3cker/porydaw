@@ -81,7 +81,7 @@ EditorDrawerTestSupport {
         fuzzyCompare(testCase.section(kind).bodyHeight, stored + 40, 1,
                      "the drag grows the body by its delta")
         fuzzyCompare(presenter.height, openHeight + 40, 1, "the container grows with the body")
-        verify(presenter.height <= testCase.editorHeight(), "the container stays above the status strip")
+        verify(presenter.height <= testCase.editorHeight(), "the container stays above the other-events band")
 
         LayoutSupport.dragGripTo(testCase, kind, testCase.dragSceneY + 600)
         var floorHeight = testCase.section(kind).bodyHeight
@@ -120,7 +120,7 @@ EditorDrawerTestSupport {
         LayoutSupport.pressGrip(testCase, kind)
         LayoutSupport.dragGripTo(testCase, kind, testCase.dragSceneY - 4000)
         fuzzyCompare(presenter.height, testCase.editorHeight(), 0.01,
-                     "the container clamps above the status strip")
+                     "the container clamps above the other-events band")
         var ceiling = testCase.section(kind).bodyHeight
         LayoutSupport.dragGripTo(testCase, kind, testCase.dragSceneY - 200)
         fuzzyCompare(testCase.section(kind).bodyHeight, ceiling, 0.01,

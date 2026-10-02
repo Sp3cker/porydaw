@@ -92,12 +92,22 @@ TestCase {
         }, 30000), "import transaction settles")
     }
     function songRow(label) {
-        const list = child("songList")
         const model = shell.shellPresenter.session.songDockController().songListPresenter()
         for (let index = 0; index < model.rowCount; ++index) {
-            list.positionViewAtIndex(index, ListView.Contain)
-            const row = list.itemAtIndex(index)
-            if (row && row.song.label === label) return row
+            const songId = model.songId(index)
+            let mounted = null
+            verify(waitForNative(function() {
+                const list = child("songList")
+                if (!list || !list.visible || list.width <= 0 || list.height <= 0
+                        || list.count <= index)
+                    return false
+                list.forceLayout()
+                list.positionViewAtIndex(index, ListView.Contain)
+                mounted = list.itemAtIndex(index)
+                return mounted !== null && mounted.song && mounted.song.songId === songId
+                    && mounted.visible && mounted.width > 0 && mounted.height > 0
+            }, 5000), "the candidate song delegate mounts with visible geometry")
+            if (mounted.song.label === label) return mounted
         }
         return null
     }

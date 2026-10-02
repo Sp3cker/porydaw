@@ -305,10 +305,7 @@ ShellVoicegroupSupport {
                    "selector undo displays the home voicegroup again")
     }
     function test_zzCatalogOutageRetainsLastValid() {
-        fullShell = fullShellComponent.createObject(null)
-        const shell = fullShell
-        shell.requestActivate()
-        tryCompare(shell, "active", true)
+        const shell = createFullShell()
         const session = shell.shellPresenter.session
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         verify(waitForNative(function() {

@@ -28,3 +28,15 @@ function waitForNative(bootstrap, waitFn, predicate, timeoutMs) {
     }
     return predicate()
 }
+
+function waitForSubmittedFrame(bootstrap, waitFn, window, timeoutMs) {
+    var submitted = false
+    var onSubmitted = function() { submitted = true }
+    window.frameSwapped.connect(onSubmitted)
+    try {
+        window.update()
+        return waitForNative(bootstrap, waitFn, function() { return submitted }, timeoutMs)
+    } finally {
+        window.frameSwapped.disconnect(onSubmitted)
+    }
+}

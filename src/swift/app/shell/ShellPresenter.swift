@@ -179,6 +179,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var startupBegun = false
     private var hasRestoredChrome = false
     private var hasLoadedContent = false
+    private var hasLoadedWorkspace = false
     @QtIgnored var closeSettlementTask: Task<Void, Never>?
     @QtTracked public var themeMode = "vanilla"
     @QtTracked public var gridLineContrast = 50
@@ -289,7 +290,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
             return session.songOpen && session.gridCommandAvailable(command: command.rawValue)
         }
         switch id {
-        case "songs.find": return session.projectOpen
+        case "songs.find": return session.projectOpen && hasLoadedWorkspace
         case "file.new_song": return session.projectOpen
         case "file.import_midi": return session.projectOpen
         case "tools.import_sample": return session.projectOpen && !session.sampleStudio().editorOpen
@@ -523,12 +524,21 @@ public final class ShellPresenter: QmlInstantiableStatus {
         contentRequested = true
     }
 
-    /// Start services only after the deferred controls can consume their publications.
+    /// Start services after the mounted shell can consume their publications.
     public func contentReady() {
         guard contentRequested, sceneActive, !closing else { return }
         hasLoadedContent = true
         pd_startup_trace_mark("content-ready")
+        pd_startup_trace_next_frame("chrome-frame")
         beginStartupIfReady()
+    }
+
+    /// Records workspace mounting, not restored-song or editor readiness.
+    public func workspaceReady() {
+        guard sceneActive, !closing else { return }
+        hasLoadedWorkspace = true
+        pd_startup_trace_mark("workspace-ready")
+        pd_startup_trace_next_frame("workspace-frame")
     }
 
     private func beginStartupIfReady() {

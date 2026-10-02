@@ -4,12 +4,12 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 import Porydaw.Ui
 
-// The persistent window owns launch and close; this tree owns its deferred UI.
+// The shell owns chrome and dialogs independently of its deferred workspace.
 Item {
     id: content
     required property var root
     readonly property var shell: content.root.shellPresenter
-    readonly property alias sceneLoader: editorScene
+    readonly property alias sceneLoader: workspace
     readonly property alias menuBar: shellMenu
     readonly property alias header: transportBar
     readonly property alias footer: shellStatus
@@ -19,7 +19,6 @@ Item {
         transportBar.presenter.restoreOutputVolume()
         transportBar.presenter.restoreTransportToggles()
         shell.settingsStore.restoreFromPreferences()
-        root.dockSettingsReady = true
     }
 
     // Text metrics belong to the controls, not the first window frame.
@@ -41,7 +40,6 @@ Item {
         }
         function onProjectRootChanged() { shell.refreshWindowChrome() }
         function onSongOpenChanged() {
-            gridContextMenu.menu.close()
             shell.songOpenChanged()
             ++root.actionRevision
         }
@@ -72,19 +70,11 @@ Item {
         target: shell.session.songTabs
         function onSelectedTabShowsEventsChanged() { ++root.actionRevision }
         function onSelectedPageChanged() {
-            gridContextMenu.menu.close()
             shell.refreshWindowChrome()
             ++root.actionRevision
         }
-        function onSelectedIdChanged() {
-            gridContextMenu.menu.close()
-            ++root.actionRevision
-        }
+        function onSelectedIdChanged() { ++root.actionRevision }
         function onTabCountChanged() { ++root.actionRevision }
-    }
-    Connections {
-        target: shell.session.songOpen ? shell.session.gridPresenter() : null
-        function onAppliedRevisionTextChanged() { gridContextMenu.menu.close() }
     }
     Connections {
         target: root.drawerSectionSource
@@ -110,9 +100,8 @@ Item {
         }
     }
 
-    // Menus, docks, editor and secondary windows instantiate together.
     // Window-scope shortcuts get native Qt ShortcutOverride arbitration; editor
-    // strokes are routed only from the focused tab's raw key path below.
+    // strokes stay on the focused tab's raw key path.
     Repeater {
         model: shell.windowActionIds
         delegate: Item {
@@ -205,152 +194,34 @@ Item {
         typography: root.chromeTypography
     }
 
-    SplitView {
-        id: shellBody
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: polyDock.visible ? polyDock.left : parent.right
-        orientation: Qt.Horizontal
-
-        SongsDockColumn {
-            id: dockColumn
-            SplitView.fillHeight: true
-            SplitView.minimumWidth: 200
-            SplitView.maximumWidth: 480
-            SplitView.preferredWidth: Math.max(200, Math.min(480, shell.dockColumnWidth))
-            controller: shell.session.songDockController()
-            applicationSession: shell.session
-            songsRatio: shell.dockSongsRatio
-            colors: shell.session.palette
-            onSongsRatioChanged: {
-                if (root.dockSettingsReady && songsRatio !== shell.dockSongsRatio)
-                    shell.setDockSongsRatio(songsRatio)
-            }
-            onWidthChanged: {
-                if (root.dockSettingsReady && width >= 200 && width <= 480 && width !== shell.dockColumnWidth)
-                    shell.setDockColumnWidth(Math.round(width))
-            }
-        }
-
-        Loader {
-            id: editorScene
-            objectName: "shellSceneLoader"
-            SplitView.fillWidth: true
-            SplitView.fillHeight: true
-            active: shell.sceneActive
-            focus: true
-            onActiveFocusChanged: {
-                if (!item || activeFocus)
-                    return
-                let focus = root.activeFocusItem
-                while (focus) {
-                    if (focus.objectName === "drawerModalLayer"
-                            && focus.parent === root.contentItem && focus.visible)
-                        return
-                    focus = focus.parent
-                }
-                shell.session.cancelGridInput(0)
-            }
-            sourceComponent: SongTabs {
-                objectName: "shellSongTabs"
-                controller: shell.session.songTabs
-                layoutSpaces: shell.session.layoutSpaces
-                shellRouter: shell
-                onContextMenuAt: (x, y) => {
-                    root.actionRevision++
-                    gridContextMenu.menu.x = x
-                    gridContextMenu.menu.y = y
-                    gridContextMenu.menu.open()
-                }
-            }
-            Text {
-                objectName: "shellEmptySongMessage"
-                anchors.centerIn: parent
-                visible: !shell.session.songOpen && shell.sceneActive
-                text: qsTr("Open a project and song to play with the Swift core.")
-                font: Qt.font(root.chromeTypography.body)
-                color: shell.session.palette.windowText
-                horizontalAlignment: Text.AlignHCenter
-            }
-        }
-    }
-    Item {
-        id: polyDock
-        objectName: "shellPolyphonyDock"
-        visible: shell.polyphonyVisible
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.right: parent.right
-        width: Math.min(root.chromeBaseFontPx * 32, parent.width * 0.48)
-        z: 2
-        Rectangle {
-            anchors.fill: parent
-            color: root.colors.windowBackground
-            border.color: root.colors.outline
-        }
-        Row {
-            id: polyTitle
-            width: parent.width
-            height: Math.max(bodyMetrics.height, transportBar.toolExtent)
-                    + 2 * root.chromeSpacing.half + 2
-            Text {
-                objectName: "shellPolyphonyTitle"
-                width: parent.width - polyClose.width
-                height: parent.height
-                leftPadding: root.chromeSpacing.two
-                text: qsTr("Polyphony Debugger")
-                font: Qt.font(root.chromeTypography.body)
-                color: root.colors.windowText
-                verticalAlignment: Text.AlignVCenter
-            }
-            Button {
-                id: polyClose
-                objectName: "shellPolyphonyClose"
-                height: parent.height
-                font: Qt.font(root.chromeTypography.body)
-                text: qsTr("×")
-                onClicked: shell.activate("view.polyphony_debugger")
-            }
-        }
-        PolyphonyPanel {
-            id: polyPanel
-            anchors.top: polyTitle.bottom
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            presenter: shell.session.polyphony
-            colors: root.colors
-            typography: root.chromeTypography
-            layoutSpaces: root.chromeSpacing
-            baseFontPx: root.chromeBaseFontPx
-        }
-        Timer {
-            running: polyDock.visible && shell.session.songOpen
-            repeat: true
-            interval: 100
-            onTriggered: shell.session.polyphony.poll()
-        }
-    }
-
     Loader {
-        id: songConfirmation
-        objectName: "songConfirmationLoader"
-        active: shell.session.songDockController().confirmation.length > 0
-        sourceComponent: SongConfirmDialog {
-            controller: shell.session.songDockController()
-            baseFontPx: root.chromeBaseFontPx
-            layoutSpaces: root.chromeSpacing
-        }
+        id: workspace
+        objectName: "shellWorkspaceLoader"
+        anchors.fill: parent
+        asynchronous: true
+        active: shell.sceneActive
+        visible: status === Loader.Ready
+        focus: true
+        Component.onCompleted: setSource(Qt.resolvedUrl("ShellBody.qml"), {
+            root: content.root,
+            transportToolExtent: Qt.binding(function() { return transportBar.toolExtent })
+        })
         onLoaded: {
-            if (status === Loader.Ready)
-                item.open()
+            if (shell.sceneActive) {
+                shell.workspaceReady()
+                ++root.actionRevision
+            }
+        }
+        onStatusChanged: {
+            if (status === Loader.Error) {
+                console.error("Cannot load the required application workspace: " + source)
+                Qt.exit(1)
+            }
         }
     }
-    // Save-conflict prompt: modal, so local Space is allowed. The name field
-    // reuses the New Song label law; Register stays disabled until valid.
-    // Loader-gated like songConfirmation above; handlers and objectNames
-    // inside are unchanged.
+
+    // Save-conflict prompt stays shell-owned, including before workspace mounting.
+    // The name field reuses the New Song label law; Register requires a valid name.
     Loader {
         id: saveConflictLoader
         objectName: "saveConflictLoader"
@@ -460,14 +331,6 @@ Item {
         shell: root.shellPresenter
         bodyMetrics: bodyMetrics
         captionMetrics: captionMetrics
-    }
-
-    ShellGridContextMenu {
-        id: gridContextMenu
-        root: content.root
-        shell: root.shellPresenter
-        editorScene: editorScene
-        bodyMetrics: bodyMetrics
     }
 
     Loader {

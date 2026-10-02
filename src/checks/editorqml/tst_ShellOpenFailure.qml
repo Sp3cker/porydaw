@@ -34,6 +34,12 @@ TestCase {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
+    function waitForShellScene() {
+        verify(waitForNative(function() {
+            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the presented window mounts its deferred editor scene")
+    }
+
     function cleanup() {
         probe.restoreSong(bootstrap.projectRoot, "mus_littleroot_test")
         if (!shell)
@@ -169,6 +175,7 @@ TestCase {
         var selectedDocument = selectedPage.grid
         verify(waitForNative(function() { return selectedDocument.fetchNoteSummary().length > 2 }, 5000),
                "the selected document publishes loaded notes before project replacement")
+        waitForShellScene()
         settings.synchronize()
         compare(settings.string("lastProjectDir", ""), bootstrap.projectRoot,
                 "the two live songs persist their original project path before failure")

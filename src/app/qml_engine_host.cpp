@@ -6,6 +6,7 @@
 #include <QtQuick/qquickwindow.h>
 #include <cstdio>
 #include <cstdlib>
+#include <string>
 
 #include <qappcpp.h>
 
@@ -59,4 +60,32 @@ void pd_startup_trace_window()
                              },
                              Qt::DirectConnection);
                      });
+}
+
+// Called on the GUI thread at mount completion, before its next render.
+void pd_startup_trace_next_frame(const char *stage)
+{
+    if (!std::getenv("PORYDAW_STARTUP_TRACE"))
+        return;
+    auto *engine = pd_qml_engine();
+    if (!engine)
+        return;
+    const auto roots = engine->rootObjects();
+    for (auto *object : roots) {
+        auto *window = qobject_cast<QQuickWindow *>(object);
+        if (!window)
+            continue;
+        // An in-flight swap can still contain the scene from before mounting.
+        QObject::connect(
+            window, &QQuickWindow::afterSynchronizing, window,
+            [window, mark = std::string(stage)]() {
+                QObject::connect(
+                    window, &QQuickWindow::frameSwapped, window,
+                    [mark]() { pd_startup_trace_mark(mark.c_str()); },
+                    static_cast<Qt::ConnectionType>(Qt::DirectConnection |
+                                                    Qt::SingleShotConnection));
+            },
+            static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::SingleShotConnection));
+        return;
+    }
 }

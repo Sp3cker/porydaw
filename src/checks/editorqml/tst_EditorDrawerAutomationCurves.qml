@@ -89,9 +89,7 @@ EditorDrawerTestSupport {
         }
         compare(bootstrap.automationLaneValues(), "144:95",
                 "the exact Pan origin-phantom fixture has one written tick-144 value-95 node")
-        var status = findChild(testCase.surface, "mouseHintStatus")
-        var hint = findChild(status, "mouseHintStatusText")
-        verify(hint, "the mounted phantom hint reaches the status strip")
+        var hint = testCase.surface.hintService
         mouseMove(input, sourceX, y)
         tryVerify(function() { return hint.text.length > 0 }, 2000,
                   "the written node offers an operational hint")

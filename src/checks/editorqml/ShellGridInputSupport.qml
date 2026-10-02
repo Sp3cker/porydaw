@@ -66,11 +66,12 @@ TestCase {
             var surface = selectedSurface()
             return surface !== null && surface.gridModel.renderedNoteCount > 0
         }, 10000), "the staged song publishes grid notes")
+        waitForGridFrame(selectedSurface())
         return session
     }
 
     function selectedSurface() {
-        if (!shell || !shell.sceneLoader || !shell.sceneLoader.item)
+        if (!shell || !shell.sceneLoader || shell.sceneLoader.status !== Loader.Ready)
             return null
         var tabs = shell.shellPresenter.session.songTabs
         var page = findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId)
@@ -90,17 +91,26 @@ TestCase {
     }
     function syncedPlot(surface, grid) {
         var plot = findChild(surface, "timelineRendererPlot")
-        waitForNative(function() {
+        verify(waitForNative(function() {
             return plot && plot.fetchedRevision === grid.scene.displayRevision
-        }, 8000)
+        }, 8000), "the roll renderer fetches the current scene revision")
         return plot
+    }
+
+    function waitForGridFrame(surface) {
+        verify(waitForPolish(shell), "the mounted grid layout finishes pending polish")
+        var grid = surface.gridModel
+        syncedPlot(surface, grid)
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, shell, 5000),
+               "the shell submits the current grid revision before fixture input or capture")
     }
 
     function awaitNoteFace(surface, grid, id) {
         var plot = syncedPlot(surface, grid)
         var face = null
         waitForNative(function() {
-            face = plot ? RollNoteFaces.face(plot, id) : null
+            face = plot.fetchedRevision === grid.scene.displayRevision
+                ? RollNoteFaces.face(plot, id) : null
             return face !== null
         }, 8000)
         return face
@@ -110,7 +120,8 @@ TestCase {
         var plot = syncedPlot(surface, grid)
         var rect = null
         waitForNative(function() {
-            rect = plot ? RollNoteFaces.rect(plot, roll, id) : null
+            rect = plot.fetchedRevision === grid.scene.displayRevision
+                ? RollNoteFaces.rect(plot, roll, id) : null
             return rect !== null
         }, 8000)
         return rect
@@ -120,7 +131,8 @@ TestCase {
         var plot = syncedPlot(surface, grid)
         var center = null
         waitForNative(function() {
-            center = plot ? RollNoteFaces.center(plot, roll, id) : null
+            center = plot.fetchedRevision === grid.scene.displayRevision
+                ? RollNoteFaces.center(plot, roll, id) : null
             return center !== null
         }, 8000)
         return center

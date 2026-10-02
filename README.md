@@ -85,22 +85,38 @@ stronger checks in the same state, but retain fixture guards and lifecycle scena
 Rendering checks observe painted output rather than pinning renderer-specific primitives.
 Update affected proof ledgers with their check changes; compile only referenced support.
 
+### Shell and workspace
+
+The persistent window owns the Swift session and close lifecycle. Shell chrome
+(menus, transport, status, window shortcuts and lazy global dialogs) mounts first.
+One asynchronous Loader creates the workspace: song list, tabs/editor and polyphony.
+Late-mounted views read current session state; closing cancels pending incubation.
+Find Song becomes available once its workspace search field exists. The startup
+lane gates first-frame lifecycle and late-mounted song rendering; early command
+use and closing during workspace incubation are not required startup gates.
+
 ### Startup profiling
 
-Measure the Release process's first submitted window frame:
+Measure the Release process's submitted window, chrome or workspace frame:
 
 ```bash
 deno task build:app --release
 deno task bench:startup --project /path/to/project --song mus_title --check
+deno task bench:startup --until chrome-frame
+deno task bench:startup --until workspace-frame
 ```
 
 The monotonic interval starts immediately before process creation and ends at the
-native render-thread `QQuickWindow::frameSwapped` marker. This means a frame queued
-for presentation, not physical display scanout or an editable/audio-ready song.
+selected native render-thread `QQuickWindow::frameSwapped` marker. `first-frame`
+(the default) measures the initial window; `chrome-frame` and `workspace-frame`
+measure a submitted frame synchronized after the respective UI has mounted.
+These are queued presentations, not physical display scanout or an editable/audio-ready
+song. Asynchronous incubation spreads GUI-thread creation across frames; it does not
+run Swift presenters on a background thread.
 The first run is reported separately, without claiming a cold OS cache; `--check`
-requires every launch, including that first run, to stay strictly below 300 ms.
-Only the benchmark's own processes are terminated. `--help` lists run-count,
-budget, and timeout options.
+requires every launch, including that first run, to stay below `--budget-ms`
+(default 300). Only the benchmark's own processes are terminated. `--help` lists
+run-count, budget, and timeout options.
 
 `bash autoresearch.sh` measures the configured live-project cold launch on a
 Debug build, including song restoration and a settled rendered window. It is

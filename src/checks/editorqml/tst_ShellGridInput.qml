@@ -292,7 +292,7 @@ ShellGridInputSupport {
         mouseRelease(ruler, endX, y, Qt.LeftButton, Qt.ControlModifier)
         verify(shell.shellPresenter.session.gridCommandAvailable(17),
                "the mounted modified sweep publishes an active time selection")
-        waitForRendering(shell.contentItem)
+        waitForGridFrame(surface)
         var image = physical ? physicalShellImage(captureItem) : grabImage(captureItem)
         verify(image.width > 0 && image.height > 0, "the modified selection renders pixels")
         var dpr = image.width / captureItem.width
@@ -361,7 +361,7 @@ ShellGridInputSupport {
             return transposed && transposed.pitch === coveredPrimary.pitch + 1
                 && shell.shellPresenter.session.gridCommandAvailable(17)
         }, 5000), "mounted Up edits the covered primary while retaining the time range")
-        waitForRendering(shell.contentItem)
+        waitForGridFrame(surface)
         var keyedImage = physical ? physicalShellImage(captureItem) : grabImage(captureItem)
         var keyedBottom = rasterBottom({
             tick: coveredPrimary.tick, duration: coveredPrimary.duration,

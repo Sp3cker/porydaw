@@ -136,7 +136,7 @@ TestCase {
 
     function tabs() { return shell.shellPresenter.session.songTabs }
     function session() { return shell.shellPresenter.session }
-    function tabsRoot() { return shell && shell.sceneLoader ? shell.sceneLoader.item : null }
+    function tabsRoot() { return shell && shell.sceneLoader ? findChild(shell.sceneLoader.item, "shellSongTabs") : null }
     function strip() { return findChild(tabsRoot(), "songTabStrip") }
     function pages() { return findChild(tabsRoot(), "songTabPages") }
     function selectButton(tabId) { return findChild(tabsRoot(), "songTabSelect_" + tabId) }

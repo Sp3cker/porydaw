@@ -15,11 +15,9 @@ EditorDrawerTestSupport {
         VelocitySupport.mountProductionVelocity(testCase, "velocity-hint-release")
         var input = VelocitySupport.velocityPlotInput(testCase)
         var ruler = VelocitySupport.velocityRuler(testCase)
-        var status = findChild(testCase.surface, "mouseHintStatus")
-        var text = findChild(status, "mouseHintStatusText")
-        verify(status && text, "the production status strip is drawn")
+        var text = testCase.surface.hintService
         tryCompare(testCase.surface, "hintWindowActive", true)
-        mouseMove(status, status.width / 2, status.height / 2)
+        mouseMove(testCase.surface, testCase.surface.width / 2, testCase.surface.height + 10)
         tryCompare(text, "text", "")
 
         var x = input.width / 2
@@ -36,7 +34,8 @@ EditorDrawerTestSupport {
         tryCompare(text, "text", plotInstructions)
 
         // Keep x fixed so the middle-button grab changes no camera position.
-        var outside = input.mapFromItem(status, status.width / 2, status.height / 2)
+        var outside = input.mapFromItem(testCase.surface, testCase.surface.width / 2,
+                                        testCase.surface.height + 10)
         mousePress(input, x, y, Qt.MiddleButton)
         mouseMove(input, x, outside.y, -1, Qt.MiddleButton)
         mouseRelease(input, x, outside.y, Qt.MiddleButton)

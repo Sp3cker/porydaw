@@ -71,6 +71,10 @@ TestCase {
         verify(shell !== null, "the production ShellWindow loads")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
+        const chrome = findChild(shell, "shellContentLoader")
+        verify(waitForNative(function() {
+            return chrome && chrome.status === Loader.Ready && chrome.item !== null
+        }, 10000), "persistent chrome mounts before window contrast audits")
     }
 
     function applyTheme(theme) {
@@ -81,11 +85,11 @@ TestCase {
         verify(waitForNative(function() {
             return palette.windowBackground === theme.window
         }, 3000), theme.mode + " is applied")
-        waitForRendering(shell.contentItem)
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, shell, 5000),
+               "the shell submits the applied theme before contrast capture")
     }
 
     function grab(root) {
-        waitForRendering(root)
         return grabImage(root)
     }
 
@@ -372,6 +376,14 @@ TestCase {
             return session.songOpen || session.lastSaveError.length > 0
         }, 30000), "song load settles")
         verify(session.songOpen, session.lastSaveError)
+        verify(waitForNative(function() {
+            const scene = shell.sceneLoader
+            if (scene === null || scene.status !== Loader.Ready)
+                return false
+            const page = findChild(scene.item, "songTab_" + session.songTabs.selectedId)
+            const surface = page ? findChild(page, "swiftRollOverlay") : null
+            return surface !== null && surface.visible
+        }, 10000), "the selected song page mounts before body contrast audits")
         applyTheme(data.theme)
         const presenter = shell.shellPresenter
         const mode = data.tag

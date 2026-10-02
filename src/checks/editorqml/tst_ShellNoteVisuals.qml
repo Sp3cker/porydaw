@@ -241,8 +241,11 @@ ShellNoteVisualsSupport {
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         verify(waitForNative(function() { return session.songOpen }, 30000),
                "Route 101 loads for the physical dpr2 ruler capture")
-        var surface = selectedSurface()
-        verify(surface !== null, "the dpr2 roll is mounted")
+        var surface = null
+        verify(waitForNative(function() {
+            surface = selectedSurface()
+            return surface !== null && surface.visible
+        }, 10000), "the dpr2 roll is mounted")
         var grid = surface.gridModel
         var plot = findChild(surface, "timelineQuickRollPlot")
         var fills = findChild(surface, "timelineRendererPlot")
@@ -263,8 +266,11 @@ ShellNoteVisualsSupport {
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         verify(waitForNative(function() { return session.songOpen }, 30000),
                "Route 101 loads for the dpr2 small-font note capture")
-        surface = selectedSurface()
-        verify(surface !== null, "the dpr2 small-font roll is mounted")
+        surface = null
+        verify(waitForNative(function() {
+            surface = selectedSurface()
+            return surface !== null && surface.visible
+        }, 10000), "the dpr2 small-font roll is mounted")
         grid = surface.gridModel
         plot = findChild(surface, "timelineQuickRollPlot")
         fills = findChild(surface, "timelineRendererPlot")

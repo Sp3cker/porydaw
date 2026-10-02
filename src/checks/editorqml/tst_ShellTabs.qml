@@ -36,6 +36,9 @@ ShellTabsSupport {
         verify(shell !== null, "a project-only recipe constructs the production shell")
         verify(waitForNative(function() { return session().projectOpen }, 30000),
                "a project-only recipe restores its live project")
+        waitForNative(function() {
+            return shell.title === bootstrap.projectRoot.split("/").pop() + " — porydaw"
+        }, 5000)
         compare(shell.title, bootstrap.projectRoot.split("/").pop() + " — porydaw",
                 "a project-only restore shows its project title")
         compare(tabs().tabCount, 0, "a project-only restore creates no song tab")
@@ -179,6 +182,9 @@ ShellTabsSupport {
         verify(waitForNative(function() { return session().projectOpen }, 30000),
                "a missing-song recipe still restores its live project")
         compare(tabs().tabCount, 0, "a deleted recipe song creates no phantom tab")
+        waitForNative(function() {
+            return shell.title === bootstrap.projectRoot.split("/").pop() + " — porydaw"
+        }, 5000)
         compare(shell.title, bootstrap.projectRoot.split("/").pop() + " — porydaw",
                 "a deleted recipe song leaves the project title visible")
         compare(settings.string("lastSongLabel", ""), "mus_deleted_song",

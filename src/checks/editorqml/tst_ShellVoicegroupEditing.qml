@@ -119,11 +119,7 @@ ShellVoicegroupSupport {
     }
 
     function test_xSpaceInFocusedAdsrFieldTogglesTransport() {
-        fullShell = fullShellComponent.createObject(null)
-        const shell = fullShell
-        verify(shell !== null, "the production window mounts the voice editor and transport")
-        shell.requestActivate()
-        tryCompare(shell, "active", true)
+        const shell = createFullShell()
         const session = shell.shellPresenter.session
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         verify(waitForNative(function() {

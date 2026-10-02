@@ -65,7 +65,7 @@ enum ShellQmlRegistry {
         [
             Entry(
                 name: "shell-startup", inputFileName: "tst_ShellStartup.qml",
-                fixtureFiles: songs("mus_route101"), windowing: "window-system"),
+                fixtureFiles: songs("mus_route101", "mus_littleroot_test"), windowing: "window-system"),
             Entry(
                 name: "shellwindow", inputFileName: "tst_ShellWindow.qml",
                 fixtureFiles: songs("mus_route101", "mus_littleroot_test")),

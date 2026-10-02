@@ -333,6 +333,13 @@ ShellGridInputSupport {
         mouseRelease(scrollbar, point.x, point.y, Qt.LeftButton)
         verify(grid.fetchNoteSummary() === before && grid.appliedRevisionText === revision,
                "the thumb grab blocks Delete and Escape releases it")
+        verify(waitForNative(function() {
+            return scrollbar.value === grid.cameraScrollY
+                && scrollbar.maximum === grid.cameraMaxVScroll
+                && scrollbar.pageStep === roll.height
+        }, 3000), "the released thumb presents the current roll camera and viewport")
+        point = thumb.mapToItem(scrollbar, thumb.width / 2, thumb.height / 2)
+        cameraY = grid.cameraScrollY
         mousePress(scrollbar, point.x, point.y, Qt.LeftButton)
         tryCompare(scrollbar, "gestureActive", true, 3000)
         keyClick(Qt.Key_Delete)
