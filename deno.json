@@ -18,7 +18,11 @@
     "proof:edit": "deno run --allow-read=src/checks --allow-write=src/checks tools/proof_editor.ts",
     "proof:compact": "deno run --allow-read=src/checks --allow-write=src/checks --allow-run=git tools/proof_compact.ts",
     "lsp:swift": "python3 tools/gen_swift_compdb.py --index",
-    "worktree:create": "deno run --allow-read --allow-write --allow-run tools/worktree.ts create"
+    "worktree:create": "deno run --allow-read --allow-write --allow-run tools/worktree.ts create",
+    "xctrace": "deno run --allow-read --allow-write --allow-run=xcrun --allow-env=HOME,TMPDIR tools/xctrace.ts"
+  },
+  "imports": {
+    "fast-xml-parser": "npm:fast-xml-parser@5.3.0"
   },
   "fmt": {
     "include": ["tools/**/*.ts"]
