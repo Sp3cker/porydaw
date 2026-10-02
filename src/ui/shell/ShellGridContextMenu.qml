@@ -16,6 +16,7 @@ Item {
         Basic.MenuItem {
             id: contextAction
             required property string modelData
+            property int menuOrdinal: -1
             objectName: "shellContextAction_" + modelData
             text: shell.actionLabel(modelData)
             readonly property string shortcutText: shell.actionShortcut(modelData)
@@ -88,6 +89,7 @@ Item {
     Basic.Menu {
         id: gridContextMenu
         objectName: "shellGridContextMenu"
+        readonly property int headActionCount: shell.contextHeadActionIds.length
         parent: Overlay.overlay
         popupType: Popup.Item
         z: 2
@@ -96,17 +98,34 @@ Item {
         palette.window: root.colors.menuBackground
         palette.dark: root.colors.outline
         onAboutToShow: ++root.actionRevision
+        function insertContextItem(ordinal, item) {
+            item.menuOrdinal = ordinal
+            let position = 0
+            while (position < gridContextMenu.count
+                   && gridContextMenu.itemAt(position).menuOrdinal < ordinal)
+                ++position
+            gridContextMenu.insertItem(position, item)
+        }
         Instantiator {
             model: shell.contextHeadActionIds
             delegate: contextRow
-            onObjectAdded: (index, object) => gridContextMenu.insertItem(index, object)
+            onObjectAdded: (index, object) => gridContextMenu.insertContextItem(index, object)
             onObjectRemoved: (index, object) => gridContextMenu.removeItem(object)
         }
-        Basic.MenuSeparator {}
+        Instantiator {
+            model: 1
+            delegate: Basic.MenuSeparator {
+                property int menuOrdinal: -1
+            }
+            onObjectAdded: (index, object) => gridContextMenu.insertContextItem(
+                gridContextMenu.headActionCount, object)
+            onObjectRemoved: (index, object) => gridContextMenu.removeItem(object)
+        }
         Instantiator {
             model: shell.contextBodyActionIds
             delegate: contextRow
-            onObjectAdded: (index, object) => gridContextMenu.insertItem(index + 2, object)
+            onObjectAdded: (index, object) => gridContextMenu.insertContextItem(
+                gridContextMenu.headActionCount + 1 + index, object)
             onObjectRemoved: (index, object) => gridContextMenu.removeItem(object)
         }
     }
