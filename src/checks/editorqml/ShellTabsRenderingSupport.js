@@ -67,17 +67,18 @@
     }
 
 
+    // TestCase.grabImage crops the window grab at the anchor's parent-relative
+    // x/y, so a region is the control's window rect shifted by that offset.
     function regionOf(testCase, image, anchor, control) {
-        var origin = control.mapToItem(anchor, 0, 0)
-        var anchorWin = anchor.mapToItem(null, 0, 0)
+        var win = control.mapToItem(null, 0, 0)
+        var x = win.x - anchor.x
+        var y = win.y - anchor.y
         var scaleX = anchor.width > 0 ? image.width / anchor.width : 1
         var scaleY = anchor.height > 0 ? image.height / anchor.height : 1
-        return { x0: Math.max(0, Math.round((origin.x + anchorWin.x) * scaleX)),
-                 y0: Math.max(0, Math.round((origin.y + anchorWin.y) * scaleY)),
-                 x1: Math.min(image.width - 1,
-                              Math.round((origin.x + anchorWin.x + control.width) * scaleX) - 1),
-                 y1: Math.min(image.height - 1,
-                              Math.round((origin.y + anchorWin.y + control.height) * scaleY) - 1) }
+        return { x0: Math.max(0, Math.round(x * scaleX)),
+                 y0: Math.max(0, Math.round(y * scaleY)),
+                 x1: Math.min(image.width - 1, Math.round((x + control.width) * scaleX) - 1),
+                 y1: Math.min(image.height - 1, Math.round((y + control.height) * scaleY) - 1) }
     }
 
     function collectAll(testCase, prefix) {

@@ -3,7 +3,7 @@ import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Porydaw.Ui
 
-Item {
+FocusScope {
     id: root
 
     required property QtObject controller

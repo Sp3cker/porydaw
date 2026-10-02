@@ -71,8 +71,7 @@ Item {
             onPressed: (mouse) => {
                 contextRoot.noteMenuSwallowingRelease = true
                 if (mouse.button === Qt.RightButton) {
-                    const surface = editorScene.item
-                        ? editorScene.item.selectedEditorSurface() : null
+                    const surface = editorScene.selectedEditorSurface()
                     const point = mapToItem(null, mouse.x, mouse.y)
                     gridContextMenu.close()
                     if (surface)

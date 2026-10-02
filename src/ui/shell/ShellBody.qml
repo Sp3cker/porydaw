@@ -7,7 +7,6 @@ Item {
     required property var root
     required property int transportToolExtent
     readonly property var shell: body.root.shellPresenter
-    readonly property alias sceneLoader: editorScene
     property bool dockSettingsReady: false
 
     Component.onCompleted: body.dockSettingsReady = true
@@ -58,41 +57,25 @@ Item {
             }
         }
 
-        Loader {
+        SongTabs {
             id: editorScene
-            objectName: "shellSceneLoader"
+            objectName: "shellSongTabs"
             SplitView.fillWidth: true
             SplitView.fillHeight: true
-            active: shell.sceneActive
             focus: true
-            onActiveFocusChanged: {
-                if (!item || activeFocus)
-                    return
-                let focus = root.activeFocusItem
-                while (focus) {
-                    if (focus.objectName === "drawerModalLayer"
-                            && focus.parent === root.contentItem && focus.visible)
-                        return
-                    focus = focus.parent
-                }
-                shell.session.cancelGridInput(0)
-            }
-            sourceComponent: SongTabs {
-                objectName: "shellSongTabs"
-                controller: shell.session.songTabs
-                layoutSpaces: shell.session.layoutSpaces
-                shellRouter: shell
-                onContextMenuAt: (x, y) => {
-                    root.actionRevision++
-                    gridContextMenu.menu.x = x
-                    gridContextMenu.menu.y = y
-                    gridContextMenu.menu.open()
-                }
+            controller: shell.session.songTabs
+            layoutSpaces: shell.session.layoutSpaces
+            shellRouter: shell
+            onContextMenuAt: (x, y) => {
+                root.actionRevision++
+                gridContextMenu.menu.x = x
+                gridContextMenu.menu.y = y
+                gridContextMenu.menu.open()
             }
             Text {
                 objectName: "shellEmptySongMessage"
                 anchors.centerIn: parent
-                visible: !shell.session.songOpen && shell.sceneActive
+                visible: !shell.session.songOpen
                 text: qsTr("Open a project and song to play with the Swift core.")
                 font: Qt.font(root.chromeTypography.body)
                 color: shell.session.palette.windowText

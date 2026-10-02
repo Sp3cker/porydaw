@@ -1,7 +1,7 @@
 import QtQuick
 import Porydaw.Ui
 
-Item {
+FocusScope {
     id: root
     objectName: "swiftRollOverlay"
     clip: true
@@ -13,8 +13,15 @@ Item {
     readonly property font captionFont: Qt.font(applicationSession.timeSigHost.typographyFonts.caption)
     property var shellRouter: null
     signal contextMenuAt(real x, real y)
+    readonly property int cancelReasonFocusLost: 0
     readonly property int cancelReasonPointerUngrabbed: 1
     readonly property int cancelReasonHidden: 2
+    // A drawer modal lives on the window's content item, outside this scope;
+    // a hidden surface already cancelled as hidden.
+    onActiveFocusChanged: {
+        if (!activeFocus && visible && !editorDrawer.modalOwnsFocus())
+            applicationSession.cancelGridInput(cancelReasonFocusLost)
+    }
     readonly property var gridModel: applicationSession.gridPresenter()
     readonly property var headersModel: applicationSession.trackHeadersPresenter()
     readonly property var headerPickerModel: applicationSession.headerVoicePickerModel()
