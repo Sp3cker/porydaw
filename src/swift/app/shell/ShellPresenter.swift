@@ -204,6 +204,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     public init() {
         pd_startup_trace_mark("presenter-begin")
         pd_startup_trace_window()
+        pd_window_cloak_until_first_frame()
         session = ApplicationSession()
         mouseHints = session.mouseHintsPresenter()
         let settingsStore = EngineSettingsStore()
