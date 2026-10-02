@@ -98,6 +98,8 @@ Item {
         palette.window: root.colors.menuBackground
         palette.dark: root.colors.outline
         onAboutToShow: ++root.actionRevision
+        // Async workspace incubation adds Instantiator rows before the static separator
+        // exists, so rows insert by ordinal; ShellMenuBar's separator-anchor would misorder.
         function insertContextItem(ordinal, item) {
             item.menuOrdinal = ordinal
             let position = 0
