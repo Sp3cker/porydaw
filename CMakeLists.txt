@@ -99,7 +99,7 @@ if(PORYDAW_ASAN)
         "$<$<LINK_LANGUAGE:Swift>:-sanitize=address>")
 endif()
 
-find_package(Qt6 6.11 REQUIRED COMPONENTS Qml Quick QuickControls2 Svg Widgets)
+find_package(Qt6 6.11 REQUIRED COMPONENTS Qml Quick QuickControls2 Widgets)
 qt_standard_project_setup()
 qt_policy(SET QTP0004 NEW)
 
@@ -115,7 +115,7 @@ if(APPLE)
     # NO_SYSTEM_FROM_IMPORTED keeps Qt's exact framework-header paths ahead of
     # unrelated non-framework Qt installs. Also classify those same paths as
     # system headers so project warning flags do not diagnose Qt internals.
-    foreach(qt_target IN ITEMS Core Gui Qml Quick QuickControls2 Svg Widgets)
+    foreach(qt_target IN ITEMS Core Gui Qml Quick QuickControls2 Widgets)
         porydaw_mark_interface_includes_system(Qt6::${qt_target})
     endforeach()
 endif()
@@ -188,6 +188,46 @@ qt_add_library(porydaw_app STATIC
     src/project/projectidentity.h
 )
 
+# Icons stand alone so the Controls style and Porydaw.Ui both import them.
+qt_add_library(porydaw_icons STATIC)
+set_source_files_properties(src/ui/icons/Icons.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+qt_add_qml_module(porydaw_icons
+    URI Porydaw.Icons
+    VERSION 1.0
+    RESOURCE_PREFIX /qt/qml
+    OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Porydaw/Icons"
+    NO_PLUGIN
+    QML_FILES
+        src/ui/icons/Icons.qml
+        src/ui/icons/AppIcon.qml
+)
+target_link_libraries(porydaw_icons PRIVATE Qt6::Quick)
+
+# The Controls style (qtquickcontrols2.conf): Fusion, with every image-backed
+# indicator drawn as an icon glyph. Its version is forwarded to Fusion, so it
+# tracks Qt's.
+qt_add_library(porydaw_style STATIC)
+qt_add_qml_module(porydaw_style
+    URI PorydawStyle
+    VERSION ${Qt6_VERSION_MAJOR}.${Qt6_VERSION_MINOR}
+    RESOURCE_PREFIX /qt/qml
+    OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/PorydawStyle"
+    NO_PLUGIN
+    IMPORTS
+        QtQuick.Controls.Fusion/auto
+    DEPENDENCIES
+        Porydaw.Icons
+    QML_FILES
+        src/ui/style/CheckBox.qml
+        src/ui/style/CheckIndicator.qml
+        src/ui/style/ComboBox.qml
+        src/ui/style/Menu.qml
+        src/ui/style/MenuItem.qml
+        src/ui/style/ProgressBar.qml
+        src/ui/style/SpinBox.qml
+)
+target_link_libraries(porydaw_style PRIVATE Qt6::Quick porydaw_icons)
+
 qt_add_qml_module(porydaw_app
     URI Porydaw.Ui
     VERSION 1.0
@@ -254,6 +294,7 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/ShellGridContextMenu.qml
         src/ui/shell/ThemedWindow.qml
         src/ui/shell/DialogWindow.qml
+        src/ui/shell/DisclosureLabel.qml
         src/ui/shell/AboutDialog.qml
         src/ui/shell/TransportBar.qml
         src/ui/shell/TransportButton.qml
@@ -276,57 +317,6 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/samplestudio/SampleWaveform.qml
 )
 
-qt_add_resources(porydaw_app "swift_roll_tabart"
-    PREFIX "/porydaw/swiftroll"
-    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swiftroll"
-    FILES
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-disabled.png
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-disabled@2x.png
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-enabled.png
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-enabled@2x.png
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-disabled.png
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-disabled@2x.png
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-enabled.png
-        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-enabled@2x.png
-        src/ui/songview/quick/swiftroll/tabart/window-close.svg
-)
-
-qt_add_resources(porydaw_app "voicegroup_type_icons"
-    PREFIX "/porydaw/voiceicons"
-    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
-    FILES
-        resources/waveform.svg
-        resources/wave-square.svg
-        resources/wave-triangle.svg
-        resources/wave-sine.svg
-        resources/waveform-path.svg
-        resources/piano-keyboard.svg
-        resources/drum.svg
-)
-
-qt_add_resources(porydaw_app "drawer_icons"
-    PREFIX "/icons"
-    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
-    FILES
-        resources/velocity.svg
-        resources/velocity_labels.svg
-        resources/automation.svg
-        resources/flat-music.svg
-)
-
-qt_add_resources(porydaw_app "transport_icons"
-    PREFIX "/icons"
-    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
-    FILES
-        resources/transport-play.svg
-        resources/transport-pause.svg
-        resources/transport-loop.svg
-        resources/transport-follow.svg
-        resources/transport-gotostart.svg
-        resources/transport-stop.svg
-        resources/transport-resonance.svg
-)
-
 qt_add_resources(porydaw_app "cursor_images"
     PREFIX "/cursors"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
@@ -338,7 +328,7 @@ qt_add_resources(porydaw_app "cursor_images"
         resources/right-drag@2x.png
 )
 
-# The application owns its Quick Controls style on every platform: Fusion
+# The application owns its Quick Controls style on every platform: PorydawStyle
 # draws entirely from the themed window palette. Platform styles (macOS,
 # Windows, FluentWinUI3) follow the OS appearance instead of the theme.
 qt_add_resources(porydaw_app "controls_style"
@@ -373,7 +363,7 @@ porydaw_enable_project_warnings(porydaw_app)
 # release CI refuses a tag that doesn't match it.
 target_compile_definitions(porydaw_app PUBLIC
     "$<$<NOT:$<COMPILE_LANGUAGE:Swift>>:PORYDAW_VERSION=\"${PROJECT_VERSION}\">")
-target_link_libraries(porydaw_app PUBLIC Qt6::Gui poryaaaa_engine)
+target_link_libraries(porydaw_app PUBLIC Qt6::Gui poryaaaa_engine porydaw_icons porydaw_style)
 target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick QtBridge)
 if(APPLE)
     # Keep framework headers ahead of stale non-framework Qt installs such
@@ -415,8 +405,15 @@ target_link_libraries(porydaw_shell_entry PRIVATE QtBridge PorydawApp)
 set(shell_qml
     src/ui/shell/PorydawApplication.qml
 )
-set_source_files_properties(${shell_qml} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-qt_add_executable(porydaw ${shell_qml} resources/fonts.qrc)
+# Bundled faces load by file URL from the same resource directory as the shell QML.
+set(porydaw_fonts
+    "${PROJECT_SOURCE_DIR}/resources/AtkinsonHyperlegibleNext-Regular.ttf"
+    "${PROJECT_SOURCE_DIR}/resources/AtkinsonHyperlegibleNext-SemiBold.ttf"
+    "${PROJECT_SOURCE_DIR}/resources/AtkinsonHyperlegibleMono-Regular.ttf"
+    "${PROJECT_SOURCE_DIR}/resources/icons/PorydawIcons.otf")
+set_source_files_properties(${shell_qml} ${porydaw_fonts} PROPERTIES
+    MACOSX_PACKAGE_LOCATION Resources)
+qt_add_executable(porydaw ${shell_qml} ${porydaw_fonts})
 if(NOT APPLE)
     target_sources(porydaw PRIVATE src/app/qt_main_executor.cpp)
 endif()
@@ -425,6 +422,22 @@ if(NOT APPLE)
         get_filename_component(qml_name "${qml}" NAME)
         file(GENERATE OUTPUT "$<TARGET_FILE_DIR:porydaw>/${qml_name}"
             INPUT "${CMAKE_CURRENT_SOURCE_DIR}/${qml}")
+    endforeach()
+endif()
+# Non-bundle executables (the non-Apple app, the QML check hosts) resolve resources
+# from their runtime directory; multi-config generators append the config.
+if(NOT APPLE OR PORYDAW_BUILD_CHECKS)
+    get_property(porydaw_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    set(porydaw_runtime_dirs "${PROJECT_BINARY_DIR}")
+    if(porydaw_multi_config)
+        list(TRANSFORM CMAKE_CONFIGURATION_TYPES PREPEND "${PROJECT_BINARY_DIR}/"
+            OUTPUT_VARIABLE porydaw_runtime_dirs)
+    endif()
+    foreach(runtime_dir IN LISTS porydaw_runtime_dirs)
+        foreach(font IN LISTS porydaw_fonts)
+            get_filename_component(font_name "${font}" NAME)
+            configure_file("${font}" "${runtime_dir}/${font_name}" COPYONLY)
+        endforeach()
     endforeach()
 endif()
 # Retain Swift @main and the original editor qrc from their archives
@@ -467,9 +480,6 @@ if(WIN32)
         add_custom_command(TARGET porydaw POST_BUILD
             COMMAND Qt6::windeployqt
                     --qmldir "${PROJECT_SOURCE_DIR}/src/ui"
-                    # SVG image/icon plugins are soft dependencies, so force
-                    # their deployment rather than relying on executable scanning.
-                    --include-plugins qsvg,qsvgicon
                     --no-translations
                     --no-opengl-sw
                     --no-system-d3d-compiler

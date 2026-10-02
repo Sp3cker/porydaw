@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.Basic as Basic
 import Porydaw.Ui
 import PorydawApp
 
@@ -39,7 +38,7 @@ Item {
         contentHeight: content.height + 2 * panel.margin
         clip: true
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: Basic.ScrollBar { policy: ScrollBar.AsNeeded }
+        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
         Item {
             id: content
@@ -48,7 +47,7 @@ Item {
             width: panel.contentWidth
             height: Math.max(scroll.height - 2 * panel.margin, log.y + log.height)
 
-            Basic.CheckBox {
+            CheckBox {
                 id: invert
                 objectName: "polyphonyInvert"
                 x: 0
@@ -153,7 +152,7 @@ Item {
                         font: Qt.font(panel.typography.bodyBold)
                         color: panel.colors.windowText
                     }
-                    Basic.Button {
+                    Button {
                         id: resetButton
                         objectName: "polyphonyReset"
                         anchors.right: parent.right

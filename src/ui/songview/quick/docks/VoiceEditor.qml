@@ -5,6 +5,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Porydaw.Ui
 import PorydawApp
+import Porydaw.Icons
 
 ColumnLayout {
     id: editor
@@ -163,14 +164,28 @@ ColumnLayout {
             text: "+"
             onClicked: editor.controller.requestNewSample(editor.controller.currentSlot)
         }
-        ToolButton {
-            objectName: "vgEditSampleButton"
-            visible: editor.draft.macro <= 2 && !editor.draft.isSynth
+        // Built only for DirectSound voices, the only ones that offer sample editing.
+        Loader {
+            active: editor.draft.macro <= 2 && !editor.draft.isSynth
+            visible: active
             Layout.preferredWidth: editor.baseFontPx * 2.08
             Layout.preferredHeight: editor.baseFontPx * 1.83
             Layout.minimumHeight: 0
-            text: "✎"
-            onClicked: editor.controller.requestEditSample(editor.controller.currentSlot)
+            sourceComponent: ToolButton {
+                id: editSample
+                objectName: "vgEditSampleButton"
+                text: qsTr("Edit Sample")
+                contentItem: Item {
+                    AppIcon {
+                        anchors.centerIn: parent
+                        width: Math.round(editor.baseFontPx)
+                        height: width
+                        icon: Icons.editSample
+                        color: editSample.palette.buttonText
+                    }
+                }
+                onClicked: editor.controller.requestEditSample(editor.controller.currentSlot)
+            }
         }
     }
 

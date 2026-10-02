@@ -37,23 +37,28 @@ ThemedWindow {
 
     FontLoader {
         id: regularFont
-        source: "qrc:/fonts/AtkinsonHyperlegibleNext-Regular.ttf"
+        source: shell.regularFontSource
     }
     FontLoader {
         id: semiboldFont
-        source: "qrc:/fonts/AtkinsonHyperlegibleNext-SemiBold.ttf"
+        source: shell.semiboldFontSource
     }
     FontLoader {
         id: monoFont
-        source: "qrc:/fonts/AtkinsonHyperlegibleMono-Regular.ttf"
+        source: shell.monoFontSource
+    }
+    FontLoader {
+        id: iconsFont
+        source: shell.iconsFontSource
     }
 
     Component.onCompleted: {
-        // Bundled qrc fonts load synchronously; never show text if packaging broke.
+        // Bundled faces load synchronously from local files; never show text if packaging broke.
         if (regularFont.status !== FontLoader.Ready
                 || semiboldFont.status !== FontLoader.Ready
-                || monoFont.status !== FontLoader.Ready) {
-            console.error("Cannot load the required bundled Atkinson fonts")
+                || monoFont.status !== FontLoader.Ready
+                || iconsFont.status !== FontLoader.Ready) {
+            console.error("Cannot load the required bundled fonts")
             Qt.exit(1)
             return
         }

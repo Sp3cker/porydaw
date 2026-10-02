@@ -1,7 +1,7 @@
 // Original two-column parameter selector, bound directly to the Swift page.
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls.Basic as Controls
+import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Porydaw.Ui
 

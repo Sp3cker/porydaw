@@ -33,15 +33,6 @@ public enum DrawerSectionKind: Int, CaseIterable, Sendable {
         }
     }
 
-    /// Existing toggle icon, tinted by the chrome's alpha mask.
-    public var iconResource: String {
-        switch self {
-        case .automation: "qrc:/icons/automation.svg"
-        case .velocity: "qrc:/icons/velocity.svg"
-        case .voiceChanges: "qrc:/icons/flat-music.svg"
-        }
-    }
-
     /// Position of this kind's toggle in `toggleOrder`. Page attachment never moves it.
     var toggleSlot: Int {
         switch self {

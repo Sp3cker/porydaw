@@ -148,6 +148,10 @@ public final class ShellPresenter: QmlInstantiableStatus {
     }()
 
     private let keybindings = KeybindingRegistry()
+    public let regularFontSource: String = BundledFont.regular.source
+    public let semiboldFontSource: String = BundledFont.semibold.source
+    public let monoFontSource: String = BundledFont.mono.source
+    public let iconsFontSource: String = BundledFont.icons.source
 
     @QtTracked public var session: ApplicationSession
     @QtTracked public var settingsStore: EngineSettingsStore

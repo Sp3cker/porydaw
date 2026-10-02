@@ -135,6 +135,33 @@ function requiredRatio(item) {
     return px >= 24 || (bold && px >= 18.67) ? 3.0 : 4.5
 }
 
+// The dominant color of the one-pixel ring around a box: the surface when the
+// ink outnumbers it inside, as with box-filling icon glyphs or gradient fills.
+function surfaceAroundBox(image, x0, y0, x1, y1) {
+    var counts = {}, best = null, bestCount = 0
+    function tally(px, py) {
+        if (px < 0 || py < 0 || px >= image.width || py >= image.height)
+            return
+        var c = image.pixel(px, py)
+        var rgb = [Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)]
+        var key = (rgb[0] << 16) | (rgb[1] << 8) | rgb[2]
+        counts[key] = (counts[key] || 0) + 1
+        if (counts[key] > bestCount) {
+            bestCount = counts[key]
+            best = rgb
+        }
+    }
+    for (var x = x0 - 1; x <= x1; ++x) {
+        tally(x, y0 - 1)
+        tally(x, y1)
+    }
+    for (var y = y0; y < y1; ++y) {
+        tally(x0 - 1, y)
+        tally(x1, y)
+    }
+    return best
+}
+
 // Measures one text item against a grab of its window root. Returns null when
 // the item is exempt or not drawn, otherwise the measured record.
 function measure(item, image, root) {
@@ -173,6 +200,8 @@ function measure(item, image, root) {
     if (best === null)
         return null
     var ink = [item.color.r * 255, item.color.g * 255, item.color.b * 255]
+    if (Math.hypot(ink[0] - best[0], ink[1] - best[1], ink[2] - best[2]) < 2)
+        best = surfaceAroundBox(image, x0, y0, x1, y1) || best
     var fg = [0, 1, 2].map(function(c) { return ink[c] * opacity + best[c] * (1 - opacity) })
     var spread = Math.hypot(fg[0] - best[0], fg[1] - best[1], fg[2] - best[2])
     // A glyph that was actually painted leaves pixels nearer its ink than its

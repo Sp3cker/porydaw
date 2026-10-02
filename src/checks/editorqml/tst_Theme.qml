@@ -169,7 +169,7 @@ TestCase {
         // dark-baseline palette pins (:135-193) observe QWidget rendering
         // with no QWidget layer in the Swift app. The user-observable half —
         // menu chrome follows the applied theme — lives in ShellWindow's
-        // Basic context-menu delegate bindings, asserted here.
+        // context-menu delegate bindings, asserted here.
         settings.setString("theme.mode", "vanilla")
         settings.setInt("theme.grid-line-contrast", 50)
         openThemedShell()

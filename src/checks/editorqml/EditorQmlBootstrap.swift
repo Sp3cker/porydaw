@@ -80,6 +80,12 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
     /// The runner's scratch directory, staged before Qt builds any QML object.
     public var projectRoot: String = EditorQmlBootstrap.stagedProjectRoot
 
+    /// The staged bundled-face files the production shell loads.
+    public let regularFontSource: String = BundledFont.regular.source
+    public let semiboldFontSource: String = BundledFont.semibold.source
+    public let monoFontSource: String = BundledFont.mono.source
+    public let iconsFontSource: String = BundledFont.icons.source
+
     // ---- reference profile capture -----------------------------------------
 
     /// `true` only inside a profile child, so the ordinary single run skips the

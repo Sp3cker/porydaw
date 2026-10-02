@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Controls.Basic as Basic
+import QtQuick.Controls
 import Porydaw.Ui
 
 Item {
@@ -19,8 +19,8 @@ Item {
     activeFocusOnTab: true
     Accessible.role: Accessible.Slider
     Accessible.name: qsTr("Application output volume")
-    Basic.ToolTip.text: qsTr("Application output volume. Does not change the song volume or saved song settings.")
-    Basic.ToolTip.visible: hovered
+    ToolTip.text: qsTr("Application output volume. Does not change the song volume or saved song settings.")
+    ToolTip.visible: hovered
 
     Repeater {
         model: 11

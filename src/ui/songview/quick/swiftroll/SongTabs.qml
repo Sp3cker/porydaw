@@ -1,7 +1,8 @@
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls
 import QtQuick.Layouts
 import Porydaw.Ui
+import Porydaw.Icons
 
 FocusScope {
     id: root
@@ -138,12 +139,13 @@ FocusScope {
         width: root.scrollExtent
         padding: 0
         contentItem: Item {
-            Image {
-                source: "qrc:/porydaw/swiftroll/tabart/tab-arrow-" + (control.pointsLeft ? "left" : "right") + (control.enabled ? "-enabled.png" : "-disabled.png")
-                sourceSize.width: 4
-                x: Math.floor((parent.width - width) / 2)
-                y: Math.floor((parent.height - height) / 2)
-                smooth: false
+            AppIcon {
+                anchors.centerIn: parent
+                width: root.scrollExtent
+                height: root.scrollExtent
+                icon: control.pointsLeft ? Icons.scrollTabsLeft : Icons.scrollTabsRight
+                color: control.enabled ? root.controller.palette.windowText
+                                       : root.controller.palette.disabledText
             }
         }
         background: Rectangle {
@@ -248,16 +250,20 @@ FocusScope {
                             padding: 2
                             focusPolicy: Qt.NoFocus
                             enabled: !selectButton.session.bankTransitionPending
-                            display: AbstractButton.IconOnly
-                            icon.source: "qrc:/porydaw/swiftroll/tabart/window-close.svg"
-                            icon.width: root.scrollExtent
-                            icon.height: root.scrollExtent
-                            icon.color: selectButton.down
-                                          ? root.controller.palette.buttonPressedText
-                                          : (selectButton.checked && !selectButton.hovered
-                                             && !closeButton.hovered)
-                                            ? root.controller.palette.selectionText
-                                            : root.controller.palette.windowText
+                            contentItem: Item {
+                                AppIcon {
+                                    anchors.centerIn: parent
+                                    width: root.scrollExtent
+                                    height: root.scrollExtent
+                                    icon: Icons.closeTab
+                                    color: selectButton.down
+                                           ? root.controller.palette.buttonPressedText
+                                           : (selectButton.checked && !selectButton.hovered
+                                              && !closeButton.hovered)
+                                             ? root.controller.palette.selectionText
+                                             : root.controller.palette.windowText
+                                }
+                            }
                             background: Item {}
                             Accessible.name: qsTr("Close %1").arg(selectButton.session.title)
                             ToolTip.visible: hovered

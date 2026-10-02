@@ -22,6 +22,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Porydaw.Ui
+import Porydaw.Icons
 
 FocusScope {
     id: drawerScope
@@ -67,13 +68,13 @@ FocusScope {
         return ""
     }
 
-    function iconResourceFor(kind) {
+    function iconFor(kind) {
         switch (kind) {
-        case drawerScope.automationKind: return "qrc:/icons/automation.svg"
-        case drawerScope.velocityKind: return "qrc:/icons/velocity.svg"
-        case drawerScope.voiceChangesKind: return "qrc:/icons/flat-music.svg"
+        case drawerScope.automationKind: return Icons.automation
+        case drawerScope.velocityKind: return Icons.velocity
+        case drawerScope.voiceChangesKind: return Icons.flat
         }
-        return ""
+        return ({})
     }
 
 
@@ -138,51 +139,6 @@ FocusScope {
             loader.item.forceActiveFocus(Qt.OtherFocusReason)
     }
 
-    // A monochrome SVG refilled with source-in (the retired chrome's CompositionMode_SourceIn).
-    // Rasterized at device pixels and reloaded whenever they change, so it never upscales.
-    component TintedIcon: Canvas {
-        id: tinted
-
-        required property url source
-        required property color tint
-        readonly property int pixelWidth: Math.ceil(width * tinted.Screen.devicePixelRatio)
-        readonly property int pixelHeight: Math.ceil(height * tinted.Screen.devicePixelRatio)
-        property int loadedWidth: 0
-        property int loadedHeight: 0
-
-        onPixelWidthChanged: tinted.sync()
-        onPixelHeightChanged: tinted.sync()
-        onTintChanged: tinted.requestPaint()
-        onImageLoaded: tinted.requestPaint()
-        onPaint: tinted.paintIcon()
-        Component.onCompleted: tinted.sync()
-
-        function sync() {
-            if (pixelWidth <= 0 || pixelHeight <= 0)
-                return
-            if (pixelWidth === loadedWidth && pixelHeight === loadedHeight) {
-                requestPaint()
-                return
-            }
-            unloadImage(source)
-            loadedWidth = pixelWidth
-            loadedHeight = pixelHeight
-            loadImage(source, Qt.size(pixelWidth, pixelHeight))
-        }
-
-        function paintIcon() {
-            if (width <= 0 || height <= 0 || !isImageLoaded(source))
-                return
-            var ctx = getContext("2d")
-            ctx.clearRect(0, 0, width, height)
-            ctx.globalCompositeOperation = "source-over"
-            ctx.drawImage(source, 0, 0, width, height)
-            ctx.globalCompositeOperation = "source-in"
-            ctx.fillStyle = tint
-            ctx.fillRect(0, 0, width, height)
-        }
-    }
-
     component DrawerSection: Item {
         id: section
 
@@ -196,7 +152,7 @@ FocusScope {
         anchors.fill: parent
 
         readonly property string keyName: drawerScope.keyNameFor(section.kind)
-        readonly property string iconResource: drawerScope.iconResourceFor(section.kind)
+        readonly property var icon: drawerScope.iconFor(section.kind)
         readonly property var sectionState: drawerScope.presenter.section(section.kind)
         // Available means a page is attached with a resolved URL: that kind owns
         // a toggle, however hidden it is, and only an available visible kind
@@ -327,10 +283,11 @@ FocusScope {
             Accessible.focusable: true
             Accessible.onPressAction: toggle.activate()
 
-            TintedIcon {
+            AppIcon {
                 anchors.fill: parent
-                source: section.iconResource
-                tint: drawerScope.drawerPalette.keyboardLabel
+                icon: section.icon
+                color: section.sectionState.visible ? drawerScope.drawerPalette.selectionText
+                                                     : drawerScope.drawerPalette.windowText
             }
 
             MouseArea {
@@ -484,13 +441,13 @@ FocusScope {
         Accessible.focusable: true
         Accessible.onPressAction: detent.activate()
 
-        TintedIcon {
+        AppIcon {
             anchors.fill: parent
             anchors.margins: drawerScope.presenter.detentIconInset
-            source: "qrc:/icons/velocity_labels.svg"
-            tint: drawerScope.velocityModel && drawerScope.velocityModel.detentsEnabled
-                  ? drawerScope.drawerPalette.selectionRing
-                  : drawerScope.drawerPalette.keyboardLabel
+            icon: Icons.velocityLabels
+            color: drawerScope.velocityModel && drawerScope.velocityModel.detentsEnabled
+                   ? drawerScope.drawerPalette.selectionRing
+                   : drawerScope.drawerPalette.keyboardLabel
         }
 
         MouseArea {

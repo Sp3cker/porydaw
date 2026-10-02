@@ -148,6 +148,7 @@ add_library(PorydawApp STATIC
     headers/TrackActivity.swift
     headers/TrackHeadersGeometry.swift
     headers/TrackHeadersInput.swift
+    shell/BundledFont.swift
     shell/PreferencesStore.swift
     shell/ShellPresenter.swift
     shell/ShellAppearance.swift

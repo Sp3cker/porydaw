@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Porydaw.Ui
 import PorydawApp
 
 Flickable {
@@ -54,10 +55,12 @@ Flickable {
             ToolTip.visible: hovered
         }
         Button {
+            id: controllerToggle
             objectName: "importControllerToggle"
             flat: true
             visible: page.controller.hasControllerRows
-            text: (page.controllersExpanded ? "▾ " : "▸ ") + qsTr("CC commands")
+            text: qsTr("CC commands")
+            contentItem: DisclosureLabel { control: controllerToggle; expanded: page.controllersExpanded }
             onClicked: page.controllersExpanded = !page.controllersExpanded
         }
         ColumnLayout {

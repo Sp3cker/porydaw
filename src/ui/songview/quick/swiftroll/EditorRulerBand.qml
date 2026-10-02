@@ -1,5 +1,6 @@
 import QtQuick
 import Porydaw.Ui
+import Porydaw.Icons
 
 Item {
     id: rulerModule
@@ -163,17 +164,16 @@ Item {
                     maximumLineCount: 1
                     verticalAlignment: Text.AlignVCenter
                 }
-                Text {
+                AppIcon {
                     id: gridControlArrow
                     objectName: "gridControlArrow"
                     anchors.right: parent.right
                     anchors.rightMargin: rulerControls.controlsGap
                     anchors.verticalCenter: parent.verticalCenter
+                    width: rulerControls.controlsFont.pixelSize
+                    height: width
+                    icon: Icons.comboArrow
                     color: root.gridModel.palette.buttonText
-                    font: rulerControls.controlsFont
-                    text: "▾"
-                    textFormat: Text.PlainText
-                    renderType: Text.NativeRendering
                 }
                 MouseArea {
                     id: gridArea

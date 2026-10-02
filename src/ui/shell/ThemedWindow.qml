@@ -17,9 +17,8 @@ T.ApplicationWindow {
 
     // Every surface role is paired with a text role that keeps 4.5:1 on it:
     // text/placeholderText on base, windowText on window/dark/midlight,
-    // buttonText on button, highlightedText on highlight and on light (Basic
-    // item delegates paint their highlight with `light`), toolTipText on
-    // toolTipBase, brightText on dark.
+    // buttonText on button, highlightedText on highlight and light,
+    // toolTipText on toolTipBase, brightText on dark.
     palette.window: colors.windowBackground
     palette.base: colors.inputBackground
     palette.alternateBase: colors.alternateBackground

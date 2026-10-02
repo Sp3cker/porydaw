@@ -250,12 +250,18 @@ function qmlReachability(
   const ui = qml.filter((file) => file.path.startsWith("src/ui/"));
   const byPath = new Map(ui.map((file) => [file.path, file]));
   const reachable = new Set<string>();
-  const module =
-    /qt_add_qml_module\(porydaw_app\b[\s\S]*?\bQML_FILES\b([\s\S]*?)\n\s*\)/
-      .exec(cmake);
-  if (!module) throw new Error("porydaw_app QML_FILES block not found");
-  for (const path of module[1].match(/src\/ui\/[^\s)]+\.qml/g) ?? []) {
-    reachable.add(path);
+  const modules = [
+    ...cmake.matchAll(
+      /qt_add_qml_module\((\w+)\b[\s\S]*?\bQML_FILES\b([\s\S]*?)\n\s*\)/g,
+    ),
+  ];
+  if (!modules.some((module) => module[1] === "porydaw_app")) {
+    throw new Error("porydaw_app QML_FILES block not found");
+  }
+  for (const module of modules) {
+    for (const path of module[2].match(/src\/ui\/[^\s)]+\.qml/g) ?? []) {
+      reachable.add(path);
+    }
   }
   const shell = /set\(shell_qml\s+(src\/ui\/[^\s)]+\.qml)\s*\)/.exec(cmake)
     ?.[1];
