@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Templates as T
 
 // Base of every Porydaw top-level window. The window palette assigns every Qt
 // palette role, in every color group, from the applied theme, so no control,
@@ -11,8 +11,9 @@ import QtQuick.Controls
 // Mapping follows the legacy application palette (themeruntime.cpp
 // applyPaletteGroup). Text roles are assigned per color group so the disabled
 // ink never races the enabled ink during a theme switch.
-ApplicationWindow {
+T.ApplicationWindow {
     required property QtObject colors
+    color: palette.window
 
     // Every surface role is paired with a text role that keeps 4.5:1 on it:
     // text/placeholderText on base, windowText on window/dark/midlight,

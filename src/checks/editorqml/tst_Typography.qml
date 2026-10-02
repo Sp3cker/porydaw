@@ -95,7 +95,7 @@ TestCase {
     }
 
     function selectedSurface() {
-        var pages = shell.sceneLoader.item
+        var pages = shell.sceneLoader ? shell.sceneLoader.item : null
         if (!pages)
             return null
         var tabs = shell.shellPresenter.session.songTabs
@@ -195,6 +195,10 @@ TestCase {
                 "the published Two token rounds half of the captured base")
         compare(session.layoutSpaces.eight, session.baseFontPx * 2,
                 "the published Eight token doubles the captured base")
+        tryVerify(function() {
+            return findChild(shell, "shellSettingsLoader") !== null
+                && findChild(shell, "shellAboutLoader") !== null
+        }, 5000, "the mounted controls expose the on-demand dialog loaders")
         findChild(shell, "shellSettingsLoader").active = true
         findChild(shell, "shellAboutLoader").active = true
         var settings = findChild(shell, "shellSettingsDialog")

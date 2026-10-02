@@ -34,6 +34,13 @@ The application entry point is the Swift shell
 (`src/swift/app/shell/PorydawShellApp.swift`), which loads
 `src/ui/shell/PorydawApplication.qml` and `ShellWindow.qml`.
 
+The persistent shell restores geometry, palette, and bundled Atkinson fonts before
+showing. After its first frame, it constructs `ShellContent.qml` atomically;
+controls and editor attachment then release saved-session restoration and audio preparation.
+Hidden windows do not start that work. Explicit project opens still prepare their
+dependencies on demand. Closing before the frame or during content creation keeps
+the saved-session recipe and waits for scene/audio ownership to settle.
+
 Builds run through Deno tasks against a checkout-local Qt 6.11. On macOS the
 Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.
 The Swift app builds on macOS and Linux. Linux ARM64 has been validated with
@@ -79,6 +86,21 @@ Rendering checks observe painted output rather than pinning renderer-specific pr
 Update affected proof ledgers with their check changes; compile only referenced support.
 
 ### Startup profiling
+
+Measure the Release process's first submitted window frame:
+
+```bash
+deno task build:app --release
+deno task bench:startup --project /path/to/project --song mus_title --check
+```
+
+The monotonic interval starts immediately before process creation and ends at the
+native render-thread `QQuickWindow::frameSwapped` marker. This means a frame queued
+for presentation, not physical display scanout or an editable/audio-ready song.
+The first run is reported separately, without claiming a cold OS cache; `--check`
+requires every launch, including that first run, to stay strictly below 300 ms.
+Only the benchmark's own processes are terminated. `--help` lists run-count,
+budget, and timeout options.
 
 `bash autoresearch.sh` measures the configured live-project cold launch on a
 Debug build, including song restoration and a settled rendered window. It is

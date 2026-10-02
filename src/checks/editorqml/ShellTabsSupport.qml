@@ -94,6 +94,9 @@ TestCase {
         seedDrawerPrefs()
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
+        verify(waitForNative(function() {
+            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the presented window mounts its deferred editor scene")
         var toolbar = findChild(shell, "transportToolbar")
         verify(toolbar !== null && toolbar.height > 0, "mounted transport has a measured height")
         shell.height += toolbar.height
@@ -133,7 +136,7 @@ TestCase {
 
     function tabs() { return shell.shellPresenter.session.songTabs }
     function session() { return shell.shellPresenter.session }
-    function tabsRoot() { return shell.sceneLoader.item }
+    function tabsRoot() { return shell && shell.sceneLoader ? shell.sceneLoader.item : null }
     function strip() { return findChild(tabsRoot(), "songTabStrip") }
     function pages() { return findChild(tabsRoot(), "songTabPages") }
     function selectButton(tabId) { return findChild(tabsRoot(), "songTabSelect_" + tabId) }

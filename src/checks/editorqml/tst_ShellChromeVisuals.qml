@@ -47,7 +47,7 @@ TestCase {
     }
 
     function selectedSurface() {
-        var pages = shell.sceneLoader.item
+        var pages = shell && shell.sceneLoader ? shell.sceneLoader.item : null
         if (!pages)
             return null
         var tabs = shell.shellPresenter.session.songTabs
@@ -107,8 +107,11 @@ TestCase {
             return session.songOpen || session.lastSaveError.length > 0
         }, 30000)
         verify(session.songOpen, "Route 101 loads from the staged project")
-        var surface = selectedSurface()
-        verify(surface !== null, "the selected tab page is mounted")
+        var surface = null
+        verify(waitForNative(function() {
+            surface = selectedSurface()
+            return surface !== null
+        }, 5000), "the selected tab page is mounted")
         var grid = surface.gridModel
         verify(waitForNative(function() { return grid.renderedNoteCount > 0 }, 5000),
                "the roll publishes notes")

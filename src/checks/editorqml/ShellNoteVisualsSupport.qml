@@ -79,7 +79,7 @@ TestCase {
     }
 
     function selectedSurface() {
-        var pages = shell.sceneLoader.item
+        var pages = shell && shell.sceneLoader ? shell.sceneLoader.item : null
         if (!pages)
             return null
         var tabs = shell.shellPresenter.session.songTabs

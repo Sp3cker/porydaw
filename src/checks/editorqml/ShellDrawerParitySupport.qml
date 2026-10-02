@@ -104,7 +104,7 @@ TestCase {
         waitForRendering(tabsRoot())
     }
     function session() { return shell.shellPresenter.session }
-    function tabsRoot() { return shell.sceneLoader.item }
+    function tabsRoot() { return shell && shell.sceneLoader ? shell.sceneLoader.item : null }
     function selectedSurface() {
         var tabs = session().songTabs
         var page = findChild(tabsRoot(), "songTab_" + tabs.selectedId)

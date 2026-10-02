@@ -22,10 +22,17 @@ Rectangle {
     color: colors.chromeBackground
     readonly property int edgeMargin: Math.max(1, Math.round(baseFontPx / 6))
     readonly property int toolbarSeparatorExtent: 6
-    readonly property real masterCaptionWidth: Math.ceil(captionMetrics.boundingRect(qsTr("Volume")).width)
-                                               + layoutSpaces.two + layoutSpaces.one
-    readonly property real outputCaptionWidth: Math.ceil(captionMetrics.boundingRect(qsTr("Output")).width)
-                                               + layoutSpaces.two + layoutSpaces.one
+    // Invoking FontMetrics methods alone does not track a change to their font.
+    readonly property real masterCaptionWidth: {
+        captionMetrics.font
+        return Math.ceil(captionMetrics.boundingRect(qsTr("Volume")).width)
+            + layoutSpaces.two + layoutSpaces.one
+    }
+    readonly property real outputCaptionWidth: {
+        captionMetrics.font
+        return Math.ceil(captionMetrics.boundingRect(qsTr("Output")).width)
+            + layoutSpaces.two + layoutSpaces.one
+    }
     readonly property bool outputFits: width >= 2 * edgeMargin + 15 + 7 * toolExtent
         + Math.ceil(clockHintWidth) + 6 * inset
         + transportScaleSlot.Layout.preferredWidth + Math.round(baseFontPx * 2.25) + 2

@@ -175,6 +175,9 @@ TestCase {
         openThemedShell()
         tryCompare(shell.shellPresenter, "themeMode", "vanilla")
         var palette = shell.shellPresenter.session.palette
+        verify(waitForNative(function() {
+            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the presented window mounts its deferred editor scene")
         var menu = findChild(shell, "shellGridContextMenu")
         verify(menu, "the production context menu exists")
         var copyItem = findChild(menu, "shellContextAction_roll.copy")

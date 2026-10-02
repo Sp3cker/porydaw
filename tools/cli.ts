@@ -80,6 +80,7 @@ Examples:
   build:app        build the application
   build:checks     build the application, checks, and mid2agb
   build:render     build the Swift-backed offline renderer
+  bench:startup    benchmark existing Release app spawn to first frame
   checks           build and run checks
   checks:qml       build and run the QML drawer lane
   checks:qml-roll  build and run the QML roll window lane

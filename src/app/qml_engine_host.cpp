@@ -1,7 +1,11 @@
 #include "qml_engine_host.h"
+#include "native_host.h"
 
 #include <QtCore/qthread.h>
 #include <QtQml/qqmlapplicationengine.h>
+#include <QtQuick/qquickwindow.h>
+#include <cstdio>
+#include <cstdlib>
 
 #include <qappcpp.h>
 
@@ -24,4 +28,35 @@ bool pd_qml_add_import_path(const char *path)
         return false;
     engine->addImportPath(QString::fromUtf8(path));
     return true;
+}
+
+// The external launch probe owns the clock, including process creation and dyld.
+void pd_startup_trace_mark(const char *stage)
+{
+    if (std::getenv("PORYDAW_STARTUP_TRACE"))
+        std::fprintf(stderr, "PORYDAW_STARTUP_TRACE %s\n", stage);
+}
+
+// Observe submission on the render thread, not a delayed GUI-thread signal handler.
+void pd_startup_trace_window()
+{
+    if (!std::getenv("PORYDAW_STARTUP_TRACE"))
+        return;
+    auto *engine = pd_qml_engine();
+    QObject::connect(engine, &QQmlApplicationEngine::objectCreated, engine,
+                     [](QObject *object, const QUrl &) {
+                         auto *window = qobject_cast<QQuickWindow *>(object);
+                         if (!window)
+                             return;
+                         pd_startup_trace_mark("root-created");
+                         QObject::connect(
+                             window, &QQuickWindow::frameSwapped, window,
+                             [seen = false]() mutable {
+                                 if (!seen) {
+                                     seen = true;
+                                     pd_startup_trace_mark("first-frame");
+                                 }
+                             },
+                             Qt::DirectConnection);
+                     });
 }

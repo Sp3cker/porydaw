@@ -94,7 +94,7 @@ TestCase {
     }
 
     function surface() {
-        if (!shell || !shell.sceneLoader.item)
+        if (!shell || !shell.sceneLoader || !shell.sceneLoader.item)
             return null
         var tabs = shell.shellPresenter.session.songTabs
         var page = findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId)

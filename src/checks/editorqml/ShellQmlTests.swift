@@ -1,5 +1,4 @@
 import Foundation
-import PorydawApp
 import PorydawAppCommands
 import PorydawBankLease
 import PorydawCore
@@ -7,6 +6,7 @@ import PorydawPlaybackNative
 import QtBridge
 import QtBridgeCpp
 
+@testable import PorydawApp
 @testable import PorydawAppAudio
 
 /// Hosts the actual production ShellWindow through Qt Quick Test. Each entry
@@ -251,6 +251,22 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
         EditorViewStateCodec.saveTabs(
             WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: songs, selectedSong: selected),
             store: preferences)
+    }
+
+    public func startupAudioState() -> String {
+        guard let session = qmlChildren.compactMap({ $0 as? ShellPresenter }).first?.session else {
+            return "missing-shell"
+        }
+        switch session.audioReadiness {
+        case .idle: return "idle"
+        case .preparing: return "preparing"
+        case .ready: return "ready"
+        case .failed: return "failed"
+        }
+    }
+
+    public func savedStartupSongs() -> [String] {
+        EditorViewStateCodec.loadTabs(store: preferences).orderedSongs
     }
 
     /// Widget oracle geometry for the standalone production voicegroup panel.

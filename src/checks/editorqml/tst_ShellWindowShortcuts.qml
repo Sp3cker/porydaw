@@ -308,6 +308,9 @@ ShellWindowSupport {
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000,
                    "the unloaded shell window becomes active")
+        waitForShellScene()
+        tryCompare(shell.menuBar, "visible", true, 3000,
+                   "the unloaded shell mounts its visible menu controls")
         var session = shell.shellPresenter.session
         compare(session.songOpen, false,
                 "the unloaded shell opens no song workspace")

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawBankLease
 import QtBridge
 
 #if canImport(Darwin)
@@ -39,6 +40,7 @@ struct PorydawShellApp: QApp {
     ]
 
     init() {
+        pd_startup_trace_mark("app-init")
         #if !canImport(Darwin)
             _createExecutors(factory: PorydawExecutorFactory.self)
         #endif

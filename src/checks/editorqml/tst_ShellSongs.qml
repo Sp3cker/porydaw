@@ -29,6 +29,12 @@ TestCase {
     function waitForNative(predicate, timeoutMs) {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
+    function waitForShellScene() {
+        verify(waitForNative(function() {
+            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the presented window mounts its deferred editor scene")
+    }
+
 
 
     function cleanup() {
@@ -354,6 +360,8 @@ TestCase {
         verify(shell !== null, "the production window loads")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
+        waitForShellScene()
+        verify(waitForRendering(panel()), "the mounted dock completes its layout")
         const session = shell.shellPresenter.session
         compare(panel().baseFontPx, session.baseFontPx,
                 "Songs pane derives its geometry from the captured session base before project open")
@@ -739,6 +747,7 @@ TestCase {
         verify(shell !== null, "the production window loads")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
+        waitForShellScene()
         const dock = findChild(shell, "swiftDockColumn")
         const songs = findChild(shell, "swiftSongsPanel")
         const voice = findChild(shell, "voicegroupPanel")

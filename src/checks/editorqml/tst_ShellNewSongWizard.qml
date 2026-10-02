@@ -27,6 +27,10 @@ TestCase {
         verify(bootstrap.resetPreferences(), "fresh shell preferences")
         shell = shellComponent.createObject(null)
         verify(shell !== null, "production shell loads")
+        verify(waitForNative(function() {
+            return shell.visible && shell.menuBar !== null && shell.menuBar.visible
+                && shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the presented shell mounts its visible controls")
         return shell.shellPresenter
     }
     function openProject() {

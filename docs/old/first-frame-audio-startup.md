@@ -67,3 +67,48 @@ cancellation, and settlement semantics above are unchanged. `MidiFile` and
 off-main; the song composes on the main actor at `openTab`. Residual: the
 prefetch's `openSong` still publishes bank views through the main actor (a
 no-op before adoption) — a later change can defer that publish to adoption.
+
+## Superseded 2026-10-02: window-first startup
+
+The eager-construction policy above is superseded. `ShellWindow` now owns only
+the persistent window, bundled-font registration, restored chrome, and close
+coordination before its first frame. It uses the native ApplicationWindow
+template directly, avoiding Controls style initialization for an empty window.
+The captured font's requested pixel size supplies typography without resolving
+an unused system font face. Saved geometry is applied before native show.
+
+The actual `frameSwapped` delivery requests the separate `ShellContent.qml`.
+Its control tree is constructed synchronously after that frame, preserving menu
+ordering and dialog readiness. Once preferences and the editor scene are restored,
+`contentReady` releases audio preparation and the existing
+startup prefetch/open path. Hidden windows remain idle. Explicit-open precedence
+and the single-flight audio ownership contract remain unchanged.
+
+The outer content Loader owns scene-removal acknowledgement, including the case
+where it was already inactive and never created an item. Close-before-frame and
+close-on-first-frame checks preserve the saved song recipe. All three bundled
+Atkinson faces must be ready before the window shows; missing fonts or failed
+content creation fail visibly in diagnostics rather than displaying fallback
+text or leaving a permanently empty application.
+
+`deno task bench:startup` measures monotonic process spawn through the native
+render-thread frame marker. It includes the first launch in the strict budget
+and labels the result as queued presentation, not physical display scanout.
+
+Measured on macOS arm64 with the Release application, the Hearth project, and
+`mus_title`: the previous eager startup's warm median was 485.15 ms. The final
+ordinary-launch batch passed 11/11 launches below 300 ms: median 248.58 ms,
+range 223.84–281.03 ms. The first launch immediately after linking was 370.28 ms
+and failed the strict budget; this change does not establish a cold-start guarantee.
+The benchmark reports that first launch rather than silently warming or dropping it.
+
+The minimum-work audit removed the unused system-face lookup, pre-frame Controls
+style initialization, and the application's Widgets link dependency. Metal
+prewarming and executable-symbol pruning were measured and rejected, not retained
+as speculative optimizations.
+
+The final production-bundle smoke verified the same regular, semibold, and mono
+Atkinson faces at the first window frame and after song rendering, 115 visible
+notes, an advancing playback clock with PCM/CGB activity, stop, and graceful close
+after scene removal. The affected check sweep passed: 90 shell lanes, 13 selected
+Swift-core groups, two QML lanes, one piano-roll lane, and the bridge guard.

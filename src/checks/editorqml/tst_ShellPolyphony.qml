@@ -46,6 +46,9 @@ TestCase {
         verify(shell, "the production shell mounts")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
+        verify(waitForNative(function() {
+            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the presented window mounts its deferred editor scene")
         return shell.shellPresenter
     }
 
@@ -103,6 +106,9 @@ TestCase {
             compare(text.font.pixelSize, body.pixelSize, name + " uses the body size")
             compare(text.font.weight, body.weight, name + " keeps regular body weight")
         }
+        verify(waitForNative(function() {
+            return findChild(pane, "polyphonyChannelCell") !== null
+        }, 5000), "the visible channel group publishes its first cells")
         const cell = findChild(pane, "polyphonyChannelCell")
         verify(cell !== null, "mounted channel group has a rendered cell")
         compare(cell.width, Math.round(session.baseFontPx * 46 / 12),

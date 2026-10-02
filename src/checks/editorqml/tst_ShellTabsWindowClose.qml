@@ -61,7 +61,8 @@ ShellTabsSupport {
                 "A177 the window close preserves the second song's pinned MIDI bytes")
         compare(fileProbe.projectTreeFingerprint(root), tree,
                 "the switch-and-close journey leaves every staged project file unchanged")
-        safeDisconnect(dialog.visibleChanged, onVisible)
+        if (dialog)
+            safeDisconnect(dialog.visibleChanged, onVisible)
         safeDisconnect(session().closeCancelled, onCancelled)
         projectReadySpy.target = null
     }

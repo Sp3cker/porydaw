@@ -44,6 +44,12 @@ TestCase {
     function waitForNative(predicate, timeoutMs) {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
+    function waitForShellScene() {
+        verify(waitForNative(function() {
+            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the presented window mounts its deferred editor scene")
+    }
+
 
     function cleanup() {
         if (!shell)
@@ -72,6 +78,7 @@ TestCase {
         verify(shell !== null)
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
+        waitForShellScene()
         const session = shell.shellPresenter.session
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         verify(waitForNative(function() {
@@ -82,7 +89,7 @@ TestCase {
         tryCompare(session.songTabs, "selectedTabShowsEvents", true, 3000)
         let page = null
         tryVerify(function() {
-            page = findChild(shell.sceneLoader.item, "eventListPage")
+            page = shell.sceneLoader ? findChild(shell.sceneLoader.item, "eventListPage") : null
             return page !== null && page.visible
         }, 3000, "event-list page mounts")
         const table = findChild(page, "eventListTable")

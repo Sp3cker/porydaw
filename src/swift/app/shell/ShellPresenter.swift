@@ -1,5 +1,6 @@
 import Foundation
 import PorydawAppCommands
+import PorydawBankLease
 import QtBridge
 
 @MainActor
@@ -116,7 +117,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
         "transport.go_to_start", "transport.play", "transport.play_pause",
         "transport.pause", "transport.stop", "transport.loop",
     ]
-    private static let viewIds = allActionIds.filter { $0.hasPrefix("view.") }
+    private static let viewIds =
+        allActionIds.filter { $0.hasPrefix("view.") }
         + ["transport.follow_playhead"]
     private static let toolsIds = ["tools.import_sample"]
     private static let contextHeadIds = ["edit.set_velocity"]
@@ -173,8 +175,10 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     @QtTracked public var closeReady = false
     @QtTracked public var sceneActive = true
+    @QtTracked public var contentRequested = false
     @QtTracked public var startupBegun = false
-    @QtIgnored var hasRestoredChrome = false
+    private var hasRestoredChrome = false
+    private var hasLoadedContent = false
     @QtIgnored var closeSettlementTask: Task<Void, Never>?
     @QtTracked public var themeMode = "vanilla"
     @QtTracked public var gridLineContrast = 50
@@ -193,13 +197,13 @@ public final class ShellPresenter: QmlInstantiableStatus {
     private var closing = false
 
     public init() {
+        pd_startup_trace_mark("presenter-begin")
+        pd_startup_trace_window()
         session = ApplicationSession()
         mouseHints = session.mouseHintsPresenter()
         let settingsStore = EngineSettingsStore()
         self.settingsStore = settingsStore
         settingsStore.attach(session: session)
-        session.prepareAudio()
-        session.prefetchStartup(arguments: CommandLine.arguments)
         session.onVoicegroupCatalogChanged = { [weak settingsStore] in
             settingsStore?.refreshVoicegroups()
         }
@@ -223,6 +227,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         windowActionIds = Self.windowIds
         contextHeadActionIds = Self.contextHeadIds
         contextBodyActionIds = Self.contextBodyIds
+        pd_startup_trace_mark("presenter-end")
     }
 
     public func componentComplete() {}
@@ -508,22 +513,31 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     /// Records completion of chrome and persisted preference restoration.
     public func chromeRestored() {
+        pd_startup_trace_mark("chrome-restored")
         hasRestoredChrome = true
-        beginStartupIfReady()
     }
 
-    /// Records a presented frame. Startup no longer waits for a frame; either
-    /// event may start it once chrome is restored.
+    /// The first submitted window frame releases construction of the application UI.
     public func firstFrameRendered() {
+        guard hasRestoredChrome, sceneActive, !closing, !closePending else { return }
+        contentRequested = true
+    }
+
+    /// Start services only after the deferred controls can consume their publications.
+    public func contentReady() {
+        guard contentRequested, sceneActive, !closing else { return }
+        hasLoadedContent = true
+        pd_startup_trace_mark("content-ready")
         beginStartupIfReady()
     }
 
     private func beginStartupIfReady() {
-        guard hasRestoredChrome, !startupBegun,
+        guard hasRestoredChrome, hasLoadedContent, !startupBegun,
             sceneActive, !closing, !closePending
         else { return }
         startupBegun = true
         session.prepareAudio()
+        session.prefetchStartup(arguments: CommandLine.arguments)
         openStartup()
     }
 
@@ -715,4 +729,3 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtSignal public func eventListGateChanged()
     @QtSignal public func criticalRequested(title: String, message: String)
 }
-

@@ -91,6 +91,7 @@ TestCase {
         }
         copyActivatedSpy.target = null
         soloActivatedSpy.target = null
+        bootstrap.children.length = 0
         shell.destroy()
         shell = null
         wait(0)
@@ -98,6 +99,12 @@ TestCase {
 
     function waitForNative(predicate, timeoutMs) {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
+    }
+
+    function waitForShellScene() {
+        verify(waitForNative(function() {
+            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the presented window mounts its deferred editor scene")
     }
 
     function openTwoSongShell(beforeOpen) {
@@ -111,6 +118,7 @@ TestCase {
         verify(shell !== null, "the production ShellWindow loads")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000, "the two-song shell window becomes active")
+        waitForShellScene()
         if (beforeOpen)
             beforeOpen()
         var session = shell.shellPresenter.session
@@ -150,7 +158,7 @@ TestCase {
     }
 
     function selectedSurface() {
-        var pages = shell.sceneLoader.item
+        var pages = shell && shell.sceneLoader ? shell.sceneLoader.item : null
         if (!pages)
             return null
         var tabs = shell.shellPresenter.session.songTabs
@@ -251,7 +259,8 @@ TestCase {
     }
 
     function windowShortcut(name) {
-        var delegates = shell.contentItem.children
+        var content = findChild(shell, "shellContentLoader").item
+        var delegates = content ? content.children : []
         for (var i = 0; i < delegates.length; ++i) {
             var objects = delegates[i].data
             for (var j = 0; objects && j < objects.length; ++j) {

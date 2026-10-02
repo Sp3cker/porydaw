@@ -29,6 +29,10 @@ TestCase {
         preferences.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production shell is instantiated")
+        verify(waitForNative(function() {
+            return shell.visible && shell.menuBar !== null && shell.menuBar.visible
+                && shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the presented shell mounts its visible controls")
         if (label) {
             const session = shell.shellPresenter.session
             session.openProjectAndSong(rootPath, label)

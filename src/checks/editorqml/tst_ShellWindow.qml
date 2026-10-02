@@ -43,6 +43,7 @@ ShellWindowSupport {
         verify(shell !== null)
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
+        waitForShellScene()
         compare(shell.shellPresenter.windowMaximized && shell.visibility === Window.Maximized,
                 true, "the maximized flag restores across a fresh shell session")
         compare(shell.shellPresenter.polyphonyVisible
@@ -87,6 +88,7 @@ ShellWindowSupport {
                 "shell role map follows captured session")
         compare(shell.font.pixelSize, body.pixelSize,
                 "window font follows captured body role")
+        waitForShellScene()
         const status = findChild(shell, "shellStatusText")
         const title = findChild(shell, "shellPolyphonyTitle")
         verify(status && title, "status and debugger heading are mounted")
@@ -215,7 +217,7 @@ ShellWindowSupport {
         }, 30000), "the clean close fixture opens Route 101" + openDiagnostics(session))
         verify(session.songOpen && !session.documentDirty && !session.saveInProgress,
                "the close begins with an open, clean song")
-        tryVerify(function() { return shell.sceneLoader.item !== null }, 5000,
+        tryVerify(function() { return shell.sceneLoader && shell.sceneLoader.item !== null }, 5000,
                   "the opened song mounts its scene")
         var dialog = findChild(shell, "songTabCloseDialog")
         verify(dialog !== null && !dialog.visible, "the discard prompt starts hidden")
@@ -236,6 +238,7 @@ ShellWindowSupport {
     function test_zWindowTitleAndStatusMeter() {
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production shell is mounted for chrome state")
+        waitForShellScene()
         var presenter = shell.shellPresenter
         var session = presenter.session
         var projectName = bootstrap.projectRoot.split("/").filter(function(part) {

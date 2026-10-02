@@ -222,7 +222,7 @@ ShellMenusSupport {
         session = shell.shellPresenter.session
         compare(session.noteNameMode, true, "a fresh shell restores note names")
         var names = findChild(shell, "shellAction_view.note_names")
-        compare(names.checked, true, "the restored check is visible in the menu")
+        tryCompare(names, "checked", true, 3000, "the restored check is visible in the menu")
         presenter = shell.shellPresenter
         presenter.activate("view.note_names")
         tryVerify(function() {

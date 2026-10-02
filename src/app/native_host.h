@@ -16,6 +16,9 @@ bool pd_clipboard_read(void *context, PdConsumeBytesCallback consume);
 void *pd_clipboard_observe(void *context, PdClipboardChangedCallback changed);
 void pd_clipboard_unobserve(void *token);
 
+void pd_startup_trace_mark(const char *stage);
+void pd_startup_trace_window(void);
+
 #ifdef __cplusplus
 }
 #endif

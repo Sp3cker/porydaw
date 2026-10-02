@@ -31,6 +31,9 @@ TestCase {
         verify(shell !== null, "production ShellWindow instantiates")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
+        verify(waitForNative(function() {
+            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the presented window mounts its deferred editor scene")
         var transport = findChild(shell, "transportToolbar")
         verify(transport !== null, "the mounted header owns the production transport")
         return transport
@@ -92,7 +95,7 @@ TestCase {
     }
 
     function rollSurface() {
-        if (!shell || !shell.sceneLoader.item)
+        if (!shell || !shell.sceneLoader || !shell.sceneLoader.item)
             return null
         var tabs = shell.shellPresenter.session.songTabs
         var page = findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId)

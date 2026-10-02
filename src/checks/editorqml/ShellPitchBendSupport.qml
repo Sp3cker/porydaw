@@ -37,7 +37,7 @@ TestCase {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
     function surface() {
-        if (!shell || !shell.sceneLoader.item)
+        if (!shell || !shell.sceneLoader || !shell.sceneLoader.item)
             return null
         const tabs = shell.shellPresenter.session.songTabs
         const page = findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId)

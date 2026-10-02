@@ -120,7 +120,7 @@ ShellWindowSupport {
         mouseClick(discard, discard.width / 2, discard.height / 2)
         verify(waitForNative(function() {
             return shell.shellPresenter.closeReady && tabs.tabCount === 0
-                && shell.sceneLoader.item === null
+                && shell.sceneLoader === null
         }, 5000), "Discard advances the remaining clean tab and detaches the scene")
         compare(tabs.pendingCloseId, -1, "the close-all gate is fully resolved")
     }

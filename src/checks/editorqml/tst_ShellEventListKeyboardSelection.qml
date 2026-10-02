@@ -10,6 +10,7 @@ ShellEventListSupport {
         verify(shell !== null)
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
+        waitForShellScene()
         const session = shell.shellPresenter.session
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         verify(waitForNative(function() {
@@ -66,7 +67,10 @@ ShellEventListSupport {
         for (let row = 0; row < presenter.rowCount; ++row)
             verify(presenter.isSelected(row), "Select All targets every event row")
         let copyShortcut = null
-        for (const delegate of shell.contentItem.children) {
+        const contentLoader = findChild(shell, "shellContentLoader")
+        verify(contentLoader !== null && contentLoader.status === Loader.Ready,
+               "the deferred window controls are mounted")
+        for (const delegate of contentLoader.item.children) {
             const objects = delegate.data
             for (const object of objects || []) {
                 if (object.objectName === "shellShortcut_roll.copy")
@@ -225,6 +229,7 @@ ShellEventListSupport {
         verify(shell !== null)
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
+        waitForShellScene()
         const session = shell.shellPresenter.session
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         verify(waitForNative(function() {

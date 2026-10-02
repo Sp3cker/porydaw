@@ -58,7 +58,7 @@ TestCase {
     }
 
     function surfaceOf(tabId) {
-        var pages = shell.sceneLoader.item
+        var pages = shell && shell.sceneLoader ? shell.sceneLoader.item : null
         var page = pages ? findChild(pages, "songTab_" + tabId) : null
         return page ? findChild(page, "swiftRollOverlay") : null
     }
@@ -83,6 +83,8 @@ TestCase {
         tryCompare(tabs, "tabCount", 1)
         var tabId = tabs.selectedId
         var selectedPage = tabs.selectedPage
+        verify(waitForNative(function() { return surfaceOf(tabId) !== null }, 5000),
+               "the live tab mounts its deferred roll")
         var sceneItem = shell.sceneLoader.item
         verify(surfaceOf(tabId) !== null, "the live tab mounts its roll")
         verify(waitForNative(function() {

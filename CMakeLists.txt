@@ -32,11 +32,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-if(APPLE)
-    enable_language(OBJCXX)
-    set(CMAKE_OBJCXX_STANDARD 20)
-    set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
-endif()
 set(CMAKE_AUTORCC ON)
 
 # Strict diagnostics apply only to project C++ translation units. Vendored C
@@ -46,19 +41,12 @@ set(CMAKE_AUTORCC ON)
 function(porydaw_enable_project_warnings target)
     target_compile_options(${target} PRIVATE
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wall;-Wextra;-Wpedantic;-Wshadow>
-        $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wall;-Wextra;-Wpedantic;-Wshadow>
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wformat=2>
-        $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wformat=2>
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wnull-dereference>
-        $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wnull-dereference>
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wdouble-promotion>
-        $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wdouble-promotion>
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wcast-align>
-        $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wcast-align>
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wcast-qual>
-        $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wcast-qual>
         $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang>:-Wextra-semi;-Wrange-loop-analysis>
-        $<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-Wextra-semi;-Wrange-loop-analysis>
         $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wduplicated-cond;-Wduplicated-branches;-Wlogical-op>
     )
 endfunction()
@@ -259,6 +247,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/drawer/AutomationMenu.qml
         src/ui/songview/quick/drawer/VoicePicker.qml
         src/ui/shell/ShellWindow.qml
+        src/ui/shell/ShellContent.qml
         src/ui/shell/ShellMenuBar.qml
         src/ui/shell/WavExportSurface.qml
         src/ui/shell/ShellStatusBar.qml
@@ -384,7 +373,7 @@ porydaw_enable_project_warnings(porydaw_app)
 # release CI refuses a tag that doesn't match it.
 target_compile_definitions(porydaw_app PUBLIC
     "$<$<NOT:$<COMPILE_LANGUAGE:Swift>>:PORYDAW_VERSION=\"${PROJECT_VERSION}\">")
-target_link_libraries(porydaw_app PUBLIC Qt6::Widgets poryaaaa_engine)
+target_link_libraries(porydaw_app PUBLIC Qt6::Gui poryaaaa_engine)
 target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick QtBridge)
 if(APPLE)
     # Keep framework headers ahead of stale non-framework Qt installs such

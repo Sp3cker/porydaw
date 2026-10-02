@@ -376,6 +376,7 @@ target_link_libraries(porydaw_checks PRIVATE
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
     PorydawApp
     Qt6::Test
+    Qt6::Widgets
     QtBridgeCpp
 )
 porydaw_link_linux_swift_runtime(porydaw_checks

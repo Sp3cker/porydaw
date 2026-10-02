@@ -3,6 +3,6 @@
 #include <algorithm>
 #include <vector>
 
-#include <QApplication>
+#include <QGuiApplication>
 #include <QPainter>
 #include <QString>

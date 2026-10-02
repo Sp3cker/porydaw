@@ -79,6 +79,9 @@ TestCase {
         verify(shell !== null, "the production ShellWindow loads")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
+        verify(waitForNative(function() {
+            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the presented window mounts its deferred editor scene")
     }
 
     function openSong() {
@@ -97,7 +100,7 @@ TestCase {
 
     function editorPage() {
         var tabs = shell.shellPresenter.session.songTabs
-        return findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId)
+        return shell.sceneLoader ? findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId) : null
     }
 
     function checkMenuItem(menu, actionId, label) {
