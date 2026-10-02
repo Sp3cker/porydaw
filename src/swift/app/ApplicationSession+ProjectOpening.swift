@@ -110,7 +110,12 @@ extension ApplicationSession {
             do {
                 loaded = try await read.value
             } catch {
-                guard let self, !Task.isCancelled else { return }
+                guard let self, !Task.isCancelled else {
+                    Task { [read] in
+                        if let loaded = try? await read.value { await loaded.service.close() }
+                    }
+                    return
+                }
                 if restore != nil, self.persistenceConfigured {
                     EditorViewStateCodec.saveTabs(
                         WorkspaceTabRecipe(projectPath: path, orderedSongs: [], selectedSong: ""),
@@ -246,4 +251,27 @@ struct ProjectRead: Sendable {
             throw error
         }
     }
+}
+
+/// Startup CLI selection shared by prefetch and open: `--project` wins;
+/// a lone `--song` uses the saved project, and empty means plain restore.
+func parseStartupArguments(_ arguments: [String]) -> (project: String, song: String) {
+    var project = ""
+    var song = ""
+    var index = 1
+    while index < arguments.count {
+        let argument = arguments[index]
+        if argument == "--project" || argument == "--song" {
+            if index + 1 < arguments.count {
+                index += 1
+                if argument == "--project" { project = arguments[index] } else { song = arguments[index] }
+            }
+        } else if argument.hasPrefix("--project=") {
+            project = String(argument.dropFirst("--project=".count))
+        } else if argument.hasPrefix("--song=") {
+            song = String(argument.dropFirst("--song=".count))
+        }
+        index += 1
+    }
+    return (project, song)
 }

@@ -241,7 +241,7 @@ struct VelocitySceneSnapshot {
                 || input.interaction.preview[note.id] != nil
         }
         var result: [VelocityHandle] = []
-        result.reserveCapacity(candidates.count)
+        result.reserveCapacity(notes.count)
         for note in candidates {
             let frozen = input.interaction.frozenNote(note.id)
             let map = frozen?.map ?? resolve(note.tick, Int(note.pitch)).map

@@ -34,7 +34,7 @@ import QtBridge
 /// `GridCameraPolicy.seedBaseFontPx`, which is internal to this module.
 public enum VelocityPagePolicy {
     public static let seedBaseFontPx: Double = 13
-    static let handleMarginViewportWidths: Double = 1
+    public static let handleMarginViewportWidths: Double = 1
 }
 
 /// Where a pointer event landed in the page body. Mirrors the legacy

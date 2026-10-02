@@ -219,9 +219,9 @@ public final class PolyphonyPanelPresenter {
         shadowPcm.reset(to: [])
         lastChannelSnapshot = nil
         shadowCgb.reset(to: [])
-        counterCount = 0
-        eventCount = 0
-        showingShadow = false
+        setPublished(counterCount, 0) { counterCount = $0 }
+        setPublished(eventCount, 0) { eventCount = $0 }
+        setPublished(showingShadow, false) { showingShadow = $0 }
     }
 
     private static func sameChannels(_ old: AudioPolySnapshot,

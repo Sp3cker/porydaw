@@ -32,3 +32,8 @@ func syncModel<Element: QVariantGettable>(
         }
     }
 }
+
+/// Writes only changed values without triggering observer writeback on reads.
+func setPublished<Value: Equatable>(_ current: Value, _ value: Value, set: (Value) -> Void) {
+    if current != value { set(value) }
+}

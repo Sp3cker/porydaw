@@ -46,7 +46,7 @@ extension VelocityPage {
         contextDiagnostic = presented.diagnostic
         contextSlot = presented.slot
         contextVoiceName = presented.map.voiceName
-        setPublished(&detentsAvailable, presented.status == .resolved && presented.map.isPSG)
+        setPublished(detentsAvailable, presented.status == .resolved && presented.map.isPSG) { detentsAvailable = $0 }
         let snapshot = buildScene()
         refreshAxisAndHandles(snapshot)
         publishTransient(updateDrawing: false)
@@ -72,9 +72,9 @@ extension VelocityPage {
     /// Applies one build's value axis to the page's published axis values.
     private func rebuildAxis(_ axis: VelocityAxisModel) {
         self.axis = axis
-        setPublished(&axisMode, axis.mode.rawValue)
-        setPublished(&axisGraduationsVisible, axis.mode == .intrinsic && detentsEnabled)
-        setPublished(&axisAccessibleDescription, axis.accessibleDescription)
+        setPublished(axisMode, axis.mode.rawValue) { axisMode = $0 }
+        setPublished(axisGraduationsVisible, axis.mode == .intrinsic && detentsEnabled) { axisGraduationsVisible = $0 }
+        setPublished(axisAccessibleDescription, axis.accessibleDescription) { axisAccessibleDescription = $0 }
     }
 
     // MARK: Scene input
@@ -90,9 +90,9 @@ extension VelocityPage {
 
     /// The primary track's note rows, projected against the published axis: the
     /// scoped build a live gesture uses, so motion never rebuilds static content.
-    @QtIgnored func projectHandles() -> [VelocityHandle] {
+    @QtIgnored func projectHandles(window: ClosedRange<Double>? = nil) -> [VelocityHandle] {
         VelocitySceneSnapshot.buildHandleRows(
-            sceneInput(reuseGeometry: handleReuseGeometry()),
+            sceneInput(reuseGeometry: handleReuseGeometry(), window: window),
             axis: axis, previousHandles: handlesByID)
     }
 
@@ -103,7 +103,7 @@ extension VelocityPage {
         guard session != nil else { return }
         let window = handleWindowForCamera()
         if window != publishedHandleWindow {
-            publishHandles(projectHandles())
+            publishHandles(projectHandles(window: window), window: window)
         }
         let projection = self.projection
         for handle in publishedHandles {
@@ -146,11 +146,11 @@ extension VelocityPage {
 
     /// Everything one scene build reads, as values: the session's document facts,
     /// the page's live interaction snapshot and its cached grid metrics.
-    func sceneInput(reuseGeometry: Bool) -> VelocitySceneInput {
+    func sceneInput(reuseGeometry: Bool, window: ClosedRange<Double>? = nil) -> VelocitySceneInput {
         let session = self.session
         return VelocitySceneInput(
             camera: session?.camera,
-            handleTickWindow: handleWindowForCamera(),
+            handleTickWindow: window ?? handleWindowForCamera(),
             context: resolvedContextValue,
             notes: VelocityScene.trackNotes(session),
             selectedNotes: VelocityScene.selectedTrackNotes(session),
@@ -209,22 +209,16 @@ extension VelocityPage {
 
     /// Publishes one handle projection. The page's own array is the authoritative
     /// copy the hit tests and the checks read, so it moves with the model.
-    @QtIgnored func publishHandles(_ values: [VelocityHandle]) {
+    @QtIgnored func publishHandles(_ values: [VelocityHandle], window: ClosedRange<Double>? = nil) {
         let nextByID = Dictionary(uniqueKeysWithValues: values.map { ($0.noteID, $0) })
-        // Remove outgoing rows before adding incoming ones so the retained
-        // overlap is a shared prefix or suffix for syncModel on a window slide.
-        let retained: [VelocityHandle]? =
-            publishedHandles.contains(where: { nextByID[$0.noteID] == nil })
-            ? publishedHandles.filter { nextByID[$0.noteID] != nil } : nil
         publishedHandles = values
         handlesByID = nextByID
-        publishedHandleWindow = handleWindowForCamera()
+        publishedHandleWindow = window ?? handleWindowForCamera()
         let selected = session?.selectedNotes ?? []
         let count = VelocityScene.trackNotes(session).reduce(0) {
             $0 + (selected.contains($1.id) ? 1 : 0)
         }
-        setPublished(&selectedCount, count)
-        if let retained { syncModel(handles, retained, matches: { $0.matches($1) }) }
+        setPublished(selectedCount, count) { selectedCount = $0 }
         syncModel(handles, values, matches: { $0.matches($1) })
     }
 
@@ -362,9 +356,9 @@ extension VelocityPage {
     }
 
     @QtIgnored func publishTransient(updateDrawing: Bool = true) {
-        setPublished(&rampVisible, false)
-        setPublished(&rampLength, 0)
-        setPublished(&rampSlopeY, 0)
+        setPublished(rampVisible, false) { rampVisible = $0 }
+        setPublished(rampLength, 0) { rampLength = $0 }
+        setPublished(rampSlopeY, 0) { rampSlopeY = $0 }
         if let gesture {
             switch gesture.kind {
             case .ramp:
@@ -372,12 +366,12 @@ extension VelocityPage {
                 let dy = gesture.previousY - gesture.pressY
                 // Gestures live in scroll-stable x; the transient draws in
                 // untranslated plot space, so it restores the origin here.
-                setPublished(&rampX0, gesture.pressX - projection.scrollOffsetX)
-                setPublished(&rampY0, gesture.pressY)
-                setPublished(&rampLength, (dx * dx + dy * dy).squareRoot())
-                setPublished(&rampSlopeY, dy)
-                setPublished(&rampColor, palette.primaryText)
-                setPublished(&rampVisible, rampLength > 0)
+                setPublished(rampX0, gesture.pressX - projection.scrollOffsetX) { rampX0 = $0 }
+                setPublished(rampY0, gesture.pressY) { rampY0 = $0 }
+                setPublished(rampLength, (dx * dx + dy * dy).squareRoot()) { rampLength = $0 }
+                setPublished(rampSlopeY, dy) { rampSlopeY = $0 }
+                setPublished(rampColor, palette.primaryText) { rampColor = $0 }
+                setPublished(rampVisible, rampLength > 0) { rampVisible = $0 }
             case .band, .pendingBand:
                 break
             case .relative, .paint, .pan:
@@ -408,16 +402,11 @@ extension VelocityPage {
             x = handle?.x ?? 0
             y = handle?.y ?? 0
         }
-        setPublished(&readoutText, text)
-        setPublished(&readoutVisible, visible)
-        setPublished(&readoutX, x)
-        setPublished(&readoutY, y)
-        setPublished(&hoveredNoteText, hovered.map(velocityNoteText) ?? "")
+        setPublished(readoutText, text) { readoutText = $0 }
+        setPublished(readoutVisible, visible) { readoutVisible = $0 }
+        setPublished(readoutX, x) { readoutX = $0 }
+        setPublished(readoutY, y) { readoutY = $0 }
+        setPublished(hoveredNoteText, hovered.map(velocityNoteText) ?? "") { hoveredNoteText = $0 }
     }
 
-    /// Writes one published primitive only when it really changed, so a
-    /// repeated equal publication emits nothing.
-    @QtIgnored func setPublished<Value: Equatable>(_ storage: inout Value, _ value: Value) {
-        if storage != value { storage = value }
-    }
 }

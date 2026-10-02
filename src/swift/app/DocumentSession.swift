@@ -307,7 +307,7 @@ public final class DocumentSession {
     /// decode failure still throws before anything is adopted.
     public static func open(
         loaded: LoadedSong, file: MidiFile, service: ProjectService,
-        sampleRate: Double = 48_000
+        sampleRate: Double
     ) -> DocumentSession {
         let document = SongDocument(
             file: file, config: loaded.config,

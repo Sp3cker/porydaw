@@ -484,7 +484,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
         // This must precede sceneActive=false: workspace input cancellation
         // still reaches the live QML scene (ApplicationSession.hostClosing).
         session.hostClosing()
-        session.discardPrefetchedProject()
         sceneActive = false
     }
 
@@ -717,26 +716,3 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtSignal public func criticalRequested(title: String, message: String)
 }
 
-/// Startup CLI selection shared by the construction-time prefetch and the
-/// chrome-restored open: `--project` wins with or without `--song`; a lone
-/// `--song` opens in the saved recipe's project; empty means plain restore.
-func parseStartupArguments(_ arguments: [String]) -> (project: String, song: String) {
-    var project = ""
-    var song = ""
-    var index = 1
-    while index < arguments.count {
-        let argument = arguments[index]
-        if argument == "--project" || argument == "--song" {
-            if index + 1 < arguments.count {
-                index += 1
-                if argument == "--project" { project = arguments[index] } else { song = arguments[index] }
-            }
-        } else if argument.hasPrefix("--project=") {
-            project = String(argument.dropFirst("--project=".count))
-        } else if argument.hasPrefix("--song=") {
-            song = String(argument.dropFirst("--song=".count))
-        }
-        index += 1
-    }
-    return (project, song)
-}

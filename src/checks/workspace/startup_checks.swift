@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import PorydawPlaybackNative
+import Synchronization
 
 @testable import PorydawApp
 
@@ -54,12 +55,12 @@ private final class StartupAudioGate {
     }
 }
 
-@MainActor
-private final class StartupAudioFailureProbe {
-    private(set) var attempts = 0
+private final class StartupAudioFailureProbe: Sendable {
+    private let counter = Mutex<Int>(0)
+    var attempts: Int { counter.withLock { $0 } }
 
     func make(failure: Error) async throws -> NativeAudio {
-        attempts += 1
+        counter.withLock { $0 += 1 }
         throw failure
     }
 }
@@ -307,7 +308,7 @@ private func startupPreparationFailureRetainsCause(_ report: CheckReport) {
                 cppID: id, what: "the song-open failure keeps its preparation cause instead of a generic fallback")
             await session.openTab(label: "mus_session_test", at: nil)
             report.expectEqual(
-                expected: 1, actual: await probe.attempts, cppID: id,
+                expected: 1, actual: probe.attempts, cppID: id,
                 what: "a second song-open consumer does not restart terminally failed preparation")
             report.expectEqual(
                 expected: String(describing: failure), actual: session.lastSaveError,

@@ -94,8 +94,8 @@ MenuBar {
             objectName: "shellEditMenu"
             title: qsTr("&Edit")
             onAboutToShow: ++root.windowRoot.actionRevision
-            // Nested submenu titles render through this delegate; null the
-            // arrow/indicator like the item delegates to skip image loads.
+            // Configure submenu titles for non-native menus; macOS native
+            // menu rendering does not use this delegate.
             delegate: MenuItem {
                 arrow: null
                 indicator: null

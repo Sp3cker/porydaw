@@ -571,22 +571,27 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// Follows the selected tab's document, but gates Undo/Redo while any
     /// tab has a pending bank transition.
     func refreshDocumentState() {
-        songOpen = songTabs.tabCount > 0
+        let hasSongs = songTabs.tabCount > 0
+        setPublished(songOpen, hasSongs) { songOpen = $0 }
         songDock.syncSelection()
         guard let session = workspace?.session else {
-            documentDirty = false
-            songDocumentDirty = false
-            canUndo = false
-            canRedo = false
+            setPublished(documentDirty, false) { documentDirty = $0 }
+            setPublished(songDocumentDirty, false) { songDocumentDirty = $0 }
+            setPublished(canUndo, false) { canUndo = $0 }
+            setPublished(canRedo, false) { canRedo = $0 }
             return
         }
-        songDocumentDirty = session.document.isDirty
-        documentDirty = songDocumentDirty || session.bankDirty
+        let songDirty = session.document.isDirty
+        setPublished(songDocumentDirty, songDirty) { songDocumentDirty = $0 }
+        let dirty = songDirty || session.bankDirty
+        setPublished(documentDirty, dirty) { documentDirty = $0 }
         let bankPending = songTabs.tabs.contains {
             $0.workspace.session.document.history.bankTransitionInFlight
         }
-        canUndo = !bankPending && session.document.history.canUndo
-        canRedo = !bankPending && session.document.history.canRedo
+        let undoAvailable = !bankPending && session.document.history.canUndo
+        setPublished(canUndo, undoAvailable) { canUndo = $0 }
+        let redoAvailable = !bankPending && session.document.history.canRedo
+        setPublished(canRedo, redoAvailable) { canRedo = $0 }
     }
 
 }

@@ -13,7 +13,8 @@ extension ApplicationSession {
     /// and the surface read.
     @QtIgnored
     func tabsDidChange() {
-        headerVoicePickerOpen = workspace?.headerVoicePicker.pickerOpen ?? false
+        let pickerOpen = workspace?.headerVoicePicker.pickerOpen ?? false
+        setPublished(headerVoicePickerOpen, pickerOpen) { headerVoicePickerOpen = $0 }
         polyphony.setContext(session: workspace?.session)
         transportBar.refresh()
         refreshDocumentState()

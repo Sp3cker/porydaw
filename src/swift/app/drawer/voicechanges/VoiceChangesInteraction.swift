@@ -453,11 +453,11 @@ extension VoiceChangesPage {
         let lineX = xForTick(tick)
         hoverIdentity = nil
         hoverTick = Double(tick)
-        setPublished(&hoverText, label)
+        setPublished(hoverText, label) { hoverText = $0 }
         setPublishedRect(&hoverLabelRect,
                          VoiceMarkerHandle.rect(lineX + pad, 0, max(0, plotWidth - lineX),
                                                 plotHeight))
-        setPublished(&hoverVisible, true)
+        setPublished(hoverVisible, true) { hoverVisible = $0 }
         publishMarkerHover()
     }
 
@@ -494,6 +494,6 @@ extension VoiceChangesPage {
     private func refreshInteractionPublished() {
         let active = drag != nil || panRevision != nil || picker != nil || menu != nil
         if interactionActive != active { interactionActive = active }
-        setPublished(&selectedIdentity, drag?.identity ?? selectedIdentity)
+        setPublished(selectedIdentity, drag?.identity ?? selectedIdentity) { selectedIdentity = $0 }
     }
 }
