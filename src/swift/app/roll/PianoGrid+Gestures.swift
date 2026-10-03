@@ -174,12 +174,13 @@ extension PianoGrid {
             keyboardAuditionKey = note.pitch
             keyboardAuditionTrack = trackIndex
             onAudition?(trackIndex, note.pitch, note.velocity)
-            if control && hit.zone == .body {
+            if control {
                 gesture = .velocity(
                     GridGesture.Velocity(
                         noteId: note.noteId, pressY: y, original: note.velocity))
                 pendingVelocityReanchor =
                     session.selectedNotes.contains(note.noteId) ? nil : note.noteId
+                cursorKind = GridCursorKind.velocity.rawValue
                 if hoverKey != note.pitch {
                     hoverKey = note.pitch
                     scene.rebuildHover(sceneInput())
@@ -262,20 +263,36 @@ extension PianoGrid {
         {
             return
         }
-        if case .pendingDraw = gesture {
-            let key = pitch(atY: y)
-            if key >= 0, !session.scaleProjection.fold || session.scaleProjection.contains(key),
-                key != keyboardAuditionKey
-            {
-                stopAudition()
-                keyboardAuditionKey = key
-                keyboardAuditionTrack = trackIndex
-                onAudition?(trackIndex, key, min(127, max(1, lastVelocity)))
-            }
-        }
         self.gesture = gesture.updated(
             x: x, y: y, metrics: metrics, grid: session.grid,
             camera: session.camera, scale: session.scaleProjection)
+        let audition: (track: Int, pitch: Int, velocity: Int)?
+        switch self.gesture {
+        case .pendingDraw(let state):
+            audition = (trackIndex, state.pressKey, min(127, max(1, lastVelocity)))
+        case .draw(let state):
+            audition = (trackIndex, state.key, min(127, max(1, lastVelocity)))
+        case .move:
+            if let note = session.document.note(NoteID(activeNoteId)) {
+                let source = GridNote(
+                    noteId: note.id, tick: Int(note.tick), duration: Int(note.duration),
+                    pitch: Int(note.pitch), track: note.track,
+                    velocity: Int(note.velocity), ghost: false)
+                audition = (note.track, displayedNote(source).pitch, Int(note.velocity))
+            } else {
+                audition = nil
+            }
+        default:
+            audition = nil
+        }
+        if let audition,
+            audition.pitch != keyboardAuditionKey || audition.track != keyboardAuditionTrack
+        {
+            stopAudition()
+            keyboardAuditionKey = audition.pitch
+            keyboardAuditionTrack = audition.track
+            onAudition?(audition.track, audition.pitch, audition.velocity)
+        }
         if case .velocity(let state) = self.gesture {
             if let reanchor = pendingVelocityReanchor {
                 pendingVelocityReanchor = nil

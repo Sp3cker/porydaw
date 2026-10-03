@@ -67,7 +67,7 @@ Item {
                         if (pressed)
                             root.gridModel.updateKeyboardPointer(mouse.y)
                         else
-                            root.gridModel.updateHover(mouse.x, mouse.y)
+                            root.gridModel.updateHover(mouse.x, mouse.y, mouse.modifiers)
                     }
                     onReleased: function(mouse) {
                         root.gridModel.endKeyboardPointer()
@@ -141,7 +141,8 @@ Item {
                                 { shape: Qt.OpenHandCursor, source: "" },
                                 { shape: Qt.ArrowCursor, source: "qrc:/cursors/left-drag.png" },
                                 { shape: Qt.ArrowCursor, source: "qrc:/cursors/right-drag.png" },
-                                { shape: Qt.ClosedHandCursor, source: "" }
+                                { shape: Qt.ClosedHandCursor, source: "" },
+                                { shape: Qt.SizeVerCursor, source: "" }
                             ]
                             readonly property var current: kinds[root.gridModel.cursorKind]
                             objectName: "swiftRollCursor"
@@ -195,8 +196,10 @@ Item {
                                 rightSweepActive = false
                                 timeMenuPressHandled = false
                             }
-                            else
+                            else {
                                 root.gridModel.endPointer(mouse.x, mouse.y)
+                                root.gridModel.updateHover(mouse.x, mouse.y, mouse.modifiers)
+                            }
                             mouse.accepted = true
                         }
                         onCanceled: {
@@ -226,7 +229,7 @@ Item {
                                 else if (buttons & Qt.LeftButton)
                                     root.gridModel.updatePointer(x, y, modifiers)
                                 else
-                                    root.gridModel.updateHover(x, y)
+                                    root.gridModel.updateHover(x, y, modifiers)
                             }
                         }
                     }

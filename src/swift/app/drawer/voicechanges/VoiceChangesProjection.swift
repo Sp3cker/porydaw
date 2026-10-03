@@ -263,6 +263,7 @@ struct VoiceMarkerProjectionInput {
 struct VoiceGutterProjectionInput {
     var plotHeight: Double
     var plotOrigin: Double
+    var pad: Double
     var title: String
     var summary: String?
     var titleFont: [String: QVariantSettable]
@@ -331,7 +332,7 @@ enum VoiceChangesProjection {
     static func gutterTexts(_ input: VoiceGutterProjectionInput) -> [SceneText] {
         let top = max(0, (input.plotHeight - input.titleHeight - input.captionHeight) / 2)
         var texts = [SceneText(
-            rect: (0, top, input.plotOrigin, input.titleHeight),
+                rect: (input.pad, top, max(0, input.plotOrigin - input.pad), input.titleHeight),
             text: input.title,
             color: input.titleColor,
             font: input.titleFont,
@@ -339,7 +340,10 @@ enum VoiceChangesProjection {
             vertical: 0x80)]
         if let summary = input.summary {
             texts.append(SceneText(
-                rect: (0, top + input.titleHeight, input.plotOrigin, input.captionHeight),
+                    rect: (
+                        input.pad, top + input.titleHeight,
+                        max(0, input.plotOrigin - input.pad), input.captionHeight
+                    ),
                 text: summary,
                 color: input.captionColor,
                 font: input.captionFont,

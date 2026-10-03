@@ -166,7 +166,7 @@ enum RollDrawingContent {
             SceneRectPacking.argb(p.selectionFill),
             SceneRectPacking.argb(p.selectionRing),
             SceneRectPacking.argb(p.selectionRing),
-            p.noteFillArgb(track: 0, velocity: input.lastVelocity),
+            p.noteFillArgb(track: input.selectedTrack, velocity: input.lastVelocity),
             SceneRectPacking.argb(p.keyboardNatural),
             SceneRectPacking.argb(p.keyboardBlack),
             SceneRectPacking.argb(p.keyboardSeparator),

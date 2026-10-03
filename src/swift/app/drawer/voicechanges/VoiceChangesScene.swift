@@ -208,6 +208,7 @@ enum VoiceChangesScene {
         VoiceChangesProjection.gutterTexts(VoiceGutterProjectionInput(
             plotHeight: input.plotHeight,
             plotOrigin: input.plotOrigin,
+                pad: input.pad,
             title: input.gutterTitle,
             summary: input.trackAvailable ? countSummary(input.points) : nil,
             titleFont: title?.fontMap ?? [:],

@@ -104,6 +104,13 @@ public final class TrackHeadersPresenter {
         if self.session !== session { detach() }
         self.session = session
         self.palette = palette
+        refreshAppearance()
+    }
+
+    /// Rebuilds cached control roles and row colors from the attached palette.
+    /// The existing row refresh preserves interaction and measured text state.
+    @QtIgnored
+    public func refreshAppearance() {
         appearance = TrackHeadersGeometry.appearance(palette: palette)
         refreshFromDocument()
     }

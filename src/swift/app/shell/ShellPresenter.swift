@@ -686,9 +686,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     public func previewThemeMode(mode: String) {
         themeMode = ShellAppearance.mode(mode)
-        ShellAppearance.apply(to: session.palette, mode: themeMode, contrast: gridLineContrast)
-        session.eventListPresenter().refreshAppearance()
-        if session.songOpen { session.gridPresenter().reloadVisuals() }
+        applyAppearance()
     }
 
     public func commitThemeMode() {
@@ -705,9 +703,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     public func setGridLineContrast(value: Int) {
         gridLineContrast = min(100, max(0, value))
-        ShellAppearance.apply(to: session.palette, mode: themeMode, contrast: gridLineContrast)
-        session.eventListPresenter().refreshAppearance()
-        if session.songOpen { session.gridPresenter().reloadVisuals() }
+        applyAppearance()
     }
 
     public func commitGridLineContrast() {
@@ -721,6 +717,16 @@ public final class ShellPresenter: QmlInstantiableStatus {
         setGridLineContrast(value: committedGridLineContrast)
     }
 
+    private func applyAppearance() {
+        ShellAppearance.apply(to: session.palette, mode: themeMode, contrast: gridLineContrast)
+        session.eventListPresenter().refreshAppearance()
+        // Shared roles update direct bindings; each open workspace also owns
+        // color snapshots and display lists, including those in hidden tabs.
+        for index in 0..<session.songTabs.tabs.count {
+            session.songTabs.tabs[index].workspace.refreshAppearance()
+        }
+    }
+
     public func restoreAppearance() {
         let store = PreferencesStore()
         ShellAppearance.removeLegacyCustomKeys(store: store)
@@ -729,9 +735,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
             store.string(key: "theme.grid-line-contrast", fallback: ""))
         committedThemeMode = themeMode
         committedGridLineContrast = gridLineContrast
-        ShellAppearance.apply(to: session.palette, mode: themeMode, contrast: gridLineContrast)
-        session.eventListPresenter().refreshAppearance()
-        if session.songOpen { session.gridPresenter().reloadVisuals() }
+        applyAppearance()
         store.setString(key: "theme.mode", value: themeMode)
         store.setInt(key: "theme.grid-line-contrast", value: gridLineContrast)
         store.synchronize()

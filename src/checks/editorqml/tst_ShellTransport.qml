@@ -308,15 +308,6 @@ ShellTransportSupport {
         tryCompare(master, "value", 87, 3000,
                    "the mounted master-volume field restores the edited song value")
 
-        var startingTempo = bar.presenter.tempo
-        var midX = clock.width / 2
-        var midY = clock.height / 2
-        mousePress(clock, midX, midY, Qt.LeftButton)
-        mouseMove(clock, midX, midY - 20, -1, Qt.LeftButton)
-        mouseRelease(clock, midX, midY - 20, Qt.LeftButton)
-        verify(waitForNative(function() {
-            return bar.presenter.tempo > startingTempo
-        }, 3000), "time label's upward scrub commits a faster song tempo")
         cleanup()
         bar = openShell()
         compare(bar.presenter.outputVolume, outputAcrossTabs,

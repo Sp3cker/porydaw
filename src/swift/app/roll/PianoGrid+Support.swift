@@ -16,6 +16,7 @@ enum GridCursorKind: Int {
     case leftEdge = 2
     case rightEdge = 3
     case closedHand = 4
+        case velocity = 5
 }
 
     /// True while a pointer gesture owns the roll. Swift-only: the shared
@@ -129,10 +130,8 @@ enum GridCursorKind: Int {
 
     @QtIgnored
     func cancelInput() {
-        if case .pan = gesture {
-            if cursorKind != GridCursorKind.arrow.rawValue {
-                cursorKind = GridCursorKind.arrow.rawValue
-            }
+        if cursorKind != GridCursorKind.arrow.rawValue {
+            cursorKind = GridCursorKind.arrow.rawValue
         }
         if case .band = rightGesture {
             session.setSelectedNotes(selectionAtRightPress)

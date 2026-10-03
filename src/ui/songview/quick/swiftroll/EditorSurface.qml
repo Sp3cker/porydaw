@@ -102,6 +102,18 @@ FocusScope {
     property alias rollPlot: rollBandContent.rollPlot
     property alias rollInput: rollBandContent.rollInput
     property alias rollHint: rollBandContent.rollHint
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Control && rollInput.containsMouse && !rollInput.pressed)
+            gridModel.updateHover(rollInput.mouseX, rollInput.mouseY,
+                                  event.modifiers | Qt.ControlModifier)
+        event.accepted = false
+    }
+    Keys.onReleased: event => {
+        if (event.key === Qt.Key_Control && rollInput.containsMouse && !rollInput.pressed)
+            gridModel.updateHover(rollInput.mouseX, rollInput.mouseY,
+                                  event.modifiers & ~Qt.ControlModifier)
+        event.accepted = false
+    }
     property alias eventListHost: rollBandContent.eventListHost
     property alias eventPage: rollBandContent.eventPage
     property alias trackHeaders: rollBandContent.trackHeaders

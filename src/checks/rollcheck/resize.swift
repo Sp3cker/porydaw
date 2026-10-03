@@ -181,19 +181,19 @@ private func checkResizeSelection(_ report: CheckReport, session: DocumentSessio
                                             dpr: grid.devicePixelRatio)
         - session.camera.viewX(tick: Double(d.tick + 2 * d.duration),
                                   dpr: grid.devicePixelRatio)
-    grid.beginPointer(x: edge, y: y, modifiers: 0x0400_0000)
+    grid.beginPointer(x: edge, y: y, modifiers: 0)
     grid.updatePointer(x: edge + cellWidth, y: y)
     grid.endPointer(x: edge + cellWidth, y: y)
     report.expect(document.note(dID).map { Int($0.duration) == 3 * d.duration } == true,
-                  cppID: id, message: "Ctrl+edge drag grows grabbed note by exactly one cell")
+        cppID: id, message: "unmodified edge drag grows grabbed note by exactly one cell")
     report.expect(document.note(bID).map {
         Int($0.duration) == Int(bBefore.duration) + d.duration
-    } == true, cppID: id, message: "Ctrl+edge drag grows the rest of selection by one cell")
+        } == true, cppID: id, message: "edge drag grows the rest of selection by one cell")
     report.expect(document.revision == revision + 1
                       && document.history.currentIdentity != selected,
                   cppID: id, message: "one selection resize gesture commits one transaction")
     report.expect(document.history.undoCount == commandCount + 1, cppID: id,
-                  message: "grouped Ctrl edge resize pushes exactly one undo command")
+        message: "grouped edge resize pushes exactly one undo command")
     report.expect(document.history.undoDocument()
                       && document.history.currentIdentity == planted
                       && (try? document.captureSave().bytes) == before,
@@ -462,8 +462,7 @@ private func checkEdgeResize(_ report: CheckReport, session: DocumentSession) {
             Int($0.tick) == 24 - snap && Int($0.duration) == 2 * snap
         } == true,
         cppID: id, message: "leading-edge drag snaps the start back one cell and keeps the end")
-    // Ctrl+edge: a stationary Ctrl press joins the note to the selection
-    // without resizing; the drag then resizes every selected note.
+    // A stationary modifier click joins the selection; an unmodified edge drag resizes it.
     session.setSelectedNotes([a])
     guard let bRect = rect(b) else {
         report.fail(id, "second fixture note is not projected")
@@ -477,7 +476,7 @@ private func checkEdgeResize(_ report: CheckReport, session: DocumentSession) {
         session.selectedNotes == Set([a, b])
             && session.document.note(b).map { Int($0.duration) == 12 } == true,
         cppID: id, message: "stationary Ctrl+edge click joins the note without resizing")
-    grid.beginPointer(x: bEdgeX, y: bRowY, modifiers: 0x0400_0000)
+    grid.beginPointer(x: bEdgeX, y: bRowY, modifiers: 0)
     grid.updatePointer(x: bEdgeX + Double(snap) * session.camera.snapshot.pixelsPerTick,
                        y: bRowY)
     grid.endPointer(x: bEdgeX + Double(snap) * session.camera.snapshot.pixelsPerTick,
@@ -487,7 +486,7 @@ private func checkEdgeResize(_ report: CheckReport, session: DocumentSession) {
             && session.document.note(a).map {
                 Int($0.tick) + Int($0.duration) == 24 + 2 * snap
             } == true,
-        cppID: id, message: "Ctrl+edge drag resizes the grabbed note and the joined selection")
+        cppID: id, message: "edge drag resizes the grabbed note and the joined selection")
     // Abutting boundary: a press just left of the shared boundary grips the
     // left note's trailing edge; just right grips the right note's leading edge.
     guard let cPair = try? session.document.addNotes([

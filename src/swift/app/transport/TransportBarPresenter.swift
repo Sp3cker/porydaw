@@ -244,19 +244,6 @@ public final class TransportBarPresenter: QmlUncreatable {
         refresh()
     }
 
-    public func setTempo(bpm: Int) {
-        guard (TimeDefaults.minimumTempoBPM...TimeDefaults.maximumTempoBPM).contains(bpm),
-            let document = session?.selectedDocument?.document
-        else { return }
-        let tick = TimeDefaults.tick(from: session?.playheadPresenter().tick ?? 0)
-        let prior = document.state.tempo.last { $0.tick <= tick }
-        let target = TempoPoint(
-            tick: prior?.tick ?? 0,
-            microsecondsPerQuarterNote: TimeDefaults.microsecondsPerQuarterNote(forBPM: bpm))
-        document.editTempo(TempoEdit(remove: prior.map { [$0] } ?? [], add: [target]))
-        refresh()
-    }
-
     static func clock(sample: UInt64, sampleRate: Double) -> String {
         let tenths = Int(Double(sample) / sampleRate * 10)
         return "\(tenths / 600):\(String(format: "%02d", tenths / 10 % 60)).\(tenths % 10)"

@@ -199,30 +199,10 @@ Rectangle {
             text: bar.presenter.timeText
             elide: Text.ElideRight
             Accessible.role: Accessible.StaticText
-            Accessible.description: qsTr("Measure and beat: %1. Loop: %2. Tempo: %3 BPM. Drag vertically to scrub tempo.")
+            Accessible.description: qsTr("Measure and beat: %1. Loop: %2. Tempo: %3 BPM.")
                                         .arg(bar.presenter.measureText)
                                         .arg(bar.presenter.loopBounds)
                                         .arg(bar.presenter.tempo)
-            Controls.ToolTip.text: qsTr("Tempo: %1 BPM. Drag vertically to scrub.").arg(bar.presenter.tempo)
-            Controls.ToolTip.visible: clockHover.hovered && bar.presenter.state !== 0
-            HoverHandler { id: clockHover }
-            MouseArea {
-                anchors.fill: parent
-                enabled: bar.presenter.state !== 0
-                property real pressedY: 0
-                property int pressedTempo: 0
-                onPressed: mouse => {
-                    pressedY = mouse.y
-                    pressedTempo = bar.presenter.tempo
-                }
-                onReleased: mouse => {
-                    const distance = pressedY - mouse.y
-                    if (Math.abs(distance) < bar.inset) return
-                    const next = Math.max(20, Math.min(255,
-                        pressedTempo + Math.trunc(distance * 0.5)))
-                    if (next !== bar.presenter.tempo) bar.presenter.setTempo(next)
-                }
-            }
         }
 
         Item {

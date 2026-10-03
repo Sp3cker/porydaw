@@ -341,7 +341,7 @@ public final class PianoGrid: QmlUncreatable {
 
     public func doublePointer(x: Double, y: Double) { doublePointerImpl(x: x, y: y) }
 
-    public func updateHover(x: Double, y: Double) {
+    public func updateHover(x: Double, y: Double, modifiers: Int = 0) {
         let key = pitch(atY: y)
         let next = key >= 0 ? key : -1
         if next != hoverKey {
@@ -350,10 +350,15 @@ public final class PianoGrid: QmlUncreatable {
         }
         guard gesture == nil else { return }
         let hovered: GridCursorKind
-        switch hitNote(x: x, y: y)?.zone {
-        case .leftEdge: hovered = .leftEdge
-        case .rightEdge: hovered = .rightEdge
-        default: hovered = .arrow
+        let hit = hitNote(x: x, y: y)
+        if hit != nil, modifiers & QtFact.controlModifier != 0 {
+            hovered = .velocity
+        } else {
+            switch hit?.zone {
+            case .leftEdge: hovered = .leftEdge
+            case .rightEdge: hovered = .rightEdge
+            default: hovered = .arrow
+            }
         }
         if cursorKind != hovered.rawValue {
             cursorKind = hovered.rawValue

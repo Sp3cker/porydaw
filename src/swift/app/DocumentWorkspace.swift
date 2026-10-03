@@ -248,6 +248,17 @@ public final class DocumentWorkspace {
         playhead.startPolling()
     }
 
+    /// Republishes palette-derived rows and drawing without document or camera changes.
+    /// Includes hidden tabs and drawer sections without cancelling interactions.
+    func refreshAppearance() {
+        guard !isTornDown else { return }
+        grid.reloadVisuals()
+        trackHeaders.refreshAppearance()
+        voiceChangesPage.rebuildContent()
+        automationPage.publishContent(session)
+        automationPage.publishDrawingContent()
+    }
+
     public func cancel(reason: Int) {
         rulerMenu.cancelSweep()
         grid.inputCancelled(reason: reason)

@@ -11,13 +11,19 @@ editable, other tracks are ghosted for context. -->
 
 ## Drawing notes
 
+While drawing, the preview uses the selected track's note color, or the velocity
+color when that mode is enabled. Live audition follows the preview's pitch.
+
 <!-- TODO: Click-drag to draw; the snap grid; how the drawn length follows
-the grid; live audition while drawing. -->
+the grid. -->
 
 ## Moving and copying notes
 
 <!-- TODO: Drag to move (pitch + time), modifier for fine/unsnapped moves,
 duplicate gestures. -->
+
+Dragging a note across keys auditions its displayed pitch. Moving within the same
+key does not restart the sound; releasing or cancelling the drag stops it.
 
 On the same track, moving or pasting a group is refused if same-pitch notes
 partially overlap, contain one another, or share a start but have different ends,
@@ -53,9 +59,12 @@ edge-drag and velocity-drag operate on the whole selection. -->
 
 ## Velocity
 
-<!-- TODO: What velocity is (link to DAW Basics); the Ctrl/Cmd+vertical-drag
-gesture; the quantized effective value shown inline; View → Color Notes by
-Velocity for seeing dynamics at a glance (purple = soft, red = loud). -->
+Hold **Cmd** on macOS (**Ctrl** elsewhere) over a note to show the vertical
+velocity cursor. Drag upward to increase velocity or downward to decrease it.
+This also works at note edges; drag an edge without the modifier to resize.
+
+Dragging a selected note adjusts the selected group. Dragging an unselected
+note starts a new one-note velocity selection and leaves the old group unchanged.
 
 ## Deleting notes
 
