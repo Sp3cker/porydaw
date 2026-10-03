@@ -32,8 +32,6 @@ external/          — poryaaaa (submodule), dr_libs, stb
 docs/plans/        — implementation plans; one directory per plan
 ```
 
-`src/mainwindow.*` and `src/ui/*.cpp` are unbuilt leftovers, not architecture.
-
 ## Native boundary
 
 C/C++ exists only at: `src/app/`, `src/audio/`, `src/project/`,
