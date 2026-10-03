@@ -8,7 +8,8 @@ private let bucketSumID = "eventviews/ViewBucketsGridTest::bucketSum"
 private let clockLatticeID = "eventviews/ViewBucketsGridTest::clockLatticeCrossesSignatureSeam"
 private let snapLadderID = "eventviews/ViewBucketsGridTest::snapLadder"
 private let linesSnappableID = "eventviews/ViewBucketsGridTest::gridLinesSnappable"
-private let densityID = "eventviews/ViewBucketsGridTest::fixedGridPaintDensityGuard"
+private let fixedVisibilityID = "swiftcore/RollGrid::fixedGridPaintsUntilLinesTouch"
+private let snapLinesID = "swiftcore/RollGrid::fixedGridLinesMatchSnap"
 
 @MainActor
 func runEventViewsRemapBucketsParityChecks(_ report: CheckReport) {
@@ -17,7 +18,8 @@ func runEventViewsRemapBucketsParityChecks(_ report: CheckReport) {
     clockParityLattice(report)
     gridSnapLadder(report)
     gridLinesSnappable(report)
-    fixedGridPaintDensityGuard(report)
+    fixedGridPaintsUntilLinesTouch(report)
+    fixedGridLinesMatchSnap(report)
 }
 
 @MainActor
@@ -369,9 +371,9 @@ private func gridLinesSnappable(_ report: CheckReport) {
 }
 
 @MainActor
-private func fixedGridPaintDensityGuard(_ report: CheckReport) {
+private func fixedGridPaintsUntilLinesTouch(_ report: CheckReport) {
     let metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 640, height: 320)
-    let cell = metrics.autoGridMinCell
+    let stroke = metrics.gridLineStroke
     var camera = EditorCamera(ticksPerBeat: 24, lengthTicks: 120, viewportWidth: 640,
                               rollHeight: 320, limits: GridCameraPolicy.limits(baseFontPx: 13))
     var grid = RollGrid(clockTicks: 1, metrics: metrics)
@@ -382,27 +384,118 @@ private func fixedGridPaintDensityGuard(_ report: CheckReport) {
         }
         return result
     }
+    let segment = grid.axis.segmentAt(0)
     grid.setSelection(.musical(8))
-    _ = camera.setTimeZoom(2 * cell)
-    report.expect(!lines().isEmpty, cppID: densityID,
-                  message: "fixed eighth sub-grid paints at twice the cell")
-    _ = camera.setTimeZoom(cell)
-    report.expect(lines().isEmpty, cppID: densityID,
-                  message: "fixed eighth sub-grid suppresses at the cell")
-    report.expectEqual(expected: 12, actual: grid.snapTicksAt(0, camera: camera),
-                       cppID: densityID, what: "fixed snap ignores paint suppression")
+    _ = camera.setTimeZoom(metrics.autoGridMinCell)
+    report.expect(
+        lines() == [12, 36, 60, 84, 108], cppID: fixedVisibilityID,
+        message: "fixed eighth sub-grid paints below the auto cell size")
+    // A 1/32 cell is 3 ticks: spacing reaches one stroke at 8 strokes per quarter.
+    grid.setSelection(.musical(32))
+    _ = camera.setTimeZoom(8 * stroke)
+    report.expect(
+        !lines().isEmpty, cppID: fixedVisibilityID,
+        message: "fixed 1/32 sub-grid paints at one stroke of spacing")
+    _ = camera.setTimeZoom(8 * stroke - 1)
+    report.expect(
+        lines().isEmpty, cppID: fixedVisibilityID,
+        message: "fixed 1/32 sub-grid suppresses once lines would touch")
+    report.expectEqual(
+        expected: 3, actual: grid.snapTicksAt(0, camera: camera),
+        cppID: fixedVisibilityID, what: "fixed snap ignores paint suppression")
     report.expectEqual(expected: 36, actual: grid.snapTickDown(37, camera: camera),
-                       cppID: densityID, what: "fixed snap ignores paint suppression")
-    report.expectEqual(expected: 36, actual: grid.nextSnapTickAfter(24, camera: camera),
-                       cppID: densityID, what: "fixed snap ignores paint suppression")
+        cppID: fixedVisibilityID, what: "fixed snap ignores paint suppression")
     grid.setSelection(.clock)
     let clock = grid.snapTicksAt(0, camera: camera)
-    _ = camera.setTimeZoom(6 * cell)
-    report.expect(!lines().isEmpty, cppID: densityID,
-                  message: "clock sub-grid paints at six cells")
-    _ = camera.setTimeZoom(2 * cell)
-    report.expect(lines().isEmpty, cppID: densityID,
-                  message: "clock sub-grid suppresses at two cells")
+    _ = camera.setTimeZoom(24 * stroke)
+    report.expect(
+        !lines().isEmpty, cppID: fixedVisibilityID,
+        message: "clock sub-grid paints at one stroke of spacing")
+    _ = camera.setTimeZoom(24 * stroke - 1)
+    report.expect(
+        lines().isEmpty, cppID: fixedVisibilityID,
+        message: "clock sub-grid suppresses once lines would touch")
     report.expectEqual(expected: clock, actual: grid.snapTicksAt(0, camera: camera),
-                       cppID: densityID, what: "clock snap ignores paint suppression")
+        cppID: fixedVisibilityID, what: "clock snap ignores paint suppression")
+    _ = camera.setTimeZoom(metrics.detailMinPxPerBeat - 1)
+    grid.setSelection(.musical(4))
+    report.expect(
+        grid.drawsBeatTicksIn(segment, camera: camera), cppID: fixedVisibilityID,
+        message: "fixed grid keeps ruler beat ticks below the auto detail zoom")
+    grid.setSelection(.auto)
+    report.expect(
+        !grid.drawsBeatTicksIn(segment, camera: camera), cppID: fixedVisibilityID,
+        message: "auto grid hides ruler beat ticks below the detail zoom")
+}
+
+// 6/8 eighth beats under quarter (wider) and triplet-eighth (non-dividing) grids;
+// the 16-tick triplet quarter does not fit the 72-tick bar and restarts at bar 2.
+@MainActor
+private func fixedGridLinesMatchSnap(_ report: CheckReport) {
+    let axis = TimeAxis(
+        map: TimeMap(
+            ticksPerBeat: 24, lengthTicks: 144,
+            timeSigs: [TimeSigPoint(tick: 0, numerator: 6, denomPow2: 3)]))
+    let metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 640, height: 320, timeAxis: axis)
+    let camera = {
+        var camera = EditorCamera(
+            ticksPerBeat: 24, lengthTicks: 144, viewportWidth: 640,
+            rollHeight: 320, limits: GridCameraPolicy.limits(baseFontPx: 13))
+        _ = camera.setTimeZoom(2 * metrics.autoGridMinCell)
+        return camera
+    }()
+    var grid = RollGrid(axis: axis, clockTicks: 1, metrics: metrics)
+    let rows:
+        [(
+            name: String, selection: GridSelection, feel: GridFeel, lattice: [Tick],
+            demoted: [Tick]
+        )] = [
+            ("straight quarter", .musical(4), .straight, [], [12, 36, 60, 84, 108, 132]),
+            (
+                "triplet quarter", .musical(4), .triplet, [16, 32, 64, 88, 104, 136],
+                [12, 24, 36, 60, 84, 96, 108, 132]
+            ),
+            (
+                "triplet eighth", .musical(8), .triplet,
+                [8, 16, 32, 40, 56, 64, 80, 88, 104, 112, 128, 136], [12, 36, 60, 84, 108, 132]
+            ),
+        ]
+    for (name, selection, feel, lattice, demoted) in rows {
+        grid.setState(selection, feel: feel)
+        var subdivisions: [Tick] = []
+        grid.forEachSubdivision(from: 0, to: 144, camera: camera) { tick, level in
+            report.expect(
+                level == 1, cppID: snapLinesID,
+                message: "\(name): off-beat snap line \(tick) paints at level 1")
+            subdivisions.append(tick)
+        }
+        var offGrid: [Tick] = []
+        var snapped: [Tick] = []
+        axis.forEachGridLine(from: 0, to: 144) { tick, isBar, _, _ in
+            switch grid.beatLineWeight(tick, isBar: isBar, camera: camera) {
+            case .offGrid: offGrid.append(tick)
+            case .bar, .beat, .beatFine: snapped.append(tick)
+            }
+        }
+        report.expect(
+            subdivisions == lattice, cppID: snapLinesID,
+            message: "\(name): off-beat lattice points paint as sub-grid lines")
+        report.expect(
+            offGrid == demoted, cppID: snapLinesID,
+            message: "\(name): beats off the snap lattice are demoted")
+        report.expect(
+            (subdivisions + snapped).allSatisfy {
+                grid.snapTick(Double($0), camera: camera) == $0
+            }, cppID: snapLinesID, message: "\(name): every emphasized line is a snap point")
+    }
+    grid.setState(.musical(4), feel: .triplet)
+    report.expectEqual(
+        expected: 72, actual: grid.snapTick(70, camera: camera), cppID: snapLinesID,
+        what: "triplet quarter: the bar 2 downbeat is a snap point")
+    report.expectEqual(
+        expected: 72, actual: grid.nextSnapTickAfter(64, camera: camera), cppID: snapLinesID,
+        what: "triplet quarter: the last cell of bar 1 is cut short at the bar line")
+    report.expectEqual(
+        expected: 88, actual: grid.nextSnapTickAfter(72, camera: camera), cppID: snapLinesID,
+        what: "triplet quarter: bar 2 restarts the lattice")
 }

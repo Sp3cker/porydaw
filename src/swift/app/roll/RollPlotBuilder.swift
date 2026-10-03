@@ -241,12 +241,11 @@ struct RollPlotBuilder {
                 }
                 input.grid.axis.forEachGridLine(from: begin, to: end) { tick, isBar, _, _ in
                     let slot: RollPaletteSlot
-                    if isBar {
-                        slot = .gridBar
-                    } else if input.grid.gridTicksAt(tick, camera: camera) == 1 {
-                        slot = .gridBeatFine
-                    } else {
-                        slot = .gridBeat
+                    switch input.grid.beatLineWeight(tick, isBar: isBar, camera: camera) {
+                    case .bar: slot = .gridBar
+                    case .beat: slot = .gridBeat
+                    case .beatFine: slot = .gridBeatFine
+                    case .offGrid: slot = .gridSub3
                     }
                     emitClipped(
                         camera.viewX(tick: Double(tick), dpr: dpr) - stroke / 2, -soY, stroke, gridH,

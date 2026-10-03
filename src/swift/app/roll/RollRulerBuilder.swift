@@ -121,7 +121,7 @@ struct RollRulerBuilder {
                 let beatWidth = Double(segment.beatTicks) * ppt
                 let beatAdvance = typography.beatAdvance(
                     bar: maxBar, beat: Int(segment.beatsPerBar))
-                drawBeatTicks = beatWidth >= metrics.detailMinPxPerBeat
+                drawBeatTicks = input.grid.drawsBeatTicksIn(segment, camera: camera)
                 showBeatLabels =
                     beatWidth
                     >= metrics.rulerBeatLabelZoomFactor

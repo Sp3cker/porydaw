@@ -67,12 +67,11 @@ extension DrawerStaticsContent {
         }
         axis.forEachGridLine(from: begin, to: end) { tick, isBar, _, _ in
             let argb: UInt32
-            if isBar {
-                argb = bar
-            } else if grid.gridTicksAt(tick, camera: camera) == 1 {
-                argb = fine
-            } else {
-                argb = beat
+            switch grid.beatLineWeight(tick, isBar: isBar, camera: camera) {
+            case .bar: argb = bar
+            case .beat: argb = beat
+            case .beatFine: argb = fine
+            case .offGrid: argb = sub3
             }
             Self.drawerEmit(
                 &out, x: camera.viewX(tick: Double(tick), dpr: dpr) - stroke / 2,

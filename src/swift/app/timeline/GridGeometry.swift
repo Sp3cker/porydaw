@@ -208,36 +208,71 @@ struct RollGrid {
         clock == 0 ? gridTicksAt(0, camera: camera) : clockTicks
     }
 
-    func subGridAnchorIn(_ segment: GridSegment) -> Tick {
-        selection == .clock ? 0 : segment.start
+    /// The bar owning `tick`, clipped to its signature segment.
+    private func barSpan(at tick: Tick) -> (segment: GridSegment, start: UInt64, end: UInt64) {
+        let segment = axis.segmentAt(tick)
+        let bar = UInt64(segment.beatTicks) * UInt64(segment.beatsPerBar)
+        let start = UInt64(segment.start) + (UInt64(tick) - UInt64(segment.start)) / bar * bar
+        return (segment, start, min(start + bar, UInt64(segment.next)))
     }
 
+    /// Musical lattices restart at every bar, so bar lines always snap and a
+    /// stride that does not fit leaves a short last cell; the clock lattice is absolute.
+    private func snapLattice(at tick: Tick) -> (anchor: UInt64, limit: UInt64) {
+        if selection == .clock { return (0, UInt64(TimeDefaults.maxTick)) }
+        let bar = barSpan(at: tick)
+        return (bar.start, min(bar.end, UInt64(TimeDefaults.maxTick)))
+    }
+
+    /// Fixed selections paint until adjacent lines touch; only auto adapts to zoom.
     func drawsSubGridIn(_ segment: GridSegment, camera: EditorCamera) -> Bool {
         switch selection {
-        case .clock:
+        case .clock, .musical:
             Double(fixedTicks) * camera.snapshot.pixelsPerTick >= metrics.gridLineStroke
-        case .musical:
-            Double(fixedTicks) * camera.snapshot.pixelsPerTick >= metrics.autoGridMinCell
         case .auto:
             Double(segment.beatTicks) * camera.snapshot.pixelsPerTick >= metrics.detailMinPxPerBeat
         }
+    }
+
+    /// Beat ticks follow the same rule as the sub-grid under each selection.
+    func drawsBeatTicksIn(_ segment: GridSegment, camera: EditorCamera) -> Bool {
+        Double(segment.beatTicks) * camera.snapshot.pixelsPerTick
+            >= (selection == .auto ? metrics.detailMinPxPerBeat : metrics.gridLineStroke)
+    }
+
+    /// A fixed musical stride that does not divide the segment's beat: its
+    /// lattice cannot inherit the beat hierarchy, so every lattice line is level 1.
+    private func isOffBeatLattice(_ segment: GridSegment) -> Bool {
+        guard case .musical = selection else { return false }
+        return UInt64(segment.beatTicks) % UInt64(fixedTicks) != 0
+    }
+
+    /// Ink weight of a bar/beat line; a fixed grid demotes beats it cannot snap to.
+    func beatLineWeight(_ tick: Tick, isBar: Bool, camera: EditorCamera) -> BeatLineWeight {
+        if isBar { return .bar }
+        if selection != .auto {
+            let anchor = snapLattice(at: tick).anchor
+            if (UInt64(tick) - anchor) % UInt64(fixedTicks) != 0 { return .offGrid }
+        }
+        return gridTicksAt(tick, camera: camera) == 1 ? .beatFine : .beat
     }
 
     func visibleGridCellContaining(_ tick: Tick, camera: EditorCamera) -> (start: Tick, end: Tick) {
         let segment = axis.segmentAt(tick)
         let beat = UInt64(segment.beatTicks)
         let stride: UInt64
-        if camera.snapshot.pixelsPerBeat < metrics.detailMinPxPerBeat {
+        if selection == .auto && camera.snapshot.pixelsPerBeat < metrics.detailMinPxPerBeat {
             stride = beat * UInt64(segment.beatsPerBar)
         } else if drawsSubGridIn(segment, camera: camera) {
             stride = UInt64(gridTicksAt(tick, camera: camera))
         } else {
             stride = beat
         }
-        let start = UInt64(segment.start) + (UInt64(tick) - UInt64(segment.start)) / stride * stride
+        let lattice = snapLattice(at: tick)
+        let start = lattice.anchor + (UInt64(tick) - lattice.anchor) / stride * stride
         let next = start > UInt64(TimeDefaults.maxTick) - stride
             ? UInt64(TimeDefaults.noTick) : start + stride
-        return (Tick(start), min(Tick(next), segment.next))
+        return (Tick(start), Tick(min(next, lattice.limit)))
     }
 
     private func lattice(_ tick: Double, camera: EditorCamera, fine: Bool)
@@ -246,9 +281,8 @@ struct RollGrid {
             return (0, UInt64(fineGridTicks(camera: camera)), UInt64(TimeDefaults.maxTick), true)
         }
         let position = TimeDefaults.tick(from: tick)
-        let segment = axis.segmentAt(position)
-        return (UInt64(segment.start), UInt64(snapTicksAt(position, camera: camera)),
-                min(UInt64(segment.next), UInt64(TimeDefaults.maxTick)), false)
+        let span = snapLattice(at: position)
+        return (span.anchor, UInt64(snapTicksAt(position, camera: camera)), span.limit, false)
     }
 
     private func floor(_ tick: Double, lattice: (anchor: UInt64, stride: UInt64,
@@ -284,13 +318,10 @@ struct RollGrid {
     }
 
     func nextSubdivisionTickAfter(_ tick: Tick, camera: EditorCamera) -> Tick {
-        let segment = axis.segmentAt(tick)
         let stride = UInt64(gridTicksAt(tick, camera: camera))
-        let anchor = UInt64(subGridAnchorIn(segment))
-        let next = anchor + ((UInt64(tick) - anchor) / stride + 1) * stride
-        let limit = selection == .clock ? UInt64(TimeDefaults.maxTick)
-            : min(UInt64(segment.next), UInt64(TimeDefaults.maxTick))
-        return Tick(min(next, limit))
+        let lattice = snapLattice(at: tick)
+        let next = lattice.anchor + ((UInt64(tick) - lattice.anchor) / stride + 1) * stride
+        return Tick(min(next, lattice.limit))
     }
 
     func nextSnapTickAfter(_ tick: Tick, camera: EditorCamera, fine: Bool = false) -> Tick {
@@ -299,30 +330,33 @@ struct RollGrid {
             let next = (UInt64(tick) / stride + 1) * stride
             return Tick(min(next, UInt64(TimeDefaults.maxTick)))
         }
-        let segment = axis.segmentAt(tick)
         let stride = UInt64(snapTicksAt(tick, camera: camera))
-        let anchor = UInt64(segment.start)
-        let next = anchor + ((UInt64(tick) - anchor) / stride + 1) * stride
-        return Tick(min(next, UInt64(segment.next), UInt64(TimeDefaults.maxTick)))
+        let lattice = snapLattice(at: tick)
+        let next = lattice.anchor + ((UInt64(tick) - lattice.anchor) / stride + 1) * stride
+        return Tick(min(next, lattice.limit))
     }
 
+    /// Sub-grid lines off the beat, walked bar by bar. Under a fixed grid whose stride
+    /// does not divide the beat, every lattice line paints at level 1 to match snap points.
     func forEachSubdivision(from begin: Tick, to end: Tick, camera: EditorCamera,
                             _ visit: (Tick, Int) -> Void) {
         var start = begin
         while start < end {
-            let segment = axis.segmentAt(start)
-            let stop = min(end, segment.next)
+            let span = barSpan(at: start)
+            let segment = span.segment
+            let stop = Tick(min(UInt64(end), span.end))
             let beat = UInt64(segment.beatTicks)
             let stride = UInt64(gridTicksAt(start, camera: camera))
-            if stride < beat && drawsSubGridIn(segment, camera: camera) {
-                let anchor = UInt64(subGridAnchorIn(segment))
+            let offBeat = isOffBeatLattice(segment)
+            if (offBeat || stride < beat) && drawsSubGridIn(segment, camera: camera) {
+                let anchor = selection == .clock ? 0 : span.start
                 let relative = UInt64(start) - anchor
                 var tick = anchor + (relative / stride + (relative % stride == 0 ? 0 : 1)) * stride
                 while tick < UInt64(stop) {
                     let beatRelative = (tick - UInt64(segment.start)) % beat
                     if beatRelative != 0 {
                         let level: Int
-                        if beatRelative % max(1, beat / (feel == .triplet ? 3 : 2)) == 0 {
+                        if offBeat || beatRelative % max(1, beat / (feel == .triplet ? 3 : 2)) == 0 {
                             level = 1
                         } else if beatRelative % max(1, beat / (feel == .triplet ? 6 : 4)) == 0 {
                             level = 2
@@ -337,6 +371,13 @@ struct RollGrid {
             start = stop
         }
     }
+}
+
+enum BeatLineWeight: Equatable {
+    case bar
+    case beat
+    case beatFine
+    case offGrid
 }
 
 struct GridMetrics {
