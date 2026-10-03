@@ -15,14 +15,14 @@
             "h": 30,
             "name": "transportMasterVolume",
             "w": 111,
-            "x": 967,
+            "x": 960,
             "y": 4
         },
         {
             "h": 35,
             "name": "transportMasterVolumeCaption",
             "w": 72,
-            "x": 894,
+            "x": 887,
             "y": 2
         },
         {
@@ -155,14 +155,14 @@
             "h": 35,
             "name": "transport.master-volume-caption",
             "w": 72,
-            "x": 894,
+            "x": 887,
             "y": 2
         },
         {
             "h": 30,
             "name": "transport.master-volume",
             "w": 111,
-            "x": 967,
+            "x": 960,
             "y": 4
         },
         {

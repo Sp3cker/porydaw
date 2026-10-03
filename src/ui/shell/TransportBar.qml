@@ -22,7 +22,6 @@ Rectangle {
     implicitHeight: toolExtent + layoutSpaces.two - 2
     color: colors.chromeBackground
     readonly property int edgeMargin: Math.max(1, Math.round(baseFontPx / 6))
-    readonly property int toolbarSeparatorExtent: 6
     // Invoking FontMetrics methods alone does not track a change to their font.
     readonly property real masterCaptionWidth: {
         captionMetrics.font
@@ -34,7 +33,8 @@ Rectangle {
         return Math.ceil(captionMetrics.boundingRect(qsTr("Output")).width)
             + layoutSpaces.two + layoutSpaces.one
     }
-    readonly property bool outputFits: width >= 2 * edgeMargin + 15 + 7 * toolExtent
+    // Gap term: 14 visible controls contribute 13 inter-item gaps when Output fits.
+    readonly property bool outputFits: width >= 2 * edgeMargin + 13 * controls.spacing + 7 * toolExtent
         + Math.ceil(clockHintWidth) + 6 * inset
         + transportScaleSlot.Layout.preferredWidth + Math.round(baseFontPx * 2.25) + 2
         + masterCaptionWidth
@@ -311,11 +311,6 @@ Rectangle {
             Layout.preferredHeight: bar.toolExtent
             Layout.preferredWidth: bar.outputFits ? -1 : Layout.minimumWidth
         }
-        Rectangle {
-            Layout.preferredWidth: bar.toolbarSeparatorExtent
-            Layout.preferredHeight: bar.toolExtent
-            color: bar.colors.separator
-        }
         Text {
             objectName: "transportMasterVolumeCaption"
             Layout.preferredWidth: bar.masterCaptionWidth
@@ -341,12 +336,6 @@ Rectangle {
             Layout.preferredWidth: Math.round(bar.baseFontPx * 6 + 18)
             Layout.preferredHeight: Math.round(bar.baseFontPx * 2.1)
             onValueCommitted: committed => bar.presenter.setMasterVolume(committed)
-        }
-        Rectangle {
-            Layout.preferredWidth: bar.toolbarSeparatorExtent
-            Layout.preferredHeight: bar.toolExtent
-            color: bar.colors.separator
-            visible: bar.outputFits
         }
         Text {
             objectName: "transportOutputVolumeCaption"

@@ -401,6 +401,8 @@ ShellTransportSupport {
                              "transport.resonance", "transportScaleRoot", "transportScaleType",
                              "transportScaleHighlight", "transportScaleFold"]
         wait(50)
+        // References drop the two 6px separators: expanded bars grow the fill spacer by 2*(6 + spacing);
+        // collapsed bars shift the master pair left by 6 + spacing.
         for (var dpr = 1; dpr <= 2; ++dpr) {
             var baseline = JSON.parse(bootstrap.transportReferenceJson(dpr, data.fontPx))
             compare(bar.width, baseline.image.width, "transport reference width")
