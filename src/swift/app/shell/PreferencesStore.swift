@@ -1,4 +1,6 @@
-import CoreFoundation
+#if canImport(CoreFoundation)
+    import CoreFoundation
+#endif
 import Foundation
 import QtBridge
 
@@ -75,18 +77,24 @@ public final class PreferencesStore: QmlInstantiableStatus {
         return fallback
     }
     func storedBool(key: String) -> Bool? {
-        guard let raw = value(key), CFGetTypeID(raw as CFTypeRef) == CFBooleanGetTypeID(),
-            let number = raw as? NSNumber
+        guard let number = value(key) as? NSNumber, Self.isBoolean(number)
         else { return nil }
         return number.boolValue
     }
 
     func storedPositiveInt(key: String) -> Int? {
-        guard let raw = value(key), CFGetTypeID(raw as CFTypeRef) == CFNumberGetTypeID(),
-            let number = raw as? NSNumber, number.intValue > 0,
+        guard let number = value(key) as? NSNumber, !Self.isBoolean(number), number.intValue > 0,
             number.doubleValue == Double(number.intValue)
         else { return nil }
         return number.intValue
+    }
+
+    private static func isBoolean(_ number: NSNumber) -> Bool {
+        #if canImport(CoreFoundation)
+            return CFGetTypeID(number) == CFBooleanGetTypeID()
+        #else
+            return String(cString: number.objCType) == String(cString: NSNumber(value: true).objCType)
+        #endif
     }
 
     public func hasValue(key: String) -> Bool { value(key) != nil }

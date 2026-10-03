@@ -134,6 +134,16 @@ FocusScope {
             boundsBehavior: Flickable.StopAtBounds
             keyNavigationEnabled: false
             currentIndex: -1
+            Label {
+                id: loadingPlaceholder
+                objectName: "songListLoading"
+                parent: list
+                anchors.centerIn: parent
+                visible: root.controller.songsLoading && root.songs.rowCount === 0
+                text: qsTr("Loading…")
+                font: Qt.font(root.applicationSession.typographyFonts.body)
+                color: root.colors.secondaryText
+            }
             Rectangle {
                 anchors.fill: parent
                 z: -1
@@ -208,7 +218,7 @@ FocusScope {
             Layout.fillWidth: true
             Layout.preferredHeight: Math.ceil(root.baseFontPx * 1.15)
             color: root.colors.secondaryText
-            text: root.songs.countText
+            text: loadingPlaceholder.visible ? "" : root.songs.countText
         }
     }
 

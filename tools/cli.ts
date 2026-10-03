@@ -249,7 +249,11 @@ async function runChecks(rawArgs: string[], command: Lane): Promise<void> {
   }
   if (options.help) showHelp(command);
   await runBridge([], true);
-  const directory = await runBuild(lane.buildTargets(options), "debug", true);
+  const directory = await runBuild(
+    lane.buildTargets(options),
+    Deno.build.os === "windows" ? "release" : "debug",
+    true,
+  );
   const executable = Deno.build.os === "windows"
     ? `${lane.binary}.exe`
     : lane.binary;

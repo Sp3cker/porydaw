@@ -182,8 +182,10 @@ void pd_startup_trace_mark(const char *stage)
                                    "%{public}s", stage);
     }
 #endif
-    if (std::getenv("PORYDAW_STARTUP_TRACE"))
+    if (std::getenv("PORYDAW_STARTUP_TRACE")) {
         std::fprintf(stderr, "PORYDAW_STARTUP_TRACE %s\n", stage);
+        std::fflush(stderr);
+    }
 }
 
 bool pd_startup_trace_enabled()

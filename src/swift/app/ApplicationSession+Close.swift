@@ -123,6 +123,7 @@ extension ApplicationSession {
         if let pending = pendingProjectSwitch {
             pendingProjectSwitch = nil
             guard closed else {
+                songDock.songsLoading = false
                 Task { await pending.service.close() }
                 persistTabRecipe()
                 closeCancelled()

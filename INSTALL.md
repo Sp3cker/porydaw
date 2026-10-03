@@ -15,7 +15,7 @@ Installation is not required to use Porydaw. You can download the latest release
 
 Porydaw is a Swift 6.4 + QML application (Swift owns behavior, exposed to QML through QtBridge; no QWidgets). The application entry point is the Swift shell (`src/swift/app/shell/PorydawShellApp.swift`), which loads `src/ui/shell/PorydawApplication.qml` and `ShellWindow.qml`.
 
-The Swift app builds on macOS and Linux. Linux ARM64 has been validated with Swift 6.4.0 and Qt 6.11.2; Windows Swift build support is pending. Release downloads above may still contain the older C++ application.
+The Swift app builds on macOS, Linux, and Windows x86_64. Linux ARM64 and Windows x86_64 have been validated with Swift 6.4.0 and Qt 6.11.2. See [Windows build and runtime notes](docs/windows-build.md) for the Windows toolchain, build fixes, launch commands, and check limitations. Release downloads above may still contain the older C++ application.
 
 Porydaw uses one Deno setup command. It checks installed host build tools before making changes, provisions only missing prerequisites, initializes `poryaaaa`, creates checkout-local Qt and formatter tooling, configures the complete check-enabled build, and builds the application.
 
@@ -96,10 +96,12 @@ Launch the application built by `deno task setup` with the platform-appropriate 
 open build/release/porydaw.app
 
 # Windows
-.\build\release\Release\porydaw.exe
+.\build\release\porydaw.exe
 
 # Linux
 ./build/release/porydaw
 ```
 
-`deno task checks` runs the check lanes declared for the host platform. On macOS every lane runs. On Linux and Windows the Swift lanes (`swiftcore`, `projectidentitycheck`, `projectstore-*`, `bankleases`, `vgbankcheck`, `exportcheck-*`) are still listed by `porydaw_checks --manifest` with `"platforms": ["macos"]`, but the runner reports them as platform-skipped because the check harness does not link Swift there yet. A selection that leaves no runnable check on the host exits with status 2 instead of passing.
+The Windows path above is for the current default Ninja generator. An existing Visual Studio multi-config build keeps its generator and places the executable under `build/release/Release/`. Launch with the matching Qt runtime environment described in the Windows guide.
+
+`deno task checks` runs the check lanes declared for the host platform. The native Swift suites are enabled on macOS and Linux; they remain platform-skipped on Windows because the check harness does not link its Swift test library there yet. The QML lanes are currently built only on macOS. Windows checks use the Release build tree. A selection that leaves no runnable check on the host exits with status 2 instead of passing.

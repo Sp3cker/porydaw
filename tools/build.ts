@@ -13,6 +13,78 @@ import { summarizeBuild } from "./build_output.ts";
 const decoder = new TextDecoder();
 const SHOWN_LINES = 20;
 
+async function prepareWindowsEnvironment(): Promise<void> {
+  if (Deno.build.os !== "windows") return;
+  const vswhere = join(
+    Deno.env.get("ProgramFiles(x86)") ?? "C:\\Program Files (x86)",
+    "Microsoft Visual Studio",
+    "Installer",
+    "vswhere.exe",
+  );
+  const found = await new Deno.Command(vswhere, {
+    args: ["-latest", "-products", "*", "-property", "installationPath"],
+  }).output();
+  const vsRoot = decoder.decode(found.stdout).trim();
+  if (!found.success || !vsRoot) {
+    throw new Error("Visual Studio C++ tools are required for Windows builds");
+  }
+  const devCmd = join(vsRoot, "Common7", "Tools", "VsDevCmd.bat");
+  const envScript = await Deno.makeTempFile({ suffix: ".cmd" });
+  let devEnv;
+  try {
+    await Deno.writeTextFile(
+      envScript,
+      `@echo off\r\ncall "${devCmd}" -arch=x64 -host_arch=x64 >nul\r\nif errorlevel 1 exit /b 1\r\nset\r\n`,
+    );
+    devEnv = await new Deno.Command("cmd.exe", {
+      args: ["/d", "/c", envScript],
+    }).output();
+  } finally {
+    await Deno.remove(envScript);
+  }
+  if (!devEnv.success) throw new Error(decoder.decode(devEnv.stderr));
+  for (const line of decoder.decode(devEnv.stdout).split(/\r?\n/)) {
+    const equal = line.indexOf("=");
+    if (equal > 0) Deno.env.set(line.slice(0, equal), line.slice(equal + 1));
+  }
+  const version = (await Deno.readTextFile(".swift-version")).trim();
+  const swiftRoot = join(
+    Deno.env.get("LOCALAPPDATA") ?? "",
+    "Programs",
+    "Swift",
+  );
+  const toolchainBin = join(
+    swiftRoot,
+    "Toolchains",
+    `${version}+Asserts`,
+    "usr",
+    "bin",
+  );
+  const runtimeBin = join(swiftRoot, "Runtimes", version, "usr", "bin");
+  const sdk = join(
+    swiftRoot,
+    "Platforms",
+    version,
+    "Windows.platform",
+    "Developer",
+    "SDKs",
+    "Windows.sdk",
+  );
+  if (
+    !(await exists(join(toolchainBin, "swiftc.exe"))) ||
+    !(await exists(runtimeBin)) || !(await exists(sdk))
+  ) {
+    throw new Error(
+      `Swift ${version} toolchain, runtime, and SDK are required under ${swiftRoot}`,
+    );
+  }
+  Deno.env.set("SDKROOT", sdk);
+  Deno.env.set(
+    "PATH",
+    `${toolchainBin};${runtimeBin};${Deno.env.get("PATH") ?? ""}`,
+  );
+}
+
 async function exists(path: string): Promise<boolean> {
   try {
     await Deno.stat(path);
@@ -248,6 +320,7 @@ export async function runBuild(
   config: BuildConfig,
   buildChecks?: boolean,
 ): Promise<string> {
+  await prepareWindowsEnvironment();
   const started = performance.now();
   const directory = buildDirectory(config);
   const log = join(directory, "build.log");

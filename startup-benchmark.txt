@@ -1,0 +1,200 @@
+Windows startup benchmark — 2026-10-03
+
+Source: fork/feature/startup-avenues-v7, 42db95446208b0c6e0b2bab068285c6159ebcc02
+Worktree: C:\Users\Spencer\Documents\Poryfaw\.worktrees\v7 (feature/v7)
+SDK: poryaaaa c504afebe5c56cf9393e6ae632b9cef632480ab6 (latest origin/main)
+Build: Release, Swift 6.4.0, Qt 6.11.2 MSVC kit, Ninja, Windows x86_64
+Executable SHA256: 7F6185B80C2631324A35BEEBCB34752B246E98FD6667EAD8A29B106E50CA1266
+Screen: natural 120 Hz
+Project: src/checks/fixtures/decompproject
+Song: mus_route101
+
+Endpoint       First in block  Warm median  Warm min  Warm max  Warm samples
+First frame    404.78 ms       385.10 ms    371.73 ms 394.49 ms 10
+Editor frame   461.05 ms       455.41 ms    448.89 ms 476.49 ms 10
+
+Both blocks had 11 successful launches, zero launch failures, and 11/11 samples
+above the default 300 ms ceiling. Each block excludes its first launch from warm
+statistics. First-in-block launches are not cold-cache measurements.
+
+Times include process creation and dynamic loading and end at receipt of a native
+QQuickWindow::frameSwapped marker: submitted presentation, not physical scanout.
+The editor endpoint also requires a loaded selected document and applied viewport.
+Audio readiness is not measured. No build or tests ran concurrently with timing.
+This is a single-variant benchmark, not the handoff's matched pocketed A/B comparison.
+
+Local Windows compatibility changes were necessary to build and launch this tip:
+- Use Ninja; the Visual Studio generator cannot compile Swift.
+- Disable Qt autogen on Swift-only libraries; archive native code with C++.
+- Convert the standard-key enum value to the Windows signed raw-value type.
+- Remove an unused CoreFoundation import and support preferences without that module.
+- Supply native-link Swift library paths, names, and runtime registration object.
+- Avoid duplicate generated UAC content in the executable manifest.
+- Flush trace markers so redirected Windows output reaches the observer promptly.
+
+Earlier attempts failed before obtaining valid frame samples: build/link failures,
+manifest loader rejection, missing Swift registration crash, and buffered trace
+timeouts. They were resolved before the two successful timing blocks above.
+
+Verification: Release build passed; setup tests 5 passed, 0 failed, 3 skipped on
+Windows; changed Swift/TypeScript formatting and git diff --check passed.
+Native harness suite and manual interaction regression checks were not run.
+Changes are uncommitted. The main checkout's poryaaaa gitlink update is staged.
+
+Raw successful blocks:
+build/release/startup-first-frame.txt
+build/release/startup-editor-frame.txt
+
+MATCHED PREVIOUS-CODE COMPARISON
+
+The literal parent of branch tip 42db9544 is 7966b9df and differs only in docs.
+This comparison instead uses the preceding implementation cb17b70d (WITHOUT)
+against 7966b9df (WITH), which is the code at the branch tip.
+Both include the same local Windows compatibility fixes and latest poryaaaa.
+Only ShellWindow.qml and ShellContent.qml differ in compiled app behavior.
+
+WITHOUT SHA256: C41FB8A288758B40596139F7BA22965807F201DF5C5C0F18743767A5016D0F9D
+WITH SHA256: 7F6185B80C2631324A35BEEBCB34752B246E98FD6667EAD8A29B106E50CA1266
+Copies run in the same Release directory alongside identical fonts, DLLs and root
+QML. The two differing QML components are embedded in their respective binaries.
+
+Two blocks of 16 alternating pairs (64 launches), excluding pair 0 of each block
+from warm statistics: 30 warm matched pairs. Even pairs run WITHOUT then WITH;
+odd pairs run WITH then WITHOUT. Same fixture/song and natural 120 Hz screen.
+All launches succeeded, without diagnostics or observed refresh drift.
+
+Endpoint         WITHOUT median  WITH median  Median paired delta  WITH wins
+First frame      357.953 ms      419.828 ms   +63.045 ms           0/30
+Chrome frame     358.043 ms      419.897 ms   +63.018 ms           0/30
+Workspace frame  535.071 ms      419.899 ms   -112.803 ms          30/30
+Editor frame     535.145 ms      499.190 ms   -35.256 ms           27/30
+
+Editor paired deltas by block: -30.439 ms and -36.147 ms.
+Interpretation: loaded-editor startup improves by about 7%, while first-frame and
+chrome marker latency regresses. The 300 ms ceiling remains unmet. These are
+receiver times for submitted frame markers, not physical scanout latency.
+Use the matched data above; do not subtract earlier standalone session medians.
+Bridge surface check passed after timing (0 baselined findings).
+The source QML and normal porydaw.exe were restored to WITH after comparison.
+
+Raw matched observations, full stage sequences and all attempts:
+build/startup-profile/ab-raw.json
+build/startup-profile/ab-summary.json
+Throwaway observer: build/startup-profile/compare.ts
+
+SUBSEQUENT WINDOWS FIX INTEGRATION
+
+After the timing above, the Windows fixes from feature/swift-qml-grid (30024330,
+including the integration at 8e3b6871) replaced the temporary build adaptations.
+The main Release executable now deploys its matching Swift runtime DLLs and uses
+the branch's manifest embedding, Release importer flags, native keybinding bridge,
+Windows linker configuration and automatic developer-environment setup.
+The pocketed startup sequence and latest poryaaaa were preserved.
+
+Verified normal launch with QT_PLUGIN_PATH, QML2_IMPORT_PATH and QT_QPA_PLATFORM
+removed, no Swift or Qt PATH additions, and cwd set to the repository root.
+The app stayed open showing mus_route101. Qt6Core.dll, swiftCore.dll and Foundation.dll
+were confirmed loaded from build/release beside the executable. Stderr was empty.
+
+Release build, setup tests, build/CLI type checking, focused formatting, bridge
+surface guard and production-startup check passed. Setup: 5 passed, 3 skipped.
+Native check runner: 1 passed, 36 Windows platform-skipped; it needs the matching
+Qt test-library path, separately from the app's self-contained direct launch.
+
+The benchmark numbers and hashes above describe the earlier benchmark binaries;
+they have not been remeasured for this subsequent integration. Normal porydaw.exe
+is the newly integrated build; the saved A/B executable copies remain historical.
+
+INTEGRATED V7 RETEST — 2026-10-03
+
+Executable SHA256: CAEC788207F8899931B8B771454782CFE0EFA36BED9DA7AE1D4139E2DB31D7A7
+Same fixture project and mus_route101; no custom Qt or Swift launch environment.
+The previously opened app closed normally before timing. No build or tests ran
+alongside either timing block. 11 fresh processes per endpoint; first in block
+reported separately, followed by 10 warm samples. First is not guaranteed cold.
+
+Endpoint      First in block  Warm median  Warm min  Warm max
+First frame   406.69 ms       391.42 ms    384.65 ms 431.29 ms
+Editor frame  473.30 ms       479.48 ms    467.82 ms 501.70 ms
+
+All 22 launches succeeded; every sample exceeded the unchanged 300 ms ceiling.
+Times end at submitted-frame marker receipt, not physical display scanout.
+This retest measures integrated v7 only; it is not a new matched A/B comparison.
+
+Raw logs:
+build/release/startup-integrated-first-frame.txt
+build/release/startup-integrated-editor-frame.txt
+
+FULL SWIFT-QML-GRID INTEGRATION — 2026-10-03
+
+Fetched and verified fork/feature/swift-qml-grid tip:
+30024330e29a68f62806a5d76433b254da3d5f85.
+All 22 incoming paths since merge base 79054e40 are integrated. Twenty-one
+match the branch blobs exactly. ApplicationSession+ProjectOpening.swift combines
+its five incoming songsLoading transitions with v7's existing bank-lease,
+prefetch, adoption and startup tracing behavior. No incoming path was omitted.
+This includes loading-state UI, physical-pixel playhead alignment, session fixes,
+Windows setup/build/runtime deployment, check adaptations and documentation.
+V7 startup source is preserved. Shared poryaaaa remains c504afebe5c56cf9393e6ae632b9cef632480ab6.
+This integration is committed on feature/v7 for publication to fork/feature/v7.
+No merge into another branch was performed.
+
+Measured and normally opened v7 executable:
+build/release/porydaw.exe
+SHA256: 3F8DA5A3B23F15EFDA7C18521E3DAC18604B93EEE158DB8692D4BA6B448A8F55
+WITHOUT comparison executable SHA256:
+DC86820641329E1B8E70CE52CF774FE96F5ED89FC214049F98B3A45811B0FD4E
+
+Standalone retest (11 launches per endpoint; first is not guaranteed cold):
+Endpoint      First in block  Warm median  Warm min  Warm max
+First frame   406.33 ms       387.85 ms    380.58 ms 396.61 ms
+Editor frame  555.56 ms       470.28 ms    461.74 ms 482.64 ms
+All 22 launches succeeded with no app diagnostics. All exceeded 300 ms.
+Raw logs: build/release/startup-full-first-frame.txt and
+build/release/startup-full-editor-frame.txt.
+
+Latest matched comparison uses the same complete integration and runtime in
+both variants. Only ShellWindow.qml and ShellContent.qml differ: cb17b70d's
+previous construction sequence versus v7's pocketed startup. The literal tip
+parent is documentation-only and would not compare different code.
+Two blocks of 16 alternating pairs (64 successful launches), excluding pair 0
+in each block: 30 warm matched pairs. Same fixture mus_route101 and observed
+120 Hz refresh before/after and on the window. No app diagnostics or refresh drift.
+
+Endpoint         WITHOUT median  WITH median  Median paired delta  WITH wins
+First frame      312.820 ms      370.680 ms   +55.732 ms           0/30
+Chrome frame     312.912 ms      370.739 ms   +55.733 ms           0/30
+Workspace frame  486.414 ms      370.741 ms   -115.486 ms          30/30
+Editor frame     486.494 ms      449.813 ms   -34.593 ms           30/30
+Editor paired block medians: -33.329 ms and -37.984 ms.
+The loaded-editor median is about 7.5% faster; first submitted frame is slower.
+The comparison isolates startup construction, not the effect of integrating
+swift-qml-grid. Standalone and matched session medians must not be subtracted.
+These measurements include process creation and runtime loading and end at
+native submitted-frame marker receipt, not physical display scanout or audio readiness.
+
+An initial full-integration probe timed out without native frame markers; its raw
+attempt is retained in build/startup-profile/ab-full-failed-attempt-1.json.
+Temporary observer diagnostics were removed. After rebuilding, all 86 measured
+launches above reported their required native markers. The timeout is excluded
+from the successful comparison, and its cause was not conclusively established.
+Only the stderr flush required for reliable Windows marker delivery remains.
+Raw final pairs: build/startup-profile/ab-full-raw.json
+Summary: build/startup-profile/ab-full-summary.json
+Throwaway observer: build/startup-profile/compare-full.ts
+
+Final verification:
+- Release build via deno task: passed.
+- deno task setup:check: 5 passed, 0 failed, 3 ignored.
+- deno task checks:bridge: 0 baselined findings.
+- Focused deno task format --check --base HEAD: passed using pinned Swift 6.4.
+  The system Swift 6.2 formatter rejected --lines; setting SWIFTC to the pinned
+  toolchain resolved the tool mismatch without source edits.
+- git diff --check: passed.
+- deno task checks --verbose: production-startup passed; 36 Windows platform
+  skips. This is not full functional/visual harness coverage on Windows.
+- Normal porydaw.exe opened with no CLI arguments, no extra Qt/Swift PATH,
+  and no QT_PLUGIN_PATH, QML2_IMPORT_PATH, QT_QPA_PLATFORM or startup tracing.
+  The saved mus_route101 session opened, stderr was empty, and Qt6Core.dll,
+  swiftCore.dll and Foundation.dll loaded from the executable's own directory.
+The final normal executable is the measured WITH copy; source and app are v7.

@@ -19,13 +19,13 @@ QStringList strings(std::initializer_list<const char *> values)
     return result;
 }
 
+#if defined(__APPLE__) || defined(__linux__)
 const QString &argumentAt(const QStringList &arguments, qsizetype index)
 {
     static const QString empty;
     return index < arguments.size() ? arguments.at(index) : empty;
 }
 
-#if defined(__APPLE__) || defined(__linux__)
 int swiftCore(QApplication &, const QStringList &arguments, const QStringList &qtArguments)
 {
     auto selected = QStringList{
@@ -59,6 +59,7 @@ int swiftExport(QApplication &, const QStringList &arguments, const QStringList 
 }
 #else
 constexpr Handler swiftCore = nullptr;
+constexpr Handler swiftSample = nullptr;
 constexpr Handler swiftBank = nullptr;
 constexpr Handler swiftExport = nullptr;
 #endif
