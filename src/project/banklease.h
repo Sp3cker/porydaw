@@ -79,9 +79,7 @@ VoicegroupLease wrapVoicegroupBorrow(LoadedVoiceGroup *raw, std::shared_ptr<void
 
 // A loaded bank owned through plain value semantics. poryaaaa hands out a
 // mutable LoadedVoiceGroup* and frees it with voicegroup_free, but porydaw
-// publishes banks as immutable, so the public surface is only the const
-// borrow. AudioEngine alone may unwrap the legacy mutable borrow to feed
-// poryaaaa entry points, which only read the bank.
+// publishes banks as immutable, so the public surface is only the const borrow.
 class VoicegroupLease
 {
   public:
@@ -93,7 +91,6 @@ class VoicegroupLease
     void reset() { m_bank.reset(); }
 
   private:
-    friend class AudioEngine;
     friend VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw);
     friend VoicegroupLease wrapVoicegroupLease(LoadedVoiceGroup *raw,
                                                std::shared_ptr<void> retained);
@@ -101,10 +98,6 @@ class VoicegroupLease
     friend VoicegroupLease borrowVoicegroupLease(LoadedVoiceGroup *raw);
     friend VoicegroupLease wrapVoicegroupBorrow(LoadedVoiceGroup *raw,
                                                 std::shared_ptr<void> retained);
-
-    // Legacy mutable borrow required by unchanged poryaaaa; porydaw never
-    // writes through it.
-    LoadedVoiceGroup *borrow() const { return m_bank.get(); }
 
     std::shared_ptr<LoadedVoiceGroup> m_bank;
 };

@@ -11,6 +11,7 @@ func drawerVoicePickerInsertion(_ report: CheckReport, suite: DocumentSession,
     let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
     let page = fixture.page
     let baseline = fixture.snapshot
+    let undoBefore = fixture.document.history.undoIndex
     report.expect(!baseline.canUndo, cppID: drawerVoiceInsertionID,
                   message: "the fixture starts with no undoable edit")
 
@@ -18,17 +19,17 @@ func drawerVoicePickerInsertion(_ report: CheckReport, suite: DocumentSession,
                   message: "the double-click on the empty lane opens the picker")
     report.expect(page.hasPicker, cppID: drawerVoiceInsertionID,
                   message: "the double-click on the empty lane opens the picker")
-    report.expectEqual("Insert voice change", page.pickerTitle, cppID: drawerVoiceInsertionID,
+    report.expectEqual(expected: "Insert voice change", actual: page.pickerTitle, cppID: drawerVoiceInsertionID,
                        what: "an empty-lane target opens the insertion title")
-    report.expectEqual(96, page.pickerTargetTick, cppID: drawerVoiceInsertionID,
+    report.expectEqual(expected: 96, actual: page.pickerTargetTick, cppID: drawerVoiceInsertionID,
                        what: "the captured tick is the press's snapped tick")
     report.expect(page.pickerTargetIdentity == nil, cppID: drawerVoiceInsertionID,
                   message: "an empty-lane target carries no occurrence")
-    report.expectEqual(programs[1], page.pickerProgram, cppID: drawerVoiceInsertionID,
+    report.expectEqual(expected: programs[1], actual: page.pickerProgram, cppID: drawerVoiceInsertionID,
                        what: "the picker opens on the slot the context resolves to")
     report.expect(page.interactionActive, cppID: drawerVoiceInsertionID,
                   message: "an open picker reports an active interaction")
-    report.expectEqual(3, page.markerIdentities.count, cppID: drawerVoiceInsertionID,
+    report.expectEqual(expected: 3, actual: page.markerIdentities.count, cppID: drawerVoiceInsertionID,
                        what: "the open picker publishes no marker of its own")
 
     // Filter, then accept: one insertion, one revision, one history entry.
@@ -42,20 +43,23 @@ func drawerVoicePickerInsertion(_ report: CheckReport, suite: DocumentSession,
         $0.label.range(of: filter, options: .caseInsensitive) != nil
     }, cppID: drawerVoiceInsertionID, message: "every visible row matches the filter")
     page.selectPickerRow(index: 0)
-    report.expectEqual(programs[2], page.pickerProgram, cppID: drawerVoiceInsertionID,
+    report.expectEqual(expected: programs[2], actual: page.pickerProgram, cppID: drawerVoiceInsertionID,
                        what: "the row press selects the filtered program")
     report.expect(page.acceptPicker(), cppID: drawerVoiceInsertionID,
                   message: "accepting the picker writes the captured target")
-    report.expectEqual(4, fixture.lanePoints().count, cppID: drawerVoiceInsertionID,
+    report.expectEqual(expected: 4, actual: fixture.lanePoints().count, cppID: drawerVoiceInsertionID,
                        what: "the insertion adds exactly one lane event")
-    report.expectEqual(programs[2],
+    report.expectEqual(expected: programs[2], actual: 
                        VoiceLanePolicy.occurrence(at: 96, in: fixture.lanePoints())?.value,
                        cppID: drawerVoiceInsertionID, what: "the inserted event carries the chosen slot")
-    report.expectEqual(baseline.revision + 1, fixture.snapshot.revision, cppID: drawerVoiceInsertionID,
+    report.expectEqual(expected: baseline.revision + 1, actual: fixture.snapshot.revision, cppID: drawerVoiceInsertionID,
                        what: "the insertion is one revision")
     report.expect(fixture.snapshot.canUndo, cppID: drawerVoiceInsertionID,
                   message: "the insertion records one history entry")
-    report.expectEqual([0, 48, 96, 120], page.markerTicks, cppID: drawerVoiceInsertionID,
+    report.expectEqual(expected: undoBefore + 1, actual: fixture.document.history.undoIndex,
+                       cppID: drawerVoiceInsertionID,
+                       what: "the committed insertion advances the undo index by one")
+    report.expectEqual(expected: [0, 48, 96, 120], actual: page.markerTicks, cppID: drawerVoiceInsertionID,
                        what: "the projection rebuilds around the new occurrence")
     report.expect(!page.hasPicker, cppID: drawerVoiceInsertionID,
                   message: "acceptance closes the picker")
@@ -64,22 +68,22 @@ func drawerVoicePickerInsertion(_ report: CheckReport, suite: DocumentSession,
 
     // Undo and redo follow the document.
     do {
-        _ = try drawerVoiceRunBlocking { try await fixture.session.undo() }
+        _ = try runBlocking { try await fixture.session.undo() }
     } catch {
         report.fail(drawerVoiceInsertionID, "undo failed: \(error)")
         return
     }
     report.expect(VoiceLanePolicy.occurrence(at: 96, in: fixture.lanePoints()) == nil,
                   cppID: drawerVoiceInsertionID, message: "undo removes the inserted occurrence")
-    report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceInsertionID,
+    report.expectEqual(expected: [0, 48, 120], actual: page.markerTicks, cppID: drawerVoiceInsertionID,
                        what: "undo rebuilds the projection without the insertion")
     do {
-        _ = try drawerVoiceRunBlocking { try await fixture.session.redo() }
+        _ = try runBlocking { try await fixture.session.redo() }
     } catch {
         report.fail(drawerVoiceInsertionID, "redo failed: \(error)")
         return
     }
-    report.expectEqual(programs[2],
+    report.expectEqual(expected: programs[2], actual: 
                        VoiceLanePolicy.occurrence(at: 96, in: fixture.lanePoints())?.value,
                        cppID: drawerVoiceInsertionID, what: "redo restores the inserted occurrence")
     report.expect(page.markerTicks.contains(96), cppID: drawerVoiceInsertionID,
@@ -92,7 +96,7 @@ func drawerVoicePickerInsertion(_ report: CheckReport, suite: DocumentSession,
     page.selectPickerRow(index: 0)
     report.expect(!page.acceptPicker(), cppID: drawerVoiceInsertionID,
                   message: "accepting the value the document already holds writes nothing")
-    report.expectEqual(settled, fixture.snapshot, cppID: drawerVoiceInsertionID,
+    report.expectEqual(expected: settled, actual: fixture.snapshot, cppID: drawerVoiceInsertionID,
                        what: "the same-value acceptance leaves the document untouched")
 
     // A filter that matches nothing cannot be accepted.
@@ -100,13 +104,13 @@ func drawerVoicePickerInsertion(_ report: CheckReport, suite: DocumentSession,
     page.setPickerFilter(text: "zzz-no-such-voice")
     report.expect(!page.pickerHasMatch, cppID: drawerVoiceInsertionID,
                   message: "an unmatched filter publishes no match")
-    report.expectEqual(0, page.pickerRowValues.count, cppID: drawerVoiceInsertionID,
+    report.expectEqual(expected: 0, actual: page.pickerRowValues.count, cppID: drawerVoiceInsertionID,
                        what: "an unmatched filter publishes no row")
-    report.expectEqual(-1, page.pickerIndex, cppID: drawerVoiceInsertionID,
+    report.expectEqual(expected: -1, actual: page.pickerIndex, cppID: drawerVoiceInsertionID,
                        what: "an unmatched filter publishes no current row")
     report.expect(!page.acceptPicker(), cppID: drawerVoiceInsertionID,
                   message: "an unmatched filter cannot be accepted")
-    report.expectEqual(settled, fixture.snapshot, cppID: drawerVoiceInsertionID,
+    report.expectEqual(expected: settled, actual: fixture.snapshot, cppID: drawerVoiceInsertionID,
                        what: "the refused acceptance leaves the document untouched")
 }
 
@@ -140,7 +144,7 @@ func drawerVoiceOriginalPickerRows(_ report: CheckReport, suite: DocumentSession
         }
     }
     func open(_ tick: Tick) {
-        _ = page.pointerDoubleClick(x: session.camera.displayX(tick: Double(tick), origin: 0, dpr: 1), y: 10)
+        _ = page.pointerDoubleClick(x: session.camera.viewX(tick: Double(tick), dpr: 1), y: 10)
     }
     func expect(_ condition: @autoclosure () -> Bool, _ line: Int) {
         report.expect(condition(), cppID: "drawerpresentation/DrawerPresentationTest::voicePickerTransactions",
@@ -149,7 +153,7 @@ func drawerVoiceOriginalPickerRows(_ report: CheckReport, suite: DocumentSession
     func value(_ tick: Tick) -> Int? {
         document.lanePoints(track: 0, lane: .voice).first { $0.tick == tick }?.value
     }
-    let baseline = drawerVoiceVoiceDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     let baselineBytes = try! document.captureSave().bytes
     open(48)
     expect(page.pickerOpen, 309)
@@ -172,14 +176,14 @@ func drawerVoiceOriginalPickerRows(_ report: CheckReport, suite: DocumentSession
     _ = document.history.redoDocument()
     expect(oneUndoRestored && (try! document.captureSave().bytes) == writtenBytes
         && document.history.currentIdentity == writtenIdentity, 320)
-    let changed = drawerVoiceVoiceDocumentSnapshot(document)
+    let changed = DocumentSnapshot(document)
     open(48)
     expect(page.pickerOpen, 324)
     page.setPickerFilter(text: "005")
     expect(page.pickerRowPrograms == [5] && page.pickerIndex == 0, 326)
     _ = page.acceptPicker()
     expect(!page.pickerOpen, 328)
-    expect(drawerVoiceVoiceDocumentSnapshot(document) == changed, 329)
+    expect(DocumentSnapshot(document) == changed, 329)
     open(48)
     expect(page.pickerOpen, 332)
     page.setPickerFilter(text: "not-a-voice")
@@ -188,7 +192,7 @@ func drawerVoiceOriginalPickerRows(_ report: CheckReport, suite: DocumentSession
     expect(page.pickerRowPrograms == [7] && page.pickerIndex == 0, 336)
     page.cancelPicker()
     expect(!page.pickerOpen, 338)
-    expect(drawerVoiceVoiceDocumentSnapshot(document) == changed, 339)
+    expect(DocumentSnapshot(document) == changed, 339)
     open(96)
     expect(page.pickerOpen, 407)
     expect(page.pickerIndex == 5, 408)
@@ -237,25 +241,25 @@ func drawerVoicePickerValueReplacement(_ report: CheckReport, suite: DocumentSes
     let markerX = fixture.markerX(48)
 
     _ = page.pointerDoubleClick(x: markerX, y: 10)
-    report.expectEqual("Change voice", page.pickerTitle, cppID: drawerVoiceReplacementID,
+    report.expectEqual(expected: "Change voice", actual: page.pickerTitle, cppID: drawerVoiceReplacementID,
                        what: "a marker target opens the change title")
-    report.expectEqual(target.text, page.pickerTargetIdentity, cppID: drawerVoiceReplacementID,
+    report.expectEqual(expected: target.text, actual: page.pickerTargetIdentity, cppID: drawerVoiceReplacementID,
                        what: "the captured identity is the pressed occurrence")
-    report.expectEqual(48, page.pickerTargetTick, cppID: drawerVoiceReplacementID,
+    report.expectEqual(expected: 48, actual: page.pickerTargetTick, cppID: drawerVoiceReplacementID,
                        what: "the captured tick is the marker's own tick")
-    report.expectEqual(target.value, page.pickerProgram, cppID: drawerVoiceReplacementID,
+    report.expectEqual(expected: target.value, actual: page.pickerProgram, cppID: drawerVoiceReplacementID,
                        what: "the picker opens on the marker's current program")
 
     page.setPickerFilter(text: String(format: "%03d", programs[2]))
     page.selectPickerRow(index: 0)
     report.expect(page.acceptPicker(), cppID: drawerVoiceReplacementID,
                   message: "accepting the picker replaces the captured occurrence's value")
-    report.expectEqual(programs[2],
+    report.expectEqual(expected: programs[2], actual: 
                        VoiceLanePolicy.occurrence(at: 48, in: fixture.lanePoints())?.value,
                        cppID: drawerVoiceReplacementID, what: "the change at tick 48 carries the new slot")
-    report.expectEqual(3, fixture.lanePoints().count, cppID: drawerVoiceReplacementID,
+    report.expectEqual(expected: 3, actual: fixture.lanePoints().count, cppID: drawerVoiceReplacementID,
                        what: "a value replacement adds no event")
-    report.expectEqual(baseline.revision + 1, fixture.snapshot.revision, cppID: drawerVoiceReplacementID,
+    report.expectEqual(expected: baseline.revision + 1, actual: fixture.snapshot.revision, cppID: drawerVoiceReplacementID,
                        what: "the replacement is one revision")
     report.expect(fixture.snapshot.canUndo && !baseline.canUndo, cppID: drawerVoiceReplacementID,
                   message: "the replacement records one history entry")
@@ -271,7 +275,7 @@ func drawerVoicePickerValueReplacement(_ report: CheckReport, suite: DocumentSes
     report.expect(page.handleEscape(), cppID: drawerVoiceReplacementID,
                   message: "Escape claims the key while the picker is open")
     report.expect(!page.hasPicker, cppID: drawerVoiceReplacementID, message: "Escape closes the picker")
-    report.expectEqual(settled, fixture.snapshot, cppID: drawerVoiceReplacementID,
+    report.expectEqual(expected: settled, actual: fixture.snapshot, cppID: drawerVoiceReplacementID,
                        what: "Escape writes nothing")
     report.expect(!page.handleEscape(), cppID: drawerVoiceReplacementID,
                   message: "Escape is unhandled once nothing is open")
@@ -283,7 +287,7 @@ func drawerVoicePickerValueReplacement(_ report: CheckReport, suite: DocumentSes
     report.expect(!page.hasGesture, cppID: drawerVoiceReplacementID,
                   message: "the dismissing press starts no gesture")
     _ = page.pointerRelease(x: fixture.markerX(200), y: 10, button: 1)
-    report.expectEqual(settled, fixture.snapshot, cppID: drawerVoiceReplacementID,
+    report.expectEqual(expected: settled, actual: fixture.snapshot, cppID: drawerVoiceReplacementID,
                        what: "the dismissed press and its release write nothing")
 
     // A stale capture — the document moved under the open picker — writes
@@ -292,7 +296,7 @@ func drawerVoicePickerValueReplacement(_ report: CheckReport, suite: DocumentSes
     let staleTarget = page.pickerTargetIdentity
     let heldAtCapture = VoiceLanePolicy.occurrence(
         at: 48, in: fixture.document.lanePoints(track: 0, lane: .voice)).map { $0.text }
-    report.expectEqual(heldAtCapture, staleTarget, cppID: drawerVoiceReplacementID,
+    report.expectEqual(expected: heldAtCapture, actual: staleTarget, cppID: drawerVoiceReplacementID,
                        what: "the capture names the occurrence the document held then")
     fixture.document.writeLane(track: 0, lane: .voice, from: 0, through: 0,
                                points: [LaneWrite(tick: 0, value: programs[2])])
@@ -301,11 +305,11 @@ func drawerVoicePickerValueReplacement(_ report: CheckReport, suite: DocumentSes
     let rewrote = fixture.snapshot
     report.expect(!page.acceptPicker(), cppID: drawerVoiceReplacementID,
                   message: "an acceptance after the cancellation writes nothing")
-    report.expectEqual(rewrote, fixture.snapshot, cppID: drawerVoiceReplacementID,
+    report.expectEqual(expected: rewrote, actual: fixture.snapshot, cppID: drawerVoiceReplacementID,
                        what: "the stale acceptance leaves the rewrite as the only change")
     report.expect(page.pickerTargetIdentity == nil, cppID: drawerVoiceReplacementID,
                   message: "the cancelled capture is gone instead of retargeted")
-    report.expectEqual(programs[2],
+    report.expectEqual(expected: programs[2], actual: 
                        VoiceLanePolicy.occurrence(at: 0, in: fixture.lanePoints())?.value,
                        cppID: drawerVoiceReplacementID, what: "the rewrite itself stands")
 }
@@ -320,45 +324,51 @@ func drawerVoicePickerKeyboardPolicy(_ report: CheckReport, suite: DocumentSessi
         report.fail(drawerVoiceKeyboardID, "the picker did not open")
         return
     }
-    report.expectEqual(suite.bankSlots.count, page.pickerRowValues.count, cppID: drawerVoiceKeyboardID,
+    report.expectEqual(expected: suite.bankSlots.count, actual: page.pickerRowValues.count, cppID: drawerVoiceKeyboardID,
                        what: "an empty filter publishes every bank row")
-    report.expectEqual(programs[1], page.pickerProgram, cppID: drawerVoiceKeyboardID,
+    report.expectEqual(expected: programs[1], actual: page.pickerProgram, cppID: drawerVoiceKeyboardID,
                        what: "the picker opens on the context slot the target captured")
-    report.expectEqual(programs[1], page.pickerIndex, cppID: drawerVoiceKeyboardID,
+    report.expectEqual(expected: programs[1], actual: page.pickerIndex, cppID: drawerVoiceKeyboardID,
                        what: "the published row index follows the current program")
     let first = page.pickerProgram
     page.movePickerSelection(delta: 1)
-    report.expectEqual(first + 1, page.pickerProgram, cppID: drawerVoiceKeyboardID,
+    report.expectEqual(expected: first + 1, actual: page.pickerProgram, cppID: drawerVoiceKeyboardID,
                        what: "the down arrow moves to the next visible program")
     page.movePickerSelection(delta: -1)
-    report.expectEqual(first, page.pickerProgram, cppID: drawerVoiceKeyboardID,
+    report.expectEqual(expected: first, actual: page.pickerProgram, cppID: drawerVoiceKeyboardID,
                        what: "the up arrow returns to the previous program")
     page.movePickerSelection(delta: -5)
-    report.expectEqual(page.pickerRowPrograms.first ?? -1, page.pickerProgram, cppID: drawerVoiceKeyboardID,
+    report.expectEqual(expected: page.pickerRowPrograms.first ?? -1, actual: page.pickerProgram, cppID: drawerVoiceKeyboardID,
                        what: "the navigation clamps at the first row")
     page.movePickerSelection(delta: 500)
-    report.expectEqual(page.pickerRowPrograms.last ?? -1, page.pickerProgram, cppID: drawerVoiceKeyboardID,
+    report.expectEqual(expected: page.pickerRowPrograms.last ?? -1, actual: page.pickerProgram, cppID: drawerVoiceKeyboardID,
                        what: "the navigation clamps at the last row")
-    report.expectEqual(page.pickerRowPrograms.count - 1, page.pickerIndex, cppID: drawerVoiceKeyboardID,
+    report.expectEqual(expected: page.pickerRowPrograms.count - 1, actual: page.pickerIndex, cppID: drawerVoiceKeyboardID,
                        what: "the row index follows the clamped program")
     page.selectPickerRow(index: 1)
-    report.expectEqual(page.pickerRowPrograms[1], page.pickerProgram, cppID: drawerVoiceKeyboardID,
+    report.expectEqual(expected: page.pickerRowPrograms[1], actual: page.pickerProgram, cppID: drawerVoiceKeyboardID,
                        what: "a row press selects exactly that row's program")
     report.expect(page.pickerRowValues[1].selected, cppID: drawerVoiceKeyboardID,
                   message: "the selected row publishes its own state")
-    report.expectEqual(1, page.pickerRowValues.filter(\.selected).count, cppID: drawerVoiceKeyboardID,
+    report.expectEqual(expected: 1, actual: page.pickerRowValues.filter(\.selected).count, cppID: drawerVoiceKeyboardID,
                        what: "exactly one row is selected")
 
-    // Filtering by name text follows the labels the bank publishes.
-    let name = suite.bankSlots[programs[0]].voice?.symbol ?? ""
-    if !name.isEmpty {
-        page.setPickerFilter(text: name)
-        report.expect(page.pickerRowPrograms.contains(programs[0]), cppID: drawerVoiceKeyboardID,
-                      message: "a name filter keeps the slot that carries it")
-        report.expect(page.pickerRowValues.allSatisfy {
-            $0.label.lowercased().contains(name.lowercased())
-        }, cppID: drawerVoiceKeyboardID, message: "every row matched by name really carries the name")
+    guard let namedSlot = suite.bankSlots.indices.first(where: {
+        suite.bankSlots[$0].kind == BankSlotKind.editable
+            && !(suite.bankSlots[$0].voice?.symbol.isEmpty ?? true)
+    }) else {
+        report.fail(drawerVoiceKeyboardID, "the staged bank has no named editable slot")
+        page.cancelPicker()
+        return
     }
+    let name = String(VoiceLanePolicy.label(
+        slot: namedSlot, view: suite.bankSlots[namedSlot]).split(separator: " ", maxSplits: 1).last ?? "")
+    page.setPickerFilter(text: name)
+    report.expect(page.pickerRowPrograms.contains(namedSlot), cppID: drawerVoiceKeyboardID,
+                  message: "a name filter keeps the slot that carries it")
+    report.expect(page.pickerRowValues.allSatisfy {
+        $0.label.lowercased().contains(name.lowercased())
+    }, cppID: drawerVoiceKeyboardID, message: "every row matched by name really carries the name")
     page.cancelPicker()
     report.expect(!page.hasPicker, cppID: drawerVoiceKeyboardID, message: "the picker closes")
 }
@@ -367,10 +377,9 @@ func drawerVoicePickerKeyboardPolicy(_ report: CheckReport, suite: DocumentSessi
 func drawerVoiceBlankSlotCommit(_ report: CheckReport, suite: DocumentSession,
                              service: ProjectService, programs: [Int]) {
     guard let blankIndex = suite.bankSlots.indices.first(where: {
-        suite.bankSlots[$0].voice == nil
+        suite.bankSlots[$0].kind == BankSlotKind.none
     }) else {
-        report.expect(true, cppID: drawerVoiceCollisionID,
-                      message: "the staged bank publishes no blank slot to commit")
+        report.fail(drawerVoiceCollisionID, "the staged bank publishes no blank slot to commit")
         return
     }
     let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
@@ -390,7 +399,7 @@ func drawerVoiceBlankSlotCommit(_ report: CheckReport, suite: DocumentSession,
     page.selectPickerRow(index: row)
     report.expect(page.acceptPicker(), cppID: drawerVoiceCollisionID,
                   message: "the picker commits the slot the bank holds no parsed voice for")
-    report.expectEqual(blankIndex,
+    report.expectEqual(expected: blankIndex, actual: 
                        VoiceLanePolicy.occurrence(at: 96, in: fixture.lanePoints())?.value,
                        cppID: drawerVoiceCollisionID, what: "the lane holds the blank slot's number")
 
@@ -400,15 +409,41 @@ func drawerVoiceBlankSlotCommit(_ report: CheckReport, suite: DocumentSession,
     }
     report.expect(marker.slotBlank, cppID: drawerVoiceCollisionID,
                   message: "the committed blank slot publishes blank truth")
-    report.expectEqual("", marker.symbol, cppID: drawerVoiceCollisionID,
+    report.expectEqual(expected: "", actual: marker.symbol, cppID: drawerVoiceCollisionID,
                        what: "the committed blank slot publishes no symbol")
-    report.expectEqual(String(format: "%03d", blankIndex), marker.label, cppID: drawerVoiceCollisionID,
+    report.expectEqual(expected: String(format: "%03d", blankIndex), actual: marker.label, cppID: drawerVoiceCollisionID,
                        what: "the committed blank slot's label stays its program number")
 
     fixture.session.editCursor = 96
     report.expect(fixture.page.contextBlank, cppID: drawerVoiceCollisionID,
                   message: "the readout publishes the blank truth for that context")
-    report.expectEqual(String(format: "%03d", blankIndex), fixture.page.readoutText,
+    report.expectEqual(expected: String(format: "%03d", blankIndex), actual: fixture.page.readoutText,
                        cppID: drawerVoiceCollisionID,
                        what: "the readout of a blank context is the program number alone")
+}
+
+@MainActor
+func drawerVoicePickerReattachment(_ report: CheckReport, suite: DocumentSession,
+                                   service: ProjectService, programs: [Int]) {
+    let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
+    let page = fixture.page
+    let before = fixture.snapshot
+    _ = page.pointerDoubleClick(x: fixture.markerX(96), y: 10)
+    guard page.hasPicker else {
+        report.fail(drawerVoiceCancellationID, "the picker did not open before detaching")
+        return
+    }
+    page.detach()
+    report.expect(!page.hasPicker && !page.pickerOpen && fixture.snapshot == before,
+                  cppID: drawerVoiceCancellationID,
+                  message: "a detached page cancels its open picker without writing")
+    page.attach(session: fixture.session, palette: GridPalette())
+    _ = page.pointerDoubleClick(x: fixture.markerX(96), y: 10)
+    page.setPickerFilter(text: String(format: "%03d", programs[2]))
+    page.selectPickerRow(index: 0)
+    let accepted = page.acceptPicker()
+    report.expect(accepted && fixture.lanePoints().contains {
+        $0.tick == 96 && $0.value == programs[2]
+    } && fixture.snapshot.revision == before.revision + 1, cppID: drawerVoiceInsertionID,
+    message: "a re-attached page drives a fresh insertion")
 }

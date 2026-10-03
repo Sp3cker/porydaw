@@ -56,12 +56,45 @@ struct CheckReport {
         }
     }
 
-    func expectEqual<T: Equatable>(_ expected: T, _ actual: T, cppID: String,
+    func expectEqual<T: Equatable>(expected: T, actual: T, cppID: String,
                                     what: String) {
         if expected == actual {
             pass(cppID, row: what)
         } else {
             fail(cppID, "\(what): expected=\(expected) actual=\(actual)")
+        }
+    }
+
+    /// Scoped view that fixes the cppID prefix so call sites stop carrying
+    /// cppID-prefixing helpers. Forwards byte-identically to the unscoped
+    /// methods with the same cppID string.
+    func scoped(cppID: String) -> Scoped {
+        Scoped(report: self, cppID: cppID)
+    }
+
+    struct Scoped {
+        private let report: CheckReport
+        private let cppID: String
+
+        init(report: CheckReport, cppID: String) {
+            self.report = report
+            self.cppID = cppID
+        }
+
+        func pass(row: String = "suite-complete") {
+            report.pass(cppID, row: row)
+        }
+
+        func fail(_ message: String) {
+            report.fail(cppID, message)
+        }
+
+        func expect(_ condition: @autoclosure () -> Bool, message: String) {
+            report.expect(condition(), cppID: cppID, message: message)
+        }
+
+        func expectEqual<T: Equatable>(expected: T, actual: T, what: String) {
+            report.expectEqual(expected: expected, actual: actual, cppID: cppID, what: what)
         }
     }
 
@@ -78,6 +111,10 @@ struct CheckReport {
 enum CheckEnvironment {
     static let fixtureRoot: String? = {
         guard let pointer = pdc_check_fixture_root() else { return nil }
+        return String(cString: pointer)
+    }()
+    static let sampleCorpus: String? = {
+        guard let pointer = pdc_check_sample_corpus() else { return nil }
         return String(cString: pointer)
     }()
 
@@ -103,7 +140,10 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         }
     case 3:
         runPlaybackSuite(report)
-        runAudioControllerChecks(report)
+        let boxedAudio = ReportBox(report)
+        MainActor.assumeIsolated {
+            runAudioControllerChecks(boxedAudio.report)
+        }
         runAudioAuditionChecks(report)
         runResonanceSuppressionChecks(report)
     case 4:
@@ -165,8 +205,6 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         runSaveCoreSuite(report)
     case 20:
         runVoicegroupEditingSuite(report)
-    case 21:
-        runVoicegroupCatalogAbsentSuite(report)
     case 22:
         runVoicegroupEditingSuite(report)
         runSaveCoreSuite(report)
@@ -187,7 +225,10 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
     case 30:
         runProjectStoreSaveSuite(report)
     case 31:
-        runBankLeasesSuite(report)
+        let boxedBankLeases = ReportBox(report)
+        MainActor.assumeIsolated {
+            runBankLeasesSuite(boxedBankLeases.report)
+        }
     case 32:
         let boxedExport = ReportBox(report)
         MainActor.assumeIsolated {
@@ -205,6 +246,13 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         let boxedSettings = ReportBox(report)
         MainActor.assumeIsolated {
             runEngineSettingsChecks(boxedSettings.report)
+        }
+    case 34:
+        runDisplayListChecks(report)
+    case 35:
+        let boxedSample = ReportBox(report)
+        MainActor.assumeIsolated {
+            runSampleChecks(boxedSample.report)
         }
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")

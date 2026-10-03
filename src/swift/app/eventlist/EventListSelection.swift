@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawAppEventList
 
 @MainActor
 extension EventListPresenter {
@@ -74,10 +75,19 @@ extension EventListPresenter {
     }
 
     func dispatchResizeColumn(column: Int, width: Double) {
-        guard (0..<columnWidths.count).contains(column), width.isFinite else { return }
+        guard (0..<6).contains(column), width.isFinite else { return }
         let next = max(24, width)
-        guard columnWidths[column] != next else { return }
-        columnWidths[column] = next
+        guard savedColumnWidth(column: column) != next else { return }
+        var widths = columnWidths
+        if widths.count < 6 {
+            widths.reserveCapacity(6)
+            for index in widths.count..<6 {
+                widths.append(defaultColumnWidth(column: index))
+            }
+        }
+        widths[column] = next
+        resizedColumns.insert(column)
+        columnWidths = widths
     }
 
     public func toggleFilter(bit: Int) {
@@ -118,8 +128,14 @@ extension EventListPresenter {
               let source = model.row(at: fromRow)?.eventIndex else { return }
         let following = model.rows[gap...].first(where: { $0.eventIndex != nil })?.eventIndex
         let preceding = model.rows[..<gap].last(where: { $0.eventIndex != nil })?.eventIndex
-        let destination = following.map { $0 > source ? $0 - 1 : $0 }
-            ?? preceding.map { $0 < source ? $0 + 1 : $0 }
+        let destination: Int?
+        if let following {
+            destination = following > source ? following - 1 : following
+        } else if let preceding {
+            destination = preceding < source ? preceding + 1 : preceding
+        } else {
+            destination = nil
+        }
         guard let destination else { return }
         session.document.moveRawEvent(chunk: chunkIndex, index: source, to: destination)
         selectedRows = []
@@ -130,13 +146,25 @@ extension EventListPresenter {
         }
     }
 
-    func moveEvent(delta: Int) {
-        guard let session, !session.isClosed,
+    func moveDestination(delta: Int) -> Int? {
+        guard visible, !editing, let session, !session.isClosed,
               let source = model.row(at: currentRow)?.eventIndex,
+              let adjacent = model.row(at: currentRow + delta),
+              let destination = adjacent.eventIndex,
+              session.document.rawChunks.indices.contains(chunkIndex) else { return nil }
+        let events = session.document.rawChunks[chunkIndex].events
+        guard events.indices.contains(source), events.indices.contains(destination),
+              events[source].tick == events[destination].tick,
               let bounds = session.document.rawMoveBounds(chunk: chunkIndex, index: source),
-              bounds.contains(source + delta) else { return }
-        session.document.moveRawEvent(chunk: chunkIndex, index: source, to: source + delta)
-        if let row = model.rows.firstIndex(where: { $0.eventIndex == source + delta }) {
+              bounds.contains(destination), destination != source else { return nil }
+        return destination
+    }
+
+    func moveEvent(delta: Int) {
+        guard let destination = moveDestination(delta: delta), let session,
+              let source = model.row(at: currentRow)?.eventIndex else { return }
+        session.document.moveRawEvent(chunk: chunkIndex, index: source, to: destination)
+        if let row = model.rows.firstIndex(where: { $0.eventIndex == destination }) {
             focusRow(row: row)
             selectedRows = [row]
             selectionAnchor = row

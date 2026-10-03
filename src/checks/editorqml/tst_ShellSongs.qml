@@ -1,10 +1,10 @@
-import QtCore
 import QtQuick
 import QtQuick.Controls
 import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "NativeWait.js" as NativeWait
 
 TestCase {
     id: testCase
@@ -15,32 +15,33 @@ TestCase {
     visible: true
 
     property var shell: null
+    property string originalProjectRoot: ""
     ShellQmlBootstrap { id: bootstrap }
-    Component { id: settingsComponent; Settings {} }
+    TabsDrawerProbe { id: fileProbe }
+    GatedVisualsProbe { id: rewriteProbe }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 550; visible: true } }
 
+    function init() {
+        originalProjectRoot = bootstrap.projectRoot
+        verify(bootstrap.resetPreferences(), "each shell starts with fresh window and filter state")
+    }
+
     function waitForNative(predicate, timeoutMs) {
-        const deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
+        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
+    }
+    function waitForShellScene() {
+        verify(waitForNative(function() {
+            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the presented window mounts its deferred editor scene")
     }
 
-    function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-    }
 
-    function cleanupTestCase() {
-        verify(bootstrap.clearSettings(), "private settings domain removed")
-    }
 
     function cleanup() {
-        if (!shell)
+        if (!shell) {
+            bootstrap.projectRoot = originalProjectRoot
             return
+        }
         if (shell.shellPresenter.sceneActive) {
             shell.close()
             for (let step = 0; step < 12 && !shell.shellPresenter.closeReady; ++step) {
@@ -56,23 +57,43 @@ TestCase {
         }
         shell.destroy()
         shell = null
+        bootstrap.projectRoot = originalProjectRoot
         wait(0)
     }
 
     function panel() { return findChild(shell, "swiftSongsPanel") }
     function list() { return findChild(shell, "songList") }
     function row(id) {
-        const view = list()
-        for (let index = 0; index < view.count; ++index) {
-            if (presenter().songId(index) !== id)
+        const model = presenter()
+        for (let index = 0; index < model.rowCount; ++index) {
+            if (model.songId(index) !== id)
                 continue
-            view.positionViewAtIndex(index, ListView.Contain)
-            return view.itemAtIndex(index)
+            let mounted = null
+            verify(waitForNative(function() {
+                const view = list()
+                if (!view || !view.visible || view.width <= 0 || view.height <= 0
+                        || view.count <= index)
+                    return false
+                view.forceLayout()
+                view.positionViewAtIndex(index, ListView.Contain)
+                mounted = view.itemAtIndex(index)
+                return mounted !== null && mounted.song && mounted.song.songId === id
+                    && mounted.visible && mounted.width > 0 && mounted.height > 0
+            }, 5000), "the requested song delegate mounts with visible geometry")
+            return mounted
         }
         return null
     }
     function presenter() { return shell.shellPresenter.session.songDockController().songListPresenter() }
     function controller() { return shell.shellPresenter.session.songDockController() }
+    function compareRole(item, role, name) {
+        verify(!!item, name + " is mounted for " + role)
+        const expected = shell.shellPresenter.session.typographyFonts[role]
+        compare(item.font.family, expected.family, name + " uses " + role + " family")
+        compare(item.font.pixelSize, expected.pixelSize, name + " uses " + role + " pixelSize")
+        compare(item.font.weight, expected.weight, name + " uses " + role + " weight")
+    }
+
 
     function menuAction(id) {
         const menu = findChild(shell, "songListContextMenu")
@@ -95,6 +116,13 @@ TestCase {
         mouseClick(button)
     }
 
+    function registrationBytes() {
+        return ["sound/song_table.inc", "include/constants/songs.h",
+                "sound/songs/midi/midi.cfg"].map(function(relative) {
+            return fileProbe.fileFingerprint(bootstrap.projectRoot + "/" + relative)
+        })
+    }
+
     function compareRegion(reference, name, item, tolerance) {
         const expected = reference.regions.find(function(region) { return region.name === name })
         verify(expected !== undefined, name + " is pinned by widget baseline JSON")
@@ -106,20 +134,263 @@ TestCase {
         verify(Math.abs(item.height - expected.h) <= tolerance, name + " height: " + item.height)
     }
 
+    function test_deleteSongConfirmationBranches() {
+        for (const branch of ["cancel", "opt-out", "opt-in"]) {
+            verify(bootstrap.prepareSongDeletionFixture(branch),
+                   "the mounted deletion branch uses its own copied project")
+            const paths = ["sound/song_table.inc", "include/constants/songs.h",
+                           "sound/songs/midi/midi.cfg", "sound/voice_groups.inc",
+                           "sound/voicegroups/fixture_songs_dock.inc"]
+            const expected = ["780:cd265cf93bb70ec3", "423:7e4eec643bee2aa", "672:c98052dc8895c041",
+                              "52:3bb1c28fd6f7ab72", "73:922bb3bdc6282dd5"]
+            shell = shellComponent.createObject(null)
+            verify(shell !== null, "a mounted production shell opens the copied deletion project")
+            shell.shellPresenter.session.openProject(bootstrap.projectRoot)
+            verify(waitForNative(function() { return shell.shellPresenter.session.projectOpen }, 30000),
+                   "the mounted deletion project opens before dialog input")
+            verify(waitForNative(function() { return presenter().rowCount === 10 }, 5000),
+                   "the deletion fixture exposes its stray MIDI in the mounted list")
+            waitForShellScene()
+            let deletedId = -1
+            for (let index = 0; index < presenter().rowCount; ++index) {
+                const candidate = presenter().songId(index)
+                if (row(candidate).song.label === "mus_stray_test") {
+                    deletedId = candidate
+                    break
+                }
+            }
+            verify(deletedId >= 0, "the mounted stray is located by its song label")
+            mouseClick(row(deletedId), row(deletedId).width / 2,
+                       row(deletedId).height / 2, Qt.RightButton)
+            menuAction("delete")
+            verify(waitForNative(function() { return controller().confirmation === "delete" }, 5000),
+                   "the real menu opens its mounted deletion confirmation")
+            compare(JSON.stringify(paths.map(path => fileProbe.fileFingerprint(bootstrap.projectRoot + "/" + path))),
+                    JSON.stringify(expected), "staging deletion preserves the literal project and bank images")
+            compare(bootstrap.dockSongMidiExists(), true, "staging keeps the original MIDI at its path")
+            const dialog = findChild(shell, "songConfirmationDialog")
+            const checkbox = findChild(dialog, "songDeleteVoicegroup")
+            compare(checkbox.checked, true, "the mounted deletion checkbox initially opts into unused-bank removal")
+            if (branch === "cancel") {
+                mouseClick(dialog.standardButton(Dialog.Cancel))
+                compare(controller().confirmation, "", "Cancel dismisses the mounted deletion confirmation")
+                compare(JSON.stringify(paths.map(path => fileProbe.fileFingerprint(bootstrap.projectRoot + "/" + path))),
+                        JSON.stringify(expected), "Cancel preserves literal registration, flags and bank images")
+                compare(bootstrap.dockSongMidiExists(), true, "Cancel preserves MIDI at the original path")
+            } else {
+                if (branch === "opt-out") {
+                    mouseClick(checkbox)
+                    compare(checkbox.checked, false, "clicking the mounted checkbox opts out of bank deletion")
+                }
+                clickConfirmation()
+                verify(waitForNative(function() {
+                    return !controller().busy && presenter().rowCount === 9
+                }, 30000), "confirmed deletion refreshes the mounted song listing")
+                compare(row(deletedId), null, "confirmed deletion removes the selected row")
+                compare(bootstrap.dockSongMidiExists(), false, "confirmed deletion removes the original MIDI path")
+                compare(bootstrap.projectPorydawFolderExists(), false,
+                        "confirmed deletion keeps no copy of the MIDI inside the project")
+                if (branch === "opt-out") {
+                    compare(fileProbe.fileFingerprint(bootstrap.projectRoot + "/sound/voicegroups/fixture_songs_dock.inc"),
+                            expected[4], "opt-out preserves the literal complete bank source")
+                } else {
+                    compare(bootstrap.dockVoicegroupExists(), false, "opt-in removes the unused bank source")
+                }
+                // Removing the sole include leaves one newline byte in the hub.
+                const expectedHub = branch === "opt-in" ? "1:af63c74c8601c8dd" : expected[3]
+                compare(fileProbe.fileFingerprint(bootstrap.projectRoot + "/sound/voice_groups.inc"),
+                        expectedHub, "acceptance removes exactly the optional bank include-hub entry")
+            }
+            cleanup()
+        }
+    }
+
+    function test_charmapOnlyRegisterAndReopen() {
+        verify(bootstrap.prepareSongActionFixture("charmap"),
+               "the isolated charmap-only fixture stages")
+        const root = bootstrap.projectRoot
+        const charmap = root + "/charmap.txt"
+        compare(fileProbe.fileFingerprint(charmap), "273:9f0b840cb4f4a2c0",
+                "the independently seeded charmap omits exactly the registered song")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the action fixture opens a production shell")
+        const session = shell.shellPresenter.session
+        session.openProject(root)
+        verify(waitForNative(function() { return session.projectOpen && presenter().rowCount === 8 }, 30000),
+               "the charmap-only project loads its eight playable registered songs")
+        waitForShellScene()
+        const id = 2
+        verify(row(id) !== null, "the registered route song is listed")
+        compare(row(id).song.text, "mus_route101  ⚠ not fully registered",
+                "A014: the registered song remains partial rather than becoming an unregistered stray")
+        compare(row(id).song.registrationGapText, "charmap.txt",
+                "A015: the partial registered song is missing only charmap.txt")
+        compare(row(id).song.label, "mus_route101",
+                "A016: the partially registered song remains listed under its original label")
+        mouseDoubleClickSequence(row(id), row(id).width / 2, row(id).height / 2, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 1
+                && session.songTabs.selectedPage.title === "mus_route101"
+        }, 30000), "A011: the original registered song opens in an editor tab before its charmap repair")
+        compare(presenter().canRegister(id), true,
+                "A012: Register is enabled for the open song with only a charmap gap")
+        mouseClick(row(id), 4, 4, Qt.RightButton)
+        const menu = findChild(shell, "songListContextMenu")
+        compare(menu.contentItem.rowItem(3).enabled, true,
+                "the real context menu enables Register on the charmap-only row")
+        menuAction("register")
+        verify(waitForNative(function() {
+            const dialog = findChild(shell, "songConfirmationDialog")
+            return controller().confirmation === "register" && dialog !== null && dialog.visible
+        }, 5000), "A017: the mounted Register confirmation appears for the charmap-only plan")
+        const confirmation = findChild(shell, "songConfirmationDialog")
+        verify(confirmation.standardButton(Dialog.Ok) !== null,
+               "A018: the mounted Register confirmation has an activatable accepting button")
+        verify(presenter().canRegister(id)
+               && controller().confirmationDetail ===
+                   "The following registration files need updates:\n  - charmap.txt",
+               "A006: the mounted registration plan applies to the charmap and no other missing file")
+        compare(fileProbe.fileFingerprint(charmap), "273:9f0b840cb4f4a2c0",
+                "the plan leaves the stripped charmap unchanged before acceptance")
+        clickConfirmation()
+        verify(waitForNative(function() {
+            return !controller().busy && row(id) !== null
+                && row(id).song.registrationGapText === ""
+                && !row(id).song.warning && !presenter().canRegister(id)
+        }, 30000), "A019: accepting Register refreshes the listed song to complete registration with Register disabled")
+        compare(fileProbe.fileBytesBase64(charmap),
+                "TVVTX0RVTU1ZID0gMDAgMDAKTVVTX0xJVFRMRVJPT1RfVEVTVCA9IDAxIDAwCk1VU19ST1VURTEwMSA9IDAyIDAwCk1VU19ST1VURTEwMiA9IDAzIDAwCk1VU19HU0NfUk9VVEUzOCA9IDA0IDAwCk1VU19DQVVHSFQgPSAwNSAwMApNVVNfUEVUQUxCVVJHID0gMDYgMDAKTVVTX09MREFMRSA9IDA3IDAwCk1VU19HWU0gPSAwOCAwMApNVVNfU1VSRiA9IDA5IDAwCk1VU19WSUNUT1JZX1dJTEQgPSAwQSAwMApTRV9VU0VfSVRFTSA9IDBCIDAwClNFX1BDX0xPR0lOID0gMEMgMDAKU0VfRkFORkFSRV8xVFJLID0gMEQgMDAK",
+                "A020: accepting Register restores every byte of the independently seeded complete charmap")
+        session.songTabs.requestClose(session.songTabs.selectedId)
+        verify(waitForNative(function() { return session.songTabs.tabCount === 0 }, 5000),
+               "the clean registered song tab closes before a fresh open")
+        mouseClick(row(id), 4, 4, Qt.RightButton)
+        compare(menu.contentItem.rowItem(3).enabled, false,
+                "the mounted Register menu is disabled after the completed repair")
+        menuAction("open")
+        verify(waitForNative(function() {
+            return session.projectOpen && session.songTabs.tabCount === 1
+                && session.songTabs.selectedPage.title === "mus_route101"
+        }, 30000), "A023: reopening the repaired song restores an enabled project and a ready editor tab")
+        compare(presenter().canRegister(id), false,
+                "A024: reopening the fully registered song keeps Register disabled")
+    }
+
+    function test_openRegisteredSongDeletion() {
+        verify(bootstrap.prepareSongActionFixture("open-delete"),
+               "the isolated registered deletion fixture stages")
+        const root = bootstrap.projectRoot
+        const midi = root + "/sound/songs/midi/mus_route101.mid"
+        compare(fileProbe.fileFingerprint(midi), "471:d31e7c4a0a32a53f",
+                "the original registered MIDI starts with the fixed fixture bytes")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the mounted shell opens the registered deletion fixture")
+        const session = shell.shellPresenter.session
+        session.openProject(root)
+        verify(waitForNative(function() { return session.projectOpen && presenter().rowCount === 8 }, 30000),
+               "the deletion fixture lists all eight playable originals")
+        waitForShellScene()
+        const id = 2
+        mouseDoubleClickSequence(row(id), row(id).width / 2, row(id).height / 2, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 1
+                && session.songTabs.selectedPage.title === "mus_route101"
+        }, 30000), "A033: the registered clean deletion candidate opens in its named editor tab")
+        const originalTabId = session.songTabs.selectedId
+        mouseClick(row(id), 4, 4, Qt.RightButton)
+        menuAction("delete")
+        verify(waitForNative(function() { return controller().confirmation === "delete" }, 5000),
+               "A042: the open song raises the mounted deletion confirmation")
+        const dialog = findChild(shell, "songConfirmationDialog")
+        verify(dialog !== null && dialog.visible && dialog.standardButton(Dialog.Ok) !== null,
+               "A043: the deletion confirmation exposes its visible accepting button")
+        clickConfirmation()
+        verify(waitForNative(function() {
+            return !controller().busy && session.songTabs.tabCount === 0
+                && session.songTabs.selectedId !== originalTabId
+        }, 30000), "A045: accepting deletion closes the original clean open song tab")
+        compare(row(id), null, "A046: deletion removes the original song row from the mounted list")
+        compare(presenter().rowCount, 7, "A047: deleting one song decreases the listed count by exactly one")
+        compare(bootstrap.actionMidiExists(), false,
+                "A048: deleting the song removes its original MIDI path")
+    }
+
+    function test_fallbackDeletionRefusedWithOpenTab() {
+        verify(bootstrap.prepareSongActionFixture("fallback"),
+               "the isolated fallback fixture stages its playable ID-zero MIDI")
+        const root = bootstrap.projectRoot
+        const paths = ["sound/song_table.inc", "include/constants/songs.h", "ld_script.ld",
+                       "charmap.txt", "sound/songs/midi/midi.cfg", "src/debug.c"]
+        const expected = ["732:4efe265a89789cea", "423:7e4eec643bee2aa",
+                          "761:755b12f592bddb60", "294:863a4ea898d33ff6",
+                          "615:2d0bb9be3c185b9e", "580:1d158bbea527b04f"]
+        compare(JSON.stringify(paths.map(path => fileProbe.fileFingerprint(root + "/" + path))),
+                JSON.stringify(expected), "the six literal fallback project images are staged")
+        const midi = root + "/sound/songs/midi/mus_dummy.mid"
+        compare(fileProbe.fileFingerprint(midi), "471:d31e7c4a0a32a53f",
+                "the playable fallback MIDI starts with independently fixed bytes")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the fallback fixture opens a production shell")
+        const session = shell.shellPresenter.session
+        session.openProject(root)
+        verify(waitForNative(function() { return session.projectOpen && presenter().rowCount === 9 }, 30000),
+               "the project lists its newly playable ID-zero fallback")
+        waitForShellScene()
+        const id = 0
+        mouseDoubleClickSequence(row(id), row(id).width / 2, row(id).height / 2, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 1
+                && session.songTabs.selectedPage.title === "mus_dummy"
+        }, 30000), "the song-table ID-zero fallback opens in its own clean tab")
+        const tabId = session.songTabs.selectedId
+        mouseClick(row(id), 4, 4, Qt.RightButton)
+        menuAction("delete")
+        verify(waitForNative(function() {
+            const dialog = findChild(shell, "shellCriticalDialog")
+            return dialog !== null && dialog.visible
+                && shell.shellPresenter.statusText.indexOf("mus_dummy") >= 0
+        }, 5000), "A035: fallback deletion raises a refusal identifying mus_dummy")
+        const refusal = findChild(shell, "shellCriticalDialog")
+        compare(refusal.informativeText.indexOf("mus_dummy") >= 0, true,
+                "the visible refusal identifies the protected song rather than a blank error")
+        refusal.close()
+        compare(session.songTabs.selectedId, tabId,
+                "A038: rejecting fallback deletion retains the original open tab")
+        compare(JSON.stringify(paths.map(path => fileProbe.fileFingerprint(root + "/" + path))),
+                JSON.stringify(expected),
+                "A039: fallback refusal preserves exact table, header, linker, charmap, flags and debug bytes")
+        compare(fileProbe.fileFingerprint(midi), "471:d31e7c4a0a32a53f",
+                "A041: fallback refusal retains its original playable MIDI bytes")
+        compare(presenter().rowCount, 9,
+                "the fallback refusal retains all nine playable rows in the mounted list")
+    }
+
     function test_mountedSongDockAndConfirmationRoundTrips() {
         verify(bootstrap.prepareSongDockFixture(), "staged project has a stray and partial registration")
-        const settings = settingsComponent.createObject(testCase)
-        verify(settings !== null, "QtCore settings is available")
-        settings.setValue("lastProjectDir", "")
-        settings.setValue("swiftDock/columnWidth", 280)
-        settings.setValue("swiftDock/songsRatio", 0.5)
-        settings.sync()
-        settings.destroy()
+        const settings = bootstrap.preferences
+        settings.setString("lastProjectDir", "")
+        settings.setInt("swiftDock.columnWidth", 280)
+        settings.setDouble("swiftDock.songsRatio", 0.5)
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production window loads")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
+        waitForShellScene()
+        verify(waitForRendering(panel()), "the mounted dock completes its layout")
         const session = shell.shellPresenter.session
+        compare(panel().baseFontPx, session.baseFontPx,
+                "Songs pane derives its geometry from the captured session base before project open")
+        compare(panel().pad, session.layoutSpaces.one,
+                "Songs pane margins follow the published One token")
+        compareRole(findChild(shell, "songListSearch"), "body", "song search")
+        compareRole(findChild(shell, "songListCategory"), "body", "song category")
+        compareRole(findChild(shell, "songListSort"), "body", "song sort")
+        compareRole(findChild(shell, "songListCount"), "body", "song count")
+        compare(findChild(shell, "songListSearch").height,
+                Math.ceil(session.baseFontPx * (1.5 + 1 / 3)),
+                "song search height follows the captured base")
+        compare(findChild(shell, "songListSort").width, session.baseFontPx * 7.25,
+                "song sort width follows the captured base")
         session.openProject(bootstrap.projectRoot)
         verify(waitForNative(function() { return session.projectOpen || session.lastSaveError.length > 0 }, 30000),
                "fixture project opens: " + session.lastSaveError)
@@ -163,6 +434,10 @@ TestCase {
         compare(row(firstId).objectName, "songListRow_" + firstId,
                 "the rendered delegate identifies the first catalog song")
         compareRegion(baseline, "songs.row.first", row(firstId), 3)
+        compareRole(row(firstId), "body", "song row")
+        compareRole(row(firstId).contentItem, "body", "song row text")
+        compare(row(firstId).height, Math.ceil(session.baseFontPx * 9 / 8),
+                "song row height follows the captured base")
         compareRegion(baseline, "songs.row.second", row(secondId), 3)
         // The service assigns the partial song an earlier ID than the stray.
         // Compare the two warning-row slots independent of their label order.
@@ -170,6 +445,9 @@ TestCase {
         const secondWarningId = presenter().songId(9)
         compareRegion(baseline, "songs.row.unregistered", row(firstWarningId), 3)
         compareRegion(baseline, "songs.row.partial", row(secondWarningId), 3)
+        compareRole(row(firstWarningId).contentItem, "body", "unregistered song row text")
+        compare(row(firstWarningId).height, Math.ceil(session.baseFontPx * 11 / 8),
+                "warning song row height follows the captured base")
         const image = grabImage(shell.contentItem)
         const warningRow = row(firstWarningId)
         const origin = warningRow.mapToItem(shell.contentItem, 0, 0)
@@ -208,6 +486,7 @@ TestCase {
         const musicChoice = category.popup.contentItem.itemAtIndex(1)
         verify(musicChoice !== null && musicChoice.text.indexOf("Music") === 0,
                "the second category is the mounted Music choice")
+        compareRole(musicChoice, "body", "category popup delegate")
         mouseClick(musicChoice)
         compare(category.currentIndex, 1, "the clicked category is selected in the mounted combo")
         tryCompare(presenter(), "categoryIndex", 1, 3000)
@@ -231,6 +510,13 @@ TestCase {
         tryCompare(emptyMessage, "visible", false, 3000,
                    "the guidance hides when a song opens")
         mouseClick(row(secondId), 4, 4, Qt.RightButton)
+        const typographyMenu = findChild(shell, "songListContextMenu")
+        compareRole(typographyMenu, "body", "song context menu")
+        const openAction = typographyMenu.contentItem.rowItem(0)
+        compareRole(openAction.children.find(child => child.text === qsTr("Open")),
+                    "body", "song context action text")
+        compare(typographyMenu.contentItem.rowHeight, Math.ceil(session.baseFontPx * 1.7),
+                "song context action height follows the captured base")
         menuAction("newTab")
         verify(waitForNative(function() { return session.songTabs.tabCount === 2 }, 5000),
                "Open in New Tab preserves the existing tab (tabs="
@@ -277,6 +563,7 @@ TestCase {
         tryCompare(presenter(), "rowCount", 10)
         const stray = row(strayId)
         verify(stray !== null && stray.song.warning, "unregistered song wears the warning badge")
+        const beforeRegistration = registrationBytes()
         mouseClick(stray, 4, 4, Qt.RightButton)
         compare(presenter().selectedSongId, strayId,
                 "right-click on the recovered stray row selects it")
@@ -285,49 +572,143 @@ TestCase {
                "registration plan reaches the confirmation")
         verify(controller().confirmationDetail.indexOf("song_table.inc") >= 0,
                "the dialog names the missing registration file")
-        controller().cancelConfirmation()
+        const confirmation = findChild(shell, "songConfirmationDialog")
+        const bodyFont = session.typographyFonts.body
+        verify(confirmation !== null, "song confirmation mounts after Register")
+        for (const name of ["songConfirmationPrompt", "songConfirmationDetail"]) {
+            const label = findChild(confirmation, name)
+            compare(label.font.family, bodyFont.family, name + " inherits body family")
+            compare(label.font.pixelSize, bodyFont.pixelSize, name + " inherits body size")
+            compare(label.font.weight, bodyFont.weight, name + " inherits regular weight")
+        }
+        compare(confirmation.contentItem.spacing, session.layoutSpaces.four,
+                "confirmation content uses the Four spacing token")
+        compare(JSON.stringify(registrationBytes()), JSON.stringify(beforeRegistration),
+                "opening Register stages a plan without changing table, header or config bytes")
+        const cancelButton = confirmation.standardButton(Dialog.Cancel)
+        verify(cancelButton !== null, "the mounted Register confirmation offers Cancel")
+        mouseClick(cancelButton)
         compare(controller().confirmation, "", "Cancel leaves the staged project unchanged")
+        compare(JSON.stringify(registrationBytes()), JSON.stringify(beforeRegistration),
+                "clicking Cancel preserves the exact table, header and config bytes")
         tryCompare(findChild(shell, "songConfirmationLoader"), "status", Loader.Null, 3000)
         compare(presenter().canRegister(strayId), true, "cancel leaves Register enabled")
         mouseClick(row(strayId), 4, 4, Qt.RightButton)
         menuAction("register")
         verify(waitForNative(function() { return controller().confirmation === "register" }, 5000),
                "a second registration plan is prepared")
+        compare(JSON.stringify(registrationBytes()), JSON.stringify(beforeRegistration),
+                "reopening Register still leaves project bytes untouched before acceptance")
         clickConfirmation()
         verify(waitForNative(function() {
             return !controller().busy && !presenter().canRegister(strayId)
         }, 30000), "confirmed registration refreshes the badge")
+        const afterRegistration = registrationBytes()
+        verify(afterRegistration[0] !== beforeRegistration[0],
+               "Accept changes the song table after the mounted confirmation")
+        compare(afterRegistration[2], beforeRegistration[2],
+                "Accept leaves the MIDI config byte-identical")
+        verify(afterRegistration[1] !== beforeRegistration[1],
+               "Accept changes songs.h after the mounted confirmation")
         mouseClick(row(strayId), 4, 4, Qt.RightButton)
         menuAction("delete")
         verify(waitForNative(function() { return controller().confirmation === "delete" }, 5000),
                "delete plan reaches the warning confirmation")
-        verify(controller().confirmationDetail.indexOf(".porydaw/trash") >= 0,
-               "delete discloses where the MIDI file moves")
         compare(controller().deletableVoicegroup, "fixture_songs_dock",
                 "an unused song-specific voicegroup is offered for deletion")
         const voicegroupOption = findChild(shell, "songDeleteVoicegroup")
         verify(voicegroupOption !== null && voicegroupOption.visible && voicegroupOption.checked,
                "the real delete dialog defaults to including the unused voicegroup")
+        compare(voicegroupOption.font.family, bodyFont.family,
+                "delete voicegroup option inherits the body family")
+        compare(voicegroupOption.font.pixelSize, bodyFont.pixelSize,
+                "delete voicegroup option inherits the body size")
+        compare(voicegroupOption.font.weight, bodyFont.weight,
+                "delete voicegroup option keeps regular body weight")
         clickConfirmation()
         verify(waitForNative(function() { return !controller().busy && presenter().rowCount === 9 }, 30000),
                "confirmed deletion removes the song from the refreshed listing")
         tryCompare(category, "displayText", "All (9)", 3000,
                    "the mounted category caption refreshes after deletion")
         verify(row(strayId) === null, "the deleted song is no longer painted in the dock")
-        verify(!bootstrap.dockSongMidiExists() && bootstrap.dockTrashedMidiExists(),
-               "deletion moves the .mid to .porydaw/trash")
+        verify(!bootstrap.dockSongMidiExists(), "deletion removes the .mid")
         verify(!bootstrap.dockVoicegroupExists(),
                "deleting with the checked option removes the unused voicegroup source")
     }
 
+    function test_songFiltersSurviveShellRelaunch() {
+        const settings = bootstrap.preferences
+        settings.setString("lastProjectDir", "")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null)
+        const session = shell.shellPresenter.session
+        session.openProject(bootstrap.projectRoot)
+        verify(waitForNative(function() { return session.projectOpen }, 30000),
+               "the filter fixture project opens")
+        verify(waitForNative(function() { return presenter().totalCount > 0 }, 5000),
+               "the Songs dock catalog is ready before selecting a category")
+        waitForShellScene()
+        const search = findChild(shell, "songListSearch")
+        const sort = findChild(shell, "songListSort")
+        verify(search && sort && findChild(shell, "songListCategory"),
+               "the mounted Songs filters are available")
+        search.forceActiveFocus()
+        for (const key of [Qt.Key_R, Qt.Key_O, Qt.Key_U, Qt.Key_T, Qt.Key_E])
+            keyClick(key)
+        tryCompare(presenter(), "searchText", "route")
+        sort.currentIndex = 1
+        presenter().selectSort(1)
+        presenter().selectCategory(1)
+        const prefix = presenter().categoryPrefix()
+        verify(prefix !== "", "the mounted Songs panel selects a real category")
+        cleanup()
+        shell = shellComponent.createObject(null)
+        verify(shell !== null)
+        const restored = shell.shellPresenter.session
+        restored.openProject(bootstrap.projectRoot)
+        verify(waitForNative(function() { return restored.projectOpen }, 30000))
+        verify(waitForNative(function() { return presenter().totalCount > 0 }, 5000),
+               "the reopened Songs dock catalog is ready before checking restored filters")
+        waitForShellScene()
+        tryVerify(function() {
+            return findChild(shell, "songListSearch").text === "route"
+                && presenter().searchText === "route"
+                && findChild(shell, "songListSort").currentIndex === 1
+                && presenter().sortIndex === 1
+                && presenter().categoryPrefix() === prefix
+                && findChild(shell, "songListCategory").currentIndex === presenter().categoryIndex
+                && presenter().categoryIndex > 0
+        }, 3000, "song filter text, sort and category restore across a fresh shell session")
+        const reopenedCategoryBox = findChild(shell, "songListCategory")
+        verify(reopenedCategoryBox !== null && reopenedCategoryBox.count > 1,
+               "the reopened Songs browser still lists more than one category")
+        cleanup()
+        settings.setString("songFilterText", "")
+        settings.setInt("songFilterSort", 0)
+        settings.setString("songFilterCategory", "")
+    }
+
+    function test_unknownStoredSongCategoryFallsBackToAll() {
+        const settings = bootstrap.preferences
+        settings.setString("lastProjectDir", "")
+        settings.setString("songFilterCategory", "zz")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null)
+        const session = shell.shellPresenter.session
+        session.openProject(bootstrap.projectRoot)
+        verify(waitForNative(function() { return session.projectOpen }, 30000))
+        verify(waitForNative(function() { return presenter().totalCount > 0 }, 5000),
+               "the Songs dock catalog is ready before checking the missing category")
+        tryCompare(presenter(), "categoryIndex", 0)
+        compare(presenter().categoryPrefix(), "",
+                "a restored category the project does not have falls back to all songs")
+    }
+
     function test_constrainedVoiceEditorRemainsScrollable() {
-        const settings = settingsComponent.createObject(testCase)
-        verify(settings !== null, "QtCore settings is available")
-        settings.setValue("lastProjectDir", "")
-        settings.setValue("swiftDock/columnWidth", 280)
-        settings.setValue("swiftDock/songsRatio", 0.5)
-        settings.sync()
-        settings.destroy()
+        const settings = bootstrap.preferences
+        settings.setString("lastProjectDir", "")
+        settings.setInt("swiftDock.columnWidth", 280)
+        settings.setDouble("swiftDock.songsRatio", 0.5)
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production window loads")
         shell.height = 380
@@ -338,6 +719,8 @@ TestCase {
         verify(waitForNative(function() { return session.songOpen || session.lastSaveError.length > 0 },
                              30000), "the fixture bank loads: " + session.lastSaveError)
         compare(session.lastSaveError, "")
+        waitForShellScene()
+        verify(waitForRendering(shell.contentItem), "the constrained dock completes its mounted layout")
         const dock = findChild(shell, "swiftDockColumn")
         const scroll = findChild(shell, "voiceEditorScrollView")
         const editor = findChild(shell, "voicegroupEditorSurface")
@@ -375,17 +758,15 @@ TestCase {
     }
 
     function test_voicegroupPaneStackedAndRatioRestores() {
-        const settings = settingsComponent.createObject(testCase)
-        verify(settings !== null, "QtCore settings is available")
-        settings.setValue("lastProjectDir", "")
-        settings.setValue("swiftDock/columnWidth", 280)
-        settings.setValue("swiftDock/songsRatio", 0.3)
-        settings.sync()
-        settings.destroy()
+        const settings = bootstrap.preferences
+        settings.setString("lastProjectDir", "")
+        settings.setInt("swiftDock.columnWidth", 280)
+        settings.setDouble("swiftDock.songsRatio", 0.3)
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production window loads")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
+        waitForShellScene()
         const dock = findChild(shell, "swiftDockColumn")
         const songs = findChild(shell, "swiftSongsPanel")
         const voice = findChild(shell, "voicegroupPanel")
@@ -405,5 +786,178 @@ TestCase {
             return voice.mapToItem(dock, 0, 0).y >= songs.mapToItem(dock, 0, 0).y + songs.height
                 && Math.abs(songs.height / dock.height - 0.3) < 0.06
         }, 3000, "the voicegroup pane sits below Songs with the restored swiftDock/songsRatio")
+    }
+
+    function openConflictShell(label) {
+        verify(bootstrap.prepareSongActionFixture("open-delete"), "the conflict journey uses its own copied project")
+        shell = shellComponent.createObject(null)
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, label)
+        verify(waitForNative(function() { return session.songOpen && session.songTabs.selectedPage && session.songTabs.selectedPage.isReady }, 30000), "the song is ready before the conflict journey")
+        waitForShellScene()
+        return session
+    }
+
+    function dirtyConflictSong(shell, session) {
+        const settings = shell.shellPresenter.settingsStore
+        settings.open()
+        const changedVolume = settings.masterVolume === 110 ? 111 : 110
+        settings.changeMasterVolume(changedVolume)
+        settings.apply()
+        verify(waitForNative(function() { return !settings.isApplying && session.documentDirty }, 15000), "the mounted setting edit dirties the document")
+    }
+
+    function rewriteSongExternally(root, midi) {
+        verify(rewriteProbe.prepareUnsignedSong(root, "mus_route101", 48), "an external edit rewrites the on-disk MIDI bytes")
+        const modified = fileProbe.fileFingerprint(midi)
+        verify(modified.length > 0 && modified !== "471:d31e7c4a0a32a53f", "the external edit changes the pinned bytes")
+        return modified
+    }
+
+    function conflictDialog() { return findChild(shell, "saveConflictDialog") }
+
+    function waitConflictPrompt() {
+        verify(waitForNative(function() { const dialog = conflictDialog(); return dialog !== null && dialog.visible }, 5000), "the externally changed save raises the conflict prompt")
+    }
+
+    function test_saveConflictCleanSaveWritesWithoutPrompting() {
+        const session = openConflictShell("mus_route101")
+        const midi = bootstrap.projectRoot + "/sound/songs/midi/mus_route101.mid"
+        compare(fileProbe.fileFingerprint(midi), "471:d31e7c4a0a32a53f", "the song starts with the pinned MIDI bytes")
+        dirtyConflictSong(shell, session)
+        session.requestSave()
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 30000), "File Save settles clean")
+        compare(session.lastSaveError, "", "the clean save reports no error")
+        compare(session.saveConflictSongLabel, "", "the clean save raises no conflict prompt")
+        verify(conflictDialog() === null || !conflictDialog().visible, "no conflict dialog mounts for the clean save")
+        cleanup()
+    }
+
+    function test_saveConflictCancelWritesNothing() {
+        const session = openConflictShell("mus_route101")
+        const midi = bootstrap.projectRoot + "/sound/songs/midi/mus_route101.mid"
+        dirtyConflictSong(shell, session)
+        const modified = rewriteSongExternally(bootstrap.projectRoot, midi)
+        session.requestSave()
+        waitConflictPrompt()
+        compare(fileProbe.fileFingerprint(midi), modified, "the refused save writes nothing")
+        const cancel = findChild(shell, "saveConflictCancel")
+        verify(cancel !== null, "the conflict prompt offers Cancel")
+        mouseClick(cancel)
+        verify(waitForNative(function() { const dialog = conflictDialog(); return dialog === null || !dialog.visible }, 5000), "Cancel dismisses the conflict prompt")
+        tryCompare(session, "saveConflictSongLabel", "", 5000, "Cancel clears the conflict state")
+        verify(session.documentDirty, "Cancel keeps the refused document dirty")
+        compare(fileProbe.fileFingerprint(midi), modified, "Cancel writes no song bytes")
+        verify(rewriteProbe.restoreUnsignedSong(bootstrap.projectRoot, "mus_route101"), "the rewritten MIDI is restored for the retry")
+        session.requestSave()
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 30000), "the retry save settles clean")
+        const savedOnce = fileProbe.fileFingerprint(midi)
+        verify(savedOnce.length > 0 && savedOnce !== modified, "the retry save writes the in-app bytes over the external edit")
+        session.requestSave()
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 30000), "a second save is a clean no-op")
+        compare(fileProbe.fileFingerprint(midi), savedOnce, "the clean save preserves the saved bytes")
+        cleanup()
+    }
+
+    function test_saveConflictOverwriteWritesEdits() {
+        const session = openConflictShell("mus_route101")
+        const midi = bootstrap.projectRoot + "/sound/songs/midi/mus_route101.mid"
+        dirtyConflictSong(shell, session)
+        const modified = rewriteSongExternally(bootstrap.projectRoot, midi)
+        session.requestSave()
+        waitConflictPrompt()
+        const overwrite = findChild(shell, "saveConflictOverwrite")
+        verify(overwrite !== null, "the conflict prompt offers Overwrite")
+        mouseClick(overwrite)
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 30000), "Overwrite settles clean")
+        compare(session.lastSaveError, "", "Overwrite reports no error")
+        verify(conflictDialog() === null || !conflictDialog().visible, "Overwrite dismisses the conflict prompt")
+        const overwritten = fileProbe.fileFingerprint(midi)
+        verify(overwritten.length > 0 && overwritten !== modified, "Overwrite writes the in-app edits over the disk contents")
+        session.requestSave()
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 30000), "a second save is a clean no-op")
+        compare(fileProbe.fileFingerprint(midi), overwritten, "Overwrite refreshes the on-disk identity the next save trusts")
+        cleanup()
+    }
+
+    function test_saveConflictForkRegistersNewSong() {
+        const session = openConflictShell("mus_route101")
+        const root = bootstrap.projectRoot
+        const midi = root + "/sound/songs/midi/mus_route101.mid"
+        dirtyConflictSong(shell, session)
+        const modified = rewriteSongExternally(root, midi)
+        session.requestSave()
+        waitConflictPrompt()
+        const field = findChild(shell, "saveConflictNewName")
+        verify(field !== null, "the conflict prompt asks for a new song name")
+        field.forceActiveFocus()
+        for (const key of [Qt.Key_M, Qt.Key_U, Qt.Key_S, Qt.Key_C, Qt.Key_O, Qt.Key_N, Qt.Key_F, Qt.Key_L, Qt.Key_I, Qt.Key_C, Qt.Key_T])
+            keyClick(key)
+        compare(field.text, "musconflict", "real text input enters the fork label")
+        const fork = findChild(shell, "saveConflictFork")
+        verify(fork !== null && fork.enabled, "a valid label enables Register changes as New Song...")
+        const priorId = session.songTabs.selectedId
+        mouseClick(fork)
+        verify(waitForNative(function() { return session.songTabs.tabCount === 2 && session.songTabs.selectedPage && session.songTabs.selectedPage.title === "musconflict" && session.songTabs.selectedPage.isReady }, 30000), "the fork opens the created song in a new tab")
+        compare(fileProbe.fileFingerprint(midi), modified, "the fork leaves the original file byte-identical")
+        const forkedBytes = fileProbe.fileFingerprint(root + "/sound/songs/midi/musconflict.mid")
+        verify(forkedBytes.length > 0 && forkedBytes !== modified, "the fork carries the in-app MIDI bytes rather than the disk contents")
+        verify(session.songDockController().songListPresenter().songLabelTaken("musconflict"), "the fork registers the new song")
+        session.songTabs.selectTab(priorId)
+        verify(waitForNative(function() { return session.documentDirty && session.songTabs.selectedPage && session.songTabs.selectedPage.title === "mus_route101" }, 5000), "the original tab stays open and dirty after the fork")
+        cleanup()
+    }
+
+    function test_saveConflictCloseCancelAbortsClose() {
+        const session = openConflictShell("mus_route101")
+        const midi = bootstrap.projectRoot + "/sound/songs/midi/mus_route101.mid"
+        dirtyConflictSong(shell, session)
+        const modified = rewriteSongExternally(bootstrap.projectRoot, midi)
+        const onlyId = session.songTabs.selectedId
+        session.songTabs.requestClose(onlyId)
+        verify(waitForNative(function() { return session.songTabs.pendingCloseId === onlyId }, 5000), "the dirty close raises the gate")
+        verify(waitForNative(function() { const gateSave = findChild(shell, "songTabSave"); return gateSave !== null && gateSave.visible }, 5000), "the close gate shows its Save")
+        const save = findChild(shell, "songTabSave")
+        verify(waitForRendering(save), "the close gate's Save button is drawn before the click")
+        mouseClick(save)
+        waitConflictPrompt()
+        compare(fileProbe.fileFingerprint(midi), modified, "the close-time save writes nothing before the answer")
+        const cancel = findChild(shell, "saveConflictCancel")
+        verify(cancel !== null, "the conflict prompt offers Cancel")
+        mouseClick(cancel)
+        verify(waitForNative(function() { const dialog = conflictDialog(); return (dialog === null || !dialog.visible) && session.songTabs.pendingCloseId === -1 }, 5000), "Cancel dismisses both the prompt and the gate")
+        compare(session.songTabs.tabCount, 1, "Cancel keeps the tab open")
+        compare(session.songTabs.selectedId, onlyId, "Cancel keeps the original tab selected")
+        verify(session.documentDirty, "Cancel keeps the refused document dirty")
+        compare(fileProbe.fileFingerprint(midi), modified, "Cancel writes no song bytes")
+        cleanup()
+    }
+
+    function test_saveConflictDeletedFilePromptsAndCancels() {
+        const session = openConflictShell("mus_route101")
+        const midi = bootstrap.projectRoot + "/sound/songs/midi/mus_route101.mid"
+        dirtyConflictSong(shell, session)
+        verify(rewriteProbe.moveSongAside(bootstrap.projectRoot, "mus_route101"), "deleting the MIDI file is the external change")
+        session.requestSave()
+        waitConflictPrompt()
+        compare(fileProbe.fileFingerprint(midi), "", "the refused save writes nothing")
+        const cancel = findChild(shell, "saveConflictCancel")
+        verify(cancel !== null, "the conflict prompt offers Cancel")
+        mouseClick(cancel)
+        verify(waitForNative(function() { const dialog = conflictDialog(); return dialog === null || !dialog.visible }, 5000), "Cancel dismisses the conflict prompt")
+        tryCompare(session, "saveConflictSongLabel", "", 5000, "Cancel clears the conflict state")
+        verify(session.documentDirty, "Cancel keeps the refused document dirty")
+        compare(fileProbe.fileFingerprint(midi), "", "Cancel writes no song bytes")
+        verify(rewriteProbe.restoreSong(bootstrap.projectRoot, "mus_route101"), "the deleted MIDI is restored for the retry")
+        session.requestSave()
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 30000), "the retry save settles clean")
+        const savedOnce = fileProbe.fileFingerprint(midi)
+        verify(savedOnce.length > 0, "the retry save rewrites the restored song bytes")
+        session.requestSave()
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 30000), "a second save is a clean no-op")
+        compare(fileProbe.fileFingerprint(midi), savedOnce, "the clean save preserves the saved bytes")
+        cleanup()
     }
 }

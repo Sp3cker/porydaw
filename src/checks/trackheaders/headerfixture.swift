@@ -21,7 +21,8 @@ struct TrackHeadersFixture {
         return map.tracks.prefix(map.usedTrackCount).map(\.channel)
     }
 
-    init(suite: DocumentSession, service: ProjectService, configured: Bool = true) {
+    init(suite: DocumentSession, service: ProjectService, configured: Bool = true,
+         trackBudget: Int = 16) {
         let file = MidiFile(division: 24, chunks: [
             MidiChunk(events: [.meta(type: 0x51, data: [0x07, 0xA1, 0x20])], endTick: 96),
             MidiChunk(events: [
@@ -38,13 +39,13 @@ struct TrackHeadersFixture {
             ], endTick: 96),
         ])
         let document = SongDocument(file: file, config: suite.document.state.config,
-                                    source: suite.document.source, trackBudget: 16)
+                                    source: suite.document.source, trackBudget: trackBudget)
         session = DocumentSession(document: document, service: service,
                                   lease: suite.bankLease, slots: suite.bankSlots,
                                   dirty: false, loadName: suite.bankLoadName,
                                   sampleRate: 48_000)
         session.selectedTrack = 0
-        let headers = TrackHeadersPresenter(baseFontPx: 13)
+        let headers = TrackHeadersPresenter()
         self.headers = headers
         headers.attach(session: session, palette: GridPalette())
         session.onChange = { [weak headers] change in headers?.documentDidChange(change) }
@@ -88,15 +89,15 @@ struct TrackHeadersFixture {
     }
 
     func expectRows(_ report: CheckReport, names: [String], cppID: String, phase: String) {
-        report.expectEqual(Array(names.indices), trackRows.map(\.track), cppID: cppID,
+        report.expectEqual(expected: Array(names.indices), actual: trackRows.map(\.track), cppID: cppID,
                            what: "\(phase): rows follow engine track order")
         let titles = names.enumerated().map { "\($0.offset + 1) · \($0.element)" }
-        report.expectEqual(titles, trackRows.map(\.title), cppID: cppID,
+        report.expectEqual(expected: titles, actual: trackRows.map(\.title), cppID: cppID,
                            what: "\(phase): rows display ordered numbered track names")
-        report.expectEqual(names.count + 1, headers.rows.count, cppID: cppID,
+        report.expectEqual(expected: names.count + 1, actual: headers.rows.count, cppID: cppID,
                            what: "\(phase): one row per track plus add-track row")
         let addRows = (0..<headers.rows.count).filter { headers.rows[$0].isAddTrack }
-        report.expectEqual([names.count], addRows, cppID: cppID,
+        report.expectEqual(expected: [names.count], actual: addRows, cppID: cppID,
                            what: "\(phase): add-track row remains last")
     }
 }

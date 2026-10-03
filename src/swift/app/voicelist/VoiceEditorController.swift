@@ -6,7 +6,7 @@ import QtBridge
 /// lease after the preceding operation finishes, never replaying a stale copy.
 @MainActor
 @QtBridgeable
-public final class VoiceEditorController {
+public final class VoiceEditorController: QmlUncreatable {
     @QtTracked public var editable = false
     @QtTracked public var notice = ""
     @QtTracked public var macro = Int(BankVoiceMacro.directSound)
@@ -26,57 +26,60 @@ public final class VoiceEditorController {
     @QtTracked public var modDepth = 0
     @QtTracked public var phase = 0
     @QtIgnored public weak var owner: VoiceListController?
-    @QtIgnored private var pending: Task<Void, Never>?
+    private var pending: Task<Void, Never>?
 
     public init() {}
 
     @QtIgnored
     public func refresh() {
         guard let owner, owner.isBound, !owner.isLoading else {
-            isSynth = false
-            editable = false
-            notice = ""
+            setPublished(isSynth, false) { isSynth = $0 }
+            setPublished(editable, false) { editable = $0 }
+            setPublished(notice, "") { notice = $0 }
             return
         }
         let slot = owner.currentSlot
         guard let draft = owner.voiceDraft(slot) else {
-            editable = false
-            isSynth = false
-            notice = owner.noticeForSlot(slot)
+            setPublished(editable, false) { editable = $0 }
+            setPublished(isSynth, false) { isSynth = $0 }
+            let slotNotice = owner.noticeForSlot(slot)
+            setPublished(notice, slotNotice) { notice = $0 }
             return
         }
         let voice = draft.voice
-        editable = true
-        notice = ""
-        materializesBlank = draft.materializesBlank
-        macro = Int(voice.macro)
-        symbol = voice.symbol
+        setPublished(editable, true) { editable = $0 }
+        setPublished(notice, "") { notice = $0 }
+        setPublished(materializesBlank, draft.materializesBlank) { materializesBlank = $0 }
+        setPublished(macro, Int(voice.macro)) { macro = $0 }
+        setPublished(symbol, voice.symbol) { symbol = $0 }
         let descriptor = owner.synthDescriptor(symbol: voice.symbol)
-        isSynth = descriptor != nil
+        let synthesized = descriptor != nil
+        setPublished(isSynth, synthesized) { isSynth = $0 }
         let synth = descriptor ?? VgSynthDesc()
-        waveform = synth.waveform
-        baseDuty = synth.baseDuty
-        dutyStep = synth.dutyStep
-        modDepth = synth.modDepth
-        phase = synth.phase
-        attack = Int(voice.attack)
-        decay = Int(voice.decay)
-        sustain = Int(voice.sustain)
-        release = Int(voice.release)
-        sweep = Int(voice.sweep)
-        duty = Int(voice.duty)
-        period = Int(voice.period)
+        setPublished(waveform, synth.waveform) { waveform = $0 }
+        setPublished(baseDuty, synth.baseDuty) { baseDuty = $0 }
+        setPublished(dutyStep, synth.dutyStep) { dutyStep = $0 }
+        setPublished(modDepth, synth.modDepth) { modDepth = $0 }
+        setPublished(phase, synth.phase) { phase = $0 }
+        setPublished(attack, Int(voice.attack)) { attack = $0 }
+        setPublished(decay, Int(voice.decay)) { decay = $0 }
+        setPublished(sustain, Int(voice.sustain)) { sustain = $0 }
+        setPublished(release, Int(voice.release)) { release = $0 }
+        setPublished(sweep, Int(voice.sweep)) { sweep = $0 }
+        setPublished(duty, Int(voice.duty)) { duty = $0 }
+        setPublished(period, Int(voice.period)) { period = $0 }
     }
 
     /// Commits one editor field as a bank history action. Values outside the
     /// instrument's hardware range and uneditable slots are silently refused.
     public func change(field: String, value: Int) {
-        guard let owner, editable else { return }
+        guard let owner, editable, let origin = owner.editOrigin() else { return }
         let slot = owner.currentSlot
         let previous = pending
         pending = Task { [weak self, weak owner] in
             await previous?.value
-            guard let self, let owner, owner.currentSlot == slot,
+            guard let self, let owner, owner.isCurrentEditOrigin(origin),
+                  owner.currentSlot == slot,
                   let draft = owner.voiceDraft(slot),
                   draft.voice.macro != BankVoiceMacro.keysplit,
                   draft.voice.macro != BankVoiceMacro.keysplitAll else { return }
@@ -95,11 +98,12 @@ public final class VoiceEditorController {
             default: return
             }
             guard draft.materializesBlank || voice != draft.voice else { return }
+            guard owner.isCurrentEditOrigin(origin) else { return }
             do {
                 _ = try await owner.applyVoiceEdit(slot: slot, voice: voice)
-                self.refresh()
+                if owner.isCurrentEditOrigin(origin), owner.currentSlot == slot { self.refresh() }
             } catch {
-                self.refresh()
+                if owner.isCurrentEditOrigin(origin), owner.currentSlot == slot { self.refresh() }
             }
         }
     }
@@ -107,12 +111,14 @@ public final class VoiceEditorController {
     /// A type or symbol edit rebuilds the voicegroup's audio source. Synth
     /// is a pseudo-type: its voice remains DirectSound with a synth symbol.
     public func changeType(macro newMacro: Int, symbol newSymbol: String) {
-        guard let owner, editable, (-1...12).contains(newMacro) else { return }
+        guard let owner, editable, (-1...12).contains(newMacro),
+              let origin = owner.editOrigin() else { return }
         let slot = owner.currentSlot
         let previous = pending
         pending = Task { [weak self, weak owner] in
             await previous?.value
-            guard let self, let owner, owner.currentSlot == slot,
+            guard let self, let owner, owner.isCurrentEditOrigin(origin),
+                  owner.currentSlot == slot,
                   let draft = owner.voiceDraft(slot) else { return }
             let old = draft.voice
             var voice = old
@@ -130,12 +136,16 @@ public final class VoiceEditorController {
                     } else {
                         symbol = try await owner.mintSynth(VgSynthDesc())
                     }
+                    guard owner.isCurrentEditOrigin(origin),
+                          owner.currentSlot == slot else { return }
                     voice.macro = VoiceListSemantics.isDirectSoundFamily(old.macro)
                         ? old.macro : BankVoiceMacro.directSound
                     voice.symbol = symbol
                     voice.keysplitTable = ""
                 } catch {
-                    self.notice = String(describing: error)
+                    if owner.isCurrentEditOrigin(origin), owner.currentSlot == slot {
+                        self.notice = String(describing: error)
+                    }
                     return
                 }
             } else if VoiceListSemantics.macroHasSymbol(selectedMacro) {
@@ -194,8 +204,10 @@ public final class VoiceEditorController {
                 voice.release = min(voice.release, 7)
             }
             guard draft.materializesBlank || voice != old else { return }
+            guard owner.isCurrentEditOrigin(origin) else { return }
             do {
                 _ = try await owner.applyVoiceEdit(slot: slot, voice: voice)
+                guard owner.isCurrentEditOrigin(origin), owner.currentSlot == slot else { return }
                 if selectedMacro == -1 {
                     if let descriptor = owner.synthDescriptor(symbol: symbol) {
                         owner.synthDefinitions[symbol] = descriptor
@@ -204,19 +216,21 @@ public final class VoiceEditorController {
                 }
                 self.refresh()
             } catch {
-                self.refresh()
+                if owner.isCurrentEditOrigin(origin), owner.currentSlot == slot { self.refresh() }
             }
         }
     }
     /// Resolves an edited synth descriptor, then changes the bank slot only
     /// after the new symbol can be minted. The save action persists both.
     public func changeSynth(field: String, value: Int) {
-        guard let owner, editable, isSynth else { return }
+        guard let owner, editable, isSynth,
+              let origin = owner.editOrigin() else { return }
         let slot = owner.currentSlot
         let previous = pending
         pending = Task { [weak self, weak owner] in
             await previous?.value
-            guard let self, let owner, owner.currentSlot == slot,
+            guard let self, let owner, owner.isCurrentEditOrigin(origin),
+                  owner.currentSlot == slot,
                   let draft = owner.voiceDraft(slot),
                   var descriptor = owner.synthDescriptor(symbol: draft.voice.symbol) else { return }
             let old = descriptor
@@ -236,14 +250,17 @@ public final class VoiceEditorController {
             guard descriptor != old else { return }
             do {
                 let symbol = try await owner.mintSynth(descriptor)
-                guard owner.currentSlot == slot else { return }
+                guard owner.isCurrentEditOrigin(origin),
+                      owner.currentSlot == slot else { return }
                 var voice = draft.voice
                 voice.symbol = symbol
                 _ = try await owner.applyVoiceEdit(slot: slot, voice: voice)
+                guard owner.isCurrentEditOrigin(origin), owner.currentSlot == slot else { return }
                 owner.synthDefinitions[symbol] = descriptor
                 owner.synthSymbols.insert(symbol)
                 self.refresh()
             } catch {
+                guard owner.isCurrentEditOrigin(origin), owner.currentSlot == slot else { return }
                 self.refresh()
                 self.notice = String(describing: error)
             }

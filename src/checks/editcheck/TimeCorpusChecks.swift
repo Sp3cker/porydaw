@@ -93,28 +93,28 @@ private func coreTimeRemoveRow(_ report: CheckReport, _ document: SongDocument,
     }, cppID: id, message: "post-range note ripples left")
     report.expect(!document.notes(in: track).contains { $0.id == inserted[1] },
                   cppID: id, message: "in-range note is removed")
-    report.expectEqual("\(base + 51 * step):40",
-                       document.lanePoints(track: track, lane: .controller(7))
+    report.expectEqual(expected: "\(base + 51 * step):40",
+                       actual: document.lanePoints(track: track, lane: .controller(7))
                            .first(where: { $0.tick == base + 51 * step }).map(coreTimePointShape),
                        cppID: id, what: "last in-range CC7 value is rescued to the seam")
-    report.expectEqual(position + 1,
-                       try coreEditHistoryCountAtTip(document, report: report,
+    report.expectEqual(expected: position + 1,
+                       actual: try coreEditHistoryCountAtTip(document, report: report,
                                                      cppID: id),
                        cppID: id, what: "removal adds one history entry")
     let after = coreTimeBytes(document)
     _ = document.history.undoDocument()
-    report.expectEqual(before, coreTimeBytes(document), cppID: id,
+    report.expectEqual(expected: before, actual: coreTimeBytes(document), cppID: id,
                        what: "one undo restores the removal")
     report.expect(document.notes(in: track).contains {
         $0.id == inserted[1] && $0.tick == base + 52 * step && $0.pitch == 62
     }, cppID: id, message: "undo restores the removed note")
     _ = document.history.redoDocument()
-    report.expectEqual(after, coreTimeBytes(document), cppID: id,
+    report.expectEqual(expected: after, actual: coreTimeBytes(document), cppID: id,
                        what: "one redo restores the removal")
     report.expect(document.notes(in: track).contains {
         $0.id == inserted[2] && $0.tick == base + 53 * step && $0.pitch == 64
     }, cppID: id, message: "redo restores the rippled note")
-    report.expectEqual(originalTempo, document.state.tempo, cppID: id,
+    report.expectEqual(expected: originalTempo, actual: document.state.tempo, cppID: id,
                        what: "track-scoped removal leaves tempo untouched")
 }
 
@@ -149,42 +149,42 @@ private func coreTimeWholeSongRow(_ report: CheckReport, _ document: SongDocumen
         $0.id == shiftedID && $0.tick == base + 62 * step && $0.pitch == 65
     }, cppID: id, message: "later note shifts by the removed span")
     let loopAfter = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(loopBefore.loopStartTick, loopAfter.loopStartTick,
+    report.expectEqual(expected: loopBefore.loopStartTick, actual: loopAfter.loopStartTick,
                        cppID: id, what: "loop start stays put across removal")
-    report.expectEqual(loopBefore.loopEndTick, loopAfter.loopEndTick,
+    report.expectEqual(expected: loopBefore.loopEndTick, actual: loopAfter.loopEndTick,
                        cppID: id, what: "loop end stays put across removal")
-    report.expectEqual(endBefore - 4 * step, document.rawChunks.map(\.endTick).max() ?? 0,
+    report.expectEqual(expected: endBefore - 4 * step, actual: document.rawChunks.map(\.endTick).max() ?? 0,
                        cppID: id, what: "song end closes by exactly four clocks")
-    report.expectEqual(position + 1,
-                       try coreEditHistoryCountAtTip(document, report: report,
+    report.expectEqual(expected: position + 1,
+                       actual: try coreEditHistoryCountAtTip(document, report: report,
                                                      cppID: id),
                        cppID: id, what: "whole-song removal adds one history entry")
     let after = coreTimeBytes(document)
     _ = document.history.undoDocument()
-    report.expectEqual(before, coreTimeBytes(document), cppID: id,
+    report.expectEqual(expected: before, actual: coreTimeBytes(document), cppID: id,
                        what: "one undo restores the whole-song removal")
-    report.expectEqual(originalTempo, document.state.tempo, cppID: id,
+    report.expectEqual(expected: originalTempo, actual: document.state.tempo, cppID: id,
                        what: "undo restores the tempo points")
     report.expect(document.notes(in: track).contains {
         $0.id == shiftedID && $0.tick == base + 66 * step && $0.pitch == 65
     }, cppID: id, message: "undo restores the shifted note")
     let loopUndone = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(loopBefore.loopStartTick, loopUndone.loopStartTick,
+    report.expectEqual(expected: loopBefore.loopStartTick, actual: loopUndone.loopStartTick,
                        cppID: id, what: "loop start stays put across undo")
-    report.expectEqual(loopBefore.loopEndTick, loopUndone.loopEndTick,
+    report.expectEqual(expected: loopBefore.loopEndTick, actual: loopUndone.loopEndTick,
                        cppID: id, what: "loop end stays put across undo")
-    report.expectEqual(endBefore, document.rawChunks.map(\.endTick).max() ?? 0,
+    report.expectEqual(expected: endBefore, actual: document.rawChunks.map(\.endTick).max() ?? 0,
                        cppID: id, what: "undo restores the song end")
     _ = document.history.redoDocument()
-    report.expectEqual(after, coreTimeBytes(document), cppID: id,
+    report.expectEqual(expected: after, actual: coreTimeBytes(document), cppID: id,
                        what: "one redo restores the whole-song removal")
     report.expect(document.notes(in: track).contains {
         $0.id == shiftedID && $0.tick == base + 62 * step && $0.pitch == 65
     }, cppID: id, message: "redo restores the shifted note")
     let loopRedone = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(loopBefore.loopStartTick, loopRedone.loopStartTick,
+    report.expectEqual(expected: loopBefore.loopStartTick, actual: loopRedone.loopStartTick,
                        cppID: id, what: "loop start stays put across redo")
-    report.expectEqual(loopBefore.loopEndTick, loopRedone.loopEndTick,
+    report.expectEqual(expected: loopBefore.loopEndTick, actual: loopRedone.loopEndTick,
                        cppID: id, what: "loop end stays put across redo")
     report.expect(coreTimeTracksSorted(document), cppID: id,
                   message: "all chunk events stay tick-sorted")
@@ -209,24 +209,24 @@ private func coreTimeAutomationRow(_ report: CheckReport, _ document: SongDocume
                                                      endTick: base + 2 * step),
                                            scope: TimeScope(tracks: [track])),
                   cppID: id, message: "insertion shifts lane points")
-    report.expectEqual("\(base):30", document.lanePoints(track: track,
+    report.expectEqual(expected: "\(base):30", actual: document.lanePoints(track: track,
                                                          lane: .controller(7))
         .first(where: { $0.tick == base }).map(coreTimePointShape),
         cppID: id, what: "pre-range lane point keeps its tick")
-    report.expectEqual("\(base + 2 * step):44", document.lanePoints(track: track,
+    report.expectEqual(expected: "\(base + 2 * step):44", actual: document.lanePoints(track: track,
                                                                     lane: .controller(7))
         .first(where: { $0.tick == base + 2 * step }).map(coreTimePointShape),
         cppID: id, what: "post-range lane point shifts right")
-    report.expectEqual(position + 1,
-                       try coreEditHistoryCountAtTip(document, report: report,
+    report.expectEqual(expected: position + 1,
+                       actual: try coreEditHistoryCountAtTip(document, report: report,
                                                      cppID: id),
                        cppID: id, what: "insertion adds one history entry")
     let after = coreTimeBytes(document)
     _ = document.history.undoDocument()
-    report.expectEqual(before, coreTimeBytes(document), cppID: id,
+    report.expectEqual(expected: before, actual: coreTimeBytes(document), cppID: id,
                        what: "one undo restores the lane insertion")
     _ = document.history.redoDocument()
-    report.expectEqual(after, coreTimeBytes(document), cppID: id,
+    report.expectEqual(expected: after, actual: coreTimeBytes(document), cppID: id,
                        what: "one redo restores the lane insertion")
     document.writeLane(track: track, lane: .controller(7), from: base + 2 * step,
                        through: base + 2 * step,
@@ -247,8 +247,8 @@ private func coreTimeAutomationRow(_ report: CheckReport, _ document: SongDocume
                   message: "150 BPM tempo is inserted at clock four")
     document.moveLanePoints(track: track, lane: .controller(7),
                             moves: [LanePointMove(point: cc, tick: base + 5 * step, value: 90)])
-    report.expectEqual("\(base + 5 * step):90",
-                       document.lanePoints(track: track, lane: .controller(7))
+    report.expectEqual(expected: "\(base + 5 * step):90",
+                       actual: document.lanePoints(track: track, lane: .controller(7))
                            .first(where: { $0.tick == base + 5 * step }).map(coreTimePointShape),
                        cppID: id, what: "CC7 moves to clock five with value 90")
     report.expect(document.lanePoints(track: track, lane: .pitchBend).contains {
@@ -287,17 +287,17 @@ private func coreTimeAutomationRow(_ report: CheckReport, _ document: SongDocume
         report.expect(document.history.undoDocument(), cppID: id,
                       message: "each applied edit can be undone")
     }
-    report.expectEqual(originalBytes, coreTimeBytes(document), cppID: id,
+    report.expectEqual(expected: originalBytes, actual: coreTimeBytes(document), cppID: id,
                        what: "counted undo restores the original song bytes")
-    report.expectEqual(originalTempos, document.state.tempo, cppID: id,
+    report.expectEqual(expected: originalTempos, actual: document.state.tempo, cppID: id,
                        what: "counted undo restores the original tempos")
     for _ in 0..<applied {
         report.expect(document.history.redoDocument(), cppID: id,
                       message: "each applied edit can be redone")
     }
-    report.expectEqual(editedBytes, coreTimeBytes(document), cppID: id,
+    report.expectEqual(expected: editedBytes, actual: coreTimeBytes(document), cppID: id,
                        what: "counted redo restores the edited song bytes")
-    report.expectEqual(editedTempos, document.state.tempo, cppID: id,
+    report.expectEqual(expected: editedTempos, actual: document.state.tempo, cppID: id,
                        what: "counted redo restores the edited tempos")
 }
 
@@ -319,24 +319,24 @@ private func coreTimeVoiceRow(_ report: CheckReport, _ document: SongDocument,
                                                 endTick: base + 2 * step),
                                       scope: TimeScope(tracks: [track])),
                   cppID: id, message: "removal shifts voice points")
-    report.expectEqual("\(base):5", document.lanePoints(track: track, lane: .voice)
+    report.expectEqual(expected: "\(base):5", actual: document.lanePoints(track: track, lane: .voice)
         .first(where: { $0.tick == base }).map(coreTimePointShape),
         cppID: id, what: "pre-range voice point keeps its tick")
-    report.expectEqual("\(base + 2 * step):12",
-                       document.lanePoints(track: track, lane: .voice)
+    report.expectEqual(expected: "\(base + 2 * step):12",
+                       actual: document.lanePoints(track: track, lane: .voice)
                            .first(where: { $0.tick == base + 2 * step })
                            .map(coreTimePointShape),
                        cppID: id, what: "post-range voice point ripples left one clock")
-    report.expectEqual(position + 1,
-                       try coreEditHistoryCountAtTip(document, report: report,
+    report.expectEqual(expected: position + 1,
+                       actual: try coreEditHistoryCountAtTip(document, report: report,
                                                      cppID: id),
                        cppID: id, what: "removal adds one history entry")
     let after = coreTimeBytes(document)
     _ = document.history.undoDocument()
-    report.expectEqual(before, coreTimeBytes(document), cppID: id,
+    report.expectEqual(expected: before, actual: coreTimeBytes(document), cppID: id,
                        what: "one undo restores the voice removal")
     _ = document.history.redoDocument()
-    report.expectEqual(after, coreTimeBytes(document), cppID: id,
+    report.expectEqual(expected: after, actual: coreTimeBytes(document), cppID: id,
                        what: "one redo restores the voice removal")
     document.writeLane(track: track, lane: .voice, from: base + step,
                        through: base + step,

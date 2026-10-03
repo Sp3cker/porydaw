@@ -84,24 +84,6 @@ enum VelocityScene {
         session.projectionCache.timeAxis
     }
 
-    /// The label typography the ruler draws with.
-    static func typography(metrics: GridMetrics, rowHeight: Double) -> GridTypography {
-        GridTypography(fonts: GridTypography.fonts(metrics: metrics), rowHeight: rowHeight)
-    }
-
-    /// The ruler label font: the page's typography, or the seed literal while
-    /// the page has no session.
-    static func fontMap(emphasized: Bool, typography: GridTypography?,
-                        baseFontPx: Double) -> [String: QVariantSettable] {
-        guard let typography else {
-            return ["family": "Atkinson Hyperlegible Next",
-                    "pixelSize": Int(baseFontPx),
-                    "weight": emphasized ? 600 : 400,
-                    "letterSpacing": 0.0, "features": ["tnum": 1],
-                    "hintingPreference": fontPreferNoHinting]
-        }
-        return typography.fontMap(emphasized ? .bold : .keyLabel)
-    }
 
     /// The value axis: the presented context's map, the active set's markers and
     /// the font-relative ruler geometry. A hovered note takes its own tick's map
@@ -124,7 +106,8 @@ enum VelocityScene {
         axisGeometry.labelWidth = max(0, input.rulerWidth - input.geometry.pixel)
         axisGeometry.labelSideInset = input.geometry.labelSideInset
         axisGeometry.labelColumnGap = input.geometry.labelColumnGap
-        axisGeometry.labelHeight = max(input.geometry.densityD1, input.plotHeight / 8)
+        axisGeometry.labelHeight = NativeFontMetrics(
+            Typography(baseFontPx: Int(input.baseFontPx.rounded())).noteName).extents.height
         axisGeometry.continuousDensityD1 = input.geometry.densityD1
         axisGeometry.continuousDensityD2 = input.geometry.densityD2
         axisGeometry.continuousDensityD3 = input.geometry.densityD3
@@ -135,11 +118,9 @@ enum VelocityScene {
     /// The ruler's rows and labels: the intrinsic graduations with their
     /// density-thinned labels, or the continuous ladder with its ticks, markers
     /// and active-value labels. The label column's own geometry is part of the
-    /// value, exactly as `rebuildQuickAxis` derives it. `typography` is the
-    /// page's `@MainActor` label typography, or `nil` while it has no session.
+    /// value, exactly as `rebuildQuickAxis` derives it.
     static func axisRows(_ input: VelocitySceneInput, axis: VelocityAxisModel,
-                         relativeGesture: Bool,
-                         typography: GridTypography?) -> VelocityAxisRows {
+                         relativeGesture: Bool) -> VelocityAxisRows {
         let separatorX = max(0, input.rulerWidth - input.geometry.pixel)
         // The ruler spans the whole gutter (track headers plus the keyboard
         // column); the label column keeps its keyboard-column width, anchored
@@ -152,6 +133,9 @@ enum VelocityScene {
         let labelHeight = max(0, axis.geometry.labelHeight)
         let labelColor = input.palette.primaryText
         let selectedColor = input.palette.selectionRing
+        let typography = Typography(baseFontPx: Int(input.baseFontPx.rounded()))
+        let noteNameFont = typography.noteName.map
+        let markerFont = typography.captionBold.map
         var rows = VelocityAxisRows()
         if axis.mode == .intrinsic && input.interaction.detentsEnabled {
             for graduation in axis.graduations {
@@ -169,8 +153,7 @@ enum VelocityScene {
                 rows.labels.append(SceneText(
                     rect: (labelLeft, graduation.y - labelHeight / 2, labelWidth, labelHeight),
                     text: graduation.text, color: labelColor,
-                    font: fontMap(emphasized: emphasized, typography: typography,
-                                  baseFontPx: input.baseFontPx), horizontal: 0x2))
+                    font: emphasized ? markerFont : noteNameFont, horizontal: 0x2))
             }
         } else {
             for tick in axis.ticks {
@@ -186,8 +169,7 @@ enum VelocityScene {
                     rows.labels.append(SceneText(
                         rect: (labelLeft, label.y - labelHeight / 2, labelWidth, labelHeight),
                         text: label.text, color: labelColor,
-                        font: fontMap(emphasized: false, typography: typography,
-                                      baseFontPx: input.baseFontPx), horizontal: 0x2))
+                        font: noteNameFont, horizontal: 0x2))
                 }
             }
             for marker in axis.markers {
@@ -199,112 +181,51 @@ enum VelocityScene {
                 rows.labels.append(SceneText(
                     rect: (labelLeft, marker.y - labelHeight / 2, labelWidth, labelHeight),
                     text: "\(marker.velocity)", color: labelColor,
-                    font: fontMap(emphasized: true, typography: typography,
-                                  baseFontPx: input.baseFontPx), horizontal: 0x2))
+                    font: markerFont, horizontal: 0x2))
             }
         }
         return rows
     }
 
-    /// The vertical grid over the visible plot: `composeBandedGrid`'s
-    /// subdivisions plus the beat, fine-beat and bar lines.
-    static func grid(_ input: VelocitySceneInput) -> [SceneRect] {
-        guard let camera = input.camera, let metrics = input.metrics,
-              input.plotHeight > 0, input.plotWidth > input.rulerWidth else { return [] }
-        let physicalPixel = max(input.geometry.pixel, 0.0001)
-        let roundingMargin = physicalPixel / 2
-        let beginTick = camera.tickAtContentX(-roundingMargin)
-        let endTick = camera.tickAtContentX(input.plotWidth - physicalPixel + roundingMargin) + 1
-        guard endTick > beginTick else { return [] }
-        let range = (begin: Tick(max(0, beginTick.rounded(.down))),
-                     end: Tick(max(1, endTick.rounded(.up))))
-        let stroke = metrics.gridLineStroke
-        var rects: [SceneRect] = []
-        metrics.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
-            let x = camera.displayX(tick: Double(tick), origin: 0, dpr: input.devicePixelRatio)
-            let color = level == 1 ? input.palette.gridLineSub1
-                : level == 2 ? input.palette.gridLineSub2 : input.palette.gridLineSub3
-            rects.append(SceneRect(x: x - stroke / 2, y: 0, width: stroke,
-                                   height: input.plotHeight, fillColor: color,
-                                   primitiveName: "velocityGrid"))
+    static func modelBands(_ input: VelocitySceneInput, axis: VelocityAxisModel) -> [DrawerStaticRect] {
+        guard input.plotHeight > 0 else { return [] }
+        var rects: [DrawerStaticRect] = []
+        let source = input.source
+        var start: Tick = 0
+        var slot = source.firstProgram
+        for change in source.voiceChanges {
+            appendModelBands(
+                &rects, from: start, to: change.tick, slot: slot,
+                input: input, axis: axis)
+            start = change.tick
+            slot = change.value
         }
-        var segment = metrics.timeAxis.segmentAt(range.begin)
-        var finest = metrics.visibleGridTicks(in: segment, camera: camera) == 1
-        metrics.timeAxis.forEachGridLine(from: range.begin, to: range.end) { tick, isBar, _, _ in
-            if tick >= segment.next {
-                segment = metrics.timeAxis.segmentAt(tick)
-                finest = metrics.visibleGridTicks(in: segment, camera: camera) == 1
-            }
-            let x = camera.displayX(tick: Double(tick), origin: 0, dpr: input.devicePixelRatio)
-            rects.append(SceneRect(
-                x: x - stroke / 2, y: 0, width: stroke, height: input.plotHeight,
-                fillColor: isBar ? input.palette.gridLineBar
-                    : finest ? input.palette.gridLineBeatFine : input.palette.gridLineBeat,
-                primitiveName: "velocityGrid"))
-        }
+        appendModelBands(
+            &rects, from: start, to: TimeDefaults.maxTick, slot: slot,
+            input: input, axis: axis)
         return rects
     }
 
-    /// PSG level bands: one horizontal boundary per level inside each voice
-    /// context section whose map resolves exactly to a PSG voice. A section
-    /// whose map is unknown draws no level line rather than a guessed layout.
-    static func bands(_ input: VelocitySceneInput, axis: VelocityAxisModel,
-                      projection: VelocityProjection) -> [SceneRect] {
-        guard let camera = input.camera, input.plotHeight > 0,
-              input.plotWidth > input.rulerWidth else { return [] }
-        let color = input.palette.separator
-        let first = Tick(max(0, camera.tickAtContentX(0).rounded(.down)))
-        let last = max(Tick(first + 1), Tick(camera.tickAtContentX(input.plotWidth).rounded(.up)))
-        var sectionTick = first
-        var rects: [SceneRect] = []
-        var guardCounter = 0
-        let resolve = input.source.resolver()
-        while sectionTick < last, guardCounter < 4096 {
-            guardCounter += 1
-            let context = resolve(sectionTick, nil)
-            let sectionEnd = min(last, context.endTick ?? last)
-            if sectionEnd <= sectionTick { break }
-            if context.status == .resolved, context.map.isPSG, context.map.levelCount > 1 {
-                let left = min(max(projection.xForDisplayTick(Double(sectionTick)), 0),
-                               input.plotWidth)
-                let right = min(max(projection.xForDisplayTick(Double(sectionEnd)), 0),
-                                input.plotWidth)
-                if right > left {
-                    let sectionMap = context.map
-                    for level in 0..<(context.map.levelCount - 1) {
-                        let y = axis.levelBoundaryToY(level, map: sectionMap)
-                        rects.append(SceneRect(
-                            x: left, y: y - input.geometry.gridLineStroke / 2,
-                            width: right - left, height: input.geometry.gridLineStroke,
-                            fillColor: color, primitiveName: "velocityBand"))
-                    }
-                }
-            }
-            sectionTick = sectionEnd
-        }
-        return rects
-    }
-
-    /// One dashed band edge of the gesture transient. The page supplies the
-    /// physical pixel and edge colour the reticle draws with.
-    static func appendDashed(_ rects: inout [SceneRect], horizontal: Bool, fixed: Double,
-                             from: Double, to: Double, dash: Double, gap: Double,
-                             physicalPixel: Double, color: String) {
-        let period = dash + gap
-        guard period > 0, to > from else { return }
-        var position = from
-        while position < to {
-            let end = min(position + dash, to)
-            if horizontal {
-                rects.append(SceneRect(x: position, y: fixed - physicalPixel / 2,
-                                       width: end - position, height: physicalPixel,
-                                       fillColor: color, primitiveName: "velocityBandEdge"))
-            } else {
-                rects.append(SceneRect(x: fixed - physicalPixel / 2, y: position,
-                                       width: physicalPixel, height: end - position,
-                                       fillColor: color, primitiveName: "velocityBandEdge"))
-            }
-            position += period
+    private static func appendModelBands(
+        _ rects: inout [DrawerStaticRect],
+        from start: Tick, to end: Tick, slot: Int,
+        input: VelocitySceneInput, axis: VelocityAxisModel
+    ) {
+        guard end > start else { return }
+        let context = VelocityContextPolicy.resolve(
+            slot: slot, endTick: end,
+            slots: input.source.slots)
+        guard context.status == .resolved, context.map.isPSG,
+            context.map.levelCount > 1
+        else { return }
+        let stroke = input.geometry.gridLineStroke
+        let argb = SceneRectPacking.argb(input.palette.separator)
+        for level in 0..<(context.map.levelCount - 1) {
+            rects.append(
+                DrawerStaticRect(
+                    tickStart: start, tickEnd: end,
+                    y: Float(axis.levelBoundaryToY(level, map: context.map) - stroke / 2),
+                    height: Float(stroke), argb: argb))
         }
     }
 }

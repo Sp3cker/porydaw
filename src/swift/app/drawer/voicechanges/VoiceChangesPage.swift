@@ -112,6 +112,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
     public var promptFont: [String: QVariantSettable] = [:]
     public var captionFont: [String: QVariantSettable] = [:]
     public var titleFont: [String: QVariantSettable] = [:]
+    public var noteNameFont: [String: QVariantSettable] = [:]
     /// `false` while no track is presented: the plot draws its own message then
     /// and the gutter carries the title alone.
     public var trackAvailable: Bool = false
@@ -166,13 +167,15 @@ public final class VoiceChangesPage: EditorDrawerPage {
             auditionDiagnostic = auditionAvailable ? "" : "Voice audition is unavailable."
         }
     }
-    @QtIgnored var soundingProgram: UInt8?
 
     // MARK: Published models
 
     public var markers: QListModel<VoiceMarkerHandle> = QListModel()
-    public var heldSpans: QListModel<SceneRect> = QListModel()
-    public var gridLines: QListModel<SceneRect> = QListModel()
+    @QtTracked public var displayRevision = 0
+    public func displayList(list: Int) -> Data {
+        guard displayLists.indices.contains(list) else { return retainedEmptyDisplayList() }
+        return displayLists[list]
+    }
     public var pickerRows: QListModel<VoicePickerRowHandle> = QListModel()
     public var menuRows: QListModel<VoiceMenuRowHandle> = QListModel()
 
@@ -182,13 +185,13 @@ public final class VoiceChangesPage: EditorDrawerPage {
     /// voice span, and repeated equal publications, rebuild nothing.
     @QtIgnored public internal(set) var contentBuildCount: UInt64 = 0
     /// Shared-playhead presentations the page consumed.
-    @QtIgnored public private(set) var playheadPresentationCount: UInt64 = 0
+    public private(set) var playheadPresentationCount: UInt64 = 0
     /// Presentations that crossed a voice context: the readout/indicator change.
-    @QtIgnored public private(set) var contextChangeCount: UInt64 = 0
-    @QtIgnored public private(set) var presentedContextTick: Tick = 0
-    @QtIgnored public private(set) var presentedContextSlot: Int = -1
-    @QtIgnored public private(set) var presentedPlaying = false
-    @QtIgnored private var lastPresentedPublication: (tick: Tick, playing: Bool)?
+    public private(set) var contextChangeCount: UInt64 = 0
+    public private(set) var presentedContextTick: Tick = 0
+    public private(set) var presentedContextSlot: Int = -1
+    public private(set) var presentedPlaying = false
+    private var lastPresentedPublication: (tick: Tick, playing: Bool)?
 
     // MARK: Check-facing state
 
@@ -224,8 +227,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
     /// The presented context span's end tick: the boundary a later presentation
     /// has to cross to change the readout, or `TimeDefaults.noTick` when the
     /// span runs to the song's end.
-    @QtIgnored public private(set) var presentedContextEndTick: Tick = TimeDefaults.noTick
-    @QtIgnored private var presentedContextStartTick: Tick = 0
+    public private(set) var presentedContextEndTick: Tick = TimeDefaults.noTick
+    private var presentedContextStartTick: Tick = 0
 
     @QtIgnored weak var session: DocumentSession?
     @QtIgnored var palette = GridPalette()
@@ -242,22 +245,18 @@ public final class VoiceChangesPage: EditorDrawerPage {
     @QtIgnored var dragDistance: Double = 10
     @QtIgnored var contextTick: Tick = 0
     @QtIgnored var playing = false
-    @QtIgnored private var lastContextKey: VoiceContextKey?
+    private var lastContextKey: VoiceContextKey?
     @QtIgnored let pickerCache = VoicePickerProjectionCache()
-    @QtIgnored var metricsKey: MetricsKey?
-    @QtIgnored var cachedMetrics: GridMetrics?
     @QtIgnored var entriesRevision: UInt64?
     @QtIgnored var entriesTrack: Int?
     @QtIgnored var cachedEntries: [VoiceProjectionEntry] = []
+    // Retained display-list buffer (list 0 grid + held spans) and the writer
+    // reused across frames; the one list rebuilds with one bump.
+    @QtIgnored var displayLists: [Data] = []
+    @QtIgnored var listWriter = DisplayListWriter()
+    @QtIgnored var cachedEmptyDisplayList: Data?
     @QtIgnored var markerLookup: [String: VoiceMarkerHandle] = [:]
 
-    struct MetricsKey: Equatable {
-        var revision: UInt64
-        var font: Double
-        var dpr: Double
-        var width: Double
-        var height: Double
-    }
 
     public init(baseFontPx: Double = VoiceChangesPagePolicy.seedBaseFontPx) {
         let base = baseFontPx.isFinite && baseFontPx > 0
@@ -268,7 +267,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
         bodyPolicy = EditorDrawerBodyPolicy(maximumBodyHeight: maximum) { _, _ in minimum }
         self.baseFontPx = base
         promptAppearance = PromptAppearance.metrics(base: base)
-        promptFont = PromptAppearance.font(base: base)
+        promptFont = PromptAppearance.font(typography: Typography(baseFontPx: Int(base.rounded())))
         publishTypography()
     }
 
@@ -278,8 +277,6 @@ public final class VoiceChangesPage: EditorDrawerPage {
     public func attach(session: DocumentSession, palette: GridPalette) {
         cancelSectionInteraction()
         self.session = session
-        metricsKey = nil
-        cachedMetrics = nil
         entriesRevision = nil
         entriesTrack = nil
         pickerCache.refresh(slots: session.bankSlots)
@@ -300,9 +297,12 @@ public final class VoiceChangesPage: EditorDrawerPage {
         presentedContextStartTick = 0
         let scene = VoiceChangesSceneSnapshot.detached
         publishMarkers([])
-        publishSpans(scene.spans)
-        publishGrid(scene.gridLines)
         publishGutter(scene.gutterTexts)
+        let current = displayLists.first ?? Data()
+        if !current.isEmpty {
+            displayLists = []
+            displayRevision &+= 1
+        }
     }
 
     // MARK: Composition input
@@ -332,7 +332,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
         if fontChanged {
             self.baseFontPx = nextFont
             promptAppearance = PromptAppearance.metrics(base: nextFont)
-            promptFont = PromptAppearance.font(base: nextFont)
+            promptFont = PromptAppearance.font(typography: Typography(baseFontPx: Int(nextFont.rounded())))
             publishTypography()
         }
         if changed { rebuildContent() }
@@ -431,6 +431,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
         presentedContextStartTick = points.last { $0.tick <= effectiveTick }?.tick ?? 0
         presentedContextEndTick = VoiceLanePolicy.endTick(after: effectiveTick, points: points)
             ?? TimeDefaults.noTick
+        if contextChanged { clearHover() }
         if contextChanged || playingChanged {
             contextChangeCount &+= 1
             rebuildContent()

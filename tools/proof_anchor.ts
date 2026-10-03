@@ -237,7 +237,11 @@ function skipRawString(source: string, i: number, brace: BraceState): number {
   return source.length;
 }
 
-function skipElement(source: string, j: number, brace: BraceState): number {
+export function skipElement(
+  source: string,
+  j: number,
+  brace: BraceState,
+): number {
   const c = source[j];
   if (c === "/" && source[j + 1] === "/") return skipLineEnd(source, j + 2);
   if (c === "/" && source[j + 1] === "*") {

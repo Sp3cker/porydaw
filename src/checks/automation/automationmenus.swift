@@ -33,7 +33,7 @@ func drawerAutomationOriginalClearMenus(_ report: CheckReport, suite: DocumentSe
                       cppID: id, message: "the other parameter remains selectable")
         report.expect(page.activateParameter(index: page.catalogIndex(of: parameter)),
                       cppID: id, message: "the cleared parameter remains selectable")
-        report.expectEqual(parameter, page.activeParameter, cppID: id,
+        report.expectEqual(expected: parameter, actual: page.activeParameter, cppID: id,
                            what: "switching back selects the cleared parameter")
     }
 }
@@ -65,9 +65,9 @@ func drawerAutomationOriginalRangeMenu(_ report: CheckReport, suite: DocumentSes
     report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.range64.rawValue),
                   cppID: id, message: "the original range choice is accepted")
     report.expect(!page.menuOpen, cppID: id, message: "a normal range pick closes the menu")
-    report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
+    report.expectEqual(expected: 64, actual: page.scaleLabels.first?.value, cppID: id,
                        what: "the selected range rescales the lane to 64")
-    report.expectEqual(before, fixture.snapshot, cppID: id,
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
                        what: "range selection preserves document revision and history identity")
     report.expect(fixture.document.state == state, cppID: id,
                   message: "range selection preserves all song content")

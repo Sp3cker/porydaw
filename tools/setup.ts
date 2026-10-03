@@ -4,6 +4,7 @@
 import { join } from "node:path";
 import {
   aqtInstall,
+  buildDirectory as configurationDirectory,
   cmakeConfigureArgs,
   currentQtInstallation,
   localQtPrefix,
@@ -26,7 +27,7 @@ import { poryaaaaConfiguration } from "./poryaaaa_source.ts";
 import { SetupProgress } from "./setup_reporter.ts";
 
 const root = Deno.cwd();
-const buildDirectory = "build";
+const buildDirectory = configurationDirectory("release");
 const cacheDirectory = setupCacheDirectory(root);
 const virtualEnvironment = setupVirtualEnvironment(root);
 const toolsetMarker = setupToolsetMarker(root);
@@ -130,19 +131,19 @@ function platform(): Platform {
       return {
         label: "macOS",
         qt,
-        launchCommand: "open build/porydaw.app",
+        launchCommand: "open build/release/porydaw.app",
       };
     case "linux":
       return {
         label: qt.host === "linux_arm64" ? "Linux arm64" : "Linux x86_64",
         qt,
-        launchCommand: "./build/porydaw",
+        launchCommand: "./build/release/porydaw",
       };
     case "windows":
       return {
         label: "Windows x86_64",
         qt,
-        launchCommand: ".\\build\\Release\\porydaw.exe",
+        launchCommand: ".\\build\\release\\Release\\porydaw.exe",
       };
     default:
       throw new Error(`unsupported platform ${Deno.build.os}`);
@@ -168,7 +169,7 @@ async function ensureToolset(python: NativeBuildPython): Promise<Toolset> {
   await Deno.mkdir(cacheDirectory, { recursive: true });
   const environmentPython = setupVirtualEnvironmentPython(root);
   const expectedToolsetVersion =
-    `aqtinstall=${aqtInstall}\nclang-format=22\npython=${python.version}\n`;
+    `aqtinstall=${aqtInstall}\npython=${python.version}\n`;
   const environmentExists = await exists(environmentPython);
   let currentMarker = "";
   try {
@@ -191,14 +192,13 @@ async function ensureToolset(python: NativeBuildPython): Promise<Toolset> {
         virtualEnvironment,
       ],
     );
-    await run("installing Qt and formatter setup tools", environmentPython, [
+    await run("installing Qt setup tools", environmentPython, [
       "-m",
       "pip",
       "install",
       "--disable-pip-version-check",
       "--upgrade",
       aqtInstall,
-      "clang-format==22.*",
     ]);
     await Deno.writeTextFile(toolsetMarker, expectedToolsetVersion);
   }
@@ -215,6 +215,7 @@ async function ensureQt(
     root,
     target.qt,
     requestedVersion === qtVersion ? undefined : requestedVersion,
+    buildDirectory,
   );
   if (existingPrefix) {
     await patchWindowsQtVersionNumber(existingPrefix, requestedVersion);

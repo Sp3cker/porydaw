@@ -29,11 +29,19 @@ FocusScope {
         childOpen = false
         currentRow = -1
         childRow = -1
-        if (showing) {
-            forceActiveFocus(Qt.PopupFocusReason)
-        }
-        else closed()
+        if (showing)
+            claimMenuFocus()
+        else
+            closed()
     }
+    // Focus lands in the same pass the menu becomes showable: claiming while
+    // still disabled would drop focus to the window root, so every stage re-checks.
+    function claimMenuFocus() {
+        if (root.showing && root.visible && root.enabled)
+            root.forceActiveFocus(Qt.PopupFocusReason)
+    }
+    onVisibleChanged: claimMenuFocus()
+    onEnabledChanged: claimMenuFocus()
     function firstEnabled(level, start, step) {
         const count = level === panel ? model.menuRowCount : model.menuChildRowCount
         for (let i = start; i >= 0 && i < count; i += step) {

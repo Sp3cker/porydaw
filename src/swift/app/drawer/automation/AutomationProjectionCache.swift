@@ -13,11 +13,9 @@ final class AutomationProjectionCache {
     private var rowSelection: AutomationTimeSelection?
     private var rowReady = false
     private var rowUsedTracks = -1
-    private var snapping: AutomationSnapPolicy?
-    private var snapFont = 0.0
-    private var snapDpr = 0.0
     private var policies: [AutomationParameter: (
-        revision: UInt64, range: Int?, font: Double, projection: AutomationProjection)] = [:]
+        revision: UInt64, range: Int?, font: Double, selection: GridSelection,
+        feel: GridFeel, projection: AutomationProjection)] = [:]
 
     private func refresh(_ session: DocumentSession) {
         let id = ObjectIdentifier(session)
@@ -28,7 +26,6 @@ final class AutomationProjectionCache {
         songEnd = session.timeline.lengthTicks
         lanes.removeAll(keepingCapacity: true)
         rowFacts = nil
-        snapping = nil
         policies.removeAll(keepingCapacity: true)
     }
 
@@ -69,6 +66,7 @@ final class AutomationProjectionCache {
         refresh(session)
         if let cached = policies[snapshot.parameter], cached.revision == snapshot.revision,
            cached.range == range, cached.font == font,
+           cached.selection == session.grid.selection, cached.feel == session.grid.feel,
            cached.projection.camera.snapshot == camera.snapshot,
            cached.projection.bounds == bounds, cached.projection.geometry == geometry,
            cached.projection.songEndTick == snapshot.songEndTick {
@@ -78,20 +76,15 @@ final class AutomationProjectionCache {
             snapPolicy: snapPolicy(session: session, font: font, dpr: bounds.devicePixelRatio),
             songEndTick: snapshot.songEndTick,
             displayMaximum: AutomationProjection.displayMaximum(snapshot: snapshot, range: range))
-        policies[snapshot.parameter] = (snapshot.revision, range, font, projection)
+        policies[snapshot.parameter] = (
+            snapshot.revision, range, font, session.grid.selection, session.grid.feel, projection)
         return projection
     }
 
     func snapPolicy(session: DocumentSession, font: Double, dpr: Double) -> AutomationSnapPolicy {
-        refresh(session)
-        if let snapping, snapFont == font, snapDpr == dpr { return snapping }
-        let policy = AutomationSnapPolicy(baseFontPx: font, devicePixelRatio: dpr,
-            timeAxis: session.projectionCache.timeAxis,
-            clockTicks: TimelineSnapPolicy.clockTicks(division: session.document.ticksPerBeat,
-                extendedClocks: session.document.state.config.extendedClocks))
-        snapping = policy
-        snapFont = font
-        snapDpr = dpr
-        return policy
+        var grid = session.grid
+        grid.metrics = GridMetrics(baseFontPx: font, dpr: dpr, width: 0, height: 0,
+                                   timeAxis: grid.axis)
+        return AutomationSnapPolicy(grid: grid, clockTicks: session.gridClockTicks)
     }
 }

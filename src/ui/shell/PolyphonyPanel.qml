@@ -1,26 +1,32 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.Basic as Basic
 import Porydaw.Ui
+import PorydawApp
 
 Item {
     id: panel
     objectName: "polyphonyPanel"
-    required property var presenter
+    required property PolyphonyPanelPresenter presenter
     required property var colors
-    required property font applicationFont
-    readonly property font boldFont: Qt.font({
-        family: applicationFont.family, pixelSize: applicationFont.pixelSize, weight: Font.Bold
-    })
-    readonly property font headerFont: Qt.font({
-        family: applicationFont.family, pixelSize: applicationFont.pixelSize, weight: Font.DemiBold
-    })
-    readonly property real em: Math.max(1, applicationFont.pixelSize)
-    readonly property real gap: Math.round(em / 2)
+    required property var typography
+    required property var layoutSpaces
+    required property real baseFontPx
+    readonly property real em: baseFontPx
+    readonly property real gap: layoutSpaces.two
     readonly property bool wideLayout: width >= em * 50
     readonly property real margin: Math.round(em * 8 / 12)
     readonly property real contentWidth: width - 2 * margin
     readonly property real headingHeight: Math.round(em * 1.5)
+    // Measured layout results; section rects share the sections item's coordinate space.
+    readonly property rect usageSectionRect: Qt.rect(usage.x, usage.y, usage.width, usage.height)
+    readonly property rect overflowSectionRect: Qt.rect(overflow.x, overflow.y,
+                                                        overflow.width, overflow.height)
+    readonly property bool gridFullyVisible: grid.width > 0
+        && grid.height >= grid.implicitHeight
+        && grid.y + grid.height <= usage.height
+        && content.x + usage.x + grid.width <= scroll.width
+        && content.y + sections.y + usage.y + usage.height <= scroll.contentHeight
+    readonly property real vScrollRange: Math.max(0, scroll.contentHeight - scroll.height)
 
     Rectangle { anchors.fill: parent; color: panel.colors.windowBackground }
 
@@ -32,7 +38,7 @@ Item {
         contentHeight: content.height + 2 * panel.margin
         clip: true
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: Basic.ScrollBar { policy: ScrollBar.AsNeeded }
+        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
         Item {
             id: content
@@ -41,7 +47,7 @@ Item {
             width: panel.contentWidth
             height: Math.max(scroll.height - 2 * panel.margin, log.y + log.height)
 
-            Basic.CheckBox {
+            CheckBox {
                 id: invert
                 objectName: "polyphonyInvert"
                 x: 0
@@ -50,7 +56,7 @@ Item {
                 height: panel.headingHeight
                 text: qsTr("Solo overflow (invert audio)")
                 checked: panel.presenter.invertChecked
-                font: panel.applicationFont
+                font: Qt.font(panel.typography.body)
                 palette.windowText: panel.colors.windowText
                 ToolTip.text: qsTr("Mutes normal playback and makes ONLY the sounds lost to the polyphony limit audible.")
                 ToolTip.visible: hovered
@@ -75,7 +81,7 @@ Item {
                         text: qsTr("Channel usage")
                         width: parent.width
                         height: panel.headingHeight
-                        font: panel.boldFont
+                        font: Qt.font(panel.typography.bodyBold)
                         color: panel.colors.windowText
                     }
                     Column {
@@ -89,6 +95,7 @@ Item {
                             channels: panel.presenter.pcm
                             colors: panel.colors
                             em: panel.em
+                            typography: panel.typography
                         }
                         PolyphonyChannelGroup {
                             width: parent.width
@@ -96,14 +103,16 @@ Item {
                             channels: panel.presenter.cgb
                             colors: panel.colors
                             em: panel.em
+                            typography: panel.typography
                         }
                         Text {
+                            objectName: "polyphonyShadowNotice"
                             width: parent.width
                             height: panel.headingHeight
                             visible: panel.presenter.showingShadow
                             text: qsTr("Lost sounds currently playing (solo overflow):")
                             color: panel.colors.secondaryText
-                            font: panel.applicationFont
+                            font: Qt.font(panel.typography.body)
                         }
                         PolyphonyChannelGroup {
                             width: parent.width
@@ -112,6 +121,7 @@ Item {
                             channels: panel.presenter.shadowPcm
                             colors: panel.colors
                             em: panel.em
+                            typography: panel.typography
                         }
                         PolyphonyChannelGroup {
                             width: parent.width
@@ -120,6 +130,7 @@ Item {
                             channels: panel.presenter.shadowCgb
                             colors: panel.colors
                             em: panel.em
+                            typography: panel.typography
                         }
                     }
                 }
@@ -138,16 +149,16 @@ Item {
                                         parent.width - resetButton.width - panel.gap)
                         height: panel.headingHeight
                         text: qsTr("Overflow by track")
-                        font: panel.boldFont
+                        font: Qt.font(panel.typography.bodyBold)
                         color: panel.colors.windowText
                     }
-                    Basic.Button {
+                    Button {
                         id: resetButton
                         objectName: "polyphonyReset"
                         anchors.right: parent.right
                         height: panel.headingHeight
                         text: qsTr("Reset")
-                        font: panel.applicationFont
+                        font: Qt.font(panel.typography.body)
                         leftPadding: panel.gap
                         rightPadding: panel.gap
                         topPadding: 0
@@ -179,12 +190,13 @@ Item {
                                 Repeater {
                                     model: [qsTr("Track"), qsTr("Dropped"), qsTr("Cut Off"), qsTr("Tail Cut")]
                                     delegate: Text {
+                                        objectName: "polyphonyTableHeader"
                                         required property string modelData
                                         required property int index
                                         width: index === 0 ? table.trackWidth : (header.width - table.trackWidth) / 3
                                         height: header.height
                                         text: modelData
-                                        font: panel.headerFont
+                                        font: Qt.font(panel.typography.body)
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
                                         color: panel.colors.windowText
@@ -206,12 +218,18 @@ Item {
                                     required property int dropped
                                     required property int cutOff
                                     required property int tailCut
-                                    required property bool flash
+                                    required property real flashAlpha
                                     width: rows.width
                                     height: Math.round(panel.em * 30 / 12)
-                                    color: flash ? "#D88985" : panel.colors.buttonBackground
+                                    color: panel.colors.buttonBackground
                                     border.color: panel.colors.outline
                                     border.width: 0.5
+                                    Rectangle {
+                                        objectName: "polyphonyFlashOverlay"
+                                        anchors.fill: parent
+                                        color: panel.colors.polyphonyFlashBackground
+                                        opacity: counterRow.flashAlpha
+                                    }
                                     Row {
                                         anchors.fill: parent
                                         Repeater {
@@ -227,13 +245,14 @@ Item {
                                                 border.color: panel.colors.outline
                                                 border.width: 0.5
                                                 Text {
+                                                    objectName: "polyphonyCounterText"
                                                     anchors.fill: parent
                                                     leftPadding: panel.em / 4
                                                     text: parent.modelData
                                                     elide: Text.ElideRight
+                                                    font: Qt.font(panel.typography.body)
                                                     verticalAlignment: Text.AlignVCenter
                                                     color: panel.colors.windowText
-                                                    font: panel.applicationFont
                                                 }
                                             }
                                         }
@@ -247,7 +266,7 @@ Item {
                         anchors.centerIn: table
                         visible: panel.presenter.counterCount === 0
                         text: qsTr("No overflow recorded")
-                        font: panel.applicationFont
+                        font: Qt.font(panel.typography.body)
                         color: panel.colors.secondaryText
                     }
                 }
@@ -260,7 +279,7 @@ Item {
                 width: parent.width
                 height: panel.headingHeight
                 text: qsTr("Recent events")
-                font: panel.boldFont
+                font: Qt.font(panel.typography.bodyBold)
                 color: panel.colors.windowText
             }
             Rectangle {
@@ -268,10 +287,13 @@ Item {
                 objectName: "polyphonyEventLog"
                 y: logHeading.y + logHeading.height + panel.gap / 2
                 width: parent.width
-                height: Math.max(panel.em * 4, scroll.height - panel.margin - y)
+                height: Math.max(panel.em * 4, scroll.height - 2 * panel.margin - y)
                 color: panel.colors.buttonBackground
                 border.color: panel.colors.outline
                 border.width: 1
+                HoverHandler { id: logHover }
+                ToolTip.text: qsTr("Double-click an event to jump to its position.")
+                ToolTip.visible: logHover.hovered
                 ListView {
                     id: list
                     objectName: "polyphonyEventRows"
@@ -290,14 +312,16 @@ Item {
                         Text {
                             anchors.fill: parent
                             text: eventRow.text
-                            font: panel.applicationFont
+                            font: Qt.font(panel.typography.body)
                             color: eventRow.kind === 0 ? panel.colors.errorText
                                 : eventRow.kind === 1 ? panel.colors.warningText : panel.colors.secondaryText
                             elide: Text.ElideRight
                         }
-                        TapHandler {
+                        MouseArea {
+                            anchors.fill: parent
                             acceptedButtons: Qt.LeftButton
-                            onTapped: panel.presenter.activateEvent(eventRow.index, panel.Screen.devicePixelRatio)
+                            onDoubleClicked: panel.presenter.activateEvent(eventRow.index,
+                                                                            panel.Screen.devicePixelRatio)
                         }
                     }
                 }

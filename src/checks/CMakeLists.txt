@@ -38,23 +38,22 @@ qt_add_executable(porydaw_checks
     fixturecatalog.cpp
     fixturecatalog.hpp
     fwd.hpp
-    audio/tst_audiobackend.cpp
-    audio/tst_audiobackend.h
     support/checkstartup.cpp
     support/checkstartup.h
-    support/songfixture.cpp
-    support/songfixture.h
-    ${PROJECT_SOURCE_DIR}/resources/fonts.qrc
 )
 set_target_properties(porydaw_checks PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+    LINKER_LANGUAGE CXX)
 target_include_directories(porydaw_checks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 porydaw_enable_project_warnings(porydaw_checks)
 
-if(APPLE)
+if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_library(swift_core_check STATIC
         support/corecheck/CoreCheckSupport.swift
-        midi/MidiChecks.swift
+        midi/MidiSmfCodecChecks.swift
+        midi/MidiSmfCodecCompare.swift
+        midi/MidiSemanticsChecks.swift
+        midi/MidiSemanticsExpected.swift
         midi/MidiEngineBoundsChecks.swift
         playback/PlaybackChecks.swift
         audio/controllerfixture.swift
@@ -74,6 +73,22 @@ if(APPLE)
         keyboard/KeybindingRegistryChecks.swift
         keyboard/EngineSettingsChecks.swift
         themecolor/ThemeColorChecks.swift
+        themecolor/ThemeColorPresets.swift
+        displaylist/DisplayListChecks.swift
+        samplecheck/SampleChecks.swift
+        samplecheck/SampleFixtures.swift
+        samplecheck/DecoderChecks.swift
+        samplecheck/CompressedDecoderChecks.swift
+        samplecheck/SoundFontChecks.swift
+        samplecheck/DspKernelChecks.swift
+        samplecheck/RenderPipelineChecks.swift
+        samplecheck/AnalysisChecks.swift
+        samplecheck/RegistrationChecks.swift
+        samplecheck/ProvenanceChecks.swift
+        samplecheck/EditorPresenterChecks.swift
+        samplecheck/LoopToolsChecks.swift
+        samplecheck/AuditionStripChecks.swift
+        samplecheck/WaveformChecks.swift
         editcheck/tst_songdocument_songraw.swift
         editcheck/tst_songdocument_runner.swift
         editcheck/tst_songdocument_songranges.swift
@@ -96,45 +111,98 @@ if(APPLE)
         audio/AudioAuditionChecks.swift
         playback/ResonanceSuppressionChecks.swift
         editcheck/NoteChecks.swift
+        editcheck/NoteHistoryChecks.swift
         editcheck/NoteIdentityChecks.swift
         editcheck/DocumentHistoryChecks.swift
         editcheck/DocumentEditChecks.swift
         editcheck/DocumentTrackChecks.swift
         editcheck/ScaleChecks.swift
         editcheck/EventChecks.swift
+        editcheck/MidiImportWizardLawChecks.swift
         editcheck/EventViewsEditsParity.swift
         editcheck/EventViewsRemapBucketsParity.swift
         editcheck/TrackCorpusChecks.swift
-        editcheck/TimeChecks.swift
+        editcheck/TimeRangeChecks.swift
+        editcheck/TimeRangeSupport.swift
+        editcheck/TimeRangeRangeEditingChecks.swift
+        editcheck/TimeRangeRangeMovementChecks.swift
+        editcheck/TimeRangeRemovalAndSeamsChecks.swift
+        editcheck/TimeRangeInsertionAndBoundariesChecks.swift
+        editcheck/TimeRangeDuplicationAndGlobalsChecks.swift
         editcheck/TimeCorpusChecks.swift
         editcheck/SelectionChecks.swift
+        editcheck/SelectionTrackChecks.swift
+        editcheck/SelectionTransitions.swift
         editcheck/TickBoundsChecks.swift
+        editcheck/ClipboardCodecChecks.swift
+        editcheck/ClipboardEditingChecks.swift
+        editcheck/TrackLifecycleChecks.swift
+        editcheck/TrackContractsChecks.swift
+        editcheck/MidiImportChecks.swift
+        editcheck/XcmdPlaybackChecks.swift
+        editcheck/FormatZeroChecks.swift
         rollcheck/static/camera.swift
+        rollcheck/static/camera_wheel.swift
         rollcheck/static/geometry.swift
         rollcheck/static/gate.swift
+        rollcheck/camera_grid.swift
+        support/PageCheckSupport.swift
         scrollbar/ScrollbarChecks.swift
         rollcheck/pencil.swift
         rollcheck/resize.swift
         rollcheck/scale_editing.swift
         rollcheck/note_rendering.swift
+        rollcheck/note_rendering_support.swift
+        rollcheck/roll_content_probe.swift
+        rollcheck/note_rendering_borders.swift
+        rollcheck/note_rendering_velocity.swift
+        rollcheck/note_rendering_names.swift
+        rollcheck/note_rendering_ghosts.swift
+        rollcheck/note_rendering_economy.swift
         rollcheck/keyboard.swift
+        rollcheck/keyboard_timeline_insert.swift
+        rollcheck/keyboard_drum_labels.swift
+        rollcheck/keyboard_time_selection.swift
         rollcheck/keyboard_parity.swift
         rollcheck/selection.swift
+        rollcheck/selection_band.swift
+        rollcheck/selection_audition.swift
+        rollcheck/selection_editing.swift
         rollcheck/identity.swift
         rollcheck/interlock.swift
         rollcheck/note_commands.swift
+        rollcheck/note_commands_routing.swift
         rollcheck/remap.swift
         rollcheck/presentation.swift
         rollcheck/time_signature_prompt.swift
         rollcheck/pitch_bend.swift
+        rollcheck/pitch_bend_support.swift
+        rollcheck/pitch_bend_document.swift
+        rollcheck/pitch_bend_lifecycle.swift
+        rollcheck/pitch_bend_editing.swift
         rollcheck/timemenu.swift
         rollcheck/ruler_loop_menu.swift
+        rollcheck/ruler_loop_menu_retirement.swift
+        rollcheck/ruler_loop_menu_loop.swift
+        rollcheck/ruler_loop_menu_sweep.swift
+        rollcheck/ruler_loop_menu_seek.swift
         nativegraphics/tst_playhead_quick.swift
         nativegraphics/PlayheadFeatureChecks.swift
         eventviews/EventListPlayheadChecks.swift
+        eventviews/EventListPlayheadFocusChecks.swift
+        eventviews/EventListPlayheadContractChecks.swift
         eventviews/EventListPageChecks.swift
+        eventviews/EventListPageAppearanceChecks.swift
+        eventviews/EventListPageCellCommitChecks.swift
         songlist/songlist_checks.swift
         songlist/songlist_service.swift
+        songlist/SongRegistrationChecks.swift
+        songlist/SongDeletionChecks.swift
+        songlist/SongRegionRegistrationChecks.swift
+        songlist/SongDebugLayoutChecks.swift
+        songlist/SongImportChecks.swift
+        songlist/MidiImportWizardChecks.swift
+        songlist/NewSongWizardChecks.swift
         voicelist/VoiceListChecks.swift
         voicelist/VoiceListIntentChecks.swift
         voicelist/voicelist_session.swift
@@ -147,22 +215,35 @@ if(APPLE)
         trackheaders/trackheaderraster.swift
         trackheaders/tst_trackactivitymeter.swift
         automation/domain/tst_automationdomain.swift
-        automation/domain/gestures.swift
+        automation/domain/tst_automationdomainLegacy.swift
+        automation/domain/gestureSweep.swift
+        automation/domain/gestureNodeDrag.swift
+        automation/domain/gestureNodeContract.swift
+        automation/domain/gestureNodeDragPhantom.swift
+        automation/domain/gesturePointRange.swift
+        automation/domain/gesturePencil.swift
         automation/domain/xcmd.swift
         automation/domain/xcmdRanges.swift
         automation/presentation/painting.swift
+        automation/presentation/painting_raster.swift
         automation/presentation/tst_automationpresentation.swift
         automation/automationcanvaslayout.swift
         automation/automationpointmenus.swift
         automation/automationclipboard.swift
         automation/automationcanvasediting.swift
+        automation/automationcanvashover.swift
         automation/tst_automationediting.swift
         automation/automationtaptempo.swift
         automation/automationactions.swift
         automation/automationselection.swift
+        automation/automationselection_band.swift
+        automation/automationselection_pencil.swift
+        automation/automationselection_mixed.swift
         automation/automationmenus.swift
         selectionkey/localinputtier_text.swift
+        selectionkey/localinputtier_window.swift
         drawerpresentation/velocity.swift
+        drawerpresentation/velocity_context.swift
         drawerpresentation/voice_projection.swift
         drawerpresentation/voice_picker.swift
         drawerpresentation/voice_interaction.swift
@@ -174,16 +255,27 @@ if(APPLE)
         velocity/velocitydetentdragging.swift
         velocity/tst_velocityediting.swift
         velocity/VelocityClickSelectionChecks.swift
+        velocity/VelocityClickCancellationChecks.swift
         velocity/VelocityPaintDetentChecks.swift
+        velocity/VelocityProgramFlowChecks.swift
+        velocity/VelocityPaintDetentUnlockedChecks.swift
         velocity/VelocityRollCoreChecks.swift
         rollcheck/velocity_prompt.swift
         rollcheck/EditorGridCameraChecks.swift
+        rollcheck/EditorGridLatticeChecks.swift
+        rollcheck/EditorGridProjectionChecks.swift
+        rollcheck/EditorGridCameraIsolation.swift
         drawerpresentation/EditorDrawerChecks.swift
+        drawerpresentation/other_events_band.swift
         themelayout/TypographyLayoutChecks.swift
         nativegraphics/SharedPlayheadChecks.swift
+        nativegraphics/SharedPlayheadPureChecks.swift
         velocity/VelocityPageChecks.swift
+        velocity/VelocityContentProbe.swift
         drawerpresentation/VoiceChangesPageChecks.swift
         automation/AutomationPageChecks.swift
+        automation/AutomationDrawingContentChecks.swift
+        host/HostBehaviorChecks.swift
         trackheaders/TrackHeadersChecks.swift
         trackheaders/TrackHeadersInputChecks.swift
         workspace/SessionChecks.swift
@@ -194,9 +286,10 @@ if(APPLE)
         projectstore/SongCatalogChecks.swift
         projectstore/SynthCatalogChecks.swift
         projectstore/VoicegroupValueChecks.swift
+        projectstore/WriteFailureFixture.swift
         projectstore/SaveCoreChecks.swift
         projectstore/VoicegroupEditingChecks.swift
-        projectstore/VoicegroupCatalogAbsentChecks.swift
+        projectstore/VoicegroupLoaderChecks.swift
         projectstore/VoicegroupContextChecks.swift
         projectstore/VoicegroupBankLogicChecks.swift
         projectstore/ProjectStoreActorChecks.swift
@@ -208,20 +301,31 @@ if(APPLE)
         projectstore/ProjectStoreSaveChecks.swift
         projectstore/BankLeasesChecks.swift
         projectstore/ExportChecks.swift
+        projectstore/ExportCaptureChecks.swift
         workspace/session_support.swift
         workspace/editor_view_state_checks.swift
+        workspace/session_view_state.swift
+        workspace/session_view_state_fanout.swift
         workspace/transport_checks.swift
+        workspace/startup_checks.swift
         workspace/session_fixtures.swift
         workspace/session_editor_semantics.swift
         workspace/session_time_routing.swift
+        workspace/session_edit_routing.swift
         workspace/session_io.swift
         workspace/session_playback.swift
         workspace/session_save.swift
+        workspace/session_save_delta.swift
         workspace/bank_history_probes.swift
+        workspace/bank_undo_publication.swift
+        workspace/voicegroup_creation.swift
         workspace/bank_edits.swift
         workspace/bank_saves.swift
         workspace/bank_sharing.swift
+        workspace/bank_sharing_history.swift
         workspace/bank_switching.swift
+        workspace/sample_commit.swift
+        workspace/session_catalog.swift
     )
     set_target_properties(swift_core_check PROPERTIES
         Swift_MODULE_NAME SwiftCoreCheck
@@ -231,14 +335,17 @@ if(APPLE)
         AUTOUIC OFF
         AUTORCC OFF
     )
+    porydaw_enable_swift_batch_mode(swift_core_check)
     target_compile_options(swift_core_check PRIVATE
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/project/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
     )
-    target_link_libraries(swift_core_check PRIVATE PorydawCore PorydawPlayback PorydawProject PorydawApp)
+    target_link_libraries(swift_core_check PRIVATE PorydawCore PorydawPlayback PorydawProject PorydawApp PorydawSample)
     target_link_libraries(porydaw_checks PRIVATE swift_core_check)
     target_sources(porydaw_checks PRIVATE
         support/corecheck/tst_swiftcore.cpp
@@ -247,26 +354,37 @@ if(APPLE)
         support/corecheck/native_check.cpp
         support/corecheck/native_check.h
     )
-    set_target_properties(porydaw_checks PROPERTIES
-        LINKER_LANGUAGE CXX
-        MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
-        MACOSX_BUNDLE_GUI_IDENTIFIER com.sp3cker.porydaw.checks
-        NO_SYSTEM_FROM_IMPORTED ON
-    )
-    add_custom_command(TARGET porydaw_checks POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E rm -f "${PROJECT_BINARY_DIR}/porydaw_checks"
-        COMMAND ${CMAKE_COMMAND} -E create_symlink
-                "$<TARGET_FILE:porydaw_checks>" "${PROJECT_BINARY_DIR}/porydaw_checks"
-        VERBATIM
-    )
+    if(APPLE)
+        set_target_properties(porydaw_checks PROPERTIES
+            MACOSX_BUNDLE TRUE
+            MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+            MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+            MACOSX_BUNDLE_GUI_IDENTIFIER com.sp3cker.porydaw.checks
+            NO_SYSTEM_FROM_IMPORTED ON
+        )
+        # The bundle's resources, like the app's: checkstartup loads the staged faces.
+        target_sources(porydaw_checks PRIVATE ${porydaw_fonts})
+        set_source_files_properties(${porydaw_fonts} PROPERTIES
+            MACOSX_PACKAGE_LOCATION Resources)
+        add_custom_command(TARGET porydaw_checks POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E rm -f "${PROJECT_BINARY_DIR}/porydaw_checks"
+            COMMAND ${CMAKE_COMMAND} -E create_symlink
+                    "$<TARGET_FILE:porydaw_checks>" "${PROJECT_BINARY_DIR}/porydaw_checks"
+            VERBATIM
+        )
+    endif()
 endif()
 
 target_link_libraries(porydaw_checks PRIVATE
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+    PorydawApp
     Qt6::Test
+    Qt6::Widgets
+    QtBridgeCpp
 )
+porydaw_link_linux_swift_runtime(porydaw_checks
+    swift_core_check PorydawApp QtBridge PorydawProject PorydawPlayback PorydawCore
+    PorydawSample BinaryParsing)
 target_precompile_headers(porydaw_checks PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/src/porydaw_pch.hpp>")
 target_compile_definitions(porydaw_checks PRIVATE
@@ -311,6 +429,11 @@ if(APPLE)
     # executable below links it instead of compiling Swift itself.
     add_library(editor_qml_lane STATIC
         editorqml/EditorQmlTests.swift
+        editorqml/EditorQmlProfileChildren.swift
+        editorqml/EditorQmlProfileEvidence.swift
+        editorqml/EditorQmlBootstrap.swift
+        editorqml/EditorQmlBootstrapSupport.swift
+        editorqml/DisplayListProbe.swift
         editorqml/DrawerTestPage.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
     )
@@ -321,6 +444,7 @@ if(APPLE)
         AUTOUIC OFF
         AUTORCC OFF
     )
+    porydaw_enable_swift_batch_mode(editor_qml_lane)
     # The Swift module-map compile options the core check sets, so this lane
     # sees the app module's Clang headers through the same contract. QtBridge
     # and PorydawApp also hand their Swift modules to this compile.
@@ -334,27 +458,38 @@ if(APPLE)
 
     # A plain executable at the build root: the Deno runner resolves
     # `<build>/editor_qml_tests` as a file, so no bundle or symlink wrapper.
-    # The link runs through the C++ driver because porydaw_app's LTO objects
-    # only link with the toolchain that produced them — the Swift driver aborts
-    # in the LTO backend while force-loading them. The lane's template is the
-    # one (uncompiled) source this target needs; the entry point comes from the
-    # module archive above.
-    add_executable(editor_qml_tests editorqml/EditorQmlPaths.swift.in)
+    add_executable(editor_qml_tests
+        editorqml/EditorQmlPaths.swift.in
+        # Shared waitForNative loop (editorqml/NativeWait.js): the QML lanes run
+        # with -input under the source directories themselves, so Qt Quick Test
+        # resolves each suite's relative "NativeWait.js" import against the
+        # importing file's directory at runtime — no fixture staging or qrc
+        # needed. Listed here so the build tracks the helper every suite imports.
+        editorqml/NativeWait.js
+        editorqml/tst_DisplayListSameFrame.qml
+        editorqml/tst_EditorDrawerVelocitySameFrame.qml
+        editorqml/EditorDrawerTestSupport.qml
+        editorqml/EditorDrawerLayoutSupport.js
+        editorqml/EditorDrawerPixelSupport.js
+        editorqml/EditorDrawerPageSupport.js
+        editorqml/EditorDrawerVelocitySupport.js
+        editorqml/EditorDrawerAutomationTabsSupport.js
+        editorqml/EditorDrawerAutomationGestureSupport.js
+        editorqml/EditorDrawerAutomationMenuSupport.js
+        editorqml/EditorDrawerVoiceSupport.js
+        editorqml/RollNoteFaces.js
+    )
     set_target_properties(editor_qml_tests PROPERTIES
         AUTOMOC OFF
         AUTOUIC OFF
-        AUTORCC OFF
+        AUTORCC ON
         LINKER_LANGUAGE CXX
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
     )
-    # PorydawApp carries the session and its QML registration entry point; the
-    # whole-archive C++ app library carries the QML resources; QtBridge
-    # supplies the QTestAppCpp host.
     target_link_libraries(editor_qml_tests PRIVATE
         editor_qml_lane
-        QtBridge
-        PorydawApp
         "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+        PorydawApp
         Qt6::QuickTest
     )
     # run_checks.ts refuses to start without mid2agb beside the build root.
@@ -372,6 +507,8 @@ if(APPLE)
     )
     add_library(roll_qml_lane STATIC
         rollqml/RollQmlTests.swift
+        rollqml/RollQmlStaging.swift
+        swiftqtml/BridgeProbeCheck.swift
         "${CMAKE_CURRENT_BINARY_DIR}/rollqml/RollQmlPaths.swift"
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
     )
@@ -382,6 +519,7 @@ if(APPLE)
         AUTOUIC OFF
         AUTORCC OFF
     )
+    porydaw_enable_swift_batch_mode(roll_qml_lane)
     target_compile_options(roll_qml_lane PRIVATE
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
@@ -392,10 +530,15 @@ if(APPLE)
 
     add_executable(roll_qml_tests
         rollqml/RollQmlPaths.swift.in
-        "${PROJECT_SOURCE_DIR}/resources/fonts.qrc"
+        rollqml/cursor_probe.cpp
+        rollqml/cursor_probe.h
+        # Same shared waitForNative loop the editor lane lists above; rollqml
+        # suites import it as "../editorqml/NativeWait.js", which Qt Quick Test
+        # resolves against the importing file's source directory at runtime.
+        editorqml/NativeWait.js
     )
     set_target_properties(roll_qml_tests PROPERTIES
-        AUTOMOC OFF
+        AUTOMOC ON
         AUTOUIC OFF
         AUTORCC ON
         LINKER_LANGUAGE CXX
@@ -403,20 +546,24 @@ if(APPLE)
     )
     target_link_libraries(roll_qml_tests PRIVATE
         roll_qml_lane
-        QtBridge
-        PorydawApp
         "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+        PorydawApp
         Qt6::QuickTest
     )
     add_dependencies(roll_qml_tests mid2agb)
 
     add_library(shell_qml_lane STATIC
         editorqml/ShellQmlTests.swift
+        editorqml/ShellQmlEntries.swift
         editorqml/GridInputClipProbe.swift
         editorqml/GatedVisualsProbe.swift
         editorqml/PolyphonyShellProbe.swift
+        editorqml/WavFileProbe.swift
+        editorqml/SampleBinProbe.swift
         editorqml/TabsDrawerProbe.swift
         keyboard/KeybindingRegistryChecks.swift
+        editorqml/ImportWizardProbe.swift
+        editorqml/SampleStudioVoiceProbe.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
     )
     set_target_properties(shell_qml_lane PROPERTIES
@@ -426,15 +573,83 @@ if(APPLE)
         AUTOUIC OFF
         AUTORCC OFF
     )
+    porydaw_enable_swift_batch_mode(shell_qml_lane)
     target_compile_options(shell_qml_lane PRIVATE
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
     )
-    target_link_libraries(shell_qml_lane PRIVATE QtBridge PorydawApp)
+    target_link_libraries(shell_qml_lane PRIVATE QtBridge PorydawApp PorydawCore)
 
     add_executable(shell_qml_tests
         editorqml/EditorQmlPaths.swift.in
-        "${PROJECT_SOURCE_DIR}/resources/fonts.qrc"
+        editorqml/NativeWait.js
+        editorqml/ShellWindowSupport.qml
+        editorqml/tst_ShellWindowCrossTab.qml
+        editorqml/tst_ShellWindowDrawer.qml
+        editorqml/tst_ShellWindowShortcuts.qml
+        editorqml/tst_ShellWindowEditorKeys.qml
+        editorqml/tst_ShellWindowPrompts.qml
+        editorqml/tst_ShellWindowFocus.qml
+        editorqml/tst_ShellWindowTimeEditing.qml
+        editorqml/tst_ShellWindowVelocity.qml
+        editorqml/tst_ShellDeferralProbe.qml
+        editorqml/tst_ShellWindowParameterKeys.qml
+        editorqml/tst_ShellWindowLabelCommands.qml
+        editorqml/tst_ShellWindowHints.qml
+        editorqml/ShellGridInputSupport.qml
+        editorqml/tst_ShellGridInputDraw.qml
+        editorqml/tst_ShellGridInputEditing.qml
+        editorqml/tst_ShellGridInputCancel.qml
+        editorqml/tst_ShellGridInputKeyboard.qml
+        editorqml/tst_ShellGridInputAutomation.qml
+        editorqml/ShellPitchBendSupport.qml
+        editorqml/tst_ShellPitchBendCancellation.qml
+        editorqml/tst_ShellPitchBendControls.qml
+        editorqml/tst_ShellPitchBendPointer.qml
+        editorqml/tst_ShellPitchBendKeys.qml
+        editorqml/tst_ShellPitchBendRetarget.qml
+        editorqml/ShellGridMenuSupport.qml
+        editorqml/tst_ShellGridMenuInputZones.qml
+        editorqml/tst_ShellGridMenuNoteActions.qml
+        editorqml/tst_ShellGridMenuRulerLifecycle.qml
+        editorqml/tst_ShellGridMenuRulerMarkers.qml
+        editorqml/tst_ShellGridMenuRulerClipboard.qml
+        editorqml/tst_ShellGridMenuAutomation.qml
+        editorqml/ShellClipboardSupport.qml
+        editorqml/tst_ShellClipboardRange.qml
+        editorqml/tst_ShellClipboardRoundTrip.qml
+        editorqml/ShellTransportSupport.qml
+        editorqml/tst_ShellTransportVolume.qml
+        editorqml/tst_ShellTransportSession.qml
+        editorqml/ShellMenusSupport.qml
+        editorqml/tst_ShellMenusCommands.qml
+        editorqml/tst_ShellMenusLoop.qml
+        editorqml/ShellNoteVisualsSupport.qml
+        editorqml/tst_ShellNoteVisualsDetail.qml
+        editorqml/tst_ShellNoteVisualsRuler.qml
+        editorqml/ShellTabsSupport.qml
+        editorqml/ShellTabsRenderingSupport.js
+        editorqml/tst_ShellTabsMouseHints.qml
+        editorqml/tst_ShellTabsOpenSelect.qml
+        editorqml/tst_ShellTabsClose.qml
+        editorqml/tst_ShellTabsDrawer.qml
+        editorqml/tst_ShellTabsBankLifetime.qml
+        editorqml/tst_ShellTabsReload.qml
+        editorqml/ShellEventListSupport.qml
+        editorqml/tst_ShellEventListMenus.qml
+        editorqml/tst_ShellEventListPresentation.qml
+        editorqml/tst_ShellEventListKeyboardSelection.qml
+        editorqml/ShellDrawerParitySupport.qml
+        editorqml/ShellDrawerParityRasterSupport.js
+        editorqml/ShellDrawerParityVelocitySupport.js
+        editorqml/ShellDrawerParityVelocityInputSupport.js
+        editorqml/tst_ShellDrawerParityAutomation.qml
+        editorqml/tst_ShellDrawerParityVoiceVelocity.qml
+        editorqml/ShellVoicegroupSupport.qml
+        editorqml/tst_ShellSettings.qml
+        editorqml/tst_ShellVoicegroupEditing.qml
+        editorqml/tst_ShellVoicegroupPicker.qml
+        editorqml/tst_ShellVoicegroupSave.qml
     )
     set_target_properties(shell_qml_tests PROPERTIES
         AUTOMOC OFF
@@ -445,9 +660,8 @@ if(APPLE)
     )
     target_link_libraries(shell_qml_tests PRIVATE
         shell_qml_lane
-        QtBridge
-        PorydawApp
         "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+        PorydawApp
         Qt6::QuickTest
     )
     add_dependencies(shell_qml_tests mid2agb)

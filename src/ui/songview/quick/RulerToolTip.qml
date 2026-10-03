@@ -12,10 +12,10 @@ Item {
     required property color textColor
     required property color outlineColor
 
-    readonly property real horizontalPadding: 4
-    readonly property real verticalPadding: 3
-    readonly property real edgeMargin: 4
-    readonly property real verticalGap: 2
+    readonly property real horizontalPadding: controlFont.pixelSize * 4 / 13
+    readonly property real verticalPadding: controlFont.pixelSize * 3 / 13
+    readonly property real edgeMargin: controlFont.pixelSize * 4 / 13
+    readonly property real verticalGap: controlFont.pixelSize * 2 / 13
     readonly property real maximumWidth: Math.max(0, overlayRoot.width - 2 * edgeMargin)
     readonly property real preferredX: anchorRect.x + (anchorRect.width - width) / 2
     readonly property real belowY: anchorRect.y + anchorRect.height + verticalGap

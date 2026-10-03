@@ -1,42 +1,57 @@
 import QtQuick
 import QtQuick.Layouts
-import QtCore
-import QtQuick.Controls.Basic as Basic
+import QtQuick.Controls as Controls
 import Porydaw.Ui
+import PorydawApp
+import Porydaw.Icons
 
 Rectangle {
     id: bar
     objectName: "transportToolbar"
-    required property QtObject presenter
+    required property TransportBarPresenter presenter
+    required property QtObject shell
+    required property int actionRevision
     required property QtObject colors
     required property int baseFontPx
     required property bool songAvailable
     onSongAvailableChanged: { if (presenter) presenter.refresh() }
-    required property font toolbarFont
-    required property font clockFont
+    required property var typography
+    required property var layoutSpaces
     readonly property int toolExtent: Math.round(Math.min(baseFontPx, 12) * 2.75)
-    readonly property int inset: Math.max(1, Math.round(baseFontPx / 4))
-    implicitHeight: toolExtent + Math.round(baseFontPx / 2) - 2
+    readonly property int inset: layoutSpaces.one
+    implicitHeight: toolExtent + layoutSpaces.two - 2
     color: colors.chromeBackground
     readonly property int edgeMargin: Math.max(1, Math.round(baseFontPx / 6))
+    readonly property int toolbarSeparatorExtent: 6
+    // Invoking FontMetrics methods alone does not track a change to their font.
+    readonly property real masterCaptionWidth: {
+        captionMetrics.font
+        return Math.ceil(captionMetrics.boundingRect(qsTr("Volume")).width)
+            + layoutSpaces.two + layoutSpaces.one
+    }
+    readonly property real outputCaptionWidth: {
+        captionMetrics.font
+        return Math.ceil(captionMetrics.boundingRect(qsTr("Output")).width)
+            + layoutSpaces.two + layoutSpaces.one
+    }
     readonly property bool outputFits: width >= 2 * edgeMargin + 15 + 7 * toolExtent
         + Math.ceil(clockHintWidth) + 6 * inset
         + transportScaleSlot.Layout.preferredWidth + Math.round(baseFontPx * 2.25) + 2
-        + captionMetrics.advanceWidth(qsTr("Volume")) + 3 * inset + Math.round(baseFontPx / 2)
+        + masterCaptionWidth
         + Math.round(baseFontPx * 6 + 18)
-        + captionMetrics.advanceWidth(qsTr("Output")) + 3 * inset + Math.round(baseFontPx / 2)
+        + outputCaptionWidth
         + Math.round(baseFontPx * 5 / 3) + 2 * Math.round(baseFontPx / 4)
 
     TextMetrics {
         id: clockMetrics
-        font: bar.clockFont
+        font: Qt.font(bar.typography.bodyMono)
         text: "99:59.9 / 99:59.9"
     }
     readonly property real clockHintWidth: clockMetrics.advanceWidth
-    FontMetrics { id: captionMetrics; font: bar.toolbarFont }
+    FontMetrics { id: captionMetrics; font: Qt.font(bar.typography.body) }
     QtObject {
         id: inputAppearance
-        property font font: bar.toolbarFont
+        property font font: Qt.font(bar.typography.body)
         property color background: bar.colors.buttonBackground
         property color text: bar.colors.buttonText
         property color outline: bar.colors.outline
@@ -47,15 +62,8 @@ Rectangle {
         property real verticalPadding: 0
         property real dragThreshold: bar.inset
     }
-    Loader {
-        id: volumeSettingsLoader
-        active: false
-        sourceComponent: Settings { property int outputVolume: 100 }
-    }
     function restoreOutputVolume() {
-        volumeSettingsLoader.active = true
-        if (volumeSettingsLoader.status === Loader.Ready)
-            presenter.setOutputVolume(volumeSettingsLoader.item.outputVolume)
+        presenter.restoreOutputVolume()
     }
 
     Timer {
@@ -75,66 +83,106 @@ Rectangle {
         TransportButton {
             objectName: "transport.go-to-start"
             colors: bar.colors; baseFontPx: bar.baseFontPx
-            label: qsTr("Go to Start"); symbol: "◀◀"
-            actionable: bar.presenter.state !== 0
+            typography: bar.typography
+            label: qsTr("Go to Start"); icon: Icons.goToStart
+            actionable: {
+                bar.actionRevision
+                return bar.shell.actionEnabled("transport.go_to_start")
+            }
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
-            onActivated: bar.presenter.goToStart()
+            onActivated: bar.shell.activate("transport.go_to_start")
         }
         TransportButton {
             objectName: "transport.play"
             colors: bar.colors; baseFontPx: bar.baseFontPx
-            label: qsTr("Play"); symbol: "▶"; iconSource: "qrc:/icons/transport-play.svg"
-            actionable: bar.presenter.state > 0 && bar.presenter.state !== 3
+            typography: bar.typography
+            label: qsTr("Play"); icon: Icons.play
+            actionable: {
+                bar.actionRevision
+                return bar.shell.actionEnabled("transport.play")
+            }
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
-            onActivated: bar.presenter.play()
+            onActivated: bar.shell.activate("transport.play")
         }
         TransportButton {
             objectName: "transport.pause"
             colors: bar.colors; baseFontPx: bar.baseFontPx
-            label: qsTr("Pause"); symbol: "Ⅱ"; iconSource: "qrc:/icons/transport-pause.svg"
-            actionable: bar.presenter.state === 3
+            typography: bar.typography
+            label: qsTr("Pause"); icon: Icons.pause
+            actionable: {
+                bar.actionRevision
+                return bar.shell.actionEnabled("transport.pause")
+            }
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
-            onActivated: bar.presenter.pause()
+            onActivated: bar.shell.activate("transport.pause")
         }
         TransportButton {
             objectName: "transport.stop"
             colors: bar.colors; baseFontPx: bar.baseFontPx
-            label: qsTr("Stop"); symbol: "■"
-            actionable: bar.presenter.state > 1
+            typography: bar.typography
+            label: qsTr("Stop"); icon: Icons.stop
+            actionable: {
+                bar.actionRevision
+                return bar.shell.actionEnabled("transport.stop")
+            }
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
-            onActivated: bar.presenter.stop()
+            onActivated: bar.shell.activate("transport.stop")
         }
         TransportButton {
             objectName: "transport.loop"
             colors: bar.colors; baseFontPx: bar.baseFontPx
-            label: qsTr("Loop"); symbol: "⟲"; iconSource: "qrc:/icons/transport-loop.svg"
-            checked: bar.presenter.loopEnabled
-            actionable: bar.presenter.state !== 0
+            typography: bar.typography
+            label: qsTr("Loop"); icon: Icons.loop
+            checked: {
+                bar.actionRevision
+                return bar.shell.actionChecked("transport.loop")
+            }
+            actionable: {
+                bar.actionRevision
+                return bar.shell.actionEnabled("transport.loop")
+            }
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
-            onActivated: bar.presenter.setLoopEnabled(!bar.presenter.loopEnabled)
+            onActivated: bar.shell.activate("transport.loop")
         }
         TransportButton {
             objectName: "transport.follow-playhead"
             colors: bar.colors; baseFontPx: bar.baseFontPx
-            label: qsTr("Follow Playhead"); symbol: "▶▶"; iconSource: "qrc:/icons/transport-follow.svg"
-            checked: bar.presenter.followPlayhead
+            typography: bar.typography
+            label: qsTr("Follow Playhead"); icon: Icons.followPlayhead
+            checked: {
+                bar.actionRevision
+                return bar.shell.actionChecked("transport.follow_playhead")
+            }
+            actionable: {
+                bar.actionRevision
+                return bar.shell.actionEnabled("transport.follow_playhead")
+            }
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
-            onActivated: bar.presenter.setFollowPlayhead(!bar.presenter.followPlayhead)
+            onActivated: bar.shell.activate("transport.follow_playhead")
         }
         TransportButton {
             objectName: "transport.resonance"
             colors: bar.colors; baseFontPx: bar.baseFontPx
-            label: qsTr("Suppress Resonances"); symbol: "◖))"
-            checked: bar.presenter.resonanceSuppression
+            typography: bar.typography
+            label: qsTr("Suppress Resonances"); icon: Icons.resonance
+            checked: {
+                bar.actionRevision
+                bar.presenter.resonanceSuppression
+                return bar.shell.actionChecked("transport.resonance")
+            }
+            actionable: {
+                bar.actionRevision
+                return bar.shell.actionEnabled("transport.resonance")
+            }
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
-            onActivated: bar.presenter.setResonanceSuppression(!bar.presenter.resonanceSuppression)
+            onActivated: bar.shell.activate("transport.resonance")
         }
         Text {
             objectName: "transportTimeLabel"
@@ -145,36 +193,16 @@ Rectangle {
             leftPadding: 3 * bar.inset
             rightPadding: 3 * bar.inset
             verticalAlignment: Text.AlignVCenter
-            font: bar.clockFont
+            font: Qt.font(bar.typography.bodyMono)
             renderType: Text.NativeRendering
             color: bar.colors.windowText
             text: bar.presenter.timeText
             elide: Text.ElideRight
             Accessible.role: Accessible.StaticText
-            Accessible.description: qsTr("Measure and beat: %1. Loop: %2. Tempo: %3 BPM. Drag vertically to scrub tempo.")
+            Accessible.description: qsTr("Measure and beat: %1. Loop: %2. Tempo: %3 BPM.")
                                         .arg(bar.presenter.measureText)
                                         .arg(bar.presenter.loopBounds)
                                         .arg(bar.presenter.tempo)
-            Basic.ToolTip.text: qsTr("Tempo: %1 BPM. Drag vertically to scrub.").arg(bar.presenter.tempo)
-            Basic.ToolTip.visible: clockHover.hovered && bar.presenter.state !== 0
-            HoverHandler { id: clockHover }
-            MouseArea {
-                anchors.fill: parent
-                enabled: bar.presenter.state !== 0
-                property real pressedY: 0
-                property int pressedTempo: 0
-                onPressed: mouse => {
-                    pressedY = mouse.y
-                    pressedTempo = bar.presenter.tempo
-                }
-                onReleased: mouse => {
-                    const distance = pressedY - mouse.y
-                    if (Math.abs(distance) < bar.inset) return
-                    const next = Math.max(20, Math.min(255,
-                        pressedTempo + Math.trunc(distance * 0.5)))
-                    if (next !== bar.presenter.tempo) bar.presenter.setTempo(next)
-                }
-            }
         }
 
         Item {
@@ -188,7 +216,7 @@ Rectangle {
             Layout.preferredWidth: Layout.maximumWidth
             Layout.preferredHeight: bar.toolExtent
 
-            Basic.ComboBox {
+            Controls.ComboBox {
                 id: scaleRoot
                 objectName: "transportScaleRoot"
                 x: 0
@@ -200,8 +228,8 @@ Rectangle {
                 onActivated: index => bar.presenter.setScaleRoot(index)
                 enabled: bar.songAvailable
                 activeFocusOnTab: false
-                font: bar.toolbarFont
-                Basic.ToolTip.text: qsTr("Scale root note")
+                font: Qt.font(bar.typography.body)
+                Controls.ToolTip.text: qsTr("Scale root note")
                 Accessible.name: qsTr("Scale root note")
                 background: Rectangle {
                     color: bar.colors.buttonBackground
@@ -209,7 +237,7 @@ Rectangle {
                     radius: bar.inset / 2
                 }
             }
-            Basic.ComboBox {
+            Controls.ComboBox {
                 id: scaleType
                 objectName: "transportScaleType"
                 x: transportScaleSlot.rootWidth + 1
@@ -221,8 +249,8 @@ Rectangle {
                 onActivated: index => bar.presenter.setScaleType(index)
                 enabled: bar.songAvailable
                 activeFocusOnTab: false
-                font: bar.toolbarFont
-                Basic.ToolTip.text: qsTr("Scale type")
+                font: Qt.font(bar.typography.body)
+                Controls.ToolTip.text: qsTr("Scale type")
                 Accessible.name: qsTr("Scale type")
                 background: Rectangle {
                     color: bar.colors.buttonBackground
@@ -237,9 +265,9 @@ Rectangle {
                 y: 0
                 colors: bar.colors
                 baseFontPx: bar.baseFontPx
+                typography: bar.typography
                 label: qsTr("Highlight")
-                symbol: ""
-                iconSource: "qrc:/icons/flat-music.svg"
+                icon: Icons.flat
                 checked: bar.presenter.scaleHighlight
                 actionable: bar.songAvailable
                 activeFocusOnTab: false
@@ -260,11 +288,11 @@ Rectangle {
                 Accessible.role: Accessible.CheckBox
                 Accessible.name: qsTr("Fold")
                 Accessible.checked: bar.presenter.scaleFold
-                Basic.ToolTip.text: qsTr("Fold piano roll to pitches used by the selected track")
+                Controls.ToolTip.text: qsTr("Fold piano roll to pitches used by the selected track")
                 Text {
                     anchors.centerIn: parent
                     text: qsTr("Fold")
-                    font: bar.toolbarFont
+                    font: Qt.font(bar.typography.body)
                     color: !fold.enabled ? bar.colors.disabledText : bar.presenter.scaleFold ? bar.colors.buttonPressedText : bar.colors.buttonText
                 }
                 HoverHandler { id: foldHover }
@@ -284,19 +312,19 @@ Rectangle {
             Layout.preferredWidth: bar.outputFits ? -1 : Layout.minimumWidth
         }
         Rectangle {
-            Layout.preferredWidth: 1
+            Layout.preferredWidth: bar.toolbarSeparatorExtent
             Layout.preferredHeight: bar.toolExtent
             color: bar.colors.separator
         }
         Text {
             objectName: "transportMasterVolumeCaption"
-            Layout.preferredWidth: captionMetrics.advanceWidth(qsTr("Volume"))
-                + 3 * bar.inset + Math.round(bar.baseFontPx / 2)
+            Layout.preferredWidth: bar.masterCaptionWidth
             Layout.preferredHeight: bar.toolExtent
             verticalAlignment: Text.AlignVCenter
-            leftPadding: 2 * bar.inset
-            font: bar.toolbarFont
+            leftPadding: bar.layoutSpaces.two
+            rightPadding: bar.layoutSpaces.one
             enabled: bar.presenter.state !== 0
+            font: Qt.font(bar.typography.body)
             color: enabled ? bar.colors.windowText : bar.colors.disabledText
             text: qsTr("Volume")
         }
@@ -315,20 +343,20 @@ Rectangle {
             onValueCommitted: committed => bar.presenter.setMasterVolume(committed)
         }
         Rectangle {
-            Layout.preferredWidth: 1
+            Layout.preferredWidth: bar.toolbarSeparatorExtent
             Layout.preferredHeight: bar.toolExtent
             color: bar.colors.separator
             visible: bar.outputFits
         }
         Text {
             objectName: "transportOutputVolumeCaption"
-            Layout.preferredWidth: captionMetrics.advanceWidth(qsTr("Output"))
-                + 3 * bar.inset + Math.round(bar.baseFontPx / 2)
+            Layout.preferredWidth: bar.outputCaptionWidth
             Layout.preferredHeight: bar.toolExtent
             verticalAlignment: Text.AlignVCenter
-            leftPadding: 2 * bar.inset
+            leftPadding: bar.layoutSpaces.two
+            rightPadding: bar.layoutSpaces.one
             visible: bar.outputFits
-            font: bar.toolbarFont
+            font: Qt.font(bar.typography.body)
             color: bar.colors.windowText
             text: qsTr("Output")
         }
@@ -336,21 +364,13 @@ Rectangle {
             colors: bar.colors
             baseFontPx: bar.baseFontPx
             value: bar.presenter.outputVolume
+            hintService: bar.shell.mouseHints
             visible: bar.outputFits
             Accessible.description: qsTr("Does not change the song volume")
-            Basic.ToolTip.text: qsTr("Does not change the song volume")
-            Basic.ToolTip.visible: hovered
             Layout.preferredWidth: implicitWidth
             Layout.preferredHeight: implicitHeight
-            onValueCommitted: percent => {
-                bar.presenter.setOutputVolume(percent)
-                if (volumeSettingsLoader.status === Loader.Ready)
-                    volumeSettingsLoader.item.outputVolume = percent
-            }
+            onValueCommitted: percent => bar.presenter.commitOutputVolume(percent)
         }
-        // QToolBar still reserves its clipped output controls at large fonts.
-        // Absorb the unavailable trailing space here rather than stretching
-        // the buttons, clock or scale strip away from their widget positions.
         Item {
             visible: !bar.outputFits
             Layout.fillWidth: true

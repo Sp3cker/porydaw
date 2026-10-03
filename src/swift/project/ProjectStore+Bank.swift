@@ -11,8 +11,11 @@ public final class ProjectBankLease: @unchecked Sendable {
     public let sectionLabel: String
     public let dirty: Bool
     public let slotViews: [VoicegroupSlotView]
+    public let publicationOwner: UUID
+    public let publicationRevision: UInt64
 
-    init(handle: OpaquePointer, view: LoadedBankView, projectRoot: String) {
+    init(handle: OpaquePointer, view: LoadedBankView, projectRoot: String,
+         publicationOwner: UUID, publicationRevision: UInt64) {
         self.handle = handle
         id = view.id
         loadName = view.loadName
@@ -20,6 +23,8 @@ public final class ProjectBankLease: @unchecked Sendable {
         sectionLabel = view.id.sectionLabel
         dirty = view.dirty
         slotViews = view.slotViews
+        self.publicationOwner = publicationOwner
+        self.publicationRevision = publicationRevision
     }
 
     deinit {
@@ -44,10 +49,6 @@ extension ProjectStore {
     /// - Returns: A lease with a detached copy of the voicegroup's slot publication.
     /// - Throws: `VoicegroupStoreError` if the project is not open or its bank cannot load.
     public func loadBank(voicegroupArg: String) async throws -> ProjectBankLease {
-        try await run { [self] in try await self.loadBankProject(voicegroupArg: voicegroupArg) }
-    }
-
-    private func loadBankProject(voicegroupArg: String) throws -> ProjectBankLease {
         guard let store = voicegroupStore else {
             throw VoicegroupStoreError.operationFailed("Project is not open.")
         }
@@ -74,7 +75,10 @@ extension ProjectStore {
             retained.release()
             throw VoicegroupStoreError.operationFailed("Could not identify the voicegroup source.")
         }
-        return ProjectBankLease(handle: box, view: view, projectRoot: projectRoot)
+        publicationRevision += 1
+        return ProjectBankLease(handle: box, view: view, projectRoot: projectRoot,
+                                publicationOwner: publicationOwner,
+                                publicationRevision: publicationRevision)
     }
 }
 

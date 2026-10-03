@@ -48,7 +48,7 @@ extension EventListModel {
             let hex = bytes.map { String(format: "%02X", $0) }.joined(separator: " ")
             return blob.count > 64 && !editing ? "\(hex) … (\(blob.count) bytes)" : hex
         case 6:
-            return editing ? "" : Self.summary(event, kind: item.kind)
+            return editing ? "" : Self.summary(event, kind: item.kind, voiceNames: voiceNames)
         default: return ""
         }
     }
@@ -70,21 +70,84 @@ extension EventListModel {
         }
     }
 
-    private static func summary(_ event: MidiEvent, kind: EventListEventType) -> String {
+    private static func metaName(_ metaType: UInt8) -> String {
+        switch metaType {
+        case 0x00: return "Sequence number"
+        case 0x01: return "Text"
+        case 0x02: return "Copyright"
+        case 0x03: return "Track name"
+        case 0x04: return "Instrument"
+        case 0x05: return "Lyric"
+        case 0x06: return "Marker"
+        case 0x07: return "Cue point"
+        case 0x20: return "Channel prefix"
+        case 0x21: return "MIDI port"
+        case 0x51: return "Tempo"
+        case 0x54: return "SMPTE offset"
+        case 0x58: return "Time signature"
+        case 0x59: return "Key signature"
+        case 0x7F: return "Sequencer-specific"
+        default: return String(format: "Meta 0x%02x", metaType)
+        }
+    }
+
+    private static func blobDisplayText(_ event: MidiEvent) -> String {
+        guard let blob = event.blob else { return "" }
+        if let meta = event.metaType, (0x01...0x07).contains(meta),
+           !blob.isEmpty, blob.allSatisfy({ (0x20..<0x7F).contains($0) }) {
+            return "\"\(String(decoding: blob, as: UTF8.self))\""
+        }
+        if blob.count > 64 {
+            let hex = blob.prefix(64).map { String(format: "%02X", $0) }.joined(separator: " ")
+            return "\(hex) … (\(blob.count) bytes)"
+        }
+        return blob.map { String(format: "%02X", $0) }.joined(separator: " ")
+    }
+
+    private static func metaIsLoopMarker(_ event: MidiEvent, _ marker: UInt8) -> Bool {
+        guard event.isMeta, let meta = event.metaType, (0x01...0x07).contains(meta),
+              let blob = event.blob else { return false }
+        let text = String(decoding: blob.prefix(32), as: UTF8.self)
+            .trimmingCharacters(in: .whitespaces)
+        return text.utf8.count == 1 && text.utf8.first == marker
+    }
+
+    private static func metaSummary(_ event: MidiEvent) -> String {
+        guard let meta = event.metaType else { return "" }
+        let name = metaName(meta)
+        if meta == 0x58, let blob = event.blob, blob.count >= 2 {
+            return "Time signature \(midiTimeSignatureLabel(numerator: Int(blob[0]), denominatorPowerOfTwo: Int(blob[1])))"
+        }
+        if (0x01...0x07).contains(meta) {
+            var text = "\(name) \(blobDisplayText(event))"
+            if metaIsLoopMarker(event, UInt8(ascii: "[")) { text += " — loop start" }
+            else if metaIsLoopMarker(event, UInt8(ascii: "]")) { text += " — loop end" }
+            return text
+        }
+        return name
+    }
+
+    private static func summary(_ event: MidiEvent, kind: EventListEventType,
+                                voiceNames: [String]) -> String {
         switch event.payload {
         case let .channel(_, data0, data1):
             switch kind {
-            case .noteOn: return data1 == 0 ? "Note off \(data0) (velocity-0 note-on)"
-                : "Note on \(data0), velocity \(data1)"
-            case .noteOff: return "Note off \(data0)"
-            case .polyTouch: return "Poly aftertouch \(data0) = \(data1)"
-            case .cc: return "CC \(data0) = \(data1)"
-            case .program: return "Voice \(data0)"
+            case .noteOn: return data1 == 0
+                ? "Note off \(midiKeyName(Int(data0))) (velocity-0 note-on)"
+                : "Note on \(midiKeyName(Int(data0))), velocity \(data1)"
+            case .noteOff: return "Note off \(midiKeyName(Int(data0)))"
+            case .polyTouch: return "Poly aftertouch \(midiKeyName(Int(data0))) = \(data1)"
+            case .cc:
+                let info = m4aClassifyCC(data0)
+                return "CC \(data0) \(info.display) = \(m4aFormatCCValue(controller: data0, value: data1))"
+            case .program:
+                let name = voiceNames.indices.contains(Int(data0)) ? voiceNames[Int(data0)] : ""
+                return name.isEmpty ? "Voice \(data0)" : "Voice \(data0) — \(name)"
             case .channelTouch: return "Channel aftertouch = \(data0)"
-            case .bend: return "Pitch bend \(Int(data1) * 128 + Int(data0) - 8192)"
+            case .bend: return "Pitch bend \(m4aFormatBend(Int(data1) * 128 + Int(data0) - 8192))"
             default: return ""
             }
-        case let .meta(type, _): return "Meta 0x\(String(format: "%02X", type))"
+        case .meta: return metaSummary(event)
         case let .systemExclusive(_, data): return "\(data.count) payload byte(s)"
         }
     }

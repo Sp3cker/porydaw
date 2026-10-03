@@ -1,26 +1,29 @@
 import Foundation
 import PorydawApp
+import PorydawAppAudio
 import PorydawCore
-import PorydawPlaybackNative
 
 private enum ExportCheckError: Error {
     case failed(String)
 }
 
 private let exportRate = 44_100
-private let exportChunk = 4_096
+private let exportOptions = WavExportOptions(
+    sampleRate: exportRate, loopCount: 1,
+    fadeoutSeconds: 1, tailSeconds: 1)
 
 private struct ExportFixture {
     let song: LoadedSong
     let timeline: PlaybackTimeline
     let scratch: URL
+    let settings: AudioSettings
 
-    var hasLoop: Bool { timeline.hasLoop }
-    var fadeStart: UInt64 {
-        hasLoop ? timeline.loopEndSample : .max
-    }
-    var totalFrames: UInt64 {
-        hasLoop ? fadeStart + UInt64(exportRate) : timeline.lengthSamples + UInt64(exportRate)
+    // Independent oracle: original tst_midiexport.cpp expectedTotalSamples.
+    var expectedTotalFrames: UInt64 {
+        if timeline.hasLoop {
+            return timeline.loopStartSample + (timeline.loopEndSample - timeline.loopStartSample) + UInt64(exportRate)
+        }
+        return timeline.lengthSamples + UInt64(exportRate)
     }
 }
 
@@ -28,16 +31,11 @@ private func exportRequire(_ condition: Bool, _ reason: String) throws {
     guard condition else { throw ExportCheckError.failed(reason) }
 }
 
-private func exportAwait<Value: Sendable>(
-    _ operation: @escaping @Sendable () async throws -> Value
-) throws -> Value {
-    guard let result = awaitValue(operation) else {
-        throw ExportCheckError.failed("project operation timed out after 60 seconds")
-    }
-    return try result.get()
-}
-
-private func withExportFixture(label: String, _ body: (ExportFixture) throws -> Void) throws {
+@MainActor
+private func withExportFixture(
+    label: String, report: CheckReport,
+    _ body: (ExportFixture) throws -> Void
+) throws {
     var isDirectory: ObjCBool = false
     guard let root = CheckEnvironment.fixtureRoot,
           FileManager.default.fileExists(atPath: root, isDirectory: &isDirectory),
@@ -47,125 +45,35 @@ private func withExportFixture(label: String, _ body: (ExportFixture) throws -> 
     guard !label.isEmpty else {
         throw ExportCheckError.failed("exportcheck requires a song label")
     }
-    let scratch = FileManager.default.temporaryDirectory.appendingPathComponent(
-        "exportcheck-\(UUID().uuidString)", isDirectory: true)
-    // Best-effort cleanup of an isolated scratch fixture.
-    defer { try? FileManager.default.removeItem(at: scratch) }
-    try FileManager.default.copyItem(at: URL(filePath: root), to: scratch)
     let service = ProjectService()
-    defer { _ = awaitValue { await service.close() } }
-    try exportAwait { try await service.open(root: scratch.path) }
-    let song = try exportAwait { try await service.openSong(label: label) }
-    let file = try MidiFile.decode(song.midiBytes)
-    let timeline = PlaybackTimeline.build(
-        file: file, sampleRate: Double(exportRate),
-        settings: PlaybackSettings(exactGate: song.config.exactGate,
-                                   extendedClocks: song.config.extendedClocks))
-    try body(ExportFixture(song: song, timeline: timeline, scratch: scratch))
-}
-
-private func appendU16(_ value: UInt16, to bytes: inout Data) {
-    bytes.append(UInt8(truncatingIfNeeded: value))
-    bytes.append(UInt8(truncatingIfNeeded: value >> 8))
-}
-
-private func appendU32(_ value: UInt32, to bytes: inout Data) {
-    for shift in stride(from: 0, to: 32, by: 8) {
-        bytes.append(UInt8(truncatingIfNeeded: value >> shift))
+    let outcome = Result {
+        try runBlocking { try await service.open(root: root) }
+        let song = try runBlocking { try await service.openSong(label: label) }
+        let file = try MidiFile.decode(song.midiBytes)
+        let timeline = PlaybackTimeline.build(
+            file: file, sampleRate: Double(exportRate),
+            settings: PlaybackSettings(
+                exactGate: song.config.exactGate,
+                extendedClocks: song.config.extendedClocks))
+        report.expect(
+            song.label == label && timeline.sampleRate == Double(exportRate),
+            cppID: "exportcheck/MidiExportTest::\(label)",
+            message: "S003: staged song opens and builds its export timeline")
+        var settings = AudioSettings()
+        settings.songVolume = UInt8(clamping: song.config.masterVolume)
+        settings.reverb = UInt8(clamping: max(0, song.config.reverb ?? 0))
+        let scratch = FileManager.default.temporaryDirectory
+            .appendingPathComponent("exportcheck-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        report.expect(
+            FileManager.default.fileExists(atPath: scratch.path),
+            cppID: "exportcheck/MidiExportTest::\(label)",
+            message: "S006: per-case WAV export scratch directory is created")
+        try body(ExportFixture(song: song, timeline: timeline, scratch: scratch, settings: settings))
     }
-}
-
-private func wavHeader(frames: UInt64) throws -> Data {
-    try exportRequire(frames <= (UInt64(UInt32.max) - 36) / 4,
-                      "The rendered file would exceed the 4 GB WAV limit")
-    let dataSize = frames * 4
-    var bytes = Data()
-    bytes.reserveCapacity(44)
-    bytes.append(contentsOf: "RIFF".utf8)
-    appendU32(UInt32(36 + dataSize), to: &bytes)
-    bytes.append(contentsOf: "WAVEfmt ".utf8)
-    appendU32(16, to: &bytes)
-    appendU16(1, to: &bytes)
-    appendU16(2, to: &bytes)
-    appendU32(UInt32(exportRate), to: &bytes)
-    appendU32(UInt32(exportRate * 4), to: &bytes)
-    appendU16(4, to: &bytes)
-    appendU16(16, to: &bytes)
-    bytes.append(contentsOf: "data".utf8)
-    appendU32(UInt32(dataSize), to: &bytes)
-    return bytes
-}
-
-private func pcm16(_ sample: Float) -> UInt16 {
-    let value = Int32(sample * 32_767)
-    return UInt16(bitPattern: Int16(clamping: value))
-}
-
-/// Returns false only when the progress callback cancelled; errors throw.
-private func renderExport(
-    _ fixture: ExportFixture, at path: URL, suppress: Bool = false,
-    progress: (Double) -> Bool = { _ in true }
-) throws -> Bool {
-    try exportRequire(fixture.totalFrames > 0, "Nothing to render.")
-    let header = try wavHeader(frames: fixture.totalFrames)
-    var completed = false
-    var renderedEntireSong = false
-    // On cancellation or failure the partially written WAV must not survive.
-    defer { if !completed { try? FileManager.default.removeItem(at: path) } }
-    _ = FileManager.default.createFile(atPath: path.path, contents: nil)
-    let output = try FileHandle(forWritingTo: path)
-    do {
-        try output.write(contentsOf: header)
-        guard progress(0) else {
-            try output.close()
-            return false
-        }
-        try fixture.song.bank.withVoices { voices in
-            guard voices != nil else {
-                throw ExportCheckError.failed("song bank has no native voices")
-            }
-            let renderer = try AudioRenderEngine(sampleRate: Double(exportRate),
-                                                 periodFrames: exportChunk)
-            var settings = AudioSettings()
-            settings.songVolume = UInt8(clamping: fixture.song.config.masterVolume)
-            settings.reverb = UInt8(clamping: max(0, fixture.song.config.reverb ?? 0))
-            renderer.bind(timeline: fixture.timeline, voicegroup: voices, settings: settings)
-            renderer.setLoopEnabled(fixture.hasLoop)
-            renderer.setResonanceSuppression(suppress)
-            renderer.play()
-            let floats = UnsafeMutablePointer<Float>.allocate(capacity: exportChunk * 2)
-            defer { floats.deallocate() }
-            var pcm = Data()
-            pcm.reserveCapacity(exportChunk * 4)
-            let fadeLength = fixture.hasLoop ? fixture.totalFrames - fixture.fadeStart : 0
-            var position: UInt64 = 0
-            while position < fixture.totalFrames {
-                let count = Int(min(UInt64(exportChunk), fixture.totalFrames - position))
-                renderer.render(floats, frames: UInt32(count))
-                pcm.removeAll(keepingCapacity: true)
-                for frame in 0..<count {
-                    let sample = position + UInt64(frame)
-                    let gain: Float = sample >= fixture.fadeStart
-                        ? 1 - Float(sample - fixture.fadeStart) / Float(fadeLength) : 1
-                    appendU16(pcm16(floats[frame * 2] * gain), to: &pcm)
-                    appendU16(pcm16(floats[frame * 2 + 1] * gain), to: &pcm)
-                }
-                try output.write(contentsOf: pcm)
-                position += UInt64(count)
-                if !progress(Double(position) / Double(fixture.totalFrames)) {
-                    return
-                }
-            }
-            renderedEntireSong = true
-        }
-        try output.close()
-        completed = renderedEntireSong
-        return completed
-    } catch {
-        // The output is already failing; closing is best-effort before removal.
-        try? output.close()
-        throw error
-    }
+    try runBlocking { await service.close() }
+    try outcome.get()
 }
 
 private func le16(_ bytes: Data, _ offset: Int) -> UInt16 {
@@ -177,13 +85,32 @@ private func le32(_ bytes: Data, _ offset: Int) -> UInt32 {
         UInt32(bytes[offset + 2]) << 16 | UInt32(bytes[offset + 3]) << 24
 }
 
+private func correlation(_ baseline: Data, _ suppressed: Data, lag: Int) -> Double {
+    let frames = (min(baseline.count, suppressed.count) - 44) / 4
+    guard frames > lag else { return 0 }
+    var dot = 0.0
+    var baselinePower = 0.0
+    var suppressedPower = 0.0
+    for frame in 0..<(frames - lag) {
+        for channel in 0..<2 {
+            let a = Double(Int16(bitPattern: le16(baseline, 44 + frame * 4 + channel * 2)))
+            let b = Double(Int16(bitPattern: le16(suppressed, 44 + (frame + lag) * 4 + channel * 2)))
+            dot += a * b
+            baselinePower += a * a
+            suppressedPower += b * b
+        }
+    }
+    guard baselinePower > 0 && suppressedPower > 0 else { return 0 }
+    return dot / (sqrt(baselinePower) * sqrt(suppressedPower))
+}
+
+@MainActor
 private func exportCase(_ name: String, labels: [String], _ report: CheckReport,
                         _ body: (ExportFixture) throws -> Void) {
-    let cppID = "exportcheck/MidiExportTest::\(name)"
     for label in labels {
+        let cppID = "exportcheck/MidiExportTest::\(name)"
         do {
-            try withExportFixture(label: label, body)
-            report.pass(cppID, row: "\(name)[\(label)]")
+            try withExportFixture(label: label, report: report, body)
         } catch {
             report.fail(cppID, "\(name)[\(label)]: \(error)")
         }
@@ -197,79 +124,298 @@ internal func runExportChecks(_ report: CheckReport) {
             .map { FileManager.default.fileExists(atPath: $0) } == true
     }
     let stagedLabels = labels.isEmpty ? [""] : labels
+
     exportCase("durationCalculationMatchesRenderParity", labels: stagedLabels, report) { fixture in
-        let expected = fixture.hasLoop
-            ? fixture.timeline.loopStartSample +
-                (fixture.timeline.loopEndSample - fixture.timeline.loopStartSample) + UInt64(exportRate)
-            : fixture.timeline.lengthSamples + UInt64(exportRate)
+        let totals = WavExportTotals(timeline: fixture.timeline, options: exportOptions)
+        report.expect(
+            totals.totalFrames == fixture.expectedTotalFrames,
+            cppID: "exportcheck/MidiExportTest::durationCalculationMatchesRenderParity",
+            message: "S004: production totals equal independent expected frame count")
         let path = fixture.scratch.appendingPathComponent("parity.wav")
-        try exportRequire(try renderExport(fixture, at: path), "duration render was cancelled")
+        let result = try fixture.song.bank.withVoices { voices in
+            try WavExport.render(
+                to: path.path, timeline: fixture.timeline, voices: voices,
+                settings: fixture.settings, options: exportOptions, progress: { _ in true })
+        }
+        try exportRequire(result == .completed, "duration render was cancelled")
         let bytes = try Data(contentsOf: path)
-        try exportRequire(bytes.count == 44 + Int(expected) * 4,
-                          "calculated duration differs from rendered frame count")
+        report.expect(
+            bytes.count == 44 + Int(fixture.expectedTotalFrames) * 4,
+            cppID: "exportcheck/MidiExportTest::durationCalculationMatchesRenderParity",
+            message: "duration render frame count matches independent expected total")
     }
 
     exportCase("offlineExportProducesValidRiffPcm", labels: stagedLabels, report) { fixture in
+        let totals = WavExportTotals(timeline: fixture.timeline, options: exportOptions)
         let path = fixture.scratch.appendingPathComponent("export.wav")
-        var lastFraction = -1.0
+        var previous = -1.0
         var monotonic = true
-        try exportRequire(try renderExport(fixture, at: path) { fraction in
-            monotonic = monotonic && fraction > lastFraction
-            lastFraction = fraction
-            return true
-        }, "WAV export was cancelled")
-        try exportRequire(monotonic && lastFraction == 1,
-                          "WAV export progress was not strictly monotonic through 1.0")
-        let wav = try Data(contentsOf: path)
-        try exportRequire(wav.count == 44 + Int(fixture.totalFrames) * 4,
-                          "WAV byte count does not match the rendered frame count")
-        try exportRequire(wav.count >= 44 && String(decoding: wav[0..<4], as: UTF8.self) == "RIFF" &&
-                          String(decoding: wav[8..<12], as: UTF8.self) == "WAVE" &&
-                          String(decoding: wav[12..<16], as: UTF8.self) == "fmt " &&
-                          String(decoding: wav[36..<40], as: UTF8.self) == "data" &&
-                          le32(wav, 4) == UInt32(wav.count - 8) && le32(wav, 16) == 16 &&
-                          le16(wav, 20) == 1 && le16(wav, 22) == 2 &&
-                          le32(wav, 24) == UInt32(exportRate) &&
-                          le32(wav, 28) == UInt32(exportRate * 4) &&
-                          le16(wav, 32) == 4 && le16(wav, 34) == 16 &&
-                          le32(wav, 40) == UInt32(fixture.totalFrames * 4),
-                          "export did not produce a valid RIFF/stereo PCM header")
-        var peak = 0
-        var tailPeak = 0
-        for sample in stride(from: 44, to: wav.count, by: 2) {
-            let magnitude = abs(Int(Int16(bitPattern: le16(wav, sample))))
-            peak = max(peak, magnitude)
-            if fixture.hasLoop && sample >= wav.count - 16 * 4 {
-                tailPeak = max(tailPeak, magnitude)
+        let result = try fixture.song.bank.withVoices { voices in
+            try WavExport.render(
+                to: path.path, timeline: fixture.timeline, voices: voices,
+                settings: fixture.settings, options: exportOptions
+            ) { fraction in
+                monotonic = monotonic && fraction > previous
+                previous = fraction
+                return true
             }
         }
-        try exportRequire(peak >= 256, "offline WAV render is nearly silent")
-        if fixture.hasLoop {
-            try exportRequire(fixture.totalFrames >= 16,
-                              "looping export is too short for tail verification")
-            try exportRequire(tailPeak <= peak / 16, "looping WAV export did not fade to silence")
+        report.expect(
+            result == .completed,
+            cppID: "exportcheck/MidiExportTest::offlineExportProducesValidRiffPcm",
+            message: "S007: WAV export completes")
+        report.expect(
+            monotonic && previous == 1.0,
+            cppID: "exportcheck/MidiExportTest::offlineExportProducesValidRiffPcm",
+            message: "S008: progress strictly increases and ends at one")
+        let wav = try Data(contentsOf: path)
+        report.expect(
+            wav.count == 44 + Int(totals.totalFrames) * 4,
+            cppID: "exportcheck/MidiExportTest::offlineExportProducesValidRiffPcm",
+            message: "S010: WAV byte count equals header plus stereo frames")
+        guard wav.count >= 44 else { throw ExportCheckError.failed("WAV header truncated") }
+        report.expect(
+            String(decoding: wav[0..<4], as: UTF8.self) == "RIFF" && le32(wav, 4) == UInt32(wav.count - 8)
+                &&
+                          String(decoding: wav[8..<12], as: UTF8.self) == "WAVE" &&
+                          String(decoding: wav[12..<16], as: UTF8.self) == "fmt " &&
+                le32(wav, 16) == 16 && le16(wav, 20) == 1 && le16(wav, 22) == 2 && le32(wav, 24) == UInt32(exportRate)
+                && le32(wav, 28) == UInt32(exportRate * 4) &&
+                          le16(wav, 32) == 4 && le16(wav, 34) == 16 &&
+                String(decoding: wav[36..<40], as: UTF8.self) == "data"
+                && le32(wav, 40) == UInt32(totals.totalFrames * 4),
+            cppID: "exportcheck/MidiExportTest::offlineExportProducesValidRiffPcm",
+            message: "S011: RIFF stereo PCM header fields match expected values")
+        var peak = 0
+        var tailPeak = 0
+        for offset in stride(from: 44, to: wav.count - 1, by: 2) {
+            let magnitude = abs(Int(Int16(bitPattern: le16(wav, offset))))
+            peak = max(peak, magnitude)
+            if fixture.timeline.hasLoop && offset >= wav.count - 16 * 4 { tailPeak = max(tailPeak, magnitude) }
+        }
+        report.expect(
+            peak >= 256,
+            cppID: "exportcheck/MidiExportTest::offlineExportProducesValidRiffPcm",
+            message: "S012: exported PCM has an audible peak")
+        if fixture.timeline.hasLoop {
+            report.expect(
+                totals.totalFrames >= 16,
+                cppID: "exportcheck/MidiExportTest::offlineExportProducesValidRiffPcm",
+                message: "S013: loop has at least sixteen fade frames")
+            report.expect(
+                tailPeak <= peak / 16,
+                cppID: "exportcheck/MidiExportTest::offlineExportProducesValidRiffPcm",
+                message: "S014: final sixteen loop frames fade beneath peak")
         }
     }
 
-    exportCase("resonanceSuppressionChangesPcmWithoutChangingFrames",
-               labels: stagedLabels, report) { fixture in
-        let baseline = fixture.scratch.appendingPathComponent("baseline.wav")
-        let suppressed = fixture.scratch.appendingPathComponent("suppressed.wav")
-        try exportRequire(try renderExport(fixture, at: baseline), "baseline render was cancelled")
-        try exportRequire(try renderExport(fixture, at: suppressed, suppress: true),
-                          "suppressed render was cancelled")
-        let before = try Data(contentsOf: baseline)
-        let after = try Data(contentsOf: suppressed)
-        try exportRequire(after.count == before.count, "suppression changed exported frame count")
-        try exportRequire(after.dropFirst(44) != before.dropFirst(44),
-                          "resonance suppression did not alter exported PCM bytes")
+    exportCase("zeroFadeLoopPreservesPcm", labels: stagedLabels, report) { fixture in
+        guard fixture.timeline.hasLoop else { return }
+        var options = exportOptions
+        options.fadeoutSeconds = 0
+        let totals = WavExportTotals(timeline: fixture.timeline, options: options)
+        let path = fixture.scratch.appendingPathComponent("zero-fade.wav")
+        let result = try fixture.song.bank.withVoices { voices in
+            try WavExport.render(
+                to: path.path, timeline: fixture.timeline, voices: voices,
+                settings: fixture.settings, options: options, progress: { _ in true })
+        }
+        let bytes = try Data(contentsOf: path)
+        let peak = stride(from: 44, to: bytes.count - 1, by: 2)
+            .map { abs(Int(Int16(bitPattern: le16(bytes, $0)))) }.max() ?? 0
+        report.expect(
+            result == .completed && totals.totalFrames == totals.fadeStartFrame
+                && bytes.count == 44 + Int(totals.totalFrames) * 4 && peak >= 256,
+            cppID: "exportcheck/WavExport::zeroFadeLoop",
+            message: "zero-fade loop exports non-silent full-length PCM")
+    }
+
+    exportCase("resonanceSuppressionChangesPcmWithoutChangingFrames", labels: stagedLabels, report) { fixture in
+        let baselinePath = fixture.scratch.appendingPathComponent("baseline.wav")
+        let suppressedPath = fixture.scratch.appendingPathComponent("suppressed.wav")
+        let baseline = try fixture.song.bank.withVoices { voices in
+            try WavExport.render(
+                to: baselinePath.path, timeline: fixture.timeline, voices: voices,
+                settings: fixture.settings, options: exportOptions, progress: { _ in true })
+        }
+        report.expect(
+            baseline == .completed,
+            cppID: "exportcheck/MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames",
+            message: "S015: baseline export completes")
+        let before = try Data(contentsOf: baselinePath)
+        report.expect(
+            before.count >= 44,
+            cppID: "exportcheck/MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames",
+            message: "S017: baseline WAV reads back with a complete header")
+        var suppressedOptions = exportOptions
+        suppressedOptions.resonanceSuppression = true
+        let suppressed = try fixture.song.bank.withVoices { voices in
+            try WavExport.render(
+                to: suppressedPath.path, timeline: fixture.timeline, voices: voices,
+                settings: fixture.settings, options: suppressedOptions, progress: { _ in true })
+        }
+        report.expect(
+            suppressed == .completed,
+            cppID: "exportcheck/MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames",
+            message: "S016: suppressed export completes")
+        let after = try Data(contentsOf: suppressedPath)
+        report.expect(
+            after.count >= 44,
+            cppID: "exportcheck/MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames",
+            message: "S018: suppressed WAV reads back with a complete header")
+        report.expect(
+            after.count == before.count,
+            cppID: "exportcheck/MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames",
+            message: "S019: suppression retains the frame count")
+        report.expect(
+            before.count >= 44 && after.count >= 44 && before.dropFirst(44) != after.dropFirst(44),
+            cppID: "exportcheck/MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames",
+            message: "S020: suppressed PCM differs from baseline")
+        report.expect(
+            correlation(before, after, lag: 0) >= 0.9
+                && correlation(before, after, lag: 0) > correlation(before, after, lag: 2047),
+            cppID: "exportcheck/WavExport::suppressionAlignment",
+            message: "suppression is aligned without a 2047-frame delay")
     }
 
     exportCase("cancelledExportRemovesPartialFile", labels: stagedLabels, report) { fixture in
         let path = fixture.scratch.appendingPathComponent("cancelled.wav")
-        let completed = try renderExport(fixture, at: path, suppress: true) { fraction in fraction == 0 }
-        try exportRequire(!completed, "cancelled export unexpectedly completed")
-        try exportRequire(!FileManager.default.fileExists(atPath: path.path),
-                          "cancelled WAV export left a partial file")
+        var firstFraction = -1.0
+        let result = try fixture.song.bank.withVoices { voices in
+            try WavExport.render(
+                to: path.path, timeline: fixture.timeline, voices: voices,
+                settings: fixture.settings, options: exportOptions
+            ) { fraction in
+                firstFraction = fraction
+                return false
+            }
+        }
+        report.expect(
+            firstFraction == 0 && result == .cancelled,
+            cppID: "exportcheck/MidiExportTest::cancelledExportRemovesPartialFile",
+            message: "S021: progress-zero cancellation returns cancelled")
+        report.expect(
+            !FileManager.default.fileExists(atPath: path.path),
+            cppID: "exportcheck/MidiExportTest::cancelledExportRemovesPartialFile",
+            message: "S022: cancelled export removes its partial file")
     }
+
+    let id = "exportcheck/WavExport"
+    exportCase("totalsAndPreview", labels: stagedLabels, report) { fixture in
+        let own = WavExportTotals(timeline: fixture.timeline, options: exportOptions)
+        report.expect(
+            WavExportTotals.previewSeconds(timeline: fixture.timeline, options: exportOptions)
+                == Int(Double(own.totalFrames) / Double(exportRate) + 0.5)
+                && WavExportTotals.clockText(seconds: 125) == "2:05"
+                && WavExportTotals.clockText(seconds: 59) == "0:59",
+            cppID: "\(id)::preview", message: "preview rounds duration and formats m:ss")
+        if fixture.timeline.hasLoop {
+            var three = exportOptions
+            three.loopCount = 3
+            var two = exportOptions
+            two.loopCount = 2
+            report.expect(
+                WavExportTotals(timeline: fixture.timeline, options: three).totalFrames
+                    - WavExportTotals(timeline: fixture.timeline, options: two).totalFrames == fixture.timeline
+                    .loopEndSample - fixture.timeline.loopStartSample,
+                cppID: "\(id)::loopCount", message: "three loops minus two adds one loop")
+            let fade = WavExportTotals(timeline: fixture.timeline, options: exportOptions)
+            let length = fade.totalFrames - fade.fadeStartFrame
+            report.expect(
+                length > 0 && fade.gain(atFrame: fade.fadeStartFrame - 1) == 1
+                    && fade.gain(atFrame: fade.fadeStartFrame) == 1
+                    && abs(fade.gain(atFrame: fade.totalFrames - 1) - 1 / Float(length)) < 0.000001,
+                cppID: "\(id)::fadeGain", message: "fade preserves first and terminal gain")
+        } else {
+            let plain = WavExportTotals(timeline: fixture.timeline, options: exportOptions)
+            report.expect(
+                plain.gain(atFrame: 0) == 1 && plain.gain(atFrame: plain.totalFrames - 1) == 1,
+                cppID: "\(id)::noLoopGain", message: "nonloop output never fades")
+        }
+        var zero = exportOptions
+        zero.fadeoutSeconds = 0
+        zero.tailSeconds = 0
+        let zeroTotals = WavExportTotals(timeline: fixture.timeline, options: zero)
+        report.expect(
+            fixture.timeline.hasLoop
+                ? zeroTotals.totalFrames == zeroTotals.fadeStartFrame
+                : zeroTotals.totalFrames == fixture.timeline.lengthSamples,
+            cppID: "\(id)::zeroDurations", message: "zero duration yields no additional output")
+        var fractional = exportOptions
+        fractional.fadeoutSeconds = 0.1
+        fractional.tailSeconds = 0.1
+        let small = WavExportTotals(timeline: fixture.timeline, options: fractional)
+        report.expect(
+            small.totalFrames - zeroTotals.totalFrames == 4_410,
+            cppID: "\(id)::rounding", message: "tenths of seconds round to 4410 frames at 44100 Hz")
+        fractional.sampleRate = 32_000
+        fractional.fadeoutSeconds = 1.25
+        fractional.tailSeconds = 1.25
+        let large = WavExportTotals(timeline: fixture.timeline, options: fractional)
+        let zeroAt32k = WavExportTotals(
+            timeline: fixture.timeline,
+            options: WavExportOptions(
+                sampleRate: 32_000, loopCount: 1,
+                fadeoutSeconds: 0, tailSeconds: 0))
+        report.expect(
+            large.totalFrames - zeroAt32k.totalFrames == 40_000,
+            cppID: "\(id)::rounding", message: "one and a quarter seconds round to 40000 frames at 32000 Hz")
+        let missing = fixture.scratch.appendingPathComponent("missing/output.wav")
+        do {
+            _ = try fixture.song.bank.withVoices { voices in
+                try WavExport.render(
+                    to: missing.path, timeline: fixture.timeline, voices: voices,
+                    settings: fixture.settings, options: exportOptions, progress: { _ in true })
+            }
+            report.expect(false, cppID: "\(id)::openFailure", message: "missing directory must refuse export")
+        } catch let error as WavExportError {
+            report.expect(
+                error.message.hasPrefix("Cannot write \(missing.path): ")
+                    && !FileManager.default.fileExists(atPath: missing.path),
+                cppID: "\(id)::openFailure", message: "open failure names path and leaves no output")
+        }
+    }
+    do {
+        let accepted = try WavExport.header(
+            totals: .init(totalFrames: 1_073_741_814, fadeStartFrame: .max),
+            sampleRate: exportRate)
+        report.expect(
+            le32(Data(accepted), 40) == 4_294_967_256,
+            cppID: "\(id)::riffBoundary", message: "largest legal RIFF payload is accepted")
+    } catch { report.fail("\(id)::riffBoundary", "boundary header rejected: \(error)") }
+    let refusals: [(UInt64, WavExportError, String)] = [
+        (0, .nothingToRender, "Nothing to render."),
+        (
+            1_073_741_815, .exceedsRiffLimit,
+            "The rendered file would exceed the 4 GB WAV limit — reduce the loop count."
+        ),
+    ]
+    for (frames, expected, text) in refusals {
+        do {
+            _ = try WavExport.header(
+                totals: .init(totalFrames: frames, fadeStartFrame: .max),
+                sampleRate: exportRate)
+            report.expect(false, cppID: "\(id)::riffRefusals", message: "invalid RIFF size must refuse")
+        } catch {
+            report.expect(
+                error == expected && error.message == text,
+                cppID: "\(id)::riffRefusals", message: "zero and oversize RIFF errors retain fork text")
+        }
+    }
+    let empty = PlaybackTimeline.build(file: MidiFile(), sampleRate: Double(exportRate))
+    let emptyPath = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "empty-export-\(UUID().uuidString).wav")
+    var noTail = exportOptions
+    noTail.tailSeconds = 0
+    do {
+        _ = try WavExport.render(
+            to: emptyPath.path, timeline: empty, voices: nil,
+            settings: AudioSettings(), options: noTail, progress: { _ in true })
+        report.expect(false, cppID: "\(id)::emptyRefusal", message: "empty render must refuse")
+    } catch {
+        report.expect(
+            error == .nothingToRender && !FileManager.default.fileExists(atPath: emptyPath.path),
+            cppID: "\(id)::emptyRefusal", message: "empty render refuses before creating file")
+    }
+    runExportCaptureChecks(report)
 }

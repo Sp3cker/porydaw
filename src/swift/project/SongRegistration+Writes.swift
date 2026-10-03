@@ -34,10 +34,10 @@ extension SongRegistration {
         var insertAfter = -1
         var firstDefine = -1
         var firstEndif = -1
+        let ownDefine = RegistrationText.dynamic(#"^(\s*#define\s+\#(constant)\s+)(\d+)(.*)$"#)
         for index in songsH.lines.indices {
             let text = songsH.text(index)
-            if own < 0, let match = RegistrationText.match(
-                #"^(\s*#define\s+\#(constant)\s+)(\d+)(.*)$"#, text) {
+            if own < 0, let match = RegistrationText.match(ownDefine, text) {
                 own = index
                 ownMatch = match
             }
@@ -53,7 +53,7 @@ extension SongRegistration {
             guard let entry = RegistrationText.match(RegistrationText.define, text),
                   !RegistrationText.isMarker(entry.group(2)),
                   let id = Int(entry.group(3)) else {
-                if firstEndif < 0 && RegistrationText.match(#"^\s*#endif\b"#, text) != nil {
+                if firstEndif < 0 && RegistrationText.match(RegistrationText.endif, text) != nil {
                     firstEndif = index
                 }
                 continue
@@ -101,9 +101,10 @@ extension SongRegistration {
             var ownAnyForm = false
             var insertAfter = -1
             var firstEntry = -1
+            let ownAssignment = RegistrationText.dynamic(#"^\s*\#(constant)\s*="#)
             for index in file.lines.indices {
                 let text = file.text(index)
-                if RegistrationText.match(#"^\s*\#(constant)\s*="# , text) != nil {
+                if RegistrationText.match(ownAssignment, text) != nil {
                     ownAnyForm = true
                 }
                 guard let entry = RegistrationText.match(RegistrationText.charmap, text),

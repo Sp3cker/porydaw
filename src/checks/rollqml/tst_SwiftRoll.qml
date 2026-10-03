@@ -19,6 +19,7 @@ import RollQmlCheck 1.0
 // same file the application's resource engine loads. A directory import keeps
 // one composition root -- the lane never copies, forks or re-declares it.
 import Porydaw.Ui
+import "../editorqml/NativeWait.js" as NativeWait
 
 TestCase {
     id: testCase
@@ -75,27 +76,19 @@ TestCase {
     // production session calls intact and service the native event loop while
     // observing the same state the original checks require.
     function waitForNative(predicate, timeoutMs) {
-        var deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
+        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
     function initTestCase() {
-        // QtCore.Settings uses QGuiApplication's identity, not the test
-        // runner's executable name. Establish it before any Settings or the
-        // mounted drawer exists.
-        Qt.application.name = "porydaw"
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        verify(bootstrap.captureSettings(), "saved the caller's native preferences")
+        bootstrap.seedDrawerPreferences(false, true, true, 0)
         verify(bootstrap.start("mus_route101"),
                "the staged route101 project starts opening")
         verify(waitForNative(function() {
             return session.songOpen || testCase.openFailure.length > 0
         }, 30000), "the staged route101 song opened" + testCase.openDiagnostics())
+        verify(waitForNative(function() {
+            return session.songDockController().songListPresenter().totalCount > 0
+        }, 5000), "the Songs dock catalog is ready before checking scene-removal retention")
         testCase.mountOverlay()
     }
 
@@ -138,10 +131,9 @@ TestCase {
             surface = testCase.selectedSurface()
             return surface !== null
         }, 5000), "the selected tab's production EditorSurface mounted")
-        surface.drawerPreferenceLocation = bootstrap.preferencesUrl("lane-drawer.ini")
         var drawer = findChild(surface, "editorDrawer")
         verify(drawer, "the production drawer is mounted")
-        drawer.presenter.restoreStoredPreferences(0, 160, 1, 240, 1, 90, 0)
+        session.configurePersistence()
         verify(waitForNative(function() {
             return surface.visible && surface.width > 0 && surface.height > 0
         }, 5000), "the mounted surface is drawn")
@@ -170,29 +162,30 @@ TestCase {
         wait(0)
     }
 
-    // The suite hands the document presentation back the way the host does at
-    // close, around the one composition the lane mounted: polling stops, the
-    // session cancels while the scene still exists, the scene is removed, and
-    // the acknowledgment — `detachGridScene()`'s own call — releases the page
-    // slot, the grid, the audio binding and the document session.
     function cleanupTestCase() {
         bootstrap.pausePlayheadPolling()
-        if (session.songOpen)
-            verify(bootstrap.hostClosing(),
-                   "the session still presents its document while the scene exists")
+        verify(bootstrap.bridgeStaleSelectionReleased(),
+               "the stale selectedReference cannot reactivate a released BridgeProbe")
+        verify(bootstrap.bridgeReturnedRowReleased(),
+               "lastReturnedRow survives probe release without reactivating a replacement")
+        verify(bootstrap.hostClosing(),
+               "the session retains its page and song catalog until scene removal")
+        verify(bootstrap.releasePresentedPage(),
+               "closing the presented tab removes its page through the production strip")
+        tryVerify(function() { return bootstrap.pageWorkspaceReleased() }, 5000,
+                  "pageReleased retires the tabPageReleased workspace after page destruction")
         var retired = testCase.overlay
         testCase.overlay = null
         if (retired) {
             retired.destroy()
-            // The host removes the scene before it acknowledges the removal, so
-            // the composition is really gone — its bindings included — before
-            // the session releases the document-bound owners they read.
             wait(0)
             verify(bootstrap.acknowledgeSceneRemoval(),
-                   "the session released its document presentation after the"
-                   + " acknowledged scene removal")
+                   "acknowledged scene removal releases the remaining document presentation")
+            verify(bootstrap.releasedDocumentCannotPublish(),
+                   "released camera, playback and document callbacks cannot mutate the old grid")
+            verify(bootstrap.acknowledgeSceneRemovalAgain(),
+                   "a second scene-removal acknowledgment does not re-release presentation")
         }
-        verify(bootstrap.restoreSettings(), "restored the caller's native settings")
     }
 
     // ---- the smoke case ------------------------------------------------------
@@ -335,8 +328,9 @@ TestCase {
                   5000, "the menu loader responds to the published open state")
         var menu = findChild(surface, "quickMenuPanelRoot")
         verify(menu && session.timeSigMenuOpen, "A026: shared ruler menu opens")
+        tryVerify(function() { return findChild(menu, "rulerMenuRow_9") !== null },
+                  5000, "the existing Edit Time Signature menu row is rendered")
         var editRow = findChild(menu, "rulerMenuRow_9")
-        verify(editRow, "the existing Edit Time Signature menu row is rendered")
         mouseClick(editRow, editRow.width / 2, editRow.height / 2, Qt.LeftButton)
         compare(session.timeSigMenuOpen, false, "A027: menu no longer owns the prompt")
         tryVerify(function() { return findChild(surface, "timeSignaturePrompt") !== null },

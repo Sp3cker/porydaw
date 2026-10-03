@@ -55,22 +55,26 @@ final class ServiceBankAction: BankHistoryAction {
             switch direction {
             case .undo:
                 if materializedBlank, let live = token {
-                    result = try await service.bankRevert(lease: current.lease, token: live)
+                    result = try await service.bankRevert(lease: current.lease, token: live,
+                                                          publishResult: false)
                     token = nil
                 } else if let restore = before {
                     result = try await service.bankApply(lease: current.lease, slot: slot,
-                                                         value: restore, expected: after)
+                                                         value: restore, expected: after,
+                                                         publishResult: false)
                 } else {
                     throw ProjectServiceError.operationFailed("Bank undo has no pre-edit voice.")
                 }
             case .redo:
                 if materializedBlank, token == nil {
                     result = try await service.bankApply(lease: current.lease, slot: slot,
-                                                         value: after, expected: nil)
+                                                         value: after, expected: nil,
+                                                         publishResult: false)
                     token = result.materializationToken
                 } else if let reapply = before {
                     result = try await service.bankApply(lease: current.lease, slot: slot,
-                                                         value: after, expected: reapply)
+                                                         value: after, expected: reapply,
+                                                         publishResult: false)
                 } else {
                     throw ProjectServiceError.operationFailed("Bank redo has no pre-edit voice.")
                 }
@@ -91,7 +95,7 @@ final class ServiceBankAction: BankHistoryAction {
         guard let other = newer as? ServiceBankAction,
               other.service === service,
               other.slot == slot,
-              other.current.lease.sourcePath == current.lease.sourcePath,
+              BankBindingIdentity(other.current.lease) == BankBindingIdentity(current.lease),
               !materializedBlank, !other.materializedBlank,
               token == nil, other.token == nil,
               let oldest = before, let middle = other.before,
@@ -106,7 +110,8 @@ final class ServiceBankAction: BankHistoryAction {
     func rebaseCurrent(with newer: any BankHistoryAction) {
         guard let other = newer as? ServiceBankAction,
               other.service === service,
-              other.current.lease.sourcePath == current.lease.sourcePath else { return }
+              BankBindingIdentity(other.current.lease) == BankBindingIdentity(current.lease)
+        else { return }
         current = other.current
     }
 }

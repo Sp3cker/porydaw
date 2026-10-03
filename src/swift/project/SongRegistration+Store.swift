@@ -56,6 +56,7 @@ extension ProjectStore {
         let catalog = VoicegroupSource.catalogScan(projectRoot)
         guard !catalog.keysplits.contains(where: { $0.symbol == symbol }),
               !catalog.drumkits.contains(symbol) else { return nil }
+        let reference = RegistrationText.dynamic(#"(?<![A-Za-z0-9_])\#(symbol)(?![A-Za-z0-9_])"#)
         for directory in ["src", "include"] {
             guard let files = FileManager.default.enumerator(atPath: projectRoot + "/" + directory)
             else { continue }
@@ -63,7 +64,7 @@ extension ProjectStore {
                 guard let bytes = try? ProjectFileStore.read(projectRoot + "/" + directory + "/" + relative)
                 else { continue }
                 let text = String(decoding: bytes, as: UTF8.self)
-                if RegistrationText.match(#"(?<![A-Za-z0-9_])\#(symbol)(?![A-Za-z0-9_])"#, text) != nil {
+                if RegistrationText.match(reference, text) != nil {
                     return nil
                 }
             }
@@ -91,19 +92,8 @@ extension ProjectStore {
             }
         }
         let midiDir = projectRoot + "/sound/songs/midi"
-        let midiPath = midiDir + "/\(label).mid"
-        if ProjectFileStore.exists(midiPath) {
-            let trash = projectRoot + "/.porydaw/trash"
-            do { try ProjectFileStore.mkpath(trash) }
-            catch { problems.append("Could not create .porydaw/trash.") }
-            var target = trash + "/\(label).mid"
-            var suffix = 2
-            while ProjectFileStore.exists(target) {
-                target = trash + "/\(label)-\(suffix).mid"
-                suffix += 1
-            }
-            do { try ProjectFileStore.move(from: midiPath, to: target) }
-            catch { problems.append("Could not move \(midiPath) to \(target)") }
+        do { try ProjectFileStore.remove(midiDir + "/\(label).mid") } catch {
+            problems.append(error.localizedDescription)
         }
         do { try ProjectFileStore.remove(midiDir + "/\(label).s") }
         catch { problems.append(error.localizedDescription) }

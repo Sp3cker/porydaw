@@ -4,13 +4,16 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Porydaw.Ui
+import PorydawApp
+import Porydaw.Icons
 
 ColumnLayout {
     id: editor
     objectName: "voicegroupEditor"
-    required property QtObject controller
+    required property VoiceListController controller
     required property var colors
-    required property real baseFontPx
+    required property ApplicationSession applicationSession
+    readonly property real baseFontPx: applicationSession.baseFontPx
     readonly property var draft: controller.editorModel()
     readonly property int spacingPx: Math.max(1, Math.round(baseFontPx * 0.16))
     readonly property int regularHeight: Math.round(baseFontPx * 1.83)
@@ -59,7 +62,6 @@ ColumnLayout {
         visible: editor.draft.notice.length > 0
         text: editor.draft.notice
         wrapMode: Text.WordWrap
-        font.pixelSize: editor.baseFontPx
         color: editor.colors.primaryText
         Layout.preferredHeight: editor.noticeHeight
     }
@@ -72,7 +74,6 @@ ColumnLayout {
         Label {
             text: qsTr("Type")
             Layout.preferredWidth: editor.fieldLabelWidth
-            font.pixelSize: editor.baseFontPx
             color: editor.colors.primaryText
         }
         ComboBox {
@@ -81,7 +82,6 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.minimumHeight: 0
             Layout.preferredHeight: editor.baseFontPx * 1.85
-            font.pixelSize: editor.baseFontPx
             model: {
                 const revision = editor.controller.catalogRevision
                 const types = [{ name: qsTr("Sample"), macro: 0 },
@@ -117,7 +117,6 @@ ColumnLayout {
                   : editor.draft.macro === 7 || editor.draft.macro === 8 ? qsTr("Wave")
                   : editor.draft.macro === 12 ? qsTr("Drumkit") : qsTr("Sample")
             Layout.preferredWidth: editor.fieldLabelWidth
-            font.pixelSize: editor.baseFontPx
             color: editor.colors.primaryText
         }
         SamplePicker {
@@ -129,7 +128,7 @@ ColumnLayout {
             controller: editor.controller
             draft: editor.draft
             colors: editor.colors
-            baseFontPx: editor.baseFontPx
+            applicationSession: editor.applicationSession
             waveMode: editor.draft.macro === 7 || editor.draft.macro === 8
             onPicked: symbol => editor.draft.changeType(editor.draft.macro, symbol)
         }
@@ -138,7 +137,6 @@ ColumnLayout {
             visible: editor.draft.isSynth
             Layout.fillWidth: true
             Layout.preferredHeight: editor.regularHeight
-            font.pixelSize: editor.baseFontPx
             model: {
                 const revision = editor.controller.catalogRevision
                 return editor.controller.synthCatalogChoices()
@@ -151,7 +149,6 @@ ColumnLayout {
             visible: editor.draft.macro === 12
             Layout.fillWidth: true
             Layout.preferredHeight: editor.baseFontPx * 1.5
-            font.pixelSize: editor.baseFontPx
             editable: true
             model: editor.controller.drumkitChoices()
             editText: editor.draft.symbol
@@ -165,18 +162,30 @@ ColumnLayout {
             Layout.minimumHeight: 0
             Layout.preferredHeight: editor.baseFontPx * 1.83
             text: "+"
-            font.pixelSize: editor.baseFontPx
             onClicked: editor.controller.requestNewSample(editor.controller.currentSlot)
         }
-        ToolButton {
-            objectName: "vgEditSampleButton"
-            visible: editor.draft.macro <= 2 && !editor.draft.isSynth
+        // Built only for DirectSound voices, the only ones that offer sample editing.
+        Loader {
+            active: editor.draft.macro <= 2 && !editor.draft.isSynth
+            visible: active
             Layout.preferredWidth: editor.baseFontPx * 2.08
             Layout.preferredHeight: editor.baseFontPx * 1.83
             Layout.minimumHeight: 0
-            text: "✎"
-            font.pixelSize: editor.baseFontPx
-            onClicked: editor.controller.requestEditSample(editor.controller.currentSlot)
+            sourceComponent: ToolButton {
+                id: editSample
+                objectName: "vgEditSampleButton"
+                text: qsTr("Edit Sample")
+                contentItem: Item {
+                    AppIcon {
+                        anchors.centerIn: parent
+                        width: Math.round(editor.baseFontPx)
+                        height: width
+                        icon: Icons.editSample
+                        color: editSample.palette.buttonText
+                    }
+                }
+                onClicked: editor.controller.requestEditSample(editor.controller.currentSlot)
+            }
         }
     }
 
@@ -188,13 +197,11 @@ ColumnLayout {
         Label {
             text: qsTr("Waveform")
             Layout.preferredWidth: editor.fieldLabelWidth
-            font.pixelSize: editor.baseFontPx
             color: editor.colors.primaryText
         }
         ComboBox {
             objectName: "vgSynthWaveformCombo"
             Layout.fillWidth: true
-            font.pixelSize: editor.baseFontPx
             model: [qsTr("Pulse"), qsTr("Saw"), qsTr("Triangle")]
             currentIndex: editor.draft.waveform
             onActivated: index => editor.draft.changeSynth("waveform", index)
@@ -209,7 +216,6 @@ ColumnLayout {
         Label {
             text: qsTr("Duty LFO")
             Layout.preferredWidth: editor.fieldLabelWidth
-            font.pixelSize: editor.baseFontPx
             color: editor.colors.primaryText
         }
         Repeater {
@@ -227,7 +233,6 @@ ColumnLayout {
                 from: 0
                 to: 255
                 value: editor.draft[modelData.field]
-                font.pixelSize: editor.baseFontPx
                 ToolTip.text: modelData.detail
                 ToolTip.visible: hovered
                 onValueModified: editor.draft.changeSynth(modelData.field, value)
@@ -243,7 +248,6 @@ ColumnLayout {
         Label {
             text: qsTr("Sweep")
             Layout.preferredWidth: editor.fieldLabelWidth
-            font.pixelSize: editor.baseFontPx
             color: editor.colors.primaryText
         }
         SpinBox {
@@ -253,7 +257,6 @@ ColumnLayout {
             Layout.minimumHeight: 0
             from: 0; to: 127
             value: editor.draft.sweep
-            font.pixelSize: editor.baseFontPx
             onValueModified: editor.draft.change("sweep", value)
         }
     }
@@ -265,7 +268,6 @@ ColumnLayout {
         Label {
             text: qsTr("Duty")
             Layout.preferredWidth: editor.fieldLabelWidth
-            font.pixelSize: editor.baseFontPx
             color: editor.colors.primaryText
         }
         ComboBox {
@@ -273,7 +275,6 @@ ColumnLayout {
             Layout.fillWidth: true
             model: ["12.5%", "25%", "50%", "75%"]
             currentIndex: editor.draft.duty
-            font.pixelSize: editor.baseFontPx
             onActivated: index => editor.draft.change("duty", index)
         }
     }
@@ -285,7 +286,6 @@ ColumnLayout {
         Label {
             text: qsTr("Period")
             Layout.preferredWidth: editor.fieldLabelWidth
-            font.pixelSize: editor.baseFontPx
             color: editor.colors.primaryText
         }
         ComboBox {
@@ -293,7 +293,6 @@ ColumnLayout {
             Layout.fillWidth: true
             model: [qsTr("0 (15-bit, hiss)"), qsTr("1 (7-bit, metallic)")]
             currentIndex: editor.draft.period
-            font.pixelSize: editor.baseFontPx
             onActivated: index => editor.draft.change("period", index)
         }
     }
@@ -305,7 +304,6 @@ ColumnLayout {
         Label {
             text: qsTr("ADSR")
             Layout.preferredWidth: editor.fieldLabelWidth
-            font.pixelSize: editor.baseFontPx
             color: editor.colors.primaryText
         }
         Repeater {
@@ -322,7 +320,6 @@ ColumnLayout {
                 from: 0
                 to: editor.isCgb ? (modelData === "sustain" ? 15 : 7) : 255
                 value: editor.draft[modelData]
-                font.pixelSize: editor.baseFontPx
                 onValueModified: editor.draft.change(modelData, value)
             }
         }
@@ -332,10 +329,10 @@ ColumnLayout {
         Layout.preferredHeight: editor.buttonHeight
         Layout.minimumHeight: 0
         Button {
+            objectName: "vgNewVoicegroupButton"
             text: qsTr("New...")
             Layout.preferredHeight: editor.buttonHeight
             Layout.minimumHeight: 0
-            font.pixelSize: editor.baseFontPx
             focusPolicy: Qt.NoFocus
             onClicked: editor.controller.requestNewVoicegroup()
         }
@@ -344,7 +341,6 @@ ColumnLayout {
             text: qsTr("Save")
             Layout.preferredHeight: editor.buttonHeight
             Layout.minimumHeight: 0
-            font.pixelSize: editor.baseFontPx
             enabled: editor.controller.bankDirty
             onClicked: editor.controller.requestSave()
         }

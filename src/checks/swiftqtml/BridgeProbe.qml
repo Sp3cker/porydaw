@@ -1,5 +1,5 @@
 import QtQuick
-import SwiftQtMlCheck 1.0
+import RollQmlCheck 1.0
 
 Item {
     id: root

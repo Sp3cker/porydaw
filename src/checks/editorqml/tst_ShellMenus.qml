@@ -1,153 +1,40 @@
-import QtCore
 import QtQuick
+import QtQuick.Controls
 import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 
-TestCase {
-    id: testCase
-    name: "ShellMenus"
-    when: windowShown
-    width: 1100
-    height: 720
-    visible: true
+ShellMenusSupport {
+    ShellQmlBootstrap { id: songBootstrap }
 
-    property var shell: null
-    property var settings: null
-
-    ShellQmlBootstrap { id: bootstrap }
-
-    Component { id: settingsComponent; Settings {} }
-    Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
-
-    function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        settings = settingsComponent.createObject(testCase)
-        verify(settings !== null, "genuine QtCore.Settings is available")
-    }
-
-    function cleanupTestCase() {
-        if (settings) {
-            settings.destroy()
-            settings = null
-            wait(0)
+    function dockPresenter() { return shell.shellPresenter.session.songDockController().songListPresenter() }
+    function dockController() { return shell.shellPresenter.session.songDockController() }
+    function dockRow(id) {
+        var view = findChild(shell, "songList")
+        for (var index = 0; index < view.count; ++index) {
+            if (dockPresenter().songId(index) !== id)
+                continue
+            view.positionViewAtIndex(index, ListView.Contain)
+            return view.itemAtIndex(index)
         }
-        verify(bootstrap.clearSettings(), "removed only the private native settings")
+        return null
     }
 
-    function closeShell() {
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            var settled = false
-            for (var step = 0; step < 12 && !settled; ++step) {
-                var gate = waitForNative(function() {
-                    return shell.shellPresenter.closeReady
-                        || shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                }, 5000)
-                if (!gate)
-                    break
-                if (shell.shellPresenter.closeReady) {
-                    settled = true
-                    break
-                }
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-                wait(50)
-            }
-            verify(shell.shellPresenter.closeReady,
-                   "teardown waits for scene destruction and grid detach")
-        }
-        shell.destroy()
-        shell = null
-        wait(0)
-    }
-
-    function cleanup() {
-        closeShell()
-    }
-
-    function waitForNative(predicate, timeoutMs) {
-        var deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
-    }
-
-    function openDiagnostics(session) {
-        return " (projectOpen=" + session.projectOpen
-            + "; songOpen=" + session.songOpen
-            + "; lastSaveError=" + session.lastSaveError
-            + "; status=" + shell.shellPresenter.statusText + ")"
-    }
-
-    function openShell() {
-        // Every explicit-open test starts without a stale startup recipe.
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
-        settings.setValue("editorDrawer/velocityVisible", true)
-        settings.setValue("editorDrawer/velocityHeight", 173)
-        settings.setValue("editorDrawer/automationVisible", true)
-        settings.setValue("editorDrawer/automationHeight", 200)
-        settings.setValue("editorDrawer/voiceChangesVisible", true)
-        settings.setValue("editorDrawer/voiceChangesHeight", 200)
-        settings.setValue("editorDrawer/activePage", "velocity")
-        settings.sync()
-        shell = shellComponent.createObject(null)
-        verify(shell !== null, "the production ShellWindow loads")
-        shell.requestActivate()
-        tryCompare(shell, "active", true, 3000)
-    }
-
-    function openSong() {
-        var session = shell.shellPresenter.session
-        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
-        verify(waitForNative(function() {
-            return session.songOpen || session.lastSaveError.length > 0
-        }, 30000), "the fixture song loads" + openDiagnostics(session))
-        verify(session.songOpen, "mus_route101 opens" + openDiagnostics(session))
-        tryCompare(session.songTabs, "tabCount", 1)
-        var transport = findChild(shell, "transportToolbar")
-        verify(waitForNative(function() { return transport.presenter.state !== 0 }, 5000),
-               "transport observes the loaded audio timeline")
-        return transport
-    }
-
-    function checkMenuItem(menu, actionId, label) {
-        var item = findChild(menu, "shellAction_" + actionId)
-        verify(item !== null, "the menu owns " + actionId)
-        compare(shell.shellPresenter.actionLabel(actionId), label,
-                actionId + " keeps the keymap label")
-        verify(item.text.indexOf(label) === 0,
-                actionId + " shows its label, got: " + item.text)
-        return item
-    }
-
-    function menuOrder(menu, actionIds) {
-        var actual = []
-        for (var index = 0; index < menu.count; ++index)
-            actual.push(menu.itemAt(index).objectName)
-        compare(JSON.stringify(actual),
-                JSON.stringify(actionIds.map(function(id) { return "shellAction_" + id })),
-                "the menu keeps the original order")
-    }
 
     function test_menuItemsExistWithLabelsAndNoSongGates() {
         openShell()
         var fileMenu = findChild(shell, "shellFileMenu")
         var transportMenu = findChild(shell, "shellTransportMenu")
         var viewMenu = findChild(shell, "shellViewMenu")
+        var toolsMenu = findChild(shell, "shellToolsMenu")
         var helpMenu = findChild(shell, "shellHelpMenu")
-        verify(fileMenu && transportMenu && viewMenu && helpMenu,
-               "File, Transport, View and Help menus are mounted")
+        verify(fileMenu && transportMenu && viewMenu && toolsMenu && helpMenu,
+               "File, Transport, View, Tools and Help menus are mounted")
         compare(fileMenu.title, "&File")
-        compare(transportMenu.title, "&Transport")
+        compare(transportMenu.title, "Trans&port")
         compare(viewMenu.title, "&View")
+        compare(toolsMenu.title, "&Tools")
         compare(helpMenu.title, "&Help")
 
         var closeTab = checkMenuItem(fileMenu, "file.close_tab", "Close Tab")
@@ -159,204 +46,258 @@ TestCase {
         var pause = checkMenuItem(transportMenu, "transport.pause", "Pause")
         var stop = checkMenuItem(transportMenu, "transport.stop", "Stop")
         var loop = checkMenuItem(transportMenu, "transport.loop", "Toggle Loop")
-        var follow = checkMenuItem(transportMenu, "transport.follow_playhead", "Follow Playhead")
-        var transportRows = [goToStart, play, playPause, pause, stop, loop, follow]
+        var follow = checkMenuItem(viewMenu, "transport.follow_playhead", "Follow Playhead")
+        var transportRows = [goToStart, play, playPause, pause, stop, loop]
         for (var rowIndex = 0; rowIndex < transportRows.length; ++rowIndex)
             compare(transportRows[rowIndex].enabled, false,
                     "no song disables " + transportRows[rowIndex].objectName)
+        compare(follow.enabled, true, "Follow Playhead stays enabled without a song")
         compare(loop.checkable, true, "Loop is checkable")
         compare(follow.checkable, true, "Follow Playhead is checkable")
         compare(goToStart.checkable, false, "Go to Start is not checkable")
         menuOrder(transportMenu, ["transport.go_to_start", "transport.play",
                                  "transport.play_pause", "transport.pause",
-                                 "transport.stop", "transport.loop",
-                                 "transport.follow_playhead"])
+                                 "transport.stop", "transport.loop"])
 
         var automation = checkMenuItem(viewMenu, "view.automation_drawer", "Automation Drawer")
         var velocity = checkMenuItem(viewMenu, "view.velocity_drawer", "Velocity Drawer")
         var voiceChanges = checkMenuItem(viewMenu, "view.voice_changes_drawer",
                                          "Voice Changes Drawer")
-        var colors = checkMenuItem(viewMenu, "view.velocity_colors", "Color Notes by Velocity")
         var names = checkMenuItem(viewMenu, "view.note_names", "Show Note Names")
         compare(automation.enabled, false, "no tab disables the automation drawer toggle")
         compare(velocity.enabled, false, "no tab disables the velocity drawer toggle")
         compare(voiceChanges.enabled, false, "no tab disables the voice-change drawer toggle")
-        compare(colors.enabled, true, "velocity colours stay available with no song")
         compare(names.enabled, true, "note names stay available with no song")
         compare(automation.checkable, true, "the automation drawer toggle is checkable")
-        compare(colors.checkable, true, "velocity colours are checkable")
+        compare(names.checkable, true, "note names are checkable")
         var eventList = findChild(viewMenu, "shellAction_view.event_list")
         verify(eventList !== null, "the event list row still leads the View menu")
-        menuOrder(viewMenu, ["view.event_list", "view.automation_drawer",
-                             "view.velocity_drawer", "view.voice_changes_drawer",
-                             "view.polyphony_debugger", "view.velocity_colors",
-                             "view.note_names"])
+        compare(viewMenu.itemAt(5).objectName, "shellViewSectionSeparator",
+                "the global View preferences follow a separator")
+        compare(viewMenu.itemAt(7).objectName, "shellAction_transport.follow_playhead",
+                "Follow Playhead stays at the fork View position")
 
+        var importSample = checkMenuItem(toolsMenu, "tools.import_sample", "Import Sample")
+        verify(importSample.text.indexOf("Import Sample...") === 0,
+               "Tools displays the fork's Import Sample... label")
+        compare(importSample.enabled, false, "no project disables sample import")
+        menuOrder(toolsMenu, ["tools.import_sample"])
         var about = checkMenuItem(helpMenu, "help.about", "About porydaw")
         compare(about.enabled, true, "About stays available with no song")
     }
 
-    function test_songMenuActionsDriveSessionState() {
+    function test_forkMenuTopologyAndLabels() {
         openShell()
-        var bar = openSong()
         var presenter = shell.shellPresenter
-        var session = presenter.session
-        var tabs = session.songTabs
-        var transport = session.transportBarPresenter()
-
-        var closeTab = findChild(shell, "shellAction_file.close_tab")
-        compare(closeTab.enabled, true, "the open tab enables Close Tab")
-
-        // Drawer toggles flip section visibility and the menu check follows.
-        // DrawerSectionKind raw values travel to QML unchanged: 0 automation,
-        // 1 velocity, 2 voice changes.
-        verify(waitForNative(function() {
-            var page = session.songTabs.selectedPage
-            if (page === null)
-                return false
-            var attached = page.drawerPresenter()
-            return attached.velocitySection.available && attached.automationSection.available
-                && attached.voiceChangesSection.available
-        }, 10000), "drawer pages attach to the open tab")
-        var drawer = tabs.selectedPage.drawerPresenter()
-        var sectionIds = ["view.automation_drawer", "view.velocity_drawer",
-                          "view.voice_changes_drawer"]
-        var sectionKinds = [0, 1, 2]
-        var sectionStates = [drawer.automationSection, drawer.velocitySection,
-                             drawer.voiceChangesSection]
-        for (var sectionIndex = 0; sectionIndex < sectionIds.length; ++sectionIndex) {
-            var sectionId = sectionIds[sectionIndex]
-            var sectionKind = sectionKinds[sectionIndex]
-            var sectionState = sectionStates[sectionIndex]
-            var item = findChild(shell, "shellAction_" + sectionId)
-            compare(item.enabled, true, sectionId + " is enabled with a tab selected")
-            var before = sectionState.visible
-            presenter.activate(sectionId)
-            verify(waitForNative(function() { return sectionState.visible !== before }, 3000),
-                   sectionId + " flips its drawer section")
-            tryVerify(function() { return item.checked === !before }, 3000,
-                      sectionId + " check follows the flip")
-            // Toggling the drawer directly (its own toggle buttons call the
-            // same presenter) also updates the menu check.
-            drawer.toggleSection(sectionKind, false)
-            verify(waitForNative(function() { return sectionState.visible === before }, 3000),
-                   "the presenter toggle restores " + sectionId)
-            tryVerify(function() { return item.checked === before }, 3000,
-                      sectionId + " check follows the presenter toggle")
+        var file = findChild(shell, "shellFileMenu")
+        var edit = findChild(shell, "shellEditMenu")
+        var view = findChild(shell, "shellViewMenu")
+        var fileRows = []
+        for (var fileIndex = 0; fileIndex < file.count; ++fileIndex)
+            fileRows.push(file.itemAt(fileIndex).objectName)
+        compare(JSON.stringify(fileRows),
+                JSON.stringify(["shellAction_file.open_project", "shellAction_file.new_song",
+                                "shellAction_file.import_midi",
+                                "shellAction_file.save_song", "shellAction_file.register_song",
+                                "shellAction_file.close_tab", "shellFileExportSeparator",
+                                "shellAction_file.export_wav", "shellFileQuitSeparator",
+                                "shellAction_file.quit"]),
+                "the File menu keeps the fork rows and separators")
+        compare(file.count, 10, "the File menu keeps the fork rows and separators")
+        verify(findChild(file, "shellAction_songs.find") === null,
+               "Find Song moves from File to the Edit clipboard group")
+        var clipboard = ["roll.copy", "roll.cut", "roll.paste", "roll.delete",
+                         "roll.select_all", "songs.find"]
+        for (var i = 0; i < clipboard.length; ++i)
+            compare(edit.itemAt(i + 3).objectName, "shellAction_" + clipboard[i],
+                    "the Edit clipboard head follows Undo and Redo")
+        var submenuNames = ["shellTimeMenu", "shellNotesMenu", "shellMoveMenu",
+                            "shellTracksMenu", "shellAutomationMenu", "shellEventsMenu",
+                            "shellLoopMenu", "shellTransportMenu"]
+        var submenuTitles = ["&Time", "&Notes", "&Move", "Tr&acks", "&Automation",
+                             "&Events", "&Loop", "Trans&port"]
+        for (var sub = 0; sub < submenuNames.length; ++sub) {
+            verify(findChild(edit, submenuNames[sub]) !== null,
+                   "the Edit menu mounts " + submenuNames[sub])
+            compare(edit.itemAt(sub + 9).text, submenuTitles[sub],
+                    "the Edit menu nests the fork's eight command submenus in order")
         }
-
-        // Loop and Follow reflect and flip the transport presenter.
-        var loop = findChild(shell, "shellAction_transport.loop")
-        var follow = findChild(shell, "shellAction_transport.follow_playhead")
-        compare(loop.enabled, true, "the open song enables Loop")
-        compare(follow.enabled, true, "the open song enables Follow Playhead")
-        compare(loop.checked, transport.loopEnabled, "Loop check mirrors the presenter")
-        var loopBefore = transport.loopEnabled
-        presenter.activate("transport.loop")
-        compare(transport.loopEnabled, !loopBefore, "the menu toggle flips loop state")
-        tryVerify(function() { return loop.checked === !loopBefore }, 3000,
-                  "Loop check follows the flip")
-        transport.setLoopEnabled(loopBefore)
-        tryVerify(function() { return loop.checked === loopBefore }, 3000,
-                  "Loop check follows the transport bar switch")
-        var followBefore = transport.followPlayhead
-        presenter.activate("transport.follow_playhead")
-        compare(transport.followPlayhead, !followBefore, "the menu toggle flips follow state")
-        tryVerify(function() { return follow.checked === !followBefore }, 3000,
-                  "Follow check follows the flip")
-        transport.setFollowPlayhead(followBefore)
-        tryVerify(function() { return follow.checked === followBefore }, 3000,
-                  "Follow check follows the transport bar switch")
-
-        // Display modes flip session state and the menu checks.
-        var colors = findChild(shell, "shellAction_view.velocity_colors")
-        var names = findChild(shell, "shellAction_view.note_names")
-        var colorsBefore = session.velocityColorMode
-        presenter.activate("view.velocity_colors")
-        compare(session.velocityColorMode, !colorsBefore, "the menu toggle flips velocity colours")
-        tryVerify(function() { return colors.checked === !colorsBefore }, 3000,
-                  "velocity colours check follows the flip")
-        presenter.activate("view.velocity_colors")
-        var namesBefore = session.noteNameMode
-        presenter.activate("view.note_names")
-        compare(session.noteNameMode, !namesBefore, "the menu toggle flips note names")
-        tryVerify(function() { return names.checked === !namesBefore }, 3000,
-                  "note names check follows the flip")
-        presenter.activate("view.note_names")
-
-        // Go to Start rewinds the real playhead after it advanced.
-        var clock = findChild(bar, "transportTimeLabel")
-        verify(clock !== null, "the mounted clock is readable")
-        presenter.activate("transport.play")
-        tryCompare(transport, "state", 3, 3000)
-        verify(waitForNative(function() {
-            bar.presenter.refresh()
-            return !clock.text.startsWith("0:00.0 / ")
-        }, 5000), "playback advances the real playhead")
-        presenter.activate("transport.go_to_start")
-        verify(waitForNative(function() {
-            bar.presenter.refresh()
-            return clock.text.startsWith("0:00.0 / ")
-        }, 3000), "Go to Start rewinds the real playhead")
-        presenter.activate("transport.stop")
-
-        // About opens the dialog.
-        var aboutItem = findChild(shell, "shellAction_help.about")
-        var aboutDialog = findChild(shell, "shellAboutDialog")
-        verify(aboutDialog !== null, "the About dialog is mounted")
-        compare(aboutDialog.visible, false, "About starts hidden")
-        aboutItem.triggered()
-        tryVerify(function() { return aboutDialog.visible }, 3000, "About opens the dialog")
-        aboutDialog.close()
-        tryVerify(function() { return !aboutDialog.visible }, 3000, "About closes again")
+        menuOrder(findChild(edit, "shellTimeMenu"),
+                  ["edit.insert_time", "edit.delete_time", "roll.duplicate_time",
+                   "edit.clear_time_selection", "edit.edit_time_signature",
+                   "edit.remove_time_signature"], "the Time submenu retains the fork actions")
+        menuOrder(findChild(edit, "shellNotesMenu"),
+                  ["roll.transpose_up", "roll.transpose_down", "roll.transpose_up_octave",
+                   "roll.transpose_down_octave", "roll.pitch_bend", "edit.set_velocity",
+                   "roll.duplicate_time", "roll.split", "roll.join"],
+                  "the Notes submenu retains the fork actions")
+        menuOrder(findChild(edit, "shellMoveMenu"),
+                  ["roll.nudge_left", "roll.nudge_right"],
+                  "the Move submenu retains the fork actions")
+        menuOrder(findChild(edit, "shellTracksMenu"),
+                  ["roll.mute_tracks", "roll.solo_tracks"],
+                  "the Tracks submenu retains the fork actions")
+        menuOrder(findChild(edit, "shellAutomationMenu"),
+                  ["automation.pencil_mode"], "the Automation submenu retains the fork action")
+        menuOrder(findChild(edit, "shellEventsMenu"),
+                  ["eventlist.move_up", "eventlist.move_down"],
+                  "the Events submenu retains the fork actions")
+        menuOrder(findChild(edit, "shellLoopMenu"),
+                  ["edit.set_loop_start", "edit.set_loop_end",
+                   "edit.loop_from_selection", "edit.remove_loop"],
+                  "the Loop submenu retains the fork actions")
+        var transport = findChild(edit, "shellTransportMenu")
+        menuOrder(transport, ["transport.go_to_start", "transport.play",
+                              "transport.play_pause", "transport.pause",
+                              "transport.stop", "transport.loop"])
+        verify(findChild(transport, "shellAction_transport.follow_playhead") === null,
+               "Follow Playhead is not a Transport submenu row")
+        compare(view.itemAt(view.count - 1).objectName,
+                "shellAction_transport.follow_playhead",
+                "Follow Playhead ends the View preference group")
+        compare(presenter.actionLabel("roll.copy"), "Copy Selection",
+                "menu rows show the keymap label")
+        compare(presenter.actionLabel("file.save_song"), "Save Song",
+                "Save Song uses the keymap wording")
+        compare(findChild(file, "shellAction_file.open_project").text.indexOf("Open Project...") >= 0,
+                true, "the File menu keeps the fork Open Project ellipsis")
+        verify(findChild(view, "shellAction_view.voice_changes_drawer").text
+               .indexOf("Voice-change Drawer") === 0,
+               "the View menu keeps the fork drawer wording")
     }
 
-    function test_closeTabClosesTheCleanTab() {
+    function test_forkNoteContextShapeAndLoopGates() {
         openShell()
-        openSong()
-        var tabs = shell.shellPresenter.session.songTabs
-        var closeTab = findChild(shell, "shellAction_file.close_tab")
-        verify(closeTab !== null && closeTab.enabled, "Close Tab targets the clean tab")
-        closeTab.triggered()
-        verify(waitForNative(function() { return tabs.tabCount === 0 }, 5000),
-               "triggering Close Tab closes the clean tab")
-        compare(shell.shellPresenter.session.songOpen, false, "no song remains open")
-        tryVerify(function() { return !closeTab.enabled }, 3000,
-                  "no tab disables Close Tab again")
+        var context = findChild(shell, "shellGridContextMenu")
+        compare(context.itemAt(0).objectName, "shellContextAction_edit.set_velocity",
+                "the note context menu leads with Set Velocity and omits Paste")
+        var contextIds = ["roll.copy", "roll.cut", "roll.duplicate_time",
+                          "roll.split", "roll.join", "roll.delete"]
+        for (var i = 0; i < contextIds.length; ++i)
+            compare(context.itemAt(i + 2).objectName,
+                    "shellContextAction_" + contextIds[i],
+                    "the note context menu follows the fork command order")
+        verify(findChild(context, "shellContextAction_roll.paste") === null,
+               "the note context menu omits Paste")
+        var loop = findChild(shell, "shellLoopMenu")
+        menuOrder(loop, ["edit.set_loop_start", "edit.set_loop_end",
+                         "edit.loop_from_selection", "edit.remove_loop"])
+        compare(shell.shellPresenter.actionEnabled("edit.set_loop_start"), false,
+                "loop rows gate on song and markers")
+        compare(shell.shellPresenter.actionEnabled("edit.remove_loop"), false,
+                "Remove Loop Markers needs a song and marker")
     }
 
-    function test_displayModesPersistAcrossShells() {
+    function test_editTailItemsExistDisabledAndInertWithNoSong() {
+        openShell()
+        var editMenu = findChild(shell, "shellEditMenu")
+        verify(editMenu !== null, "the Edit menu is mounted")
+        var ids = ["roll.pitch_bend", "edit.set_velocity", "edit.loop_from_selection",
+                   "eventlist.move_up", "eventlist.move_down"]
+        for (var index = 0; index < ids.length; ++index) {
+            var item = findChild(editMenu, "shellAction_" + ids[index])
+            verify(item !== null, "the menu owns " + ids[index])
+            compare(item.enabled, false, ids[index] + " is disabled with no song")
+            compare(shell.shellPresenter.actionEnabled(ids[index]), false,
+                    ids[index] + " reports disabled with no song")
+            shell.shellPresenter.activate(ids[index])
+        }
+        compare(shell.shellPresenter.session.songOpen, false, "inert activations open nothing")
+        compare(shell.shellPresenter.sceneActive, true, "inert activations keep the scene")
+    }
+
+    function test_noteNamesPersistAcrossShells() {
         openShell()
         var presenter = shell.shellPresenter
         var session = presenter.session
-        if (session.velocityColorMode)
-            presenter.activate("view.velocity_colors")
         if (session.noteNameMode)
             presenter.activate("view.note_names")
-        compare(session.velocityColorMode, false, "the test starts from colours off")
-        presenter.activate("view.velocity_colors")
+        compare(session.noteNameMode, false, "the test starts from names off")
         presenter.activate("view.note_names")
         tryVerify(function() {
-            settings.sync()
-            return settings.value("velocityNoteColors", false) === true
-        }, 3000, "toggling colours writes the original root key")
-        tryVerify(function() {
-            settings.sync()
-            return settings.value("noteNames", false) === true
+            return settings.bool("noteNames", false)
         }, 3000, "toggling names writes the original root key")
         closeShell()
         openShell()
         session = shell.shellPresenter.session
-        compare(session.velocityColorMode, true, "a fresh shell restores velocity colours")
         compare(session.noteNameMode, true, "a fresh shell restores note names")
-        var colors = findChild(shell, "shellAction_view.velocity_colors")
-        compare(colors.checked, true, "the restored check is visible in the menu")
+        var names = findChild(shell, "shellAction_view.note_names")
+        tryCompare(names, "checked", true, 3000, "the restored check is visible in the menu")
         presenter = shell.shellPresenter
-        presenter.activate("view.velocity_colors")
         presenter.activate("view.note_names")
         tryVerify(function() {
-            settings.sync()
-            return settings.value("velocityNoteColors", true) === false
-        }, 3000, "toggling back clears the stored colours")
+            return !settings.bool("noteNames", true)
+        }, 3000, "toggling back clears the stored names")
+    }
+
+    function test_fileRegisterSongActsOnSelectedTab() {
+        verify(songBootstrap.resetPreferences(), "the register journey starts with fresh window and filter state")
+        var originalRoot = songBootstrap.projectRoot
+        verify(songBootstrap.prepareSongActionFixture("charmap"),
+               "the register journey stages its isolated charmap-only project")
+        var root = songBootstrap.projectRoot
+        openShell()
+        verify(shell !== null, "the File-menu fixture opens a production shell")
+        var session = shell.shellPresenter.session
+        var presenter = shell.shellPresenter
+        var dock = session.songDockController()
+        var songs = dock.songListPresenter()
+        var songList = findChild(shell, "songList")
+        verify(songList !== null, "the production Songs list is mounted for the File-menu journey")
+        session.openProject(root)
+        verify(waitForNative(function() { return session.projectOpen && songs.rowCount > 0 }, 30000),
+               "the File-menu project loads the staged charmap project with its listed route song")
+        var routeId = -1
+        for (var index = 0; index < songs.rowCount; ++index) {
+            songList.positionViewAtIndex(index, ListView.Contain)
+            var candidate = songList.itemAtIndex(index)
+            if (candidate !== null && candidate.song.label === "mus_route101")
+                routeId = songs.songId(index)
+        }
+        verify(routeId >= 0, "the charmap-gapped route song is listed for the File-menu journey")
+        var fileMenu = findChild(shell, "shellFileMenu")
+        var registerRow = checkMenuItem(fileMenu, "file.register_song", "Register Song")
+        compare(presenter.actionEnabled("file.register_song"), false,
+                "no selected tab disables File Register Song")
+        compare(registerRow.enabled, false, "the File menu shows Register Song disabled with no tab")
+        var target = dockRow(routeId)
+        verify(target !== null, "the gapped route row is mounted for the File-menu journey")
+        compare(target.song.registrationGapText, "charmap.txt",
+                "the File-menu song is missing only charmap.txt")
+        mouseDoubleClickSequence(target, target.width / 2, target.height / 2, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 1
+                && session.songTabs.selectedPage.title === "mus_route101"
+        }, 30000), "the gapped song opens in an editor tab for its File-menu repair")
+        compare(presenter.actionEnabled("file.register_song"), true,
+                "the selected gapped tab enables File Register Song")
+        fileMenu.open()
+        tryVerify(function() { return registerRow.enabled }, 3000,
+                  "the opened File menu enables Register Song on the gapped tab")
+        fileMenu.close()
+        presenter.activate("file.register_song")
+        verify(waitForNative(function() {
+            var dialog = findChild(shell, "songConfirmationDialog")
+            return dock.confirmation === "register" && dialog !== null && dialog.visible
+        }, 5000), "activating File Register Song mounts the register confirmation for the selected tab")
+        var confirmation = findChild(shell, "songConfirmationDialog")
+        compare(dock.confirmationDetail,
+                "The following registration files need updates:\n  - charmap.txt",
+                "the File-menu ingress carries the charmap-only plan detail")
+        verify(confirmation.standardButton(Dialog.Ok) !== null,
+               "the File-menu confirmation has an activatable accepting button")
+        mouseClick(confirmation.standardButton(Dialog.Ok))
+        verify(waitForNative(function() {
+            return !dock.busy && dockRow(routeId) !== null
+                && dockRow(routeId).song.registrationGapText === ""
+                && !songs.canRegister(routeId)
+        }, 30000), "accepting the File-menu registration repairs the selected song")
+        compare(presenter.actionEnabled("file.register_song"), false,
+                "the repaired clean tab disables File Register Song")
+        fileMenu.open()
+        tryVerify(function() { return !registerRow.enabled }, 3000,
+                  "the opened File menu disables Register Song on the clean tab")
+        fileMenu.close()
+        songBootstrap.projectRoot = originalRoot
     }
 }

@@ -7,13 +7,17 @@ public struct Sequencer: ~Copyable {
     public private(set) var position: UInt64 = 0
 
     public init() {
+        precondition(
+            ChaseLatest.count == Self.chaseSlotCount && PerTrack.count == TrackLimits.hardwareCapacity,
+            "scratch literals mirror TrackLimits.hardwareCapacity")
         keyedOn = .allocate(capacity: Self.keyStateCount)
         keyedOn.initialize(repeating: 0, count: Self.keyStateCount)
         keyedOnTick = .allocate(capacity: Self.keyStateCount)
         keyedOnTick.initialize(repeating: 0, count: Self.keyStateCount)
         pendingReleases = .allocate(capacity: Self.maximumPendingReleases)
-        pendingReleases.initialize(repeating: PendingRelease(),
-                                   count: Self.maximumPendingReleases)
+        pendingReleases.initialize(
+            repeating: PendingRelease(),
+            count: Self.maximumPendingReleases)
     }
 
     deinit {
@@ -43,39 +47,54 @@ public struct Sequencer: ~Copyable {
         }
     }
 
-    public static func chase(engine: UnsafeMutablePointer<M4AEngine>,
-                             timeline: borrowing PlaybackTimeline, position: UInt64) {
+    public static func chase(
+        engine: UnsafeMutablePointer<M4AEngine>,
+        timeline: borrowing PlaybackTimeline, position: UInt64
+    ) {
         withSwiftSource(timeline) { source in
             chase(engine: engine, source: source, position: position)
         }
     }
 
-    public static func primeVoices(engine: UnsafeMutablePointer<M4AEngine>,
-                                   timeline: borrowing PlaybackTimeline, position: UInt64) {
+    public static func primeVoices(
+        engine: UnsafeMutablePointer<M4AEngine>,
+        timeline: borrowing PlaybackTimeline, position: UInt64
+    ) {
         withSwiftSource(timeline) { source in
             primeVoices(engine: engine, source: source, position: position)
         }
     }
 
-    public mutating func render(engine: UnsafeMutablePointer<M4AEngine>,
-                                timeline: borrowing PlaybackTimeline,
-                                left: UnsafeMutableBufferPointer<Float>,
-                                right: UnsafeMutableBufferPointer<Float>,
-                                looping: Bool, muteMask: UInt32) {
+    public mutating func render(
+        engine: UnsafeMutablePointer<M4AEngine>,
+        timeline: borrowing PlaybackTimeline,
+        left: UnsafeMutableBufferPointer<Float>,
+        right: UnsafeMutableBufferPointer<Float>,
+        looping: Bool, muteMask: UInt32
+    ) {
         precondition(left.count == right.count)
         guard let leftBase = left.baseAddress, let rightBase = right.baseAddress else {
             return
         }
         withSwiftSource(timeline) { source in
-            render(engine: engine, source: source, left: leftBase, right: rightBase,
-                   frames: left.count, looping: looping, muteMask: muteMask)
+            render(
+                engine: engine, source: source, left: leftBase, right: rightBase,
+                frames: left.count, looping: looping, muteMask: muteMask)
         }
     }
 
     private static let keyStateCount = TrackLimits.hardwareCapacity * 128
     private static let maximumPendingReleases = 128
+    /// One slot per (track, controller), one bend slot per track, one tempo slot.
+    private static let chaseSlotCount = TrackLimits.hardwareCapacity * 129 + 1
+    /// Stack scratch for chase/prime: value generics take literals only, so `init` checks the
+    /// counts. `withUnsafeTemporaryAllocation` may heap-allocate above 1 KB; the render thread must not.
+    private typealias ChaseLatest = InlineArray<2065, Int>
+    private typealias PerTrack = InlineArray<16, Int>
 
     private var cursor = 0
+    // MutableSpan/InlineArray variants measured -10.96% throughput (paired xctrace, 2026-10-02);
+    // the pointer storage stays (swift-modern-buffers exception 2).
     private let keyedOn: UnsafeMutablePointer<UInt8>
     private let keyedOnTick: UnsafeMutablePointer<UInt32>
     private let pendingReleases: UnsafeMutablePointer<PendingRelease>
@@ -114,8 +133,8 @@ private protocol TimelineSource: EventBuffer {
     func sample(for tick: Tick) -> UInt64
 }
 
-private extension TimelineSource {
-    var hasLoop: Bool {
+extension TimelineSource {
+    fileprivate var hasLoop: Bool {
         playbackHasLoop(startSample: loopStartSample, endSample: loopEndSample)
     }
 }
@@ -131,11 +150,14 @@ private struct SwiftEventBuffer: EventBuffer {
 
     subscript(index: Int) -> SequencedEvent {
         let event = events[index]
-        return SequencedEvent(sample: event.sample, tick: event.tick, type: event.type,
-                              track: event.track, data0: event.data0, data1: event.data1)
+        return SequencedEvent(
+            sample: event.sample, tick: event.tick, type: event.type,
+            track: event.track, data0: event.data0, data1: event.data1)
     }
 }
 
+// Borrowed views over PlaybackTimeline storage. Stored `Span` members need the experimental
+// `Lifetimes` feature on Swift 6.4, so the buffer pointers stay until that lands.
 private struct SwiftTimelineSource: TimelineSource {
     let events: UnsafeBufferPointer<PlaybackEvent>
     let tempos: UnsafeBufferPointer<PlaybackTempoPoint>
@@ -152,13 +174,15 @@ private struct SwiftTimelineSource: TimelineSource {
 
     subscript(index: Int) -> SequencedEvent {
         let event = events[index]
-        return SequencedEvent(sample: event.sample, tick: event.tick, type: event.type,
-                              track: event.track, data0: event.data0, data1: event.data1)
+        return SequencedEvent(
+            sample: event.sample, tick: event.tick, type: event.type,
+            track: event.track, data0: event.data0, data1: event.data1)
     }
 
     func sample(for tick: Tick) -> UInt64 {
-        playbackSample(for: UInt64(tick), segments: PlaybackTempoPointView(tempos),
-                       ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
+        playbackSample(
+            for: UInt64(tick), segments: PlaybackTempoPointView(tempos),
+            ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
     }
 }
 
@@ -176,8 +200,9 @@ private struct NativeTimelineSource: TimelineSource {
 
     subscript(index: Int) -> SequencedEvent {
         let event = data.pointee.events![index]
-        return SequencedEvent(sample: event.sample, tick: event.tick, type: event.type,
-                              track: event.track, data0: event.data0, data1: event.data1)
+        return SequencedEvent(
+            sample: event.sample, tick: event.tick, type: event.type,
+            track: event.track, data0: event.data0, data1: event.data1)
     }
 
     func sample(for tick: Tick) -> UInt64 {
@@ -201,18 +226,21 @@ private struct NativeTempoPointView: PlaybackTempoSegmentView {
     }
 }
 
-private func withSwiftSource<Result>(_ timeline: borrowing PlaybackTimeline,
-                                     _ body: (SwiftTimelineSource) -> Result) -> Result {
+private func withSwiftSource<Result>(
+    _ timeline: borrowing PlaybackTimeline,
+    _ body: (SwiftTimelineSource) -> Result
+) -> Result {
     timeline.events.withUnsafeBufferPointer { events in
         timeline.tempoMap.withUnsafeBufferPointer { tempos in
-            body(SwiftTimelineSource(
-                events: events, tempos: tempos, sampleRate: timeline.sampleRate,
-                ticksPerBeat: timeline.ticksPerBeat,
-                loopStartSample: timeline.loopStartSample,
-                loopEndSample: timeline.loopEndSample,
-                loopStartTick: timeline.loopStartTick, loopEndTick: timeline.loopEndTick,
-                usedTrackCount: timeline.usedTrackCount,
-                extendedClocks: timeline.settings.extendedClocks))
+            body(
+                SwiftTimelineSource(
+                    events: events, tempos: tempos, sampleRate: timeline.sampleRate,
+                    ticksPerBeat: timeline.ticksPerBeat,
+                    loopStartSample: timeline.loopStartSample,
+                    loopEndSample: timeline.loopEndSample,
+                    loopStartTick: timeline.loopStartTick, loopEndTick: timeline.loopEndTick,
+                    usedTrackCount: timeline.usedTrackCount,
+                    extendedClocks: timeline.settings.extendedClocks))
         }
     }
 }
@@ -244,23 +272,30 @@ extension Sequencer {
         cursor = lowerBound(in: NativeTimelineSource(data: data), sample: newPosition)
     }
 
-    static func chase(engine: UnsafeMutablePointer<M4AEngine>,
-                      data: UnsafePointer<PdPlaybackData>, position: UInt64) {
+    static func chase(
+        engine: UnsafeMutablePointer<M4AEngine>,
+        data: UnsafePointer<PdPlaybackData>, position: UInt64
+    ) {
         chase(engine: engine, source: NativeTimelineSource(data: data), position: position)
     }
 
-    static func primeVoices(engine: UnsafeMutablePointer<M4AEngine>,
-                            data: UnsafePointer<PdPlaybackData>, position: UInt64) {
+    static func primeVoices(
+        engine: UnsafeMutablePointer<M4AEngine>,
+        data: UnsafePointer<PdPlaybackData>, position: UInt64
+    ) {
         primeVoices(engine: engine, source: NativeTimelineSource(data: data), position: position)
     }
 
-    mutating func render(engine: UnsafeMutablePointer<M4AEngine>,
-                         data: UnsafePointer<PdPlaybackData>,
-                         left: UnsafeMutablePointer<Float>,
-                         right: UnsafeMutablePointer<Float>,
-                         frames: Int, looping: Bool, muteMask: UInt32) {
-        render(engine: engine, source: NativeTimelineSource(data: data), left: left, right: right,
-               frames: frames, looping: looping, muteMask: muteMask)
+    mutating func render(
+        engine: UnsafeMutablePointer<M4AEngine>,
+        data: UnsafePointer<PdPlaybackData>,
+        left: UnsafeMutablePointer<Float>,
+        right: UnsafeMutablePointer<Float>,
+        frames: Int, looping: Bool, muteMask: UInt32
+    ) {
+        render(
+            engine: engine, source: NativeTimelineSource(data: data), left: left, right: right,
+            frames: frames, looping: looping, muteMask: muteMask)
     }
 
     mutating func clearKeyState() {
@@ -271,8 +306,10 @@ extension Sequencer {
         pendingReleaseCount = 0
     }
 
-    private static func chase<Source: TimelineSource>(engine: UnsafeMutablePointer<M4AEngine>,
-                                               source: Source, position: UInt64) {
+    private static func chase<Source: TimelineSource>(
+        engine: UnsafeMutablePointer<M4AEngine>,
+        source: Source, position: UInt64
+    ) {
         for track in 0..<source.usedTrackCount {
             m4a_engine_cc(engine, Int32(track), 0x1E, 0x08)
             m4a_engine_cc(engine, Int32(track), 0x1D, 0)
@@ -284,87 +321,83 @@ extension Sequencer {
         let controllerSlots = TrackLimits.hardwareCapacity * 128
         let bendBase = controllerSlots
         let tempoSlot = bendBase + TrackLimits.hardwareCapacity
-        withUnsafeTemporaryAllocation(of: Int.self, capacity: tempoSlot + 1) { latest in
-            latest.initialize(repeating: 0)
-            for index in 0..<source.count {
-                let event = source[index]
-                if event.sample > position { break }
-                switch event.type {
-                case 0xB:
-                    let controller = event.data0 & 0x7F
-                    if controller == 0x78 || controller == 0x7B {
-                        continue
-                    }
-                    if event.data0 >= 0x1D && event.data0 <= 0x1F {
-                        dispatch(engine: engine, event: event, muteMask: 0)
-                    } else {
-                        latest[Int(event.track) * 128 + Int(controller)] = index + 1
-                    }
-                case 0xC:
+        var latest = ChaseLatest(repeating: 0)
+        for index in 0..<source.count {
+            let event = source[index]
+            if event.sample > position { break }
+            switch event.type {
+            case 0xB:
+                let controller = event.data0 & 0x7F
+                if controller == 0x78 || controller == 0x7B {
+                    continue
+                }
+                if event.data0 >= 0x1D && event.data0 <= 0x1F {
                     dispatch(engine: engine, event: event, muteMask: 0)
-                case 0xE:
-                    latest[bendBase + Int(event.track)] = index + 1
-                case playbackTempoEventType:
-                    latest[tempoSlot] = index + 1
-                default:
-                    break
-                }
-            }
-
-            for track in 0..<TrackLimits.hardwareCapacity {
-                for controller in 0..<128 {
-                    let eventIndex = latest[track * 128 + controller]
-                    if eventIndex != 0 {
-                        dispatch(engine: engine, event: source[eventIndex - 1], muteMask: 0)
-                    }
-                }
-                for index in 0..<TimeDefaults.controllerDefaultCount {
-                    let defaultValue = TimeDefaults.controllerDefault(at: index)
-                    if latest[track * 128 + Int(defaultValue.controller)] == 0 {
-                        m4a_engine_cc(
-                            engine, Int32(track), defaultValue.controller, defaultValue.value)
-                    }
-                }
-                let bendIndex = latest[bendBase + track]
-                if bendIndex != 0 {
-                    dispatch(engine: engine, event: source[bendIndex - 1], muteMask: 0)
                 } else {
-                    m4a_engine_pitch_bend(engine, Int32(track), 0)
+                    latest[Int(event.track) * 128 + Int(controller)] = index + 1
+                }
+            case 0xC:
+                dispatch(engine: engine, event: event, muteMask: 0)
+            case 0xE:
+                latest[bendBase + Int(event.track)] = index + 1
+            case playbackTempoEventType:
+                latest[tempoSlot] = index + 1
+            default:
+                break
+            }
+        }
+
+        for track in 0..<TrackLimits.hardwareCapacity {
+            for controller in 0..<128 {
+                let eventIndex = latest[track * 128 + controller]
+                if eventIndex != 0 {
+                    dispatch(engine: engine, event: source[eventIndex - 1], muteMask: 0)
                 }
             }
-
-            let tempoIndex = latest[tempoSlot]
-            if tempoIndex != 0 {
-                dispatch(engine: engine, event: source[tempoIndex - 1], muteMask: 0)
-            } else {
-                m4a_engine_set_tempo_bpm(engine, Double(TimeDefaults.tempoBPM))
+            for index in 0..<TimeDefaults.controllerDefaultCount {
+                let defaultValue = TimeDefaults.controllerDefault(at: index)
+                if latest[track * 128 + Int(defaultValue.controller)] == 0 {
+                    m4a_engine_cc(
+                        engine, Int32(track), defaultValue.controller, defaultValue.value)
+                }
             }
+            let bendIndex = latest[bendBase + track]
+            if bendIndex != 0 {
+                dispatch(engine: engine, event: source[bendIndex - 1], muteMask: 0)
+            } else {
+                m4a_engine_pitch_bend(engine, Int32(track), 0)
+            }
+        }
+
+        let tempoIndex = latest[tempoSlot]
+        if tempoIndex != 0 {
+            dispatch(engine: engine, event: source[tempoIndex - 1], muteMask: 0)
+        } else {
+            m4a_engine_set_tempo_bpm(engine, Double(TimeDefaults.tempoBPM))
         }
     }
 
-    private static func primeVoices<Source: TimelineSource>(engine: UnsafeMutablePointer<M4AEngine>,
-                                                     source: Source, position: UInt64) {
+    private static func primeVoices<Source: TimelineSource>(
+        engine: UnsafeMutablePointer<M4AEngine>,
+        source: Source, position: UInt64
+    ) {
         var chasedMask: UInt16 = 0
-        withUnsafeTemporaryAllocation(
-            of: Int.self, capacity: TrackLimits.hardwareCapacity
-        ) { firstLater in
-            firstLater.initialize(repeating: 0)
-            for index in 0..<source.count {
-                let event = source[index]
-                guard event.type == 0xC else { continue }
-                let track = Int(event.track)
-                if event.sample <= position {
-                    chasedMask |= UInt16(1) << UInt16(track)
-                } else if firstLater[track] == 0 {
-                    firstLater[track] = index + 1
-                }
+        var firstLater = PerTrack(repeating: 0)
+        for index in 0..<source.count {
+            let event = source[index]
+            guard event.type == 0xC else { continue }
+            let track = Int(event.track)
+            if event.sample <= position {
+                chasedMask |= UInt16(1) << UInt16(track)
+            } else if firstLater[track] == 0 {
+                firstLater[track] = index + 1
             }
-            for track in 0..<TrackLimits.hardwareCapacity {
-                let chased = chasedMask & (UInt16(1) << UInt16(track)) != 0
-                if !chased && firstLater[track] != 0 {
-                    m4a_engine_program_change(
-                        engine, Int32(track), source[firstLater[track] - 1].data0)
-                }
+        }
+        for track in 0..<TrackLimits.hardwareCapacity {
+            let chased = chasedMask & (UInt16(1) << UInt16(track)) != 0
+            if !chased && firstLater[track] != 0 {
+                m4a_engine_program_change(
+                    engine, Int32(track), source[firstLater[track] - 1].data0)
             }
         }
     }
@@ -429,8 +462,9 @@ extension Sequencer {
                 count = Int(min(UInt64(count), next - position))
             }
             if count == 0 { count = 1 }
-            m4a_engine_process(engine, left.advanced(by: done), right.advanced(by: done),
-                               Int32(count))
+            m4a_engine_process(
+                engine, left.advanced(by: done), right.advanced(by: done),
+                Int32(count))
             position += UInt64(count)
             done += count
         }
@@ -440,8 +474,7 @@ extension Sequencer {
         engine: UnsafeMutablePointer<M4AEngine>, source: Source
     ) {
         for index in 0..<pendingReleaseCount {
-            pendingReleases[index].tick = source.loopStartTick &+
-                (pendingReleases[index].tick &- source.loopEndTick)
+            pendingReleases[index].tick = source.loopStartTick &+ (pendingReleases[index].tick &- source.loopEndTick)
             pendingReleases[index].sample = source.sample(for: pendingReleases[index].tick)
         }
 
@@ -464,8 +497,7 @@ extension Sequencer {
                 if cursor < source.count {
                     for index in cursor..<source.count {
                         let event = source[index]
-                        if event.type == 0x8 && event.track == UInt8(track) &&
-                            (event.data0 & 0x7F) == UInt8(key) {
+                        if event.type == 0x8 && event.track == UInt8(track) && (event.data0 & 0x7F) == UInt8(key) {
                             noteOff = event
                             break
                         }
@@ -494,8 +526,10 @@ extension Sequencer {
         }
     }
 
-    private static func dispatch(engine: UnsafeMutablePointer<M4AEngine>, event: SequencedEvent,
-                         muteMask: UInt32) {
+    private static func dispatch(
+        engine: UnsafeMutablePointer<M4AEngine>, event: SequencedEvent,
+        muteMask: UInt32
+    ) {
         switch event.type {
         case playbackTempoEventType:
             m4a_engine_set_tempo_bpm(engine, Double(Int(event.data1) << 7 | Int(event.data0)))
@@ -525,4 +559,3 @@ extension Sequencer {
         Int(track) * 128 + Int(key)
     }
 }
-

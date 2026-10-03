@@ -1,35 +1,42 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.Basic as Basic
 import QtQuick.Layouts
 import Porydaw.Ui
+import PorydawApp
 
-Basic.Dialog {
+Dialog {
     id: dialog
     objectName: "songConfirmationDialog"
-    required property var controller
-    required property font applicationFont
+    required property SongDockController controller
     required property real baseFontPx
+    required property var layoutSpaces
     parent: Overlay.overlay
     anchors.centerIn: parent
     modal: true
     focus: true
-    closePolicy: Popup.NoAutoClose
-    width: Math.min(parent.width - 2 * baseFontPx, Math.max(28 * baseFontPx, 340))
+    closePolicy: Popup.CloseOnEscape
+    width: Math.min(parent.width - 2 * baseFontPx, 30 * baseFontPx)
     title: controller.confirmation === "register" ? qsTr("Register Song") : qsTr("Delete Song")
     standardButtons: Dialog.Ok | Dialog.Cancel
     onAccepted: controller.acceptConfirmation(alsoVoicegroup.checked)
+    onClosed: {
+        if (controller.confirmation.length > 0)
+            controller.cancelConfirmation()
+    }
     onRejected: controller.cancelConfirmation()
     Component.onCompleted: {
         const ok = dialog.footer.standardButton(Dialog.Ok)
-        if (ok)
-            ok.text = controller.confirmation === "register" ? qsTr("Register") : qsTr("Delete")
+        if (ok) {
+            ok.text = Qt.binding(function() {
+                return controller.confirmation === "register" ? qsTr("Register") : qsTr("Delete")
+            })
+        }
     }
     contentItem: ColumnLayout {
-        spacing: dialog.baseFontPx
+        spacing: dialog.layoutSpaces.four
         Label {
+            objectName: "songConfirmationPrompt"
             Layout.fillWidth: true
-            font: dialog.applicationFont
             wrapMode: Text.WordWrap
             text: dialog.controller.confirmation === "register"
                 ? qsTr("Register %1 as %2?").arg(dialog.controller.confirmationLabel)
@@ -37,8 +44,8 @@ Basic.Dialog {
                 : qsTr("Delete %1?").arg(dialog.controller.confirmationLabel)
         }
         Label {
+            objectName: "songConfirmationDetail"
             Layout.fillWidth: true
-            font: dialog.applicationFont
             wrapMode: Text.WordWrap
             text: dialog.controller.confirmationDetail
             visible: text.length > 0
@@ -52,7 +59,6 @@ Basic.Dialog {
             checked: true
             text: qsTr("Also delete voicegroup %1 (used only by this song)")
                 .arg(dialog.controller.deletableVoicegroup)
-            font: dialog.applicationFont
         }
     }
 }

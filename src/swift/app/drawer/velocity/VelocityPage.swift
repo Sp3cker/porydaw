@@ -34,6 +34,7 @@ import QtBridge
 /// `GridCameraPolicy.seedBaseFontPx`, which is internal to this module.
 public enum VelocityPagePolicy {
     public static let seedBaseFontPx: Double = 13
+    public static let handleMarginViewportWidths: Double = 1
 }
 
 /// Where a pointer event landed in the page body. Mirrors the legacy
@@ -61,9 +62,8 @@ enum VelocityModifier {
 
 // MARK: - Published note handle
 
-/// One published note handle: stable identity, plot geometry, displayed value
-/// and state. QML draws only these values, and the page's own hit tests read the
-/// same objects, so a pointer lands on exactly what the renderer drew.
+/// One published note handle: QML places it from its ticks inside one
+/// scroll-shifted container; hit tests read its scroll-stable x.
 @MainActor
 @QtBridgeable
 public final class VelocityHandle {
@@ -97,12 +97,32 @@ public final class VelocityHandle {
 
     public init() {}
 
+    /// Everything a delegate needs, packed into one map: the delegate's
+    /// model-data object exposes stored properties only, so this is a stored
+    /// role — `refreshSpec()` must run after fields are assigned.
+    public var spec: [String: QVariantSettable] = [:]
+
+    @QtIgnored
+    func refreshSpec() {
+        spec = [
+            "tick": tick, "endTick": endTick, "y": y,
+            "stemWidth": stemWidth, "stemColor": stemColor,
+            "nodeRadius": nodeRadius, "fillColor": fillColor,
+            "outlineRadius": outlineRadius, "outlineWidth": outlineWidth,
+            "outlineColor": outlineColor,
+            "ringRadius": ringRadius, "ringWidth": ringWidth,
+            "ringColor": ringColor,
+            "selected": selected, "hovered": hovered, "dimmed": dimmed,
+            "primitiveName": primitiveName,
+        ]
+    }
+
     /// The model's no-op rule: an unchanged handle stays in place, so an
     /// unchanged row emits nothing.
     @QtIgnored
     func matches(_ other: VelocityHandle) -> Bool {
         noteIdText == other.noteIdText && tick == other.tick && endTick == other.endTick
-            && x == other.x && endX == other.endX && value == other.value && y == other.y
+            && value == other.value && y == other.y
             && selected == other.selected && hovered == other.hovered
             && preview == other.preview && dimmed == other.dimmed && level == other.level
             && label == other.label && hitRadius == other.hitRadius
@@ -123,7 +143,7 @@ public final class VelocityHandle {
 /// entry is produced per completed gesture or accepted prompt.
 @MainActor
 @QtBridgeable
-public final class VelocityPage: EditorDrawerPage {
+public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     /// The fixed production QML URL, resolved once by the container at attach.
     public static let contentUrl = QmlEngineAccess.moduleResourcePrefix + "src/ui/songview/quick/drawer/VelocityPage.qml"
 
@@ -176,10 +196,10 @@ public final class VelocityPage: EditorDrawerPage {
     public var rampLength: Double = 0
     public var rampSlopeY: Double = 0
     public var rampColor: String = ""
-    @QtTracked public var promptOpen: Bool = false
+    public var promptOpen: Bool = false
     public var promptAppearance: [String: QVariantSettable] = [:]
     public var promptFont: [String: QVariantSettable] = [:]
-    @QtTracked public var promptDraft: String = ""
+    public var promptDraft: String = ""
     public var promptError: String = ""
     public var promptTitle: String = "Note velocity"
     public var promptLabel: String = "Velocity (1-127):"
@@ -189,29 +209,30 @@ public final class VelocityPage: EditorDrawerPage {
     /// Accepted prompt values also seed subsequently drawn notes, including no-op edits.
     @QtIgnored public var onVelocityAccepted: ((UInt8) -> Void)?
 
-    public var gridLines: QListModel<SceneRect> = QListModel()
-    public var psgBands: QListModel<SceneRect> = QListModel()
-    /// The gesture transient's rects. `transient` alone is a reserved QML
-    /// keyword, so the published name carries its own noun.
-    public var transientRects: QListModel<SceneRect> = QListModel()
+    @QtTracked public var displayRevision = 0
+    public func displayList(list: Int) -> Data {
+        guard displayLists.indices.contains(list) else { return retainedEmptyDisplayList() }
+        return displayLists[list]
+    }
     public var axisTicks: QListModel<SceneRect> = QListModel()
     public var axisGraduations: QListModel<SceneRect> = QListModel()
     public var axisMarkers: QListModel<SceneRect> = QListModel()
     public var axisLabels: QListModel<SceneText> = QListModel()
+    /// Retained tick-space rows translate with the camera; overscan edges admit and retire rows.
     public var handles: QListModel<VelocityHandle> = QListModel()
 
     /// Distinct content rebuilds: shared-playhead movement inside one voice
     /// context, and repeated equal publications, rebuild nothing.
     @QtIgnored public internal(set) var contentBuildCount: UInt64 = 0
     /// Shared-playhead presentations the page consumed.
-    @QtIgnored public private(set) var playheadPresentationCount: UInt64 = 0
+    public private(set) var playheadPresentationCount: UInt64 = 0
     /// The tick and context slot the page last presented.
-    @QtIgnored public private(set) var presentedContextTick: Tick = 0
-    @QtIgnored public private(set) var presentedContextSlot: Int = -1
-    @QtIgnored public private(set) var presentedPlaying = false
+    public private(set) var presentedContextTick: Tick = 0
+    public private(set) var presentedContextSlot: Int = -1
+    public private(set) var presentedPlaying = false
     /// The last publication the page consumed, so one published change that
     /// reaches the page through both of its signals counts once.
-    @QtIgnored private var lastPresentedPublication: (tick: Tick, playing: Bool)?
+    private var lastPresentedPublication: (tick: Tick, playing: Bool)?
     @QtIgnored public var hasGesture: Bool { gesture != nil }
     /// The primary track's selected notes as the published identity text, for the
     /// lane's real-input cases: the grid's own summary is only as fresh as its
@@ -240,6 +261,13 @@ public final class VelocityPage: EditorDrawerPage {
     @QtIgnored var axis = VelocityAxisModel()
     @QtIgnored var resolvedContextValue = VelocityVoiceContext(status: .unresolvedVoice)
     @QtIgnored var publishedHandles: [VelocityHandle] = []
+    @QtIgnored var publishedHandleWindow: ClosedRange<Double>?
+    @QtIgnored var drawingBands: [DrawerStaticRect] = []
+    // Retained display-list buffers (list 0 grid + bands, list 1 transient)
+    // and the writer reused across frames; lists rebuild together with one bump.
+    @QtIgnored var displayLists: [Data] = []
+    @QtIgnored var listWriter = DisplayListWriter()
+    @QtIgnored var cachedEmptyDisplayList: Data?
     @QtIgnored var gesture: VelocityGestureState?
     @QtIgnored var prompt: VelocityPromptState?
     @QtIgnored var hovered: NoteID?
@@ -249,7 +277,6 @@ public final class VelocityPage: EditorDrawerPage {
     @QtIgnored var contextTick: Tick = 0
     @QtIgnored var playing = false
     @QtIgnored var lastContextKey: VelocityContextKey?
-    @QtIgnored var typographyCache: (key: TypographyKey, value: GridTypography)?
     @QtIgnored var metricsCache: (key: MetricsKey, value: GridMetrics)?
     @QtIgnored var handlesByID: [NoteID: VelocityHandle] = [:]
     @QtIgnored var paintCandidates: [Note] = []
@@ -270,13 +297,6 @@ public final class VelocityPage: EditorDrawerPage {
         var height: Double
     }
 
-
-    struct TypographyKey: Equatable {
-        var baseFontPx: Double
-        var devicePixelRatio: Double
-        var rowHeight: Double
-    }
-
     public init(baseFontPx: Double = VelocityPagePolicy.seedBaseFontPx) {
         let base = baseFontPx.isFinite && baseFontPx > 0
             ? baseFontPx
@@ -289,7 +309,7 @@ public final class VelocityPage: EditorDrawerPage {
         }
         geometry = VelocityNodeGeometry(baseFontPx: base, devicePixelRatio: 1)
         promptAppearance = PromptAppearance.metrics(base: base)
-        promptFont = PromptAppearance.font(base: base)
+        promptFont = PromptAppearance.font(typography: Typography(baseFontPx: Int(base.rounded())))
     }
 
     /// Installs the document and palette owners. Called before the container
@@ -298,6 +318,7 @@ public final class VelocityPage: EditorDrawerPage {
     public func attach(session: DocumentSession, palette: GridPalette) {
         metricsCache = nil
         handleGeometryKey = nil
+        publishedHandleWindow = nil
         self.session = session
         self.palette = palette
         contextTick = session.editCursor
@@ -309,10 +330,13 @@ public final class VelocityPage: EditorDrawerPage {
     @QtIgnored
     public func detach() {
         cancelSectionInteraction()
+        // The outgoing selection dies with the page, so no survivor inherits it.
+        session?.setSelectedNotes([])
         session = nil
         hovered = nil
         metricsCache = nil
         handleGeometryKey = nil
+        publishedHandleWindow = nil
         paintCandidates = []
         refreshInteractionPublished()
         publishHandles([])
@@ -345,7 +369,7 @@ public final class VelocityPage: EditorDrawerPage {
         if self.baseFontPx != nextFont {
             self.baseFontPx = nextFont
             promptAppearance = PromptAppearance.metrics(base: nextFont)
-            promptFont = PromptAppearance.font(base: nextFont)
+            promptFont = PromptAppearance.font(typography: Typography(baseFontPx: Int(nextFont.rounded())))
         }
         if changed { rebuildContent() }
     }
@@ -379,19 +403,6 @@ public final class VelocityPage: EditorDrawerPage {
         let next = VelocityContextKey(context: presented, playing: false)
         guard lastContextKey != next else { return }
         rebuildContent()
-    }
-
-    /// Camera-only publication: the same notes at new plot positions. Nothing
-    /// that feeds the value axis changed, so the build derives the same axis and
-    /// the page publishes exactly the rows it published before.
-    @QtIgnored
-    public func refreshCamera() {
-        guard session != nil else { return }
-        let snapshot = buildScene()
-        publishHandles(snapshot.handles)
-        publishGrid(snapshot)
-        publishBands(snapshot)
-        publishTransient()
     }
 
     /// One shared-playhead presentation, delivered by `ApplicationSession`'s

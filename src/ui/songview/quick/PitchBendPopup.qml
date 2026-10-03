@@ -12,7 +12,7 @@ Rectangle {
 
     required property var bridge
 
-    property font fallbackFont
+    required property font fallbackFont
 
     readonly property var metrics: bridge ? bridge.metrics : null
     readonly property var appearance: bridge ? bridge.appearance : null
@@ -62,13 +62,20 @@ Rectangle {
         onWheel: (wheel) => wheel.accepted = true
     }
 
-    // The focused graph or numeric field claims its own keys first. The
-    // popup handles Escape and vertex deletion; no timeline command may leak
-    // through this shared overlay.
+    Keys.onShortcutOverride: (event) => {
+        if (bridge && bridge.isOpen
+                && !bendRangeField.textInput.activeFocus
+                && !lfoSpeedField.textInput.activeFocus
+                && !event.matches(StandardKey.Undo) && !event.matches(StandardKey.Redo))
+            event.accepted = true
+    }
+
     Keys.onPressed: (event) => {
-        if (event.key === Qt.Key_Escape)
-            bridge.cancelAndClose()
-        else
+        if (event.key === Qt.Key_Escape) {
+            event.accepted = false
+            return
+        }
+        if (!bendRangeField.textInput.activeFocus && !lfoSpeedField.textInput.activeFocus)
             bridge.routeUnclaimedKey(event.key, event.modifiers, event.isAutoRepeat)
         event.accepted = true
     }
@@ -115,6 +122,8 @@ Rectangle {
 
         Text {
             id: liveValue
+            objectName: labels.graph && labels.graph === pitchGraph
+                        ? "pitchBendLiveValue" : "modWheelLiveValue"
 
             x: labels.canvas.x
             y: 0
@@ -299,9 +308,19 @@ Rectangle {
             color: graphCanvas.lane ? graphCanvas.lane.plotBackground : "transparent"
             clip: true
         }
-        TimelineQuickItem {
-            anchors.fill: parent
-            rects: graphCanvas.lane ? graphCanvas.lane.gridLines : []
+        Repeater {
+            model: graphCanvas.lane ? graphCanvas.lane.gridLines : []
+            delegate: Rectangle {
+                required property var frame
+                required property string fillColor
+                required property string primitiveName
+                objectName: primitiveName
+                x: frame.x
+                y: frame.y
+                width: frame.width
+                height: frame.height
+                color: fillColor
+            }
         }
         Repeater {
             id: renderedCurveSegments
@@ -374,7 +393,7 @@ Rectangle {
             }
             onCanceled: {
                 if (graphCanvas.lane)
-                    graphCanvas.lane.cancelGesture()
+                    graphCanvas.lane.settleGesture()
             }
             onWheel: (wheel) => {
                 if (graphCanvas.lane && graphCanvas.inCanvas(wheel.x, wheel.y))
@@ -387,7 +406,7 @@ Rectangle {
 
     GraphCanvas {
         id: pitchGraph
-        lane: bridge ? bridge.pitchGraph() : null
+        lane: bridge ? bridge.currentPitch : null
         objectName: "pitchBendGraph"
         x: 0
         y: root.headerHeight
@@ -398,7 +417,7 @@ Rectangle {
 
     GraphCanvas {
         id: modGraph
-        lane: bridge ? bridge.modGraph() : null
+        lane: bridge ? bridge.currentMod : null
         objectName: "modWheelGraph"
         x: 0
         y: root.headerHeight + root.graphHeight
@@ -443,6 +462,7 @@ Rectangle {
 
     Text {
         id: titleText
+        objectName: "pitchBendTitle"
 
         x: root.outerInset
         y: 0
@@ -459,6 +479,7 @@ Rectangle {
 
     Text {
         id: subtitleText
+        objectName: "pitchBendDescription"
 
         x: root.outerInset
         y: root.titleHeight
@@ -506,6 +527,13 @@ Rectangle {
             if (bridge)
                 bridge.setBendRange(committed)
         }
+        Connections {
+            target: bendRangeField.textInput.Keys
+            function onShortcutOverride(event) {
+                event.accepted = event.key !== Qt.Key_Space
+                    && !event.matches(StandardKey.Undo) && !event.matches(StandardKey.Redo)
+            }
+        }
     }
 
     Text {
@@ -540,6 +568,13 @@ Rectangle {
         onValueCommitted: (committed) => {
             if (bridge)
                 bridge.setLfoSpeed(committed)
+        }
+        Connections {
+            target: lfoSpeedField.textInput.Keys
+            function onShortcutOverride(event) {
+                event.accepted = event.key !== Qt.Key_Space
+                    && !event.matches(StandardKey.Undo) && !event.matches(StandardKey.Redo)
+            }
         }
     }
 }

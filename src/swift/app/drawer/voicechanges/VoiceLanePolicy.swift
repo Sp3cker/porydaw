@@ -117,21 +117,49 @@ public enum VoiceLanePolicy {
         return best
     }
 
+    static func shortName(_ view: BankSlotView) -> String {
+        let name: String
+        let type: String
+        if let voice = view.voice {
+            name = displayName(voice.symbol)
+            type = voiceTypeName(macro: voice.macro)
+        } else if let tone = view.tone {
+            name = tone.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            type = m4aVoiceTypeName(UInt8(clamping: tone.type))
+        } else {
+            name = ""
+            type = ""
+        }
+        if name.isEmpty { return type.isEmpty ? "Voice" : type }
+        return type.isEmpty ? name : "\(name) (\(type))"
+    }
+
+    static func displayName(_ symbol: String) -> String {
+        var name = symbol
+        for prefix in ["DirectSoundWaveData_", "ProgrammableWaveData_", "voicegroup_"]
+        where name.hasPrefix(prefix) && name.utf8.count > prefix.utf8.count {
+            name = String(name.dropFirst(prefix.count))
+            break
+        }
+        if name.utf8.count > 47 {
+            var bytes = 0
+            name = String(name.unicodeScalars.prefix { scalar in
+                bytes += scalar.utf8.count
+                return bytes <= 47
+            })
+        }
+        return name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// `VoiceChangeArea::paintTextFor`: the program number plus the slot's short
     /// name. A blank or unresolvable slot keeps the program number and gains no
     /// name of its own.
     public static func label(slot: Int, view: BankSlotView?) -> String {
         guard slot >= 0, let view else { return "" }
-        guard let voice = view.voice else { return String(format: "%03d", slot) }
-        let type = voiceTypeName(macro: voice.macro)
-        let name = voice.symbol.trimmingCharacters(in: .whitespacesAndNewlines)
-        let short: String
-        if !name.isEmpty {
-            short = type.isEmpty ? name : "\(name) (\(type))"
-        } else {
-            short = type.isEmpty ? "Voice" : type
+        guard view.voice != nil || view.tone != nil else {
+            return String(format: "%03d", slot)
         }
-        return String(format: "%03d %@", slot, short)
+        return String(format: "%03d %@", slot, shortName(view))
     }
 
     /// `VoicePickerModel`: `"%03d  %@"` with the picker's own separator.

@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.Basic as Basic
 import QtQuick.Layouts
 
 // Help > About porydaw: the QMessageBox::about body from the old MainWindow
@@ -11,14 +10,14 @@ import QtQuick.Layouts
 //
 // Sizing follows the settings-dialog convention: fixed font-derived geometry
 // instead of content-driven implicit sizes. The body lays out bottom-up in a
-// ColumnLayout (the SongConfirmDialog pattern in the same Basic.Dialog
+// ColumnLayout (the SongConfirmDialog pattern in the same Dialog
 // family) and never reads the dialog's available width, so the dialog's
 // implicitHeight no longer feeds back into its own content.
-Basic.Dialog {
+Dialog {
     id: about
     objectName: "shellAboutDialog"
     required property QtObject colors
-    required property font applicationFont
+    required property QtObject applicationSession
     required property real baseFontPx
     // Qt exposes no qVersion() binding, so the numeric Qt version from the
     // old "Running on Qt" line cannot be rendered; the host application
@@ -30,6 +29,7 @@ Basic.Dialog {
     modal: true
     focus: true
     standardButtons: Dialog.Close
+    font: Qt.font(applicationSession.typographyFonts.body)
     width: Math.min(parent.width - 4 * baseFontPx,
                     aboutMetrics.averageCharacterWidth * 68 + 4 * baseFontPx)
     height: Math.min(parent.height - 4 * baseFontPx,
@@ -40,15 +40,15 @@ Basic.Dialog {
                         ? about.footer.implicitHeight + about.spacing : 0))
     FontMetrics {
         id: aboutMetrics
-        font: about.applicationFont
+        font: about.font
     }
     contentItem: ColumnLayout {
         id: bodyColumn
         Label {
+            objectName: "shellAboutBody"
             Layout.fillWidth: true
             textFormat: Text.RichText
             wrapMode: Text.WordWrap
-            font: about.applicationFont
             color: about.colors.windowText
             linkColor: about.colors.windowText
             onLinkActivated: link => Qt.openUrlExternally(link)

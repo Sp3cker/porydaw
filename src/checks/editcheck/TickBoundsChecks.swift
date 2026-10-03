@@ -20,19 +20,19 @@ func unsignedTicksAndRawSignaturePrecedence(_ report: CheckReport) {
         ], endTick: offTick),
     ]))
     let cppID = "swiftdocfeed/SwiftDocFeedTest::unsignedTicksAndRawSignaturePrecedence"
-    report.expectEqual(2, document.engineTracks.usedTrackCount,
+    report.expectEqual(expected: 2, actual: document.engineTracks.usedTrackCount,
                        cppID: cppID, what: "conductor chunk leaves two note tracks")
-    report.expectEqual(960, document.ticksPerBeat,
+    report.expectEqual(expected: 960, actual: document.ticksPerBeat,
                        cppID: cppID, what: "document keeps the 960-tick division")
-    report.expectEqual(["0:64:2147483664:32", "1:72:2147483664:32"],
-                       (0..<2).flatMap { track in
+    report.expectEqual(expected: ["0:64:2147483664:32", "1:72:2147483664:32"],
+                       actual: (0..<2).flatMap { track in
                            document.notes(in: track).map {
                                "\(track):\($0.pitch):\($0.tick):\($0.duration)"
                            }
                        },
                        cppID: cppID, what: "both tracks preserve unsigned note ticks and durations")
-    report.expectEqual(["7:3", "5:31", "0:255"],
-                       document.timeSignatures.map {
+    report.expectEqual(expected: ["7:3", "5:31", "0:255"],
+                       actual: document.timeSignatures.map {
                            "\($0.numerator):\($0.denominatorPower)"
                        },
                        cppID: cppID, what: "raw signature bytes retain order and full-width values")

@@ -33,7 +33,6 @@ class SwiftCoreTest final : public QObject
     void voicegroupValues();
     void saveCore();
     void voicegroupEditing();
-    void catalogAbsent();
     void projectStoreChecks();
     void voicegroupContext();
     void voicegroupBankLogic();
@@ -46,6 +45,8 @@ class SwiftCoreTest final : public QObject
     void bankLeases();
     void exportChecks();
     void themeColor();
+    void displayList();
+    void sampleCheck();
 };
 
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);

@@ -1,6 +1,6 @@
 /// An adopted bank publication after an edit, or a confirmed not-applied conflict.
 public enum ProjectBankEditOutcome: Sendable {
-    case applied(lease: ProjectBankLease, materializationToken: UInt64?)
+    case applied(lease: ProjectBankLease, materialization: BlankSlotMaterialization?, materializationToken: UInt64?)
     case conflict(voicegroup: VoicegroupId)
 }
 
@@ -14,7 +14,9 @@ extension ProjectStore {
     public func applyVoicegroupEdit(
         lease: ProjectBankLease, operation: VoicegroupEditOperation
     ) async throws -> ProjectBankEditOutcome {
-        try await run { [self] in try await self.applyVoicegroupEditProject(lease: lease, operation: operation) }
+        let store = try editingStore()
+        let result = try store.applyVoicegroupEdit(input: .init(id: lease.id, operation: operation))
+        return try adoptedEditOutcome(result)
     }
 
     /// Consumes a blank-slot token and adopts the reverted in-memory bank.
@@ -26,9 +28,9 @@ extension ProjectStore {
     public func revertBlankSlot(
         lease: ProjectBankLease, materializationToken: UInt64
     ) async throws -> ProjectBankEditOutcome {
-        try await run { [self] in
-            try await self.revertBlankSlotProject(lease: lease, materializationToken: materializationToken)
-        }
+        let store = try editingStore()
+        let result = try store.revertBlankSlot(id: lease.id, materializationToken: materializationToken)
+        return try adoptedEditOutcome(result)
     }
 
     /// Adopts a staged preview bank without modifying the stored publication.
@@ -36,26 +38,6 @@ extension ProjectStore {
     /// - Returns: A new lease, or nil when staging or loading the preview fails.
     /// - Throws: `VoicegroupStoreError` if the project is closed or the source cannot load.
     public func preview(lease: ProjectBankLease) async throws -> ProjectBankLease? {
-        try await run { [self] in try await self.previewProject(lease: lease) }
-    }
-
-    private func applyVoicegroupEditProject(
-        lease: ProjectBankLease, operation: VoicegroupEditOperation
-    ) throws -> ProjectBankEditOutcome {
-        let store = try editingStore()
-        let result = try store.applyVoicegroupEdit(input: .init(id: lease.id, operation: operation))
-        return try adoptedEditOutcome(result)
-    }
-
-    private func revertBlankSlotProject(
-        lease: ProjectBankLease, materializationToken: UInt64
-    ) throws -> ProjectBankEditOutcome {
-        let store = try editingStore()
-        let result = try store.revertBlankSlot(id: lease.id, materializationToken: materializationToken)
-        return try adoptedEditOutcome(result)
-    }
-
-    private func previewProject(lease: ProjectBankLease) throws -> ProjectBankLease? {
         let store = try editingStore()
         guard let handle = store.preview(id: lease.id),
               let current = store.currentPublication(id: lease.id) else { return nil }
@@ -75,7 +57,8 @@ extension ProjectStore {
         switch result {
         case .applied(let applied):
             let adopted = try adoptBankLease(view: applied.view)
-            return .applied(lease: adopted, materializationToken: applied.materializationToken)
+            return .applied(lease: adopted, materialization: applied.materialization,
+                            materializationToken: applied.materializationToken)
         case .conflict(let conflict):
             return .conflict(voicegroup: conflict.voicegroup)
         }

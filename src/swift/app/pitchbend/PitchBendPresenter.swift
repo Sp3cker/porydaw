@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawAppCommands
 import QtBridge
 
 /// One document-scoped popup. Draft gestures stay in the kernels; only completed
@@ -12,27 +13,32 @@ public final class PitchBendPresenter {
     @QtTracked public var lfoSpeed = 22
     @QtTracked public var noteDescription = ""
     @QtTracked public var description = ""
-    @QtTracked public var metrics: [String: QVariantSettable] = [:]
-    @QtTracked public var appearance: [String: QVariantSettable] = [:]
+    public var metrics: [String: QVariantSettable] = [:]
+    public var appearance: [String: QVariantSettable] = [:]
     @QtTracked public var anchorX = 0.0
     @QtTracked public var anchorY = 0.0
     @QtTracked public var anchorWidth = 0.0
     @QtTracked public var anchorHeight = 0.0
-    @QtIgnored private let session: DocumentSession
-    @QtIgnored private let grid: PianoGrid
-    @QtIgnored private let palette: GridPalette
-    @QtIgnored private var geometry: PitchBendGeometry
-    @QtIgnored private var note: Note?
-    @QtIgnored private var noteEnd = 0
-    @QtIgnored private var endRange = 2
-    @QtIgnored private var endSpeed = 22
-    @QtIgnored private var currentPitch: PitchBendLane?
-    @QtIgnored private var currentMod: PitchBendLane?
+    private let session: DocumentSession
+    private let grid: PianoGrid
+    private let palette: GridPalette
+    private var typography: Typography
+    private var geometry: PitchBendGeometry
+    private var note: Note?
+    private var noteEnd = 0
+    private var endRange = 2
+    private var endSpeed = 22
+    @QtTracked public var currentPitch: PitchBendLane?
+    @QtTracked public var currentMod: PitchBendLane?
+    @QtIgnored public var onAuditionFromTick: ((Tick) -> Void)?
+    @QtIgnored public var onSoloTracksRequested: (() -> Void)?
 
-    public init(session: DocumentSession, grid: PianoGrid, palette: GridPalette) {
+    public init(session: DocumentSession, grid: PianoGrid, palette: GridPalette,
+                typography: Typography = Typography(baseFontPx: 13)) {
         self.session = session
         self.grid = grid
         self.palette = palette
+        self.typography = typography
         geometry = PitchBendGeometry(fontPx: grid.baseFontPx,
                                      lineSpacing: grid.baseFontPx, dpr: 1)
         configure(fontPx: grid.baseFontPx, lineSpacing: grid.baseFontPx, dpr: 1)
@@ -47,9 +53,12 @@ public final class PitchBendPresenter {
         return currentMod
     }
 
-    /// Recalculate from the actual popup's application font and Quick window DPR.
     public func configure(fontPx: Double, lineSpacing: Double, dpr: Double) {
         guard fontPx > 0, lineSpacing > 0 else { return }
+        let nextBase = Int(fontPx.rounded())
+        if nextBase != typography.baseFontPx {
+            typography = Typography(baseFontPx: nextBase)
+        }
         geometry = PitchBendGeometry(fontPx: fontPx, lineSpacing: lineSpacing, dpr: dpr)
         metrics = geometry.metrics
         appearance = [
@@ -58,9 +67,9 @@ public final class PitchBendPresenter {
             "secondaryText": palette.secondaryText,
             "outline": palette.outline,
             "trackColor": palette.noteFill(track: note?.track ?? 0, velocity: 127),
-            "titleFont": ["pixelSize": fontPx, "bold": true] as [String: QVariantSettable],
-            "captionFont": ["pixelSize": fontPx * 0.85] as [String: QVariantSettable],
-            "monospaceFont": ["pixelSize": fontPx] as [String: QVariantSettable],
+            "titleFont": typography.bodyBold.map,
+            "captionFont": typography.caption.map,
+            "monospaceFont": typography.bodyMono.map,
             "dragInput": [
                 "background": palette.buttonBackground,
                 "text": palette.buttonText,
@@ -68,11 +77,11 @@ public final class PitchBendPresenter {
                 "focus": palette.focusOutline,
                 "selection": palette.tabSelectedBackground,
                 "selectionText": palette.selectionText,
-                "font": ["pixelSize": fontPx] as [String: QVariantSettable],
-                "radius": geometry.hairline,
+                "font": typography.body.map,
+                "radius": Double(typography.space(.one)),
                 "borderWidth": geometry.hairline,
-                "horizontalPadding": fontPx / 4,
-                "verticalPadding": fontPx / 8,
+                "horizontalPadding": Double(typography.space(.one)),
+                "verticalPadding": Double(typography.space(.half)),
                 "dragThreshold": geometry.scrubThreshold,
             ] as [String: QVariantSettable],
         ]
@@ -93,8 +102,8 @@ public final class PitchBendPresenter {
         cancelAndClose()
         self.note = note
         noteEnd = end
-        let x0 = session.camera.displayX(tick: Double(note.tick), origin: 0, dpr: grid.devicePixelRatio)
-        let x1 = session.camera.displayX(tick: Double(end), origin: 0, dpr: grid.devicePixelRatio)
+        let x0 = session.camera.viewX(tick: Double(note.tick), dpr: grid.devicePixelRatio)
+        let x1 = session.camera.viewX(tick: Double(end), dpr: grid.devicePixelRatio)
         let row = session.camera.projection.row(forPitch: Int(note.pitch))
         anchorX = x0
         anchorWidth = max(grid.baseFontPx / 6, x1 - x0)
@@ -108,13 +117,13 @@ public final class PitchBendPresenter {
                                 palette: palette, track: note.track)
         pitch.bendRange = bendRange
         pitch.rebuild()
-        pitch.onCommit = { [weak self, weak pitch] in
+        pitch.onCommit = { [weak self, weak pitch] sampledStroke in
             guard let self, let pitch else { return }
-            self.commit(pitch, lane: .pitchBend)
+            self.commit(pitch, lane: .pitchBend, sampledStroke: sampledStroke)
         }
-        mod.onCommit = { [weak self, weak mod] in
+        mod.onCommit = { [weak self, weak mod] sampledStroke in
             guard let self, let mod else { return }
-            self.commit(mod, lane: .controller(1))
+            self.commit(mod, lane: .controller(1), sampledStroke: sampledStroke)
         }
         pitch.onWheelSteps = { [weak self] steps in
             guard let self else { return }
@@ -131,6 +140,16 @@ public final class PitchBendPresenter {
         guard isOpen else { return }
         currentPitch?.cancelGesture()
         currentMod?.cancelGesture()
+        isOpen = false
+        currentPitch = nil
+        currentMod = nil
+        note = nil
+    }
+
+    public func settleAndClose() {
+        guard isOpen else { return }
+        currentPitch?.settleGesture()
+        currentMod?.settleGesture()
         isOpen = false
         currentPitch = nil
         currentMod = nil
@@ -216,8 +235,14 @@ public final class PitchBendPresenter {
             currentMod?.kernel.finish()
             return true
         }
-        _ = modifiers
-        _ = autoRepeat
+        if !autoRepeat && KeybindingRegistry().matches(key, modifiers, "transport.play_pause") {
+            if let note { onAuditionFromTick?(Tick(note.tick)) }
+            return true
+        }
+        if KeybindingRegistry().matches(key, modifiers, "roll.solo_tracks") {
+            onSoloTracksRequested?()
+            return true
+        }
         return false
     }
 
@@ -248,27 +273,58 @@ public final class PitchBendPresenter {
         }
         points[Int(note.tick)] = entering
         points[noteEnd] = ending
+        let session = self.session
         return PitchBendKernel(lane: graphLane, geometry: geometry,
                                startTick: Int(note.tick), endTick: noteEnd,
-                               snapTicks: grid.snapTicks,
-                               fineTicks: Int(TimelineSnapPolicy.clockTicks(
-                                   division: session.document.ticksPerBeat,
-                                   extendedClocks: session.document.state.config.extendedClocks)),
+                               fineTicks: Int(session.grid.fineGridTicks(camera: session.camera)),
+                               snap: { [unowned session] tick, fine in
+                                   Int(session.grid.snapTick(tick, camera: session.camera,
+                                                             fine: fine))
+                               },
+                               snapUp: { [unowned session] tick, fine in
+                                   Int(session.grid.snapTickUp(tick + 0.5,
+                                                               camera: session.camera, fine: fine))
+                               },
                                points: points, endValue: ending)
     }
 
     private func spanStillPresent() -> Bool {
         guard let note, let current = session.document.note(note.id) else { return false }
-        return current.track == note.track && current.tick == note.tick
-            && current.endTick == note.endTick && current.pitch == note.pitch
+        if current.track != note.track { return false }
+        if current.tick != note.tick { return false }
+        if current.endTick != note.endTick { return false }
+        return current.pitch == note.pitch
     }
 
-    private func commit(_ graph: PitchBendLane, lane: Lane) {
+    private func commit(_ graph: PitchBendLane, lane: Lane, sampledStroke: Bool = false) {
         guard isOpen, let note, spanStillPresent() else { return }
         let sorted = graph.kernel.orderedPoints
+        var points: [LaneWrite] = []
+        points.reserveCapacity(sorted.count)
+        if sampledStroke {
+            var previousValue = 0
+            var previousTick = 0
+            var hasPrevious = false
+            for point in sorted {
+                let endpoint = point.tick == graph.kernel.startTick
+                    || point.tick == graph.kernel.endTick
+                let fineSample = hasPrevious && point.tick > previousTick
+                    && point.tick - previousTick == graph.kernel.fineTicks
+                if endpoint || !hasPrevious || point.value != previousValue || fineSample {
+                    points.append(LaneWrite(tick: Tick(point.tick), value: point.value))
+                }
+                previousValue = point.value
+                previousTick = point.tick
+                hasPrevious = true
+            }
+        } else {
+            for point in sorted {
+                points.append(LaneWrite(tick: Tick(point.tick), value: point.value))
+            }
+        }
         session.document.writeLane(track: note.track, lane: lane,
                                    from: note.tick, through: Tick(noteEnd),
-                                   points: sorted.map { LaneWrite(tick: Tick($0.tick), value: $0.value) })
+                                   points: points)
     }
 
     private func refreshDescription() {

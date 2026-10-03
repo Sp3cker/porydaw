@@ -8,10 +8,10 @@ internal func xcmdPairedProjection(_ report: CheckReport) {
         Xcmd.Event(index: 7, tick: 3, stream: 0, controller: 0x1F, value: 35),
     ]
     let projection = Xcmd.project(events)
-    report.expectEqual([34, 35], projection.points.map { Int($0.value) },
+    report.expectEqual(expected: [34, 35], actual: projection.points.map { Int($0.value) },
                        cppID: "xcmdcheck/XcmdTest::sharedSelectorServesTwoCompletions",
                        what: "one selector serves every payload in its epoch")
-    report.expectEqual([2, 7, 9], projection.consumed,
+    report.expectEqual(expected: [2, 7, 9], actual: projection.consumed,
                        cppID: "xcmdcheck/XcmdTest::consumedIsSortedDedupIndexSet",
                        what: "consumed identities are sorted")
     let opaque = Xcmd.project([

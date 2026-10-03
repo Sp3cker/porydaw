@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 
 /// Ports the pure colour/resolver/contrast rules of
 /// `src/checks/themelayout/tst_themelayout_color.cpp` and the portable
@@ -17,7 +17,7 @@ import PorydawApp
 
 private let themeColorEpsilon = 1e-12
 
-private func themeRefChannels(_ hex: String) -> (r: Int, g: Int, b: Int, a: Int) {
+func themeRefChannels(_ hex: String) -> (r: Int, g: Int, b: Int, a: Int) {
     let body = hex.dropFirst()
     var value: UInt64 = 0
     Scanner(string: String(body)).scanHexInt64(&value)
@@ -55,7 +55,7 @@ private func themeRefLuminance(_ hex: String) -> Double {
     return themeRefLuminance(r: c.r, g: c.g, b: c.b)
 }
 
-private func themeRefContrast(_ first: String, _ second: String) -> Double {
+func themeRefContrast(_ first: String, _ second: String) -> Double {
     let lighter = max(themeRefLuminance(first), themeRefLuminance(second))
     let darker = min(themeRefLuminance(first), themeRefLuminance(second))
     return (lighter + 0.05) / (darker + 0.05)
@@ -69,8 +69,12 @@ internal func runThemeColorChecks(_ report: CheckReport) {
     themeModeAndContrastValidation(report)
     themePresetValueChecks(report)
     themeTextContrastChecks(report)
+    trackHeaderBudgetContrastChecks(report)
+    polyphonyFlashContrastChecks(report)
     themeGridContrastChecks(report)
     themeTrackIdentityChecks(report)
+    themeColorTableChecks(report)
+    noteLabelContrastChecks(report)
     themeCommitPreviewRevertChecks(report)
 }
 
@@ -121,229 +125,28 @@ private let themeValidationID = "themelayout/ThemeLayoutTest::settingsRepair"
 
 @MainActor
 private func themeModeAndContrastValidation(_ report: CheckReport) {
-    report.expectEqual("vanilla", ShellAppearance.mode("vanilla"),
+    report.expectEqual(expected: "vanilla", actual: ShellAppearance.mode("vanilla"),
                        cppID: themeValidationID, what: "vanilla survives validation")
-    report.expectEqual("dark-neutral-high", ShellAppearance.mode("dark-neutral-high"),
+    report.expectEqual(expected: "dark-neutral-high", actual: ShellAppearance.mode("dark-neutral-high"),
                        cppID: themeValidationID, what: "dark-neutral-high survives validation")
-    report.expectEqual("immaterial", ShellAppearance.mode("immaterial"),
+    report.expectEqual(expected: "immaterial", actual: ShellAppearance.mode("immaterial"),
                        cppID: themeValidationID, what: "immaterial survives validation")
-    report.expectEqual("vanilla", ShellAppearance.mode("custom"),
+    report.expectEqual(expected: "vanilla", actual: ShellAppearance.mode("custom"),
                        cppID: themeValidationID, what: "unknown mode repairs to vanilla")
-    report.expectEqual("vanilla", ShellAppearance.mode(""),
+    report.expectEqual(expected: "vanilla", actual: ShellAppearance.mode(""),
                        cppID: themeValidationID, what: "empty mode repairs to vanilla")
-    report.expectEqual(80, ShellAppearance.contrast("80"),
+    report.expectEqual(expected: 80, actual: ShellAppearance.contrast("80"),
                        cppID: themeValidationID, what: "stored contrast 80 survives")
-    report.expectEqual(50, ShellAppearance.contrast("banana"),
+    report.expectEqual(expected: 50, actual: ShellAppearance.contrast("banana"),
                        cppID: themeValidationID, what: "unparseable contrast falls back to 50")
-    report.expectEqual(50, ShellAppearance.contrast(""),
+    report.expectEqual(expected: 50, actual: ShellAppearance.contrast(""),
                        cppID: themeValidationID, what: "missing contrast falls back to 50")
-    report.expectEqual(100, ShellAppearance.contrast("200"),
+    report.expectEqual(expected: 100, actual: ShellAppearance.contrast("200"),
                        cppID: themeValidationID, what: "contrast clamps to 100")
-    report.expectEqual(0, ShellAppearance.contrast("-3"),
+    report.expectEqual(expected: 0, actual: ShellAppearance.contrast("-3"),
                        cppID: themeValidationID, what: "contrast clamps to 0")
-    report.expectEqual(80, ShellAppearance.contrast("  80  "),
+    report.expectEqual(expected: 80, actual: ShellAppearance.contrast("  80  "),
                        cppID: themeValidationID, what: "contrast tolerates surrounding whitespace")
-}
-
-// MARK: - Preset values and role contracts (themeCompleteness, lane legibility)
-
-// Literals below come from presetcolors.h makeVanilla (lines 316-372),
-// makeDarkNeutralHigh (375-432) and makeImmaterial (434-489), with two
-// intentional text-contrast walks: vanilla secondary is #4D4742 (preset
-// #57514C sat 3.87:1 on chrome #BDB5AF) and implicitSignature/rulerDetailText
-// alias the secondary ink in every theme (never the disabled ink). The
-// pressed-text rule (vanilla resting text, dark presets resting-button
-// surface) comes from themeresolver.cpp:38-52.
-private struct ThemePresetRow {
-    let mode: String
-    let window: String
-    let text: String
-    let disabled: String
-    let outline: String
-    let selection: String
-    let accent: String
-    let chrome: String
-    let separator: String
-    let control: String
-    let controlHover: String
-    let controlPressed: String
-    let pressedText: String
-    let item: String
-    let itemHover: String
-    let secondary: String
-    let grid: String
-    let roll: String
-    let accidental: String
-    let keyboardSeparator: String
-}
-
-private let themePresetRows: [ThemePresetRow] = [
-    ThemePresetRow(mode: "vanilla",
-                   window: "#C9C1BB", text: "#302C29", disabled: "#8B847E",
-                   outline: "#8C857F", selection: "#B9E8EE", accent: "#00CADB",
-                   chrome: "#BDB5AF", separator: "#5B5652", control: "#E1DBD6",
-                   controlHover: "#ECE7E1", controlPressed: "#F5B61C", pressedText: "#302C29",
-                   item: "#D2D0CA", itemHover: "#E7E2DC", secondary: "#4D4742",
-                   grid: "#3F040000", roll: "#D4CCC7", accidental: "#B4ACA6",
-                   keyboardSeparator: "#BCB4AF"),
-    ThemePresetRow(mode: "dark-neutral-high",
-                   window: "#373737", text: "#D8D8D8", disabled: "#A0A0A0",
-                   outline: "#505050", selection: "#9FCDD7", accent: "#037384",
-                   chrome: "#424242", separator: "#262626", control: "#1A1A1A",
-                   controlHover: "#5C5C5C", controlPressed: "#00D3F2", pressedText: "#1A1A1A",
-                   item: "#424242", itemHover: "#5B5B5B", secondary: "#BDBDBD",
-                   grid: "#54030303", roll: "#454545", accidental: "#303030",
-                   keyboardSeparator: "#9A9A9A"),
-    ThemePresetRow(mode: "immaterial",
-                   window: "#2E3138", text: "#CBCBCD", disabled: "#979AA3",
-                   outline: "#545559", selection: "#ABCAD2", accent: "#008493",
-                   chrome: "#363941", separator: "#292A2E", control: "#292A2E",
-                   controlHover: "#52555E", controlPressed: "#F98CBE", pressedText: "#292A2E",
-                   item: "#393C43", itemHover: "#51545C", secondary: "#A5A8B0",
-                   grid: "#54030606", roll: "#3C3F46", accidental: "#282B32",
-                   keyboardSeparator: "#9A9A9A"),
-]
-
-private let themeCompletenessID = "themelayout/ThemeLayoutTest::themeCompleteness"
-private let themeLegibilityID = "themelayout/ThemeLayoutTest::laneAndWaveformLegibility"
-
-// Fields apply() leaves translucent by design; every other exposed field must
-// be fully opaque, mirroring completeTheme's grid-role exception.
-private let themeTranslucentFields: Set<String> = [
-    "gridLine", "gridLineBar", "gridLineSub1", "gridLineSub2", "gridLineSub3",
-    "gridLineBeat", "gridLineBeatFine", "rowLine",
-    "selectionFill", "keyboardHover", "hoverChipFill",
-]
-
-@MainActor
-private func themeAppliedPalette(mode: String, contrast: Int) -> GridPalette {
-    let palette = GridPalette()
-    ShellAppearance.apply(to: palette, mode: mode, contrast: contrast)
-    return palette
-}
-
-@MainActor
-private func themeAssertComplete(_ report: CheckReport, _ palette: GridPalette,
-                                 cppID: String, what: String) {
-    let fields = Mirror(reflecting: palette).children.compactMap { child -> (String, String)? in
-        guard let name = child.label, let value = child.value as? String else { return nil }
-        return (name, value)
-    }
-    report.expect(!fields.isEmpty, cppID: cppID, message: "\(what): palette exposes color fields")
-    for (name, value) in fields {
-        let opaque = themeRefChannels(value).a == 255
-        let wellFormed = (value.count == 7 || value.count == 9) && value.hasPrefix("#")
-        report.expect(wellFormed, cppID: cppID, message: "\(what): \(name) is a hex color")
-        if !themeTranslucentFields.contains(name) {
-            report.expect(opaque, cppID: cppID,
-                           message: "\(what): \(name) is fully opaque (\(value))")
-        }
-    }
-}
-
-@MainActor
-private func themePresetValueChecks(_ report: CheckReport) {
-    for row in themePresetRows {
-        let palette = themeAppliedPalette(mode: row.mode, contrast: 50)
-        let tag = "mode=\(row.mode)"
-        themeAssertComplete(report, palette, cppID: themeCompletenessID, what: tag)
-        report.expectEqual(row.window, palette.windowBackground,
-                           cppID: themeCompletenessID, what: "\(tag): window")
-        report.expectEqual(row.text, palette.windowText,
-                           cppID: themeCompletenessID, what: "\(tag): window text")
-        report.expectEqual(row.text, palette.primaryText,
-                           cppID: themeCompletenessID, what: "\(tag): primary text aliases window text")
-        report.expectEqual(row.text, palette.buttonText,
-                           cppID: themeCompletenessID, what: "\(tag): button text")
-        report.expectEqual(row.disabled, palette.disabledText,
-                           cppID: themeCompletenessID, what: "\(tag): disabled text")
-        report.expectEqual(row.outline, palette.outline,
-                           cppID: themeCompletenessID, what: "\(tag): outline")
-        report.expectEqual(palette.outline, palette.focusOutline,
-                           cppID: themeCompletenessID, what: "\(tag): focus outline aliases outline")
-        report.expectEqual(row.chrome, palette.chromeBackground,
-                           cppID: themeCompletenessID, what: "\(tag): chrome")
-        report.expectEqual(row.separator, palette.separator,
-                           cppID: themeCompletenessID, what: "\(tag): separator")
-        report.expectEqual(row.control, palette.buttonBackground,
-                           cppID: themeCompletenessID, what: "\(tag): button surface")
-        report.expectEqual(palette.buttonBackground, palette.tabBackground,
-                           cppID: themeCompletenessID, what: "\(tag): tab and button share the control surface")
-        report.expectEqual(row.controlHover, palette.buttonHoverBackground,
-                           cppID: themeCompletenessID, what: "\(tag): button hover surface")
-        report.expectEqual(palette.buttonHoverBackground, palette.tabHoverBackground,
-                           cppID: themeCompletenessID, what: "\(tag): tab and button share the hover surface")
-        report.expectEqual(row.controlPressed, palette.buttonPressedBackground,
-                           cppID: themeCompletenessID, what: "\(tag): button pressed surface")
-        report.expectEqual(palette.buttonPressedBackground, palette.tabPressedBackground,
-                           cppID: themeCompletenessID, what: "\(tag): tab and button share the pressed surface")
-        report.expectEqual(row.pressedText, palette.buttonPressedText,
-                           cppID: themeCompletenessID, what: "\(tag): pressed foreground rule")
-        report.expectEqual(palette.buttonPressedText, palette.selectionText,
-                           cppID: themeCompletenessID, what: "\(tag): selection text shares the pressed foreground")
-        report.expectEqual(row.item, palette.menuBackground,
-                           cppID: themeCompletenessID, what: "\(tag): menu aliases the item surface")
-        report.expectEqual(row.itemHover, palette.menuHoverBackground,
-                           cppID: themeCompletenessID, what: "\(tag): menu hover aliases the item hover surface")
-        report.expectEqual(row.secondary, palette.secondaryText,
-                           cppID: themeCompletenessID, what: "\(tag): secondary text")
-        report.expectEqual(row.grid, palette.gridLine,
-                           cppID: themeCompletenessID, what: "\(tag): pinned grid value")
-        report.expectEqual(row.roll, palette.rollBackground,
-                           cppID: themeCompletenessID, what: "\(tag): piano-roll background")
-        report.expectEqual(row.accidental, palette.accidentalLane,
-                           cppID: themeCompletenessID, what: "\(tag): accidental lane")
-        report.expectEqual(row.keyboardSeparator, palette.keyboardSeparator,
-                           cppID: themeCompletenessID, what: "\(tag): keyboard separator")
-        report.expectEqual("#1A1A1A", palette.keyboardLabel,
-                           cppID: themeCompletenessID, what: "\(tag): keyboard label stays fixed")
-        report.expectEqual(row.selection, palette.tabSelectedBackground,
-                           cppID: themeCompletenessID, what: "\(tag): selected tab fill")
-        report.expectEqual(row.selection, palette.selectionRing,
-                           cppID: themeCompletenessID, what: "\(tag): selection ring")
-        report.expectEqual(row.selection, palette.keyboardActiveKey,
-                           cppID: themeCompletenessID, what: "\(tag): active keyboard key")
-        report.expectEqual(row.accent, palette.selectionEdge,
-                           cppID: themeCompletenessID, what: "\(tag): selection edge accents")
-        report.expectEqual(row.text, palette.editCursor,
-                           cppID: themeCompletenessID, what: "\(tag): edit cursor")
-        report.expectEqual("#E24242", palette.playhead,
-                           cppID: themeCompletenessID, what: "\(tag): playhead stays the identity red")
-        report.expectEqual(row.disabled, palette.noteVelocityZero,
-                           cppID: themeCompletenessID, what: "\(tag): zero-velocity ink")
-        report.expectEqual(row.secondary, palette.implicitSignature,
-                           cppID: themeCompletenessID, what: "\(tag): implicit-signature ink aliases secondary")
-        report.expectEqual(row.secondary, palette.rulerDetailText,
-                           cppID: themeCompletenessID, what: "\(tag): ruler-detail ink aliases secondary")
-
-        // Menu/control contrast floors (verifyMenuAndControlContracts plus the
-        // disabled-text floor), judged by the independent reference.
-        report.expect(themeRefContrast(palette.windowText, palette.chromeBackground) >= 4.5,
-                      cppID: themeCompletenessID, message: "\(tag): menu-bar text floor")
-        report.expect(themeRefContrast(palette.windowText, palette.buttonHoverBackground) >= 4.5,
-                      cppID: themeCompletenessID, message: "\(tag): button-hover text floor")
-        report.expect(themeRefContrast(palette.buttonPressedText,
-                                       palette.buttonPressedBackground) >= 4.5,
-                      cppID: themeCompletenessID, message: "\(tag): button-pressed text floor")
-        report.expect(themeRefContrast(palette.windowText, palette.menuHoverBackground) >= 4.5,
-                      cppID: themeCompletenessID, message: "\(tag): menu-hover text floor")
-        report.expect(themeRefContrast(palette.buttonText, palette.buttonHoverBackground) >= 4.5,
-                      cppID: themeCompletenessID, message: "\(tag): combo text floor")
-        report.expect(themeRefContrast(palette.disabledText, palette.windowText) >= 1.3,
-                      cppID: themeCompletenessID, message: "\(tag): disabled-text floor")
-
-        // Lane and waveform legibility rows with a Swift-shell counterpart:
-        // edit-preview outline and add-lane action resolve to window/secondary
-        // text on the piano-roll surface; the selected-tab/active-automation
-        // pair resolves to the pressed surfaces.
-        report.expect(themeRefContrast(palette.windowText, palette.rollBackground) >= 3.0,
-                      cppID: themeLegibilityID, message: "\(tag): edit-preview outline floor")
-        report.expect(themeRefContrast(palette.secondaryText, palette.rollBackground) >= 3.0,
-                      cppID: themeLegibilityID, message: "\(tag): add-lane action floor")
-        let selectedText = row.mode == "vanilla" ? palette.windowText : palette.buttonPressedText
-        report.expect(themeRefContrast(selectedText, palette.tabPressedBackground) >= 3.0,
-                      cppID: themeLegibilityID, message: "\(tag): selected-tab floor")
-    }
 }
 
 // MARK: - Text contrast (WCAG AA 4.5:1 on every legal ink/surface pair)
@@ -479,6 +282,55 @@ private func themeTextContrastChecks(_ report: CheckReport) {
     }
 }
 
+@MainActor
+private func trackHeaderBudgetContrastChecks(_ report: CheckReport) {
+    let id = "swiftcore/TrackHeaders::budgetContrast"
+    for preset in themePresetRows {
+        let palette = themeAppliedPalette(mode: preset.mode, contrast: 50)
+        let scopedSurface = TrackHeadersGeometry.scopedHeaderSurface(palette: palette)
+        let states: [(name: String, title: String, subtitle: String,
+                      backdrop: String, surface: String, cap: Double)] = [
+            ("normal", palette.primaryText, palette.secondaryText,
+             palette.windowBackground, palette.windowBackground, 0.6),
+            ("primary", palette.selectionText, palette.selectionText,
+             palette.selectionRing, palette.selectionRing, 0.35),
+            ("in-scope", palette.windowText, palette.windowText,
+             palette.selectionRing, scopedSurface, 0.6),
+        ]
+        for state in states {
+            let title = TrackHeadersGeometry.dimmedInk(
+                ink: state.title, backdrop: state.backdrop,
+                surface: state.surface, cap: state.cap)
+            let subtitle = TrackHeadersGeometry.dimmedInk(
+                ink: state.subtitle, backdrop: state.backdrop,
+                surface: state.surface, cap: state.cap)
+            let titleRatio = PaletteMath.contrastRatio(title, state.surface)
+            let subtitleRatio = PaletteMath.contrastRatio(subtitle, state.surface)
+            report.expect(titleRatio >= 4.5,
+                          cppID: id,
+                          message: "\(preset.mode): dimmed title on \(state.name) surface contrast \(String(format: "%.2f", titleRatio)) (floor 4.5)")
+            report.expect(subtitleRatio >= 4.5,
+                          cppID: id,
+                          message: "\(preset.mode): dimmed subtitle on \(state.name) surface contrast \(String(format: "%.2f", subtitleRatio)) (floor 4.5)")
+        }
+    }
+}
+
+@MainActor
+private func polyphonyFlashContrastChecks(_ report: CheckReport) {
+    let id = "swiftcore/PolyphonyPanel::flashContrast"
+    for row in themePresetRows {
+        let palette = themeAppliedPalette(mode: row.mode, contrast: 50)
+        let flashSurface = themeCompositeHex("#8CD92626", over: palette.buttonBackground)
+        let flashRatio = themeRefContrast(palette.windowText, flashSurface)
+        report.expect(flashRatio >= 4.5, cppID: id,
+                      message: "mode=\(row.mode): windowText on polyphonyFlashBackground@0.55 over buttonBackground contrast \(String(format: "%.2f", flashRatio)) (floor 4.5)")
+        let restingRatio = themeRefContrast(palette.windowText, palette.buttonBackground)
+        report.expect(restingRatio >= 4.5, cppID: id,
+                      message: "mode=\(row.mode): windowText on buttonBackground contrast \(String(format: "%.2f", restingRatio)) (floor 4.5)")
+    }
+}
+
 // MARK: - Grid-line contrast (tst_themelayout_color.cpp:160-207)
 
 private let themeGridContrastID = "themelayout/ThemeLayoutTest::gridContrast"
@@ -488,7 +340,7 @@ private func themeGridContrastChecks(_ report: CheckReport) {
     for row in themePresetRows {
         let base = themeAppliedPalette(mode: row.mode, contrast: 50)
         let tag = "mode=\(row.mode)"
-        report.expectEqual(row.grid, base.gridLine,
+        report.expectEqual(expected: row.grid, actual: base.gridLine,
                            cppID: themeGridContrastID, what: "\(tag): default contrast is the identity")
         for contrast in [0, 50, 100] {
             let adjusted = themeAppliedPalette(mode: row.mode, contrast: contrast)
@@ -509,6 +361,9 @@ private func themeGridContrastChecks(_ report: CheckReport) {
                       cppID: themeGridContrastID, message: "\(tag): contrast 100 raises grid alpha")
         let baseLuminance = themeRefLuminance(base.gridLine)
         let rollLuminance = themeRefLuminance(row.roll)
+        report.expect(baseLuminance <= rollLuminance,
+                      cppID: themeGridContrastID,
+                      message: "\(tag): default grid luminance sits at or below the roll surface")
         let fullLuminance = themeRefLuminance(strengthened.gridLine)
         if baseLuminance <= rollLuminance {
             report.expect(fullLuminance < baseLuminance,
@@ -531,7 +386,7 @@ private let themeTrackIdentityID = "themelayout/DeferredThemeLayoutTest::trackId
 
 @MainActor
 private func themeTrackIdentityChecks(_ report: CheckReport) {
-    report.expectEqual(16, PaletteMath.trackIdentityFills.count,
+    report.expectEqual(expected: 16, actual: PaletteMath.trackIdentityFills.count,
                        cppID: themeTrackIdentityID, what: "sixteen identity fills")
     for (index, fill) in PaletteMath.trackIdentityFills.enumerated() {
         let channels = PaletteMath.channels(fill)
@@ -557,19 +412,267 @@ private let themeDialogID = "themelayout/DeferredThemeLayoutTest::dialogCommitAn
 @MainActor
 private func themeCommitPreviewRevertChecks(_ report: CheckReport) {
     let committed = themeAppliedPalette(mode: "dark-neutral-high", contrast: 80)
-    report.expectEqual("#373737", committed.windowBackground,
+    report.expectEqual(expected: "#373737", actual: committed.windowBackground,
                        cppID: themeDialogID, what: "commit applies the dark window surface")
     report.expect(themeRefChannels(committed.gridLine).a
                   > themeRefChannels("#54030303").a,
                   cppID: themeDialogID, message: "commit applies contrast 80 to the grid")
-    report.expectEqual("#424242", committed.chromeBackground,
+    report.expectEqual(expected: "#424242", actual: committed.chromeBackground,
                        cppID: themeDialogID, what: "dark preview shows the dark chrome")
     let immaterial = themeAppliedPalette(mode: "immaterial", contrast: 50)
-    report.expectEqual("#363941", immaterial.chromeBackground,
+    report.expectEqual(expected: "#363941", actual: immaterial.chromeBackground,
                        cppID: themeDialogID, what: "immaterial preview shows the immaterial chrome")
     let reverted = themeAppliedPalette(mode: "dark-neutral-high", contrast: 80)
-    report.expectEqual("#037384", reverted.selectionEdge,
+    report.expectEqual(expected: "#037384", actual: reverted.selectionEdge,
                        cppID: themeDialogID, what: "revert restores the committed link accent")
-    report.expectEqual(committed.gridLine, reverted.gridLine,
+    report.expectEqual(expected: committed.gridLine, actual: reverted.gridLine,
                        cppID: themeDialogID, what: "revert restores the committed grid value")
+}
+
+@MainActor
+private func noteLabelContrastChecks(_ report: CheckReport) {
+    let id = "swiftcore/PianoRoll::noteLabelContrast"
+    for row in themePresetRows {
+        let palette = themeAppliedPalette(mode: row.mode, contrast: 50)
+        let tag = "mode=\(row.mode)"
+        report.expectEqual(expected: row.disabled, actual: palette.noteVelocityZero,
+                           cppID: id, what: "\(tag): velocity-zero fill equals the preset disabledText role")
+        report.expect(themeRefChannels(palette.noteVelocityZero).a == 255, cppID: id,
+                      message: "\(tag): velocity-zero fill is opaque")
+        var identityFloor = Double.infinity
+        var preservesKeyboardInk = true
+        for velocity in 0...127 {
+            for track in 0..<16 {
+                let identityFill = palette.noteFill(track: track, velocity: velocity)
+                let identityInk = palette.noteLabelInk(forFill: identityFill)
+                identityFloor = min(identityFloor, themeRefContrast(identityFill, identityInk))
+                let identityKeyboard = PaletteMath.contrastingTextColor(
+                    fill: identityFill, light: palette.keyboardNatural,
+                    dark: palette.keyboardBlack)
+                if themeRefContrast(identityFill, identityKeyboard) >= 4.5 {
+                    preservesKeyboardInk = preservesKeyboardInk && identityInk == identityKeyboard
+                }
+            }
+        }
+        report.expect(identityFloor >= 4.5, cppID: id,
+                      message: "\(tag): identity ramp label ink stays above AA")
+        report.expect(preservesKeyboardInk, cppID: id,
+            message: "\(tag): legible keyboard ink is preserved on the identity ramp")
+    }
+}
+
+// MARK: - Precomputed theme color tables (ThemeColorTables.swift)
+
+private let themeTableID = "themelayout/ThemeLayoutTest::themeColorTables"
+
+// The Oklch dimming the track activity renderer applied to each identity
+// fill: lower L by 0.18, shrink chroma only while out of sRGB gamut.
+private func themeActivityDimOracle(_ identity: PaletteMath.Oklab) -> String {
+    let lightness = max(0, identity.lightness - 0.18)
+    var a = identity.a
+    var b = identity.b
+    for _ in 0..<12 {
+        let lab = PaletteMath.Oklab(lightness: lightness, a: a, b: b)
+        let l = lightness + 0.3963377774 * a + 0.2158037573 * b
+        let m = lightness - 0.1055613458 * a - 0.0638541728 * b
+        let s = lightness - 0.0894841775 * a - 1.2914855480 * b
+        let l3 = l * l * l
+        let m3 = m * m * m
+        let s3 = s * s * s
+        let r = 4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3
+        let g = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3
+        let blue = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3
+        if r >= 0, r <= 1, g >= 0, g <= 1, blue >= 0, blue <= 1 {
+            return PaletteMath.hex(lab)
+        }
+        a *= 0.85
+        b *= 0.85
+    }
+    return PaletteMath.hex(PaletteMath.Oklab(lightness: lightness, a: 0, b: 0))
+}
+
+/// Every checked-in literal table reproduces its closed-form Oklab rule, so a
+/// preset, identity color, or table entry change without regenerating fails
+/// here. Mismatches aggregate per table with the first witness only.
+@MainActor
+private func themeColorTableChecks(_ report: CheckReport) {
+    let black = PaletteMath.oklab(r: 0, g: 0, b: 0)
+    var stemMismatches = 0
+    var stemExample = ""
+    var dimMismatches = 0
+    var dimExample = ""
+    var heldMismatches = 0
+    var heldExample = ""
+    for track in 0..<16 {
+        let slot = PaletteMath.trackIdentityIndex(track)
+        let identity = PaletteMath.trackIdentityOklab(track)
+        let expectedStem = PaletteMath.hex(
+            PaletteMath.mixTowardOklab(identity, black, 1.0 / 3.0))
+        if ThemeColorTables.velocityStemColors[slot] != expectedStem {
+            stemMismatches += 1
+            if stemExample.isEmpty { stemExample = "track=\(track) expected=\(expectedStem)" }
+        }
+        let expectedHeld = PaletteMath.hex(identity, alpha: 18)
+        if ThemeColorTables.voiceHeldColors[slot] != expectedHeld {
+            heldMismatches += 1
+            if heldExample.isEmpty { heldExample = "track=\(track) expected=\(expectedHeld)" }
+        }
+        let expectedDim = themeActivityDimOracle(identity)
+        if ThemeColorTables.activityDimColors[slot] != expectedDim {
+            dimMismatches += 1
+            if dimExample.isEmpty { dimExample = "track=\(track) expected=\(expectedDim)" }
+        }
+    }
+    report.expect(
+        ThemeColorTables.velocityStemColors.count == 16, cppID: themeTableID,
+        message: "stem table covers all sixteen identity slots")
+    let stemMessage =
+        stemMismatches == 0
+        ? "stem table matches the one-third-to-black mix"
+        : "stem table drifts (\(stemMismatches) mismatches, first \(stemExample))"
+    report.expect(stemMismatches == 0, cppID: themeTableID, message: stemMessage)
+    report.expect(
+        ThemeColorTables.activityDimColors.count == 16, cppID: themeTableID,
+        message: "activity-dim table covers all sixteen identity slots")
+    let dimMessage =
+        dimMismatches == 0
+        ? "activity-dim table matches the Oklch dimming oracle"
+        : "activity-dim table drifts (\(dimMismatches) mismatches, first \(dimExample))"
+    report.expect(dimMismatches == 0, cppID: themeTableID, message: dimMessage)
+    report.expect(
+        ThemeColorTables.voiceHeldColors.count == 16, cppID: themeTableID,
+        message: "voice-held table covers all sixteen identity slots")
+    let heldMessage =
+        heldMismatches == 0
+        ? "voice-held table matches the alpha-18 identity fill"
+        : "voice-held table drifts (\(heldMismatches) mismatches, first \(heldExample))"
+    report.expect(heldMismatches == 0, cppID: themeTableID, message: heldMessage)
+    for row in themePresetRows {
+        let palette = themeAppliedPalette(mode: row.mode, contrast: 50)
+        let tag = "mode=\(row.mode)"
+        report.expect(
+            palette.theme == ThemePreset(mode: row.mode), cppID: themeTableID,
+            message: "\(tag): the applied palette carries its theme preset")
+        let zeroChannels = PaletteMath.channels(palette.noteVelocityZero)
+        let zeroLab = PaletteMath.oklab(r: zeroChannels.r, g: zeroChannels.g, b: zeroChannels.b)
+        var noteMismatches = 0
+        var noteExample = ""
+        for track in 0..<16 {
+            let identity = PaletteMath.trackIdentityOklab(track)
+            for velocity in 0...127 {
+                let expected: String
+                if velocity == 0 {
+                    expected = palette.noteVelocityZero
+                } else {
+                    expected = PaletteMath.hex(
+                        PaletteMath.mixTowardOklab(
+                            identity, zeroLab, 1.0 - Double(velocity) / 127.0))
+                }
+                if palette.noteFill(track: track, velocity: velocity) != expected {
+                    noteMismatches += 1
+                    if noteExample.isEmpty {
+                        noteExample = "track=\(track) velocity=\(velocity) expected=\(expected)"
+                    }
+                }
+            }
+        }
+        let noteMessage =
+            noteMismatches == 0
+            ? "\(tag): note table matches the identity-mix oracle for 16 tracks x 128 velocities"
+            : "\(tag): note table drifts (\(noteMismatches) mismatches, first \(noteExample))"
+        report.expect(noteMismatches == 0, cppID: themeTableID, message: noteMessage)
+        var ghostMismatches = 0
+        var ghostExample = ""
+        for track in 0..<16 {
+            let identity = PaletteMath.trackIdentityOklab(track)
+            for accidentalRow: Bool in [false, true] {
+                let backdrop = PaletteMath.channels(
+                    accidentalRow ? palette.accidentalLane : palette.rollBackground)
+                let background = PaletteMath.oklab(r: backdrop.r, g: backdrop.g, b: backdrop.b)
+                let weight = 60.0 / 255.0
+                let offset = min(
+                    0.055,
+                    max(
+                        -0.055,
+                        (identity.lightness - background.lightness) * weight))
+                let expected = PaletteMath.hex(
+                    PaletteMath.Oklab(
+                        lightness: background.lightness + offset,
+                        a: background.a + (identity.a - background.a) * weight,
+                        b: background.b + (identity.b - background.b) * weight))
+                if palette.ghostFill(track: track, accidentalRow: accidentalRow) != expected {
+                    ghostMismatches += 1
+                    if ghostExample.isEmpty {
+                        ghostExample =
+                            "track=\(track) accidentalRow=\(accidentalRow)"
+                            + " expected=\(expected)"
+                    }
+                }
+            }
+        }
+        let ghostMessage =
+            ghostMismatches == 0
+            ? "\(tag): ghost table matches the lane-mix oracle on both backdrops"
+            : "\(tag): ghost table drifts (\(ghostMismatches) mismatches, first \(ghostExample))"
+        report.expect(ghostMismatches == 0, cppID: themeTableID, message: ghostMessage)
+        let scopedSurface = TrackHeadersGeometry.scopedHeaderSurface(palette: palette)
+        let preset = palette.theme.rawValue
+        report.expect(
+            TrackHeadersGeometry.overBudgetSurface[preset] == scopedSurface,
+            cppID: themeTableID,
+            message: "\(tag): header surface table matches the selection tint mix")
+        let inkStates:
+            [(
+                name: String, table: String, ink: String,
+                backdrop: String, surface: String, cap: Double
+            )] = [
+                (
+                    "primary", TrackHeadersGeometry.overBudgetPrimaryInk[preset],
+                    palette.selectionText, palette.selectionRing, palette.selectionRing, 0.35
+                ),
+                (
+                    "scoped", TrackHeadersGeometry.overBudgetScopedInk[preset],
+                    palette.windowText, palette.selectionRing, scopedSurface, 0.6
+                ),
+                (
+                    "title", TrackHeadersGeometry.overBudgetTitleInk[preset],
+                    palette.primaryText, palette.windowBackground, palette.windowBackground, 0.6
+                ),
+                (
+                    "subtitle", TrackHeadersGeometry.overBudgetSubtitleInk[preset],
+                    palette.secondaryText, palette.windowBackground, palette.windowBackground, 0.6
+                ),
+            ]
+        for state in inkStates {
+            let expected = TrackHeadersGeometry.dimmedInk(
+                ink: state.ink, backdrop: state.backdrop, surface: state.surface, cap: state.cap)
+            report.expect(
+                state.table == expected, cppID: themeTableID,
+                message: "\(tag): header \(state.name) ink table matches the dimmed-ink rule")
+        }
+    }
+    let hexRows: [(hex: String, argb: UInt32, channels: (Int, Int, Int, Int))] = [
+        ("#CD5454", 0xFFCD5454, (205, 84, 84, 255)),
+        ("#3F040000", 0x3F040000, (4, 0, 0, 63)),
+        ("#80EA3C3C", 0x80EA3C3C, (234, 60, 60, 128)),
+    ]
+    for row in hexRows {
+        let parsed = PaletteMath.channels(row.hex)
+        report.expect(
+            (parsed.r, parsed.g, parsed.b, parsed.a) == row.channels,
+            cppID: themeTableID,
+            message: "\(row.hex): channels parses to \(row.channels)")
+        report.expect(
+            PaletteMath.hex(r: parsed.r, g: parsed.g, b: parsed.b, a: parsed.a)
+                == row.hex, cppID: themeTableID,
+            message: "\(row.hex): hex formats back bit-identically")
+        report.expect(
+            PaletteMath.hex(argb: row.argb) == row.hex, cppID: themeTableID,
+            message: "\(row.hex): hex(argb:) formats back bit-identically")
+    }
+    let empty = PaletteMath.channels("")
+    report.expect(
+        (empty.r, empty.g, empty.b, empty.a) == (0, 0, 0, 255),
+        cppID: themeTableID,
+        message: "empty string parses to (0, 0, 0, 255)")
 }

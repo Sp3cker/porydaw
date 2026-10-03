@@ -106,13 +106,13 @@ struct VelocityScenePalette: Sendable {
 
 /// Everything one static scene build reads: the document facts, the page's
 /// frozen interaction snapshot, the drawn geometry, the palette colours as
-/// values, and the page's reuse decision for the handle rows. The page's label
-/// typography and its previous handle rows are `@MainActor` objects and travel
-/// as explicit build parameters, so this input stays a plain Sendable value.
+/// values, and the page's reuse decision for handle rows.
 struct VelocitySceneInput: Sendable {
     /// The shared camera at the page's device pixel ratio, or `nil` while the
     /// page has no session: camera-derived rows are then empty and x reads zero.
     var camera: EditorCamera?
+    /// The retained overscan window; live interaction notes bypass this range.
+    var handleTickWindow: ClosedRange<Double>? = nil
     /// The presented voice context the page resolved for this build.
     var context: VelocityVoiceContext
     /// The primary track's notes, its selected notes in selection order, and the
@@ -132,6 +132,7 @@ struct VelocitySceneInput: Sendable {
     var baseFontPx: Double
     /// The page's cached grid metrics; the scene owns no cache of its own.
     var metrics: GridMetrics?
+    var grid: RollGrid? = nil
     var palette: VelocityScenePalette
     /// The page's handle-reuse decision.
     var reuseGeometry: Bool
@@ -157,36 +158,29 @@ struct VelocitySceneSnapshot {
     let axisGraduations: [SceneRect]
     let axisMarkers: [SceneRect]
     let axisLabels: [SceneText]
-    let grid: [SceneRect]
-    let bands: [SceneRect]
-
     /// The full static build: the value axis for the presented context, the note
     /// handle rows, the ruler rows and labels, the time grid and the PSG bands.
-    /// `typography` and `previousHandles` are the page's `@MainActor` objects,
-    /// which is why they are parameters here and not input fields.
     @MainActor
-    static func build(_ input: VelocitySceneInput, typography: GridTypography?,
+    static func build(_ input: VelocitySceneInput,
                       previousHandles: [NoteID: VelocityHandle]) -> Self {
-        let parts = axisAndHandles(input, typography: typography, previousHandles: previousHandles)
+        let parts = axisAndHandles(input, previousHandles: previousHandles)
         return Self(
             axis: parts.axis,
             handles: parts.handles,
             axisTicks: parts.rows.ticks,
             axisGraduations: parts.rows.graduations,
             axisMarkers: parts.rows.markers,
-            axisLabels: parts.rows.labels,
-            grid: VelocityScene.grid(input),
-            bands: VelocityScene.bands(input, axis: parts.axis, projection: parts.projection))
+            axisLabels: parts.rows.labels)
     }
 
     /// The scoped build a hover, a pointer exit or a detent change republishes:
     /// the same axis, handle rows and ruler rows a full build derives, without
     /// the grid subdivision walk or the PSG band walk a content rebuild performs.
     @MainActor
-    static func buildAxisAndHandles(_ input: VelocitySceneInput, typography: GridTypography?,
+    static func buildAxisAndHandles(_ input: VelocitySceneInput,
                                     previousHandles: [NoteID: VelocityHandle])
         -> VelocityAxisAndHandles {
-        let parts = axisAndHandles(input, typography: typography, previousHandles: previousHandles)
+        let parts = axisAndHandles(input, previousHandles: previousHandles)
         return VelocityAxisAndHandles(axis: parts.axis, handles: parts.handles, rows: parts.rows)
     }
 
@@ -194,7 +188,7 @@ struct VelocitySceneSnapshot {
     /// drawn against, the note handle rows and the ruler rows one interaction
     /// state produces.
     @MainActor
-    private static func axisAndHandles(_ input: VelocitySceneInput, typography: GridTypography?,
+    private static func axisAndHandles(_ input: VelocitySceneInput,
                                        previousHandles: [NoteID: VelocityHandle])
         -> (axis: VelocityAxisModel, projection: VelocityProjection, handles: [VelocityHandle],
             rows: VelocityAxisRows) {
@@ -204,9 +198,8 @@ struct VelocitySceneSnapshot {
         let handles = handleRows(input, axis: axis, projection: projection,
                                  previousHandles: previousHandles)
         let relativeGesture = input.interaction.relativeActivated
-            || handles.filter(\.selected).count > 1 || input.interaction.hovered != nil
-        let rows = VelocityScene.axisRows(input, axis: axis, relativeGesture: relativeGesture,
-                                          typography: typography)
+            || input.selectedNotes.count > 1 || input.interaction.hovered != nil
+        let rows = VelocityScene.axisRows(input, axis: axis, relativeGesture: relativeGesture)
         return (axis, projection, handles, rows)
     }
 
@@ -234,26 +227,31 @@ struct VelocitySceneSnapshot {
         let selected = input.selectedNoteIDs
         let notes = input.notes
         let trackColor = PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(input.track)]
-        let trackChannels = PaletteMath.channels(trackColor)
-        let stemColor = PaletteMath.hex(
-            PaletteMath.mixTowardOklab(
-                PaletteMath.oklab(r: trackChannels.r, g: trackChannels.g, b: trackChannels.b),
-                PaletteMath.oklab(r: 0, g: 0, b: 0), 1.0 / 3.0))
-        let selectedCount = notes.filter { selected.contains($0.id) }.count
+        let stemColor = ThemeColorTables.velocityStemColors[PaletteMath.trackIdentityIndex(input.track)]
+        let selectedCount = notes.reduce(0) { $0 + (selected.contains($1.id) ? 1 : 0) }
         let dimUnselected = selectedCount > 1
         let resolve = input.source.resolver()
+        let candidates = notes.lazy.filter { note in
+            guard let window = input.handleTickWindow else { return true }
+            return
+                (Double(note.tick) <= window.upperBound
+                && Double(note.tick) + Double(note.duration) >= window.lowerBound)
+                || input.interaction.frozenNote(note.id) != nil
+                || input.interaction.hovered == note.id
+                || input.interaction.preview[note.id] != nil
+        }
         var result: [VelocityHandle] = []
         result.reserveCapacity(notes.count)
-        for note in notes {
+        for note in candidates {
             let frozen = input.interaction.frozenNote(note.id)
             let map = frozen?.map ?? resolve(note.tick, Int(note.pitch)).map
             let previewValue = input.interaction.preview[note.id]
             let displayed = previewValue.map(Int.init) ?? Int(note.velocity)
             let isSelected = selected.contains(note.id)
             let isHovered = input.interaction.hovered == note.id
-            let x = projection.xForDisplayTick(Double(note.tick))
+            let x = projection.stableXForTick(Double(note.tick))
             let endTick = Double(note.tick) + Double(note.duration)
-            let endX = projection.xForDisplayTick(endTick)
+            let endX = projection.stableXForTick(endTick)
             let y = projection.yForNote(
                 map: map, velocity: displayed,
                 detentUnlock: !input.interaction.detentsEnabled || input.interaction.detentUnlock)
@@ -261,11 +259,12 @@ struct VelocitySceneSnapshot {
             let previous = previousHandles[note.id]
             if input.reuseGeometry, let previous,
                previous.tick == Double(note.tick), previous.endTick == endTick,
-               previous.x == x, previous.endX == endX, previous.y == y,
-               previous.value == displayed, previous.level == level,
+                previous.y == y, previous.value == displayed, previous.level == level,
                previous.selected == isSelected, previous.hovered == isHovered,
                previous.preview == (previewValue != nil),
                previous.dimmed == (dimUnselected && !isSelected) {
+                if previous.x != x { previous.x = x }
+                if previous.endX != endX { previous.endX = endX }
                 result.append(previous)
                 continue
             }
@@ -304,6 +303,7 @@ struct VelocitySceneSnapshot {
             handle.ringColor = input.palette.selectionRing
             handle.outlineColor = input.palette.noteBorder
             handle.primitiveName = "velocityNode"
+            handle.refreshSpec()
             result.append(handle)
         }
         return result

@@ -1,113 +1,120 @@
 import Foundation
 import PorydawProject
-import Synchronization
-
-private enum ActorCheckError: Error {
-    case expected
-}
-
-private struct CounterState: Sendable {
-    var indices: [Int] = []
-}
-
-private final class ActorCheckCounter: Sendable {
-    private let state = Mutex(CounterState())
-
-    func append(_ index: Int) -> Int {
-        // Keep the read and append separate: a concurrently executing run
-        // can observe the same pre-increment count as another operation.
-        let previous = state.withLock { $0.indices.count }
-        state.withLock { $0.indices.append(index) }
-        return previous
-    }
-
-    var appendedIndices: [Int] { state.withLock { $0.indices } }
-}
 
 private struct ParallelState: Sendable {
-    var values: [Int?]
     var completed = 0
     var succeeded = true
 }
 
 private final class ParallelActorResults: Sendable {
-    private let box: ConditionBox<ParallelState>
+    private let box = ConditionBox(ParallelState())
+    private let count: Int
 
     init(count: Int) {
-        box = ConditionBox(ParallelState(values: Array(repeating: nil, count: count)))
+        self.count = count
     }
 
-    func record(_ outcome: Result<Int, Error>?, at index: Int) {
+    func record(_ outcome: Result<Void, Error>?) {
         box.update { state in
-            if case .success(let value) = outcome {
-                state.values[index] = value
-            } else {
+            switch outcome {
+            case .some(.success):
+                break
+            case .some(.failure), .none:
                 state.succeeded = false
             }
             state.completed += 1
         }
     }
 
-    func wait() -> [Int]? {
-        let state = box.wait(while: { $0.completed < $0.values.count }, timeout: 15)
-        guard state.completed == state.values.count, state.succeeded else { return nil }
-        return state.values.compactMap { $0 }
+    func wait() -> Bool {
+        let state = box.wait(while: { $0.completed < count }, timeout: 60)
+        return state.completed == count && state.succeeded
     }
 }
 
 internal func runProjectStoreActorSuite(_ report: CheckReport) {
     let projectRoot = FileManager.default.temporaryDirectory
-        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        .appendingPathComponent("projectstore-actor-\(UUID().uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: projectRoot) }
     let store = ProjectStore(projectRoot: projectRoot)
     let id = "projectstore-actor"
+    let file = projectRoot.appendingPathComponent("song.mid")
+    let payload = Data([0, 255, 1, 0, 127])
 
-    // A01: the actor's executor returns the operation's value.
-    let roundTrip = awaitValue { try await store.run { 40 + 2 } }
-    report.expect(roundTrip?.success == 42, cppID: "\(id)/A01",
-                  message: "actor init and run round-trip returns 42")
-
-    // A02: an operation's original error case crosses the actor boundary.
-    let thrown: Result<Int, Error>? = awaitValue {
-        try await store.run { throw ActorCheckError.expected }
+    do {
+        try FileManager.default.createDirectory(at: projectRoot, withIntermediateDirectories: true)
+    } catch {
+        for site in 1...5 {
+            report.fail("\(id)/A0\(site)", "could not create scratch project: \(error)")
+        }
+        return
     }
-    if case .failure(ActorCheckError.expected) = thrown {
-        report.pass("\(id)/A02", row: "run propagates its error case")
+
+    let roundTrip = awaitValue {
+        try await store.writeFile(file.path, data: payload)
+        return try await store.readFile(file.path)
+    }
+    report.expect(roundTrip?.success == payload, cppID: "\(id)/A01",
+                  message: "actor file write and read preserve binary bytes")
+
+    let missing = projectRoot.appendingPathComponent("missing.mid").path
+    let unreadable = awaitValue { try await store.readFile(missing) }
+    if case .some(.failure(let error)) = unreadable,
+       let fileError = error as? ProjectFileStoreError,
+       fileError == .cannotRead(path: missing) {
+        report.pass("\(id)/A02", row: "read returns the missing file path in its error")
     } else {
-        report.fail("\(id)/A02", "run did not propagate the expected error case")
+        report.fail("\(id)/A02", "missing file did not produce cannotRead for its path")
     }
 
-    // A03: independent threads race for the actor; the counter's separate
-    // read/append steps expose overlapping operations without racing on data.
     let count = 32
-    let counter = ActorCheckCounter()
     let parallel = ParallelActorResults(count: count)
-    for index in 0..<count {
+    let competing = projectRoot.appendingPathComponent("competing.mid").path
+    let candidates = (0..<count).map { Data(repeating: UInt8($0), count: 262_144) }
+    for candidate in candidates {
         Thread.detachNewThread {
-            parallel.record(awaitValue {
-                try await store.run { counter.append(index) }
-            }, at: index)
+            parallel.record(awaitValue { try await store.writeFile(competing, data: candidate) })
         }
     }
-    let returned = parallel.wait()
-    report.expect(returned?.sorted() == Array(0..<count)
-                      && counter.appendedIndices.sorted() == Array(0..<count),
+    let writesSucceeded = parallel.wait()
+    let final = awaitValue { try await store.readFile(competing) }
+    report.expect(writesSucceeded && final?.success.map(candidates.contains) == true,
                   cppID: "\(id)/A03",
-                  message: "concurrent run calls serialize counter mutation and preserve each index")
+                  message: "concurrent atomic writes leave one complete payload")
 
-    // A04: a suspended outer operation must allow its nested run to proceed.
-    let nested = awaitValue {
-        try await store.run { try await store.run { 42 } }
+    let missingParent = projectRoot.appendingPathComponent("absent/song.mid").path
+    let unwritable = awaitValue { try await store.writeFile(missingParent, data: payload) }
+    if case .some(.failure(let error)) = unwritable,
+       let fileError = error as? ProjectFileStoreError,
+       fileError == .cannotWrite(path: missingParent),
+       !FileManager.default.fileExists(atPath: missingParent) {
+        report.pass("\(id)/A04", row: "write returns the destination path when its parent is missing")
+    } else {
+        report.fail("\(id)/A04", "missing parent did not produce cannotWrite without a file")
     }
-    report.expect(nested?.success == 42, cppID: "\(id)/A04",
-                  message: "nested run completes without deadlock")
 
-    // A05: value results survive the asynchronous boundary without mutation.
-    let input = [3, 1, 4, 1, 5]
-    let first = awaitValue { try await store.run { input } }
-    let second = awaitValue { try await store.run { input } }
-    report.expect(first?.success == input && second?.success == input,
-                  cppID: "\(id)/A05",
-                  message: "equal array input round-trips as equal value data")
+    let sound = projectRoot.appendingPathComponent("sound", isDirectory: true)
+    let groups = sound.appendingPathComponent("voicegroups", isDirectory: true)
+    do {
+        try FileManager.default.createDirectory(at: groups, withIntermediateDirectories: true)
+        let sampleLines = """
+            DirectSoundWaveData_actor::
+            \t.incbin "sound/direct_sound_samples/actor.bin"
+            """
+        let scanned = awaitValue {
+            try await store.writeFile(groups.appendingPathComponent("actor.inc").path,
+                                      data: Data("voicegroup_actor::\n".utf8))
+            try await store.writeFile(sound.appendingPathComponent("direct_sound_data.inc").path,
+                                      data: Data(sampleLines.utf8))
+            return await store.voicegroupCatalog()
+        }
+        report.expect(scanned?.success?.groups.groupArgs == ["_actor"]
+                          && scanned?.success?.direct.directSound == ["DirectSoundWaveData_actor"],
+                      cppID: "\(id)/A05",
+                      message: "actor catalog scans its project root for groups and samples")
+    } catch {
+        report.fail("\(id)/A05", "could not create catalog fixture: \(error)")
+    }
 }
 
 private extension Result {

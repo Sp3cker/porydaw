@@ -1,120 +1,34 @@
 import Foundation
-import PorydawApp
+import PorydawAppCommands
 import PorydawBankLease
+import PorydawCore
+import PorydawPlaybackNative
 import QtBridge
 import QtBridgeCpp
+
+@testable import PorydawApp
+@testable import PorydawAppAudio
 
 /// Hosts the actual production ShellWindow through Qt Quick Test. Each entry
 /// is one TestCase file with its own staged decomp-project fixture; the runner
 /// passes the entry name first, then the scratch project it staged.
 @main
 enum ShellQmlLane {
-    private struct Entry {
-        let name: String
-        let inputFileName: String
-        let fixtureFiles: [String]
-        /// run_checks.ts windowing: "offscreen", or "window-system" for real
-        /// focus/activation delivery (run serially, never beside other windows).
-        var windowing = "offscreen"
-        /// Qt Quick Test selectors run when the caller passes none, so one
-        /// input file can back several entries, each within the harness timeout.
-        var testFunctions: [String] = []
-    }
-
-    /// The rendered text-contrast audit: one entry per shell state and theme.
-    private static let textContrastEntries: [Entry] = ["empty", "song"].flatMap { state in
-        ["vanilla", "dark-neutral-high", "immaterial"].map { mode in
-            Entry(name: "shell-text-contrast-\(state)-\(mode)",
-                  inputFileName: "tst_TextContrast.qml",
-                  fixtureFiles: songs("mus_route101"),
-                  testFunctions: ["TextContrast::test_\(state)ShellText:\(mode)"])
-        }
-    }
-
-    /// Project tables, samples and the original `_fixture_rich` voicegroups.
-    private static let projectFixture = [
-        "sound/song_table.inc",
-        "sound/songs/midi/midi.cfg",
-        "sound/direct_sound_data.inc",
-        "sound/direct_sound_samples/fixture_bass.bin",
-        "sound/direct_sound_samples/fixture_drum.bin",
-        "sound/direct_sound_samples/fixture_loop.bin",
-        "sound/direct_sound_samples/fixture_pluck.bin",
-        "sound/programmable_wave_data.inc",
-        "sound/programmable_wave_samples/fixture_pulse.pcm",
-        "sound/programmable_wave_samples/fixture_saw.pcm",
-        "sound/keysplit_tables.inc",
-        "sound/voicegroups/fixture_rich.inc",
-        "sound/voicegroups/fixture_keys.inc",
-        "sound/voicegroups/fixture_bass.inc",
-        "sound/voicegroups/fixture_drums_a.inc",
-        "sound/voicegroups/fixture_drums_b.inc",
-    ]
-
-    private static func songs(_ labels: String...) -> [String] {
-        projectFixture + labels.map { "sound/songs/midi/\($0).mid" }
-    }
-
-    private static let entries = [
-        Entry(name: "shellwindow", inputFileName: "tst_ShellWindow.qml",
-              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
-        Entry(name: "shell-grid-input", inputFileName: "tst_ShellGridInput.qml",
-              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
-        Entry(name: "shell-pitch-bend", inputFileName: "tst_ShellPitchBend.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-grid-menu", inputFileName: "tst_ShellGridMenu.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-clipboard", inputFileName: "tst_ShellClipboard.qml",
-              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
-        Entry(name: "shell-theme", inputFileName: "tst_Theme.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-typography", inputFileName: "tst_Typography.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-open-failure", inputFileName: "tst_ShellOpenFailure.qml",
-              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
-        Entry(name: "shell-chrome-visuals", inputFileName: "tst_ShellChromeVisuals.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-transport", inputFileName: "tst_ShellTransport.qml",
-              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
-        Entry(name: "shell-menus", inputFileName: "tst_ShellMenus.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-note-visuals", inputFileName: "tst_ShellNoteVisuals.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-reticle-visuals", inputFileName: "tst_ShellReticleVisuals.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-tabs", inputFileName: "tst_ShellTabs.qml",
-              fixtureFiles: songs("mus_route101", "mus_littleroot_test", "mus_route102", "mus_gym")),
-        Entry(name: "shell-songs", inputFileName: "tst_ShellSongs.qml",
-              fixtureFiles: songs("mus_route101", "mus_petalburg", "mus_gym", "mus_surf",
-                                  "mus_victory_wild", "se_fanfare_1trk", "se_pc_login",
-                                  "se_use_item") + ["sound/voicegroups/fixture_alt.inc",
-                                                     "include/constants/songs.h"]),
-        Entry(name: "shell-event-list", inputFileName: "tst_ShellEventList.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-drawer-parity", inputFileName: "tst_ShellDrawerParity.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-polyphony", inputFileName: "tst_ShellPolyphony.qml",
-              fixtureFiles: songs("mus_route101")),
-        Entry(name: "shell-voicegroup", inputFileName: "tst_ShellVoicegroup.qml",
-              fixtureFiles: songs("mus_route101") + [
-                  "asm/macros/synth_test.inc", "data/sound_data.s"
-              ]),
-        Entry(name: "shell-settings", inputFileName: "tst_ShellSettings.qml",
-              fixtureFiles: songs("mus_route101")),
-    ] + textContrastEntries
 
     private static var manifestLine: String {
-        let checks = entries.map { entry in
+        let checks = ShellQmlRegistry.entries.map { entry in
             let files = entry.fixtureFiles.map { "\"" + $0 + "\"" }.joined(separator: ",")
-            return #"{"name":"\#(entry.name)","argv":["\#(entry.name)","{scratch}"],"binary":"checks","windowing":"\#(entry.windowing)","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
+            return
+                #"{"name":"\#(entry.name)","argv":["\#(entry.name)","{scratch}"],"binary":"checks","windowing":"\#(entry.windowing)","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
         }
         return #"{"checks":[\#(checks.joined(separator: ","))]}"#
     }
 
     static func main() {
-        exit(MainActor.assumeIsolated {
-            run(arguments: Array(CommandLine.arguments.dropFirst()))
-        })
+        exit(
+            MainActor.assumeIsolated {
+                run(arguments: Array(CommandLine.arguments.dropFirst()))
+            })
     }
 
     @MainActor
@@ -125,7 +39,7 @@ enum ShellQmlLane {
         }
         let usage = "usage: shell_qml_tests <entry> <staged-project-directory> [--qt <Qt args>]"
         guard arguments.count >= 2,
-              let entry = entries.first(where: { $0.name == arguments[0] })
+            let entry = ShellQmlRegistry.entries.first(where: { $0.name == arguments[0] })
         else {
             return fail(usage)
         }
@@ -146,25 +60,121 @@ enum ShellQmlLane {
             return fail("\(entry.name) owns its -input file: \(entry.inputFileName)")
         }
         ShellQmlBootstrap.stage(projectRoot: scratch)
+        PreferencesStore.stageShared(
+            plistPath: URL(fileURLWithPath: scratch, isDirectory: true)
+                .appendingPathComponent("settings.plist").path)
         var app = QTestAppCpp()
         app.setInputDir(EditorQmlPaths.testDirectory)
         app.setImportPath(EditorQmlPaths.qmlImportPath)
         app.setPluginsPath(EditorQmlPaths.pluginPath)
         ApplicationSession.registerQmlElement()
         ShellPresenter.registerQmlElement()
+        EngineSettingsStore.registerUncreatableQmlElement()
+        EventListPresenter.registerUncreatableQmlElement()
+        MidiImportController.registerUncreatableQmlElement()
+        NewSongController.registerUncreatableQmlElement()
+        PianoGrid.registerUncreatableQmlElement()
+        PolyphonyPanelPresenter.registerUncreatableQmlElement()
+        SampleLoopTools.registerUncreatableQmlElement()
+        SampleStudioAudition.registerUncreatableQmlElement()
+        SampleStudioPresenter.registerUncreatableQmlElement()
+        SampleStudioWorkflow.registerUncreatableQmlElement()
+        SampleWaveformModel.registerUncreatableQmlElement()
+        Sf2ZonePickerPresenter.registerUncreatableQmlElement()
+        SongDockController.registerUncreatableQmlElement()
+        TransportBarPresenter.registerUncreatableQmlElement()
+        VelocityPage.registerUncreatableQmlElement()
+        VoiceEditorController.registerUncreatableQmlElement()
+        VoiceListController.registerUncreatableQmlElement()
+        WavExportPresenter.registerUncreatableQmlElement()
+        PreferencesStore.registerQmlElement()
         ShellQmlBootstrap.registerQmlElement()
         GridInputClipProbe.registerQmlElement()
         GatedVisualsProbe.registerQmlElement()
         TabsDrawerProbe.registerQmlElement()
         PolyphonyShellProbe.registerQmlElement()
+        WavFileProbe.registerQmlElement()
+        SampleBinProbe.registerQmlElement()
+        ImportWizardProbe.registerQmlElement()
+        SampleStudioVoiceProbe.registerQmlElement()
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .appendingPathComponent(entry.inputFileName).path
         let arguments = [CommandLine.arguments.first ?? "shell_qml_tests", "-input", inputFile] + payload
         var argv: [UnsafeMutablePointer<Int8>?] = arguments.map { strdup($0) }
         defer { argv.forEach { free($0) } }
         let status = app.runQtQuickTests(Int32(arguments.count), &argv)
+        if status == 0, entry.name == "shell-note-visuals",
+            ProcessInfo.processInfo.environment["PORYDAW_NOTE_VISUAL_DPR2"] == nil
+        {
+            let child = Process()
+            child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
+            child.arguments = [entry.name, scratch, "--qt", "ShellNoteVisuals::test_dpr2SmallFontThinning"]
+            var environment = ProcessInfo.processInfo.environment
+            environment["PORYDAW_NOTE_VISUAL_DPR2"] = "1"
+            environment["QT_SCALE_FACTOR"] = "2"
+            environment["QT_QPA_PLATFORM"] = "offscreen"
+            child.environment = environment
+            let output = Pipe()
+            child.standardOutput = output
+            child.standardError = output
+            do {
+                try child.run()
+            } catch {
+                return fail("note visuals dpr2: child failed to start: \(error)")
+            }
+            let log = String(
+                decoding: output.fileHandleForReading.readDataToEndOfFile(),
+                as: UTF8.self)
+            child.waitUntilExit()
+            print("note visuals dpr2: \(log)")
+            guard child.terminationStatus == 0 else {
+                return fail("note visuals dpr2: capture failed (\(child.terminationStatus))")
+            }
+            let capture = URL(fileURLWithPath: scratch)
+                .appendingPathComponent("notevisuals-dpr2-small-font.png")
+            let artifact = FileManager.default.temporaryDirectory
+                .appendingPathComponent("porydaw-notevisuals-\(UUID().uuidString).png")
+            do {
+                try FileManager.default.copyItem(at: capture, to: artifact)
+            } catch {
+                return fail("note visuals dpr2: missing frame: \(error)")
+            }
+            print("note visuals dpr2 artifact: \(artifact.path)")
+            return 0
+        }
+        if status == 0, entry.name == "shell-drawer-parity",
+            ProcessInfo.processInfo.environment["PORYDAW_DRAWER_RASTER_DPR2"] == nil
+        {
+            let child = Process()
+            child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
+            child.arguments = [
+                entry.name, scratch, "--qt",
+                "ShellDrawerParity::test_dpr2AutomationHoverRaster",
+            ]
+            var environment = ProcessInfo.processInfo.environment
+            environment["PORYDAW_DRAWER_RASTER_DPR2"] = "1"
+            environment["QT_SCALE_FACTOR"] = "2"
+            environment["QT_QPA_PLATFORM"] = "offscreen"
+            child.environment = environment
+            let output = Pipe()
+            child.standardOutput = output
+            child.standardError = output
+            do {
+                try child.run()
+            } catch {
+                return fail("drawer raster dpr2: child failed to start: \(error)")
+            }
+            let log = String(
+                decoding: output.fileHandleForReading.readDataToEndOfFile(),
+                as: UTF8.self)
+            child.waitUntilExit()
+            print("drawer raster dpr2: \(log)")
+            guard child.terminationStatus == 0 else {
+                return fail("drawer raster dpr2: capture failed (\(child.terminationStatus))")
+            }
+        }
         guard status == 0, entry.name == "shell-polyphony",
-              ProcessInfo.processInfo.environment["PORYDAW_POLYPHONY_PROFILE"] == nil
+            ProcessInfo.processInfo.environment["PORYDAW_POLYPHONY_PROFILE"] == nil
         else { return status }
         for profile in ["dpr1-font12", "dpr1-font16", "dpr2-font12", "dpr2-font16"] {
             let child = Process()
@@ -183,15 +193,18 @@ enum ShellQmlLane {
             } catch {
                 return fail("polyphony \(profile): child failed to start: \(error)")
             }
-            let log = String(decoding: output.fileHandleForReading.readDataToEndOfFile(),
-                             as: UTF8.self)
+            let log = String(
+                decoding: output.fileHandleForReading.readDataToEndOfFile(),
+                as: UTF8.self)
             child.waitUntilExit()
             print("polyphony \(profile): \(log)")
             guard child.terminationStatus == 0 else {
                 return fail("polyphony \(profile): capture failed (\(child.terminationStatus))")
             }
-            for state in ["narrow-vanilla", "wide-vanilla",
-                          "narrow-darkneutralhigh", "wide-darkneutralhigh"] {
+            for state in [
+                "narrow-vanilla", "wide-vanilla",
+                "narrow-darkneutralhigh", "wide-darkneutralhigh",
+            ] {
                 let image = URL(fileURLWithPath: scratch)
                     .appendingPathComponent("polyphony-\(profile)-\(state).png").path
                 guard FileManager.default.fileExists(atPath: image) else {
@@ -208,15 +221,14 @@ enum ShellQmlLane {
     }
 }
 
-/// QtCore.Settings owns the original fixture's writes and reads in a private
-/// native application domain. Foundation removes only that domain at teardown.
 @MainActor
 @QtBridgeable
 public final class ShellQmlBootstrap: QmlInstantiableStatus {
-    @QtIgnored private static var stagedProjectRoot = ""
+    private static var stagedProjectRoot = ""
 
     public var projectRoot: String = ShellQmlBootstrap.stagedProjectRoot
-    public var settingsApplicationName: String = "porydaw-shell-checks-\(UUID().uuidString.lowercased())"
+    @QtTracked public var rasterDpr2Child = ProcessInfo.processInfo.environment["PORYDAW_DRAWER_RASTER_DPR2"] != nil
+    @QtTracked public var preferences = PreferencesStore()
 
     static func stage(projectRoot: String) {
         stagedProjectRoot = projectRoot
@@ -226,13 +238,35 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
 
     public func componentComplete() {}
 
+    public func resetPreferences() -> Bool {
+        preferences.resetPreferences()
+    }
+    public func seedStartupSong(projectPath: String, song: String) -> Bool {
+        let recipe = WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: [song], selectedSong: song)
+        EditorViewStateCodec.saveTabs(recipe, store: preferences)
+        return EditorViewStateCodec.loadTabs(store: preferences).orderedSongs == [song]
+    }
 
-    /// Like the original temporary INI fixture, this store never touches user settings.
-    public func clearSettings() -> Bool {
-        let domain = "com.sp3cker." + settingsApplicationName
-        guard let store = UserDefaults(suiteName: domain) else { return false }
-        store.removePersistentDomain(forName: domain)
-        return store.synchronize()
+    public func seedStartupRecipe(projectPath: String, songs: [String], selected: String) {
+        EditorViewStateCodec.saveTabs(
+            WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: songs, selectedSong: selected),
+            store: preferences)
+    }
+
+    public func startupAudioState() -> String {
+        guard let session = qmlChildren.compactMap({ $0 as? ShellPresenter }).first?.session else {
+            return "missing-shell"
+        }
+        switch session.audioReadiness {
+        case .idle: return "idle"
+        case .preparing: return "preparing"
+        case .ready: return "ready"
+        case .failed: return "failed"
+        }
+    }
+
+    public func savedStartupSongs() -> [String] {
+        EditorViewStateCodec.loadTabs(store: preferences).orderedSongs
     }
 
     /// Widget oracle geometry for the standalone production voicegroup panel.
@@ -243,6 +277,126 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
         let file = fixtures.appendingPathComponent("macos-dpr1-font12/voicegroupbrowser")
             .appendingPathComponent(variant).appendingPathComponent("vanilla.json")
         return (try? String(contentsOf: file, encoding: .utf8)) ?? ""
+    }
+
+    public func prepareSongDeletionFixture(branch: String) -> Bool {
+        guard ["cancel", "opt-out", "opt-in"].contains(branch) else { return false }
+        let source = URL(fileURLWithPath: Self.stagedProjectRoot, isDirectory: true)
+        let target = source.deletingLastPathComponent()
+            .appendingPathComponent(source.lastPathComponent + "-deletion-" + branch, isDirectory: true)
+        do {
+            if FileManager.default.fileExists(atPath: target.path) {
+                try FileManager.default.removeItem(at: target)
+            }
+            try FileManager.default.copyItem(at: source, to: target)
+            projectRoot = target.path
+            guard prepareSongDockFixture() else { return false }
+            let bank = target.appendingPathComponent("sound/voicegroups/fixture_songs_dock.inc")
+            try "\tvoice_group fixture_songs_dock\n\tvoice_square_1 60, 0, 2, 2, 2, 3, 12, 4\n"
+                .write(to: bank, atomically: true, encoding: .utf8)
+            let hub = target.appendingPathComponent("sound/voice_groups.inc")
+            try ".include \"sound/voicegroups/fixture_songs_dock.inc\"\n"
+                .write(to: hub, atomically: true, encoding: .utf8)
+            return true
+        } catch { return false }
+    }
+    public func prepareSongActionFixture(branch: String) -> Bool {
+        guard ["charmap", "open-delete", "fallback"].contains(branch) else { return false }
+        let source = URL(fileURLWithPath: Self.stagedProjectRoot, isDirectory: true)
+        let target = source.deletingLastPathComponent()
+            .appendingPathComponent(source.lastPathComponent + "-action-" + branch, isDirectory: true)
+        let fixture = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
+            .deletingLastPathComponent().appendingPathComponent("fixtures/decompproject")
+        let charmapComplete = """
+            MUS_DUMMY = 00 00
+            MUS_LITTLEROOT_TEST = 01 00
+            MUS_ROUTE101 = 02 00
+            MUS_ROUTE102 = 03 00
+            MUS_GSC_ROUTE38 = 04 00
+            MUS_CAUGHT = 05 00
+            MUS_PETALBURG = 06 00
+            MUS_OLDALE = 07 00
+            MUS_GYM = 08 00
+            MUS_SURF = 09 00
+            MUS_VICTORY_WILD = 0A 00
+            SE_USE_ITEM = 0B 00
+            SE_PC_LOGIN = 0C 00
+            SE_FANFARE_1TRK = 0D 00
+            """ + "\n"
+        let charmapStripped = """
+            MUS_DUMMY = 00 00
+            MUS_LITTLEROOT_TEST = 01 00
+            MUS_ROUTE102 = 03 00
+            MUS_GSC_ROUTE38 = 04 00
+            MUS_CAUGHT = 05 00
+            MUS_PETALBURG = 06 00
+            MUS_OLDALE = 07 00
+            MUS_GYM = 08 00
+            MUS_SURF = 09 00
+            MUS_VICTORY_WILD = 0A 00
+            SE_USE_ITEM = 0B 00
+            SE_PC_LOGIN = 0C 00
+            SE_FANFARE_1TRK = 0D 00
+            """ + "\n"
+        do {
+            if FileManager.default.fileExists(atPath: target.path) {
+                try FileManager.default.removeItem(at: target)
+            }
+            try FileManager.default.copyItem(at: source, to: target)
+            for relative in [
+                "sound/song_table.inc", "include/constants/songs.h",
+                "sound/songs/midi/midi.cfg", "ld_script.ld", "src/debug.c",
+                "sound/voicegroups/dummy.inc",
+            ] {
+                let bytes = try Data(contentsOf: fixture.appendingPathComponent(relative))
+                let destination = target.appendingPathComponent(relative)
+                try FileManager.default.createDirectory(
+                    at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try bytes.write(to: destination)
+            }
+            for relative in [
+                "sound/songs/midi/mus_stray_test.mid",
+                "sound/songs/midi/mus_partial_test.mid",
+                "sound/voicegroups/fixture_songs_dock.inc",
+            ] {
+                let leftover = target.appendingPathComponent(relative)
+                if FileManager.default.fileExists(atPath: leftover.path) {
+                    try FileManager.default.removeItem(at: leftover)
+                }
+            }
+            let charmap = target.appendingPathComponent("charmap.txt")
+            let complete = Data(charmapComplete.utf8)
+            let expected = try Data(contentsOf: fixture.appendingPathComponent("charmap.txt"))
+            guard expected == complete else { return false }
+            try (branch == "charmap" ? charmapStripped : charmapComplete)
+                .write(to: charmap, atomically: true, encoding: .utf8)
+            if branch == "fallback" {
+                let midi = target.appendingPathComponent("sound/songs/midi")
+                let playable = try Data(contentsOf: midi.appendingPathComponent("mus_route101.mid"))
+                try playable.write(to: midi.appendingPathComponent("mus_dummy.mid"))
+            }
+            projectRoot = target.path
+            return true
+        } catch { return false }
+    }
+    public func prepareImportCommitFixture(label: String) -> Bool {
+        let source = URL(fileURLWithPath: Self.stagedProjectRoot, isDirectory: true)
+        let target = source.deletingLastPathComponent()
+            .appendingPathComponent(source.lastPathComponent + "-import-" + label, isDirectory: true)
+        do {
+            if FileManager.default.fileExists(atPath: target.path) {
+                try FileManager.default.removeItem(at: target)
+            }
+            try FileManager.default.copyItem(at: source, to: target)
+            projectRoot = target.path
+            return true
+        } catch { return false }
+    }
+
+    public func actionMidiExists() -> Bool {
+        FileManager.default.fileExists(
+            atPath:
+                projectRoot + "/sound/songs/midi/mus_route101.mid")
     }
 
     /// Creates a stray and a partial song in this entry's isolated scratch project.
@@ -260,12 +414,16 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
             try (originalConfig + "\nmus_stray_test.mid: -E -R50 -G_fixture_songs_dock -V100\n")
                 .write(to: config, atomically: true, encoding: .utf8)
             let groups = root.appendingPathComponent("sound/voicegroups", isDirectory: true)
-            let originalVoicegroup = try String(contentsOf: groups.appendingPathComponent("fixture_rich.inc"),
-                                                encoding: .utf8)
-            try originalVoicegroup.replacingOccurrences(of: "voice_group fixture_rich",
-                                                        with: "voice_group fixture_songs_dock")
-                .write(to: groups.appendingPathComponent("fixture_songs_dock.inc"),
-                       atomically: true, encoding: .utf8)
+            let originalVoicegroup = try String(
+                contentsOf: groups.appendingPathComponent("fixture_rich.inc"),
+                encoding: .utf8)
+            try originalVoicegroup.replacingOccurrences(
+                of: "voice_group fixture_rich",
+                with: "voice_group fixture_songs_dock"
+            )
+            .write(
+                to: groups.appendingPathComponent("fixture_songs_dock.inc"),
+                atomically: true, encoding: .utf8)
             let original = try String(contentsOf: table, encoding: .utf8)
             if !original.contains("song mus_partial_test,") {
                 try (original + "\n    song mus_partial_test, MUSIC_PLAYER_BGM, 0\n")
@@ -276,24 +434,25 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     }
 
     public func dockVoicegroupExists() -> Bool {
-        FileManager.default.fileExists(atPath:
-            projectRoot + "/sound/voicegroups/fixture_songs_dock.inc")
+        FileManager.default.fileExists(
+            atPath:
+                projectRoot + "/sound/voicegroups/fixture_songs_dock.inc")
     }
 
     public func dockSongMidiExists() -> Bool {
-        FileManager.default.fileExists(atPath:
-            projectRoot + "/sound/songs/midi/mus_stray_test.mid")
+        FileManager.default.fileExists(
+            atPath:
+                projectRoot + "/sound/songs/midi/mus_stray_test.mid")
     }
 
-    public func dockTrashedMidiExists() -> Bool {
-        FileManager.default.fileExists(atPath:
-            projectRoot + "/.porydaw/trash/mus_stray_test.mid")
+    public func projectPorydawFolderExists() -> Bool {
+        FileManager.default.fileExists(atPath: projectRoot + "/.porydaw")
     }
 
     /// Selects the frozen widget geometry for the actual mounted display
     /// profile rather than assuming that shell tests run at DPR 2/font 12.
     public func songListBaselineJson(dpr: Int, fontPx: Int) -> String {
-        guard (dpr == 1 || dpr == 2), (fontPx == 12 || fontPx == 16) else { return "" }
+        guard dpr == 1 || dpr == 2, fontPx == 12 || fontPx == 16 else { return "" }
         let root = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .deletingLastPathComponent()
         let url = root.appendingPathComponent(
@@ -308,7 +467,7 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     }
     /// The QWidget widget baseline uses logical item coordinates for both DPRs.
     public func transportReferenceJson(dpr: Int, fontPx: Int) -> String {
-        guard (dpr == 1 || dpr == 2), (fontPx == 12 || fontPx == 16) else { return "" }
+        guard dpr == 1 || dpr == 2, fontPx == 12 || fontPx == 16 else { return "" }
         let path = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .deletingLastPathComponent()
             .appendingPathComponent("fixtures/visual/macos-dpr\(dpr)-font\(fontPx)/transportbar/vanilla.json")
@@ -322,7 +481,8 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
 
     public func settingsReferenceJson(profile: String, page: String) -> String {
         guard ["macos-dpr1-font12", "macos-dpr2-font16"].contains(profile),
-              ["engine", "song"].contains(page) else { return "" }
+            ["engine", "song"].contains(page)
+        else { return "" }
         let path = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .deletingLastPathComponent()
             .appendingPathComponent("fixtures/visual/\(profile)/settings/\(page)-vanilla.json")
@@ -340,8 +500,6 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
         return text.components(separatedBy: .newlines)
             .first(where: { $0.hasPrefix("mus_route101.mid:") }) ?? ""
     }
-    /// The full native keymap assertions run only after QML has written the
-    /// four original values to the genuine QtCore.Settings user store.
     public func registryFailures() -> [String] {
         var failures: [String] = []
         runKeybindingRegistryChecks(onAssertion: { passed, id, message in
@@ -356,11 +514,15 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     public func copiedClipSummary() -> String {
         let box = ShellClipboardReadBox()
         let context = Unmanaged.passUnretained(box).toOpaque()
-        guard pd_clipboard_read(context, { rawContext, bytes, count in
-            guard let rawContext, let bytes else { return }
-            Unmanaged<ShellClipboardReadBox>.fromOpaque(rawContext)
-                .takeUnretainedValue().data = Data(bytes: bytes, count: count)
-        }), let data = box.data, let decoded = ClipboardCodec.decode(data) else { return "[]" }
+        guard
+            pd_clipboard_read(
+                context,
+                { rawContext, bytes, count in
+                    guard let rawContext, let bytes else { return }
+                    Unmanaged<ShellClipboardReadBox>.fromOpaque(rawContext)
+                        .takeUnretainedValue().data = Data(bytes: bytes, count: count)
+                }), let data = box.data, let decoded = ClipboardCodec.decode(data)
+        else { return "[]" }
         let tracks = decoded.clip.tracks
         let notes = tracks.first?.notes ?? []
         return "[\(tracks.count),\(notes.count),\(notes.first.map { Int($0.key) } ?? -1)]"
@@ -369,6 +531,91 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     /// Clear the previous song clip before the original focused-text Copy row.
     public func clearClipboardProbe() -> Bool {
         pd_clipboard_write(nil, 0)
+    }
+
+    private var polyphonySession: ApplicationSession? {
+        qmlChildren.compactMap { $0 as? ShellPresenter }.first?.session
+    }
+
+    /// Install deterministic diagnostic events on the mounted shell presenter,
+    /// with matching notes in its actual document rather than an isolated panel.
+    public func seedPolyphonyReveal() -> String {
+        guard let app = polyphonySession,
+            let session = app.selectedDocument,
+            let other = session.document.addTrack(voice: 0),
+            let planted = try? session.document.addNotes([
+                NewNote(track: 0, tick: 12_000, pitch: 60, duration: 6, velocity: 80),
+                NewNote(track: 0, tick: 12_024, pitch: 60, duration: 6, velocity: 80),
+                NewNote(track: 0, tick: 12_072, pitch: 60, duration: 6, velocity: 80),
+            ]), planted.count == 3
+        else { return "" }
+        session.selectPrimaryTrack(other)
+        session.setSelectedNotes([planted[2]])
+        // Pause audio polling while the mounted dock displays the synthetic event ring.
+        app.polyphony.setVisible(showing: false)
+        var snapshot = AudioPolySnapshot(
+            maxPcmChannels: 0, invert: false,
+            pcm: Array(
+                repeating: AudioPolyChannel(
+                    on: false, releasing: false,
+                    track: 0, midiKey: 0),
+                count: Int(TOTAL_PCM_CHANNELS)),
+            cgb: Array(
+                repeating: AudioPolyChannel(
+                    on: false, releasing: false,
+                    track: 0, midiKey: 0),
+                count: Int(TOTAL_CGB_CHANNELS)),
+            drop: Array(repeating: 0, count: Int(MAX_TRACKS)),
+            steal: Array(repeating: 0, count: Int(MAX_TRACKS)),
+            tailCut: Array(repeating: 0, count: Int(MAX_TRACKS)),
+            eventTotal: 3,
+            events: Array(
+                repeating: M4APolyEvent(
+                    type: 0, trackIndex: 0, midiKey: 0,
+                    byTrack: 0, program: 0, tick: 0),
+                count: Int(M4A_POLY_EVENT_CAPACITY)))
+        snapshot.events[0] = M4APolyEvent(
+            type: 1, trackIndex: 0, midiKey: 60,
+            byTrack: 1, program: 0, tick: 12_027)
+        snapshot.events[1] = M4APolyEvent(
+            type: 1, trackIndex: 0, midiKey: 127,
+            byTrack: 1, program: 0, tick: 12_048)
+        snapshot.events[2] = M4APolyEvent(
+            type: 1, trackIndex: 0, midiKey: 60,
+            byTrack: 1, program: 0, tick: 12_048)
+        app.polyphony.update(snapshot)
+        return "[\(planted.map { String($0.rawValue) }.joined(separator: ",")),\(other)]"
+    }
+
+    public func stagePolyphonyMiss(track: Int, noteID: Int) -> Bool {
+        guard let session = polyphonySession?.selectedDocument, noteID > 0 else { return false }
+        let selected = NoteID(UInt64(noteID))
+        session.selectPrimaryTrack(track)
+        session.setSelectedNotes([selected])
+        return session.selectedTrack == track && session.selectedNoteOrder == [selected]
+    }
+
+    /// Lightweight poll for the reveal journeys: selected track only,
+    /// without the captureSave + base64 snapshot that polyphonyRevealState builds.
+    public func polyphonyRevealTrack() -> Int {
+        polyphonySession?.selectedDocument?.selectedTrack ?? -1
+    }
+
+    public func polyphonyRevealState() -> String {
+        guard let session = polyphonySession?.selectedDocument,
+            let saved = try? session.document.captureSave()
+        else { return "" }
+        let camera = session.camera
+        let selected = session.selectedNoteOrder.map { String($0.rawValue) }.joined(separator: ",")
+        return """
+            {"track":\(session.selectedTrack ?? -1),"selected":[\(selected)],
+            "undoIndex":\(session.document.history.undoIndex),
+            "undoCount":\(session.document.history.undoCount),
+            "bytes":"\(Data(saved.bytes).base64EncodedString())",
+            "scrollX":\(camera.snapshot.scrollX),
+            "noteX":\(camera.contentX(tick: 12_027)),
+            "viewportWidth":\(camera.snapshot.viewportWidth)}
+            """
     }
 
     public func setVelocityCommand() -> Int { EditCommand.setVelocity.rawValue }

@@ -3,8 +3,11 @@
 ## Themes
 
 Three built-in themes — Vanilla, Dark Neutral High, and Immaterial — are
-selectable in View → Theme, alongside a grid-line contrast slider. The choice
-is persisted per user.
+selectable in **Edit → Engine Settings**, alongside the grid-line contrast
+slider. Preview immediately updates track headers, the Voice gutter label, and
+automation nodes in every open song.
+
+**Apply** saves the choice per user. **Cancel** restores the previous appearance.
 
 ## Use System Font
 

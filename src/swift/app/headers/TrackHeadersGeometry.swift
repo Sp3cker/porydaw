@@ -30,8 +30,8 @@ struct TrackHeaderSnapshot: Equatable {
     var titleRect = HeaderRect()
     var subtitleRect = HeaderRect()
     var selectedTitleOffset = HeaderPoint()
-    var titleFont = GridFontSpec(family: "", pixelSize: 0, weight: 400, letterSpacing: 0)
-    var subtitleFont = GridFontSpec(family: "", pixelSize: 0, weight: 400, letterSpacing: 0)
+    var titleFont: GridFontSpec
+    var subtitleFont: GridFontSpec
     var baseColor = "#00000000"
     var overlayColor = "#00000000"
     var titleColor = "#00000000"
@@ -128,14 +128,6 @@ struct TrackHeadersGeometry {
                                   width: Double(textWidth), height: Double(metrics.subtitle))
         return (title, subtitle)
     }
-    static func titleFont(baseFontPx: Double, bold: Bool = false) -> GridFontSpec {
-        GridFontSpec(family: "Atkinson Hyperlegible Next", pixelSize: Int(fontPx(baseFontPx, 1.125)),
-                     weight: bold ? 600 : 400, letterSpacing: 0)
-    }
-    static func subtitleFont(baseFontPx: Double) -> GridFontSpec {
-        GridFontSpec(family: "Atkinson Hyperlegible Next", pixelSize: Int(fontPx(baseFontPx, 1)),
-                     weight: 400, letterSpacing: 0)
-    }
 
     @MainActor
     static func appearance(palette: GridPalette) -> [String: QVariantSettable] {
@@ -161,22 +153,25 @@ struct TrackHeadersGeometry {
 extension TrackHeadersPresenter {
     func configureGeometry(width: Double, height: Double, base: Double, dpr: Double) {
         guard width.isFinite, height.isFinite, base.isFinite, dpr.isFinite else { return }
-        let nextBase = max(1, base)
+        let requestedBase = Int(max(1, base).rounded())
+        let nextBase = Double(requestedBase)
         let nextWidth = max(0, width)
         let nextHeight = max(0, height)
         let nextDpr = max(0.1, dpr)
         guard rowHeight == 0 || nextWidth != viewportWidth || nextHeight != viewportHeight
                 || nextBase != baseFontPx || nextDpr != devicePixelRatio else { return }
         if nextBase != baseFontPx { textMetrics = nil }
-        baseFontPx = nextBase
+        if requestedBase != fontRoles.baseFontPx {
+            fontRoles = Typography(baseFontPx: requestedBase)
+        }
         devicePixelRatio = nextDpr
         viewportWidth = nextWidth
         viewportHeight = nextHeight
         geometry = TrackHeadersGeometry(base: nextBase)
-        controlFont = TrackHeadersGeometry.titleFont(baseFontPx: nextBase).map
-        normalTitleFont = controlFont
-        boldTitleFont = TrackHeadersGeometry.titleFont(baseFontPx: nextBase, bold: true).map
-        subtitleFont = TrackHeadersGeometry.subtitleFont(baseFontPx: nextBase).map
+        controlFont = fontRoles.body.map
+        normalTitleFont = fontRoles.body.map
+        boldTitleFont = fontRoles.bodyBold.map
+        subtitleFont = fontRoles.caption.map
         publishGeometry()
         refreshFromDocument()
     }
@@ -229,36 +224,57 @@ extension TrackHeadersPresenter {
         let name = session.document.trackName(track)
         let primary = session.selectedTrack == track
         let rects = geometry.textRects(width: viewportWidth, metrics: textMetrics)
-        var row = TrackHeaderSnapshot(track: track,
-            title: "\(track + 1) · \(name.isEmpty ? "Track \(track + 1)" : name)")
+        var row = TrackHeaderSnapshot(
+            track: track, title: "\(track + 1) · \(name.isEmpty ? "Track \(track + 1)" : name)",
+            titleFont: primary ? fontRoles.bodyBold : fontRoles.body,
+            subtitleFont: fontRoles.caption)
         row.titleBold = primary
-        row.titleFont = TrackHeadersGeometry.titleFont(baseFontPx: baseFontPx, bold: primary)
-        row.subtitleFont = TrackHeadersGeometry.subtitleFont(baseFontPx: baseFontPx)
         row.titleRect = rects.0
         row.subtitleRect = rects.1
         row.baseColor = primary ? palette.selectionRing : palette.windowBackground
-        if !primary && session.selectedTracks.contains(track) {
-            // 0x40 tint keeps windowText >= 4.5:1 on the composited mix in every theme; secondaryText fails above 0x16-0x27 alpha.
+        let scoped = !primary && session.selectedTracks.contains(track)
+        if scoped {
             row.overlayColor = "#40\(palette.selectionRing.suffix(6))"
+        }
+        if primary {
+            row.titleColor = palette.selectionText
+            row.subtitleColor = palette.selectionText
+        } else if scoped {
             row.titleColor = palette.windowText
             row.subtitleColor = palette.windowText
+        } else {
+            row.titleColor = palette.primaryText
+            row.subtitleColor = palette.secondaryText
         }
-        // Selected rows sit on a selection surface, so every text in the row
-        // uses the selection ink.
-        row.titleColor = primary ? palette.selectionText : palette.primaryText
-        row.subtitleColor = primary ? palette.selectionText : palette.secondaryText
+        if track >= session.document.trackBudget {
+            // Theme-only lookups: the dimmed inks depend solely on the preset
+            // palette, so they are checked-in literals indexed by ThemePreset.
+            let preset = palette.theme.rawValue
+            if primary {
+                row.titleColor = TrackHeadersGeometry.overBudgetPrimaryInk[preset]
+                row.subtitleColor = row.titleColor
+            } else if scoped {
+                row.titleColor = TrackHeadersGeometry.overBudgetScopedInk[preset]
+                row.subtitleColor = row.titleColor
+            } else {
+                row.titleColor = TrackHeadersGeometry.overBudgetTitleInk[preset]
+                row.subtitleColor = TrackHeadersGeometry.overBudgetSubtitleInk[preset]
+            }
+        }
         row.muteChecked = session.mutedTracks.contains(track)
         row.soloChecked = session.soloedTracks.contains(track)
         let program = program ?? resolvedProgram(
             track: track, session: session,
             tick: playing ? playheadTick : session.editCursor)
         if program < 0 { row.subtitle = "(no voice set)" }
-        else if session.bankSlots.indices.contains(program), session.bankSlots[program].voice != nil {
-            row.subtitle = VoiceLanePolicy.label(slot: program, view: session.bankSlots[program])
+        else if session.bankSlots.indices.contains(program),
+                session.bankSlots[program].voice != nil
+                || session.bankSlots[program].tone != nil {
+            row.subtitle = VoiceLanePolicy.label(slot: program,
+                                                 view: session.bankSlots[program])
         } else { row.subtitle = String(format: "%03d Voice", program) }
-        let identity = PaletteMath.trackIdentityOklab(track)
         row.activityActiveColor = PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(track)]
-        row.activityDimColor = headerActivityDim(identity)
+        row.activityDimColor = ThemeColorTables.activityDimColors[PaletteMath.trackIdentityIndex(track)]
         let intensity = activity.intensity(track: track)
         row.activityLeftHeight = activityHeight(intensity.left)
         row.activityRightHeight = activityHeight(intensity.right)
@@ -266,24 +282,46 @@ extension TrackHeadersPresenter {
     }
 }
 
-/// The existing track activity renderer's Oklch dimming: lower L by 0.18,
-/// reduce chroma only when the result would leave sRGB, then quantize once.
-private func headerActivityDim(_ identity: PaletteMath.Oklab) -> String {
-    let lightness = max(0, identity.lightness - 0.18)
-    var a = identity.a, b = identity.b
-    for _ in 0..<12 {
-        let lab = PaletteMath.Oklab(lightness: lightness, a: a, b: b)
-        let l = lightness + 0.3963377774 * a + 0.2158037573 * b
-        let m = lightness - 0.1055613458 * a - 0.0638541728 * b
-        let s = lightness - 0.0894841775 * a - 1.2914855480 * b
-        let l3 = l * l * l, m3 = m * m * m, s3 = s * s * s
-        let r = 4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3
-        let g = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3
-        let blue = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3
-        if r >= 0, r <= 1, g >= 0, g <= 1, blue >= 0, blue <= 1 {
-            return PaletteMath.hex(lab)
-        }
-        a *= 0.85; b *= 0.85
+extension TrackHeadersGeometry {
+    @MainActor
+    static func scopedHeaderSurface(palette: GridPalette) -> String {
+        let tint = PaletteMath.channels(palette.selectionRing)
+        let base = PaletteMath.channels(palette.windowBackground)
+        return PaletteMath.hex(
+            r: (tint.r * 64 + base.r * 191 + 127) / 255,
+            g: (tint.g * 64 + base.g * 191 + 127) / 255,
+            b: (tint.b * 64 + base.b * 191 + 127) / 255)
     }
-    return PaletteMath.hex(PaletteMath.Oklab(lightness: lightness, a: 0, b: 0))
+
+    // Over-budget inks per ThemePreset.rawValue, precomputed from the
+    // dimmedInk/scopedHeaderSurface math; verified by themeColorTableChecks.
+    static let overBudgetSurface = ["#C5CBC8", "#515D5F", "#4D575F"]
+    static let overBudgetPrimaryInk = ["#5B6565", "#455255", "#4B5359"]
+    static let overBudgetScopedInk = ["#505655", "#C6D5D8", "#C5CBCE"]
+    static let overBudgetTitleInk = ["#554F4C", "#A0A0A0", "#96989C"]
+    static let overBudgetSubtitleInk = ["#564F4A", "#A0A0A0", "#95989F"]
+
+    static func dimmedInk(ink: String, backdrop: String, surface: String,
+                          cap: Double) -> String {
+        let from = PaletteMath.channels(ink)
+        let to = PaletteMath.channels(backdrop)
+        let inkLab = PaletteMath.oklab(r: from.r, g: from.g, b: from.b)
+        let backdropLab = PaletteMath.oklab(r: to.r, g: to.g, b: to.b)
+        func mixed(_ factor: Double) -> String {
+            PaletteMath.hex(PaletteMath.mixTowardOklab(inkLab, backdropLab, factor))
+        }
+        let capped = mixed(cap)
+        if PaletteMath.contrastRatio(capped, surface) >= 4.5 { return capped }
+        var lower = 0.0
+        var upper = cap
+        while upper - lower > 0.001 {
+            let midpoint = (lower + upper) / 2
+            if PaletteMath.contrastRatio(mixed(midpoint), surface) >= 4.5 {
+                lower = midpoint
+            } else {
+                upper = midpoint
+            }
+        }
+        return mixed(lower)
+    }
 }

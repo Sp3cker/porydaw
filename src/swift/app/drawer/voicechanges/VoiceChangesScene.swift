@@ -84,7 +84,6 @@ struct VoiceChangesSceneInput: Sendable {
     var slots: [BankSlotView] = []
     var track: Int = 0
     var firstProgram: Int = -1
-    var lengthTicks: Tick = 0
     var trackAvailable = false
     var gutterTitle = "Voice"
     /// The effective context tick the readout resolves at.
@@ -98,12 +97,7 @@ struct VoiceChangesSceneInput: Sendable {
     var pad: Double = 0
     var gap: Double = 0
     var stairLimit: Double = 0
-    /// The camera the x-mapping resolves through, the page's cached grid metrics,
-    /// and the document's own clock lattice.
     var camera: EditorCamera
-    var metrics: GridMetrics
-    var division: Int = 24
-    var extendedClocks = false
     /// The live interaction the marker projection marks its rows with.
     var interaction: VoiceInteractionSnapshot
 }
@@ -120,16 +114,12 @@ struct VoiceChangesSceneSnapshot {
     var entries: [VoiceProjectionEntry]
     /// The gutter's own two lines.
     var gutterTexts: [SceneText]
-    /// One rect per held program span.
-    var spans: [SceneRect]
-    /// The visible vertical grid.
-    var gridLines: [SceneRect]
     /// The effective context's readout.
     var readout: VoiceReadoutValues
 
     /// The detached scene: no track, no content and no context.
     static let detached = Self(
-        trackAvailable: false, entries: [], gutterTexts: [], spans: [], gridLines: [],
+        trackAvailable: false, entries: [], gutterTexts: [],
         readout: VoiceReadoutValues())
 
     /// The static projections of one rebuild: the gutter, the held spans, the
@@ -144,8 +134,6 @@ struct VoiceChangesSceneSnapshot {
             entries: input.entries,
             gutterTexts: VoiceChangesScene.gutterTexts(input, palette: palette, title: title,
                                                       caption: caption),
-            spans: VoiceChangesScene.spans(input, entries: input.entries),
-            gridLines: VoiceChangesScene.gridLines(input, palette: palette),
             readout: VoiceChangesScene.readout(firstProgram: input.firstProgram,
                                                tick: input.contextTick, points: input.points,
                                                slots: input.slots, pad: input.pad,
@@ -163,26 +151,12 @@ struct VoiceChangesSceneSnapshot {
 enum VoiceChangesScene {
     // MARK: Plot queries
 
-    /// The shared camera's plot-local x for one tick. `origin: 0` is the page's
-    /// own body: the gutter is the plot origin, never part of the camera mapping.
+    /// The shared camera's plot-local x for one tick.
     static func xForTick(_ tick: Tick, camera: EditorCamera,
                          devicePixelRatio: Double) -> Double {
-        camera.displayX(tick: Double(tick), origin: 0, dpr: devicePixelRatio)
+        camera.viewX(tick: Double(tick), dpr: devicePixelRatio)
     }
 
-    /// `VoiceChangeArea`'s snap seam: the shared grid's editing lattice for a
-    /// plain drag, and the legacy alt-fine clock lattice while the modifier is
-    /// held — `Grid::snapTick(rawTick, modifiers & Qt::AltModifier)`.
-    static func snapTick(at x: Double, fine: Bool, camera: EditorCamera, metrics: GridMetrics,
-                         division: Int, extendedClocks: Bool) -> Tick {
-        let raw = max(0, camera.tickAtContentX(max(0, x)))
-        guard !fine else {
-            return TimelineSnapPolicy.fineSnap(
-                raw, clockTicks: TimelineSnapPolicy.clockTicks(
-                    division: division, extendedClocks: extendedClocks))
-        }
-        return Tick(max(0, metrics.snapTick(raw, camera: camera)))
-    }
 
     /// The nearest marker whose drawn x is inside the font-relative hit radius;
     /// ties keep the later point, exactly as the legacy scan does.
@@ -234,6 +208,7 @@ enum VoiceChangesScene {
         VoiceChangesProjection.gutterTexts(VoiceGutterProjectionInput(
             plotHeight: input.plotHeight,
             plotOrigin: input.plotOrigin,
+                pad: input.pad,
             title: input.gutterTitle,
             summary: input.trackAvailable ? countSummary(input.points) : nil,
             titleFont: title?.fontMap ?? [:],
@@ -244,43 +219,7 @@ enum VoiceChangesScene {
             captionColor: palette.secondaryText))
     }
 
-    /// One held-span rect per program section, exactly the legacy walk: a span
-    /// from the previous change to this one, then the tail to the song's end.
-    static func spans(_ input: VoiceChangesSceneInput,
-                      entries: [VoiceProjectionEntry]) -> [SceneRect] {
-        guard input.plotHeight > 0, input.plotWidth > 0, input.trackAvailable else { return [] }
-        let held = PaletteMath.hex(PaletteMath.trackIdentityOklab(input.track), alpha: 18)
-        return VoiceChangesProjection.spans(VoiceSpanProjectionInput(
-            entries: entries,
-            firstProgram: input.firstProgram,
-            lengthTicks: input.lengthTicks,
-            plotWidth: input.plotWidth,
-            plotHeight: input.plotHeight,
-            color: held,
-            displayX: { xForTick($0, camera: input.camera,
-                                 devicePixelRatio: input.devicePixelRatio) }))
-    }
 
-    /// The vertical grid over the visible plot: the roll's own subdivision,
-    /// beat, fine-beat and bar lines, through the same grid metrics.
-    static func gridLines(_ input: VoiceChangesSceneInput,
-                          palette: GridPalette) -> [SceneRect] {
-        guard input.plotHeight > 0, input.plotWidth > 0, input.trackAvailable else { return [] }
-        return VoiceChangesProjection.grid(
-            metrics: input.metrics,
-            camera: input.camera,
-            plotWidth: input.plotWidth,
-            plotHeight: input.plotHeight,
-            colors: VoiceGridProjectionColors(
-                subdivision1: palette.gridLineSub1,
-                subdivision2: palette.gridLineSub2,
-                subdivision3: palette.gridLineSub3,
-                bar: palette.gridLineBar,
-                beat: palette.gridLineBeat,
-                fineBeat: palette.gridLineBeatFine),
-            displayX: { xForTick($0, camera: input.camera,
-                                 devicePixelRatio: input.devicePixelRatio) })
-    }
 
     /// The marker projection: one marker rule and one label box per entry, with
     /// the legacy elision, stair placement and offscreen rule. The page's own
@@ -310,8 +249,10 @@ enum VoiceChangesScene {
             previewIdentity: input.interaction.drag?.active == true
                 ? input.interaction.drag?.identity : nil,
             caption: caption,
-            displayX: { xForTick($0, camera: input.camera,
-                                 devicePixelRatio: input.devicePixelRatio) }),
+                displayX: {
+                    input.camera.contentTickX(
+                        tick: Double($0), dpr: input.devicePixelRatio)
+                }),
             reusing: previous)
     }
 

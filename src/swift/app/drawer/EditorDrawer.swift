@@ -1,18 +1,5 @@
 import QtBridge
 
-// The editor drawer container: three independently visible sections stacked in the
-// fixed order Velocity, Voice Changes, Automations, one bottom chrome bar holding
-// one toggle per attached section, one resize handle directly above each visible
-// body, and one active page. Behaviour follows the production reference
-// `src/ui/editordrawer/{editordrawer,drawersections,drawerchrome}.{h,cpp}`.
-//
-// `EditorDrawerLayout` owns every rule — section state, metrics, stacking, the host
-// clamp, resizing (including the Voice-Changes→Automations spill), focus decisions,
-// synchronous cancellation and the preference-change records. `EditorDrawerPresenter`
-// only mirrors one layout value into published primitives and applies the container's
-// cancel-before-publish order; it holds no policy of its own. The bridge never sees
-// the layout type, the page protocol or a Core value.
-
 // MARK: - Page seam
 
 /// A page's declared body sizing. Re-read on every layout pass; the page owns its
@@ -89,8 +76,7 @@ public final class EditorDrawerSectionState {
 }
 
 /// The container as QML sees it: one `EditorDrawerLayout` value mirrored into
-/// published primitives, one bridged section state per kind, and the container's
-/// two preference signals. It holds no policy; every rule lives in the layout.
+/// published primitives, one bridged section state per kind and the section preference signal.
 @MainActor
 @QtBridgeable
 public final class EditorDrawerPresenter {
@@ -117,6 +103,8 @@ public final class EditorDrawerPresenter {
 
     /// Swift-only hook for pages that were hidden during shared-playhead publication.
     @QtIgnored public var onSectionVisibilityChanged: ((DrawerSectionKind, Bool) -> Void)?
+    @QtIgnored public var onChromeChanged: ((EditorDrawerChromeState) -> Void)?
+
 
     private var layout = EditorDrawerLayout()
     private let unresolvedSection = EditorDrawerSectionState()
@@ -144,35 +132,91 @@ public final class EditorDrawerPresenter {
                                      gutterWidth: gutterWidth))
     }
 
-    /// The store's one read, with `-1` for an absent visibility or page and `0` for
-    /// an absent height. Applying restored values never writes back.
-    public func restoreStoredPreferences(velocityVisible: Int, velocityHeight: Int,
-                                         automationVisible: Int, automationHeight: Int,
-                                         voiceChangesVisible: Int, voiceChangesHeight: Int,
-                                         activePage: Int) {
-        publish(layout.restorePreferences(velocityVisible: velocityVisible,
-                                          velocityHeight: velocityHeight,
-                                          automationVisible: automationVisible,
-                                          automationHeight: automationHeight,
-                                          voiceChangesVisible: voiceChangesVisible,
-                                          voiceChangesHeight: voiceChangesHeight,
-                                          activePage: activePage))
+    @QtIgnored
+    public var chromeState: EditorDrawerChromeState {
+        var state = EditorDrawerChromeState()
+        state.velocity = .init(visible: layout.isVisible(.velocity),
+                               height: layout.storedBodyHeight(.velocity))
+        state.automation = .init(visible: layout.isVisible(.automation),
+                                 height: layout.storedBodyHeight(.automation))
+        state.voiceChanges = .init(visible: layout.isVisible(.voiceChanges),
+                                   height: layout.storedBodyHeight(.voiceChanges))
+        state.activePage = layout.activePage
+        return state
+    }
+
+    @QtIgnored
+    public func applyChrome(_ state: EditorDrawerChromeState) {
+        publish(layout.restorePreferences(
+            velocityVisible: state.velocity.visible ? 1 : 0,
+            velocityHeight: state.velocity.height ?? 0,
+            automationVisible: state.automation.visible ? 1 : 0,
+            automationHeight: state.automation.height ?? 0,
+            voiceChangesVisible: state.voiceChanges.visible ? 1 : 0,
+            voiceChangesHeight: state.voiceChanges.height ?? 0,
+            activePage: state.activePage.rawValue))
     }
 
     public func toggleSection(kind: Int, drawerOwnsFocus: Bool) {
         guard let section = DrawerSectionKind(rawValue: kind) else { return }
+        if !layout.isAvailable(section), onChromeChanged != nil {
+            var state = chromeState
+            switch section {
+            case .automation: state.automation.visible.toggle()
+            case .velocity: state.velocity.visible.toggle()
+            case .voiceChanges: state.voiceChanges.visible.toggle()
+            }
+            state.activePage = section
+            publishDetachedChange(state, section: section)
+            return
+        }
         publish(layout.toggleSection(section, drawerOwnsFocus: drawerOwnsFocus))
     }
 
     public func setSectionVisible(kind: Int, visible: Bool, drawerOwnsFocus: Bool) {
         guard let section = DrawerSectionKind(rawValue: kind) else { return }
+        if !layout.isAvailable(section), onChromeChanged != nil {
+            var state = chromeState
+            switch section {
+            case .automation: state.automation.visible = visible
+            case .velocity: state.velocity.visible = visible
+            case .voiceChanges: state.voiceChanges.visible = visible
+            }
+            publishDetachedChange(state, section: section)
+            return
+        }
         publish(layout.setSectionVisible(section, visible: visible,
                                          drawerOwnsFocus: drawerOwnsFocus))
     }
 
     public func setSectionBodyHeight(kind: Int, height: Int) {
         guard let section = DrawerSectionKind(rawValue: kind) else { return }
+        if !layout.isAvailable(section), onChromeChanged != nil {
+            var state = chromeState
+            let stored = height > 0 ? height : nil
+            switch section {
+            case .automation: state.automation.height = stored
+            case .velocity: state.velocity.height = stored
+            case .voiceChanges: state.voiceChanges.height = stored
+            }
+            publishDetachedChange(state, section: section)
+            return
+        }
         publish(layout.setSectionBodyHeight(section, height: height))
+    }
+
+    private func publishDetachedChange(_ state: EditorDrawerChromeState,
+                                       section: DrawerSectionKind) {
+        guard state != chromeState else { return }
+        let preference: DrawerChromeSection
+        switch section {
+        case .automation: preference = state.automation
+        case .velocity: preference = state.velocity
+        case .voiceChanges: preference = state.voiceChanges
+        }
+        drawerSectionPreferenceChanged(kind: section.rawValue, visible: preference.visible,
+                                       height: preference.height ?? 0)
+        onChromeChanged?(state)
     }
 
     public func beginResize(kind: Int) {
@@ -206,6 +250,9 @@ public final class EditorDrawerPresenter {
         publish(layout.cancelInteractions())
     }
 
+    @QtIgnored
+    public var resizeActive: Bool { layout.resizeKind != nil }
+
     /// The container's aggregate interaction state: the chrome resize session or
     /// any attached page's own interaction. Swift-only: the shared playhead's
     /// follow gate reads it, and no QML surface learns gesture state from it.
@@ -216,13 +263,16 @@ public final class EditorDrawerPresenter {
     /// `height == 0` is the unset marker.
     @QtSignal public func drawerSectionPreferenceChanged(kind: Int, visible: Bool, height: Int)
 
-    /// Emitted when an interactive call moved the active page to an available kind.
-    @QtSignal public func drawerActivePagePreferenceChanged(page: Int)
-
     /// Swift-only page attachment; the session owns every attach and detach call.
     @QtIgnored
     public func attachSection(_ page: EditorDrawerPage) {
         publish(layout.attachPage(page))
+    }
+
+    /// Swift-only page attachment: publishes only the combined final layout.
+    @QtIgnored
+    public func attachSections(_ pages: [EditorDrawerPage]) {
+        publish(layout.attachPages(pages))
     }
 
     /// Swift-only page detachment: cancels `page` synchronously, then publishes the
@@ -247,8 +297,8 @@ public final class EditorDrawerPresenter {
         for (kind, visible) in visibilityChanges {
             onSectionVisibilityChanged?(kind, visible)
         }
-        if let page = change.activePagePreference {
-            drawerActivePagePreferenceChanged(page: page.rawValue)
+        if !change.sectionPreferences.isEmpty || change.activePagePreference != nil {
+            onChromeChanged?(chromeState)
         }
         // The target is published before the revision so a handler that runs on the
         // revision change reads the matching target.

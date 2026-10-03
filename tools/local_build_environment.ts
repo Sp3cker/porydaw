@@ -10,11 +10,19 @@ export type QtInstallation = {
   architecture: string;
 };
 
+export type BuildConfig = "debug" | "release" | "asan";
+
+// Each configuration owns its tree, so switching never reconfigures in place.
+export function buildDirectory(config: BuildConfig): string {
+  return join("build", config);
+}
+
 type CmakeConfigureOptions = {
   buildDirectory: string;
   poryaaaaArgument: string;
   qtPrefix?: string;
   buildChecks?: boolean;
+  asan?: boolean;
   // Single-config generators only. Multi-config selects at build time.
   buildType?: "Debug" | "Release";
 };
@@ -69,12 +77,6 @@ export function setupVirtualEnvironmentPython(root = Deno.cwd()): string {
     : join(setupVirtualEnvironment(root), "bin", "python");
 }
 
-export function setupClangFormat(root = Deno.cwd()): string {
-  return Deno.build.os === "windows"
-    ? join(setupVirtualEnvironment(root), "Scripts", "clang-format.exe")
-    : join(setupVirtualEnvironment(root), "bin", "clang-format");
-}
-
 export function qtInstallationDirectory(
   root: string,
   installation: QtInstallation,
@@ -98,6 +100,7 @@ export async function localQtPrefix(
   root = Deno.cwd(),
   installation = currentQtInstallation(),
   requestedVersion?: string,
+  configuredBuild = buildDirectory("debug"),
 ): Promise<string | undefined> {
   const directory = qtInstallationDirectory(root, installation);
   const kitDirectory = installation.host === "windows"
@@ -120,7 +123,7 @@ export async function localQtPrefix(
     if (requestedVersion === undefined) {
       try {
         const cache = await Deno.readTextFile(
-          join(root, "build", "CMakeCache.txt"),
+          join(root, configuredBuild, "CMakeCache.txt"),
         );
         const configured = /^Qt6_DIR:[^=]+=(.+)$/m.exec(cache)?.[1];
         const selected = prefixes.find((prefix) =>
@@ -200,6 +203,7 @@ export async function cmakeConfigureArgs({
   poryaaaaArgument,
   qtPrefix,
   buildChecks,
+  asan,
   buildType = "Debug",
 }: CmakeConfigureOptions): Promise<string[]> {
   const generatorArguments =
@@ -207,6 +211,10 @@ export async function cmakeConfigureArgs({
       ? []
       : defaultGeneratorArguments();
   const swiftToolchain = await swiftToolchainArgument();
+  // Apple's Clang and downloaded Swift toolchains have different ASAN ABIs.
+  const nativeBin = asan && Deno.build.os === "darwin" && swiftToolchain
+    ? dirname(swiftToolchain.slice("-DCMAKE_Swift_COMPILER=".length))
+    : undefined;
   return [
     "-S",
     ".",
@@ -217,6 +225,7 @@ export async function cmakeConfigureArgs({
     ...(buildChecks === undefined
       ? []
       : [`-DPORYDAW_BUILD_CHECKS=${buildChecks ? "ON" : "OFF"}`]),
+    ...(asan === undefined ? [] : [`-DPORYDAW_ASAN=${asan ? "ON" : "OFF"}`]),
     ...(qtPrefix
       ? [
         "-UQt6*_DIR",
@@ -225,6 +234,13 @@ export async function cmakeConfigureArgs({
       ]
       : []),
     ...(swiftToolchain ? [swiftToolchain] : []),
+    ...(nativeBin
+      ? [
+        `-DCMAKE_C_COMPILER=${join(nativeBin, "clang")}`,
+        `-DCMAKE_CXX_COMPILER=${join(nativeBin, "clang++")}`,
+        `-DCMAKE_OBJCXX_COMPILER=${join(nativeBin, "clang++")}`,
+      ]
+      : []),
     poryaaaaArgument,
   ];
 }

@@ -1,6 +1,6 @@
 # Architecture scope
 
-Porydaw is a Swift 6 + QML application: Swift owns behavior and exposes it to QML through QtBridge. There are no QWidgets and no new C++ outside the native boundaries (`src/app/clipboard_host.cpp`, `font_metrics.cpp`, `src/project/`). The application entry point is the Swift shell (`src/swift/app/shell/PorydawShellApp.swift` → `src/ui/shell/*.qml`); new document, session, presenter, and drawer behavior belongs in `src/swift/` with its QML surface. Apply the ownership, publication, and lifecycle rules below to the Swift owners first; the named C++ seams (`SongDocument`, `ProjectWorkspace`, `SongTab`, `QUndoStack`) govern the retained native code they still own until it migrates.
+Porydaw is a Swift 6 + QML application: Swift owns behavior and exposes it to QML through QtBridge. There are no QWidgets and no new C++ outside the native boundaries AGENTS.md lists (`src/app/`, `src/audio/`, `src/project/`, `font_metrics.cpp`, the `src/render/` display list). The application entry point is the Swift shell (`src/swift/app/shell/PorydawShellApp.swift` → `src/ui/shell/*.qml`); document, session, presenter, and drawer behavior belongs in `src/swift/` with its QML surface.
 
 ## Fast path for agents
 
@@ -20,8 +20,9 @@ callback layer, cache, or compatibility path.
 When rules pull in different directions, resolve in this order:
 
 1. Correctness of the canonical document and project data.
-2. The module seams (`core/` pure, `project/` owns I/O and workers, `ui/`
-   passive) — never let `ui/` perform disk I/O or reach into worker internals.
+2. The module seams (`PorydawCore` pure, `PorydawProject` and the
+   `ProjectService` actor own I/O and workers, QML passive) — never let a QML
+   surface or presenter perform disk I/O or reach into store internals.
 3. Atomic, coherent publication of interrelated state.
 4. Throughput and latency for real interactions (playback, gestures, redraws).
 5. Local simplicity — fewest owners, fewest moving parts.
@@ -33,28 +34,35 @@ would otherwise forbid.
 ## Ownership and source of truth
 
 - Give each coherent decision one owner. `SongDocument` owns the editable
-  `SmfFile` + `SongCfg` facts and the `QUndoStack`; `ProjectWorkspace` is the
-  only seam the GUI may submit through; `SongTab` owns one tab's
-  document/view/timeline lifecycle. Do not let two widgets keep competing
-  copies of the same selection, context, or lifecycle state.
+  `SongState` (`MidiFile` + `SongConfig`) and its `SongHistory`;
+  `ProjectService` is the only seam to the project store; `DocumentSession`
+  owns one document's session-only state (selection, camera, bank lease);
+  `DocumentWorkspace` owns that document's presenters; `SongTabsController`
+  owns tab identity, order, and selection. Do not let two presenters or QML
+  items keep competing copies of the same selection, context, or lifecycle
+  state.
 - When one action changes several facts that must agree, resolve and validate
   all of them first, then publish in a single transition — the way
-  `SongTab::applyMidiStage` swaps a fully built timeline in one step. A reader
-  must never see a half-updated invariant spread across setters.
-- Cross module and thread boundaries with immutable snapshots and tokens
-  (`ProjectSnapshot`, `SongSaveSnapshot`, `LoadedBankView`), not shared
-  mutable references.
+  `SongDocument.commit` swaps in the new state, records history, and publishes
+  once, and `DocumentSession.withStateChanges` coalesces nested session
+  mutations into one publication. A reader must never see a half-updated
+  invariant spread across setters.
+- Cross module, actor, and thread boundaries with immutable `Sendable`
+  snapshots and tokens (`ProjectSnapshot`, `SaveSnapshot`, `LoadedBankView`,
+  `AutomationFrozenFacts`), not shared mutable references.
 
 ## Plan before you mutate
 
 - For multi-step, collision-prone, or structural edits, compute the change as
-  a pure value first: `planLaneMoves` (`src/core/lanemoveplan.h`) returns
-  `std::optional<LaneMovePlan>`; `TrackRemap` (`src/core/songdocument.h`)
-  translates indices without touching the document. Validate invariants on
-  plain value structs, then execute in one step.
-- Every `SongDocument` edit goes through the `QUndoStack` as one undoable
-  command. A composite user action must not push several undo items; nested
-  helpers apply inside the command's redo.
+  a pure value first: `planLaneMoves`
+  (`src/swift/core/EventEditing+Helpers.swift`) returns `LaneMovePlan?`;
+  `TrackRemap` (`src/swift/core/SongDocument.swift`) translates indices
+  without touching the document. Validate invariants on plain value structs,
+  then execute in one step.
+- Every `SongDocument` edit lands in `SongHistory` as one undoable entry. A
+  composite user action builds one `DocumentMutation` and commits once; a
+  continuous gesture passes one `HistoryGroup` so its steps merge into a
+  single entry.
 - Validate before mutation: early return or fail-fast assertion when an
   operation has no valid target. An impossible internal state fails visibly —
   assert or return a typed failure; never add recovery for a state the design
@@ -64,10 +72,9 @@ would otherwise forbid.
 ## Facts vs. derived state
 
 - Store only what must persist; derive the rest on demand. Canonical state is
-  `SmfFile` + `SongCfg`; `MidiTimeline`, `SongViewModel`, and
-  `AutomationViewModel` are rebuilt by pure builders
-  (`buildSongViewModel`, `buildAutomationViewModel`) or downstream of
-  `documentChanged`, not maintained as parallel caches.
+  `SongState`; the session's `PlaybackTimeline` is rebuilt through its state
+  factory on open, every edit, and every history step, and presenters derive
+  their rows from the session rather than keeping parallel caches.
 - Exception — materialize derived state when it protects something real:
   - throughput (a lookup index that removes a per-frame linear scan),
   - atomic publication (precomputing interrelated fields so one setter can
@@ -75,22 +82,24 @@ would otherwise forbid.
   - lifecycle (a snapshot that must stay valid while the source mutates),
   - expensive work (a parse or decode whose cost cannot repeat per query).
 - When you materialize, name the owner, what makes it stale, and the exact
-  behavior it protects. Do not add a mirror, revision flag, or invalidation
-  layer for a consumer that does not exist yet.
+  behavior it protects — as `SongDocument`'s `NoteProjection` (repaired before
+  every publication) and `DocumentSession.selectedNotes` (the lookup index of
+  the authoritative `selectedNoteOrder`) do. Do not add a mirror, revision
+  flag, or invalidation layer for a consumer that does not exist yet.
 
 ## Composition and abstraction threshold
 
 - Keep the main path top-down: public contract first, then the normal flow in
   execution order. Move parsing, lookup, and formatting into named helpers
   near their single caller when that makes the decision easier to scan.
-- Name operations for the domain action (`adoptSmf`, `applyBankView`,
-  `applyMidiStage`), not the mechanism. Callers see a small input, a clear
+- Name operations for the domain action (`insertBlankTime`, `duplicateTrack`,
+  `applyBankEdit`), not the mechanism. Callers see a small input, a clear
   outcome, one owner.
-- High threshold for new abstraction: prefer free functions and value structs;
-  introduce a class for a stateful accumulator or a lifecycle that must be
-  owned, not to wrap a single direct call. Exception: a small wrapper is
-  justified when it isolates a flaky external boundary (device, codec,
-  process) from domain callers.
+- High threshold for new abstraction: prefer value types and free or static
+  functions; introduce a class or actor for a stateful accumulator or a
+  lifecycle that must be owned, not to wrap a single direct call. Exception: a
+  small wrapper is justified when it isolates a flaky external boundary
+  (device, codec, process) from domain callers.
 - Avoid both extremes: one file owning unrelated concerns, and a web of
   single-use indirections hiding the real flow. Cohesion, not line count, is
   the test here — file-size targets and review signals live in AGENTS.md.
@@ -99,36 +108,39 @@ would otherwise forbid.
 
 - Validate aggressively at ingress — file formats, SMF data, project files,
   settings, worker results — and assume invariants hold downstream. Do not
-  sprinkle defensive checks through `core/`.
-- Model fallible cross-seam outcomes as closed sum types
-  (`ProjectMutationFailure` is a `std::variant` of exactly four alternatives)
-  or `std::optional`, so every caller handles all cases. Do not flatten
-  concrete failures into generic strings.
+  sprinkle defensive checks through `PorydawCore`.
+- Model fallible cross-seam outcomes as closed enums (`ProjectServiceError`;
+  `VoicegroupEditResult` is exactly `applied` or `conflict`) or optionals, so
+  every caller handles all cases. Do not flatten concrete failures into
+  generic strings.
 - Bounded resilience belongs at user-facing and external-system seams: a UI
   orchestrator may catch an unexpected failure, log it, and restore a safe
   state (deselect, empty view, unavailable status) rather than crash the
-  workspace. Inside `core/` parsers and planners, the same input fails fast.
-  Recovery must be bounded and explicit — never a silent fallback that makes
-  a broken invariant look valid.
+  workspace. Inside `PorydawCore` parsers and planners, the same input fails
+  fast. Recovery must be bounded and explicit — never a silent fallback that
+  makes a broken invariant look valid.
 
 ## Async, stale work, and resource lifetimes
 
 - Long-running operations use discrete lifecycle states with input gating
-  (`ProjectOpenState`, `SongTab`'s `InputGate`), not ad-hoc busy booleans.
-  Keep the last good presentation live while gating input until terminal
-  facts arrive.
-- Suppress stale in-flight work at the source: generation/revision tokens
-  (`DocumentStateIdentity`, save-state tokens) or explicit cancellation when
-  the context changes. Do not let a superseded async result land.
+  (`AudioReadiness`; `SongHistory`'s `BankTransitionToken`, which refuses
+  document mutations while a bank transition is in flight), not ad-hoc busy
+  booleans. Keep the last good presentation live while gating input until
+  terminal facts arrive.
+- Suppress stale in-flight work at the source: generation or revision tokens
+  (`refreshVoicegroupCatalog`'s generation, `DocumentIdentity`, the revision
+  in `AutomationFrozenFacts`) or task cancellation when the context changes.
+  Do not let a superseded async result land; a stale capture writes nothing.
 - Replace shared or borrowed resources with a borrow-safe swap: build the new
-  object locally, repoint every borrow
-  (`m_view->setSong(newTimeline.get(), voicegroup)`), then retire the old
-  owner — the parked lease outlives the borrow (`SongTab::applyMidiStage`,
-  `applyBankView`).
+  object, repoint every borrow, then retire the old owner — an applied bank
+  edit mints a fresh `NativeBankLease` while the superseded lease keeps its
+  bank alive for views that still hold it.
 - Pair every acquired handle (file, device, lease, worker) with an
   unconditional release path that runs on early return, failure, and
-  teardown. Destructor ordering is part of the contract
-  (`SongTab::~SongTab` detaches the Quick host before the view).
+  teardown. Teardown ordering is part of the contract: `DocumentWorkspace`
+  deactivates before it detaches its presenters, and
+  `ApplicationSession.retire` chains every document close ahead of the
+  project service stop.
 
 ## UI and rendering
 
@@ -139,14 +151,16 @@ would otherwise forbid.
 - Keep high-frequency interaction state local to the surface that owns it —
   drag offsets, hover, pan/zoom, popup state. Promote to shared state only
   when a second owner must coordinate with the result.
-- Inside a tightly coupled UI cluster, prefer synchronous value diffs
-  (`DrawerDiff`) or a single typed observer (`EditorSelectionModel::Observer`)
-  over cascading Qt signals. Cross-module events (`timelineChanged`,
-  `readinessChanged`) are the right place for signals.
-- Use Qt's ownership, focus scopes, models, and layouts when they express the
-  behavior. Add custom coordination only for a Porydaw-specific rule Qt cannot
-  own; never duplicate a Qt mechanism with focus memory or a second
-  dispatcher.
+- Inside a tightly coupled UI cluster, prefer synchronous calls through a
+  typed seam (`EditorDrawerPage`) or a single typed observer
+  (`DocumentSession.addSelectionTransitionObserver`) over chains of QtBridge
+  notifications. NOTIFYs coalesce into one queued flush per event-loop turn,
+  so state that must agree within a frame rides a `QListModel` row or is read
+  at frame time.
+- Use Qt Quick's ownership, focus scopes, models, and layouts when they
+  express the behavior. Add custom coordination only for a Porydaw-specific
+  rule Qt cannot own; never duplicate a Qt mechanism with focus memory or a
+  second dispatcher.
 
 ## Checks and proof
 
@@ -167,11 +181,11 @@ would otherwise forbid.
 - Is every stored derivation justified by throughput, atomic publication,
   lifecycle, or cost — with a named owner and staleness rule?
 - Are multi-step mutations planned as pure values before touching the
-  document, and do they land as a single undo command?
+  document, and do they land as a single history entry?
 - Do shared-resource updates use borrow-safe swaps, and does every acquired
   handle have an unconditional release path?
-- Are failures typed and exhaustive at seams, fail-fast inside `core/`, and
-  bounded-self-healing only at user-facing edges?
+- Are failures typed and exhaustive at seams, fail-fast inside `PorydawCore`,
+  and bounded-self-healing only at user-facing edges?
 - Can a reader find the normal path before the exceptional details?
 - Did the change add only behavior the request requires?
 - Does each added or retained check prove a real production rule?

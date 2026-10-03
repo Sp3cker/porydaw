@@ -1,235 +1,145 @@
 import QtQuick
-import QtQuick.Controls
-import QtQuick.Controls.Basic as Basic
-import QtQuick.Dialogs
-import QtCore
-import QtQml.Models
 import PorydawApp
 import Porydaw.Ui
-
 ThemedWindow {
     id: root
     objectName: "shellWindow"
     readonly property alias shellPresenter: shell
-    readonly property alias sceneLoader: editorScene
+    readonly property var sceneLoader: applicationContent.item ? applicationContent.item.sceneLoader : null
+    readonly property var drawerSectionSource: shell.session.songTabs.selectedPage
+                                               ? shell.session.songTabs.selectedPage.drawerPresenter() : null
     colors: shell.session.palette
     property bool establishApplicationIdentity: false
     property int actionRevision: 0
-    readonly property int bodyFontPx: Math.max(1, Math.round(baseFontInfo.pixelSize * 1.125))
-    width: bodyFontPx * 72
-    height: bodyFontPx * 48
-    title: qsTr("Porydaw")
-    visible: true
+    property var normalFrame: null
+    property bool sessionStatePersisted: false
+    property bool windowPrepared: false
+    readonly property int bodyFontPx: shell.session.bodyFontPx
+    property int chromeBaseFontPx: shell.session.baseFontPx
+    property var chromeTypography: shell.session.typographyFonts
+    property var chromeSpacing: shell.session.layoutSpaces
+    property font typographyCaptureFont: Application.font
+    width: root.chromeBaseFontPx * 92
+    height: root.chromeBaseFontPx * 57
+    title: shell.windowTitle
+    visible: root.windowPrepared
     color: shell.session.palette.windowBackground
-    font: Qt.font({ family: regularFont.name || baseFontInfo.family,
-                    pixelSize: bodyFontPx, hintingPreference: Font.PreferNoHinting,
-                    features: { "tnum": 1 } })
+    font: Qt.font(root.chromeTypography.body)
+    contentItem.enabled: shell.sceneActive
+    menuBar: applicationContent.item ? applicationContent.item.menuBar : null
+    header: applicationContent.item ? applicationContent.item.header : null
+    footer: applicationContent.item ? applicationContent.item.footer : null
 
     ShellPresenter {
         id: shell
         objectName: "shellPresenter"
     }
 
-    FontInfo {
-        id: baseFontInfo
-        font: Application.font
-    }
     FontLoader {
         id: regularFont
-        source: "qrc:/fonts/AtkinsonHyperlegibleNext-Regular.ttf"
+        source: shell.regularFontSource
     }
     FontLoader {
-        source: "qrc:/fonts/AtkinsonHyperlegibleNext-SemiBold.ttf"
+        id: semiboldFont
+        source: shell.semiboldFontSource
     }
     FontLoader {
         id: monoFont
-        source: "qrc:/fonts/AtkinsonHyperlegibleMono-Regular.ttf"
+        source: shell.monoFontSource
     }
-    FontMetrics {
-        id: bodyMetrics
-        font: root.font
-    }
-
-    // Executable startup establishes QGuiApplication's native settings identity.
-    // Restore appearance only after the complete shell has been constructed.
-    Loader {
-        id: appearanceStore
-        active: false
-        sourceComponent: Settings {
-            category: "theme"
-        }
-        onLoaded: {
-            const settings = appearanceStore.item
-            shell.restoreAppearance(String(settings.value("mode")),
-                                    String(settings.value("grid-line-contrast")),
-                                    Qt.application.name)
-            settings.setValue("mode", shell.themeMode)
-            settings.setValue("grid-line-contrast", shell.gridLineContrast)
-            shell.openStartup(Qt.application.name)
-        }
+    FontLoader {
+        id: iconsFont
+        source: shell.iconsFontSource
     }
 
-    Settings {
-        id: dockSettings
-        category: "swiftDock"
-        property int columnWidth: 280
-        property real songsRatio: 0.5
-    }
-    // Velocity colours and note names persist as QSettings root keys, exactly
-    // as the old app stored them. No category: the keys live beside the other
-    // application-level settings, not in a group.
-    Settings {
-        id: displayModeSettings
-    }
-    Loader {
-        id: engineSettingsStore
-        active: false
-        sourceComponent: Settings { category: "engine" }
-        onLoaded: {
-            const settings = engineSettingsStore.item
-            shell.settingsStore.restore(String(settings.value("pcmMixer", "ipatix")),
-                                        String(settings.value("maxPcmChannels", 5)),
-                                        String(settings.value("pcmMixRate", 13379)),
-                                        String(settings.value("analogFilter", false)))
-        }
-    }
-    Connections {
-        target: shell.settingsStore
-        function onRevisionChanged() {
-            if (engineSettingsStore.status !== Loader.Ready)
-                return
-            const settings = engineSettingsStore.item
-            settings.setValue("pcmMixer", shell.settingsStore.mixer)
-            settings.setValue("maxPcmChannels", shell.settingsStore.maxPcmChannels)
-            settings.setValue("pcmMixRate", shell.settingsStore.mixRate)
-            settings.setValue("analogFilter", shell.settingsStore.analogFilter)
-        }
-    }
     Component.onCompleted: {
+        // Bundled faces load synchronously from local files; never show text if packaging broke.
+        if (regularFont.status !== FontLoader.Ready
+                || semiboldFont.status !== FontLoader.Ready
+                || monoFont.status !== FontLoader.Ready
+                || iconsFont.status !== FontLoader.Ready) {
+            console.error("Cannot load the required bundled fonts")
+            Qt.exit(1)
+            return
+        }
+        const naturalWidth = root.width === root.chromeBaseFontPx * 92
+        const naturalHeight = root.height === root.chromeBaseFontPx * 57
+        // The requested pixel size needs no matching or measurement of an unused system face.
+        shell.session.configureTypography(root.typographyCaptureFont.pixelSize)
+        root.chromeBaseFontPx = shell.session.baseFontPx
+        root.chromeTypography = shell.session.typographyFonts
+        root.chromeSpacing = shell.session.layoutSpaces
+        if (naturalWidth)
+            root.width = root.chromeBaseFontPx * 92
+        if (naturalHeight)
+            root.height = root.chromeBaseFontPx * 57
         if (establishApplicationIdentity) {
             Qt.application.name = "porydaw"
             Qt.application.organization = "sp3cker"
             Qt.application.domain = ""
         }
-        // The session fans restored modes out to every tab, including tabs
-        // opened later, so this runs before the startup recipe opens anything.
-        shell.session.setVelocityColorMode(Boolean(displayModeSettings.value("velocityNoteColors", false)))
-        shell.session.setNoteNameMode(Boolean(displayModeSettings.value("noteNames", false)))
-        transportBar.restoreOutputVolume()
-        engineSettingsStore.active = true
-        appearanceStore.active = true
-    }
-
-    // Cocoa uses the primary NativeText suffix as the same key equivalent the
-    // old QAction supplied. ShortcutOverride arbitrates it before keyDown;
-    // an Action.shortcut here would incorrectly add another Qt map entry.
-    function nativeMenuText(actionId) {
-        const shortcut = shell.actionShortcut(actionId)
-        const label = shell.actionLabel(actionId)
-        return shortcut.length > 0 ? label + "\t" + shortcut : label
-    }
-
-    // Checked menu items mirror the live tracked state, so a toggle flipped
-    // from the transport bar, a drawer toggle, or a shortcut repaints the
-    // menu without reopening it. Every read below is a notified property, so
-    // the binding tracks it; no Swift method result is cached here.
-    function actionCheckable(actionId) {
-        switch (actionId) {
-        case "view.event_list":
-        case "view.automation_drawer":
-        case "view.velocity_drawer":
-        case "view.voice_changes_drawer":
-        case "view.polyphony_debugger":
-        case "view.velocity_colors":
-        case "view.note_names":
-        case "transport.loop":
-        case "transport.follow_playhead":
-            return true
-        default:
-            return false
+        shell.configureSettings(Qt.application.name)
+        if (shell.windowX >= 0) {
+            const centerX = shell.windowX + shell.windowWidth / 2
+            const centerY = shell.windowY + shell.windowHeight / 2
+            for (const screen of Qt.application.screens) {
+                if (centerX >= screen.virtualX && centerX < screen.virtualX + screen.width
+                        && centerY >= screen.virtualY && centerY < screen.virtualY + screen.height) {
+                    root.x = shell.windowX
+                    root.y = shell.windowY
+                    root.width = shell.windowWidth
+                    root.height = shell.windowHeight
+                    break
+                }
+            }
         }
+        shell.restoreAppearance()
+        shell.chromeRestored()
+        if (shell.windowMaximized)
+            root.visibility = Window.Maximized
+        root.windowPrepared = true
     }
-    function actionChecked(actionId) {
-        const tabs = shell.session.songTabs
-        const page = tabs.selectedPage
-        switch (actionId) {
-        case "view.event_list":
-            return tabs.selectedTabShowsEvents
-        case "view.automation_drawer":
-            return page !== null && page.drawerPresenter().automationSection.visible
-        case "view.velocity_drawer":
-            return page !== null && page.drawerPresenter().velocitySection.visible
-        case "view.voice_changes_drawer":
-            return page !== null && page.drawerPresenter().voiceChangesSection.visible
-        case "view.polyphony_debugger":
-            return shell.polyphonyVisible
-        case "view.velocity_colors":
-            return shell.session.velocityColorMode
-        case "view.note_names":
-            return shell.session.noteNameMode
-        case "transport.loop":
-            return shell.session.transportBarPresenter().loopEnabled
-        case "transport.follow_playhead":
-            return shell.session.transportBarPresenter().followPlayhead
-        default:
-            return false
+
+    Connections {
+        target: root
+        enabled: !shell.contentRequested
+        function onFrameSwapped() { shell.firstFrameRendered() }
+    }
+
+    // This separate document is not parsed or instantiated before the window presents.
+    Loader {
+        id: applicationContent
+        objectName: "shellContentLoader"
+        anchors.fill: parent
+        // Chrome mounts synchronously; its workspace incubates independently.
+        asynchronous: false
+        focus: true
+        active: shell.contentRequested && shell.sceneActive
+        Component.onCompleted: setSource(Qt.resolvedUrl("ShellContent.qml"), {root: root})
+        onLoaded: shell.contentReady()
+        onItemChanged: acknowledgeRemoval()
+        onStatusChanged: {
+            if (status === Loader.Error) {
+                console.error("Cannot load the required application content: " + source)
+                Qt.exit(1)
+            }
+            acknowledgeRemoval()
+        }
+        onActiveChanged: acknowledgeRemoval()
+
+        function acknowledgeRemoval() {
+            if (!shell.sceneActive && !active && !item && status === Loader.Null)
+                shell.sceneDestroyed()
         }
     }
 
-    // A Swift method's internal reads do not install QML binding dependencies.
-    // Re-evaluate delivery and menus on the same notifications as the native
-    // updateWindowActions/updateGridActions slots, without duplicating policy.
+    // Close remains operational even when deferred content has never existed.
     Connections {
         target: shell.session
-        function onProjectOpenChanged() { ++root.actionRevision }
-        function onSongOpenChanged() {
-            shell.songOpenChanged()
-            ++root.actionRevision
-        }
-        function onSaveInProgressChanged() {
-            shell.saveStateChanged()
-            ++root.actionRevision
-        }
-        function onCanUndoChanged() { ++root.actionRevision }
-        function onCanRedoChanged() { ++root.actionRevision }
-        function onGridCommandAvailabilityChanged() { ++root.actionRevision }
-        function onVelocityColorModeChanged() {
-            displayModeSettings.setValue("velocityNoteColors", shell.session.velocityColorMode)
-            displayModeSettings.sync()
-        }
-        function onNoteNameModeChanged() {
-            displayModeSettings.setValue("noteNames", shell.session.noteNameMode)
-            displayModeSettings.sync()
-        }
-        function onOpenFailed(message) { shell.openFailed(message) }
-        function onOperationFailed(message) { shell.operationFailed(message) }
         function onAllTabsClosed() { shell.allTabsClosed() }
         function onCloseCancelled() { shell.closeCancelled() }
     }
-    Connections {
-        target: shell.session.songTabs
-        function onSelectedTabShowsEventsChanged() { ++root.actionRevision }
-        function onSelectedPageChanged() { ++root.actionRevision }
-        function onSelectedIdChanged() { ++root.actionRevision }
-        function onTabCountChanged() { ++root.actionRevision }
-    }
-    Connections {
-        target: shell
-        function onChooseProjectRequested() { projectPicker.open() }
-        function onAboutRequested() { aboutDialog.open() }
-        function onSettingsRequested(songFirst) { settingsDialog.showSettings(songFirst) }
-        function onQuitRequested() { root.close() }
-        function onInformationRequested(title, message) {
-            informationDialog.text = title
-            informationDialog.informativeText = message
-            informationDialog.open()
-        }
-        function onCriticalRequested(title, message) {
-            criticalDialog.text = title
-            criticalDialog.informativeText = message
-            criticalDialog.open()
-        }
-    }
+
     onActiveChanged: {
         if (!active)
             shell.session.cancelGridInput(3)
@@ -238,511 +148,40 @@ ThemedWindow {
         if (!visible)
             shell.session.cancelGridInput(2)
     }
+    function trackNormalFrame() {
+        if (visibility !== Window.Maximized && width > 0 && height > 0)
+            normalFrame = { x: x, y: y, width: width, height: height }
+    }
+    onXChanged: trackNormalFrame()
+    onYChanged: trackNormalFrame()
+    onWidthChanged: trackNormalFrame()
+    onHeightChanged: trackNormalFrame()
+    onVisibilityChanged: trackNormalFrame()
     onClosing: close => {
-        if (!shell.beginClose())
+        if (!shell.beginClose()) {
             close.accepted = false
+            return
+        }
     }
     Connections {
         target: shell
         function onCloseReadyChanged() {
-            if (shell.closeReady)
-                root.close()
-        }
-        function onSceneActiveChanged() { ++root.actionRevision }
-    }
-
-    // Window-scope shortcuts get native Qt ShortcutOverride arbitration; editor
-    // strokes are routed only from the focused tab's raw key path below.
-    Repeater {
-        model: shell.windowActionIds
-        delegate: Item {
-            id: shortcutDelegate
-            required property string modelData
-            width: 0
-            height: 0
-            Shortcut {
-                objectName: "shellShortcut_" + shortcutDelegate.modelData
-                sequences: shell.actionSequences(shortcutDelegate.modelData)
-                context: Qt.WindowShortcut
-                enabled: {
-                    root.actionRevision
-                    return shell.actionEnabled(shortcutDelegate.modelData)
+            if (!shell.closeReady)
+                return
+            if (!root.sessionStatePersisted) {
+                const frame = root.normalFrame || {
+                    x: root.x, y: root.y, width: root.width, height: root.height
                 }
-                onActivated: shell.activate(shortcutDelegate.modelData)
+                shell.persistSessionState(frame.x, frame.y, frame.width, frame.height,
+                                          root.visibility === Window.Maximized, shell.polyphonyVisible)
+                root.sessionStatePersisted = true
             }
+            root.close()
+        }
+        function onSceneActiveChanged() {
+            ++root.actionRevision
+            applicationContent.acknowledgeRemoval()
         }
     }
 
-    menuBar: MenuBar {
-        Menu {
-            id: fileMenu
-            objectName: "shellFileMenu"
-            title: qsTr("&File")
-            onAboutToShow: ++root.actionRevision
-            MenuSeparator {}
-            Instantiator {
-                model: shell.fileActionIds
-                delegate: MenuItem {
-                    required property string modelData
-                    objectName: "shellAction_" + modelData
-                    text: root.nativeMenuText(modelData)
-                    enabled: {
-                        root.actionRevision
-                        return shell.actionEnabled(modelData)
-                    }
-                    onTriggered: shell.activate(modelData)
-                }
-                onObjectAdded: (index, object) => fileMenu.insertItem(index < 2 ? index : index + 1, object)
-                onObjectRemoved: (index, object) => fileMenu.removeItem(object)
-            }
-        }
-        Menu {
-            id: editMenu
-            objectName: "shellEditMenu"
-            title: qsTr("&Edit")
-            onAboutToShow: ++root.actionRevision
-            Component.onCompleted: {
-                editTopItems.active = true
-                editClipboardItems.active = true
-                editNotesItems.active = true
-                editTailItems.active = true
-            }
-            Instantiator {
-                id: editTopItems
-                active: false
-                model: shell.editTopActionIds
-                delegate: MenuItem {
-                    required property string modelData
-                    objectName: "shellAction_" + modelData
-                    text: root.nativeMenuText(modelData)
-                    enabled: {
-                        root.actionRevision
-                        return shell.actionEnabled(modelData)
-                    }
-                    onTriggered: shell.activate(modelData)
-                }
-                onObjectAdded: (index, object) => editMenu.insertItem(index, object)
-                onObjectRemoved: (index, object) => editMenu.removeItem(object)
-            }
-            MenuSeparator { objectName: "shellEditSectionSeparator" }
-            Instantiator {
-                id: editClipboardItems
-                active: false
-                model: shell.editClipboardActionIds
-                delegate: MenuItem {
-                    required property string modelData
-                    objectName: "shellAction_" + modelData
-                    text: root.nativeMenuText(modelData)
-                    enabled: {
-                        root.actionRevision
-                        return shell.actionEnabled(modelData)
-                    }
-                    onTriggered: shell.activate(modelData)
-                }
-                onObjectAdded: (index, object) =>
-                    editMenu.insertItem(shell.editTopActionIds.length + 1 + index, object)
-                onObjectRemoved: (index, object) => editMenu.removeItem(object)
-            }
-            Menu {
-                id: timeMenu
-                objectName: "shellTimeMenu"
-                title: qsTr("&Time")
-                onAboutToShow: ++root.actionRevision
-                Instantiator {
-                    model: shell.timeActionIds
-                    delegate: MenuItem {
-                        required property string modelData
-                        objectName: "shellAction_" + modelData
-                        text: root.nativeMenuText(modelData)
-                        enabled: {
-                            root.actionRevision
-                            return shell.actionEnabled(modelData)
-                        }
-                        onTriggered: shell.activate(modelData)
-                    }
-                    onObjectAdded: (index, object) => timeMenu.insertItem(index, object)
-                    onObjectRemoved: (index, object) => timeMenu.removeItem(object)
-                }
-            }
-            Instantiator {
-                id: editNotesItems
-                active: false
-                model: shell.editNotesActionIds
-                delegate: MenuItem {
-                    required property string modelData
-                    objectName: "shellAction_" + modelData
-                    text: root.nativeMenuText(modelData)
-                    enabled: {
-                        root.actionRevision
-                        return shell.actionEnabled(modelData)
-                    }
-                    onTriggered: shell.activate(modelData)
-                }
-                onObjectAdded: (index, object) =>
-                    editMenu.insertItem(shell.editTopActionIds.length
-                                        + shell.editClipboardActionIds.length + 2 + index, object)
-                onObjectRemoved: (index, object) => editMenu.removeItem(object)
-            }
-            Menu {
-                id: tracksMenu
-                objectName: "shellTracksMenu"
-                title: qsTr("Tr&acks")
-                onAboutToShow: ++root.actionRevision
-                Instantiator {
-                    model: shell.tracksActionIds
-                    delegate: MenuItem {
-                        required property string modelData
-                        objectName: "shellAction_" + modelData
-                        text: root.nativeMenuText(modelData)
-                        enabled: {
-                            root.actionRevision
-                            return shell.actionEnabled(modelData)
-                        }
-                        onTriggered: shell.activate(modelData)
-                    }
-                    onObjectAdded: (index, object) => tracksMenu.insertItem(index, object)
-                    onObjectRemoved: (index, object) => tracksMenu.removeItem(object)
-                }
-            }
-            Instantiator {
-                id: editTailItems
-                active: false
-                model: shell.editTailActionIds
-                delegate: MenuItem {
-                    required property string modelData
-                    objectName: "shellAction_" + modelData
-                    text: root.nativeMenuText(modelData)
-                    enabled: {
-                        root.actionRevision
-                        return shell.actionEnabled(modelData)
-                    }
-                    onTriggered: shell.activate(modelData)
-                }
-                onObjectAdded: (index, object) =>
-                    editMenu.insertItem(shell.editTopActionIds.length
-                                        + shell.editClipboardActionIds.length
-                                        + shell.editNotesActionIds.length + 3 + index, object)
-                onObjectRemoved: (index, object) => editMenu.removeItem(object)
-            }
-        }
-        Menu {
-            id: transportMenu
-            objectName: "shellTransportMenu"
-            title: qsTr("&Transport")
-            onAboutToShow: ++root.actionRevision
-            Instantiator {
-                model: shell.transportActionIds
-                delegate: MenuItem {
-                    required property string modelData
-                    objectName: "shellAction_" + modelData
-                    text: root.nativeMenuText(modelData)
-                    checkable: root.actionCheckable(modelData)
-                    checked: root.actionChecked(modelData)
-                    enabled: {
-                        root.actionRevision
-                        return shell.actionEnabled(modelData)
-                    }
-                    onTriggered: shell.activate(modelData)
-                }
-                onObjectAdded: (index, object) => transportMenu.insertItem(index, object)
-                onObjectRemoved: (index, object) => transportMenu.removeItem(object)
-            }
-        }
-        Menu {
-            id: viewMenu
-            objectName: "shellViewMenu"
-            title: qsTr("&View")
-            onAboutToShow: ++root.actionRevision
-            Instantiator {
-                model: shell.viewActionIds
-                delegate: MenuItem {
-                    required property string modelData
-                    objectName: "shellAction_" + modelData
-                    text: root.nativeMenuText(modelData)
-                    checkable: root.actionCheckable(modelData)
-                    checked: root.actionChecked(modelData)
-                    enabled: {
-                        root.actionRevision
-                        return shell.actionEnabled(modelData)
-                    }
-                    onTriggered: shell.activate(modelData)
-                }
-                onObjectAdded: (index, object) => viewMenu.insertItem(index, object)
-                onObjectRemoved: (index, object) => viewMenu.removeItem(object)
-            }
-        }
-        Menu {
-            id: helpMenu
-            objectName: "shellHelpMenu"
-            title: qsTr("&Help")
-            onAboutToShow: ++root.actionRevision
-            // Qt Quick Controls offers no QAction::AboutRole equivalent, so the
-            // item stays in the Help menu on every platform, as it did on
-            // non-macOS builds of the old app.
-            MenuItem {
-                objectName: "shellAction_help.about"
-                text: root.nativeMenuText("help.about")
-                enabled: {
-                    root.actionRevision
-                    return shell.actionEnabled("help.about")
-                }
-                onTriggered: shell.activate("help.about")
-            }
-        }
-    }
-    SettingsDialog {
-        id: settingsDialog
-        objectName: "shellSettingsDialog"
-        transientParent: root
-        store: shell.settingsStore
-        colors: root.colors
-        applicationFont: Application.font
-    }
-    AboutDialog {
-        id: aboutDialog
-        colors: root.colors
-        applicationFont: root.font
-        baseFontPx: root.bodyFontPx
-    }
-
-    SplitView {
-        id: shellBody
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: polyDock.visible ? polyDock.left : parent.right
-        orientation: Qt.Horizontal
-
-        SongsDockColumn {
-            id: dockColumn
-            SplitView.fillHeight: true
-            SplitView.minimumWidth: 200
-            SplitView.maximumWidth: 480
-            SplitView.preferredWidth: Math.max(200, Math.min(480, dockSettings.columnWidth))
-            controller: shell.session.songDockController()
-            applicationSession: shell.session
-            songsRatio: dockSettings.songsRatio
-            colors: shell.session.palette
-            applicationFont: Application.font
-            baseFontPx: baseFontInfo.pixelSize
-            onSongsRatioChanged: {
-                if (songsRatio !== dockSettings.songsRatio)
-                    dockSettings.songsRatio = songsRatio
-            }
-            onWidthChanged: {
-                if (width >= 200 && width <= 480 && width !== dockSettings.columnWidth)
-                    dockSettings.columnWidth = Math.round(width)
-            }
-        }
-
-        Loader {
-            id: editorScene
-            objectName: "shellSceneLoader"
-            SplitView.fillWidth: true
-            SplitView.fillHeight: true
-            active: shell.sceneActive
-            focus: true
-            onActiveFocusChanged: {
-                if (item && !activeFocus)
-                    shell.session.cancelGridInput(0)
-            }
-            sourceComponent: SongTabs {
-                objectName: "shellSongTabs"
-                controller: shell.session.songTabs
-                applicationFont: root.font
-                shellRouter: shell
-                onContextMenuAt: (x, y) => {
-                    root.actionRevision++
-                    gridContextMenu.x = x
-                    gridContextMenu.y = y
-                    gridContextMenu.open()
-                }
-            }
-            onItemChanged: {
-                if (!item && !shell.sceneActive)
-                    shell.sceneDestroyed()
-            }
-            Text {
-                objectName: "shellEmptySongMessage"
-                anchors.centerIn: parent
-                visible: !shell.session.songOpen && shell.sceneActive
-                text: qsTr("Open a project and song to play with the Swift core.")
-                font: root.font
-                color: shell.session.palette.windowText
-                horizontalAlignment: Text.AlignHCenter
-            }
-        }
-    }
-    Item {
-        id: polyDock
-        objectName: "shellPolyphonyDock"
-        visible: shell.polyphonyVisible
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.right: parent.right
-        width: Math.min(root.bodyFontPx * 32, parent.width * 0.48)
-        z: 2
-        Rectangle {
-            anchors.fill: parent
-            color: root.colors.windowBackground
-            border.color: root.colors.outline
-        }
-        Row {
-            id: polyTitle
-            width: parent.width
-            height: Math.ceil(bodyMetrics.height * 1.8)
-            Text {
-                width: parent.width - polyClose.width
-                height: parent.height
-                leftPadding: root.bodyFontPx / 2
-                text: qsTr("Polyphony Debugger")
-                color: root.colors.windowText
-                font: Qt.font({family: root.font.family,
-                               pixelSize: root.font.pixelSize, weight: Font.Bold})
-                verticalAlignment: Text.AlignVCenter
-            }
-            Button {
-                id: polyClose
-                objectName: "shellPolyphonyClose"
-                height: parent.height
-                text: qsTr("×")
-                onClicked: shell.activate("view.polyphony_debugger")
-            }
-        }
-        PolyphonyPanel {
-            id: polyPanel
-            anchors.top: polyTitle.bottom
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            presenter: shell.session.polyphony
-            colors: root.colors
-            applicationFont: root.font
-        }
-        Timer {
-            running: polyDock.visible && shell.session.songOpen
-            repeat: true
-            interval: 100
-            onTriggered: shell.session.polyphony.poll()
-        }
-    }
-
-    Loader {
-        id: songConfirmation
-        objectName: "songConfirmationLoader"
-        active: shell.session.songDockController().confirmation.length > 0
-        sourceComponent: SongConfirmDialog {
-            controller: shell.session.songDockController()
-            applicationFont: root.font
-            baseFontPx: root.bodyFontPx
-        }
-        onLoaded: {
-            if (status === Loader.Ready)
-                item.open()
-        }
-    }
-    header: TransportBar {
-        id: transportBar
-        width: root.width
-        songAvailable: shell.session.songOpen
-        baseFontPx: Math.max(1, Math.round(baseFontInfo.pixelSize))
-        presenter: shell.session.transportBarPresenter()
-        colors: root.colors
-        toolbarFont: Qt.font({ family: root.font.family, pixelSize: baseFontPx,
-                               hintingPreference: Font.PreferNoHinting,
-                               features: { "tnum": 1 } })
-        clockFont: Qt.font({ family: monoFont.name, pixelSize: baseFontPx + 2,
-                             hintingPreference: Font.PreferNoHinting,
-                             features: { "tnum": 1 } })
-    }
-    footer: Rectangle {
-        implicitHeight: Math.ceil(bodyMetrics.height * 1.5)
-        color: shell.session.palette.windowBackground
-        Text {
-            anchors.fill: parent
-            anchors.leftMargin: bodyMetrics.height / 2
-            anchors.rightMargin: bodyMetrics.height / 2
-            text: shell.statusText
-            font: root.font
-            color: shell.session.palette.windowText
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-        }
-    }
-
-    Basic.Menu {
-        id: gridContextMenu
-        objectName: "shellGridContextMenu"
-        parent: Overlay.overlay
-        popupType: Popup.Item
-        font: root.font
-        palette.window: root.colors.menuBackground
-        palette.dark: root.colors.outline
-        onAboutToShow: ++root.actionRevision
-        Instantiator {
-            model: shell.contextActionIds
-            delegate: Basic.MenuItem {
-                id: contextAction
-                required property string modelData
-                objectName: "shellContextAction_" + modelData
-                text: shell.actionLabel(modelData)
-                readonly property string shortcutText: shell.actionShortcut(modelData)
-                readonly property color foreground: !enabled ? root.colors.disabledText
-                    : down ? root.colors.buttonPressedText : root.colors.windowText
-                Accessible.description: shortcutText
-                hoverEnabled: true
-                padding: root.bodyFontPx / 4
-                contentItem: Item {
-                    implicitWidth: caption.implicitWidth + (hint.visible
-                        ? hint.implicitWidth + bodyMetrics.averageCharacterWidth * 2 : 0)
-                    implicitHeight: Math.max(caption.implicitHeight, hint.implicitHeight)
-                    Text {
-                        id: caption
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: contextAction.text
-                        font: contextAction.font
-                        color: contextAction.foreground
-                    }
-                    Text {
-                        id: hint
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: text.length > 0
-                        text: contextAction.shortcutText
-                        font: contextAction.font
-                        color: contextAction.foreground
-                    }
-                }
-                background: Rectangle {
-                    color: contextAction.down ? root.colors.buttonPressedBackground
-                        : contextAction.highlighted ? root.colors.menuHoverBackground
-                        : root.colors.menuBackground
-                }
-                enabled: {
-                    root.actionRevision
-                    return shell.actionEnabled(modelData)
-                }
-                onTriggered: shell.activate(modelData)
-            }
-            onObjectAdded: (index, object) => gridContextMenu.insertItem(index, object)
-            onObjectRemoved: (index, object) => gridContextMenu.removeItem(object)
-        }
-    }
-    FolderDialog {
-        id: projectPicker
-        objectName: "shellProjectPicker"
-        title: qsTr("Open Project")
-        onAccepted: shell.chooseProject(selectedFolder.toString())
-    }
-    MessageDialog {
-        id: informationDialog
-        objectName: "shellInformationDialog"
-        buttons: MessageDialog.Ok
-    }
-    MessageDialog {
-        id: criticalDialog
-        objectName: "shellCriticalDialog"
-        buttons: MessageDialog.Ok
-    }
 }

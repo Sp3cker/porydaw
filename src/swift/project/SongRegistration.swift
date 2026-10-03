@@ -130,19 +130,26 @@ struct RegistrationMatch {
 }
 
 enum RegistrationText {
-    static func match(_ pattern: String, _ line: String) -> RegistrationMatch? {
-        guard let expression = try? NSRegularExpression(pattern: pattern),
+    static func match(_ expression: NSRegularExpression?, _ line: String) -> RegistrationMatch? {
+        guard let expression,
               let result = expression.firstMatch(in: line, range: NSRange(location: 0,
-                                                                          length: (line as NSString).length))
+                                                                          length: line.utf16.count))
         else { return nil }
         return RegistrationMatch(source: line, result: result)
     }
 
-    static func matches(_ pattern: String, _ line: String) -> [RegistrationMatch] {
-        guard let expression = try? NSRegularExpression(pattern: pattern) else { return [] }
-        return expression.matches(in: line, range: NSRange(location: 0,
-                                                           length: (line as NSString).length))
+    static func matches(_ expression: NSRegularExpression, _ line: String) -> [RegistrationMatch] {
+        expression.matches(in: line, range: NSRange(location: 0, length: line.utf16.count))
             .map { RegistrationMatch(source: line, result: $0) }
+    }
+
+    static func pattern(_ source: String) -> NSRegularExpression {
+        do { return try NSRegularExpression(pattern: source) }
+        catch { preconditionFailure("Invalid built-in registration pattern \(source): \(error)") }
+    }
+
+    static func dynamic(_ source: String) -> NSRegularExpression? {
+        try? NSRegularExpression(pattern: source)
     }
 
     static func lines(_ root: String, _ relative: String) -> [String] {
@@ -154,10 +161,21 @@ enum RegistrationText {
         String(format: "%02X %02X", id & 255, (id >> 8) & 255)
     }
 
-    static let song = #"^(\s*)song\s+(\w+)\s*,\s*(\w+)\s*,\s*(\w+)"#
-    static let define = #"^(\s*#define\s+(\w+)\s+)(\d+)\b(.*)$"#
-    static let charmap = #"^(\w+)( *)= *([0-9A-Fa-f]{2}) ([0-9A-Fa-f]{2})\s*$"#
-    static let marker = #"^(\s*#define\s+(END_SE|END_MUS)\s+)([A-Za-z_]\w*|\d+)(.*)$"#
+    static let song = pattern(#"^(\s*)song\s+(\w+)\s*,\s*(\w+)\s*,\s*(\w+)"#)
+    static let define = pattern(#"^(\s*#define\s+(\w+)\s+)(\d+)\b(.*)$"#)
+    static let charmap = pattern(#"^(\w+)( *)= *([0-9A-Fa-f]{2}) ([0-9A-Fa-f]{2})\s*$"#)
+    static let marker = pattern(#"^(\s*#define\s+(END_SE|END_MUS)\s+)([A-Za-z_]\w*|\d+)(.*)$"#)
+    static let numericDefine = pattern(#"^\s*#define\s+(\w+)\s+(\d+)"#)
+    static let numericDefineWord = pattern(#"^\s*#define\s+(\w+)\s+(\d+)\b"#)
+    static let constantDefine = pattern(#"^\s*#define\s+(\w+)\s+\d"#)
+    static let regionMarker = pattern(#"^\s*#define\s+(END_SE|END_MUS)\s+([A-Za-z_]\w*|\d+)\s*(//.*)?$"#)
+    static let endMusWord = pattern(#"\bEND_MUS\b"#)
+    static let ldObject = pattern(#"sound/songs/midi/(\w+)\.o"#)
+    static let planDefine = pattern(#"^#define\s+([A-Z0-9_]+)(\s+)(\d+)"#)
+    static let endif = pattern(#"^\s*#endif\b"#)
+    static let equiv = pattern(#"^\s*\.equiv\s+(\w+)\s*,\s*(\d+)"#)
+    static let soundList = pattern(#"^#define\s+(SOUND_LIST_BGM|SOUND_LIST_SE)\b"#)
+    static let soundListEntry = pattern(#"^(\s*)X\((\w+) *(, *"[^"]*" *)?\)\s*(\\?)\s*$"#)
 
     static func charmapValue(_ match: RegistrationMatch) -> Int {
         (Int(match.group(3), radix: 16) ?? 0) | ((Int(match.group(4), radix: 16) ?? 0) << 8)
@@ -165,7 +183,7 @@ enum RegistrationText {
 
     static func constantNames(_ root: String) -> Set<String> {
         Set(lines(root, "include/constants/songs.h").compactMap {
-            match(#"^\s*#define\s+(\w+)\s+\d"#, $0)?.group(1)
+            match(constantDefine, $0)?.group(1)
         })
     }
 
@@ -234,12 +252,11 @@ struct RegistrationRegions {
     init(_ songsH: [String], debug: [String]) {
         var values: [String: Int] = [:]
         for (index, line) in songsH.enumerated() {
-            if let value = RegistrationText.match(#"^\s*#define\s+(\w+)\s+(\d+)\b"#, line),
+            if let value = RegistrationText.match(RegistrationText.numericDefineWord, line),
                values[value.group(1)] == nil {
                 values[value.group(1)] = Int(value.group(2))
             }
-            guard let marker = RegistrationText.match(
-                #"^\s*#define\s+(END_SE|END_MUS)\s+([A-Za-z_]\w*|\d+)\s*(//.*)?$"#, line)
+            guard let marker = RegistrationText.match(RegistrationText.regionMarker, line)
             else { continue }
             var item = marker.group(1) == "END_SE" ? endSe : endMus
             guard item.line < 0 else { continue }
@@ -252,7 +269,7 @@ struct RegistrationRegions {
         if !endMus.referent.isEmpty { endMus.value = values[endMus.referent] ?? -1 }
         startMus = values["START_MUS"] ?? -1
         separateDebugArrays = regioned && debug.contains {
-            RegistrationText.match(#"\bEND_MUS\b"#, $0) != nil
+            RegistrationText.match(RegistrationText.endMusWord, $0) != nil
         }
     }
 }
@@ -278,7 +295,7 @@ public enum SongRegistration {
         let songsH = RegistrationText.lines(root, "include/constants/songs.h")
         var defines: [String: Int] = [:]
         for line in songsH {
-            guard let entry = RegistrationText.match(#"^\s*#define\s+(\w+)\s+(\d+)"#, line)
+            guard let entry = RegistrationText.match(RegistrationText.numericDefine, line)
             else { continue }
             if defines[entry.group(1)] == nil { defines[entry.group(1)] = Int(entry.group(2)) }
         }
@@ -286,7 +303,7 @@ public enum SongRegistration {
         let ldApplicable = ld.contains { $0.contains("sound/songs/midi/") }
         var ldLabels: Set<String> = []
         for line in ld {
-            for match in RegistrationText.matches(#"sound/songs/midi/(\w+)\.o"#, line) {
+            for match in RegistrationText.matches(RegistrationText.ldObject, line) {
                 ldLabels.insert(match.group(1))
             }
         }
@@ -340,7 +357,7 @@ public enum SongRegistration {
         var ownValue = -1
         var used: Set<Int> = []
         for line in songsH {
-            guard let entry = RegistrationText.match(#"^#define\s+([A-Z0-9_]+)(\s+)(\d+)"#, line),
+            guard let entry = RegistrationText.match(RegistrationText.planDefine, line),
                   let id = Int(entry.group(3)) else { continue }
             valueColumn = entry.end(2)
             if entry.group(1) == constant && ownValue < 0 { ownValue = id }
@@ -443,7 +460,7 @@ public enum SongRegistration {
 private func songCatalogPlayerNumber(root: String, name: String) -> Int {
     var result = 0
     for line in RegistrationText.lines(root, "sound/song_table.inc") {
-        guard let entry = RegistrationText.match(#"^\s*\.equiv\s+(\w+)\s*,\s*(\d+)"#, line),
+        guard let entry = RegistrationText.match(RegistrationText.equiv, line),
               entry.group(1) == name else { continue }
         result = Int(entry.group(2)) ?? 0
     }

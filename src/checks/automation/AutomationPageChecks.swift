@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import PorydawBankLease
 
@@ -85,7 +85,8 @@ let drawerAutomationPointRangeID =
 
 func drawerAutomationAutomationMidi(division: UInt16 = 24, volume: [(Tick, UInt8)] = [],
                             pan: [(Tick, UInt8)] = [], modulation: [(Tick, UInt8)] = [],
-                            echo: [(Tick, UInt8)] = [], tempo: [(Tick, UInt32)] = [(0, 500_000)],
+                            lfo: [(Tick, UInt8)] = [], echo: [(Tick, UInt8)] = [],
+                            tempo: [(Tick, UInt32)] = [(0, 500_000)],
                             endTick: Tick = 192, tailTick: Tick? = nil) -> MidiFile {
     var conductor: [MidiEvent] = tempo.map { tick, microseconds in
         .meta(tick: tick, type: 0x51, data: [UInt8((microseconds >> 16) & 0xFF),
@@ -100,6 +101,8 @@ func drawerAutomationAutomationMidi(division: UInt16 = 24, volume: [(Tick, UInt8
     events += volume.map { .channel(tick: $0.0, status: 0xB0, data0: 0x07, data1: $0.1) }
     events += pan.map { .channel(tick: $0.0, status: 0xB0, data0: 0x0A, data1: $0.1) }
     events += modulation.map { .channel(tick: $0.0, status: 0xB0, data0: 0x01, data1: $0.1) }
+    events += lfo.map { .channel(tick: $0.0, status: 0xB0,
+                                 data0: TimeDefaults.ccLFOSpeed, data1: $0.1) }
     // A note ending at the requested tail keeps the document's musical length
     // at least that long, which every lane stroke's restored seam is measured
     // against.
@@ -116,22 +119,6 @@ func drawerAutomationAutomationMidi(division: UInt16 = 24, volume: [(Tick, UInt8
     ])
 }
 
-/// The document facts one transaction claim compares against.
-struct drawerAutomationAutomationDocumentSnapshot: Equatable {
-    var revision: UInt64
-    var identity: DocumentIdentity
-    var canUndo: Bool
-    var canRedo: Bool
-
-    @MainActor
-    init(_ document: SongDocument) {
-        revision = document.revision
-        identity = document.history.currentIdentity
-        canUndo = document.history.canUndo
-        canRedo = document.history.canRedo
-    }
-}
-
 @MainActor
 struct drawerAutomationAutomationFixture {
     let session: DocumentSession
@@ -140,12 +127,13 @@ struct drawerAutomationAutomationFixture {
 
     init(suite: DocumentSession, service: ProjectService, division: UInt16 = 24,
          volume: [(Tick, UInt8)] = [], pan: [(Tick, UInt8)] = [],
-         modulation: [(Tick, UInt8)] = [], echo: [(Tick, UInt8)] = [],
+         modulation: [(Tick, UInt8)] = [], lfo: [(Tick, UInt8)] = [],
+         echo: [(Tick, UInt8)] = [],
          tempo: [(Tick, UInt32)] = [(0, 500_000)], baseFontPx: Double = 13,
          plotted: Bool = true, config: SongConfig? = nil, tailTick: Tick? = 576) {
         let document = SongDocument(
             file: drawerAutomationAutomationMidi(division: division, volume: volume, pan: pan,
-                                 modulation: modulation, echo: echo, tempo: tempo,
+                                 modulation: modulation, lfo: lfo, echo: echo, tempo: tempo,
                                  tailTick: tailTick),
             config: config ?? suite.document.state.config, source: suite.document.source,
             trackBudget: suite.document.trackBudget)
@@ -170,8 +158,11 @@ struct drawerAutomationAutomationFixture {
                                baseFontPx: baseFontPx, dragDistance: 10)
         }
         session.onChange = { [weak page] change in
-            let content: SessionChangeDomains = [.document, .selection, .bank]
+            let content: SessionChangeDomains = [.document, .bank]
             if !change.domains.intersection(content).isEmpty {
+                page?.refreshFromDocument()
+            } else if change.domains.contains(.selection),
+                      page?.menuOpen == true || page?.promptOpen == true {
                 page?.refreshFromDocument()
             } else if change.domains.contains(.cursor) {
                 page?.refreshEditCursor()
@@ -180,7 +171,7 @@ struct drawerAutomationAutomationFixture {
         session.onCameraChange = { [weak page] _ in page?.refreshCamera() }
     }
 
-    var snapshot: drawerAutomationAutomationDocumentSnapshot { drawerAutomationAutomationDocumentSnapshot(document) }
+    var snapshot: DocumentSnapshot { DocumentSnapshot(document) }
     var songEndTick: Tick { session.timeline.lengthTicks }
     var volumeLane: AutomationParameter {
         .controlChange(track: 0, controller: TimeDefaults.ccVolume)
@@ -191,6 +182,9 @@ struct drawerAutomationAutomationFixture {
     }
     var bendLane: AutomationParameter { .pitchBend(track: 0) }
     var echoLane: AutomationParameter { .controlChange(track: 0, controller: Xcmd.echoVolumeLane) }
+    var lfoLane: AutomationParameter {
+        .controlChange(track: 0, controller: TimeDefaults.ccLFOSpeed)
+    }
 
     func lanePoints(_ parameter: AutomationParameter) -> [LanePoint] {
         guard let track = parameter.track, let lane = parameter.lane else { return [] }
@@ -211,6 +205,20 @@ struct drawerAutomationAutomationFixture {
                 forMicrosecondsPerQuarterNote: point.microsecondsPerQuarterNote).rounded())
             return "\(point.tick):\(bpm)"
         }
+    }
+    func playbackValues(_ parameter: AutomationParameter, at tick: Tick) -> [UInt8] {
+        guard case let .controlChange(track, controller) = parameter else { return [] }
+        return session.timeline.events.compactMap { event in
+            event.type == 0xB && event.track == UInt8(track)
+                && event.data0 == controller && event.tick == tick ? event.data1 : nil
+        }
+    }
+
+    func playbackTempo(at tick: Tick) -> (microseconds: UInt32, bpm: Double)? {
+        guard let point = session.timeline.tempoMap.first(where: { $0.tick == tick }) else {
+            return nil
+        }
+        return (point.microsecondsPerQuarterNote, point.beatsPerMinute)
     }
 
     func laneSnapshot(_ parameter: AutomationParameter) -> AutomationLaneSnapshot {
@@ -234,8 +242,7 @@ struct drawerAutomationAutomationFixture {
             camera: session.camera,
             bounds: AutomationPlotBounds(width: width, height: height, devicePixelRatio: 1),
             geometry: page.geometry,
-            snapPolicy: AutomationSnapPolicy(document: document, timeline: session.timeline,
-                                             baseFontPx: page.baseFontPx, devicePixelRatio: 1),
+            snapPolicy: AutomationProjectionCache().snapPolicy(session: session, font: page.baseFontPx, dpr: 1),
             songEndTick: songEndTick)
         return projection.project(facts.snapshot, selection: selection,
                                   usedTracks: Set(0..<document.engineTracks.usedTrackCount))
@@ -254,8 +261,7 @@ struct drawerAutomationAutomationFixture {
             camera: session.camera,
             bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
             geometry: page.geometry,
-            snapPolicy: AutomationSnapPolicy(document: document, timeline: session.timeline,
-                                             baseFontPx: page.baseFontPx, devicePixelRatio: 1),
+            snapPolicy: AutomationProjectionCache().snapPolicy(session: session, font: page.baseFontPx, dpr: 1),
             songEndTick: songEndTick)
         return projection.y(value, metadata: AutomationParameterMetadata(parameter: parameter))
     }
@@ -264,7 +270,7 @@ struct drawerAutomationAutomationFixture {
         _ = page.activateParameter(index: AutomationCatalog.index(of: parameter, track: 0) ?? 0)
     }
 
-    func undo() -> Bool { (try? drawerAutomationRunBlocking { try await session.undo() }) ?? false }
+    func undo() -> Bool { (try? runBlocking { try await session.undo() }) ?? false }
 
     /// One node drag through the page's public pointer route, in plot
     /// coordinates, carrying the raw Qt modifier bits a QML event supplies. The
@@ -291,28 +297,6 @@ struct drawerAutomationAutomationFixture {
                                 modifiers: modifiers)
         return pressed
     }
-}
-
-@MainActor
-func drawerAutomationRunBlocking<T>(_ operation: @escaping @MainActor () async throws -> T) throws -> T {
-    var outcome: Result<T, Error>?
-    Task { @MainActor in
-        do {
-            outcome = .success(try await operation())
-        } catch {
-            outcome = .failure(error)
-        }
-    }
-    let deadline = Date().addingTimeInterval(20)
-    while outcome == nil {
-        if Date() > deadline { throw drawerAutomationAutomationCheckTimeout.timeout }
-        RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-    }
-    return try outcome!.get()
-}
-
-enum drawerAutomationAutomationCheckTimeout: Error {
-    case timeout
 }
 
 // MARK: - Suite entry
@@ -347,41 +331,61 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     defer { clipboardState.restore() }
     drawerAutomationParameterCatalogAndMetadata(report)
     drawerAutomationLaneProjection(report, suite: session, service: service)
+    drawerAutomationDrawingContentChecks(report, suite: session, service: service)
+    drawerAutomationDrawPreviewChecks(report, suite: session, service: service)
     drawerAutomationPointIdentityAndStaleness(report, suite: session, service: service)
     drawerAutomationScaleLabelsAndLaneCounts(report, suite: session, service: service)
     drawerAutomationRowStackAndSelectionIndicators(report, suite: session, service: service)
     drawerAutomationPresentationPaintingModel(report, suite: session, service: service)
+    drawerAutomationRasterHalfOpenGeometry(report, suite: session, service: service)
+    drawerAutomationRasterScrolledPhantom(report, suite: session, service: service)
     drawerAutomationParameterSwitchAndGhosts(report, suite: session, service: service)
     drawerAutomationPencilCursorKind(report, suite: session, service: service)
     drawerAutomationHitGeometry(report, suite: session, service: service)
+    drawerAutomationTempoPromptInsertion(report, suite: session, service: service)
     drawerAutomationPromptTransactions(report, suite: session, service: service)
     drawerAutomationPointMenuDeleteAndStale(report, suite: session, service: service)
+    drawerAutomationSharedPopupArbitration(report, suite: session, service: service)
     drawerAutomationDuplicatePromptAndParameterSwitch(report, suite: session, service: service)
     drawerAutomationLaneDeleteConfirmation(report, suite: session, service: service)
     drawerAutomationOutsidePressRetarget(report, suite: session, service: service)
+    drawerAutomationSelectionInvalidation(report, suite: session, service: service)
+    drawerAutomationTrackSwitchInvalidation(report, suite: session, service: service)
     drawerAutomationDeleteTransactions(report, suite: session, service: service)
     drawerAutomationRangeEditAndClipboard(report, suite: session, service: service)
+    drawerAutomationTrackScopedSelectionClipboard(report, suite: session, service: service)
     drawerAutomationCrossLanePasteClamps(report, suite: session, service: service)
     drawerAutomationCancellationAndNoOps(report, suite: session, service: service)
     drawerAutomationInflightDragInvalidation(report, suite: session, service: service)
     drawerAutomationKeyboardIngress(report, suite: session, service: service)
     drawerAutomationBandEscape(report, suite: session, service: service)
     drawerAutomationHistoryUndoRedo(report, suite: session, service: service)
+    drawerAutomationCcPointerDragPlayback(report, suite: session, service: service)
     drawerAutomationHoverModel(report, suite: session, service: service)
+    drawerAutomationGhostRightClickPrompt(report, suite: session, service: service)
     drawerAutomationMenuHintMuting(report, suite: session, service: service)
     drawerAutomationHoverResidual(report, suite: session, service: service)
+    drawerAutomationFocusLossRetainsGesture(report, suite: session, service: service)
+    drawerAutomationFocusLossKeepsPress(report, suite: session, service: service)
     drawerAutomationContextAndPublicationDiagnostics(report, suite: session, service: service)
     drawerAutomationSweepSteppingAndRampFinish(report, suite: session, service: service)
     drawerAutomationSweepFinishRestoresTrailingHeldValue(report, suite: session, service: service)
+    drawerAutomationShiftRampEndpoints(report, suite: session, service: service)
     drawerAutomationPanNeutralSnap(report, suite: session, service: service)
     drawerAutomationNodeDragAndPhantomOutcomes(report, suite: session, service: service)
     drawerAutomationPointRangeAndPencilReplacements(report, suite: session, service: service)
+    drawerAutomationEmptyLanePencilCommit(report, suite: session, service: service)
     drawerAutomationPencilStrokeFilters(report, suite: session, service: service)
     drawerAutomationPencilStrokeModifiers(report, suite: session, service: service)
     drawerAutomationGestureContractParity(report, suite: session, service: service)
+    drawerAutomationStagedGestureSnapshots(report, suite: session, service: service)
+    drawerAutomationCompletedGestureOneEditLaw(report, suite: session, service: service)
+    drawerAutomationParkedGestureUnchangedLaw(report, suite: session, service: service)
     drawerAutomationXcmdParity(report, suite: session, service: service)
     drawerAutomationXcmdLaneEdits(report)
     drawerAutomationTapTempoCadenceAndCommit(report, suite: session, service: service)
+    drawerAutomationTapTempoForkBoundaries(report, suite: session, service: service)
+    drawerAutomationTapHintCatalog(report)
     drawerAutomationTapTempoStrayAndEmptyStream(report, suite: session, service: service)
     drawerAutomationQtModifierMapping(report, suite: session, service: service)
     drawerAutomationProjectionValueBounds(report, suite: session, service: service)
@@ -389,6 +393,13 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationBandIsolatesTempoAndCc(report, suite: session, service: service)
     drawerAutomationMultiCcDragExcludesOthers(report, suite: session, service: service)
     drawerAutomationSelectionDeleteCommand(report, suite: session, service: service)
+    drawerAutomationTempoOnlyHorizontalPlayback(report, suite: session, service: service)
+    drawerAutomationMixedSelectionDragPlayback(report, suite: session, service: service)
+    drawerAutomationMixedSelectionHoverSnapshot(report, suite: session, service: service)
+    drawerAutomationMixedDragTempoRow(report, suite: session, service: service)
+    drawerAutomationMixedSelectionDeletePlayback(report, suite: session, service: service)
+    drawerAutomationMixedDragRebuildCancellation(report, suite: session, service: service)
+    drawerAutomationCcOnlyExactIntervalDrag(report, suite: session, service: service)
     drawerAutomationGhostViewOnlyAndSurvives(report, suite: session, service: service)
     drawerAutomationPencilOwnershipAndShift(report, suite: session, service: service)
     drawerAutomationDetailThresholdPrecedence(report, suite: session, service: service)
@@ -402,12 +413,56 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationLegacyDefaultPromotion(report, camera: session.camera.snapshot)
     drawerAutomationLegacySpanRows(report, camera: session.camera.snapshot)
     do {
-        try drawerAutomationRunBlocking {
+        try runBlocking {
             try await coreAutomationPanUndoRegression(report, suite: session, service: service)
         }
     } catch {
         report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")
     }
+}
+
+@MainActor
+func drawerAutomationTapHintCatalog(_ report: CheckReport) {
+    let id = "swiftcore/AutomationPage::tapHintCatalog"
+    let hints = MouseHints()
+    let token = hints.allocateSourceToken()
+    hints.setWindowActive(active: true)
+    hints.claim(sourceToken: token, profile: 27)
+    let tap = hints.text
+    report.expect(!tap.isEmpty, cppID: id,
+                  message: "the tap hint publishes its catalog text")
+    hints.claim(sourceToken: token, profile: 25)
+    report.expect(!hints.text.isEmpty && hints.text != tap, cppID: id,
+                  message: "the tap and ghost hints stay distinct")
+}
+
+@MainActor
+func drawerAutomationTempoPromptInsertion(_ report: CheckReport, suite: DocumentSession,
+                                          service: ProjectService) {
+    let id = "swiftcore/AutomationPage::tempoPromptInsertion"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service)
+    fixture.activate(.tempo)
+    let before = fixture.snapshot
+    let originalTempo = fixture.tempoValues
+    let undoCount = fixture.document.history.undoCount
+    report.expect(fixture.page.openPrompt(tick: 96, value: 120)
+                  && fixture.page.promptOpen && fixture.snapshot == before, cppID: id,
+                  message: "the tempo insertion prompt opens without a write")
+    report.expect(fixture.page.promptTitle == "Set tempo"
+                  && fixture.page.promptLabel == "BPM:"
+                  && fixture.page.promptMinimum == TimeDefaults.minimumTempoBPM
+                  && fixture.page.promptMaximum == TimeDefaults.maximumTempoBPM
+                  && fixture.page.promptDraft == "120", cppID: id,
+                  message: "the tempo insertion prompt publishes its displayed domain")
+    report.expect(fixture.page.acceptPrompt(displayedValue: 90)
+                  && fixture.tempoValues.contains("96:90")
+                  && fixture.document.revision == before.revision + 1
+                  && fixture.document.history.undoCount == undoCount + 1
+                  && fixture.document.history.canUndo, cppID: id,
+                  message: "the typed tempo draft commits at the prompt's tick")
+    let undone = fixture.undo()
+    report.expect(undone && fixture.tempoValues == originalTempo, cppID: id,
+                  message: "undo restores the pre-insertion tempo")
 }
 
 

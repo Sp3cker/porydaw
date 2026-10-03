@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawAppCommands
 
 /// Owns one document's editor presenters and all document-scoped publication wiring.
 /// The application replaces and tears down this object as a single unit;
@@ -8,31 +9,37 @@ import PorydawCore
 @MainActor
 public final class DocumentWorkspace {
     public struct Callbacks {
-        public var addTrackRequested: () -> Void
+        public var addTrackVoiceRequested: () -> Void
         public var changeTrackVoiceRequested: (Int) -> Void
+        public var headerVoicePickerOpenChanged: (Bool) -> Void
+        public var headerVoicePickerCompleted: ((Int) -> Void)?
         public var revealTrackVoiceRequested: (Int) -> Void
-        public var headerContextMenuRequested: (Double, Double) -> Void
         public var gridCommandAvailabilityChanged: () -> Void
         public var sessionStateChanged: () -> Void
         public var publicationFailed: (String) -> Void
         public var timeSignaturePromptInvalidated: (DocumentSession, UInt64) -> Void
+        public var transportPlayingChanged: (Bool) -> Void
 
-        public init(addTrackRequested: @escaping () -> Void,
+        public init(addTrackVoiceRequested: @escaping () -> Void = {},
                     changeTrackVoiceRequested: @escaping (Int) -> Void,
                     revealTrackVoiceRequested: @escaping (Int) -> Void,
-                    headerContextMenuRequested: @escaping (Double, Double) -> Void,
+                    headerVoicePickerOpenChanged: @escaping (Bool) -> Void = { _ in },
+                    headerVoicePickerCompleted: ((Int) -> Void)? = nil,
                     gridCommandAvailabilityChanged: @escaping () -> Void,
                     sessionStateChanged: @escaping () -> Void,
                     publicationFailed: @escaping (String) -> Void,
-                    timeSignaturePromptInvalidated: @escaping (DocumentSession, UInt64) -> Void) {
+                    timeSignaturePromptInvalidated: @escaping (DocumentSession, UInt64) -> Void,
+                    transportPlayingChanged: @escaping (Bool) -> Void = { _ in }) {
+            self.addTrackVoiceRequested = addTrackVoiceRequested
             self.timeSignaturePromptInvalidated = timeSignaturePromptInvalidated
-            self.addTrackRequested = addTrackRequested
             self.changeTrackVoiceRequested = changeTrackVoiceRequested
+            self.headerVoicePickerOpenChanged = headerVoicePickerOpenChanged
+            self.headerVoicePickerCompleted = headerVoicePickerCompleted
             self.revealTrackVoiceRequested = revealTrackVoiceRequested
-            self.headerContextMenuRequested = headerContextMenuRequested
             self.gridCommandAvailabilityChanged = gridCommandAvailabilityChanged
             self.sessionStateChanged = sessionStateChanged
             self.publicationFailed = publicationFailed
+            self.transportPlayingChanged = transportPlayingChanged
         }
     }
 
@@ -40,6 +47,7 @@ public final class DocumentWorkspace {
     public let grid: PianoGrid
     public let pitchBend: PitchBendPresenter
     public let trackHeaders: TrackHeadersPresenter
+    public let headerVoicePicker: HeaderVoicePicker
     public let velocityPage: VelocityPage
     public let voiceChangesPage: VoiceChangesPage
     public let automationPage: AutomationPage
@@ -47,6 +55,7 @@ public final class DocumentWorkspace {
     /// Drawer chrome belongs to the document: this workspace owns the presenter
     /// and the three section slots its own pages occupy.
     public let drawer = EditorDrawerPresenter()
+    public let otherEventsBand: OtherEventsBandPresenter
 
     private unowned let audio: NativeAudio
     private unowned let playhead: SharedPlayheadPresenter
@@ -54,7 +63,11 @@ public final class DocumentWorkspace {
     private unowned let eventList: EventListPresenter
     private let callbacks: Callbacks
     private var lastPlayheadPresentation: SharedPlayheadPresentation?
+    private var lastPolledPlaying: Bool?
     private var appliedSongConfig: SongConfig
+    // Camera work a hidden drawer section skipped; showing or re-attaching it
+    // replays one catch-up (zoom subsumes horizontal).
+    private var deferredCameraZoom: [DrawerSectionKind: Bool] = [:]
     private var isActive = false
     private var isTornDown = false
 
@@ -62,7 +75,7 @@ public final class DocumentWorkspace {
                 playhead: SharedPlayheadPresenter,
                 playheadGuides: PlayheadGuidesPresenter,
                 eventList: EventListPresenter, palette: GridPalette,
-                callbacks: Callbacks) {
+                typography: Typography, callbacks: Callbacks) {
         self.session = session
         appliedSongConfig = session.document.state.config
         self.audio = audio
@@ -75,38 +88,77 @@ public final class DocumentWorkspace {
         // presents that instance: the window's single theme push then reaches
         // every page of every tab, hidden ones included, and the strip reads the
         // same object.
-        let grid = PianoGrid(session: session, palette: palette)
+        let grid = PianoGrid(session: session, palette: palette, typography: typography)
         self.grid = grid
-        let pitchBend = PitchBendPresenter(session: session, grid: grid, palette: grid.palette)
+        let otherEventsBand = OtherEventsBandPresenter()
+        otherEventsBand.configure(session: session, palette: grid.palette,
+            baseFontPx: Double(typography.baseFontPx), appFontLineSpacing: 0)
+        self.otherEventsBand = otherEventsBand
+        let pitchBend = PitchBendPresenter(
+            session: session, grid: grid, palette: grid.palette, typography: typography)
         self.pitchBend = pitchBend
         grid.onPitchBendRequested = { [weak pitchBend] in
             pitchBend?.openSelected() ?? false
         }
-        let headers = TrackHeadersPresenter(baseFontPx: grid.baseFontPx)
+        pitchBend.onSoloTracksRequested = { [weak grid] in
+            grid?.performCommand(command: EditCommand.soloTracks.rawValue)
+        }
+        let headers = TrackHeadersPresenter(typography: typography)
         headers.attach(session: session, palette: grid.palette)
         self.trackHeaders = headers
-        let velocityPage = VelocityPage(baseFontPx: grid.baseFontPx)
+        let headerVoicePicker = HeaderVoicePicker(headers: headers, typography: typography)
+        self.headerVoicePicker = headerVoicePicker
+        headerVoicePicker.onOpenChanged = callbacks.headerVoicePickerOpenChanged
+        headerVoicePicker.onComplete = callbacks.headerVoicePickerCompleted
+        headerVoicePicker.onAuditionVoice = { [weak audio] program, key, velocity in
+            audio?.previewVoice(program: program, key: key, velocity: velocity)
+        }
+        let velocityPage = VelocityPage(baseFontPx: Double(typography.baseFontPx))
         velocityPage.attach(session: session, palette: grid.palette)
         self.velocityPage = velocityPage
-        let voiceChangesPage = VoiceChangesPage(baseFontPx: grid.baseFontPx)
+        let voiceChangesPage = VoiceChangesPage(baseFontPx: Double(typography.baseFontPx))
         voiceChangesPage.attach(session: session, palette: grid.palette)
         self.voiceChangesPage = voiceChangesPage
-        let automationPage = AutomationPage(baseFontPx: grid.baseFontPx)
+        let automationPage = AutomationPage(baseFontPx: Double(typography.baseFontPx))
         automationPage.attach(session: session, palette: grid.palette)
         self.automationPage = automationPage
-        rulerMenu = RulerMenuPresenter(session: session, grid: grid, automation: automationPage)
+        let rulerMenu = RulerMenuPresenter(session: session, grid: grid, automation: automationPage)
+        self.rulerMenu = rulerMenu
+        grid.onGridMenuOpened = { [weak automationPage, weak rulerMenu] in
+            if rulerMenu?.isOpen == true { rulerMenu?.close() }
+            if automationPage?.hasMenu == true { automationPage?.dismissMenu() }
+        }
+        automationPage.onMenuOpened = { [weak rulerMenu, weak grid] in
+            if rulerMenu?.isOpen == true { rulerMenu?.close() }
+            if let grid, grid.gridMenuKind != 0 { grid.dismissGridMenu() }
+        }
+        automationPage.onRequestTimeMenu = { [weak rulerMenu] tick, _ in
+            rulerMenu?.openTimeSelection(tick: tick)
+        }
         drawer.onSectionVisibilityChanged = { [weak self] kind, visible in
             guard visible else { return }
             self?.drawerSectionBecameVisible(kind)
         }
+        drawer.onChromeChanged = { [weak session] state in
+            guard let session else { return }
+            var next = session.editorViewState
+            next.chrome = state
+            session.setEditorViewState(next)
+        }
+
 
         headers.onTrackSelected = { [weak grid] track in
             grid?.setTrack(index: track)
         }
-        headers.onAddTrackRequested = callbacks.addTrackRequested
-        headers.onChangeTrackVoiceRequested = callbacks.changeTrackVoiceRequested
+        headers.onAddTrackRequested = { [weak headerVoicePicker] in
+            callbacks.addTrackVoiceRequested()
+            headerVoicePicker?.open(track: -1)
+        }
+        headers.onChangeTrackVoiceRequested = { [weak headerVoicePicker] track in
+            callbacks.changeTrackVoiceRequested(track)
+            headerVoicePicker?.open(track: track)
+        }
         headers.onRevealTrackVoiceRequested = callbacks.revealTrackVoiceRequested
-        headers.onContextMenuRequested = callbacks.headerContextMenuRequested
         grid.onAudition = { [weak audio] track, key, velocity in
             guard let audio, (0...15).contains(track), (0...127).contains(key),
                   (0...127).contains(velocity) else { return }
@@ -126,7 +178,6 @@ public final class DocumentWorkspace {
         session.onCameraChangeDetailed = { [weak self] _, change in
             self?.cameraDidChange(change)
         }
-        installPlaybackPublication()
         session.onChange = { [weak self] change in
             self?.sessionDidChange(change)
         }
@@ -142,6 +193,8 @@ public final class DocumentWorkspace {
         do {
             try audio.bind(timeline: session.timeline, bank: session.bankLease,
                            config: session.document.state.config)
+            audio.setMuteMask(Self.trackMask(session.mutedTracks))
+            audio.setSoloMask(Self.trackMask(session.soloedTracks))
             appliedSongConfig = session.document.state.config
         } catch {
             // The renderer refused this document's voices. The document stays
@@ -158,6 +211,11 @@ public final class DocumentWorkspace {
         }
         playhead.onPoll = { [weak self] elapsed, playing, presentationChanged in
             guard let self else { return }
+            let previouslyPlaying = lastPolledPlaying
+            lastPolledPlaying = playing
+            if let previouslyPlaying, previouslyPlaying != playing {
+                callbacks.transportPlayingChanged(playing)
+            }
             // Audio telemetry is destructive-read state; drain it even when
             // no presentation or meter publication needs the values.
             let levels = self.audio.consumeTrackActivityLevels()
@@ -168,9 +226,10 @@ public final class DocumentWorkspace {
             _ = self.trackHeaders.advanceActivity(levels: levels,
                                                   elapsedSeconds: elapsed, playing: playing)
         }
-        drawer.attachSection(velocityPage)
-        drawer.attachSection(voiceChangesPage)
-        drawer.attachSection(automationPage)
+        drawer.attachSections([velocityPage, voiceChangesPage, automationPage])
+        for kind in [DrawerSectionKind.velocity, .voiceChanges, .automation] {
+            flushDeferredCamera(kind)
+        }
         playheadGuides.attach(session: session)
         let engineTracks = session.document.engineTracks
         let initialChunk: Int
@@ -185,14 +244,33 @@ public final class DocumentWorkspace {
         }
         eventList.attach(session: session, chunkIndex: initialChunk)
         playhead.attach(session: session, audio: audio, grid: grid, drawer: drawer)
+        lastPolledPlaying = nil
         playhead.startPolling()
     }
 
+    /// Republishes palette-derived rows and drawing without document or camera changes.
+    /// Includes hidden tabs and drawer sections without cancelling interactions.
+    func refreshAppearance() {
+        guard !isTornDown else { return }
+        grid.reloadVisuals()
+        trackHeaders.refreshAppearance()
+        voiceChangesPage.rebuildContent()
+        automationPage.publishContent(session)
+        automationPage.publishDrawingContent()
+    }
+
     public func cancel(reason: Int) {
+        rulerMenu.cancelSweep()
         grid.inputCancelled(reason: reason)
         trackHeaders.inputCancelled(reason: reason)
+        if reason == GridCancelReason.hidden.rawValue { headerVoicePicker.cancelPicker() }
         voiceChangesPage.cancelSectionInteraction()
         drawer.inputCancelled(reason: reason)
+        otherEventsBand.inputCancelled()
+        if reason == GridCancelReason.windowDeactivated.rawValue
+            || reason == GridCancelReason.hidden.rawValue {
+            pitchBend.settleAndClose()
+        }
     }
 
     /// Stops every session callback before the host tears the scene down.
@@ -206,6 +284,9 @@ public final class DocumentWorkspace {
         session.onCameraChangeDetailed = nil
         session.onChange = nil
         session.onPlayback = nil
+        session.onEditorViewStateChanged = nil
+        drawer.onChromeChanged = nil
+        automationPage.onLaneRangeChanged = nil
     }
 
     /// The non-destructive inverse of `activate()`: a hidden workspace keeps its
@@ -247,13 +328,23 @@ public final class DocumentWorkspace {
         rulerMenu.close()
         rulerMenu.cancelInsertTimePrompt()
         pitchBend.cancelAndClose()
-        deactivate()
+        if isActive {
+            deactivate()
+        } else {
+            cancel(reason: GridCancelReason.hidden.rawValue)
+        }
         session.onChange = nil
         session.onPlayback = nil
         drawer.onSectionVisibilityChanged = nil
+        session.onEditorViewStateChanged = nil
+        drawer.onChromeChanged = nil
+        automationPage.onLaneRangeChanged = nil
         session.onCameraChange = nil
         session.onCameraChangeDetailed = nil
         voiceChangesPage.detach()
+        headerVoicePicker.cancelPicker()
+        headerVoicePicker.onOpenChanged = nil
+        headerVoicePicker.onAuditionVoice = nil
         voiceChangesPage.onAuditionVoice = nil
         velocityPage.detach()
         velocityPage.onVelocityAccepted = nil
@@ -262,42 +353,60 @@ public final class DocumentWorkspace {
         grid.detach()
     }
 
-    /// Installs the borrowed session's playback publication. The workspace owns
-    /// this closure from construction while it presents the document, and every
-    /// activation reinstalls what `deactivate()` cleared: an engine bound
-    /// without it would keep playing whatever it last held.
     private func installPlaybackPublication() {
-        session.onPlayback = { [weak audio, weak self] timeline in
+        session.onPlayback = { [weak self] timeline in
+            guard let self, self.isActive else { return }
             do {
-                try audio?.publish(timeline)
+                try self.audio.publish(timeline)
             } catch {
-                self?.callbacks.publicationFailed(String(describing: error))
+                self.callbacks.publicationFailed(String(describing: error))
             }
         }
     }
 
-    private func cameraDidChange(_ change: EditorCamera.Change) {
-        grid.refreshCamera()
-        playhead.refreshProjection()
-        playheadGuides.refreshProjection()
-
-        // Drawer pages project only through the horizontal camera. A vertical
-        // scroll or pitch-projection change therefore leaves them untouched;
-        // an x scroll uses their projection-only seams, while camera zoom still
-        // needs the existing full scene path.
-        guard change.contains(.scrollX) || change.contains(.zoom) else { return }
-        if change.contains(.zoom) {
-            velocityPage.refreshCamera()
-            voiceChangesPage.refreshCamera()
-            automationPage.refreshCamera()
-        } else {
-            velocityPage.refreshHorizontalProjection()
-            voiceChangesPage.refreshHorizontalProjection()
-            automationPage.refreshHorizontalProjection()
+    private static func trackMask(_ tracks: Set<Int>) -> UInt32 {
+        tracks.reduce(into: UInt32(0)) { mask, track in
+            if (0..<16).contains(track) { mask |= UInt32(1) << track }
         }
     }
 
+    private func cameraDidChange(_ change: EditorCamera.Change) {
+        grid.refreshCameraPresentation(change)
+        if isActive {
+            playhead.refreshProjection()
+            playheadGuides.refreshProjection()
+        }
+
+        guard change.contains(.scrollX) || change.contains(.zoom) else { return }
+        let zoom = change.contains(.zoom)
+        if zoom { otherEventsBand.refreshCamera() }
+        for kind in [DrawerSectionKind.velocity, .voiceChanges, .automation] {
+            guard drawer.section(kind: kind.rawValue).visible else {
+                deferredCameraZoom[kind] = zoom || deferredCameraZoom[kind] == true
+                continue
+            }
+            applyCamera(kind, zoom: zoom)
+        }
+    }
+
+    private func applyCamera(_ kind: DrawerSectionKind, zoom: Bool) {
+        switch (kind, zoom) {
+        case (.velocity, _): velocityPage.refreshCamera()
+        case (.voiceChanges, _): voiceChangesPage.refreshCamera()
+        case (.automation, true): automationPage.refreshCamera()
+        case (.automation, false): automationPage.refreshHorizontalProjection()
+        }
+    }
+
+    private func flushDeferredCamera(_ kind: DrawerSectionKind) {
+        guard drawer.section(kind: kind.rawValue).visible,
+            let zoom = deferredCameraZoom.removeValue(forKey: kind)
+        else { return }
+        applyCamera(kind, zoom: zoom)
+    }
+
     private func sessionDidChange(_ change: SessionChange) {
+        rulerMenu.sessionDidChange(change)
         let documentChanged = change.domains.contains(.document)
         let fullPageDomains: SessionChangeDomains = [.document, .selection, .bank]
         if documentChanged {
@@ -306,17 +415,23 @@ public final class DocumentWorkspace {
         }
         let headerDomains: SessionChangeDomains = [.selection, .bank, .cursor, .mixState]
         let applicationStateDomains: SessionChangeDomains = [.document, .dirty, .history, .bank, .scale]
-        playheadGuides.sessionDidChange(change)
-        eventList.documentDidChange(change)
+        if isActive {
+            playheadGuides.sessionDidChange(change)
+            eventList.documentDidChange(change)
+        }
 
         if documentChanged {
             trackHeaders.documentDidChange(change)
-            playhead.refreshImmediate()
+            otherEventsBand.refreshDocument()
+            if isActive { playhead.refreshImmediate() }
         } else if !change.domains.intersection(headerDomains).isEmpty {
             trackHeaders.refreshFromDocument()
         }
+        if documentChanged || change.domains.contains(.bank) {
+            headerVoicePicker.refresh()
+        }
 
-        if documentChanged || !change.domains.intersection([.selection, .scale]).isEmpty {
+        if documentChanged || !change.domains.intersection([.selection, .scale, .bank]).isEmpty {
             if change.domains.contains(.selection) { pitchBend.cancelAndClose() }
             grid.refreshFromSession()
         } else if change.domains.contains(.cursor) {
@@ -325,6 +440,10 @@ public final class DocumentWorkspace {
         if isActive && documentChanged && appliedSongConfig != session.document.state.config {
             appliedSongConfig = session.document.state.config
             audio.updateSettings(config: appliedSongConfig)
+        }
+        if isActive && (change.domains.contains(.mixState) || change.trackRemap != nil) {
+            audio.setMuteMask(Self.trackMask(session.mutedTracks))
+            audio.setSoloMask(Self.trackMask(session.soloedTracks))
         }
 
         if isActive && change.domains.contains(.bank) {
@@ -338,16 +457,22 @@ public final class DocumentWorkspace {
             velocityPage.cancelSectionInteraction()
         }
         if !change.domains.intersection(fullPageDomains).isEmpty {
+            // Document rebuilds read the live camera, so they settle deferred camera work.
             velocityPage.refreshFromDocument()
+            deferredCameraZoom[.velocity] = nil
             voiceChangesPage.refreshFromDocument()
-            automationPage.refreshFromDocument()
+            deferredCameraZoom[.voiceChanges] = nil
+            if documentChanged || change.domains.contains(.bank) {
+                automationPage.refreshFromDocument()
+                deferredCameraZoom[.automation] = nil
+            }
         } else if change.domains.contains(.cursor) {
             velocityPage.refreshEditCursor()
             voiceChangesPage.refreshEditCursor()
             automationPage.refreshEditCursor()
         }
 
-        if change.domains.contains(.mixState) {
+        if isActive && change.domains.contains(.mixState) {
             callbacks.gridCommandAvailabilityChanged()
         }
         if !change.domains.intersection(applicationStateDomains).isEmpty {
@@ -371,6 +496,7 @@ public final class DocumentWorkspace {
     }
 
     private func drawerSectionBecameVisible(_ kind: DrawerSectionKind) {
+        flushDeferredCamera(kind)
         guard let presentation = lastPlayheadPresentation else { return }
         switch kind {
         case .velocity:

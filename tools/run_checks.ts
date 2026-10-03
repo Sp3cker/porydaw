@@ -6,16 +6,20 @@
 //
 // env: PORYDAW_SAMPLE_CORPUS  optional built project for samplecheck's corpus
 //      ASAN_OPTIONS defaults to detect_leaks=0
+//      PORYDAW_CHECK_HOST     macos|windows|linux; overrides the host platform
+//                             when env access to it is granted
 
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { createReporter } from "./checks_reporter.ts";
 import type { Reporter } from "./checks_reporter.ts";
 import { wallEstimate } from "./checks_walls.ts";
-import { parseCheckOptions, VERIFY_HELP } from "./checks_options.ts";
+import { CHECKS_HELP, parseCheckOptions } from "./checks_options.ts";
+import { enclosingFunction } from "./proof_anchor.ts";
 
 type ScratchKind = "existing-directory" | "must-not-exist-path" | "unused";
 type FixtureRootKind = "decomp-project" | "songs-mk-project" | "none";
 type Windowing = "offscreen" | "window-system";
+const CHECK_PLATFORMS: readonly string[] = ["macos", "windows", "linux"];
 interface CheckManifestEntry {
   readonly name: string;
   readonly argv: readonly string[];
@@ -23,6 +27,7 @@ interface CheckManifestEntry {
   readonly windowing: Windowing;
   readonly framework: "qt-test" | "process";
   readonly optIn: boolean;
+  readonly platforms?: readonly string[];
 
   readonly environment?: Readonly<Record<string, string>>;
   readonly optionalArgumentEnvironment?: Readonly<Record<string, string>>;
@@ -37,7 +42,7 @@ const encoder = new TextEncoder();
 
 function usage(message?: string): never {
   if (message) console.error(`error: ${message}`);
-  console.error(VERIFY_HELP);
+  console.error(CHECKS_HELP);
   Deno.exit(2);
 }
 
@@ -159,7 +164,44 @@ async function loadManifest(
     console.error("run_checks: manifest is missing the opt-in classification");
     Deno.exit(2);
   }
+  if (
+    checks.some((check) =>
+      check.platforms !== undefined &&
+      (!Array.isArray(check.platforms) ||
+        check.platforms.some((platform) => !CHECK_PLATFORMS.includes(platform)))
+    )
+  ) {
+    console.error("run_checks: manifest has an unsupported platform");
+    Deno.exit(2);
+  }
   return checks;
+}
+
+function hostPlatform(): string {
+  const override =
+    Deno.permissions.querySync({ name: "env", variable: "PORYDAW_CHECK_HOST" })
+        .state === "granted"
+      ? Deno.env.get("PORYDAW_CHECK_HOST")
+      : undefined;
+  if (override !== undefined) {
+    if (!CHECK_PLATFORMS.includes(override)) {
+      console.error(
+        `run_checks: PORYDAW_CHECK_HOST must be one of ${
+          CHECK_PLATFORMS.join(", ")
+        }: ${override}`,
+      );
+      Deno.exit(2);
+    }
+    return override;
+  }
+  return Deno.build.os === "darwin" ? "macos" : Deno.build.os;
+}
+
+function refuseUnrunnable(registered: number, platform: string): never {
+  console.error(
+    `run_checks: ${registered} check(s) registered but none runnable on this platform (${platform})`,
+  );
+  Deno.exit(2);
 }
 
 function fixtureRoot(
@@ -288,12 +330,10 @@ async function runProcess(
   environment: Readonly<Record<string, string>>,
 ): Promise<CheckResult> {
   const startedAt = performance.now();
-  const profileFile = Deno.env.get("LLVM_PROFILE_FILE");
   const child = new Deno.Command(binary, {
     args,
     env: {
       ASAN_OPTIONS: Deno.env.get("ASAN_OPTIONS") ?? "detect_leaks=0",
-      ...(profileFile ? { LLVM_PROFILE_FILE: profileFile } : {}),
       ...environment,
     },
     stdout: "piped",
@@ -343,16 +383,31 @@ interface ProofEvidencePass {
   readonly row: string;
 }
 
+interface QmlAssertion {
+  readonly path: string;
+  readonly line: number;
+  readonly function: string;
+  readonly message: string;
+}
+
 interface ProofEvidence {
   readonly check: string;
   readonly passes: readonly ProofEvidencePass[];
   readonly functions: readonly string[];
+  readonly qmlAssertions: readonly QmlAssertion[];
 }
 
-function collectProofEvidence(check: string, output: string): ProofEvidence {
+async function collectProofEvidence(
+  check: string,
+  output: string,
+): Promise<ProofEvidence> {
   const passes: ProofEvidencePass[] = [];
   const functions: string[] = [];
-  for (const line of output.split(/\r?\n/)) {
+  const qmlAssertions: QmlAssertion[] = [];
+  const sourceCache = new Map<string, string>();
+  const lines = output.split(/\r?\n/);
+  for (let index = 0; index < lines.length; ++index) {
+    const line = lines[index];
     const marker = "swiftcore PASS cppId=";
     const markerIndex = line.indexOf(marker);
     if (markerIndex >= 0) {
@@ -377,9 +432,33 @@ function collectProofEvidence(check: string, output: string): ProofEvidence {
         continue;
       }
       functions.push(`${pass[1]}::${name}`);
+      continue;
+    }
+    const assertion = /^\s*INFO\s+:.+?\b(QVERIFY|QCOMPARE)\((.*)\)\s*$/.exec(
+      line,
+    );
+    const location =
+      /^\s*Loc: \[.*?(src\/checks\/[^()]+?\.(?:js|qml))\((\d+)\)\]\s*$/
+        .exec(lines[index + 1] ?? "");
+    if (assertion === null || location === null) continue;
+    const path = location[1];
+    let source = sourceCache.get(path);
+    if (source === undefined) {
+      source = await Deno.readTextFile(join(repoRoot, path));
+      sourceCache.set(path, source);
+    }
+    const sourceLine = Number(location[2]);
+    const body = enclosingFunction(source, sourceLine);
+    if (body !== undefined) {
+      qmlAssertions.push({
+        path,
+        line: sourceLine,
+        function: body.name,
+        message: assertion[1] === "QVERIFY" ? assertion[2] : "",
+      });
     }
   }
-  return { check, passes, functions };
+  return { check, passes, functions, qmlAssertions };
 }
 
 async function writeProofEvidence(
@@ -390,7 +469,7 @@ async function writeProofEvidence(
     await Deno.mkdir(join(buildRoot, "proof-evidence"), { recursive: true });
     await Deno.writeTextFile(
       join(buildRoot, "proof-evidence", `${check}.json`),
-      `${JSON.stringify(collectProofEvidence(check, output))}\n`,
+      `${JSON.stringify(await collectProofEvidence(check, output))}\n`,
     );
   } catch (error) {
     console.error(
@@ -409,7 +488,7 @@ try {
   usage(error instanceof Error ? error.message : String(error));
 }
 if (Deno.args[0] === "--help" || options.help) {
-  console.log(VERIFY_HELP);
+  console.log(CHECKS_HELP);
   Deno.exit(0);
 }
 const {
@@ -480,6 +559,8 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
       if (uncapQt) {
         args.push("-maxwarnings", "0");
       }
+    } else if (basename(checksInputPath).endsWith("_qml_tests")) {
+      args.push("--qt", "-v2", "-maxwarnings", "0");
     } else if (uncapQt) {
       args.push("--qt", "-maxwarnings", "0");
     }
@@ -528,17 +609,26 @@ async function runParallel(
   );
 }
 
+const host = hostPlatform();
+const platformSkippedChecks = checkManifest.filter((check) =>
+  check.platforms !== undefined && !check.platforms.includes(host)
+);
 const skipWindowSystem = selection === "--no-windowing-checks";
 let runnableChecks = checkManifest.filter(
   (check) =>
+    !platformSkippedChecks.includes(check) &&
     (!skipWindowSystem || check.windowing !== "window-system") &&
     (!check.optIn || selection === "--all" || filters.length > 0),
 );
 if (filters.length > 0) {
-  runnableChecks = runnableChecks.filter((check) =>
-    filters.some((filter) => check.name.includes(filter))
-  );
+  const matchesFilter = (check: CheckManifestEntry) =>
+    filters.some((filter) => check.name.includes(filter));
+  runnableChecks = runnableChecks.filter(matchesFilter);
   if (runnableChecks.length === 0) {
+    const platformMatches = platformSkippedChecks.filter(matchesFilter);
+    if (platformMatches.length > 0) {
+      refuseUnrunnable(platformMatches.length, host);
+    }
     console.error(
       `run_checks: no harness matches filter: ${filters.join(", ")}`,
     );
@@ -559,7 +649,7 @@ if (exclusions.length > 0) {
     !excludedNames.has(check.name)
   );
 }
-const visualPlatform = Deno.build.os === "darwin" ? "macos" : Deno.build.os;
+const visualPlatform = host;
 let hasVisualBaselines = false;
 try {
   for await (
@@ -582,19 +672,22 @@ if (
     !check.name.startsWith("visual-")
   );
   console.log(
-    `verify: no reviewed ${visualPlatform} visual baselines; skipping visual-* ` +
+    `checks: no reviewed ${visualPlatform} visual baselines; skipping visual-* ` +
       "(use --filter=visual to run them)",
   );
+}
+if (runnableChecks.length === 0) {
+  if (platformSkippedChecks.length > 0) {
+    refuseUnrunnable(platformSkippedChecks.length, host);
+  }
+  console.error("run_checks: selection resolved to zero runnable checks");
+  Deno.exit(2);
 }
 const applicationBinary =
   runnableChecks.some((check) => check.binary === "application")
     ? await findApplication(buildRoot)
     : undefined;
 if (qtPayload !== undefined) {
-  if (runnableChecks.length === 0) {
-    console.error("run_checks: --qt selected no harness");
-    Deno.exit(2);
-  }
   if (runnableChecks.length > 1) {
     console.error(
       `run_checks: --qt requires exactly one harness, selected: ${
@@ -640,6 +733,7 @@ reporter.onSummary(
   performance.now() - suiteStartedAt,
   checkManifest.length,
   runnableChecks.length,
+  platformSkippedChecks.length,
 );
 if (failures.length > 0) {
   Deno.exit(1);

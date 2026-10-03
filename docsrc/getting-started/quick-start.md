@@ -4,6 +4,8 @@ This is a quick 10-minute walkthrough of a basic music edit using Porydaw.  We'l
 
 ## 1. Open your project
 
+On launch, Porydaw draws the window before preparing audio and restoring saved tabs. Playback becomes available once a song is ready.
+
 Choose `File → Open Project`, and pick the folder for your decomp project. I've chosen my `pokeemerald` folder here.
 
 ![Opened Project State](../img/quick-start-opened.png)
@@ -45,6 +47,8 @@ Now, let's actually edit some notes!  I'm going to edit the first three notes th
 In my case, I changed those three intro flute notes to descend from the C6 note.
 
 ![Edited Notes](../img/quick-start-littleroot-flute-edit.png)
+
+The single status bar at the bottom of the window shows mouse hints, save status, and polyphony.
 
 ## 5. Save
 

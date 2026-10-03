@@ -45,7 +45,6 @@ public final class AutomationNodeHandle {
     public var radius: Double = 0
     public var ringRadius: Double = 0
     public var outlineWidth: Double = 0
-    public var fillColor: String = ""
     public var outlineColor: String = ""
     public var ringColor: String = ""
     public var selected: Bool = false
@@ -59,45 +58,37 @@ public final class AutomationNodeHandle {
 
     public init() {}
 
+    /// Everything a delegate needs, packed into one map: the delegate's
+    /// model-data object exposes stored properties only, so this is a stored
+    /// role — `refreshSpec()` must run after fields are assigned.
+    public var spec: [String: QVariantSettable] = [:]
+
+    @QtIgnored
+    func refreshSpec() {
+        spec = [
+            "x": x, "y": y, "tick": tick,
+            "radius": radius, "ringRadius": ringRadius,
+            "outlineWidth": outlineWidth,
+            "outerRadius": radius + outlineWidth,
+            "ringWidth": outlineWidth * 12.0 / 5.0,
+            "ringOuterRadius": ringRadius + outlineWidth * 6.0 / 5.0,
+            "hoverOuterRadius": radius + outlineWidth + 2,
+            "outlineColor": outlineColor,
+            "ringColor": ringColor,
+            "selected": selected, "hovered": hovered, "phantom": phantom,
+            "primitiveName": primitiveName,
+        ]
+    }
+
     @QtIgnored
     func matches(_ other: AutomationNodeHandle) -> Bool {
         x == other.x && y == other.y && tick == other.tick && value == other.value
             && radius == other.radius && ringRadius == other.ringRadius
-            && outlineWidth == other.outlineWidth && fillColor == other.fillColor
+            && outlineWidth == other.outlineWidth
             && outlineColor == other.outlineColor && ringColor == other.ringColor
             && selected == other.selected && hovered == other.hovered
             && projected == other.projected && phantom == other.phantom
             && identity == other.identity && primitiveName == other.primitiveName
-    }
-}
-
-/// One published ramp segment: the drawn span from its start to the next value.
-@MainActor
-@QtBridgeable
-public final class AutomationRampHandle {
-    public var x0: Double = 0
-    public var y0: Double = 0
-    public var dx: Double = 0
-    public var dy: Double = 0
-    public var color: String = ""
-    public var primitiveName = "automationRamp"
-
-    public init() {}
-
-    init(x0: Double, y0: Double, dx: Double, dy: Double, color: String,
-         primitiveName: String) {
-        self.x0 = x0
-        self.y0 = y0
-        self.dx = dx
-        self.dy = dy
-        self.color = color
-        self.primitiveName = primitiveName
-    }
-
-    @QtIgnored
-    func matches(_ other: AutomationRampHandle) -> Bool {
-        x0 == other.x0 && y0 == other.y0 && dx == other.dx && dy == other.dy
-            && color == other.color && primitiveName == other.primitiveName
     }
 }
 

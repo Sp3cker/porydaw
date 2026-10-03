@@ -17,6 +17,11 @@ Each command has one of two scopes:
   keep their keys locally; an editor command only fires when no protected
   local input claims it.
 
+Event-row commands target the event list only while it has keyboard focus.
+Keeping the list visible does not redirect keys from drawer controls to its
+selected rows. Drawer labels, toggles, and grips pass unclaimed editor keys
+through to the timeline command policy.
+
 Menu rows show a command's enabled state from the committed selection and
 edit cursor. A context menu closes itself when the selection, track scope,
 or edit cursor it was opened against changes; reopening it rebuilds the menu

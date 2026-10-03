@@ -26,10 +26,21 @@ struct VelocityProjection: Sendable {
         self.axis = axis
     }
 
-    /// The shared camera's own projection at the page's device pixel ratio.
-    func xForDisplayTick(_ tick: Double) -> Double {
+    /// Scroll-stable x: the tick's content position without camera scroll,
+    /// snapped to the device grid exactly like `viewX` at zero scroll.
+    func stableXForTick(_ tick: Double) -> Double {
         guard let camera else { return 0 }
-        return camera.displayX(tick: tick, origin: 0, dpr: devicePixelRatio)
+        return camera.contentTickX(tick: tick, dpr: devicePixelRatio)
+    }
+
+    /// The snapped scroll a plot-space pointer x needs to reach stable space:
+    /// the same rounding the delegate offset applies, so hit tests land on
+    /// exactly what the renderer drew at every scroll offset.
+    var scrollOffsetX: Double {
+        guard let camera else { return 0 }
+        let scrollX = camera.snapshot.scrollX
+        return devicePixelRatio.isFinite && devicePixelRatio > 0
+            ? (scrollX * devicePixelRatio).rounded() / devicePixelRatio : scrollX
     }
 
     /// One displayed value's y: the continuous ladder while the detent set is
@@ -46,6 +57,9 @@ struct VelocityProjection: Sendable {
     @MainActor
     func hitTest(x: Double, y: Double, includeStems: Bool,
                  handles: [VelocityHandle]) -> NoteID? {
+        // Pointers address published handle coordinates, which are
+        // scroll-stable, so they compare directly against the stable handle
+        // rows with no scroll shift.
         let radius = geometry.hitRadius
         var best: NoteID?
         var bestCircle = false

@@ -47,22 +47,50 @@ extension AutomationPage {
             let hovered = hoveredTick == node.tick
             if node.hovered != hovered {
                 node.hovered = hovered
+                node.refreshSpec()
                 nodes[index] = node
             }
         }
         guard let session, let hover else {
             let wasVisible = hoverVisible
             hoverVisible = false
-            hoverText = ""
-            hoverTick = 0
-            hoverLabelRect = Self.rect(0, 0, 0, 0)
             if wasVisible {
                 hoverDisplay = [
                     "visible": false, "text": "", "hasNode": false, "nodeTick": 0.0,
+                    "guideX": 0.0, "ghostY": 0.0, "hasGhost": false,
                     "x": 0.0, "y": 0.0, "width": 0.0, "height": 0.0,
                 ]
             }
+            hoverText = ""
+            hoverTick = 0
+            hoverLabelRect = Self.rect(0, 0, 0, 0)
             return
+        }
+        if !hover.hasPoint && !ghostParameters.isEmpty {
+            let tracks = usedTracks()
+            for parameter in ghostParameters {
+                let facts = facts(parameter: parameter, modifiers: .init(), session: session)
+                let cameraProjection = makeProjection(facts: facts, camera: session.camera)
+                let lane = cameraProjection.project(
+                    facts.snapshot, selection: selection, usedTracks: tracks)
+                guard let value = lane.heldValue(at: hover.tick) else { continue }
+                let curveY = cameraProjection.y(value, metadata: lane.metadata)
+                guard abs(curveY - hoverY) <= geometry.pointHitRadius else { continue }
+                let label = parameter.isTempo ? "Tempo" : AutomationCatalog.tabLabel(parameter)
+                let rect = hoverGhostRect(text: label, x: hoverX, curveY: curveY)
+                hoverVisible = true
+                hoverText = label
+                hoverTick = Double(hover.tick)
+                hoverLabelRect = rect
+                hoverDisplay = [
+                    "visible": true, "text": label, "hasNode": false,
+                    "nodeTick": 0.0, "guideX": 0.0, "ghostY": 0.0,
+                    "hasGhost": false, "x": rect["x"] ?? 0.0,
+                    "y": rect["y"] ?? 0.0, "width": rect["width"] ?? 0.0,
+                    "height": rect["height"] ?? 0.0,
+                ]
+                return
+            }
         }
         let facts = facts(parameter: hover.parameter, modifiers: .init(), session: session)
         let projection = makeProjection(facts: facts, camera: session.camera)
@@ -76,42 +104,55 @@ extension AutomationPage {
         hoverDisplay = [
             "visible": true, "text": hover.text, "hasNode": hoveredTick != nil,
             "nodeTick": hoveredTick ?? 0.0,
+            "guideX": projection.x(hover.tick),
+            "ghostY": hover.value.map { projection.y($0, metadata: metadata) } ?? 0.0,
+            "hasGhost": !hover.hasPoint && hover.value != nil,
             "x": hoverLabelRect["x"] ?? 0.0, "y": hoverLabelRect["y"] ?? 0.0,
             "width": hoverLabelRect["width"] ?? 0.0,
             "height": hoverLabelRect["height"] ?? 0.0,
         ]
     }
 
-    /// The frozen gesture's draft: one marker per draft point and the value
-    /// readout at the last of them.
+    /// The frozen gesture's draft: one marker per point it would commit, the lane
+    /// drawn through that replacement, and the value readout at the release point.
     func publishPreview() {
-        applyPreviewDraft(AutomationPreviewDraft.resolve(gesture: gesture, frozen: frozen))
-        guard let facts = frozen, !previewPoints.isEmpty else {
-            syncRects(previewRects, [])
+        let gestureProjection = frozen.map { makeProjection(facts: $0, camera: gestureCamera) }
+        var draft = AutomationPreviewDraft.resolve(gesture: gesture, frozen: frozen)
+        var edit: AutomationLaneEdit?
+        var sweepRelease: AutomationLanePoint?
+        if case let .pencil(transaction) = gesture { edit = transaction.preview }
+        if case let .sweep(transaction) = gesture, let facts = frozen,
+            let projection = gestureProjection
+        {
+            let finished = transaction.finishedPoints(fine: facts.modifiers.fine, projection: projection)
+            edit = transaction.finish(fine: facts.modifiers.fine, projection: projection)
+            sweepRelease = finished.last
+            draft = AutomationPreviewDraft(
+                parameter: facts.parameter, points: edit?.points ?? finished,
+                text: sweepRelease.map { facts.metadata.valueText($0.value) } ?? "")
+        }
+        applyPreviewDraft(draft)
+        applyPreviewEdit(edit)
+        guard let facts = frozen, let projection = gestureProjection, !previewPoints.isEmpty else {
+            publishDrawingContent()
             previewLabelVisible = false
             previewLabelText = ""
             previewLabelRect = Self.rect(0, 0, 0, 0)
             return
         }
-        let projection = makeProjection(facts: facts, camera: gestureCamera)
-        let extent = nodePaint.nodeRadius
-        let limit = max(0, plotWidth)
-        let rects = previewPoints.map { point in
-            SceneRect(x: (min(max(0, projection.x(point.tick)), limit) - extent).rounded(),
-                      y: (projection.y(point.value, metadata: facts.metadata) - extent).rounded(),
-                      width: 2 * extent, height: 2 * extent, fillColor: palette.selectionEdge,
-                      primitiveName: "automationPreviewNode")
-        }
-        syncRects(previewRects, rects)
-        previewLabelText = previewText
+        publishDrawingContent()
         let labelPoint: AutomationLanePoint?
         if case let .node(transaction) = gesture { labelPoint = transaction.grabbed?.current }
-        else { labelPoint = previewPoints.last }
+        else {
+            labelPoint = sweepRelease ?? previewPoints.last
+        }
         guard let last = labelPoint, !previewText.isEmpty else {
             previewLabelVisible = false
+            previewLabelText = ""
             previewLabelRect = Self.rect(0, 0, 0, 0)
             return
         }
+        previewLabelText = previewText
         previewLabelVisible = true
         previewLabelRect = labelRect(
             text: previewText, tick: last.tick,
@@ -119,14 +160,48 @@ extension AutomationPage {
             valueY: projection.y(last.value, metadata: facts.metadata))
     }
 
+    func publishGhostNames(_ session: DocumentSession) {
+        let height = captionMetrics?.height ?? fontPx(baseFontPx, 1)
+        let pad = fontPx(baseFontPx, 0.5)
+        let projected = ghostProjections(session)
+        var labels: [SceneText] = []
+        for (index, lane) in projected.enumerated() {
+            guard let value = lane.heldValue(at: lane.points.last?.tick ?? 0),
+                  index < ghostLabels.count else { continue }
+            let text = ghostLabels[index]
+            let width = min(max(0, plotWidth - 2 * pad),
+                            max(fontPx(baseFontPx, 2),
+                                (captionMetrics?.advance(text) ?? 0).rounded()))
+            let projection = makeProjection(
+                facts: facts(parameter: lane.parameter, modifiers: .init(), session: session),
+                camera: session.camera)
+            let curveY = projection.y(value, metadata: lane.metadata)
+            let y = min(max(0, curveY - height / 2), max(0, plotHeight - height))
+            labels.append(SceneText(rect: (max(0, plotWidth - width - pad), y, width, height),
+                                    text: text, color: palette.primaryText, font: captionFont))
+        }
+        syncTexts(ghostNameLabels, labels)
+    }
+
+    func hoverGhostRect(text: String, x: Double, curveY: Double) -> [String: QVariantSettable] {
+        let height = noteNameMetrics?.height ?? fontPx(baseFontPx, 1)
+        let pad = fontPx(baseFontPx, 0.5)
+        let width = min(max(0, plotWidth - 2 * pad),
+                        max(fontPx(baseFontPx, 2),
+                            (noteNameMetrics?.advance(text) ?? 0).rounded()))
+        return Self.rect(min(max(0, x - width / 2), max(0, plotWidth - width)),
+                         min(max(0, curveY - height - pad), max(0, plotHeight - height)),
+                         width, height)
+    }
+
 
     /// A value label's own rectangle: font-sized, at the column the interaction
     /// works in, and clamped into the plot.
     func labelRect(text: String, tick: Tick, x: Double,
                            valueY: Double?) -> [String: QVariantSettable] {
-        let height = captionMetrics?.height ?? fontPx(1)
-        let width = max(fontPx(2), (captionMetrics?.advance(text) ?? 0).rounded())
-        let gap = fontPx(1)
+        let height = noteNameMetrics?.height ?? fontPx(baseFontPx, 1)
+        let width = max(fontPx(baseFontPx, 2), (noteNameMetrics?.advance(text) ?? 0).rounded())
+        let gap = fontPx(baseFontPx, 1)
         let anchor = isPencilMode ? x + gap : xForTick(tick) + gap
         let originX = min(max(0, anchor), max(0, plotWidth - width))
         let centerY = valueY ?? plotHeight / 2
@@ -137,10 +212,10 @@ extension AutomationPage {
     /// The readout's own rectangle: the parameter title's width at the plot's
     /// top-right corner.
     func publishReadoutGeometry() {
-        let height = titleMetrics?.height ?? fontPx(1)
-        let pad = fontPx(0.5)
+        let height = titleMetrics?.height ?? fontPx(baseFontPx, 1)
+        let pad = fontPx(baseFontPx, 0.5)
         let width = min(max(0, plotWidth - 2 * pad),
-                        max(fontPx(4), (titleMetrics?.advance(readoutText) ?? 0).rounded()))
+                        max(fontPx(baseFontPx, 4), (titleMetrics?.advance(readoutText) ?? 0).rounded()))
         readoutRect = Self.rect(max(0, plotWidth - width - pad).rounded(), pad.rounded(),
                                 width, height)
     }
@@ -205,15 +280,20 @@ extension AutomationPage {
         tapTempoReady = tapSession.readyToCommit
     }
 
-
     func publishTypography() {
-        let pixelSize = max(1, Int(baseFontPx.rounded()))
-        let caption = AutomationCaption(pixelSize: pixelSize, weight: 400)
-        let title = AutomationCaption(pixelSize: pixelSize, weight: 600)
-        captionMetrics = caption
-        titleMetrics = title
-        setFont(&captionFont, caption.fontMap)
-        setFont(&titleFont, title.fontMap)
+        let typography = Typography(baseFontPx: Int(baseFontPx.rounded()))
+        captionMetrics = AutomationCaption(font: typography.caption)
+        titleMetrics = AutomationCaption(font: typography.captionBold)
+        noteNameMetrics = AutomationCaption(font: typography.noteName)
+        setFont(&captionFont, typography.caption.map)
+        setFont(&titleFont, typography.captionBold.map)
+        setFont(&noteNameFont, typography.noteName.map)
+        setFont(&minimumFont, typography.captionMinimum.map)
+        promptAppearance = PromptAppearance.metrics(base: baseFontPx)
+        setFont(&promptFont, PromptAppearance.font(typography: typography))
+        promptInputWidth = typography.fontPx(16)
+        pipExtent = Double(typography.fontPx(0.5))
+        minimumCellHeight = typography.fontPxF(4.0 / 3.0)
     }
 
     func setFont(_ storage: inout [String: QVariantSettable],
@@ -231,14 +311,6 @@ extension AutomationPage {
 
     // MARK: Internals: shared metrics
 
-    func fontPx(_ multiplier: Double) -> Double {
-        multiplier == 0 ? 0 : max(1, (baseFontPx * multiplier).rounded())
-    }
-
-    func gridMetrics(_ session: DocumentSession) -> GridMetrics {
-        GridMetrics(baseFontPx: baseFontPx, dpr: devicePixelRatio, width: plotWidth,
-                    height: plotHeight, timeAxis: timeAxis(session))
-    }
 
     /// The roll's own time axis, built from the same document facts the grid
     /// uses, so the automation grid is the roll's grid.
@@ -275,23 +347,16 @@ extension AutomationPage {
 
     // MARK: Internals: model synchronisation
 
-    func syncRects(_ model: QListModel<SceneRect>, _ rects: [SceneRect]) {
-        let common = min(model.count, rects.count)
-        for index in 0..<common where !model[index].matches(rects[index]) {
-            model[index] = rects[index]
-        }
-        if model.count != rects.count {
-            model.replaceSubrange(common..<model.count, with: rects[common...])
-        }
-    }
 
     func syncTexts(_ model: QListModel<SceneText>, _ texts: [SceneText]) {
-        let common = min(model.count, texts.count)
-        for index in 0..<common where !Self.textMatches(model[index], texts[index]) {
-            model[index] = texts[index]
-        }
-        if model.count != texts.count {
-            model.replaceSubrange(common..<model.count, with: texts[common...])
+        model.update {
+            let common = min(model.count, texts.count)
+            for index in 0..<common where !Self.textMatches(model[index], texts[index]) {
+                model[index] = texts[index]
+            }
+            if model.count != texts.count {
+                model.replaceSubrange(common..<model.count, with: texts[common...])
+            }
         }
     }
 
@@ -314,16 +379,6 @@ extension AutomationPage {
         }
         if nodes.count != values.count {
             nodes.replaceSubrange(common..<nodes.count, with: values[common...])
-        }
-    }
-
-    func syncRamps(_ values: [AutomationRampHandle]) {
-        let common = min(ramps.count, values.count)
-        for index in 0..<common where !ramps[index].matches(values[index]) {
-            ramps[index] = values[index]
-        }
-        if ramps.count != values.count {
-            ramps.replaceSubrange(common..<ramps.count, with: values[common...])
         }
     }
 
@@ -353,22 +408,13 @@ extension AutomationPage {
 /// native font-metrics seam the grid and the sibling pages use.
 @MainActor
 final class AutomationCaption {
-    let fontMap: [String: QVariantSettable]
     let height: Double
-    private let session: OpaquePointer
+    private let metrics: NativeFontMetrics
 
-    init(pixelSize: Int, weight: Int) {
-        let family = AutomationPage.fontFamily
-        fontMap = ["family": family, "pixelSize": pixelSize, "weight": weight,
-                   "letterSpacing": 0.0, "features": ["tnum": 1],
-                   "hintingPreference": fontPreferNoHinting]
-        session = family.withCString { sgf_create($0, Int32(pixelSize), Int32(weight), 0)! }
-        height = sgf_extents(session).height
+    init(font: GridFontSpec) {
+        metrics = NativeFontMetrics(font)
+        height = metrics.extents.height
     }
 
-    isolated deinit { sgf_destroy(session) }
-
-    func advance(_ text: String) -> Double {
-        text.withCString { sgf_advance(session, $0) }
-    }
+    func advance(_ text: String) -> Double { metrics.advance(text) }
 }

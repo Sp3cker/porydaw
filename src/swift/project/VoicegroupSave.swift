@@ -4,10 +4,15 @@ extension VoicegroupSource {
     /// Basename used for a staged preview, matching the loader's selected voicegroup name.
     public var previewShadowName: String { loadName }
 
-    /// Atomically persists the full source and adopts its bytes as the clean baseline.
+    /// Rebases onto the current disk bytes, then atomically writes the selected section's pending
+    /// change into that fresh image and adopts it as the clean baseline.
     /// - Returns: Whether the written bytes are still the current source bytes.
-    /// - Throws: The underlying write failure; the caller maps it to a user-facing message.
+    /// - Throws: `VoicegroupSourceConflict` for a missing, invalid, relocated, or conflicting source,
+    ///   or the underlying write failure. Pending edits and dirty state survive every failure.
     public func save() throws -> Bool {
+        guard try rebasePreservingEdits(from: diskSnapshot()) else {
+            throw VoicegroupSourceConflict(message: "\(loadName) changed in \(filePath) since it was loaded.")
+        }
         let bytes = sourceBytes()
         try ProjectFileStore.writeAtomic(filePath, data: Data(bytes))
         return didSave(savedBytes: bytes)
@@ -27,29 +32,25 @@ extension VoicegroupSource {
         return bytes
     }
 
-    /// Stages the preview under its loader basename, loads it through the project context,
-    /// and removes the temporary directory even if the load fails.
+    /// Stages the preview outside the project, loads it through the project context,
+    /// and removes the staging directory even if the load fails.
+    /// The loader takes the staged file by absolute path while sample and include
+    /// references still resolve against the project root, so the preview matches
+    /// the saved result. Staging under a per-process temporary directory keeps
+    /// previews out of the user's project folder (and its git); any staging or
+    /// load failure refuses the preview.
     /// - Parameter context: Context holding the current project's loader discovery state.
     /// - Returns: A self-contained preview bank, or nil if staging or loading fails.
     func loadPreviewedSource(using context: ProjectContext) -> BankHandle? {
-        let root = URL(filePath: projectRoot).standardizedFileURL.path
-        let directory = "\(root)/.porydaw/vgpreview"
-        let path = "\(directory)/\(previewShadowName).inc"
+        let staging = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "porydaw-vgpreview-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)
         do {
-            // A non-directory squatting on the staging path fails the preview
-            // instead of deleting a file porydaw did not create (C++ parity:
-            // QDir::removeRecursively on a file path fails the staged load).
-            var isDirectory: ObjCBool = false
-            if FileManager.default.fileExists(atPath: directory, isDirectory: &isDirectory),
-               !isDirectory.boolValue {
-                return nil
-            }
-            try ProjectFileStore.remove(directory)
-            try ProjectFileStore.mkpath(directory)
+            try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
         } catch {
             return nil
         }
-        defer { try? ProjectFileStore.remove(directory) }
+        defer { try? FileManager.default.removeItem(at: staging) }
+        let path = staging.appendingPathComponent("\(previewShadowName).inc").path
         do {
             try ProjectFileStore.writeAtomic(path, data: Data(renderPreview()))
         } catch {

@@ -3,8 +3,9 @@ import PorydawCore
 import PorydawPlayback
 import PorydawPlaybackNative
 import PorydawAudioDeviceNative
+import PorydawAppAudio
 
-public enum NativeAudioError: Error, Equatable {
+public enum NativeAudioError: Error, Equatable, Sendable {
     case initializationFailed(String)
     case bindFailed
     case publishFailed
@@ -14,13 +15,25 @@ public enum NativeAudioError: Error, Equatable {
 /// Cold mutations park callbacks before replacing storage.
 @MainActor
 public final class NativeAudio {
-    nonisolated(unsafe) private let device: AudioDevice
+    private let device: AudioDevice
     private var bankLease: NativeBankLease?
     private var engineSettings = AudioSettings()
 
-    public init() throws {
+    public init() async throws {
+        device = try await Self.prepareDevice()
+    }
+
+    /// Device preparation starts on the pool without waiting for the main
+    /// actor; only adoption hops to MainActor.
+    @concurrent
+    public static func make() async throws -> NativeAudio {
+        let device = try await prepareDevice()
+        return await NativeAudio(adopting: device)
+    }
+
+    private static func prepareDevice() async throws -> sending AudioDevice {
         do {
-            device = try AudioDevice()
+            return try await AudioDevice.prepare()
         } catch AudioRenderEngine.InitializationError.engine {
             throw NativeAudioError.initializationFailed(
                 "Failed to allocate the M4A audio engines. Free memory and try again.")
@@ -29,7 +42,11 @@ public final class NativeAudio {
         }
     }
 
-    deinit {
+    private init(adopting device: sending AudioDevice) {
+        self.device = device
+    }
+
+    isolated deinit {
         // Joining callbacks and destroying both engines must precede lease release.
         withExtendedLifetime(bankLease) { device.shutdown() }
     }
@@ -47,6 +64,7 @@ public final class NativeAudio {
     public var activePcmChannels: Int32 { Int32(device.renderer.activePcmChannels) }
     public var activeCgbChannels: Int32 { Int32(device.renderer.activeCgbChannels) }
     public var outputVolume: Int { device.renderer.outputVolume }
+    public var appliedSongVolume: Int { device.renderer.appliedSongVolume }
     public var loopEnabled: Bool { device.renderer.loopEnabled }
     public var resonanceSuppression: Bool { device.renderer.resonanceSuppression }
     public var polyDebugInvert: Bool { device.renderer.polyDebugInvert }
@@ -58,7 +76,7 @@ public final class NativeAudio {
 
     public func bind(timeline: PlaybackTimeline, bank: NativeBankLease,
                      config: SongConfig) throws {
-        try bind(timeline: timeline, bank: bank, settings: settings(for: config))
+        try bind(timeline: timeline, bank: bank, settings: songSettings(for: config))
     }
 
     public func bind(timeline: PlaybackTimeline, bank: NativeBankLease,
@@ -87,7 +105,7 @@ public final class NativeAudio {
     }
 
     public func updateSettings(config: SongConfig) {
-        updateSettings(settings(for: config))
+        updateSettings(songSettings(for: config))
     }
 
     public func setEngineSettings(_ engine: EngineSettings, config: SongConfig?) {
@@ -149,11 +167,8 @@ public final class NativeAudio {
 
     public func auditionSampleOff() { device.renderer.audition.sampleOff() }
 
-    private func settings(for config: SongConfig) -> AudioSettings {
-        var settings = engineSettings
-        settings.songVolume = UInt8(clamping: config.masterVolume)
-        settings.reverb = UInt8(clamping: config.reverb ?? 50)
-        return settings
+    public func songSettings(for config: SongConfig) -> AudioSettings {
+        engineSettings.applyingSong(config)
     }
 
     /// Borrow the lease's pinned external allocation through its typed native API.

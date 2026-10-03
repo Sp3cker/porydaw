@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppCommands
 import PorydawCore
 
 // Direct coverage for the Velocity page. The pure layers (voice context, the
@@ -54,19 +55,17 @@ let drawerVelocityHistoryID = "swiftcore/VelocityPage::undoRedoRefresh"
 
 // MARK: - Synthetic fixture
 
-/// A synthetic song with a square-1 opening program and a voice change to noise
-/// at tick 96, over the suite's real bank lease and slots.
-func drawerVelocityVelocityPageFixture() -> MidiFile {
+func drawerVelocityVelocityPageFixture(contextSlot: UInt8 = 0) -> MidiFile {
     let conductor: [MidiEvent] = [
         .meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20]),
     ]
     let notes: [MidiEvent] = [
-        .channel(tick: 0, status: 0xC0, data0: 0),
+        .channel(tick: 0, status: 0xC0, data0: contextSlot),
         .channel(tick: 0, status: 0x90, data0: 60, data1: 100),
         .channel(tick: 24, status: 0x80, data0: 60),
         .channel(tick: 24, status: 0x90, data0: 67, data1: 64),
         .channel(tick: 48, status: 0x80, data0: 67),
-        .channel(tick: 96, status: 0xC0, data0: 2),
+        .channel(tick: 96, status: 0xC0, data0: contextSlot == 0 ? 2 : contextSlot),
         .channel(tick: 96, status: 0x90, data0: 72, data1: 32),
         .channel(tick: 120, status: 0x80, data0: 72),
     ]
@@ -76,21 +75,23 @@ func drawerVelocityVelocityPageFixture() -> MidiFile {
     ])
 }
 
-/// The three checksum facts one finished transaction must move: the document
-/// revision, the history identity (the Swift analogue of the legacy undo index)
-/// and the undo/redo reachability.
 @MainActor
-struct drawerVelocityDocumentSnapshot: Equatable {
-    var revision: UInt64
-    var identity: DocumentIdentity
-    var canUndo: Bool
-    var canRedo: Bool
+func drawerVelocityTimelineVelocity(_ session: DocumentSession, _ id: NoteID) -> Int {
+    session.timeline.events.first { $0.type == 0x9 && $0.noteID == id }.map { Int($0.data1) } ?? -1
+}
 
-    init(_ document: SongDocument) {
-        revision = document.revision
-        identity = document.history.currentIdentity
-        canUndo = document.history.canUndo
-        canRedo = document.history.canRedo
+@MainActor
+final class drawerVelocityPublicationCounter {
+    private(set) var document = 0
+    private(set) var dirty = 0
+
+    init(session: DocumentSession) {
+        let prior = session.onChange
+        session.onChange = { [weak self] change in
+            if change.domains.contains(.document) { self?.document += 1 }
+            if change.domains.contains(.dirty) { self?.dirty += 1 }
+            prior?(change)
+        }
     }
 }
 
@@ -104,8 +105,8 @@ struct drawerVelocityVelocityFixture {
     let notes: [Note]
 
     init(session suite: DocumentSession, service: ProjectService,
-         baseFontPx: Double = 13) {
-        let document = SongDocument(file: drawerVelocityVelocityPageFixture(),
+         baseFontPx: Double = 13, contextSlot: UInt8 = 0) {
+        let document = SongDocument(file: drawerVelocityVelocityPageFixture(contextSlot: contextSlot),
                                     config: suite.document.state.config,
                                     source: suite.document.source,
                                     trackBudget: suite.document.trackBudget)
@@ -141,28 +142,6 @@ struct drawerVelocityVelocityFixture {
     }
 }
 
-@MainActor
-func drawerVelocityRunBlocking<T>(_ operation: @escaping @MainActor () async throws -> T) throws -> T {
-    var outcome: Result<T, Error>?
-    Task { @MainActor in
-        do {
-            outcome = .success(try await operation())
-        } catch {
-            outcome = .failure(error)
-        }
-    }
-    let deadline = Date().addingTimeInterval(20)
-    while outcome == nil {
-        if Date() > deadline { throw drawerVelocityRunBlockingTimeout.timeout }
-        RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-    }
-    return try outcome!.get()
-}
-
-enum drawerVelocityRunBlockingTimeout: Error {
-    case timeout
-}
-
 // MARK: - Suite entry
 
 @MainActor
@@ -181,12 +160,15 @@ internal func runVelocityPageChecks(_ report: CheckReport, session: DocumentSess
     drawerVelocityLateUnlockKeepsSnapped(report, session: session, service: service)
     drawerVelocityUnlockedRelativeKeepsOffsets(report, session: session, service: service)
     drawerVelocityUnlockedRampInterpolates(report, session: session, service: service)
+    drawerVelocityProgramFlowChecks(report, session: session, service: service)
     drawerVelocityBlankClickDeselects(report, session: session, service: service)
     drawerVelocityGraduationClickEdits(report, session: session, service: service)
     drawerVelocityClickBelowNodeCommits(report, session: session, service: service)
     drawerVelocityBandExpandContract(report, session: session, service: service)
     drawerVelocityPressCancelRestores(report, session: session, service: service)
     drawerVelocityBandCancelRestores(report, session: session, service: service)
+    drawerVelocityOverlapNodeDragCancelRestores(report, session: session, service: service)
+    drawerVelocityStemDragGuardsEdits(report, session: session, service: service)
     drawerVelocityPrimaryTrackSwitchCancels(report, session: session, service: service)
     drawerVelocityLifecycleCancellation(report, session: session, service: service)
     drawerVelocityStackedHitPriority(report, session: session, service: service)
@@ -206,6 +188,7 @@ internal func runVelocityPageChecks(_ report: CheckReport, session: DocumentSess
     drawerVelocityPromptTransaction(report, session: session, service: service)
     drawerVelocityKeysplitPerNoteMapping(report, session: session, service: service)
     drawerVelocityProjectionRefresh(report, session: session, service: service)
+    drawerVelocityContentBlobChecks(report, session: session, service: service)
     drawerVelocityVoiceContextInvalidation(report, session: session, service: service)
     drawerVelocityPlayheadDiagnostics(report, session: session, service: service)
     drawerVelocityCommandAvailability(report, session: session, service: service)
@@ -232,7 +215,7 @@ func drawerVelocityCommandAvailability(_ report: CheckReport, session: DocumentS
         return page?.openSelectedVelocityPrompt() ?? false
     }
     let document = fixture.document
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
 
     fixture.session.setSelectedNotes([fixture.notes[0].id])
     grid.setEditCursorTick(tick: Int(fixture.session.editCursor))
@@ -240,26 +223,26 @@ func drawerVelocityCommandAvailability(_ report: CheckReport, session: DocumentS
                   message: "Set Velocity becomes available with a selection")
 
     grid.performCommand(command: setVelocity)
-    report.expectEqual(1, requested, cppID: drawerVelocityCommandID,
+    report.expectEqual(expected: 1, actual: requested, cppID: drawerVelocityCommandID,
                        what: "the existing command row asks its owner for the prompt")
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
                   message: "the command commits no value before prompt acceptance")
 
     page = fixture.page
     grid.performCommand(command: setVelocity)
-    report.expectEqual(2, requested, cppID: drawerVelocityCommandID,
+    report.expectEqual(expected: 2, actual: requested, cppID: drawerVelocityCommandID,
                        what: "the command routes every execution through the same owner")
     report.expect(fixture.page.promptOpen, cppID: drawerVelocityCommandID,
                   message: "the routed command opened the page's captured prompt")
     fixture.page.cancelPrompt()
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
                   message: "cancelling the routed prompt still commits nothing")
 
     let row = editCommandTable.first { $0.command == .setVelocity }
-    report.expectEqual(EditNotesOperation.setVelocity.rawValue,
+    report.expectEqual(expected: EditNotesOperation.setVelocity.rawValue, actual: 
                        row?.notesOperation.rawValue ?? -1, cppID: drawerVelocityCommandID,
                        what: "the command table keeps Set Velocity on the notes arm")
-    report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
+    report.expectEqual(expected: EditKeyRoute.alwaysConsume.rawValue, actual: row?.keyRoute.rawValue ?? -1,
                        cppID: drawerVelocityCommandID,
                        what: "the command table keeps Set Velocity's consume route")
 }

@@ -16,6 +16,7 @@ import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
+import "../editorqml/NativeWait.js" as NativeWait
 
 TestCase {
     id: testCase
@@ -29,7 +30,7 @@ TestCase {
     // AudioTransportState raw values the presenter consumes.
     readonly property int transportPaused: 1
     readonly property int transportPlaying: 2
-    // PlayheadGuideHoverOwner raw values (none/roll/automation/voiceChanges).
+    // PlayheadGuideHoverOwner raw values (none/automation/voiceChanges).
     readonly property int ownerAutomation: 1
     readonly property int ownerVoiceChanges: 2
     // checks::support::isPlayheadPixel: alpha >= 32, channel delta <= 24.
@@ -63,24 +64,19 @@ TestCase {
     }
 
     function waitForNative(predicate, timeoutMs) {
-        var deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
+        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
     function initTestCase() {
-        Qt.application.name = "porydaw"
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        verify(bootstrap.captureSettings(), "saved the caller's native preferences")
+        bootstrap.seedDrawerPreferences(true, true, true, 0)
         verify(bootstrap.start("mus_route101"),
                "the staged route101 project starts opening")
         verify(waitForNative(function() {
             return session.songOpen || testCase.openFailure.length > 0
         }, 30000), "the staged route101 song opened (" + testCase.openFailure + ")")
+        verify(waitForNative(function() {
+            return session.songDockController().songListPresenter().totalCount > 0
+        }, 5000), "the Songs dock catalog is ready before checking scene-removal retention")
         testCase.mountOverlay()
     }
 
@@ -96,13 +92,14 @@ TestCase {
             surface = testCase.selectedSurface()
             return surface !== null
         }, 5000), "the selected tab's production EditorSurface mounted")
-        surface.drawerPreferenceLocation = bootstrap.preferencesUrl("lane-drawer.ini")
         var drawer = findChild(surface, "editorDrawer")
         verify(drawer, "the production drawer is mounted")
-        drawer.presenter.restoreStoredPreferences(1, 160, 1, 240, 1, 90, 0)
+        session.configurePersistence()
         verify(waitForNative(function() {
             return surface.visible && surface.width > 0 && surface.height > 0
         }, 5000), "the mounted surface is drawn")
+        testCase.height += findChild(surface, "timelineOtherEventsBand").height
+        item.height = testCase.height
     }
 
     function selectedSurface() {
@@ -134,7 +131,6 @@ TestCase {
                    "the session released its document presentation after the"
                    + " acknowledged scene removal")
         }
-        verify(bootstrap.restoreSettings(), "restored the caller's native settings")
     }
 
     // ---- shared lookups ------------------------------------------------------
@@ -376,6 +372,25 @@ TestCase {
                 return false
         }
         return true
+    }
+
+    function test_rollHoverNeverPublishesGuide() {
+        var g = grid()
+        var guide = guides()
+        var roll = findChild(surface(), "swiftRollInput")
+        verify(roll !== null, "the mounted roll input accepts the pointer")
+        g.resetCameraScroll()
+        g.setEditCursorTick(0)
+        bootstrap.guideClear(testCase.ownerAutomation)
+        bootstrap.guideClear(testCase.ownerVoiceChanges)
+        settle()
+        verify(!guide.hover.visible && guide.edit.visible,
+               "the edit guide is visible before roll hover")
+        var editX = guide.edit.contentX
+        mouseMove(roll, roll.width / 2, roll.height / 2)
+        settle()
+        verify(!guide.hover.visible && guide.edit.visible && guide.edit.contentX === editX,
+               "roll hover leaves the edit guide visible and stationary")
     }
 
     function test_guidesResizeScrollAndOwnership() {

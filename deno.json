@@ -1,23 +1,28 @@
 {
   "tasks": {
-    "checks": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify",
+    "checks": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,PORYDAW_SAMPLE_CORPUS tools/cli.ts checks",
+    "build": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build",
     "build:app": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:app",
     "build:render": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:render",
     "build:checks": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:checks",
+    "bench:startup": "deno run --allow-read --allow-run tools/startup_bench.ts",
     "setup": "deno run --allow-read --allow-write --allow-run --allow-env tools/setup.ts",
     "setup:check": "deno check tools/setup.ts && deno test --allow-read --allow-write --allow-run --allow-env tools/setup_test.ts tools/setup_swift_test.ts",
-    "verify": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify",
-    "verify:qml": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify:qml",
-    "verify:qml-roll": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify:qml-roll",
-    "verify:shell": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify:shell",
-    "format": "deno run --allow-read --allow-write --allow-run --allow-env=CLANG_FORMAT tools/cli.ts format",
-    "format:check": "deno run --allow-read --allow-write --allow-run --allow-env=CLANG_FORMAT tools/cli.ts format --check",
-    "coverage": "deno run --allow-read --allow-write --allow-run --allow-env=CI,PORYDAW_COVERAGE_IN_CI tools/coverage.ts",
-    "proof": "deno run --allow-read=src/checks,build/proof-evidence tools/proof_reader.ts",
+    "checks:bridge": "deno run --allow-read=src,CMakeLists.txt,cmake/QtBridge.cmake,tools --allow-run=deno tools/cli.ts checks:bridge",
+    "bridge:baseline": "deno run --allow-read=src,CMakeLists.txt,cmake/QtBridge.cmake,tools --allow-write=tools --allow-run=deno tools/cli.ts checks:bridge --update-baseline --allow-growth",
+    "checks:qml": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,PORYDAW_SAMPLE_CORPUS tools/cli.ts checks:qml",
+    "checks:qml-roll": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,PORYDAW_SAMPLE_CORPUS tools/cli.ts checks:qml-roll",
+    "checks:shell": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,PORYDAW_SAMPLE_CORPUS tools/cli.ts checks:shell",
+    "format": "deno run --allow-read --allow-write --allow-run --allow-env=HOME,SWIFTC tools/cli.ts format",
+    "proof": "deno run --allow-read=src/checks,build/debug/proof-evidence tools/proof_reader.ts",
     "proof:edit": "deno run --allow-read=src/checks --allow-write=src/checks tools/proof_editor.ts",
     "proof:compact": "deno run --allow-read=src/checks --allow-write=src/checks --allow-run=git tools/proof_compact.ts",
     "lsp:swift": "python3 tools/gen_swift_compdb.py --index",
-    "worktree:create": "deno run --allow-read --allow-write --allow-run tools/worktree.ts create"
+    "worktree:create": "deno run --allow-read --allow-write --allow-run tools/worktree.ts create",
+    "xctrace": "deno run --allow-read --allow-write --allow-run=xcrun --allow-env=HOME,TMPDIR tools/xctrace.ts"
+  },
+  "imports": {
+    "fast-xml-parser": "npm:fast-xml-parser@5.3.0"
   },
   "fmt": {
     "include": ["tools/**/*.ts"]

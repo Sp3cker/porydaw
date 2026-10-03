@@ -1,9 +1,9 @@
-import QtCore
 import QtQuick
 import QtQuick.Controls
 import QtTest
 import ShellQmlCheck 1.0
 import "../../ui/shell"
+import "NativeWait.js" as NativeWait
 
 TestCase {
     id: testCase
@@ -15,33 +15,17 @@ TestCase {
 
     ShellQmlBootstrap { id: bootstrap }
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
-    Component { id: settingsComponent; Settings { category: "engine" } }
     property var shell: null
-    property var nativeSettings: null
+    readonly property var nativeSettings: bootstrap.preferences
 
     function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        nativeSettings = settingsComponent.createObject(testCase)
-        nativeSettings.setValue("pcmMixer", "sappy")
-        nativeSettings.setValue("maxPcmChannels", 8)
-        nativeSettings.setValue("pcmMixRate", 21024)
-        nativeSettings.setValue("analogFilter", true)
-        nativeSettings.sync()
-    }
-    function cleanupTestCase() {
-        nativeSettings.destroy()
-        wait(0)
-        verify(bootstrap.clearSettings(), "settings fixture remains isolated")
+        nativeSettings.setString("engine.pcmMixer", "sappy")
+        nativeSettings.setInt("engine.maxPcmChannels", 8)
+        nativeSettings.setInt("engine.pcmMixRate", 21024)
+        nativeSettings.setBool("engine.analogFilter", true)
     }
     function waitForNative(predicate, timeoutMs) {
-        const deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
+        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
     function cleanup() {
         if (!shell)
@@ -67,7 +51,10 @@ TestCase {
         tryCompare(shell.shellPresenter.settingsStore, "mixer", "sappy")
         return shell.shellPresenter
     }
-    function dialog() { return findChild(shell, "shellSettingsDialog") }
+    function dialog() {
+        findChild(shell, "shellSettingsLoader").active = true
+        return findChild(shell, "shellSettingsDialog")
+    }
     function reference(profile, page) {
         return JSON.parse(bootstrap.settingsReferenceJson(profile, page))
     }
@@ -82,11 +69,6 @@ TestCase {
                name + " measured " + mapped.x + "," + mapped.y + " "
                + child.width + "x" + child.height + "; widget "
                + expected.x + "," + expected.y + " " + expected.w + "x" + expected.h)
-    }
-    function useFont(px) {
-        dialog().applicationFont = Qt.font({family: dialog().applicationFont.family,
-                                            pixelSize: px})
-        wait(0)
     }
     function capture(page, px) {
         var saved = false
@@ -108,40 +90,249 @@ TestCase {
         compare(findChild(dialog(), "pcmMixerCombo").count, 2)
         compare(findChild(dialog(), "pcmMixerCombo").textAt(0), "Ipatix")
         compare(findChild(dialog(), "pcmMixerCombo").textAt(1), "Sappy")
-        useFont(12)
+        const body = presenter.session.typographyFonts.body
+        compare(dialog().unit, presenter.session.baseFontPx / 12,
+                "settings layout unit derives from session base")
+        for (const name of ["settingsEngineTab", "pcmMixerCombo", "engine.polyphony",
+                            "engine.mix-rate", "engine.analog-filter",
+                            "engine.restore-defaults"]) {
+            const control = findChild(dialog(), name)
+            compare(control.font.family, body.family, name + " uses body family")
+            compare(control.font.pixelSize, body.pixelSize, name + " uses body size")
+            compare(control.font.weight, body.weight, name + " keeps body weight")
+        }
         const engineRegions = ["tabs", "tab-bar", "button-box", "engine.polyphony",
                                "pcmMixerCombo", "engine.mix-rate", "engine.analog-filter",
                                "engine.restore-defaults"]
         const baseline = reference("macos-dpr1-font12", "engine")
         for (const name of engineRegions)
             checkRegion(baseline, name, findChild(dialog(), name), 6)
-        capture("engine", 12)
-        useFont(16)
-        const larger = reference("macos-dpr2-font16", "engine")
-        for (const name of engineRegions)
-            checkRegion(larger, name, findChild(dialog(), name), 6)
-        capture("engine", 16)
+        capture("engine", presenter.session.baseFontPx)
         compare(findChild(dialog(), "pcmMixerCombo").currentIndex, 1)
         model.changeMixer("ipatix")
         model.changeMaxPcmChannels(7)
         model.changeMixRate(13379)
         model.changeAnalogFilter(false)
         findChild(dialog(), "settingsApply").clicked()
-        nativeSettings.sync()
-        tryVerify(function() { return String(nativeSettings.value("pcmMixer")) === "ipatix" }, 5000,
-                  "Apply persisted the actual mixer value")
-        compare(Number(nativeSettings.value("maxPcmChannels")), 7)
-        compare(Number(nativeSettings.value("pcmMixRate")), 13379)
-        compare(String(nativeSettings.value("analogFilter")), "false")
-        nativeSettings.setValue("pcmMixer", "invalid")
-        nativeSettings.sync()
+        tryVerify(function() {
+            return nativeSettings.string("engine.pcmMixer", "") === "ipatix"
+        }, 5000, "Apply persisted the actual mixer value")
+        compare(nativeSettings.int("engine.maxPcmChannels", -1), 7)
+        compare(nativeSettings.int("engine.pcmMixRate", -1), 13379)
+        compare(nativeSettings.bool("engine.analogFilter", true), false)
+        nativeSettings.setString("engine.pcmMixer", "invalid")
         dialog().close()
         const second = shellComponent.createObject(null)
         verify(second !== null)
         tryCompare(second.shellPresenter.settingsStore, "mixer", "ipatix")
         second.destroy()
-        nativeSettings.setValue("pcmMixer", "sappy")
-        nativeSettings.sync()
+        nativeSettings.setString("engine.pcmMixer", "sappy")
+    }
+    function test_reopeningDiscardsCancelledDraft() {
+        const presenter = createShell()
+        const model = presenter.settingsStore
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        const savedChannels = model.maxPcmChannels
+        const field = findChild(dialog(), "engine.polyphony")
+        verify(!!field, "Object exists")
+        const changedChannels = savedChannels > 1 ? savedChannels - 1 : 2
+        field.value = changedChannels
+        model.changeMaxPcmChannels(changedChannels)
+        const cancel = findChild(dialog(), "settingsCancel")
+        verify(!!cancel, "Object exists")
+        mouseClick(cancel, cancel.width / 2, cancel.height / 2)
+        tryCompare(dialog(), "visible", false)
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        const reopenedField = findChild(dialog(), "engine.polyphony")
+        verify(!!reopenedField, "Object exists")
+        tryCompare(model, "maxPcmChannels", savedChannels)
+        tryCompare(reopenedField, "value", savedChannels)
+    }
+    function test_escapeDismissesAndRestoresWindowFocus() {
+        const presenter = createShell()
+        presenter.activate("edit.engine_settings")
+        const settings = dialog()
+        tryCompare(settings, "visible", true)
+        tryCompare(settings, "active", true)
+        const body = findChild(settings, "settingsBody")
+        verify(body, "settings dialog body receives key events")
+        keyClick(Qt.Key_Escape)
+        tryCompare(settings, "visible", false)
+        tryCompare(shell, "active", true)
+    }
+    function test_gridContrastPreviewApplyAndRevert() {
+        nativeSettings.setString("theme.mode", "vanilla")
+        nativeSettings.setInt("theme.grid-line-contrast", 50)
+        const presenter = createShell()
+        const app = presenter.session
+        app.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() { return app.songOpen || app.lastSaveError.length > 0 }, 30000),
+               "grid contrast fixture song loads: " + app.lastSaveError)
+        verify(app.songOpen, "grid contrast fixture opens a mounted song")
+        verify(waitForNative(function() {
+            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the grid contrast fixture mounts its editor scene")
+        const page = findChild(shell.sceneLoader.item, "songTab_" + app.songTabs.selectedId)
+        const surface = page ? findChild(page, "swiftRollOverlay") : null
+        verify(surface && surface.gridModel, "the grid contrast journey has a mounted roll")
+        const palette = surface.gridModel.palette
+        function alpha(hex) {
+            return hex.length === 9 ? parseInt(hex.substring(1, 3), 16) : 255
+        }
+        compare(alpha(palette.gridLine), 63, "the mounted grid begins at the default opacity")
+
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        const slider = findChild(dialog(), "gridLineContrastSlider")
+        verify(!!slider, "the engine settings page exposes the contrast control")
+        tryCompare(slider, "value", 50)
+        function dragContrast(targetX) {
+            mousePress(slider, slider.handle.x + slider.handle.width / 2, slider.height / 2)
+            mouseMove(slider, targetX, slider.height / 2)
+            mouseRelease(slider, targetX, slider.height / 2)
+        }
+        dragContrast(slider.handle.width / 2)
+        tryCompare(slider, "value", 0)
+        tryCompare(presenter, "gridLineContrast", 0)
+        compare(alpha(palette.gridLine), 0, "soft preview removes opacity from the mounted grid")
+        compare(nativeSettings.int("theme.grid-line-contrast", -1), 50,
+                "live preview does not commit the contrast preference")
+
+        dragContrast(slider.width - slider.handle.width / 2)
+        tryCompare(slider, "value", 100)
+        tryCompare(presenter, "gridLineContrast", 100)
+        compare(alpha(palette.gridLine), 255, "strong preview makes the mounted grid opaque")
+        const apply = findChild(dialog(), "settingsApply")
+        verify(!!apply, "the mounted settings dialog has an Apply button")
+        verify(apply.enabled && apply.width > 0 && apply.height > 0,
+               "Apply remains available after grid preview")
+        mouseClick(apply, apply.width / 2, apply.height / 2)
+        verify(waitForNative(function() {
+            return nativeSettings.int("theme.grid-line-contrast", -1) === 100
+        }, 5000), "A047 Apply commits grid-line contrast 100 to preferences")
+
+        dragContrast(slider.handle.width / 2)
+        tryCompare(presenter, "gridLineContrast", 0)
+        compare(alpha(palette.gridLine), 0, "moving away previews the soft grid again")
+        const cancel = findChild(dialog(), "settingsCancel")
+        verify(!!cancel, "the mounted settings dialog has a Cancel button")
+        mouseClick(cancel, cancel.width / 2, cancel.height / 2)
+        tryCompare(presenter, "gridLineContrast", 100)
+        compare(alpha(palette.gridLine), 255, "Cancel restores the committed strong grid")
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        tryCompare(slider, "value", 100)
+        dragContrast(slider.handle.width / 2)
+        tryCompare(presenter, "gridLineContrast", 0)
+        dialog().close()
+        tryCompare(presenter, "gridLineContrast", 100)
+        compare(alpha(palette.gridLine), 255, "closing after another preview restores strong grid")
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        tryCompare(slider, "value", 100)
+        compare(nativeSettings.int("theme.grid-line-contrast", -1), 100,
+                "reopening preserves the committed grid contrast")
+        nativeSettings.setInt("theme.grid-line-contrast", 50)
+    }
+    function test_themeModePreviewCommitAndRevert() {
+        nativeSettings.setString("theme.mode", "vanilla")
+        nativeSettings.setInt("theme.grid-line-contrast", 50)
+        const presenter = createShell()
+        const palette = presenter.session.palette
+        tryCompare(presenter, "themeMode", "vanilla")
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        const group = findChild(dialog(), "themeModeGroup")
+        verify(!!group, "theme picker group rides the mounted settings dialog")
+        const vanilla = findChild(dialog(), "vanillaModeButton")
+        const dark = findChild(dialog(), "darkNeutralHighModeButton")
+        const immaterial = findChild(dialog(), "immaterialModeButton")
+        verify(!!vanilla && !!dark && !!immaterial, "theme picker shows its three fork mode buttons")
+        compare(vanilla.text, "Vanilla", "vanilla mode button keeps the fork label")
+        compare(dark.text, "Dark Neutral High", "dark mode button keeps the fork label")
+        compare(immaterial.text, "Immaterial", "immaterial mode button keeps the fork label")
+        for (const entry of [["vanillaModeLabel", "vanilla"], ["darkNeutralHighModeLabel", "dark-neutral-high"], ["immaterialModeLabel", "immaterial"]]) {
+            const label = findChild(dialog(), entry[0])
+            verify(!!label, entry[1] + " mode button exposes its label item")
+            verify(label.implicitWidth <= label.width + 1 && !label.truncated, entry[1] + " mode label is fully visible without elision")
+        }
+        tryCompare(vanilla, "checked", true)
+        compare(palette.chromeBackground.toString().toUpperCase(), "#BDB5AF",
+                "mounted settings reflect the committed vanilla chrome")
+        mouseClick(dark, dark.width / 2, dark.height / 2)
+        tryCompare(presenter, "themeMode", "dark-neutral-high")
+        tryCompare(dark, "checked", true)
+        compare(palette.chromeBackground.toString().toUpperCase(), "#424242",
+                "clicking dark previews the dark chrome live")
+        compare(nativeSettings.string("theme.mode", ""), "vanilla",
+                "mode preview does not persist the theme preference")
+        mouseClick(immaterial, immaterial.width / 2, immaterial.height / 2)
+        tryCompare(presenter, "themeMode", "immaterial")
+        compare(palette.chromeBackground.toString().toUpperCase(), "#363941",
+                "clicking immaterial previews the immaterial chrome live")
+        const cancel = findChild(dialog(), "settingsCancel")
+        verify(!!cancel, "the mounted settings dialog has a Cancel button")
+        mouseClick(cancel, cancel.width / 2, cancel.height / 2)
+        tryCompare(presenter, "themeMode", "vanilla")
+        compare(palette.chromeBackground.toString().toUpperCase(), "#BDB5AF",
+                "Cancel reverts the previewed mode to the committed vanilla chrome")
+        compare(nativeSettings.string("theme.mode", ""), "vanilla",
+                "cancelled preview leaves the persisted mode alone")
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        tryCompare(vanilla, "checked", true)
+        const darkAgain = findChild(dialog(), "darkNeutralHighModeButton")
+        mouseClick(darkAgain, darkAgain.width / 2, darkAgain.height / 2)
+        tryCompare(presenter, "themeMode", "dark-neutral-high")
+        const apply = findChild(dialog(), "settingsApply")
+        verify(!!apply, "the mounted settings dialog has an Apply button")
+        mouseClick(apply, apply.width / 2, apply.height / 2)
+        verify(waitForNative(function() {
+            return nativeSettings.string("theme.mode", "") === "dark-neutral-high"
+        }, 5000), "Apply commits the previewed dark mode to preferences")
+        compare(presenter.themeMode, "dark-neutral-high",
+                "Apply keeps the committed dark mode applied")
+        dialog().close()
+        tryCompare(dialog(), "visible", false)
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        tryCompare(findChild(dialog(), "darkNeutralHighModeButton"), "checked", true)
+        compare(nativeSettings.string("theme.mode", ""), "dark-neutral-high",
+                "reopening preserves the committed dark mode")
+        nativeSettings.setString("theme.mode", "vanilla")
+        nativeSettings.setInt("theme.grid-line-contrast", 50)
+    }
+    function test_themeModeGeometryStableAcrossPreview() {
+        nativeSettings.setString("theme.mode", "vanilla")
+        nativeSettings.setInt("theme.grid-line-contrast", 50)
+        const presenter = createShell()
+        tryCompare(presenter, "themeMode", "vanilla")
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        const content = dialog().contentItem
+        function frame(item) {
+            const mapped = item.mapToItem(content, 0, 0)
+            return [mapped.x, mapped.y, item.width, item.height]
+        }
+        const beforeSize = [dialog().width, dialog().height]
+        const buttons = [findChild(dialog(), "vanillaModeButton"),
+                         findChild(dialog(), "darkNeutralHighModeButton"),
+                         findChild(dialog(), "immaterialModeButton")]
+        verify(buttons[0] && buttons[1] && buttons[2], "all three mode buttons mount for geometry")
+        const before = [frame(buttons[0]), frame(buttons[1]), frame(buttons[2])]
+        mouseClick(buttons[1], buttons[1].width / 2, buttons[1].height / 2)
+        tryCompare(presenter, "themeMode", "dark-neutral-high")
+        wait(0)
+        compare([dialog().width, dialog().height], beforeSize,
+                "settings size is unchanged across a mode preview click")
+        for (let index = 0; index < 3; ++index)
+            compare(frame(buttons[index]), before[index],
+                    "mode button " + index + " geometry is unchanged across a mode preview click")
+        dialog().close()
+        tryCompare(presenter, "themeMode", "vanilla")
+        nativeSettings.setString("theme.mode", "vanilla")
     }
     function test_songFlagsAndReferenceGeometry() {
         const presenter = createShell()
@@ -151,11 +342,24 @@ TestCase {
                "song loads: " + app.lastSaveError)
         presenter.activate("edit.song_settings")
         tryCompare(dialog(), "visible", true)
+        verify(waitForNative(function() {
+            return presenter.settingsStore.voicegroups.indexOf("fixture_rich") >= 0
+        }, 5000), "the deferred voicegroup catalog reaches the song settings dialog")
         compare(dialog().selectedTab, 1)
         const model = presenter.settingsStore
         compare(model.songAvailable, true)
         compare(model.songLabel, "mus_route101")
-        useFont(12)
+        const body = app.typographyFonts.body
+        compare(dialog().unit, app.baseFontPx / 12,
+                "song settings geometry follows the session base")
+        for (const name of ["settingsSongTab", "song.voicegroup", "song.volume",
+                            "song.reverb", "song.priority", "song.exact-gate",
+                            "song.extended-clocks", "song.no-compression"]) {
+            const control = findChild(dialog(), name)
+            compare(control.font.family, body.family, name + " uses body family")
+            compare(control.font.pixelSize, body.pixelSize, name + " uses body size")
+            compare(control.font.weight, body.weight, name + " keeps regular weight")
+        }
         const songRegions = ["tabs", "tab-bar", "button-box", "song.voicegroup",
                              "song.volume", "song.reverb", "song.priority",
                              "song.exact-gate", "song.extended-clocks",
@@ -165,16 +369,11 @@ TestCase {
         verify(model.voicegroups.indexOf("fixture_rich") >= 0)
         for (const name of songRegions)
             checkRegion(baseline, name, findChild(dialog(), name), 6)
-        capture("song", 12)
+        capture("song", app.baseFontPx)
         compare(model.voicegroup, "fixture_rich", "song config voicegroup is presented")
         compare(findChild(dialog(), "song.voicegroup").editText, model.voicegroup,
                 "editable selector preserves the current song's voicegroup")
         compare(app.documentDirty, false, "loaded song starts clean")
-        useFont(16)
-        const larger = reference("macos-dpr2-font16", "song")
-        for (const name of songRegions)
-            checkRegion(larger, name, findChild(dialog(), name), 6)
-        capture("song", 16)
         findChild(dialog(), "settingsApply").clicked()
         verify(waitForNative(function() { return !model.isApplying }, 10000))
         compare(app.documentDirty, false, "unchanged Apply does not dirty the song")

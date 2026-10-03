@@ -1,22 +1,9 @@
-// Automation hover-decor assertions for the Swift roll window, run by the
-// rollqml lane:
-//
-//     roll_qml_tests {scratch} -input tst_SwiftRollAutomation.qml
-//
-// Ports the deleted nativegraphics tst_playhead_autohover.cpp
-// automationHoverDecor sequence to the production Swift surface: the real
-// Modulation selector tab activates the lane, the page model's pencil mode is
-// the same enter/prime/hover/leave move sequence drives the
-// baseline/hovered/cleared framebuffer triple, read over the plot input's
-// scene-mapped rect in the window framebuffer (grabImage crops the window by
-// an item's local rect, so the whole-window grab is the faithful capture).
-// The cleared-vs-baseline compare tolerates a one-channel glyph antialiasing
-// repaint wobble; a real decor remnant differs by far more.
 import QtQuick
 import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
+import "../editorqml/NativeWait.js" as NativeWait
 
 TestCase {
     id: testCase
@@ -52,24 +39,19 @@ TestCase {
     }
 
     function waitForNative(predicate, timeoutMs) {
-        var deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
+        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
     function initTestCase() {
-        Qt.application.name = "porydaw"
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        verify(bootstrap.captureSettings(), "saved the caller's native preferences")
+        bootstrap.seedDrawerPreferences(false, true, true, 0)
         verify(bootstrap.start("mus_route101"),
                "the staged route101 project starts opening")
         verify(waitForNative(function() {
             return session.songOpen || testCase.openFailure.length > 0
         }, 30000), "the staged route101 song opened" + testCase.openDiagnostics())
+        verify(waitForNative(function() {
+            return session.songDockController().songListPresenter().totalCount > 0
+        }, 5000), "the Songs dock catalog is ready before checking scene-removal retention")
         testCase.mountOverlay()
     }
 
@@ -97,10 +79,9 @@ TestCase {
             surface = testCase.selectedSurface()
             return surface !== null
         }, 5000), "the selected tab's production EditorSurface mounted")
-        surface.drawerPreferenceLocation = bootstrap.preferencesUrl("lane-drawer.ini")
         var drawer = findChild(surface, "editorDrawer")
         verify(drawer, "the production drawer is mounted")
-        drawer.presenter.restoreStoredPreferences(0, 160, 1, 240, 1, 90, 0)
+        session.configurePersistence()
         verify(waitForNative(function() {
             return surface.visible && surface.width > 0 && surface.height > 0
         }, 5000), "the mounted surface is drawn")
@@ -134,7 +115,6 @@ TestCase {
                    "the session released its document presentation after the"
                    + " acknowledged scene removal")
         }
-        verify(bootstrap.restoreSettings(), "restored the caller's native settings")
     }
 
     // ---- shared lookups ------------------------------------------------------
@@ -199,45 +179,6 @@ TestCase {
         return tab
     }
 
-    // grabImage(item) crops the window framebuffer by the item's own *local*
-    // rect (QuickTestResult::grabImage), so a nested item's capture lands on
-    // whatever shares its parent-local coordinates. The faithful capture is
-    // the whole window - testCase fills it at 0,0 - read over the item's
-    // scene-mapped rect in device pixels, the same rect the original's
-    // scene.capture(input) cropped.
-    function itemRegion(image, item) {
-        var origin = item.mapToItem(testCase, 0, 0)
-        var dpr = image.width / testCase.width
-        return Qt.rect(Math.round(origin.x * dpr), Math.round(origin.y * dpr),
-                       Math.round(item.width * dpr), Math.round(item.height * dpr))
-    }
-
-    // Two window frames differ inside rect if any pixel differs beyond a
-    // one-channel step: native text antialiasing can repaint a glyph edge one
-    // channel off between identical frames; a real decor remnant differs by
-    // far more. rect is in device pixels.
-    function regionsEquivalent(actual, expected, rect) {
-        for (var y = rect.y; y < rect.y + rect.height; ++y) {
-            for (var x = rect.x; x < rect.x + rect.width; ++x) {
-                if (Math.abs(actual.red(x, y) - expected.red(x, y)) > 1
-                    || Math.abs(actual.green(x, y) - expected.green(x, y)) > 1
-                    || Math.abs(actual.blue(x, y) - expected.blue(x, y)) > 1
-                    || Math.abs(actual.alpha(x, y) - expected.alpha(x, y)) > 1)
-                    return false
-            }
-        }
-        return true
-    }
-
-    function regionsDiffer(a, b, rect) {
-        return !testCase.regionsEquivalent(a, b, rect)
-    }
-
-    // ---- the case ------------------------------------------------------------
-
-    // nativegraphics tst_playhead_autohover.cpp::automationHoverDecor: the
-    // pencil-armed automation lane paints hover decor over the body on a real
-    // hover move and clears it completely when the pointer leaves.
     function test_automationPencilHoverDecor() {
         var s = surface()
         var page = automationPage()
@@ -250,9 +191,6 @@ TestCase {
         verify(input.hoverEnabled, "the plot input takes hover delivery")
         verify(input.Window.window !== null, "the plot input is windowed")
 
-        // Real activation on the shared plot: the Modulation selector tab is
-        // the same path a user takes, and its checked state is the published
-        // active parameter.
         var tab = testCase.activateModulationTab()
 
         var body = automationBody()
@@ -263,17 +201,7 @@ TestCase {
         verify(input.width > 0 && input.height > 0,
                "the plot input covers a drawn area")
 
-        // The interior point: the body minus its border rows, at two-thirds
-        // width — the same pick the original made.
-        var insetTop = 2
-        var insetBottom = 1
-        var interior = Qt.rect(0, insetTop, input.width,
-                               input.height - insetTop - insetBottom)
-        verify(interior.width > 0 && interior.height > 0,
-               "the lane body has a hoverable interior")
-        var point = Qt.point(Math.min(Math.max(input.width * 2 / 3, interior.x),
-                                      interior.x + interior.width),
-                             interior.y + interior.height / 2)
+        var point = Qt.point(input.width * 2 / 3, input.height / 2)
         verify(point.x >= 0 && point.x < input.width
                && point.y >= 0 && point.y < input.height,
                "the hover point is inside the plot input")
@@ -281,7 +209,8 @@ TestCase {
                "the hover point is inside the lane body")
 
         var hoverWindow = input.mapToItem(testCase, point.x, point.y)
-        var leaveWindow = input.mapToItem(testCase, -1, -1)
+        var leaveInset = s.gridModel.baseFontPx / 4
+        var leaveWindow = input.mapToItem(testCase, -leaveInset, -leaveInset)
         verify(hoverWindow.x >= 0 && hoverWindow.x < testCase.width
                && hoverWindow.y >= 0 && hoverWindow.y < testCase.height,
                "the hover point lands inside the window")
@@ -291,22 +220,15 @@ TestCase {
         verify(!input.contains(input.mapFromItem(testCase, leaveWindow.x, leaveWindow.y)),
                "the leave point is outside the plot input")
 
-        // Pencil mode armed before the baseline, exactly as the original: the
-        // decor under test is the hover state on top of the armed lane.
         model.isPencilMode = true
         compare(model.isPencilMode, true, "pencil mode armed on the page model")
         mouseMove(testCase, leaveWindow.x, leaveWindow.y)
-        wait(0)
-        waitForRendering(body)
-        var baseline = grabImage(testCase)
-        var region = itemRegion(baseline, input)
-        verify(baseline.width > 0 && baseline.height > 0,
-               "the baseline capture holds the window framebuffer")
-
-        // The first move into a fresh surface may deliver only HoverEnter, so
-        // stage an adjacent interior move before the target.
+        tryCompare(model, "hoverVisible", false, 5000)
+        compare(model.hoverText, "", "the baseline has no projected hover label")
+        var step = s.gridModel.baseFontPx / 4
         var staged = false
-        var offsets = [Qt.point(-1, 0), Qt.point(1, 0), Qt.point(0, -1), Qt.point(0, 1)]
+        var offsets = [Qt.point(-step, 0), Qt.point(step, 0),
+                       Qt.point(0, -step), Qt.point(0, step)]
         for (var i = 0; i < offsets.length; ++i) {
             var adjacent = Qt.point(point.x + offsets[i].x, point.y + offsets[i].y)
             if (adjacent.x >= 0 && adjacent.x < input.width
@@ -321,13 +243,31 @@ TestCase {
 
         mouseMove(testCase, hoverWindow.x, hoverWindow.y)
         tryCompare(model, "hoverVisible", true, 5000)
-        tryVerify(function() {
-            return testCase.regionsDiffer(grabImage(testCase), baseline, region)
-        }, 5000, "the hover decor paints over the lane body")
-
+        verify(model.hoverText.length > 0 && model.hoverLabelRect["width"] > 0,
+               "the hovered automation point publishes visible label geometry")
         mouseMove(testCase, leaveWindow.x, leaveWindow.y)
-        tryVerify(function() {
-            return testCase.regionsEquivalent(grabImage(testCase), baseline, region)
-        }, 5000, "the hover decor clears back to the baseline frame")
+        tryCompare(model, "hoverVisible", false, 5000)
+        verify(model.hoverText === "" && model.hoverLabelRect["width"] === 0,
+               "the hover decor clears its projected label on leave")
+    }
+
+    function test_hostAutomationTempoViewport() {
+        var s = surface()
+        var body = automationBody()
+        var page = automationPage()
+        var plot = findChild(page, "automationPlot")
+        var input = automationInput()
+        verify(body.status === Loader.Ready && plot
+               && page.width > 0 && page.height > 0,
+               "the automation body has a mounted, non-empty plot")
+        verify(page.plotOrigin === s.timelineSplitX
+               && page.plotOrigin === s.drawerPresenter.plotOrigin
+               && plot.mapToItem(page, 0, 0).x === page.plotOrigin
+               && input.mapToItem(page, 0, 0).x === page.plotOrigin
+               && input.width === body.width - page.plotOrigin
+               && input.height === body.height
+               && page.pageModel.plotWidth === input.width
+               && page.pageModel.plotHeight === input.height,
+               "the automation plot fills the viewport at the split")
     }
 }

@@ -101,6 +101,27 @@ separate batch boundaries, not a condition of task completion.
   unit. Reserve one-dispatch-per-task for work needing its own judgment,
   tests, or review surface.
 
+## Proof-ledger handoff for Swift checks
+
+- When a task changes Swift checks covered by `src/checks/**/proof.*.txt`,
+  make proof ownership explicit at dispatch. Keep the check-source writer
+  and `ledger-agent` on disjoint files; give the implementer the brief's
+  verification command, then freeze final check sources before handing
+  proof paths, affected `A###` sites, final Swift predicates and observed
+  result to the ledger agent. The ledger agent uses
+  `deepseek/deepseek-flash:max` and owns only assigned proof files.
+- If the brief requires proof edits but the controller delegates them, treat
+  the implementer's proof-pending result as a handoff, not a completed task.
+  Accept DONE only after the ledger agent finishes, `deno task proof check`
+  passes, all exact `A###`/`S###` links and hashes have been reviewed, and
+  the focused check evidence covers the settled sources. Include both
+  writers' files and results in the same task review package; do not
+  silently drop a `GAP`/`PARTIAL` or infer parity from proof parsing.
+- A reviewer finding on a proof file returns to its ledger owner; a finding
+  requiring a new Swift assertion returns to the check implementer, after
+  which the ledger owner refreshes paths, predicates and hashes. Serialize
+  any same-file fix and re-run the affected proof gate before review.
+
 ## Implementer local inspection
 
 Applies to every implementation and fix pass, including Qt Implement mode

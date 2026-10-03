@@ -44,11 +44,11 @@ private func coreRawMutationRow(_ report: CheckReport, loaded: CoreEditCorpusSon
     let before = document.rawChunks[chunk].events.count
     var event = MidiEvent.channel(tick: base, status: 0xB0 | channel, data0: 7, data1: 64)
     document.insertRawEvent(chunk: chunk, event: event)
-    report.expectEqual(before + 1, document.rawChunks[chunk].events.count, cppID: cppID,
+    report.expectEqual(expected: before + 1, actual: document.rawChunks[chunk].events.count, cppID: cppID,
                        what: "insert increments the raw event count")
-    report.expectEqual(1, document.rawChunks[chunk].events.filter { $0 == event }.count,
+    report.expectEqual(expected: 1, actual: document.rawChunks[chunk].events.filter { $0 == event }.count,
                        cppID: cppID, what: "inserted event occurs exactly once")
-    report.expectEqual(base, document.rawChunks[chunk].endTick, cppID: cppID,
+    report.expectEqual(expected: base, actual: document.rawChunks[chunk].endTick, cppID: cppID,
                        what: "insert extends chunk end")
     report.expect(coreRawTracksSorted(document), cppID: cppID, message: "insert keeps all tracks sorted")
 
@@ -58,7 +58,7 @@ private func coreRawMutationRow(_ report: CheckReport, loaded: CoreEditCorpusSon
     }
     event = .channel(tick: base, status: 0xB0 | channel, data0: 7, data1: 99)
     document.modifyRawEvent(chunk: chunk, index: sameTickIndex, event: event)
-    report.expectEqual(sameTickIndex, document.rawChunks[chunk].events.firstIndex(of: event),
+    report.expectEqual(expected: sameTickIndex, actual: document.rawChunks[chunk].events.firstIndex(of: event),
                        cppID: cppID, what: "same-tick modification retains index")
     report.expect(coreRawTracksSorted(document), cppID: cppID, message: "same-tick modification keeps sorting")
 
@@ -69,9 +69,9 @@ private func coreRawMutationRow(_ report: CheckReport, loaded: CoreEditCorpusSon
     event.tick = 0
     let countBeforeMove = document.rawChunks[chunk].events.filter { $0 == event }.count
     document.modifyRawEvent(chunk: chunk, index: movingIndex, event: event)
-    report.expectEqual(countBeforeMove + 1, document.rawChunks[chunk].events.filter { $0 == event }.count,
+    report.expectEqual(expected: countBeforeMove + 1, actual: document.rawChunks[chunk].events.filter { $0 == event }.count,
                        cppID: cppID, what: "tick change creates the destination event")
-    report.expectEqual(before + 1, document.rawChunks[chunk].events.count, cppID: cppID,
+    report.expectEqual(expected: before + 1, actual: document.rawChunks[chunk].events.count, cppID: cppID,
                        what: "tick change retains event count")
     report.expect(coreRawTracksSorted(document), cppID: cppID, message: "tick change keeps sorting")
     guard let deleteIndex = document.rawChunks[chunk].events.firstIndex(of: event) else {
@@ -79,17 +79,17 @@ private func coreRawMutationRow(_ report: CheckReport, loaded: CoreEditCorpusSon
         return
     }
     document.deleteRawEvents(chunk: chunk, indices: [deleteIndex])
-    report.expectEqual(before, document.rawChunks[chunk].events.count, cppID: cppID,
+    report.expectEqual(expected: before, actual: document.rawChunks[chunk].events.count, cppID: cppID,
                        what: "delete restores initial event count")
     document.setChunkEnd(chunk, tick: base + 500)
-    report.expectEqual(base + 500, document.rawChunks[chunk].endTick, cppID: cppID,
+    report.expectEqual(expected: base + 500, actual: document.rawChunks[chunk].endTick, cppID: cppID,
                        what: "explicit chunk-end extension")
     let lastTick = document.rawChunks[chunk].events.last?.tick ?? 0
     document.setChunkEnd(chunk, tick: 0)
-    report.expectEqual(lastTick, document.rawChunks[chunk].endTick, cppID: cppID,
+    report.expectEqual(expected: lastTick, actual: document.rawChunks[chunk].endTick, cppID: cppID,
                        what: "chunk end clamps to the last event")
     while document.history.undoDocument() {}
-    report.expectEqual(baseline, try document.state.file.encoded(), cppID: cppID,
+    report.expectEqual(expected: baseline, actual: try document.state.file.encoded(), cppID: cppID,
                        what: "all mutations undo to exact MIDI bytes")
 }
 
@@ -118,60 +118,60 @@ private func coreRawReorderRow(_ report: CheckReport, loaded: CoreEditCorpusSong
     }
     let secondIndex = firstIndex + 1
     let noteIndex = firstIndex + 2
-    report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: second),
+    report.expectEqual(expected: secondIndex, actual: document.rawChunks[chunk].events.firstIndex(of: second),
                        cppID: cppID, what: "second controller follows first")
-    report.expectEqual(noteIndex, document.rawChunks[chunk].events.firstIndex(of: noteOn),
+    report.expectEqual(expected: noteIndex, actual: document.rawChunks[chunk].events.firstIndex(of: noteOn),
                        cppID: cppID, what: "note follows controllers")
     let firstBounds = document.rawMoveBounds(chunk: chunk, index: firstIndex)
     report.expect(firstBounds != nil, cppID: cppID, message: "controller move bounds exist")
-    report.expectEqual(firstIndex, firstBounds?.lowerBound, cppID: cppID, what: "controller lower bound")
-    report.expectEqual(secondIndex, firstBounds?.upperBound, cppID: cppID, what: "controller upper bound")
+    report.expectEqual(expected: firstIndex, actual: firstBounds?.lowerBound, cppID: cppID, what: "controller lower bound")
+    report.expectEqual(expected: secondIndex, actual: firstBounds?.upperBound, cppID: cppID, what: "controller upper bound")
     let noteBounds = document.rawMoveBounds(chunk: chunk, index: noteIndex)
     report.expect(noteBounds != nil, cppID: cppID, message: "note move bounds exist")
-    report.expectEqual(noteIndex, noteBounds?.lowerBound, cppID: cppID, what: "note lower bound")
-    report.expectEqual(noteIndex, noteBounds?.upperBound, cppID: cppID, what: "note upper bound")
+    report.expectEqual(expected: noteIndex, actual: noteBounds?.lowerBound, cppID: cppID, what: "note lower bound")
+    report.expectEqual(expected: noteIndex, actual: noteBounds?.upperBound, cppID: cppID, what: "note upper bound")
 
     document.moveRawEvent(chunk: chunk, index: firstIndex, to: secondIndex)
-    report.expectEqual(firstIndex, document.rawChunks[chunk].events.firstIndex(of: second),
+    report.expectEqual(expected: firstIndex, actual: document.rawChunks[chunk].events.firstIndex(of: second),
                        cppID: cppID, what: "reorder moves second controller before first")
-    report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: first),
+    report.expectEqual(expected: secondIndex, actual: document.rawChunks[chunk].events.firstIndex(of: first),
                        cppID: cppID, what: "reorder moves first controller after second")
     report.expect(coreRawTracksSorted(document), cppID: cppID, message: "reordering keeps sorting")
     let undoCount = try coreEditHistoryCountAtTip(document, report: report, cppID: cppID)
     document.moveRawEvent(chunk: chunk, index: secondIndex, to: noteIndex)
     document.moveRawEvent(chunk: chunk, index: firstIndex, to: 0)
-    report.expectEqual(undoCount, try coreEditHistoryCountAtTip(document, report: report, cppID: cppID),
+    report.expectEqual(expected: undoCount, actual: try coreEditHistoryCountAtTip(document, report: report, cppID: cppID),
                        cppID: cppID, what: "both forbidden moves leave history entry count unchanged")
-    report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: first),
+    report.expectEqual(expected: secondIndex, actual: document.rawChunks[chunk].events.firstIndex(of: first),
                        cppID: cppID, what: "forbidden moves retain first controller position")
-    report.expectEqual(firstIndex, document.rawChunks[chunk].events.firstIndex(of: second),
+    report.expectEqual(expected: firstIndex, actual: document.rawChunks[chunk].events.firstIndex(of: second),
                        cppID: cppID, what: "forbidden moves retain second controller position")
     _ = document.history.undoDocument()
-    report.expectEqual(firstIndex, document.rawChunks[chunk].events.firstIndex(of: first),
+    report.expectEqual(expected: firstIndex, actual: document.rawChunks[chunk].events.firstIndex(of: first),
                        cppID: cppID, what: "undo restores first controller position")
-    report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: second),
+    report.expectEqual(expected: secondIndex, actual: document.rawChunks[chunk].events.firstIndex(of: second),
                        cppID: cppID, what: "undo restores second controller position")
     _ = document.history.redoDocument()
-    report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: first),
+    report.expectEqual(expected: secondIndex, actual: document.rawChunks[chunk].events.firstIndex(of: first),
                        cppID: cppID, what: "redo restores reordered first controller")
-    report.expectEqual(firstIndex, document.rawChunks[chunk].events.firstIndex(of: second),
+    report.expectEqual(expected: firstIndex, actual: document.rawChunks[chunk].events.firstIndex(of: second),
                        cppID: cppID, what: "redo restores reordered second controller")
     let edited = try document.state.file.encoded()
     while document.history.undoDocument() {}
-    report.expectEqual(baseline, try document.state.file.encoded(), cppID: cppID,
+    report.expectEqual(expected: baseline, actual: try document.state.file.encoded(), cppID: cppID,
                        what: "undo all restores exact baseline bytes")
     while document.history.redoDocument() {}
-    report.expectEqual(edited, try document.state.file.encoded(), cppID: cppID,
+    report.expectEqual(expected: edited, actual: try document.state.file.encoded(), cppID: cppID,
                        what: "redo all restores exact edited bytes")
 }
 
 @MainActor
 internal func coreRawEventEditing(_ report: CheckReport, document: SongDocument) {
     let rawBaseline = try? document.captureSave().bytes
-    report.expectEqual(Optional(0...1), document.rawMoveBounds(chunk: 0, index: 0),
+    report.expectEqual(expected: Optional(0...1), actual: document.rawMoveBounds(chunk: 0, index: 0),
                        cppID: "editcheck/EditCheckTest::rawEventReorder",
                        what: "setup events reorder only before the note")
-    report.expectEqual(Optional(2...2), document.rawMoveBounds(chunk: 0, index: 2),
+    report.expectEqual(expected: Optional(2...2), actual: document.rawMoveBounds(chunk: 0, index: 2),
                        cppID: "editcheck/EditCheckTest::rawEventReorder",
                        what: "note cannot cross pinned setup events")
     document.moveRawEvent(chunk: 0, index: 0, to: 1)
@@ -181,7 +181,7 @@ internal func coreRawEventEditing(_ report: CheckReport, document: SongDocument)
         }
         return controller
     }()
-    report.expectEqual(UInt8(10), firstController,
+    report.expectEqual(expected: UInt8(10), actual: firstController,
                        cppID: "editcheck/EditCheckTest::rawEventReorder",
                        what: "same-tick raw order changes")
     _ = document.history.undoDocument()
@@ -200,7 +200,7 @@ internal func coreRawEventEditing(_ report: CheckReport, document: SongDocument)
 
     document.insertRawEvent(chunk: 0,
         event: .systemExclusive(tick: 11, status: 0xF0, data: [0x7D, 1, 2, 0xF7]))
-    report.expectEqual([UInt8(0x7D), 1, 2, 0xF7], document.rawChunks[0].events
+    report.expectEqual(expected: [UInt8(0x7D), 1, 2, 0xF7], actual: document.rawChunks[0].events
         .first(where: { $0.isSystemExclusive })?.blob,
         cppID: "editcheck/EditCheckTest::rawEventMutate",
         what: "opaque bytes are stored without normalization")
@@ -214,12 +214,12 @@ internal func coreRawEventEditing(_ report: CheckReport, document: SongDocument)
     if let disposableIndex = document.rawChunks[0].events.firstIndex(of: disposable) {
         document.deleteRawEvents(chunk: 0, indices: [disposableIndex])
     }
-    report.expectEqual([UInt8(0x7D), 9, 8, 0xF7], document.rawChunks[0].events
+    report.expectEqual(expected: [UInt8(0x7D), 9, 8, 0xF7], actual: document.rawChunks[0].events
         .first(where: { $0.isSystemExclusive })?.blob,
         cppID: "editcheck/EditCheckTest::rawEventMutate",
         what: "modify and delete retain the intended opaque mutation")
     document.setChunkEnd(0, tick: 1)
-    report.expectEqual(Tick(11), document.rawChunks[0].endTick,
+    report.expectEqual(expected: Tick(11), actual: document.rawChunks[0].endTick,
                        cppID: "editcheck/EditCheckTest::rawEventMutate",
                        what: "chunk end clamps to its last event tick")
     let rawEdited = try? document.captureSave().bytes
@@ -244,8 +244,8 @@ private func coreRawEventDocumentSeams(_ report: CheckReport) throws {
     ]))
     let seamBefore = try coreEditHistoryCountAtTip(seam, report: report, cppID: seamID)
     seam.insertRawEvent(chunk: 0, event: .meta(type: 0x06, data: Array("eventviews conversion".utf8)))
-    report.expectEqual(seamBefore + 1,
-                       try coreEditHistoryCountAtTip(seam, report: report, cppID: seamID),
+    report.expectEqual(expected: seamBefore + 1,
+                       actual: try coreEditHistoryCountAtTip(seam, report: report, cppID: seamID),
                        cppID: seamID,
                        what: "raw insert pushes exactly one undoable step")
 
@@ -266,7 +266,7 @@ private func coreRawEventDocumentSeams(_ report: CheckReport) throws {
     }
     promoted.insertRawEvent(chunk: metadataChunk,
                             event: .channel(status: 0xC0 | freeChannel, data0: 3))
-    report.expectEqual(3, promoted.engineTracks.usedTrackCount, cppID: remapID,
+    report.expectEqual(expected: 3, actual: promoted.engineTracks.usedTrackCount, cppID: remapID,
                        what: "channel event promotes the metadata chunk to an engine track")
     report.expect(promoted.engineTracks.tracks
         .prefix(promoted.engineTracks.usedTrackCount)
@@ -274,9 +274,9 @@ private func coreRawEventDocumentSeams(_ report: CheckReport) throws {
         cppID: remapID,
         message: "an engine track owns the promoted metadata chunk")
     _ = promoted.history.undoDocument()
-    report.expectEqual(2, promoted.engineTracks.usedTrackCount, cppID: remapID,
+    report.expectEqual(expected: 2, actual: promoted.engineTracks.usedTrackCount, cppID: remapID,
                        what: "undo demotes the metadata chunk")
     _ = promoted.history.redoDocument()
-    report.expectEqual(3, promoted.engineTracks.usedTrackCount, cppID: remapID,
+    report.expectEqual(expected: 3, actual: promoted.engineTracks.usedTrackCount, cppID: remapID,
                        what: "redo repromotes the metadata chunk")
 }

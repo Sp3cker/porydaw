@@ -2,6 +2,7 @@ import Foundation
 import PorydawCore
 import PorydawPlaybackNative
 import QtBridge
+import PorydawAppAudio
 
 /// User-wide audio configuration, kept separate from the song's undoable flags.
 public struct EngineSettings: Equatable {
@@ -14,10 +15,17 @@ public struct EngineSettings: Equatable {
 
     public init(mixer: String, maxPcmChannels: String, mixRate: String, analogFilter: String) {
         self.mixer = mixer == "sappy" ? "sappy" : "ipatix"
-        self.maxPcmChannels = min(Int(MAX_PCM_CHANNELS), max(1, Int(maxPcmChannels) ?? 1))
+        self.maxPcmChannels = min(Int(MAX_PCM_CHANNELS), max(1, Int(maxPcmChannels) ?? 5))
         let rate = Float(mixRate) ?? 13_379
         self.mixRate = rate >= 0 && rate.isFinite ? Int(rate.rounded()) : 13_379
         self.analogFilter = analogFilter.lowercased() == "true"
+    }
+
+    init(mixer: String, maxPcmChannels: Int, mixRate: Int, analogFilter: Bool) {
+        self.mixer = mixer == "sappy" ? "sappy" : "ipatix"
+        self.maxPcmChannels = min(Int(MAX_PCM_CHANNELS), max(1, maxPcmChannels))
+        self.mixRate = mixRate >= 0 ? mixRate : 13_379
+        self.analogFilter = analogFilter
     }
 
     func apply(to settings: inout AudioSettings) {
@@ -32,7 +40,7 @@ public struct EngineSettings: Equatable {
 /// the audio owner and to the selected document's ordinary save snapshot.
 @MainActor
 @QtBridgeable
-public final class EngineSettingsStore: QmlInstantiableStatus {
+public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
     @QtTracked public var mixer = "ipatix"
     @QtTracked public var maximumPcmChannels = Int(MAX_PCM_CHANNELS)
     @QtTracked public var maxPcmChannels = 5
@@ -41,7 +49,7 @@ public final class EngineSettingsStore: QmlInstantiableStatus {
     @QtTracked public var songAvailable = false
     @QtTracked public var songLabel = ""
     @QtTracked public var voicegroup = ""
-    @QtTracked public var voicegroups: [String] = []
+    public var voicegroups: [String] = []
     @QtTracked public var masterVolume = 127
     @QtTracked public var reverb = -1
     @QtTracked public var priority = 0
@@ -51,9 +59,9 @@ public final class EngineSettingsStore: QmlInstantiableStatus {
     @QtTracked public var isApplying = false
     @QtTracked public var revision = 0
 
-    @QtIgnored private weak var session: ApplicationSession?
-    @QtIgnored private var committed = EngineSettings()
-    @QtIgnored private var target: DocumentSession?
+    private weak var session: ApplicationSession?
+    private var committed = EngineSettings()
+    private var target: DocumentSession?
 
     public required init() {}
     public func componentComplete() {}
@@ -63,10 +71,13 @@ public final class EngineSettingsStore: QmlInstantiableStatus {
         self.session = session
     }
 
-    public func restore(mixer: String, maxPcmChannels: String, mixRate: String,
-                        analogFilter: String) {
-        committed = EngineSettings(mixer: mixer, maxPcmChannels: maxPcmChannels,
-                                   mixRate: mixRate, analogFilter: analogFilter)
+    public func restoreFromPreferences() {
+        let store = PreferencesStore()
+        committed = EngineSettings(
+            mixer: store.string(key: "engine.pcmMixer", fallback: "ipatix"),
+            maxPcmChannels: store.int(key: "engine.maxPcmChannels", fallback: 5),
+            mixRate: store.int(key: "engine.pcmMixRate", fallback: 13_379),
+            analogFilter: store.bool(key: "engine.analogFilter", fallback: false))
         session?.setEngineSettings(committed)
         resetEngine()
     }
@@ -76,8 +87,7 @@ public final class EngineSettingsStore: QmlInstantiableStatus {
         target = session?.selectedDocument
         songAvailable = target != nil
         songLabel = session?.settingsSongLabel() ?? ""
-        let args = session?.settingsVoicegroupArgs() ?? []
-        voicegroups = args.map(VoiceListSemantics.voicegroupDisplayName)
+        refreshVoicegroups()
         guard let config = target?.document.state.config else { return }
         voicegroup = VoiceListSemantics.voicegroupDisplayName(config.voicegroupArgument)
         masterVolume = config.masterVolume
@@ -86,6 +96,12 @@ public final class EngineSettingsStore: QmlInstantiableStatus {
         exactGate = config.exactGate
         extendedClocks = config.extendedClocks
         noCompression = config.noCompression
+    }
+
+    @QtIgnored
+    public func refreshVoicegroups() {
+        voicegroups = (session?.settingsVoicegroupArgs() ?? [])
+            .map(VoiceListSemantics.voicegroupDisplayName)
     }
 
     public func restoreDefaults() {
@@ -116,6 +132,12 @@ public final class EngineSettingsStore: QmlInstantiableStatus {
             committed = engine
             session?.setEngineSettings(engine)
             revision &+= 1
+            let store = PreferencesStore()
+            store.setString(key: "engine.pcmMixer", value: mixer)
+            store.setInt(key: "engine.maxPcmChannels", value: maxPcmChannels)
+            store.setInt(key: "engine.pcmMixRate", value: mixRate)
+            store.setBool(key: "engine.analogFilter", value: analogFilter)
+            store.synchronize()
         }
         guard let target, session?.selectedDocument === target else { return }
         let arg = VoiceListSemantics.voicegroupArg(

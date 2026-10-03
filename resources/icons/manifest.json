@@ -1,0 +1,70 @@
+{
+  "fontAwesome": {
+    "solid": {
+      "play": "play",
+      "pause": "pause",
+      "stop": "stop",
+      "goToStart": "step-backward",
+      "loop": "repeat",
+      "followPlayhead": "forward",
+      "closeTab": "times",
+      "scrollTabsLeft": "caret-left",
+      "scrollTabsRight": "caret-right",
+      "comboArrow": "caret-down",
+      "spinUp": "caret-up",
+      "spinDown": "caret-down",
+      "submenuArrow": "caret-right",
+      "check": "check",
+      "disclosureClosed": "caret-right",
+      "disclosureOpen": "caret-down"
+    },
+    "light": {
+      "editSample": "pencil-alt",
+      "sample": "waveform",
+      "square1": "wave-square",
+      "square2": "wave-triangle",
+      "wave": "wave-sine",
+      "noise": "waveform-path",
+      "keysplit": "piano-keyboard",
+      "drumkit": "drum"
+    }
+  },
+  "custom": {
+    "automation": "automation.svg",
+    "velocity": "velocity.svg",
+    "velocityLabels": "velocity_labels.svg",
+    "flat": "flat-music.svg",
+    "resonance": "transport-resonance.svg"
+  },
+  "codepoints": {
+    "automation": "E000",
+    "closeTab": "E001",
+    "drumkit": "E002",
+    "editSample": "E003",
+    "flat": "E004",
+    "followPlayhead": "E005",
+    "goToStart": "E006",
+    "keysplit": "E007",
+    "loop": "E008",
+    "noise": "E009",
+    "pause": "E00A",
+    "play": "E00B",
+    "resonance": "E00C",
+    "sample": "E00D",
+    "scrollTabsLeft": "E00E",
+    "scrollTabsRight": "E00F",
+    "square1": "E010",
+    "square2": "E011",
+    "stop": "E012",
+    "velocity": "E013",
+    "velocityLabels": "E014",
+    "wave": "E015",
+    "check": "E016",
+    "comboArrow": "E017",
+    "spinDown": "E018",
+    "spinUp": "E019",
+    "submenuArrow": "E01A",
+    "disclosureClosed": "E01B",
+    "disclosureOpen": "E01C"
+  }
+}

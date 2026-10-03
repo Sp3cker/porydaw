@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { cmakeBuildUsesNinja } from "./local_build_environment.ts";
 import {
   checkSwiftCompiler,
+  checkSwiftFormat,
   selectedSwiftCompiler,
 } from "./swift_toolchain.ts";
 import { installMissingNativeBuildTools } from "./native_build_tool_installers.ts";
@@ -406,11 +407,13 @@ export async function inspectNativeBuildTools(
     }
   }
 
-  const swiftIssue = await checkSwiftCompiler(
-    await selectedSwiftCompiler(buildDirectory),
-    { link: missing.size === 0 && incompatibilities.length === 0 },
-  );
+  const swift = await selectedSwiftCompiler(buildDirectory);
+  const swiftIssue = await checkSwiftCompiler(swift, {
+    link: missing.size === 0 && incompatibilities.length === 0,
+  });
   if (swiftIssue) incompatibilities.push(swiftIssue);
+  const formatIssue = swiftIssue ? undefined : await checkSwiftFormat(swift);
+  if (formatIssue) incompatibilities.push(formatIssue);
 
   return {
     cmake: cmake.executable,

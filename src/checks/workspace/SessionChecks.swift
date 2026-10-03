@@ -8,20 +8,30 @@ import PorydawPlayback
 
 @MainActor
 internal func runProjectSessionSuite(_ report: CheckReport) {
+    guard let scratch = CheckEnvironment.fixtureRoot else {
+        report.fail("workspace/WorkspaceTabRecipe::restore", "missing staged settings directory")
+        return
+    }
+    let store = PreferencesStore()
+    PreferencesStore.stageShared(
+        plistPath: URL(fileURLWithPath: scratch, isDirectory: true)
+            .appendingPathComponent("settings.plist").path)
     runKeybindingRegistryChecks { passed, cppID, message in
         report.expect(passed, cppID: cppID, message: message)
     }
     runEditorCameraChecks(report)
     runTimelineScrollbarChecks(report)
     runEditorDrawerChecks(report)
-    runEditorViewStateChecks(report)
+    runEditorViewStateChecks(report, store: store)
     runTypographyLayoutChecks(report)
     mouseHintOwnershipChecks(report)
 
+    runWorkspaceStartupChecks(report)
     runTransportBarChecks(report)
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
-        report.fail("project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
-                    "missing --swiftcore fixture root")
+        report.fail(
+            "project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
+            "missing --swiftcore fixture root")
         return
     }
     runSongListModelChecks(report)
@@ -29,10 +39,11 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     runVoiceListChecks(report)
     runVoiceListSessionChecks(report)
 
-
     savedMidiCompilesAfterDocumentSave(report, fixtureRoot: fixtureRoot)
+    vanillaVelocitySavePreservesOtherEvents(report, fixtureRoot: fixtureRoot)
 
     let projectDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-session-test")
+    runSessionViewStateChecks(report, store: store, fixtureRoot: fixtureRoot)
 
     guard let opened = sessionOpenAndRecovery(report: report, projectDir: projectDir) else {
         return
@@ -44,8 +55,11 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
 
     sessionSavePersistence(report: report, session: session, service: service, projectDir: projectDir)
 
-    guard sessionFailureStages(report: report, session: session, service: service,
-                               projectDir: projectDir) else {
+    guard
+        sessionFailureStages(
+            report: report, session: session, service: service,
+            projectDir: projectDir)
+    else {
         return
     }
 
@@ -57,7 +71,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     runScaleEditingChecks(report, session: session)
     runNoteRenderingChecks(report, session: session)
     runKeyboardChecks(report, session: session)
-    runSelectionChecks(report, session: session)
+    runSelectionChecks(report, session: session, fixtureRoot: fixtureRoot)
     runIdentityChecks(report, session: session)
     runInterlockChecks(report, session: session)
     runNoteCommandChecks(report, session: session)
@@ -65,7 +79,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     runPresentationChecks(report, session: session)
     runTimeSignaturePromptChecks(report, session: session)
     runTimemenuChecks(report, session: session)
-    runPitchBendChecks(report)
+    runPitchBendChecks(report, session: session)
     runRulerLoopMenuChecks(report, session: session)
     runSharedPlayheadChecks(report, session: session, service: service)
     runPlayheadFeatureChecks(report, suite: session, service: service)
@@ -73,9 +87,11 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     runVelocityPageChecks(report, session: session, service: service)
     runVoiceChangesPageChecks(report, session: session, service: service)
     runAutomationPageChecks(report, session: session, service: service)
+    runHostBehaviorChecks(report, session: session, service: service, fixtureRoot: fixtureRoot)
     drawerOriginalNumericPromptTransaction(report, suite: session, service: service)
     editorSelectionCommandChecks(report, suite: session, service: service)
     runTimeRoutingChecks(report: report, suite: session, service: service)
+    runEditRoutingChecks(report: report, fixtureRoot: fixtureRoot)
     runClipboardSelectionChecks(report, suite: session, service: service)
     runTrackHeadersChecks(report, session: session, service: service)
     runTrackHeadersInputChecks(report, session: session, service: service)
@@ -89,14 +105,26 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
 internal func runBankHistorySuite(_ report: CheckReport) {
     historyTransitionRegressions(report)
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
-        report.fail("vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                    "missing --swiftcore fixture root")
+        report.fail(
+            "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+            "missing --swiftcore fixture root")
         return
     }
+    bankUndoPublicationChecks(report, fixtureRoot: fixtureRoot)
+    runVoicegroupCreationChecks(report, fixtureRoot: fixtureRoot)
+    twoOpenSessionsShareBankEdit(report: report, fixtureRoot: fixtureRoot)
+    bankSharedHistoryAndLifecycle(report: report, fixtureRoot: fixtureRoot)
+    bankBindingIdentityIsolation(report: report, fixtureRoot: fixtureRoot)
+    bankSharedFailedSaveAndStaleReceipt(report: report, fixtureRoot: fixtureRoot)
+    bankBackgroundEditReachesSelectedAudio(report: report, fixtureRoot: fixtureRoot)
+    mountedEditReachesPeerTabAudio(report: report, fixtureRoot: fixtureRoot)
     releaseEditorBankHistorySemantics(report, fixtureRoot: fixtureRoot)
     bankSaveMergeBoundaryParity(report: report, fixtureRoot: fixtureRoot)
     bankSwitchingParity(report: report, fixtureRoot: fixtureRoot)
+    bankMissingBasisAndApplied(report: report, fixtureRoot: fixtureRoot)
+    sessionCatalogOutageRetainsLastValid(report: report, fixtureRoot: fixtureRoot)
 
+    sampleCommitRefreshChecks(report, fixtureRoot: fixtureRoot)
     let projectDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-bank-test")
     let service = ProjectService()
     do {
@@ -104,8 +132,9 @@ internal func runBankHistorySuite(_ report: CheckReport) {
             try await service.open(root: projectDir)
         }
     } catch {
-        report.fail("vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                    "project open failed: \(error)")
+        report.fail(
+            "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+            "project open failed: \(error)")
         return
     }
 
@@ -115,21 +144,25 @@ internal func runBankHistorySuite(_ report: CheckReport) {
             try await DocumentSession.open(service: service, label: "mus_session_test")
         }
     } catch {
-        report.fail("vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                    "session open failed: \(error)")
+        report.fail(
+            "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+            "session open failed: \(error)")
         return
     }
 
     // Verify initial slots from test_vg.inc
-    report.expect(session.bankSlots.count >= 4,
-                  cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                  message: "published bank has slot views")
-    report.expectEqual(BankSlotKind.editable, session.bankSlots[0].kind,
-                       cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                       what: "slot 0 is editable square 1")
-    report.expectEqual(BankSlotKind.none, session.bankSlots[3].kind,
-                       cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
-                       what: "slot 3 is initially blank")
+    report.expect(
+        session.bankSlots.count >= 4,
+        cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+        message: "published bank has slot views")
+    report.expectEqual(
+        expected: BankSlotKind.editable, actual: session.bankSlots[0].kind,
+        cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+        what: "slot 0 is editable square 1")
+    report.expectEqual(
+        expected: BankSlotKind.none, actual: session.bankSlots[3].kind,
+        cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+        what: "slot 3 is initially blank")
 
     let oldLease = session.bankLease
     let oldToken = oldLease.bankToken
@@ -145,27 +178,31 @@ internal func runBankHistorySuite(_ report: CheckReport) {
     var scalarEditedSlots = originalSlots
     scalarEditedSlots[0].voice = editedVoice
 
-
     do {
         bankPublications.removeAll(keepingCapacity: true)
         let result = try runBlocking {
             try await session.applyBankEdit(slot: 0, value: editedVoice, expected: originalVoice)
         }
-        report.expectEqual(true, session.bankDirty,
-                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                           what: "bank edit dirties bank")
-        report.expectEqual(scalarEditedSlots, session.bankSlots,
-                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                           what: "scalar edit changes the requested voice and preserves every other slot")
-        report.expect(result.lease.bankToken != oldToken,
-                      cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                      message: "applied bank edit mints a fresh lease")
-        report.expectEqual(oldToken, oldLease.bankToken,
-                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                           what: "superseded lease retains its bank token and stays valid")
+        report.expectEqual(
+            expected: true, actual: session.bankDirty,
+            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+            what: "bank edit dirties bank")
+        report.expectEqual(
+            expected: scalarEditedSlots, actual: session.bankSlots,
+            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+            what: "scalar edit changes the requested voice and preserves every other slot")
         report.expect(
-            bankPublications.count == 1
-                && bankPublications[0].domains == [.bank, .dirty, .history],
+            result.lease.bankToken != oldToken,
+            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+            message: "applied bank edit mints a fresh lease")
+        report.expectEqual(
+            expected: oldToken, actual: oldLease.bankToken,
+            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+            what: "superseded lease retains its bank token and stays valid")
+        let completedBankPublications = bankPublications.filter { $0.domains.contains(.bank) }
+        report.expect(
+            completedBankPublications.count == 1
+                && completedBankPublications[0].domains == [.bank, .dirty, .history],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
             message: "bank edit publishes bank, dirty, and history exactly once")
 
@@ -174,9 +211,10 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         _ = try runBlocking {
             try await session.undo()
         }
-        report.expectEqual(originalSlots, session.bankSlots,
-                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                           what: "undo restores the complete original bank view")
+        report.expectEqual(
+            expected: originalSlots, actual: session.bankSlots,
+            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+            what: "undo restores the complete original bank view")
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
@@ -188,21 +226,23 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         _ = try runBlocking {
             try await session.redo()
         }
-        report.expectEqual(scalarEditedSlots, session.bankSlots,
-                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                           what: "redo restores the scalar edit without changing other slots")
+        report.expectEqual(
+            expected: scalarEditedSlots, actual: session.bankSlots,
+            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+            what: "redo restores the scalar edit without changing other slots")
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
             message: "bank redo publishes bank, dirty, and history exactly once")
     } catch {
-        report.fail("vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
-                    "scalar edit or undo/redo threw: \(error)")
+        report.fail(
+            "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+            "scalar edit or undo/redo threw: \(error)")
     }
 
     bankPreviewFailure(report: report, session: session, projectDir: projectDir)
-    bankBlankMaterialization(report: report, session: session)
+    bankBlankMaterialization(report: report, session: session, service: service)
     bankMergeSealing(report: report, session: session)
     bankConflicts(report: report, session: session, service: service)
 
@@ -211,7 +251,7 @@ internal func runBankHistorySuite(_ report: CheckReport) {
     do {
         let unifiedTick = session.document.state.file.chunks.map(\.endTick).max()! + 96
         _ = try session.document.addNotes([
-            NewNote(track: 0, tick: unifiedTick, pitch: 72, duration: 24, velocity: 93),
+            NewNote(track: 0, tick: unifiedTick, pitch: 72, duration: 24, velocity: 93)
         ])
         let expectedUnifiedFile = session.document.state.file
         let expectedUnifiedSlots = session.bankSlots
@@ -223,23 +263,27 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         try runBlocking {
             try await session.save()
         }
-        report.expectEqual(false, session.document.isDirty,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                           what: "unified save marks the song clean")
-        report.expectEqual(false, session.bankDirty,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                           what: "unified save marks the bank clean")
+        report.expectEqual(
+            expected: false, actual: session.document.isDirty,
+            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+            what: "unified save marks the song clean")
+        report.expectEqual(
+            expected: false, actual: session.bankDirty,
+            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+            what: "unified save marks the bank clean")
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
             message: "unified bank save publishes bank, dirty, and history exactly once")
-        report.expect(bytes(at: unifiedMidiPath) != midiBeforeUnifiedSave,
-                      cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                      message: "unified save changes persisted MIDI bytes")
-        report.expect(bytes(at: unifiedBankPath) != bankBeforeUnifiedSave,
-                      cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                      message: "unified save changes persisted bank bytes")
+        report.expect(
+            bytes(at: unifiedMidiPath) != midiBeforeUnifiedSave,
+            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+            message: "unified save changes persisted MIDI bytes")
+        report.expect(
+            bytes(at: unifiedBankPath) != bankBeforeUnifiedSave,
+            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+            message: "unified save changes persisted bank bytes")
 
         let reopenedService = ProjectService()
         try runBlocking {
@@ -248,20 +292,24 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         let reopened = try runBlocking {
             try await DocumentSession.open(service: reopenedService, label: "mus_session_test")
         }
-        report.expectEqual(expectedUnifiedFile, reopened.document.state.file,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                           what: "fresh reopen reads the unified song edit from disk")
-        report.expectEqual(expectedUnifiedSlots, reopened.bankSlots,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                           what: "fresh reopen reads the unified bank edits and preserved slots from disk")
+        report.expectEqual(
+            expected: expectedUnifiedFile, actual: reopened.document.state.file,
+            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+            what: "fresh reopen reads the unified song edit from disk")
+        report.expectEqual(
+            expected: expectedUnifiedSlots, actual: reopened.bankSlots,
+            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+            what: "fresh reopen reads the unified bank edits and preserved slots from disk")
     } catch {
-        report.fail("vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
-                    "unified save or fresh reopen threw: \(error)")
+        report.fail(
+            "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+            "unified save or fresh reopen threw: \(error)")
     }
 
     bankQueuedSave(report: report, session: session, projectDir: projectDir)
     bankReleaseBoundsAndSharedBank(report: report, session: session, service: service)
     bankCatalogOutage(report: report, session: session, service: service, projectDir: projectDir)
     bankSaveRoundTrip(report: report, fixtureRoot: fixtureRoot)
+    orphanBankCloseAccounting(report: report, fixtureRoot: fixtureRoot)
     bankCoordinatorGate(report: report, fixtureRoot: fixtureRoot)
 }

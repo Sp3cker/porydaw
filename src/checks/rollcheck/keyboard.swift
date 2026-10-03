@@ -1,5 +1,6 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
+@testable import PorydawAppCommands
 import PorydawCore
 
 @MainActor
@@ -8,11 +9,15 @@ func runKeyboardChecks(_ report: CheckReport, session: DocumentSession) {
     checkKeyboardKeepsEditedNoteVisible(report, session: session)
     checkKeyboardResizeNotes(report, session: session)
     checkTimelineInsertBlankTimeTracks(report, session: session)
+    checkTimelineInsertRejectedScope(report, session: session)
     checkTimelineInsertBlankTimeLanes(report, session: session)
+    checkKeyboardSkipsGhosts(report, session: session)
+    checkTimeSelectionHighlights(report, session: session)
     runKeyboardParityChecks(report, session: session)
+    checkDrumPadLabels(report)
 }
 
-private struct KeyboardSeed {
+struct KeyboardSeed {
     let id: NoteID
     let track: Int
     let tick: Tick
@@ -24,7 +29,7 @@ private struct KeyboardSeed {
 // makeResizeSeed starts probing at pixel 88, searching visible keys 115 down to 24,
 // with velocity 100 and the grid's drawn duration at the selected snap cell.
 @MainActor
-private func withKeyboardSeed(
+func withKeyboardSeed(
     _ report: CheckReport, session: DocumentSession, id: String,
     _ body: (PianoGrid, KeyboardSeed) -> Void
 ) {
@@ -89,6 +94,15 @@ private func withKeyboardSeed(
         $0.track == track && $0.tick == tick && Int($0.pitch) == pitch
             && $0.duration == duration
     } == true, cppID: id, message: "the seeded keyboard note is present")
+    let postSeedBytes = coreTimeBytes(document)
+    let postSeedIdentity = document.history.currentIdentity
+    defer {
+        while document.history.currentIdentity != postSeedIdentity && document.history.canUndo {
+            guard document.history.undoDocument() else { break }
+        }
+        report.expect(coreTimeBytes(document) == postSeedBytes, cppID: id,
+                      message: "the scenario unwind restores the slot's post-seed bytes")
+    }
     body(grid, KeyboardSeed(id: noteID, track: track, tick: tick,
                             duration: duration, pitch: pitch, snap: snap))
 }
@@ -169,15 +183,15 @@ private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, session:
         _ = session.mutateCamera {
             _ = $0.setHScroll($0.contentX(tick: Double(parkedTick + seed.snap)) + 1 / dpr)
         }
-        report.expect(session.camera.displayX(tick: Double(parkedTick + seed.snap),
-                                               origin: 0, dpr: dpr) < 0,
+        report.expect(session.camera.viewX(tick: Double(parkedTick + seed.snap),
+                                               dpr: dpr) < 0,
                       cppID: id, message: "the next nudge starts left of the viewport")
         grid.performCommand(command: EditCommand.nudgeRight.rawValue)
         guard let nudged = session.document.note(seed.id) else {
             report.fail(id, "nudge lost the keep-visible note")
             return
         }
-        let startX = session.camera.displayX(tick: Double(nudged.tick), origin: 0, dpr: dpr)
+        let startX = session.camera.viewX(tick: Double(nudged.tick), dpr: dpr)
         report.expect(nudged.tick == parkedTick + seed.snap && startX == 0,
                       cppID: id, message: "Right reveals the parked note at the left edge")
         let cellWidth = session.camera.contentX(tick: Double(parkedTick + 2 * seed.snap))
@@ -192,10 +206,10 @@ private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, session:
                 report.fail(id, "repeated nudge lost the keep-visible note")
                 return
             }
-            let left = session.camera.displayX(tick: Double(current.tick), origin: 0, dpr: dpr)
-            let right = session.camera.displayX(tick: Double(UInt64(current.tick)
+            let left = session.camera.viewX(tick: Double(current.tick), dpr: dpr)
+            let right = session.camera.viewX(tick: Double(UInt64(current.tick)
                                                               + UInt64(current.duration)),
-                                                origin: 0, dpr: dpr)
+                                                dpr: dpr)
             everyRideVisible = everyRideVisible && left >= 0
                 && right <= session.camera.snapshot.viewportWidth - 1 / dpr
         }
@@ -210,10 +224,10 @@ private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, session:
                 report.fail(id, "return nudge lost the keep-visible note")
                 return
             }
-            let left = session.camera.displayX(tick: Double(current.tick), origin: 0, dpr: dpr)
-            let right = session.camera.displayX(tick: Double(UInt64(current.tick)
+            let left = session.camera.viewX(tick: Double(current.tick), dpr: dpr)
+            let right = session.camera.viewX(tick: Double(UInt64(current.tick)
                                                               + UInt64(current.duration)),
-                                                origin: 0, dpr: dpr)
+                                                dpr: dpr)
             everyReturnVisible = everyReturnVisible && left >= 0
                 && right <= session.camera.snapshot.viewportWidth - 1 / dpr
         }
@@ -254,6 +268,11 @@ private func checkKeyboardResizeNotes(_ report: CheckReport, session: DocumentSe
         report.expect(seed.duration != laterDuration
             && session.document.note(second)?.duration == laterDuration,
             cppID: id, message: "the batch fixture has two different durations")
+        report.expect(session.document.note(second).map {
+            $0.id == second && $0.track == seed.track && $0.tick == laterTick
+                && Int($0.pitch) == laterPitch
+        } == true, cppID: id,
+        message: "second resize note occupies the chosen later tick and distinct pitch")
         session.setSelectedNotes([seed.id, second])
         let surface = EditSurfaceState(pointerGestureActive: false, timeSelectionActive: false,
                                        noteSelectionEmpty: false, origin: .timeline,
@@ -263,11 +282,16 @@ private func checkKeyboardResizeNotes(_ report: CheckReport, session: DocumentSe
             cppID: id, message: "both normalized resize keys target the selected notes")
         let baseline = session.document.state
         let resizeIdentity = session.document.history.currentIdentity
+        let resizeIndex = session.document.history.undoIndex
+        let resizeCount = session.document.history.undoCount
         grid.performCommand(command: EditCommand.lengthenNote.rawValue)
         grid.performCommand(command: EditCommand.lengthenNote.rawValue)
         report.expect(session.document.note(seed.id)?.duration == seed.duration + 2 * seed.snap
             && session.document.note(second)?.duration == laterDuration + 2 * seed.snap,
             cppID: id, message: "two Shift+Right presses extend both notes by two snap cells")
+        report.expect(session.document.history.undoIndex == resizeIndex + 1
+                      && session.document.history.undoCount == resizeCount + 1,
+                      cppID: id, message: "two Shift+Right presses merge into exactly one history entry")
         report.expect(session.document.history.undoDocument(), cppID: id,
                       message: "two compatible resize presses merge into one undo step")
         report.expect(session.document.state == baseline
@@ -284,6 +308,11 @@ private func checkKeyboardResizeNotes(_ report: CheckReport, session: DocumentSe
                 return
             }
             let shrink = min(a.duration, b.duration) - min(nextA.duration, nextB.duration)
+            report.expect(nextA.id == seed.id && nextB.id == second
+                          && nextA.track == seed.track && nextB.track == seed.track
+                          && nextA.tick == seed.tick && nextB.tick == laterTick
+                          && Int(nextA.pitch) == seed.pitch && Int(nextB.pitch) == laterPitch,
+                          cppID: id, message: "each Shift+Left preserves both note identities and positions")
             report.expect(shrink > 0 && nextA.duration == a.duration - shrink
                 && nextB.duration == b.duration - shrink,
                 cppID: id, message: "Shift+Left shortens both notes by the same step")
@@ -292,100 +321,92 @@ private func checkKeyboardResizeNotes(_ report: CheckReport, session: DocumentSe
                           session.document.note(second)?.duration ?? 0) == 1,
                       cppID: id, message: "repeated Shift+Left reaches the one-tick floor")
         let atFloor = session.document.state
+        let floorBytes = coreTimeBytes(session.document)
+        let floorIndex = session.document.history.undoIndex
+        let floorCount = session.document.history.undoCount
         let floorIdentity = session.document.history.currentIdentity
         let floorRevision = session.document.revision
         grid.performCommand(command: EditCommand.shortenNote.rawValue)
-        report.expect(session.document.state == atFloor
+        report.expect(coreTimeBytes(session.document) == floorBytes
+            && session.document.state == atFloor
             && session.document.history.currentIdentity == floorIdentity
+            && session.document.history.undoIndex == floorIndex
+            && session.document.history.undoCount == floorCount
             && session.document.revision == floorRevision,
             cppID: id, message: "an extra Shift+Left at the floor is a document and history no-op")
         report.expect(session.document.history.undoDocument()
             && session.document.state == baseline, cppID: id,
             message: "the shrink sequence merges and one undo restores the fixture")
+        let blockedBytes = coreTimeBytes(session.document)
+        let blockedRevision = session.document.revision
+        let blockedIndex = session.document.history.undoIndex
+        let blockedCount = session.document.history.undoCount
+        let blockedCursor = session.editCursor
+        let blockedTrack = session.selectedTrack
+        let blockedScope = session.selectedTracks
+        session.applyTimeSelection(AutomationTimeSelection(
+            range: TimeRange(startTick: seed.tick, endTick: seed.tick + seed.snap),
+            scope: .tracks([seed.track])))
+        let blockedSelection = session.timeSelection
+        let blockedNotes = session.selectedNoteOrder
+        grid.performCommand(command: EditCommand.lengthenNote.rawValue)
+        grid.performCommand(command: EditCommand.shortenNote.rawValue)
+        report.expect(coreTimeBytes(session.document) == blockedBytes
+                      && session.document.revision == blockedRevision
+                      && session.document.history.undoIndex == blockedIndex
+                      && session.document.history.undoCount == blockedCount
+                      && session.timeSelection == blockedSelection
+                      && session.selectedNoteOrder == blockedNotes
+                      && session.selectedTrack == blockedTrack
+                      && session.selectedTracks == blockedScope
+                      && session.editCursor == blockedCursor,
+                      cppID: id,
+                      message: "active time range blocks both resize keys without changing song selection cursor or history")
+        session.clearTimeSelection()
     }
 }
 
+
+
 @MainActor
-private func checkTimelineInsertBlankTimeTracks(_ report: CheckReport, session: DocumentSession) {
-    let id = "swiftcore/PianoRoll::timelineInsertBlankTimeTracks"
-    withKeyboardSeed(report, session: session, id: id) { _, seed in
-        let start = seed.tick + 2 * seed.snap
-        let end = start + seed.snap
-        session.document.nudgeNotes([seed.id], byTicks: Int64(2 * seed.snap), byKeys: -10)
-        report.expect(session.document.note(seed.id).map {
-            $0.tick == start && Int($0.pitch) == seed.pitch - 10
-        } == true, cppID: id, message: "track insertion seed reaches its shortcut position")
-        guard session.document.engineTracks.usedTrackCount >= 2 else { return }
-        let otherTrack = seed.track == 0 ? 1 : 0
-        guard let otherPitch = (12..<128).first(where: { pitch in
-            !session.document.notes(in: otherTrack).contains {
-                $0.tick == start && Int($0.pitch) == pitch
+private func checkKeyboardSkipsGhosts(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::keyboardTranspose"
+    withKeyboardSeed(report, session: session, id: id) { grid, seed in
+        guard session.document.canAddTrack, let other = session.document.addTrack(voice: 0),
+              other != seed.track else {
+            report.fail(id, "could not provision the other track for keyboard ghost editing")
+            return
+        }
+        report.expect(session.document.engineTracks.usedTrackCount > other,
+                      cppID: id, message: "a distinct second track exists for keyboard ghost editing")
+        guard let ghostPitch = (24...115).first(where: { pitch in
+            !session.document.notes(in: other).contains { note in
+                Int(note.pitch) == pitch && UInt64(note.tick) < UInt64(seed.tick + seed.duration)
+                    && (note.endTick ?? UInt64.max) > UInt64(seed.tick)
             }
-        }), let inserted = try? session.document.addNotes([
-            NewNote(track: otherTrack, tick: start, pitch: UInt8(otherPitch),
-                    duration: seed.snap, velocity: 91)
-        ]), let otherID = inserted.first,
-            let otherBefore = session.document.note(otherID) else {
-            report.fail(id, "could not create the unselected-track insert fixture")
+        }), let ids = try? session.document.addNotes([
+            NewNote(track: other, tick: seed.tick, pitch: UInt8(ghostPitch),
+                    duration: seed.duration, velocity: 100)
+        ]), let ghostID = ids.first,
+            let ghostBefore = session.document.note(ghostID) else {
+            report.fail(id, "could not seed the other-track ghost note")
             return
         }
-        let baseline = session.document.state
-        let history = session.document.history.currentIdentity
-        let range = TimeRange(startTick: start, endTick: end)
-        let routed = EditKeyArbiter.decide(command: .insertTime, surface: EditSurfaceState(
-            pointerGestureActive: false, timeSelectionActive: true, noteSelectionEmpty: true,
-            origin: .timeline, autoRepeat: false, commandAvailable: true))
-        report.expect(routed == .execute, cppID: id,
-                      message: "a normalized Insert Time key executes with an active time selection")
-        report.expect(session.document.insertBlankTime(range, scope: TimeScope(tracks: [seed.track]))
-            && session.document.notes(in: seed.track).contains(where: {
-                $0.tick == end && Int($0.pitch) == seed.pitch - 10
-            })
-            && session.document.note(otherID).map {
-                $0.tick == otherBefore.tick && $0.duration == otherBefore.duration
-                    && $0.pitch == otherBefore.pitch && $0.velocity == otherBefore.velocity
-            } == true, cppID: id,
-            message: "track-scoped blank insertion shifts only the selected track")
-        report.expect(session.document.history.undoDocument()
-            && session.document.state == baseline
-            && session.document.history.currentIdentity == history,
-            cppID: id, message: "undo restores the track-scoped insertion")
-    }
-}
-
-@MainActor
-private func checkTimelineInsertBlankTimeLanes(_ report: CheckReport, session: DocumentSession) {
-    let id = "swiftcore/PianoRoll::timelineInsertBlankTimeLanes"
-    withKeyboardSeed(report, session: session, id: id) { _, seed in
-        let start = seed.tick + 2 * seed.snap
-        let end = start + seed.snap
-        let pointTick = start + seed.snap / 2
-        let lane: Lane = .controller(7)
-        session.document.nudgeNotes([seed.id], byTicks: Int64(2 * seed.snap), byKeys: -10)
-        session.document.writeLane(track: seed.track, lane: lane, from: pointTick,
-                                   through: pointTick, points: [LaneWrite(tick: pointTick, value: 80)])
-        guard session.document.lanePoints(track: seed.track, lane: lane).contains(where: {
-            $0.tick == pointTick && $0.value == 80
-        }), let noteBefore = session.document.note(seed.id) else {
-            report.fail(id, "could not create the lane-scoped insert fixture")
-            return
-        }
-        let baseline = session.document.state
-        let history = session.document.history.currentIdentity
-        let range = TimeRange(startTick: start, endTick: end)
-        let scope = TimeScope(lanes: [TimeScope.ScopedLane(track: seed.track, lane: lane)])
-        report.expect(session.document.insertBlankTime(range, scope: scope)
-            && session.document.lanePoints(track: seed.track, lane: lane).contains(where: {
-                $0.tick == pointTick + seed.snap && $0.value == 80
-            })
-            && session.document.note(seed.id).map {
-                $0.tick == noteBefore.tick && $0.duration == noteBefore.duration
-                    && $0.pitch == noteBefore.pitch && $0.velocity == noteBefore.velocity
-            } == true, cppID: id,
-            message: "lane-scoped blank insertion shifts CC7 without moving the note")
-        report.expect(session.document.history.undoDocument()
-            && session.document.state == baseline
-            && session.document.history.currentIdentity == history,
-            cppID: id, message: "undo restores the lane-scoped insertion")
+        grid.refreshFromSession()
+        report.expect(grid.notes.contains {
+            $0.noteId == ghostID && $0.ghost
+        }, cppID: id, message: "the other-track note projects as a ghost")
+        session.setSelectedNotes([seed.id])
+        grid.performCommand(command: EditCommand.transposeUp.rawValue)
+        grid.performCommand(command: EditCommand.nudgeRight.rawValue)
+        report.expect(session.document.note(seed.id).map {
+            $0.tick == seed.tick + seed.snap && Int($0.pitch) == seed.pitch + 1
+        } == true, cppID: id,
+        message: "transpose and nudge remap the selected note with ghosts present")
+        report.expect(session.document.note(ghostID).map {
+            $0.tick == ghostBefore.tick && $0.duration == ghostBefore.duration
+                && $0.pitch == ghostBefore.pitch && $0.velocity == ghostBefore.velocity
+        } == true, cppID: id,
+        message: "keyboard remaps leave other-track ghost notes untouched")
     }
 }

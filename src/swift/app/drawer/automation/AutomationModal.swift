@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawAppCommands
 
 // Captured prompt/menu state and acceptance policy. All accepted mutations route
 // through AutomationCommit; modal state never owns document history.
@@ -116,6 +117,7 @@ extension AutomationPage {
     func openMenu(facts: AutomationFrozenFacts, target: AutomationMenuTarget,
                           x: Double, y: Double) -> Bool {
         guard session != nil else { return false }
+        let wasOpen = menu != nil
         var state = AutomationMenuState(facts: facts, target: target,
                                         anchorX: max(0, x), anchorY: max(0, y), rows: [])
         state.rows = menuRows(for: target, facts: facts)
@@ -123,6 +125,7 @@ extension AutomationPage {
         menu = state
         menuX = state.anchorX
         menuY = state.anchorY
+        if !wasOpen { onMenuOpened?() }
         publishMenuRows()
         publishInteractionState()
         return true
@@ -257,14 +260,14 @@ extension AutomationPage {
 
 @MainActor
 extension AutomationPage {
-    func openCapturedPrompt(tick: Tick, value: Int) -> Bool {
+    func openCapturedPrompt(tick: Tick, value: Int, insertion: Bool = false) -> Bool {
         guard let facts = frozenFacts(modifiers: .init()) else { return false }
-        let occupants = facts.occupants(at: tick)
+        let source = insertion ? nil : facts.occupants(at: tick).last
         let nextPrompt = AutomationPromptTransaction(
             facts: facts,
             anchor: AutomationLanePoint(tick: tick, value: value),
-            source: occupants.last,
-            forExistingNode: !occupants.isEmpty,
+            source: source,
+            forExistingNode: source != nil,
             metadata: facts.metadata)
         applyPrompt(nextPrompt)
         guard let nextPrompt else { return false }

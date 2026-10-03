@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import QtBridge
 
@@ -53,8 +53,8 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
     }
     let grid = PianoGrid(session: session)
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    guard let a = interlockRect(seeded[0], in: grid.scene.pianoNoteFills),
-          let b = interlockRect(seeded[1], in: grid.scene.pianoNoteFills),
+    guard let a = selectionRect(seeded[0], grid: grid),
+        let b = selectionRect(seeded[1], grid: grid),
           let beforeSlot = try? session.document.captureSave().bytes else {
         report.fail(id, "gesture-interlock notes were not projected or serialized")
         return
@@ -64,11 +64,10 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
     let bandX = max(ax, bx) + 4, bandY = max(ay, by) + 4
     let beyondBX = bx + (bx < ax ? -4.0 : 4.0)
     let beyondAX = ax + (ax < bx ? -4.0 : 4.0)
+    let boxes = rollNoteRects(grid)
     let freeX = [400.0, 500, 550, 600].first { x in
-        !(0..<grid.scene.pianoNoteFills.count).contains { index in
-            let rect = grid.scene.pianoNoteFills[index]
-            return rect.x <= x && x < rect.x + rect.width &&
-                rect.y <= ay && ay < rect.y + rect.height
+        !boxes.contains { rect in
+            rect.x <= x && x < rect.x + rect.width && rect.y <= ay && ay < rect.y + rect.height
         }
     }
     report.expect(freeX != nil, cppID: id, message: "A002 free draw cell exists")
@@ -87,13 +86,21 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
     func containsAB() -> Bool {
         session.selectedNotes.contains(seeded[0]) && session.selectedNotes.contains(seeded[1])
     }
+    session.clearTimeSelection()
+    let playhead = SharedPlayheadPresenter()
+    playhead.attach(session: session, audio: nil, grid: grid, drawer: nil)
+    playhead.setFollowEnabled(false)
+    playhead.observe(sample: session.timeline.sample(for: Tick(bTick)), transport: 0)
+    let playbackTick = playhead.tick
+    defer { playhead.detach() }
     func clearSelection() {
         session.clearSelectedNotes()
-        // PianoGrid has no time-selection state to clear.
-        // The original A003/A005 time-selection conjuncts remain unproven.
     }
 
     clearSelection()
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: Tick(aTick), endTick: Tick(aTick + duration)),
+        scope: .tracks([grid.trackIndex])))
     do {
         let before = snapshot()
         grid.beginPointer(x: ax, y: ay, modifiers: 0)
@@ -101,23 +108,28 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
         grid.beginRightPointer(x: 1, y: 0)
         grid.updateRightPointer(x: bandX, y: bandY)
         grid.endRightPointer(x: bandX, y: bandY)
-        report.expect(session.selectedNoteOrder.isEmpty && !grid.interactionActive,
-                      cppID: id, message: "A003 blocked right click resolves as empty space")
+        report.expect(session.selectedNoteOrder.isEmpty && !grid.interactionActive
+                      && session.timeSelection == nil,
+                      cppID: id, message: "A003 blocked right click clears notes and time selection")
         grid.endPointer(x: bandX, y: bandY)
         report.expect(unchanged(before), cppID: id,
                       message: "A004 aborted left Move preserves MIDI bytes and undo history")
     }
 
     clearSelection()
+    session.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: Tick(aTick), endTick: Tick(aTick + duration)),
+        scope: .tracks([grid.trackIndex])))
     do {
         let before = snapshot()
         grid.beginRightPointer(x: 1, y: 0)
-        grid.updateRightPointer(x: 12, y: 0)
+        grid.updateRightPointer(x: grid.dragDistance + 2, y: 0)
         grid.beginPointer(x: ax, y: ay, modifiers: 0)
         grid.updatePointer(x: beyondBX, y: by + 4)
         grid.endRightPointer(x: beyondBX, y: by + 4)
-        report.expect(session.selectedNoteOrder.isEmpty && !grid.interactionActive,
-                      cppID: id, message: "A005 demoted right Band resolves as a plain clear")
+        report.expect(session.selectedNoteOrder.isEmpty && !grid.interactionActive
+                      && session.timeSelection == nil,
+                      cppID: id, message: "A005 demoted right Band clears notes and time selection")
         grid.endPointer(x: beyondBX, y: by + 4)
         report.expect(unchanged(before), cppID: id,
                       message: "A006 demoted Band preserves MIDI bytes and undo history")
@@ -135,6 +147,13 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
         grid.endPointer(x: freeX, y: ay)
         report.expect(containsAB(), cppID: id,
                       message: "A008 parked PendingDraw release retains A and B")
+        report.expect(session.editCursor == session.grid.snapTick(
+            camera.tickAtContentX(freeX), camera: camera)
+            && grid.editCursorTick == Int(session.editCursor),
+            cppID: id, message: "A008 PendingDraw parks the cursor after the right band ends")
+        playhead.refreshProjection()
+        report.expect(playhead.tick == playbackTick, cppID: id,
+                      message: "PendingDraw cursor commit leaves the playback position unchanged")
         report.expect(unchanged(before), cppID: id,
                       message: "A009 PendingDraw interlock preserves MIDI bytes and undo history")
     }
@@ -143,7 +162,7 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
     do {
         let before = snapshot()
         grid.beginRightPointer(x: 1, y: 0)
-        grid.updateRightPointer(x: 12, y: 0)
+        grid.updateRightPointer(x: grid.dragDistance + 2, y: 0)
         grid.beginPointer(x: bx, y: by, modifiers: 0x0400_0000)
         grid.endPointer(x: bx, y: by)
         report.expect(session.selectedNoteOrder == [seeded[1]], cppID: id,
@@ -154,12 +173,12 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
                 bAuditioned = true
             }
         }
-        grid.updateRightPointer(x: bx + 1, y: by + 1)
+        grid.updateRightPointer(x: bx + 1, y: by + 1, modifiers: 0x0400_0000)
         grid.onAudition = nil
         report.expect(bAuditioned, cppID: id,
                       message: "A011 live right Band auditions B above zero velocity")
-        grid.updateRightPointer(x: beyondAX, y: ay + 4)
-        grid.endRightPointer(x: beyondAX, y: ay + 4)
+        grid.updateRightPointer(x: beyondAX, y: ay + 4, modifiers: 0x0400_0000)
+        grid.endRightPointer(x: beyondAX, y: ay + 4, modifiers: 0x0400_0000)
         report.expect(containsAB(), cppID: id,
                       message: "A012 deferred Ctrl click retains Band token through release")
         report.expect(unchanged(before), cppID: id,
@@ -171,7 +190,7 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
         let before = snapshot()
         for attempt in 0..<2 {
             grid.beginPointer(x: bx, y: by, modifiers: 0x0400_0000)
-            grid.updatePointer(x: bx, y: by - 11)
+            grid.updatePointer(x: bx, y: by - grid.dragDistance - 1)
             report.expect(grid.previewVelocity(seeded[1]) != nil, cppID: id,
                           message: attempt == 0 ? "A014 Ctrl velocity drag stages a preview" :
                               "A016 later Ctrl velocity drag stages a preview")
@@ -189,12 +208,4 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
                   message: "A019 all five interlocks preserve the slot undo index")
     report.expect((try? session.document.captureSave().bytes) == beforeSlot, cppID: id,
                   message: "A020 all five interlocks preserve slot MIDI bytes")
-}
-
-@MainActor
-private func interlockRect(_ id: NoteID, in model: QListModel<SceneRect>) -> SceneRect? {
-    for index in 0..<model.count where model[index].primitiveName == "gridNote_\(id.rawValue)" {
-        return model[index]
-    }
-    return nil
 }

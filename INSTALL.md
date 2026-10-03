@@ -44,7 +44,7 @@ deno task setup --qt-version 6.11.2
 
 Selecting a Qt patch replaces cached Qt package paths in the existing build. Later setup and build tasks reuse that selection. Swift compiler options supplied through `SWIFTC` or cached `CMAKE_Swift_COMPILER_ARG1` are preserved during prerequisite checks. Swift's version is checked before provisioning; compilation and linking are checked after missing native tools are installed.
 
-`deno task setup` needs an internet connection when a prerequisite is missing. Before invoking a package manager, it checks CMake, the selected generator, a C and C++20 toolchain, a Swift 6.4 toolchain, and Python. Compatible installed tools are left unchanged. If an installed tool is incompatible, setup stops before provisioning it and reports the required and detected versions. On macOS the Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.
+`deno task setup` needs an internet connection when a prerequisite is missing. Before invoking a package manager, it checks CMake, the selected generator, a C and C++20 toolchain, a Swift 6.4 toolchain including its bundled swift-format (`swift format`, used by `deno task format`), and Python. Compatible installed tools are left unchanged. If an installed tool is incompatible, setup stops before provisioning it and reports the required and detected versions. On macOS the Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.
 
 When it must provision a missing host prerequisite, it uses:
 
@@ -52,7 +52,7 @@ When it must provision a missing host prerequisite, it uses:
 - WinGet plus Visual Studio 2022 Build Tools on Windows;
 - `apt-get` (Debian/Ubuntu), `pacman` (Arch), or `dnf` (Fedora) on Linux.
 
-The required host tools are CMake 3.24 or newer, a C++20 compiler, Swift 6.4 (pinned by `.swift-version` on macOS via swiftly), Python 3.10 or newer that can create a virtual environment with pip, and the generator selected for the build. Qt 6.11 and the CI-matched `clang-format` 22 are installed only into this checkout:
+The required host tools are CMake 3.24 or newer, a C++20 compiler, Swift 6.4 (pinned by `.swift-version` on macOS via swiftly), Python 3.10 or newer that can create a virtual environment with pip, and the generator selected for the build. Qt 6.11 and its installer (aqtinstall) are installed only into this checkout:
 
 ```text
 .cache/setup/qt/
@@ -68,20 +68,38 @@ After setup, use the repository tasks:
 ```bash
 deno task build:app
 deno task build:checks
-deno task verify
-deno task format:check
+deno task checks
+deno task format --check
 deno task setup:check
 ```
 
-Launch the built application with the platform-appropriate command:
+Debug and Release builds live in separate trees: `build/debug` (the default) and `build/release`
+(`--release`, and the tree `deno task setup` builds). Switching configurations never reconfigures a
+tree in place.
+
+Build tasks print only what needs attention: on failure, the failed step and its errors; on success,
+one line naming the built binary, plus any warnings located in project sources. The complete
+CMake/Ninja output of the last run is in `build/<config>/build.log`.
+
+Swift targets compile in batches on Debug builds, so a target's C++-interop frontend startup is paid
+once per batch instead of once per source file. Swift's incremental driver reuses an object whenever
+the sources and their dependencies are unchanged — the compile command included — so a build drops
+the objects of any Swift target whose compile command no longer matches the one its objects were
+built with. That happens once per flag change (a CMake option edit, or a flip between `build:app`
+and `build:checks`), not on unchanged builds.
+
+Launch the application built by `deno task setup` with the platform-appropriate command
+(`deno task build:app` builds the same paths under `build/debug`):
 
 ```bash
 # macOS
-open build/porydaw.app
+open build/release/porydaw.app
 
 # Windows
-.\build\Release\porydaw.exe
+.\build\release\Release\porydaw.exe
 
 # Linux
-./build/porydaw
+./build/release/porydaw
 ```
+
+`deno task checks` runs the check lanes declared for the host platform. On macOS every lane runs. On Linux and Windows the Swift lanes (`swiftcore`, `projectidentitycheck`, `projectstore-*`, `bankleases`, `vgbankcheck`, `exportcheck-*`) are still listed by `porydaw_checks --manifest` with `"platforms": ["macos"]`, but the runner reports them as platform-skipped because the check harness does not link Swift there yet. A selection that leaves no runnable check on the host exits with status 2 instead of passing.

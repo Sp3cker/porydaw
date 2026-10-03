@@ -3,6 +3,8 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "NativeWait.js" as NativeWait
+import "ShellTabsRenderingSupport.js" as Rendering
 
 TestCase {
     id: testCase
@@ -15,37 +17,31 @@ TestCase {
     property var shell: null
 
     ShellQmlBootstrap { id: bootstrap }
+    readonly property var settings: bootstrap.preferences
     GatedVisualsProbe { id: probe }
     SignalSpy { id: openFailedSpy; signalName: "openFailed" }
     SignalSpy { id: criticalSpy; signalName: "criticalRequested" }
 
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
 
-    function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-    }
 
     function init() {
-        verify(bootstrap.clearSettings(), "each explicit-open scenario starts in an empty domain")
+        verify(bootstrap.resetPreferences(), "each explicit-open scenario starts in an empty store")
     }
 
-    function cleanupTestCase() {
-        verify(bootstrap.clearSettings(), "removed only the private native settings")
-    }
 
     function waitForNative(predicate, timeoutMs) {
-        var deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
+        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
+    }
+
+    function waitForShellScene() {
+        verify(waitForNative(function() {
+            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
+        }, 10000), "the presented window mounts its deferred editor scene")
     }
 
     function cleanup() {
-        probe.restoreSong(bootstrap.projectRoot, "mus_route101")
+        probe.restoreSong(bootstrap.projectRoot, "mus_littleroot_test")
         if (!shell)
             return
         if (shell.shellPresenter.sceneActive) {
@@ -67,85 +63,85 @@ TestCase {
         wait(0)
     }
 
-    function selectedSurface() {
-        var pages = shell.sceneLoader.item
-        if (!pages)
-            return null
-        var tabs = shell.shellPresenter.session.songTabs
-        var page = findChild(pages, "songTab_" + tabs.selectedId)
+    function surfaceOf(tabId) {
+        var pages = shell && shell.sceneLoader ? shell.sceneLoader.item : null
+        var page = pages ? findChild(pages, "songTab_" + tabId) : null
         return page ? findChild(page, "swiftRollOverlay") : null
     }
+    function gridOf(tabId) {
+        var surface = surfaceOf(tabId)
+        return surface ? surface.gridModel : null
+    }
+    function summaryOf(tabId) { return gridOf(tabId).fetchNoteSummary() }
+    function drawNote(tabId) { return Rendering.drawNote(testCase, tabId) }
 
-    function test_failedReopenLeavesEmptyStripAndSurfacesError() {
+    function test_failedOpenPreservesLiveDirtyTabAndSurfacesError() {
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
         var session = shell.shellPresenter.session
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
-        waitForNative(function() {
+        verify(waitForNative(function() {
             return session.songOpen || session.lastSaveError.length > 0
-        }, 30000)
-        verify(session.songOpen, "Route 101 loads before the failure is injected")
-        tryCompare(session.songTabs, "tabCount", 1)
+        }, 30000), "Route 101 opens before requesting the unavailable song")
         var tabs = session.songTabs
+        tryCompare(tabs, "tabCount", 1)
         var tabId = tabs.selectedId
-        verify(tabId >= 0, "the opened song selects its tab")
+        var selectedPage = tabs.selectedPage
+        verify(waitForNative(function() { return surfaceOf(tabId) !== null }, 5000),
+               "the live tab mounts its deferred roll")
         var sceneItem = shell.sceneLoader.item
-        verify(sceneItem !== null, "the scene loader hosts the tab strip")
-        var surface = selectedSurface()
-        verify(surface !== null, "the selected tab page is mounted")
-        tryVerify(function() {
-            return surface.gridModel.renderedNoteCount > 0
-        }, 5000, "the roll publishes notes before the failure is injected")
-        var baseline = surface.gridModel.noteSummary
-        verify(baseline.length > 2, "the baseline note summary is a non-empty JSON array")
+        verify(surfaceOf(tabId) !== null, "the live tab mounts its roll")
+        verify(waitForNative(function() {
+            return gridOf(tabId).renderedNoteCount > 0
+        }, 5000), "the live roll publishes the source notes")
+        var before = summaryOf(tabId)
+        var drawn = drawNote(tabId)
+        var edited = summaryOf(tabId)
+        verify(edited !== before && drawn !== null && selectedPage.dirty,
+               "a real roll drag leaves the live document dirty before the failed open")
 
-        verify(probe.moveSongAside(bootstrap.projectRoot, "mus_route101"),
-               "the song file is moved aside to model the filesystem failure")
+        verify(probe.moveSongAside(bootstrap.projectRoot, "mus_littleroot_test"),
+               "the second song's MIDI source is hidden for the failed open")
         openFailedSpy.target = session
         criticalSpy.target = shell.shellPresenter
         openFailedSpy.clear()
         criticalSpy.clear()
-        session.openSong("mus_route101")
+        session.openSong("mus_littleroot_test")
         verify(waitForNative(function() { return openFailedSpy.count === 1 }, 5000),
-               "the failed reopen delivers openFailed exactly once")
+               "opening the missing second song reports one failure")
         verify(waitForNative(function() { return criticalSpy.count === 1 }, 5000),
-               "the failed reopen surfaces one critical error dialog")
+               "the failed second-song open raises one critical dialog")
         compare(criticalSpy.signalArguments[0][0], "Open Failed",
-                "the error surface reports the open failure")
-        compare(shell.shellPresenter.statusText, session.lastSaveError,
-                "the window status carries the failure message")
-        verify(session.lastSaveError.length > 0, "the failure is recorded on the session")
-
-        verify(waitForNative(function() { return tabs.tabCount === 0 }, 5000),
-               "the failed reload leaves an empty strip")
-        compare(tabs.pendingCloseId, -1, "no close gate is left up")
-        compare(tabs.selectedId, -1, "no tab stays selected")
-        compare(session.songOpen, false, "no song stays open")
-        verify(shell.active, "the window stays active through the failed reopen")
-        compare(shell.sceneLoader.item, sceneItem, "the failed reload keeps the same scene")
-        compare(findChild(shell.sceneLoader.item, "songTab_" + tabId), null,
-                "the failed tab's page is gone, not half-open")
+                "the failure dialog attributes its cause to opening a song")
+        verify(session.lastSaveError.indexOf("mus_littleroot_test") !== -1,
+               "the open result identifies the requested second song")
         var dialog = findChild(shell, "shellCriticalDialog")
-        verify(dialog !== null, "the production critical dialog exists")
-        verify(waitForNative(function() { return dialog.visible }, 3000),
-               "the Open Failed dialog is shown")
+        verify(dialog !== null && dialog.visible,
+               "the production Open Failed dialog is visible")
         dialog.close()
 
-        verify(probe.restoreSong(bootstrap.projectRoot, "mus_route101"),
-               "the song file is restored")
-        session.openSong("mus_route101")
-        verify(waitForNative(function() { return tabs.tabCount === 1 }, 15000),
-               "the restored song opens one tab")
-        verify(session.songOpen, "the restored song is open")
-        var reopened = selectedSurface()
-        verify(reopened !== null, "the reopened tab page is mounted")
+        compare(tabs.tabCount, 1, "the failed second-song open leaves one live tab")
+        compare(tabs.selectedId, tabId, "the failed open retains the selected tab identity")
+        compare(tabs.selectedPage, selectedPage, "the failed open retains the live page")
+        compare(tabs.pendingCloseId, -1, "the failed open does not stage a close")
+        compare(session.songOpen, true, "the failed open keeps the document ready")
+        compare(selectedPage.dirty, true, "dismissal retains the staged edit dirty")
+        compare(summaryOf(tabId), edited, "dismissal retains the exact staged note")
+        compare(shell.sceneLoader.item, sceneItem, "the failed open keeps the same scene")
+        verify(surfaceOf(tabId) !== null && shell.active,
+               "dismissal keeps the selected roll mounted and the window active")
+
+        verify(probe.restoreSong(bootstrap.projectRoot, "mus_littleroot_test"),
+               "the hidden second MIDI source is restored")
+        session.openSong("mus_littleroot_test")
         verify(waitForNative(function() {
-            return reopened.gridModel.renderedNoteCount > 0
-        }, 5000), "the reopened roll publishes notes")
-        compare(reopened.gridModel.noteSummary, baseline,
-                "the reopened song restores the original note summary")
+            return tabs.tabCount === 2 && tabs.selectedPage.title === "mus_littleroot_test"
+        }, 15000), "the restored second song opens without replacing the edited tab")
+        compare(tabs.tabCount, 2, "recovery adds exactly the requested song")
+        compare(selectedPage.dirty, true, "recovery does not save the original edit")
+        compare(summaryOf(tabId), edited, "recovery retains the original staged note")
     }
 
     function test_liveTabCleanBeforeFailedProjectOpen() {
@@ -161,6 +157,8 @@ TestCase {
         tryCompare(session.songTabs, "tabCount", 1)
         var firstId = session.songTabs.selectedId
         var firstPage = session.songTabs.selectedPage
+        verify(waitForNative(function() { return firstPage.grid.fetchNoteSummary().length > 2 }, 5000),
+               "the first song publishes its source notes before project replacement")
         session.openSong("mus_littleroot_test")
         verify(waitForNative(function() {
             return session.songTabs.tabCount === 2 || session.lastSaveError.length > 0
@@ -175,9 +173,15 @@ TestCase {
         var tabCount = tabs.tabCount
         var label = selectedPage.title
         var selectedDocument = selectedPage.grid
-        verify(waitForNative(function() { return selectedDocument.noteSummary.length > 2 }, 5000),
+        verify(waitForNative(function() { return selectedDocument.fetchNoteSummary().length > 2 }, 5000),
                "the selected document publishes loaded notes before project replacement")
-        var originalNotes = selectedDocument.noteSummary
+        waitForShellScene()
+        settings.synchronize()
+        compare(settings.string("lastProjectDir", ""), bootstrap.projectRoot,
+                "the two live songs persist their original project path before failure")
+        compare(settings.string("lastSongLabel", ""), "mus_littleroot_test",
+                "the selected second song persists before failure")
+        var originalNotes = selectedDocument.fetchNoteSummary()
 
         openFailedSpy.target = session
         criticalSpy.target = shell.shellPresenter
@@ -193,6 +197,15 @@ TestCase {
         verify(dialog !== null, "the production critical dialog exists")
         verify(waitForNative(function() { return dialog.visible }, 3000),
                "the project-open failure dialog is shown")
+        verify(session.lastSaveError.length > 0,
+               "the failed project replacement publishes a nonempty explanation")
+        compare(session.projectOpen, true,
+                "the failed project replacement leaves the original project open")
+        settings.synchronize()
+        compare(settings.string("lastProjectDir", ""), bootstrap.projectRoot,
+                "the failed project replacement does not persist the missing path")
+        compare(settings.string("lastSongLabel", ""), "mus_littleroot_test",
+                "the failed project replacement retains the persisted selection")
         dialog.close()
         compare(tabs.selectedId, selectedId,
                 "failed project replacement preserves the selected tab")
@@ -204,10 +217,67 @@ TestCase {
                 "failed project replacement keeps the selected document ready")
         compare(selectedPage.title, label,
                 "failed project replacement preserves the document label")
-        compare(selectedPage.grid.noteSummary, originalNotes,
+        compare(selectedPage.grid.fetchNoteSummary(), originalNotes,
                 "failed project replacement preserves the selected document notes")
         verify(findChild(shell.sceneLoader.item, "songTab_" + firstId) !== null
                && firstPage.songOpen,
                "failed project replacement keeps the background document ready")
+
+        session.openSong("mus_route101")
+        compare(tabs.selectedId, firstId,
+                "the retained project can select its original first song")
+        compare(tabs.selectedPage, firstPage,
+                "selecting the original song reuses its retained live page")
+        compare(firstPage.title, "mus_route101",
+                "the original song remains available by its registered label")
+        compare(selectedPage.songOpen, true,
+                "selecting the first song keeps the second prior document ready")
+
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return tabs.tabCount === 1 && tabs.selectedPage !== firstPage
+                && tabs.selectedPage !== null && tabs.selectedPage.title === "mus_route101"
+                && session.songOpen
+        }, 30000), "reopening releases the old pages and mounts a new ready song")
+        var selector = findChild(shell, "vgArgCombo")
+        verify(selector !== null, "the reopened project's voicegroup selector is mounted")
+        verify(waitForNative(function() { return selector.count === 5 }, 5000),
+               "the reopened project's five staged fixture voicegroups reach the selector")
+        verify(session.projectOpen && session.songOpen
+               && selector.textAt(0) === "fixture_bass"
+               && selector.textAt(1) === "fixture_drums_a"
+               && selector.textAt(2) === "fixture_drums_b"
+               && selector.textAt(3) === "fixture_keys"
+               && selector.textAt(4) === "fixture_rich",
+               "A016 recovered project is ready with its exact nonempty staged voicegroup catalog")
+        settings.synchronize()
+        verify(settings.string("lastProjectDir", "") === bootstrap.projectRoot
+               && settings.string("lastSongLabel", "") === "mus_route101"
+               && tabs.tabCount === 1,
+               "A017 recovered project persists its staged path and complete selected tab recipe")
+    }
+
+    function test_startupRestoreReportsMissingSavedSong() {
+        bootstrap.seedStartupRecipe(bootstrap.projectRoot, ["mus_route101", "porydaw_missing_song"], "mus_route101")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the missing-song startup recipe loads the production ShellWindow")
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        var session = shell.shellPresenter.session
+        openFailedSpy.target = session
+        criticalSpy.target = shell.shellPresenter
+        openFailedSpy.clear()
+        criticalSpy.clear()
+        verify(waitForNative(function() { return criticalSpy.count === 1 }, 30000), "A035 startup restore reports the missing saved song as one operation failure")
+        compare(criticalSpy.signalArguments[0][0], "Operation Failed", "the missing saved song raises the production operation dialog")
+        compare(criticalSpy.signalArguments[0][1], "Song porydaw_missing_song is not a playable song in this project.", "A036 the startup report names the missing saved song")
+        var dialog = findChild(shell, "shellCriticalDialog")
+        verify(dialog !== null && dialog.visible, "the production missing-song dialog is visible")
+        dialog.close()
+        verify(waitForNative(function() { return session.songTabs.tabCount === 1 && session.songTabs.selectedPage !== null && session.songTabs.selectedPage.title === "mus_route101" }, 30000), "A037 the missing saved song leaves no tab while the saved song restores")
+        compare(session.projectOpen, true, "the reported restore leaves the project open")
+        compare(session.songOpen, true, "the reported restore leaves the saved song ready")
+        compare(session.lastSaveError, "", "the startup report does not fail the restore result")
+        compare(openFailedSpy.count, 0, "the startup report raises no open failure")
     }
 }

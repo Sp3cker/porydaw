@@ -1,15 +1,24 @@
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls
 import QtQuick.Layouts
 import Porydaw.Ui
+import Porydaw.Icons
 
-Item {
+FocusScope {
     id: root
 
     required property QtObject controller
-    property font applicationFont: Application.font
+    property var layoutSpaces: null
     property var shellRouter: null
     signal contextMenuAt(real x, real y)
+    function selectedEditorSurface() {
+        for (let index = 0; index < pages.count; ++index) {
+            const page = pages.itemAt(index)
+            if (page && page.session === root.controller.selectedPage)
+                return page.surface
+        }
+        return null
+    }
     function focusOwnsLocalKeys() {
         if (closeDialog.visible)
             return true
@@ -22,17 +31,19 @@ Item {
                 return false
             if (focus === root)
                 return false
-            if (focus.activeFocusOnTab || focus.modal || focus.text !== undefined)
+            if (focus.modal || focus.displayText !== undefined)
                 return true
             focus = focus.parent
         }
         return true
     }
     function eventListIsActive() {
-        for (let index = 0; index < pages.count; ++index) {
-            const page = pages.itemAt(index)
-            if (page && page.visible && page.showEvents)
+        const window = Window.window
+        let focus = window ? window.activeFocusItem : null
+        while (focus && focus !== root) {
+            if (focus.objectName === "eventListPage")
                 return true
+            focus = focus.parent
         }
         return false
     }
@@ -43,16 +54,20 @@ Item {
                                                       event.isAutoRepeat)
         }
     }
+    Keys.onReleased: event => {
+        if (root.shellRouter && !root.focusOwnsLocalKeys())
+            event.accepted = root.shellRouter.releaseEditorKey(event.isAutoRepeat)
+    }
     // One physical pixel at any device ratio: the strip separator and every
     // control border draw this same hairline.
     readonly property real hairline: 1 / Screen.devicePixelRatio
-    // The tab the close gate is asking about. C++ (WorkspaceUi::requestCloseTab)
+    // The target the close gate is asking about. C++ (WorkspaceUi::requestCloseTab)
     // asks about one named tab ("%1 has unsaved changes. Save them?"), so the
-    // dialog names the strip's tab instead of saying "this tab". C++'s
-    // bank-dirty variant of that string has no counterpart here: the tab's
-    // single `dirty` flag is the union of document and voicegroup edits
-    // (the protective choice for a gate that can discard work).
+    // dialog names the strip's tab instead of saying "this tab", and names the
+    // bank when the close walk asks about a dirty bank no open tab holds.
     readonly property string pendingCloseTitle: {
+        if (root.controller.pendingCloseBankTitle.length > 0)
+            return root.controller.pendingCloseBankTitle;
         for (let i = 0; i < tabButtons.count; ++i) {
             const button = tabButtons.itemAt(i);
             if (button && button.tabId === root.controller.pendingCloseId)
@@ -61,25 +76,18 @@ Item {
         return "";
     }
 
-    // Production layout.cpp spacing and Fusion's fixed style metrics.
-    readonly property int tabMargin: Math.max(1, Math.round(root.applicationFont.pixelSize * 0.125))
-    readonly property int tabPadding: Math.max(1, Math.round(root.applicationFont.pixelSize * 0.5))
+    readonly property int tabMargin: layoutSpaces
+                                     ? layoutSpaces.half : Math.max(1, Math.round(bodyMetrics.font.pixelSize * 0.125))
+    readonly property int tabPadding: layoutSpaces
+                                      ? layoutSpaces.two : Math.max(1, Math.round(bodyMetrics.font.pixelSize * 0.5))
     readonly property int closeExtent: 20
     readonly property int scrollExtent: 16
-    readonly property int tabHeight: Math.max(closeExtent, Math.round(bodyMetrics.height)) + 3 * tabMargin + 2
-    readonly property font bodyFont: Qt.font({
-        family: root.applicationFont.family, pixelSize: root.applicationFont.pixelSize,
-        weight: Font.Normal, styleName: "", hintingPreference: Font.PreferNoHinting,
-        features: { "tnum": 1 }
-    })
-    readonly property font tabFont: Qt.font({
-        family: root.applicationFont.family, pixelSize: root.applicationFont.pixelSize,
-        weight: Font.DemiBold, styleName: "", hintingPreference: Font.PreferNoHinting,
-        features: { "tnum": 1 }
-    })
+    readonly property int tabHeight: Math.max(closeExtent, Math.round(bodyMetrics.height))
+                                     + 2 * tabMargin + 2
     FontMetrics {
         id: bodyMetrics
-        font: root.bodyFont
+        font: root.Window.window ? root.Window.window.font
+                                 : Qt.font({family: "Atkinson Hyperlegible Next"})
     }
 
     function revealSelectedTab() {
@@ -101,12 +109,11 @@ Item {
 
     component StripButton: Button {
         id: button
-        font: root.applicationFont
         focusPolicy: Qt.NoFocus
         palette.button: down ? root.controller.palette.tabPressedBackground : hovered ? root.controller.palette.tabHoverBackground : root.controller.palette.chromeBackground
         implicitWidth: caption.implicitWidth + leftPadding + rightPadding
-        implicitHeight: Math.round(root.applicationFont.pixelSize * 2)
-        padding: Math.round(root.applicationFont.pixelSize * 0.5)
+        implicitHeight: Math.round(button.font.pixelSize * 2)
+        padding: root.tabPadding
         contentItem: Text {
             id: caption
             text: button.text
@@ -132,12 +139,13 @@ Item {
         width: root.scrollExtent
         padding: 0
         contentItem: Item {
-            Image {
-                source: "qrc:/porydaw/swiftroll/tabart/tab-arrow-" + (control.pointsLeft ? "left" : "right") + (control.enabled ? "-enabled.png" : "-disabled.png")
-                sourceSize.width: 4
-                x: Math.floor((parent.width - width) / 2)
-                y: Math.floor((parent.height - height) / 2)
-                smooth: false
+            AppIcon {
+                anchors.centerIn: parent
+                width: root.scrollExtent
+                height: root.scrollExtent
+                icon: control.pointsLeft ? Icons.scrollTabsLeft : Icons.scrollTabsRight
+                color: control.enabled ? root.controller.palette.windowText
+                                       : root.controller.palette.disabledText
             }
         }
         background: Rectangle {
@@ -156,7 +164,7 @@ Item {
         anchors.right: parent.right
         height: Math.max(Math.round(bodyMetrics.lineSpacing), root.scrollExtent) + 2 * root.tabMargin + 2
         color: root.controller.palette.windowBackground
-        enabled: root.controller.pendingCloseId < 0
+        enabled: root.controller.pendingCloseId < 0 && root.controller.pendingCloseBankTitle.length === 0
 
         Rectangle {
             width: parent.width
@@ -194,18 +202,15 @@ Item {
                         text: session.dirty ? qsTr("%1*").arg(session.title) : session.title
                         Accessible.name: session.dirty ? qsTr("%1, modified").arg(session.title) : session.title
                         checked: root.controller.selectedId === tabId
-                        font: root.tabFont
                         focusPolicy: Qt.NoFocus
                         padding: 0
                         width: Math.round(titleMetrics.advanceWidth) + 2 * (root.tabPadding + 1) + root.closeExtent + 4
                         height: root.tabHeight
-                        ToolTip.visible: hovered && !closeButton.hovered
-                        ToolTip.text: session.title
                         onClicked: root.controller.selectTab(tabId)
 
                         TextMetrics {
                             id: titleMetrics
-                            font: root.bodyFont
+                            font: selectButton.font
                             text: selectButton.text
                         }
                         contentItem: Item {
@@ -244,16 +249,21 @@ Item {
                             height: root.closeExtent
                             padding: 2
                             focusPolicy: Qt.NoFocus
-                            display: AbstractButton.IconOnly
-                            icon.source: "qrc:/porydaw/swiftroll/tabart/window-close.svg"
-                            icon.width: root.scrollExtent
-                            icon.height: root.scrollExtent
-                            icon.color: selectButton.down
-                                          ? root.controller.palette.buttonPressedText
-                                          : (selectButton.checked && !selectButton.hovered
-                                             && !closeButton.hovered)
-                                            ? root.controller.palette.selectionText
-                                            : root.controller.palette.windowText
+                            enabled: !selectButton.session.bankTransitionPending
+                            contentItem: Item {
+                                AppIcon {
+                                    anchors.centerIn: parent
+                                    width: root.scrollExtent
+                                    height: root.scrollExtent
+                                    icon: Icons.closeTab
+                                    color: selectButton.down
+                                           ? root.controller.palette.buttonPressedText
+                                           : (selectButton.checked && !selectButton.hovered
+                                              && !closeButton.hovered)
+                                             ? root.controller.palette.selectionText
+                                             : root.controller.palette.windowText
+                                }
+                            }
                             background: Item {}
                             Accessible.name: qsTr("Close %1").arg(selectButton.session.title)
                             ToolTip.visible: hovered
@@ -330,7 +340,6 @@ Item {
                 objectName: "songTab_" + model.display.tabId
                 anchors.fill: parent
                 session: model.display
-                applicationFont: root.applicationFont
                 shellRouter: root.shellRouter
                 onContextMenuAt: (x, y) => root.contextMenuAt(x, y)
                 controller: root.controller
@@ -346,20 +355,36 @@ Item {
         id: closeDialog
         objectName: "songTabCloseDialog"
         parent: Overlay.overlay
+        implicitWidth: Math.max(closeMessage.implicitWidth,
+                                saveButton.implicitWidth + discardButton.implicitWidth
+                                + cancelButton.implicitWidth + 2 * closeButtons.spacing)
+                       + leftPadding + rightPadding
         anchors.centerIn: parent
         title: qsTr("Unsaved Changes")
-        font: root.applicationFont
         modal: true
         focus: true
-        visible: root.controller.pendingCloseId >= 0
+        visible: root.controller.pendingCloseId >= 0 || root.controller.pendingCloseBankTitle.length > 0
         closePolicy: Popup.CloseOnEscape
         onRejected: root.controller.cancelClose()
         Label {
+            id: closeMessage
             text: qsTr("%1 has unsaved changes. Save them?").arg(root.pendingCloseTitle)
-            font: root.applicationFont
         }
         footer: DialogButtonBox {
+            id: closeButtons
+            // Kept deliberately: stock contentItem animates ~350ms while hidden (accf62cf); silencing the residual transient costs a line for zero visible gain.
+            contentItem: ListView {
+                implicitWidth: saveButton.implicitWidth + discardButton.implicitWidth
+                               + cancelButton.implicitWidth + 2 * closeButtons.spacing
+                model: closeButtons.contentModel
+                spacing: closeButtons.spacing
+                orientation: ListView.Horizontal
+                boundsBehavior: Flickable.StopAtBounds
+                snapMode: ListView.SnapToItem
+                currentIndex: -1
+            }
             StripButton {
+                id: saveButton
                 objectName: "songTabSave"
                 text: qsTr("Save")
                 focusPolicy: Qt.StrongFocus
@@ -369,6 +394,7 @@ Item {
             }
             StripButton {
                 objectName: "songTabDiscard"
+                id: discardButton
                 text: qsTr("Discard")
                 focusPolicy: Qt.StrongFocus
                 DialogButtonBox.buttonRole: DialogButtonBox.DestructiveRole
@@ -376,6 +402,7 @@ Item {
             }
             StripButton {
                 objectName: "songTabCancel"
+                id: cancelButton
                 text: qsTr("Cancel")
                 focusPolicy: Qt.StrongFocus
                 DialogButtonBox.buttonRole: DialogButtonBox.RejectRole

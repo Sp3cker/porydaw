@@ -86,8 +86,6 @@ FocusScope {
         id: emptyModel
 
         readonly property var markers: []
-        readonly property var heldSpans: []
-        readonly property var gridLines: []
         readonly property var gutterTexts: []
         readonly property var pickerRows: []
         readonly property var menuRows: []
@@ -104,6 +102,7 @@ FocusScope {
         readonly property int hoverHintProfile: HintProfiles.HorizontalScroll
         readonly property var captionFont: ({})
         readonly property var titleFont: ({})
+        readonly property var noteNameFont: ({})
         readonly property double baseFontPx: 13
         readonly property int cursorKind: 0
         readonly property bool previewVisible: false
@@ -148,10 +147,6 @@ FocusScope {
     readonly property real seedBaseFontPx: 13
     readonly property real baseFontPx: page.gridModel ? page.gridModel.baseFontPx
                                                       : page.seedBaseFontPx
-    /// `layout::fontPx` in the page's own base font, for this file's chrome.
-    function fontPx(multiplier) {
-        return Math.max(1, Math.round(page.baseFontPx * multiplier))
-    }
 
     function pushBodyFacts() {
         if (!page.pageModel || page.width <= 0 || page.height <= 0)
@@ -229,17 +224,19 @@ FocusScope {
             model: (page.pageModel ? page.pageModel.gutterTexts : [])
 
             delegate: Text {
-                required property var model
+                required property var labelSpec
+                required property string labelText
+                required property var labelFont
 
-                x: model.labelRect.x
-                y: model.labelRect.y
-                width: model.labelRect.width
-                height: model.labelRect.height
-                text: model.labelText
-                color: model.labelColor
-                font: Qt.font(model.labelFont)
-                horizontalAlignment: model.labelHorizontalAlignment
-                verticalAlignment: model.labelVerticalAlignment
+                x: labelSpec.x
+                y: labelSpec.y
+                width: labelSpec.width
+                height: labelSpec.height
+                text: labelText
+                color: labelSpec.color
+                font: Qt.font(labelFont)
+                horizontalAlignment: labelSpec.horizontal
+                verticalAlignment: labelSpec.vertical
                 textFormat: Text.PlainText
                 renderType: Text.NativeRendering
                 elide: Text.ElideRight
@@ -278,20 +275,21 @@ FocusScope {
             color: page.gridPalette.outline
         }
 
-        TimelineQuickItem {
+        DisplayList {
             objectName: "voiceGridLines"
             anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.gridLines : [])
-        }
-
-        TimelineQuickItem {
-            objectName: "voiceHeldSpans"
-            anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.heldSpans : [])
+            clip: true
+            source: page.pageModel
+            list: 0
+            revision: page.pageModel ? page.pageModel.displayRevision : 0
         }
 
         // One delegate per marker: the vertical rule at its projected position
         // and the label box Swift laid out (already elided and stair-placed).
+        Item {
+            x: -(page.gridModel ? page.gridModel.cameraScrollX : 0)
+            width: plot.width
+            height: plot.height
         Repeater {
             model: (page.pageModel ? page.pageModel.markers : [])
 
@@ -299,6 +297,9 @@ FocusScope {
                 id: marker
 
                 required property var model
+                // One packed spec per marker: every child binding reads the
+                // local map instead of paying a metaCall per property.
+                readonly property var s: model ? model.spec : ({})
 
                 x: 0
                 y: 0
@@ -306,35 +307,35 @@ FocusScope {
                 height: plot.height
 
                 Rectangle {
-                    objectName: marker.model.primitiveName + "Line"
-                    x: marker.model.x
-                    y: marker.model.lineTop
-                    width: marker.model.lineWidth
-                    height: Math.max(0, marker.model.lineBottom - marker.model.lineTop)
-                    color: marker.model.lineColor
+                    objectName: marker.s.primitiveName + "Line"
+                    x: marker.s.x
+                    y: marker.s.lineTop
+                    width: marker.s.lineWidth
+                    height: Math.max(0, marker.s.lineBottom - marker.s.lineTop)
+                    color: marker.s.lineColor
                 }
 
                 Rectangle {
-                    objectName: marker.model.primitiveName + "Selection"
-                    visible: marker.model.selected || marker.model.hovered
-                    x: marker.model.x - marker.model.lineWidth
-                    y: marker.model.lineTop
-                    width: 3 * marker.model.lineWidth
-                    height: Math.max(0, marker.model.lineBottom - marker.model.lineTop)
+                    objectName: marker.s.primitiveName + "Selection"
+                    visible: marker.s.selected || marker.s.hovered
+                    x: marker.s.x - marker.s.lineWidth
+                    y: marker.s.lineTop
+                    width: 3 * marker.s.lineWidth
+                    height: Math.max(0, marker.s.lineBottom - marker.s.lineTop)
                     color: "transparent"
-                    border.width: marker.model.lineWidth
+                    border.width: marker.s.lineWidth
                     border.color: page.gridPalette.selectionRing
                 }
 
                 Text {
-                    objectName: marker.model.primitiveName + "Label"
+                    objectName: marker.s.primitiveName + "Label"
 
-                    x: marker.model.labelRect.x
-                    y: marker.model.labelRect.y
-                    width: marker.model.labelRect.width
-                    height: marker.model.labelRect.height
-                    visible: !marker.model.offscreen
-                    text: marker.model.label
+                    x: marker.s.labelX
+                    y: marker.s.labelY
+                    width: marker.s.labelWidth
+                    height: marker.s.labelHeight
+                    visible: !marker.s.offscreen
+                    text: marker.s.label
                     color: page.gridPalette.primaryText
                     font: Qt.font(page.pageModel ? page.pageModel.captionFont : {})
                     textFormat: Text.PlainText
@@ -345,6 +346,7 @@ FocusScope {
                     clip: true
                 }
             }
+        }
         }
 
         // The frozen drag's draft position: the marker itself is projected at
@@ -371,7 +373,7 @@ FocusScope {
             height: (page.pageModel ? page.pageModel.hoverLabelRect.height : 0)
             text: (page.pageModel ? page.pageModel.hoverText : "")
             color: page.gridPalette.primaryText
-            font: Qt.font(page.pageModel ? page.pageModel.captionFont : {})
+            font: Qt.font(page.pageModel ? page.pageModel.noteNameFont : {})
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
             horizontalAlignment: Text.AlignLeft

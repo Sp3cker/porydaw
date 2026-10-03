@@ -101,7 +101,6 @@ private func checkPlayheadGuides(_ report: CheckReport, suite: DocumentSession,
 
     let automation = PlayheadGuideHoverOwner.automation.rawValue
     let voiceChanges = PlayheadGuideHoverOwner.voiceChanges.rawValue
-    let roll = PlayheadGuideHoverOwner.roll.rawValue
     let automationTick = 72.0
     let automationX = session.camera.contentX(tick: automationTick)
     guides.updateHover(owner: automation, contentX: automationX)
@@ -148,12 +147,12 @@ private func checkPlayheadGuides(_ report: CheckReport, suite: DocumentSession,
                   message: "an invalid hover does not suppress the edit guide")
 
     let viewportWidth = session.camera.snapshot.viewportWidth
-    guides.updateHover(owner: roll, contentX: viewportWidth + 1.0)
+    guides.updateHover(owner: automation, contentX: viewportWidth + 1.0)
     report.expect(!guides.hover.visible && guides.hover.contentX >= viewportWidth,
                   cppID: playheadCppID(playheadGuidesID, "viewport-edge"),
                   message: "a projected hover outside [0, viewportWidth) is hidden")
 
-    guides.updateHover(owner: roll, contentX: automationX)
+    guides.updateHover(owner: automation, contentX: automationX)
     let editBeforeScroll = guides.edit.contentX
     let hoverBeforeScroll = guides.hover.contentX
     let priorScroll = session.camera.snapshot.scrollX
@@ -165,9 +164,6 @@ private func checkPlayheadGuides(_ report: CheckReport, suite: DocumentSession,
                     && !playheadNear(guides.hover.contentX, hoverBeforeScroll),
                   cppID: playheadCppID(playheadGuidesID, "A029"),
                   message: "camera scrolling changes both retained guide projections")
-    report.expect(!playheadNear(guides.edit.contentX, editBeforeScroll),
-                  cppID: playheadCppID(playheadGuidesID, "A030"),
-                  message: "camera scrolling reprojects the edit guide")
     report.expect(playheadNear(guides.edit.contentX,
                                session.camera.contentX(tick: editTick), tolerance: 1.0)
                     && playheadNear(guides.hover.contentX,
@@ -313,20 +309,20 @@ fileprivate func devicePixelRect(_ logicalRect: PlayheadDeviceRect, dpr: Double,
 @MainActor
 private func checkPlayheadDevicePixelRect(_ report: CheckReport) {
     let logicalRect = PlayheadDeviceRect(x: 3, y: 2, width: 5, height: 4)
-    report.expectEqual(logicalRect,
-                       devicePixelRect(logicalRect, dpr: 1.0, imageWidth: 16, imageHeight: 10),
+    report.expectEqual(expected: logicalRect,
+                       actual: devicePixelRect(logicalRect, dpr: 1.0, imageWidth: 16, imageHeight: 10),
                        cppID: playheadCppID(playheadMathID, "A001"),
                        what: "DPR 1 preserves the logical rectangle")
-    report.expectEqual(PlayheadDeviceRect(x: 6, y: 4, width: 10, height: 8),
-                       devicePixelRect(logicalRect, dpr: 2.0, imageWidth: 32, imageHeight: 20),
+    report.expectEqual(expected: PlayheadDeviceRect(x: 6, y: 4, width: 10, height: 8),
+                       actual: devicePixelRect(logicalRect, dpr: 2.0, imageWidth: 32, imageHeight: 20),
                        cppID: playheadCppID(playheadMathID, "A002"),
                        what: "DPR 2 doubles position and extent")
-    report.expectEqual(PlayheadDeviceRect(x: 4, y: 3, width: 8, height: 6),
-                       devicePixelRect(logicalRect, dpr: 1.5, imageWidth: 12, imageHeight: 14),
+    report.expectEqual(expected: PlayheadDeviceRect(x: 4, y: 3, width: 8, height: 6),
+                       actual: devicePixelRect(logicalRect, dpr: 1.5, imageWidth: 12, imageHeight: 14),
                        cppID: playheadCppID(playheadMathID, "A003"),
                        what: "fractional DPR floors the origin and ceils the far edge")
-    report.expectEqual(PlayheadDeviceRect(x: 1, y: 1, width: 4, height: 4),
-                       devicePixelRect(PlayheadDeviceRect(x: 1, y: 1, width: 2, height: 2),
+    report.expectEqual(expected: PlayheadDeviceRect(x: 1, y: 1, width: 4, height: 4),
+                       actual: devicePixelRect(PlayheadDeviceRect(x: 1, y: 1, width: 2, height: 2),
                                        dpr: 1.5, imageWidth: 12, imageHeight: 14),
                        cppID: playheadCppID(playheadMathID, "A004"),
                        what: "fractional DPR rounds a second logical rectangle outward")

@@ -1,3 +1,4 @@
+import PorydawCore
 import QtBridge
 
 /// One open song's QML-facing facade: the `applicationSession` a page binds.
@@ -22,7 +23,12 @@ public final class SongTabSession {
     /// Whether this tab's song has unsaved changes. Document edits and bank
     /// (voicegroup) edits alike count: both are work the close gate must not
     /// discard without an answer.
-    @QtTracked public var dirty: Bool
+    public var dirty: Bool
+    /// Whether this tab owns an in-flight bank transition. While set, the
+    /// strip refuses this tab's close and the session refuses its next bank
+    /// action; other tabs are unaffected. Refreshed with `dirty` on every
+    /// session publication, so the flag tracks the history's live answer.
+    public var bankTransitionPending: Bool = false
     /// Whether this tab's song is presented. A tab exists only while its
     /// document is open, so a live tab's own answer is always true. The member
     /// exists because the surface reads one session object: the drawer pages'
@@ -30,6 +36,9 @@ public final class SongTabSession {
     /// standalone session's pages, this facade's never fail — they resolve
     /// against a workspace that lives exactly as long as the tab.
     @QtTracked public var songOpen = true
+    /// Whether this tab has completed its most recent load; the old
+    /// presentation stays visible while an in-place reload is pending.
+    @QtTracked public var isReady = true
     /// Whether this tab shows the event list instead of the piano roll. The
     /// View menu's MIDI Event List check mirrors the selected tab's value.
     @QtTracked public var showsEvents = false
@@ -39,6 +48,7 @@ public final class SongTabSession {
     @QtTracked public var timeSigHost: ApplicationSession
     @QtTracked public var timeSigPromptOpen = false
     @QtTracked public var timeSigMenuOpen = false
+    @QtTracked public var headerVoicePickerOpen = false
 
     /// The workspace this tab presents: one document plus every presenter bound
     /// to it. The tab owns it for as long as the tab is live; the application
@@ -46,7 +56,7 @@ public final class SongTabSession {
     @QtIgnored let workspace: DocumentWorkspace
     /// The application this tab belongs to. The application's tab model owns the
     /// tab, so it cannot outlive its owner.
-    @QtIgnored private unowned let app: ApplicationSession
+    private unowned let app: ApplicationSession
 
     init(tabId: Int, title: String, workspace: DocumentWorkspace,
          app: ApplicationSession) {
@@ -66,11 +76,14 @@ public final class SongTabSession {
     }
 
     /// Republishes this tab's own dirty state, for the strip caption and for the
-    /// close gate.
+    /// close gate, alongside its pending bank-transition flag, for the
+    /// origin-scoped close gate. Both track the session's live answers.
     @QtIgnored
     func refreshDirty() {
         let value = SongTabSession.isDirty(workspace.session)
         if dirty != value { dirty = value }
+        let pending = workspace.session.document.history.bankTransitionInFlight
+        if bankTransitionPending != pending { bankTransitionPending = pending }
     }
 
     // MARK: - Editor surface: this tab's document
@@ -80,8 +93,10 @@ public final class SongTabSession {
     public func pitchBendPresenter() -> PitchBendPresenter { workspace.pitchBend }
 
     public func trackHeadersPresenter() -> TrackHeadersPresenter { workspace.trackHeaders }
+    public func headerVoicePickerModel() -> HeaderVoicePicker { workspace.headerVoicePicker }
 
     public func drawerPresenter() -> EditorDrawerPresenter { workspace.drawer }
+    public func otherEventsBand() -> OtherEventsBandPresenter { workspace.otherEventsBand }
 
     public func velocityPage() -> VelocityPage { workspace.velocityPage }
 
@@ -106,15 +121,75 @@ public final class SongTabSession {
 
     public func mouseHintsPresenter() -> MouseHints { app.mouseHintsPresenter() }
 
-    public func requestGridContextMenu(x: Double, y: Double) {
-        app.requestGridContextMenu(x: x, y: y)
-    }
-
     func pullTimeSigFlags() {
         let prompt = app.timeSigPromptOpen
         let menu = app.timeSigMenuOpen
         if timeSigPromptOpen != prompt { timeSigPromptOpen = prompt }
         if timeSigMenuOpen != menu { timeSigMenuOpen = menu }
+    }
+}
+
+internal struct BankCloseTarget {
+    let identity: BankBindingIdentity
+    let lease: NativeBankLease
+    let title: String
+
+    init(_ bank: AppliedBankEdit) {
+        identity = BankBindingIdentity(bank.lease)
+        lease = bank.lease
+        title = bank.loadName.isEmpty ? bank.lease.sectionLabel : bank.loadName
+    }
+}
+
+/// Presentation-only state retained by an in-place reload or replacement.
+/// Document data and history come from the newly opened song.
+@MainActor
+internal struct ReloadedTab {
+    let tabId: Int
+    let documentRevision: UInt64
+    let bankSlots: [BankSlotView]
+    let bankDirty: Bool
+    let bankLoadName: String
+    let camera: EditorCamera.Snapshot
+    let selectedTrack: Int?
+    let selectedTracks: Set<Int>
+    let selectedNoteOrder: [NoteID]
+    let timeSelection: AutomationTimeSelection?
+    let mutedTracks: Set<Int>
+    let soloedTracks: Set<Int>
+    let scale: ScaleProjection
+    let editCursor: UInt32
+    let baseFontPx: Double
+    let devicePixelRatio: Double
+    let grid: RollGrid
+    let showsEvents: Bool
+
+    init(_ tab: SongTabSession) {
+        tabId = tab.tabId
+        documentRevision = tab.workspace.session.document.revision
+        bankSlots = tab.workspace.session.bankSlots
+        bankDirty = tab.workspace.session.bankDirty
+        bankLoadName = tab.workspace.session.bankLoadName
+        camera = tab.workspace.session.camera.snapshot
+        selectedTrack = tab.workspace.session.selectedTrack
+        selectedTracks = tab.workspace.session.selectedTracks
+        selectedNoteOrder = tab.workspace.session.selectedNoteOrder
+        timeSelection = tab.workspace.session.timeSelection
+        mutedTracks = tab.workspace.session.mutedTracks
+        soloedTracks = tab.workspace.session.soloedTracks
+        scale = tab.workspace.session.scaleProjection
+        editCursor = tab.workspace.session.editCursor
+        baseFontPx = tab.workspace.grid.baseFontPx
+        devicePixelRatio = tab.workspace.grid.devicePixelRatio
+        grid = tab.workspace.session.grid
+        showsEvents = tab.showsEvents
+    }
+
+    func matches(_ tab: SongTabSession) -> Bool {
+        tab.workspace.session.document.revision == documentRevision
+            && tab.workspace.session.bankSlots == bankSlots
+            && tab.workspace.session.bankDirty == bankDirty
+            && tab.workspace.session.bankLoadName == bankLoadName
     }
 }
 
@@ -133,10 +208,11 @@ public final class SongTabsController {
     // Only this controller writes these properties. QtBridge does not expose
     // private(set) properties, so their setters must remain public.
     public var tabs: QListModel<SongTabSession> = QListModel()
-    @QtTracked public var selectedId: Int = -1
-    @QtTracked public var selectedIndex: Int = -1
-    @QtTracked public var tabCount: Int = 0
-    @QtTracked public var pendingCloseId: Int = -1
+    public var selectedId: Int = -1
+    public var selectedIndex: Int = -1
+    public var tabCount: Int = 0
+    public var pendingCloseBankTitle: String = ""
+    public var pendingCloseId: Int = -1
 
     /// The one palette every surface reads. The session owns the instance; the
     /// strip only reads roles through this reference, so the window's single
@@ -155,20 +231,35 @@ public final class SongTabsController {
     /// The application that owns the workspaces. The application owns this
     /// controller, so the reference is weak and is bound once the application's
     /// own stored properties exist.
-    @QtIgnored private weak var app: ApplicationSession?
+    @QtIgnored
+    weak var app: ApplicationSession?
     /// The tab the close gate must reopen in place once the user approves; `-1`
     /// while the gate is asking about a plain close.
-    @QtIgnored private var reloadId = -1
-    @QtIgnored private var replacementLabel: String?
+    @QtIgnored
+    var reloadId = -1
+    @QtIgnored
+    var replacementLabel: String?
     /// The tab whose close-save is in flight. The gate stays up until the
     /// application reports back, so a second Save press starts no second write.
-    @QtIgnored private var savingCloseId = -1
-    /// Whether a close-all walk still has tabs to ask about.
-    @QtIgnored private var isClosingAll = false
+    @QtIgnored
+    var savingCloseId = -1
+    /// Whether a close-all walk still has tabs or dirty banks to ask about.
+    @QtIgnored
+    var isClosingAll = false
     /// Whether the walk's next step is already scheduled for the next turn.
-    @QtIgnored private var advancePending = false
-    @QtIgnored private var projectSwitchApprovalIndex: Int?
+    @QtIgnored
+    var advancePending = false
+    @QtIgnored
+    var pendingCloseBank: BankCloseTarget?
+    @QtIgnored
+    var savingCloseBank: BankBindingIdentity?
+    @QtIgnored
+    var answeredCloseBanks: Set<BankBindingIdentity> = []
+    @QtIgnored
+    var projectSwitchApprovalIndex: Int?
 
+    @QtIgnored
+    var reloadsInFlight: Set<Int> = []
     private var nextTabId = 1
 
     init(palette: GridPalette) {
@@ -221,6 +312,22 @@ public final class SongTabsController {
         for tab in tabs { tab.refreshDirty() }
     }
 
+    /// The tab owning the in-flight bank transition, or -1 while none is
+    /// pending. A pending transition gates close and bank actions on its
+    /// origin tab only; every other tab follows document dirt alone.
+    public var pendingBankTabId: Int {
+        tabs.first { $0.bankTransitionPending }?.tabId ?? -1
+    }
+
+    /// Whether a tab's close affordance is enabled. A pending bank transition
+    /// refuses close on its origin tab; any other tab stays enabled whatever
+    /// its own bank dirt. Unsaved document dirt still raises the ordinary
+    /// close gate in `requestClose`.
+    public func closeEnabled(tabId: Int) -> Bool {
+        guard let tab = tabs.first(where: { $0.tabId == tabId }) else { return false }
+        return !tab.bankTransitionPending
+    }
+
     @QtIgnored
     func tab(id tabId: Int) -> SongTabSession? {
         guard let index = tabIndex(of: tabId) else { return nil }
@@ -233,16 +340,17 @@ public final class SongTabsController {
         tabs.first { $0.title == label }
     }
 
-    private func tabIndex(of tabId: Int) -> Int? {
+    func tabIndex(of tabId: Int) -> Int? {
         tabs.firstIndex { $0.tabId == tabId }
     }
 
     // MARK: - Model changes
 
-    /// Installs a built tab and selects it. A reload reopens at the index the
-    /// tab had, clamped to the strip the reload left behind.
+    /// Installs a newly opened song and selects it.
     @QtIgnored
     func add(_ tab: SongTabSession, at index: Int?) {
+        // Inserts only create delegates: no page is destroyed, so no teardown
+        // can publish under this borrow (removals retire first — see closeTab).
         if let index {
             tabs.insert(tab, at: min(max(index, 0), tabs.count))
         } else {
@@ -259,8 +367,8 @@ public final class SongTabsController {
         select(tabId: tabId)
     }
 
-    /// Shows or hides the selected tab's event list, mirroring the legacy
-    /// View-menu check. Ignored without a selected tab; the mounted page
+    /// Shows or hides the selected tab's event list.
+    /// Ignored without a selected tab; the mounted page
     /// follows through its session binding.
     public func setSelectedTabEventsVisible(visible: Bool) {
         guard let page = selectedPage else { return }
@@ -290,9 +398,12 @@ public final class SongTabsController {
     /// being written. A tab that is already leaving the strip is not found here
     /// at all — its row is gone before it is retired. The third C++ refusal, a
     /// tab that is still loading, has no counterpart: a tab is installed only
-    /// after its document loaded, so nothing saveable is ever missing.
+    /// after its document loaded, so nothing saveable is ever missing. A tab
+    /// owning an in-flight bank transition is refused while it stays pending:
+    /// closing it would drop the transition's origin from under the commit.
     public func requestClose(tabId: Int) {
-        guard let index = tabIndex(of: tabId), savingCloseId != tabId else { return }
+        guard pendingCloseBank == nil, let index = tabIndex(of: tabId),
+              savingCloseId != tabId, !tabs[index].bankTransitionPending else { return }
         guard tabs[index].dirty else {
             closeTab(index: index)
             return
@@ -304,6 +415,13 @@ public final class SongTabsController {
     }
 
     public func confirmDiscard() {
+        if let bank = pendingCloseBank {
+            guard savingCloseBank != bank.identity else { return }
+            answeredCloseBanks.insert(bank.identity)
+            clearPendingCloseBank()
+            advanceCloseAll()
+            return
+        }
         guard let tabId = takePendingClose() else { return }
         if let index = projectSwitchApprovalIndex {
             projectSwitchApprovalIndex = index + 1
@@ -313,19 +431,34 @@ public final class SongTabsController {
         advanceCloseAll()
     }
 
-    /// The gate's Save answer: the application writes the document and reports
-    /// back through `closeAfterSave(tabId:saved:)`. A refused save leaves the
-    /// gate up, so the user can answer again.
+    /// The gate's Save answer: the application writes the document or the bank
+    /// and reports back through `closeAfterSave(tabId:saved:)` or
+    /// `bankCloseAfterSave(saved:)`. A refused save leaves the gate up, so the
+    /// user can answer again.
     public func confirmSave() {
+        if let bank = pendingCloseBank {
+            guard savingCloseBank == nil else { return }
+            savingCloseBank = bank.identity
+            app?.saveBankBeforeClose(bank)
+            return
+        }
         guard pendingCloseId != -1, savingCloseId == -1 else { return }
         guard let tab = tab(id: pendingCloseId) else { return }
         savingCloseId = tab.tabId
         app?.saveTabBeforeClose(tab)
     }
 
-    /// The gate's Cancel answer: the tab stays open. A close-all walk stops and
-    /// the application reports the refusal to the host.
+    /// The gate's Cancel answer: the tab stays open and a bank stays dirty. A
+    /// close-all walk stops and the application reports the refusal to the host.
     public func cancelClose() {
+        if let bank = pendingCloseBank {
+            guard savingCloseBank != bank.identity else { return }
+            clearPendingCloseBank()
+            isClosingAll = false
+            projectSwitchApprovalIndex = nil
+            app?.closeAllResolved(closed: false)
+            return
+        }
         guard pendingCloseId != -1 else { return }
         pendingCloseId = -1
         if reloadId != -1 { reloadId = -1 }
@@ -337,45 +470,6 @@ public final class SongTabsController {
         }
     }
 
-    /// Reopens a tab's song in place: the tab closes through the same gate and
-    /// the application opens its label again at the index it had. Re-opening the
-    /// selected song is the reload path — the file on disk may have changed
-    /// under the open document.
-    @QtIgnored
-    func requestReload(tabId: Int) {
-        guard pendingCloseId == -1, let index = tabIndex(of: tabId) else { return }
-        reloadId = tabId
-        if tabs[index].dirty {
-            if tabId != selectedId { select(tabId: tabId) }
-            pendingCloseId = tabId
-        } else {
-            closeTab(index: index)
-        }
-    }
-
-    /// Applies the ordinary dirty close gate before placing a different song
-    /// at the selected tab's position.
-    @QtIgnored
-    func requestReplacement(tabId: Int, label: String) {
-        guard pendingCloseId == -1, tab(id: tabId) != nil else { return }
-        replacementLabel = label
-        requestReload(tabId: tabId)
-    }
-
-    /// The application's answer to `confirmSave()`.
-    @QtIgnored
-    func closeAfterSave(tabId: Int, saved: Bool) {
-        guard savingCloseId == tabId else { return }
-        savingCloseId = -1
-        guard saved, pendingCloseId == tabId, let index = tabIndex(of: tabId) else { return }
-        pendingCloseId = -1
-        if projectSwitchApprovalIndex != nil {
-            projectSwitchApprovalIndex = index + 1
-        } else {
-            closeTab(index: index)
-        }
-        advanceCloseAll()
-    }
 
     /// The page acknowledgment: `SongTab.qml` reports the destruction of the
     /// page that bound `tabId`, which is what allows the application to release
@@ -383,170 +477,5 @@ public final class SongTabsController {
     /// it read, so nothing may be released while a page still exists.
     public func pageReleased(tabId: Int) {
         app?.tabPageReleased(tabId: tabId)
-    }
-
-    /// Walks every tab through the close gate, asking about each dirty one in
-    /// turn and reporting the walk's verdict once it is settled.
-    @QtIgnored
-    func startCloseAll() {
-        guard !isClosingAll else { return }
-        // A single-tab close or reload gate may already be up when the host asks
-        // to close everything. Refusing would strand the host's pending close:
-        // no allTabsClosed/closeCancelled would ever fire. Adopt the gate — its
-        // answer drives advanceCloseAll — and drop any reload so the walk owns
-        // the outcome.
-        reloadId = -1
-        replacementLabel = nil
-        isClosingAll = true
-        if pendingCloseId == -1 { advanceCloseAll() }
-    }
-
-    @QtIgnored
-    func startProjectSwitchCloseAll() {
-        guard !isClosingAll else { return }
-        reloadId = -1
-        projectSwitchApprovalIndex = 0
-        isClosingAll = true
-        if pendingCloseId == -1 { advanceCloseAll() }
-    }
-
-    // MARK: - Whole-strip release
-
-    /// Releases every tab while the strip is still presented: the outgoing
-    /// project's songs cannot outlive its service, so each workspace is retained
-    /// for the application and retired as its own page reports destruction.
-    @QtIgnored
-    func releaseAll() {
-        _ = dropAllTabs()
-    }
-
-    /// Releases every tab whose scene the host has already removed, so no page
-    /// can acknowledge anything: the application retires the rest at once.
-    @QtIgnored
-    func releaseAllDetached() {
-        if dropAllTabs() { app?.drainTabReleases() }
-    }
-
-    // MARK: - Internals
-
-    /// Selects `tabId` unconditionally: the outgoing workspace releases the one
-    /// shared engine, the playhead and its drawer slots, and the incoming one
-    /// takes them. The workspace keeps its document, presenters and history.
-    private func select(tabId: Int) {
-        guard let index = tabIndex(of: tabId) else { return }
-        deactivateSelection()
-        publishSelection(index: index)
-        tabs[index].workspace.activate()
-        app?.tabsDidChange()
-    }
-
-    /// Removes one tab and publishes the surviving selection.
-    private func closeTab(index: Int) {
-        let tab = tabs[index]
-        let tabId = tab.tabId
-        let closingSelected = tabId == selectedId
-        if pendingCloseId == tabId { pendingCloseId = -1 }
-        let reopening = reloadId == tabId
-        let replacement = reopening ? replacementLabel : nil
-        if reopening {
-            reloadId = -1
-            replacementLabel = nil
-        }
-        // The closing workspace releases the one shared engine, the playhead and
-        // its drawer slots while the scene still shows it.
-        if closingSelected { tab.workspace.deactivate() }
-        app?.tabWillLeave(tab)
-        tabs.remove(at: index)
-        tabCount = tabs.count
-        // A closed selection hands over to the adjacent survivor; a background
-        // close leaves the selection and its activation alone.
-        let survivorIndex = closingSelected
-            ? min(index, tabs.count - 1)
-            : tabIndex(of: selectedId) ?? -1
-        publishSelection(index: survivorIndex)
-        if closingSelected, survivorIndex >= 0 {
-            tabs[survivorIndex].workspace.activate()
-        }
-        app?.tabsDidChange()
-        if reopening { app?.reloadApproved(label: replacement ?? tab.title, index: index) }
-    }
-
-    private func advanceCloseAll() {
-        guard isClosingAll, !advancePending else { return }
-        advancePending = true
-        Task { [weak self] in
-            guard let self else { return }
-            self.advancePending = false
-            self.settleCloseAll()
-        }
-    }
-
-    private func settleCloseAll() {
-        guard isClosingAll else { return }
-        let projectSwitch = projectSwitchApprovalIndex != nil
-        if let approvalIndex = projectSwitchApprovalIndex {
-            for index in approvalIndex..<tabs.count {
-                let tab = tabs[index]
-                guard tab.dirty else { continue }
-                projectSwitchApprovalIndex = index
-                if tab.tabId != selectedId { select(tabId: tab.tabId) }
-                if pendingCloseId != tab.tabId { pendingCloseId = tab.tabId }
-                return
-            }
-            projectSwitchApprovalIndex = nil
-        }
-        while let tab = tabs.first {
-            guard tab.dirty && !projectSwitch else {
-                closeTab(index: 0)
-                continue
-            }
-            if tab.tabId != selectedId { select(tabId: tab.tabId) }
-            if pendingCloseId != tab.tabId { pendingCloseId = tab.tabId }
-            return
-        }
-        isClosingAll = false
-        app?.closeAllResolved(closed: true)
-    }
-
-    private func takePendingClose() -> Int? {
-        guard pendingCloseId != -1 else { return nil }
-        let tabId = pendingCloseId
-        pendingCloseId = -1
-        return tabId
-    }
-
-    private func deactivateSelection() {
-        guard let index = tabIndex(of: selectedId) else { return }
-        tabs[index].workspace.deactivate()
-    }
-
-    private func publishSelection(index: Int) {
-        let page: SongTabSession? = index == -1 ? nil : tabs[index]
-        let tabId = index == -1 ? -1 : tabs[index].tabId
-        if selectedId != tabId { selectedId = tabId }
-        if selectedIndex != index { selectedIndex = index }
-        if selectedPage !== page { selectedPage = page }
-        let showsEvents = page?.showsEvents ?? false
-        if selectedTabShowsEvents != showsEvents { selectedTabShowsEvents = showsEvents }
-    }
-
-    /// Drops every row, retaining each tab with the application until the page
-    /// that bound it is gone. Returns false when the strip was already empty.
-    private func dropAllTabs() -> Bool {
-        guard !tabs.isEmpty else { return false }
-        let released = tabs.asArray
-        // The one shared engine goes with the selection, before any page is
-        // destroyed, exactly as a single close releases it while its scene lives.
-        deactivateSelection()
-        for tab in released { app?.tabWillLeave(tab) }
-        tabs.removeSubrange(0..<tabs.count)
-        tabCount = 0
-        pendingCloseId = -1
-        reloadId = -1
-        savingCloseId = -1
-        isClosingAll = false
-        publishSelection(index: -1)
-        app?.tabsDidChange()
-        return true
     }
 }

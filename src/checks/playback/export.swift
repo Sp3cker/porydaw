@@ -17,7 +17,7 @@ internal func xcmdPairedExport(_ report: CheckReport) {
         Xcmd.Event(index: 1, tick: 2, stream: 0, controller: 0x1D, value: 10),
         Xcmd.Event(index: 2, tick: 3, stream: 0, controller: 0x1D, value: 20),
     ])
-    report.expectEqual(4, exported.inserts.count,
+    report.expectEqual(expected: 4, actual: exported.inserts.count,
                        cppID: "xcmdcheck/XcmdTest::sharedSelectorRebuiltAsSameTickPairs",
                        what: "export expands shared selector on detached values")
     let document = SongDocument(file: MidiFile(chunks: [MidiChunk(events: [
@@ -31,10 +31,10 @@ internal func xcmdPairedExport(_ report: CheckReport) {
                     "export snapshot did not decode")
         return
     }
-    report.expectEqual(3, document.rawChunks[0].events.count,
+    report.expectEqual(expected: 3, actual: document.rawChunks[0].events.count,
                        cppID: "xcmdcheck/XcmdTest::sharedSelectorRebuiltAsSameTickPairs",
                        what: "export canonicalization does not mutate the document")
-    report.expectEqual(4, decoded.chunks[0].events.filter {
+    report.expectEqual(expected: 4, actual: decoded.chunks[0].events.filter {
         if case let .channel(status, _, _) = $0.payload { return status >> 4 == 0xB }
         return false
     }.count, cppID: "xcmdcheck/XcmdTest::sharedSelectorRebuiltAsSameTickPairs",

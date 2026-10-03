@@ -1,12 +1,11 @@
 import Foundation
 import QtBridge
-import SwiftGrid
 
 @MainActor
 @QtBridgeable
 public final class BridgeRow {
-    @QtTracked public var title: String
-    @QtTracked public var value: Int
+    public var title: String
+    public var value: Int
     public let domainKey: Int
 
     public init(title: String, value: Int, domainKey: Int) {
@@ -19,22 +18,22 @@ public final class BridgeRow {
 @MainActor
 @QtBridgeable
 public final class BridgeProbe: QmlInstantiableStatus {
-    @QtTracked public var statusText: String = "idle"
+    public var statusText: String = "idle"
     // QListModel storage owns every live row until removal or reset.
-    @QtTracked public var rows: QListModel<BridgeRow> = QListModel()
-    @QtTracked public var actionLog: String = ""
+    public var rows: QListModel<BridgeRow> = QListModel()
+    public var actionLog: String = ""
     public var selectedIndex: Int = -1
     // An explicit stale-reference holder. selectedRow() replaces it for a
     // valid index and clears it for an invalid index; model mutations do not
     // clear it, so detached-row scenarios remain alive until the next
     // selection lookup or presenter teardown.
-    @QtIgnored private var selectedReference: BridgeRow?
+    private var selectedReference: BridgeRow?
     // A QML var retains only the C++ proxy for a returned bridged object; it
     // does not retain the Swift instance that owns that proxy. The presenter
     // must therefore retain the harness's single standalone return while QML
     // may dereference it. makeRow() replaces this when QML replaces that
     // return slot, and presenter teardown releases the final retained row.
-    @QtIgnored private var lastReturnedRow: BridgeRow?
+    private var lastReturnedRow: BridgeRow?
 
     required public init() {}
 
@@ -145,6 +144,56 @@ public final class BridgeProbe: QmlInstantiableStatus {
     public func actViaRow(row: BridgeRow) {
         let entry = "\(row.domainKey):\(row.title)"
         actionLog = actionLog.isEmpty ? entry : "\(actionLog)|\(entry)"
+    }
+}
+
+@MainActor
+public enum BridgeProbeLifetimeChecks {
+    public static func staleSelectionReleased() -> Bool {
+        var probe: BridgeProbe? = BridgeProbe()
+        probe?.resetToDefaultRows()
+        probe?.selectedIndex = 1
+        guard let selected = probe?.selectedRow() else { return false }
+        weak let retiredProbe = probe
+        probe?.resetToFreshRows()
+        probe?.actViaSelectedRow()
+        guard probe?.actionLog == "202:Beta" else { return false }
+        probe = nil
+        let replacement = BridgeProbe()
+        replacement.resetToDefaultRows()
+        replacement.selectedIndex = 1
+        guard replacement.selectedRow() != nil else { return false }
+        selected.title = "Detached"
+        replacement.actViaSelectedRow()
+        return retiredProbe == nil && replacement.actionLog == "202:Beta"
+            && replacement.rows[1].title == "Beta"
+    }
+
+    public static func returnedRowReleased() -> Bool {
+        var probe: BridgeProbe? = BridgeProbe()
+        weak var heldRow: BridgeRow?
+        do {
+            let returned = probe?.makeRow(title: "Returned", value: 7, key: 707)
+            heldRow = returned
+        }
+        guard heldRow?.title == "Returned" else { return false }
+        weak let retiredProbe = probe
+        probe = nil
+        guard retiredProbe == nil, heldRow == nil else { return false }
+
+        var secondProbe: BridgeProbe? = BridgeProbe()
+        guard let survivingRow = secondProbe?.makeRow(title: "Survivor", value: 8, key: 808)
+        else { return false }
+        weak let retiredSecondProbe = secondProbe
+        secondProbe = nil
+        let replacement = BridgeProbe()
+        replacement.resetToDefaultRows()
+        replacement.selectedIndex = 1
+        guard replacement.selectedRow() != nil else { return false }
+        survivingRow.title = "Detached"
+        replacement.actViaSelectedRow()
+        return retiredSecondProbe == nil && survivingRow.title == "Detached"
+            && replacement.actionLog == "202:Beta" && replacement.rows[1].title == "Beta"
     }
 }
 

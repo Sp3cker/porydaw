@@ -4,38 +4,16 @@ import PorydawCore
 import PorydawCoreCheckNative
 import PorydawPlayback
 
-// MARK: - Synchronous Concurrency Helper
-
-internal enum RunBlockingError: Error {
-    case timeout
-}
-
-@MainActor
-internal func runBlocking<T>(_ operation: @escaping @MainActor () async throws -> T) throws -> T {
-    var outcome: Result<T, Error>?
-    Task { @MainActor in
-        do {
-            outcome = .success(try await operation())
-        } catch {
-            outcome = .failure(error)
-        }
-    }
-    let deadline = Date().addingTimeInterval(25.0)
-    while outcome == nil {
-        if Date() > deadline {
-            throw RunBlockingError.timeout
-        }
-        RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-    }
-    return try outcome!.get()
-}
-
 internal func operationFailureMessage(_ error: Error) -> String? {
-    guard let serviceError = error as? ProjectServiceError,
-          case let .operationFailed(message) = serviceError else {
-        return nil
+    guard let serviceError = error as? ProjectServiceError else { return nil }
+    switch serviceError {
+    case .serviceClosed, .bankConflict: return nil
+    case .operationFailed(let message): return message
+    case .songNotPlayable(let label): return "No playable song named \(label)."
+    case .songMidiUnavailable(_, let path): return "Cannot read \(path)"
+    case .songBankUnavailable(_, _, let reason): return reason
+    case .songSaveUnavailable(_, let path): return "Cannot write \(path)"
     }
-    return message
 }
 
 internal func noteOffSample(_ timeline: PlaybackTimeline, key: UInt8) -> UInt64? {

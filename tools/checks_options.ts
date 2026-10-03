@@ -2,11 +2,11 @@
 // Keep Qt's terminal payload opaque: only the runner options are ours to parse.
 export const DEFAULT_CHECK_POOL = Math.max(
   1,
-  Math.min(6, navigator.hardwareConcurrency),
+  Math.min(12, navigator.hardwareConcurrency),
 );
 
-export const VERIFY_HELP =
-  `usage: deno task verify [options] [--qt <Qt arguments...>]
+export const CHECKS_HELP =
+  `usage: deno task checks [options] [--qt <Qt arguments...>]
   default: build, then run all non-opt-in checks
   --filter <name>       substring match; repeatable; includes opt-in checks
   --exclude <name>      exclude exact harness name; repeatable
@@ -20,9 +20,9 @@ export const VERIFY_HELP =
                       all following arguments belong to Qt, not this runner
 
 Examples:
-  deno task verify --filter=automation-presentation
-  deno task verify --filter=automation-presentation --qt -functions
-  deno task verify --filter=automation-presentation --qt selectedInactiveParametersKeepScopeIndicators
+  deno task checks --filter=automation-presentation
+  deno task checks --filter=automation-presentation --qt -functions
+  deno task checks --filter=automation-presentation --qt selectedInactiveParametersKeepScopeIndicators
 
 --qt does not select a harness. --no-build is not supported; builds are incremental.`;
 

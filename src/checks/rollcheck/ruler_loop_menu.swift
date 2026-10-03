@@ -1,22 +1,36 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
+import PorydawAppCommands
 
 // The original resize seed requests a free cell near tick 88. The synthetic
 // document has no competing notes, so its six-tick grid cell starts at 84.
-private let rulerSeedTick: Tick = 88 - (88 % 6)
+let rulerSeedTick: Tick = 88 - (88 % 6)
 
 @MainActor
 func runRulerLoopMenuChecks(_ report: CheckReport, session: DocumentSession) {
     checkRulerLoopSetAndUndo(report, session: session)
+    checkRulerLoopBuildTotality(report, session: session)
     checkRulerSignatureRemoval(report, session: session)
     checkRulerInsertTime(report, session: session)
     checkRenderedRulerMenuCommands(report, session: session)
     checkRulerInsertTimePrompt(report, session: session)
+    checkRulerMenuRetirement(report, session: session)
+    checkRulerSweepScopeTapAndChip(report, session: session)
+    checkRulerSelectedKeyboardScope(report, session: session)
+    checkRulerSeekEmission(report, session: session)
+    checkRulerDeferredTiming(report, session: session)
+    checkGridLoopCommandArms(report, session: session)
 }
 
 @MainActor
-private func rulerMenuDocument(_ session: DocumentSession) -> SongDocument {
+func openRulerMenu(_ menu: RulerMenuPresenter, at contentX: Double) {
+    menu.captureRulerPress(contentX: contentX, pointerY: 0)
+    menu.openRulerAtRelease()
+}
+
+@MainActor
+func rulerMenuDocument(_ session: DocumentSession) -> SongDocument {
     // As in makeResizeSeed, the requested cell has velocity 100. The loop
     // endpoints are its right edge and one snap cell beyond that edge.
     return SongDocument(file: MidiFile(division: 24, chunks: [
@@ -31,231 +45,65 @@ private func rulerMenuDocument(_ session: DocumentSession) -> SongDocument {
 }
 
 @MainActor
-private func checkRulerLoopSetAndUndo(_ report: CheckReport, session: DocumentSession) {
-    let id = "swiftcore/PianoRoll::rulerLoopMenuSetAndTwoStepUndo"
+private func checkRulerSelectedKeyboardScope(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::timelineRulerScope"
+    withKeyboardSeed(report, session: session, id: id) { grid, seed in
+        let document = session.document
+        let postSeedBytes = coreTimeBytes(document)
+        let postSeedIdentity = document.history.currentIdentity
+        let palette = GridPalette()
+        let automation = AutomationPage(baseFontPx: grid.baseFontPx)
+        automation.attach(session: session, palette: palette)
+        defer { automation.detach(); session.clearTimeSelection() }
+        session.setSelectedNotes([seed.id])
+        grid.performCommand(command: EditCommand.transposeDownOctave.rawValue)
+        grid.performCommand(command: EditCommand.nudgeRight.rawValue)
+        let firstTick = seed.tick
+        let lastTick = firstTick + 4 * seed.snap
+        guard document.canAddTrack, let other = document.addTrack(voice: 0),
+              let ghost = try? document.addNotes([NewNote(
+                  track: other, tick: firstTick + seed.snap, pitch: UInt8(seed.pitch),
+                  duration: seed.snap, velocity: 90)]).first else {
+            report.fail(id, "cannot add the overlapping ruler-scope note")
+            return
+        }
+        var expectedScope: Set<Int> = [seed.track]
+        for track in 0..<document.engineTracks.usedTrackCount where track != seed.track {
+            if document.notes(in: track).contains(where: {
+                $0.tick < lastTick && firstTick < $0.tick + $0.duration
+            }) {
+                expectedScope.insert(track)
+            }
+        }
+        let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+        menu.beginSweep(contentX: session.camera.contentX(tick: Double(firstTick)),
+                        pointerY: 0, modifiers: 0x0400_0000)
+        menu.updateSweep(contentX: session.camera.contentX(tick: Double(lastTick)))
+        menu.endSweep(contentX: session.camera.contentX(tick: Double(lastTick)))
+        report.expect(automation.selection?.range == TimeRange(startTick: firstTick, endTick: lastTick)
+                      && automation.selection?.scope == .tracks(expectedScope)
+                      && expectedScope.contains(other) && document.note(ghost) != nil,
+                      cppID: id,
+                      message: "A026 modified ruler sweep selects exactly every overlapping note track and span")
+        session.clearTimeSelection()
+        while document.history.currentIdentity != postSeedIdentity && document.history.canUndo {
+            guard document.history.undoDocument() else { break }
+        }
+        report.expect(coreTimeBytes(document) == postSeedBytes
+                      && document.history.currentIdentity == postSeedIdentity,
+                      cppID: id, message: "A039 ruler transpose and sweep unwind to post-seed bytes")
+    }
+}
+
+@MainActor
+func checkRulerLoopBuildTotality(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::rulerLoopMenuBuildTotality"
     let document = rulerMenuDocument(session)
-    guard let note = document.notes(in: 0).first else {
-        report.fail(id, "resize fixture note is absent")
-        return
-    }
-    let snapCell: Tick = 6
-    let startTick = note.tick + note.duration
-    let endTick = startTick + snapCell
-    // The legacy fixture begins with both loop markers removed.
-    document.setLoop(end: false, tick: nil)
-    document.setLoop(end: true, tick: nil)
-    let before = coreTimeBytes(document)
-    let timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expect(timeline.loopStartTick == TimeDefaults.noTick &&
-                  timeline.loopEndTick == TimeDefaults.noTick,
-                  cppID: id, message: "A004: both markers begin absent")
-
-    document.setLoop(end: false, tick: Int64(startTick))
-    report.expect(PlaybackTimeline.build(state: document.state, sampleRate: 48_000).loopStartTick == startTick,
-                  cppID: id, message: "A009: setting loop start moves its marker to the cell edge")
-    let afterStart = document.history.currentIdentity
-    document.setLoop(end: true, tick: Int64(endTick))
-    let afterSets = coreTimeBytes(document)
-    report.expect(PlaybackTimeline.build(state: document.state, sampleRate: 48_000).loopEndTick == endTick &&
-                  document.history.currentIdentity != afterStart && afterSets != before,
-                  cppID: id, message: "A015/A017: the end marker is one snap cell later and changes the song")
-
-    // Production removal performs two commands: start first, end second.
-    document.setLoop(end: false, tick: nil)
-    document.setLoop(end: true, tick: nil)
-    let afterRemoval = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expect(afterRemoval.loopStartTick == TimeDefaults.noTick &&
-                  afterRemoval.loopEndTick == TimeDefaults.noTick,
-                  cppID: id, message: "A022: removal clears both markers")
-    report.expect(document.history.undoDocument(), cppID: id,
-                  message: "removing the end marker is undoable")
-    let firstUndo = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expect(firstUndo.loopStartTick == TimeDefaults.noTick && firstUndo.loopEndTick == endTick,
-                  cppID: id, message: "A024: first undo restores only the end marker")
-    report.expect(document.history.undoDocument(), cppID: id,
-                  message: "removing the start marker is separately undoable")
-    let secondUndo = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expect(secondUndo.loopStartTick == startTick && secondUndo.loopEndTick == endTick &&
-                  coreTimeBytes(document) == afterSets,
-                  cppID: id, message: "A025/A026: second undo restores both markers and song bytes")
-
-    let selectionStart = startTick - snapCell
-    document.setLoop(end: false, tick: Int64(selectionStart))
-    document.setLoop(end: true, tick: Int64(startTick))
-    let selected = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expect(selected.loopStartTick == selectionStart && selected.loopEndTick == startTick,
-                  cppID: id, message: "A030: the selection bounds become the loop markers")
-    _ = document.history.undoDocument()
-    let selectionUndo = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expect(selectionUndo.loopStartTick == selectionStart && selectionUndo.loopEndTick == endTick,
-                  cppID: id, message: "A032: first selection undo restores only the old end")
-    _ = document.history.undoDocument()
-    report.expect(coreTimeBytes(document) == afterSets, cppID: id,
-                  message: "A033: second selection undo restores the manual markers")
-}
-
-@MainActor
-private func checkRulerSignatureRemoval(_ report: CheckReport, session: DocumentSession) {
-    let id = "swiftcore/PianoRoll::rulerLoopMenuEnablementSelectionContext"
-    let document = rulerMenuDocument(session)
-    let snapCell: Tick = 6
-    let chipTick = rulerSeedTick + snapCell
-    document.setTimeSignature(tick: chipTick, numerator: 5, denominatorPower: 2)
-    report.expect(PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-        .timeSignatures.contains { $0.tick == chipTick }, cppID: id,
-                  message: "A037: the explicit 5/4 signature exists at the snap cell")
-    let before = coreTimeBytes(document)
-    document.deleteTimeSignature(at: chipTick)
-    report.expect(!PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-        .timeSignatures.contains { $0.tick == chipTick }, cppID: id,
-                  message: "A050: removing the chip deletes the exact event")
-    _ = document.history.undoDocument()
-    report.expect(coreTimeBytes(document) == before, cppID: id,
-                  message: "one undo restores the explicit signature")
-}
-
-@MainActor
-private func checkRulerInsertTime(_ report: CheckReport, session: DocumentSession) {
-    let id = "swiftcore/PianoRoll::rulerLoopMenuInsertTimeAndStaleNoOp"
-    let document = rulerMenuDocument(session)
-    let snapCell: Tick = 6
-    let insertStart = rulerSeedTick + snapCell
-    let insertEnd = insertStart + snapCell
-    guard let note = document.notes(in: 0).first else {
-        report.fail(id, "resize fixture note is absent")
-        return
-    }
-    document.nudgeNotes([note.id], byTicks: Int64(snapCell), byKeys: 0)
-    guard document.notes(in: 0).contains(where: { $0.tick == insertStart && $0.pitch == note.pitch }) else {
-        report.fail(id, "the moved fixture note did not land at the selected seam")
-        return
-    }
-    let before = coreTimeBytes(document)
-    let identity = document.history.currentIdentity
-    let range = TimeRange(startTick: insertStart, endTick: insertEnd)
-    report.expect(document.insertBlankTime(range, scope: TimeScope(tracks: [0])),
-                  cppID: id, message: "the selected span inserts blank time")
-    report.expect(document.notes(in: 0).contains {
-        $0.tick == insertEnd && $0.pitch == note.pitch && $0.velocity == note.velocity
-    } && document.history.currentIdentity != identity && coreTimeBytes(document) != before,
-    cppID: id, message: "A104/A108: the note shifts by exactly one span and the song bytes change")
-    _ = document.history.undoDocument()
-    report.expect(coreTimeBytes(document) == before, cppID: id,
-                  message: "A109: one undo restores the song before ruler insertion")
-}
-
-@MainActor
-private func checkRenderedRulerMenuCommands(_ report: CheckReport, session: DocumentSession) {
-    let id = "swiftcore/PianoRoll::rulerMenuSwiftRowsAndTwoStepUndo"
-    let palette = GridPalette()
-    let grid = PianoGrid(session: session, palette: palette)
-    let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: palette)
-    defer { automation.detach() }
-    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
-    let previousTrack = session.selectedTrack
-    if previousTrack == nil { session.selectPrimaryTrack(0) }
-    defer { session.selectedTrack = previousTrack }
-    let previousCursor = session.editCursor
-    defer { session.editCursor = previousCursor }
-
-    let start: Tick = session.timeline.loopStartTick == 72 ? 48 : 72
-    let end: Tick = session.timeline.loopEndTick == 96 ? 120 : 96
-    let atStart = session.camera.contentX(tick: Double(start))
-    let atEnd = session.camera.contentX(tick: Double(end))
-    menu.openRuler(contentX: atStart)
-    report.expect(menu.isOpen && menu.rows.count > 0
-                  && (0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 2 && menu.rows[$0].enabled }),
-                  cppID: id, message: "the ruler opens a typed, enabled Set Loop Start row")
-    _ = menu.activate(actionId: 2)
-    let writtenStart = session.timeline.loopStartTick
-    report.expect(!menu.isOpen && writtenStart == Tick(grid.snapTickDown(Double(start))),
-                  cppID: id, message: "the clicked start row closes and writes the loop marker")
-
-    menu.openRuler(contentX: atEnd)
-    _ = menu.activate(actionId: 3)
-    let writtenEnd = session.timeline.loopEndTick
-    report.expect(writtenEnd == Tick(grid.snapTickDown(Double(end))), cppID: id,
-                  message: "the clicked end row writes a second undoable marker")
-
-    menu.openRuler(contentX: atEnd)
-    report.expect((0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 4 && menu.rows[$0].enabled }),
-                  cppID: id, message: "Remove Loop becomes enabled when a marker exists")
-    _ = menu.activate(actionId: 4)
-    report.expect(session.timeline.loopStartTick == TimeDefaults.noTick
-                  && session.timeline.loopEndTick == TimeDefaults.noTick, cppID: id,
-                  message: "Remove Loop clears both marker events")
-    _ = session.document.history.undoDocument()
-    report.expect(session.timeline.loopStartTick == TimeDefaults.noTick
-                  && session.timeline.loopEndTick == writtenEnd, cppID: id,
-                  message: "the first undo restores only the end marker")
-    _ = session.document.history.undoDocument()
-    report.expect(session.timeline.loopStartTick == writtenStart
-                  && session.timeline.loopEndTick == writtenEnd, cppID: id,
-                  message: "the second undo restores both markers")
-    _ = session.document.history.undoDocument()
-    _ = session.document.history.undoDocument()
-
-    menu.beginSweep(contentX: atStart)
-    menu.updateSweep(contentX: atEnd)
-    menu.endSweep(contentX: atEnd)
-    menu.openRuler(contentX: session.camera.contentX(tick: Double((start + end) / 2)))
-    report.expect((0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 5 && menu.rows[$0].enabled })
-                  && !(0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 2 }), cppID: id,
-                  message: "a swept range replaces positional rows with selection rows")
-    automation.clearTimeSelection()
-    let identity = session.document.history.currentIdentity
-    _ = menu.activate(actionId: 5)
-    report.expect(identity == session.document.history.currentIdentity && !menu.isOpen,
-                  cppID: id, message: "a stale selection click dismisses without a document write")
-}
-
-@MainActor
-private func checkRulerInsertTimePrompt(_ report: CheckReport, session: DocumentSession) {
-    let id = "swiftcore/PianoRoll::rulerInsertTimePromptWholeSong"
-    let palette = GridPalette()
-    let grid = PianoGrid(session: session, palette: palette)
-    let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: palette)
-    defer { automation.detach() }
-    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
-    let previousCursor = session.editCursor
-    defer { session.editCursor = previousCursor }
-    guard let note = session.document.notes(in: 0).first else {
-        report.fail(id, "the ruler check fixture needs a note on track zero")
-        return
-    }
-    let before = coreTimeBytes(session.document)
-    let priorIdentity = session.document.history.currentIdentity
-    let axis = TimeAxis(map: TimeMap(
-        ticksPerBeat: UInt32(max(1, session.document.ticksPerBeat)),
-        timeSigs: session.document.timeSignatures.map {
-            TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
-                         denomPow2: $0.denominatorPower)
-        }))
-    let segment = axis.segmentAt(0)
-    let barTicks = Tick(segment.beatTicks) * Tick(segment.beatsPerBar)
-    session.editCursor = 0
-    menu.openRuler(contentX: session.camera.contentX(tick: 0))
-    _ = menu.activate(actionId: 1)
-    report.expect(menu.insertTimePromptOpen && !menu.isOpen
-                  && menu.insertTimePromptMaximumBeats == Int(segment.beatsPerBar - 1)
-                  && session.document.history.currentIdentity == priorIdentity,
-                  cppID: id, message: "A042: choosing Insert Time opens the bar/beat form without inserting")
-    menu.acceptInsertTimePrompt(bars: 1, beats: 0, fractions: 0)
-    report.expect(!menu.insertTimePromptOpen
-                  && session.document.notes(in: 0).contains {
-                      $0.pitch == note.pitch && $0.velocity == note.velocity
-                          && $0.tick == note.tick + barTicks
-                  }
-                  && session.document.history.currentIdentity != priorIdentity,
-                  cppID: id, message: "the accepted bar shifts whole-song events by the local signature length")
-    _ = session.document.history.undoDocument()
-    report.expect(coreTimeBytes(session.document) == before, cppID: id,
-                  message: "one undo restores the song before prompted insertion")
-    menu.openRuler(contentX: session.camera.contentX(tick: 0))
-    _ = menu.activate(actionId: 1)
-    menu.cancelInsertTimePrompt()
-    report.expect(!menu.insertTimePromptOpen && coreTimeBytes(session.document) == before,
-                  cppID: id, message: "cancelling the prompt never writes time")
+    // The fork's :500 guard holds a nullable build; Swift's build is total,
+    // so the clause's law is that the marked document builds a looped timeline.
+    document.setLoop(end: false, tick: 6)
+    document.setLoop(end: true, tick: 18)
+    let marked = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
+    report.expect(marked.hasLoop, cppID: id,
+                  message: "A137: the loop-marked document always builds a looped timeline")
 }

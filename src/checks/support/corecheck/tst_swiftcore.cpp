@@ -123,11 +123,6 @@ void SwiftCoreTest::voicegroupEditing()
     pdc_suite_run(PDC_SUITE_VOICE_EDITING, reportSwiftCheck, this);
 }
 
-void SwiftCoreTest::catalogAbsent()
-{
-    pdc_suite_run(PDC_SUITE_CATALOG_ABSENT, reportSwiftCheck, this);
-}
-
 void SwiftCoreTest::projectStoreChecks()
 {
     pdc_suite_run(PDC_SUITE_PROJECTSTORE_CHECKS, reportSwiftCheck, this);
@@ -188,6 +183,16 @@ void SwiftCoreTest::themeColor()
     pdc_suite_run(PDC_SUITE_THEME_COLOR, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::displayList()
+{
+    pdc_suite_run(PDC_SUITE_DISPLAY_LIST, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::sampleCheck()
+{
+    pdc_suite_run(PDC_SUITE_SAMPLE, reportSwiftCheck, this);
+}
+
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
 {
     const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);
@@ -201,6 +206,14 @@ int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments
         pdc_check_set_mid2agb_path(encodedCompiler.constData());
     } else {
         pdc_check_set_mid2agb_path(nullptr);
+    }
+    const QString corpusPrefix = QStringLiteral("--pdc-sample-corpus=");
+    if (!selectedArguments.isEmpty() && selectedArguments.front().startsWith(corpusPrefix)) {
+        const QByteArray encodedCorpus =
+            QFile::encodeName(selectedArguments.takeFirst().mid(corpusPrefix.size()));
+        pdc_check_set_sample_corpus(encodedCorpus.constData());
+    } else {
+        pdc_check_set_sample_corpus(nullptr);
     }
 
     SwiftCoreTest test;

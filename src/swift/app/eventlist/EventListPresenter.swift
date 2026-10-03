@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import QtBridge
+import PorydawAppEventList
 
 /// The QML-facing value for one event-list row. Policy stays in
 /// `EventListModel`; this handle only publishes the values a delegate renders.
@@ -11,8 +12,8 @@ public final class EventListRowHandle {
     public var eventIndex: Int = -1
     public var tick: Int = 0
     public var typeKind: Int = EventListEventType.endOfTrack.rawValue
-    public var isEndOfTrack = false
-    public var rowTint = ""
+    public var isEndOfTrack: Bool = false
+    public var rowTint: String = ""
 
     init(_ source: EventListRow, tint: String) {
         row = source.index
@@ -31,29 +32,33 @@ public final class EventListRowHandle {
 /// request only when native follow-playhead suppression permits it.
 @MainActor
 @QtBridgeable
-public final class EventListPresenter {
+public final class EventListPresenter: QmlUncreatable {
+    private static let defaultWidthSeeds = [70.0, 120.0, 36.0, 56.0, 56.0, 140.0]
     public var rows: QListModel<EventListRowHandle> = QListModel()
     @QtTracked public var tableRevision = 0
     @QtTracked public var visible = false
     @QtTracked public var chunk = -1
-    @QtTracked public var chunkLabels: [String] = []
+    public var chunkLabels: [String] = []
     @QtTracked public var filterMask = 127
     @QtTracked public var filterSummary = "All events"
     @QtTracked public var countText = ""
     @QtTracked public var headerLabels = ["Tick", "Type", "Ch", "Data 1",
                                           "Data 2", "Data", "Summary"]
-    @QtIgnored public var columnWidths: [Double] = [70, 120, 36, 56, 56, 140] {
+    @QtIgnored public var columnWidths: [Double] = [] {
         didSet { columnWidthsRevision &+= 1 }
     }
     @QtTracked public var columnWidthsRevision = 0
+    @QtIgnored var resizedColumns: Set<Int> = []
     @QtIgnored public var selectedRows: [Int] = [] {
         didSet { selectionRevision &+= 1 }
     }
     @QtTracked public var selectionRevision = 0
     public var menuItems: QListModel<EventListMenuItem> = QListModel()
+    @QtTracked public var menuShortcutText = ""
+    @QtTracked public var menuSeparatorCount = 0
     @QtTracked public var menuX = 0.0
     @QtTracked public var menuY = 0.0
-    @QtTracked public var appearance: [String: QVariantSettable] = [:]
+    public var appearance: [String: QVariantSettable] = [:]
 
     @QtTracked public var attached = false
     @QtTracked public var chunkIndex = -1
@@ -69,22 +74,39 @@ public final class EventListPresenter {
     @QtTracked public var scrollToRowRequested = 0
 
     /// Swift checks and the host can observe the exact row of the last request.
-    @QtIgnored public private(set) var lastScrollToRow = -1
-    @QtIgnored public private(set) var playheadTick = -1.0
-    @QtIgnored public private(set) var playing = false
-    @QtIgnored public private(set) var pointerDown = false
+    public private(set) var lastScrollToRow = -1
+    public private(set) var playheadTick = -1.0
+    public private(set) var playing = false
+    public private(set) var pointerDown = false
     /// Qt's mouse-button bit mask. Zero is the native `NoButton` state.
-    @QtIgnored public private(set) var mouseButtons = 0
+    public private(set) var mouseButtons = 0
     @QtIgnored public internal(set) var model = EventListModel()
     @QtIgnored public var onScrollToRow: ((Int) -> Void)?
+    @QtIgnored public var onRevealVoiceRequested: ((Int) -> Void)?
+    @QtIgnored public var onPerformEventListCommand: ((Int) -> Void)?
 
     @QtIgnored var selectionAnchor = -1
     @QtIgnored var menuKind: EventListMenuKind?
     @QtIgnored var menuRow = -1
     @QtIgnored weak var session: DocumentSession?
+    private var appearancePalette: GridPalette
+    private var typography: Typography
 
-    public init() {
-        appearance = EventListAppearance.roles()
+    public init(palette: GridPalette = GridPalette(),
+                typography: Typography = Typography(baseFontPx: 13)) {
+        appearancePalette = palette
+        self.typography = typography
+        appearance = EventListAppearance.roles(palette: palette, typography: typography)
+    }
+
+    public func refreshAppearance() {
+        appearance = EventListAppearance.roles(palette: appearancePalette, typography: typography)
+    }
+    public func configureTypography(typography: Typography) {
+        guard self.typography.baseFontPx != typography.baseFontPx else { return }
+        self.typography = typography
+        refreshAppearance()
+        columnWidthsRevision &+= 1
     }
 
     /// Installs one document and rebuilds its configured chunk synchronously.
@@ -132,7 +154,15 @@ public final class EventListPresenter {
     /// unless selection changes the mapped chunk.
     @QtIgnored
     public func documentDidChange(_ change: SessionChange) {
+        if change.domains.contains(.document) || change.trackRemap != nil {
+            invalidateRowMenu()
+        }
         guard attached, let session, !session.isClosed else { return }
+
+        if change.domains.contains(.bank) {
+            model.voiceNames = voiceNames()
+            tableRevision &+= 1
+        }
 
         let documentChanged = change.domains.contains(.document) || change.trackRemap != nil
         if documentChanged, let remap = change.trackRemap {
@@ -143,6 +173,7 @@ public final class EventListPresenter {
         if change.domains.contains(.selection), visible,
            let selectedChunk = mappedChunk(for: session.selectedTrack, in: session.document),
            selectedChunk != chunkIndex {
+            invalidateRowMenu()
             chunkIndex = selectedChunk
             chunkChangedBySelection = true
         }
@@ -155,6 +186,7 @@ public final class EventListPresenter {
     @QtIgnored
     public func refresh() {
         guard attached else { return }
+        invalidateRowMenu()
         rebuildFromDocument(preservingCurrentRow: true)
     }
     /// Selects a document chunk and resets row focus as the native controller
@@ -168,6 +200,7 @@ public final class EventListPresenter {
         guard let session, !session.isClosed else { return }
         let target = session.document.rawChunks.indices.contains(index) ? index : -1
         guard target != chunkIndex else { return }
+        invalidateRowMenu()
         chunk = target
 
         chunkIndex = target
@@ -218,9 +251,11 @@ public final class EventListPresenter {
     public func focusRow(row: Int) {
         guard attached, let session, !session.isClosed,
               let tick = model.rowTick(row: row) else { return }
+        let oldRow = currentRow
         let oldPlayRow = model.playRow
         model.setCurrentRow(row)
         currentRow = model.currentRow
+        if currentRow != oldRow { invalidateRowMenu() }
         session.editCursor = tick
         publishPlayheadTransition(from: oldPlayRow)
     }
@@ -270,9 +305,16 @@ public final class EventListPresenter {
     // the document policy and interaction implementations live in extensions.
     public func isSelected(row: Int) -> Bool { dispatchIsSelected(row: row) }
     public func selectRow(row: Int, modifiers: Int) {
+        let previous = selectedRows
+        let previousRow = currentRow
         dispatchSelectRow(row: row, modifiers: modifiers)
+        if selectedRows != previous || currentRow != previousRow { invalidateRowMenu() }
     }
-    public func selectAll() { dispatchSelectAll() }
+    public func selectAll() {
+        let previous = selectedRows
+        dispatchSelectAll()
+        if selectedRows != previous { invalidateRowMenu() }
+    }
     public func setVisible(visible: Bool) { dispatchSetVisible(visible: visible) }
     public func isCellEditable(row: Int, column: Int) -> Bool {
         dispatchIsCellEditable(row: row, column: column)
@@ -288,8 +330,13 @@ public final class EventListPresenter {
     public func headerAlignment(column: Int) -> Int {
         dispatchHeaderAlignment(column: column)
     }
+    func defaultColumnWidth(column: Int) -> Double {
+        guard Self.defaultWidthSeeds.indices.contains(column) else { return 0 }
+        return Double(typography.fontPx(Self.defaultWidthSeeds[column] / 13.0))
+    }
     public func savedColumnWidth(column: Int) -> Double {
-        columnWidths.indices.contains(column) ? columnWidths[column] : 0
+        resizedColumns.contains(column) && columnWidths.indices.contains(column)
+            ? columnWidths[column] : defaultColumnWidth(column: column)
     }
     public func resizeColumn(column: Int, width: Double) {
         dispatchResizeColumn(column: column, width: width)
@@ -364,9 +411,13 @@ public final class EventListPresenter {
             publishRows()
             return
         }
-        let chunks = session.document.rawChunks
-        chunkLabels = chunks.indices.map { index in
-            index == 0 ? "0: Tempo / metadata" : "\(index): MIDI chunk"
+        let document = session.document
+        let chunks = document.rawChunks
+        chunkLabels = chunks.indices.map { chunk in
+            if let engineTrack = firstEngineTrack(for: chunk, in: document) {
+                return "Chunk \(chunk) — Track \(engineTrack + 1)"
+            }
+            return "Chunk \(chunk) (tempo/meta)"
         }
         guard chunks.indices.contains(chunkIndex) else {
             model.setSource(nil)
@@ -379,6 +430,7 @@ public final class EventListPresenter {
                         preservingCurrentRow: preservingCurrentRow)
         chunk = chunkIndex
         selectedRows = selectedRows.filter { model.rows.indices.contains($0) }
+        model.voiceNames = voiceNames()
         publishRows()
     }
 
@@ -415,5 +467,12 @@ public final class EventListPresenter {
         scrollToRowRequested &+= 1
         onScrollToRow?(row)
         scrollToRow(row: row)
+    }
+
+    private func voiceNames() -> [String] {
+        (session?.bankSlots ?? []).map {
+            let name = VoiceLanePolicy.shortName($0)
+            return name == "Voice" ? "" : name
+        }
     }
 }

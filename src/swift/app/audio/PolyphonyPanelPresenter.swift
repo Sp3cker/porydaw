@@ -2,6 +2,7 @@ import Foundation
 import PorydawCore
 import PorydawPlaybackNative
 import QtBridge
+import PorydawAppAudio
 
 @MainActor
 @QtBridgeable
@@ -22,14 +23,14 @@ public final class PolyphonyCounterRow {
     public var dropped: Int
     public var cutOff: Int
     public var tailCut: Int
-    public var flash: Bool
+    public var flashAlpha: Double
 
-    init(name: String, dropped: Int, cutOff: Int, tailCut: Int, flash: Bool) {
+    init(name: String, dropped: Int, cutOff: Int, tailCut: Int, flashAlpha: Double) {
         self.name = name
         self.dropped = dropped
         self.cutOff = cutOff
         self.tailCut = tailCut
-        self.flash = flash
+        self.flashAlpha = flashAlpha
     }
 }
 
@@ -54,7 +55,7 @@ public final class PolyphonyEventRow {
 /// UI-thread projection of the renderer's diagnostic ring. Poll only while visible.
 @MainActor
 @QtBridgeable
-public final class PolyphonyPanelPresenter {
+public final class PolyphonyPanelPresenter: QmlUncreatable {
     public var pcm: QListModel<PolyphonyChannelRow> = QListModel()
     public var cgb: QListModel<PolyphonyChannelRow> = QListModel()
     public var shadowPcm: QListModel<PolyphonyChannelRow> = QListModel()
@@ -67,17 +68,17 @@ public final class PolyphonyPanelPresenter {
     @QtTracked public var counterCount = 0
     @QtTracked public var eventCount = 0
 
-    @QtIgnored private weak var audio: NativeAudio?
-    @QtIgnored private var visible = false
-    @QtIgnored private var seenTotal: UInt32 = 0
-    @QtIgnored private var eventRows: [PolyphonyEventRow] = []
-    @QtIgnored private var previousCounters: [(UInt32, UInt32, UInt32)] = []
-    @QtIgnored private var flashUntil: [ContinuousClock.Instant] = []
-    @QtIgnored private var trackNames: [String] = []
-    @QtIgnored private var voiceNames: [String] = []
-    @QtIgnored private var ticksPerBeat: UInt32 = 24
-    @QtIgnored private var signatures: [TimeSignature] = []
-    @QtIgnored private var lastChannelSnapshot: AudioPolySnapshot?
+    private weak var audio: NativeAudio?
+    private var visible = false
+    private var seenTotal: UInt32 = 0
+    private var eventRows: [PolyphonyEventRow] = []
+    private var previousCounters: [(UInt32, UInt32, UInt32)] = []
+    private var flashUntil: [ContinuousClock.Instant] = []
+    private var trackNames: [String] = []
+    private var voiceNames: [String] = []
+    private var ticksPerBeat: UInt32 = 24
+    private var signatures: [TimeSignature] = []
+    private var lastChannelSnapshot: AudioPolySnapshot?
     @QtIgnored public var onJump: ((UInt32, Int, Int, Double) -> Void)?
 
     public init() {}
@@ -85,7 +86,8 @@ public final class PolyphonyPanelPresenter {
     @QtIgnored
     public func attach(audio: NativeAudio?) {
         self.audio = audio
-        invertChecked = audio?.polyDebugInvert ?? false
+        audio?.setPolyDebugInvert(visible && invertChecked)
+        if visible { poll() }
     }
 
     /// Rebind the selected document, without carrying its diagnostic rows to a new song.
@@ -125,11 +127,10 @@ public final class PolyphonyPanelPresenter {
     }
 
     @QtIgnored
-    public func update(_ snapshot: AudioPolySnapshot) {
+    public func update(_ snapshot: AudioPolySnapshot, now: ContinuousClock.Instant = .now) {
         showingShadow = snapshot.invert
         let pcmCount = min(Int(snapshot.maxPcmChannels), Int(MAX_PCM_CHANNELS), snapshot.pcm.count)
         if lastChannelSnapshot.map({ Self.sameChannels($0, snapshot) }) != true {
-            // A channel repaint is necessary only when a cell's observed state changes.
             pcm.reset(to: makeChannels(snapshot.pcm.prefix(pcmCount), cgb: false, shadow: false))
             cgb.reset(to: makeChannels(snapshot.cgb.prefix(Int(MAX_CGB_CHANNELS)), cgb: true,
                                        shadow: false))
@@ -168,19 +169,19 @@ public final class PolyphonyPanelPresenter {
         }
         seenTotal = snapshot.eventTotal
 
-        let now = ContinuousClock.now
         var current: [PolyphonyCounterRow] = []
         let count = min(snapshot.drop.count, snapshot.steal.count, snapshot.tailCut.count)
         if previousCounters.count != count {
             previousCounters = Array(repeating: (0, 0, 0), count: count)
             flashUntil = Array(repeating: now, count: count)
-            // A first observation is a baseline, not an increase.
             for i in 0..<count {
                 previousCounters[i] = (snapshot.drop[i], snapshot.steal[i], snapshot.tailCut[i])
             }
         }
         for i in 0..<count {
-            let drop = snapshot.drop[i], steal = snapshot.steal[i], tail = snapshot.tailCut[i]
+            let drop = snapshot.drop[i]
+            let steal = snapshot.steal[i]
+            let tail = snapshot.tailCut[i]
             let previous = previousCounters[i]
             if drop > previous.0 || steal > previous.1 || tail > previous.2 {
                 flashUntil[i] = now.advanced(by: .seconds(1))
@@ -188,8 +189,11 @@ public final class PolyphonyPanelPresenter {
             previousCounters[i] = (drop, steal, tail)
             guard drop != 0 || steal != 0 || tail != 0 else { continue }
             let name = i < trackNames.count ? trackNames[i].trimmingCharacters(in: .whitespacesAndNewlines) : ""
+            let remaining = now.duration(to: flashUntil[i]).components
+            let alpha = now < flashUntil[i]
+                ? 0.55 * (Double(remaining.seconds) + Double(remaining.attoseconds) / 1e18) : 0
             current.append(PolyphonyCounterRow(name: name.isEmpty ? "Track \(i + 1)" : name,
-                dropped: Int(drop), cutOff: Int(steal), tailCut: Int(tail), flash: now < flashUntil[i]))
+                dropped: Int(drop), cutOff: Int(steal), tailCut: Int(tail), flashAlpha: alpha))
         }
         counters.reset(to: current)
         counterCount = current.count
@@ -215,9 +219,9 @@ public final class PolyphonyPanelPresenter {
         shadowPcm.reset(to: [])
         lastChannelSnapshot = nil
         shadowCgb.reset(to: [])
-        counterCount = 0
-        eventCount = 0
-        showingShadow = false
+        setPublished(counterCount, 0) { counterCount = $0 }
+        setPublished(eventCount, 0) { eventCount = $0 }
+        setPublished(showingShadow, false) { showingShadow = $0 }
     }
 
     private static func sameChannels(_ old: AudioPolySnapshot,
@@ -226,24 +230,27 @@ public final class PolyphonyPanelPresenter {
             return false
         }
         let pcmCount = min(Int(new.maxPcmChannels), Int(MAX_PCM_CHANNELS))
-        guard sameChannels(old.pcm.prefix(pcmCount), new.pcm.prefix(pcmCount)),
-              sameChannels(old.cgb.prefix(Int(MAX_CGB_CHANNELS)),
-                           new.cgb.prefix(Int(MAX_CGB_CHANNELS)))
+        guard sameChannelSlice(old.pcm.prefix(pcmCount), new.pcm.prefix(pcmCount)),
+              sameChannelSlice(old.cgb.prefix(Int(MAX_CGB_CHANNELS)),
+                               new.cgb.prefix(Int(MAX_CGB_CHANNELS)))
         else { return false }
         guard new.invert else { return true }
-        return sameChannels(old.pcm.dropFirst(Int(MAX_PCM_CHANNELS)).prefix(Int(MAX_PCM_CHANNELS)),
-                            new.pcm.dropFirst(Int(MAX_PCM_CHANNELS)).prefix(Int(MAX_PCM_CHANNELS)))
-            && sameChannels(old.cgb.dropFirst(Int(MAX_CGB_CHANNELS)).prefix(Int(MAX_CGB_CHANNELS)),
-                            new.cgb.dropFirst(Int(MAX_CGB_CHANNELS)).prefix(Int(MAX_CGB_CHANNELS)))
+        return sameChannelSlice(old.pcm.dropFirst(Int(MAX_PCM_CHANNELS)).prefix(Int(MAX_PCM_CHANNELS)),
+                                new.pcm.dropFirst(Int(MAX_PCM_CHANNELS)).prefix(Int(MAX_PCM_CHANNELS)))
+            && sameChannelSlice(old.cgb.dropFirst(Int(MAX_CGB_CHANNELS)).prefix(Int(MAX_CGB_CHANNELS)),
+                                new.cgb.dropFirst(Int(MAX_CGB_CHANNELS)).prefix(Int(MAX_CGB_CHANNELS)))
     }
 
-    private static func sameChannels(_ first: ArraySlice<AudioPolyChannel>,
-                                     _ second: ArraySlice<AudioPolyChannel>) -> Bool {
+    private static func sameChannelSlice(_ first: ArraySlice<AudioPolyChannel>,
+                                         _ second: ArraySlice<AudioPolyChannel>) -> Bool {
         guard first.count == second.count else { return false }
-        return zip(first, second).allSatisfy { old, new in
-            old.on == new.on && old.releasing == new.releasing
-                && old.track == new.track && old.midiKey == new.midiKey
+        for (old, new) in zip(first, second) {
+            if old.on != new.on || old.releasing != new.releasing
+                || old.track != new.track || old.midiKey != new.midiKey {
+                return false
+            }
         }
+        return true
     }
 
     private func makeChannels(_ channels: ArraySlice<AudioPolyChannel>, cgb isCgb: Bool,
@@ -280,7 +287,10 @@ public final class PolyphonyPanelPresenter {
     }
 
     private func formatPosition(_ tick: UInt32) -> String {
-        var start: UInt64 = 0, numerator: UInt64 = 4, denominatorPower = 2, bar: UInt64 = 1
+        var start: UInt64 = 0
+        var numerator: UInt64 = 4
+        var denominatorPower = 2
+        var bar: UInt64 = 1
         for signature in signatures where signature.tick <= tick {
             let beat = max(UInt64(1), UInt64(ticksPerBeat) * 4 >> denominatorPower)
             let barLength = numerator * beat

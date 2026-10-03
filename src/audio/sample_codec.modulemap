@@ -1,0 +1,4 @@
+module PorydawSampleCodec {
+    header "sample_codec.h"
+    export *
+}

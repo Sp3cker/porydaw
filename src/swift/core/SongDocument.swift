@@ -98,6 +98,10 @@ public struct TrackRemap: Equatable, Sendable {
 public struct DocumentChange: Equatable, Sendable {
     public let revision: UInt64
     public let trackRemap: TrackRemap?
+    public init(revision: UInt64, trackRemap: TrackRemap? = nil) {
+        self.revision = revision
+        self.trackRemap = trackRemap
+    }
 }
 
 public struct SaveSnapshot: Sendable {
@@ -348,7 +352,10 @@ public final class SongDocument {
             }
         }
         var result: [LanePoint] = []
-        for (index, event) in state.file.chunks[mapping.chunk].events.enumerated() {
+        let sourceEvents = state.file.chunks[mapping.chunk].events
+        let events = sourceEvents.span
+        for index in events.indices {
+            let event = events[index]
             guard case let .channel(status, data0, data1) = event.payload,
                   status & 0x0F == mapping.channel else { continue }
             let type = status >> 4
@@ -372,7 +379,11 @@ public final class SongDocument {
     public func trackName(_ track: Int) -> String {
         guard let mapping = mapping(for: track) else { return "" }
         var scanner = TrackNameScan()
-        for event in state.file.chunks[mapping.chunk].events where scanner.consume(event) {
+        let sourceEvents = state.file.chunks[mapping.chunk].events
+        let events = sourceEvents.span
+        for index in events.indices {
+            let event = events[index]
+            guard scanner.consume(event) else { continue }
             guard case let .meta(_, bytes) = event.payload else { continue }
             return String(bytes: bytes.prefix(64), encoding: .isoLatin1) ?? ""
         }
@@ -472,7 +483,10 @@ public final class SongDocument {
     private func projectTimeSignatures() -> [TimeSignature] {
         var signatures: [TimeSignature] = []
         for (chunkIndex, chunk) in state.file.chunks.enumerated() {
-            for (eventIndex, event) in chunk.events.enumerated() {
+            let sourceEvents = chunk.events
+            let events = sourceEvents.span
+            for eventIndex in events.indices {
+                let event = events[eventIndex]
                 if case let .meta(type, bytes) = event.payload, type == 0x58, bytes.count >= 2 {
                     signatures.append(TimeSignature(chunk: chunkIndex, eventIndex: eventIndex,
                                                     tick: event.tick, numerator: bytes[0],

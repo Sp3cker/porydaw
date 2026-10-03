@@ -129,7 +129,6 @@ public struct KeybindingRegistry {
         .init("edit.remove_time_signature", .editorRouted, "Remove Time Signature"),
         .init("view.theme", .window, "Theme"),
         .init("view.event_list", .window, "MIDI Event List", keys: "Ctrl+Shift+E"),
-        .init("view.velocity_colors", .window, "Color Notes by Velocity"),
         .init("view.note_names", .window, "Show Note Names"),
         .init("view.automation_drawer", .window, "Automation Drawer", keys: "A"),
         .init("view.velocity_drawer", .window, "Velocity Drawer", keys: "V"),

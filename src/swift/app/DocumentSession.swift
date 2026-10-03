@@ -37,9 +37,34 @@ public struct SessionChange: Sendable {
     }
 }
 
+public struct TrackTimeSelection: Equatable, Sendable {
+    public let startTick: Tick
+    public let endTick: Tick
+    public let trackScope: Set<Int>
+    public var active: Bool { endTick > startTick }
+
+    public init(startTick: Tick = 0, endTick: Tick = 0, trackScope: Set<Int> = []) {
+        self.startTick = startTick
+        self.endTick = endTick
+        self.trackScope = trackScope
+    }
+}
+
+public struct SelectionTransition: Equatable, Sendable {
+    public let previousTrackTime: TrackTimeSelection
+    public let trackTime: TrackTimeSelection
+}
+
+/// The song's MIDI file changed on disk since this session last loaded or
+/// saved it. The caller prompts before overwriting; nothing was written.
+public struct SaveConflictError: Error, Sendable {
+    public let label: String
+    public init(label: String) { self.label = label }
+}
+
 // MARK: - Document session
 
-/// Task 8's ownership interface: one document plus its confirmed bank history,
+/// One document plus its confirmed bank history,
 /// session-only selection/track-scope/camera/mute-solo, the current bank
 /// lease, and the published playback projection.
 ///
@@ -47,30 +72,41 @@ public struct SessionChange: Sendable {
 /// initial open and for every edit/history rebuild alike. Document history
 /// operations stay immediate; bank transitions serialize on the service actor.
 /// Selection and other session state never dirty the document and never enter
-/// history. Playback is published as an immutable value for Task 7 to bind;
-/// the old AudioEngine timeline API is not referenced here.
+/// history.
 @MainActor
 public final class DocumentSession {
     public private(set) var document: SongDocument
     internal private(set) lazy var projectionCache = DocumentProjectionCache(session: self)
     /// Current projection, always rebuilt via the state factory.
-    public private(set) var timeline: PlaybackTimeline
-    public private(set) var bankLease: NativeBankLease
-    public private(set) var bankSlots: [BankSlotView]
-    public private(set) var bankDirty: Bool
-    public private(set) var bankLoadName: String
+    public internal(set) var timeline: PlaybackTimeline
+    public var bankLease: NativeBankLease { sharedBank.value.lease }
+    public var bankSlots: [BankSlotView] { sharedBank.value.slots }
+    public var bankDirty: Bool { sharedBank.value.dirty }
+    public var bankLoadName: String { sharedBank.value.loadName }
     public private(set) var isClosed = false
+    /// On-disk MIDI identity at the last load or save. Nil predates tracking
+    /// (direct init); the first save then adopts the disk without prompting.
+    public private(set) var lastKnownMidiBytes: [UInt8]?
+    public private(set) var editorViewState = EditorViewState()
+
 
     /// Selection order is authoritative; membership is its cached lookup index.
     /// Both are session-only and never dirty the document or enter history.
-    public private(set) var selectedNoteOrder: [NoteID] = []
-    public private(set) var selectedNotes: Set<NoteID> = []
-    public private(set) var selectedTracks: Set<Int> = []
+    public internal(set) var selectedNoteOrder: [NoteID] = []
+    public internal(set) var selectedNotes: Set<NoteID> = []
+    public internal(set) var selectedTracks: Set<Int> = []
+    public internal(set) var timeSelection: AutomationTimeSelection?
     public enum TrackScopeAction { case plain, toggle, range }
+    internal var changingPrimaryInternally = false
     public var selectedTrack: Int? {
         didSet {
-            if selectedTrack != oldValue {
+            guard selectedTrack != oldValue else { return }
+            withStateChanges {
                 selectedTracks = selectedTrack.map { [$0] } ?? []
+                if !changingPrimaryInternally {
+                    clearSelectedNotes()
+                    clearTimeSelection()
+                }
                 if scaleProjection.fold { refreshScaleProjection() }
                 publishChange([.selection])
             }
@@ -82,7 +118,12 @@ public final class DocumentSession {
             if editCursor != oldValue { publishChange([.cursor]) }
         }
     }
-    public private(set) var camera: EditorCamera
+    public internal(set) var camera: EditorCamera
+    var grid: RollGrid
+    var gridClockTicks: Tick {
+        TimelineSnapPolicy.clockTicks(division: document.ticksPerBeat,
+                                      extendedClocks: document.state.config.extendedClocks)
+    }
     public var mutedTracks: Set<Int> = [] {
         didSet {
             if mutedTracks != oldValue { publishChange([.mixState]) }
@@ -97,38 +138,63 @@ public final class DocumentSession {
     /// Session-state callback. Document changes invoke it after selection
     /// reconciliation, timeline rebuild, and playback publication.
     public var onChange: ((SessionChange) -> Void)?
-    /// Immutable playback publication for Task 7 to bind.
+    /// A changed origin publishes once; sibling projections do not publish.
+    public var onEditorViewStateChanged: ((EditorViewState) -> Void)?
+
     public var onPlayback: ((PlaybackTimeline) -> Void)?
+    internal var selectionTransitionObservers: [UUID: (SelectionTransition) -> Void] = [:]
     /// Presentation-only camera publication. The document workspace is the sole subscriber.
     public var onCameraChange: ((EditorCamera.Snapshot) -> Void)?
     /// Camera publication with the field-level delta used by the workspace
     /// to choose projection-only drawer updates.
     public var onCameraChangeDetailed: ((EditorCamera.Snapshot, EditorCamera.Change) -> Void)?
 
+    /// Sets presentation-only editor state without document history.
+    /// Returns true only for a changed value and publishes its origin once.
+    @discardableResult
+    public func setEditorViewState(_ state: EditorViewState) -> Bool {
+        guard editorViewState != state else { return false }
+        editorViewState = state
+        onEditorViewStateChanged?(state)
+        return true
+    }
+
+    internal func applyEditorViewStateProjection(_ state: EditorViewState) {
+        editorViewState = state
+    }
+
+    public func addSelectionTransitionObserver(_ observer: @escaping (SelectionTransition) -> Void) -> UUID {
+        let token = UUID()
+        selectionTransitionObservers[token] = observer
+        return token
+    }
+
+    public func removeSelectionTransitionObserver(_ token: UUID) {
+        selectionTransitionObservers.removeValue(forKey: token)
+    }
+
     /// Borrowed from ApplicationSession, which owns the project service.
-    private unowned let service: ProjectService
-    private let inbox = BankResultInbox()
-    private let sampleRate: Double
-    private var previousBankVoices: [BankVoice?]
+    internal unowned let service: ProjectService
+    internal let inbox = BankResultInbox()
+    internal var sharedBank: SharedBankState
+    internal var pendingBankNotification = false
     /// A queued bank write owns the session's bank/history lifecycle, but not
     /// ordinary document mutation admission.
-    private var bankPersistenceInFlight = false
+    internal var bankPersistenceInFlight = false
     /// Nested synchronous state changes accumulate one final publication.
-    private var stateChangeDepth = 0
-    private var pendingDomains: SessionChangeDomains = []
-    private var pendingTrackRemap: TrackRemap?
+    internal var stateChangeDepth = 0
+    internal var pendingDomains: SessionChangeDomains = []
+    internal var pendingTrackRemap: TrackRemap?
+    internal var publishedTrackTime = TrackTimeSelection()
 
     public init(document: SongDocument, service: ProjectService,
                 lease: NativeBankLease, slots: [BankSlotView], dirty: Bool,
                 loadName: String, sampleRate: Double = 48_000) {
         self.document = document
         self.service = service
-        self.bankLease = lease
-        self.bankSlots = slots
-        self.bankDirty = dirty
-        self.bankLoadName = loadName
-        self.previousBankVoices = slots.map(\.voice)
-        self.sampleRate = sampleRate
+        sharedBank = service.bankViews.state(for: AppliedBankEdit(
+            lease: lease, slots: slots, dirty: dirty, loadName: loadName,
+            materializationToken: nil))
         let timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
         self.timeline = timeline
         let limits = GridCameraPolicy.limits(baseFontPx: GridCameraPolicy.seedBaseFontPx)
@@ -138,83 +204,19 @@ public final class DocumentSession {
             viewportWidth: 0,
             rollHeight: 0,
             limits: limits)
+        grid = RollGrid(axis: TimeAxis(map: TimeMap(
+            ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
+            lengthTicks: timeline.lengthTicks,
+            timeSigs: document.timeSignatures.map {
+                TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
+                             denomPow2: $0.denominatorPower)
+            })), clockTicks: TimelineSnapPolicy.clockTicks(
+                division: document.ticksPerBeat,
+                extendedClocks: document.state.config.extendedClocks))
         document.onChange = { [weak self] change in
             self?.handleDocumentChange(change)
         }
-    }
-
-    public func setSelectedNotes(_ ids: [NoteID]) {
-        var membership = Set<NoteID>()
-        let order = ids.filter { $0.isAssigned && membership.insert($0).inserted }
-        guard order != selectedNoteOrder else { return }
-        selectedNoteOrder = order
-        selectedNotes = membership
-        publishChange([.selection])
-    }
-
-    public func selectPrimaryTrack(_ track: Int) {
-        guard (0..<document.engineTracks.usedTrackCount).contains(track),
-              selectedTrack != track else { return }
-        adjustTrackScope(track: track, action: .plain)
-    }
-
-    public func adjustTrackScope(track: Int, action: TrackScopeAction) {
-        guard (0..<document.engineTracks.usedTrackCount).contains(track) else { return }
-        var primary = selectedTrack ?? track
-        var scope = selectedTracks
-        var clearNotes = false
-        switch action {
-        case .plain:
-            primary = track
-            scope = [track]
-            clearNotes = true
-        case .toggle:
-            if scope.contains(track) { scope.remove(track) }
-            else { scope.insert(track) }
-            guard !scope.isEmpty else { return }
-            if !scope.contains(primary) {
-                primary = scope.min()!
-                clearNotes = true
-            }
-        case .range:
-            scope = Set(min(primary, track)...max(primary, track))
-        }
-        withStateChanges {
-            selectedTrack = primary
-            if selectedTracks != scope {
-                selectedTracks = scope
-                publishChange([.selection])
-            }
-            if clearNotes { clearSelectedNotes() }
-        }
-    }
-
-    public func addSelectedNote(_ id: NoteID) {
-        guard id.isAssigned, !selectedNotes.contains(id) else { return }
-        selectedNoteOrder.append(id)
-        selectedNotes.insert(id)
-        publishChange([.selection])
-    }
-
-    public func removeSelectedNote(_ id: NoteID) {
-        guard selectedNotes.contains(id) else { return }
-        selectedNoteOrder.removeAll { $0 == id }
-        selectedNotes.remove(id)
-        publishChange([.selection])
-    }
-
-    public func removeSelectedNotes(_ ids: Set<NoteID>) {
-        guard !selectedNotes.isDisjoint(with: ids) else { return }
-        selectedNoteOrder.removeAll { ids.contains($0) }
-        selectedNotes.subtract(ids)
-        publishChange([.selection])
-    }
-
-    public func clearSelectedNotes() {
-        guard !selectedNoteOrder.isEmpty else { return }
-        selectedNoteOrder.removeAll()
-        selectedNotes.removeAll()
-        publishChange([.selection])
+        sharedBank.attach(self)
     }
 
     /// Coalesces synchronous session mutations into one publication. Nested
@@ -282,7 +284,7 @@ public final class DocumentSession {
         publishChange([.scale])
     }
 
-    private func refreshScaleProjection() {
+    internal func refreshScaleProjection() {
         let notes = selectedTrack.map { document.notes(in: $0) } ?? []
         let rows = scaleProjection.projection(notes: notes)
         guard rows != camera.projection else { return }
@@ -300,24 +302,39 @@ public final class DocumentSession {
         }
     }
 
+    /// Composes a session from an already-opened song and its decoded MIDI,
+    /// for the startup prefetch. The throwing open below funnels through this;
+    /// decode failure still throws before anything is adopted.
+    public static func open(
+        loaded: LoadedSong, file: MidiFile, service: ProjectService,
+        sampleRate: Double
+    ) -> DocumentSession {
+        let document = SongDocument(
+            file: file, config: loaded.config,
+            source: loaded.source, trackBudget: loaded.trackBudget)
+        let session = DocumentSession(
+            document: document, service: service, lease: loaded.bank,
+            slots: loaded.bankSlots, dirty: loaded.bankDirty,
+            loadName: loaded.bankLoadName, sampleRate: sampleRate)
+        session.lastKnownMidiBytes = loaded.midiBytes
+        return session
+    }
+
     /// Opens a song through the service, adopts it as the document (tempo
     /// metas stripped, authoritative tempo held by state), and composes the
     /// session. MIDI decode failure throws; nothing half-adopted is kept.
     public static func open(service: ProjectService, label: String,
                             sampleRate: Double = 48_000) async throws -> DocumentSession {
         let loaded = try await service.openSong(label: label)
-        let file = try MidiFile.decode(loaded.midiBytes)
-        let document = SongDocument(file: file, config: loaded.config,
-                                    source: loaded.source, trackBudget: loaded.trackBudget)
-        return DocumentSession(document: document, service: service, lease: loaded.bank,
-                               slots: loaded.bankSlots, dirty: loaded.bankDirty,
-                               loadName: loaded.bankLoadName, sampleRate: sampleRate)
+        let midiBytes = loaded.midiBytes
+        let file = try await Task { @concurrent in try MidiFile.decode(midiBytes) }.value
+        return open(loaded: loaded, file: file, service: service, sampleRate: sampleRate)
     }
 
-    /// Ordered save (bank stage when the bank is dirty, then MIDI, then
-    /// flags). A clean session performs no work and emits no receipt. Failures
-    /// throw and never mark clean.
-    public func save() async throws {
+    /// Writes the song MIDI unless it changed on disk since the last load or
+    /// save, in which case nothing is written and SaveConflictError throws so
+    /// the caller can prompt. Bank-only voicegroup saves bypass this session.
+    public func save(forceOverwrite: Bool = false) async throws {
         try requireOpen()
         guard !bankPersistenceInFlight, !document.history.bankTransitionInFlight else {
             throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
@@ -326,17 +343,47 @@ public final class DocumentSession {
         let bank = bankDirty ? bankLease : nil
         if bank != nil { bankPersistenceInFlight = true }
         defer {
-            if bank != nil { bankPersistenceInFlight = false }
+            if bank != nil {
+                bankPersistenceInFlight = false
+                flushPendingBankNotification()
+            }
         }
         let snapshot = try document.captureSave()
+        if !forceOverwrite { try checkMidiConflict(against: snapshot) }
         let receipt = try await service.save(snapshot, bank: bank)
         document.didSave(snapshot)
+        lastKnownMidiBytes = snapshot.bytes
         var domains: SessionChangeDomains = [.dirty, .history]
         if let refreshed = receipt.bank {
-            adoptBank(refreshed, remembersPrevious: false)
+            adoptBank(refreshed)
             domains.insert(.bank)
         }
+        if domains.contains(.bank) { pendingBankNotification = false }
         publishChange(domains)
+    }
+
+    /// Compares the MIDI file against the last load or save. Readable bytes
+    /// that differ prompt, unless the write would land identical bytes
+    /// anyway. A path that exists but cannot be read is a save failure, not
+    /// a conflict: it falls through so the bank stage still runs and the
+    /// write stage reports the real error. Outright deletion is the one
+    /// unreadable case that prompts — the write would succeed by recreating
+    /// the file, so the external change would otherwise pass silently.
+    private func checkMidiConflict(against snapshot: SaveSnapshot) throws {
+        guard let known = lastKnownMidiBytes else { return }
+        guard
+            let current = try? Data(
+                contentsOf: URL(
+                    fileURLWithPath: document.source.midiPath))
+        else {
+            if !FileManager.default.fileExists(atPath: document.source.midiPath) {
+                throw SaveConflictError(label: document.source.label)
+            }
+            return
+        }
+        if Array(current) != known && Array(current) != snapshot.bytes {
+            throw SaveConflictError(label: document.source.label)
+        }
     }
 
     /// Confirmed user bank edit: applies through the service, then records the
@@ -348,32 +395,34 @@ public final class DocumentSession {
         guard !bankPersistenceInFlight else {
             throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
         }
-        if bankSlots.indices.contains(slot),
-           bankSlots[slot].voice != expected,
-           previousBankVoices.indices.contains(slot),
-           previousBankVoices[slot] == expected {
-            throw ProjectServiceError.operationFailed(
-                "A bank transition is already in progress.")
-        }
         if !bankDirty { document.history.sealBankMerge() }
         guard let transition = document.history.beginBankTransition() else {
             throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
         }
+        publishChange([.history])
         var ownsTransition = true
         defer {
-            if ownsTransition { document.history.endBankTransition(transition) }
+            if ownsTransition {
+                document.history.endBankTransition(transition)
+                publishChange([.history])
+            }
+            flushPendingBankNotification()
         }
         let result = try await service.bankApply(lease: bankLease, slot: slot,
-                                                 value: value, expected: expected)
-        adoptBank(result)
+                                                 value: value, expected: expected,
+                                                 publishResult: false)
         let materializationToken = expected == nil ? result.materializationToken : nil
-        document.history.finishBankTransition(transition, recording: ServiceBankAction(
-            service: service, slot: slot, before: expected, after: value,
-            token: materializationToken,
-            materializedBlank: materializationToken != nil,
-            current: result, inbox: inbox))
-        ownsTransition = false
-        publishChange([.bank, .dirty, .history])
+        withStateChanges {
+            document.history.finishBankTransition(transition, recording: ServiceBankAction(
+                service: service, slot: slot, before: expected, after: value,
+                token: materializationToken,
+                materializedBlank: materializationToken != nil,
+                current: result, inbox: inbox))
+            ownsTransition = false
+            adoptBank(result)
+            pendingBankNotification = false
+            publishChange([.bank, .dirty, .history])
+        }
         return result
     }
 
@@ -386,26 +435,28 @@ public final class DocumentSession {
         return try await service.mintSynth(descriptor)
     }
 
-    /// Retargets the song's -G argument only after its replacement bank loads.
-    /// A failed load leaves the document, lease and history untouched.
+    /// Records the requested -G edit even when its bank cannot load; the
+    /// previous bank remains bound until a replacement succeeds.
     public func selectVoicegroup(_ arg: String) async throws {
         try requireOpen()
         guard !arg.isEmpty, arg != document.state.config.voicegroupArgument,
               !bankPersistenceInFlight, !document.history.bankTransitionInFlight else { return }
         bankPersistenceInFlight = true
-        defer { bankPersistenceInFlight = false }
-        let previous = document.state.config.voicegroupArgument
-        let bank = try await service.loadBank(voicegroupArg: arg)
-        try requireOpen()
-        guard document.state.config.voicegroupArgument == previous else {
-            throw ProjectServiceError.operationFailed("Voicegroup changed during load.")
+        defer {
+            bankPersistenceInFlight = false
+            flushPendingBankNotification()
         }
         withStateChanges {
             var config = document.state.config
             config.voicegroupArgument = arg
             document.setConfig(config)
-            guard document.state.config.voicegroupArgument == arg else { return }
+            publishChange([.dirty, .history])
+        }
+        let bank = try await service.loadBank(voicegroupArg: arg)
+        try requireOpen()
+        withStateChanges {
             adoptBank(bank)
+            pendingBankNotification = false
             publishChange([.bank, .dirty, .history])
         }
     }
@@ -420,12 +471,13 @@ public final class DocumentSession {
         try await stepHistory(.redo)
     }
 
-    /// Rebind before crossing an undoable -G edit. An unavailable target
-    /// cannot leave the history cursor on a config whose bank never loaded.
+    /// Crosses a -G history edit even if its replacement bank fails to load.
+    /// The last valid lease remains bound while the requested cfg stays undoable.
     private func stepHistory(_ direction: BankHistoryDirection) async throws -> Bool {
         try requireOpen()
         guard !bankPersistenceInFlight else { return false }
         var preparedBank: AppliedBankEdit?
+        var loadFailure: Error?
         if let arg = document.history.voicegroupArgumentAfter(direction) {
             guard let token = document.history.beginBankTransition() else { return false }
             bankPersistenceInFlight = true
@@ -433,13 +485,15 @@ public final class DocumentSession {
                 preparedBank = try await service.loadBank(voicegroupArg: arg)
                 try requireOpen()
             } catch {
-                document.history.endBankTransition(token)
-                bankPersistenceInFlight = false
-                throw error
+                loadFailure = error
             }
             document.history.endBankTransition(token)
         }
-        defer { bankPersistenceInFlight = false }
+        bankPersistenceInFlight = true
+        defer {
+            bankPersistenceInFlight = false
+            flushPendingBankNotification()
+        }
         let previousArg = document.state.config.voicegroupArgument
         let changed: Bool
         switch direction {
@@ -457,8 +511,10 @@ public final class DocumentSession {
                 adoptBank(result)
                 domains.insert(.bank)
             }
+            if domains.contains(.bank) { pendingBankNotification = false }
             publishChange(domains)
         }
+        if let loadFailure { throw loadFailure }
         return changed
     }
 
@@ -469,143 +525,16 @@ public final class DocumentSession {
     public func close() async -> Bool {
         guard !bankPersistenceInFlight, !document.history.bankTransitionInFlight else { return false }
         onChange = nil
+        onEditorViewStateChanged = nil
+        selectionTransitionObservers.removeAll()
         onPlayback = nil
         onCameraChange = nil
         onCameraChangeDetailed = nil
         document.onChange = nil
         isClosed = true
+        sharedBank.detach(self)
         return true
     }
 
-    // MARK: - Internals
 
-    private func requireOpen() throws {
-        if isClosed {
-            throw ProjectServiceError.serviceClosed
-        }
-    }
-
-    private func adoptBank(_ result: AppliedBankEdit, remembersPrevious: Bool = true) {
-        if remembersPrevious {
-            previousBankVoices = bankSlots.map(\.voice)
-        }
-        bankLease = result.lease
-        bankSlots = result.slots
-        bankDirty = result.dirty
-        bankLoadName = result.loadName
-    }
-
-    private func publishChange(_ domains: SessionChangeDomains,
-                               trackRemap: TrackRemap? = nil) {
-        guard !domains.isEmpty else { return }
-        if stateChangeDepth > 0 {
-            pendingDomains.formUnion(domains)
-            if let trackRemap {
-                pendingTrackRemap = pendingTrackRemap.map {
-                    composeTrackRemaps($0, followedBy: trackRemap)
-                } ?? trackRemap
-            }
-            return
-        }
-        onChange?(SessionChange(revision: document.revision,
-                                trackRemap: trackRemap,
-                                domains: domains))
-    }
-
-    private func flushStateChanges() {
-        guard !pendingDomains.isEmpty else { return }
-        let domains = pendingDomains
-        let trackRemap = pendingTrackRemap
-        pendingDomains = []
-        pendingTrackRemap = nil
-        onChange?(SessionChange(revision: document.revision,
-                                trackRemap: trackRemap,
-                                domains: domains))
-    }
-
-    /// A batch may contain successive structural document mutations. Compose
-    /// their old-to-new mappings instead of publishing an ambiguous last remap.
-    private func composeTrackRemaps(_ first: TrackRemap,
-                                    followedBy second: TrackRemap) -> TrackRemap {
-        let chunks = first.chunkMap.map { intermediate -> Int? in
-            guard let intermediate, second.chunkMap.indices.contains(intermediate) else {
-                return nil
-            }
-            return second.chunkMap[intermediate]
-        }
-        let tracks = first.engineTrackMap.map { intermediate -> Int? in
-            guard let intermediate,
-                  second.engineTrackMap.indices.contains(intermediate) else {
-                return nil
-            }
-            return second.engineTrackMap[intermediate]
-        }
-        return TrackRemap(chunkMap: chunks, engineTrackMap: tracks,
-                          newChunkCount: second.newChunkCount,
-                          newEngineTrackCount: second.newEngineTrackCount)
-    }
-
-    /// Coordinates selection reconciliation before presentation/playback: dead
-    /// note references are pruned and the track scope follows the remap, then
-    /// the timeline is rebuilt via the state factory, playback is published,
-    /// and the presenter is notified.
-    private func handleDocumentChange(_ change: DocumentChange) {
-        withStateChanges {
-            let priorScope = selectedTracks
-            let priorPrimary = selectedTrack
-            let priorNotes = selectedNoteOrder
-            let survivingSelection = selectedNoteOrder.filter { document.note($0) != nil }
-            if survivingSelection.count != selectedNoteOrder.count {
-                selectedNoteOrder = survivingSelection
-                selectedNotes = Set(survivingSelection)
-                publishChange([.selection])
-            }
-            if let remap = change.trackRemap {
-                // Session playback masks follow engine-track identity through edits
-                // and the inverse remaps history publishes on undo.
-                mutedTracks = Set(mutedTracks.compactMap { track in
-                    remap.engineTrackMap.indices.contains(track)
-                        ? remap.engineTrackMap[track] : nil
-                })
-                soloedTracks = Set(soloedTracks.compactMap { track in
-                    remap.engineTrackMap.indices.contains(track)
-                        ? remap.engineTrackMap[track] : nil
-                })
-            }
-            if let remap = change.trackRemap, let track = selectedTrack {
-                if track < remap.engineTrackMap.count, let mapped = remap.engineTrackMap[track] {
-                    selectedTrack = mapped
-                } else {
-                    selectedTrack = nil
-                }
-            }
-            if let track = selectedTrack,
-               !(0..<document.engineTracks.usedTrackCount).contains(track) {
-                selectedTrack = nil
-            }
-            if let remap = change.trackRemap {
-                if selectedTrack == nil, let priorPrimary,
-                   document.engineTracks.usedTrackCount > 0 {
-                    selectedTrack = min(priorPrimary, document.engineTracks.usedTrackCount - 1)
-                }
-                selectedTracks = Set(priorScope.compactMap { track in
-                    remap.engineTrackMap.indices.contains(track)
-                        ? remap.engineTrackMap[track] : nil
-                })
-                if let selectedTrack { selectedTracks.insert(selectedTrack) }
-            }
-            if scaleProjection.fold { refreshScaleProjection() }
-            timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
-            camera.updateTimeDomain(
-                ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
-                lengthTicks: UInt64(timeline.lengthTicks))
-            onPlayback?(timeline)
-            var domains: SessionChangeDomains = [.document, .dirty, .history]
-            if selectedNoteOrder != priorNotes || selectedTrack != priorPrimary
-                || selectedTracks != priorScope {
-                domains.insert(.selection)
-            }
-            publishChange(domains, trackRemap: change.trackRemap)
-        }
-    }
 }

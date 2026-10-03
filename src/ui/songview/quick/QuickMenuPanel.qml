@@ -47,7 +47,8 @@ Item {
     readonly property color pressedTextColor: appearance?.pressedText ?? hoverTextColor
     readonly property color disabledTextColor: appearance?.disabledText ?? textColor
     readonly property color separatorColor: appearance?.separator ?? "transparent"
-    readonly property font menuFont: appearance?.font ?? Application.font
+    readonly property font menuFont: appearance?.font ?? (panel.Window.window
+                                                           ? panel.Window.window.font : Qt.font({}))
 
     // Current model-index lookup intentionally excludes ListView's pooled
     // delegates, which can outlive a model reset for reuse.

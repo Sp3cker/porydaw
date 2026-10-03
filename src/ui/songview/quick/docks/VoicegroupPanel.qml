@@ -3,26 +3,23 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import QtQuick.Effects
 import Porydaw.Ui
+import Porydaw.Icons
 
 ColumnLayout {
     id: panel
     objectName: "voicegroupPanel"
     required property QtObject applicationSession
     required property QtObject controller
-    readonly property var grid: applicationSession.songOpen
-                                ? applicationSession.gridPresenter() : null
     readonly property QtObject colors: applicationSession.palette
-    readonly property real baseFontPx: grid ? grid.baseFontPx : 12
+    readonly property real baseFontPx: applicationSession.baseFontPx
     readonly property int rowHeight: Math.round(baseFontPx * 1.33)
     readonly property int headerHeight: Math.round(baseFontPx * 1.83)
     readonly property int typeWidth: Math.round(baseFontPx * 3.75)
     readonly property int adsrWidth: Math.round(baseFontPx * 8.33)
-    readonly property var iconNames: ["waveform.svg", "waveform.svg",
-                                      "wave-square.svg", "wave-triangle.svg",
-                                      "wave-sine.svg", "waveform-path.svg",
-                                      "piano-keyboard.svg", "drum.svg"]
+    // Indexed by VoiceListGlyph; the reverse sample reuses the sample glyph rotated.
+    readonly property var typeIcons: [Icons.sample, Icons.sample, Icons.square1, Icons.square2,
+                                      Icons.wave, Icons.noise, Icons.keysplit, Icons.drumkit]
     spacing: 0
 
     RowLayout {
@@ -34,7 +31,6 @@ ColumnLayout {
         Label {
             text: qsTr("voicegroup_")
             Layout.preferredWidth: Math.round(panel.baseFontPx * 6.08)
-            font.pixelSize: panel.baseFontPx
             color: panel.colors.primaryText
         }
         ComboBox {
@@ -46,8 +42,13 @@ ColumnLayout {
             enabled: panel.controller.selectorEnabled
             model: panel.controller.argChoices
             textRole: "name"
-            font.pixelSize: panel.baseFontPx
             editText: panel.controller.selectorText
+            Connections {
+                target: panel.controller
+                function onSelectorTextChanged() {
+                    selector.editText = panel.controller.selectorText
+                }
+            }
             onActivated: {
                 panel.controller.selectorText = editText
                 panel.controller.commitVoicegroupSelection()
@@ -86,21 +87,21 @@ ColumnLayout {
                 spacing: 0
                 Label {
                     text: qsTr("Voice")
+                    objectName: "voicegroupVoiceHeader"
                     Layout.fillWidth: true
-                    Layout.leftMargin: Math.round(panel.baseFontPx * 0.25)
-                    font.pixelSize: panel.baseFontPx
+                    Layout.leftMargin: panel.applicationSession.layoutSpaces.one
                     color: panel.colors.primaryText
                 }
                 Label {
                     text: qsTr("Type")
+                    objectName: "voicegroupTypeHeader"
                     Layout.preferredWidth: panel.typeWidth
-                    font.pixelSize: panel.baseFontPx
                     color: panel.colors.primaryText
                 }
                 Label {
                     text: qsTr("ADSR")
+                    objectName: "voicegroupAdsrHeader"
                     Layout.preferredWidth: panel.adsrWidth
-                    font.pixelSize: panel.baseFontPx
                     color: panel.colors.primaryText
                 }
             }
@@ -125,6 +126,8 @@ ColumnLayout {
             clip: true
             model: panel.controller.rows
             boundsBehavior: Flickable.StopAtBounds
+            // -1 stops the unused highlight animating ~470 ms of frames after each bank load.
+            currentIndex: -1
             ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
             delegate: Rectangle {
                 id: row
@@ -146,10 +149,9 @@ ColumnLayout {
                     spacing: 0
                     Label {
                         text: row.title
+                        objectName: "voicegroupTitle_" + row.slot
                         Layout.fillWidth: true
-                        Layout.leftMargin: Math.round(panel.baseFontPx * 0.25)
-                        font.pixelSize: panel.baseFontPx
-                        font.bold: row.used
+                        Layout.leftMargin: panel.applicationSession.layoutSpaces.one
                         color: panel.controller.currentSlot === row.slot ? panel.colors.selectionText
                                                                        : panel.colors.primaryText
                         elide: Text.ElideRight
@@ -158,6 +160,8 @@ ColumnLayout {
                         objectName: "voicegroupTypeIcon_" + row.slot
                         Layout.preferredWidth: panel.typeWidth
                         Layout.fillHeight: true
+                        Accessible.role: Accessible.StaticText
+                        Accessible.name: row.typeName
                         HoverHandler { id: iconHover }
                         Rectangle {
                             anchors.centerIn: parent
@@ -167,25 +171,16 @@ ColumnLayout {
                             color: Qt.tint(panel.colors.windowBackground, "#59666666")
                             visible: row.altChip
                         }
-                        Image {
-                            id: sourceGlyph
+                        AppIcon {
                             anchors.centerIn: parent
                             width: panel.baseFontPx * 1.25
                             height: width
-                            sourceSize: Qt.size(width, height)
-                            source: row.typeIconKey < 0 ? ""
-                                    : "qrc:/porydaw/voiceicons/"
-                                      + panel.iconNames[Math.floor(row.typeIconKey / 2)]
+                            icon: row.typeIconKey < 0 ? ({})
+                                  : panel.typeIcons[Math.floor(row.typeIconKey / 2)]
                             rotation: Math.floor(row.typeIconKey / 2) === 1 ? 180 : 0
-                            visible: false
-                        }
-                        MultiEffect {
-                            anchors.fill: sourceGlyph
-                            source: sourceGlyph
-                            visible: row.typeIconKey >= 0
-                            colorization: 1
-                            colorizationColor: row.altChip ? panel.colors.windowBackground
-                                                           : panel.colors.primaryText
+                            color: row.altChip ? panel.colors.windowBackground
+                                   : panel.controller.currentSlot === row.slot
+                                     ? panel.colors.selectionText : panel.colors.primaryText
                         }
                         ToolTip.text: row.typeName
                         ToolTip.visible: iconHover.hovered && row.typeName.length > 0
@@ -194,8 +189,6 @@ ColumnLayout {
                         objectName: "voicegroupAdsr_" + row.slot
                         Layout.preferredWidth: panel.adsrWidth
                         text: row.adsr
-                        font.pixelSize: panel.baseFontPx
-                        font.bold: row.used
                         color: panel.controller.currentSlot === row.slot ? panel.colors.selectionText
                                                                        : panel.colors.primaryText
                         elide: Text.ElideRight
@@ -245,7 +238,23 @@ ColumnLayout {
             height: editorScroll.contentHeight
             controller: panel.controller
             colors: panel.colors
+            applicationSession: panel.applicationSession
+        }
+    }
+
+    Loader {
+        id: newVoicegroupDialog
+        objectName: "voicegroupNewDialogLoader"
+        height: 0
+        active: panel.controller.newVoicegroupPrompt
+        sourceComponent: VoicegroupNewDialog {
+            controller: panel.controller
             baseFontPx: panel.baseFontPx
+            layoutSpaces: panel.applicationSession.layoutSpaces
+        }
+        onLoaded: {
+            if (status === Loader.Ready)
+                item.open()
         }
     }
 }

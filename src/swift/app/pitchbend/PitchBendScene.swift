@@ -49,9 +49,9 @@ public final class PitchBendVertex: QVariantGettable {
 @QtBridgeable
 public final class PitchBendLane {
     @QtIgnored public var kernel: PitchBendKernel
-    @QtIgnored private let palette: GridPalette
-    @QtIgnored private let track: Int
-    @QtTracked public var canvasRect: [String: QVariantSettable] = [:]
+    private let palette: GridPalette
+    private let track: Int
+    public var canvasRect: [String: QVariantSettable] = [:]
     @QtTracked public var liveValueText = ""
     @QtTracked public var upperValueText = ""
     @QtTracked public var lowerValueText = ""
@@ -64,10 +64,10 @@ public final class PitchBendLane {
     public var gridLines: QListModel<SceneRect> = QListModel()
     public var curveLines: QListModel<PitchBendLine> = QListModel()
     public var vertices: QListModel<PitchBendVertex> = QListModel()
-    @QtIgnored public var onCommit: (() -> Void)?
+    @QtIgnored public var onCommit: ((Bool) -> Void)?
     @QtIgnored public var onWheelSteps: ((Int) -> Void)?
     @QtIgnored public var bendRange = 2
-    @QtIgnored private var gestureStartingPoints: [Int: Int]?
+    private var gestureStartingPoints: [Int: Int]?
 
     public init(kernel: PitchBendKernel, palette: GridPalette, track: Int) {
         self.kernel = kernel
@@ -98,11 +98,17 @@ public final class PitchBendLane {
     public func release(x: Double, y: Double, modifiers: Int) {
         guard kernel.hasGesture else { return }
         _ = kernel.update(x: x, y: y, fine: modifiers & 0x0800_0000 != 0)
+        settleGesture()
+    }
+
+    public func settleGesture() {
+        guard kernel.hasGesture else { return }
+        let sampledStroke = kernel.isSampledStroke
         kernel.finish()
         let changed = gestureStartingPoints != kernel.points
         gestureStartingPoints = nil
         rebuild()
-        if changed { onCommit?() }
+        if changed { onCommit?(sampledStroke) }
     }
 
     public func cancelGesture() {
@@ -120,7 +126,7 @@ public final class PitchBendLane {
     public func removeSelectedVertex() {
         guard kernel.removeSelectedVertex() else { return }
         rebuild()
-        onCommit?()
+        onCommit?(false)
     }
 
     public func hitVertex(x: Double, y: Double) -> Int {
@@ -137,11 +143,9 @@ public final class PitchBendLane {
         focusColor = palette.focusOutline
         let gridColor = palette.gridLine
         var rules: [SceneRect] = []
-        var tick = (k.startTick / k.snapTicks + 1) * k.snapTicks
-        while tick < k.endTick {
+        for tick in k.gridTicks {
             rules.append(SceneRect(x: k.x(at: tick), y: g.canvasY, width: g.hairline,
                                    height: g.canvasHeight, fillColor: gridColor))
-            tick += k.snapTicks
         }
         let zero = k.y(at: 0)
         var x = g.canvasX
@@ -151,7 +155,8 @@ public final class PitchBendLane {
                 fillColor: palette.separator))
             x += 6 * g.hairline
         }
-        syncModel(gridLines, rules, matches: { $0.matches($1) })
+        let ruleMatch: (SceneRect, SceneRect) -> Bool = { $0.matches($1) }
+        syncModel(gridLines, rules, matches: ruleMatch)
 
         let ordered = k.orderedPoints
         var strokes: [PitchBendLine] = []
@@ -178,27 +183,31 @@ public final class PitchBendLane {
                 x1: k.x(at: last.tick), y1: k.y(at: last.value),
                 width: g.hairline, color: palette.editCursor))
         }
-        syncModel(curveLines, strokes, matches: {
+        let lineMatch: (PitchBendLine, PitchBendLine) -> Bool = {
             $0.x0 == $1.x0 && $0.y0 == $1.y0 && $0.x1 == $1.x1 && $0.y1 == $1.y1
                 && $0.strokeWidth == $1.strokeWidth && $0.strokeColor == $1.strokeColor
-        })
-        var dots: [PitchBendVertex] = ordered.map { point in
+        }
+        syncModel(curveLines, strokes, matches: lineMatch)
+        var dots: [PitchBendVertex] = []
+        dots.reserveCapacity(ordered.count + 1)
+        for point in ordered {
             let selected = k.selectedTick == point.tick
             let endpoint = point.tick == k.startTick || point.tick == k.endTick
-            return PitchBendVertex(x: k.x(at: point.tick), y: k.y(at: point.value),
+            dots.append(PitchBendVertex(x: k.x(at: point.tick), y: k.y(at: point.value),
                 radius: selected ? g.selectedRingRadius : g.nodePaintRadius,
                 fill: endpoint && !selected ? palette.secondaryText : curveColor,
                 ring: selected ? palette.focusOutline : "transparent",
-                ringWidth: selected ? g.hairline * 1.5 : 0)
+                ringWidth: selected ? g.hairline * 1.5 : 0))
         }
         dots.append(PitchBendVertex(x: k.x(at: k.keyboardTick), y: k.y(at: k.liveValue),
                                      radius: g.nodePaintRadius, fill: "transparent",
                                      ring: palette.editCursor, ringWidth: g.hairline))
-        syncModel(vertices, dots, matches: {
+        let vertexMatch: (PitchBendVertex, PitchBendVertex) -> Bool = {
             $0.x == $1.x && $0.y == $1.y && $0.radius == $1.radius
                 && $0.fillColor == $1.fillColor && $0.ringColor == $1.ringColor
                 && $0.ringWidth == $1.ringWidth
-        })
+        }
+        syncModel(vertices, dots, matches: vertexMatch)
         if k.lane == .modulation {
             liveValueText = String(k.liveValue)
             upperValueText = "127"

@@ -46,7 +46,7 @@ public struct AutomationPlotGeometry: Equatable, Sendable {
         pointHitRadius = fontPx(base, 7.0 / 12.0)
         neutralSnapRadius = fontPx(base, 2.0 / 3.0)
         nodeDragActivationDistance = fontPx(base, 5.0 / 12.0)
-        pointDetailThreshold = fontPx(base, 2.0)
+        pointDetailThreshold = fontPx(base, 1.0 / 2.0)
         // Endpoint centers sit at the painted outer edge, marker stroke included.
         valuePlotPadding = (max(nodePaintRadius + nodeOutlineDipWidth,
                                 selectedRingRadius + selectedRingDipWidth * 0.5)).rounded()
@@ -70,42 +70,22 @@ public struct AutomationPlotBounds: Equatable, Sendable {
 /// The snapping lattice: the shared visible grid for a coarse pointer position,
 /// and the shared document clock lattice for a fine (Alt) one.
 public struct AutomationSnapPolicy {
-    private let metrics: GridMetrics
+    private let grid: RollGrid
     public let clockTicks: Tick
 
-    init(baseFontPx: Double, devicePixelRatio: Double, timeAxis: TimeAxis,
-         clockTicks: Tick) {
-        metrics = GridMetrics(baseFontPx: baseFontPx, dpr: devicePixelRatio, width: 0, height: 0,
-                              timeAxis: timeAxis)
+    init(grid: RollGrid, clockTicks: Tick) {
+        self.grid = grid
         self.clockTicks = max(1, clockTicks)
-    }
-
-    @MainActor
-    public init(document: SongDocument, timeline: PlaybackTimeline, baseFontPx: Double,
-                devicePixelRatio: Double) {
-        self.init(baseFontPx: baseFontPx, devicePixelRatio: devicePixelRatio,
-                  timeAxis: TimeAxis(map: TimeMap(
-                      ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
-                      lengthTicks: timeline.lengthTicks,
-                      loopStartTick: timeline.loopStartTick,
-                      loopEndTick: timeline.loopEndTick,
-                      timeSigs: document.timeSignatures.map {
-                          TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
-                                       denomPow2: $0.denominatorPower)
-                      })),
-                  clockTicks: TimelineSnapPolicy.clockTicks(
-                      division: document.ticksPerBeat,
-                      extendedClocks: document.state.config.extendedClocks))
     }
 
     public func snap(_ tick: Double, fine: Bool, camera: EditorCamera) -> Tick {
         fine ? TimelineSnapPolicy.fineSnap(tick, clockTicks: clockTicks)
-             : Tick(metrics.snapTick(tick, camera: camera))
+             : grid.snapTick(tick, camera: camera)
     }
 
     public func snapDown(_ tick: Double, fine: Bool, camera: EditorCamera) -> Tick {
         let position = max(0, tick)
-        guard fine else { return Tick(metrics.snapTickDown(position, camera: camera)) }
+        guard fine else { return grid.snapTickDown(position, camera: camera) }
         let limit = Double(TimeDefaults.maxTick)
         let clamped = min(position, limit)
         return Tick(min(limit, (clamped / Double(clockTicks)).rounded(.down) * Double(clockTicks)))
@@ -118,8 +98,7 @@ public struct AutomationSnapPolicy {
             let next = (UInt64(tick) / UInt64(clockTicks) + 1) * UInt64(clockTicks)
             return min(limit, Tick(min(next, UInt64(TimeDefaults.maxTick))))
         }
-        let candidate = metrics.snapTickUp(Double(tick) + 1, camera: camera)
-        return min(limit, Tick(max(Int(tick) + 1, candidate)))
+        return min(limit, grid.nextSnapTickAfter(tick, camera: camera))
     }
 }
 
@@ -159,12 +138,10 @@ public struct AutomationProjection {
 
     public func contentX(_ tick: Tick) -> Double { camera.contentX(tick: Double(tick)) }
 
-    /// The display x of a tick: the camera's projection, snapped to the physical
-    /// pixel grid exactly as the roll and every other page snap theirs.
+    /// The display x of a tick, delegated to `viewX` so the lane snaps to the
+    /// physical pixel grid exactly as the roll does.
     public func x(_ tick: Tick) -> Double {
-        let value = camera.contentX(tick: Double(tick))
-        let scale = bounds.devicePixelRatio
-        return scale > 0 ? (value * scale).rounded() / scale : value
+        camera.viewX(tick: Double(tick), dpr: bounds.devicePixelRatio)
     }
 
     /// The raw (unsnapped) tick under an x, clamped to `[0, songEnd]`.
@@ -287,24 +264,9 @@ public struct AutomationProjection {
                       projectedNode: true)
         }
 
-        // The step/ramp curve: each point holds (or ramps) into the next, the
-        // last one runs to the song's end, and the lead-in opens the lane.
-        var segments: [AutomationCurveSegment] = []
-        if let leadIn, let first = points.first, leadIn.value != first.value {
-            segments.append(AutomationCurveSegment(
-                kind: .step, tickBegin: 0, tickEnd: first.tick, fromValue: leadIn.value,
-                toValue: leadIn.value, isLeadIn: true, isSelected: false))
-        }
-        for (index, point) in points.enumerated() {
-            let next = index + 1 < points.count ? points[index + 1] : nil
-            let kind: AutomationCurveSegment.Kind =
-                metadata.interpolation == .ramp ? .ramp : .step
-            segments.append(AutomationCurveSegment(
-                kind: kind, tickBegin: point.tick, tickEnd: next?.tick,
-                fromValue: point.value,
-                toValue: kind == .ramp ? (next?.value ?? point.value) : point.value,
-                isLeadIn: false, isSelected: point.selected))
-        }
+        let segments = AutomationCurveSegment.curve(
+            through: points, leadIn: leadIn?.value, selection: range,
+            interpolation: metadata.interpolation)
 
         return AutomationLaneProjection(
             parameter: snapshot.parameter, metadata: metadata, revision: snapshot.revision,
@@ -331,5 +293,43 @@ public struct AutomationProjection {
                                                y: y(neutral, metadata: metadata)))
         }
         return labels
+    }
+}
+
+/// A tick-ordered lane value a curve runs through.
+protocol AutomationCurvePoint {
+    var tick: Tick { get }
+    var value: Int { get }
+}
+
+extension AutomationLanePoint: AutomationCurvePoint {}
+extension AutomationProjectedPoint: AutomationCurvePoint {}
+
+extension AutomationCurveSegment {
+    /// The step/ramp curve: each point holds (or ramps) into the next, the last
+    /// runs to the song's end, and a lead-in differing from the first point opens it.
+    static func curve<Point: AutomationCurvePoint>(
+        through points: [Point], leadIn: Int?, selection: TimeRange?,
+        interpolation: AutomationInterpolation
+    ) -> [AutomationCurveSegment] {
+        var segments: [AutomationCurveSegment] = []
+        segments.reserveCapacity(points.count + 1)
+        if let leadIn, let first = points.first, leadIn != first.value {
+            segments.append(
+                AutomationCurveSegment(
+                    kind: .step, tickBegin: 0, tickEnd: first.tick, fromValue: leadIn,
+                    toValue: leadIn, isLeadIn: true, isSelected: false))
+        }
+        let kind: Kind = interpolation == .ramp ? .ramp : .step
+        for (index, point) in points.enumerated() {
+            let next = index + 1 < points.count ? points[index + 1] : nil
+            segments.append(
+                AutomationCurveSegment(
+                    kind: kind, tickBegin: point.tick, tickEnd: next?.tick,
+                    fromValue: point.value,
+                    toValue: kind == .ramp ? (next?.value ?? point.value) : point.value,
+                    isLeadIn: false, isSelected: selection?.contains(point.tick) ?? false))
+        }
+        return segments
     }
 }

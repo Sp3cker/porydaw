@@ -1,105 +1,7 @@
 import QtQuick
 import QtTest
-import PorydawApp
-import RollQmlCheck 1.0
-import Porydaw.Ui
 
-TestCase {
-    id: testCase
-    name: "TimelineScrollbar"
-    when: windowShown
-    width: 960
-    height: 640
-    visible: true
-
-    property var overlay: null
-    property string openFailure: ""
-
-    RollQmlBootstrap {
-        id: bootstrap
-        ApplicationSession { id: session }
-    }
-    Connections {
-        target: session
-        function onOpenFailed(message) { testCase.openFailure = message }
-        function onOperationFailed(message) { testCase.openFailure = message }
-    }
-    Component {
-        id: overlayComponent
-        SwiftRollOverlay { property var appSession: session }
-    }
-
-    function waitForNative(predicate, timeoutMs) {
-        var deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
-    }
-
-    function surface() { return overlay ? findChild(overlay, "swiftRollOverlay") : null }
-    function grid() { return surface().gridModel }
-    function bar(vertical) {
-        return findChild(surface(), vertical ? "timelineRollScrollBar"
-                                             : "timelineHorizontalScrollBar")
-    }
-    function cameraValue(vertical) { return vertical ? grid().cameraScrollY : grid().cameraScrollX }
-    function cameraMaximum(vertical) {
-        return vertical ? grid().cameraMaxVScroll : grid().cameraMaxHScroll
-    }
-    function midpoint(bar, position) {
-        return bar.orientation === Qt.Vertical
-                ? { x: bar.width / 2, y: position }
-                : { x: position, y: bar.height / 2 }
-    }
-    function closeTo(actual, expected) { return Math.abs(actual - expected) < 0.05 }
-
-    function initTestCase() {
-        Qt.application.name = "porydaw"
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        verify(bootstrap.captureSettings(), "private preferences are available")
-        verify(bootstrap.start("mus_route101"), "the staged song starts opening")
-        verify(waitForNative(function() {
-            return session.songOpen || openFailure.length > 0
-        }, 30000), "the song opened: " + openFailure)
-        overlay = overlayComponent.createObject(testCase, {
-            "width": testCase.width, "height": testCase.height
-        })
-        verify(overlay, "production composition loaded")
-        verify(waitForNative(function() { return surface() !== null }, 5000),
-               "the mounted editor loaded")
-        surface().drawerPreferenceLocation = bootstrap.preferencesUrl("scrollbar-drawer.ini")
-        findChild(surface(), "editorDrawer").presenter
-            .restoreStoredPreferences(0, 160, 1, 240, 1, 90, 0)
-        verify(waitForNative(function() {
-            return bar(false) && bar(true) && bar(false).visible && bar(true).visible
-                && bar(false).thumbTravel > 0 && bar(true).thumbTravel > 0
-        }, 5000), "both rendered scroll tracks have a thumb and travel")
-    }
-
-    function cleanupTestCase() {
-        bootstrap.pausePlayheadPolling()
-        if (session.songOpen)
-            verify(bootstrap.hostClosing(), "document remains presented during teardown")
-        var old = overlay
-        overlay = null
-        if (old) {
-            old.destroy()
-            wait(0)
-            verify(bootstrap.acknowledgeSceneRemoval(), "scene removal acknowledged")
-        }
-        verify(bootstrap.restoreSettings(), "private preferences restored")
-    }
-
-    function init() {
-        bootstrap.cancelInput()
-        grid().setCameraHScroll(100)
-        grid().setCameraVScroll(Math.min(150, grid().cameraMaxVScroll))
-        wait(0)
-    }
-
+TimelineScrollbarSupport {
     function test_tracksFollowViewportAndCamera() {
         var h = bar(false), v = bar(true)
         var plot = findChild(surface(), "timelineQuickRollPlot")
@@ -114,15 +16,12 @@ TestCase {
         for (var axis = 0; axis < 2; ++axis) {
             var vertical = axis === 1
             var control = bar(vertical)
-            var thumb = vertical ? vThumb : hThumb
             verify(closeTo(control.value, cameraValue(vertical))
                    && closeTo(control.thumbPos,
                               (cameraValue(vertical) - control.minimum)
                               / control.span * control.thumbTravel),
                    "the live camera positions its rendered thumb")
-            var position = vertical ? thumb.y : thumb.x
-            var length = vertical ? thumb.height : thumb.width
-            verify(position >= 0 && position + length <= control.trackLength + 0.05,
+            verify(thumbWithinTrack(control, vertical),
                    "the rendered thumb stays inside its track")
         }
         var previousLength = v.thumbLength
@@ -136,6 +35,13 @@ TestCase {
         for (var axis = 0; axis < 2; ++axis) {
             var vertical = axis === 1
             var control = bar(vertical)
+            verify(control.span > 0, "the scrollable span straddles the midpoint before dragging")
+            var centerValue = control.minimum + control.span / 2
+            if (vertical) grid().setCameraVScroll(centerValue)
+            else grid().setCameraHScroll(centerValue)
+            tryVerify(function() {
+                return closeTo(cameraValue(vertical), centerValue)
+            }, 5000, "the scrollable span straddles the midpoint before dragging")
             var start = midpoint(control, control.thumbPos + control.thumbLength / 2)
             mousePress(control, start.x, start.y, Qt.LeftButton)
             var beyond = midpoint(control, control.trackLength + control.thumbLength * 2)
@@ -143,18 +49,27 @@ TestCase {
             verify(waitForNative(function() {
                 return closeTo(cameraValue(vertical), cameraMaximum(vertical))
             }, 5000), "drag clamps at the far end")
+            verify(thumbWithinTrack(control, vertical),
+                   "the thumb stays inside its track through clamp, reversal and release")
             var beforeReversal = cameraValue(vertical)
             var back = midpoint(control, control.trackLength / 2)
             mouseMove(control, back.x, back.y, -1, Qt.LeftButton)
             verify(waitForNative(function() {
                 return cameraValue(vertical) < beforeReversal
             }, 5000), "reversing a held drag moves back toward the start")
+            verify(cameraValue(vertical) > control.minimum
+                   && cameraValue(vertical) < control.maximum,
+                   "reversal leaves the drag interior")
+            verify(thumbWithinTrack(control, vertical),
+                   "the thumb stays inside its track through clamp, reversal and release")
             var below = midpoint(control, -control.thumbLength * 2)
             mouseMove(control, below.x, below.y, -1, Qt.LeftButton)
             mouseRelease(control, below.x, below.y, Qt.LeftButton)
             verify(waitForNative(function() {
                 return closeTo(cameraValue(vertical), control.minimum)
             }, 5000), "drag clamps at the near end")
+            verify(thumbWithinTrack(control, vertical),
+                   "the thumb stays inside its track through clamp, reversal and release")
         }
     }
 
@@ -187,9 +102,7 @@ TestCase {
             verify(waitForNative(function() {
                 return closeTo(cameraValue(vertical),
                                expectedBackward + control.singleStep)
-            }, 5000), "focused scrollbar arrow advances the camera one step"
-               + " (actual=" + cameraValue(vertical) + " paged="
-               + expectedBackward + " step=" + control.singleStep + ")")
+            }, 5000), "focused scrollbar arrow advances the camera one step")
             keyClick(Qt.Key_End)
             verify(waitForNative(function() {
                 return closeTo(cameraValue(vertical), cameraMaximum(vertical))
@@ -201,65 +114,128 @@ TestCase {
         }
     }
 
-    function test_wheelAndResizeRebase() {
+    function test_mountedBoundsAndExactPaging() {
+        overlay.width = testCase.width / 2 - grid().keyboardWidth
+        wait(0)
+        var plot = findChild(surface(), "timelineQuickRollPlot")
+        for (var axis = 0; axis < 2; ++axis) {
+            var vertical = axis === 1, control = bar(vertical)
+            verify(closeTo(control.minimum, vertical ? 0 : grid().cameraMinHScroll)
+                   && closeTo(control.maximum, cameraMaximum(vertical))
+                   && closeTo(control.pageStep, vertical ? plot.height : plot.width),
+                   "the mounted tracks publish the camera's bounds and page")
+            grid().setCameraHScroll(100)
+            grid().setCameraVScroll(Math.min(150, grid().cameraMaxVScroll))
+            var opposite = cameraValue(!vertical)
+            var first = control.minimum + (control.span - control.pageStep) / 2
+            verify(first > control.minimum && first + control.pageStep < control.maximum,
+                   "the paging start leaves one full viewport on either side")
+            for (var direction = -1; direction <= 1; direction += 2) {
+                if (vertical) grid().setCameraVScroll(first)
+                else grid().setCameraHScroll(first)
+                tryVerify(function() { return closeTo(control.value, first) }, 5000,
+                          "the thumb settles before paging")
+                var target = direction < 0 ? control.thumbPos / 2
+                                           : (control.thumbPos + control.thumbLength
+                                              + control.trackLength) / 2
+                var point = midpoint(control, target)
+                mouseClick(control, point.x, point.y, Qt.LeftButton)
+                tryVerify(function() {
+                    return closeTo(cameraValue(vertical), first + direction * control.pageStep)
+                }, 5000, "a track click beyond the thumb pages exactly one viewport toward the click")
+                verify(closeTo(cameraValue(!vertical), opposite),
+                       "paging never disturbs the other axis")
+            }
+        }
+    }
+
+    function test_keyboardParksThumbAndPreservesOtherAxis() {
+        var h = bar(false)
+        verify(h.minimum < 0, "the horizontal track owns a negative pre-roll bound")
+        for (var axis = 0; axis < 2; ++axis) {
+            var vertical = axis === 1, control = bar(vertical)
+            var other = cameraValue(!vertical)
+            control.forceActiveFocus()
+            tryCompare(control, "activeFocus", true, 5000)
+            keyClick(Qt.Key_Home)
+            tryVerify(function() {
+                return closeTo(cameraValue(vertical), control.minimum)
+                    && closeTo(control.thumbPos, 0)
+            }, 5000, "Home parks the thumb flush at the near end")
+            verify(closeTo(cameraValue(!vertical), other),
+                   "keyboard scrolling never disturbs the other axis")
+            control.forceActiveFocus()
+            tryCompare(control, "activeFocus", true, 5000)
+            keyClick(Qt.Key_End)
+            tryVerify(function() {
+                return closeTo(cameraValue(vertical), control.maximum)
+                    && closeTo(control.thumbPos + control.thumbLength, control.trackLength)
+            }, 5000, "End parks the thumb flush at the far end")
+            verify(closeTo(cameraValue(!vertical), other),
+                   "keyboard scrolling never disturbs the other axis")
+        }
+    }
+
+    function test_releasedGrabAndExternalCamera() {
+        for (var axis = 0; axis < 2; ++axis) {
+            var vertical = axis === 1, control = bar(vertical)
+            var start = midpoint(control, control.thumbPos + control.thumbLength / 2)
+            mousePress(control, start.x, start.y, Qt.LeftButton)
+            var moved = midpoint(control, (vertical ? start.y : start.x)
+                                 + Qt.styleHints.startDragDistance + 1)
+            mouseMove(control, moved.x, moved.y, -1, Qt.LeftButton)
+            mouseRelease(control, moved.x, moved.y, Qt.LeftButton)
+            var released = cameraValue(vertical)
+            mouseMove(control, (vertical ? moved.x : moved.x + 25),
+                      (vertical ? moved.y + 25 : moved.y))
+            verify(closeTo(cameraValue(vertical), released) && !control.gestureActive,
+                   "a released thumb abandons its grab; movement without a press does not scroll")
+            var target = control.minimum + control.span / 4
+            if (vertical) grid().setCameraVScroll(target)
+            else grid().setCameraHScroll(target)
+            tryVerify(function() {
+                return closeTo(cameraValue(vertical), target)
+                    && closeTo(control.thumbPos,
+                               (cameraValue(vertical) - control.minimum)
+                               / control.span * control.thumbTravel)
+            }, 5000, "an external camera move repositions the released thumb proportionally")
+        }
+    }
+
+    function test_mountedAngleWheelMatrix() {
         var h = bar(false), v = bar(true)
-        var beforeX = grid().cameraScrollX
-        mouseWheel(h, h.width / 2, h.height / 2, 0, -120)
-        verify(waitForNative(function() { return grid().cameraScrollX > beforeX }, 5000),
-               "horizontal track wheel advances camera time")
-        var beforeY = grid().cameraScrollY
-        mouseWheel(v, v.width / 2, v.height / 2, 0, -120)
-        verify(waitForNative(function() { return grid().cameraScrollY > beforeY }, 5000),
-               "vertical track wheel advances camera pitch")
-
-        var start = midpoint(v, v.thumbPos + v.thumbLength / 2)
-        mousePress(v, start.x, start.y, Qt.LeftButton)
-        var moved = midpoint(v, start.y + Qt.styleHints.startDragDistance + v.thumbTravel / 6)
-        mouseMove(v, moved.x, moved.y, -1, Qt.LeftButton)
-        verify(waitForNative(function() { return v.dragThresholdReached }, 5000),
-               "the roll-thumb drag passes its threshold")
-        var previousTravel = v.thumbTravel
-        var previousMaximum = grid().cameraMaxVScroll
-        overlay.height -= 70
-        verify(waitForNative(function() {
-            return v.gestureActive && v.thumbTravel !== previousTravel
-                && grid().cameraMaxVScroll !== previousMaximum
-                && closeTo(v.dragStartValue, grid().cameraScrollY)
-                && closeTo(v.maximum, grid().cameraMaxVScroll)
-        }, 5000), "the held roll thumb rebases after the camera viewport settles")
-        var rebased = grid().cameraScrollY
-        var nextPosition = v.dragLastPosition + 30
-        var expected = rebased + 30 * v.span / v.thumbTravel
-        verify(expected < v.maximum, "resized drag step stays inside the camera range")
-        var further = midpoint(v, nextPosition)
-        mouseMove(v, further.x, further.y, -1, Qt.LeftButton)
-        verify(waitForNative(function() {
-            return closeTo(grid().cameraScrollY, expected)
-        }, 5000), "a resized thumb moves by the fresh span per track distance")
-        mouseRelease(v, further.x, further.y, Qt.LeftButton)
-        overlay.height += 70
+        var cases = [
+            { control: h, dx: 0, dy: -120, change: Qt.styleHints.wheelScrollLines,
+              vertical: false },
+            { control: h, dx: 0, dy: 120, change: -Qt.styleHints.wheelScrollLines,
+              vertical: false },
+            { control: h, dx: -120, dy: 0, change: Qt.styleHints.wheelScrollLines,
+              vertical: false },
+            { control: h, dx: 0, dy: 50, change: -Qt.styleHints.wheelScrollLines * 50 / 120,
+              vertical: false },
+            { control: h, dx: 0, dy: -50, change: Qt.styleHints.wheelScrollLines * 50 / 120,
+              vertical: false },
+            { control: v, dx: -120, dy: 0, change: Qt.styleHints.wheelScrollLines,
+              vertical: true },
+            { control: v, dx: 0, dy: -120, change: Qt.styleHints.wheelScrollLines,
+              vertical: true },
+            { control: v, dx: 0, dy: 120, change: -Qt.styleHints.wheelScrollLines,
+              vertical: true }
+        ]
+        for (var i = 0; i < cases.length; ++i) {
+            var row = cases[i], before = cameraValue(row.vertical)
+            var other = cameraValue(!row.vertical)
+            mouseWheel(row.control, row.control.width / 2, row.control.height / 2,
+                       row.dx, row.dy)
+            tryVerify(function() {
+                return closeTo(cameraValue(row.vertical), before + row.change)
+            }, 5000, row.control === h
+                    ? (row.dx === 0 ? "rotary notches scroll the wheel-scroll-lines step"
+                                    : "a horizontal track scrolls its own axis from either wheel axis")
+                    : "a vertical track scrolls its own axis from either wheel axis")
+            verify(closeTo(cameraValue(!row.vertical), other),
+                   "wheel keeps the other axis still")
+        }
     }
 
-    function test_zoomDuringHeldDragRebases() {
-        var h = bar(false), plot = findChild(surface(), "timelineQuickRollPlot")
-        var start = midpoint(h, h.thumbPos + h.thumbLength / 2)
-        mousePress(h, start.x, start.y, Qt.LeftButton)
-        var moved = midpoint(h, start.x + Qt.styleHints.startDragDistance + h.thumbTravel / 8)
-        mouseMove(h, moved.x, moved.y, -1, Qt.LeftButton)
-        verify(waitForNative(function() { return h.dragThresholdReached }, 5000),
-               "the time-thumb drag passes its threshold")
-        var oldBeatWidth = grid().beatWidth
-        grid().handleWheel(0, 120, 0, 0, 0, 0, false,
-                           plot.width / 2, plot.height / 2)
-        verify(waitForNative(function() {
-            return grid().beatWidth > oldBeatWidth
-                && closeTo(h.dragStartValue, grid().cameraScrollX)
-        }, 5000), "time zoom rebases the held thumb to the new camera value")
-        var rebased = grid().cameraScrollX
-        var continued = midpoint(h, moved.x + h.thumbTravel / 10)
-        mouseMove(h, continued.x, continued.y, -1, Qt.LeftButton)
-        mouseRelease(h, continued.x, continued.y, Qt.LeftButton)
-        verify(waitForNative(function() { return grid().cameraScrollX > rebased }, 5000),
-               "movement after the zoom advances from the rebased position")
-    }
 }

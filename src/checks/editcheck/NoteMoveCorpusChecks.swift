@@ -73,17 +73,17 @@ private func coreNoteMoveOverlapRow(_ document: SongDocument, _ track: Int,
     document.moveNotes([source.id], byTicks: 0, byKeys: 1)
     guard let moving = requireCorpusNote(document, track, base + step * 88, 71,
                                          report, id, "A027") else { return }
-    report.expectEqual(step * 4, moving.duration, cppID: id,
+    report.expectEqual(expected: step * 4, actual: moving.duration, cppID: id,
                        what: "A028 moved note retains its duration")
     guard let trimmed = requireCorpusNote(document, track, base + step * 92, 71,
                                           report, id, "A029") else { return }
-    report.expectEqual(step * 2, trimmed.duration, cppID: id,
+    report.expectEqual(expected: step * 2, actual: trimmed.duration, cppID: id,
                        what: "A030 stationary overlap keeps its tail")
 
     document.resizeNotes([moving.id], edge: .trailing, byTicks: Int64(step) * 4)
     guard let extended = requireCorpusNote(document, track, base + step * 88, 71,
                                            report, id, "A031") else { return }
-    report.expectEqual(step * 8, extended.duration, cppID: id,
+    report.expectEqual(expected: step * 8, actual: extended.duration, cppID: id,
                        what: "A032 trailing resize extends by four steps")
     report.expect(corpusNote(document, track, base + step * 92, 71) == nil,
                   cppID: id, message: "A033 resize swallows the covered note")
@@ -94,17 +94,17 @@ private func coreNoteMoveOverlapRow(_ document: SongDocument, _ track: Int,
     ])
     guard let retrimmed = requireCorpusNote(document, track, base + step * 88, 71,
                                             report, id, "A034") else { return }
-    report.expectEqual(step * 6, retrimmed.duration, cppID: id,
+    report.expectEqual(expected: step * 6, actual: retrimmed.duration, cppID: id,
                        what: "A035 insertion trims the extended note")
     guard let stationary = requireCorpusNote(document, track, base + step * 94, 71,
                                               report, id, "A036") else { return }
-    report.expectEqual(step * 4, stationary.duration, cppID: id,
+    report.expectEqual(expected: step * 4, actual: stationary.duration, cppID: id,
                        what: "A037 inserted stationary note keeps its duration")
 
     _ = document.history.undoDocument()
     guard let restored = requireCorpusNote(document, track, base + step * 88, 71,
                                             report, id, "A038") else { return }
-    report.expectEqual(step * 8, restored.duration, cppID: id,
+    report.expectEqual(expected: step * 8, actual: restored.duration, cppID: id,
                        what: "A039 undo restores the extended duration")
     report.expect(corpusNote(document, track, base + step * 94, 71) == nil,
                   cppID: id, message: "A040 undo removes the inserted note")
@@ -132,36 +132,36 @@ private func coreNoteMoveMergeRow(_ document: SongDocument, _ track: Int,
     document.nudgeNotes([source.id], byTicks: 0, byKeys: 1)
     guard let tail = requireCorpusNote(document, track, tick + step * 2, 70,
                                        report, id, "A046") else { return }
-    report.expectEqual(step * 2, tail.duration, cppID: id,
+    report.expectEqual(expected: step * 2, actual: tail.duration, cppID: id,
                        what: "A047 first nudge retains the stationary tail")
     guard let moving = requireCorpusNote(document, track, tick, 70,
                                          report, id, "A048") else { return }
     document.nudgeNotes([moving.id], byTicks: 0, byKeys: 1)
-    report.expectEqual(before + 1,
-                       try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+    report.expectEqual(expected: before + 1,
+                       actual: try coreEditHistoryCountAtTip(document, report: report, cppID: id),
                        cppID: id, what: "A049 compatible nudges merge into one entry")
     guard let twiceMoved = requireCorpusNote(document, track, tick, 71,
                                               report, id, "A050") else { return }
-    report.expectEqual(step * 2, twiceMoved.duration, cppID: id,
+    report.expectEqual(expected: step * 2, actual: twiceMoved.duration, cppID: id,
                        what: "A051 second nudge retains moving duration")
     guard let stationary = requireCorpusNote(document, track, tick, 70,
                                               report, id, "A052") else { return }
-    report.expectEqual(step * 4, stationary.duration, cppID: id,
+    report.expectEqual(expected: step * 4, actual: stationary.duration, cppID: id,
                        what: "A053 second nudge rebuilds the stationary note")
 
     _ = document.history.undoDocument()
     _ = requireCorpusNote(document, track, tick, 69, report, id, "A054")
     guard let undoneStationary = requireCorpusNote(document, track, tick, 70,
                                                     report, id, "A055") else { return }
-    report.expectEqual(step * 4, undoneStationary.duration, cppID: id,
+    report.expectEqual(expected: step * 4, actual: undoneStationary.duration, cppID: id,
                        what: "A056 undo restores stationary duration")
     _ = document.history.redoDocument()
     guard let redone = requireCorpusNote(document, track, tick, 71,
                                          report, id, "A057") else { return }
     document.didSave(try document.captureSave())
     document.nudgeNotes([redone.id], byTicks: 0, byKeys: 1)
-    report.expectEqual(before + 2,
-                       try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+    report.expectEqual(expected: before + 2,
+                       actual: try coreEditHistoryCountAtTip(document, report: report, cppID: id),
                        cppID: id, what: "A058 save boundary splits the next nudge")
 }
 
@@ -188,34 +188,34 @@ private func coreNoteMoveBatchRow(_ document: SongDocument, _ track: Int,
 
     report.expect(document.moveNotes(ids, toPitches: [118, 114], byTicks: 0),
                   cppID: id, message: "A064 absolute-pitch batch is admitted")
-    report.expectEqual(before + 1,
-                       try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+    report.expectEqual(expected: before + 1,
+                       actual: try coreEditHistoryCountAtTip(document, report: report, cppID: id),
                        cppID: id, what: "A065 batch adds one history entry")
     guard let first = requireCorpusNote(document, track, firstTick, 118,
                                         report, id, "A066") else { return }
-    report.expectEqual(step * 4, first.duration, cppID: id,
+    report.expectEqual(expected: step * 4, actual: first.duration, cppID: id,
                        what: "A067 first duration is preserved")
-    report.expectEqual(UInt8(100), first.velocity, cppID: id,
+    report.expectEqual(expected: UInt8(100), actual: first.velocity, cppID: id,
                        what: "A068 first velocity is preserved")
     report.expect(corpusNote(document, track, firstTick, 115) == nil,
                   cppID: id, message: "A069 first source pitch is vacated")
     guard let second = requireCorpusNote(document, track, firstTick + step * 20, 114,
                                          report, id, "A070") else { return }
-    report.expectEqual(step * 2, second.duration, cppID: id,
+    report.expectEqual(expected: step * 2, actual: second.duration, cppID: id,
                        what: "A071 second duration is preserved")
-    report.expectEqual(UInt8(90), second.velocity, cppID: id,
+    report.expectEqual(expected: UInt8(90), actual: second.velocity, cppID: id,
                        what: "A072 second velocity is preserved")
     report.expect(corpusNote(document, track, firstTick + step * 20, 117) == nil,
                   cppID: id, message: "A073 second source pitch is vacated")
 
     let movedBytes = try document.state.file.encoded()
     _ = document.history.undoDocument()
-    report.expectEqual(beforeBytes, try document.state.file.encoded(), cppID: id,
+    report.expectEqual(expected: beforeBytes, actual: try document.state.file.encoded(), cppID: id,
                        what: "A074 undo restores exact pre-move bytes")
     _ = requireCorpusNote(document, track, firstTick, 115, report, id, "A075")
     _ = requireCorpusNote(document, track, firstTick + step * 20, 117, report, id, "A076")
     _ = document.history.redoDocument()
-    report.expectEqual(movedBytes, try document.state.file.encoded(), cppID: id,
+    report.expectEqual(expected: movedBytes, actual: try document.state.file.encoded(), cppID: id,
                        what: "A077 redo restores exact moved bytes")
     _ = requireCorpusNote(document, track, firstTick, 118, report, id, "A078")
     _ = requireCorpusNote(document, track, firstTick + step * 20, 114, report, id, "A079")
@@ -228,13 +228,13 @@ private func coreNoteMoveBatchRow(_ document: SongDocument, _ track: Int,
     _ = requireCorpusNote(document, track, firstTick + step * 20, 115, report, id, "A082")
     report.expect(document.nudgeNotes(ids, toPitches: [120, 116], byTicks: 0),
                   cppID: id, message: "A083 second absolute-pitch nudge is admitted")
-    report.expectEqual(nudgeBefore + 1,
-                       try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+    report.expectEqual(expected: nudgeBefore + 1,
+                       actual: try coreEditHistoryCountAtTip(document, report: report, cppID: id),
                        cppID: id, what: "A084 compatible nudges merge into one entry")
     _ = requireCorpusNote(document, track, firstTick, 120, report, id, "A085")
     _ = requireCorpusNote(document, track, firstTick + step * 20, 116, report, id, "A086")
     _ = document.history.undoDocument()
-    report.expectEqual(nudgeStart, try document.state.file.encoded(), cppID: id,
+    report.expectEqual(expected: nudgeStart, actual: try document.state.file.encoded(), cppID: id,
                        what: "A087 one undo restores pre-nudge bytes")
     _ = requireCorpusNote(document, track, firstTick, 118, report, id, "A088")
     _ = requireCorpusNote(document, track, firstTick + step * 20, 114, report, id, "A089")
@@ -248,11 +248,11 @@ private func coreNoteMoveBatchRow(_ document: SongDocument, _ track: Int,
     _ = requireCorpusNote(document, track, firstTick + step * 20, 115, report, id, "A092")
     report.expect(document.nudgeNotes(ids, toPitches: [118, 114], byTicks: 0),
                   cppID: id, message: "A093 inverse-pair return nudge is admitted")
-    report.expectEqual(afterUp, coreRangeHistoryPosition(document, report, id)[1],
+    report.expectEqual(expected: afterUp, actual: coreRangeHistoryPosition(document, report, id)[1],
                        cppID: id, what: "A094 inverse pair retains the post-up history index")
     _ = requireCorpusNote(document, track, firstTick, 118, report, id, "A095")
     _ = document.history.undoDocument()
-    report.expectEqual(inverseStart, try document.state.file.encoded(), cppID: id,
+    report.expectEqual(expected: inverseStart, actual: try document.state.file.encoded(), cppID: id,
                        what: "A096 undo after inverse pair restores exact start bytes")
 }
 
@@ -284,13 +284,13 @@ private func coreNoteMoveCollisionRow(_ document: SongDocument, _ track: Int,
                   message: "A104 collision trim keeps every raw track sorted")
     guard let moving = requireCorpusNote(document, track, base + step * 138, 119,
                                          report, id, "A105") else { return }
-    report.expectEqual(step * 4, moving.duration, cppID: id,
+    report.expectEqual(expected: step * 4, actual: moving.duration, cppID: id,
                        what: "A106 moved note retains its duration")
     guard let stationary = requireCorpusNote(document, track, base + step * 142, 119,
                                               report, id, "A107") else { return }
-    report.expectEqual(stationaryID, stationary.id, cppID: id,
+    report.expectEqual(expected: stationaryID, actual: stationary.id, cppID: id,
                        what: "A108 trimmed stationary note retains identity")
-    report.expectEqual(step * 2, stationary.duration, cppID: id,
+    report.expectEqual(expected: step * 2, actual: stationary.duration, cppID: id,
                        what: "A109 stationary tail has two-step duration")
     report.expect(corpusNote(document, track, base + step * 138, 118) == nil,
                   cppID: id, message: "A110 source pitch is vacated")
@@ -300,13 +300,13 @@ private func coreNoteMoveCollisionRow(_ document: SongDocument, _ track: Int,
     _ = document.history.undoDocument()
     guard let undoneMoving = requireCorpusNote(document, track, base + step * 138, 118,
                                                 report, id, "A112") else { return }
-    report.expectEqual(step * 4, undoneMoving.duration, cppID: id,
+    report.expectEqual(expected: step * 4, actual: undoneMoving.duration, cppID: id,
                        what: "A113 undo restores moving duration")
     guard let undoneStationary = requireCorpusNote(document, track, base + step * 140, 119,
                                                     report, id, "A114") else { return }
-    report.expectEqual(stationaryID, undoneStationary.id, cppID: id,
+    report.expectEqual(expected: stationaryID, actual: undoneStationary.id, cppID: id,
                        what: "A115 undo preserves stationary identity")
-    report.expectEqual(step * 4, undoneStationary.duration, cppID: id,
+    report.expectEqual(expected: step * 4, actual: undoneStationary.duration, cppID: id,
                        what: "A116 undo restores stationary duration")
     _ = document.history.redoDocument()
 
@@ -319,7 +319,7 @@ private func coreNoteMoveCollisionRow(_ document: SongDocument, _ track: Int,
                   message: "A119 full collision keeps every raw track sorted")
     guard let finalMoving = requireCorpusNote(document, track, base + step * 140, 119,
                                                report, id, "A120") else { return }
-    report.expectEqual(step * 4, finalMoving.duration, cppID: id,
+    report.expectEqual(expected: step * 4, actual: finalMoving.duration, cppID: id,
                        what: "A121 forward move retains duration")
     let collisionEnd = try document.state.file.encoded()
     let collisionEndIndex = coreRangeHistoryPosition(document, report, id)[1]
@@ -327,16 +327,16 @@ private func coreNoteMoveCollisionRow(_ document: SongDocument, _ track: Int,
     if collisionEndIndex > collisionStartIndex {
         for _ in collisionStartIndex..<collisionEndIndex { _ = document.history.undoDocument() }
     }
-    report.expectEqual(collisionStart, try document.state.file.encoded(), cppID: id,
+    report.expectEqual(expected: collisionStart, actual: try document.state.file.encoded(), cppID: id,
                        what: "A122 undo-to-start restores exact bytes")
     guard let restoredStationary = requireCorpusNote(document, track, base + step * 140, 119,
                                                       report, id, "A123") else { return }
-    report.expectEqual(stationaryID, restoredStationary.id, cppID: id,
+    report.expectEqual(expected: stationaryID, actual: restoredStationary.id, cppID: id,
                        what: "A124 undo-to-start restores stationary identity")
     if collisionEndIndex > collisionStartIndex {
         for _ in collisionStartIndex..<collisionEndIndex { _ = document.history.redoDocument() }
     }
-    report.expectEqual(collisionEnd, try document.state.file.encoded(), cppID: id,
+    report.expectEqual(expected: collisionEnd, actual: try document.state.file.encoded(), cppID: id,
                        what: "A125 redo-to-end restores exact bytes")
     report.expect(corpusNote(document, track, base + step * 142, 119) == nil,
                   cppID: id, message: "A126 fully covered stationary note remains absent")
@@ -368,10 +368,10 @@ private func coreNoteMoveRejectsRow(_ document: SongDocument, _ track: Int,
                   cppID: id, message: "A133 empty pitch list is rejected")
     report.expect(!document.moveNotes([], toPitches: [118], byTicks: 0),
                   cppID: id, message: "A134 empty note list is rejected")
-    report.expectEqual(before,
-                       try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+    report.expectEqual(expected: before,
+                       actual: try coreEditHistoryCountAtTip(document, report: report, cppID: id),
                        cppID: id, what: "A135 rejected requests add no history entries")
-    report.expectEqual(baseline, try document.state.file.encoded(), cppID: id,
+    report.expectEqual(expected: baseline, actual: try document.state.file.encoded(), cppID: id,
                        what: "A136 rejected requests preserve exact bytes")
     _ = requireCorpusNote(document, track, firstTick, 115, report, id, "A137")
     _ = requireCorpusNote(document, track, firstTick + step * 20, 117, report, id, "A138")

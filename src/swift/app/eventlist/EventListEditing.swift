@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawAppEventList
 
 @MainActor
 extension EventListPresenter {
@@ -134,15 +135,53 @@ extension EventListPresenter {
     func dispatchAddEvent() {
         guard let session, !session.isClosed,
               session.document.rawChunks.indices.contains(chunkIndex) else { return }
-        if chunkIndex == 0, model.row(at: currentRow)?.tempo != nil {
+        if let row = model.row(at: currentRow), row.isEndOfTrack { return }
+        if chunkIndex == 0, let tempo = model.row(at: currentRow)?.tempo {
             session.document.editTempo(TempoEdit(add: [TempoPoint(
-                tick: session.editCursor, microsecondsPerQuarterNote: 500_000)]))
+                tick: session.editCursor,
+                microsecondsPerQuarterNote: tempo.microsecondsPerQuarterNote)]))
+            selectedRows = []
+            selectionAnchor = -1
+            if let row = model.rows.firstIndex(where: { $0.tempo?.tick == session.editCursor })
+                ?? model.rows.firstIndex(where: { $0.eventIndex != nil
+                                                && $0.tick == session.editCursor }) {
+                focusRow(row: row)
+                selectedRows = [row]
+            }
             return
         }
         var event = model.row(at: currentRow)?.event
             ?? .channel(status: 0xB0, data0: 7, data1: 100)
         event.tick = session.editCursor
         session.document.insertRawEvent(chunk: chunkIndex, event: event)
+        selectedRows = []
+        selectionAnchor = -1
+        if let row = model.rows.firstIndex(where: { $0.event == event }) {
+            focusRow(row: row)
+            selectedRows = [row]
+        }
+    }
+
+    func insertCopyOfRow(row: Int) {
+        guard let session, !session.isClosed,
+              session.document.rawChunks.indices.contains(chunkIndex),
+              let item = model.row(at: row) else { return }
+        if let tempo = item.tempo {
+            session.document.editTempo(TempoEdit(add: [tempo]))
+        } else if let event = item.event {
+            session.document.insertRawEvent(chunk: chunkIndex, event: event)
+        } else {
+            addEvent()
+            return
+        }
+        if let copied = model.rows.lastIndex(where: {
+            $0.event == item.event && item.event != nil
+                || $0.tempo == item.tempo && item.tempo != nil
+        }) {
+            focusRow(row: copied)
+            selectedRows = [copied]
+            selectionAnchor = copied
+        }
     }
 
     func dispatchDeleteSelected() {
@@ -151,12 +190,19 @@ extension EventListPresenter {
         let selection = selectedRows.compactMap { model.row(at: $0) }
         let indices = selection.compactMap(\.eventIndex)
         let tempos = selection.compactMap(\.tempo)
-        guard !indices.isEmpty || !tempos.isEmpty else { return }
-        selectedRows = []
-        selectionAnchor = -1
-        model.setCurrentRow(-1)
-        currentRow = -1
+        let deletable = indices.count + tempos.count
+        guard deletable > 0 else { return }
+        let priorRow = currentRow
+        if deletable > 1 {
+            selectedRows = []
+            selectionAnchor = -1
+            model.setCurrentRow(-1)
+            currentRow = -1
+        }
         session.document.editRawAndTempo(chunk: chunkIndex, deleting: indices,
                                          tempo: TempoEdit(remove: tempos))
+        if deletable == 1, rowCount > 0 {
+            focusRow(row: max(0, min(priorRow, rowCount - 1)))
+        }
     }
 }

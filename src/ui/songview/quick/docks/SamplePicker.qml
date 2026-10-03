@@ -3,16 +3,22 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import PorydawApp
 
 Item {
     id: picker
-    required property QtObject controller
-    required property QtObject draft
+    required property VoiceListController controller
+    required property VoiceEditorController draft
     required property var colors
-    required property real baseFontPx
+    required property ApplicationSession applicationSession
+    readonly property real baseFontPx: applicationSession.baseFontPx
     required property bool waveMode
     property string clickedSymbol: ""
     property bool positioning: false
+    onVisibleChanged: {
+        if (!visible)
+            popup.close()
+    }
     readonly property var entries: {
         controller.catalogRevision
         const filter = search.text.trim().toLowerCase()
@@ -85,7 +91,6 @@ Item {
         text: picker.draft.symbol ? (picker.waveMode ? picker.draft.symbol
                                                    : picker.displayName(picker.draft.symbol))
                                   : qsTr("(none)")
-        font.pixelSize: picker.baseFontPx
         onClicked: popup.open()
     }
 
@@ -93,6 +98,7 @@ Item {
         id: popup
         objectName: "vgSamplePickerPopup"
         parent: picker
+        font: Qt.font(picker.applicationSession.typographyFonts.body)
         property real spacingPx: Math.max(1, Math.round(picker.baseFontPx / 3))
         x: 0
         y: trigger.height
@@ -119,6 +125,10 @@ Item {
             picker.positioning = false
             search.forceActiveFocus()
         }
+        onVisibleChanged: {
+            if (visible)
+                picker.controller.requestPickerSampleInfo()
+        }
         onClosed: {
             auditionOff.stop()
             picker.controller.stopSampleAudition()
@@ -130,7 +140,6 @@ Item {
                 objectName: "vgSamplePickerSearch"
                 Layout.fillWidth: true
                 placeholderText: qsTr("Search samples…")
-                font.pixelSize: picker.baseFontPx
                 onAccepted: picker.commit()
                 Keys.onDownPressed: {
                     for (let i = list.currentIndex + 1; i < picker.entries.length; i++) {
@@ -168,6 +177,8 @@ Item {
                 Layout.fillHeight: true
                 clip: true
                 model: picker.entries
+                // Delegates draw highlight; a following highlight animates frames while hidden.
+                highlightFollowsCurrentItem: false
                 delegate: ItemDelegate {
                     id: entry
                     required property int index
@@ -176,16 +187,39 @@ Item {
                     height: picker.baseFontPx * 1.83
                     enabled: !!modelData.symbol
                     highlighted: list.currentIndex === index
-                    font.pixelSize: picker.baseFontPx
-                    font.bold: !modelData.symbol
-                    contentItem: Label {
-                        text: entry.modelData.label
-                        font: entry.font
-                        elide: Text.ElideRight
-                        verticalAlignment: Text.AlignVCenter
-                        color: !entry.modelData.symbol ? picker.colors.secondaryText
-                               : entry.highlighted ? picker.colors.selectionText
-                                                   : picker.colors.windowText
+                    contentItem: RowLayout {
+                        spacing: popup.spacingPx
+                        Label {
+                            objectName: "vgSamplePickerRowText"
+                            Layout.fillWidth: true
+                            text: entry.modelData.label
+                            font: entry.modelData.typed
+                                  ? Qt.font(Object.assign({},
+                                                          picker.applicationSession.typographyFonts.body,
+                                                          { italic: true }))
+                                  : !entry.modelData.symbol
+                                    ? Qt.font(picker.applicationSession.typographyFonts.bodyBold)
+                                    : entry.font
+                            elide: Text.ElideRight
+                            verticalAlignment: Text.AlignVCenter
+                            color: !entry.modelData.symbol ? picker.colors.secondaryText
+                                   : entry.highlighted ? picker.colors.selectionText
+                                                       : picker.colors.windowText
+                        }
+                        Label {
+                            objectName: "vgSamplePickerLoopBadge"
+                            Layout.preferredWidth: implicitWidth
+                            visible: !!entry.modelData.symbol && !entry.modelData.split
+                                     && !entry.modelData.typed
+                                     && (picker.controller.pickerInfoRevision,
+                                         picker.controller.pickerRowLoops(entry.modelData.symbol))
+                            text: "∞"
+                            color: entry.highlighted ? picker.colors.selectionText
+                                                     : picker.colors.windowText
+                            ToolTip.text: qsTr("Loops")
+                            ToolTip.visible: badgeHover.hovered
+                            HoverHandler { id: badgeHover }
+                        }
                     }
                     onClicked: {
                         const symbol = modelData.symbol
@@ -198,26 +232,15 @@ Item {
                     }
                 }
             }
-            RowLayout {
+            Label {
+                objectName: "vgSamplePickerDetail"
                 Layout.fillWidth: true
-                Label {
-                    objectName: "vgSamplePickerDetail"
-                    Layout.fillWidth: true
-                    font.pixelSize: picker.baseFontPx
-                    color: picker.colors.secondaryText
-                    text: {
-                        const entry = picker.currentEntry()
-                        return !entry ? "" : entry.typed ? qsTr("Unlisted symbol")
-                               : picker.controller.pickerSampleDetail
-                                 || (entry.split ? qsTr("Keysplit instrument") : "")
-                    }
-                }
-                Label {
-                    objectName: "vgSamplePickerLoop"
-                    visible: picker.controller.pickerSampleLoop
-                    font.pixelSize: picker.baseFontPx
-                    color: picker.colors.primaryText
-                    text: qsTr("Loop")
+                color: picker.colors.secondaryText
+                text: {
+                    const entry = picker.currentEntry()
+                    picker.controller.pickerInfoRevision
+                    return entry ? picker.controller.pickerDetail(
+                                       entry.symbol, !!entry.split, !!entry.typed) : ""
                 }
             }
         }

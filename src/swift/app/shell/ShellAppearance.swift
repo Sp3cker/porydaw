@@ -1,7 +1,4 @@
 import Foundation
-#if canImport(CoreFoundation)
-import CoreFoundation
-#endif
 
 @MainActor
 public enum ShellAppearance {
@@ -21,6 +18,7 @@ public enum ShellAppearance {
         let itemHover: String
         let secondary: String
         let input: String
+        let scrollbar: String
         let alternate: String
         let warning: String
         let error: String
@@ -29,6 +27,13 @@ public enum ShellAppearance {
         let accidental: String
         let keyboardSeparator: String
         let keyboardLabel: String
+        let automationNodeInk: String
+        let automationTabBackground: String
+        let automationTabOutline: String
+        let sampleWaveformInk: String
+        let sampleCropHandle: String
+        let sampleLoopHandle: String
+        let sampleSeamEndInk: String
     }
 
     // Secondary ink is the preset's own secondary walked toward black until it
@@ -42,9 +47,13 @@ public enum ShellAppearance {
         accent: "#00CADB", chrome: "#BDB5AF", separator: "#5B5652", control: "#E1DBD6",
         controlHover: "#ECE7E1", controlPressed: "#F5B61C",
         item: "#D2D0CA", itemHover: "#E7E2DC", secondary: "#4D4742",
-        input: "#F3F0ED", alternate: "#D1CBC5", warning: "#644100", error: "#8D1B1F",
+        input: "#F3F0ED", scrollbar: "#A49D97", alternate: "#D1CBC5", warning: "#644100", error: "#8D1B1F",
         grid: "#3F040000", roll: "#D4CCC7", accidental: "#B4ACA6",
-        keyboardSeparator: "#BCB4AF", keyboardLabel: "#1A1A1A")
+        keyboardSeparator: "#BCB4AF", keyboardLabel: "#1A1A1A",
+        automationNodeInk: "#EA3C3C", automationTabBackground: "#E7E1DB",
+        automationTabOutline: "#8C857F",
+        sampleWaveformInk: "#005B63", sampleCropHandle: "#92681F",
+        sampleLoopHandle: "#2A7292", sampleSeamEndInk: "#C54444")
 
     private static let darkNeutralHigh = Colors(
         window: "#373737", text: "#D8D8D8", disabledText: "#A0A0A0",
@@ -52,9 +61,13 @@ public enum ShellAppearance {
         accent: "#037384", chrome: "#424242", separator: "#262626", control: "#1A1A1A",
         controlHover: "#5C5C5C", controlPressed: "#00D3F2",
         item: "#424242", itemHover: "#5B5B5B", secondary: "#BDBDBD",
-        input: "#252525", alternate: "#575757", warning: "#E2A854", error: "#F09999",
+        input: "#252525", scrollbar: "#262626", alternate: "#575757", warning: "#E2A854", error: "#F09999",
         grid: "#54030303", roll: "#454545", accidental: "#303030",
-        keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A")
+        keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A",
+        automationNodeInk: "#FF4D47", automationTabBackground: "#51555E",
+        automationTabOutline: "#62666F",
+        sampleWaveformInk: "#9FCDD7", sampleCropHandle: "#E0A030",
+        sampleLoopHandle: "#4AB4E2", sampleSeamEndInk: "#F08D8D")
 
     private static let immaterial = Colors(
         window: "#2E3138", text: "#CBCBCD", disabledText: "#979AA3",
@@ -62,9 +75,13 @@ public enum ShellAppearance {
         accent: "#008493", chrome: "#363941", separator: "#292A2E", control: "#292A2E",
         controlHover: "#52555E", controlPressed: "#F98CBE",
         item: "#393C43", itemHover: "#51545C", secondary: "#A5A8B0",
-        input: "#25272B", alternate: "#52545C", warning: "#E2A854", error: "#F09999",
+        input: "#25272B", scrollbar: "#212225", alternate: "#52545C", warning: "#E2A854", error: "#F09999",
         grid: "#54030606", roll: "#3C3F46", accidental: "#282B32",
-        keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A")
+        keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A",
+        automationNodeInk: "#FF91C3", automationTabBackground: "#4A4E59",
+        automationTabOutline: "#616571",
+        sampleWaveformInk: "#ABCAD2", sampleCropHandle: "#E0A030",
+        sampleLoopHandle: "#40B0E0", sampleSeamEndInk: "#EF8585")
 
     public static func mode(_ stored: String) -> String {
         switch stored {
@@ -82,40 +99,20 @@ public enum ShellAppearance {
         return min(100, max(0, value))
     }
 
-    /// QSettings maps the prescribed sp3cker organization and active application
-    /// name to com.sp3cker.<application>, and theme/primary to theme.primary
-    /// (qsettings_mac.cpp). QtCore.Settings cannot remove a key:
-    /// setValue(undefined) persists "@Invalid()" instead. CFPreferences also
-    /// supports the app's own bundle, which UserDefaults(suiteName:) rejects.
-    static func removeLegacyCustomKeys(applicationName: String) {
-        #if canImport(CoreFoundation)
-        func cfString(_ text: String) -> CFString {
-            guard let result = text.withCString({
-                CFStringCreateWithCString(kCFAllocatorDefault, $0,
-                                          CFStringBuiltInEncodings.UTF8.rawValue)
-            }) else {
-                preconditionFailure("Native Qt settings identifier could not be encoded")
-            }
-            return result
-        }
-        let applicationID = cfString("com.sp3cker." + applicationName)
-        CFPreferencesSetAppValue(cfString("theme.primary"), nil, applicationID)
-        CFPreferencesSetAppValue(cfString("theme.accent"), nil, applicationID)
-        _ = CFPreferencesAppSynchronize(applicationID)
-        #else
-        let defaults = UserDefaults(suiteName: "com.sp3cker." + applicationName) ?? .standard
-        defaults.removeObject(forKey: "theme.primary")
-        defaults.removeObject(forKey: "theme.accent")
-        _ = defaults.synchronize()
-        #endif
+    static func removeLegacyCustomKeys(store: PreferencesStore) {
+        store.remove(key: "theme.primary")
+        store.remove(key: "theme.accent")
+        store.synchronize()
     }
 
     public static func apply(to palette: GridPalette, mode: String, contrast: Int) {
+        let preset = ThemePreset(mode: mode)
+        palette.theme = preset
         let colors: Colors
-        switch mode {
-        case "dark-neutral-high": colors = darkNeutralHigh
-        case "immaterial": colors = immaterial
-        default: colors = vanilla
+        switch preset {
+        case .darkNeutralHigh: colors = darkNeutralHigh
+        case .immaterial: colors = immaterial
+        case .vanilla: colors = vanilla
         }
         let grid = gridColor(colors.grid, background: colors.roll, contrast: contrast)
         let gridChannels = PaletteMath.channels(grid)
@@ -135,18 +132,28 @@ public enum ShellAppearance {
         palette.buttonPressedBackground = colors.controlPressed
         // Dark presets use the resting button surface as the active foreground
         // (themeresolver.cpp:38-52), not their pale resting text.
-        palette.buttonPressedText = mode == "vanilla" ? colors.text : colors.control
+        palette.buttonPressedText = preset == .vanilla ? colors.text : colors.control
         // Native menu roles use item surfaces; selection and pressed menu text
         // share resolveDarkPreset's active foreground (themeresolver.cpp:44-49).
         palette.buttonHoverBackground = colors.controlHover
         palette.menuBackground = colors.item
         palette.menuHoverBackground = colors.itemHover
         palette.disabledText = colors.disabledText
+        palette.polyphonyValueBackground = colors.control
+        palette.polyphonyValueText = colors.text
         palette.selectionText = palette.buttonPressedText
         palette.tabBackground = colors.control
         palette.tabHoverBackground = colors.controlHover
         palette.tabSelectedBackground = colors.selection
         palette.tabPressedBackground = colors.controlPressed
+        palette.automationNodeInk = colors.automationNodeInk
+        palette.automationTabBackground = colors.automationTabBackground
+        palette.automationTabOutline = colors.automationTabOutline
+        palette.sampleWaveformInk = colors.sampleWaveformInk
+        palette.sampleCropHandle = colors.sampleCropHandle
+        palette.sampleLoopHandle = colors.sampleLoopHandle
+        palette.sampleSeamEndInk = colors.sampleSeamEndInk
+        palette.scrollbarHandle = colors.scrollbar
         // Qt control-palette surfaces: editable fields and tooltips use the
         // preset's input swatch, where text and placeholder ink keep 4.5:1.
         palette.inputBackground = colors.input

@@ -1,4 +1,4 @@
-// The editor drawer container: chrome, section bodies and preference store.
+// The editor drawer container: chrome and section bodies.
 //
 // Swift owns every layout decision (EditorDrawer.swift: metrics, stacking,
 // visibility, the resize including the voice-change spill, the focus requests
@@ -18,17 +18,11 @@
 // `modalHost` property, so a page's picker or menu is never clipped by the body
 // loader that hosts its content. The layer draws nothing and takes no input of
 // its own.
-//
-// Input: a focused toggle activates with Return/Enter, a focused grip resizes
-// with Up/Down and consumes Left/Right. Bare Space is never claimed, so the
-// window's transport shortcut outranks incidental focus here. Every visibility
-// call passes this scope's live activeFocus as the focus observation for that
-// call; no focus value is remembered.
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtCore
 import Porydaw.Ui
+import Porydaw.Icons
 
 FocusScope {
     id: drawerScope
@@ -41,9 +35,6 @@ FocusScope {
     // virtual `palette` member of an unrelated type, and shadowing it makes the
     // engine warn on every instantiation and mis-handle the base property.
     required property QtObject drawerPalette
-    // Empty selects the application's default QSettings store; every lane case
-    // points this at a private file under its own scratch directory.
-    property url preferenceLocation: ""
     property var hintService: null
     readonly property bool hintScopeAllowed: {
         for (let child of modalLayer.children) {
@@ -67,14 +58,6 @@ FocusScope {
     height: presenter.height
     clip: true
 
-    // Historical store: category "editorDrawer", one category the two
-    // preference signals write and one read performed at mount.
-    Settings {
-        id: drawerSettings
-
-        category: "editorDrawer"
-        location: drawerScope.preferenceLocation
-    }
 
     function keyNameFor(kind) {
         switch (kind) {
@@ -85,86 +68,15 @@ FocusScope {
         return ""
     }
 
-    function pageNameFor(kind) {
+    function iconFor(kind) {
         switch (kind) {
-        case drawerScope.automationKind: return "automations"
-        case drawerScope.velocityKind: return "velocity"
-        case drawerScope.voiceChangesKind: return "voiceChanges"
+        case drawerScope.automationKind: return Icons.automation
+        case drawerScope.velocityKind: return Icons.velocity
+        case drawerScope.voiceChangesKind: return Icons.flat
         }
-        return ""
+        return ({})
     }
 
-    function iconResourceFor(kind) {
-        switch (kind) {
-        case drawerScope.automationKind: return "qrc:/icons/automation.svg"
-        case drawerScope.velocityKind: return "qrc:/icons/velocity.svg"
-        case drawerScope.voiceChangesKind: return "qrc:/icons/flat-music.svg"
-        }
-        return ""
-    }
-
-    // Read once, at mount: children complete before this item, so the Settings
-    // object has already loaded its values. A key is passed as its raw value,
-    // an absent visibility or page as -1 and an absent height as 0; the
-    // presenter applies state, records no preference change and writes nothing
-    // back. Restoring is the only place this file reads the store.
-    function storedVisibility(key) {
-        var value = drawerSettings.value(key)
-        if (value === undefined || value === null)
-            return -1
-        if (value === true || value === 1 || value === "1" || value === "true")
-            return 1
-        if (value === false || value === 0 || value === "0" || value === "false")
-            return 0
-        return -1
-    }
-
-    function storedHeight(key) {
-        var value = drawerSettings.value(key)
-        if (value === undefined || value === null)
-            return 0
-        var height = Number(value)
-        return isNaN(height) ? 0 : Math.round(height)
-    }
-
-    function storedPage() {
-        var value = drawerSettings.value("activePage")
-        if (value === undefined || value === null)
-            return -1
-        switch (String(value)) {
-        case "velocity": return drawerScope.velocityKind
-        case "voiceChanges": return drawerScope.voiceChangesKind
-        case "automations": return drawerScope.automationKind
-        }
-        return -1
-    }
-
-    function restoreStoredPreferences() {
-        drawerScope.presenter.restoreStoredPreferences(drawerScope.storedVisibility("velocityVisible"),
-                                                       drawerScope.storedHeight("velocityHeight"),
-                                                       drawerScope.storedVisibility("automationVisible"),
-                                                       drawerScope.storedHeight("automationHeight"),
-                                                       drawerScope.storedVisibility("voiceChangesVisible"),
-                                                       drawerScope.storedHeight("voiceChangesHeight"),
-                                                       drawerScope.storedPage())
-    }
-
-    function writeSectionPreference(kind, visible, height) {
-        var key = drawerScope.keyNameFor(kind)
-        if (key.length === 0)
-            return
-        drawerSettings.setValue(key + "Visible", visible)
-        drawerSettings.setValue(key + "Height", height)
-        drawerSettings.sync()
-    }
-
-    function writeActivePagePreference(page) {
-        var name = drawerScope.pageNameFor(page)
-        if (name.length === 0)
-            return
-        drawerSettings.setValue("activePage", name)
-        drawerSettings.sync()
-    }
 
     // A monotonic request names the kind whose loaded page takes focus, or -1
     // for the roll. A request whose loader has no item yet is skipped rather
@@ -194,8 +106,24 @@ FocusScope {
         }
         return null
     }
+    // True when keyboard focus sits inside the container-wide modal layer:
+    // a menu, picker or prompt owns it, not the section chrome.
+    function modalOwnsFocus() {
+        const window = drawerScope.Window.window
+        let focus = window ? window.activeFocusItem : null
+        while (focus) {
+            if (focus === modalLayer)
+                return true
+            focus = focus.parent
+        }
+        return false
+    }
 
     function executeFocusRequest() {
+        // A queued section request predates a modal the user has since opened;
+        // the modal keeps keyboard focus until it dismisses itself.
+        if (drawerScope.modalOwnsFocus())
+            return
         var target = drawerScope.presenter.focusTarget
         if (target < 0) {
             var root = drawerScope
@@ -224,7 +152,7 @@ FocusScope {
         anchors.fill: parent
 
         readonly property string keyName: drawerScope.keyNameFor(section.kind)
-        readonly property string iconResource: drawerScope.iconResourceFor(section.kind)
+        readonly property var icon: drawerScope.iconFor(section.kind)
         readonly property var sectionState: drawerScope.presenter.section(section.kind)
         // Available means a page is attached with a resolved URL: that kind owns
         // a toggle, however hidden it is, and only an available visible kind
@@ -328,6 +256,15 @@ FocusScope {
                 drawerScope.presenter.toggleSection(section.kind, drawerScope.activeFocus)
             }
 
+            function activateFromPointer() {
+                const hadVisibleSection = drawerScope.presenter.automationSection.visible
+                                          || drawerScope.presenter.velocitySection.visible
+                                          || drawerScope.presenter.voiceChangesSection.visible
+                drawerScope.presenter.toggleSection(section.kind,
+                                                    drawerScope.activeFocus
+                                                    && (toggle.activeFocus || hadVisibleSection))
+            }
+
             function activateFromKeyboard(event) {
                 activate()
                 event.accepted = true
@@ -346,48 +283,11 @@ FocusScope {
             Accessible.focusable: true
             Accessible.onPressAction: toggle.activate()
 
-            // The kind's own SVG, tinted in QML: the image is loaded once at the
-            // button size and drawn from that URL (Canvas paints only images
-            // loaded through loadImage), then the same rect is refilled with
-            // source-in. That is the retired chrome's
-            // QPainter::CompositionMode_SourceIn result with no image provider,
-            // no effect item and no second icon set.
-            Canvas {
-                id: icon
-
+            AppIcon {
                 anchors.fill: parent
-
-                onImageLoaded: icon.requestPaint()
-                onWidthChanged: icon.sync()
-                onHeightChanged: icon.sync()
-                onPaint: icon.paintIcon()
-                Component.onCompleted: icon.sync()
-
-                // The drawn rect is this canvas's own size, so a resize always
-                // repaints. loadImage only starts a load, and a cached URL
-                // emits nothing, so the first paint must never wait on it.
-                function sync() {
-                    if (width <= 0 || height <= 0)
-                        return
-                    if (isImageLoaded(section.iconResource)
-                            || isImageLoading(section.iconResource)) {
-                        requestPaint()
-                        return
-                    }
-                    loadImage(section.iconResource, Qt.size(width, height))
-                }
-
-                function paintIcon() {
-                    if (width <= 0 || height <= 0)
-                        return
-                    var ctx = getContext("2d")
-                    ctx.clearRect(0, 0, width, height)
-                    ctx.globalCompositeOperation = "source-over"
-                    ctx.drawImage(section.iconResource, 0, 0, width, height)
-                    ctx.globalCompositeOperation = "source-in"
-                    ctx.fillStyle = drawerScope.drawerPalette.keyboardLabel
-                    ctx.fillRect(0, 0, width, height)
-                }
+                icon: section.icon
+                color: section.sectionState.visible ? drawerScope.drawerPalette.selectionText
+                                                     : drawerScope.drawerPalette.windowText
             }
 
             MouseArea {
@@ -395,7 +295,12 @@ FocusScope {
 
                 anchors.fill: parent
                 acceptedButtons: Qt.LeftButton
-                onClicked: toggle.activate()
+                onPressed: (mouse) => {
+                    if (!toggle.activeFocus)
+                        bar.forceActiveFocus(Qt.MouseFocusReason)
+                    mouse.accepted = true
+                }
+                onClicked: toggle.activateFromPointer()
             }
         }
 
@@ -536,31 +441,13 @@ FocusScope {
         Accessible.focusable: true
         Accessible.onPressAction: detent.activate()
 
-        Canvas {
-            id: detentIcon
+        AppIcon {
             anchors.fill: parent
             anchors.margins: drawerScope.presenter.detentIconInset
-            readonly property color tint: drawerScope.velocityModel
-                                          && drawerScope.velocityModel.detentsEnabled
-                                          ? drawerScope.drawerPalette.selectionRing
-                                          : drawerScope.drawerPalette.keyboardLabel
-            onTintChanged: requestPaint()
-            onWidthChanged: requestPaint()
-            onHeightChanged: requestPaint()
-            onImageLoaded: requestPaint()
-            Component.onCompleted: loadImage("qrc:/icons/velocity_labels.svg")
-            onPaint: {
-                if (width <= 0 || height <= 0
-                        || !isImageLoaded("qrc:/icons/velocity_labels.svg"))
-                    return
-                const ctx = getContext("2d")
-                ctx.clearRect(0, 0, width, height)
-                ctx.globalCompositeOperation = "source-over"
-                ctx.drawImage("qrc:/icons/velocity_labels.svg", 0, 0, width, height)
-                ctx.globalCompositeOperation = "source-in"
-                ctx.fillStyle = tint
-                ctx.fillRect(0, 0, width, height)
-            }
+            icon: Icons.velocityLabels
+            color: drawerScope.velocityModel && drawerScope.velocityModel.detentsEnabled
+                   ? drawerScope.drawerPalette.selectionRing
+                   : drawerScope.drawerPalette.keyboardLabel
         }
 
         MouseArea {
@@ -590,22 +477,9 @@ FocusScope {
 
     Connections {
         target: drawerScope.presenter
-
-        // Swift decides what changed; QML performs the historical write for the
-        // kind the signal names, then syncs so the bytes are on disk. No other
-        // path in this file writes the store.
-        function onDrawerSectionPreferenceChanged(kind, visible, height) {
-            drawerScope.writeSectionPreference(kind, visible, height)
-        }
-
-        function onDrawerActivePagePreferenceChanged(page) {
-            drawerScope.writeActivePagePreference(page)
-        }
-
         function onFocusRequestChanged() {
             drawerScope.executeFocusRequest()
         }
     }
 
-    Component.onCompleted: drawerScope.restoreStoredPreferences()
 }

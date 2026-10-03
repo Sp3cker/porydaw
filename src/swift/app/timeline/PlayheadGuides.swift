@@ -13,7 +13,6 @@ public enum PlayheadGuideHoverOwner: Int, Sendable {
     case none = 0
     case automation = 1
     case voiceChanges = 2
-    case roll = 3
 }
 
 /// One guide's QML-facing presentation. The kind is fixed for the lifetime of
@@ -21,9 +20,9 @@ public enum PlayheadGuideHoverOwner: Int, Sendable {
 @MainActor
 @QtBridgeable
 public final class PlayheadGuideState {
-    @QtTracked public var contentX: Double = 0
+    public var contentX: Double = 0
     @QtTracked public var visible = false
-    @QtTracked public var kind: Int
+    public var kind: Int
 
     public init(kind: Int) {
         self.kind = kind
@@ -42,12 +41,12 @@ public final class PlayheadGuidesPresenter {
     @QtTracked public var timelineAttached = false
 
     /// Distinct guide publications, retained for deterministic presenter checks.
-    @QtIgnored public private(set) var presentationCount: UInt64 = 0
+    public private(set) var presentationCount: UInt64 = 0
 
-    @QtIgnored private weak var session: DocumentSession?
-    @QtIgnored private var hoverOwner: Int?
-    @QtIgnored private var hoverTick: Double?
-    @QtIgnored private var published: Presentation?
+    private weak var session: DocumentSession?
+    private var hoverOwner: Int?
+    private var hoverTick: Double?
+    private var published: Presentation?
 
     private struct Presentation: Equatable {
         var timelineAttached: Bool
@@ -109,12 +108,6 @@ public final class PlayheadGuidesPresenter {
 
     // MARK: - Hover ownership
 
-    /// Publishes the roll's pointer-local hover. QML calls this one-argument
-    /// entry; drawer owners use the owner-aware Swift entry below.
-    public func updateHover(contentX: Double) {
-        updateHover(owner: PlayheadGuideHoverOwner.roll.rawValue, contentX: contentX)
-    }
-
     /// Publishes a hover for one owner. A before-song-start or invalid position
     /// clears only that owner, preserving a different owner's active hover.
     @QtIgnored
@@ -132,12 +125,6 @@ public final class PlayheadGuidesPresenter {
         hoverOwner = owner
         hoverTick = tick
         apply()
-    }
-
-
-    /// Clears the roll's hover owner. A drawer-owned hover is not affected.
-    public func clearHover() {
-        clearHover(owner: PlayheadGuideHoverOwner.roll.rawValue)
     }
 
     /// Clears an owner only when that owner currently owns the published hover.

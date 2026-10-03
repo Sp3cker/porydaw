@@ -1,13 +1,100 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 @MainActor
 func runGeometryChecks(_ report: CheckReport, session: DocumentSession) {
+    checkFallbackAndSignatureBind(report, session: session)
+    checkCeilingGridWalk(report)
     checkDefaultBindKeepsGeometry(report)
     checkTicksPerBeatKeepsGeometry(report)
     checkScaleProjectionInvariants(report, session: session)
+    checkLiveFoldProjection(report, session: session)
     checkScaleHighlightRasterDocumentGuards(report, session: session)
+}
+
+@MainActor
+private func checkFallbackAndSignatureBind(_ report: CheckReport, session: DocumentSession) {
+    let fallbackID = "rollcheck/PianoRollStaticTest::fallbackGrid"
+    let bindID = "rollcheck/PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars"
+    let camera = geometryCamera()
+    let width = camera.snapshot.viewportWidth
+    let expectedLead = min(max((width * 0.10).rounded(), 48), 256)
+    report.expect(camera.leadPad > 0 && camera.snapshot.minHScroll < 0, cppID: fallbackID,
+                  message: "A002 fallback camera reserves a positive pre-roll lead pad")
+    report.expect(abs(camera.contentX(tick: 0) - expectedLead) <= 0.5,
+                  cppID: fallbackID,
+                  message: "A003 tick zero starts inside the independently computed lead pad")
+    report.expect(camera.snapshot.pixelsPerBeat == (13 * 8.0 / 3.0).rounded(),
+                  cppID: fallbackID,
+                  message: "A004 fallback grid retains the seed-font default beat zoom")
+    let axis = session.grid.axis
+    var lines: [(tick: Tick, bar: Bool, barNumber: Int, beatNumber: Int)] = []
+    axis.forEachGridLine(from: 0, to: 384) { tick, bar, barNumber, beatNumber in
+        lines.append((tick, bar, barNumber, beatNumber))
+    }
+    report.expect(lines.count == 16, cppID: fallbackID,
+                  message: "A009 unsignatured document publishes sixteen beat lines")
+    report.expect(lines.count == 16 && lines.indices.allSatisfy {
+        lines[$0].tick == Tick($0 * 24)
+    }, cppID: fallbackID, message: "A010 fallback line positions follow whole beats")
+    report.expect(lines.count == 16 && lines.indices.allSatisfy {
+        lines[$0].bar == ($0 % 4 == 0)
+    }, cppID: fallbackID, message: "A011 every fourth fallback line is a bar")
+    report.expect(lines.count == 16 && lines.indices.allSatisfy {
+        lines[$0].barNumber == $0 / 4 + 1
+    }, cppID: fallbackID, message: "A012 fallback bars use one-based grouping")
+    report.expect(lines.count == 16 && lines.indices.allSatisfy {
+        lines[$0].beatNumber == $0 % 4 + 1
+    }, cppID: fallbackID, message: "A013 fallback beats use one-based grouping")
+    let opening = axis.segmentAt(0)
+    report.expect(opening.start == 0, cppID: fallbackID,
+                  message: "A014 fallback segment starts at tick zero")
+    report.expect(opening.next == TimeDefaults.noTick, cppID: fallbackID,
+                  message: "A015 fallback segment runs to the no-tick sentinel")
+    report.expect(opening.beatTicks == 24, cppID: fallbackID,
+                  message: "A016 fallback segment uses 24 ticks per beat")
+    report.expect(opening.beatsPerBar == 4, cppID: fallbackID,
+                  message: "A017 fallback segment has four beats per bar")
+
+    let before = (1...8).map { session.camera.contentX(tick: Double($0 * 24)) }
+    session.document.setTimeSignature(tick: 0, numerator: 3, denominatorPower: 2)
+    defer { _ = session.document.history.undoDocument() }
+    let bound = session.grid.axis.segmentAt(0)
+    report.expect(bound.start == 0, cppID: bindID,
+                  message: "A044 bound 3/4 segment starts at tick zero")
+    report.expect(bound.next == TimeDefaults.noTick, cppID: bindID,
+                  message: "A045 bound 3/4 segment runs to the no-tick sentinel")
+    report.expect(bound.beatTicks == 24, cppID: bindID,
+                  message: "A046 bound 3/4 segment uses 24 ticks per beat")
+    report.expect(bound.beatsPerBar == 3, cppID: bindID,
+                  message: "A047 bound 3/4 segment has three beats per bar")
+    let boundWidth = session.camera.snapshot.viewportWidth
+    let boundLead = min(max((boundWidth * 0.10).rounded(), 48), 256)
+    report.expect(bound.beatsPerBar == 3 && session.camera.leadPad > 0
+                  && session.camera.snapshot.minHScroll == -boundLead,
+                  cppID: bindID,
+                  message: "A049 the bound three-four camera retains a positive viewport lead pad")
+    report.expect((1...8).allSatisfy {
+        abs(session.camera.contentX(tick: Double($0 * 24)) - before[$0 - 1]) <= 1e-6
+    }, cppID: bindID, message: "A050 binding 3/4 preserves beat content positions")
+}
+
+@MainActor
+private func checkCeilingGridWalk(_ report: CheckReport) {
+    let id = "rollcheck/PianoRollStaticTest::tickCeilingDoesNotWrap"
+    let floor = TimeDefaults.maxTick - 24
+    let axis = TimeAxis(map: TimeMap(ticksPerBeat: 24))
+    var count = 0
+    var smallest = TimeDefaults.noTick
+    axis.forEachGridLine(from: floor, to: TimeDefaults.noTick) { tick, _, _, _ in
+        count += 1
+        smallest = min(smallest, tick)
+    }
+    report.expect(count <= 1, cppID: id,
+                  message: "A018 the tick-ceiling grid walk emits at most one beat")
+    report.expect(count == 0 || smallest >= floor, cppID: id,
+                  message: "A019 the tick-ceiling grid walk never wraps to a low beat")
 }
 
 private func geometryCamera(lengthTicks: UInt64? = nil,
@@ -41,12 +128,12 @@ private func checkTicksPerBeatKeepsGeometry(_ report: CheckReport) {
     var camera = geometryCamera(lengthTicks: 16 * 4 * 24)
     let original = (1...8).map { camera.contentX(tick: Double($0 * 24)) }
     let initialZoom = camera.snapshot.pixelsPerBeat
-    let originalColumns = (1...3).map { camera.displayX(tick: Double($0 * 24), origin: 0, dpr: 1) }
+    let originalColumns = (1...3).map { camera.viewX(tick: Double($0 * 24), dpr: 1) }
     camera.updateTimeDomain(ticksPerBeat: 48, lengthTicks: 16 * 4 * 48)
     report.expect(gridCameraNear(camera.snapshot.pixelsPerBeat, initialZoom, tolerance: 1e-9),
                   cppID: id, message: "A037 binding 48 TPB retains the default beat zoom")
     for beat in 1...3 {
-        report.expect(abs(camera.displayX(tick: Double(beat * 48), origin: 0, dpr: 1)
+        report.expect(abs(camera.viewX(tick: Double(beat * 48), dpr: 1)
                           - originalColumns[beat - 1]) <= 1,
                       cppID: id, message: "A039 beat \(beat) retains its display column")
     }
@@ -162,6 +249,14 @@ private func checkScaleHighlightRasterDocumentGuards(
         report.fail(id, "A031-A032 no unused pitch for highlight probe")
         return
     }
+    let previous = session.scaleProjection.highlight
+    let history = session.document.history.currentIdentity
+    let bytes = try? session.document.state.file.encoded()
+    session.setScale(highlight: !previous)
+    session.setScale(highlight: previous)
+    report.expect(session.document.history.currentIdentity == history
+                  && bytes != nil && (try? session.document.state.file.encoded()) == bytes,
+                  cppID: id, message: "highlight view passes leave history and bytes unchanged")
     checkDocumentUndoProbe(
         report, session: session, id: id,
         messages: UndoProbeMessages(
@@ -176,6 +271,51 @@ private func checkScaleHighlightRasterDocumentGuards(
                     pitch: UInt8(freePitch), duration: 1, velocity: 100)
         }
     )
+}
+
+@MainActor
+private func checkLiveFoldProjection(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRollTest::scaleProjectionInvariants"
+    let document = session.document
+    let track = session.selectedTrack ?? 0
+    let oldFold = session.scaleProjection.fold
+    let before = document.history.currentIdentity
+    let occupied = Set(document.notes(in: track).map(\.pitch))
+    session.setScale(fold: true)
+    let projection = session.camera.projection
+    report.expect(projection.visibleRowCount == occupied.count, cppID: id,
+                  message: "production fold row count equals selected-track occupancy")
+    report.expect((0..<128).allSatisfy {
+        (projection.row(forPitch: $0) != PitchProjection.hiddenRow)
+            == occupied.contains(UInt8($0))
+    }, cppID: id, message: "production fold visibility exactly matches occupancy")
+    guard let base = stride(from: 1, through: 115, by: 12).first(where: {
+        !occupied.contains(UInt8($0)) && !occupied.contains(UInt8($0 + 12))
+    }), let added = try? document.addNotes([
+        NewNote(track: track,
+                tick: session.timeline.lengthTicks + Tick(document.ticksPerBeat * 8),
+                pitch: UInt8(base), duration: Tick(document.ticksPerBeat), velocity: 100)
+    ]).first else {
+        report.fail(id, "could not add the live folded off-scale note")
+        session.setScale(fold: oldFold)
+        return
+    }
+    let live = session.camera.projection
+    report.expect(document.note(added) != nil
+                  && live.row(forPitch: base) != PitchProjection.hiddenRow, cppID: id,
+                  message: "production fold exposes an occupied off-scale pitch after add")
+    report.expect(live.row(forPitch: base + 12) == PitchProjection.hiddenRow, cppID: id,
+                  message: "production fold keeps the unused off-scale octave hidden")
+    report.expect((0..<128).allSatisfy { key in
+        key % 12 != 1 || occupied.contains(UInt8(key)) || key == base
+            || live.row(forPitch: key) == PitchProjection.hiddenRow
+    }, cppID: id, message: "production fold hides every unused off-scale pitch")
+    if !document.history.undoDocument() {
+        report.fail(id, "could not undo the live folded note")
+    }
+    session.setScale(fold: oldFold)
+    report.expect(document.history.currentIdentity == before, cppID: id,
+                  message: "production fold insertion restores document history")
 }
 
 private struct UndoProbeMessages {

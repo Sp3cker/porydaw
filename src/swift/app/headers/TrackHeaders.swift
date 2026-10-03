@@ -25,37 +25,37 @@ public struct HeaderScrollPosition {
 public final class TrackHeadersPresenter {
     public var rows: QListModel<TrackHeaderRowHandle> = QListModel()
     public var menuItems: QListModel<TrackHeaderMenuItem> = QListModel()
-    @QtTracked public var trackHeaderWidth: Double = 0
-    @QtTracked public var rowHeight: Int = 0
-    @QtTracked public var activityWidth: Int = 0
-    @QtTracked public var separatorWidth: Int = 0
-    @QtTracked public var scrollbarWidth: Int = 0
-    @QtTracked public var scrollbarMinimumThumbHeight: Int = 0
-    @QtTracked public var reorderIndicatorHeight: Int = 0
-    @QtTracked public var contentHeight: Int = 0
-    @QtTracked public var viewportHeight: Double = 0
-    @QtTracked public var maximumScrollY: Double = 0 {
+    public var trackHeaderWidth: Double = 0
+    public var rowHeight: Int = 0
+    public var activityWidth: Int = 0
+    public var separatorWidth: Int = 0
+    public var scrollbarWidth: Int = 0
+    public var scrollbarMinimumThumbHeight: Int = 0
+    public var reorderIndicatorHeight: Int = 0
+    public var contentHeight: Int = 0
+    public var viewportHeight: Double = 0
+    public var maximumScrollY: Double = 0 {
         willSet { _scrollY.maximum = newValue }
     }
-    @QtTracked @HeaderScrollPosition public var scrollY: Double = 0
-    @QtTracked public var muteButtonRect: [String: QVariantSettable] = HeaderRect().map
-    @QtTracked public var soloButtonRect: [String: QVariantSettable] = HeaderRect().map
-    @QtTracked public var voiceLineRect: [String: QVariantSettable] = HeaderRect().map
-    @QtTracked public var renameEditorRect: [String: QVariantSettable] = HeaderRect().map
-    @QtTracked public var renamingTrack: Int = -1
-    @QtTracked public var renameDraft: String = ""
-    @QtTracked public var renamePlaceholder: String = ""
+    @HeaderScrollPosition public var scrollY: Double = 0
+    public var muteButtonRect: [String: QVariantSettable] = HeaderRect().map
+    public var soloButtonRect: [String: QVariantSettable] = HeaderRect().map
+    public var voiceLineRect: [String: QVariantSettable] = HeaderRect().map
+    public var renameEditorRect: [String: QVariantSettable] = HeaderRect().map
+    public var renamingTrack: Int = -1
+    public var renameDraft: String = ""
+    public var renamePlaceholder: String = ""
     @QtTracked public var reorderIndicatorVisible = false
-    @QtTracked public var reorderIndicatorY: Double = 0
+    public var reorderIndicatorY: Double = 0
     @QtTracked public var menuOpen = false
-    @QtTracked public var rowRebuildCount: Int = 0
-    @QtTracked public var lastCancelReason: Int = -1
-    @QtTracked public var cursorKind: Int = 0
-    @QtTracked public var controlFont: [String: QVariantSettable] = [:]
-    @QtTracked public var appearance: [String: QVariantSettable] = [:]
-    @QtTracked public var normalTitleFont: [String: QVariantSettable] = [:]
-    @QtTracked public var boldTitleFont: [String: QVariantSettable] = [:]
-    @QtTracked public var subtitleFont: [String: QVariantSettable] = [:]
+    public var rowRebuildCount: Int = 0
+    public var lastCancelReason: Int = -1
+    public var cursorKind: Int = 0
+    public var controlFont: [String: QVariantSettable] = [:]
+    public var appearance: [String: QVariantSettable] = [:]
+    public var normalTitleFont: [String: QVariantSettable] = [:]
+    public var boldTitleFont: [String: QVariantSettable] = [:]
+    public var subtitleFont: [String: QVariantSettable] = [:]
     /// Supplied by the same Qt host style hints as every other pointer surface.
     public var dragDistance: Double = 0
 
@@ -64,7 +64,6 @@ public final class TrackHeadersPresenter {
     @QtIgnored public var onRevealTrackVoiceRequested: ((Int) -> Void)?
     @QtIgnored public var onTrackSelected: ((Int) -> Void)?
     @QtIgnored public var onContextMenuRequested: ((Double, Double) -> Void)?
-    @QtIgnored public var onRestoreRollFocus: (() -> Void)?
     @QtIgnored var session: DocumentSession?
     @QtIgnored var palette = GridPalette()
     @QtIgnored var geometry = TrackHeadersGeometry()
@@ -75,7 +74,8 @@ public final class TrackHeadersPresenter {
     /// not need to rescan the document lane.
     @QtIgnored var resolvedProgramStarts: [Tick] = []
     @QtIgnored var resolvedProgramEnds: [Tick] = []
-    @QtIgnored var baseFontPx: Double
+    @QtIgnored var fontRoles: Typography
+    @QtIgnored var baseFontPx: Double { Double(fontRoles.baseFontPx) }
     @QtIgnored var viewportWidth: Double = 0
     @QtIgnored var devicePixelRatio: Double = 1
     @QtIgnored var textMetrics: HeaderTextMetrics?
@@ -90,12 +90,12 @@ public final class TrackHeadersPresenter {
     @QtIgnored var activity = TrackActivity()
     @QtIgnored var activityPlaying = false
 
-    public init(baseFontPx: Double = 13) {
-        self.baseFontPx = max(1, baseFontPx)
-        controlFont = TrackHeadersGeometry.titleFont(baseFontPx: self.baseFontPx).map
-        normalTitleFont = controlFont
-        boldTitleFont = TrackHeadersGeometry.titleFont(baseFontPx: self.baseFontPx, bold: true).map
-        subtitleFont = TrackHeadersGeometry.subtitleFont(baseFontPx: self.baseFontPx).map
+    public init(typography: Typography = Typography(baseFontPx: 13)) {
+        fontRoles = typography
+        controlFont = typography.body.map
+        normalTitleFont = typography.body.map
+        boldTitleFont = typography.bodyBold.map
+        subtitleFont = typography.caption.map
         appearance = TrackHeadersGeometry.appearance(palette: palette)
     }
 
@@ -104,6 +104,13 @@ public final class TrackHeadersPresenter {
         if self.session !== session { detach() }
         self.session = session
         self.palette = palette
+        refreshAppearance()
+    }
+
+    /// Rebuilds cached control roles and row colors from the attached palette.
+    /// The existing row refresh preserves interaction and measured text state.
+    @QtIgnored
+    public func refreshAppearance() {
         appearance = TrackHeadersGeometry.appearance(palette: palette)
         refreshFromDocument()
     }
@@ -132,7 +139,6 @@ public final class TrackHeadersPresenter {
         onRevealTrackVoiceRequested = nil
         onTrackSelected = nil
         onContextMenuRequested = nil
-        onRestoreRollFocus = nil
     }
 
     /// Called by the composition's one document publication, before refresh.
@@ -173,7 +179,12 @@ public final class TrackHeadersPresenter {
             nextEnds.append(span.end)
             next.append(makeSnapshot(track: track, session: session, program: span.program))
         }
-        if hasAdd { next.append(TrackHeaderSnapshot(isAddTrack: true, title: "+ Add track")) }
+        if hasAdd {
+            next.append(TrackHeaderSnapshot(
+                isAddTrack: true, title: "+ Add track",
+                titleFont: fontRoles.body,
+                subtitleFont: fontRoles.caption))
+        }
         if structural {
             snapshots = next
             rows.reset(to: next.map(TrackHeaderRowHandle.init))
@@ -302,7 +313,7 @@ public final class TrackHeadersPresenter {
             session.document.renameTrack(target.track, to: draft)
             refreshFromDocument()
         }
-        if restoreRollFocus { onRestoreRollFocus?(); rollFocusRequested() }
+        if restoreRollFocus { restoreRollFocusRequested() }
     }
 
     public func beginPointer(x: Double, y: Double, button: Int, modifiers: Int) -> Bool {
@@ -363,27 +374,36 @@ public final class TrackHeadersPresenter {
 
     public func dismissHeaderMenu() { pendingMenu = nil; menuOpen = false }
 
-    /// Completion of the existing host's picker callback, guarded across edits
-    /// and document replacement. A negative program is the picker's cancellation.
     public func completeVoiceRequest(program: Int) {
         guard let target = pendingVoice else { return }
         pendingVoice = nil
         guard (0...127).contains(program), let session,
               target.matches(session.document) else { return }
         if target.track < 0 {
-            if let track = session.document.addTrack(voice: program) { selectTrack(track) }
+            if session.document.canAddTrack,
+               let track = session.document.addTrack(voice: program) { selectTrack(track) }
         } else if validTrack(target.track) {
             let points = session.document.lanePoints(track: target.track, lane: .voice)
-            let tick = points.first?.tick ?? 0
-            session.document.writeLane(track: target.track, lane: .voice,
-                                       from: tick, through: tick,
-                                       points: [LaneWrite(tick: tick, value: program)])
+            if let firstTick = points.first?.tick,
+               let firstChange = points.last(where: { $0.tick == firstTick }) {
+                if program != firstChange.value {
+                    session.document.moveLanePoints(
+                        track: target.track, lane: .voice,
+                        moves: [LanePointMove(point: firstChange, tick: firstTick, value: program)])
+                }
+            } else {
+                session.document.writeLane(track: target.track, lane: .voice,
+                                           from: 0, through: 0,
+                                           points: [LaneWrite(tick: 0, value: program)])
+            }
         }
         refreshFromDocument()
     }
 
     @QtSignal public func contextMenuRequested(x: Double, y: Double)
-    @QtSignal public func rollFocusRequested()
+    // Mounted EditorSurface observes this to run the fork's focusContent
+    // synchronously after a rename ends with the editor's restore flag.
+    @QtSignal public func restoreRollFocusRequested()
 
     @QtIgnored
     func validTrack(_ track: Int) -> Bool {
@@ -397,6 +417,14 @@ public final class TrackHeadersPresenter {
         session.selectPrimaryTrack(track)
         onTrackSelected?(track)
         refreshFromDocument()
+    }
+
+    @QtIgnored
+    func firstVoiceProgram(track: Int) -> Int {
+        guard let session, validTrack(track) else { return 0 }
+        let points = session.document.lanePoints(track: track, lane: .voice)
+        guard let firstTick = points.first?.tick else { return 0 }
+        return points.last { $0.tick == firstTick }?.value ?? 0
     }
 
     @QtIgnored

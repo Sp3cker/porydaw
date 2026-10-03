@@ -1,580 +1,420 @@
-import QtCore
 import QtQuick
 import QtTest
-import PorydawApp
 import ShellQmlCheck 1.0
-import Porydaw.Ui
+import "GatedVisualsHelpers.js" as Helpers
+import "RollNoteFaces.js" as RollNoteFaces
 
-TestCase {
-    id: testCase
-    name: "ShellGridInput"
-    when: windowShown
-    width: 960
-    height: 640
-    visible: true
+ShellGridInputSupport {
+    GatedVisualsProbe { id: dprProbe }
+    Component { id: physicalReader; Canvas { width: 1; height: 1 } }
+    property int physicalCaptureIndex: 0
 
-    property var shell: null
-    property var settings: null
-
-    ShellQmlBootstrap { id: bootstrap }
-
-    Component { id: settingsComponent; Settings {} }
-    Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
-
-    function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        settings = settingsComponent.createObject(testCase)
-        verify(settings !== null, "genuine QtCore.Settings is available")
-    }
-
-    function cleanupTestCase() {
-        if (settings) {
-            settings.destroy()
-            settings = null
-            wait(0)
+    function physicalShellImage(item) {
+        var capture = null
+        verify(item.grabToImage(function(result) { capture = result }),
+               "the mounted selection accepts a physical framebuffer capture")
+        tryVerify(function() { return capture !== null }, 3000)
+        var file = bootstrap.projectRoot + "/grid-selection-dpr2-"
+                   + (++physicalCaptureIndex) + ".png"
+        verify(capture.saveToFile(file),
+               "the mounted selection saves its physical framebuffer")
+        var reader = physicalReader.createObject(item)
+        tryCompare(reader, "available", true, 3000)
+        var url = "file://" + file
+        reader.loadImage(url)
+        tryVerify(function() { return reader.isImageLoaded(url) }, 3000)
+        var pixels = reader.getContext("2d").createImageData(url)
+        reader.destroy()
+        return {
+            width: pixels.width, height: pixels.height,
+            red: function(x, y) { return pixels.data[(y * pixels.width + x) * 4] },
+            green: function(x, y) { return pixels.data[(y * pixels.width + x) * 4 + 1] },
+            blue: function(x, y) { return pixels.data[(y * pixels.width + x) * 4 + 2] }
         }
-        verify(bootstrap.clearSettings(), "removed only the private native settings")
     }
 
-    function cleanup() {
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                    || !shell.shellPresenter.sceneActive
-            }, 5000), "the close-all walk reaches the dirty gate or completes")
-            if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.closeReady
-            }, 5000), "teardown waits for scene destruction and grid detach")
+    function test_headerRenameFocusAndLifecycle() {
+        var session = openRoute101()
+        var surface = selectedSurface()
+        var headers = surface.headersModel
+        var input = findChild(surface, "timelineTrackHeadersInput")
+        var field = findChild(surface, "timelineTrackHeaderRename")
+        var rows = findChild(surface, "timelineTrackHeaderRows")
+        verify(input && field && rows && rows.itemAt(0),
+               "the loaded track header and rename field are mounted")
+        var row = rows.itemAt(0)
+        var title = row.titleRect
+        var x = title.x + title.width / 2
+        var y = title.y + title.height / 2
+        mouseClick(input, x, y)
+        tryCompare(input, "activeFocus", true, 3000,
+                   "a real header click gives the track-header band active focus")
+        verify(input.activeFocus, "A007 the loaded Quick header band accepts real pointer focus")
+        verify(input.activeFocus && !field.activeFocus,
+               "A008 the focused band is the track header rather than the rename editor")
+        function openRename() {
+            mouseDoubleClickSequence(input, x, y, Qt.LeftButton)
+            tryCompare(headers, "renamingTrack", 0, 3000)
+            tryCompare(field, "visible", true, 3000)
+            tryCompare(field, "activeFocus", true, 3000)
         }
-        shell.destroy()
-        shell = null
-        wait(0)
+        openRename()
+        verify(field.visible && field.activeFocus,
+               "A010 the opened rename field is visible and holds active focus")
+        for (var letter of "Rolled")
+            keyClick(letter)
+        compare(field.text, "Rolled",
+                "A009 the focused Quick rename editor contains the literal Rolled draft")
+        keyClick(Qt.Key_Return)
+        tryCompare(field, "visible", false, 3000)
+        compare(row.title, "1 · Rolled",
+                "Return commits the header title through the loaded shell")
+        openRename()
+        verify(field.visible && field.activeFocus,
+               "A012 the reopened rename field is visible and holds active focus")
+        for (var discarded of "Discarded")
+            keyClick(discarded)
+        keyClick(Qt.Key_Escape)
+        tryCompare(field, "visible", false, 3000)
+        compare(row.title, "1 · Rolled",
+                "Escape discards the reopened header draft")
+        openRename()
+        verify(field.visible && field.activeFocus,
+               "A014 the loop-marker guard reopens a visible focused rename field")
+        keyClick(Qt.Key_BracketLeft)
+        compare(field.text, "[", "the third focused rename editor accepts a loop-marker draft")
+        keyClick(Qt.Key_Return)
+        tryCompare(field, "visible", false, 3000)
+        compare(row.title, "1 · Rolled",
+                "the loop-marker guard keeps the committed name")
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        var deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
-    }
-
-    function openRoute101() {
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
+    function test_loadedRulerAndFixedInputSurfaces() {
+        settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
-        verify(shell !== null, "the production ShellWindow loads")
+        verify(shell !== null, "the empty shell mounts")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
         var session = shell.shellPresenter.session
-        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
-        waitForNative(function() {
-            return session.songOpen || session.lastSaveError.length > 0
-        }, 30000)
-        verify(session.songOpen, "Route 101 loads: " + session.lastSaveError)
+        compare(session.songTabs.tabCount, 0, "no song has no editable tab")
+        compare(selectedSurface(), null, "no song exposes no roll, ruler or drawer input")
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        compare(session.songTabs.selectedPage.songOpen, true,
+                "the published editor belongs to a loaded document")
+        var fixedNames = ["swiftRollInput", "timelineRulerInput",
+                          "timelineHorizontalScrollBar", "timelineRollScrollBar",
+                          "timelineTrackHeadersInput", "timelineOtherEventsInput",
+                          "timelineRulerControls", "timelineRulerDivisionControl",
+                          "timelineRulerFeelControl", "drawerBarInput",
+                          "drawerToggle_velocity", "drawerToggle_voiceChanges",
+                          "drawerToggle_automation"]
+        var fixedInputsLive = true
+        for (var i = 0; i < fixedNames.length; ++i) {
+            var input = findChild(surface, fixedNames[i])
+            fixedInputsLive = fixedInputsLive && input !== null && input.enabled
+                && input.width > 0 && input.height > 0
+        }
+        verify(fixedInputsLive,
+               "the loaded roll, ruler, scrollbars, headers, other events and drawer controls accept input")
+        var division = findChild(surface, "timelineRulerDivisionControl")
+        var feel = findChild(surface, "timelineRulerFeelControl")
+        verify(findChild(division, "gridControlLabel").text === grid.gridDivisionControlText
+               && findChild(feel, "gridControlLabel").text === grid.gridFeelControlText
+               && division.controlToolTip ===
+                   "Editing snap grid. Auto follows the zoom one step finer than the drawn grid; a fixed division snaps to that note value; Clock snaps to the mid2agb clock grid."
+               && feel.controlToolTip === "Straight or triplet beat subdivisions.",
+               "the loaded division and feel labels and help match the live ruler")
+        var ruler = findChild(surface, "timelineRulerInput")
+        var clickX = Math.min(ruler.width - grid.baseFontPx, 4 * grid.beatWidth)
+        var guide = session.playheadGuidesPresenter().edit
+        var beforeCursorX = guide.contentX
+        mouseClick(ruler, clickX, ruler.height * 3 / 4)
         verify(waitForNative(function() {
-            var surface = selectedSurface()
-            return surface !== null && surface.gridModel.renderedNoteCount > 0
-        }, 10000), "the staged song publishes grid notes")
-        return session
+            return guide.contentX > beforeCursorX
+        }, 3000), "a ready ruler click moves the document edit-cursor guide")
+        verify(!session.gridCommandAvailable(17),
+               "the released ruler click leaves no active time selection")
+        var bar = findChild(surface, "timelineHorizontalScrollBar")
+        grid.setCameraHScroll(0)
+        var beforeScroll = grid.cameraScrollX
+        mouseWheel(bar, bar.width / 2, bar.height / 2, 0, -120)
+        verify(waitForNative(function() { return grid.cameraScrollX > beforeScroll }, 3000),
+               "a ready horizontal scrollbar wheel moves the camera")
+        var vertical = findChild(surface, "timelineRollScrollBar")
+        var beforeVertical = grid.cameraScrollY
+        var wheelAngle = beforeVertical < grid.cameraMaxVScroll / 2 ? -120 : 120
+        mouseWheel(vertical, vertical.width / 2, vertical.height / 2, 0, wheelAngle)
+        verify(waitForNative(function() { return grid.cameraScrollY !== beforeVertical }, 3000),
+               "a ready vertical scrollbar wheel moves the roll")
+        var drawerKinds = ["velocity", "voiceChanges", "automation"]
+        for (var section = 0; section < drawerKinds.length; ++section) {
+            var toggle = findChild(surface, "drawerToggle_" + drawerKinds[section])
+            var handle = findChild(surface, "drawerHandle_" + drawerKinds[section])
+            verify(toggle && handle && toggle.enabled && toggle.visible,
+                   "the loaded drawer section exposes its live toggle and resize grip")
+            if (!handle.visible)
+                mouseClick(toggle, toggle.width / 2, toggle.height / 2)
+            tryCompare(handle, "visible", true, 3000,
+                       "the drawer resize grip becomes live when its section opens")
+            verify(handle.enabled && handle.width > 0 && handle.height > 0,
+                   "the expanded drawer section exposes its usable resize grip")
+        }
+        var detent = findChild(surface, "drawerDetentInput")
+        verify(detent !== null && detent.enabled && detent.width > 0
+               && detent.height > 0
+               && detent.parent.visible === (surface.velocityModel.detentsAvailable
+                   && surface.drawerPresenter.velocitySection.visible),
+               "the loaded velocity detent input follows its real section availability")
+        shell.shellPresenter.activate("view.event_list")
+        tryCompare(session.songTabs, "selectedTabShowsEvents", true, 3000)
+        var eventPage = null
+        tryVerify(function() {
+            eventPage = findChild(surface, "eventListPage")
+            return eventPage !== null && eventPage.visible && eventPage.enabled
+        }, 3000, "a loaded song exposes the live Event List")
+        var eventInputs = ["eventListChunk", "eventListFilter", "eventListAdd"]
+        var eventInputsLive = true
+        for (var eventIndex = 0; eventIndex < eventInputs.length; ++eventIndex) {
+            var eventInput = findChild(eventPage, eventInputs[eventIndex])
+            eventInputsLive = eventInputsLive && eventInput !== null && eventInput.enabled
+                && eventInput.visible && eventInput.width > 0 && eventInput.height > 0
+        }
+        verify(eventInputsLive, "the loaded Event List exposes its live chunk, filter and add controls")
+        shell.shellPresenter.activate("view.event_list")
+        tryCompare(session.songTabs, "selectedTabShowsEvents", false, 3000)
     }
 
-    function selectedSurface() {
-        if (!shell || !shell.sceneLoader.item)
-            return null
-        var tabs = shell.shellPresenter.session.songTabs
-        var page = findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId)
-        if (!page)
-            return null
-        return findChild(page, "swiftRollOverlay")
-    }
-
-    function gridNotes(grid) { return JSON.parse(grid.noteSummary) }
-
-    function noteById(grid, id) {
-        var list = gridNotes(grid)
-        for (var i = 0; i < list.length; ++i)
-            if (list[i].id === id)
-                return list[i]
-        return null
-    }
-
-    function selectedNotes(grid) {
-        return gridNotes(grid).filter(function(n) { return n.selected })
-    }
-
-    function pointFor(grid, tick, pitch) {
-        var ppt = grid.beatWidth / grid.ticksPerBeat
-        return {
-            x: tick * ppt - grid.cameraScrollX,
-            y: (127 - pitch + 0.5) * grid.rowHeight - grid.cameraScrollY
+    function test_readyRulerControlHoverHelp() {
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        compare(shell.shellPresenter.session.songTabs.selectedPage.songOpen, true,
+                "ruler control styling is inspected only after the song becomes ready")
+        var tip = findChild(surface, "timelineRulerToolTip")
+        var row = findChild(surface, "timelineRulerControls")
+        verify(tip !== null && row !== null && !tip.visible,
+               "ruler help starts hidden outside the clipped control row")
+        var entries = [
+            ["timelineRulerDivisionControl", "gridDivisionControlText",
+             "Editing snap grid. Auto follows the zoom one step finer than the drawn grid; a fixed division snaps to that note value; Clock snaps to the mid2agb clock grid."],
+            ["timelineRulerFeelControl", "gridFeelControlText",
+             "Straight or triplet beat subdivisions."]
+        ]
+        for (var i = 0; i < entries.length; ++i) {
+            var control = findChild(surface, entries[i][0])
+            var label = findChild(control, "gridControlLabel")
+            verify(control && control.enabled && control.width > 0 && control.height > 0,
+                   "the ready ruler help target is live")
+            if (i === 0) {
+                compare(label.text, grid.gridDivisionControlText,
+                        "the ready division control shows its canonical state")
+                compare(control.controlToolTip, entries[i][2],
+                        "the ready division control exposes its canonical help text")
+            } else {
+                compare(label.text, grid.gridFeelControlText,
+                        "the ready feel control shows its canonical state")
+                compare(control.controlToolTip, entries[i][2],
+                        "the ready feel control exposes its canonical help text")
+            }
+            mouseMove(control, control.width / 2, control.height / 2)
+            tryCompare(tip, "visible", true, 3000,
+                       "hovering a ready ruler control shows its mounted help")
+            compare(tip.toolTipText, entries[i][2],
+                    "the hovered help belongs to the actual control")
+            var origin = tip.mapToItem(surface, 0, 0)
+            var rowBottom = row.mapToItem(surface, 0, row.height).y
+            verify(tip.parent === surface && tip.width > 0 && tip.height > 0
+                   && rowBottom + tip.height <= surface.height,
+                   "the hovered help has space below the real ruler row")
+            verify(origin.y >= rowBottom,
+                   "hover help floats below rather than covering the ruler row")
+            verify(origin.y + tip.height <= surface.height,
+                   "hover help remains inside the bottom of the real canvas")
+            verify(origin.x >= 0 && origin.x + tip.width <= surface.width,
+                   "hover help remains inside both sides of the real canvas")
+            mouseMove(surface, surface.width / 2, surface.height / 2)
+            tryCompare(tip, "visible", false, 3000,
+                       "leaving either ruler control hides its help")
         }
     }
 
-    function freeLane(grid, surface, spanSnaps) {
-        var snap = grid.snapTicks
+    function test_modifiedRulerSweepPaintsExactNoteScope() {
+        compare(Screen.devicePixelRatio, dprProbe.expectedLaneDpr(),
+                "the modified sweep executes at the requested framebuffer DPR")
+        var physical = dprProbe.expectedLaneDpr() === 2
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var ruler = findChild(surface, "timelineRulerInput")
         var plot = findChild(surface, "timelineQuickRollPlot")
-        if (!plot || plot.width <= 0 || plot.height <= 0)
-            return null
-        var ppt = grid.beatWidth / grid.ticksPerBeat
-        var rowH = grid.rowHeight
-        var scrollX = grid.cameraScrollX
-        var scrollY = grid.cameraScrollY
-        var firstTick = Math.ceil(((scrollX + 24) / ppt) / snap) * snap
-        var lastTick = Math.floor(((scrollX + plot.width - 24) / ppt) / snap) * snap
-        var firstRow = Math.min(127, Math.max(0, Math.ceil(scrollY / rowH) + 2))
-        var lastRow = Math.min(127, Math.max(0, Math.floor((scrollY + plot.height) / rowH) - 2))
-        var current = gridNotes(grid)
-        for (var row = firstRow; row <= lastRow; ++row) {
-            var pitch = 127 - row
-            for (var tick = Math.max(0, firstTick); tick + spanSnaps * snap <= lastTick; tick += snap) {
-                var end = tick + spanSnaps * snap
-                var occupied = false
-                for (var i = 0; i < current.length; ++i) {
-                    var note = current[i]
-                    if (note.pitch === pitch && note.tick < end && note.tick + note.duration > tick) {
-                        occupied = true
-                        break
-                    }
-                }
-                if (!occupied)
-                    return { tick: tick, pitch: pitch }
+        var captureItem = physical ? surface : shell.contentItem
+        verify(ruler !== null && plot !== null, "the mounted roll and ruler accept a scope sweep")
+        var scale = grid.beatWidth / grid.ticksPerBeat
+        function rasterBottom(note) {
+            var x = (note.tick + note.duration / 2) * scale - grid.cameraScrollX
+            var bottom = (128 - note.pitch) * grid.rowHeight - grid.cameraScrollY
+                         - 2 / grid.devicePixelRatio
+            if (x < 2 || x >= plot.width - 2 || bottom < grid.rowHeight + 2
+                    || bottom >= plot.height - 2)
+                return null
+            return plot.mapToItem(captureItem, x, bottom)
+        }
+        var notes = gridNotes(grid)
+        var renderer = findChild(surface, "timelineRendererPlot")
+        var secondary = null
+        for (var i = 0; i < notes.length; ++i) {
+            var candidate = notes[i]
+            var item = RollNoteFaces.face(renderer, candidate.id)
+            var left = candidate.tick * scale - grid.cameraScrollX
+            var right = (candidate.tick + candidate.duration) * scale - grid.cameraScrollX
+            var primaryOverlap = notes.some(function(other) {
+                var primaryItem = RollNoteFaces.face(renderer, other.id)
+                return other.track === grid.trackIndex && !other.ghost
+                    && other.tick >= candidate.tick
+                    && other.tick < candidate.tick + candidate.duration
+                    && primaryItem && rasterBottom(other) !== null
+            })
+            if (candidate.ghost && item && rasterBottom(candidate) !== null && primaryOverlap
+                    && left > ruler.width * 0.15 && right < ruler.width * 0.6) {
+                secondary = candidate
+                break
             }
         }
-        return null
-    }
-
-    function noteBand(roll, surface, noteId) {
-        var note = findChild(surface, "gridNote_" + noteId)
-        if (!note || note.width <= 0 || note.height <= 0)
-            return null
-        var topLeft = note.mapToItem(roll, 0, 0)
-        var bottomRight = note.mapToItem(roll, note.width, note.height)
-        var sx = topLeft.x - 3
-        var sy = topLeft.y - 3
-        var ex = bottomRight.x + 3
-        var ey = bottomRight.y + 3
-        if (sx < 1 || sy < 1 || ex > roll.width - 1 || ey > roll.height - 1)
-            return null
-        return { sx: sx, sy: sy, ex: ex, ey: ey }
-    }
-
-    function firstBandedNote(grid, surface, roll) {
-        var list = gridNotes(grid)
-        for (var i = 0; i < list.length; ++i) {
-            if (noteBand(roll, surface, list[i].id) !== null)
-                return list[i]
+        verify(secondary !== null, "a rendered secondary note anchors the modified sweep")
+        var startX = (secondary.tick - grid.snapTicks) * scale - grid.cameraScrollX
+        var endX = (secondary.tick + secondary.duration + grid.snapTicks) * scale
+                   - grid.cameraScrollX
+        var y = ruler.height * 0.75
+        mousePress(ruler, startX, y, Qt.LeftButton, Qt.ControlModifier)
+        mouseMove(ruler, endX, y, -1, Qt.LeftButton, Qt.ControlModifier)
+        mouseRelease(ruler, endX, y, Qt.LeftButton, Qt.ControlModifier)
+        verify(shell.shellPresenter.session.gridCommandAvailable(17),
+               "the mounted modified sweep publishes an active time selection")
+        waitForGridFrame(surface)
+        var image = physical ? physicalShellImage(captureItem) : grabImage(captureItem)
+        verify(image.width > 0 && image.height > 0, "the modified selection renders pixels")
+        var dpr = image.width / captureItem.width
+        verify(image.width === Math.round(captureItem.width * Screen.devicePixelRatio)
+               && image.height === Math.round(captureItem.height * Screen.devicePixelRatio),
+               "the modified ruler uses the observed physical framebuffer dimensions")
+        var ring = Helpers.channels(grid.palette.selectionRing)
+        var selectedTracks = {}
+        selectedTracks[grid.trackIndex] = true
+        var startTick = secondary.tick - grid.snapTicks
+        var endTick = secondary.tick + secondary.duration + grid.snapTicks
+        var probed = 0
+        var ghostRings = 0
+        var primaryRings = 0
+        for (var index = 0; index < notes.length; ++index) {
+            var note = notes[index]
+            if (rasterBottom(note) === null)
+                continue
+            if (note.tick < endTick && note.tick + note.duration > startTick)
+                selectedTracks[note.track] = true
         }
-        return null
-    }
-
-    function dragLeft(roll, sx, sy, ex, ey) {
-        mousePress(roll, sx, sy, Qt.LeftButton)
-        mouseMove(roll, ex, ey, -1, Qt.LeftButton)
-        mouseRelease(roll, ex, ey, Qt.LeftButton)
-    }
-
-    function dragRight(roll, sx, sy, ex, ey) {
-        mousePress(roll, sx, sy, Qt.RightButton)
-        mouseMove(roll, ex, ey, -1, Qt.RightButton)
-        mouseRelease(roll, ex, ey, Qt.RightButton)
-    }
-
-    function rollInput(surface) { return findChild(surface, "swiftRollInput") }
-
-    function test_drawMoveNeighborTrim() {
-        var session = openRoute101()
-        var surface = selectedSurface()
-        var grid = surface.gridModel
-        var roll = rollInput(surface)
-        verify(roll && roll.visible, "the real roll input is mounted")
-        var lane = freeLane(grid, surface, 12)
-        verify(lane !== null, "a free lane spans 12 snaps")
-        var snap = grid.snapTicks
-        var tick = lane.tick
-        var pitch = lane.pitch
-        var inset = Math.max(1, Math.floor(snap / 4))
-
-        var beforeCount = gridNotes(grid).length
-        var a = pointFor(grid, tick + inset, pitch)
-        var b = pointFor(grid, tick + 2 * snap - inset, pitch)
-        dragLeft(roll, a.x, a.y, b.x, b.y)
-        var movingId = 0
-        verify(waitForNative(function() {
-            var list = gridNotes(grid)
-            if (list.length !== beforeCount + 1)
-                return false
-            for (var i = 0; i < list.length; ++i) {
-                var found = true
-                // New identity: not present before is checked via count + fields below.
-                if (list[i].tick === tick && list[i].duration === 2 * snap && list[i].pitch === pitch)
-                    movingId = list[i].id
+        verify(selectedTracks[secondary.track] === true && secondary.track !== grid.trackIndex,
+               "the fixture includes a distinct secondary track")
+        for (var track in selectedTracks) {
+            var found = false
+            for (var n = 0; n < notes.length; ++n) {
+                var visible = notes[n]
+                if (visible.track !== Number(track) || visible.tick >= endTick
+                        || visible.tick + visible.duration <= startTick)
+                    continue
+                var bottom = rasterBottom(visible)
+                if (bottom === null)
+                    continue
+                var px = Math.round(bottom.x * dpr)
+                var py = Math.round(bottom.y * dpr) - 1
+                if (px < 0 || px >= image.width || py < 0 || py >= image.height)
+                    continue
+                var actual = [image.red(px, py), image.green(px, py), image.blue(px, py)]
+                verify(Helpers.colorsNear(actual, ring),
+                       "modified ruler scope paints each covered note's independently located selection ring")
+                found = true
+                ++probed
+                if (visible.ghost)
+                    ++ghostRings
+                else if (visible.track === grid.trackIndex)
+                    ++primaryRings
             }
-            return movingId !== 0
-        }, 5000), "left drag draws the moving note")
-        var moving = noteById(grid, movingId)
-        compare(moving.tick, tick)
-        compare(moving.duration, 2 * snap)
-        compare(moving.pitch, pitch)
-
-        var c = pointFor(grid, tick + 4 * snap + inset, pitch)
-        var d = pointFor(grid, tick + 8 * snap - inset, pitch)
-        var beforeSecond = gridNotes(grid).length
-        dragLeft(roll, c.x, c.y, d.x, d.y)
-        var neighborId = 0
-        verify(waitForNative(function() {
-            var list = gridNotes(grid)
-            if (list.length !== beforeSecond + 1)
-                return false
-            for (var i = 0; i < list.length; ++i) {
-                if (list[i].tick === tick + 4 * snap && list[i].duration === 4 * snap
-                        && list[i].pitch === pitch)
-                    neighborId = list[i].id
-            }
-            return neighborId !== 0
-        }, 5000), "left drag draws the neighbor note")
-
-        var moveFrom = pointFor(grid, tick + snap, pitch)
-        var moveTo = pointFor(grid, tick + 4 * snap, pitch)
-        dragLeft(roll, moveFrom.x, moveFrom.y, moveTo.x, moveTo.y)
-        verify(waitForNative(function() {
-            var moved = noteById(grid, movingId)
-            var trimmed = noteById(grid, neighborId)
-            return moved && trimmed && moved.tick === tick + 3 * snap
-                && moved.duration === 2 * snap && trimmed.tick === tick + 5 * snap
-                && trimmed.duration === 3 * snap
-        }, 5000), "body drag moves one note and trims its neighbor")
-
-        var rendered = findChild(surface, "gridNote_" + movingId)
-        verify(rendered !== null && rendered.visible, "the moved note keeps its rendered face")
-        var expected = pointFor(grid, tick + 3 * snap, pitch)
-        var actual = rendered.mapToItem(roll, rendered.width / 2, rendered.height / 2)
-        verify(Math.abs(actual.x - (expected.x + snap)) < grid.beatWidth,
-              "the rendered face follows the moved tick (x=" + actual.x + " expected~" + expected.x + ")")
-    }
-
-    function test_resizeMinimum() {
-        var session = openRoute101()
-        var surface = selectedSurface()
-        var grid = surface.gridModel
-        var roll = rollInput(surface)
-        var lane = freeLane(grid, surface, 18)
-        verify(lane !== null, "a free lane spans 18 snaps")
-        var snap = grid.snapTicks
-        var tick = lane.tick
-        var pitch = lane.pitch
-        var inset = Math.max(1, Math.floor(snap / 4))
-
-        var a = pointFor(grid, tick + inset, pitch)
-        var b = pointFor(grid, tick + 6 * snap - inset, pitch)
-        dragLeft(roll, a.x, a.y, b.x, b.y)
-        var trailingId = 0
-        verify(waitForNative(function() {
-            var list = gridNotes(grid)
-            for (var i = 0; i < list.length; ++i)
-                if (list[i].tick === tick && list[i].duration === 6 * snap && list[i].pitch === pitch)
-                    trailingId = list[i].id
-            return trailingId !== 0
-        }, 5000), "trailing note is drawn")
-
-        var c = pointFor(grid, tick + 9 * snap + inset, pitch)
-        var d = pointFor(grid, tick + 15 * snap - inset, pitch)
-        dragLeft(roll, c.x, c.y, d.x, d.y)
-        var leadingId = 0
-        verify(waitForNative(function() {
-            var list = gridNotes(grid)
-            for (var i = 0; i < list.length; ++i)
-                if (list[i].tick === tick + 9 * snap && list[i].duration === 6 * snap
-                        && list[i].pitch === pitch)
-                    leadingId = list[i].id
-            return leadingId !== 0
-        }, 5000), "leading note is drawn")
-
-        var trailing = noteById(grid, trailingId)
-        var shrinkFrom = pointFor(grid, trailing.tick + trailing.duration, pitch)
-        var shrinkTo = pointFor(grid, trailing.tick, pitch)
-        mousePress(roll, shrinkFrom.x - 1, shrinkFrom.y, Qt.LeftButton)
-        mouseMove(roll, shrinkTo.x, shrinkTo.y, -1, Qt.LeftButton)
-        mouseRelease(roll, shrinkTo.x, shrinkTo.y, Qt.LeftButton)
-        verify(waitForNative(function() {
-            var note = noteById(grid, trailingId)
-            return note && note.tick === trailing.tick && note.duration === snap
-        }, 5000), "trailing resize clamps at the snap minimum")
-
-        var leading = noteById(grid, leadingId)
-        var leadingEnd = leading.tick + leading.duration
-        var growFrom = pointFor(grid, leading.tick, pitch)
-        var growTo = pointFor(grid, leadingEnd, pitch)
-        mousePress(roll, growFrom.x + 1, growFrom.y, Qt.LeftButton)
-        mouseMove(roll, growTo.x, growTo.y, -1, Qt.LeftButton)
-        mouseRelease(roll, growTo.x, growTo.y, Qt.LeftButton)
-        verify(waitForNative(function() {
-            var note = noteById(grid, leadingId)
-            return note && note.tick === leadingEnd - snap && note.duration === snap
-        }, 5000), "leading resize clamps at the snap minimum")
-    }
-
-    function test_undoRedoRerender() {
-        var session = openRoute101()
-        var surface = selectedSurface()
-        var grid = surface.gridModel
-        var roll = rollInput(surface)
-        var baseline = grid.renderedNoteCount
-        verify(baseline > 0, "the staged song publishes notes")
-        var lane = freeLane(grid, surface, 4)
-        verify(lane !== null, "a free lane spans 4 snaps")
-        var snap = grid.snapTicks
-        var inset = Math.max(1, Math.floor(snap / 4))
-        var a = pointFor(grid, lane.tick + inset, lane.pitch)
-        var b = pointFor(grid, lane.tick + 2 * snap - inset, lane.pitch)
-        dragLeft(roll, a.x, a.y, b.x, b.y)
-        var addedId = 0
-        var addedTick = 0
-        var addedDuration = 0
-        verify(waitForNative(function() {
-            var list = gridNotes(grid)
-            if (list.length !== baseline + 1)
-                return false
-            for (var i = 0; i < list.length; ++i) {
-                if (list[i].tick === lane.tick && list[i].duration === 2 * snap
-                        && list[i].pitch === lane.pitch) {
-                    addedId = list[i].id
-                    addedTick = list[i].tick
-                    addedDuration = list[i].duration
-                }
-            }
-            return addedId !== 0
-        }, 5000), "left drag adds one document note")
-        verify(findChild(surface, "gridNote_" + addedId) !== null, "the added note renders")
-
-        roll.forceActiveFocus(Qt.OtherFocusReason)
-        tryCompare(roll, "activeFocus", true, 3000)
-        keySequence(StandardKey.Undo)
-        verify(waitForNative(function() {
-            return grid.renderedNoteCount === baseline
-                && findChild(surface, "gridNote_" + addedId) === null
-        }, 5000), "Undo removes the added note and its face")
-        keySequence(StandardKey.Redo)
-        verify(waitForNative(function() {
-            var restored = noteById(grid, addedId)
-            return restored && restored.tick === addedTick && restored.duration === addedDuration
-                && findChild(surface, "gridNote_" + addedId) !== null
-        }, 5000), "Redo restores the note and its face")
-    }
-
-    function test_rightDragCommit() {
-        var session = openRoute101()
-        var surface = selectedSurface()
-        var grid = surface.gridModel
-        var roll = rollInput(surface)
-        var target = firstBandedNote(grid, surface, roll)
-        verify(target !== null, "a fully visible note takes a band")
-        verify(!target.selected, "the band target starts unselected")
-        var band = noteBand(roll, surface, target.id)
-        verify(band !== null, "the band fits inside the roll")
-        dragRight(roll, band.sx, band.sy, band.ex, band.ey)
-        verify(waitForNative(function() {
-            var current = noteById(grid, target.id)
-            return current && current.selected
-        }, 5000), "right drag commits the band selection")
-    }
-
-    function test_escapeCancel() {
-        var session = openRoute101()
-        var surface = selectedSurface()
-        var grid = surface.gridModel
-        var roll = rollInput(surface)
-        var before = grid.noteSummary
-        var beforeReason = grid.lastCancelReason
-        var target = firstBandedNote(grid, surface, roll)
-        verify(target !== null, "a fully visible note takes a band")
-        var band = noteBand(roll, surface, target.id)
-        verify(band !== null, "the band fits inside the roll")
-        mouseMove(roll, band.sx, band.sy)
-        mousePress(roll, band.sx, band.sy, Qt.RightButton)
-        mouseMove(roll, band.ex, band.ey, -1, Qt.RightButton)
-        verify(waitForNative(function() {
-            var current = noteById(grid, target.id)
-            return current && current.selected
-        }, 5000), "the band previews its selection while held")
-        roll.forceActiveFocus(Qt.OtherFocusReason)
-        keyClick(Qt.Key_Escape)
-        mouseRelease(roll, band.ex, band.ey, Qt.RightButton)
-        verify(waitForNative(function() {
-            return grid.noteSummary === before
-        }, 5000), "Escape cancels the band without a document edit")
-        compare(grid.lastCancelReason, beforeReason, "band Escape leaves the host cancel reason untouched")
-        var idleItem = findChild(surface, "gridNote_" + target.id)
-        verify(idleItem !== null, "the idle note still renders")
-        var center = idleItem.mapToItem(roll, idleItem.width / 2, idleItem.height / 2)
-        mouseClick(roll, center.x, center.y, Qt.LeftButton)
-        verify(waitForNative(function() {
-            var current = noteById(grid, target.id)
-            return current && current.selected
-        }, 5000), "idle click selects the note")
-        roll.forceActiveFocus(Qt.OtherFocusReason)
-        tryCompare(roll, "activeFocus", true, 3000)
-        verify(waitForNative(function() { return true }, 100))
-        var idleBefore = gridNotes(grid)
-        var idleRevision = grid.appliedRevisionText
-        var idleReason = grid.lastCancelReason
-        keyClick(Qt.Key_Escape)
-        verify(waitForNative(function() {
-            var current = noteById(grid, target.id)
-            return current && !current.selected
-        }, 5000), "idle Escape clears the ephemeral selection")
-        var idleAfter = gridNotes(grid)
-        compare(idleAfter.length, idleBefore.length, "idle Escape keeps every note")
-        for (var i = 0; i < idleBefore.length; ++i) {
-            compare(idleAfter[i].id, idleBefore[i].id)
-            compare(idleAfter[i].tick, idleBefore[i].tick)
-            compare(idleAfter[i].duration, idleBefore[i].duration)
-            compare(idleAfter[i].pitch, idleBefore[i].pitch)
-            compare(idleAfter[i].track, idleBefore[i].track)
-            compare(idleAfter[i].velocity, idleBefore[i].velocity)
-            verify(!idleAfter[i].selected, "idle Escape selects nothing")
+            verify(found,
+                   "modified ruler scope paints the selection-ring pixels of every overlapping track")
         }
-        compare(grid.appliedRevisionText, idleRevision, "idle Escape is not a history edit")
-        compare(grid.lastCancelReason, idleReason, "idle Escape fabricates no cancel reason")
-    }
-
-    function test_ungrabCancel() {
-        var session = openRoute101()
-        var surface = selectedSurface()
-        var grid = surface.gridModel
+        verify(probed >= 2, "the mounted sweep paints primary and secondary note rings")
+        verify(ghostRings > 0 && primaryRings > 0,
+               "the modified ruler proves both a covered ghost and a primary raster ring")
+        var coveredPrimary = notes.find(function(note) {
+            if (note.track !== grid.trackIndex || note.ghost
+                    || note.tick < startTick || note.tick >= endTick)
+                return false
+            return rasterBottom(note) !== null
+        })
+        verify(coveredPrimary !== undefined, "the selected span contains a primary note for key delivery")
         var roll = rollInput(surface)
-        var before = grid.noteSummary
-        var target = firstBandedNote(grid, surface, roll)
-        verify(target !== null, "a fully visible note takes a band")
-        var band = noteBand(roll, surface, target.id)
-        verify(band !== null, "the band fits inside the roll")
-        mouseMove(roll, band.sx, band.sy)
-        mousePress(roll, band.sx, band.sy, Qt.RightButton)
-        mouseMove(roll, band.ex, band.ey, -1, Qt.RightButton)
-        // QML cannot synthesize QEvent::UngrabMouse; invoke the same production
-        // slot the roll's onCanceled calls (EditorSurface.qml) while the real
-        // right band is held.
-        grid.inputCancelled(1)
-        mouseRelease(roll, band.ex, band.ey, Qt.RightButton)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Up)
         verify(waitForNative(function() {
-            return grid.lastCancelReason === 1 && grid.noteSummary === before
-        }, 5000), "pointer-ungrab cancels the band with reason 1")
-    }
-
-    function test_trackFollowReload() {
-        var session = openRoute101()
-        var surface = selectedSurface()
-        var grid = surface.gridModel
-        verify(grid.trackIndex === 0, "the tab starts on track 0")
-        grid.setTrack(1)
-        verify(waitForNative(function() {
-            if (grid.trackIndex !== 1)
-                return false
-            var list = gridNotes(grid)
-            if (list.length === 0 || grid.renderedNoteCount !== list.length)
-                return false
-            for (var i = 0; i < list.length; ++i)
-                if (list[i].track !== 1)
-                    return false
-            return true
-        }, 5000), "setTrack follows track 1 in notes and faces")
-        var oldGrid = grid
-        var tabs = session.songTabs
-        compare(tabs.tabCount, 1, "one tab is open before the reload")
+            var transposed = noteById(grid, coveredPrimary.id)
+            return transposed && transposed.pitch === coveredPrimary.pitch + 1
+                && shell.shellPresenter.session.gridCommandAvailable(17)
+        }, 5000), "mounted Up edits the covered primary while retaining the time range")
+        waitForGridFrame(surface)
+        var keyedImage = physical ? physicalShellImage(captureItem) : grabImage(captureItem)
+        var keyedBottom = rasterBottom({
+            tick: coveredPrimary.tick, duration: coveredPrimary.duration,
+            pitch: coveredPrimary.pitch + 1
+        })
+        verify(keyedBottom !== null,
+               "the time-scoped keyboard edit leaves its primary note inside the rendered plot")
+        var keyedX = Math.round(keyedBottom.x * dpr)
+        var keyedY = Math.round(keyedBottom.y * dpr) - 1
+        verify(keyedX >= 0 && keyedX < keyedImage.width
+               && keyedY >= 0 && keyedY < keyedImage.height
+               && Helpers.colorsNear([keyedImage.red(keyedX, keyedY),
+                                      keyedImage.green(keyedX, keyedY),
+                                      keyedImage.blue(keyedX, keyedY)], ring),
+               "time-scoped Up leaves the edited note's selection ring painted")
+        var session = shell.shellPresenter.session
+        var blockedSummary = grid.fetchNoteSummary()
+        var blockedRevision = grid.appliedRevisionText
+        var blockedCursor = grid.editCursorTick
+        var blockedUndo = session.canUndo
+        var blockedRedo = session.canRedo
+        keyClick(Qt.Key_Right, Qt.ShiftModifier)
+        keyClick(Qt.Key_Left, Qt.ShiftModifier)
+        compare(grid.fetchNoteSummary(), blockedSummary,
+                "mounted time selection blocks both resize keys without changing notes")
+        compare(grid.appliedRevisionText, blockedRevision,
+                "mounted time selection blocks resize without changing revision")
+        compare(grid.editCursorTick, blockedCursor,
+                "mounted time selection blocks resize without changing cursor")
+        compare(session.canUndo, blockedUndo,
+                "mounted time selection blocks resize without adding undo")
+        compare(session.canRedo, blockedRedo,
+                "mounted time selection blocks resize without changing redo")
+        compare(session.gridCommandAvailable(17), true,
+                "mounted blocked resize keys preserve the active time selection")
         session.openSong("mus_route101")
-        var replacement = null
         verify(waitForNative(function() {
             var current = selectedSurface()
-            if (!current)
-                return false
-            replacement = current.gridModel
-            return tabs.tabCount === 1 && tabs.pendingCloseId === -1
-                && replacement && replacement !== oldGrid
-        }, 15000), "re-opening the selected song replaces its grid in place")
-        verify(shell.visible, "the mounted window survives the reload")
+            return session.songTabs.pendingCloseId >= 0
+                || (current && current.gridModel !== grid)
+        }, 15000), "the reload either requests discard or installs the replacement")
+        if (session.songTabs.pendingCloseId >= 0)
+            session.songTabs.confirmDiscard()
+        var mountedTabs = findChild(shell.sceneLoader.item, "songTabPages").parent
         verify(waitForNative(function() {
-            return replacement.renderedNoteCount > 0
-        }, 5000), "the replacement grid publishes notes")
-        compare(replacement.trackIndex, 0, "the reloaded tab resets its track selection")
+            var replacement = mountedTabs.selectedEditorSurface()
+            return replacement && session.songTabs.selectedPage
+                && replacement.gridModel !== grid
+                && replacement.gridModel === session.songTabs.selectedPage.gridPresenter()
+                && replacement.gridModel.renderedNoteCount > 0
+        }, 15000), "the selected song reload replaces the grid after the active ruler range")
+        compare(session.gridCommandAvailable(17), false,
+                "reloading the selected song clears the old active time selection")
     }
 
-    function test_focusedRouting() {
-        var session = openRoute101()
-        var surface = selectedSurface()
-        var grid = surface.gridModel
-        var roll = rollInput(surface)
-        var target = firstBandedNote(grid, surface, roll)
-        verify(target !== null, "a fully visible note takes routing")
-        var item = findChild(surface, "gridNote_" + target.id)
-        verify(item !== null, "the routing note renders")
-        var center = item.mapToItem(roll, item.width / 2, item.height / 2)
-        mouseClick(roll, center.x, center.y, Qt.LeftButton)
-        verify(waitForNative(function() {
-            var current = noteById(grid, target.id)
-            return current && current.selected
-        }, 5000), "left click selects the routing note")
-        var snap = grid.snapTicks
-        verify(shell.shellPresenter.actionEnabled("roll.nudge_right"),
-              "Nudge Right is enabled for the selection")
-        roll.forceActiveFocus(Qt.OtherFocusReason)
-        tryCompare(roll, "activeFocus", true, 3000)
-        keyClick(Qt.Key_Right)
-        verify(waitForNative(function() {
-            var moved = noteById(grid, target.id)
-            return moved && moved.tick === target.tick + snap && moved.pitch === target.pitch
-        }, 5000), "Right nudges the focused note by one snap")
-
-        keyClick(Qt.Key_B)
-        tryCompare(grid, "pencilMode", true, 3000, "B toggles Pencil Mode")
-        var pencilStayed = shell.shellPresenter.routeEditorKey(Qt.Key_B, Qt.NoModifier, true)
-        verify(pencilStayed, "auto-repeat B is consumed while eligible")
-        compare(grid.pencilMode, true, "repeat never retoggles Pencil Mode")
-
-        var movedItem = findChild(surface, "gridNote_" + target.id)
-        verify(movedItem !== null, "the moved note renders")
-        var movedCenter = movedItem.mapToItem(roll, movedItem.width / 2, movedItem.height / 2)
-        var beforeGesture = grid.noteSummary
-        mouseMove(roll, movedCenter.x, movedCenter.y)
-        mousePress(roll, movedCenter.x, movedCenter.y, Qt.LeftButton)
-        keyClick(Qt.Key_Delete)
-        compare(grid.noteSummary, beforeGesture, "Delete is blocked mid-gesture")
-        var pencilBefore = grid.pencilMode
-        keyClick(Qt.Key_B)
-        compare(grid.pencilMode, !pencilBefore, "Pencil survives the pointer gesture")
-        compare(grid.noteSummary, beforeGesture, "surviving Pencil never edits notes")
-        keyClick(Qt.Key_B)
-        compare(grid.pencilMode, pencilBefore, "second Pencil restores the mode")
-        compare(grid.noteSummary, beforeGesture, "restoring Pencil never edits notes")
-        mouseRelease(roll, movedCenter.x, movedCenter.y, Qt.LeftButton)
-        compare(grid.noteSummary, beforeGesture, "releasing the held press commits no edit")
-    }
-
-    function test_bareSpace() {
-        var session = openRoute101()
-        var surface = selectedSurface()
-        var grid = surface.gridModel
-        var roll = rollInput(surface)
-        verify(shell.shellPresenter.actionEnabled("transport.play_pause"),
-              "Play/Pause is enabled with a song open")
-        var playhead = session.playheadPresenter()
-        compare(playhead.playing, false, "transport starts stopped")
-        var before = grid.noteSummary
-        roll.forceActiveFocus(Qt.OtherFocusReason)
-        tryCompare(roll, "activeFocus", true, 3000)
-        keyClick(Qt.Key_Space)
-        verify(waitForNative(function() { return playhead.playing }, 5000),
-              "bare Space starts transport from the focused grid")
-        compare(grid.noteSummary, before, "window Space never edits notes")
-        keyClick(Qt.Key_Space)
-        verify(waitForNative(function() { return !playhead.playing }, 5000),
-              "second Space stops transport")
-    }
 }

@@ -17,20 +17,22 @@ FocusScope {
     visible: showing
     enabled: showing
     readonly property real baseFontPx: model ? model.baseFontPx : 13
-    readonly property font bodyFont: ApplicationWindow.window
-        ? ApplicationWindow.window.font : Application.font
+    readonly property font bodyFont: menuRoot.pageItem
+        ? Qt.font((menuRoot.pageItem.applicationSession.timeSigHost
+                   || menuRoot.pageItem.applicationSession).typographyFonts.body) : Qt.font({})
     readonly property var menuColors: menuRoot.pageItem ? menuRoot.pageItem.gridPalette : null
     readonly property point anchor: pageItem && parent
         ? pageItem.mapToItem(parent, model ? model.menuX : 0, model ? model.menuY : 0)
         : Qt.point(model ? model.menuX : 0, model ? model.menuY : 0)
-    onShowingChanged: {
-        if (showing) {
+    // Focus only once enabled: a disabled item's focus request parks active
+    // focus on the window root until the enabled binding catches up.
+    onEnabledChanged: {
+        if (enabled) {
             currentRow = 0
             forceActiveFocus(Qt.PopupFocusReason)
-        } else {
-            closed()
         }
     }
+    onShowingChanged: if (!showing) closed()
     function hoverRow(panel, index) { currentRow = index }
     function activateRow(panel, index) { return model.activateMenuRow(index) }
     function moveRow(delta) {

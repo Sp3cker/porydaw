@@ -7,10 +7,6 @@ extension ProjectStore {
     /// - Returns: The clean reloaded lease, or nil when the source was not saved.
     /// - Throws: `VoicegroupStoreError` if the project is closed or saving or reloading fails.
     public func saveVoicegroup(lease: ProjectBankLease) async throws -> ProjectBankLease? {
-        try await run { [self] in try await self.saveVoicegroupProject(lease: lease) }
-    }
-
-    private func saveVoicegroupProject(lease: ProjectBankLease) throws -> ProjectBankLease? {
         guard let store = voicegroupStore else {
             throw VoicegroupStoreError.operationFailed("Project is not open.")
         }

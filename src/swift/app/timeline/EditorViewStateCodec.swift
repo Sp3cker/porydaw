@@ -1,11 +1,9 @@
 import Foundation
-#if canImport(CoreFoundation)
-import CoreFoundation
-#endif
+import PorydawProject
 import QtBridgeCpp
 
 /// The historical QSettings workspace recipe. These keys are application-wide,
-/// not part of a project's MIDI sidecar or the document's revision/history.
+/// not part of a project's files or the document's revision/history.
 public struct WorkspaceTabRecipe: Equatable, Sendable {
     public var projectPath: String
     public var orderedSongs: [String]
@@ -27,8 +25,6 @@ public struct WorkspaceTabRecipe: Equatable, Sendable {
 }
 
 /// The `editorDrawer/automationLanes` compact JSON grammar from editorviewstate.cpp.
-/// Chrome visibility, section heights and active page remain in the existing
-/// QtCore.Settings-backed EditorDrawer; only the lane blob is owned here.
 public struct EditorLaneState: Equatable, Sendable {
     public struct Lane: Hashable, Sendable {
         public let track: Int
@@ -47,59 +43,194 @@ public struct EditorLaneState: Equatable, Sendable {
     public var hiddenLanes: [Lane] = []
 
     public init() {}
+
+    /// Remaps track-owned lanes as one value, rejecting invalid destinations.
+    /// Returns false for rejection or an unchanged value.
+    public mutating func remapEngineTracks(_ map: [Int?]) -> Bool {
+        var destinations: Set<Int> = []
+        for destination in map.compactMap({ $0 }) {
+            guard (0...15).contains(destination), destinations.insert(destination).inserted else {
+                return false
+            }
+        }
+        func remap(_ lane: Lane) -> Lane? {
+            guard map.indices.contains(lane.track), let track = map[lane.track] else { return nil }
+            return Lane(track: track, controller: lane.controller)
+        }
+        func remapRows(_ rows: [String: Int]) -> [String: Int] {
+            var result: [String: Int] = [:]
+            for (key, value) in rows {
+                if key == "tempo" {
+                    result[key] = value
+                } else if case let .controlChange(track, controller) =
+                    EditorViewStateCodec.parameter(for: key),
+                    let lane = remap(Lane(track: track, controller: Int(controller)))
+                {
+                    result["cc:\(lane.track):\(lane.controller)"] = value
+                } else if case let .pitchBend(track) = EditorViewStateCodec.parameter(for: key),
+                    let lane = remap(Lane(track: track, controller: 255))
+                {
+                    result["cc:\(lane.track):255"] = value
+                }
+            }
+            return result
+        }
+        var next = self
+        next.laneHeights = remapRows(laneHeights)
+        next.laneRanges = remapRows(laneRanges)
+        next.emptyLanes = Set(emptyLanes.compactMap(remap))
+        next.hiddenLanes = hiddenLanes.compactMap(remap)
+        guard next != self else { return false }
+        self = next
+        return true
+    }
+}
+
+/// One complete, presentation-only editor preference transaction.
+public struct EditorViewState: Equatable, Sendable {
+    public var chrome = EditorDrawerChromeState()
+    public var lanes = EditorLaneState()
+
+    public init() {}
+}
+
+extension EditorViewState {
+    /// Remaps track-owned lanes while preserving chrome.
+    /// Returns false for rejection or an unchanged value.
+    public mutating func remapEngineTracks(_ map: [Int?]) -> Bool {
+        lanes.remapEngineTracks(map)
+    }
+}
+
+public struct DrawerChromeSection: Equatable, Sendable {
+    public var visible: Bool
+    public var height: Int?
+
+    public init(visible: Bool, height: Int? = nil) {
+        self.visible = visible
+        self.height = height
+    }
+}
+
+public struct EditorDrawerChromeState: Equatable, Sendable {
+    public var velocity = DrawerChromeSection(visible: false)
+    public var automation = DrawerChromeSection(visible: true)
+    public var voiceChanges = DrawerChromeSection(visible: false)
+    public var activePage: DrawerSectionKind = .automation
+
+    public init() {}
 }
 
 public enum EditorViewStateCodec {
     private static let lanesKey = "editorDrawer.automationLanes"
+    private static let chromePrefix = "editorDrawer."
 
-    /// Reads the same application preferences as QtCore.Settings on macOS.
-    /// - Parameter applicationName: The `Qt.application.name` of the running shell.
-    /// - Returns: The last successfully opened project and its saved tab recipe.
-    public static func loadTabs(applicationName: String) -> WorkspaceTabRecipe {
-        let store = SettingsStore(applicationName: applicationName)
+    @MainActor
+    public static func load(store: PreferencesStore) -> EditorViewState {
+        var state = EditorViewState()
+        state.chrome = loadChrome(store: store)
+        state.lanes = loadLanes(store: store)
+        return state
+    }
+
+    @MainActor
+    public static func save(_ state: EditorViewState, store: PreferencesStore) {
+        writeChrome(state.chrome, store: store)
+        writeLanes(state.lanes, store: store)
+        store.synchronize()
+    }
+
+    @MainActor
+    public static func loadChrome(store: PreferencesStore) -> EditorDrawerChromeState {
+        var state = EditorDrawerChromeState()
+        state.velocity = loadSection("velocity", defaultVisible: state.velocity.visible, store: store)
+        state.automation = loadSection("automation", defaultVisible: state.automation.visible, store: store)
+        state.voiceChanges = loadSection("voiceChanges", defaultVisible: state.voiceChanges.visible, store: store)
+        switch store.string(key: chromePrefix + "activePage", fallback: "") {
+        case "velocity": state.activePage = .velocity
+        case "voiceChanges": state.activePage = .voiceChanges
+        case "automations": state.activePage = .automation
+        default: break
+        }
+        return state
+    }
+
+    @MainActor
+    private static func loadSection(
+        _ name: String, defaultVisible: Bool,
+        store: PreferencesStore
+    ) -> DrawerChromeSection {
+        DrawerChromeSection(
+            visible: store.storedBool(key: chromePrefix + name + "Visible") ?? defaultVisible,
+            height: store.storedPositiveInt(key: chromePrefix + name + "Height"))
+    }
+
+    @MainActor
+    public static func saveChrome(_ state: EditorDrawerChromeState, store: PreferencesStore) {
+        writeChrome(state, store: store)
+        store.synchronize()
+    }
+
+    @MainActor
+    private static func writeChrome(_ state: EditorDrawerChromeState, store: PreferencesStore) {
+        for (name, section) in [
+            ("velocity", state.velocity),
+            ("automation", state.automation),
+            ("voiceChanges", state.voiceChanges),
+        ] {
+            store.setBool(key: chromePrefix + name + "Visible", value: section.visible)
+            let heightKey = chromePrefix + name + "Height"
+            if let height = section.height, height > 0 {
+                store.setInt(key: heightKey, value: height)
+            } else {
+                store.remove(key: heightKey)
+            }
+        }
+        store.setString(key: chromePrefix + "activePage", value: state.activePage.name)
+    }
+
+    @MainActor
+    public static func loadTabs(store: PreferencesStore) -> WorkspaceTabRecipe {
+        let selected = store.string(key: "lastSongLabel", fallback: "")
+        let saved = normalizeSavedRecipe(
+            projectPath: store.string(key: "lastProjectDir", fallback: ""),
+            labels: store.strings("lastOpenSongs") ?? [], selected: selected)
         return WorkspaceTabRecipe(
-            projectPath: store.string("lastProjectDir") ?? "",
-            orderedSongs: store.strings("lastOpenSongs") ?? [],
-            selectedSong: store.string("lastSongLabel") ?? "")
+            projectPath: saved.projectPath,
+            orderedSongs: saved.orderedSongs.map(\.value),
+            selectedSong: saved.selected?.value ?? "")
     }
 
-    /// Saves the tab order and selection after a real tab transition.
-    /// - Parameters:
-    ///   - recipe: The opened project's live tab order and selection.
-    ///   - applicationName: The running shell's settings identity.
-    public static func saveTabs(_ recipe: WorkspaceTabRecipe, applicationName: String) {
-        let store = SettingsStore(applicationName: applicationName)
-        store.setString("lastProjectDir", recipe.projectPath)
+    @MainActor
+    public static func saveTabs(_ recipe: WorkspaceTabRecipe, store: PreferencesStore) {
+        store.setString(key: "lastProjectDir", value: recipe.projectPath)
         store.setStrings("lastOpenSongs", recipe.orderedSongs.isEmpty ? nil : recipe.orderedSongs)
-        store.setString("lastSongLabel", recipe.orderedSongs.isEmpty ? nil : recipe.selectedSong)
-        store.sync()
+        if recipe.orderedSongs.isEmpty {
+            store.remove(key: "lastSongLabel")
+        } else {
+            store.setString(key: "lastSongLabel", value: recipe.selectedSong)
+        }
+        store.synchronize()
     }
 
-    /// Decodes the lane blob without writing it back during startup. Malformed
-    /// blob data defaults only lane fields; the existing drawer chrome survives.
-    /// - Parameter applicationName: The running shell's settings identity.
-    /// - Returns: The decoded lane preferences.
-    public static func loadLanes(applicationName: String) -> EditorLaneState {
-        let store = SettingsStore(applicationName: applicationName)
+    @MainActor
+    public static func loadLanes(store: PreferencesStore) -> EditorLaneState {
         guard let bytes = store.data(lanesKey) else { return EditorLaneState() }
         return decodeLanes(bytes)
     }
 
-    /// Stores one canonical compact JSON object after a semantic lane change.
-    /// - Parameters:
-    ///   - state: The global editor lane preference.
-    ///   - applicationName: The running shell's settings identity.
-    public static func saveLanes(_ state: EditorLaneState, applicationName: String) {
-        guard let bytes = encodeLanes(state) else { return }
-        let store = SettingsStore(applicationName: applicationName)
-        store.setData(lanesKey, bytes)
-        store.sync()
+    @MainActor
+    public static func saveLanes(_ state: EditorLaneState, store: PreferencesStore) {
+        writeLanes(state, store: store)
+        store.synchronize()
     }
 
-    /// Decodes the native lane-row grammar; an invalid member does not discard
-    /// other valid members, and malformed JSON defaults only this blob.
-    /// - Parameter bytes: QSettings' automationLanes QByteArray.
-    /// - Returns: The valid lane members.
+    @MainActor
+    private static func writeLanes(_ state: EditorLaneState, store: PreferencesStore) {
+        guard let bytes = encodeLanes(state) else { return }
+        store.setData(lanesKey, bytes)
+    }
+
     public static func decodeLanes(_ bytes: Data) -> EditorLaneState {
         guard case let .object(root) = try? JSONDecoder().decode(JSONValue.self, from: bytes) else {
             return EditorLaneState()
@@ -260,77 +391,3 @@ private indirect enum JSONValue: Codable {
         }
     }
 }
-
-#if canImport(CoreFoundation)
-private struct SettingsStore {
-    let applicationID: CFString
-
-    init(applicationName: String) {
-        applicationID = Self.cfString("com.sp3cker." + applicationName)
-    }
-
-    func string(_ key: String) -> String? {
-        CFPreferencesCopyAppValue(Self.cfString(key), applicationID) as? String
-    }
-
-    func strings(_ key: String) -> [String]? {
-        CFPreferencesCopyAppValue(Self.cfString(key), applicationID) as? [String]
-    }
-
-    func data(_ key: String) -> Data? {
-        CFPreferencesCopyAppValue(Self.cfString(key), applicationID) as? Data
-    }
-
-    func setString(_ key: String, _ value: String?) {
-        CFPreferencesSetAppValue(Self.cfString(key), value.map(Self.cfString), applicationID)
-    }
-
-    func setStrings(_ key: String, _ value: [String]?) {
-        let array: CFArray? = value.map { strings in
-            var callbacks = kCFTypeArrayCallBacks
-            guard let result = CFArrayCreateMutable(kCFAllocatorDefault, strings.count, &callbacks)
-            else { preconditionFailure("Settings array could not be allocated") }
-            for string in strings {
-                let element = Self.cfString(string)
-                CFArrayAppendValue(result, Unmanaged.passUnretained(element).toOpaque())
-            }
-            return result as CFArray
-        }
-        CFPreferencesSetAppValue(Self.cfString(key), array, applicationID)
-    }
-
-    func setData(_ key: String, _ value: Data) {
-        let bytes = value.withUnsafeBytes { buffer in
-            CFDataCreate(kCFAllocatorDefault, buffer.bindMemory(to: UInt8.self).baseAddress,
-                         value.count)
-        }
-        CFPreferencesSetAppValue(Self.cfString(key), bytes, applicationID)
-    }
-
-    func sync() { _ = CFPreferencesAppSynchronize(applicationID) }
-
-    private static func cfString(_ text: String) -> CFString {
-        guard let result = text.withCString({
-            CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
-        }) else { preconditionFailure("Settings key could not be encoded") }
-        return result
-    }
-}
-#else
-private struct SettingsStore {
-    let defaults: UserDefaults
-
-    init(applicationName: String) {
-        defaults = UserDefaults(suiteName: "com.sp3cker." + applicationName) ?? .standard
-    }
-
-    func string(_ key: String) -> String? { defaults.string(forKey: key) }
-    func strings(_ key: String) -> [String]? { defaults.stringArray(forKey: key) }
-    func data(_ key: String) -> Data? { defaults.data(forKey: key) }
-
-    func setString(_ key: String, _ value: String?) { defaults.set(value, forKey: key) }
-    func setStrings(_ key: String, _ value: [String]?) { defaults.set(value, forKey: key) }
-    func setData(_ key: String, _ value: Data) { defaults.set(value, forKey: key) }
-    func sync() { _ = defaults.synchronize() }
-}
-#endif

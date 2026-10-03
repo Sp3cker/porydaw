@@ -2,18 +2,20 @@ import QtBridge
 
 /// The font-relative layout contract of quick/promptappearance.cpp.
 enum PromptAppearance {
+    @MainActor
     static func metrics(base: Double) -> [String: QVariantSettable] {
-        let half = max(1, (base * 0.125).rounded())
-        let one = max(1, (base * 0.25).rounded())
+        let typography = Typography(baseFontPx: Int(base.rounded()))
+        let half = typography.space(.half)
+        let one = typography.space(.one)
         return ["borderWidth": 1, "radius": half, "dialogPadding": one,
                 "horizontalPadding": one, "verticalPadding": half,
-                "buttonPadding": one, "spacing": one, "dragThreshold": base,
-                "minimumWidth": max(1, (base * 30).rounded()),
-                "listHeight": max(1, (base * 110 / 3).rounded())]
+                "buttonPadding": one, "spacing": one, "dragThreshold": typography.fontPxF(1),
+                "minimumWidth": typography.fontPx(30),
+                "listHeight": typography.fontPx(110.0 / 3.0)]
     }
 
-    static func font(base: Double) -> [String: QVariantSettable] {
-        GridFontSpec(family: "Atkinson Hyperlegible Next", pixelSize: Int(base.rounded()),
-                     weight: 400, letterSpacing: 0).map
+    @MainActor
+    static func font(typography: Typography) -> [String: QVariantSettable] {
+        typography.body.map
     }
 }

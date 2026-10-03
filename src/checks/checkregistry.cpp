@@ -20,6 +20,8 @@ using detail::BinaryKind;
 using detail::CheckDefinition;
 using detail::FixtureRootKind;
 using detail::Framework;
+using detail::Platform;
+using detail::Platforms;
 using detail::ScratchKind;
 using detail::StartupKind;
 using detail::Windowing;
@@ -91,6 +93,18 @@ QString jsonName(Framework framework)
     Q_UNREACHABLE();
 }
 
+QJsonArray jsonNames(Platforms platforms)
+{
+    auto result = QJsonArray{};
+    if (platforms.testFlag(Platform::MacOS))
+        result.push_back(QStringLiteral("macos"));
+    if (platforms.testFlag(Platform::Windows))
+        result.push_back(QStringLiteral("windows"));
+    if (platforms.testFlag(Platform::Linux))
+        result.push_back(QStringLiteral("linux"));
+    return result;
+}
+
 QJsonObject manifestEntry(const CheckDefinition &definition)
 {
     auto entry = QJsonObject{
@@ -103,6 +117,7 @@ QJsonObject manifestEntry(const CheckDefinition &definition)
         {QStringLiteral("windowing"), jsonName(definition.windowing)},
         {QStringLiteral("framework"), jsonName(definition.framework)},
         {QStringLiteral("optIn"), definition.optIn},
+        {QStringLiteral("platforms"), jsonNames(definition.platforms)},
     };
     if (!definition.environment.isEmpty())
         entry.insert(QStringLiteral("environment"), jsonObject(definition.environment));

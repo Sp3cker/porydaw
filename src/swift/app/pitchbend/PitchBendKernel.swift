@@ -14,6 +14,7 @@ public struct PitchBendKernel {
         var anchor: Point
         var previous: Point
         var line: Bool
+        var sampled = false
     }
     private struct VertexDrag {
         var original: [Int: Int]
@@ -24,8 +25,11 @@ public struct PitchBendKernel {
     public let lane: Lane
     public let startTick: Int
     public let endTick: Int
-    public let snapTicks: Int
+    /// The snap lattice ticks strictly inside the note: one grid rule each.
+    public let gridTicks: [Int]
     public let fineTicks: Int
+    private let snapTick: (Double, Bool) -> Int
+    private let snapTickUp: (Double, Bool) -> Int
     public var geometry: PitchBendGeometry
     public private(set) var points: [Int: Int]
     public private(set) var endValue: Int
@@ -36,13 +40,25 @@ public struct PitchBendKernel {
     private var wheelRemainder = 0.0
 
     public init(lane: Lane, geometry: PitchBendGeometry, startTick: Int, endTick: Int,
-                snapTicks: Int, fineTicks: Int, points: [Int: Int], endValue: Int) {
+                fineTicks: Int, snap: @escaping (Double, Bool) -> Int,
+                snapUp: @escaping (Double, Bool) -> Int,
+                points: [Int: Int], endValue: Int) {
         self.lane = lane
         self.geometry = geometry
         self.startTick = startTick
         self.endTick = endTick
-        self.snapTicks = max(1, snapTicks)
+        var gridTicks: [Int] = []
+        var tick = snapUp(Double(startTick), false)
+        while tick > startTick && tick < endTick {
+            gridTicks.append(tick)
+            let next = snapUp(Double(tick), false)
+            guard next > tick else { break }
+            tick = next
+        }
+        self.gridTicks = gridTicks
         self.fineTicks = max(1, fineTicks)
+        snapTick = snap
+        snapTickUp = snapUp
         self.points = points
         self.endValue = min(max(endValue, lane == .pitch ? -8192 : 0),
                             lane == .pitch ? 8191 : 127)
@@ -52,6 +68,10 @@ public struct PitchBendKernel {
     }
 
     public var hasGesture: Bool { gesture != nil }
+    public var isSampledStroke: Bool {
+        guard case .stroke(let stroke) = gesture else { return false }
+        return stroke.sampled
+    }
     public var minimumValue: Int { lane == .pitch ? -8192 : 0 }
     public var maximumValue: Int { lane == .pitch ? 8191 : 127 }
     public var orderedPoints: [Point] {
@@ -146,12 +166,23 @@ public struct PitchBendKernel {
     }
 
     private func snap(_ tick: Double, fine: Bool) -> Int {
-        let stride = Double(fine ? fineTicks : snapTicks)
-        let lo = (max(0, tick) / stride).rounded(.down) * stride
-        let rounded = tick - lo <= stride / 2 ? lo : lo + stride
         let last = endTick > startTick ? endTick - 1 : startTick
-        let lastSnapped = Int((Double(last) / stride).rounded(.down) * stride)
-        return min(max(startTick, Int(rounded)), max(startTick, min(last, lastSnapped)))
+        var lastSnapped = snapTick(Double(last), fine)
+        if lastSnapped > last {
+            var low = startTick
+            var high = last
+            while low < high {
+                let mid = low + (high - low + 1) / 2
+                if snapTick(Double(mid), fine) <= last {
+                    low = mid
+                } else {
+                    high = mid - 1
+                }
+            }
+            lastSnapped = snapTick(Double(low), fine)
+        }
+        return min(max(startTick, snapTick(max(0, tick), fine)),
+                   max(startTick, min(last, lastSnapped)))
     }
 
     public func tick(atX x: Double, fine: Bool = false) -> Int {
@@ -187,6 +218,7 @@ public struct PitchBendKernel {
         switch gesture {
         case .stroke(var stroke):
             let point = Point(tick: tick(atX: x, fine: stroke.line), value: value(atY: y))
+            if point.tick != stroke.previous.tick { stroke.sampled = true }
             if stroke.line { points = stroke.original }
             replace(from: stroke.line ? stroke.anchor : stroke.previous, to: point, fine: stroke.line)
             stroke.previous = point
@@ -249,7 +281,7 @@ public struct PitchBendKernel {
         for tick in points.keys.filter({ $0 >= low && $0 <= high }) {
             points.removeValue(forKey: tick)
         }
-        let stride = max(1, fine ? fineTicks : snapTicks)
+        let nextTick = snapTickUp
         func interpolated(_ tick: Int) -> Int {
             let fraction = first.tick == last.tick ? 1.0
                 : min(1, max(0, Double(tick - first.tick) / Double(last.tick - first.tick)))
@@ -258,10 +290,12 @@ public struct PitchBendKernel {
         }
         points[low] = interpolated(low)
         if high > low {
-            var tick = (low / stride + 1) * stride
+            var tick = nextTick(Double(low), fine)
             while tick < high {
                 points[tick] = interpolated(tick)
-                tick += stride
+                let next = nextTick(Double(tick), fine)
+                if next <= tick { break }
+                tick = next
             }
             points[high] = interpolated(high)
         }

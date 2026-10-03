@@ -61,10 +61,10 @@ struct HeaderDocumentBaseline {
 
     func expectUnchanged(_ report: CheckReport, _ document: SongDocument,
                          cppID: String, phase: String) {
-        report.expectEqual(state, document.state, cppID: cppID, what: "\(phase): song unchanged")
-        report.expectEqual(revision, document.revision, cppID: cppID,
+        report.expectEqual(expected: state, actual: document.state, cppID: cppID, what: "\(phase): song unchanged")
+        report.expectEqual(expected: revision, actual: document.revision, cppID: cppID,
                            what: "\(phase): no document write")
-        report.expectEqual(history, document.history.currentIdentity, cppID: cppID,
+        report.expectEqual(expected: history, actual: document.history.currentIdentity, cppID: cppID,
                            what: "\(phase): history unchanged")
     }
 }

@@ -81,6 +81,44 @@ private final class MergingHistoryBankAction: BankHistoryAction {
 @MainActor
 internal func historyTransitionRegressions(_ report: CheckReport) {
     do {
+        let document = historyProbeDocument()
+        var config = document.state.config
+        config.priority = 1
+        document.setConfig(config)
+        let beforeBank = document.history.currentIdentity
+        let action = ControlledHistoryBankAction()
+        document.history.recordConfirmedBank(action)
+        let afterBank = document.history.currentIdentity
+        config.priority = 2
+        document.setConfig(config)
+        let afterDocument = document.history.currentIdentity
+        let count = document.history.undoCount
+        let undoSteps = try runBlocking { () async throws -> [Bool] in
+            [try await document.history.undo(), try await document.history.undo(),
+             try await document.history.undo()]
+        }
+        report.expect(count == 3 && undoSteps.allSatisfy { $0 }
+                      && document.history.undoIndex == 0
+                      && document.state.config.priority == 0
+                      && beforeBank == afterBank && afterBank != afterDocument
+                      && action.calls == 1,
+                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+                      message: "document and bank undo/redo cross the shared history in order")
+        let redoSteps = try runBlocking { () async throws -> [Bool] in
+            [try await document.history.redo(), try await document.history.redo(),
+             try await document.history.redo()]
+        }
+        report.expect(redoSteps.allSatisfy { $0 } && document.history.undoIndex == count
+                      && document.state.config.priority == 2
+                      && document.history.currentIdentity == afterDocument && action.calls == 2,
+                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+                      message: "document and bank undo/redo cross the shared history in order")
+    } catch {
+        report.fail("voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+                    "interleaved document and bank replay failed: \(error)")
+    }
+
+    do {
         let result = try runBlocking { () async throws -> (Bool, Bool, Int, Int, Bool) in
             let document = historyProbeDocument()
             var savedConfig = document.state.config

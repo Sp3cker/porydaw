@@ -12,8 +12,4 @@ public enum QmlEngineAccess {
     public static func addImportPath(_ path: String) -> Bool {
         pd_qml_add_import_path(path)
     }
-
-    public static func setContextProperty(_ name: String, _ value: QtBridge.QVariant) -> Bool {
-        pd_qml_set_context_property(name, value.cppVariant())
-    }
 }

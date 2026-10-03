@@ -3,28 +3,35 @@ import PorydawAudioDeviceNative
 
 /// Owns the output device and its renderer. Lifecycle/cold calls are serialized by
 /// the facade on its control thread, never made from the audio callback.
-final class AudioDevice {
+public final class AudioDevice {
     enum InitializationError: String, LocalizedError {
         case nullBackend = "Failed to initialize the null audio backend."
         case outputDevice = "Failed to initialize the audio output device."
-        case startDevice = "Failed to start the audio output device."
 
         var errorDescription: String? { rawValue }
     }
 
     /// Programming invariant: the facade must not access the renderer after shutdown.
-    var renderer: AudioRenderEngine {
+    public var renderer: AudioRenderEngine {
         precondition(retainedRenderer != nil, "AudioDevice renderer accessed after shutdown")
         return retainedRenderer!
     }
-    private(set) var sampleRate: Double = 0
-    private(set) var backendName = ""
-    private(set) var usingNullBackend = false
-    let nullBackendForced: Bool
-    private(set) var periodSizeFrames = 0
-    private(set) var periodCount = 0
+    public private(set) var sampleRate: Double = 0
+    public private(set) var backendName = ""
+    public private(set) var usingNullBackend = false
+    public let nullBackendForced: Bool
+    public private(set) var periodSizeFrames = 0
+    public private(set) var periodCount = 0
 
-    init() throws {
+    @concurrent
+    public static func prepare() async throws -> sending AudioDevice {
+        try Task.checkCancellation()
+        let device = try AudioDevice()
+        try Task.checkCancellation()
+        return device
+    }
+
+    private init() throws {
         let environment = ProcessInfo.processInfo.environment
         nullBackendForced = environment["PORYDAW_AUDIO_BACKEND"] == "null"
         do {
@@ -70,45 +77,40 @@ final class AudioDevice {
             periodCount = Int(device.pointee.playback.internalPeriods)
             retainedRenderer = try AudioRenderEngine(
                 sampleRate: sampleRate, periodFrames: periodSizeFrames)
-            // The device is still stopped. Publish only after the renderer is complete;
-            // retain it through uninit, including when start partially fails.
+            // Stay stopped: the first bind starts the device (starting here forces a ~100 ms restart).
             device.pointee.pUserData = Unmanaged.passUnretained(renderer).toOpaque()
-            guard ma_device_start(device) == MA_SUCCESS else {
-                throw InitializationError.startDevice
-            }
-            deviceStarted = true
         } catch {
             shutdown()
             throw error
         }
     }
 
-    /// Matches native cold operations: stop/resume results are deliberately ignored.
-    /// Nested cold operations remain parked until the outer operation finishes.
-    func withRenderingStopped<T>(_ body: () throws -> T) rethrows -> T {
-        let resume = deviceStarted
-        if resume, let device {
-            _ = ma_device_stop(device)
-            deviceStarted = false
+    /// Sole device start point; outermost call parks synchronously and restarts off-main.
+    public func withRenderingStopped<T>(_ body: () throws -> T) rethrows -> T {
+        coldDepth += 1
+        if coldDepth == 1, let device {
+            let handle = DeviceHandle(device: device)
+            startStop.sync { _ = ma_device_stop(handle.device) }
         }
         defer {
-            if resume, let device {
-                _ = ma_device_start(device)
-                deviceStarted = true
+            coldDepth -= 1
+            if coldDepth == 0, let device {
+                let handle = DeviceHandle(device: device)
+                startStop.async { _ = ma_device_start(handle.device) }
             }
         }
         return try body()
     }
 
-    func shutdown() {
+    public func shutdown() {
         if let device {
+            startStop.sync {}
             if deviceInitialized {
                 ma_device_uninit(device) // Joins/parks callbacks before releasing their borrower.
             }
             device.deallocate()
             self.device = nil
             deviceInitialized = false
-            deviceStarted = false
         }
         retainedRenderer = nil
         if let context {
@@ -124,7 +126,9 @@ final class AudioDevice {
     private var device: UnsafeMutablePointer<ma_device>?
     private var context: UnsafeMutablePointer<ma_context>?
     private var deviceInitialized = false
-    private var deviceStarted = false
+    private var coldDepth = 0
+    // Serializes start/stop: a queued start must finish before the next stop parks callbacks.
+    private let startStop = DispatchQueue(label: "porydaw.audio.startstop")
 
     private func initializeContext(backends: [ma_backend]) -> Bool {
         let context = UnsafeMutablePointer<ma_context>.allocate(capacity: 1)
@@ -169,6 +173,11 @@ final class AudioDevice {
         return release.lowercased().contains("microsoft")
     }
     #endif
+}
+
+// Thread-safe C handle: miniaudio's startStopLock plus the serial startStop queue.
+private struct DeviceHandle: @unchecked Sendable {
+    let device: UnsafeMutablePointer<ma_device>
 }
 
 /// Playback guarantees non-null output; pUserData borrows the renderer until uninit returns.

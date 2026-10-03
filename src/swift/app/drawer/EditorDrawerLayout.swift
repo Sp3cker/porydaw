@@ -99,13 +99,28 @@ public struct EditorDrawerLayout {
     /// attach changes no state. Replacing content is an explicit detach followed by
     /// an attach, and the URL is resolved once and never re-pointed.
     public mutating func attachPage(_ page: EditorDrawerPage) -> EditorDrawerChangeSet {
+        guard registerPage(page) else { return .untouched(snapshot) }
+        return publish()
+    }
+
+    /// Attaches accepted pages in order, then resolves their combined layout once.
+    public mutating func attachPages(_ pages: [EditorDrawerPage]) -> EditorDrawerChangeSet {
+        var attached = false
+        for page in pages {
+            if registerPage(page) { attached = true }
+        }
+        guard attached else { return .untouched(snapshot) }
+        return publish()
+    }
+
+    private mutating func registerPage(_ page: EditorDrawerPage) -> Bool {
         let kind = page.sectionKind
-        guard sections[kind].page == nil else { return .untouched(snapshot) }
+        guard sections[kind].page == nil else { return false }
         let url = Self.resolvedContentUrl(page.contentUrl)
-        guard !url.isEmpty else { return .untouched(snapshot) }
+        guard !url.isEmpty else { return false }
         sections[kind].page = page
         sections[kind].contentUrl = url
-        return publish()
+        return true
     }
 
     /// Cancels `page` synchronously, then drops its slot, URL and rectangles. The
@@ -391,11 +406,12 @@ public struct EditorDrawerLayout {
         }
         next.barY = y
 
-        // The three production toggle slots stay put; only available kinds render.
+        // The three toggle slots stay put, right-aligned under the keyboard keys:
+        // the group's right edge meets the plot origin. Only available kinds render.
         let inset = max(0, metrics.toggleInset)
         let buttonSize = max(max(1, metrics.pixel), barHeight - 2 * inset)
         let groupWidth = 3 * buttonSize + 2 * inset
-        let groupX = min(max((origin - groupWidth) / 2, 0), max(0, width - groupWidth))
+        let groupX = min(max(origin - groupWidth, 0), max(0, width - groupWidth))
         for kind in DrawerSectionKind.toggleOrder where isAvailable(kind) {
             var geometry = next[kind]
             geometry.toggleX = groupX + kind.toggleSlot * (buttonSize + inset)

@@ -116,10 +116,10 @@ private func xcmdTimeRangeCuts(_ report: CheckReport) {
     let volumeScope = TimeScope(lanes: [.init(track: 0, lane: .controller(Xcmd.echoVolumeLane))])
     report.expect(document.removeTime(range, scope: volumeScope), cppID: cppID,
                   message: "A029 volume-scoped cut changes the document")
-    report.expectEqual([String](), fixture.values(Xcmd.echoVolumeLane), cppID: cppID,
+    report.expectEqual(expected: [String](), actual: fixture.values(Xcmd.echoVolumeLane), cppID: cppID,
                        what: "A030 volume is empty after the scoped cut")
-    report.expectEqual([XcmdRangeFixture.CcByte(96, Xcmd.selectorController, 0x09),
-                        .init(96, Xcmd.payloadController, 17)], fixture.xcmdBytes(at: 96),
+    report.expectEqual(expected: [XcmdRangeFixture.CcByte(96, Xcmd.selectorController, 0x09),
+                        .init(96, Xcmd.payloadController, 17)], actual: fixture.xcmdBytes(at: 96),
                        cppID: cppID, what: "A031 the scoped cut retains length bytes at tick 96")
     report.expect(document.history.undoDocument() && fixture.snapshot.bytes == rangeBefore.bytes,
                   cppID: cppID, message: "A032 undo restores the pre-cut bytes")
@@ -134,12 +134,12 @@ private func xcmdTimeRangeCuts(_ report: CheckReport) {
     let cutBefore = fixture.snapshot
     report.expect(document.removeTime(range, scope: TimeScope(wholeSong: true)), cppID: cppID,
                   message: "A033 whole-song cut changes the document")
-    report.expectEqual([String](), fixture.values(Xcmd.echoVolumeLane), cppID: cppID,
+    report.expectEqual(expected: [String](), actual: fixture.values(Xcmd.echoVolumeLane), cppID: cppID,
                        what: "A034 whole-song cut removes volume")
-    report.expectEqual(["96:18"], fixture.values(Xcmd.echoLengthLane), cppID: cppID,
+    report.expectEqual(expected: ["96:18"], actual: fixture.values(Xcmd.echoLengthLane), cppID: cppID,
                        what: "A035 surviving length reanchors to the cut edge")
-    report.expectEqual([XcmdRangeFixture.CcByte(96, Xcmd.selectorController, 0x09),
-                        .init(96, Xcmd.payloadController, 18)], fixture.xcmdBytes(at: 96),
+    report.expectEqual(expected: [XcmdRangeFixture.CcByte(96, Xcmd.selectorController, 0x09),
+                        .init(96, Xcmd.payloadController, 18)], actual: fixture.xcmdBytes(at: 96),
                        cppID: cppID, what: "A036 reanchored length has canonical bytes")
     report.expect(document.history.undoDocument() && fixture.snapshot.bytes == cutBefore.bytes,
                   cppID: cppID, message: "A037 undo restores the whole-song cut bytes")
@@ -147,9 +147,9 @@ private func xcmdTimeRangeCuts(_ report: CheckReport) {
         report.fail(cppID, "whole-song cut redo failed")
         return
     }
-    report.expectEqual([String](), fixture.values(Xcmd.echoVolumeLane), cppID: cppID,
+    report.expectEqual(expected: [String](), actual: fixture.values(Xcmd.echoVolumeLane), cppID: cppID,
                        what: "A038 redo again removes volume")
-    report.expectEqual(["96:18"], fixture.values(Xcmd.echoLengthLane), cppID: cppID,
+    report.expectEqual(expected: ["96:18"], actual: fixture.values(Xcmd.echoLengthLane), cppID: cppID,
                        what: "A039 redo reanchors length at tick 96")
 }
 
@@ -172,16 +172,16 @@ private func xcmdRangeRemoveOnly(_ report: CheckReport) {
     report.expect(applied && fixture.oneEdit(before), cppID: cppID,
                   message: "A043 remove-only range edit is one document edit")
     let after = fixture.snapshot
-    report.expectEqual(["192:35"], fixture.values(Xcmd.echoVolumeLane), cppID: cppID,
+    report.expectEqual(expected: ["192:35"], actual: fixture.values(Xcmd.echoVolumeLane), cppID: cppID,
                        what: "A044 remove-only retains the later volume point")
-    report.expectEqual([String](), fixture.values(Xcmd.echoLengthLane), cppID: cppID,
+    report.expectEqual(expected: [String](), actual: fixture.values(Xcmd.echoLengthLane), cppID: cppID,
                        what: "A045 remove-only clears length")
-    report.expectEqual([XcmdRangeFixture.CcByte(0, 0x0A, 80),
+    report.expectEqual(expected: [XcmdRangeFixture.CcByte(0, 0x0A, 80),
                         .init(0, 0x07, 64),
                         .init(192, Xcmd.selectorController, 0x08),
                         .init(192, Xcmd.payloadController, 35),
                         .init(288, 0x07, 48),
-                        .init(384, 0x0A, 110)], fixture.ccChain(), cppID: cppID,
+                        .init(384, 0x0A, 110)], actual: fixture.ccChain(), cppID: cppID,
                        what: "A046 remove-only preserves baseline CC and later volume byte order")
     report.expect(document.history.undoDocument() && fixture.snapshot.bytes == before.bytes,
                   cppID: cppID, message: "A047 remove-only undo restores bytes")
@@ -202,7 +202,7 @@ private func xcmdRangeMoves(_ report: CheckReport) {
     report.expect(movedLeft && fixture.oneEdit(leftBefore), cppID: cppID,
                   message: "A049 left range move is one document edit")
     let leftAfter = fixture.snapshot
-    report.expectEqual([XcmdRangeFixture.CcByte(0, 0x0A, 80),
+    report.expectEqual(expected: [XcmdRangeFixture.CcByte(0, 0x0A, 80),
                         .init(0, 0x07, 64),
                         .init(96, Xcmd.selectorController, 0x09),
                         .init(96, Xcmd.payloadController, 17),
@@ -211,7 +211,7 @@ private func xcmdRangeMoves(_ report: CheckReport) {
                         .init(192, Xcmd.selectorController, 0x09),
                         .init(192, Xcmd.payloadController, 18),
                         .init(288, 0x07, 48),
-                        .init(384, 0x0A, 110)], fixture.ccChain(), cppID: cppID,
+                        .init(384, 0x0A, 110)], actual: fixture.ccChain(), cppID: cppID,
                        what: "A050 left move rebuilds length and volume in original byte order")
     report.expect(document.history.undoDocument() && fixture.snapshot.bytes == leftBefore.bytes,
                   cppID: cppID, message: "A051 left range move undo restores bytes")
@@ -226,7 +226,7 @@ private func xcmdRangeMoves(_ report: CheckReport) {
     report.expect(movedRight && fixture.oneEdit(rightBefore), cppID: cppID,
                   message: "A053 right range move is one document edit")
     let rightAfter = fixture.snapshot
-    report.expectEqual([XcmdRangeFixture.CcByte(0, 0x0A, 80),
+    report.expectEqual(expected: [XcmdRangeFixture.CcByte(0, 0x0A, 80),
                         .init(0, 0x07, 64),
                         .init(96, Xcmd.selectorController, 0x09),
                         .init(96, Xcmd.payloadController, 17),
@@ -235,7 +235,7 @@ private func xcmdRangeMoves(_ report: CheckReport) {
                         .init(192, Xcmd.selectorController, 0x08),
                         .init(192, Xcmd.payloadController, 34),
                         .init(288, 0x07, 48),
-                        .init(384, 0x0A, 110)], fixture.ccChain(), cppID: cppID,
+                        .init(384, 0x0A, 110)], actual: fixture.ccChain(), cppID: cppID,
                        what: "A054 right move places the length pair before equal-tick volume")
     report.expect(document.history.undoDocument() && fixture.snapshot.bytes == rightBefore.bytes,
                   cppID: cppID, message: "A055 right range move undo restores bytes")
@@ -250,11 +250,11 @@ private func xcmdRangeMoves(_ report: CheckReport) {
     let moving = mixed.points(Xcmd.echoVolumeLane) + mixed.points(7)
     report.expect(mixed.document.moveRange(notes: [], points: moving, by: 96),
                   cppID: cppID, message: "logical XCMD and ordinary CC move together")
-    report.expectEqual([XcmdRangeFixture.CcByte(192, Xcmd.selectorController, 0x09),
+    report.expectEqual(expected: [XcmdRangeFixture.CcByte(192, Xcmd.selectorController, 0x09),
                         .init(192, Xcmd.payloadController, 18),
                         .init(192, Xcmd.selectorController, 0x08),
                         .init(192, Xcmd.payloadController, 34),
-                        .init(192, 7, 48)], mixed.ccChain(), cppID: cppID,
+                        .init(192, 7, 48)], actual: mixed.ccChain(), cppID: cppID,
                        what: "same-tick logical XCMD bytes precede the moved ordinary CC")
     report.expect(mixed.document.history.undoDocument() && mixed.snapshot.bytes == mixedBefore.bytes,
                   cppID: cppID, message: "mixed-lane move undo restores original MIDI bytes")
@@ -277,12 +277,12 @@ private func xcmdExpansionPaste(_ report: CheckReport) {
     report.expect(applied && fixture.oneEdit(before), cppID: cppID,
                   message: "A057 expansion paste is one document edit")
     let after = fixture.snapshot
-    report.expectEqual(newTrack + 1, document.engineTracks.usedTrackCount, cppID: cppID,
+    report.expectEqual(expected: newTrack + 1, actual: document.engineTracks.usedTrackCount, cppID: cppID,
                        what: "A058 expansion paste grows the used engine tracks")
-    report.expectEqual(["96:34"], fixture.values(Xcmd.echoVolumeLane, track: newTrack), cppID: cppID,
+    report.expectEqual(expected: ["96:34"], actual: fixture.values(Xcmd.echoVolumeLane, track: newTrack), cppID: cppID,
                        what: "A059 expanded track projects the inserted volume point")
-    report.expectEqual([XcmdRangeFixture.CcByte(96, Xcmd.selectorController, 0x08),
-                        .init(96, Xcmd.payloadController, 34)], fixture.ccChain(track: newTrack),
+    report.expectEqual(expected: [XcmdRangeFixture.CcByte(96, Xcmd.selectorController, 0x08),
+                        .init(96, Xcmd.payloadController, 34)], actual: fixture.ccChain(track: newTrack),
                        cppID: cppID, what: "A060 expanded track has its canonical XCMD byte pair")
     report.expect(document.history.undoDocument() && fixture.snapshot.bytes == before.bytes,
                   cppID: cppID, message: "A061 expansion paste undo restores bytes")

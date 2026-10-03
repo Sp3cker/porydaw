@@ -27,7 +27,6 @@ enum PdcSuite {
     PDC_SUITE_VOICE_VALUES = 18,
     PDC_SUITE_SAVECORE = 19,
     PDC_SUITE_VOICE_EDITING = 20,
-    PDC_SUITE_CATALOG_ABSENT = 21,
     PDC_SUITE_PROJECTSTORE_CHECKS = 22,
     PDC_SUITE_VOICE_CONTEXT = 23,
     PDC_SUITE_VOICE_BANKLOGIC = 24,
@@ -40,6 +39,8 @@ enum PdcSuite {
     PDC_SUITE_BANK_LEASES = 31,
     PDC_SUITE_EXPORT_CHECKS = 32,
     PDC_SUITE_THEME_COLOR = 33,
+    PDC_SUITE_DISPLAY_LIST = 34,
+    PDC_SUITE_SAMPLE = 35,
 };
 
 typedef void (*PdcCheckReport)(void *context, int failed, const char *cppId, const char *message);

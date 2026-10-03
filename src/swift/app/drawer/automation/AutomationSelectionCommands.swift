@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import QtBridge
+import PorydawAppCommands
 
 // Canonical window commands for the drawer's shared time selection. Scope and
 // content gathering use the same semantics as the native selection clipboard.
@@ -9,7 +10,11 @@ extension AutomationPage {
     @QtIgnored
     public func selectionCommandAvailable(command: EditCommand) -> Bool {
         guard let session else { return false }
-        if command == .paste { return activeTrack() != nil && hasClipboard }
+        if command == .paste {
+            guard !session.isClosed, let clip = clipboard.read()?.clip else { return false }
+            return clip.tracks.contains { !$0.notes.isEmpty }
+                || clip.lanes.contains { !$0.points.isEmpty } || !clip.tempo.isEmpty
+        }
         guard let selection, selection.isActive else { return false }
         switch editCommandPolicy(command).rangeOperation {
         case .none: return false
@@ -57,6 +62,20 @@ extension AutomationPage {
         return true
     }
 
+    func selectionScope(_ selection: AutomationTimeSelection) -> TimeScope {
+        switch selection.scope {
+        case .lanes:
+            let lanes = selection.lanes.reduce(into: Set<TimeScope.ScopedLane>()) { result, item in
+                guard let track = item.track, let lane = item.lane else { return }
+                result.insert(TimeScope.ScopedLane(track: track, lane: lane))
+            }
+            return TimeScope(tracks: [], lanes: lanes, tempo: selection.tempo)
+        case let .tracks(scope):
+            return TimeScope(tracks: scope, lanes: [],
+                             tempo: selection.coversTempo(usedTracks: usedTracks()))
+        }
+    }
+
     func resolvedSelectionScope() -> TimeScope? {
         guard let selection, selection.isActive, !selection.range.hasReservedEndpoint else { return nil }
         var scope = selectionScope(selection)
@@ -69,8 +88,10 @@ extension AutomationPage {
 
     func selectionSnapPolicy() -> AutomationSnapPolicy? {
         guard let session else { return nil }
-        return AutomationSnapPolicy(document: session.document, timeline: session.timeline,
-                                    baseFontPx: baseFontPx, devicePixelRatio: devicePixelRatio)
+        var grid = session.grid
+        grid.metrics = GridMetrics(baseFontPx: baseFontPx, dpr: devicePixelRatio,
+                                   width: 0, height: 0, timeAxis: grid.axis)
+        return AutomationSnapPolicy(grid: grid, clockTicks: session.gridClockTicks)
     }
 
     func selectionSnapDuration() -> Tick {
@@ -85,21 +106,15 @@ extension AutomationPage {
         guard let session, let track = activeTrack(), let decoded = clipboard.read() else { return nil }
         let clip = ClipboardCodec.rescale(decoded.clip, sourceTicksPerBeat: decoded.ticksPerBeat,
                                           destinationTicksPerBeat: UInt32(session.document.ticksPerBeat))
-        let destination = cursor
-        guard let anticipated = ClipboardSemantics.pasteCursor(for: clip, at: destination) else { return nil }
+        guard ClipboardSemantics.pasteCursor(for: clip, at: cursor) != nil else { return nil }
         return session.withStateChanges {
-            let priorCursor = session.editCursor
-            session.editCursor = anticipated
-            guard let result = ClipboardSemantics.paste(clip, at: destination, selectedTrack: track,
-                                                        into: session.document) else {
-                session.editCursor = priorCursor
-                return nil
-            }
+            guard let result = ClipboardSemantics.paste(clip, at: cursor, selectedTrack: track,
+                                                        into: session.document) else { return nil }
             session.editCursor = result.nextCursor
             if clip.span == 0 { session.setSelectedNotes(result.insertedNoteIDs) }
             else { clearTimeSelection() }
             refreshFromDocument()
-            _ = session.mutateCamera { _ = $0.ensureTickVisible(UInt64(destination), dpr: devicePixelRatio) }
+            _ = session.mutateCamera { _ = $0.ensureTickVisible(UInt64(cursor), dpr: devicePixelRatio) }
             return result.nextCursor
         }
     }

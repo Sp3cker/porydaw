@@ -1,5 +1,6 @@
-@_spi(ExperimentalCustomExecutors) import _Concurrency
 import Foundation
+import Synchronization
+@_spi(ExperimentalCustomExecutors) import _Concurrency
 
 @_silgen_name("porydaw_schedule_qt_main_executor_drain")
 private func scheduleQtMainExecutorDrain() -> Bool
@@ -7,10 +8,14 @@ private func scheduleQtMainExecutorDrain() -> Bool
 @_silgen_name("porydaw_is_qt_main_thread")
 private func isQtMainThread() -> Bool
 
-private final class QtMainExecutor: MainExecutor, @unchecked Sendable {
-    private let lock = NSLock()
-    private var jobs: [UnownedJob] = []
-    private var scheduled = false
+private final class QtMainExecutor: MainExecutor, Sendable {
+    private struct State {
+        var jobs: [UnownedJob] = []
+        var spareJobs: [UnownedJob] = []
+        var scheduled = false
+        var activeDrain = false
+    }
+    private let state = Mutex(State())
 
     var isMainExecutor: Bool { true }
 
@@ -19,16 +24,16 @@ private final class QtMainExecutor: MainExecutor, @unchecked Sendable {
     }
 
     func enqueue(_ job: consuming ExecutorJob) {
-        lock.lock()
-        jobs.append(UnownedJob(job))
-        let shouldSchedule = !scheduled
-        if shouldSchedule { scheduled = true }
-        lock.unlock()
+        let unowned = UnownedJob(job)
+        let shouldSchedule = state.withLock { s in
+            s.jobs.append(unowned)
+            let should = !s.scheduled
+            if should { s.scheduled = true }
+            return should
+        }
 
         if shouldSchedule && !scheduleQtMainExecutorDrain() {
-            lock.lock()
-            scheduled = false
-            lock.unlock()
+            state.withLock { $0.scheduled = false }
         }
     }
 
@@ -40,19 +45,34 @@ private final class QtMainExecutor: MainExecutor, @unchecked Sendable {
 
     func drain() {
         checkIsolated()
-        while true {
-            lock.lock()
-            if jobs.isEmpty {
-                scheduled = false
-                lock.unlock()
-                return
+        var pending: [UnownedJob] = []
+        let proceed = state.withLock { s -> Bool in
+            s.scheduled = false
+            if s.activeDrain || s.jobs.isEmpty { return false }
+            swap(&pending, &s.spareJobs)
+            swap(&pending, &s.jobs)
+            s.activeDrain = true
+            return true
+        }
+        guard proceed else { return }
+
+        for index in pending.indices {
+            pending[index].runSynchronously(on: asUnownedSerialExecutor())
+        }
+
+        pending.removeAll(keepingCapacity: true)
+        let shouldSchedule = state.withLock { s -> Bool in
+            if pending.capacity > s.spareJobs.capacity {
+                swap(&pending, &s.spareJobs)
             }
-            let pending = jobs
-            jobs.removeAll(keepingCapacity: true)
-            lock.unlock()
-            for job in pending {
-                job.runSynchronously(on: asUnownedSerialExecutor())
-            }
+            s.activeDrain = false
+            let should = !s.jobs.isEmpty && !s.scheduled
+            if should { s.scheduled = true }
+            return should
+        }
+
+        if shouldSchedule && !scheduleQtMainExecutorDrain() {
+            state.withLock { $0.scheduled = false }
         }
     }
 }

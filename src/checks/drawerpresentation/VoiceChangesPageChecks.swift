@@ -89,22 +89,6 @@ func drawerVoiceVoiceChangesPageFixture(programs: [Int], division: UInt16 = 24) 
     ])
 }
 
-/// The document facts one transaction claim compares against.
-@MainActor
-struct drawerVoiceVoiceDocumentSnapshot: Equatable {
-    var revision: UInt64
-    var identity: DocumentIdentity
-    var canUndo: Bool
-    var canRedo: Bool
-
-    init(_ document: SongDocument) {
-        revision = document.revision
-        identity = document.history.currentIdentity
-        canUndo = document.history.canUndo
-        canRedo = document.history.canRedo
-    }
-}
-
 /// The page attached to its own synthetic session over the suite's service and
 /// bank, plus the composition facts the page needs to project at all.
 @MainActor
@@ -146,14 +130,14 @@ struct drawerVoiceVoiceChangesFixture {
         session.onCameraChange = { [weak page] _ in page?.refreshCamera() }
     }
 
-    var snapshot: drawerVoiceVoiceDocumentSnapshot { drawerVoiceVoiceDocumentSnapshot(document) }
+    var snapshot: DocumentSnapshot { DocumentSnapshot(document) }
 
     func lanePoints() -> [LanePoint] { document.lanePoints(track: 0, lane: .voice) }
 
     /// Plot-local x of one tick through the shared camera, which is the space
     /// the page's own input arrives in.
     func markerX(_ tick: Tick) -> Double {
-        session.camera.displayX(tick: Double(tick), origin: 0, dpr: 1)
+        session.camera.viewX(tick: Double(tick), dpr: 1)
     }
 
     func marker(at tick: Tick) -> VoiceMarkerHandle? {
@@ -161,57 +145,149 @@ struct drawerVoiceVoiceChangesFixture {
     }
 }
 
-@MainActor
-func drawerVoiceRunBlocking<T>(_ operation: @escaping @MainActor () async throws -> T) throws -> T {
-    var outcome: Result<T, Error>?
-    Task { @MainActor in
-        do {
-            outcome = .success(try await operation())
-        } catch {
-            outcome = .failure(error)
-        }
-    }
-    let deadline = Date().addingTimeInterval(20)
-    while outcome == nil {
-        if Date() > deadline { throw drawerVoiceVoiceCheckTimeout.timeout }
-        RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-    }
-    return try outcome!.get()
-}
-
-enum drawerVoiceVoiceCheckTimeout: Error {
-    case timeout
-}
-
 // MARK: - Suite entry
 
 @MainActor
-internal func runVoiceChangesPageChecks(_ report: CheckReport, session: DocumentSession,
-                                        service: ProjectService) {
+internal func runVoiceChangesPageChecks(_ report: CheckReport, session _: DocumentSession,
+                                        service _: ProjectService) {
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(drawerVoiceProjectionID, "the staged rich bank fixture is unavailable")
+        return
+    }
+    let scratch = FileManager.default.temporaryDirectory
+        .appendingPathComponent("swiftcore-voice-rich-\(UUID().uuidString)", isDirectory: true)
+    let service = ProjectService()
+    defer {
+        do {
+            try runBlocking { await service.close() }
+        } catch {
+            report.fail(drawerVoiceProjectionID, "could not close the rich bank fixture: \(error)")
+        }
+        try? FileManager.default.removeItem(at: scratch)
+    }
+    let session: DocumentSession
+    do {
+        try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: scratch)
+        try runBlocking { try await service.open(root: scratch.path) }
+        let loaded = try runBlocking { try await service.openSong(label: "mus_gym") }
+        let document = SongDocument(file: drawerVoiceVoiceChangesPageFixture(programs: [0, 1, 2]),
+                                    config: loaded.config, source: loaded.source,
+                                    trackBudget: loaded.trackBudget)
+        session = DocumentSession(document: document, service: service,
+                                  lease: loaded.bank, slots: loaded.bankSlots,
+                                  dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+    } catch {
+        report.fail(drawerVoiceProjectionID, "could not load the rich bank fixture: \(error)")
+        return
+    }
     let editable = session.bankSlots.indices.filter { session.bankSlots[$0].voice != nil }
-    guard editable.count >= 3 else {
+    let namedCount = editable.filter { !(session.bankSlots[$0].voice?.symbol.isEmpty ?? true) }.count
+    guard editable.count >= 3 && namedCount > 0 else {
         report.fail(drawerVoiceProjectionID,
-                    "the staged bank exposes \(editable.count) parsed slots; the Voice "
-                    + "Changes cases need three")
+                    "the staged bank exposes \(editable.count) parsed slots and \(namedCount) named "
+                    + "editable slots; the Voice Changes cases need three parsed and one named")
         return
     }
     let programs = [editable[0], editable[1], editable[2]]
     drawerVoiceMarkerProjection(report, suite: session, service: service, programs: programs)
+    drawerVoiceContentBlob(report, suite: session, service: service, programs: programs)
     drawerVoiceSlotLabels(report, session: session, service: service, programs: programs)
     drawerVoiceCurrentVoiceContext(report, suite: session, service: service, programs: programs)
     drawerVoiceOccurrenceIdentity(report, suite: session, service: service, programs: programs)
     drawerVoicePickerInsertion(report, suite: session, service: service, programs: programs)
+    drawerVoicePickerReattachment(report, suite: session, service: service, programs: programs)
     drawerVoiceOriginalPickerRows(report, suite: session, service: service)
     drawerVoicePickerValueReplacement(report, suite: session, service: service, programs: programs)
     drawerVoiceMarkerDragTransactions(report, suite: session, service: service, programs: programs)
     drawerVoiceContextMenuTransactions(report, suite: session, service: service, programs: programs)
+    drawerVoiceScrolledMenuPick(report, suite: session, service: service, programs: programs)
     drawerVoiceOriginalMenuTransactions(report, suite: session, service: service)
     drawerVoicePickerKeyboardPolicy(report, suite: session, service: service, programs: programs)
     drawerVoiceCancellationPaths(report, suite: session, service: service, programs: programs)
     drawerVoiceUndoRedoRefresh(report, suite: session, service: service, programs: programs)
     drawerVoicePlayheadDiagnostics(report, suite: session, service: service, programs: programs)
+    drawerVoiceHoverAndBankRefresh(report, suite: session, service: service, programs: programs)
     drawerVoiceAltFineClockLattice(report, suite: session, service: service, programs: programs)
     drawerVoiceCollisionDragOutcome(report, suite: session, service: service, programs: programs)
     drawerVoiceBlankSlotCommit(report, suite: session, service: service, programs: programs)
     drawerVoiceAuditionCapability(report, suite: session, service: service, programs: programs)
+}
+
+@MainActor
+private func drawerVoiceContentBlob(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService, programs: [Int]
+) {
+    let fixture = drawerVoiceVoiceChangesFixture(
+        suite: suite, service: service, programs: programs)
+    let page = fixture.page
+    let initial = page.displayList(list: 0)
+    let revision = page.displayRevision
+    let expectedColor = RollContentProbe.argb(
+        PaletteMath.hex(PaletteMath.trackIdentityOklab(0), alpha: 18))
+    let barArgb = RollContentProbe.argb(GridPalette().gridLineBar)
+    var expectedSpanCount = 2
+    if fixture.session.timeline.lengthTicks > 120 {
+        expectedSpanCount += 1
+    }
+    guard let decoded = velocityDisplayRects(initial) else {
+        report.fail(
+            drawerVoiceProjectionID,
+            "voice list 0 decodes the fixture's held sections and frame grid")
+        page.detach()
+        return
+    }
+    let spans = decoded.filter { $0.argb == expectedColor }
+    report.expect(
+        !decoded.isEmpty && decoded.contains { $0.argb == barArgb }
+            && spans.count == expectedSpanCount
+            && spans.allSatisfy { $0.y == 0 && $0.h == page.plotHeight },
+        cppID: drawerVoiceProjectionID,
+        message: "voice list 0 decodes the fixture's held sections and frame grid")
+    let markerXs = page.publishedMarkers.map(\.x)
+    fixture.session.mutateCamera { camera in _ = camera.setHScroll(17) }
+    page.refreshCamera()
+    report.expect(
+        page.displayRevision == revision + 1 && page.displayList(list: 0) != initial
+            && page.publishedMarkers.map(\.x) == markerXs,
+        cppID: drawerVoiceProjectionID,
+        message: "voice scroll rebuilds the viewport list with one revision; marker content x holds")
+    let scrolledRevision = page.displayRevision
+    let scrolledBytes = page.displayList(list: 0)
+    fixture.session.mutateCamera { camera in
+        camera.setTimeZoom(camera.snapshot.pixelsPerBeat * 2)
+    }
+    page.refreshCamera()
+    report.expect(
+        page.displayRevision == scrolledRevision + 1
+            && page.displayList(list: 0) != scrolledBytes,
+        cppID: drawerVoiceProjectionID,
+        message: "voice zoom rebuilds the viewport list with one revision")
+    let settledRevision = page.displayRevision
+    let settledBytes = page.displayList(list: 0)
+    page.refreshCamera()
+    report.expect(
+        page.displayRevision == settledRevision
+            && page.displayList(list: 0) == settledBytes,
+        cppID: drawerVoiceProjectionID,
+        message: "a settled camera refresh republishes identical list bytes with no new revision")
+    fixture.document.writeLane(
+        track: 0, lane: .voice, from: 72, through: 72,
+        points: [LaneWrite(tick: 72, value: programs[0])])
+    page.refreshFromDocument()
+    guard let changed = velocityDisplayRects(page.displayList(list: 0)) else {
+        report.fail(
+            drawerVoiceProjectionID,
+            "one voice change publishes exactly one revised held-span list")
+        page.detach()
+        return
+    }
+    let changedSpans = changed.filter { $0.argb == expectedColor }
+    report.expect(
+        page.displayRevision == settledRevision + 1
+            && changedSpans.count == expectedSpanCount + 1
+            && changedSpans.allSatisfy { $0.y == 0 && $0.h == page.plotHeight },
+        cppID: drawerVoiceProjectionID,
+        message: "one voice change publishes exactly one revised held-span list")
+    page.detach()
 }

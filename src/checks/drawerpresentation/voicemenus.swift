@@ -2,9 +2,6 @@ import Foundation
 import PorydawApp
 import PorydawCore
 
-// Existing scenarios paired with voicemenus.cpp.
-// Entry order remains in VoiceChangesPageChecks.swift.
-
 @MainActor
 func drawerVoiceContextMenuTransactions(_ report: CheckReport, suite: DocumentSession,
                                      service: ProjectService, programs: [Int]) {
@@ -15,13 +12,13 @@ func drawerVoiceContextMenuTransactions(_ report: CheckReport, suite: DocumentSe
     _ = page.pointerPress(x: fixture.markerX(48), y: 10, surface: 1, button: 2, modifiers: 0)
     report.expect(page.hasMenu && page.menuOpen, cppID: drawerVoiceMenuID,
                   message: "a right press on a marker opens the context menu")
-    report.expectEqual([VoiceChangesPagePolicy.changeVoiceAction,
-                        VoiceChangesPagePolicy.deleteMarkerAction],
+    report.expectEqual(expected: [VoiceChangesPagePolicy.changeVoiceAction,
+                        VoiceChangesPagePolicy.deleteMarkerAction], actual: 
                        page.menuRowActions, cppID: drawerVoiceMenuID,
                        what: "a marker target publishes the change and delete rows")
-    report.expectEqual(target.text, page.menuTargetIdentity, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: target.text, actual: page.menuTargetIdentity, cppID: drawerVoiceMenuID,
                        what: "the menu captured the pressed occurrence")
-    report.expectEqual(48, page.menuTargetTick, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: 48, actual: page.menuTargetTick, cppID: drawerVoiceMenuID,
                        what: "the menu captured the marker's own tick")
     report.expect(page.interactionActive, cppID: drawerVoiceMenuID,
                   message: "an open menu reports an active interaction")
@@ -29,9 +26,9 @@ func drawerVoiceContextMenuTransactions(_ report: CheckReport, suite: DocumentSe
     // A camera scroll after the open neither drifts the capture nor closes it.
     fixture.session.mutateCamera { $0.setHScroll($0.snapshot.scrollX + 80) }
     report.expect(page.hasMenu, cppID: drawerVoiceMenuID, message: "a camera scroll keeps the menu open")
-    report.expectEqual(target.text, page.menuTargetIdentity, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: target.text, actual: page.menuTargetIdentity, cppID: drawerVoiceMenuID,
                        what: "a camera scroll does not drift the captured identity")
-    report.expectEqual(48, page.menuTargetTick, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: 48, actual: page.menuTargetTick, cppID: drawerVoiceMenuID,
                        what: "a camera scroll does not drift the captured tick")
 
     // Outside dismissal writes nothing.
@@ -41,7 +38,7 @@ func drawerVoiceContextMenuTransactions(_ report: CheckReport, suite: DocumentSe
                   message: "the outside dismissal closes the menu")
     report.expect(!page.interactionActive, cppID: drawerVoiceMenuID,
                   message: "the dismissal releases the follow-scroll gate")
-    report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: baseline, actual: fixture.snapshot, cppID: drawerVoiceMenuID,
                        what: "the dismissal writes nothing")
 
     // The delete row removes exactly the captured occurrence.
@@ -50,26 +47,26 @@ func drawerVoiceContextMenuTransactions(_ report: CheckReport, suite: DocumentSe
                   cppID: drawerVoiceMenuID, message: "the delete row deletes the captured marker")
     report.expect(VoiceLanePolicy.occurrence(at: 48, in: fixture.lanePoints()) == nil,
                   cppID: drawerVoiceMenuID, message: "the deleted tick no longer holds a change")
-    report.expectEqual(baseline.revision + 1, fixture.snapshot.revision, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: baseline.revision + 1, actual: fixture.snapshot.revision, cppID: drawerVoiceMenuID,
                        what: "the deletion is one revision")
     report.expect(fixture.snapshot.canUndo && !baseline.canUndo, cppID: drawerVoiceMenuID,
                   message: "the deletion records one history entry")
-    report.expectEqual([0, 120], page.markerTicks, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: [0, 120], actual: page.markerTicks, cppID: drawerVoiceMenuID,
                        what: "the projection drops exactly the deleted marker")
 
     // An empty-lane target offers the insertion row, which hands the same
     // captured target to the picker.
     _ = page.pointerPress(x: fixture.markerX(96), y: 10, surface: 1, button: 2, modifiers: 0)
-    report.expectEqual([VoiceChangesPagePolicy.insertVoiceChangeAction], page.menuRowActions,
+    report.expectEqual(expected: [VoiceChangesPagePolicy.insertVoiceChangeAction], actual: page.menuRowActions,
                        cppID: drawerVoiceMenuID, what: "an empty-lane target publishes the insert row")
     report.expect(page.menuTargetIdentity == nil, cppID: drawerVoiceMenuID,
                   message: "the empty-lane target carries no occurrence")
     report.expect(page.activateMenuAction(actionId: VoiceChangesPagePolicy.insertVoiceChangeAction),
                   cppID: drawerVoiceMenuID, message: "the insert row opens the picker")
     report.expect(page.hasPicker, cppID: drawerVoiceMenuID, message: "the picker opens on the capture")
-    report.expectEqual(96, page.pickerTargetTick, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: 96, actual: page.pickerTargetTick, cppID: drawerVoiceMenuID,
                        what: "the picker inherits the menu's captured tick")
-    report.expectEqual("Insert voice change", page.pickerTitle, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: "Insert voice change", actual: page.pickerTitle, cppID: drawerVoiceMenuID,
                        what: "the inherited empty-lane capture keeps the insertion title")
     report.expect(!page.hasMenu, cppID: drawerVoiceMenuID, message: "the activation consumed the menu")
     page.cancelPicker()
@@ -78,16 +75,60 @@ func drawerVoiceContextMenuTransactions(_ report: CheckReport, suite: DocumentSe
     // nothing, and its rows never fire.
     _ = page.pointerPress(x: fixture.markerX(120), y: 10, surface: 1, button: 2, modifiers: 0)
     report.expect(page.hasMenu, cppID: drawerVoiceMenuID, message: "the menu reopened on the third marker")
-    fixture.document.writeLane(track: 0, lane: .voice, from: 0, through: 0,
-                               points: [LaneWrite(tick: 0, value: programs[2])])
+    let beforeRewrite = fixture.lanePoints()
+    fixture.document.writeLane(track: 0, lane: .voice, from: 144, through: 144,
+                               points: [LaneWrite(tick: 144, value: 5)])
     page.refreshFromDocument()
     report.expect(!page.hasMenu, cppID: drawerVoiceMenuID,
                   message: "a document change cancels the open menu")
     let rewritten = fixture.snapshot
     report.expect(!page.activateMenuAction(actionId: VoiceChangesPagePolicy.deleteMarkerAction),
                   cppID: drawerVoiceMenuID, message: "an activation after the cancellation writes nothing")
-    report.expectEqual(rewritten, fixture.snapshot, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: rewritten, actual: fixture.snapshot, cppID: drawerVoiceMenuID,
                        what: "the stale activation leaves the rewrite as the only change")
+    let afterRewrite = fixture.lanePoints()
+    report.expect(page.menuTargetIdentity == nil
+                  && afterRewrite.contains { $0.tick == 120 && $0.value == programs[2] },
+                  cppID: drawerVoiceMenuID, message: "a rewrite between press and release voids the activation")
+    report.expect(fixture.snapshot == rewritten && afterRewrite.count == beforeRewrite.count + 1
+                  && beforeRewrite.contains { $0.tick == 0 && $0.value == programs[0] }
+                  && !beforeRewrite.contains { $0.tick == 144 }
+                  && afterRewrite.contains { $0.tick == 0 && $0.value == programs[0] }
+                  && afterRewrite.contains { $0.tick == 144 && $0.value == 5 },
+                  cppID: drawerVoiceMenuID,
+                  message: "the rewrite stands as the only change")
+}
+
+@MainActor
+func drawerVoiceScrolledMenuPick(_ report: CheckReport, suite: DocumentSession,
+                                 service: ProjectService, programs: [Int]) {
+    let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
+    let page = fixture.page
+    let before = fixture.lanePoints()
+    let revision = fixture.snapshot.revision
+    let undoIndex = fixture.document.history.undoIndex
+    _ = page.pointerPress(x: fixture.markerX(48), y: 10, surface: 1, button: 2, modifiers: 0)
+    let captured = page.menuTargetIdentity
+    fixture.session.mutateCamera { $0.setHScroll($0.snapshot.scrollX + 80) }
+    guard page.hasMenu && page.activateMenuAction(actionId: VoiceChangesPagePolicy.changeVoiceAction) else {
+        report.fail(drawerVoiceMenuID, "the scrolled change row did not open the picker")
+        return
+    }
+    page.setPickerFilter(text: String(format: "%03d", programs[2]))
+    page.selectPickerRow(index: 0)
+    let accepted = page.acceptPicker()
+    let after = fixture.lanePoints()
+    report.expect(accepted && captured != nil && after.count == before.count
+                  && after[1].tick == before[1].tick && after[1].value == programs[2],
+                  cppID: drawerVoiceMenuID,
+                  message: "the post-scroll change pick moves exactly the captured marker")
+    report.expect(before.indices.filter { $0 != 1 }.allSatisfy { after.indices.contains($0) && before[$0] == after[$0] },
+                  cppID: drawerVoiceMenuID,
+                  message: "every pre-existing point stands untouched across the pick")
+    report.expect(fixture.snapshot.revision == revision + 1
+                  && fixture.document.history.undoIndex == undoIndex + 1,
+                  cppID: drawerVoiceMenuID,
+                  message: "the pick lands as one revision and one history entry")
 }
 
 @MainActor
@@ -129,10 +170,10 @@ func drawerVoiceOriginalMenuTransactions(_ report: CheckReport, suite: DocumentS
         document.lanePoints(track: 0, lane: .voice).first { $0.tick == 144 }?.value
     }
     func openMenu() {
-        _ = page.pointerPress(x: session.camera.displayX(tick: 144, origin: 0, dpr: 1),
+        _ = page.pointerPress(x: session.camera.viewX(tick: 144, dpr: 1),
                               y: 10, surface: 1, button: 2, modifiers: 0)
     }
-    let before = drawerVoiceVoiceDocumentSnapshot(document)
+    let before = DocumentSnapshot(document)
     let beforeBytes = bytes()
     openMenu()
     expect(page.menuOpen && page.menuTargetTick == 144, 111)
@@ -146,7 +187,7 @@ func drawerVoiceOriginalMenuTransactions(_ report: CheckReport, suite: DocumentS
     expect(value() != nil, 124)
     expect(value() == 7, 125)
     expect(document.revision == before.revision + 1, 126)
-    let inserted = drawerVoiceVoiceDocumentSnapshot(document)
+    let inserted = DocumentSnapshot(document)
     let insertedBytes = bytes()
 
     openMenu()
@@ -161,7 +202,7 @@ func drawerVoiceOriginalMenuTransactions(_ report: CheckReport, suite: DocumentS
     expect(value() != nil, 143)
     expect(value() == 3, 144)
     expect(document.revision == inserted.revision + 1, 145)
-    let changed = drawerVoiceVoiceDocumentSnapshot(document)
+    let changed = DocumentSnapshot(document)
     let changedBytes = bytes()
 
     openMenu()

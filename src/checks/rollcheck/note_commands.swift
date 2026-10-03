@@ -1,11 +1,13 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
+@testable import PorydawAppCommands
 import PorydawCore
 
 @MainActor
 func runNoteCommandChecks(_ report: CheckReport, session: DocumentSession) {
     checkKeyboardDuplicateNotes(report, session: session)
     checkKeyboardDuplicatePrefersTimeSelection(report, session: session)
+    checkRollNoteDragGuardsSharedCommands(report, session: session)
     checkKeyboardSplitNotesGrid(report, session: session)
     checkKeyboardSplitAtEditCursor(report, session: session)
     checkKeyboardSplitNoop(report, session: session)
@@ -13,6 +15,7 @@ func runNoteCommandChecks(_ report: CheckReport, session: DocumentSession) {
     checkKeyboardJoinMixedSpread(report, session: session)
     checkKeyboardSplitSelectedPlusCursorStraddler(report, session: session)
     checkKeyboardNoteCommandPopupActivation(report, session: session)
+    checkCommandRouting(report, session: session)
 }
 
 @MainActor
@@ -32,7 +35,7 @@ private struct NoteCommandFixture {
     let originalCursor: Tick
     let originalCamera: EditorCamera.Snapshot
 
-    init?(session: DocumentSession) {
+    init?(session: DocumentSession, grid: PianoGrid) {
         let document = session.document
         guard let originalBytes = try? document.state.file.encoded(),
               document.engineTracks.usedTrackCount > 0 else { return nil }
@@ -43,13 +46,7 @@ private struct NoteCommandFixture {
         originalTrack = session.selectedTrack
         originalCursor = session.editCursor
         originalCamera = session.camera.snapshot
-        grid = PianoGrid(session: session)
-        // The C++ split uses drawn grid boundaries; widen the snap lattice to
-        // the same subdivision before sending commands through the real grid.
-        for _ in 0..<4 where grid.snapTicks < grid.visibleGridTicks {
-            grid.performCommand(command: EditCommand.gridWiden.rawValue)
-        }
-        guard grid.snapTicks == grid.visibleGridTicks else { return nil }
+        self.grid = grid
         let cellStep = Tick(grid.visibleGridTicks)
         step = cellStep
         let track = grid.trackIndex
@@ -127,11 +124,21 @@ private func withNoteCommandFixture(
     _ report: CheckReport, session: DocumentSession, id: String,
     _ body: (NoteCommandFixture) -> Void
 ) {
-    guard let fixture = NoteCommandFixture(session: session) else {
+    let picker = PianoGrid(session: session)
+    let previousGridSelection = session.grid.selection
+    picker.openGridMenu(kind: 1)
+    picker.activateGridMenuRow(actionId: 8)
+    guard let fixture = NoteCommandFixture(session: session, grid: picker) else {
+        picker.openGridMenu(kind: 1)
+        picker.activateGridMenuRow(actionId: previousGridSelection.toMenuId())
         report.fail(id, "could not seed a free grid-aligned note")
         return
     }
-    defer { fixture.restore(report, id: id) }
+    defer {
+        fixture.restore(report, id: id)
+        picker.openGridMenu(kind: 1)
+        picker.activateGridMenuRow(actionId: previousGridSelection.toMenuId())
+    }
     body(fixture)
 }
 
@@ -155,6 +162,8 @@ private func checkKeyboardDuplicateNotes(_ report: CheckReport, session: Documen
                       cppID: id, message: "the duplicate-notes seed is present")
         session.setSelectedNotes([source.id])
         let before = document.history.currentIdentity
+        let index = document.history.undoIndex
+        let count = document.history.undoCount
         fixture.grid.performCommand(command: EditCommand.duplicate.rawValue)
         let copy = fixture.note(at: source.tick + source.duration)
         report.expect(document.history.currentIdentity != before &&
@@ -162,6 +171,11 @@ private func checkKeyboardDuplicateNotes(_ report: CheckReport, session: Documen
                       cppID: id, message: "duplicate creates one equal-length copy one span later")
         report.expect(copy.map { session.selectedNoteOrder == [$0.id] } == true,
                       cppID: id, message: "duplicate selects only its copy")
+        report.expect(document.history.undoIndex == index + 1
+                      && document.history.undoCount == count + 1,
+                      cppID: id, message: "note-only Duplicate commits exactly one undo step")
+        report.expect(session.timeSelection == nil, cppID: id,
+                      message: "note-only duplication never leaks into the time selection")
         fixture.expectOneUndo(report, id: id)
     }
 }
@@ -182,8 +196,12 @@ private func checkKeyboardDuplicatePrefersTimeSelection(
         page.applyTimeSelection(AutomationTimeSelection(
             range: TimeRange(startTick: source.tick, endTick: source.tick + fixture.step),
             scope: .tracks([source.track])))
-        let router = EditorCommandRouter(session: session, grid: fixture.grid, automation: page)
+        let ruler = RulerMenuPresenter(session: session, grid: fixture.grid, automation: page)
+        let router = EditorCommandRouter(session: session, grid: fixture.grid, automation: page,
+                                         rulerMenu: ruler)
         let before = session.document.history.currentIdentity
+        let index = session.document.history.undoIndex
+        let count = session.document.history.undoCount
         router.perform(.duplicate)
         let copy = fixture.note(at: source.tick + fixture.step)
         report.expect(session.document.history.currentIdentity != before &&
@@ -192,8 +210,25 @@ private func checkKeyboardDuplicatePrefersTimeSelection(
                               endTick: source.tick + 2 * fixture.step) &&
                           copy != nil && session.editCursor == source.tick + 2 * fixture.step,
                       cppID: id, message: "active time range owns duplicate and advances the cursor")
-        report.expect(session.selectedNoteOrder == [source.id], cppID: id,
-                      message: "time-range duplication leaves the note selection on its source")
+        report.expect(session.selectedNoteOrder.isEmpty, cppID: id,
+                      message: "committing the time range clears the competing note selection")
+        report.expect(session.document.history.undoIndex == index + 1
+                      && session.document.history.undoCount == count + 1,
+                      cppID: id, message: "time-range Duplicate commits exactly one undo step")
+        router.perform(.duplicate)
+        let secondStart = source.tick + 2 * fixture.step
+        let secondEnd = source.tick + 3 * fixture.step
+        report.expect(page.selection?.range == TimeRange(startTick: secondStart, endTick: secondEnd)
+                      && fixture.note(at: secondStart) != nil
+                      && session.editCursor == secondEnd
+                      && session.document.history.undoIndex == index + 2
+                      && session.document.history.undoCount == count + 2,
+                      cppID: id,
+                      message: "second time-range Duplicate occupies the next exact span and commits a second undo step")
+        report.expect(session.document.history.undoDocument()
+                      && fixture.note(at: secondStart) == nil
+                      && fixture.note(at: source.tick + fixture.step) != nil, cppID: id,
+                      message: "undoing the second Duplicate preserves the first copied span")
         fixture.expectOneUndo(report, id: id)
     }
 }
@@ -211,6 +246,8 @@ private func checkKeyboardSplitNotesGrid(_ report: CheckReport, session: Documen
         session.setSelectedNotes([source.id])
         let before = session.document.history.currentIdentity
         let original = try? session.document.state.file.encoded()
+        let index = session.document.history.undoIndex
+        let count = session.document.history.undoCount
         fixture.grid.performCommand(command: EditCommand.split.rawValue)
         let pieces = (0..<3).compactMap { offset in
             fixture.note(at: fixture.tick + Tick(offset) * fixture.step)
@@ -221,6 +258,9 @@ private func checkKeyboardSplitNotesGrid(_ report: CheckReport, session: Documen
         report.expect(session.selectedNoteOrder.count == 3 &&
                           Set(session.selectedNoteOrder) == Set(pieces.map(\.id)),
                       cppID: id, message: "split reselects exactly its three fragments")
+        report.expect(session.document.history.undoIndex == index + 1
+                      && session.document.history.undoCount == count + 1,
+                      cppID: id, message: "grid Split commits exactly one undo step")
         for selected in session.selectedNoteOrder {
             report.expect(session.document.note(selected).map {
                 $0.tick >= fixture.tick && $0.tick < fixture.tick + 3 * fixture.step
@@ -244,6 +284,8 @@ private func checkKeyboardSplitAtEditCursor(_ report: CheckReport, session: Docu
         let cursor = source.tick + source.duration / 2
         fixture.grid.setEditCursorTick(tick: Int(cursor))
         let before = session.document.history.currentIdentity
+        let index = session.document.history.undoIndex
+        let count = session.document.history.undoCount
         fixture.grid.performCommand(command: EditCommand.split.rawValue)
         report.expect(session.document.history.currentIdentity != before &&
                           fixture.note(at: source.tick)?.duration == cursor - source.tick &&
@@ -252,6 +294,9 @@ private func checkKeyboardSplitAtEditCursor(_ report: CheckReport, session: Docu
                       cppID: id, message: "unselected note splits at the edit cursor")
         report.expect(session.selectedNoteOrder.isEmpty, cppID: id,
                       message: "cursor-split fragments remain unselected")
+        report.expect(session.document.history.undoIndex == index + 1
+                      && session.document.history.undoCount == count + 1,
+                      cppID: id, message: "cursor Split commits exactly one undo step")
         fixture.expectOneUndo(report, id: id)
     }
 }
@@ -265,12 +310,17 @@ private func checkKeyboardSplitNoop(_ report: CheckReport, session: DocumentSess
         fixture.grid.setEditCursorTick(tick: Int(session.timeline.lengthTicks))
         let before = try? document.state.file.encoded()
         let identity = document.history.currentIdentity
+        let index = document.history.undoIndex
+        let count = document.history.undoCount
         fixture.grid.performCommand(command: EditCommand.split.rawValue)
         report.expect(document.history.currentIdentity == identity, cppID: id,
                       message: "split outside every note records no undo entry")
         report.expect((try? document.state.file.encoded()) == before &&
                           session.selectedNoteOrder.isEmpty,
                       cppID: id, message: "no-op split leaves notes and selection untouched")
+        report.expect(document.history.undoIndex == index
+                      && document.history.undoCount == count,
+                      cppID: id, message: "a no-op Split adds no undo step")
     }
 }
 
@@ -292,6 +342,8 @@ private func checkKeyboardJoinNotes(_ report: CheckReport, session: DocumentSess
         session.setSelectedNotes([source.id, secondID])
         let original = try? session.document.state.file.encoded()
         let before = session.document.history.currentIdentity
+        let index = session.document.history.undoIndex
+        let count = session.document.history.undoCount
         fixture.grid.performCommand(command: EditCommand.join.rawValue)
         let joined = fixture.note(at: source.tick)
         report.expect(session.document.history.currentIdentity != before &&
@@ -301,6 +353,9 @@ private func checkKeyboardJoinNotes(_ report: CheckReport, session: DocumentSess
                       message: "join removes its second note")
         report.expect(joined.map { session.selectedNoteOrder == [$0.id] } == true,
                       cppID: id, message: "join selects only the joined note")
+        report.expect(session.document.history.undoIndex == index + 1
+                      && session.document.history.undoCount == count + 1,
+                      cppID: id, message: "joining a note pair commits exactly one undo step")
         report.expect(session.document.history.undoDocument() &&
                           (try? session.document.state.file.encoded()) == original &&
                           session.document.history.currentIdentity == before,
@@ -346,6 +401,8 @@ private func checkKeyboardJoinMixedSpread(_ report: CheckReport, session: Docume
         session.setSelectedNotes([source.id, ids[0], singleton.id, open.id])
         let before = session.document.history.currentIdentity
         let original = try? session.document.state.file.encoded()
+        let index = session.document.history.undoIndex
+        let count = session.document.history.undoCount
         fixture.grid.performCommand(command: EditCommand.join.rawValue)
         let joined = fixture.note(at: source.tick)
         report.expect(session.document.history.currentIdentity != before &&
@@ -365,6 +422,9 @@ private func checkKeyboardJoinMixedSpread(_ report: CheckReport, session: Docume
             session.selectedNotes == [singleton.id, open.id, $0.id]
         } == true && session.selectedNoteOrder.count == 3,
         cppID: id, message: "mixed join selects the joined and surviving notes")
+        report.expect(session.document.history.undoIndex == index + 1
+                      && session.document.history.undoCount == count + 1,
+                      cppID: id, message: "mixed Join commits exactly one undo step")
         report.expect(session.document.history.undoDocument() &&
                           (try? session.document.state.file.encoded()) == original &&
                           session.document.history.currentIdentity == before,
@@ -403,6 +463,8 @@ private func checkKeyboardSplitSelectedPlusCursorStraddler(
         session.setSelectedNotes([source.id, bystander.id])
         let before = session.document.history.currentIdentity
         let original = try? session.document.state.file.encoded()
+        let index = session.document.history.undoIndex
+        let count = session.document.history.undoCount
         fixture.grid.performCommand(command: EditCommand.split.rawValue)
         report.expect(session.document.history.currentIdentity != before, cppID: id,
                       message: "both split arms commit as one transaction")
@@ -434,6 +496,9 @@ private func checkKeyboardSplitSelectedPlusCursorStraddler(
                       cppID: id, message: "also-selected bystander retains identity and values")
         report.expect(session.document.note(straddler.id) == nil, cppID: id,
                       message: "the original cursor straddler was replaced")
+        report.expect(session.document.history.undoIndex == index + 1
+                      && session.document.history.undoCount == count + 1,
+                      cppID: id, message: "selected-and-cursor Split commits exactly one undo step")
         report.expect(session.document.history.undoDocument() &&
                           (try? session.document.state.file.encoded()) == original &&
                           session.document.history.currentIdentity == before,
@@ -474,6 +539,8 @@ private func checkKeyboardNoteCommandPopupActivation(
             }
             let original = try? session.document.state.file.encoded()
             let before = session.document.history.currentIdentity
+            let index = session.document.history.undoIndex
+            let count = session.document.history.undoCount
             // Menu rows and keyboard commands both call PianoGrid.performCommand.
             fixture.grid.performCommand(command: command.rawValue)
             switch command {
@@ -507,10 +574,70 @@ private func checkKeyboardNoteCommandPopupActivation(
             }
             report.expect(session.document.history.currentIdentity != before,
                           cppID: id, message: "menu command records a history entry")
+            report.expect(session.document.history.undoIndex == index + 1
+                          && session.document.history.undoCount == count + 1,
+                          cppID: id, message: "the note-menu command commits exactly one undo step")
             report.expect(session.document.history.undoDocument() &&
                               (try? session.document.state.file.encoded()) == original &&
                               session.document.history.currentIdentity == before,
                           cppID: id, message: "one undo restores the pre-menu document")
         }
     }
+}
+
+@MainActor
+private func checkRollNoteDragGuardsSharedCommands(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::rollNoteDragGuardsSharedCommands"
+    let originalSelection = session.selectedNoteOrder
+    let originalCamera = session.camera.snapshot
+    let grid = makeCameraGrid(session: session)
+    var seededID: NoteID?
+    defer {
+        if let seededID, session.document.note(seededID) != nil {
+            session.document.deleteNotes([seededID])
+        }
+        session.setSelectedNotes(originalSelection)
+        _ = session.mutateCamera {
+            $0.restore(pixelsPerBeat: originalCamera.pixelsPerBeat,
+                       keyHeight: originalCamera.keyHeight,
+                       scrollX: originalCamera.scrollX, scrollY: originalCamera.scrollY)
+        }
+    }
+    guard let pitch = session.camera.projection.pitch(
+        atY: 160, keyHeight: session.camera.snapshot.keyHeight,
+        scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio),
+        pitch <= 115,
+        let added = try? session.document.addNotes([
+            NewNote(track: grid.trackIndex, tick: 24, pitch: UInt8(pitch),
+                    duration: 7, velocity: 80)
+        ]), added.count == 1 else {
+        report.fail(id, "roll-gesture fixture could not seed its note")
+        return
+    }
+    let target = added[0]
+    seededID = target
+    grid.refreshFromSession()
+    guard let rect = selectionRect(target, grid: grid) else {
+        report.fail(id, "roll-gesture fixture note is not projected")
+        return
+    }
+    let pressX = rect.x + rect.width / 2
+    let pressY = rect.y + rect.height / 2
+    session.setSelectedNotes([target])
+    // Opaque pre-stimulus byte snapshot for the cancel-point comparison below.
+    let beforeBytes = coreTimeBytes(session.document)
+    let beforeRevision = session.document.revision
+    let beforeUndo = session.document.history.undoCount
+    grid.beginPointer(x: pressX, y: pressY, modifiers: 0)
+    grid.updatePointer(x: pressX + grid.dragDistance + 4, y: pressY)
+    report.expect(grid.interactionActive && session.selectedNoteOrder == [target],
+                  cppID: id, message: "roll note drag did not become a live gesture")
+    grid.performCommand(command: EditCommand.delete.rawValue)
+    _ = grid.handleEscape()
+    grid.endPointer(x: pressX + grid.dragDistance + 4, y: pressY)
+    report.expect(!grid.interactionActive && coreTimeBytes(session.document) == beforeBytes
+                      && session.selectedNoteOrder == [target]
+                      && session.document.revision == beforeRevision
+                      && session.document.history.undoCount == beforeUndo,
+                  cppID: id, message: "roll gesture did not block Delete and restore selection on Escape")
 }

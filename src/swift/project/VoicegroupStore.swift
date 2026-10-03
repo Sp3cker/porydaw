@@ -26,7 +26,7 @@ private struct BankMemo {
     var sourceFileTime: Date
 }
 
-// Tokens are single-use, scoped to the bank that produced the source delta.
+// Single-use tokens survive bank rebuilds; the source delta's byte match guards undo.
 private struct TokenRegistry {
     struct Entry {
         let id: VoicegroupId
@@ -47,18 +47,13 @@ private struct TokenRegistry {
     mutating func consume(_ token: UInt64) -> Entry? {
         entries.removeValue(forKey: token)
     }
-
-    mutating func expire(id: VoicegroupId) {
-        entries = entries.filter { $0.value.id != id }
-    }
-
 }
 
 /// Worker-confined bank ownership. Call every method from the store's serial executor;
 /// the loader's own context worker performs native calls outside the cooperative pool.
 public final class VoicegroupStore {
     private let projectRoot: String
-    private let context: ProjectContext
+    private(set) var context: ProjectContext
     private var records: [VoicegroupId: BankRecord] = [:]
     private var memos: [String: BankMemo] = [:]
     private var tokens = TokenRegistry()
@@ -82,10 +77,38 @@ public final class VoicegroupStore {
         self.context = context
     }
 
-    /// Resolves a song's voicegroup argument, reusing an unchanged canonical bank.
+    /// Rebuilds loaded banks against refreshed sample maps without changing source edits or history.
+    /// - Parameter context: Fresh project loader context.
+    /// - Returns: Successfully refreshed bank publications.
+    func rebind(context: ProjectContext) -> [LoadedBankView] {
+        self.context = context
+        var views: [LoadedBankView] = []
+        views.reserveCapacity(records.count)
+        for (id, var record) in records {
+            let source = record.source
+            let bank: BankHandle?
+            if source.dirty {
+                bank = source.loadPreviewedSource(using: context)
+            } else {
+                bank = context.load(target: .init(filePath: source.filePath,
+                                                  sectionLabel: source.sectionLabel))
+                bank?.graftMintedSynths(source: source)
+            }
+            guard let bank else { continue }
+            record.current = bank
+            record.published = Self.publish(id: id, source: source, bank: bank)
+            records[id] = record
+            views.append(record.published)
+        }
+        return views
+    }
+
+    /// Resolves a song's voicegroup argument, reusing a canonical bank whose section is unchanged
+    /// and rebasing its unsaved edits onto sibling changes in the same source file.
     /// - Parameter voicegroupArg: The song's `-G` argument; empty selects `_dummy`.
     /// - Returns: An immutable bank publication for the resolved source identity.
-    /// - Throws: `VoicegroupStoreError` if the source or native bank cannot load.
+    /// - Throws: `VoicegroupStoreError` if the source or native bank cannot load, or if disk
+    ///   changed a section that has unsaved edits.
     public func loadBank(voicegroupArg: String) throws -> LoadedBankView {
         let arg = voicegroupArg.isEmpty ? "_dummy" : voicegroupArg
         if let memo = memos[arg], let record = records[memo.id],
@@ -110,16 +133,32 @@ public final class VoicegroupStore {
         guard let time = modificationTime(path) else {
             throw VoicegroupStoreError.operationFailed("Cannot read \(path)")
         }
-        if let record = records[id], record.sourceFileTime == time {
-            memos[arg] = BankMemo(id: id, filePath: path, sourceFileTime: time)
-            return record.published
+        if var record = records[id] {
+            if record.sourceFileTime == time {
+                memos[arg] = BankMemo(id: id, filePath: path, sourceFileTime: time)
+                return record.published
+            }
+            let retained: Bool
+            do {
+                retained = try record.source.rebasePreservingEdits(from: source)
+            } catch {
+                throw VoicegroupStoreError.operationFailed(error.localizedDescription)
+            }
+            if retained {
+                record.sourceFileTime = time
+                if record.published.dirty != record.source.dirty {
+                    record.published = Self.publish(id: id, source: record.source, bank: record.current)
+                }
+                records[id] = record
+                memos[arg] = BankMemo(id: id, filePath: path, sourceFileTime: time)
+                return record.published
+            }
         }
         guard let bank = context.load(target: .init(filePath: path, sectionLabel: source.sectionLabel)) else {
             throw VoicegroupStoreError.operationFailed("Could not load voicegroup source \(path).")
         }
         bank.graftMintedSynths(source: source)
         let view = Self.publish(id: id, source: source, bank: bank)
-        tokens.expire(id: id)
         records[id] = BankRecord(id: id, source: source, current: bank,
                                  sourceFileTime: time, published: view)
         memos[arg] = BankMemo(id: id, filePath: path, sourceFileTime: time)
@@ -196,6 +235,8 @@ public final class VoicegroupStore {
         let saved: Bool
         do {
             saved = try record.source.save()
+        } catch let conflict as VoicegroupSourceConflict {
+            throw VoicegroupStoreError.operationFailed("Cannot write \(record.source.filePath): \(conflict.message)")
         } catch {
             throw VoicegroupStoreError.operationFailed("Cannot write \(record.source.filePath)")
         }
@@ -220,7 +261,7 @@ public final class VoicegroupStore {
         return record.published
     }
 
-    /// Auditions the current source via a staged `loadName.inc` shadow file.
+    /// Auditions the current source via a `loadName.inc` shadow staged outside the project.
     /// - Parameter id: Identity of a loaded bank.
     /// - Returns: A self-contained preview bank, or nil when loading fails.
     public func preview(id: VoicegroupId) -> BankHandle? {

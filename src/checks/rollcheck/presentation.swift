@@ -1,6 +1,9 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
+@testable import PorydawAppCommands
 import PorydawCore
+@testable import PorydawAppAudio
+import PorydawPlaybackNative
 
 @MainActor
 func runPresentationChecks(_ report: CheckReport, session: DocumentSession) {
@@ -8,6 +11,124 @@ func runPresentationChecks(_ report: CheckReport, session: DocumentSession) {
     checkHeaderRename(report, session: session)
     checkHeaderKeyboardMuteSolo(report, session: session)
     checkHeaderReconciliation(report, session: session)
+    checkPresenterMetrics(report, session: session)
+    checkMountedPolyphonyReveal(report)
+}
+
+@MainActor
+private func checkMountedPolyphonyReveal(_ report: CheckReport) {
+    let id = "rollcheck/PianoRollTest::polyphonyEventReveal"
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(id, "mounted polyphony check requires a staged fixture directory")
+        return
+    }
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-polyphony-reveal")
+    let app = ApplicationSession()
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    app.openProjectAndSong(path: root, label: "mus_session_test")
+    let deadline = Date().addingTimeInterval(25)
+    while !app.songOpen && app.lastSaveError.isEmpty && Date() < deadline {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    guard app.songOpen, let session = app.selectedDocument,
+          let other = session.document.addTrack(voice: 0),
+          let planted = try? session.document.addNotes([
+              NewNote(track: 0, tick: 12_000, pitch: 60, duration: 6, velocity: 80),
+              NewNote(track: 0, tick: 12_024, pitch: 60, duration: 6, velocity: 80),
+              NewNote(track: 0, tick: 12_072, pitch: 60, duration: 6, velocity: 80),
+          ]), planted.count == 3,
+          let baseline = try? session.document.captureSave() else {
+        report.fail(id, "loaded polyphony fixture could not prepare the losing-track notes")
+        return
+    }
+    let document = session.document
+    let historyIndex = document.history.undoIndex
+    let historyCount = document.history.undoCount
+    let revision = document.revision
+    let identity = document.history.currentIdentity
+    session.selectPrimaryTrack(other)
+    session.setSelectedNotes([planted[2]])
+    let initialScroll = session.camera.snapshot.scrollX
+    var snapshot = AudioPolySnapshot(maxPcmChannels: 0, invert: false,
+        pcm: Array(repeating: AudioPolyChannel(on: false, releasing: false,
+                                              track: 0, midiKey: 0),
+                   count: Int(TOTAL_PCM_CHANNELS)),
+        cgb: Array(repeating: AudioPolyChannel(on: false, releasing: false,
+                                              track: 0, midiKey: 0),
+                   count: Int(TOTAL_CGB_CHANNELS)),
+        drop: Array(repeating: 0, count: Int(MAX_TRACKS)),
+        steal: Array(repeating: 0, count: Int(MAX_TRACKS)),
+        tailCut: Array(repeating: 0, count: Int(MAX_TRACKS)),
+        eventTotal: 3,
+        events: Array(repeating: M4APolyEvent(type: 0, trackIndex: 0, midiKey: 0,
+                                              byTrack: 0, program: 0, tick: 0),
+                      count: Int(M4A_POLY_EVENT_CAPACITY)))
+    snapshot.events[0] = M4APolyEvent(type: 1, trackIndex: 0, midiKey: 60,
+                                       byTrack: 1, program: 0, tick: 12_027)
+    snapshot.events[1] = M4APolyEvent(type: 1, trackIndex: 0, midiKey: 127,
+                                       byTrack: 1, program: 0, tick: 12_048)
+    snapshot.events[2] = M4APolyEvent(type: 1, trackIndex: 0, midiKey: 60,
+                                       byTrack: 1, program: 0, tick: 12_048)
+    app.polyphony.update(snapshot)
+    app.polyphony.activateEvent(index: 2, devicePixelRatio: 1)
+    report.expect(session.selectedNoteOrder == [planted[1]], cppID: id,
+                  message: "A018 the positioned event finds the last note on its earlier matching key")
+    report.expect(session.selectedTrack == 0, cppID: id,
+                  message: "A019 a positioned event selects its losing track")
+    report.expect(session.selectedNoteOrder.count == 1
+                  && session.selectedNoteOrder.first == planted[1], cppID: id,
+                  message: "A020 the positioned event selects exactly its last earlier same-key note")
+    let revealed = session.camera.snapshot
+    report.expect(revealed.scrollX > initialScroll
+                  && session.camera.contentX(tick: 12_027) >= 0
+                  && session.camera.contentX(tick: 12_027) <= revealed.viewportWidth,
+                  cppID: id,
+                  message: "the active positioned event tick is revealed within the roll viewport")
+    report.expect(session.editCursor == 12_027, cppID: id,
+                  message: "the active positioned event sets the edit cursor without changing notes")
+    let afterHit = try? document.captureSave()
+    report.expect(document.history.undoIndex == historyIndex
+                  && document.history.undoCount == historyCount
+                  && document.history.currentIdentity == identity, cppID: id,
+                  message: "A023 a matched event preserves the undo index and count")
+    report.expect(afterHit?.bytes == baseline.bytes && document.revision == revision,
+                  cppID: id, message: "A024 a matched event preserves exact exported MIDI bytes")
+    session.selectPrimaryTrack(other)
+    session.setSelectedNotes([planted[1]])
+    let beforeMiss = session.camera.snapshot
+    let cursorBeforeMiss = session.editCursor
+    app.polyphony.activateEvent(index: 1, devicePixelRatio: 1)
+    report.expect(session.selectedNoteOrder == [planted[1]], cppID: id,
+                  message: "A021 an unused key retains the previously selected note")
+    report.expect(session.selectedTrack == 0, cppID: id,
+                  message: "A022 an unused key selects its losing track despite no note match")
+    report.expect(session.camera.snapshot == beforeMiss && session.editCursor == cursorBeforeMiss,
+                  cppID: id, message: "an unused-key miss leaves the viewport and cursor untouched")
+    let afterMiss = try? document.captureSave()
+    report.expect(document.history.undoIndex == historyIndex
+                  && document.history.undoCount == historyCount
+                  && document.history.currentIdentity == identity, cppID: id,
+                  message: "the unused-key event preserves the undo index and count")
+    report.expect(afterMiss?.bytes == baseline.bytes && document.revision == revision,
+                  cppID: id, message: "the unused-key event preserves exact exported MIDI bytes")
+    session.selectPrimaryTrack(other)
+    session.setSelectedNotes([planted[1]])
+    let beforeExpiryMiss = session.camera.snapshot
+    let cursorBeforeExpiryMiss = session.editCursor
+    app.polyphony.activateEvent(index: 0, devicePixelRatio: 1)
+    report.expect(session.selectedTrack == 0 && session.selectedNoteOrder == [planted[1]],
+                  cppID: id, message: "an expired same-key note does not replace the selection")
+    report.expect(session.camera.snapshot == beforeExpiryMiss
+                  && session.editCursor == cursorBeforeExpiryMiss, cppID: id,
+                  message: "an expired same-key event leaves the viewport and cursor untouched")
+    let afterExpiryMiss = try? document.captureSave()
+    report.expect(afterExpiryMiss?.bytes == baseline.bytes
+                  && document.history.undoIndex == historyIndex
+                  && document.history.undoCount == historyCount, cppID: id,
+                  message: "an expired same-key miss preserves MIDI bytes and history")
 }
 
 @MainActor
@@ -46,7 +167,7 @@ private func checkHeaderPanFollow(_ report: CheckReport, session: DocumentSessio
         _ = $0.setHScroll(oldCamera.scrollX)
         _ = $0.setVScroll(oldCamera.scrollY)
     }
-    report.expectEqual(oldCamera, session.camera.snapshot, cppID: id,
+    report.expectEqual(expected: oldCamera, actual: session.camera.snapshot, cppID: id,
                        what: "pan probe restores the incoming camera viewport and scroll")
     report.expect(session.document.state == before && session.document.history.currentIdentity == identity,
                   cppID: id, message: "pan and follow do not edit the song or its undo history")
@@ -70,7 +191,7 @@ private func checkHeaderRename(_ report: CheckReport, session: DocumentSession) 
         while document.history.currentIdentity != identity && document.history.undoDocument() {}
         session.onChange = oldChange
         session.selectedTrack = selected
-        report.expectEqual(before, document.state, cppID: id,
+        report.expectEqual(expected: before, actual: document.state, cppID: id,
                            what: "one rename undo restores the original song bytes")
     }
     guard let track = session.selectedTrack,
@@ -79,23 +200,23 @@ private func checkHeaderRename(_ report: CheckReport, session: DocumentSession) 
         return
     }
     headers.beginRename(track: track)
-    report.expectEqual(track, headers.renamingTrack, cppID: id,
+    report.expectEqual(expected: track, actual: headers.renamingTrack, cppID: id,
                        what: "inline rename opens on the selected header")
     headers.renameDraft = "Rolled"
-    report.expectEqual("Rolled", headers.renameDraft, cppID: id,
+    report.expectEqual(expected: "Rolled", actual: headers.renameDraft, cppID: id,
                        what: "header publishes the typed draft")
     headers.finishRename(commit: true, restoreRollFocus: false)
     report.expect(document.trackName(track) == "Rolled" && headers.renamingTrack == -1,
                   cppID: id, message: "Return commits the inline rename and closes the editor")
     headers.beginRename(track: track)
-    report.expectEqual(track, headers.renamingTrack, cppID: id,
+    report.expectEqual(expected: track, actual: headers.renamingTrack, cppID: id,
                        what: "the renamed header can reopen its editor")
     headers.renameDraft = "Discarded"
     headers.finishRename(commit: false, restoreRollFocus: false)
     report.expect(document.trackName(track) == "Rolled" && headers.renamingTrack == -1,
                   cppID: id, message: "Escape discards the draft without changing the name")
     headers.beginRename(track: track)
-    report.expectEqual(track, headers.renamingTrack, cppID: id,
+    report.expectEqual(expected: track, actual: headers.renamingTrack, cppID: id,
                        what: "editor can reopen for the marker-name guard")
     let accepted = document.state
     let acceptedIdentity = document.history.currentIdentity
@@ -133,7 +254,7 @@ private func checkHeaderKeyboardMuteSolo(_ report: CheckReport, session: Documen
         }
         session.mutedTracks = originalMute
         session.soloedTracks = originalSolo
-        report.expectEqual(before, document.state, cppID: id,
+        report.expectEqual(expected: before, actual: document.state, cppID: id,
                            what: "temporary second-track fixture leaves original MIDI intact")
     }
     guard document.engineTracks.usedTrackCount == 1,
@@ -201,7 +322,7 @@ private func checkHeaderReconciliation(_ report: CheckReport, session: DocumentS
         while document.history.currentIdentity != identity && document.history.undoDocument() {}
         session.onChange = oldChange
         session.selectedTrack = selected
-        report.expectEqual(before, document.state, cppID: structuralID,
+        report.expectEqual(expected: before, actual: document.state, cppID: structuralID,
                            what: "header reconciliation restores the supplied song")
     }
     guard document.engineTracks.usedTrackCount == 1,
@@ -225,6 +346,26 @@ private func checkHeaderReconciliation(_ report: CheckReport, session: DocumentS
                   && (0..<headers.rows.count).allSatisfy { headers.rows[$0] === initialRows[$0] },
                   cppID: unchangedID,
                   message: "unchanged refresh preserves ordered header records and identities")
+    report.expect(headers.rows.count == document.engineTracks.usedTrackCount + 1
+                  && (0..<document.engineTracks.usedTrackCount).allSatisfy { track in
+        let row = headers.rows[track]
+        let name = document.trackName(track)
+        return row.track == track && !row.isAddTrack
+            && row.title == "\(track + 1) · \(name.isEmpty ? "Track \(track + 1)" : name)"
+            && row.titleBold == (session.selectedTrack == track)
+            && row.muteChecked == session.mutedTracks.contains(track)
+            && row.soloChecked == session.soloedTracks.contains(track)
+    } && headers.rows.last?.track == -1
+        && headers.rows.last?.isAddTrack == true
+        && headers.rows.last?.title == "+ Add track",
+        cppID: unchangedID,
+        message: "unchanged refresh preserves header titles and roles against the rebuilt timeline")
+    report.expect(initialRows.count == 3 && initialRows.map(\.track) == [0, lastUsed, -1]
+                  && initialRows[0].isAddTrack == false
+                  && initialRows[1].isAddTrack == false
+                  && initialRows[2].isAddTrack == true,
+                  cppID: structuralID,
+                  message: "the structural fixture starts with ordered records and a trailing add row")
     document.deleteTrack(lastUsed)
     let replacement = document.state
     report.expect(document.engineTracks.usedTrackCount == 1
@@ -241,15 +382,75 @@ private func checkHeaderReconciliation(_ report: CheckReport, session: DocumentS
                   cppID: structuralID,
                   message: "undo restores the last record and trailing add row in one reset")
     headers.beginRename(track: 0)
-    report.expectEqual(0, headers.renamingTrack, cppID: structuralID,
+    report.expectEqual(expected: 0, actual: headers.renamingTrack, cppID: structuralID,
                        what: "rename opens on the retained first record")
     headers.renameDraft = "zzz"
     document.deleteTrack(lastUsed)
-    report.expectEqual(replacement, document.state, cppID: structuralID,
+    report.expectEqual(expected: replacement, actual: document.state, cppID: structuralID,
                        what: "structural replacement recreates the deletion")
     report.expect(headers.renamingTrack == -1 && headers.rowRebuildCount == resets + 3,
                   cppID: structuralID, message: "replacement cancels the open header rename")
     headers.finishRename(commit: true, restoreRollFocus: false)
     report.expect(document.trackName(0) != "zzz", cppID: structuralID,
                   message: "cancelled draft cannot commit across the replacement")
+}
+
+@MainActor
+private func checkPresenterMetrics(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/EditorGridCamera::presenterMetrics"
+    let grid = makeCameraGrid(session: session)
+    let snapshot = session.camera.snapshot
+    report.expect(
+        gridCameraNear(grid.baseFontPx, 13) && gridCameraNear(grid.devicePixelRatio, 2)
+            && grid.rowHeight > 0 && grid.beatWidth > 0 && grid.keyboardWidth > 0,
+        cppID: id, message: "viewport configuration publishes positive metric scale")
+    report.expect(
+        grid.ticksPerBeat == max(1, session.document.ticksPerBeat)
+            && grid.appliedRevisionText == String(session.document.revision)
+            && grid.renderedNoteCount == (0..<session.document.engineTracks.usedTrackCount).reduce(0) {
+                $0 + session.document.notes(in: $1).count
+            },
+        cppID: id, message: "published beat grid, revision text, and note count match the document")
+    report.expect(
+        snapshot.minHScroll < 0 && snapshot.maxHScroll > 0 && snapshot.maxVScroll >= 0,
+        cppID: id, message: "camera scroll bounds expose a lead pad and forward range")
+    struct SummaryNote: Decodable {
+        let id: Int
+        let tick: Int
+        let duration: Int
+        let pitch: Int
+        let track: Int
+        let velocity: Int
+        let ghost: Bool
+        let selected: Bool
+    }
+    let decoded = (try? JSONDecoder().decode(
+        [SummaryNote].self, from: Data(grid.fetchNoteSummary().utf8))) ?? []
+    let trackOrder = [grid.trackIndex]
+        + (0..<session.document.engineTracks.usedTrackCount).filter { $0 != grid.trackIndex }
+    let notes = trackOrder.flatMap { session.document.notes(in: $0) }
+    let summaryMatches = decoded.count == notes.count
+        && zip(decoded, notes).allSatisfy { summary, note in
+            summary.id == note.id.rawValue && summary.tick == Int(note.tick)
+                && summary.duration == Int(note.duration)
+                && summary.pitch == Int(note.pitch) && summary.track == note.track
+                && summary.velocity == Int(note.velocity)
+                && summary.ghost == (note.track != grid.trackIndex)
+                && summary.selected == session.selectedNotes.contains(note.id)
+        }
+    report.expect(
+        summaryMatches,
+        cppID: id, message: "noteSummary JSON carries every document note field and selection flag")
+    grid.configureViewport(width: 640, height: 320, fontPx: 26, dpr: 2)
+    report.expect(
+        gridCameraNear(grid.baseFontPx, 26)
+            && gridCameraNear(grid.cameraMaxVScroll, session.camera.snapshot.maxVScroll),
+        cppID: id, message: "metric scale republish tracks the requested font and camera bounds")
+    report.expect(
+        grid.scene.hoverChipFont["pixelSize"] as? Int == Typography(baseFontPx: 26).caption.pixelSize,
+        cppID: id, message: "a larger viewport base repaints the roll hover chip with its caption role")
+    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
+    report.expect(
+        grid.scene.hoverChipFont["pixelSize"] as? Int == Typography(baseFontPx: 13).caption.pixelSize,
+        cppID: id, message: "restoring the viewport base restores the roll hover chip caption")
 }

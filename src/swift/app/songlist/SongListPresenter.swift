@@ -94,12 +94,15 @@ public final class SongListPresenter {
     @QtIgnored public var onSongRegisterRequested: ((Int) -> Void)?
     @QtIgnored public var onSongDeleteRequested: ((Int) -> Void)?
 
-    @QtIgnored private var songs: [SongListing] = []
-    @QtIgnored private var visible: [SongListing] = []
-    @QtIgnored private var knownPrefixes: [String] = []
+    private var songs: [SongListing] = []
+    private var visible: [SongListing] = []
+    /// The unfiltered snapshot input: table entries with or without MIDI
+    /// plus unregistered strays. The taken hint reads here, not the feed.
+    private var allListings: [SongListing] = []
+    private var knownPrefixes: [String] = []
     /// Restored category awaiting its first rebuild; a category the project
     /// doesn't have falls back to All.
-    @QtIgnored private var pendingCategory = ""
+    private var pendingCategory = ""
 
     public init() {
         // The native combo ships one placeholder All entry until the first
@@ -113,8 +116,11 @@ public final class SongListPresenter {
     /// the current search text, sort, and — if it still exists — category.
     @QtIgnored
     public func setSongs(_ newSongs: [SongListing]) {
+        let category = categoryPrefix()
+        allListings = newSongs
         songs = newSongs.filter(\.isPlayable)
         rebuildCategories()
+        if songs.isEmpty { pendingCategory = category }
         rebuildList()
     }
 
@@ -124,7 +130,7 @@ public final class SongListPresenter {
 
     /// The listing behind a song ID, for context-action handlers.
     @QtIgnored
-    public func listing(songId: Int) -> SongListing? {
+    public func listing(songId: Int) -> Optional<SongListing> {
         songs.first { $0.id == songId }
     }
 
@@ -170,6 +176,13 @@ public final class SongListPresenter {
         rebuildList()
     }
 
+    public func restoreFromPreferences() {
+        let store = PreferencesStore()
+        restoreFilters(search: store.string(key: "songFilterText", fallback: ""),
+                       sort: store.int(key: "songFilterSort", fallback: 0),
+                       category: store.string(key: "songFilterCategory", fallback: ""))
+    }
+
     /// Focuses the search field and selects its text (surface-side effect).
     public func focusSearch() {
         searchFocusRequest += 1
@@ -180,13 +193,13 @@ public final class SongListPresenter {
     /// Marks the loaded song: selects it, scrolls it into view, and keeps it
     /// selected across rebuilds. -1 (or a filtered-out id) deselects.
     public func setCurrentSong(songId: Int) {
-        currentSongId = songId
+        setPublished(currentSongId, songId) { currentSongId = $0 }
         if visible.contains(where: { $0.id == songId }) {
-            selectedSongId = songId
-            revealSongId = songId
+            setPublished(selectedSongId, songId) { selectedSongId = $0 }
+            setPublished(revealSongId, songId) { revealSongId = $0 }
             revealRequest += 1
         } else {
-            selectedSongId = -1
+            setPublished(selectedSongId, -1) { selectedSongId = $0 }
         }
         syncRowFlags()
     }
@@ -247,6 +260,43 @@ public final class SongListPresenter {
     /// Register Song enablement: any song with missing registration entries.
     public func canRegister(songId: Int) -> Bool {
         songs.first { $0.id == songId }?.registrationIncomplete ?? false
+    }
+
+    // MARK: - New Song name laws (fork newsongwizard identity field)
+
+    /// Filters each character for the existing ProjectService create-song path.
+    /// The text field uses acceptSongLabelEdit instead.
+    @QtIgnored public nonisolated static func normalizeSongLabel(text: String) -> String {
+        var out = ""
+        out.reserveCapacity(text.count)
+        for ch in text.lowercased() {
+            guard ch.isASCII, ch == "_" || ch.isLowercase || ch.isNumber else { continue }
+            if out.isEmpty, ch.isNumber { continue }
+            out.append(ch)
+        }
+        return out
+    }
+
+    /// Folds the whole proposed edit and accepts only an ASCII song name or empty text.
+    @QtIgnored public nonisolated static func acceptSongLabelEdit(previous: String, proposed: String) -> String {
+        let folded = proposed.lowercased()
+        guard let first = folded.utf8.first else { return folded }
+        guard first == 95 || (97...122).contains(first),
+            folded.utf8.dropFirst().allSatisfy({ $0 == 95 || (97...122).contains($0) || (48...57).contains($0) })
+        else { return previous }
+        return folded
+    }
+
+    public func acceptSongLabelEdit(previous: String, proposed: String) -> String {
+        Self.acceptSongLabelEdit(previous: previous, proposed: proposed)
+    }
+
+    @QtIgnored public func registeredLabels() -> Set<String> {
+        Set(allListings.lazy.filter(\.registered).map(\.label))
+    }
+
+    public func songLabelTaken(label: String) -> Bool {
+        allListings.contains { $0.registered && $0.label == label }
     }
 
     // MARK: - Rebuilds (SongListPanel::rebuildCategories/rebuildList)

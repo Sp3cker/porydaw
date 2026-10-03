@@ -2,7 +2,7 @@ import NativeGridTypography
 import QtBridge
 
 enum GridFontKind {
-    case ruler, beat, bold, sig, chip, keyLabel, noteName
+    case ruler, beat, bold, sig, chip, keyLabel, noteName, noteValue
 }
 
 struct GridFontSpec {
@@ -26,6 +26,9 @@ struct GridFontSpec {
 
 let fontPreferNoHinting = 1
 
+let gridBodyFamily = "Atkinson Hyperlegible Next"
+let gridMonoFamily = "Atkinson Hyperlegible Mono"
+
 @MainActor
 struct GridTypography {
     let rulerAscent: Double
@@ -34,17 +37,21 @@ struct GridTypography {
     let beatHeight: Double
     let boldHeight: Double
     let chipHeight: Double
-    /// Occupied height (ascent + descent, i.e. QFontMetrics height) of the
-    /// fixed note-name face, for the padded row-height gate in NoteNameLabels.
     let noteNameOccupiedHeight: Double
+    let noteValueOccupiedHeight: Double
+    let noteValueVisible: Bool
     private let rulerMetrics: NativeFontMetrics
     private let beatMetrics: NativeFontMetrics
+    private let boldMetrics: NativeFontMetrics
     private let signatureMetrics: NativeFontMetrics
+    private let chipMetrics: NativeFontMetrics
+    private let keyLabelMetrics: NativeFontMetrics
     private let chipWidths: [Double]
     private let noteNameWidths: [Double]
+    private let noteValueMetrics: NativeFontMetrics
     private let fontMaps: [GridFontKind: [String: QVariantSettable]]
 
-    init(fonts: [GridFontKind: GridFontSpec], rowHeight: Double) {
+    init(fonts: [GridFontKind: GridFontSpec], rowHeight: Double, pixel: Double = 1) {
         func measure(_ kind: GridFontKind) -> NativeFontMetrics {
             NativeFontMetrics(fonts[kind]!)
         }
@@ -60,14 +67,36 @@ struct GridTypography {
         chipHeight = chip.extents.height
         rulerMetrics = ruler
         beatMetrics = beat
+        boldMetrics = bold
         signatureMetrics = measure(.sig)
+        chipMetrics = chip
+        guard let keyLabelBase = fonts[.keyLabel] else {
+            preconditionFailure("GridTypography requires the key-label face")
+        }
         let keyLabelFit = measure(.keyLabel).fittedSize(rowHeight: rowHeight)
+        keyLabelMetrics = NativeFontMetrics(GridFontSpec(
+            family: keyLabelBase.family, pixelSize: keyLabelFit,
+            weight: keyLabelBase.weight, letterSpacing: keyLabelBase.letterSpacing))
+        guard let valueBase = fonts[.noteValue] else {
+            preconditionFailure("GridTypography requires the note-value face")
+        }
+        let valueFit = measure(.noteValue).fittedSize(
+            rowHeight: (rowHeight - pixel).rounded(.down))
+        let valueSize = max(1, valueFit - 1)
+        let valueSpec = GridFontSpec(
+            family: valueBase.family, pixelSize: valueSize, weight: valueBase.weight,
+            letterSpacing: valueBase.letterSpacing)
+        let value = NativeFontMetrics(valueSpec)
+        noteValueMetrics = value
+        noteValueOccupiedHeight = value.extents.height
+        noteValueVisible = valueFit > 0 && value.extents.height <= (rowHeight - pixel).rounded(.down)
         chipWidths = (0..<128).map { chip.advance(GridScene.keyName($0)) }
         let noteName = measure(.noteName)
         noteNameOccupiedHeight = noteName.extents.height
         noteNameWidths = (0..<128).map { noteName.advance(GridScene.keyName($0)) }
         var maps = fonts.mapValues { $0.map }
         maps[.keyLabel]!["pixelSize"] = keyLabelFit
+        maps[.noteValue] = valueSpec.map
         fontMaps = maps
     }
 
@@ -83,42 +112,41 @@ struct GridTypography {
         beatMetrics.advance(Self.beatLabel(bar, beat))
     }
 
+    func boldAdvance(_ label: String) -> Double {
+        boldMetrics.advance(label)
+    }
     func signatureAdvance(_ label: String) -> Double {
         signatureMetrics.advance(label)
     }
 
     func chipAdvance(pitch: Int) -> Double { chipWidths[pitch] }
+    func chipAdvance(_ text: String) -> Double { chipMetrics.advance(text) }
+    func keyLabelAdvance(_ text: String) -> Double { keyLabelMetrics.advance(text) }
 
-    /// Advance of the pitch name in the fixed note-name face, for the
-    /// complete-name-plus-two-trailing-spaces fit rule in NoteNameLabels.
     func noteNameAdvance(pitch: Int) -> Double { noteNameWidths[pitch] }
+    func noteValueAdvance(_ text: String) -> Double { noteValueMetrics.advance(text) }
 
     func fontMap(_ kind: GridFontKind) -> [String: QVariantSettable] { fontMaps[kind]! }
 
-    static func fonts(metrics m: GridMetrics) -> [GridFontKind: GridFontSpec] {
-        let bodyPx = max(1.0, (m.baseFontPx * 1.125).rounded())
-        let next = "Atkinson Hyperlegible Next"
-        let mono = "Atkinson Hyperlegible Mono"
-        func spec(_ family: String, _ px: Double, _ weight: Int, _ spacing: Double = 0)
-            -> GridFontSpec
-        {
-            GridFontSpec(
-                family: family, pixelSize: Int(px), weight: weight, letterSpacing: spacing)
+    static func fonts(metrics _: GridMetrics, typography: Typography) -> [GridFontKind: GridFontSpec] {
+        let rulerPx = max(typography.fontPx(1.0 / 12.0),
+                          typography.caption.pixelSize - 1)
+        let beatPx = max(typography.fontPx(1.0 / 12.0), rulerPx - 1)
+        let spacing = typography.fontPxF(-1.0 / 24.0)
+        let noteNamePx = max(1, typography.noteName.pixelSize - 2)
+        func derived(_ role: GridFontSpec, px: Int, spacing: Double? = nil) -> GridFontSpec {
+            GridFontSpec(family: role.family, pixelSize: px, weight: role.weight,
+                         letterSpacing: spacing ?? role.letterSpacing)
         }
-        let rulerPx = max(m.rulerMinFontPx, bodyPx - 1)
-        // The note-name face is the caption-weight Next face at two device
-        // pixels below the base size: typography::noteName(app font) with
-        // pixelSize() - 2 * singlePixel() (pianoroll.cpp). Unlike keyLabel it
-        // never shrinks to the row — it hides instead (NoteNameLabels gate).
-        let noteNamePx = max(1.0, m.baseFontPx.rounded() - 2.0)
         return [
-            .ruler: spec(mono, rulerPx, 400, m.rulerLetterSpacing),
-            .beat: spec(mono, max(m.rulerMinFontPx, rulerPx - 1), 400, m.rulerLetterSpacing),
-            .bold: spec(mono, rulerPx, 600, m.rulerLetterSpacing),
-            .sig: spec(next, bodyPx, 600),
-            .chip: spec(next, m.baseFontPx, 400),
-            .keyLabel: spec(next, min(bodyPx, m.baseFontPx), 400),
-            .noteName: spec(next, noteNamePx, 400),
+            .ruler: derived(typography.bodyMono, px: rulerPx, spacing: spacing),
+            .beat: derived(typography.bodyMono, px: beatPx, spacing: spacing),
+            .bold: derived(typography.bodyMono, px: rulerPx, spacing: spacing),
+            .sig: typography.bodyBold,
+            .chip: typography.caption,
+            .keyLabel: derived(typography.body, px: typography.caption.pixelSize),
+            .noteName: derived(typography.noteName, px: noteNamePx),
+            .noteValue: typography.body,
         ]
     }
 }

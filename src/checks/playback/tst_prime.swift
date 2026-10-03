@@ -9,7 +9,7 @@ private let primeAudibleID = "primecheck/PrimeTest::primedTrackAuditionIsAudible
 private let primeProgramIDPrefix = "primecheck/PrimeTest::primeVoicesApplyTrackPrograms"
 private let primeUnprimedID = "primecheck/PrimeTest::unprimedTrackAuditionIsSilent"
 private func checkPrimeBehavior(timeline: PlaybackTimeline, report: CheckReport) {
-    report.expectEqual(3, timeline.usedTrackCount,
+    report.expectEqual(expected: 3, actual: timeline.usedTrackCount,
                        cppID: "primecheck/PrimeTest::init",
                        what: "synthesized song has three engine tracks")
     guard timeline.usedTrackCount == 3 else { return }
@@ -19,7 +19,7 @@ private func checkPrimeBehavior(timeline: PlaybackTimeline, report: CheckReport)
     }
     Sequencer.chase(engine: unprimed.pointer, timeline: timeline, position: 0)
     m4a_engine_note_on(unprimed.pointer, 1, 60, 127)
-    report.expectEqual(false, rendersAudibly(unprimed.pointer), cppID: primeUnprimedID,
+    report.expectEqual(expected: false, actual: rendersAudibly(unprimed.pointer), cppID: primeUnprimedID,
                        what: "unprimed later-voice track audition")
 
     let programRows: [(String, Int, UInt8?, Bool)] = [
@@ -37,10 +37,10 @@ private func checkPrimeBehavior(timeline: PlaybackTimeline, report: CheckReport)
         Sequencer.primeVoices(engine: primed.pointer, timeline: timeline, position: 0)
         let track = playbackPairEngineTrack(primed.pointer, index: trackIndex)
         if let expectedProgram {
-            report.expectEqual(expectedProgram, track.currentProgram, cppID: cppID,
+            report.expectEqual(expected: expectedProgram, actual: track.currentProgram, cppID: cppID,
                                what: "track \(trackIndex) program")
         }
-        report.expectEqual(expectedVoice, track.currentVoice.wav != nil, cppID: cppID,
+        report.expectEqual(expected: expectedVoice, actual: track.currentVoice.wav != nil, cppID: cppID,
                            what: "track \(trackIndex) voice presence")
     }
     guard let primed = PlaybackCheckEngine() else {
@@ -50,7 +50,7 @@ private func checkPrimeBehavior(timeline: PlaybackTimeline, report: CheckReport)
     Sequencer.chase(engine: primed.pointer, timeline: timeline, position: 0)
     Sequencer.primeVoices(engine: primed.pointer, timeline: timeline, position: 0)
     m4a_engine_note_on(primed.pointer, 1, 60, 127)
-    report.expectEqual(true, rendersAudibly(primed.pointer), cppID: primeAudibleID,
+    report.expectEqual(expected: true, actual: rendersAudibly(primed.pointer), cppID: primeAudibleID,
                        what: "primed later-voice track audition")
 
     guard let midSong = PlaybackCheckEngine() else {
@@ -63,7 +63,7 @@ private func checkPrimeBehavior(timeline: PlaybackTimeline, report: CheckReport)
     let expectedPrograms: [UInt8] = [9, 7]
     for trackIndex in expectedPrograms.indices {
         let track = playbackPairEngineTrack(midSong.pointer, index: trackIndex)
-        report.expectEqual(expectedPrograms[trackIndex], track.currentProgram,
+        report.expectEqual(expected: expectedPrograms[trackIndex], actual: track.currentProgram,
                            cppID: primeMidSongID, what: "track \(trackIndex) program")
         report.expect(track.currentVoice.wav != nil, cppID: primeMidSongID,
                       message: "mid-song track \(trackIndex) has no voice")

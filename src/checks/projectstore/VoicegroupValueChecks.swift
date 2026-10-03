@@ -26,21 +26,21 @@ private func checkVoicegroupMacroTables(_ report: CheckReport) {
         (.keysplit, 11, "voice_keysplit", "Keysplit", 0x40, true, false, -1),
         (.keysplitAll, 12, "voice_keysplit_all", "Drumkit", 0x80, true, false, -1),
     ]
-    report.expectEqual(13, VgMacro.allCases.count, cppID: cppID,
+    report.expectEqual(expected: 13, actual: VgMacro.allCases.count, cppID: cppID,
                        what: "V001: the editable macro set has exactly thirteen entries")
     for (macro, ordinal, name, displayName, voiceType, hasSymbol, isCgb, family) in rows {
         let id = String(format: "V%03d", Int(ordinal) + 2)
-        report.expectEqual(ordinal, macro.rawValue, cppID: cppID, what: "\(id): macro ordinal")
-        report.expectEqual(name, vgMacroName(macro), cppID: cppID, what: "\(id): assembler macro word")
-        report.expectEqual(displayName, vgMacroDisplayName(macro), cppID: cppID,
+        report.expectEqual(expected: ordinal, actual: macro.rawValue, cppID: cppID, what: "\(id): macro ordinal")
+        report.expectEqual(expected: name, actual: vgMacroName(macro), cppID: cppID, what: "\(id): assembler macro word")
+        report.expectEqual(expected: displayName, actual: vgMacroDisplayName(macro), cppID: cppID,
                            what: "\(id): display label")
-        report.expectEqual(voiceType, vgMacroVoiceType(macro), cppID: cppID,
+        report.expectEqual(expected: voiceType, actual: vgMacroVoiceType(macro), cppID: cppID,
                            what: "\(id): native VOICE_* flag")
-        report.expectEqual(hasSymbol, vgMacroHasSymbol(macro), cppID: cppID,
+        report.expectEqual(expected: hasSymbol, actual: vgMacroHasSymbol(macro), cppID: cppID,
                            what: "\(id): requires a symbol argument")
-        report.expectEqual(isCgb, vgMacroIsCgb(macro), cppID: cppID,
+        report.expectEqual(expected: isCgb, actual: vgMacroIsCgb(macro), cppID: cppID,
                            what: "\(id): uses CGB envelope scale")
-        report.expectEqual(family, vgAdsrFamily(macro), cppID: cppID,
+        report.expectEqual(expected: family, actual: vgAdsrFamily(macro), cppID: cppID,
                            what: "\(id): envelope family collapse")
     }
     let lineKinds: [(VgLineKind, Int32)] = [
@@ -48,7 +48,7 @@ private func checkVoicegroupMacroTables(_ report: CheckReport) {
         (.readOnlyVoice, 4), (.broken, 5),
     ]
     for (kind, ordinal) in lineKinds {
-        report.expectEqual(ordinal, kind.rawValue, cppID: cppID,
+        report.expectEqual(expected: ordinal, actual: kind.rawValue, cppID: cppID,
                            what: "V\(String(format: "%03d", 15 + Int(ordinal))): source line kind ordinal")
     }
 }
@@ -61,27 +61,27 @@ private func checkVoicegroupAdsr(_ report: CheckReport) {
     let cgbFallback = VgAdsr(attack: 0, decay: 0, sustain: 15, release: 3)
     let defaults = VgAdsrDefaults(bySymbol: ["sample": symbolEnvelope, "": symbolEnvelope],
                                   byFamily: [0: familyEnvelope, 3: familyEnvelope, -1: familyEnvelope])
-    report.expectEqual(symbolEnvelope, vgDefaultAdsr(defaults, .directSoundAlt, "sample"),
+    report.expectEqual(expected: symbolEnvelope, actual: vgDefaultAdsr(defaults, .directSoundAlt, "sample"),
                        cppID: cppID, what: "V021: symbol override precedes direct-sound family")
-    report.expectEqual(symbolEnvelope, vgDefaultAdsr(defaults, .square1Alt, "sample"),
+    report.expectEqual(expected: symbolEnvelope, actual: vgDefaultAdsr(defaults, .square1Alt, "sample"),
                        cppID: cppID, what: "V022: symbol override precedes CGB family")
-    report.expectEqual(familyEnvelope, vgDefaultAdsr(defaults, .directSoundNoResample, "missing"),
+    report.expectEqual(expected: familyEnvelope, actual: vgDefaultAdsr(defaults, .directSoundNoResample, "missing"),
                        cppID: cppID, what: "V023: variant uses its base family when symbol misses")
-    report.expectEqual(familyEnvelope, vgDefaultAdsr(defaults, .square1Alt, ""),
+    report.expectEqual(expected: familyEnvelope, actual: vgDefaultAdsr(defaults, .square1Alt, ""),
                        cppID: cppID, what: "V024: empty symbol selects family")
-    report.expectEqual(familyEnvelope, vgDefaultAdsr(defaults, .keysplit, "missing"),
+    report.expectEqual(expected: familyEnvelope, actual: vgDefaultAdsr(defaults, .keysplit, "missing"),
                        cppID: cppID, what: "V025: no-envelope family still consults the -1 entry")
-    report.expectEqual(directFallback, vgDefaultAdsr(VgAdsrDefaults(), .directSound, ""),
+    report.expectEqual(expected: directFallback, actual: vgDefaultAdsr(VgAdsrDefaults(), .directSound, ""),
                        cppID: cppID, what: "V026: direct sound falls back to sustained 8-bit envelope")
-    report.expectEqual(directFallback, vgDefaultAdsr(VgAdsrDefaults(), .keysplitAll, ""),
+    report.expectEqual(expected: directFallback, actual: vgDefaultAdsr(VgAdsrDefaults(), .keysplitAll, ""),
                        cppID: cppID, what: "V027: drumkit uses non-CGB fallback")
     for macro in [VgMacro.square1, .square2Alt, .progWave, .noiseAlt] {
-        report.expectEqual(cgbFallback, vgDefaultAdsr(VgAdsrDefaults(), macro, "missing"),
+        report.expectEqual(expected: cgbFallback, actual: vgDefaultAdsr(VgAdsrDefaults(), macro, "missing"),
                            cppID: cppID, what: "V028: \(macro) uses sustained CGB fallback")
     }
-    report.expectEqual(familyEnvelope, vgDefaultAdsr(defaults, .square1, "sampleNotPresent"),
+    report.expectEqual(expected: familyEnvelope, actual: vgDefaultAdsr(defaults, .square1, "sampleNotPresent"),
                        cppID: cppID, what: "V029: unknown symbol does not hide family")
-    report.expectEqual(familyEnvelope, vgDefaultAdsr(defaults, .directSound, ""),
+    report.expectEqual(expected: familyEnvelope, actual: vgDefaultAdsr(defaults, .directSound, ""),
                        cppID: cppID, what: "V030: empty symbol never matches symbol table")
 }
 
@@ -110,36 +110,36 @@ private func checkVoicegroupStructuralChanges(_ report: CheckReport) {
         var after = before
         edit(&after)
         let id = String(format: "V%03d", 32 + index)
-        report.expectEqual(structural, vgVoiceStructuralChange(before, after),
+        report.expectEqual(expected: structural, actual: vgVoiceStructuralChange(before, after),
                            cppID: cppID, what: "\(id): \(label) edit structural classification")
-        report.expectEqual(structural, vgVoiceStructuralChange(after, before),
+        report.expectEqual(expected: structural, actual: vgVoiceStructuralChange(after, before),
                            cppID: cppID, what: "\(id): reverse \(label) edit classification")
     }
 }
 
 private func checkVoicegroupSynths(_ report: CheckReport) {
     let cppID = "swiftproject/VoicegroupValueChecks::synth"
-    report.expectEqual("Pulse", vgSynthWaveformName(0), cppID: cppID,
+    report.expectEqual(expected: "Pulse", actual: vgSynthWaveformName(0), cppID: cppID,
                        what: "V044: pulse waveform label")
-    report.expectEqual("Sawtooth", vgSynthWaveformName(1), cppID: cppID,
+    report.expectEqual(expected: "Sawtooth", actual: vgSynthWaveformName(1), cppID: cppID,
                        what: "V045: saw waveform label")
-    report.expectEqual("Triangle", vgSynthWaveformName(2), cppID: cppID,
+    report.expectEqual(expected: "Triangle", actual: vgSynthWaveformName(2), cppID: cppID,
                        what: "V046: triangle waveform label")
-    report.expectEqual("Triangle", vgSynthWaveformName(-1), cppID: cppID,
+    report.expectEqual(expected: "Triangle", actual: vgSynthWaveformName(-1), cppID: cppID,
                        what: "V047: unknown waveform uses triangle label")
     let pulse = VgSynthDesc()
-    report.expectEqual("DirectSoundSynth_GoldenSun_80000000", vgSynthSymbolName(pulse),
+    report.expectEqual(expected: "DirectSoundSynth_GoldenSun_80000000", actual: vgSynthSymbolName(pulse),
                        cppID: cppID, what: "V048: default pulse symbol contains all four bytes")
     let truncated = VgSynthDesc(baseDuty: 0x1AB, dutyStep: -1, modDepth: 0x100, phase: 0xA0)
-    report.expectEqual("DirectSoundSynth_GoldenSun_ABFF00A0", vgSynthSymbolName(truncated),
+    report.expectEqual(expected: "DirectSoundSynth_GoldenSun_ABFF00A0", actual: vgSynthSymbolName(truncated),
                        cppID: cppID, what: "V049: pulse parameters truncate to uppercase hex bytes")
     let saw = VgSynthDesc(waveform: 1)
     let triangle = VgSynthDesc(waveform: 2)
-    report.expectEqual("DirectSoundSynth_GoldenSun_Saw", vgSynthSymbolName(saw),
+    report.expectEqual(expected: "DirectSoundSynth_GoldenSun_Saw", actual: vgSynthSymbolName(saw),
                        cppID: cppID, what: "V050: saw symbol ignores pulse bytes")
-    report.expectEqual("DirectSoundSynth_GoldenSun_Triangle", vgSynthSymbolName(triangle),
+    report.expectEqual(expected: "DirectSoundSynth_GoldenSun_Triangle", actual: vgSynthSymbolName(triangle),
                        cppID: cppID, what: "V051: triangle symbol ignores pulse bytes")
-    report.expectEqual("DirectSoundSynth_GoldenSun_Triangle", vgSynthSymbolName(VgSynthDesc(waveform: 9)),
+    report.expectEqual(expected: "DirectSoundSynth_GoldenSun_Triangle", actual: vgSynthSymbolName(VgSynthDesc(waveform: 9)),
                        cppID: cppID, what: "V052: unknown waveform uses triangle symbol")
     report.expect(pulse == VgSynthDesc(waveform: 0, baseDuty: 0x80, dutyStep: 0,
                                        modDepth: 0, phase: 0),
@@ -160,8 +160,8 @@ private func checkVoicegroupSynths(_ report: CheckReport) {
                   message: "V059: triangle equality ignores pulse parameters")
     report.expect(saw != triangle && saw != pulse, cppID: cppID,
                   message: "V060: different waveform kinds never compare equal")
-    report.expectEqual("DirectSoundSynth_GoldenSun_Saw", vgSynthSymbolName(sawOther),
+    report.expectEqual(expected: "DirectSoundSynth_GoldenSun_Saw", actual: vgSynthSymbolName(sawOther),
                        cppID: cppID, what: "V061: saw naming ignores nondefault pulse parameters")
-    report.expectEqual("DirectSoundSynth_GoldenSun_Triangle", vgSynthSymbolName(triangleOther),
+    report.expectEqual(expected: "DirectSoundSynth_GoldenSun_Triangle", actual: vgSynthSymbolName(triangleOther),
                        cppID: cppID, what: "V062: triangle naming ignores nondefault pulse parameters")
 }

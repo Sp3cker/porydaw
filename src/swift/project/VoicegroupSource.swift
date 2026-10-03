@@ -16,6 +16,13 @@ public struct SourceLine: Sendable {
     }
 }
 
+/// Refusal to rebase or save a source whose on-disk declaration no longer safely matches it.
+struct VoicegroupSourceConflict: Error, LocalizedError {
+    let message: String
+
+    var errorDescription: String? { message }
+}
+
 /// Byte-preserving source model for a single voicegroup, whether standalone or in an index file.
 public final class VoicegroupSource {
     public private(set) var filePath = ""
@@ -91,10 +98,7 @@ public final class VoicegroupSource {
             return false
         }
         let content = [UInt8](bytes)
-        guard parse(content, error: &error) else {
-            dirty = sourceBytes() != pristineSource
-            return false
-        }
+        guard parse(content, error: &error) else { return false }
         pristineSource = content
         dirty = false
         return true
@@ -144,6 +148,14 @@ public final class VoicegroupSource {
     private struct Declaration {
         var symbol: String
         var isLabel: Bool
+    }
+
+    private struct ParsedSource {
+        var lines: [SourceLine]
+        var slotToLine: [Int]
+        var sectionBegin: Int
+        var sectionEnd: Int
+        var endsWithNewline: Bool
     }
 
     private struct MacroDefinition: Sendable {
@@ -220,13 +232,79 @@ public final class VoicegroupSource {
     }
 
     func parse(_ content: [UInt8], error: inout String?) -> Bool {
+        guard let parsed = parsedSource(content) else {
+            error = "Label \(sectionLabel):: not found in \(filePath)"
+            return false
+        }
+        lines = parsed.lines
+        slotToLine = parsed.slotToLine
+        sectionBegin = parsed.sectionBegin
+        sectionEnd = parsed.sectionEnd
+        endsWithNewline = parsed.endsWithNewline
+        return true
+    }
+
+    /// Adopts a fresh disk snapshot around the selected section while keeping its local edits.
+    /// - Parameter disk: A clean, parsed snapshot of the same source file and section label.
+    /// - Returns: Whether the selected section's editable bytes are unchanged. False means disk
+    ///   changed a section without local edits; the receiver is left untouched for a fresh load.
+    /// - Throws: `VoicegroupSourceConflict` if the identity or baseline no longer matches, or
+    ///   if disk and local edits both changed the selected section. The receiver is unchanged.
+    func rebasePreservingEdits(from disk: VoicegroupSource) throws -> Bool {
+        guard disk.filePath == filePath, disk.sectionLabel == sectionLabel, !disk.dirty else {
+            throw VoicegroupSourceConflict(message: "\(filePath) no longer declares \(loadName) where it was loaded.")
+        }
+        guard let baseline = parsedSource(pristineSource) else {
+            throw VoicegroupSourceConflict(message: "The loaded baseline of \(loadName) no longer parses.")
+        }
+        let local = lines[sectionBegin..<sectionEnd]
+        let fresh = disk.lines[disk.sectionBegin..<disk.sectionEnd]
+        let prior = baseline.lines[baseline.sectionBegin..<baseline.sectionEnd]
+        guard Self.sameRaw(fresh, prior) || Self.sameRaw(fresh, local) else {
+            guard Self.sameRaw(local, prior) else {
+                throw VoicegroupSourceConflict(
+                    message: "\(loadName) changed in \(filePath) while it has unsaved edits.")
+            }
+            return false
+        }
+        let offset = disk.sectionBegin - sectionBegin
+        var merged: [SourceLine] = []
+        merged.reserveCapacity(disk.lines.count - fresh.count + local.count)
+        merged.append(contentsOf: disk.lines[..<disk.sectionBegin])
+        merged.append(contentsOf: local)
+        merged.append(contentsOf: disk.lines[disk.sectionEnd...])
+        lines = merged
+        slotToLine = slotToLine.map { $0 >= 0 ? $0 + offset : $0 }
+        sectionEnd = disk.sectionBegin + local.count
+        sectionBegin = disk.sectionBegin
+        endsWithNewline = disk.endsWithNewline
+        pristineSource = disk.pristineSource
+        dirty = sourceBytes() != pristineSource
+        return true
+    }
+
+    /// Opens the current on-disk snapshot of this source's voicegroup argument.
+    /// - Returns: A clean source parsed from the bytes currently on disk.
+    /// - Throws: `VoicegroupSourceConflict` when the declaration is missing, invalid, or unreadable.
+    func diskSnapshot() throws -> VoicegroupSource {
+        let disk = VoicegroupSource()
+        var error: String?
+        guard disk.open(projectRoot: projectRoot, voicegroupArg: voicegroupArg, error: &error) else {
+            throw VoicegroupSourceConflict(message: error ?? "Cannot read \(filePath)")
+        }
+        return disk
+    }
+
+    private static func sameRaw(_ lhs: ArraySlice<SourceLine>, _ rhs: ArraySlice<SourceLine>) -> Bool {
+        lhs.elementsEqual(rhs) { $0.raw == $1.raw }
+    }
+
+    private func parsedSource(_ content: [UInt8]) -> ParsedSource? {
         let split = Self.splitLines(content)
-        lines = []
-        lines.reserveCapacity(split.lines.count)
-        slotToLine = [Int](repeating: -1, count: 128)
-        endsWithNewline = split.endsWithNewline
-        sectionBegin = isMonolithic ? -1 : 0
-        sectionEnd = split.lines.count
+        var parsed = ParsedSource(lines: [], slotToLine: [Int](repeating: -1, count: 128),
+                                  sectionBegin: isMonolithic ? -1 : 0, sectionEnd: split.lines.count,
+                                  endsWithNewline: split.endsWithNewline)
+        parsed.lines.reserveCapacity(split.lines.count)
         let marker = Array((sectionLabel + "::").utf8)
         var active = !isMonolithic
         var done = false
@@ -237,16 +315,16 @@ public final class VoicegroupSource {
             var line = SourceLine(raw: raw)
             let bounds = Self.contentBounds(raw)
             let text = Array(raw[bounds])
-            defer { lines.append(line) }
+            defer { parsed.lines.append(line) }
             if done || text.isEmpty { continue }
             if !active {
                 guard text.starts(with: marker) else { continue }
                 active = true
-                sectionBegin = index
+                parsed.sectionBegin = index
             } else if isMonolithic && voices > 0 &&
                         (Self.containsAfterFirst(text, Self.doubleColon) || text.starts(with: Self.alignPrefix)) {
                 done = true
-                sectionEnd = index
+                parsed.sectionEnd = index
                 continue
             }
             if nextSlot >= 128 { continue }
@@ -276,13 +354,9 @@ public final class VoicegroupSource {
             } else {
                 line.kind = .readOnlyVoice
             }
-            if line.slot < 128 { slotToLine[line.slot] = index }
+            if line.slot < 128 { parsed.slotToLine[line.slot] = index }
         }
-        guard !isMonolithic || sectionBegin >= 0 else {
-            error = "Label \(sectionLabel):: not found in \(filePath)"
-            return false
-        }
-        return true
+        return parsed.sectionBegin >= 0 ? parsed : nil
     }
 
     private static func decode(_ macro: VgMacro, pieces: [[UInt8]]) -> VgVoice? {

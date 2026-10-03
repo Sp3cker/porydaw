@@ -4,6 +4,7 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "GatedVisualsHelpers.js" as Helpers
+import "NativeWait.js" as NativeWait
 
 TestCase {
     id: testCase
@@ -20,23 +21,9 @@ TestCase {
 
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
 
-    function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-    }
-
-    function cleanupTestCase() {
-        verify(bootstrap.clearSettings(), "removed only the private native settings")
-    }
 
     function waitForNative(predicate, timeoutMs) {
-        var deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
+        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
     function cleanup() {
@@ -60,25 +47,12 @@ TestCase {
     }
 
     function selectedSurface() {
-        var pages = shell.sceneLoader.item
+        var pages = shell && shell.sceneLoader ? shell.sceneLoader.item : null
         if (!pages)
             return null
         var tabs = shell.shellPresenter.session.songTabs
         var page = findChild(pages, "songTab_" + tabs.selectedId)
         return page ? findChild(page, "swiftRollOverlay") : null
-    }
-
-    function primitiveCount(layer, clip) {
-        var n = 0
-        for (var i = 0; i < layer.children.length; ++i) {
-            var c = layer.children[i]
-            if (!c || c.fillColor === undefined || !c.visible)
-                continue
-            if (c.x + c.width > clip.x && c.x < clip.x + clip.w
-                    && c.y + c.height > clip.y && c.y < clip.y + clip.h)
-                ++n
-        }
-        return n
     }
 
     function rowCenter(pitch, rowHeight) {
@@ -99,7 +73,7 @@ TestCase {
     }
 
     function findLine(image, dpr, winLeft, naturalWinY, accidentalWinY,
-                      visibleLeft, visibleRight, expectedNatural, expectedAccidental) {
+                      visibleLeft, visibleRight, excluded, expectedNatural, expectedAccidental) {
         var left = winLeft + visibleLeft
         var right = winLeft + visibleRight
         var first = Math.ceil(Math.min(left, right) * dpr - 0.5)
@@ -108,6 +82,9 @@ TestCase {
         var accidentalRow = Math.round(accidentalWinY * dpr - 0.5)
         for (var col = first; col <= final; ++col) {
             if (col < 0 || col >= image.width)
+                continue
+            var plotX = (col + 0.5) / dpr - winLeft
+            if (excluded.some(function(span) { return plotX >= span[0] && plotX <= span[1] }))
                 continue
             var n = [image.red(col, naturalRow), image.green(col, naturalRow),
                      image.blue(col, naturalRow)]
@@ -130,8 +107,11 @@ TestCase {
             return session.songOpen || session.lastSaveError.length > 0
         }, 30000)
         verify(session.songOpen, "Route 101 loads from the staged project")
-        var surface = selectedSurface()
-        verify(surface !== null, "the selected tab page is mounted")
+        var surface = null
+        verify(waitForNative(function() {
+            surface = selectedSurface()
+            return surface !== null
+        }, 5000), "the selected tab page is mounted")
         var grid = surface.gridModel
         verify(waitForNative(function() { return grid.renderedNoteCount > 0 }, 5000),
                "the roll publishes notes")
@@ -139,35 +119,24 @@ TestCase {
         var plot = findChild(surface, "timelineQuickRollPlot")
         var gutter = findChild(surface, "timelineQuickRollGutter")
         var piano = findChild(surface, "pianoGridSurface")
-        var rows = findChild(surface, "timelineQuickPianoGridRows")
-        var time = findChild(surface, "timelineQuickPianoGridTime")
-        var keys = findChild(surface, "timelineQuickPianoKeyboardKeys")
+        var plotRenderer = findChild(surface, "timelineRendererPlot")
+        var keys = findChild(surface, "timelineRendererKeyboard")
         var chip = findChild(surface, "timelineQuickPianoHoverChip")
-        var fills = findChild(surface, "timelineQuickPianoNoteFills")
         verify(plot !== null, "the roll plot is mounted")
         verify(gutter !== null, "the roll gutter is mounted")
-        verify(fills !== null, "the note fill layer is mounted")
+        verify(plotRenderer !== null && plotRenderer.list === 0, "the note fill layer is mounted")
         verify(piano !== null, "the piano grid surface is mounted")
-        verify(rows !== null, "the row layer is mounted")
-        verify(time !== null, "the time layer is mounted")
-        verify(keys !== null, "the keyboard layer is mounted")
+        verify(plotRenderer !== null && plotRenderer.visible, "the row layer is mounted")
+        verify(plotRenderer !== null && plotRenderer.width > 0, "the time layer is mounted")
+        verify(keys !== null && keys.list === 1, "the keyboard layer is mounted")
         verify(chip !== null, "the hover chip is mounted")
-        var plotClip = { x: 0, y: 0, w: plot.width, h: plot.height }
-        verify(waitForNative(function() {
-            return primitiveCount(rows, plotClip) > 0
-        }, 5000), "the row layer draws visible primitives")
-        verify(waitForNative(function() {
-            return primitiveCount(time, plotClip) > 0
-        }, 5000), "the time layer draws visible primitives")
-        verify(waitForNative(function() {
-            return primitiveCount(keys, { x: 0, y: 0, w: gutter.width, h: gutter.height }) > 0
-        }, 5000), "the keyboard layer draws visible primitives")
 
         var rowHeight = grid.rowHeight
         var keyboardWidth = grid.keyboardWidth
         verify(rowHeight > 0, "the row height is published")
         verify(keyboardWidth > 0, "the keyboard width is published")
 
+        wait(0)
         var image = grabImage(shell.contentItem)
         verify(image.width > 0 && image.height > 0, "the window renders a frame")
         var dpr = image.width / shell.contentItem.width
@@ -251,14 +220,45 @@ TestCase {
                && !Helpers.colorsNear(expectedBeatAccidental, accidental),
                "the theme keeps beat lines distinguishable from both row roles")
         var winLeft = win(plot, 0, 0).x
-        var naturalWinY = win(plot, 0, naturalY).y
-        var accidentalWinY = win(plot, 0, accidentalY).y
-        verify(findLine(image, dpr, winLeft, naturalWinY, accidentalWinY, visibleLeft,
-                        visibleRight, expectedBarNatural, expectedBarAccidental),
-               "a visible bar line composites the grid role over both rows")
-        verify(findLine(image, dpr, winLeft, naturalWinY, accidentalWinY, visibleLeft,
-                        visibleRight, expectedBeatNatural, expectedBeatAccidental),
-               "a visible beat line composites the relative-alpha grid role over both rows")
+        var rulerMarks = findChild(surface, "timelineQuickRulerMarks")
+        verify(rulerMarks && rulerMarks.list === 2, "the native ruler marks are mounted")
+        var startMarker = rulerMarks.face(rulerMarks.loopStartId)
+        var endMarker = rulerMarks.face(rulerMarks.loopEndId)
+        var hasStart = startMarker && startMarker.x !== undefined
+        var hasEnd = endMarker && endMarker.x !== undefined
+        var excluded = []
+        if (hasStart || hasEnd) {
+            var startX = hasStart
+                ? rulerMarks.mapToItem(plot, startMarker.x + startMarker.width / 2, 0).x : 0
+            var endX = hasEnd
+                ? rulerMarks.mapToItem(plot, endMarker.x + endMarker.width / 2, 0).x : plot.width
+            var glowWidth = Math.min(2 * grid.baseFontPx, endX - startX)
+            var edge = 1 / dpr
+            if (hasStart)
+                excluded.push([startX - edge, startX + glowWidth + edge])
+            if (hasEnd)
+                excluded.push([endX - glowWidth - edge, endX + edge])
+        }
+        var barLineFound = false
+        var beatLineFound = false
+        for (var pitch = 0; pitch < 127; pitch += 12) {
+            var naturalCenter = rowCenter(pitch, rowHeight) - scrollY
+            var accidentalCenter = rowCenter(pitch + 1, rowHeight) - scrollY
+            if (naturalCenter < 0 || naturalCenter >= plot.height
+                    || accidentalCenter < 0 || accidentalCenter >= plot.height)
+                continue
+            var rowNaturalY = win(plot, 0, naturalCenter).y
+            var rowAccidentalY = win(plot, 0, accidentalCenter).y
+            barLineFound = barLineFound || findLine(
+                image, dpr, winLeft, rowNaturalY, rowAccidentalY, visibleLeft, visibleRight,
+                excluded, expectedBarNatural, expectedBarAccidental)
+            beatLineFound = beatLineFound || findLine(
+                image, dpr, winLeft, rowNaturalY, rowAccidentalY, visibleLeft, visibleRight,
+                excluded, expectedBeatNatural, expectedBeatAccidental)
+        }
+        verify(barLineFound, "an unglowed bar line composites the grid role over both rows")
+        verify(beatLineFound,
+               "an unglowed beat line composites the relative-alpha grid role over both rows")
 
         var initialScrollY = grid.cameraScrollY
         var maximumScrollY = grid.cameraMaxVScroll

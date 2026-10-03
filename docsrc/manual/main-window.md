@@ -41,7 +41,11 @@ See [Working with Tracks](tracks.md) for more details.
 
 ## The transport bar
 
-<!-- TODO: Explain transport controls, position and tempo displays, master volume, and the polyphony meter. -->
+The transport clock shows the current playback time and total song duration.
+It is read-only: hovering shows no tooltip, and dragging it does not change the
+song. Edit tempo in the [Automation](automation.md) pane instead.
+
+<!-- TODO: Explain transport controls, master volume, and the polyphony meter. -->
 
 ## Voice changes
 
@@ -58,6 +62,8 @@ See [Working with Tracks](tracks.md) for more details.
 ## Working with multiple songs (tabs)
 
 <!-- TODO: Explain opening, switching, dirty state, and closing for song tabs. -->
+
+The Automations, Velocity, and Voice Changes drawer sections share their visibility, heights, and active page across song tabs as application preferences rather than song data.
 
 ## Navigation cheat-sheet
 

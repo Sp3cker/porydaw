@@ -1,9 +1,11 @@
 import Foundation
 import PorydawApp
+import PorydawAppAudio
 import PorydawCore
 import PorydawPlayback
 import PorydawPlaybackNative
 
+@MainActor
 func runAudioControllerChecks(_ report: CheckReport) {
     do {
         try checkControllerCuts(report)
@@ -16,7 +18,101 @@ func runAudioControllerChecks(_ report: CheckReport) {
         try checkControllerSettingsAndBank(report)
         try checkControllerPreviewIsolation(report)
         try checkControllerPitchBendAudio(report)
+        try checkNativeAudioLifetime(report)
     } catch { report.fail("swiftcore/AudioController", "controller initialization failed: \(error)") }
+}
+
+@MainActor
+private func checkNativeAudioLifetime(_ report: CheckReport) throws {
+    guard let projectRoot = CheckEnvironment.fixtureRoot else {
+        report.fail("swiftcore/NativeAudio::forcedNullBackend", "missing real-project audio fixture")
+        return
+    }
+
+    for detachedRelease in [false, true] {
+        let id = detachedRelease
+            ? "swiftcore/NativeAudio::detachedLastRelease"
+            : "swiftcore/NativeAudio::mainActorLastRelease"
+        let service = ProjectService()
+        var facade: NativeAudio?
+        weak var releasedFacade: NativeAudio?
+        weak var releasedBank: NativeBankLease?
+        do {
+            let song = try runBlocking {
+                try await service.open(root: projectRoot)
+                return try await service.openSong(label: "mus_route101")
+            }
+            do {
+                let owner = try runBlocking { try await NativeAudio() }
+                let midi = try MidiFile.decode(song.midiBytes)
+                let timeline = PlaybackTimeline.build(file: midi, sampleRate: owner.sampleRate)
+                try owner.bind(timeline: timeline, bank: song.bank, config: song.config)
+                owner.play()
+                if !detachedRelease {
+                    report.expect(owner.usingNullBackend && owner.nullBackendForced
+                                  && owner.backendName == "Null",
+                                  cppID: "swiftcore/NativeAudio::forcedNullBackend",
+                                  message: "forced null request resolves to the reported Null backend")
+                }
+
+                let soundingDeadline = Date().addingTimeInterval(5)
+                var sounding = false
+                while !sounding && Date() < soundingDeadline {
+                    sounding = owner.playheadSamples > 0
+                        && owner.consumeTrackActivityLevels().contains {
+                            $0.left > 0 || $0.right > 0
+                        }
+                    if !sounding {
+                        RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+                    }
+                }
+                report.expect(sounding, cppID: id,
+                              message: "real bank sounds through the null-backend callback before teardown")
+                releasedBank = song.bank
+                releasedFacade = owner
+                facade = owner
+            }
+            try runBlocking { await service.close() }
+        } catch {
+            do {
+                try runBlocking { await service.close() }
+            } catch {
+                report.fail(id, "project close after audio setup failure failed: \(error)")
+            }
+            report.fail(id, "real-project audio setup failed: \(error)")
+            continue
+        }
+
+        report.expect(releasedFacade != nil && releasedBank != nil, cppID: id,
+                      message: "the facade still pins its bank after project service close")
+        if detachedRelease {
+            let handoff = AsyncStream<Void>.makeStream()
+            let lastOwner: Task<Void, Never>
+            do {
+                guard let owner = facade else {
+                    report.fail(id, "detached handoff lost its final facade owner")
+                    continue
+                }
+                lastOwner = Task.detached { [owner] in
+                    for await _ in handoff.stream { break }
+                    withExtendedLifetime(owner) {}
+                }
+            }
+            facade = nil
+            handoff.continuation.yield(())
+            handoff.continuation.finish()
+            try runBlocking { await lastOwner.value }
+        } else {
+            facade = nil
+        }
+
+        let releaseDeadline = Date().addingTimeInterval(5)
+        while (releasedFacade != nil || releasedBank != nil) && Date() < releaseDeadline {
+            RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        }
+        report.expect(releasedFacade == nil && releasedBank == nil, cppID: id,
+                      message: "isolated deinit joins callback and releases facade and pinned bank")
+    }
 }
 
 private func checkControllerPitchBendAudio(_ report: CheckReport) throws {
@@ -104,7 +200,7 @@ private func checkControllerControls(_ report: CheckReport) throws {
                   message: "one-channel chord must overflow before reset")
     audio.resetPolyStats()
     _ = rig.render(1)
-    report.expectEqual(UInt64(0), audio.polyLostTotal, cppID: "swiftcore/AudioController::polyReset",
+    report.expectEqual(expected: UInt64(0), actual: audio.polyLostTotal, cppID: "swiftcore/AudioController::polyReset",
                        what: "callback clears existing overflow")
     checkUnloadPlayingSong(rig, report)
 }
@@ -115,7 +211,7 @@ private func checkControllerTailMatrix(_ report: CheckReport) throws {
             let rig = try AudioControllerCheckFixture()
             let timeline = rig.timeline(looped: songLoops)
             let id = "swiftcore/AudioController::tailStop[songLoop=\(songLoops),enabled=\(enabled)]"
-            report.expectEqual(songLoops, timeline.hasLoop, cppID: id, what: "MIDI loop-marker precondition")
+            report.expectEqual(expected: songLoops, actual: timeline.hasLoop, cppID: id, what: "MIDI loop-marker precondition")
             rig.renderer.bind(timeline: timeline, voicegroup: rig.voices, settings: AudioSettings())
             rig.renderer.setLoopEnabled(enabled)
             rig.renderer.play()
@@ -148,7 +244,7 @@ private func checkControllerSettingsAndBank(_ report: CheckReport) throws {
     let quietPeak = audioControllerCheckPeak(quiet.suffix(4096))
     report.expect(loud > 0.01 && quietPeak > 0 && quietPeak < loud * 0.6,
         cppID: "swiftcore/AudioController::settingsVolume", message: "cold song volume changes actual sustained output")
-    report.expectEqual(cursor + UInt64(rig.rate), audio.playheadSamples,
+    report.expectEqual(expected: cursor + UInt64(rig.rate), actual: audio.playheadSamples,
         cppID: "swiftcore/AudioController::settingsVolume", what: "settings preserve playing cursor")
     settings.pcmMixRate = 18157
     let rateCursor = audio.playheadSamples
@@ -158,7 +254,7 @@ private func checkControllerSettingsAndBank(_ report: CheckReport) throws {
         cppID: "swiftcore/AudioController::settingsMixRate", message: "mix-rate update preserves the sounding song")
     // Native rate reconfiguration resets the PCM FIFO; it is a cold discontinuity,
     // not a promised click-free crossfade. The sequence itself must not restart.
-    report.expectEqual(rateCursor + UInt64(rig.rate), audio.playheadSamples,
+    report.expectEqual(expected: rateCursor + UInt64(rig.rate), actual: audio.playheadSamples,
         cppID: "swiftcore/AudioController::settingsMixRate", what: "mix-rate change preserves sequence position")
 
     let squareBank = try AudioControllerCheckFixture(square: true)
@@ -169,7 +265,7 @@ private func checkControllerSettingsAndBank(_ report: CheckReport) throws {
         let beforeSwap = audio.playheadSamples
         audio.updateVoicegroup(squareBank.voices)
         let swapped = rig.render(rig.rate * 2)
-        report.expectEqual(beforeSwap + UInt64(rig.rate * 2), audio.playheadSamples,
+        report.expectEqual(expected: beforeSwap + UInt64(rig.rate * 2), actual: audio.playheadSamples,
             cppID: "swiftcore/AudioController::bankRebind", what: "bank swap preserves sequence cursor")
         report.expect(rig.sustaining(60) && audioControllerCheckPeak(swapped.suffix(4096)) > 0.01 &&
                       audioControllerCheckStep(swapped, from: rig.rate * 2 - 2048, to: rig.rate * 2) >
@@ -193,7 +289,7 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
                   rig.sustaining(60) && !rig.sustaining(67),
         cppID: "swiftcore/AudioController::voicePreviewIsolation",
         message: "voice preview adds audible output without replacing the song engine's held note")
-    report.expectEqual(cursor + UInt64(rig.rate), audio.playheadSamples,
+    report.expectEqual(expected: cursor + UInt64(rig.rate), actual: audio.playheadSamples,
         cppID: "swiftcore/AudioController::voicePreviewIsolation", what: "sequence advances during voice preview")
     audio.audition.previewVoice(program: 0, key: 67, velocity: 0)
     audio.setMuteMask(1)
@@ -213,7 +309,7 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
     let sampled = rig.render(rig.rate)
     report.expect(audioControllerCheckPeak(sampled.suffix(4096)) > 0.01 && audio.activePcmChannels == 0,
         cppID: "swiftcore/AudioController::samplePreviewIsolation", message: "sample sounds exclusively through preview engine")
-    report.expectEqual(sampleCursor + UInt64(rig.rate), audio.playheadSamples,
+    report.expectEqual(expected: sampleCursor + UInt64(rig.rate), actual: audio.playheadSamples,
         cppID: "swiftcore/AudioController::samplePreviewIsolation", what: "sample preview does not park sequence")
     audio.audition.sampleOff()
     let sampleReleased = rig.render(rig.rate)

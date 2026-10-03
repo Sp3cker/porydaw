@@ -1,5 +1,5 @@
 // The Velocity drawer page: the ruler column, the plot's grid and PSG level
-// bands, the note handles, the gesture transient and the Set-Velocity prompt.
+// bands, the note handles and the gesture transient.
 //
 // Swift owns every value (VelocityPage.swift): the shared camera projection, the
 // axis ladder, the note handles, the hover/selection/preview state, the frozen
@@ -55,8 +55,7 @@ FocusScope {
         id: fallbackPalette
 
         /// Neutral colors for the window between scene removal and the session's
-        /// release; nothing drawn then reaches a frame. Covers every role this
-        /// page reads plus the roles VelocityPrompt reads through promptPalette.
+        /// release; nothing drawn then reaches a frame.
         readonly property color chromeBackground: "transparent"
         readonly property color rollBackground: "transparent"
         readonly property color primaryText: "transparent"
@@ -91,7 +90,6 @@ FocusScope {
         readonly property string contextDiagnostic: ""
         readonly property bool readoutVisible: false
         readonly property bool detentsEnabled: true
-        readonly property bool detentsAvailable: false
         readonly property double baseFontPx: 13
         readonly property bool promptOpen: false
         readonly property string promptDraft: ""
@@ -124,6 +122,11 @@ FocusScope {
                                        ? (page.gridModel.trackHeaderWidth || 0)
                                          + page.gridModel.keyboardWidth : 0
     readonly property real plotWidth: Math.max(page.width - page.plotOrigin, 0)
+    /// The snapped surface scroll the handle container translates by, and the
+    /// zoom scale handles place ticks with; both track the scene scroll row.
+    property real contentScrollX: 0
+    property real contentPixelsPerTick: 0
+    readonly property real contentDpr: page.Screen.devicePixelRatio
     /// This page's own base-font seed, for the window before a document is
     /// presented.
     readonly property real seedBaseFontPx: 13
@@ -183,44 +186,80 @@ FocusScope {
             color: page.gridPalette.chromeBackground
         }
 
-        TimelineQuickItem {
+        Item {
             objectName: "velocityRulerMarks"
             anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.axisTicks : [])
+            Repeater {
+                model: page.pageModel ? page.pageModel.axisTicks : []
+                delegate: Rectangle {
+                    required property var frame
+                    required property string fillColor
+                    required property string primitiveName
+                    objectName: primitiveName
+                    x: frame.x
+                    y: frame.y
+                    width: frame.width
+                    height: frame.height
+                    color: fillColor
+                }
+            }
         }
 
-        TimelineQuickItem {
+        Item {
             objectName: "velocityRulerGraduations"
             anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.axisGraduations : [])
+            Repeater {
+                model: page.pageModel ? page.pageModel.axisGraduations : []
+                delegate: Rectangle {
+                    required property var frame
+                    required property string fillColor
+                    required property string primitiveName
+                    objectName: primitiveName
+                    x: frame.x
+                    y: frame.y
+                    width: frame.width
+                    height: frame.height
+                    color: fillColor
+                }
+            }
         }
 
-        TimelineQuickItem {
+        Item {
             objectName: "velocityRulerMarkers"
             anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.axisMarkers : [])
+            Repeater {
+                model: page.pageModel ? page.pageModel.axisMarkers : []
+                delegate: Rectangle {
+                    required property var frame
+                    required property string fillColor
+                    required property string primitiveName
+                    objectName: primitiveName
+                    x: frame.x
+                    y: frame.y
+                    width: frame.width
+                    height: frame.height
+                    color: fillColor
+                }
+            }
         }
 
         Repeater {
             model: (page.pageModel ? page.pageModel.axisLabels : [])
 
             delegate: Text {
-                required property var labelRect
+                required property var labelSpec
                 required property string labelText
-                required property string labelColor
                 required property var labelFont
-                required property int labelHorizontalAlignment
-                required property int labelVerticalAlignment
 
-                x: labelRect.x
-                y: labelRect.y
-                width: labelRect.width
-                height: labelRect.height
+                x: labelSpec.x
+                y: labelSpec.y
+                width: labelSpec.width
+                height: labelSpec.height
                 text: labelText
-                color: labelColor
+                color: labelSpec.color
                 font: Qt.font(labelFont)
-                horizontalAlignment: labelHorizontalAlignment
-                verticalAlignment: labelVerticalAlignment
+                horizontalAlignment: labelSpec.horizontal
+                verticalAlignment: labelSpec.vertical
                 textFormat: Text.PlainText
                 renderType: Text.NativeRendering
                 elide: Text.ElideNone
@@ -284,7 +323,25 @@ FocusScope {
         Accessible.focusable: false
     }
 
-    // ---- plot ---------------------------------------------------------------
+    // Scroll and handle rows update in one dataChanged sweep, so the container
+    // translation never lags a queued bridge NOTIFY.
+    Repeater {
+        id: scrollCarrier
+
+        model: page.gridModel ? page.gridModel.scene.cameraScroll : []
+        delegate: Item {
+            required property var frame
+            onFrameChanged: applyScrollFrame()
+            Component.onCompleted: applyScrollFrame()
+            function applyScrollFrame() {
+                if (frame) {
+                    var dpr = page.Screen.devicePixelRatio
+                    page.contentScrollX = Math.round(frame.x * dpr) / dpr
+                    page.contentPixelsPerTick = frame.width
+                }
+            }
+        }
+    }
 
     Item {
         id: plot
@@ -302,95 +359,106 @@ FocusScope {
             color: page.gridPalette.rollBackground
         }
 
-        TimelineQuickItem {
+        DisplayList {
             objectName: "velocityGridLines"
             anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.gridLines : [])
-        }
-
-        TimelineQuickItem {
-            objectName: "velocityPsgBands"
-            anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.psgBands : [])
+            clip: true
+            source: page.pageModel
+            list: 0
+            revision: page.pageModel ? page.pageModel.displayRevision : 0
         }
 
         // Note stems and nodes. One delegate per handle; a selected handle draws
         // its ring and its unfilled center exactly as the row model publishes it,
         // and a single selected note keeps its outline while a multi-selection
         // dims the unselected rows.
-        Repeater {
-            model: (page.pageModel ? page.pageModel.handles : [])
+        Item {
+            id: handleContent
 
-            // `QQuickItem.x`/`y` are FINAL, so the delegate reads the published
-            // handle as the role object (`model`) exactly like the roll's own rect
-            // delegates; the drawn properties below are child items, never
-            // overrides of the delegate's own geometry.
-            delegate: Item {
-                id: node
+            width: parent.width
+            height: parent.height
+            // Stable rows translate once here from the surface scroll carrier,
+            // same-turn like the roll plot content.
+            x: -page.contentScrollX
 
-                required property var model
+            Repeater {
+                model: (page.pageModel ? page.pageModel.handles : [])
 
-                x: 0
-                y: 0
-                width: plot.width
-                height: plot.height
+                // Retained handles stay tick-space stable; rows enter and leave
+                // only when the camera escapes the published overscan window.
+                delegate: Item {
+                    id: node
 
-                Rectangle {
-                    objectName: node.model.primitiveName + "Stem"
-                    x: Math.min(node.model.x, node.model.endX)
-                    y: node.model.y - node.model.stemWidth / 2
-                    width: Math.max(1, Math.abs(node.model.endX - node.model.x))
-                    height: node.model.stemWidth
-                    color: node.model.stemColor
-                }
+                    required property var model
+                    // One packed spec per handle: every child binding reads the
+                    // local map instead of paying a metaCall per property.
+                    readonly property var s: model ? model.spec : ({})
+                    // Zoom re-evaluates only the root x and the stem end; children sit relative.
+                    x: Math.round(node.s.tick * page.contentPixelsPerTick * page.contentDpr)
+                       / page.contentDpr
+                    readonly property real endX: Math.round(
+                        node.s.endTick * page.contentPixelsPerTick * page.contentDpr) / page.contentDpr
 
-                Rectangle {
-                    objectName: node.model.primitiveName + "Ring"
-                    visible: node.model.selected
-                    x: node.model.x - node.model.ringRadius
-                    y: node.model.y - node.model.ringRadius
-                    width: 2 * node.model.ringRadius
-                    height: 2 * node.model.ringRadius
-                    radius: node.model.ringRadius
-                    color: "transparent"
-                    border.color: node.model.ringColor
-                    border.width: node.model.ringWidth
-                }
+                    Rectangle {
+                        objectName: node.s.primitiveName + "Stem"
+                        x: Math.min(0, node.endX - node.x)
+                        y: node.s.y - node.s.stemWidth / 2
+                        width: Math.max(1, Math.abs(node.endX - node.x))
+                        height: node.s.stemWidth
+                        color: node.s.stemColor
+                    }
 
-                Rectangle {
-                    objectName: node.model.primitiveName + "Fill"
-                    x: node.model.x - node.model.nodeRadius
-                    y: node.model.y - node.model.nodeRadius
-                    width: 2 * node.model.nodeRadius
-                    height: 2 * node.model.nodeRadius
-                    radius: node.model.nodeRadius
-                    color: node.model.fillColor
-                    border.width: node.model.selected || !node.model.dimmed
-                                  ? node.model.outlineWidth : 0
-                    border.color: node.model.outlineColor
-                }
+                    Rectangle {
+                        objectName: node.s.primitiveName + "Ring"
+                        visible: node.s.selected
+                        x: -node.s.ringRadius
+                        y: node.s.y - node.s.ringRadius
+                        width: 2 * node.s.ringRadius
+                        height: 2 * node.s.ringRadius
+                        radius: node.s.ringRadius
+                        color: "transparent"
+                        border.color: node.s.ringColor
+                        border.width: node.s.ringWidth
+                    }
 
-                Rectangle {
-                    objectName: node.model.primitiveName + "Hover"
-                    visible: node.model.hovered && !node.model.selected
-                    x: node.model.x - node.model.outlineRadius
-                    y: node.model.y - node.model.outlineRadius
-                    width: 2 * node.model.outlineRadius
-                    height: 2 * node.model.outlineRadius
-                    radius: node.model.outlineRadius
-                    color: "transparent"
-                    border.color: node.model.ringColor
-                    border.width: node.model.ringWidth
+                    Rectangle {
+                        objectName: node.s.primitiveName + "Fill"
+                        x: -node.s.nodeRadius
+                        y: node.s.y - node.s.nodeRadius
+                        width: 2 * node.s.nodeRadius
+                        height: 2 * node.s.nodeRadius
+                        radius: node.s.nodeRadius
+                        color: node.s.fillColor
+                        border.width: node.s.selected || !node.s.dimmed
+                                      ? node.s.outlineWidth : 0
+                        border.color: node.s.outlineColor
+                    }
+
+                    Rectangle {
+                        objectName: node.s.primitiveName + "Hover"
+                        visible: node.s.hovered && !node.s.selected
+                        x: -node.s.outlineRadius
+                        y: node.s.y - node.s.outlineRadius
+                        width: 2 * node.s.outlineRadius
+                        height: 2 * node.s.outlineRadius
+                        radius: node.s.outlineRadius
+                        color: "transparent"
+                        border.color: node.s.ringColor
+                        border.width: node.s.ringWidth
+                    }
                 }
             }
         }
 
         // The gesture transient: the band reticle's fill and dashed edges, plus
         // the ramp line the press-to-pointer span draws.
-        TimelineQuickItem {
+        DisplayList {
             objectName: "velocityTransient"
             anchors.fill: parent
-            rects: (page.pageModel ? page.pageModel.transientRects : [])
+            clip: true
+            source: page.pageModel
+            list: 1
+            revision: page.pageModel ? page.pageModel.displayRevision : 0
         }
 
         Rectangle {
@@ -408,22 +476,6 @@ FocusScope {
                       : 0
         }
 
-        // The capability diagnostic: an unknown exact map keeps rendering and
-        // navigation live while every exact-map edit is refused.
-        Text {
-            objectName: "velocityContextDiagnostic"
-
-            visible: (page.pageModel ? page.pageModel.contextUnsupported : false)
-            x: 4
-            y: 4
-            width: Math.max(0, plot.width - 8)
-            text: (page.pageModel ? page.pageModel.contextDiagnostic : "")
-            color: page.gridPalette.primaryText
-            font.pixelSize: Math.max(1, page.baseFontPx)
-            textFormat: Text.PlainText
-            wrapMode: Text.WordWrap
-        }
-
         MouseArea {
             id: plotInput
 
@@ -435,16 +487,20 @@ FocusScope {
 
             onPressed: (mouse) => {
                 plotMoves.flush()
+                // Plot input arrives in plot space; adding the carrier scroll
+                // restores the handles' scroll-stable space.
                 mouse.accepted =
-                    page.pageModel.pointerPress(mouse.x, mouse.y, page.plotSurface,
+                    page.pageModel.pointerPress(mouse.x + page.contentScrollX,
+                                                mouse.y, page.plotSurface,
                                                 mouse.button, mouse.modifiers)
             }
             onPositionChanged: (mouse) => plotMoves.enqueue(
-                mouse.x, mouse.y, mouse.buttons, mouse.modifiers)
+                mouse.x + page.contentScrollX, mouse.y, mouse.buttons, mouse.modifiers)
             onReleased: (mouse) => {
                 plotMoves.flush()
                 plotHint.settleRelease(plotInput.mapToItem(null, mouse.x, mouse.y))
-                mouse.accepted = page.pageModel.pointerRelease(mouse.x, mouse.y, mouse.button)
+                mouse.accepted = page.pageModel.pointerRelease(
+                    mouse.x + page.contentScrollX, mouse.y, mouse.button)
             }
             onCanceled: {
                 plotMoves.flush()
@@ -497,27 +553,6 @@ FocusScope {
         Accessible.focusable: true
     }
 
-    // ---- local prompt -------------------------------------------------------
-
-    property var modalHost: null
-
-    VelocityPrompt {
-        id: prompt
-        parent: page.modalHost
-        anchors.fill: parent
-        model: page.model
-        promptPalette: page.gridPalette
-        hintService: page.hintService
-        hintScopeAllowed: true
-
-        onClosed: page.focusOrigin()
-    }
-
-    /// Where focus returns after the prompt closes: this page's plot, so window
-    /// commands resume exactly where the interaction began.
-    function focusOrigin() {
-        plot.forceActiveFocus(Qt.OtherFocusReason)
-    }
 
     readonly property int rulerSurface: 0
     readonly property int plotSurface: 1
