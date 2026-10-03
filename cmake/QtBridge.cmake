@@ -79,8 +79,12 @@ function(porydaw_link_linux_swift_runtime target)
     string(JSON resource_path GET "${swift_target_info}" paths runtimeResourcePath)
     string(JSON swift_arch GET "${swift_target_info}" target arch)
     target_sources(${target} PRIVATE "${resource_path}/linux/${swift_arch}/swiftrt.o")
+    # Runner images symlink swiftc into a shared bin; the tool sits beside the real driver.
     get_filename_component(swift_bin "${CMAKE_Swift_COMPILER}" DIRECTORY)
-    find_program(swift_autolink_extract swift-autolink-extract HINTS "${swift_bin}" REQUIRED)
+    file(REAL_PATH "${CMAKE_Swift_COMPILER}" swift_real_compiler)
+    get_filename_component(swift_real_bin "${swift_real_compiler}" DIRECTORY)
+    find_program(swift_autolink_extract swift-autolink-extract
+        HINTS "${swift_bin}" "${swift_real_bin}" REQUIRED)
     set(archives "")
     foreach(library IN LISTS ARGN)
         list(APPEND archives "$<TARGET_FILE:${library}>")

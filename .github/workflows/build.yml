@@ -68,7 +68,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-15]
+        os: [windows-latest, xcode-27]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -92,14 +92,14 @@ jobs:
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
-      # windows-latest ships no Swift; ubuntu-latest ships Swift 6.4 and macOS
-      # uses Xcode's. The Qt main executor needs >= 6.4 (CMakeLists.txt:168).
+      # windows-latest ships no Swift; ubuntu-latest ships Swift 6.4 and the
+      # xcode-27 image ships Xcode 27. The Qt main executor needs >= 6.4 (CMakeLists.txt:166).
       - name: Set up Swift
         if: runner.os == 'Windows'
-        uses: swift-actions/setup-swift@v2
+        uses: compnerd/gha-setup-swift@main
         with:
-          swift-version: "6.4"
-          cache-name: porydaw-swift
+          swift-version: swift-6.4.0-release
+          swift-build: 6.4.0-RELEASE
 
       # Artifact builds don't run harnesses; the asan-checks job compiles them.
       - name: Configure
@@ -158,13 +158,8 @@ jobs:
           name: porydaw-windows
           path: porydaw-windows
 
-  # The harness sweep on an AddressSanitizer build stages each check's declared
-  # fixture files in a private scratch directory. Qt Quick uses its software
-  # backend so offscreen GUI checks do not require a graphics device. Native
-  # window paint/timing checks and Qt Quick timeline harnesses stay in the
-  # normal verification sweep because sanitizer overhead changes their timing
-  # and the CI runner cannot render the timeline scene reliably. Samplecheck
-  # runs without its optional corpus pass.
+  # AddressSanitizer sweep of the porydaw_checks catalog with the software Qt Quick
+  # backend; windowing checks and the macOS-only QML lanes are not run here.
   asan-checks:
     runs-on: ubuntu-latest
     steps:
@@ -211,11 +206,9 @@ jobs:
         run: >-
           QT_QUICK_BACKEND=software
           deno run --allow-read --allow-write --allow-run
-          --allow-env=ASAN_OPTIONS,DISPLAY,PORYDAW_SAMPLE_CORPUS
+          --allow-env=ASAN_OPTIONS,DISPLAY,PORYDAW_SAMPLE_CORPUS,PORYDAW_CHECK_HOST
           tools/run_checks.ts build-asan/porydaw_checks
           --no-windowing-checks --pool=1
-          --exclude=vgsavecheck --exclude=tabcheck --exclude=onboardcheck
-          --exclude=sessioncheck --exclude=editor-drawer
 
       - name: sccache stats
         run: sccache --show-stats || true
