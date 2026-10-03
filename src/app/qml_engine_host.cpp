@@ -4,13 +4,30 @@
 #include <QtCore/qcoreapplication.h>
 #include <QtCore/qthread.h>
 #include <QtGui/qevent.h>
+#include <QtGui/qfontdatabase.h>
+#include <QtGui/qguiapplication.h>
 #include <QtQml/qqmlapplicationengine.h>
 #include <QtQuick/qquickwindow.h>
 #include <cstdio>
+#include <cstring>
 #include <cstdlib>
 #include <string>
 
 #include <qappcpp.h>
+
+
+#ifdef Q_OS_MACOS
+#include <os/signpost.h>
+
+namespace {
+os_log_t startup_signpost_log()
+{
+    // Initialized before installing render-thread observers; immutable thereafter.
+    static const os_log_t log = os_log_create("com.sp3cker.porydaw", "startup");
+    return log;
+}
+} // namespace
+#endif
 
 #ifdef Q_OS_WIN
 #ifndef WIN32_LEAN_AND_MEAN
@@ -92,16 +109,58 @@ bool pd_qml_add_import_path(const char *path)
 // The external launch probe owns the clock, including process creation and dyld.
 void pd_startup_trace_mark(const char *stage)
 {
-    if (std::getenv("PORYDAW_STARTUP_TRACE"))
+#ifdef Q_OS_MACOS
+    const auto log = startup_signpost_log();
+    if (os_signpost_enabled(log)) {
+        if (std::strcmp(stage, "app-init") == 0)
+            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "app-init");
+        else if (std::strcmp(stage, "presenter-begin") == 0)
+            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "presenter-begin");
+        else if (std::strcmp(stage, "presenter-end") == 0)
+            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "presenter-end");
+        else if (std::strcmp(stage, "chrome-restored") == 0)
+            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "chrome-restored");
+        else if (std::strcmp(stage, "root-created") == 0)
+            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "root-created");
+        else if (std::strcmp(stage, "content-ready") == 0)
+            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "content-ready");
+        else if (std::strcmp(stage, "workspace-ready") == 0)
+            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "workspace-ready");
+        else if (std::strcmp(stage, "first-frame") == 0)
+            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "first-frame");
+        else if (std::strcmp(stage, "chrome-frame") == 0)
+            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "chrome-frame");
+        else if (std::strcmp(stage, "workspace-frame") == 0)
+            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "workspace-frame");
+        else if (std::strcmp(stage, "editor-ready") == 0)
+            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "editor-ready");
+        else if (std::strcmp(stage, "editor-frame") == 0)
+            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "editor-frame");
+    }
+#endif
+    if (std::getenv("PORYDAW_STARTUP_TRACE")) {
         std::fprintf(stderr, "PORYDAW_STARTUP_TRACE %s\n", stage);
+        std::fflush(stderr);
+    }
+}
+
+bool pd_startup_trace_enabled()
+{
+    bool enabled = std::getenv("PORYDAW_STARTUP_TRACE") != nullptr;
+#ifdef Q_OS_MACOS
+    enabled = enabled || os_signpost_enabled(startup_signpost_log());
+#endif
+    return enabled;
 }
 
 // Observe submission on the render thread, not a delayed GUI-thread signal handler.
 void pd_startup_trace_window()
 {
-    if (!std::getenv("PORYDAW_STARTUP_TRACE"))
+    if (!pd_startup_trace_enabled())
         return;
     auto *engine = pd_qml_engine();
+    if (!engine)
+        return;
     QObject::connect(engine, &QQmlApplicationEngine::objectCreated, engine,
                      [](QObject *object, const QUrl &) {
                          auto *window = qobject_cast<QQuickWindow *>(object);
@@ -123,7 +182,7 @@ void pd_startup_trace_window()
 // Called on the GUI thread at mount completion, before its next render.
 void pd_startup_trace_next_frame(const char *stage)
 {
-    if (!std::getenv("PORYDAW_STARTUP_TRACE"))
+    if (!pd_startup_trace_enabled())
         return;
     auto *engine = pd_qml_engine();
     if (!engine)
@@ -146,4 +205,19 @@ void pd_startup_trace_next_frame(const char *stage)
             static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::SingleShotConnection));
         return;
     }
+}
+
+void pd_startup_prewarm_fonts()
+{
+    auto *engine = pd_qml_engine();
+    if (!engine)
+        return;
+    auto *worker = QThread::create([] {
+        (void)QFontDatabase::families();
+    });
+    // QThread::create's destructor joins; the engine dies before QGuiApplication.
+    worker->setParent(engine);
+    QObject::connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, worker,
+                     [worker] { worker->wait(); });
+    worker->start();
 }

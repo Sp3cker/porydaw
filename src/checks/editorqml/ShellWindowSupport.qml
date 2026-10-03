@@ -157,14 +157,57 @@ TestCase {
             + "; status=" + shell.shellPresenter.statusText + ")"
     }
 
+    function gridNotes(grid) { return JSON.parse(grid.fetchNoteSummary()) }
+
     function selectedSurface() {
-        var pages = shell && shell.sceneLoader ? shell.sceneLoader.item : null
+        if (!shell || !shell.sceneLoader || shell.sceneLoader.status !== Loader.Ready)
+            return null
+        var pages = shell.sceneLoader.item
         if (!pages)
             return null
         var tabs = shell.shellPresenter.session.songTabs
         var page = findChild(pages, "songTab_" + tabs.selectedId)
         return page ? findChild(page, "swiftRollOverlay") : null
     }
+
+    function pointFor(grid, tick, pitch) {
+        var ppt = grid.beatWidth / grid.ticksPerBeat
+        return {
+            x: tick * ppt - grid.cameraScrollX,
+            y: (127 - pitch + 0.5) * grid.rowHeight - grid.cameraScrollY
+        }
+    }
+
+    function freeLane(grid, surface, spanSnaps) {
+        var snap = grid.snapTicks
+        var plot = findChild(surface, "timelineQuickRollPlot")
+        if (!plot || plot.width <= 0 || plot.height <= 0)
+            return null
+        var ppt = grid.beatWidth / grid.ticksPerBeat
+        var rowH = grid.rowHeight
+        var scrollX = grid.cameraScrollX
+        var scrollY = grid.cameraScrollY
+        var firstTick = Math.ceil(((scrollX + 24) / ppt) / snap) * snap
+        var lastTick = Math.floor(((scrollX + plot.width - 24) / ppt) / snap) * snap
+        var firstRow = Math.min(127, Math.max(0, Math.ceil(scrollY / rowH) + 2))
+        var lastRow = Math.min(127, Math.max(0, Math.floor((scrollY + plot.height) / rowH) - 2))
+        var current = gridNotes(grid)
+        var tick = Math.max(0, firstTick)
+        if (tick + spanSnaps * snap > lastTick)
+            return null
+        for (var row = firstRow; row <= lastRow; ++row) {
+            var pitch = 127 - row
+            // Drawing needs an untouched pitch row: a neighboring fixture note
+            // can capture the press through its resize grip even without overlap.
+            var occupied = current.some(function(note) {
+                return note.track === grid.trackIndex && note.pitch === pitch
+            })
+            if (!occupied)
+                return { tick: tick, pitch: pitch }
+        }
+        return null
+    }
+
     function focusBelongsTo(page) {
         var focused = shell.activeFocusItem
         while (focused) {

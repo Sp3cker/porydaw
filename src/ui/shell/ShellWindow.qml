@@ -111,12 +111,15 @@ ThemedWindow {
         id: applicationContent
         objectName: "shellContentLoader"
         anchors.fill: parent
-        // Chrome mounts synchronously; its workspace incubates independently.
+        // Mounted chrome releases services before constructing the workspace.
         asynchronous: false
         focus: true
         active: shell.contentRequested && shell.sceneActive
         Component.onCompleted: setSource(Qt.resolvedUrl("ShellContent.qml"), {root: root})
-        onLoaded: shell.contentReady()
+        onLoaded: {
+            shell.contentReady()
+            item.loadWorkspace()
+        }
         onItemChanged: acknowledgeRemoval()
         onStatusChanged: {
             if (status === Loader.Error) {

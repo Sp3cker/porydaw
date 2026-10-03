@@ -152,6 +152,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     public let semiboldFontSource: String = BundledFont.semibold.source
     public let monoFontSource: String = BundledFont.mono.source
     public let iconsFontSource: String = BundledFont.icons.source
+    public let startupTraceEnabled: Bool = pd_startup_trace_enabled()
 
     @QtTracked public var session: ApplicationSession
     @QtTracked public var settingsStore: EngineSettingsStore
@@ -184,6 +185,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     private var hasRestoredChrome = false
     private var hasLoadedContent = false
     private var hasLoadedWorkspace = false
+    private var hasObservedStartupEditor = false
     @QtIgnored var closeSettlementTask: Task<Void, Never>?
     @QtTracked public var themeMode = "vanilla"
     @QtTracked public var gridLineContrast = 50
@@ -520,6 +522,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
     /// Records completion of chrome and persisted preference restoration.
     public func chromeRestored() {
         pd_startup_trace_mark("chrome-restored")
+        if !hasRestoredChrome, sceneActive, !closing {
+            pd_startup_prewarm_fonts()
+        }
         hasRestoredChrome = true
     }
 
@@ -544,6 +549,17 @@ public final class ShellPresenter: QmlInstantiableStatus {
         hasLoadedWorkspace = true
         pd_startup_trace_mark("workspace-ready")
         pd_startup_trace_next_frame("workspace-frame")
+    }
+
+    /// QML supplies the selected roll's visible, applied positive-viewport predicate.
+    public func editorReady(tabId: Int) {
+        guard startupTraceEnabled, !hasObservedStartupEditor, sceneActive,
+            !closing, !closePending, let selected = session.songTabs.selectedPage,
+            selected.tabId == tabId, selected.isReady
+        else { return }
+        pd_startup_trace_mark("editor-ready")
+        pd_startup_trace_next_frame("editor-frame")
+        hasObservedStartupEditor = true
     }
 
     private func beginStartupIfReady() {

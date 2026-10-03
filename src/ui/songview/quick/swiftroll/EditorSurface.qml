@@ -131,6 +131,21 @@ FocusScope {
 
 
     readonly property string appliedRevisionText: gridModel.appliedRevisionText
+    property bool viewportConfigured: false
+    readonly property bool editorStartupReady: viewportConfigured && visible
+        && shellRouter !== null
+        && shellRouter.session.songTabs.selectedId === applicationSession.tabId
+        && !showEvents && rollPlot.visible && applicationSession.isReady
+        && rollPlot.width > 0 && rollPlot.height > 0
+        && gridModel.scene.displayRevision > 0 && appliedRevisionText.length > 0
+    onEditorStartupReadyChanged: observeStartupEditor()
+    onShellRouterChanged: observeStartupEditor()
+
+    function observeStartupEditor() {
+        if (root.shellRouter && root.shellRouter.startupTraceEnabled
+                && root.editorStartupReady)
+            root.shellRouter.editorReady(root.applicationSession.tabId)
+    }
 
     FontMetrics {
         id: bodyFontMetrics
@@ -375,6 +390,8 @@ FocusScope {
                                              root.baseFontPx,
                                              bodyFontMetrics.lineSpacing)
         root.otherEventsPresenter.configureViewport(root.baseFontPx, bodyFontMetrics.lineSpacing)
+        root.viewportConfigured = true
+        root.observeStartupEditor()
     }
 
     function deliverWheel(event, overGutter) {

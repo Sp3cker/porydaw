@@ -101,9 +101,11 @@ async function mainIndexSubmoduleCommit(mainRoot: string): Promise<string> {
     "--",
     "external/poryaaaa",
   ]);
-  const match = /^160000 ([0-9a-f]+) /.exec(entry);
+  const match = /^160000 ([0-9a-f]+) 0\texternal\/poryaaaa$/.exec(entry);
   if (!match) {
-    throw new Error("external/poryaaaa is not recorded as a submodule");
+    throw new Error(
+      "external/poryaaaa is missing or unmerged; run deno task poryaaaa:sync in swift-qml-grid",
+    );
   }
   return match[1];
 }
@@ -115,7 +117,7 @@ async function validateSharedSubmodule(
   const actualCommit = await gitOutput(repository, ["rev-parse", "HEAD"]);
   if (actualCommit !== expectedCommit) {
     throw new Error(
-      `shared poryaaaa checkout has ${actualCommit}, expected ${expectedCommit}`,
+      `canonical poryaaaa checkout has ${actualCommit}, but the main index records ${expectedCommit}; run deno task poryaaaa:sync in swift-qml-grid`,
     );
   }
   const status = await gitOutput(repository, [
@@ -126,21 +128,8 @@ async function validateSharedSubmodule(
   if (status) throw new Error(`shared poryaaaa checkout is dirty:\n${status}`);
 }
 
-async function prepareSharedSubmodule(
-  mainRoot: string,
-  baseRef: string,
-): Promise<string> {
-  const baseCommit = await gitOutput(mainRoot, [
-    "rev-parse",
-    `${baseRef}:external/poryaaaa`,
-  ]);
+async function prepareSharedSubmodule(mainRoot: string): Promise<string> {
   const mainCommit = await mainIndexSubmoduleCommit(mainRoot);
-  if (baseCommit !== mainCommit) {
-    throw new Error(
-      `${baseRef} records poryaaaa ${baseCommit}, but the main checkout records ${mainCommit}; shared-submodule mode requires matching revisions`,
-    );
-  }
-
   const repository = join(mainRoot, "external", "poryaaaa");
   let initialized = true;
   try {
@@ -150,7 +139,7 @@ async function prepareSharedSubmodule(
     initialized = false;
   }
   if (initialized) {
-    await validateSharedSubmodule(repository, baseCommit);
+    await validateSharedSubmodule(repository, mainCommit);
     return repository;
   }
 
@@ -164,17 +153,19 @@ async function prepareSharedSubmodule(
     if (!(error instanceof Deno.errors.NotFound)) throw error;
   }
   await requireSuccess(mainRoot, "git", [
+    "-c",
+    "submodule.external/poryaaaa.url=https://github.com/Sp3cker/poryaaaa-monorepo.git",
     "submodule",
     "update",
     "--init",
     "--recursive",
     "external/poryaaaa",
   ]);
-  await validateSharedSubmodule(repository, baseCommit);
+  await validateSharedSubmodule(repository, mainCommit);
   return repository;
 }
 
-async function createWorktree(
+export async function createWorktree(
   mainRoot: string,
   request: CreateRequest,
 ): Promise<void> {
@@ -218,8 +209,8 @@ async function createWorktree(
   } catch (error) {
     if (!(error instanceof Deno.errors.NotFound)) throw error;
   }
-
-  const sharedSubmodule = await prepareSharedSubmodule(mainRoot, baseRef);
+  const sharedSubmodule = await prepareSharedSubmodule(mainRoot);
+  const canonicalCommit = await mainIndexSubmoduleCommit(mainRoot);
   await requireSuccess(mainRoot, "git", [
     "-c",
     "submodule.recurse=false",
@@ -230,18 +221,28 @@ async function createWorktree(
     path,
     baseRef,
   ]);
+  await requireSuccess(path, "git", [
+    "update-index",
+    "--cacheinfo",
+    `160000,${canonicalCommit},external/poryaaaa`,
+  ]);
+  console.log(
+    `worktree: adopted canonical poryaaaa ${canonicalCommit} in new index`,
+  );
   console.log(`worktree: created ${path}`);
   console.log(`worktree: branch ${branch} from ${request.baseBranch}`);
   console.log(`worktree: builds use shared submodule ${sharedSubmodule}`);
 }
 
-try {
-  const request = parseRequest(Deno.args);
-  const mainRoot = await mainWorktreeRoot(Deno.cwd());
-  await createWorktree(mainRoot, request);
-} catch (error) {
-  console.error(
-    `worktree: ${error instanceof Error ? error.message : String(error)}`,
-  );
-  Deno.exit(1);
+if (import.meta.main) {
+  try {
+    const request = parseRequest(Deno.args);
+    const mainRoot = await mainWorktreeRoot(Deno.cwd());
+    await createWorktree(mainRoot, request);
+  } catch (error) {
+    console.error(
+      `worktree: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    Deno.exit(1);
+  }
 }
