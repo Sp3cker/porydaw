@@ -158,7 +158,7 @@ TestCase {
         verify(dialog !== null, "settings window exists")
         shell.shellPresenter.activate("edit.engine_settings")
         tryCompare(dialog, "visible", true, 3000)
-        for (let tab = 0; tab < 2; ++tab) {
+        for (let tab = 0; tab < 3; ++tab) {
             if (tab === 1 && !findChild(dialog, "settingsSongTab").enabled)
                 continue
             dialog.selectedTab = tab

@@ -10,6 +10,7 @@ DialogWindow {
     required property ShellPresenter presenter
     required property ApplicationSession applicationSession
     readonly property real unit: applicationSession.baseFontPx / 12
+    readonly property real engineTabWidth: 64 + 42 * (unit - 1)
     property int selectedTab: 0
     width: 560
     height: 580
@@ -63,13 +64,13 @@ DialogWindow {
         Row {
             id: tabBar
             objectName: "tab-bar"
-            width: 212 + 177 * (dialog.unit - 1)
+            width: 212 + 177 * (dialog.unit - 1) + dialog.engineTabWidth
             height: 22 + 12 * (dialog.unit - 1)
             Button {
                 id: engineTab
                 objectName: "settingsEngineTab"
                 height: tabBar.height
-                width: 64 + 42 * (dialog.unit - 1)
+                width: dialog.engineTabWidth
                 text: qsTr("Engine")
                 font: Qt.font(dialog.applicationSession.typographyFonts.body)
                 palette.active.buttonText: dialog.selectedTab === 0 ? dialog.colors.selectionText : dialog.colors.buttonText
@@ -86,7 +87,7 @@ DialogWindow {
                 id: songTab
                 objectName: "settingsSongTab"
                 height: tabBar.height
-                width: tabBar.width - engineTab.width
+                width: tabBar.width - engineTab.width - themeTab.width
                 text: dialog.store.songLabel.length > 0
                       ? qsTr("Song (%1)").arg(dialog.store.songLabel) : qsTr("Song")
                 font: Qt.font(dialog.applicationSession.typographyFonts.body)
@@ -97,6 +98,23 @@ DialogWindow {
                 onClicked: dialog.selectedTab = 1
                 background: Rectangle {
                     color: dialog.selectedTab === 1 ? dialog.colors.tabSelectedBackground
+                                                    : dialog.colors.tabBackground
+                    border.color: dialog.colors.outline
+                }
+            }
+            Button {
+                id: themeTab
+                objectName: "settingsThemeTab"
+                height: tabBar.height
+                width: dialog.engineTabWidth
+                text: qsTr("Theme")
+                font: Qt.font(dialog.applicationSession.typographyFonts.body)
+                palette.active.buttonText: dialog.selectedTab === 2 ? dialog.colors.selectionText : dialog.colors.buttonText
+                palette.inactive.buttonText: dialog.selectedTab === 2 ? dialog.colors.selectionText : dialog.colors.buttonText
+                palette.disabled.buttonText: dialog.colors.disabledText
+                onClicked: dialog.selectedTab = 2
+                background: Rectangle {
+                    color: dialog.selectedTab === 2 ? dialog.colors.tabSelectedBackground
                                                     : dialog.colors.tabBackground
                     border.color: dialog.colors.outline
                 }
@@ -133,129 +151,18 @@ DialogWindow {
             typography: dialog.applicationSession.typographyFonts
         }
     }
-    Column {
-        id: themeRow
+    Loader {
+        id: themePage
         parent: body
-        objectName: "themeModeGroup"
-        x: enginePage.x
-        y: contrastRow.y - height - dialog.unit * 4
-        width: enginePage.width
-        height: implicitHeight
-        spacing: dialog.unit * 4
-        visible: dialog.selectedTab === 0
-        Text {
-            width: parent.width
-            height: implicitHeight
-            text: qsTr("Theme:")
-            color: dialog.colors.windowText
-            font: Qt.font(dialog.applicationSession.typographyFonts.body)
-        }
-        RadioButton {
-            id: vanillaButton
-            objectName: "vanillaModeButton"
-            width: themeRow.width
-            text: qsTr("Vanilla")
-            font: Qt.font(dialog.applicationSession.typographyFonts.body)
-            checked: dialog.presenter.themeMode === "vanilla"
-            onClicked: dialog.presenter.previewThemeMode("vanilla")
-            // The label below carries the visible text in the themed windowText ink.
-            contentItem: Item {}
-            Text {
-                objectName: "vanillaModeLabel"
-                x: vanillaButton.leftPadding + vanillaButton.indicator.width + vanillaButton.spacing
-                y: (parent.height - height) / 2
-                width: parent.width - x
-                text: vanillaButton.text
-                color: dialog.colors.windowText
-                font: vanillaButton.font
-                elide: Text.ElideRight
-            }
-        }
-        RadioButton {
-            id: darkNeutralHighButton
-            objectName: "darkNeutralHighModeButton"
-            width: themeRow.width
-            text: qsTr("Dark Neutral High")
-            font: Qt.font(dialog.applicationSession.typographyFonts.body)
-            checked: dialog.presenter.themeMode === "dark-neutral-high"
-            onClicked: dialog.presenter.previewThemeMode("dark-neutral-high")
-            contentItem: Item {}
-            Text {
-                objectName: "darkNeutralHighModeLabel"
-                x: darkNeutralHighButton.leftPadding + darkNeutralHighButton.indicator.width + darkNeutralHighButton.spacing
-                y: (parent.height - height) / 2
-                width: parent.width - x
-                text: darkNeutralHighButton.text
-                color: dialog.colors.windowText
-                font: darkNeutralHighButton.font
-                elide: Text.ElideRight
-            }
-        }
-        RadioButton {
-            id: immaterialButton
-            objectName: "immaterialModeButton"
-            width: themeRow.width
-            text: qsTr("Immaterial")
-            font: Qt.font(dialog.applicationSession.typographyFonts.body)
-            checked: dialog.presenter.themeMode === "immaterial"
-            onClicked: dialog.presenter.previewThemeMode("immaterial")
-            contentItem: Item {}
-            Text {
-                objectName: "immaterialModeLabel"
-                x: immaterialButton.leftPadding + immaterialButton.indicator.width + immaterialButton.spacing
-                y: (parent.height - height) / 2
-                width: parent.width - x
-                text: immaterialButton.text
-                color: dialog.colors.windowText
-                font: immaterialButton.font
-                elide: Text.ElideRight
-            }
-        }
-    }
-    function syncThemeChecks() {
-        vanillaButton.checked = dialog.presenter.themeMode === "vanilla"
-        darkNeutralHighButton.checked = dialog.presenter.themeMode === "dark-neutral-high"
-        immaterialButton.checked = dialog.presenter.themeMode === "immaterial"
-        contrastSlider.value = dialog.presenter.gridLineContrast
-    }
-    Connections {
-        target: dialog.presenter
-        function onThemeModeChanged() { dialog.syncThemeChecks() }
-        function onGridLineContrastChanged() { contrastSlider.value = dialog.presenter.gridLineContrast }
-    }
-    Row {
-        id: contrastRow
-        parent: body
-        objectName: "gridContrastRow"
-        x: enginePage.x
-        y: enginePage.y + enginePage.height - height - dialog.unit * 2
-        width: enginePage.width
-        height: dialog.applicationSession.typographyFonts.body.pixelSize * 3
-        spacing: dialog.unit * 8
-        visible: dialog.selectedTab === 0
-        Text {
-            id: contrastLabel
-            width: enginePage.item ? enginePage.item.labelWidth : 0
-            height: parent.height
-            verticalAlignment: Text.AlignVCenter
-            text: qsTr("Grid contrast:")
-            color: dialog.colors.windowText
-            font: Qt.font(dialog.applicationSession.typographyFonts.body)
-        }
-        Slider {
-            id: contrastSlider
-            objectName: "gridLineContrastSlider"
-            width: contrastRow.width - contrastLabel.width - contrastRow.spacing
-            height: parent.height
-            from: 0
-            to: 100
-            stepSize: 1
-            value: dialog.presenter.gridLineContrast
-            Accessible.name: qsTr("Grid Line Contrast")
-            ToolTip.visible: hovered
-            ToolTip.text: qsTr("50 uses the theme default. Lower values soften grid lines; higher values strengthen them.")
-            font: Qt.font(dialog.applicationSession.typographyFonts.body)
-            onMoved: dialog.presenter.setGridLineContrast(Math.round(value))
+        x: 20; y: 31
+        width: dialog.width - 40
+        height: tabs.height - 20 * dialog.unit
+        active: dialog.visible
+        visible: dialog.selectedTab === 2
+        sourceComponent: ThemeSettingsPage {
+            objectName: "settingsThemePage"
+            unit: dialog.unit; presenter: dialog.presenter; colors: dialog.colors
+            typography: dialog.applicationSession.typographyFonts
         }
     }
     Item {

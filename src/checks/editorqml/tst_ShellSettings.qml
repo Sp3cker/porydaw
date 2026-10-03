@@ -55,8 +55,18 @@ TestCase {
         findChild(shell, "shellSettingsLoader").active = true
         return findChild(shell, "shellSettingsDialog")
     }
+    function selectThemeTab() {
+        const tab = findChild(dialog(), "settingsThemeTab")
+        verify(!!tab, "settings dialog exposes the Theme tab")
+        mouseClick(tab, tab.width / 2, tab.height / 2)
+        tryCompare(dialog(), "selectedTab", 2)
+    }
     function reference(profile, page) {
-        return JSON.parse(bootstrap.settingsReferenceJson(profile, page))
+        const baseline = JSON.parse(bootstrap.settingsReferenceJson(profile, page))
+        const tabBar = baseline.regions.find(function(entry) { return entry.name === "tab-bar" })
+        // The widget reference has two tabs; Theme adds one Engine-sized tab.
+        tabBar.w += 64 + 42 * (dialog().unit - 1)
+        return baseline
     }
     function checkRegion(baseline, name, child, tolerance) {
         const expected = baseline.regions.find(function(entry) { return entry.name === name })
@@ -185,8 +195,9 @@ TestCase {
 
         presenter.activate("edit.engine_settings")
         tryCompare(dialog(), "visible", true)
-        const slider = findChild(dialog(), "gridLineContrastSlider")
-        verify(!!slider, "the engine settings page exposes the contrast control")
+        selectThemeTab()
+        let slider = findChild(dialog(), "gridLineContrastSlider")
+        verify(!!slider, "the Theme settings page exposes the contrast control")
         tryCompare(slider, "value", 50)
         function dragContrast(targetX) {
             mousePress(slider, slider.handle.x + slider.handle.width / 2, slider.height / 2)
@@ -223,6 +234,8 @@ TestCase {
         compare(alpha(palette.gridLine), 255, "Cancel restores the committed strong grid")
         presenter.activate("edit.engine_settings")
         tryCompare(dialog(), "visible", true)
+        selectThemeTab()
+        slider = findChild(dialog(), "gridLineContrastSlider")
         tryCompare(slider, "value", 100)
         dragContrast(slider.handle.width / 2)
         tryCompare(presenter, "gridLineContrast", 0)
@@ -231,6 +244,8 @@ TestCase {
         compare(alpha(palette.gridLine), 255, "closing after another preview restores strong grid")
         presenter.activate("edit.engine_settings")
         tryCompare(dialog(), "visible", true)
+        selectThemeTab()
+        slider = findChild(dialog(), "gridLineContrastSlider")
         tryCompare(slider, "value", 100)
         compare(nativeSettings.int("theme.grid-line-contrast", -1), 100,
                 "reopening preserves the committed grid contrast")
@@ -244,6 +259,7 @@ TestCase {
         tryCompare(presenter, "themeMode", "vanilla")
         presenter.activate("edit.engine_settings")
         tryCompare(dialog(), "visible", true)
+        selectThemeTab()
         const group = findChild(dialog(), "themeModeGroup")
         verify(!!group, "theme picker group rides the mounted settings dialog")
         const vanilla = findChild(dialog(), "vanillaModeButton")
@@ -282,7 +298,8 @@ TestCase {
                 "cancelled preview leaves the persisted mode alone")
         presenter.activate("edit.engine_settings")
         tryCompare(dialog(), "visible", true)
-        tryCompare(vanilla, "checked", true)
+        selectThemeTab()
+        tryCompare(findChild(dialog(), "vanillaModeButton"), "checked", true)
         const darkAgain = findChild(dialog(), "darkNeutralHighModeButton")
         mouseClick(darkAgain, darkAgain.width / 2, darkAgain.height / 2)
         tryCompare(presenter, "themeMode", "dark-neutral-high")
@@ -298,6 +315,7 @@ TestCase {
         tryCompare(dialog(), "visible", false)
         presenter.activate("edit.engine_settings")
         tryCompare(dialog(), "visible", true)
+        selectThemeTab()
         tryCompare(findChild(dialog(), "darkNeutralHighModeButton"), "checked", true)
         compare(nativeSettings.string("theme.mode", ""), "dark-neutral-high",
                 "reopening preserves the committed dark mode")
@@ -311,6 +329,7 @@ TestCase {
         tryCompare(presenter, "themeMode", "vanilla")
         presenter.activate("edit.engine_settings")
         tryCompare(dialog(), "visible", true)
+        selectThemeTab()
         const content = dialog().contentItem
         function frame(item) {
             const mapped = item.mapToItem(content, 0, 0)

@@ -314,6 +314,7 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/settings/SettingsDialog.qml
         src/ui/shell/settings/EngineSettingsPage.qml
         src/ui/shell/settings/SongSettingsPage.qml
+        src/ui/shell/settings/ThemeSettingsPage.qml
         src/ui/shell/midiimport/MidiImportHost.qml
         src/ui/shell/midiimport/MidiImportWizard.qml
         src/ui/shell/midiimport/ImportAnalysisPage.qml
