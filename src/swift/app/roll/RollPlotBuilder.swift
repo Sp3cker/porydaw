@@ -242,6 +242,7 @@ struct RollPlotBuilder {
                 input.grid.axis.forEachGridLine(from: begin, to: end) { tick, isBar, _, _ in
                     let slot: RollPaletteSlot
                     switch input.grid.beatLineWeight(tick, isBar: isBar, camera: camera) {
+                    case nil: return
                     case .bar: slot = .gridBar
                     case .beat: slot = .gridBeat
                     case .beatFine: slot = .gridBeatFine

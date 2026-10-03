@@ -111,8 +111,16 @@ struct RollRulerBuilder {
         var usedBeatFont = false
         var usedBoldFont = false
         var current: GridSegment?
-        var drawBeatTicks = false
         var showBeatLabels = false
+        let beatTop = tickCenter - metrics.spaceHalf
+        // Beat ticks follow the roll's beat lines; a demoted beat shrinks to a sub-grid tick.
+        func emitBeatTick(_ tick: Tick, x: Double) {
+            switch input.grid.beatLineWeight(tick, isBar: false, camera: camera) {
+            case nil: return
+            case .offGrid: emitClipped(x - 0.5, tickBottom, 1, 1, tickInk)
+            case .bar, .beat, .beatFine: emitClipped(x - 0.5, beatTop, 1, tickBottom - beatTop, tickInk)
+            }
+        }
         var lastLabelRight = camera.contentTickX(tick: Double(begin), dpr: dpr) - soX - labelGap
         axis.forEachGridLine(from: begin, to: end) { tick, isBar, bar, beat in
             let segment = axis.segmentAt(tick)
@@ -121,25 +129,19 @@ struct RollRulerBuilder {
                 let beatWidth = Double(segment.beatTicks) * ppt
                 let beatAdvance = typography.beatAdvance(
                     bar: maxBar, beat: Int(segment.beatsPerBar))
-                drawBeatTicks = input.grid.drawsBeatTicksIn(segment, camera: camera)
                 showBeatLabels =
                     beatWidth
                     >= metrics.rulerBeatLabelZoomFactor
                     * (barCap + 2 * labelGap + metrics.spaceTwo + beatAdvance)
             }
             let x = camera.viewX(tick: Double(tick), dpr: dpr)
-            let beatTop = tickCenter - metrics.spaceHalf
             if !isBar && !showBeatLabels {
-                if drawBeatTicks {
-                    emitClipped(x - 0.5, beatTop, 1, tickBottom - beatTop, tickInk)
-                }
+                emitBeatTick(tick, x: x)
                 return
             }
             let labelX = x + barCap
             if labelX < lastLabelRight + labelGap {
-                if !isBar && drawBeatTicks {
-                    emitClipped(x - 0.5, beatTop, 1, tickBottom - beatTop, tickInk)
-                }
+                if !isBar { emitBeatTick(tick, x: x) }
                 return
             }
             let text =
@@ -154,7 +156,7 @@ struct RollRulerBuilder {
                 emitClipped(x - 0.5, top, 1, tickBottom - top, tickInk)
                 emitClipped(x, top - 0.5, barCap, 1, tickInk)
             } else {
-                emitClipped(x - 0.5, beatTop, 1, tickBottom - beatTop, tickInk)
+                emitBeatTick(tick, x: x)
             }
             let labelY = markerHeight + rulerAscent - (isBar ? rulerAscent : beatAscent)
             let labelH = isBar ? rulerHeight : beatHeight

@@ -8,7 +8,8 @@ private let bucketSumID = "eventviews/ViewBucketsGridTest::bucketSum"
 private let clockLatticeID = "eventviews/ViewBucketsGridTest::clockLatticeCrossesSignatureSeam"
 private let snapLadderID = "eventviews/ViewBucketsGridTest::snapLadder"
 private let linesSnappableID = "eventviews/ViewBucketsGridTest::gridLinesSnappable"
-private let fixedVisibilityID = "swiftcore/RollGrid::fixedGridPaintsUntilLinesTouch"
+private let fixedFallbackID = "swiftcore/RollGrid::fixedGridFallsBackToCoarserLines"
+private let finerAddsLinesID = "swiftcore/RollGrid::finerSelectionKeepsCoarserLines"
 private let snapLinesID = "swiftcore/RollGrid::fixedGridLinesMatchSnap"
 
 @MainActor
@@ -18,7 +19,8 @@ func runEventViewsRemapBucketsParityChecks(_ report: CheckReport) {
     clockParityLattice(report)
     gridSnapLadder(report)
     gridLinesSnappable(report)
-    fixedGridPaintsUntilLinesTouch(report)
+    fixedGridFallsBackToCoarserLines(report)
+    finerSelectionKeepsCoarserLines(report)
     fixedGridLinesMatchSnap(report)
 }
 
@@ -371,7 +373,7 @@ private func gridLinesSnappable(_ report: CheckReport) {
 }
 
 @MainActor
-private func fixedGridPaintsUntilLinesTouch(_ report: CheckReport) {
+private func fixedGridFallsBackToCoarserLines(_ report: CheckReport) {
     let metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 640, height: 320)
     let stroke = metrics.gridLineStroke
     var camera = EditorCamera(ticksPerBeat: 24, lengthTicks: 120, viewportWidth: 640,
@@ -384,48 +386,104 @@ private func fixedGridPaintsUntilLinesTouch(_ report: CheckReport) {
         }
         return result
     }
-    let segment = grid.axis.segmentAt(0)
+    func offBeat(_ stride: Tick) -> [Tick] {
+        Array(Swift.stride(from: Tick(0), to: 120, by: Int(stride))).filter { $0 % 24 != 0 }
+    }
     grid.setSelection(.musical(8))
     _ = camera.setTimeZoom(metrics.autoGridMinCell)
     report.expect(
-        lines() == [12, 36, 60, 84, 108], cppID: fixedVisibilityID,
+        lines() == [12, 36, 60, 84, 108], cppID: fixedFallbackID,
         message: "fixed eighth sub-grid paints below the auto cell size")
     // A 1/32 cell is 3 ticks: spacing reaches one stroke at 8 strokes per quarter.
     grid.setSelection(.musical(32))
     _ = camera.setTimeZoom(8 * stroke)
     report.expect(
-        !lines().isEmpty, cppID: fixedVisibilityID,
+        lines() == offBeat(3), cppID: fixedFallbackID,
         message: "fixed 1/32 sub-grid paints at one stroke of spacing")
     _ = camera.setTimeZoom(8 * stroke - 1)
     report.expect(
-        lines().isEmpty, cppID: fixedVisibilityID,
-        message: "fixed 1/32 sub-grid suppresses once lines would touch")
+        lines() == offBeat(6), cppID: fixedFallbackID,
+        message: "fixed 1/32 paints the 1/16 snap points once its own lines would touch")
     report.expectEqual(
         expected: 3, actual: grid.snapTicksAt(0, camera: camera),
-        cppID: fixedVisibilityID, what: "fixed snap ignores paint suppression")
+        cppID: fixedFallbackID, what: "fixed snap keeps the selected stride")
     report.expectEqual(expected: 36, actual: grid.snapTickDown(37, camera: camera),
-        cppID: fixedVisibilityID, what: "fixed snap ignores paint suppression")
+        cppID: fixedFallbackID, what: "fixed snap keeps the selected stride")
     grid.setSelection(.clock)
     let clock = grid.snapTicksAt(0, camera: camera)
     _ = camera.setTimeZoom(24 * stroke)
     report.expect(
-        !lines().isEmpty, cppID: fixedVisibilityID,
+        lines() == offBeat(1), cppID: fixedFallbackID,
         message: "clock sub-grid paints at one stroke of spacing")
     _ = camera.setTimeZoom(24 * stroke - 1)
     report.expect(
-        lines().isEmpty, cppID: fixedVisibilityID,
-        message: "clock sub-grid suppresses once lines would touch")
+        lines() == offBeat(3), cppID: fixedFallbackID,
+        message: "clock paints the finest musical snap points once its own lines would touch")
     report.expectEqual(expected: clock, actual: grid.snapTicksAt(0, camera: camera),
-        cppID: fixedVisibilityID, what: "clock snap ignores paint suppression")
+        cppID: fixedFallbackID, what: "clock snap keeps the clock stride")
     _ = camera.setTimeZoom(metrics.detailMinPxPerBeat - 1)
     grid.setSelection(.musical(4))
     report.expect(
-        grid.drawsBeatTicksIn(segment, camera: camera), cppID: fixedVisibilityID,
-        message: "fixed grid keeps ruler beat ticks below the auto detail zoom")
+        grid.beatLineWeight(24, isBar: false, camera: camera) == .beat, cppID: fixedFallbackID,
+        message: "fixed grid keeps beat lines below the auto detail zoom")
     grid.setSelection(.auto)
     report.expect(
-        !grid.drawsBeatTicksIn(segment, camera: camera), cppID: fixedVisibilityID,
-        message: "auto grid hides ruler beat ticks below the detail zoom")
+        grid.beatLineWeight(24, isBar: false, camera: camera) == nil, cppID: fixedFallbackID,
+        message: "auto grid hides beat lines below the detail zoom")
+    report.expect(
+        grid.beatLineWeight(96, isBar: true, camera: camera) == .bar, cppID: fixedFallbackID,
+        message: "bar lines paint at every zoom")
+}
+
+// Each finer ladder rung repaints every coarser line at the same weight, and paints
+// only its own snap points, at every zoom, meter, feel and pixel ratio.
+@MainActor
+private func finerSelectionKeepsCoarserLines(_ report: CheckReport) {
+    let meters: [(numerator: UInt8, denomPow2: UInt8)] = [(4, 2), (3, 2), (6, 3), (2, 1)]
+    for meter in meters {
+        let axis = TimeAxis(
+            map: TimeMap(
+                ticksPerBeat: 24, lengthTicks: 192,
+                timeSigs: [
+                    TimeSigPoint(tick: 0, numerator: meter.numerator, denomPow2: meter.denomPow2)
+                ]))
+        for dpr in [1.0, 2.0] {
+            let metrics = GridMetrics(baseFontPx: 13, dpr: dpr, width: 640, height: 320, timeAxis: axis)
+            for feel in [GridFeel.straight, .triplet] {
+                for zoom in [4.0, 5, 8, 16, 35, 100] {
+                    var camera = EditorCamera(
+                        ticksPerBeat: 24, lengthTicks: 192, viewportWidth: 640,
+                        rollHeight: 320, limits: GridCameraPolicy.limits(baseFontPx: 13))
+                    _ = camera.setTimeZoom(zoom)
+                    var grid = RollGrid(axis: axis, clockTicks: 1, metrics: metrics)
+                    grid.setFeel(feel)
+                    var coarser: (name: String, lines: [Tick: Int]) = ("", [:])
+                    for selection in grid.selections where selection != .auto {
+                        grid.setSelection(selection)
+                        var lines: [Tick: Int] = [:]
+                        grid.forEachSubdivision(from: 0, to: 192, camera: camera) { lines[$0] = $1 }
+                        axis.forEachGridLine(from: 0, to: 192) { tick, isBar, _, _ in
+                            switch grid.beatLineWeight(tick, isBar: isBar, camera: camera) {
+                            case .bar, .beat, .beatFine: lines[tick] = 0
+                            case .offGrid, nil: break
+                            }
+                        }
+                        let name =
+                            "\(meter.numerator)/\(1 << meter.denomPow2) \(feel) "
+                            + "dpr \(dpr) zoom \(zoom) \(coarser.name) -> \(selection)"
+                        report.expect(
+                            coarser.lines.allSatisfy { lines[$0.key] == $0.value },
+                            cppID: finerAddsLinesID,
+                            message: "\(name): every coarser line still paints at its weight")
+                        report.expect(
+                            lines.keys.allSatisfy { grid.snapTick(Double($0), camera: camera) == $0 },
+                            cppID: finerAddsLinesID, message: "\(name): every painted line snaps")
+                        coarser = ("\(selection)", lines)
+                    }
+                }
+            }
+        }
+    }
 }
 
 // 6/8 eighth beats under quarter (wider) and triplet-eighth (non-dividing) grids;
@@ -475,6 +533,7 @@ private func fixedGridLinesMatchSnap(_ report: CheckReport) {
             switch grid.beatLineWeight(tick, isBar: isBar, camera: camera) {
             case .offGrid: offGrid.append(tick)
             case .bar, .beat, .beatFine: snapped.append(tick)
+            case nil: break
             }
         }
         report.expect(

@@ -68,6 +68,7 @@ extension DrawerStaticsContent {
         axis.forEachGridLine(from: begin, to: end) { tick, isBar, _, _ in
             let argb: UInt32
             switch grid.beatLineWeight(tick, isBar: isBar, camera: camera) {
+            case nil: return
             case .bar: argb = bar
             case .beat: argb = beat
             case .beatFine: argb = fine
