@@ -1,52 +1,11 @@
 import QtQuick
 import QtTest
-import PorydawApp
-import ShellQmlCheck 1.0
-import Porydaw.Ui
 import "NativeWait.js" as NativeWait
 import "RollNoteFaces.js" as RollNoteFaces
 
-TestCase {
+ShellWindowSupport {
     id: testCase
     name: "ShellGridInput"
-    when: windowShown
-    width: 960
-    height: 640
-    visible: true
-
-    property alias bootstrap: gridInputBootstrap
-    property alias shellComponent: gridInputShellComponent
-    property var shell: null
-    readonly property var settings: bootstrap.preferences
-
-    ShellQmlBootstrap { id: gridInputBootstrap }
-
-    Component { id: gridInputShellComponent; ShellWindow { width: 960; height: 640; visible: true } }
-
-
-    function cleanup() {
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                    || !shell.shellPresenter.sceneActive
-            }, 5000), "the close-all walk reaches the dirty gate or completes")
-            if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.closeReady
-            }, 5000), "teardown waits for scene destruction and grid detach")
-        }
-        shell.destroy()
-        shell = null
-        wait(0)
-    }
-
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
 
     function openRoute101() {
         if (!shell) {
@@ -69,18 +28,6 @@ TestCase {
         waitForGridFrame(selectedSurface())
         return session
     }
-
-    function selectedSurface() {
-        if (!shell || !shell.sceneLoader || shell.sceneLoader.status !== Loader.Ready)
-            return null
-        var tabs = shell.shellPresenter.session.songTabs
-        var page = findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId)
-        if (!page)
-            return null
-        return findChild(page, "swiftRollOverlay")
-    }
-
-    function gridNotes(grid) { return JSON.parse(grid.fetchNoteSummary()) }
 
     function noteById(grid, id) {
         var list = gridNotes(grid)
@@ -141,44 +88,6 @@ TestCase {
 
     function selectedNotes(grid) {
         return gridNotes(grid).filter(function(n) { return n.selected })
-    }
-
-    function pointFor(grid, tick, pitch) {
-        var ppt = grid.beatWidth / grid.ticksPerBeat
-        return {
-            x: tick * ppt - grid.cameraScrollX,
-            y: (127 - pitch + 0.5) * grid.rowHeight - grid.cameraScrollY
-        }
-    }
-
-    function freeLane(grid, surface, spanSnaps) {
-        var snap = grid.snapTicks
-        var plot = findChild(surface, "timelineQuickRollPlot")
-        if (!plot || plot.width <= 0 || plot.height <= 0)
-            return null
-        var ppt = grid.beatWidth / grid.ticksPerBeat
-        var rowH = grid.rowHeight
-        var scrollX = grid.cameraScrollX
-        var scrollY = grid.cameraScrollY
-        var firstTick = Math.ceil(((scrollX + 24) / ppt) / snap) * snap
-        var lastTick = Math.floor(((scrollX + plot.width - 24) / ppt) / snap) * snap
-        var firstRow = Math.min(127, Math.max(0, Math.ceil(scrollY / rowH) + 2))
-        var lastRow = Math.min(127, Math.max(0, Math.floor((scrollY + plot.height) / rowH) - 2))
-        var current = gridNotes(grid)
-        var tick = Math.max(0, firstTick)
-        if (tick + spanSnaps * snap > lastTick)
-            return null
-        for (var row = firstRow; row <= lastRow; ++row) {
-            var pitch = 127 - row
-            // Drawing needs an untouched pitch row: a neighboring fixture note
-            // can capture the press through its resize grip even without overlap.
-            var occupied = current.some(function(note) {
-                return note.track === grid.trackIndex && note.pitch === pitch
-            })
-            if (!occupied)
-                return { tick: tick, pitch: pitch }
-        }
-        return null
     }
 
     function noteBand(roll, surface, noteId) {

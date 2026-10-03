@@ -92,26 +92,31 @@ The persistent window owns the Swift session and close lifecycle. Shell chrome
 One asynchronous Loader creates the workspace: song list, tabs/editor and polyphony.
 Late-mounted views read current session state; closing cancels pending incubation.
 Find Song becomes available once its workspace search field exists. The startup
-lane gates first-frame lifecycle and late-mounted song rendering; early command
-use and closing during workspace incubation are not required startup gates.
+lane gates first-frame lifecycle, late-mounted song rendering, and a real pointer
+edit followed by Undo on the restored song.
 
 ### Startup profiling
 
-Measure the Release process's submitted window, chrome or workspace frame:
+Measure the Release process's submitted window, chrome, workspace or editable-song frame:
 
 ```bash
 deno task build:app --release
 deno task bench:startup --project /path/to/project --song mus_title --check
 deno task bench:startup --until chrome-frame
 deno task bench:startup --until workspace-frame
+deno task bench:startup --until editor-frame
 ```
 
 The monotonic interval starts immediately before process creation and ends at the
 selected native render-thread `QQuickWindow::frameSwapped` marker. `first-frame`
 (the default) measures the initial window; `chrome-frame` and `workspace-frame`
 measure a submitted frame synchronized after the respective UI has mounted.
-These are queued presentations, not physical display scanout or an editable/audio-ready
-song. Asynchronous incubation spreads GUI-thread creation across frames; it does not
+These are queued presentations, not physical display scanout. The first three
+endpoints do not establish editable-song or audio readiness. `editor-frame`
+requires a visible selected loaded piano roll, a configured positive viewport,
+a nonzero display revision and an applied document revision, then a synchronized
+submitted frame; it does not establish audible playback.
+Asynchronous incubation spreads GUI-thread creation across frames; it does not
 run Swift presenters on a background thread.
 The first run is reported separately, without claiming a cold OS cache; `--check`
 requires every launch, including that first run, to stay below `--budget-ms`
@@ -122,6 +127,9 @@ The three bundled Atkinson faces ship as plain files beside the shell QML
 (`Contents/Resources` in the macOS bundle, the executable's directory elsewhere).
 `FontLoader` registers them by local path, so Qt uses file-backed registration on
 every platform instead of copying and parsing compressed qrc data.
+After all bundled fonts are registered, an engine-owned worker warms Qt's font
+family database and joins before GUI teardown. WAV options, progress and error
+windows mount only on first use, then remain available for subsequent requests.
 First-post-link launches can still exceed 300 ms: ordinary-launch improvements
 are not a cold-start guarantee. The [startup audit](docs/old/first-frame-audio-startup.md)
 records retained changes, rejected experiments, and verification.

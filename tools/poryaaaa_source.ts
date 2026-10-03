@@ -27,7 +27,7 @@ async function exists(path: string): Promise<boolean> {
 async function gitOutput(cwd: string, args: string[]): Promise<string> {
   const result = await new Deno.Command("git", {
     cwd,
-    args,
+    args: ["--no-optional-locks", ...args],
     stdout: "piped",
     stderr: "piped",
   }).output();
@@ -86,24 +86,37 @@ async function validateDependencyCheckout(
 }
 
 async function resolvePoryaaaaPackage(sourceRoot: string): Promise<string> {
-  const expectedCommit = await recordedSubmoduleCommit(sourceRoot);
-  const localRepository = join(sourceRoot, "external", "poryaaaa");
-  const localPackage = join(sourceRoot, packageRelativePath);
-  if (await exists(join(localPackage, packageSentinel))) {
-    await validateDependencyCheckout(localRepository, expectedCommit, "local");
-    return localPackage;
-  }
-
-  const mainRoot = await mainWorktreeRoot(sourceRoot);
-  const sharedRepository = join(mainRoot, "external", "poryaaaa");
-  const sharedPackage = join(mainRoot, packageRelativePath);
-  if (!(await exists(join(sharedPackage, packageSentinel)))) {
+  const mainRoot = await Deno.realPath(await mainWorktreeRoot(sourceRoot));
+  try {
+    const expectedCommit = await recordedSubmoduleCommit(mainRoot);
+    const canonicalRepository = join(mainRoot, "external", "poryaaaa");
+    const canonicalPackage = join(mainRoot, packageRelativePath);
+    if (!(await exists(join(canonicalPackage, packageSentinel)))) {
+      throw new Error(`package sentinel is missing in ${canonicalPackage}`);
+    }
+    if (await Deno.realPath(canonicalPackage) !== canonicalPackage) {
+      throw new Error(`canonical package must not use a symlink target`);
+    }
+    const repositoryRoot = await gitOutput(canonicalRepository, [
+      "rev-parse",
+      "--show-toplevel",
+    ]);
+    if (resolve(repositoryRoot) !== canonicalRepository) {
+      throw new Error(`${canonicalRepository} is not a dependency checkout`);
+    }
+    await validateDependencyCheckout(
+      canonicalRepository,
+      expectedCommit,
+      "canonical",
+    );
+    return canonicalPackage;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `poryaaaa is unavailable: initialize external/poryaaaa in the main checkout ${mainRoot}`,
+      `Canonical poryaaaa sync required in main checkout ${mainRoot}: ${detail}`,
+      { cause: error },
     );
   }
-  await validateDependencyCheckout(sharedRepository, expectedCommit, "shared");
-  return sharedPackage;
 }
 
 async function cachedPoryaaaaPackage(

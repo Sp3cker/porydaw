@@ -173,13 +173,17 @@ TestCase {
     function auditWavExport(context) {
         const presenter = shell.shellPresenter
         const model = presenter.session.wavExportPresenter()
-        const dialog = findChild(shell, "shellWavExportDialog")
-        verify(dialog !== null, "WAV export options window exists")
-        presenter.activate("file.export_wav")
+        model.open()
+        let dialog = null
+        verify(waitForNative(function() {
+            dialog = findChild(shell, "shellWavExportDialog")
+            return dialog !== null && dialog.visible
+        }, 3000), "requesting WAV export presents its actual options window")
         tryCompare(dialog, "visible", true, 3000)
         record(context + " WAV options", Audit.audit(dialog.contentItem, grab))
         model.rejectOptions()
-        presenter.activate("file.export_wav")
+        model.open()
+        tryCompare(dialog, "visible", true, 3000)
         model.setLoopCount(99)
         const picker = findChild(shell, "shellWavExportFileDialog")
         picker.selectedFile = "file://" + bootstrap.projectRoot + "/sound/contrast.wav"
@@ -187,7 +191,11 @@ TestCase {
         verify(waitForNative(function() { return picker.visible }, 5000),
                "contrast audit save picker opens with its destination")
         picker.accept()
-        const progress = findChild(shell, "shellWavExportProgress")
+        let progress = null
+        verify(waitForNative(function() {
+            progress = findChild(shell, "shellWavExportProgress")
+            return progress !== null && progress.visible
+        }, 3000), "accepting WAV export presents its actual progress window")
         tryCompare(progress, "visible", true, 3000)
         record(context + " WAV progress", Audit.audit(progress.contentItem, grab))
         model.cancelRender()

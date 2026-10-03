@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawBankLease
 import PorydawProject
 import QtBridge
 import PorydawAppAudio
@@ -31,6 +32,11 @@ extension ApplicationSession {
 
     private func adoptPreparedAudio(_ owner: NativeAudio) {
         guard !isDisposed, !Task.isCancelled else { return }
+        let traceStartup = pd_startup_trace_enabled()
+        if traceStartup { pd_startup_trace_mark("prepared-audio-adoption-begin") }
+        defer {
+            if traceStartup { pd_startup_trace_mark("prepared-audio-adoption-end") }
+        }
         adoptAudio(owner)
     }
 

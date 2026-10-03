@@ -47,7 +47,10 @@ TestCase {
     function openOptions() {
         const presenter = shell.shellPresenter
         presenter.activate("file.export_wav")
-        tryCompare(child("shellWavExportDialog"), "visible", true, 3000)
+        verify(waitForNative(function() {
+            const dialog = child("shellWavExportDialog")
+            return dialog !== null && dialog.visible
+        }, 3000), "the requested export options window is created and visible")
         return exportModel()
     }
     function choose(path, whilePicking) {
@@ -307,8 +310,10 @@ TestCase {
         model.setLoopCount(99)
         const path = rootPath + "/sound/cancel.wav"
         choose(path)
-        verify(waitForNative(function() { return model.progress > 0 }, 20000),
-               "the render streams nonzero progress")
+        verify(waitForNative(function() {
+            const progressWindow = child("shellWavExportProgress")
+            return progressWindow !== null && progressWindow.visible && model.progress > 0
+        }, 20000), "the requested render window is visible and streams nonzero progress")
         verify(probe.exists(path), "the file exists while streaming; failure="
                + model.failureMessage + ", status=" + presenter.statusText
                + ", active=" + model.active + ", rendering=" + model.rendering)
@@ -336,10 +341,11 @@ TestCase {
         model.setLoopCount(99)
         const second = rootPath + "/sound/cancel-escape.wav"
         choose(second)
-        const progressWindow = child("shellWavExportProgress")
         verify(waitForNative(function() {
-            return progressWindow.visible && model.progress > 0
+            const progressWindow = child("shellWavExportProgress")
+            return progressWindow !== null && progressWindow.visible && model.progress > 0
         }, 10000), "the second render is visible and streaming before Escape")
+        const progressWindow = child("shellWavExportProgress")
         progressWindow.requestActivate()
         keyClick(Qt.Key_Escape)
         settleRender()
@@ -356,10 +362,12 @@ TestCase {
         const path = rootPath + "/missing-dir/export.wav"
         choose(path)
         settleRender()
-        const error = child("shellWavExportErrorDialog")
         verify(model.failureMessage.length > 0, "the refused render publishes its error")
-        verify(waitForNative(function() { return error.visible }, 5000),
-               "write failure opens the export error dialog")
+        verify(waitForNative(function() {
+            const error = child("shellWavExportErrorDialog")
+            return error !== null && error.visible
+        }, 5000), "write failure opens the export error dialog")
+        const error = child("shellWavExportErrorDialog")
         compare(error.title, "Export WAV", "the export error retains its title")
         verify(child("wavExportErrorText").text.indexOf("Cannot write " + path + ": ") === 0,
                "the refusal names the unwritable output")

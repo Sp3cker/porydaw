@@ -19,24 +19,36 @@ Item {
 
     onExportActiveChanged: ++windowRoot.actionRevision
     onOptionsVisibleChanged: {
-        if (optionsVisible)
-            shellWavExportDialog.present()
-        else
-            shellWavExportDialog.close()
+        if (optionsVisible && !optionsLoader.active)
+            optionsLoader.active = true
+        else if (optionsLoader.status === Loader.Ready && optionsLoader.item) {
+            if (optionsVisible)
+                optionsLoader.item.present()
+            else
+                optionsLoader.item.close()
+        }
     }
     onRenderingChanged: {
-        if (rendering)
-            shellWavExportProgress.present()
-        else
-            shellWavExportProgress.close()
+        if (rendering && !progressLoader.active)
+            progressLoader.active = true
+        else if (progressLoader.status === Loader.Ready && progressLoader.item) {
+            if (rendering)
+                progressLoader.item.present()
+            else
+                progressLoader.item.close()
+        }
     }
     onChoosingChanged: {
         if (choosing)
             shellWavExportFileDialog.open()
     }
     onFailureRevisionChanged: {
-        if (failureRevision > 0)
-            shellWavExportErrorDialog.present()
+        if (failureRevision <= 0)
+            return
+        if (!errorLoader.active)
+            errorLoader.active = true
+        else if (errorLoader.status === Loader.Ready && errorLoader.item)
+            errorLoader.item.present()
     }
 
     FontMetrics {
@@ -44,115 +56,124 @@ Item {
         font: Qt.font(surface.typography.body)
     }
 
-    DialogWindow {
-        id: shellWavExportDialog
-        objectName: "shellWavExportDialog"
-        transientParent: surface.windowRoot
-        colors: surface.colors
-        title: qsTr("Export WAV")
-        visible: false
-        width: metrics.averageCharacterWidth * 47
-        height: metrics.height * 13
-        font: Qt.font(surface.typography.body)
-        onClosing: close => {
-            if (surface.presenter.optionsVisible) {
-                close.accepted = false
-                surface.presenter.rejectOptions()
-            }
+    // Keep first-use dialogs mounted for subsequent requests, like shell chrome.
+    Loader {
+        id: optionsLoader
+        active: false
+        onLoaded: {
+            if (status === Loader.Ready && item && surface.optionsVisible)
+                item.present()
         }
-
-        ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: metrics.averageCharacterWidth
-            spacing: metrics.height / 3
-            GridLayout {
-                columns: 2
-                Layout.fillWidth: true
-                columnSpacing: metrics.averageCharacterWidth
-                rowSpacing: metrics.height / 3
-                Label {
-                    text: qsTr("Sample rate:")
-                    color: surface.colors.windowText
-                }
-                ComboBox {
-                    id: wavExportRate
-                    objectName: "wavExportRate"
-                    Layout.fillWidth: true
-                    model: surface.presenter.rateLabels
-                    currentIndex: surface.presenter.rateIndex
-                    onActivated: index => surface.presenter.setRateIndex(index)
-                }
-                Label {
-                    text: qsTr("Loop count:")
-                    color: surface.colors.windowText
-                    visible: surface.presenter.hasLoop
-                }
-                SpinBox {
-                    id: wavExportLoopCount
-                    objectName: "wavExportLoopCount"
-                    visible: surface.presenter.hasLoop
-                    from: 1
-                    to: 99
-                    value: surface.presenter.loopCount
-                    onValueModified: surface.presenter.setLoopCount(value)
-                }
-                Label {
-                    text: qsTr("Fadeout:")
-                    color: surface.colors.windowText
-                    visible: surface.presenter.hasLoop
-                }
-                SpinBox {
-                    id: wavExportFade
-                    objectName: "wavExportFade"
-                    visible: surface.presenter.hasLoop
-                    from: 0
-                    to: 600
-                    stepSize: 10
-                    value: surface.presenter.fadeTenths
-                    textFromValue: value => (value / 10).toFixed(1) + " s"
-                    valueFromText: text => Math.round(parseFloat(text) * 10)
-                    onValueModified: surface.presenter.setFadeTenths(value)
-                }
-                Label {
-                    objectName: "wavExportTailLabel"
-                    text: qsTr("Tail (no loop markers):")
-                    color: surface.colors.windowText
-                    visible: !surface.presenter.hasLoop
-                }
-                SpinBox {
-                    id: wavExportTail
-                    objectName: "wavExportTail"
-                    visible: !surface.presenter.hasLoop
-                    from: 0
-                    to: 600
-                    stepSize: 10
-                    value: surface.presenter.tailTenths
-                    textFromValue: value => (value / 10).toFixed(1) + " s"
-                    valueFromText: text => Math.round(parseFloat(text) * 10)
-                    onValueModified: surface.presenter.setTailTenths(value)
-                }
-                Label {
-                    text: qsTr("Duration:")
-                    color: surface.colors.windowText
-                }
-                Label {
-                    objectName: "wavExportDuration"
-                    text: surface.presenter.durationText
-                    color: surface.colors.windowText
+        sourceComponent: DialogWindow {
+            id: shellWavExportDialog
+            objectName: "shellWavExportDialog"
+            transientParent: surface.windowRoot
+            colors: surface.colors
+            title: qsTr("Export WAV")
+            visible: false
+            width: metrics.averageCharacterWidth * 47
+            height: metrics.height * 13
+            font: Qt.font(surface.typography.body)
+            onClosing: close => {
+                if (surface.presenter.optionsVisible) {
+                    close.accepted = false
+                    surface.presenter.rejectOptions()
                 }
             }
-            Item { Layout.fillHeight: true }
-            RowLayout {
-                Layout.alignment: Qt.AlignRight
-                Button {
-                    objectName: "wavExportCancel"
-                    text: qsTr("Cancel")
-                    onClicked: surface.presenter.rejectOptions()
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: metrics.averageCharacterWidth
+                spacing: metrics.height / 3
+                GridLayout {
+                    columns: 2
+                    Layout.fillWidth: true
+                    columnSpacing: metrics.averageCharacterWidth
+                    rowSpacing: metrics.height / 3
+                    Label {
+                        text: qsTr("Sample rate:")
+                        color: surface.colors.windowText
+                    }
+                    ComboBox {
+                        id: wavExportRate
+                        objectName: "wavExportRate"
+                        Layout.fillWidth: true
+                        model: surface.presenter.rateLabels
+                        currentIndex: surface.presenter.rateIndex
+                        onActivated: index => surface.presenter.setRateIndex(index)
+                    }
+                    Label {
+                        text: qsTr("Loop count:")
+                        color: surface.colors.windowText
+                        visible: surface.presenter.hasLoop
+                    }
+                    SpinBox {
+                        id: wavExportLoopCount
+                        objectName: "wavExportLoopCount"
+                        visible: surface.presenter.hasLoop
+                        from: 1
+                        to: 99
+                        value: surface.presenter.loopCount
+                        onValueModified: surface.presenter.setLoopCount(value)
+                    }
+                    Label {
+                        text: qsTr("Fadeout:")
+                        color: surface.colors.windowText
+                        visible: surface.presenter.hasLoop
+                    }
+                    SpinBox {
+                        id: wavExportFade
+                        objectName: "wavExportFade"
+                        visible: surface.presenter.hasLoop
+                        from: 0
+                        to: 600
+                        stepSize: 10
+                        value: surface.presenter.fadeTenths
+                        textFromValue: value => (value / 10).toFixed(1) + " s"
+                        valueFromText: text => Math.round(parseFloat(text) * 10)
+                        onValueModified: surface.presenter.setFadeTenths(value)
+                    }
+                    Label {
+                        objectName: "wavExportTailLabel"
+                        text: qsTr("Tail (no loop markers):")
+                        color: surface.colors.windowText
+                        visible: !surface.presenter.hasLoop
+                    }
+                    SpinBox {
+                        id: wavExportTail
+                        objectName: "wavExportTail"
+                        visible: !surface.presenter.hasLoop
+                        from: 0
+                        to: 600
+                        stepSize: 10
+                        value: surface.presenter.tailTenths
+                        textFromValue: value => (value / 10).toFixed(1) + " s"
+                        valueFromText: text => Math.round(parseFloat(text) * 10)
+                        onValueModified: surface.presenter.setTailTenths(value)
+                    }
+                    Label {
+                        text: qsTr("Duration:")
+                        color: surface.colors.windowText
+                    }
+                    Label {
+                        objectName: "wavExportDuration"
+                        text: surface.presenter.durationText
+                        color: surface.colors.windowText
+                    }
                 }
-                Button {
-                    objectName: "wavExportOK"
-                    text: qsTr("OK")
-                    onClicked: surface.presenter.acceptOptions()
+                Item { Layout.fillHeight: true }
+                RowLayout {
+                    Layout.alignment: Qt.AlignRight
+                    Button {
+                        objectName: "wavExportCancel"
+                        text: qsTr("Cancel")
+                        onClicked: surface.presenter.rejectOptions()
+                    }
+                    Button {
+                        objectName: "wavExportOK"
+                        text: qsTr("OK")
+                        onClicked: surface.presenter.acceptOptions()
+                    }
                 }
             }
         }
@@ -172,76 +193,92 @@ Item {
         onRejected: surface.presenter.rejectPath()
     }
 
-    DialogWindow {
-        id: shellWavExportProgress
-        objectName: "shellWavExportProgress"
-        transientParent: surface.windowRoot
-        colors: surface.colors
-        modality: Qt.ApplicationModal
-        escapeCloses: false
-        title: Qt.application.name
-        visible: false
-        width: metrics.averageCharacterWidth * 42
-        height: metrics.height * 8
-        font: Qt.font(surface.typography.body)
-        onClosing: close => {
-            if (surface.presenter.rendering) {
-                close.accepted = false
-                surface.presenter.cancelRender()
-            }
+    Loader {
+        id: progressLoader
+        active: false
+        onLoaded: {
+            if (status === Loader.Ready && item && surface.rendering)
+                item.present()
         }
-        Shortcut {
-            sequence: "Esc"
-            context: Qt.WindowShortcut
-            onActivated: surface.presenter.cancelRender()
-        }
-        ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: metrics.averageCharacterWidth
-            Label {
-                objectName: "wavExportProgressLabel"
-                text: surface.presenter.renderText
-                color: surface.colors.windowText
+        sourceComponent: DialogWindow {
+            id: shellWavExportProgress
+            objectName: "shellWavExportProgress"
+            transientParent: surface.windowRoot
+            colors: surface.colors
+            modality: Qt.ApplicationModal
+            escapeCloses: false
+            title: Qt.application.name
+            visible: false
+            width: metrics.averageCharacterWidth * 42
+            height: metrics.height * 8
+            font: Qt.font(surface.typography.body)
+            onClosing: close => {
+                if (surface.presenter.rendering) {
+                    close.accepted = false
+                    surface.presenter.cancelRender()
+                }
             }
-            ProgressBar {
-                objectName: "wavExportProgressBar"
-                Layout.fillWidth: true
-                from: 0
-                to: 1000
-                value: surface.presenter.progress
+            Shortcut {
+                sequence: "Esc"
+                context: Qt.WindowShortcut
+                onActivated: surface.presenter.cancelRender()
             }
-            Button {
-                objectName: "wavExportProgressCancel"
-                Layout.alignment: Qt.AlignRight
-                text: qsTr("Cancel")
-                onClicked: surface.presenter.cancelRender()
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: metrics.averageCharacterWidth
+                Label {
+                    objectName: "wavExportProgressLabel"
+                    text: surface.presenter.renderText
+                    color: surface.colors.windowText
+                }
+                ProgressBar {
+                    objectName: "wavExportProgressBar"
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 1000
+                    value: surface.presenter.progress
+                }
+                Button {
+                    objectName: "wavExportProgressCancel"
+                    Layout.alignment: Qt.AlignRight
+                    text: qsTr("Cancel")
+                    onClicked: surface.presenter.cancelRender()
+                }
             }
         }
     }
 
-    DialogWindow {
-        id: shellWavExportErrorDialog
-        objectName: "shellWavExportErrorDialog"
-        transientParent: surface.windowRoot
-        colors: surface.colors
-        title: qsTr("Export WAV")
-        width: metrics.averageCharacterWidth * 52
-        height: metrics.height * 7
-        font: Qt.font(surface.typography.body)
-        ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: metrics.averageCharacterWidth
-            Label {
-                objectName: "wavExportErrorText"
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                text: surface.presenter.failureMessage
-                color: surface.colors.windowText
-            }
-            Button {
-                Layout.alignment: Qt.AlignRight
-                text: qsTr("OK")
-                onClicked: shellWavExportErrorDialog.close()
+    Loader {
+        id: errorLoader
+        active: false
+        onLoaded: {
+            if (status === Loader.Ready && item && surface.failureRevision > 0)
+                item.present()
+        }
+        sourceComponent: DialogWindow {
+            id: shellWavExportErrorDialog
+            objectName: "shellWavExportErrorDialog"
+            transientParent: surface.windowRoot
+            colors: surface.colors
+            title: qsTr("Export WAV")
+            width: metrics.averageCharacterWidth * 52
+            height: metrics.height * 7
+            font: Qt.font(surface.typography.body)
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: metrics.averageCharacterWidth
+                Label {
+                    objectName: "wavExportErrorText"
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: surface.presenter.failureMessage
+                    color: surface.colors.windowText
+                }
+                Button {
+                    Layout.alignment: Qt.AlignRight
+                    text: qsTr("OK")
+                    onClicked: shellWavExportErrorDialog.close()
+                }
             }
         }
     }

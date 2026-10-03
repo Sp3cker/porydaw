@@ -184,12 +184,53 @@ ShellWindowSupport {
             compare(bootstrap.startupAudioState(), "ready")
             compare(shell.shellPresenter.session.songTabs.selectedPage.title, "mus_route101")
             compare(shell.shellPresenter.session.songTabs.tabCount, 1)
+            let surface = null
             verify(waitForNative(function() {
-                var surface = selectedSurface()
-                return surface !== null && surface.gridModel.renderedNoteCount > 0
-            }, 5000))
+                surface = selectedSurface()
+                return surface !== null && surface.editorStartupReady
+            }, 5000), "the selected restored song satisfies production editable readiness")
+            verify(waitForPolish(shell), "the ready startup editor settles its actual input geometry")
+            const session = shell.shellPresenter.session
+            const grid = surface.gridModel
+            const sourceNotes = grid.fetchNoteSummary()
+            const originalNotes = gridNotes(grid)
+            const roll = findChild(surface, "swiftRollInput")
+            verify(roll !== null)
+            const lane = freeLane(grid, surface, 4)
+            verify(lane !== null, "a visible unoccupied lane accepts immediate startup input")
+            const snap = grid.snapTicks
+            const inset = Math.max(1, Math.floor(snap / 4))
+            const first = pointFor(grid, lane.tick + inset, lane.pitch)
+            const last = pointFor(grid, lane.tick + 4 * snap - inset, lane.pitch)
+            verify(last.x - first.x > grid.drawThreshold,
+                   "the actual pointer draw travels beyond the font-derived threshold")
+            shell.requestActivate()
             verify(NativeWait.waitForSubmittedFrame(
                 bootstrap, function(ms) { wait(ms) }, shell, 3000))
+            compare(surface.editorStartupReady, true)
+            mousePress(roll, first.x, first.y, Qt.LeftButton)
+            mouseMove(roll, last.x, last.y, -1, Qt.LeftButton)
+            mouseRelease(roll, last.x, last.y, Qt.LeftButton)
+            verify(waitForNative(function() {
+                return gridNotes(grid).length === originalNotes.length + 1
+                    && session.canUndo
+            }, 5000), "the first editable frame accepts a real pointer draw into history")
+            const newNotes = gridNotes(grid).filter(function(note) {
+                return !originalNotes.some(function(original) { return original.id === note.id })
+            })
+            compare(newNotes.length, 1)
+            compare(newNotes[0].track, grid.trackIndex)
+            compare(newNotes[0].tick, lane.tick)
+            compare(newNotes[0].pitch, lane.pitch)
+            compare(newNotes[0].duration, 4 * snap)
+            compare(gridNotes(grid).length, originalNotes.length + 1)
+            compare(session.canUndo, true)
+            shell.shellPresenter.activate("edit.undo")
+            verify(waitForNative(function() {
+                return grid.fetchNoteSummary() === sourceNotes && session.canRedo
+            }, 5000), "shell Undo restores the exact startup document and exposes Redo")
+            compare(grid.fetchNoteSummary(), sourceNotes)
+            compare(session.canRedo, true)
             compare(firstFrameFontFamily, "Atkinson Hyperlegible Next")
             compare(firstFrameFontPixels, shell.shellPresenter.session.bodyFontPx)
             compare(actualBodyFont.family, firstFrameFontFamily,

@@ -4,7 +4,7 @@ import { usesMultiConfigBuild } from "./build.ts";
 
 const HELP = `usage: deno task bench:startup [options]
   --runs <count>       fresh process launches (default 11)
-  --until <stage>      first-frame|chrome-frame|workspace-frame (default first-frame)
+  --until <stage>      first-frame|chrome-frame|workspace-frame|editor-frame (default first-frame)
   --project <path>     project root passed to the app (optional)
   --song <label>       song label passed to the app (optional)
   --budget-ms <ms>     user-set selected-frame ceiling (default 300)
@@ -19,7 +19,10 @@ Each frame marker is QQuickWindow::frameSwapped: a frame queued for presentation
 not physical display scanout. Process creation and dynamic loading are included.
 content-ready/workspace-ready record construction, not submitted frames.
 chrome-frame follows shell mounting; workspace-frame follows workspace mounting.
-Neither guarantees restored-song, editor or audio readiness.
+Neither guarantees restored-song, editor or audio readiness. editor-frame follows
+a visible selected loaded piano-roll document with a positive viewport, a nonzero
+display revision and an applied document revision, then a submitted frame.
+It does not establish audio readiness or physical display scanout.
 Run 1 is reported separately (not guaranteed cold); subsequent runs are warm.
 All-run compliance includes run 1. Exit/timeout/launch failures always exit 2.
 The budget is a chosen ceiling, not a performance guarantee; 300 is retained
@@ -28,9 +31,13 @@ Omitted project/song options retain the app's normal saved-session behavior.
 The app is stopped at the selected frame.
 
 Example:
-  deno task bench:startup --until workspace-frame --project /path/to/project --song mus_title --check`;
+  deno task bench:startup --until editor-frame --project /path/to/project --song mus_title --check`;
 
-type FrameStage = "first-frame" | "chrome-frame" | "workspace-frame";
+type FrameStage =
+  | "first-frame"
+  | "chrome-frame"
+  | "workspace-frame"
+  | "editor-frame";
 
 interface Options {
   runs: number;
@@ -81,10 +88,10 @@ function parseOptions(args: string[]): Options {
     else if (flag === "--until") {
       if (
         value !== "first-frame" && value !== "chrome-frame" &&
-        value !== "workspace-frame"
+        value !== "workspace-frame" && value !== "editor-frame"
       ) {
         throw new Error(
-          "--until requires first-frame, chrome-frame, or workspace-frame",
+          "--until requires first-frame, chrome-frame, workspace-frame, or editor-frame",
         );
       }
       options.until = value;

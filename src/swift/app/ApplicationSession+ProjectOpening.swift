@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawBankLease
 import PorydawProject
 import QtBridge
 import PorydawAppAudio
@@ -107,9 +108,13 @@ extension ApplicationSession {
         let replacement = Task { [weak self] in
             _ = await priorTask?.value
             let loaded: ProjectRead
+            let traceStartup = pd_startup_trace_enabled()
+            if traceStartup { pd_startup_trace_mark("project-read-wait-begin") }
             do {
                 loaded = try await read.value
+                if traceStartup { pd_startup_trace_mark("project-read-resumed") }
             } catch {
+                if traceStartup { pd_startup_trace_mark("project-read-failed") }
                 guard let self, !Task.isCancelled else {
                     Task { [read] in
                         if let loaded = try? await read.value { await loaded.service.close() }
@@ -145,6 +150,11 @@ extension ApplicationSession {
     }
 
     func finishProjectSwitch(_ candidate: ProjectSwitchCandidate) async {
+        let traceStartup = pd_startup_trace_enabled()
+        if traceStartup { pd_startup_trace_mark("finish-project-switch-begin") }
+        defer {
+            if traceStartup { pd_startup_trace_mark("finish-project-switch-end") }
+        }
         closeSampleStudio()
         isReplacingProject = true
         await releaseTabs()
@@ -165,6 +175,7 @@ extension ApplicationSession {
         voiceList.projectService = candidate.service
         resetVoicegroupCatalog()
         projectOpen = true
+        if traceStartup { pd_startup_trace_mark("project-service-adopted") }
         if let recipe = candidate.restore {
             let restored = recipe.normalized(available: candidate.labels)
             isRestoringTabs = true

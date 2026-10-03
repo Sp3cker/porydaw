@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawBankLease
 import PorydawProject
 import QtBridge
 import PorydawAppAudio
@@ -164,7 +165,15 @@ extension ApplicationSession {
             failOpen("Open a project before opening a song.")
             return
         }
-        guard let audio = await preparedAudio() else {
+        let traceStartup = pd_startup_trace_enabled()
+        if traceStartup { pd_startup_trace_mark("open-tab-begin") }
+        defer {
+            if traceStartup { pd_startup_trace_mark("open-tab-end") }
+        }
+        if traceStartup { pd_startup_trace_mark("open-tab-audio-wait-begin") }
+        let prepared = await preparedAudio()
+        if traceStartup { pd_startup_trace_mark("open-tab-audio-wait-end") }
+        guard let audio = prepared else {
             if isDisposed || Task.isCancelled {
                 if let tab { songTabs.cancelReload(tabId: tab.tabId) }
                 return
@@ -183,6 +192,7 @@ extension ApplicationSession {
         lastSaveError = ""
         do {
             let session: DocumentSession
+            if traceStartup { pd_startup_trace_mark("document-open-begin") }
             if let prefetched = takePrefetchedSong(label: label, service: service) {
                 session = DocumentSession.open(
                     loaded: prefetched.loaded, file: prefetched.file,
@@ -191,6 +201,7 @@ extension ApplicationSession {
                 session = try await DocumentSession.open(
                     service: service, label: label, sampleRate: audio.sampleRate)
             }
+            if traceStartup { pd_startup_trace_mark("document-open-end") }
             if let tab {
                 let usedTracks = 0..<session.document.engineTracks.usedTrackCount
                 session.selectedTrack = tab.selectedTrack.flatMap {
@@ -213,10 +224,12 @@ extension ApplicationSession {
                 }
             }
             session.applyEditorViewStateProjection(editorViewState)
+            if traceStartup { pd_startup_trace_mark("document-workspace-begin") }
             let workspace = DocumentWorkspace(
                 session: session, audio: audio, playhead: playhead,
                 playheadGuides: playheadGuides, eventList: eventList, palette: palette,
                 typography: typography, callbacks: makeCallbacks(for: session))
+            if traceStartup { pd_startup_trace_mark("document-workspace-end") }
             session.onEditorViewStateChanged = { [weak self, weak session] state in
                 guard let self, let session else { return }
                 self.publishEditorViewState(state, from: session)
@@ -296,9 +309,12 @@ extension ApplicationSession {
                     return
                 }
             } else {
+                if traceStartup { pd_startup_trace_mark("song-tabs-add-begin") }
                 songTabs.add(tabSession, at: index)
+                if traceStartup { pd_startup_trace_mark("song-tabs-add-returned") }
             }
         } catch {
+            if traceStartup { pd_startup_trace_mark("open-tab-failed") }
             if Task.isCancelled {
                 if let tab { songTabs.cancelReload(tabId: tab.tabId) }
             } else {
