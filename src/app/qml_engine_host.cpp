@@ -215,9 +215,8 @@ void pd_startup_prewarm_fonts()
     auto *worker = QThread::create([] {
         (void)QFontDatabase::families();
     });
-    // QThread::create's destructor joins; the engine dies before QGuiApplication.
+    // Engine-owned: QThread::create threads join on destruction, and QAppCpp::run
+    // destroys its stack engine before its QGuiApplication.
     worker->setParent(engine);
-    QObject::connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, worker,
-                     [worker] { worker->wait(); });
     worker->start();
 }
