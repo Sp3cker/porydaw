@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "checks": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,PORYDAW_SAMPLE_CORPUS tools/cli.ts checks",
+    "checks": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts checks",
     "build": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build",
     "build:app": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:app",
     "build:render": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:render",
@@ -10,9 +10,9 @@
     "setup:check": "deno check tools/setup.ts && deno test --allow-read --allow-write --allow-run --allow-env tools/setup_test.ts tools/setup_swift_test.ts",
     "checks:bridge": "deno run --allow-read=src,CMakeLists.txt,cmake/QtBridge.cmake,tools --allow-run=deno tools/cli.ts checks:bridge",
     "bridge:baseline": "deno run --allow-read=src,CMakeLists.txt,cmake/QtBridge.cmake,tools --allow-write=tools --allow-run=deno tools/cli.ts checks:bridge --update-baseline --allow-growth",
-    "checks:qml": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,PORYDAW_SAMPLE_CORPUS tools/cli.ts checks:qml",
-    "checks:qml-roll": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,PORYDAW_SAMPLE_CORPUS tools/cli.ts checks:qml-roll",
-    "checks:shell": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,PORYDAW_SAMPLE_CORPUS tools/cli.ts checks:shell",
+    "checks:qml": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts checks:qml",
+    "checks:qml-roll": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts checks:qml-roll",
+    "checks:shell": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts checks:shell",
     "format": "deno run --allow-read --allow-write --allow-run --allow-env=HOME,SWIFTC tools/cli.ts format",
     "proof": "deno run --allow-read=src/checks,build/debug/proof-evidence tools/proof_reader.ts",
     "proof:edit": "deno run --allow-read=src/checks --allow-write=src/checks tools/proof_editor.ts",

@@ -391,6 +391,16 @@ target_compile_definitions(porydaw_checks PRIVATE
     PORYDAW_CHECK_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 add_dependencies(porydaw_checks mid2agb)
 
+if(WIN32)
+    # Match the application's manifest embedding for the Windows linker.
+    find_program(PORYDAW_MT_TOOL mt.exe REQUIRED)
+    add_custom_command(TARGET porydaw_checks POST_BUILD
+        COMMAND "${PORYDAW_MT_TOOL}" -manifest
+                "${CMAKE_CURRENT_BINARY_DIR}/porydaw_checks.exe.manifest"
+                "-outputresource:$<TARGET_FILE:porydaw_checks>;#1"
+        VERBATIM)
+endif()
+
 # ---- Editor drawer Qt Quick Test lane (Swift-hosted, test only) ----
 # The drawer container's QML lane is its own Swift executable, so tools/
 # run_checks.ts drives it like any other harness: the runner reads this lane's

@@ -80,7 +80,10 @@ endif()
 # Optimize through the static porydaw/poryaaaa library boundaries in Release builds.
 include(CheckIPOSupported)
 check_ipo_supported(RESULT PORYDAW_IPO_SUPPORTED OUTPUT PORYDAW_IPO_ERROR)
-if(PORYDAW_IPO_SUPPORTED)
+if(WIN32)
+    # Swift's Windows archive driver cannot consume Clang LTO objects in mixed targets.
+    set(PORYDAW_IPO_SUPPORTED OFF)
+elseif(PORYDAW_IPO_SUPPORTED)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
 else()
     message(WARNING "Release IPO/LTO disabled: ${PORYDAW_IPO_ERROR}")
@@ -153,6 +156,13 @@ if(POLICY CMP0157)
         "$<IF:$<CONFIG:Debug>,incremental,wholemodule>")
 endif()
 enable_language(Swift)
+if(WIN32)
+    string(APPEND CMAKE_Swift_FLAGS " -use-ld=lld")
+    set(CMAKE_STATIC_LIBRARY_PREFIX_Swift "lib")
+endif()
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    string(APPEND CMAKE_Swift_FLAGS_RELEASE " -Xcc -DQT_NO_DEBUG -Xcc -DNDEBUG")
+endif()
 if(NOT APPLE AND CMAKE_Swift_COMPILER_VERSION VERSION_LESS 6.4)
     message(FATAL_ERROR "The Qt main executor requires Swift 6.4 or newer on Linux and Windows")
 endif()
@@ -365,15 +375,13 @@ target_compile_definitions(porydaw_app PUBLIC
     "$<$<NOT:$<COMPILE_LANGUAGE:Swift>>:PORYDAW_VERSION=\"${PROJECT_VERSION}\">")
 target_link_libraries(porydaw_app PUBLIC Qt6::Gui poryaaaa_engine porydaw_icons porydaw_style)
 target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick QtBridge)
+set_target_properties(porydaw_app PROPERTIES LINKER_LANGUAGE CXX)
 if(APPLE)
     # Keep framework headers ahead of stale non-framework Qt installs such
     # as /usr/local/include/Qt*. Treating imported frameworks as system
     # headers lets Clang select the unrelated include tree first.
-    # This archive contains only native objects; Swift's archive rule would
-    # incorrectly treat the C++ precompiled header as a Swift input.
     set_target_properties(porydaw_app PROPERTIES
         NO_SYSTEM_FROM_IMPORTED ON
-        LINKER_LANGUAGE CXX
     )
 endif()
 target_precompile_headers(porydaw_app PRIVATE
@@ -449,6 +457,20 @@ target_link_libraries(porydaw PRIVATE
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
     PorydawApp
 )
+if(WIN32)
+    # The C++ link driver does not add Swift's COFF image registration object.
+    # Without it, runtime lookup of generic Swift types returns null.
+    target_sources(porydaw PRIVATE
+        "$ENV{SDKROOT}/usr/lib/swift/windows/x86_64/swiftrt.obj")
+    target_link_directories(porydaw PRIVATE
+        "$ENV{SDKROOT}/usr/lib/swift/windows/x86_64"
+        "$<TARGET_FILE_DIR:PorydawApp>"
+        "$<TARGET_FILE_DIR:PorydawProject>"
+        "$<TARGET_FILE_DIR:PorydawPlayback>"
+        "$<TARGET_FILE_DIR:PorydawCore>"
+        "$<TARGET_FILE_DIR:PorydawSample>"
+        "$<TARGET_FILE_DIR:BinaryParsing>")
+endif()
 porydaw_link_linux_swift_runtime(porydaw
     porydaw_shell_entry PorydawApp QtBridge PorydawProject PorydawPlayback PorydawCore
     PorydawSample BinaryParsing)
@@ -467,6 +489,14 @@ qt_add_resources(porydaw "app_icon"
         resources/porydaw-256.png
 )
 if(WIN32)
+    # lld-link rewrites the generated requestedExecutionLevel attributes into
+    # the wrong XML namespace. Reembed the original manifest after linking.
+    find_program(PORYDAW_MT_TOOL mt.exe REQUIRED)
+    add_custom_command(TARGET porydaw POST_BUILD
+        COMMAND "${PORYDAW_MT_TOOL}" -manifest
+                "${CMAKE_CURRENT_BINARY_DIR}/porydaw.exe.manifest"
+                "-outputresource:$<TARGET_FILE:porydaw>;#1"
+        VERBATIM)
     # Stage the Qt DLLs beside porydaw.exe so the build tree runs directly.
     # Static Qt links everything into the exe, leaving windeployqt nothing
     # to stage — it fails with "does not seem to be a Qt executable" — so
@@ -490,6 +520,29 @@ if(WIN32)
         message(WARNING "Qt6::windeployqt not available (needs Qt >= 6.3); "
                         "porydaw.exe will need the Qt DLLs on PATH")
     endif()
+    # The Swift Windows runtime is not deployed by windeployqt. Keep the
+    # compiler-matched DLLs beside the executable for direct build-tree launch.
+    execute_process(COMMAND "${CMAKE_Swift_COMPILER}" -print-target-info
+        OUTPUT_VARIABLE porydaw_swift_target_info COMMAND_ERROR_IS_FATAL ANY)
+    string(JSON porydaw_runtime_count LENGTH
+        "${porydaw_swift_target_info}" paths runtimeLibraryPaths)
+    math(EXPR porydaw_runtime_last "${porydaw_runtime_count} - 1")
+    set(porydaw_swift_runtime_dlls "")
+    foreach(index RANGE ${porydaw_runtime_last})
+        string(JSON runtime_path GET "${porydaw_swift_target_info}"
+            paths runtimeLibraryPaths ${index})
+        if(EXISTS "${runtime_path}/swiftCore.dll")
+            file(GLOB porydaw_swift_runtime_dlls "${runtime_path}/*.dll")
+            break()
+        endif()
+    endforeach()
+    if(NOT porydaw_swift_runtime_dlls)
+        message(FATAL_ERROR "Swift Windows runtime DLLs were not found")
+    endif()
+    add_custom_command(TARGET porydaw POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                ${porydaw_swift_runtime_dlls} "$<TARGET_FILE_DIR:porydaw>"
+        COMMAND_EXPAND_LISTS VERBATIM)
 endif()
 
 if(WIN32)

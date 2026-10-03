@@ -1,5 +1,4 @@
 import Foundation
-import CoreFoundation
 import PorydawProject
 import QtBridgeCpp
 
@@ -65,10 +64,12 @@ public struct EditorLaneState: Equatable, Sendable {
                     result[key] = value
                 } else if case let .controlChange(track, controller) =
                     EditorViewStateCodec.parameter(for: key),
-                    let lane = remap(Lane(track: track, controller: Int(controller))) {
+                    let lane = remap(Lane(track: track, controller: Int(controller)))
+                {
                     result["cc:\(lane.track):\(lane.controller)"] = value
                 } else if case let .pitchBend(track) = EditorViewStateCodec.parameter(for: key),
-                          let lane = remap(Lane(track: track, controller: 255)) {
+                    let lane = remap(Lane(track: track, controller: 255))
+                {
                     result["cc:\(lane.track):255"] = value
                 }
             }
@@ -100,7 +101,6 @@ extension EditorViewState {
         lanes.remapEngineTracks(map)
     }
 }
-
 
 public struct DrawerChromeSection: Equatable, Sendable {
     public var visible: Bool
@@ -156,8 +156,10 @@ public enum EditorViewStateCodec {
     }
 
     @MainActor
-    private static func loadSection(_ name: String, defaultVisible: Bool,
-                                    store: PreferencesStore) -> DrawerChromeSection {
+    private static func loadSection(
+        _ name: String, defaultVisible: Bool,
+        store: PreferencesStore
+    ) -> DrawerChromeSection {
         DrawerChromeSection(
             visible: store.storedBool(key: chromePrefix + name + "Visible") ?? defaultVisible,
             height: store.storedPositiveInt(key: chromePrefix + name + "Height"))
@@ -171,9 +173,11 @@ public enum EditorViewStateCodec {
 
     @MainActor
     private static func writeChrome(_ state: EditorDrawerChromeState, store: PreferencesStore) {
-        for (name, section) in [("velocity", state.velocity),
-                                ("automation", state.automation),
-                                ("voiceChanges", state.voiceChanges)] {
+        for (name, section) in [
+            ("velocity", state.velocity),
+            ("automation", state.automation),
+            ("voiceChanges", state.voiceChanges),
+        ] {
             store.setBool(key: chromePrefix + name + "Visible", value: section.visible)
             let heightKey = chromePrefix + name + "Height"
             if let height = section.height, height > 0 {
@@ -185,16 +189,16 @@ public enum EditorViewStateCodec {
         store.setString(key: chromePrefix + "activePage", value: state.activePage.name)
     }
 
-
     @MainActor
     public static func loadTabs(store: PreferencesStore) -> WorkspaceTabRecipe {
         let selected = store.string(key: "lastSongLabel", fallback: "")
         let saved = normalizeSavedRecipe(
             projectPath: store.string(key: "lastProjectDir", fallback: ""),
             labels: store.strings("lastOpenSongs") ?? [], selected: selected)
-        return WorkspaceTabRecipe(projectPath: saved.projectPath,
-                                  orderedSongs: saved.orderedSongs.map(\.value),
-                                  selectedSong: saved.selected?.value ?? "")
+        return WorkspaceTabRecipe(
+            projectPath: saved.projectPath,
+            orderedSongs: saved.orderedSongs.map(\.value),
+            selectedSong: saved.selected?.value ?? "")
     }
 
     @MainActor
