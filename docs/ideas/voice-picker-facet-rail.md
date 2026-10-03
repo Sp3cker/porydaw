@@ -36,7 +36,3 @@ Reference deltas (deliberate, from the approved prototype variant):
 the used row tag reads **Used in this song**, family tags are
 contrast-safe, the per-row ▶ audition affordance is not carried over,
 and the variant switcher / state bar were exploration scaffolding only.
-
-Interaction with `voice-picker-live-change-plan.md` (still in `docs/`):
-that plan's branch implements live preview on top of this facet picker;
-the two ideas merge together or the live-change plan waits for this one.
