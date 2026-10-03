@@ -89,8 +89,9 @@ Update affected proof ledgers with their check changes; compile only referenced 
 
 The persistent window owns the Swift session and close lifecycle. Shell chrome
 (menus, transport, status, window shortcuts and lazy global dialogs) mounts first.
-One asynchronous Loader creates the workspace: song list, tabs/editor and polyphony.
-Late-mounted views read current session state; closing cancels pending incubation.
+The outer Loader calls `contentReady()` after chrome mounts, then constructs the
+workspace synchronously: song list, tabs/editor and polyphony. Late-mounted views
+read current session state; closing unloads the application content.
 Find Song becomes available once its workspace search field exists. The startup
 lane gates first-frame lifecycle, late-mounted song rendering, and a real pointer
 edit followed by Undo on the restored song.

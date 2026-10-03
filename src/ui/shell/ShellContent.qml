@@ -21,6 +21,13 @@ Item {
         shell.settingsStore.restoreFromPreferences()
     }
 
+    function loadWorkspace() {
+        workspace.setSource(Qt.resolvedUrl("ShellBody.qml"), {
+            root: content.root,
+            transportToolExtent: Qt.binding(function() { return transportBar.toolExtent })
+        })
+    }
+
     // Text metrics belong to the controls, not the first window frame.
     FontMetrics {
         id: bodyMetrics
@@ -198,14 +205,10 @@ Item {
         id: workspace
         objectName: "shellWorkspaceLoader"
         anchors.fill: parent
-        asynchronous: true
+        asynchronous: false
         active: shell.sceneActive
         visible: status === Loader.Ready
         focus: true
-        Component.onCompleted: setSource(Qt.resolvedUrl("ShellBody.qml"), {
-            root: content.root,
-            transportToolExtent: Qt.binding(function() { return transportBar.toolExtent })
-        })
         onLoaded: {
             if (shell.sceneActive) {
                 shell.workspaceReady()
