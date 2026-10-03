@@ -47,26 +47,22 @@ extension VelocityPage {
         contextSlot = presented.slot
         contextVoiceName = presented.map.voiceName
         setPublished(detentsAvailable, presented.status == .resolved && presented.map.isPSG) { detentsAvailable = $0 }
-        let snapshot = buildScene()
-        refreshAxisAndHandles(snapshot)
+        refreshAxisAndHandles(republishDisplayLists: false)
         publishTransient(updateDrawing: false)
         publishDisplayLists()
     }
 
-    /// Hover and detent changes republish the ruler and handle rows: a content
-    /// rebuild hands its own build in, the hover-only paths derive the scoped
-    /// axis, handle and ruler values those interactions actually change.
-    @QtIgnored func refreshAxisAndHandles(_ snapshot: VelocitySceneSnapshot? = nil) {
-        let built =
-            snapshot.map { VelocityAxisAndHandles($0) }
-            ?? VelocitySceneSnapshot.buildAxisAndHandles(
-                sceneInput(reuseGeometry: handleReuseGeometry()),
-                previousHandles: handlesByID)
+    /// Republishes the axis, handle and ruler rows; a content rebuild passes
+    /// `false` because it publishes its display lists after the transient.
+    @QtIgnored func refreshAxisAndHandles(republishDisplayLists: Bool = true) {
+        let built = VelocityScene.axisAndHandles(
+            sceneInput(reuseGeometry: handleReuseGeometry()),
+            previousHandles: handlesByID)
         rebuildAxis(built.axis)
         publishHandles(built.handles)
         publishAxis(built.rows)
         publishReadout()
-        if snapshot == nil { publishDisplayLists() }
+        if republishDisplayLists { publishDisplayLists() }
     }
 
     /// Applies one build's value axis to the page's published axis values.
@@ -79,19 +75,10 @@ extension VelocityPage {
 
     // MARK: Scene input
 
-    /// The page's one static scene build, from the live session and the page's
-    /// own state. The cached label typography and the published handle lookup are
-    /// the page's `@MainActor` objects, so they travel as build parameters.
-    func buildScene() -> VelocitySceneSnapshot {
-        VelocitySceneSnapshot.build(
-            sceneInput(reuseGeometry: handleReuseGeometry()),
-            previousHandles: handlesByID)
-    }
-
     /// The primary track's note rows, projected against the published axis: the
     /// scoped build a live gesture uses, so motion never rebuilds static content.
     @QtIgnored func projectHandles(window: ClosedRange<Double>? = nil) -> [VelocityHandle] {
-        VelocitySceneSnapshot.buildHandleRows(
+        VelocityScene.handleRows(
             sceneInput(reuseGeometry: handleReuseGeometry(), window: window),
             axis: axis, previousHandles: handlesByID)
     }

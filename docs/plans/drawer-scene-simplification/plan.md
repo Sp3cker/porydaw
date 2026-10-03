@@ -1,6 +1,6 @@
 # Drawer scene simplification
 
-Status: architecture proposal, not an approved implementation design. Candidate 1 is the top recommendation; candidate 2 needs further design scrutiny. No new interfaces are proposed here.
+Status: candidate 1 landed on 2026-10-03 (see its Status line). Candidate 2 remains an unapproved proposal that needs further design scrutiny. No new interfaces are proposed here.
 
 ## Scope and constraints
 
@@ -16,6 +16,8 @@ The review followed 55 recent commits through project startup, Sample Studio and
 - This document records the review, not authorization to implement either candidate. Select the candidate and settle its design before dispatch.
 
 ## 1. Collapse Velocity's duplicate scene results — Strong
+
+Status: **landed 2026-10-03.** `VelocitySceneSnapshot`, `buildScene` and `VelocityAxisAndHandles.init(_:)` are deleted; one `VelocityScene.axisAndHandles` build serves content rebuilds and hover/detent refreshes, and `refreshAxisAndHandles(republishDisplayLists:)` makes the display-list skip explicit. Verified: `deno task checks --filter swiftcore-projectsession`, `deno task checks:qml` (2/2), `deno task checks:shell --filter shell-drawer-parity-voice-velocity`.
 
 ### Files
 
