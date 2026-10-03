@@ -16,6 +16,7 @@ public final class SongDockController: QmlUncreatable {
     @QtTracked public var confirmationDetail = ""
     @QtTracked public var deletableVoicegroup = ""
     @QtTracked public var busy = false
+    @QtTracked public var songsLoading = false
 
     private weak var session: ApplicationSession?
     private var service: ProjectService?
@@ -51,6 +52,7 @@ public final class SongDockController: QmlUncreatable {
         midiImport.install(service: service)
         newSong.install(service: service)
         presenter.setSongs(songs)
+        songsLoading = true
         syncSelection()
     }
 
@@ -63,6 +65,7 @@ public final class SongDockController: QmlUncreatable {
         midiImport.detach()
         newSong.detach()
         presenter.setSongs([])
+        songsLoading = false
         clearConfirmation()
     }
 

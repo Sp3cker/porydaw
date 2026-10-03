@@ -37,6 +37,9 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
     }
     let missingRoot = projectDir + "/missing-project"
     app.openProject(path: missingRoot)
+    report.expect(
+        app.songDockController().songsLoading, cppID: id,
+        message: "an initial project open publishes the song-list loading state")
     let firstFailure = until { !app.lastSaveError.isEmpty }
     report.expect(
         firstFailure && !app.projectOpen, cppID: id,
@@ -45,6 +48,9 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
         report.fail(id, "missing project did not reach a failed-open result")
         return
     }
+    report.expect(
+        !app.songDockController().songsLoading, cppID: id,
+        message: "a failed project open clears the song-list loading state")
     report.expect(
         app.lastSaveError.contains("missing-project"), cppID: id,
         message: "A007 failed project open names the missing project in its explanation")
@@ -66,6 +72,7 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
         until {
             app.settingsVoicegroupArgs() == ["_test_vg"]
                 && !app.songDockController().songListPresenter().songListings.isEmpty
+                && !app.songDockController().songsLoading
         }, cppID: id, message: "deferred project catalogs arrive after the first tab is ready")
     report.expectEqual(
         expected: ["_test_vg"], actual: app.settingsVoicegroupArgs(),

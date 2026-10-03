@@ -48,6 +48,7 @@ extension ApplicationSession {
         let recipe = EditorViewStateCodec.loadTabs(store: preferences)
         let path = cli.project.isEmpty ? recipe.projectPath : cli.project
         guard !path.isEmpty else { return }
+        songDock.songsLoading = true
         let song = startupSongChoice(
             label: cli.song.isEmpty ? nil : cli.song,
             selected: recipe.selectedSong, ordered: recipe.orderedSongs)
@@ -91,6 +92,7 @@ extension ApplicationSession {
 
     private func startProjectSwitch(path: String, label: String?,
                                     restore: WorkspaceTabRecipe?) {
+        if songDock.presenter.songListings.isEmpty { songDock.songsLoading = true }
         let priorTask = activeReplacementTask
         prefetchedSong = nil
         let read: Task<ProjectRead, Error>
@@ -122,6 +124,7 @@ extension ApplicationSession {
                         store: self.preferences)
                 }
                 self.failOpen(String(describing: error))
+                self.songDock.songsLoading = false
                 return
             }
             guard let self, !self.isDisposed, !Task.isCancelled else {
@@ -206,12 +209,14 @@ extension ApplicationSession {
                     self.songDock.presenter.setSongs(songs)
                     self.songDock.syncSelection()
                 }
+                self.songDock.songsLoading = false
                 _ = await self.refreshVoicegroupCatalog()
             } catch {
                 guard let self, !self.isDisposed, self.pendingProjectSwitch == nil,
                     self.catalogService === service
                 else { return }
                 self.operationFailed(message: String(describing: error))
+                self.songDock.songsLoading = false
             }
         }
     }
