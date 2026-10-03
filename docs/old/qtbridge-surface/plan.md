@@ -4,7 +4,7 @@ Status: **HISTORICAL, not a dispatchable plan.** The implementation landed in
 `91727ce7` and `cf990a1c`. This file and its briefs preserve that work's
 decisions; their old task ordering is not a second queue. All integration
 gates and remaining obligations are owned by the
-[authoritative parity plan](../swift-feature-parity/plan.md). The declaration
+[authoritative parity plan](../../plans/swift-feature-parity/plan.md). The declaration
 contract in [spec.md](spec.md) remains normative.
 
 Kill the working-memory tax of the Swift↔QML bridge: make QML-visibility a

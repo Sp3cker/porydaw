@@ -4174,7 +4174,7 @@ residues.
 
 ## 30. Native timeline renderer (zoom/scroll lag)
 
-Executed per `docs/plans/native-timeline-renderer/plan.md` (see its Status section): roll plot and
+Executed per `docs/old/native-timeline-renderer/plan.md` (see its Status section): roll plot and
 keyboard (`0142cbba`), ruler and drawer pages (`29323eb8`), and the phase 5 cleanup. Zoom and scroll no
 longer rebuild or republish roll, ruler or drawer content; Swift publishes model-space blobs and the
 C++ `TimelineRenderer` (`src/render/`) applies the camera per frame. Proof-ledger impact: one anchor

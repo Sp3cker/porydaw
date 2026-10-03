@@ -183,7 +183,7 @@ annotation normalization, dead signals/QML/ramp-presentation removal and
 unused context-property seam deletion. Their commit messages record green
 native and QML lanes; those reports do not replace checks on the merged tree.
 The live convention is `.omp/rules/qtbridge-surface.md`, with its normative
-contract in `docs/plans/qtbridge-surface/spec.md`. This preserves the new
+contract in `docs/old/qtbridge-surface/spec.md`. This preserves the new
 pointer added to the retired integration-contract document without restoring
 that obsolete execution authority.
 

@@ -1,6 +1,6 @@
 # Task 4v1 — Velocity page model-space drawer content (Swift side)
 
-Plan: `docs/plans/native-timeline-renderer/plan.md` — read Contract ("Versioned binary layout", row §11
+Plan: `docs/old/native-timeline-renderer/plan.md` — read Contract ("Versioned binary layout", row §11
 `drawerStatics`), Decision 1 (content handoff), Decision 7 (drawer pages), §8 phase 4 unit U4v.
 
 ## Goal

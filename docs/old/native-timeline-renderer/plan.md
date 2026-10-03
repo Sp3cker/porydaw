@@ -1,4 +1,4 @@
-> Superseded by `docs/plans/native-display-list/plan.md` (executed): every roll/drawer surface now
+> Superseded by `docs/old/native-display-list/plan.md` (executed): every roll/drawer surface now
 > paints from Swift-emitted display lists and the `TimelineRenderer` scene code is deleted.
 
 # Native C++ timeline renderer — implementation plan

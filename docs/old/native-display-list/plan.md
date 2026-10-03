@@ -1,7 +1,7 @@
 # Native display-list boundary — implementation plan
 
 Worktree: `.worktrees/swift-qml-grid` (Swift 6.4 `swift-6.4-RELEASE`, arm64; Qt 6.11; QML via
-QtBridge). Supersedes the ownership split in `docs/plans/native-timeline-renderer/plan.md` (executed,
+QtBridge). Supersedes the ownership split in `docs/old/native-timeline-renderer/plan.md` (executed,
 `b774dd32`). All file:line citations verified against source on 2026-09-28.
 
 ## Status: executed (checkpoints b61dad0d 2aa7ab24 c3fdf05a 0efc7643 f594f8c2 625a76c9 91cfda15 f3d126c9 f05dda2f bc0a97b8)
@@ -362,7 +362,7 @@ upload. The delta is the copy and decode, tens of µs at the worst-case list siz
 | 6b | Velocity drawer on display lists | SDD | sdd-implementer | `src/swift/app/drawer/velocity/{VelocityPage,VelocityPublication}.swift`, `src/ui/songview/quick/drawer/VelocityPage.qml`, velocity checks (task-6b brief) |
 | 7 | Voice-changes drawer on display lists | SDD | sdd-implementer | `src/swift/app/drawer/voicechanges/{VoiceChangesPage,VoiceChangesPublication}.swift`, `src/ui/songview/quick/drawer/VoiceChangesPage.qml` |
 | 8 | Automation drawer on display lists | SDD | sdd-implementer | `src/swift/app/drawer/automation/{AutomationPage,AutomationDrawingContent,AutomationContentPublication,AutomationOverlayPublication}.swift`, `src/ui/songview/quick/drawer/AutomationPlot.qml` |
-| 9 | Delete `TimelineRenderer`, the C++ scene code and the legacy Swift packers; docs | Direct | controller | `src/render/` deletions, root `CMakeLists.txt`, `src/swift/app/timeline/DrawingContentBinary.swift`, legacy packer in `src/swift/app/drawer/DrawerStaticsContent.swift` and its transitional `drawerstatics-parity` suite, `docs/plans/native-timeline-renderer/plan.md` status note, AGENTS.md transitional sentence, release notes |
+| 9 | Delete `TimelineRenderer`, the C++ scene code and the legacy Swift packers; docs | Direct | controller | `src/render/` deletions, root `CMakeLists.txt`, `src/swift/app/timeline/DrawingContentBinary.swift`, legacy packer in `src/swift/app/drawer/DrawerStaticsContent.swift` and its transitional `drawerstatics-parity` suite, `docs/old/native-timeline-renderer/plan.md` status note, AGENTS.md transitional sentence, release notes |
 
 Serial dependencies: 1 → 2; 3a → 3b; 1, 3b → 4a → 4b → 5; 1, 2, 3b → 6a → 6b ∥ 7 ∥ 8 (disjoint writes;
 none of the three touches `DrawerStaticsContent.swift` — the legacy packer goes in Task 9 with
@@ -505,4 +505,4 @@ as they are.
 
 `src/render/` contains exactly `display_list.{h,c}`, `display_list_item.{h,cpp}`, `module.modulemap`;
 every Verification command is green on the final commit; the commit is pushed; the superseded plan
-`docs/plans/native-timeline-renderer/plan.md` carries a status note pointing here.
+`docs/old/native-timeline-renderer/plan.md` carries a status note pointing here.

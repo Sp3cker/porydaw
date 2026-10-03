@@ -30,7 +30,7 @@ Order (dependency waves):
 
 Deferred decisions (defaults applied; ask the user before changing):
 - Status-bar temporary-message expiry (fork `showMessage(…, 8000/10000)`): not ported in 215; shell-wide.
-- File → New Song adopts the fork's blank-mode wizard: [New Song blank wizard plan](../new-song-blank-wizard/plan.md).
+- File → New Song adopts the fork's blank-mode wizard: [New Song blank wizard plan](../../old/new-song-blank-wizard/plan.md).
 
 ## Ruled proof closures (tasks 214, 216)
 
@@ -337,7 +337,7 @@ New lanes: `shell-export-options` and `shell-export-render` are registered in `S
 
 The fork's Import MIDI flow is `NewSongWizard` in import mode (`fceecd88:src/ui/newsongwizard.cpp`, Analysis → Identity → Sound). It is driven by `WorkspaceUi::runMidiImport`/`submitCreateSong` (`workspaceui_samples.cpp:46-90`) and commits through `ProjectIo::createSong` (`projectio.cpp:318-383`).
 
-The track ports import mode only. New Song separately adopts the fork's blank-mode wizard under the [New Song blank wizard plan](../new-song-blank-wizard/plan.md), superseding its task-171/210 prompt.
+The track ports import mode only. New Song separately adopts the fork's blank-mode wizard under the [New Song blank wizard plan](../../old/new-song-blank-wizard/plan.md), superseding its task-171/210 prompt.
 
 The spec is `onboardcheck/proof.import.txt`: 33 GAP rows, A046–A078. They all close, and the ledger is deleted in task 234. The 12 NATIVE-SETUP rows are already closed. In `visual/proof.dialogs.txt`, the import-page rows A022–A027 close.
 
@@ -404,7 +404,7 @@ The proof edits belong to the implementer, in the same commit as the proving che
 
 ### Deferred / blocked rows
 
-- **dialogs A017–A021** and **PJ03**'s player/voicegroup/config/blank-MIDI conjuncts are no longer deferred: the mounted Identity → Sound wizard and commit journey are owned by the [New Song blank wizard plan](../new-song-blank-wizard/plan.md); the closed dialogs ledger is retired.
+- **dialogs A017–A021** and **PJ03**'s player/voicegroup/config/blank-MIDI conjuncts are no longer deferred: the mounted Identity → Sound wizard and commit journey are owned by the [New Song blank wizard plan](../../old/new-song-blank-wizard/plan.md); the closed dialogs ledger is retired.
 - **dialogs A001**: the shared frozen-PNG `compareShown` helper across five dialog families. It is a visual-baseline exclusion.
 - **dialogs A003–A016**: the settings/theme dialogs (excluded) and the sample-editor/Sf2 rows (P4 track).
 - **iomutations**: the task-171 creation rows are unchanged.
@@ -412,7 +412,7 @@ The proof edits belong to the implementer, in the same commit as the proving che
 
 #### Planner decisions
 
-- The import-only planner decision is superseded for New Song: the blank-mode wizard is adopted under the [New Song blank wizard plan](../new-song-blank-wizard/plan.md), with `NewSongController`/`NewSongWizard` reusing `ProjectService.importSong`.
+- The import-only planner decision is superseded for New Song: the blank-mode wizard is adopted under the [New Song blank wizard plan](../../old/new-song-blank-wizard/plan.md), with `NewSongController`/`NewSongWizard` reusing `ProjectService.importSong`.
 - Swift owner: a pure `MidiImportWizardState` (the laws, testable without Qt) plus a bridged `MidiImportController` owned by `SongDockController`. SongDockController already owns the create/register/delete lifecycle (install/detach, SongDockController.swift:38-56). This avoids edits to the hot `ApplicationSession*.swift`.
 - Domain split: `prepareImportedSong`, `suggestedSongLabel` and `trackLimit` go in PorydawCore `MidiImport` (the fork keeps them in core/newsongwizard; `songFile`:637-654, `buildPages`:589-598, clamp:429-431). The Analysis wording goes in the app-layer `ImportAnalysisSummary` (`refresh`:423-525).
 - Transaction freezes the fork order (projectio.cpp:318-383), with refusals before any write: invalid label; existing .mid ('MIDI file already exists: <path>', :326-328); taken label (task 171/210 stray parity); voicegroup name or collision. Then optional voicegroup → .mid → flags → registerSong → snapshot. No rollback. Earlier writes stay (:318-321). The existing `ProjectService.createVoicegroup` is reused, with the store re-acquired after its reopen.

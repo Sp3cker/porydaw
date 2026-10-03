@@ -3,7 +3,7 @@
 Normative target state for the Swift↔QML declaration surface. Companion to
 [audit.md](audit.md) (historical evidence) and [plan.md](plan.md) (historical
 execution record). Current work is tracked only by the
-[authoritative parity plan](../swift-feature-parity/plan.md). Bridge
+[authoritative parity plan](../../plans/swift-feature-parity/plan.md). Bridge
 mechanism citations point into the pinned QtBridge checkout
 (`407714006dd21107b70db6547ce75e43df0c8a75` + `qtbridge-object-return.patch`),
 materialized at `.worktrees/swift-qml-grid/build/_deps/qtbridge-src/`; paths

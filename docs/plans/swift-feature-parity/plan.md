@@ -1,8 +1,8 @@
 # Swift rewrite: feature-parity roadmap
 
-Status: **The overall objective is not complete; the plan continues past the earlier user-requested handoff.** Tasks 12 (R07), 13 (R24), 14 (R08 at `563a3540`), 15 (BANK-CLOSE at `92894399`) and 18 (PJ06: `935c6846` + `5c2d04b2`, merged with the R22/R26/R27 + R15-R18/R23/R25 evidence repairs at `b593f20d`) are accepted and pushed at `b5c5d397` (= `origin/feature/swift-qml-grid`). this plan is authoritative for everything landed after it. The rest of this inventory is preserved, not cancelled.
+Status: **The overall objective is not complete.** Tasks 12 (R07), 13 (R24), 14 (R08 at `563a3540`), 15 (BANK-CLOSE at `92894399`) and 18 (PJ06: `935c6846` + `5c2d04b2`, merged with the R22/R26/R27 + R15-R18/R23/R25 evidence repairs at `b593f20d`) were accepted at `b5c5d397`. Sprint 3 ([sprint-3.md](sprint-3.md)) and sprint 4 ([sprint-4.md](sprint-4.md), complete 2026-09-29) landed further work: P2 MIDI import, P3 WAV export, P4 Sample Studio, VG03 New Voicegroup, and the theme picker. This plan is authoritative for status; the rest of this inventory is preserved, not cancelled.
 
-Current authorization: **details of existing surfaces first, with no extra UI beyond C++ checks/proofs.** Reuse/adapt original QML; do not redesign old features. Sample Studio, WAV export, onboarding and other absent surfaces are deferred, not completed or removed from the inventory.
+Current authorization: **details of existing surfaces first, with no extra UI beyond C++ checks/proofs.** Reuse/adapt original QML; do not redesign old features. User rulings (9)/(10) of 2026-09-28 released P3 WAV export and P2/P4 (Import MIDI wizard, Sample Studio, sample picker, SF2 zone picker); those surfaces have landed. Onboarding beyond them stays deferred.
 
 ## Goal and scope
 
@@ -10,8 +10,8 @@ Recover every shipped C++ user workflow in the Swift/QML app, without losing mus
 
 Read [inventory.md](inventory.md) for behavior obligations and source evidence, [spec.md](spec.md) for the detailed sample/export/project contracts, and [verification.md](verification.md) for acceptance. These documents replace stale migration task ordering, not the historical behavior oracles.
 
-This is the cross-feature roadmap, not a single dispatchable implementation brief. Each package below produces a complete user-facing outcome. Before starting its code, freeze bounded `task-N-brief.md` files under that surface's plan, using the repository's SDD brief format: closed write set, existing symbols to preserve/change, chosen interfaces, exact named checks and explicit blocked rows. Do not send a whole multi-surface package to one implementer or invent new interfaces from this roadmap. Sample processing and production WAV export need contract/design work before implementation; the decision is to keep their behavior in Swift, not resurrect unlinked C++ editors.
-The execution queue after this plan is [sprint-3.md](sprint-3.md); use it for the next authorized slices and their residual evidence.
+This is the cross-feature roadmap, not a single dispatchable implementation brief. Each package below produces a complete user-facing outcome. Before starting its code, freeze bounded `task-N-brief.md` files under that surface's plan, using the repository's SDD brief format: closed write set, existing symbols to preserve/change, chosen interfaces, exact named checks and explicit blocked rows. Do not send a whole multi-surface package to one implementer or invent new interfaces from this roadmap. Sample processing and production WAV export keep their behavior in Swift (landed in sprint 4); do not resurrect unlinked C++ editors.
+The execution queues after this plan are [sprint-3.md](sprint-3.md) and [sprint-4.md](sprint-4.md) (complete); sprint-4's following-sprint backlog lists the next user-requested work.
 Note: typography authority = tasks 29–33 (`4a0e7c42`/`040dde2a`/`11c58df4`/`95aae864`); fork grid model = tasks 34a/34b (`780027e3`); roll click parity = task 35 (`780027e3`); Swift-owned settings = task 36 (`00b96099`).
 
 ## Execution status
@@ -64,7 +64,7 @@ All nontrivial rows route SDD-track because they affect behavior, ownership, or 
 | R25 | landed | `dc3ae17a`: transport publication deduplicated, `checkSelectedWorkspaceAudio` split into phases, brief-named stale comments removed. |
 | R26 | landed (partial) | `f8489983`: keyboard audition pins the pressed track (`checkKeyboardAuditionTrackSwitch`, selection S050). Hidden-tab lifetime, repeated clipping and band-audition projection are not recorded as reassessed. |
 | R27 | landed (partial) | `f8489983`: QTP0004 NEW per-directory qmldir, `.qmlls.ini` import root, zero-size font sources isolated. Missing-font and QML lint-import residuals are not recorded as resolved. |
-| R28 | blocked | New bank and sample callbacks cannot implement deferred workflows; requires VG03/SA01 scope authorization. |
+| R28 | complete | The deferred callbacks are now assigned: `onNewVoicegroupRequested` (`ApplicationSession+Audio.swift`, VG03 task 209 `b986ba08`) and `onNewSampleRequested`/`onEditSampleRequested` (`ApplicationSession+Samples.swift`, P4 tasks 253–254 `6953cb62`/`0aa5b5de`). |
 | R29 | ruled | 2026-09-25 ruling: the `feature/swift-drawer-reactive` drawer-presentation gap files are not a spec. `velocitypres_gap.swift`, `voice_gap.swift` and `drawer_gap.swift` compute one conjunction and report it once per ledger row id (104, 101 and 22 rows; most of the 241 "failures"), and pin pixel constants (`plotWidth == 400`, `rulerWidth == 56`, gutter 584) that contradict font-derived geometry. Porting them would be fake proof and is forbidden. The automation `*_gap.swift` files carry granular behavior obligations; ED07 was started by task 21 and landed at `60d05156`; remaining point-menu obligations are queued separately. |
 
 ### Complete product inventory
@@ -73,32 +73,32 @@ Details and pinned oracles remain in [inventory.md](inventory.md). “Pending”
 
 | ID | Status | Required outcome |
 | --- | --- | --- |
-| SH01 | pending | Existing shell routes, checked/enabled state, fixed shortcuts and About; absent registration UI remains PJ03/PJ04. |
+| SH01 | pending | Existing shell routes, checked/enabled state, fixed shortcuts and About; New Song (PJ03) and Import MIDI (PJ04) routes have landed. |
 | SH02 | pending | Note names across tabs, themes, persistence, fit, ghosts and drag readouts. Landed slices: task 25 (`f7c32ee6`) themed ghosts; tasks 29–33 (`4a0e7c42`/`95aae864`/`040dde2a`/`11c58df4`) typography authority; tasks 34a/34b (`780027e3`) per-tab grid. Residual: note-name rasters (task 45). The velocity-color display mode was removed by user decision (2026-09-28). |
-| SH03 | blocked | Appearance/font/grid controls require scope authorization. |
+| SH03 | landed (partial) | Theme picker in the Settings window (`6f8b9e29`; closes themelayout_settings A009/A010/A024–A028/A030/A031 and dialogs A009) and grid-line contrast slider (task 169, `59f8582f`). Residual: system-font control and settings-persistence proof. |
 | SH04 | pending | Existing dock sizing/visibility/constrained layout and workspace restoration. Landed slices: tasks 26–27 (`63736872`/`d34d93fa`) fork surface composition; tasks 29–33 (`4a0e7c42`/`95aae864`/`040dde2a`/`11c58df4`) typography/layout authority. Residual: native workspace restoration. |
 | SH05 | landed | Active song/project window title with dirty indicator and the PCM/CGB/lost-note status meter shipped in fork-main `fceecd88`; task 24 (`639c96ff`) landed the Swift slice. Residual: native macOS dirty dot. Opening the Polyphony Debugger from the meter only if fork-main did. |
 | SH06 | pending | Existing window/filter/follow/suppression/volume/debugger preference persistence. |
 | PJ01 | pending | Project open/change/startup arguments and dirty-safe failure paths. |
 | PJ02 | pending | Existing song search/filter/badges/reuse/deletion and available registration retry. |
-| PJ03 | landed | `NewSongController`/`NewSongWizard` adopt the blank wizard and reuse `ProjectService.importSong`; [plan and acceptance](../new-song-blank-wizard/plan.md). |
-| PJ04 | blocked | File-picker MIDI import workflow requires scope authorization. |
+| PJ03 | landed | `NewSongController`/`NewSongWizard` adopt the blank wizard and reuse `ProjectService.importSong`; [plan and acceptance](../../old/new-song-blank-wizard/plan.md). |
+| PJ04 | landed | Import MIDI wizard (sprint 4 tasks 230–234; `7bbd41ea` commit variants and partial-registration refresh); `onboardcheck/proof.import.txt` closed and deleted. Window file-drop stays excluded. |
 | PJ05 | pending | Ordered document/config/bank saves, conflicts, stale completion and byte conservation. |
 | PJ06 | complete | Task 18 accepted: `proof.tabs_lifecycle.txt` retired (74 MATCHED via new shell-tabs test_o/p/q/r + amended e/j/k + swiftcore); `proof.tabs_persistence.txt` 34 MATCHED/1 PARTIAL (A044 mixer-volume relaunch belongs to transport-settings surface)/36 RETIRED-*. Reload preserves same `tabId` + seeded view state (BEHAVIOR-GAP repaired in `SongTabsController`/`ApplicationSession`); fresh tab homes `scrollX` to `minHScroll` (repaired in `PianoGrid.configureViewport`). Shared-bank lifetime + restored recipe proven. Remaining `proof.session`/`tabs_scale`/`tabs_transport` GAPs route to PJ07/ED05/AU03. |
 | PJ07 | pending | View/lane/workspace persistence without writing project song sidecars. |
 | VG01 | pending | Existing browsing, typed voice edits, readonly forms and audition. |
 | VG02 | pending | Symbol pickers, metadata, unknown symbols and audition envelopes. |
-| VG03 | blocked | Create/copy-bank workflow requires scope authorization. |
+| VG03 | landed | New Voicegroup creates a per-file group, appends the hub include and binds it to the current song undoably (sprint 3 task 209, `b986ba08`; sourceediting and save presentation ledgers closed). |
 | VG04 | pending | Synth preview/deduplication and referenced-definition save/include behavior. |
 | VG05 | pending | Shared-bank two-song lifecycle; consumes R07/R08. |
-| SA01 | blocked | Sample Studio launch/source/reopen requires scope authorization. |
-| SA02 | blocked | Full decoder/SoundFont workflow requires scope authorization. |
-| SA03 | blocked | Sample DSP/waveform/loop/local-history workflow requires scope authorization. |
-| SA04 | blocked | Complete sample-editor audition journey requires SA01–SA03; existing primitive remains in AU03. |
-| SA05 | blocked | Sample commit/registration/assignment requires scope authorization. |
-| SA06 | blocked | Provenance and changed/missing-source reopen requires scope authorization. |
-| AU01 | blocked | Production WAV export workflow requires scope authorization. |
-| AU02 | blocked | Complete export cancellation/error/duration/suppression journey requires AU01. |
+| SA01 | landed | Mounted Tools → Import Sample → Sample Editor window → commit, and VoiceEditor +/✎ New/Edit routes (sprint 4 tasks 253–254, `6953cb62`/`0aa5b5de`); editor ledger closed. |
+| SA02 | landed | Swift WAV/AIFF/SF2 decode plus the `pd_sample_decode` C seam for MP3/FLAC/Ogg, and the SF2 zone picker (tasks 240–242, 254); decoder ledger closed with the external corpus (`79b9c1e2`), soundfont ledger closed (`0aa5b5de`). |
+| SA03 | landed | Non-destructive DSP, loop tools, waveform and dialog-local history (tasks 243–245, 249; `145f4fa6`); dsp and integration ledgers closed. |
+| SA04 | landed | Engine-true audition strip on `AudioAudition` with the shared MIDI-key parser (task 252, `bf3d177c`); analysis ledger closed. |
+| SA05 | landed | `SampleRegistrar` probe/validate/register with loader/engine agreement (task 246, `77609b6b`), commit transaction and loader-context rebuild (task 248), and undoable destination assignment (task 254); project ledger closed. |
+| SA06 | landed | Provenance sidecar store, edit-from-provenance and silent fallback to the committed WAV on changed/missing source (tasks 247, 254). |
+| AU01 | landed | File → Export WAV: `DialogWindow` options, save picker, app-modal render with progress and Cancel (sprint 4 tasks 220–222, `d4f70b82`/`3d7a6a78`/`a12d5a3d`); `WavExport` is the single production owner. |
+| AU02 | landed | Live unsaved-session capture holding its bank lease, cancellable `@concurrent WavExportJob`, suppression pre-roll/flush and cancel cleanup (tasks 220–221); `wavexport.{h,cpp}` retired (task 223, `e7c3b61f`). |
 | AU03 | pending | Transport/seek/loop/follow/live edits/settings/audio; consumes R02/R05/R24. Landed slices: task 25b (`b1113abd`) transport glyphs/readouts; tasks 34a/34b (`780027e3`) grid denomination and per-tab routing. Residual: transport transition and preference proof. |
 | AU04 | pending | Polyphony Debugger counters/inversion/jumps and lifecycle, including rendered flash-state contrast; the incoming ink correction has a contrast calculation but no executing flash-state lane predicate. Landed slice: task 24 (`639c96ff`) status-meter entry point. Residual: jump gesture, flash fade, counters/lifecycle (task 43). |
 | AU05 | pending | Existing transport preferences; absent compact meter remains SH05. |
@@ -125,11 +125,11 @@ Details and pinned oracles remain in [inventory.md](inventory.md). “Pending”
 | ID | Status | Required journey |
 | --- | --- | --- |
 | J01 | pending | Existing composition edit/undo/save/relaunch; independent MIDI conservation. |
-| J02 | blocked | New composition still requires VG03 authorization. |
-| J03 | blocked | External MIDI journey requires PJ04 authorization. |
+| J02 | pending | New composition: VG03 (`b986ba08`) and PJ03 have landed; the end-to-end journey is not yet recorded. |
+| J03 | landed | External MIDI journey closed with PJ04 by sprint 4 tasks 230–234 (`7bbd41ea`). |
 | J04 | pending | Shared instruments edit/play/switch/undo/save/relaunch. |
-| J05 | blocked | Sample asset journey requires SA01–SA06 authorization. |
-| J06 | blocked | Unsaved-state export journey requires AU01/AU02 authorization. |
+| J05 | pending | Sample asset journey: SA01–SA06 have landed; the cross-surface journey is not yet recorded beyond the `shell-sample-studio` lanes. |
+| J06 | pending | Unsaved-state export journey: AU01/AU02 have landed; the journey is not yet recorded beyond the `shell-export` lanes. |
 | J07 | pending | Native window/focus/popup/gesture/asynchronous teardown. |
 | J08 | pending | Existing settings and constrained-layout reopen. |
 | J09 | blocked | Clean-host distribution depends on complete authorized product and platform hosts. |
@@ -193,9 +193,9 @@ P3's effective-bank snapshot contract and P4's bank assignment/commit-visibility
 ## Implementation order and parallelism
 
 1. **Accepted repair wave.** Tasks 4–8 repaired project operations, workspace/transport, QML consumers, queued voice identity and contrast. Covering native/QML/proof gates and task reviews passed; checkpoint accepted work before reusing its files.
-2. **Handoff: shared-bank safety and audio lifetime accepted.** Tasks 12/13 are complete at this checkpoint. The next implementation is task 14, same-file section preservation, followed by a bounded brief for the authorized all-dirty-bank close policy. The user requested a stop and handoff; these and other independent obligations remain pending for the successor.
+2. **Shared-bank safety and audio lifetime accepted.** Tasks 12/13, task 14 (same-file section preservation) and task 15 (all-dirty-bank close policy) are complete.
 3. **Continue existing-surface parity (remaining P1/P5/P6/P7).** Freeze one behavior-sized brief at a time from current source and original assertions. Do not replay the three completed briefs or treat their partial proof coverage as full native parity.
-4. **Released delivery (sprint 4).** User rulings (9)/(10) of 2026-09-28 release P3 WAV export and P2/P4 (Import MIDI wizard, Sample Studio, sample picker, SF2 zone picker); execution order and briefs are in [sprint-4.md](sprint-4.md). Theme/settings dialogs and absent P5/P7 workflows still require scope expansion. P9 requires platform evidence; P10 stays blocked until the full required scope is accepted.
+4. **Released delivery (sprint 4, complete).** User rulings (9)/(10) of 2026-09-28 released P3 WAV export and P2/P4 (Import MIDI wizard, Sample Studio, sample picker, SF2 zone picker); all landed per [sprint-4.md](sprint-4.md), as did the Settings theme picker. Remaining P5/P7 workflows (system-font control, workspace restoration) still require scope expansion. P9 requires platform evidence; P10 stays blocked until the full required scope is accepted.
 
 A checkpoint is a coherent accepted behavior boundary, not one commit per task. Earlier file-ownership checkpoints can satisfy a nearby milestone. Unreviewed or failing work is repaired before reuse.
 

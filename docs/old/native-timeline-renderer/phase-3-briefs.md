@@ -1,6 +1,6 @@
 # Phase 3 — Ruler on the native renderer
 
-Plan: `docs/plans/native-timeline-renderer/plan.md` (Contract, blob table, Decision 5, §8 phase 3).
+Plan: `docs/old/native-timeline-renderer/plan.md` (Contract, blob table, Decision 5, §8 phase 3).
 Spec for every pixel: HEAD's `rebuildRuler` (`git show HEAD~0:src/swift/app/roll/GridScene+Rebuild.swift`,
 function `rebuildRuler` and `maxRulerBar`) and HEAD `src/ui/songview/quick/swiftroll/EditorRulerBand.qml`.
 Prior art: the pre-Swift C++ ruler `/Users/sallegrezza/dev/cProjects/porydaw/src/ui/songview/quick/timerulerquick.cpp`.

@@ -276,7 +276,7 @@ function qmlReachability(
         shell ?? "missing"
       }) does not match Swift qmlFileName (${
         appName.join(", ") || "missing"
-      }); see docs/plans/qtbridge-surface/spec.md §4`,
+      }); see docs/old/qtbridge-surface/spec.md §4`,
     );
     Deno.exit(1);
   }
@@ -547,7 +547,7 @@ async function main(): Promise<void> {
   if (!pin) throw new Error(`QtBridge GIT_TAG missing in ${PIN_FILE}`);
   if (pin !== SUPPORTED_TYPE_PIN) {
     console.error(
-      `QtBridge pin in ${PIN_FILE} (${pin}) differs from supported-type constant SUPPORTED_TYPE_PIN (${SUPPORTED_TYPE_PIN}); revisit the guard on a QtBridge pin bump (docs/plans/qtbridge-surface/spec.md §4)`,
+      `QtBridge pin in ${PIN_FILE} (${pin}) differs from supported-type constant SUPPORTED_TYPE_PIN (${SUPPORTED_TYPE_PIN}); revisit the guard on a QtBridge pin bump (docs/old/qtbridge-surface/spec.md §4)`,
     );
     Deno.exit(1);
   }
@@ -574,7 +574,7 @@ async function main(): Promise<void> {
   }
   if (baseline.pin !== pin) {
     console.error(
-      `QtBridge pin in ${PIN_FILE} (${pin}) differs from recorded pin in ${BASELINE} (${baseline.pin}); check SUPPORTED_TYPE_PIN (${SUPPORTED_TYPE_PIN}) and revisit the guard on a QtBridge pin bump (docs/plans/qtbridge-surface/spec.md §4)`,
+      `QtBridge pin in ${PIN_FILE} (${pin}) differs from recorded pin in ${BASELINE} (${baseline.pin}); check SUPPORTED_TYPE_PIN (${SUPPORTED_TYPE_PIN}) and revisit the guard on a QtBridge pin bump (docs/old/qtbridge-surface/spec.md §4)`,
     );
     Deno.exit(1);
   }

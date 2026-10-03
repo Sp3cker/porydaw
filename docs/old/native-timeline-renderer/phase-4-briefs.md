@@ -1,8 +1,8 @@
 # Phase 4 — Drawer pages on the native renderer
 
-Plan: `docs/plans/native-timeline-renderer/plan.md` (blob table rows 1, 3, 7, 11; Decision 7; §8 phase 4).
+Plan: `docs/old/native-timeline-renderer/plan.md` (blob table rows 1, 3, 7, 11; Decision 7; §8 phase 4).
 Precedent (done, committed 0142cbba): velocity page Swift content — brief
-`docs/plans/native-timeline-renderer/task-4v1-brief.md`, writer
+`docs/old/native-timeline-renderer/task-4v1-brief.md`, writer
 `src/swift/app/drawer/DrawerStaticsContent.swift`, shared framing
 `src/swift/app/timeline/DrawingContentBinary.swift`, decoder check
 `src/checks/velocity/VelocityContentProbe.swift`, `VelocityPage.contentRevision` + `drawingContent()`.

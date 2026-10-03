@@ -40,12 +40,12 @@ None. Parallel with 02 (disjoint files).
   must be retained Swift-side; emissions are queued (next event-loop turn);
   never mutate published state from `init` of a `QmlInstantiableStatus`
   class. Close with: full normative text + enforcement in
-  `docs/plans/qtbridge-surface/spec.md`; guard = `deno task verify:bridge`.
+  `docs/old/qtbridge-surface/spec.md`; guard = `deno task verify:bridge`.
 
 `/docs/plans/qtbridge-integration-contract.md`: insert one short paragraph
 immediately after the existing Status paragraph (line 3): the declaration
 convention and its enforcement now live in `.omp/rules/qtbridge-surface.md`
-and `docs/plans/qtbridge-surface/spec.md`; the lifetime ownership table and
+and `docs/old/qtbridge-surface/spec.md`; the lifetime ownership table and
 `RewriteWindow`/context-property rows are historical records of the retired
 C++ shell; the verified mechanism/evidence rows below remain authoritative
 for bridge capability. Do not rewrite any other part of the document.
