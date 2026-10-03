@@ -45,11 +45,11 @@ Ledger:
   src/checks/visual/proof.dialogs.txt` shows none).
 
 Docs (spec.md §7, exact lines):
-- `docs/plans/swift-feature-parity/sprint-4.md:33` — replace the "not
+- `docs/old/swift-feature-parity/sprint-4.md:33` — replace the "not
   adopted" deferral with a pointer to this plan.
-- `docs/plans/swift-feature-parity/sprint-4.md:407` — dialogs A017–A021 and
+- `docs/old/swift-feature-parity/sprint-4.md:407` — dialogs A017–A021 and
   PJ03's conjuncts: no longer deferred.
-- `docs/plans/swift-feature-parity/sprint-4.md:415` — "Import mode only"
+- `docs/old/swift-feature-parity/sprint-4.md:415` — "Import mode only"
   planner decision superseded for New Song.
 - `docs/plans/swift-feature-parity/inventory.md` — PJ03 row: name the landed
   owners (`NewSongController`/`NewSongWizard` + `ProjectService.importSong`

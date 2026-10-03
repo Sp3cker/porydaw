@@ -4,7 +4,7 @@ Status: authorized 2026-09-30. This plan adopts the fork's blank-mode
 `NewSongWizard` for File → New Song, closes visual dialogs A017–A021 and the
 PJ03 creation transaction, and removes the Swift-era copy-from-current prompt.
 It supersedes the sprint-4 deferral
-(`docs/plans/swift-feature-parity/sprint-4.md:33,407,415`) **for this surface
+(`docs/old/swift-feature-parity/sprint-4.md:33,407,415`) **for this surface
 only**; every other deferral in that document stands.
 
 Behavior contract, frozen page/transaction order, and the copy-from-current

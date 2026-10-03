@@ -7,7 +7,6 @@ Read this before opening anything under `docs/`.
 | `plans/` | Active implementation plans and task briefs. |
 | `ideas/` | Unstarted ideas. Not a work queue. |
 | `adr/` | Accepted architecture decisions. |
-| `improve/` | Audit notes. |
 | `old/` | Frozen history. See below. |
 
 Loose files in this directory are current notes. They are not a reason to open `old/`.

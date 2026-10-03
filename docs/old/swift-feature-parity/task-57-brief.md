@@ -252,7 +252,7 @@ the Escape-reuse rule below.
 
 # Deliverable answers
 
-- **Path**: `docs/plans/swift-feature-parity/task-57-brief.md` (this file).
+- **Path**: `docs/old/swift-feature-parity/task-57-brief.md` (this file).
 - **Write set**: `src/checks/automation/domain/gestureNodeDrag.swift`,
   `gesturePointRange.swift`, `gestureSweep.swift`, `gesturePencil.swift`,
   `src/checks/automation/automationselection.swift`,

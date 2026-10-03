@@ -206,11 +206,11 @@ families' C++ units belong to open ledgers in other tracks).
 
 ## 7. Doc cutover (task 3, frozen edits)
 
-- `docs/plans/swift-feature-parity/sprint-4.md:33` — drop the "not adopted"
+- `docs/old/swift-feature-parity/sprint-4.md:33` — drop the "not adopted"
   deferral line, replacing it with a pointer to this plan.
-- `docs/plans/swift-feature-parity/sprint-4.md:407` — dialogs A017–A021 and
+- `docs/old/swift-feature-parity/sprint-4.md:407` — dialogs A017–A021 and
   PJ03's conjuncts are no longer deferred-on-user-decision.
-- `docs/plans/swift-feature-parity/sprint-4.md:415` — the "Import mode only"
+- `docs/old/swift-feature-parity/sprint-4.md:415` — the "Import mode only"
   planner decision is superseded for New Song; the wizard is adopted.
 - `docs/plans/swift-feature-parity/inventory.md` PJ03 — no longer "Missing
   complete shell wizard/store transaction"; name the landed owners.
