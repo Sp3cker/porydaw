@@ -78,6 +78,8 @@ public func runKeybindingRegistryChecks(
     let selectAllID = "roll.select_all"
     let scopeRows: [(id: String, expected: KeybindingScope)] = [
         ("edit.insert_time", .window),
+        ("edit.undo", .window),
+        ("edit.redo", .window),
         ("edit.delete_time", .window),
         ("transport.play_pause", .window),
         ("roll.copy", .window),
@@ -95,6 +97,16 @@ public func runKeybindingRegistryChecks(
     ]
     for row in scopeRows {
         onAssertion(registry.scope(row.id) == row.expected, deliveryScopes, row.id)
+    }
+    for id in ["edit.undo", "edit.redo"] {
+        let sequences = registry.sequences(id)
+        onAssertion(!sequences.isEmpty, deliveryScopes, "\(id) resolves platform history bindings")
+        for sequence in sequences where sequence.strokes.count == 1 {
+            let stroke = sequence.strokes[0]
+            onAssertion(
+                registry.matches(stroke & ~0x1e00_0000, stroke & 0x1e00_0000, id),
+                deliveryScopes, "\(id) matches \(sequence.portableText)")
+        }
     }
     onAssertion(
         registry.sequences("edit.insert_time").map(\.strokes) ==

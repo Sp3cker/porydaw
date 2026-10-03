@@ -327,10 +327,14 @@ FocusScope {
         enabled: page.navigationEnabled
         onActivated: page.moveCurrentColumn(1)
     }
-    Shortcut {
-        sequence: "Home"
-        enabled: page.navigationEnabled
-        onActivated: page.moveCurrentRow(-table.eventTable.rows, Qt.NoModifier)
+    // Home belongs to row navigation here; elsewhere the window resets transport.
+    Keys.onShortcutOverride: event => event.accepted = page.navigationEnabled
+        && event.key === Qt.Key_Home && event.modifiers === Qt.NoModifier
+    Keys.onPressed: event => {
+        event.accepted = page.navigationEnabled && event.key === Qt.Key_Home
+            && event.modifiers === Qt.NoModifier
+        if (event.accepted)
+            page.moveCurrentRow(-table.eventTable.rows, Qt.NoModifier)
     }
     Shortcut {
         sequence: "End"

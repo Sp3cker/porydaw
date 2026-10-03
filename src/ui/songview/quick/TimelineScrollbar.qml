@@ -131,6 +131,8 @@ Item {
     visible: externalVisible && (visibleWhenNotScrollable || scrollable)
     // Qt cannot revoke tab eligibility while this item still owns active focus.
     activeFocusOnTab: scrollable || activeFocus
+    Keys.onShortcutOverride: event => event.accepted = scrollbar.scrollable
+        && event.key === Qt.Key_Home && event.modifiers === Qt.NoModifier
     Keys.onPressed: (event) => scrollbar.handleKey(event)
 
     Accessible.role: Accessible.ScrollBar

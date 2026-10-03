@@ -277,11 +277,8 @@ Item {
         }
     }
 
-    // The public focus leaf: a plain Item so Qt's ShortcutOverride phase is
-    // never claimed by the editor for keys it does not handle — a bare Space
-    // reaches the window shortcut while the field holds focus. Key presses
-    // that do arrive are applied to the inner TextInput through its own API;
-    // nothing is forwarded or synthesized.
+    // The plain focus leaf applies local text keys through the TextInput API.
+    // Only implemented commands claim ShortcutOverride; bare Space reaches transport.
     Item {
         id: focusLeaf
 
@@ -321,6 +318,16 @@ Item {
             event.accepted = true
         }
 
+        // Own the text commands implemented below; bare Space stays window-owned.
+        Keys.onShortcutOverride: (event) => {
+            event.accepted = event.matches(StandardKey.SelectAll)
+                || event.matches(StandardKey.Copy) || event.matches(StandardKey.Cut)
+                || event.matches(StandardKey.Paste) || event.matches(StandardKey.Undo)
+                || event.matches(StandardKey.Redo)
+                || ((event.key === Qt.Key_Home || event.key === Qt.Key_End)
+                    && (event.modifiers === Qt.NoModifier || event.modifiers === Qt.ShiftModifier))
+        }
+
         Keys.onUpPressed: (event) => {
             if (!control.adjustmentsEnabled)
                 return
@@ -337,6 +344,7 @@ Item {
         }
 
         Keys.onPressed: (event) => {
+            event.accepted = false
             if (control.adjustmentsEnabled) {
                 // Page keys always step by 10 and never apply the step modifier.
                 if (event.key === Qt.Key_PageUp) {
@@ -349,56 +357,55 @@ Item {
                     return
                 }
             }
-            if (event.modifiers & Qt.ControlModifier) {
-                if (event.key === Qt.Key_A) {
-                    input.selectAll()
-                    event.accepted = true
-                } else if (event.key === Qt.Key_C) {
-                    input.copy()
-                    event.accepted = true
-                } else if (event.key === Qt.Key_X) {
-                    input.cut()
-                    event.accepted = true
-                } else if (event.key === Qt.Key_V) {
-                    // paste() inserts clipboard text without the per-character
-                    // filter the digit branch applies; roll back a draft that
-                    // falls outside the numeric character domain.
-                    const priorText = input.text
-                    const priorCursor = input.cursorPosition
-                    const priorStart = input.selectionStart
-                    const priorEnd = input.selectionEnd
-                    input.paste()
-                    const pasted = input.text
-                    let inDomain = true
-                    for (let i = 0; i < pasted.length; ++i) {
-                        const ch = pasted.charAt(i)
-                        if (ch >= "0" && ch <= "9")
-                            continue
-                        if (ch === "-" && i === 0 && control.minimumValue < 0)
-                            continue
-                        inDomain = false
-                        break
-                    }
-                    if (!inDomain) {
-                        input.text = priorText
-                        if (priorStart !== priorEnd) {
-                            input.select(priorStart, priorEnd)
-                            if (priorCursor === priorStart)
-                                input.moveCursorSelection(priorStart, TextInput.SelectCharacters)
-                        } else {
-                            input.cursorPosition = priorCursor
-                        }
-                    }
-                    event.accepted = true
-                } else if (event.key === Qt.Key_Z) {
-                    input.undo()
-                    event.accepted = true
-                } else if (event.key === Qt.Key_Y) {
-                    input.redo()
-                    event.accepted = true
+            if (event.matches(StandardKey.SelectAll)) {
+                input.selectAll()
+                event.accepted = true
+            } else if (event.matches(StandardKey.Copy)) {
+                input.copy()
+                event.accepted = true
+            } else if (event.matches(StandardKey.Cut)) {
+                input.cut()
+                event.accepted = true
+            } else if (event.matches(StandardKey.Paste)) {
+                // paste() inserts clipboard text without the per-character
+                // filter the digit branch applies; roll back a draft that
+                // falls outside the numeric character domain.
+                const priorText = input.text
+                const priorCursor = input.cursorPosition
+                const priorStart = input.selectionStart
+                const priorEnd = input.selectionEnd
+                input.paste()
+                const pasted = input.text
+                let inDomain = true
+                for (let i = 0; i < pasted.length; ++i) {
+                    const ch = pasted.charAt(i)
+                    if (ch >= "0" && ch <= "9")
+                        continue
+                    if (ch === "-" && i === 0 && control.minimumValue < 0)
+                        continue
+                    inDomain = false
+                    break
                 }
-                return
+                if (!inDomain) {
+                    input.text = priorText
+                    if (priorStart !== priorEnd) {
+                        input.select(priorStart, priorEnd)
+                        if (priorCursor === priorStart)
+                            input.moveCursorSelection(priorStart, TextInput.SelectCharacters)
+                    } else {
+                        input.cursorPosition = priorCursor
+                    }
+                }
+                event.accepted = true
+            } else if (event.matches(StandardKey.Undo)) {
+                input.undo()
+                event.accepted = true
+            } else if (event.matches(StandardKey.Redo)) {
+                input.redo()
+                event.accepted = true
             }
+            if (event.accepted || (event.modifiers & Qt.ControlModifier))
+                return
             const shift = (event.modifiers & Qt.ShiftModifier) !== 0
             if (event.key === Qt.Key_Backspace) {
                 if (input.selectedText.length > 0)

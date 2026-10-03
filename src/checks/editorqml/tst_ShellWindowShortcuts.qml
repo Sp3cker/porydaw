@@ -6,6 +6,78 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 
 ShellWindowSupport {
+    function test_numericHistoryDoesNotUndoSong() {
+        openTwoSongShell()
+        const session = shell.shellPresenter.session
+        const surface = selectedSurface()
+        const roll = findChild(surface, "swiftRollInput")
+        selectDrawnVelocityNote(surface)
+        const originalNotes = surface.gridModel.fetchNoteSummary()
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Up)
+        tryCompare(session, "canUndo", true, 3000)
+        const editedNotes = surface.gridModel.fetchNoteSummary()
+        verify(editedNotes !== originalNotes, "transpose creates document history")
+
+        const field = findChild(shell, "transportMasterVolumeInput")
+        verify(field, "persistent master-volume field is mounted")
+        field.text = "10"
+        field.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(field, "activeFocus", true, 3000)
+        keyClick(Qt.Key_End)
+        keyClick(Qt.Key_1)
+        compare(field.text, "101")
+        keySequence(StandardKey.Undo)
+        compare(field.text, "10", "Undo changes the focused draft")
+        compare(surface.gridModel.fetchNoteSummary(), editedNotes, "draft Undo preserves the song")
+        compare(session.canUndo, true, "document Undo remains available")
+        keySequence(StandardKey.Redo)
+        compare(field.text, "101", "platform Redo restores the draft")
+        compare(surface.gridModel.fetchNoteSummary(), editedNotes, "draft Redo preserves the song")
+
+        const copyShortcut = windowShortcut("shellShortcut_roll.copy")
+        verify(copyShortcut, "the production window Copy shortcut is mounted")
+        copyActivatedSpy.target = copyShortcut
+        copyActivatedSpy.clear()
+        keySequence(StandardKey.SelectAll)
+        compare(field.selectedText, "101")
+        keySequence(StandardKey.Copy)
+        keySequence(StandardKey.Cut)
+        compare(field.text, "")
+        keySequence(StandardKey.Paste)
+        compare(field.text, "101", "clipboard commands stay in the numeric draft")
+        compare(copyActivatedSpy.count, 0, "numeric Copy never copies the selected note")
+        compare(surface.gridModel.fetchNoteSummary(), editedNotes)
+        keyClick(Qt.Key_Home)
+        keyClick(Qt.Key_Right, Qt.ShiftModifier)
+        compare(field.selectedText, "1", "Home moves the numeric caret")
+        const playhead = session.playheadPresenter()
+        compare(playhead.playing, false)
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", true, 3000, "numeric text focus yields Space to transport")
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", false, 3000)
+
+        field.text = "100"
+        const scrollbar = findChild(surface, "timelineRollScrollBar")
+        verify(scrollbar && scrollbar.scrollable, "timeline exposes keyboard scrolling")
+        scrollbar.forceActiveFocus(Qt.TabFocusReason)
+        keyClick(Qt.Key_End)
+        tryCompare(scrollbar, "value", scrollbar.maximum, 3000)
+        keyClick(Qt.Key_Home)
+        tryCompare(scrollbar, "value", scrollbar.minimum, 3000,
+                   "scrollbar Home survives the window transport binding")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keySequence(StandardKey.Undo)
+        tryCompare(session, "documentDirty", false, 3000)
+        compare(surface.gridModel.fetchNoteSummary(), originalNotes,
+                "leaving the numeric field restores document Undo")
+        keySequence(StandardKey.Redo)
+        tryVerify(function() { return surface.gridModel.fetchNoteSummary() === editedNotes }, 3000)
+        keySequence(StandardKey.Undo)
+        tryCompare(session, "documentDirty", false, 3000)
+    }
+
     function test_cWindowShortcutsAndNumericOwnership() {
         var firstId = openTwoSongShell()
         var session = shell.shellPresenter.session
