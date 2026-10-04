@@ -176,6 +176,9 @@ public final class DocumentWorkspace {
         grid.onSetVelocityRequested = { [weak velocityPage] in
             velocityPage?.openSelectedVelocityPrompt() ?? false
         }
+        grid.onVelocityPreviewChanged = { [weak velocityPage] preview in
+            velocityPage?.setRollVelocityPreview(preview)
+        }
         velocityPage.onVelocityAccepted = { [weak grid] velocity in
             grid?.lastVelocity = Int(velocity)
         }
@@ -355,6 +358,7 @@ public final class DocumentWorkspace {
         headerVoicePicker.onOpenChanged = nil
         headerVoicePicker.onAuditionVoice = nil
         voiceChangesPage.onAuditionVoice = nil
+        grid.onVelocityPreviewChanged = nil
         velocityPage.detach()
         velocityPage.onVelocityAccepted = nil
         trackHeaders.detach()

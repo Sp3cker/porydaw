@@ -273,6 +273,7 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     @QtIgnored var prompt: VelocityPromptState?
     @QtIgnored var hovered: NoteID?
     @QtIgnored var selectionBeforePress: [NoteID] = []
+    @QtIgnored var rollPreview: [NoteID: UInt8] = [:]
     @QtIgnored var pressedNote: NoteID?
     @QtIgnored var dragDistance: Double = 10
     @QtIgnored var contextTick: Tick = 0
@@ -337,6 +338,7 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
         session = nil
         hovered = nil
         metricsCache = nil
+        rollPreview = [:]
         handleGeometryKey = nil
         publishedHandleWindow = nil
         paintCandidates = []
@@ -452,6 +454,15 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
         } else {
             publishReadout()
         }
+    }
+
+    /// The roll's staged Ctrl-drag velocities; nodes show them until the roll commits or cancels.
+    @QtIgnored
+    public func setRollVelocityPreview(_ preview: [NoteID: UInt8]) {
+        guard rollPreview != preview else { return }
+        rollPreview = preview
+        guard session != nil else { return }
+        refreshAxisAndHandles()
     }
 
     // MARK: Page seam

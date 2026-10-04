@@ -161,7 +161,7 @@ extension VelocityPage {
     private func interactionSnapshot() -> VelocityInteractionSnapshot {
         VelocityInteractionSnapshot(
             frozenNotes: gesture?.notes ?? [],
-            preview: gesture?.preview ?? [:],
+            preview: gesture?.preview ?? rollPreview,
             detentUnlock: gesture?.detentUnlock ?? false,
             relativeActivated: gesture?.relativeActivated ?? false,
             hovered: hovered,

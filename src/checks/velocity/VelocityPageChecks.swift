@@ -195,6 +195,7 @@ internal func runVelocityPageChecks(
     drawerVelocityRollCoreRollEscape(report, session: session, service: service)
     drawerVelocityRollCoreRollControllerCancel(report, session: session, service: service)
     drawerVelocityRollCoreRollStationaryNoop(report, session: session, service: service)
+    drawerVelocityRollDragMovesDrawerNodes(report, session: session, service: service)
     drawerVelocityRollCoreOctaveShortcut(report, session: session, service: service)
     drawerVelocityRollCorePromptInterlock(report, session: session, service: service)
     drawerVelocityPromptTransaction(report, session: session, service: service)

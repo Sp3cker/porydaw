@@ -95,6 +95,7 @@ extension PianoGrid {
         } else if hoverKey >= 0 {
             scene.refreshHoverChip(input)
         }
+        publishVelocityPreview()
         publishOutputs()
     }
 

@@ -33,6 +33,21 @@ extension PianoGrid {
         return min(127, max(1, Int(note.velocity) + state.delta))
     }
 
+    /// Forwards the staged velocity preview to `onVelocityPreviewChanged` when it changes.
+    @QtIgnored
+    func publishVelocityPreview() {
+        var preview: [NoteID: UInt8] = [:]
+        if case .velocity(let state) = gesture, let pressed = state.preview {
+            preview[state.noteId] = UInt8(pressed)
+            for id in session.selectedNoteOrder where id != state.noteId {
+                if let velocity = previewVelocity(id) { preview[id] = UInt8(velocity) }
+            }
+        }
+        guard preview != publishedVelocityPreview else { return }
+        publishedVelocityPreview = preview
+        onVelocityPreviewChanged?(preview)
+    }
+
     @QtIgnored
     func detach() {
         inputCancelled(reason: GridCancelReason.hidden.rawValue)
