@@ -44,16 +44,16 @@ Extension members never expose (class-body pass only).
 `QmlColor` carries normalized RGBA doubles and accepts 8-bit RGBA channels.
 `QmlFont` carries family, pixel size, Qt weight (1–1000), italic, absolute
 pixel letter spacing, and `HintingPreference` (default `.preferNoHinting`).
-Both are `Equatable` and `QVariantSettable`: properties, slots, signals and
-map entries retain native Qt `color`/`font` values in both directions.
+Both are `Equatable` and `QVariantSettable`: properties, slots and map
+entries retain native Qt `color`/`font` values in both directions.
 
 Registered Swift QObject types use native pointer metatypes named `ClassName*`
 and per-class list metatypes named `QQmlListProperty<ClassName>`. Their
 storage, flags and value operations follow Qt's proxy pointer/list templates;
 the pointer metatype reports the Swift class's dynamic metaobject. Creating a
 QML object still allocates the full proxy separately from pointer storage.
-The host macro ExternalProject rebuilds when its sources or the combined patch
-inputs change, so a patch change cannot leave a stale macro plugin in use.
+The host macro ExternalProject tracks `Extensions.swift`, `QtBridgeableMacro.swift`
+and combined patch inputs, so patch changes invalidate the macro plugin.
 
 Change emission: every exposed `var` gets `didSet { emitSignal(for:) }` —
 identically whether `@QtTracked` was written or auto-attached
@@ -109,9 +109,10 @@ integration-contract M0 table).
   connection/subscription); every QML `on<Name>` handler over a bridged
   object MUST correspond to a signal that is emitted on some path.
   *Enforced: B2 `SIGNAL_NEVER_OBSERVED`, `HANDLER_NEVER_EMITTED`.*
-- **R7 signal shape.** `@QtSignal` parameters MUST be §1 settable types
-  (primitive/color/font/map/string-list; `QtBridgeableMacro.swift:479`). Handlers receive
-  arguments positionally (`setParameterNames` is never called).
+- **R7 signal shape.** Proven `@QtSignal` parameter types are primitives,
+  maps and string lists (`QtBridgeableMacro.swift:479`); color/font signal
+  round trips are not covered. Handlers receive arguments positionally
+  (`setParameterNames` is never called).
 - **R8 returned objects.** A slot returning a `@QtBridgeable` object to QML
   MUST use the non-sugar optional form `Optional<T>` if nil is possible —
   sugar `T?` return types are **silently unregistered**

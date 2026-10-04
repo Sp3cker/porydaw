@@ -17,24 +17,12 @@ Item {
     final property alias timeSigMenuLoader: timeSigMenuLoader
     final readonly property MenuAppearance menuAppearance: MenuAppearance {
         font: menuHost.root.bodyFont
-    }
-    property int rulerMenuKind
-    Binding {
-        when: menuHost.root.gridModel !== null
-        restoreMode: Binding.RestoreNone
-        menuHost.menuAppearance.background: menuHost.root.gridModel?.palette?.chromeBackground
-        menuHost.menuAppearance.outline: menuHost.root.gridModel?.palette?.separator
-        menuHost.menuAppearance.text: menuHost.root.gridModel?.palette?.primaryText
-        menuHost.menuAppearance.hoverBackground: menuHost.root.gridModel?.palette?.hoverChipFill
-        menuHost.menuAppearance.hoverText: menuHost.root.gridModel?.palette?.hoverChipText
-        menuHost.menuAppearance.disabledText: menuHost.root.gridModel?.palette?.disabledText
-    }
-    Binding {
-        target: menuHost
-        property: "rulerMenuKind"
-        value: menuHost.root.rulerMenu?.menuKind
-        when: menuHost.root.rulerMenu !== null
-        restoreMode: Binding.RestoreNone
+        background: menuHost.root.gridModel.palette.chromeBackground
+        outline: menuHost.root.gridModel.palette.separator
+        text: menuHost.root.gridModel.palette.primaryText
+        hoverBackground: menuHost.root.gridModel.palette.hoverChipFill
+        hoverText: menuHost.root.gridModel.palette.hoverChipText
+        disabledText: menuHost.root.gridModel.palette.disabledText
     }
     component MenuEntry: QtObject {
         required property int index
@@ -323,7 +311,7 @@ Item {
                                          + (rowCount - rulerMeasure.separatorCount) * rowHeight
                                          + rulerMeasure.separatorCount)
                     menuOrigin: MenuPlacement.clampOrigin(
-                        menuHost.rulerMenuKind === 2 ? menuHost.root.timeSelectionMenuPosition
+                        menuHost.root.rulerMenu.menuKind === 2 ? menuHost.root.timeSelectionMenuPosition
                                                    : menuHost.root.timeSigMenuPosition,
                         menuWidth, menuHeight, width, height)
                 }

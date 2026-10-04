@@ -15,18 +15,12 @@ FocusScope {
     property App.MouseHints hintService: null
     property bool hintScopeAllowed: true
 
-    readonly property App.VoiceChangesPage model: page.applicationSession?.songOpen
+    readonly property App.VoiceChangesPage model: page.applicationSession.songOpen
                                                 ? page.applicationSession.voiceChangesPage() : null
     readonly property App.VoiceChangesPage pageModel: page.model
-    readonly property App.PianoGrid gridModel: page.applicationSession?.songOpen
+    readonly property App.PianoGrid gridModel: page.applicationSession.songOpen
                                               ? page.applicationSession.gridPresenter() : null
-    final property App.GridPalette gridPalette
-    Binding {
-        when: page.applicationSession !== null
-        restoreMode: Binding.RestoreNone
-        page.gridPalette: page.applicationSession?.timeSigHost.palette
-        page.seedBaseFontPx: page.applicationSession?.timeSigHost.baseFontPx
-    }
+    final readonly property App.GridPalette gridPalette: page.applicationSession.timeSigHost.palette
     enabled: page.pageModel !== null
 
     /// The shared plot origin: the gutter the roll draws at and the container
@@ -35,9 +29,8 @@ FocusScope {
                                        ? (page.gridModel.trackHeaderWidth || 0)
                                          + page.gridModel.keyboardWidth : 0
     readonly property real plotWidth: Math.max(page.width - page.plotOrigin, 0)
-    property real seedBaseFontPx
     readonly property real baseFontPx: page.gridModel ? page.gridModel.baseFontPx
-                                                      : page.seedBaseFontPx
+                                                      : page.applicationSession.timeSigHost.baseFontPx
 
     function pushBodyFacts(): void {
         if (!page.pageModel || page.width <= 0 || page.height <= 0)
@@ -281,11 +274,7 @@ FocusScope {
             height: page.pageModel ? page.pageModel.hoverLabelHeight : 0
             text: (page.pageModel ? page.pageModel.hoverText : "")
             color: page.gridPalette.primaryText
-            Binding on font {
-                when: page.applicationSession !== null
-                restoreMode: Binding.RestoreNone
-                value: page.model ? page.model.noteNameFont : page.applicationSession?.timeSigHost.typographyFonts.noteName
-            }
+            font: page.model ? page.model.noteNameFont : page.applicationSession.timeSigHost.typographyFonts.noteName
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
             horizontalAlignment: Text.AlignLeft
@@ -306,11 +295,7 @@ FocusScope {
             height: page.pageModel ? page.pageModel.readoutHeight : 0
             text: (page.pageModel ? page.pageModel.readoutText : "")
             color: page.gridPalette.primaryText
-            Binding on font {
-                when: page.applicationSession !== null
-                restoreMode: Binding.RestoreNone
-                value: page.model ? page.model.captionFont : page.applicationSession?.timeSigHost.typographyFonts.caption
-            }
+            font: page.model ? page.model.captionFont : page.applicationSession.timeSigHost.typographyFonts.caption
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
             horizontalAlignment: page.pageModel ? page.pageModel.readoutAlignment
@@ -328,11 +313,7 @@ FocusScope {
             anchors.centerIn: parent
             text: (page.pageModel ? page.pageModel.plotMessage : "")
             color: page.gridPalette.primaryText
-            Binding on font {
-                when: page.applicationSession !== null
-                restoreMode: Binding.RestoreNone
-                value: page.model ? page.model.captionFont : page.applicationSession?.timeSigHost.typographyFonts.caption
-            }
+            font: page.model ? page.model.captionFont : page.applicationSession.timeSigHost.typographyFonts.caption
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
         }

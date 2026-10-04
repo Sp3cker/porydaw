@@ -83,12 +83,13 @@ extension ApplicationSession {
     /// borrowed document. Closing is the application's async boundary, and every
     /// close lands before the project service it borrows stops.
     private func retire(_ tab: SongTabSession) {
-        let session = tab.workspace.session
-        tab.workspace.teardown()
         let prior = retireChain
         retireChain = Task {
             _ = await prior?.value
-            _ = await session.close()
+            // Component.onDestruction precedes child destruction. Retire on the
+            // existing async boundary, after the QML destruction stack unwinds.
+            tab.workspace.teardown()
+            _ = await tab.workspace.session.close()
         }
     }
 

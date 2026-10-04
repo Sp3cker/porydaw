@@ -669,6 +669,9 @@ TestCase {
         var viewport = rollInput()
         tryVerify(function() { return grid.renderedNoteCount > 0 }, 5000,
                   "the staged song publishes notes")
+        verify(waitForNative(function() {
+            return plot.fetchedRevision === grid.scene.displayRevision
+        }, 5000), "the roll renderer fetches the current scene revision")
         var notes = JSON.parse(grid.fetchNoteSummary())
         var dpr = grid.devicePixelRatio
         var observed = false

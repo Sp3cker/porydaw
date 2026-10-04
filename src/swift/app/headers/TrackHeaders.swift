@@ -92,6 +92,7 @@ public final class TrackHeadersPresenter {
     @QtIgnored var geometry = TrackHeadersGeometry()
     @QtIgnored var pointer = HeaderPointerState()
     @QtIgnored var snapshots: [TrackHeaderSnapshot] = []
+    private var spareRows: [TrackHeaderRowHandle] = []
     @QtIgnored var resolvedPrograms: [Int] = []
     /// Voice context bounds paired with `resolvedPrograms`; intra-span ticks do
     /// not need to rescan the document lane.
@@ -212,7 +213,24 @@ public final class TrackHeadersPresenter {
         }
         if structural {
             snapshots = next
-            rows.reset(to: next.map(TrackHeaderRowHandle.init))
+            for index in 0..<min(rows.count, next.count) {
+                let handle = rows[index]
+                handle.update(next[index])
+                // Publish roles with the structural row change, not its queued NOTIFY.
+                rows[index] = handle
+            }
+            if rows.count > next.count {
+                for index in next.count..<rows.count { spareRows.append(rows[index]) }
+                rows.removeSubrange(next.count..<rows.count)
+            }
+            for index in rows.count..<next.count {
+                if let handle = spareRows.popLast() {
+                    handle.update(next[index])
+                    rows.append(handle)
+                } else {
+                    rows.append(TrackHeaderRowHandle(next[index]))
+                }
+            }
             rowRebuildCount += 1
         } else {
             for index in next.indices {

@@ -36,11 +36,7 @@ FocusScope {
         hoverText: root.menuColors ? root.menuColors.windowText : "transparent"
         disabledText: root.menuColors ? root.menuColors.disabledText : "transparent"
         separator: root.menuColors ? root.menuColors.separator : "transparent"
-        Binding on font {
-            when: root.model !== null
-            value: root.model?.captionFont
-            restoreMode: Binding.RestoreNone
-        }
+        font: root.model.captionFont
     }
     onShowingChanged: {
         childOpen = false

@@ -29,34 +29,36 @@ public final class EventListRowHandle {
 
     @QtIgnored
     func update(_ source: EventListRow, model: EventListModel, selected: Bool) -> Bool {
-        var changed = false
-        func publish<T: Equatable>(_ old: T, _ new: T, _ assign: (T) -> Void) {
-            guard old != new else { return }
-            assign(new)
-            changed = true
-        }
-        publish(row, source.index) { row = $0 }
-        publish(eventIndex, source.eventIndex ?? -1) { eventIndex = $0 }
-        publish(tick, Int(source.tick)) { tick = $0 }
-        publish(typeKind, source.typeKind) { typeKind = $0 }
-        publish(isEndOfTrack, source.isEndOfTrack) { isEndOfTrack = $0 }
-        publish(rowKind, model.rowKind(row: source.index)) { rowKind = $0 }
-        publish(self.selected, selected) { self.selected = $0 }
-        publish(rowTint, model.rowTint(row: source.index) ?? "") { rowTint = $0 }
-        var mask = 0
-        for column in 0..<EventListModel.columnCount {
-            if model.isCellEditable(row: source.index, column: column) { mask |= 1 << column }
-        }
-        publish(editableMask, mask) { editableMask = $0 }
-        publish(c0, model.cellText(row: source.index, column: 0)) { c0 = $0 }
-        publish(c1, model.cellText(row: source.index, column: 1)) { c1 = $0 }
-        publish(c2, model.cellText(row: source.index, column: 2)) { c2 = $0 }
-        publish(c3, model.cellText(row: source.index, column: 3)) { c3 = $0 }
-        publish(c4, model.cellText(row: source.index, column: 4)) { c4 = $0 }
-        publish(c5, model.cellText(row: source.index, column: 5)) { c5 = $0 }
-        publish(c6, model.cellText(row: source.index, column: 6)) { c6 = $0 }
-        publish(editType, model.cellText(row: source.index, column: 1, editing: true)) { editType = $0 }
-        publish(editData, model.cellText(row: source.index, column: 5, editing: true)) { editData = $0 }
+        let values = model.publishedValues(for: source)
+        let eventIndex = source.eventIndex ?? -1
+        let tick = Int(source.tick)
+        let changed =
+            row != source.index || self.eventIndex != eventIndex || self.tick != tick
+            || typeKind != source.typeKind || isEndOfTrack != source.isEndOfTrack
+            || rowKind != values.rowKind || self.selected != selected
+            || rowTint != values.rowTint || editableMask != values.editableMask
+            || c0 != values.c0 || c1 != values.c1 || c2 != values.c2
+            || c3 != values.c3 || c4 != values.c4 || c5 != values.c5 || c6 != values.c6
+            || editType != values.editType || editData != values.editData
+        guard changed else { return false }
+        if row != source.index { row = source.index }
+        if self.eventIndex != eventIndex { self.eventIndex = eventIndex }
+        if self.tick != tick { self.tick = tick }
+        if typeKind != source.typeKind { typeKind = source.typeKind }
+        if isEndOfTrack != source.isEndOfTrack { isEndOfTrack = source.isEndOfTrack }
+        if rowKind != values.rowKind { rowKind = values.rowKind }
+        if self.selected != selected { self.selected = selected }
+        if rowTint != values.rowTint { rowTint = values.rowTint }
+        if editableMask != values.editableMask { editableMask = values.editableMask }
+        if c0 != values.c0 { c0 = values.c0 }
+        if c1 != values.c1 { c1 = values.c1 }
+        if c2 != values.c2 { c2 = values.c2 }
+        if c3 != values.c3 { c3 = values.c3 }
+        if c4 != values.c4 { c4 = values.c4 }
+        if c5 != values.c5 { c5 = values.c5 }
+        if c6 != values.c6 { c6 = values.c6 }
+        if editType != values.editType { editType = values.editType }
+        if editData != values.editData { editData = values.editData }
         return changed
     }
 }
@@ -70,7 +72,6 @@ public final class EventListRowHandle {
 @QtBridgeable
 public final class EventListPresenter: QmlUncreatable {
     private static let defaultWidthSeeds = [70.0, 120.0, 36.0, 56.0, 56.0, 140.0]
-    public var rows: QListModel<EventListRowHandle> = QListModel()
     public var tableRows: QTableModel<EventListRowHandle> = QTableModel([]) {
         QTableColumn("Tick", value: \EventListRowHandle.self)
         QTableColumn("Type", value: \EventListRowHandle.self)
@@ -143,6 +144,9 @@ public final class EventListPresenter: QmlUncreatable {
     @QtIgnored var menuRow = -1
     @QtIgnored weak var session: DocumentSession?
     private var typography: Typography
+    // TableView pools delegates beyond row removal. Keep their handles valid
+    // and reuse them when the table grows instead of allocating new publishers.
+    private var spareRows: [EventListRowHandle] = []
 
     public init(
         palette: GridPalette = GridPalette(),
@@ -181,7 +185,9 @@ public final class EventListPresenter: QmlUncreatable {
         session = nil
         attached = false
         model.detach()
-        rows.reset(to: [])
+        for row in 0..<rowCount {
+            if let handle = rowHandle(row: row) { spareRows.append(handle) }
+        }
         tableRows.removeRows(in: 0..<rowCount)
         chunkIndex = -1
         rowCount = 0
@@ -397,7 +403,7 @@ public final class EventListPresenter: QmlUncreatable {
     }
 
     public func rowHandle(row: Int) -> Optional<EventListRowHandle> {
-        rows.indices.contains(row) ? rows[row] : nil
+        tableRows.value(row: row, column: 0) as? EventListRowHandle
     }
 
     public func menuItem(row: Int) -> Optional<EventListMenuItem> {
@@ -423,10 +429,8 @@ public final class EventListPresenter: QmlUncreatable {
     }
 
     private func publishSelected(row: Int, selected: Bool) {
-        guard rows.indices.contains(row), rows[row].selected != selected else { return }
-        let handle = rows[row]
+        guard let handle = rowHandle(row: row), handle.selected != selected else { return }
         handle.selected = selected
-        rows[row] = handle
     }
     public func resizeColumn(column: Int, width: Double) {
         dispatchResizeColumn(column: column, width: width)
@@ -530,15 +534,16 @@ public final class EventListPresenter: QmlUncreatable {
     }
 
     func publishRows() {
-        if rows.count > model.rowCount {
-            tableRows.removeRows(in: model.rowCount..<rows.count)
-            rows.removeSubrange(model.rowCount..<rows.count)
+        if rowCount > model.rowCount {
+            for row in model.rowCount..<rowCount {
+                if let handle = rowHandle(row: row) { spareRows.append(handle) }
+            }
+            tableRows.removeRows(in: model.rowCount..<rowCount)
         }
         publishRowValues()
-        for row in rows.count..<model.rowCount {
-            let handle = EventListRowHandle()
+        for row in min(rowCount, model.rowCount)..<model.rowCount {
+            let handle = spareRows.popLast() ?? EventListRowHandle()
             _ = handle.update(model.rows[row], model: model, selected: selectedRows.contains(row))
-            rows.append(handle)
             tableRows.appendRow(handle)
         }
         rowCount = model.rowCount
@@ -551,13 +556,9 @@ public final class EventListPresenter: QmlUncreatable {
     }
 
     private func publishRowValues() {
-        rows.update {
-            for row in rows.indices where model.rows.indices.contains(row) {
-                let handle = rows[row]
-                if handle.update(model.rows[row], model: model, selected: selectedRows.contains(row)) {
-                    rows[row] = handle
-                }
-            }
+        for row in 0..<min(rowCount, model.rowCount) {
+            guard let handle = rowHandle(row: row) else { continue }
+            _ = handle.update(model.rows[row], model: model, selected: selectedRows.contains(row))
         }
     }
 
@@ -571,12 +572,10 @@ public final class EventListPresenter: QmlUncreatable {
     }
 
     private func refreshRowHandle(at row: Int) {
-        guard model.rows.indices.contains(row) else { return }
-        let handle = rows[row]
+        guard model.rows.indices.contains(row), let handle = rowHandle(row: row) else { return }
         let tint = model.rowTint(row: row) ?? ""
         guard handle.rowTint != tint else { return }
         handle.rowTint = tint
-        rows[row] = handle
     }
 
     private func requestScroll(to row: Int) {

@@ -15,7 +15,7 @@ Item {
         final required property EventListRowHandle edit
         final required property font cellFont
         final required property int alignment
-        final property int rowKind
+        final property int rowKind: edit.rowKind
 
         property real pressX: 0
         property real pressY: 0
@@ -26,26 +26,17 @@ Item {
         readonly property bool editing: cell.page.editingRow === row && cell.page.editingColumn === column
         readonly property bool current: cell.page.controller && cell.page.controller.currentRow === row
                                         && cell.page.currentColumn === column
-        final property bool selected
+        final property bool selected: edit.selected
         readonly property bool numericEditor: column >= 2 && column <= 4
         readonly property bool tickEditor: column === 0
         readonly property bool blobEditor: column === 5
-        final property bool editable
-        final property string displayedText
-        final property string editorText
+        final property bool editable: (edit.editableMask & (1 << column)) !== 0
+        final property string displayedText: textForColumn(column)
+        final property string editorText: column === 1 ? edit.editType
+                                         : column === 5 ? edit.editData : displayedText
         readonly property int horizontalAlignment: (alignment & Text.AlignRight)
                                                   ? Text.AlignRight : Text.AlignLeft
 
-        Binding {
-            cell.rowKind: cell.edit.rowKind
-            cell.selected: cell.edit.selected
-            cell.editable: (cell.edit.editableMask & (1 << cell.column)) !== 0
-            cell.displayedText: cell.textForColumn(cell.column)
-            cell.editorText: cell.column === 1 ? cell.edit.editType
-                             : cell.column === 5 ? cell.edit.editData : cell.displayedText
-            when: cell.edit !== null
-            restoreMode: Binding.RestoreNone
-        }
 
         implicitWidth: cell.page.columnWidth(column)
         implicitHeight: cell.page.rowHeight

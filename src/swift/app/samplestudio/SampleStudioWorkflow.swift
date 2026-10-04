@@ -257,17 +257,19 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         editName = nil
         selectedZone = -1
         reopenFromSource = false
-        // The Loader still evaluates bindings while it tears down the dialog.
-        // Yield the main actor so QML can unload the dialog first.
-        Task { @MainActor [weak self] in
-            await Task.yield()
-            guard let self, !self.editorOpen, !self.zonePickerOpen else { return }
-            self.zonePresenter = nil
-            self.presenter = nil
-            self.tools = nil
-            self.wave = nil
-            self.player = nil
-        }
+    }
+
+    public func editorReleased() {
+        guard !editorOpen else { return }
+        presenter = nil
+        tools = nil
+        wave = nil
+        player = nil
+    }
+
+    public func zonePickerReleased() {
+        guard !zonePickerOpen else { return }
+        zonePresenter = nil
     }
 
     private func decodeSource(promptForPhaseCancellation: Bool = true) {

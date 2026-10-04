@@ -167,8 +167,8 @@ TestCase {
                "the session retains its page and song catalog until scene removal")
         verify(bootstrap.releasePresentedPage(),
                "closing the presented tab removes its page through the production strip")
-        tryVerify(function() { return bootstrap.pageWorkspaceReleased() }, 5000,
-                  "pageReleased retires the tabPageReleased workspace after page destruction")
+        verify(waitForNative(function() { return bootstrap.pageWorkspaceReleased() }, 5000),
+               "pageReleased retires the tabPageReleased workspace after page destruction")
         var retired = testCase.overlay
         testCase.overlay = null
         if (retired) {

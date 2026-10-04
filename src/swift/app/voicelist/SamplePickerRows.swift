@@ -11,7 +11,6 @@ public final class SamplePickerRow {
     public var loops: Bool = false
     public var detail: String = ""
     @QtIgnored
-
     func apply(_ value: SamplePickerEntry) -> Bool {
         let changed =
             symbol != value.symbol || label != value.label

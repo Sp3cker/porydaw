@@ -581,7 +581,10 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
     reporter.onCheckFail(check.name, result);
     return;
   }
-  if (qtPayload !== undefined && result.output.length > 0) {
+  if (
+    (qtPayload !== undefined || reporterMode === "verbose") &&
+    result.output.length > 0
+  ) {
     // Explicit --qt run: the complete raw output (listings, -v1 runs) is
     // the point of the mode; print it even with the quiet reporter.
     Deno.stdout.writeSync(encoder.encode(result.output));

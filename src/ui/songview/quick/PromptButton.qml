@@ -24,6 +24,13 @@ Rectangle {
     Accessible.focusable: enabled
     Accessible.onPressAction: button.activate()
 
+    implicitWidth: Math.max(button.labelWidth + 2 * button.appearance.buttonPadding,
+                            button.minimumWidth)
+    implicitHeight: label.implicitHeight + 2 * button.appearance.buttonPadding
+    color: tap.pressed ? button.appearance.pressedBackground : button.appearance.buttonBackground
+    border.width: button.appearance.borderWidth
+    border.color: button.activeFocus ? button.appearance.focus : button.appearance.outline
+    radius: button.appearance.radius
     opacity: enabled ? 1 : 0.5
 
     function activate(): void {
@@ -36,6 +43,9 @@ Rectangle {
 
         anchors.centerIn: parent
         text: button.text
+        color: !button.enabled ? button.appearance.disabledText
+             : tap.pressed ? button.appearance.pressedText : button.appearance.buttonText
+        font: button.appearance.font
         textFormat: Text.PlainText
         renderType: Text.NativeRendering
     }
@@ -61,20 +71,5 @@ Rectangle {
         id: tap
 
         onTapped: button.activate()
-    }
-
-    Binding {
-        when: button.appearance !== null
-        restoreMode: Binding.RestoreNone
-        button.implicitWidth: Math.max(button.labelWidth + 2 * button.appearance?.buttonPadding,
-                                       button.minimumWidth)
-        button.implicitHeight: label.implicitHeight + 2 * button.appearance?.buttonPadding
-        button.color: tap.pressed ? button.appearance?.pressedBackground : button.appearance?.buttonBackground
-        button.border.width: button.appearance?.borderWidth
-        button.border.color: button.activeFocus ? button.appearance?.focus : button.appearance?.outline
-        button.radius: button.appearance?.radius
-        label.color: !button.enabled ? button.appearance?.disabledText
-                   : tap.pressed ? button.appearance?.pressedText : button.appearance?.buttonText
-        label.font: button.appearance?.font
     }
 }

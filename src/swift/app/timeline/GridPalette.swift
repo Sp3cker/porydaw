@@ -237,24 +237,25 @@ public enum PaletteMath {
     }
 
     public static func trackIdentityIndex(_ track: Int) -> Int {
-        ((track % trackIdentityFills.count) + trackIdentityFills.count)
-            % trackIdentityFills.count
+        ((track % trackIdentityColors.count) + trackIdentityColors.count)
+            % trackIdentityColors.count
     }
 
     public static func trackIdentityOklab(_ track: Int) -> Oklab {
-        let c = channels(trackIdentityFills[trackIdentityIndex(track)])
+        let c = channels(trackIdentityColors[trackIdentityIndex(track)])
         return oklab(r: c.r, g: c.g, b: c.b)
     }
 
-    public static let trackIdentityFills = [
-        "#CD5454", "#54CD77", "#9B54CD", "#CDBD54", "#54B9CD", "#CD5497",
-        "#73CD54", "#5854CD", "#CD7D54", "#54CD9F", "#C354CD", "#B5CD54",
-        "#5491CD", "#CD546F", "#54CD5E", "#8154CD",
-    ]
-    public static let trackIdentityColors = trackIdentityFills.map { qmlColor(argb: argb($0)) }
-    public static let velocityStemColors = ThemeColorTables.velocityStemColors.map {
-        qmlColor(argb: argb($0))
-    }
+    public static let trackIdentityColors: [QmlColor] = [
+        0xFFCD5454, 0xFF54CD77, 0xFF9B54CD, 0xFFCDBD54, 0xFF54B9CD, 0xFFCD5497,
+        0xFF73CD54, 0xFF5854CD, 0xFFCD7D54, 0xFF54CD9F, 0xFFC354CD, 0xFFB5CD54,
+        0xFF5491CD, 0xFFCD546F, 0xFF54CD5E, 0xFF8154CD,
+    ].map { qmlColor(argb: $0) }
+    public static let velocityStemColors: [QmlColor] = [
+        0xFF762D2D, 0xFF2D7642, 0xFF582D76, 0xFF766C2D, 0xFF2D6A76, 0xFF762D55,
+        0xFF40762D, 0xFF2F2D76, 0xFF76462D, 0xFF2D765A, 0xFF702D76, 0xFF67762D,
+        0xFF2D5276, 0xFF762D3D, 0xFF2D7633, 0xFF482D76,
+    ].map { qmlColor(argb: $0) }
 }
 
 @MainActor

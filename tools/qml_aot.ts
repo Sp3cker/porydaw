@@ -188,7 +188,8 @@ async function main(): Promise<void> {
   }
   const banned: string[] = [];
   const revisionSites: string[] = [];
-  for (const path of await files("src/ui")) {
+  const sourceFiles = await files("src/ui");
+  for (const path of sourceFiles) {
     if (path.endsWith(".js")) banned.push(`JavaScript file: ${path}`);
     if (!path.endsWith(".qml")) continue;
     const code = withoutComments(await Deno.readTextFile(path));
@@ -288,6 +289,10 @@ async function main(): Promise<void> {
     Deno.exit(1);
   }
   if (update) {
+    const existingFiles = new Set(sourceFiles);
+    for (const path of Object.keys(current.files)) {
+      if (!existingFiles.has(path)) delete current.files[path];
+    }
     await Deno.writeTextFile(BASELINE, JSON.stringify(current, null, 2) + "\n");
     console.log(`Updated ${BASELINE}`);
   }

@@ -48,19 +48,18 @@ index 9ded4b1..aa8556d 100644
      QNamespace.swift
      QObjectBuildable.swift
 diff --git a/Sources/QtBridge/QAbstractListModel.swift b/Sources/QtBridge/QAbstractListModel.swift
-index 07004bc..8e33ded 100644
+index 07004bc..4e2d6b5 100644
 --- a/Sources/QtBridge/QAbstractListModel.swift
 +++ b/Sources/QtBridge/QAbstractListModel.swift
-@@ -146,7 +146,29 @@ internal final class QAbstractListModel {
+@@ -146,7 +146,28 @@ internal final class QAbstractListModel {
  
      public func roleNames() -> [Int32: String] { roles }
  
 +    private var updateDepth = 0
 +    private var pendingDataChange: ClosedRange<Int32>?
 +
-+    /// Runs `body` with row-change notifications coalesced into a single
-+    /// `dataChanged` covering the union of written rows. Nested calls fold
-+    /// into the outermost scope.
++    /// Coalesces written rows into one `dataChanged` at the outermost update.
++    /// Nested updates share the same pending row range.
 +    internal func update(_ body: () -> Void) {
 +        updateDepth += 1
 +        body()
@@ -81,7 +80,7 @@ index 07004bc..8e33ded 100644
          if roles.isEmpty {
              getCppModel().emitDataChanged(topLeft, bottomRight, nil, 0)
          } else {
-@@ -162,6 +184,15 @@ internal final class QAbstractListModel {
+@@ -162,6 +183,15 @@ internal final class QAbstractListModel {
  
      internal func endInsertRows() -> Void { return getCppModel().endInsertRows() }
  
@@ -131,21 +130,15 @@ index 0830a84..788ef51 100644
              property.addInitialProperty(to: app, name: name)
          }
 diff --git a/Sources/QtBridge/QListModel.swift b/Sources/QtBridge/QListModel.swift
-index 1705eed..00f5cd1 100644
+index 1705eed..4a20103 100644
 --- a/Sources/QtBridge/QListModel.swift
 +++ b/Sources/QtBridge/QListModel.swift
-@@ -109,6 +109,33 @@ public final class QListModel<Element: QVariantGettable>: @MainActor RandomAcces
+@@ -109,6 +109,27 @@ public final class QListModel<Element: QVariantGettable>: @MainActor RandomAcces
          }
      }
  
-+    /// Moves an element to a final index within the list.
-+    ///
-+    /// Invalid indices, identical indices, and moves rejected by
-+    /// the underlying Qt model leave the list unchanged.
-+    ///
-+    /// - Parameters:
-+    ///   - sourceIndex: The current index of the element.
-+    ///   - destinationIndex: The element's final index.
++    /// Moves an element to its final index; invalid, identical or rejected
++    /// moves leave the list unchanged.
 +    public func move(from sourceIndex: Int, to destinationIndex: Int) {
 +        guard storage.indices.contains(sourceIndex),
 +              storage.indices.contains(destinationIndex),
@@ -168,19 +161,12 @@ index 1705eed..00f5cd1 100644
      /// Inserts, removes or replaces elements within
      /// the specified range.
      ///
-@@ -172,6 +199,19 @@ public final class QListModel<Element: QVariantGettable>: @MainActor RandomAcces
+@@ -172,6 +193,12 @@ public final class QListModel<Element: QVariantGettable>: @MainActor RandomAcces
          model.endResetModel()
      }
  
-+    /// Runs `body` with per-row `dataChanged` notifications coalesced into
-+    /// one covering the union of written rows, emitted when the outermost
-+    /// update returns. Structural changes (insert/remove/reset) keep their
-+    /// own notifications. Batch wholesale row rewrites such as per-frame
-+    /// scene syncs so views receive one change notification instead of one
-+    /// per row.
-+    ///
-+    /// - Parameter body: The mutations to apply while notifications are
-+    ///   coalesced.
++    /// Coalesces row writes into one `dataChanged` at the outermost update.
++    /// Structural changes retain their own notifications.
 +    public func update(_ body: () -> Void) {
 +        model.update(body)
 +    }
@@ -189,7 +175,7 @@ index 1705eed..00f5cd1 100644
      public var asArray: [Element] { storage }
  }
 diff --git a/Sources/QtBridge/QMetaObjectBuilder.swift b/Sources/QtBridge/QMetaObjectBuilder.swift
-index 102c863..f1952fc 100644
+index 102c863..00ae744 100644
 --- a/Sources/QtBridge/QMetaObjectBuilder.swift
 +++ b/Sources/QtBridge/QMetaObjectBuilder.swift
 @@ -14,6 +14,8 @@ import QtBridgeCpp
@@ -238,7 +224,7 @@ index 102c863..f1952fc 100644
          keyPath: WritableKeyPath<Root, Member>)
      {
 -        registerProperty(name: name, keyPath: keyPath) { newValue, root in
-+        registerProperty(name: name, keyPath: keyPath, valueFromVariant: Member.value(from:)) { newValue, root in
++        registerProperty(name: name, keyPath: keyPath, valueFromVariant: { Member.value(from: $0) }) { newValue, root in
              newValue != root[keyPath: keyPath]
          }
      }
@@ -247,7 +233,7 @@ index 102c863..f1952fc 100644
          keyPath: WritableKeyPath<Root, Member>)
      {
 -        registerProperty(name: name, keyPath: keyPath, isChanged: { _, _ in true })
-+        registerProperty(name: name, keyPath: keyPath, valueFromVariant: Member.value(from:),
++        registerProperty(name: name, keyPath: keyPath, valueFromVariant: { Member.value(from: $0) },
 +                         isChanged: { _, _ in true })
 +    }
 +
@@ -255,7 +241,7 @@ index 102c863..f1952fc 100644
 +    public func registerProperty<Root: QObjectBuildable, Member: QObjectBuildable>(
 +        name: String, keyPath: WritableKeyPath<Root, Member>)
 +    {
-+        registerProperty(name: name, keyPath: keyPath, valueFromVariant: Member.value(from:),
++        registerProperty(name: name, keyPath: keyPath, valueFromVariant: { $0.swiftObject() },
 +                         isChanged: { _, _ in true })
 +    }
 +
@@ -263,7 +249,7 @@ index 102c863..f1952fc 100644
 +    public func registerProperty<Root: QObjectBuildable, Member: QObjectBuildable>(
 +        name: String, keyPath: WritableKeyPath<Root, Member?>)
 +    {
-+        registerProperty(name: name, keyPath: keyPath, valueFromVariant: Optional<Member>.value(from:),
++        registerProperty(name: name, keyPath: keyPath, valueFromVariant: { .some(Optional<Member>.value(from: $0)) },
 +                         isChanged: { _, _ in true })
      }
  
@@ -271,7 +257,7 @@ index 102c863..f1952fc 100644
 +    private func registerProperty<Root: QObjectBuildable, Member: QVariantGettable>(
          name: String,
          keyPath: WritableKeyPath<Root, Member>,
-+        valueFromVariant: @escaping @MainActor (QVariant) -> Member,
++        valueFromVariant: @escaping @MainActor (QVariant) -> Member?,
          isChanged: @escaping (Member, Root) -> Bool)
      {
          registerSignal(for: name)
@@ -280,7 +266,7 @@ index 102c863..f1952fc 100644
                  return false
              }
 -            let newValue: Member = variant.value()
-+            let newValue: Member = valueFromVariant(variant)
++            guard let newValue = valueFromVariant(variant) else { return false }
              if !isChanged(newValue, root) {
                  return false
              }
@@ -335,15 +321,16 @@ index 620758f..014a132 100644
 +    }
 +}
 diff --git a/Sources/QtBridge/QObjectBuildable.swift b/Sources/QtBridge/QObjectBuildable.swift
-index 3249047..2db9f3b 100644
+index 3249047..0918867 100644
 --- a/Sources/QtBridge/QObjectBuildable.swift
 +++ b/Sources/QtBridge/QObjectBuildable.swift
-@@ -76,5 +76,13 @@ extension QObjectBuildable {
+@@ -76,5 +76,14 @@ extension QObjectBuildable {
  
  extension QObjectBuildable {
      public func toVariant() -> QVariant { QVariant(value: self) }
 -    public static func metaType() -> Int32 { return 39 }
 +    public static func value(from variant: QVariant) -> Self {
++        // Nonoptional internal conversion; QML property setters use failable extraction.
 +        guard let object: Self = variant.swiftObject() else {
 +            preconditionFailure("Expected a bridged \(Self.self) object")
 +        }
@@ -354,7 +341,7 @@ index 3249047..2db9f3b 100644
 +    }
  }
 diff --git a/Sources/QtBridge/QVariant.swift b/Sources/QtBridge/QVariant.swift
-index c69ec15..72392e7 100644
+index c69ec15..759eed3 100644
 --- a/Sources/QtBridge/QVariant.swift
 +++ b/Sources/QtBridge/QVariant.swift
 @@ -1,6 +1,7 @@
@@ -417,13 +404,12 @@ index c69ec15..72392e7 100644
      }
  
      /// Creates a variant from a Swift dictionary.
-@@ -108,6 +138,16 @@ public struct QVariant
+@@ -108,6 +138,15 @@ public struct QVariant
          self.variant = QtBridgeCpp.QVariant(map)
      }
  
-+    /// Creates a variant containing raw bytes, bridged to C++ as a
-+    /// QVariant(QByteArray). Packed payloads (e.g. rect rows) cross the
-+    /// bridge as one value instead of N boxed properties.
++    /// Bridges raw bytes as QVariant(QByteArray), keeping packed payloads
++    /// in one value instead of separately boxed properties.
 +    public init(value: Data) {
 +        self.variant = value.withUnsafeBytes { buffer in
 +            QAbstractListModelCpp.variantFromBytes(
@@ -434,7 +420,7 @@ index c69ec15..72392e7 100644
      internal init(model: QAbstractListModel) {
          self.variant = model.getCppModel().toVariant()
      }
-@@ -137,6 +177,11 @@ public struct QVariant
+@@ -137,6 +176,11 @@ public struct QVariant
          return variant.toMap().toBridgeMap()
      }
  
@@ -446,7 +432,7 @@ index c69ec15..72392e7 100644
      internal func toSettable() -> QVariantSettable? {
          let typeId = variant.typeId()
          if typeId == Bool.metaType() { return Bool.value(from: self) }
-@@ -145,6 +190,8 @@ public struct QVariant
+@@ -145,6 +189,8 @@ public struct QVariant
          if typeId == Double.metaType() { return Double.value(from: self) }
          if typeId == Float.metaType() { return Float.value(from: self) }
          if typeId == String.metaType() { return String.value(from: self) }
@@ -455,7 +441,7 @@ index c69ec15..72392e7 100644
          if typeId == [String].metaType() { return [String].value(from: self) }
          if typeId == [String: QVariantSettable].metaType() {
              return [String: QVariantSettable].value(from: self)
-@@ -152,7 +199,7 @@ public struct QVariant
+@@ -152,7 +198,7 @@ public struct QVariant
          return nil
      }
  
@@ -464,7 +450,7 @@ index c69ec15..72392e7 100644
          return variant
      }
  }
-@@ -183,6 +230,17 @@ public protocol QVariantSettable : QVariantGettable {
+@@ -183,6 +229,17 @@ public protocol QVariantSettable : QVariantGettable {
      static func value(from variant: QVariant) -> Self
  }
  
@@ -527,10 +513,10 @@ index 0000000..a0c2876
 +}
 diff --git a/Sources/QtBridge/QmlFont.swift b/Sources/QtBridge/QmlFont.swift
 new file mode 100644
-index 0000000..732931f
+index 0000000..06428c7
 --- /dev/null
 +++ b/Sources/QtBridge/QmlFont.swift
-@@ -0,0 +1,60 @@
+@@ -0,0 +1,58 @@
 +// Copyright (C) 2025 The Qt Company Ltd.
 +// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
 +
@@ -574,9 +560,7 @@ index 0000000..732931f
 +
 +    public static func value(from variant: QVariant) -> QmlFont {
 +        let font = QmlValueTypesCpp.fontFromVariant(variant.cppVariant())
-+        guard let hinting = HintingPreference(rawValue: font.hintingPreference) else {
-+            preconditionFailure("Unknown Qt font hinting preference")
-+        }
++        let hinting = HintingPreference(rawValue: font.hintingPreference) ?? .preferNoHinting
 +        var features: [String: UInt32] = [:]
 +        features.reserveCapacity(Int(font.features.size()))
 +        for index in 0..<font.features.size() {
@@ -734,10 +718,10 @@ index fb09757..a0f6385 100644
      QString m_pluginsPath;
 diff --git a/Sources/QtBridgeCpp/include/qmlvaluetypes.h b/Sources/QtBridgeCpp/include/qmlvaluetypes.h
 new file mode 100644
-index 0000000..24f562b
+index 0000000..fab7510
 --- /dev/null
 +++ b/Sources/QtBridgeCpp/include/qmlvaluetypes.h
-@@ -0,0 +1,92 @@
+@@ -0,0 +1,93 @@
 +// Copyright (C) 2025 The Qt Company Ltd.
 +// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
 +
@@ -781,8 +765,8 @@ index 0000000..24f562b
 +class QmlValueTypesCpp
 +{
 +public:
-+    static int colorMetaType() { return QMetaType::QColor; }
-+    static int fontMetaType() { return QMetaType::QFont; }
++    static int colorMetaType() { return QMetaType::fromType<QColor>().id(); }
++    static int fontMetaType() { return QMetaType::fromType<QFont>().id(); }
 +
 +    static QVariant variantFromColor(double red, double green, double blue, double alpha)
 +    {
@@ -804,6 +788,7 @@ index 0000000..24f562b
 +        font.setPixelSize(pixelSize);
 +        font.setWeight(static_cast<QFont::Weight>(weight));
 +        font.setItalic(italic);
++        // Absolute pixel spacing converts double to Qt's qreal precision at this boundary.
 +        font.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
 +        font.setHintingPreference(static_cast<QFont::HintingPreference>(hintingPreference));
 +        for (const auto &feature : features) {
@@ -844,7 +829,7 @@ index cf53e0f..bac52a8 100644
      QList<void *> swiftChildren() const;
  
 diff --git a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h b/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
-index d55dd45..13b2efb 100644
+index d55dd45..84f4070 100644
 --- a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
 +++ b/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
 @@ -6,6 +6,7 @@
@@ -855,7 +840,7 @@ index d55dd45..13b2efb 100644
  
  #include "swiftobjectaccesor.h"
  
-@@ -15,13 +16,18 @@ class QObjectProxyImpl : public QObject,
+@@ -15,13 +16,17 @@ class QObjectProxyImpl : public QObject,
  {
      Q_OBJECT
      Q_CLASSINFO("DefaultProperty", "children")
@@ -868,9 +853,8 @@ index d55dd45..13b2efb 100644
      : m_swiftObj(swiftObj)
 -    {}
 +    {
-+        // A Swift-created proxy is owned by its Swift owner, never by QML.
-+        // Pin CppOwnership so the engine cannot garbage-collect it while the
-+        // Swift object still publishes through it.
++        // Pin Swift-created proxies to CppOwnership so QML cannot collect
++        // them while their Swift owners still publish through them.
 +        QQmlEngine::setObjectOwnership(this, QQmlEngine::CppOwnership);
 +    }
  
@@ -1282,16 +1266,15 @@ index cd53797..df0ed6b 100644
 +    m_impl->registerQmlElement(false);
 +}
 diff --git a/Sources/QtBridgeMacros/CMakeLists.txt b/Sources/QtBridgeMacros/CMakeLists.txt
-index ddedbb5..bac8626 100644
+index ddedbb5..0cb0131 100644
 --- a/Sources/QtBridgeMacros/CMakeLists.txt
 +++ b/Sources/QtBridgeMacros/CMakeLists.txt
-@@ -36,6 +36,15 @@ target_compile_options(QtBridgeMacros PRIVATE
+@@ -36,6 +36,14 @@ target_compile_options(QtBridgeMacros PRIVATE
      -parse-as-library
  )
  
-+# A patch change must compile the macro, not just enter a relink-only build.
-+# ExternalProject records this digest in its configure command; unchanged
-+# inputs preserve both that stamp and the Swift compilation arguments.
++# Compile the macro when patch inputs change; the configure stamp and
++# Swift compilation arguments retain the same digest for unchanged inputs.
 +if(QTBRIDGE_PATCH_INPUTS_SHA256)
 +    target_compile_options(QtBridgeMacros PRIVATE
 +        "-DQTBRIDGE_PATCH_${QTBRIDGE_PATCH_INPUTS_SHA256}"

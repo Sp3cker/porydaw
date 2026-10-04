@@ -59,7 +59,6 @@ Item {
         sourceComponent: Component {
             VoicePickerPrompt {
                 model: promptHost.root.headerPickerModel
-                appearance: promptHost.root.headerPickerModel?.promptStyle ?? null
                 hintService: promptHost.root.hintService
                 showing: true
             }
@@ -159,25 +158,21 @@ Item {
                     fallbackFont: promptHost.root.bodyFont
                     width: implicitWidth
                     height: implicitHeight
-                    Binding {
-                        when: promptHost.root.pitchBendPresenter !== null && promptHost.root.gridModel !== null
-                        restoreMode: Binding.RestoreNone
-                        pitchBendPopup.x: Math.max(0, Math.min(
-                            promptHost.root.timelineSplitX + promptHost.root.pitchBendPresenter?.anchorX
-                                + promptHost.root.pitchBendPresenter?.anchorWidth / 2 - pitchBendPopup.width / 2,
-                            pitchBendPopup.parent.width - pitchBendPopup.width))
-                        pitchBendPopup.y: {
-                            const below = promptHost.root.gridModel?.rulerHeight
-                                + promptHost.root.pitchBendPresenter?.anchorY
-                                + promptHost.root.pitchBendPresenter?.anchorHeight
-                                + promptHost.bodyFontMetrics.height / 3
-                            const above = promptHost.root.gridModel?.rulerHeight
-                                + promptHost.root.pitchBendPresenter?.anchorY - pitchBendPopup.height
-                                - promptHost.bodyFontMetrics.height / 3
-                            return Math.max(0, Math.min(
-                                below + pitchBendPopup.height <= promptHost.editorDrawer.y ? below : above,
-                                pitchBendPopup.parent.height - pitchBendPopup.height))
-                        }
+                    x: Math.max(0, Math.min(
+                        promptHost.root.timelineSplitX + promptHost.root.pitchBendPresenter.anchorX
+                            + promptHost.root.pitchBendPresenter.anchorWidth / 2 - width / 2,
+                        parent.width - width))
+                    y: {
+                        const below = promptHost.root.gridModel.rulerHeight
+                            + promptHost.root.pitchBendPresenter.anchorY
+                            + promptHost.root.pitchBendPresenter.anchorHeight
+                            + promptHost.bodyFontMetrics.height / 3
+                        const above = promptHost.root.gridModel.rulerHeight
+                            + promptHost.root.pitchBendPresenter.anchorY - height
+                            - promptHost.bodyFontMetrics.height / 3
+                        return Math.max(0, Math.min(
+                            below + height <= promptHost.editorDrawer.y ? below : above,
+                            parent.height - height))
                     }
                     Component.onCompleted: {
                         promptHost.root.pitchBendPresenter.configure(

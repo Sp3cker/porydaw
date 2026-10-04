@@ -11,52 +11,32 @@ Item {
     final required property Item rollBandContent
     final required property Loader gridMenuLoader
     final property alias rulerInput: rulerInput
-    property string divisionText
-    property string feelText
-    property color toolTipBackground
-    property color toolTipText
-    property color toolTipOutline
-    Binding {
-        when: rulerModule.root.gridModel !== null && rulerModule.root.headersModel !== null
-        restoreMode: Binding.RestoreNone
-        rulerBand.height: rulerModule.root.gridModel?.rulerHeight
-        rulerGutter.width: rulerModule.root.gridModel?.keyboardWidth
-        rulerGutter.color: rulerModule.root.gridModel?.palette?.chromeBackground
-        rulerSeparator.y: rulerModule.root.gridModel?.rulerHeight - 0.5
-        rulerSeparator.width: rulerModule.root.gridModel?.keyboardWidth
-        rulerSeparator.height: 1 / rulerModule.root.gridModel?.devicePixelRatio
-        rulerSeparator.color: rulerModule.root.gridModel?.palette?.separator
-        rulerPlot.x: rulerModule.root.gridModel?.keyboardWidth
-        rulerMarks.revision: rulerModule.root.gridModel?.scene?.displayRevision
-        rulerControls.width: rulerModule.root.headersModel?.trackHeaderWidth + rulerModule.root.gridModel?.keyboardWidth
-        rulerControls.height: rulerModule.root.gridModel?.rulerHeight
-        rulerControls.controlsStroke: 1 / (rulerModule.root.gridModel?.devicePixelRatio > 0
-                                          ? rulerModule.root.gridModel?.devicePixelRatio : 1)
-        gridLabel.color: rulerModule.root.gridModel?.palette?.primaryText
-        rulerModule.divisionText: rulerModule.root.gridModel?.gridDivisionControlText
-        rulerModule.feelText: rulerModule.root.gridModel?.gridFeelControlText
-        rulerModule.toolTipBackground: rulerModule.root.gridModel?.palette?.chromeBackground
-        rulerModule.toolTipText: rulerModule.root.gridModel?.palette?.windowText
-        rulerModule.toolTipOutline: rulerModule.root.gridModel?.palette?.outline
-    }
             Item {
                 id: rulerBand
                 parent: rulerModule.rollStack
                 objectName: "timelineQuickRuler"
                 width: parent.width
+                height: rulerModule.root.gridModel.rulerHeight
                 clip: true
 
                 Rectangle {
                     id: rulerGutter
                     objectName: "timelineQuickRulerGutterChrome"
                     height: parent.height
+                    width: rulerModule.root.gridModel.keyboardWidth
+                    color: rulerModule.root.gridModel.palette.chromeBackground
                 }
                 Rectangle {
                     id: rulerSeparator
+                    y: rulerModule.root.gridModel.rulerHeight - 0.5
+                    width: rulerModule.root.gridModel.keyboardWidth
+                    height: 1 / rulerModule.root.gridModel.devicePixelRatio
+                    color: rulerModule.root.gridModel.palette.separator
                 }
 
                 Item {
                     id: rulerPlot
+                    x: rulerModule.root.gridModel.keyboardWidth
                     width: Math.max(parent.width - x, 0)
                     height: parent.height
                     clip: true
@@ -68,6 +48,7 @@ Item {
                         clip: true
                         source: rulerModule.root.gridModel?.scene ?? null
                         list: 2
+                        revision: rulerModule.root.gridModel.scene.displayRevision
                     }
                     MouseArea {
                         id: rulerInput
@@ -124,10 +105,13 @@ Item {
             id: rulerControls
             parent: rulerModule.rollBandContent
             objectName: "timelineRulerControls"
+            width: rulerModule.root.headersModel.trackHeaderWidth + rulerModule.root.gridModel.keyboardWidth
+            height: rulerModule.root.gridModel.rulerHeight
             clip: true
             readonly property real controlsInset: 8
             readonly property real controlsGap: 4
-            property real controlsStroke
+            readonly property real controlsStroke: 1 / (rulerModule.root.gridModel.devicePixelRatio > 0
+                                                       ? rulerModule.root.gridModel.devicePixelRatio : 1)
             readonly property font controlsFont: rulerModule.root.bodyFont
             readonly property real gridLabelWidth:
                 Math.min(gridLabel.implicitWidth,
@@ -162,20 +146,15 @@ Item {
                     objectName: "gridControlBackground"
                     anchors.fill: parent
                     border.width: rulerControls.controlsStroke
-                    Binding {
-                        when: rulerModule.root.gridModel !== null
-                        restoreMode: Binding.RestoreNone
-                        gridControlBackground.color: gridControl.controlPressed
-                            ? rulerModule.root.gridModel?.palette?.buttonPressedBackground
-                            : rulerModule.root.gridModel?.palette?.buttonHoverBackground
-                        gridControlBackground.border.color: rulerModule.root.gridModel?.palette?.outline
-                        gridControlLabel.color: rulerModule.root.gridModel?.palette?.buttonText
-                        gridControlArrow.color: rulerModule.root.gridModel?.palette?.buttonText
-                    }
+                    color: gridControl.controlPressed
+                        ? rulerModule.root.gridModel.palette.buttonPressedBackground
+                        : rulerModule.root.gridModel.palette.buttonHoverBackground
+                    border.color: rulerModule.root.gridModel.palette.outline
                 }
                 Text {
                     id: gridControlLabel
                     objectName: "gridControlLabel"
+                    color: rulerModule.root.gridModel.palette.buttonText
                     anchors.left: parent.left
                     anchors.leftMargin: rulerControls.controlsGap
                     anchors.right: gridControlArrow.left
@@ -193,6 +172,7 @@ Item {
                 AppIcon {
                     id: gridControlArrow
                     objectName: "gridControlArrow"
+                    color: rulerModule.root.gridModel.palette.buttonText
                     anchors.right: parent.right
                     anchors.rightMargin: rulerControls.controlsGap
                     anchors.verticalCenter: parent.verticalCenter
@@ -211,6 +191,7 @@ Item {
             Text {
                 id: gridLabel
                 objectName: "timelineRulerGridLabel"
+                color: rulerModule.root.gridModel.palette.primaryText
                 x: rulerControls.controlsInset
                 width: rulerControls.gridLabelWidth
                 anchors.verticalCenter: parent.verticalCenter
@@ -231,7 +212,7 @@ Item {
                 width: rulerControls.controlWidth
                 height: Math.min(parent.height,
                     gridLabel.implicitHeight + rulerControls.controlsInset)
-                controlText: rulerModule.divisionText
+                controlText: rulerModule.root.gridModel.gridDivisionControlText
                 menuKind: 1
                 controlToolTip: qsTr("Editing snap grid. Auto follows the zoom one step finer than the drawn grid; a fixed division snaps to that note value; Clock snaps to the mid2agb clock grid.")
             }
@@ -245,7 +226,7 @@ Item {
                 width: rulerControls.controlWidth
                 height: Math.min(parent.height,
                     gridLabel.implicitHeight + rulerControls.controlsInset)
-                controlText: rulerModule.feelText
+                controlText: rulerModule.root.gridModel.gridFeelControlText
                 menuKind: 2
                 controlToolTip: qsTr("Straight or triplet beat subdivisions.")
             }
@@ -266,8 +247,8 @@ Item {
             ? divisionControl.controlToolTip : feelControl.controlToolTip
         visibleForControl: divisionControl.controlHovered || feelControl.controlHovered
         controlFont: rulerControls.controlsFont
-        backgroundColor: rulerModule.toolTipBackground
-        textColor: rulerModule.toolTipText
-        outlineColor: rulerModule.toolTipOutline
+        backgroundColor: rulerModule.root.gridModel.palette.chromeBackground
+        textColor: rulerModule.root.gridModel.palette.windowText
+        outlineColor: rulerModule.root.gridModel.palette.outline
     }
 }

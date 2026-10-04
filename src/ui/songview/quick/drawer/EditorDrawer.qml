@@ -23,7 +23,7 @@ FocusScope {
         }
         return true
     }
-    readonly property App.VelocityPage velocityModel: applicationSession?.songOpen
+    readonly property App.VelocityPage velocityModel: applicationSession.songOpen
                                                     ? applicationSession.velocityPage() : null
 
     // DrawerSectionKind raw values; layout facts stay in the presenter.
@@ -31,51 +31,9 @@ FocusScope {
     readonly property int velocityKind: 1
     readonly property int voiceChangesKind: 2
 
-    // Composition supplies width; presenter geometry is retained during teardown.
-    enabled: presenter !== null
-    Binding on height {
-        when: drawerScope.presenter !== null
-        restoreMode: Binding.RestoreNone
-        value: drawerScope.presenter?.height
-    }
+    // Composition supplies width; Swift owns the aggregate height.
+    height: presenter.height
     clip: true
-
-    Binding {
-        when: drawerScope.presenter !== null
-        restoreMode: Binding.RestoreNone
-        bar.width: drawerScope.presenter?.barWidth
-        bar.height: drawerScope.presenter?.barHeight
-        detent.width: drawerScope.presenter?.detentSize
-        detent.height: drawerScope.presenter?.detentSize
-    }
-    Binding {
-        target: bar
-        property: "x"
-        when: drawerScope.presenter !== null
-        restoreMode: Binding.RestoreNone
-        value: drawerScope.presenter?.barX
-    }
-    Binding {
-        target: bar
-        property: "y"
-        when: drawerScope.presenter !== null
-        restoreMode: Binding.RestoreNone
-        value: drawerScope.presenter?.barY
-    }
-    Binding {
-        target: detent
-        property: "x"
-        when: drawerScope.presenter !== null
-        restoreMode: Binding.RestoreNone
-        value: drawerScope.presenter?.detentX
-    }
-    Binding {
-        target: detent
-        property: "y"
-        when: drawerScope.presenter !== null
-        restoreMode: Binding.RestoreNone
-        value: drawerScope.presenter?.detentY
-    }
 
     function keyNameFor(kind: int): string {
         switch (kind) {
@@ -172,71 +130,23 @@ FocusScope {
 
         readonly property string keyName: drawerScope.keyNameFor(section.kind)
         readonly property var icon: drawerScope.iconFor(section.kind)
-        readonly property App.EditorDrawerSectionState sectionState: drawerScope.presenter
-            ? drawerScope.presenter.section(section.kind) : null
+        readonly property App.EditorDrawerSectionState sectionState: drawerScope.presenter.section(section.kind)
         // Only available sections own chrome; shown sections also own a body.
-        readonly property bool available: section.sectionState !== null && section.sectionState.available
+        readonly property bool available: section.sectionState.available
         readonly property bool shown: section.available && section.sectionState.visible
         readonly property Loader pageLoader: body
-
-        Binding {
-            when: section.sectionState !== null
-            restoreMode: Binding.RestoreNone
-            handle.height: section.sectionState?.handleHeight
-            toggle.width: section.sectionState?.toggleSize
-            toggle.height: section.sectionState?.toggleSize
-            body.width: section.sectionState?.bodyWidth
-            body.height: section.sectionState?.bodyHeight
-        }
-        Binding {
-            target: handle
-            property: "y"
-            when: section.sectionState !== null
-            restoreMode: Binding.RestoreNone
-            value: section.sectionState?.handleY
-        }
-        Binding {
-            target: toggle
-            property: "x"
-            when: section.sectionState !== null
-            restoreMode: Binding.RestoreNone
-            value: section.sectionState?.toggleX
-        }
-        Binding {
-            target: toggle
-            property: "y"
-            when: section.sectionState !== null
-            restoreMode: Binding.RestoreNone
-            value: section.sectionState?.toggleY
-        }
-        Binding {
-            target: body
-            property: "x"
-            when: section.sectionState !== null
-            restoreMode: Binding.RestoreNone
-            value: section.sectionState?.bodyX
-        }
-        Binding {
-            target: body
-            property: "y"
-            when: section.sectionState !== null
-            restoreMode: Binding.RestoreNone
-            value: section.sectionState?.bodyY
-        }
 
         Rectangle {
             id: handle
 
             objectName: "drawerHandle_" + section.keyName
             x: 0
+            y: section.sectionState.handleY
             width: drawerScope.width
+            height: section.sectionState.handleHeight
             visible: section.shown
-            Binding on color {
-                when: drawerScope.drawerPalette !== null
-                restoreMode: Binding.RestoreNone
-                value: handleInput.containsMouse || handleInput.pressed
-                       ? drawerScope.drawerPalette?.selectionRing : drawerScope.drawerPalette?.outline
-            }
+            color: handleInput.containsMouse || handleInput.pressed
+                   ? drawerScope.drawerPalette.selectionRing : drawerScope.drawerPalette.outline
             activeFocusOnTab: true
 
             function adjust(direction: int): void {
@@ -304,13 +214,13 @@ FocusScope {
             id: toggle
 
             objectName: "drawerToggle_" + section.keyName
+            x: section.sectionState.toggleX
+            y: section.sectionState.toggleY
+            width: section.sectionState.toggleSize
+            height: section.sectionState.toggleSize
             visible: section.available
-            Binding on color {
-                when: drawerScope.drawerPalette !== null
-                restoreMode: Binding.RestoreNone
-                value: section.shown ? drawerScope.drawerPalette?.selectionRing
-                                     : drawerScope.drawerPalette?.windowBackground
-            }
+            color: section.shown ? drawerScope.drawerPalette.selectionRing
+                                 : drawerScope.drawerPalette.windowBackground
             activeFocusOnTab: true
 
             function activate(): void {
@@ -347,12 +257,8 @@ FocusScope {
             AppIcon {
                 anchors.fill: parent
                 icon: section.icon
-                Binding on color {
-                    when: drawerScope.drawerPalette !== null
-                    restoreMode: Binding.RestoreNone
-                    value: section.shown ? drawerScope.drawerPalette?.selectionText
-                                         : drawerScope.drawerPalette?.windowText
-                }
+                color: section.shown ? drawerScope.drawerPalette.selectionText
+                                     : drawerScope.drawerPalette.windowText
             }
 
             MouseArea {
@@ -373,6 +279,10 @@ FocusScope {
             id: body
 
             objectName: "drawerBody_" + section.keyName
+            x: section.sectionState.bodyX
+            y: section.sectionState.bodyY
+            width: section.sectionState.bodyWidth
+            height: section.sectionState.bodyHeight
             visible: section.shown
             enabled: section.shown
             active: section.available
@@ -392,8 +302,6 @@ FocusScope {
             // The URL is resolved once per attach and never re-pointed, so a
             // reload happens only when the presenter publishes another one.
             function syncSource(): void {
-                if (section.sectionState === null)
-                    return
                 var url = String(section.sectionState.contentUrl)
                 if (url.length === 0) {
                     if (String(body.source).length > 0)
@@ -423,18 +331,14 @@ FocusScope {
         id: bar
 
         objectName: "drawerBar"
-        visible: drawerScope.presenter !== null && drawerScope.presenter.barVisible
-        Binding on color {
-            when: drawerScope.drawerPalette !== null
-            restoreMode: Binding.RestoreNone
-            value: drawerScope.drawerPalette?.chromeBackground
-        }
+        x: drawerScope.presenter.barX
+        y: drawerScope.presenter.barY
+        width: drawerScope.presenter.barWidth
+        height: drawerScope.presenter.barHeight
+        visible: drawerScope.presenter.barVisible
+        color: drawerScope.drawerPalette.chromeBackground
         border.width: 1
-        Binding on border.color {
-            when: drawerScope.drawerPalette !== null
-            restoreMode: Binding.RestoreNone
-            value: drawerScope.drawerPalette?.outline
-        }
+        border.color: drawerScope.drawerPalette.outline
 
         MouseArea {
             objectName: "drawerBarInput"
@@ -474,7 +378,11 @@ FocusScope {
     Item {
         id: detent
         objectName: "drawerDetent"
-        visible: drawerScope.presenter !== null && drawerScope.presenter.velocitySection.visible
+        x: drawerScope.presenter.detentX
+        y: drawerScope.presenter.detentY
+        width: drawerScope.presenter.detentSize
+        height: drawerScope.presenter.detentSize
+        visible: drawerScope.presenter.velocitySection.visible
                  && !!drawerScope.velocityModel
                  && drawerScope.velocityModel.detentsAvailable
         activeFocusOnTab: visible
@@ -504,19 +412,11 @@ FocusScope {
 
         AppIcon {
             anchors.fill: parent
-            Binding on anchors.margins {
-                when: drawerScope.presenter !== null
-                restoreMode: Binding.RestoreNone
-                value: drawerScope.presenter?.detentIconInset
-            }
+            anchors.margins: drawerScope.presenter.detentIconInset
             icon: Icons.velocityLabels
-            Binding on color {
-                when: drawerScope.drawerPalette !== null
-                restoreMode: Binding.RestoreNone
-                value: drawerScope.velocityModel && drawerScope.velocityModel.detentsEnabled
-                       ? drawerScope.drawerPalette?.selectionRing
-                       : drawerScope.drawerPalette?.keyboardLabel
-            }
+            color: drawerScope.velocityModel && drawerScope.velocityModel.detentsEnabled
+                   ? drawerScope.drawerPalette.selectionRing
+                   : drawerScope.drawerPalette.keyboardLabel
         }
 
         MouseArea {

@@ -16,18 +16,13 @@ Item {
 
     objectName: "timelineTrackHeaderScrollBar"
     x: rowAreaWidth
-    Binding {
-        when: trackHeaderScrollBar.headersModel !== null
-        restoreMode: Binding.RestoreNone
-        trackHeaderScrollBar.width: Math.max(0, trackHeaderScrollBar.headersModel?.scrollbarWidth)
-        trackHeaderScrollBar.span: Math.max(0, trackHeaderScrollBar.headersModel?.maximumScrollY)
-    }
+    width: Math.max(0, headersModel.scrollbarWidth)
     height: parent.height
     z: 4
     visible: bandVisible && scrollable
     activeFocusOnTab: scrollable || activeFocus
 
-    property real span
+    readonly property real span: Math.max(0, headersModel.maximumScrollY)
     readonly property bool scrollable: headersModel !== null && span > 0
     readonly property real thumbLength: {
         if (!(height > 0) || !scrollable)

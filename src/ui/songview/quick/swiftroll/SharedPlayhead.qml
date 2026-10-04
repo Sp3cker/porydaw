@@ -27,45 +27,19 @@ Item {
     required property App.EditorDrawerSectionState velocitySection
     required property App.EditorDrawerSectionState voiceChangesSection
     required property App.EditorDrawerSectionState automationSection
-    property real contentX
-    property real glowLeft
-    property real glowRight
-    property real peakAlpha
-    property real triangleHalfWidthPx
-    property real triangleHeightPx
-    property bool trianglePointsUp
-    Binding {
-        when: root.presenter !== null
-        restoreMode: Binding.RestoreNone
-        root.contentX: root.presenter?.contentX
-        root.glowLeft: root.presenter?.glowLeft
-        root.glowRight: root.presenter?.glowRight
-        root.peakAlpha: root.presenter?.peakAlpha
-        root.triangleHalfWidthPx: root.presenter?.triangleHalfWidthPx
-        root.triangleHeightPx: root.presenter?.triangleHeightPx
-        root.trianglePointsUp: root.presenter?.trianglePointsUp
-    }
-    property rect velocityBodyRect
-    property rect voiceChangesBodyRect
-    property rect automationBodyRect
-    Binding {
-        when: root.velocitySection !== null
-        restoreMode: Binding.RestoreNone
-        root.velocityBodyRect: Qt.rect(root.plotOrigin, root.drawerRect.y + root.velocitySection?.bodyY,
-                                       root.plotWidth, root.velocitySection?.bodyHeight)
-    }
-    Binding {
-        when: root.voiceChangesSection !== null
-        restoreMode: Binding.RestoreNone
-        root.voiceChangesBodyRect: Qt.rect(root.plotOrigin, root.drawerRect.y + root.voiceChangesSection?.bodyY,
-                                           root.plotWidth, root.voiceChangesSection?.bodyHeight)
-    }
-    Binding {
-        when: root.automationSection !== null
-        restoreMode: Binding.RestoreNone
-        root.automationBodyRect: Qt.rect(root.plotOrigin, root.drawerRect.y + root.automationSection?.bodyY,
-                                         root.plotWidth, root.automationSection?.bodyHeight)
-    }
+    readonly property real contentX: presenter.contentX
+    readonly property real glowLeft: presenter.glowLeft
+    readonly property real glowRight: presenter.glowRight
+    readonly property real peakAlpha: presenter.peakAlpha
+    readonly property real triangleHalfWidthPx: presenter.triangleHalfWidthPx
+    readonly property real triangleHeightPx: presenter.triangleHeightPx
+    readonly property bool trianglePointsUp: presenter.trianglePointsUp
+    readonly property rect velocityBodyRect: Qt.rect(plotOrigin, drawerRect.y + velocitySection.bodyY,
+                                                    plotWidth, velocitySection.bodyHeight)
+    readonly property rect voiceChangesBodyRect: Qt.rect(plotOrigin, drawerRect.y + voiceChangesSection.bodyY,
+                                                        plotWidth, voiceChangesSection.bodyHeight)
+    readonly property rect automationBodyRect: Qt.rect(plotOrigin, drawerRect.y + automationSection.bodyY,
+                                                      plotWidth, automationSection.bodyHeight)
     readonly property bool velocityAvailable: velocitySection !== null && velocitySection.available && velocitySection.visible
     readonly property bool voiceChangesAvailable: voiceChangesSection !== null && voiceChangesSection.available && voiceChangesSection.visible
     readonly property bool automationAvailable: automationSection !== null && automationSection.available && automationSection.visible
@@ -294,11 +268,7 @@ Item {
         // Only x changes with the guide; dash geometry depends on height.
         Shape {
             id: guideLine
-            Binding {
-                when: guideSegment.guide !== null
-                restoreMode: Binding.RestoreNone
-                guideLine.x: guideSegment.guide?.contentX
-            }
+            x: guideSegment.guide.contentX
             y: 0
             width: 1
             height: guideSegment.height

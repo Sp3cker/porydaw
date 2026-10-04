@@ -20,12 +20,6 @@ Item {
     required final property bool hintScopeAllowed
     required final property int plotSurface
     property alias input: plotInput
-    final property color nodeFill
-    Binding on nodeFill {
-        when: plot.gridPalette !== null
-        value: plot.gridPalette?.windowBackground
-        restoreMode: Binding.RestoreNone
-    }
 
     function cursorFor(kind: int): int {
         switch (kind) {
@@ -48,11 +42,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        Binding on color {
-            when: plot.gridPalette !== null
-            value: plot.gridPalette?.rollBackground
-            restoreMode: Binding.RestoreNone
-        }
+        color: plot.gridPalette.rollBackground
     }
 
     DisplayList {
@@ -79,11 +69,7 @@ Item {
             objectName: "automationScaleLabel"
 
             text: labelText
-            Binding on color {
-                when: plot.gridPalette !== null
-                value: plot.gridPalette?.primaryText
-                restoreMode: Binding.RestoreNone
-            }
+            color: plot.gridPalette.primaryText
             font: labelFont
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
@@ -117,21 +103,13 @@ Item {
             required property font labelFont
             property alias text: ghostCaption.text
             objectName: "automationGhostNameLabel"
-            Binding on color {
-                when: plot.gridPalette !== null
-                value: plot.gridPalette?.chromeBackground
-                restoreMode: Binding.RestoreNone
-            }
+            color: plot.gridPalette.chromeBackground
             Text {
                 id: ghostCaption
                 objectName: "automationGhostCaption"
                 anchors.fill: parent
                 text: ghostLabel.labelText
-                Binding on color {
-                    when: plot.gridPalette !== null
-                    value: plot.gridPalette?.windowText
-                    restoreMode: Binding.RestoreNone
-                }
+                color: plot.gridPalette.windowText
                 font: ghostLabel.labelFont
                 textFormat: Text.PlainText
                 renderType: Text.NativeRendering
@@ -144,35 +122,27 @@ Item {
     Rectangle {
         id: hoverGuide
         objectName: "automationHoverGuide"
-        readonly property App.AutomationHoverDisplay hoverState: plot.pageModel ? plot.pageModel.hoverDisplay : null
-        visible: hoverState !== null && hoverState.visible && hoverState.hasGhost
-        x: hoverState ? hoverState.guideX - width / 2 : 0
+        readonly property App.AutomationHoverDisplay hoverState: plot.pageModel.hoverDisplay
+        visible: hoverState.visible && hoverState.hasGhost
+        x: hoverState.guideX - width / 2
         y: 0
         width: 1 / plot.devicePixelRatio
         height: plot.height
-        Binding on color {
-            when: plot.gridPalette !== null
-            value: plot.gridPalette?.windowText
-            restoreMode: Binding.RestoreNone
-        }
+        color: plot.gridPalette.windowText
         Accessible.ignored: true
     }
 
     Rectangle {
         objectName: "automationHoverGhost"
-        readonly property App.AutomationHoverDisplay hoverState: plot.pageModel ? plot.pageModel.hoverDisplay : null
+        readonly property App.AutomationHoverDisplay hoverState: plot.pageModel.hoverDisplay
         readonly property real radiusPx: Math.max(1, Math.round(plot.baseFontPx * 3 / 16))
-        visible: hoverState !== null && hoverState.visible && hoverState.hasGhost
-        x: hoverState ? hoverState.guideX - radiusPx : 0
-        y: hoverState ? hoverState.ghostY - radiusPx : 0
+        visible: hoverState.visible && hoverState.hasGhost
+        x: hoverState.guideX - radiusPx
+        y: hoverState.ghostY - radiusPx
         width: radiusPx * 2
         height: width
         radius: radiusPx
-        Binding on color {
-            when: plot.gridPalette !== null
-            value: plot.gridPalette?.windowText
-            restoreMode: Binding.RestoreNone
-        }
+        color: plot.gridPalette.windowText
         Accessible.ignored: true
     }
 
@@ -268,7 +238,7 @@ Item {
 
         delegate: NodeVisual {
             id: writtenNode
-            fillColor: plot.nodeFill
+            fillColor: plot.gridPalette.windowBackground
             hovered: plot.pageModel !== null && plot.pageModel.hoverDisplay.hasNode
                      && plot.pageModel.hoverDisplay.nodeTick === writtenNode.tick
             width: plot.width
@@ -285,17 +255,9 @@ Item {
         y: (plot.pageModel ? plot.pageModel.bandRect.y : 0)
         width: (plot.pageModel ? plot.pageModel.bandRect.width : 0)
         height: (plot.pageModel ? plot.pageModel.bandRect.height : 0)
-        Binding on color {
-            when: plot.gridPalette !== null
-            value: plot.gridPalette?.selectionFill
-            restoreMode: Binding.RestoreNone
-        }
+        color: plot.gridPalette.selectionFill
         border.width: 1
-        Binding on border.color {
-            when: plot.gridPalette !== null
-            value: plot.gridPalette?.selectionEdge
-            restoreMode: Binding.RestoreNone
-        }
+        border.color: plot.gridPalette.selectionEdge
         Accessible.ignored: true
     }
 
@@ -311,7 +273,7 @@ Item {
     Repeater {
         model: plot.pageModel ? plot.pageModel.previewNodes : null
         delegate: NodeVisual {
-            fillColor: plot.nodeFill
+            fillColor: plot.gridPalette.windowBackground
             width: plot.width
             height: plot.height
         }
@@ -321,22 +283,14 @@ Item {
     Text {
         objectName: "automationHoverLabel"
 
-        visible: plot.pageModel !== null && plot.pageModel.hoverDisplay.visible
-        x: plot.pageModel ? plot.pageModel.hoverDisplay.x : 0
-        y: plot.pageModel ? plot.pageModel.hoverDisplay.y : 0
-        width: plot.pageModel ? plot.pageModel.hoverDisplay.width : 0
-        height: plot.pageModel ? plot.pageModel.hoverDisplay.height : 0
-        text: plot.pageModel ? plot.pageModel.hoverDisplay.text : ""
-        Binding on color {
-            when: plot.gridPalette !== null
-            value: plot.gridPalette?.primaryText
-            restoreMode: Binding.RestoreNone
-        }
-        Binding on font {
-            when: plot.pageModel !== null
-            value: plot.pageModel?.noteNameFont
-            restoreMode: Binding.RestoreNone
-        }
+        visible: plot.pageModel.hoverDisplay.visible
+        x: plot.pageModel.hoverDisplay.x
+        y: plot.pageModel.hoverDisplay.y
+        width: plot.pageModel.hoverDisplay.width
+        height: plot.pageModel.hoverDisplay.height
+        text: plot.pageModel.hoverDisplay.text
+        color: plot.gridPalette.primaryText
+        font: plot.pageModel.noteNameFont
         textFormat: Text.PlainText
         renderType: Text.NativeRendering
         horizontalAlignment: Text.AlignLeft
@@ -355,16 +309,8 @@ Item {
         width: (plot.pageModel ? plot.pageModel.previewLabelRect.width : 0)
         height: (plot.pageModel ? plot.pageModel.previewLabelRect.height : 0)
         text: (plot.pageModel ? plot.pageModel.previewLabelText : "")
-        Binding on color {
-            when: plot.gridPalette !== null
-            value: plot.gridPalette?.primaryText
-            restoreMode: Binding.RestoreNone
-        }
-        Binding on font {
-            when: plot.pageModel !== null
-            value: plot.pageModel?.noteNameFont
-            restoreMode: Binding.RestoreNone
-        }
+        color: plot.gridPalette.primaryText
+        font: plot.pageModel.noteNameFont
         textFormat: Text.PlainText
         renderType: Text.NativeRendering
         horizontalAlignment: Text.AlignLeft
@@ -385,16 +331,8 @@ Item {
         width: (plot.pageModel ? plot.pageModel.readoutRect.width : 0)
         height: (plot.pageModel ? plot.pageModel.readoutRect.height : 0)
         text: (plot.pageModel ? plot.pageModel.readoutText : "")
-        Binding on color {
-            when: plot.gridPalette !== null
-            value: plot.gridPalette?.primaryText
-            restoreMode: Binding.RestoreNone
-        }
-        Binding on font {
-            when: plot.pageModel !== null
-            value: plot.pageModel?.titleFont
-            restoreMode: Binding.RestoreNone
-        }
+        color: plot.gridPalette.primaryText
+        font: plot.pageModel.titleFont
         textFormat: Text.PlainText
         renderType: Text.NativeRendering
         horizontalAlignment: Text.AlignRight
@@ -411,16 +349,8 @@ Item {
                  && (plot.pageModel ? plot.pageModel.plotMessage : "").length > 0
         anchors.centerIn: parent
         text: (plot.pageModel ? plot.pageModel.plotMessage : "")
-        Binding on color {
-            when: plot.gridPalette !== null
-            value: plot.gridPalette?.primaryText
-            restoreMode: Binding.RestoreNone
-        }
-        Binding on font {
-            when: plot.pageModel !== null
-            value: plot.pageModel?.captionFont
-            restoreMode: Binding.RestoreNone
-        }
+        color: plot.gridPalette.primaryText
+        font: plot.pageModel.captionFont
         textFormat: Text.PlainText
         renderType: Text.NativeRendering
     }

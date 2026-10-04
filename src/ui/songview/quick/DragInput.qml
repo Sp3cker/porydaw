@@ -46,6 +46,10 @@ Item {
         return Number.parseInt(input.text, 10)
     }
 
+    implicitWidth: Math.max(fontMetrics.advanceWidth("" + control.minimumValue),
+                            fontMetrics.advanceWidth("" + control.maximumValue))
+                   + 2 * (control.appearance.horizontalPadding + control.appearance.borderWidth)
+    implicitHeight: fontMetrics.height + 2 * (control.appearance.verticalPadding + control.appearance.borderWidth)
 
     onValueChanged: state.syncText()
     Component.onCompleted: state.syncText()
@@ -128,12 +132,15 @@ Item {
 
     FontMetrics {
         id: fontMetrics
-
+        font: control.appearance.font
     }
 
     Rectangle {
-        id: frame
         anchors.fill: parent
+        color: control.appearance.background
+        radius: control.appearance.radius
+        border.width: control.appearance.borderWidth
+        border.color: focusLeaf.activeFocus ? control.appearance.focus : control.appearance.outline
     }
 
     TextInput {
@@ -141,6 +148,15 @@ Item {
 
         anchors.fill: parent
         clip: true
+        color: control.appearance.text
+        font: control.appearance.font
+        padding: control.appearance.borderWidth
+        leftPadding: control.appearance.horizontalPadding + control.appearance.borderWidth
+        rightPadding: control.appearance.horizontalPadding + control.appearance.borderWidth
+        topPadding: control.appearance.verticalPadding + control.appearance.borderWidth
+        bottomPadding: control.appearance.verticalPadding + control.appearance.borderWidth
+        selectionColor: control.appearance.selection
+        selectedTextColor: control.appearance.selectionText
         renderType: TextInput.NativeRendering
         horizontalAlignment: TextInput.AlignHCenter
         verticalAlignment: TextInput.AlignVCenter
@@ -199,6 +215,7 @@ Item {
             acceptedButtons: Qt.LeftButton
             enabled: control.adjustmentsEnabled
             target: null
+            dragThreshold: control.appearance.dragThreshold
             xAxis.enabled: false
             onActiveChanged: {
                 if (active) {
@@ -426,29 +443,5 @@ Item {
         Accessible.description: control.accessibleDescription
         Accessible.editable: true
         Accessible.focusable: true
-    }
-
-    Binding {
-        when: control.appearance !== null
-        restoreMode: Binding.RestoreNone
-        control.implicitWidth: Math.max(fontMetrics.advanceWidth("" + control.minimumValue),
-                                       fontMetrics.advanceWidth("" + control.maximumValue))
-                               + 2 * (control.appearance?.horizontalPadding + control.appearance?.borderWidth)
-        control.implicitHeight: fontMetrics.height + 2 * (control.appearance?.verticalPadding + control.appearance?.borderWidth)
-        fontMetrics.font: control.appearance?.font
-        frame.color: control.appearance?.background
-        frame.radius: control.appearance?.radius
-        frame.border.width: control.appearance?.borderWidth
-        frame.border.color: focusLeaf.activeFocus ? control.appearance?.focus : control.appearance?.outline
-        input.color: control.appearance?.text
-        input.font: control.appearance?.font
-        input.padding: control.appearance?.borderWidth
-        input.leftPadding: control.appearance?.horizontalPadding + control.appearance?.borderWidth
-        input.rightPadding: control.appearance?.horizontalPadding + control.appearance?.borderWidth
-        input.topPadding: control.appearance?.verticalPadding + control.appearance?.borderWidth
-        input.bottomPadding: control.appearance?.verticalPadding + control.appearance?.borderWidth
-        input.selectionColor: control.appearance?.selection
-        input.selectedTextColor: control.appearance?.selectionText
-        scrubDrag.dragThreshold: control.appearance?.dragThreshold
     }
 }

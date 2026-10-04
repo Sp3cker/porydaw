@@ -12,20 +12,9 @@ FocusScope {
     enabled: applicationSession !== null
     final required property App.SongTabSession applicationSession
     final property int baseFontPx: applicationSession?.timeSigHost?.baseFontPx ?? 0
-    final property font bodyFont
-    final property font captionFont
-    property color hoverGuideColor
-    property color editGuideColor
-    property color playheadColor
-    property color scrollbarHandleColor
-    property color scrollbarHandleHoverColor
+    final property font bodyFont: applicationSession.timeSigHost.typographyFonts.body
+    final property font captionFont: applicationSession.timeSigHost.typographyFonts.caption
     final property App.ShellPresenter shellRouter: null
-    Binding {
-        when: root.applicationSession !== null
-        restoreMode: Binding.RestoreNone
-        root.bodyFont: root.applicationSession?.timeSigHost?.typographyFonts?.body
-        root.captionFont: root.applicationSession?.timeSigHost?.typographyFonts?.caption
-    }
     signal contextMenuAt(real x, real y)
     readonly property int cancelReasonFocusLost: 0
     readonly property int cancelReasonPointerUngrabbed: 1
@@ -45,8 +34,7 @@ FocusScope {
     final readonly property App.OtherEventsBandPresenter otherEventsPresenter: applicationSession ? applicationSession.otherEventsBand() : null
     final readonly property App.PitchBendPresenter pitchBendPresenter: applicationSession ? applicationSession.pitchBendPresenter() : null
     final readonly property App.EventListPresenter eventListPresenter: applicationSession ? applicationSession.eventListPresenter() : null
-    final property bool showEvents
-    Binding { target: root; property: "showEvents"; value: root.applicationSession?.showsEvents; when: root.applicationSession !== null; restoreMode: Binding.RestoreNone }
+    final property bool showEvents: applicationSession.showsEvents
     onShowEventsChanged: {
         // Current-state arbitration: the toggle returns focus to the roll only
         // when the events surface owned it or the teardown orphaned focus.
@@ -99,9 +87,9 @@ FocusScope {
         if (!hintScopeCovered)
             Qt.callLater(refreshHintScope)
     }
-    final property real timelineSplitX
-    final property real scrollbarBreadth
-    final property int noteCount
+    final property real timelineSplitX: headersModel.trackHeaderWidth + gridModel.keyboardWidth
+    final property real scrollbarBreadth: headersModel.scrollbarWidth
+    final property int noteCount: gridModel.renderedNoteCount
     final readonly property App.ApplicationSession timeSigHost: applicationSession?.timeSigHost ?? null
     final property point timeSigMenuPosition: Qt.point(0, 0)
     final property point gridMenuPosition: Qt.point(0, 0)
@@ -110,23 +98,9 @@ FocusScope {
     final property point timeSelectionMenuPosition: Qt.point(0, 0)
     property bool timeMenuFocus: false
     property bool insertPromptHadFocus: false
-    final property int menuHorizontalPadding
-    final property int menuVerticalPadding
-    final property int menuGap
-    Binding {
-        when: root.headersModel !== null && root.gridModel !== null
-        restoreMode: Binding.RestoreNone
-        root.timelineSplitX: root.headersModel?.trackHeaderWidth + root.gridModel?.keyboardWidth
-        root.scrollbarBreadth: root.headersModel?.scrollbarWidth
-        root.noteCount: root.gridModel?.renderedNoteCount
-    }
-    Binding {
-        when: root.timeSigHost !== null
-        restoreMode: Binding.RestoreNone
-        root.menuHorizontalPadding: root.timeSigHost?.layoutSpaces?.two
-        root.menuVerticalPadding: root.timeSigHost?.layoutSpaces?.half
-        root.menuGap: root.timeSigHost?.layoutSpaces?.one
-    }
+    final property int menuHorizontalPadding: timeSigHost.layoutSpaces.two
+    final property int menuVerticalPadding: timeSigHost.layoutSpaces.half
+    final property int menuGap: timeSigHost.layoutSpaces.one
     final property alias rollStack: rollBandContent.rollStack
     final property alias rollPlot: rollBandContent.rollPlot
     final property alias rollInput: rollBandContent.rollInput
@@ -159,8 +133,7 @@ FocusScope {
     }
 
 
-    final property string appliedRevisionText
-    Binding { target: root; property: "appliedRevisionText"; value: root.gridModel?.appliedRevisionText; when: root.gridModel !== null; restoreMode: Binding.RestoreNone }
+    final property string appliedRevisionText: gridModel.appliedRevisionText
     property bool viewportConfigured: false
     final readonly property bool editorStartupReady: viewportConfigured && visible
         && applicationSession !== null && gridModel !== null && shellRouter !== null
@@ -229,7 +202,7 @@ FocusScope {
         id: rollBackground
         objectName: "swiftRollBackground"
         anchors.fill: parent
-        Binding { target: rollBackground; property: "color"; value: root.gridModel?.palette?.rollBackground; when: root.gridModel !== null; restoreMode: Binding.RestoreNone }
+        color: root.gridModel.palette.rollBackground
         z: -1
     }
 
@@ -271,25 +244,15 @@ FocusScope {
         width: Math.max(root.width - x, 0)
         height: root.scrollbarBreadth
         orientation: Qt.Horizontal
-        Binding {
-            when: root.gridModel !== null
-            restoreMode: Binding.RestoreNone
-            horizontalScrollBar.minimum: root.gridModel?.cameraMinHScroll
-            horizontalScrollBar.maximum: root.gridModel?.cameraMaxHScroll
-            horizontalScrollBar.value: root.gridModel?.cameraScrollX
-        }
+        minimum: root.gridModel.cameraMinHScroll
+        maximum: root.gridModel.cameraMaxHScroll
+        value: root.gridModel.cameraScrollX
         pageStep: root.rollPlot.width
         singleStep: 1
         accessibleName: qsTr("Timeline")
-        Binding {
-            when: root.headersModel !== null
-            restoreMode: Binding.RestoreNone
-            horizontalScrollBar.minimumThumbLength: root.headersModel?.scrollbarMinimumThumbHeight
-            root.scrollbarHandleColor: root.headersModel?.scrollbarHandle
-            root.scrollbarHandleHoverColor: root.headersModel?.scrollbarHandleHover
-        }
-        handleColor: root.scrollbarHandleColor
-        handleHoverColor: root.scrollbarHandleHoverColor
+        minimumThumbLength: root.headersModel.scrollbarMinimumThumbHeight
+        handleColor: root.headersModel.scrollbarHandle
+        handleHoverColor: root.headersModel.scrollbarHandleHover
         visibleWhenNotScrollable: true
         hintService: root.hintService
         hintScopeAllowed: !root.hintScopeCovered
@@ -318,22 +281,14 @@ FocusScope {
         height: root.rollPlot.height
         orientation: Qt.Vertical
         minimum: 0
-        Binding {
-            when: root.gridModel !== null
-            restoreMode: Binding.RestoreNone
-            rollScrollBar.maximum: root.gridModel?.cameraMaxVScroll
-            rollScrollBar.value: root.gridModel?.cameraScrollY
-        }
+        maximum: root.gridModel.cameraMaxVScroll
+        value: root.gridModel.cameraScrollY
         pageStep: root.rollPlot.height
         singleStep: 1
         accessibleName: qsTr("Piano roll")
-        Binding {
-            when: root.headersModel !== null
-            restoreMode: Binding.RestoreNone
-            rollScrollBar.minimumThumbLength: root.headersModel?.scrollbarMinimumThumbHeight
-        }
-        handleColor: root.scrollbarHandleColor
-        handleHoverColor: root.scrollbarHandleHoverColor
+        minimumThumbLength: root.headersModel.scrollbarMinimumThumbHeight
+        handleColor: root.headersModel.scrollbarHandle
+        handleHoverColor: root.headersModel.scrollbarHandleHover
         visibleWhenNotScrollable: true
         externalVisible: !root.showEvents
         hintService: root.hintService
@@ -415,16 +370,9 @@ FocusScope {
 
         presenter: root.applicationSession ? root.applicationSession.playheadPresenter() : null
         guides: root.applicationSession ? root.applicationSession.playheadGuidesPresenter() : null
-        Binding {
-            when: root.gridModel !== null
-            restoreMode: Binding.RestoreNone
-            root.hoverGuideColor: root.gridModel?.palette?.secondaryText
-            root.editGuideColor: root.gridModel?.palette?.editCursor
-            root.playheadColor: root.gridModel?.palette?.playhead
-        }
-        hoverGuideColor: root.hoverGuideColor
-        editGuideColor: root.editGuideColor
-        playheadColor: root.playheadColor
+        hoverGuideColor: root.gridModel.palette.secondaryText
+        editGuideColor: root.gridModel.palette.editCursor
+        playheadColor: root.gridModel.palette.playhead
         rollBodyVisible: !root.showEvents
         rollPlotRect: Qt.rect(root.rollStack.x + root.rollPlot.x, root.rollPlot.y,
                               root.rollPlot.width, root.rollPlot.height)

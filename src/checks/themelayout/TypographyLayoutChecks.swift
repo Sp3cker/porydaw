@@ -86,11 +86,14 @@ private func typographyLayoutCheckRoles(_ report: CheckReport) {
                 cppID: typographyLayoutFaceID,
                 message: "\(name) at base \(base) resolves to an installed font face")
         }
-        let prompt = PromptAppearance.font(typography: typography)
+        let prompt = PromptStyle()
+        prompt.update(
+            metrics: PromptAppearance.Layout(base: Double(base)), palette: GridPalette(),
+            font: typography.body.qmlFont)
         report.expect(
-            prompt["family"] as? String == typography.body.family
-                && prompt["pixelSize"] as? Int == typography.body.pixelSize
-                && prompt["weight"] as? Int == typography.body.weight,
+            prompt.font.family == typography.body.family
+                && prompt.font.pixelSize == typography.body.pixelSize
+                && prompt.font.weight == typography.body.weight,
             cppID: typographyLayoutFaceID,
             message: "time and insert prompts publish the body role at base \(base)")
         let metrics = GridMetrics(baseFontPx: Double(base), dpr: 1, width: 0, height: 0)
@@ -107,7 +110,7 @@ private func typographyLayoutCheckRoles(_ report: CheckReport) {
             ("normal title", header.normalTitleFont.family, header.normalTitleFont.weight),
             ("selected title", header.boldTitleFont.family, header.boldTitleFont.weight),
             ("subtitle", header.subtitleFont.family, header.subtitleFont.weight),
-            ("prompt", prompt["family"] as? String ?? "", prompt["weight"] as? Int ?? -1),
+            ("prompt", prompt.font.family, prompt.font.weight),
         ] {
             report.expect(
                 bundled(family, weight),

@@ -15,55 +15,38 @@ Item {
 
     final readonly property App.TrackHeadersPresenter headersModel: model
     final readonly property App.TrackHeadersPresenter appearance: headersModel
-    final property color inputBackground
-    final property color inputText
-    final property color inputOutline
-    final property color focusOutline
-    final property color scrollbarHandle
-    final property color scrollbarHandleHover
-    final property color reorderIndicator
-    final property color selectionBackground
-    final property color selectionText
-    property real rowAreaWidth
-    Binding {
-        when: root.appearance !== null
-        restoreMode: Binding.RestoreNone
-        root.inputBackground: root.appearance?.inputBackground
-        root.inputText: root.appearance?.inputText
-        root.inputOutline: root.appearance?.inputOutline
-        root.focusOutline: root.appearance?.focusOutline
-        root.scrollbarHandle: root.appearance?.scrollbarHandle
-        root.scrollbarHandleHover: root.appearance?.scrollbarHandleHover
-        root.reorderIndicator: root.appearance?.reorderIndicator
-        root.selectionBackground: root.appearance?.selectionBackground
-        root.selectionText: root.appearance?.selectionText
-        normalTitleMetrics.font: root.headersModel?.normalTitleFont
-        boldTitleMetrics.font: root.headersModel?.boldTitleFont
-        subtitleMetrics.font: root.headersModel?.subtitleFont
-        root.rowAreaWidth: Math.max(0, trackHeaderViewport.width - root.headersModel?.scrollbarWidth)
-    }
+    final readonly property color inputBackground: appearance.inputBackground
+    final readonly property color inputText: appearance.inputText
+    final readonly property color inputOutline: appearance.inputOutline
+    final readonly property color focusOutline: appearance.focusOutline
+    final readonly property color scrollbarHandle: appearance.scrollbarHandle
+    final readonly property color scrollbarHandleHover: appearance.scrollbarHandleHover
+    final readonly property color reorderIndicator: appearance.reorderIndicator
+    final readonly property color selectionBackground: appearance.selectionBackground
+    final readonly property color selectionText: appearance.selectionText
 
     width: bandRect.width
     height: bandRect.height
 
     FontMetrics {
         id: normalTitleMetrics
+        font: root.headersModel.normalTitleFont
         onLineSpacingChanged: Qt.callLater(root.configureTextMetrics)
     }
 
     FontMetrics {
         id: boldTitleMetrics
+        font: root.headersModel.boldTitleFont
         onLineSpacingChanged: Qt.callLater(root.configureTextMetrics)
     }
 
     FontMetrics {
         id: subtitleMetrics
+        font: root.headersModel.subtitleFont
         onLineSpacingChanged: Qt.callLater(root.configureTextMetrics)
     }
 
     function configureTextMetrics(): void {
-        if (!root.headersModel)
-            return
         root.headersModel.configureTextMetrics(Math.round(normalTitleMetrics.lineSpacing),
                                                Math.round(boldTitleMetrics.lineSpacing),
                                                Math.round(subtitleMetrics.lineSpacing))
@@ -79,7 +62,7 @@ Item {
     }
 
     function rowIndexForTrack(track: int): int {
-        if (track < 0 || !root.headersModel)
+        if (track < 0)
             return -1
         for (let index = 0; index < trackHeaderRowArea.rowCount; ++index) {
             const row = root.headersModel.rowAt(index)
@@ -89,7 +72,7 @@ Item {
         return -1
     }
     function hintProfileAt(x: real, y: real): int {
-        if (!root.headersModel || root.headersModel.rowHeight <= 0)
+        if (root.headersModel.rowHeight <= 0)
             return HintProfiles.Empty
         const index = Math.floor((y + root.headersModel.scrollY) / root.headersModel.rowHeight)
         const row = root.headersModel.rowAt(index)
@@ -140,7 +123,7 @@ Item {
                 controlFont: root.controlFont
                 normalMetrics: normalTitleMetrics
                 boldMetrics: boldTitleMetrics
-                rowAreaWidth: root.rowAreaWidth
+                rowAreaWidth: Math.max(0, trackHeaderViewport.width - root.headersModel.scrollbarWidth)
             }
 
             MouseArea {
@@ -226,16 +209,11 @@ Item {
 
             Rectangle {
                 objectName: "timelineTrackHeaderReorderMarker"
-                id: reorderMarker
-                Binding {
-                    when: root.headersModel !== null
-                    restoreMode: Binding.RestoreNone
-                    reorderMarker.y: Math.min(Math.max(0, root.headersModel?.reorderIndicatorY),
-                                             Math.max(0, trackHeaderRowArea.height - reorderMarker.height))
-                    reorderMarker.height: root.headersModel?.reorderIndicatorHeight
-                }
+                y: Math.min(Math.max(0, root.headersModel.reorderIndicatorY),
+                            Math.max(0, trackHeaderRowArea.height - height))
+                height: root.headersModel.reorderIndicatorHeight
                 width: trackHeaderRowArea.width
-                visible: root.headersModel !== null && root.headersModel.reorderIndicatorVisible && height > 0
+                visible: root.headersModel.reorderIndicatorVisible && height > 0
                 color: root.reorderIndicator
                 z: 3
             }
@@ -269,16 +247,12 @@ Item {
             Item {
                 id: renameEditor
 
-                readonly property int rowIndex: root.headersModel ? root.rowIndexForTrack(root.headersModel.renamingTrack) : -1
-                Binding {
-                    when: root.headersModel !== null && root.headersModel.renameEditorRect !== null
-                    restoreMode: Binding.RestoreNone
-                    renameEditor.x: root.headersModel?.renameEditorRect?.x
-                    renameEditor.y: renameEditor.rowIndex * root.headersModel?.rowHeight - root.headersModel?.scrollY
-                                    + root.headersModel?.renameEditorRect?.y
-                    renameEditor.width: root.headersModel?.renameEditorRect?.width
-                    renameEditor.height: root.headersModel?.renameEditorRect?.height
-                }
+                readonly property int rowIndex: root.rowIndexForTrack(root.headersModel.renamingTrack)
+                x: root.headersModel.renameEditorRect.x
+                y: rowIndex * root.headersModel.rowHeight - root.headersModel.scrollY
+                   + root.headersModel.renameEditorRect.y
+                width: root.headersModel.renameEditorRect.width
+                height: root.headersModel.renameEditorRect.height
                 visible: headerBand.visible && rowIndex >= 0
                 property bool finishing: false
 
@@ -359,11 +333,7 @@ Item {
 
                     Accessible.role: Accessible.EditableText
                     Accessible.name: qsTr("Rename track")
-                    Binding {
-                        when: root.headersModel !== null
-                        restoreMode: Binding.RestoreNone
-                        renameInput.Accessible.description: root.headersModel?.renameDraft
-                    }
+                    Accessible.description: root.headersModel.renameDraft
                     Accessible.focusable: true
                 }
 

@@ -35,31 +35,21 @@ Item {
         required property bool solo
         objectName: "timelineHeader" + (solo ? "Solo" : "Mute") + "_" + track
 
-        Binding {
-            when: toggle.controlRect !== null
-            restoreMode: Binding.RestoreNone
-            toggle.x: toggle.controlRect?.x
-            toggle.y: toggle.controlRect?.y
-            toggle.width: toggle.controlRect?.width
-            toggle.height: toggle.controlRect?.height
-        }
+        x: controlRect.x
+        y: controlRect.y
+        width: controlRect.width
+        height: controlRect.height
         activeFocusOnTab: true
-        property color stateBackground
-        property color stateText
-        Binding {
-            when: root.appearance !== null
-            restoreMode: Binding.RestoreNone
-            toggle.stateBackground: toggle.pressed
-                ? toggle.solo ? root.appearance?.soloCheckedBackground : root.appearance?.buttonPressedBackground
-                : toggle.checked
-                  ? toggle.solo ? root.appearance?.soloCheckedBackground : root.appearance?.muteCheckedBackground
-                  : toggle.hovered ? root.appearance?.buttonHoverBackground : root.appearance?.buttonBackground
-            toggle.stateText: toggle.pressed
-                ? toggle.solo ? root.appearance?.soloCheckedText : root.appearance?.buttonPressedText
-                : toggle.checked
-                  ? toggle.solo ? root.appearance?.soloCheckedText : root.appearance?.muteCheckedText
-                  : toggle.hovered ? root.appearance?.buttonHoverText : root.appearance?.buttonText
-        }
+        readonly property color stateBackground: toggle.pressed
+            ? toggle.solo ? root.appearance.soloCheckedBackground : root.appearance.buttonPressedBackground
+            : toggle.checked
+              ? toggle.solo ? root.appearance.soloCheckedBackground : root.appearance.muteCheckedBackground
+              : toggle.hovered ? root.appearance.buttonHoverBackground : root.appearance.buttonBackground
+        readonly property color stateText: toggle.pressed
+            ? toggle.solo ? root.appearance.soloCheckedText : root.appearance.buttonPressedText
+            : toggle.checked
+              ? toggle.solo ? root.appearance.soloCheckedText : root.appearance.muteCheckedText
+              : toggle.hovered ? root.appearance.buttonHoverText : root.appearance.buttonText
 
         function activate(): void {
             if (solo)
@@ -74,14 +64,9 @@ Item {
         }
 
         Rectangle {
-            id: toggleBackground
             anchors.fill: parent
             color: toggle.stateBackground
-            Binding {
-                when: root.appearance !== null
-                restoreMode: Binding.RestoreNone
-                toggleBackground.border.color: root.appearance?.buttonOutline
-            }
+            border.color: root.appearance.buttonOutline
             border.width: 1
         }
 
@@ -111,19 +96,15 @@ Item {
         id: translatedRows
 
         width: parent.width
-        Binding {
-            when: root.headersModel !== null
-            restoreMode: Binding.RestoreNone
-            translatedRows.y: -root.headersModel?.scrollY
-            translatedRows.height: root.headersModel?.contentHeight
-        }
+        y: -root.headersModel.scrollY
+        height: root.headersModel.contentHeight
         z: 2
 
         Repeater {
             id: trackHeaderRows
 
             objectName: "timelineTrackHeaderRows"
-            model: root.headersModel?.rows ?? null
+            model: root.headersModel.rows
 
             delegate: Item {
                 id: trackHeaderRow
@@ -163,16 +144,9 @@ Item {
 
                 property bool complete: false
 
-                property real titleWidth
-                Binding {
-                    target: trackHeaderRow
-                    property: "titleWidth"
-                    value: trackHeaderRow.titleRect?.width
-                    when: trackHeaderRow.titleRect !== null
-                    restoreMode: Binding.RestoreNone
-                }
+                readonly property real titleWidth: titleRect.width
                 function publishSelectedTitleOffset(): void {
-                    if (!complete || isAddTrack || !titleBold || !titleRect || !root.headersModel)
+                    if (!complete || isAddTrack || !titleBold)
                         return
                     const label = root.boldMetrics.elidedText(title, Text.ElideRight,
                                                              titleRect.width)
@@ -241,15 +215,10 @@ Item {
                 }
 
                 Text {
-                    id: titleLabel
-                    Binding {
-                        when: trackHeaderRow.titleRect !== null
-                        restoreMode: Binding.RestoreNone
-                        titleLabel.x: trackHeaderRow.titleRect?.x + trackHeaderRow.selectedTitleOffsetX
-                        titleLabel.y: trackHeaderRow.titleRect?.y + trackHeaderRow.selectedTitleOffsetY
-                        titleLabel.width: trackHeaderRow.titleRect?.width
-                        titleLabel.height: trackHeaderRow.titleRect?.height
-                    }
+                    x: trackHeaderRow.titleRect.x + trackHeaderRow.selectedTitleOffsetX
+                    y: trackHeaderRow.titleRect.y + trackHeaderRow.selectedTitleOffsetY
+                    width: trackHeaderRow.titleRect.width
+                    height: trackHeaderRow.titleRect.height
                     visible: !trackHeaderRow.isAddTrack
                     clip: contentWidth > width || contentHeight > height
                     color: trackHeaderRow.titleColor
@@ -264,15 +233,10 @@ Item {
 
                 // The subtitle remains a voice hit target, not a button fill.
                 Text {
-                    id: subtitleLabel
-                    Binding {
-                        when: trackHeaderRow.subtitleRect !== null
-                        restoreMode: Binding.RestoreNone
-                        subtitleLabel.x: trackHeaderRow.subtitleRect?.x
-                        subtitleLabel.y: trackHeaderRow.subtitleRect?.y
-                        subtitleLabel.width: trackHeaderRow.subtitleRect?.width
-                        subtitleLabel.height: trackHeaderRow.subtitleRect?.height
-                    }
+                    x: trackHeaderRow.subtitleRect.x
+                    y: trackHeaderRow.subtitleRect.y
+                    width: trackHeaderRow.subtitleRect.width
+                    height: trackHeaderRow.subtitleRect.height
                     visible: !trackHeaderRow.isAddTrack
                     clip: contentWidth > width || contentHeight > height
                     color: trackHeaderRow.subtitleColor
@@ -287,7 +251,7 @@ Item {
 
                 TrackHeaderToggle {
                     visible: !trackHeaderRow.isAddTrack
-                    controlRect: root.headersModel?.muteButtonRect ?? null
+                    controlRect: root.headersModel.muteButtonRect
                     track: trackHeaderRow.track
                     label: qsTr("M")
                     accessibleName: qsTr("Mute")
@@ -299,7 +263,7 @@ Item {
 
                 TrackHeaderToggle {
                     visible: !trackHeaderRow.isAddTrack
-                    controlRect: root.headersModel?.soloButtonRect ?? null
+                    controlRect: root.headersModel.soloButtonRect
                     track: trackHeaderRow.track
                     label: qsTr("S")
                     accessibleName: qsTr("Solo")

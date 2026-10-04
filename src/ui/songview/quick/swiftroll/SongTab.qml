@@ -15,7 +15,10 @@ FocusScope {
     final readonly property EditorSurface surface: pageLoader.item as EditorSurface
     signal contextMenuAt(real x, real y)
 
-    Component.onDestruction: root.controller.pageReleased(root.session.tabId)
+    Component.onDestruction: {
+        pageLoader.active = false
+        root.controller.pageReleased(root.session.tabId)
+    }
 
     Loader {
         id: pageLoader

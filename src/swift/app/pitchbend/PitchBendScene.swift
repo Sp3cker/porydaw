@@ -79,8 +79,7 @@ public final class PitchBendLane {
     public init(kernel: PitchBendKernel, palette: GridPalette, track: Int) {
         self.kernel = kernel
         self.palette = palette
-        identityColor = PaletteMath.qmlColor(
-            argb: PaletteMath.argb(PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(track)]))
+        identityColor = PaletteMath.trackIdentityColors[PaletteMath.trackIdentityIndex(track)]
         laneTitle = kernel.lane == .pitch ? "Pitch bend (BEND)" : "Mod wheel (CC1)"
         bipolar = kernel.lane == .pitch
         rebuild()

@@ -15,79 +15,26 @@ Rectangle {
     required final property real timelineSplitX
     required final property real plotWidth
     required final property font applicationFont
-    final property color chromeBackground
-    final property color separator
-    final property color windowText
-    final property color rulerPreRollMask
-    final property color inputBackground
-    final property color outline
-    final property rect toolTipAnchor
-    final property string toolTipText
-    Binding {
-        when: band.colors !== null
-        restoreMode: Binding.RestoreNone
-        band.chromeBackground: band.colors?.chromeBackground
-        band.separator: band.colors?.separator
-        band.windowText: band.colors?.windowText
-        band.rulerPreRollMask: band.colors?.rulerPreRollMask
-        band.inputBackground: band.colors?.inputBackground
-        band.outline: band.colors?.outline
-    }
-    Binding on toolTipAnchor {
-        when: band.presenter !== null
-        value: Qt.rect(band.x + band.timelineSplitX + band.presenter?.toolTipX,
-                       band.y + band.presenter?.toolTipY, 0, 0)
-        restoreMode: Binding.RestoreNone
-    }
-    Binding on toolTipText {
-        when: band.presenter !== null
-        value: band.presenter?.toolTipText
-        restoreMode: Binding.RestoreNone
-    }
-    final property real markerHalfWidth
-    final property real markerHalfHeight
-    Binding on markerHalfWidth {
-        when: band.presenter !== null
-        value: band.presenter?.markerHalfWidth
-        restoreMode: Binding.RestoreNone
-    }
-    Binding on markerHalfHeight {
-        when: band.presenter !== null
-        value: band.presenter?.markerHalfHeight
-        restoreMode: Binding.RestoreNone
-    }
-    Binding on height {
-        when: band.presenter !== null
-        value: band.presenter?.bandHeight
-        restoreMode: Binding.RestoreNone
-    }
-    color: band.chromeBackground
+    height: presenter.bandHeight
+    color: colors.chromeBackground
 
     Rectangle {
         anchors.top: parent.top
         width: band.width
         height: 1
-        color: band.separator
+        color: band.colors.separator
     }
 
     Text {
         id: gutterLabel
         objectName: "timelineOtherEventsLabel"
-        Binding on x {
-            when: band.presenter !== null
-            value: band.presenter?.gutterInset
-            restoreMode: Binding.RestoreNone
-        }
+        x: band.presenter.gutterInset
         width: Math.max(0, band.timelineSplitX - x)
         height: band.height
         verticalAlignment: Text.AlignVCenter
         font: band.applicationFont
-        color: band.windowText
-        Binding on text {
-            when: band.presenter !== null
-            value: qsTr("Other events (%1)").arg(band.presenter?.labelCount)
-            restoreMode: Binding.RestoreNone
-        }
+        color: band.colors.windowText
+        text: qsTr("Other events (%1)").arg(band.presenter.labelCount)
         elide: Text.ElideRight
     }
 
@@ -125,7 +72,7 @@ Rectangle {
             objectName: "timelineOtherEventsPreRoll"
             width: Math.min(plot.width, Math.max(0, -band.overlayRoot.scrollX))
             height: plot.height
-            color: band.rulerPreRollMask
+            color: band.colors.rulerPreRollMask
         }
 
         Item {
@@ -136,26 +83,26 @@ Rectangle {
             Repeater {
                 id: markerRepeater
                 objectName: "timelineOtherEventsMarkers"
-                model: band.presenter?.markers
+                model: band.presenter.markers
                 delegate: Shape {
                     id: marker
                     required property var model
                     readonly property real markerX: model.x
                     required property color color
                     objectName: "timelineOtherEventsMarker"
-                    x: marker.markerX - band.markerHalfWidth
+                    x: marker.markerX - band.presenter.markerHalfWidth
                     y: (band.height - height) / 2
-                    width: 2 * band.markerHalfWidth
-                    height: 2 * band.markerHalfHeight
+                    width: 2 * band.presenter.markerHalfWidth
+                    height: 2 * band.presenter.markerHalfHeight
                     ShapePath {
                         fillColor: marker.color
                         strokeWidth: 0
-                        startX: band.markerHalfWidth
+                        startX: band.presenter.markerHalfWidth
                         startY: 0
-                        PathLine { x: 2 * band.markerHalfWidth; y: band.markerHalfHeight }
-                        PathLine { x: band.markerHalfWidth; y: 2 * band.markerHalfHeight }
-                        PathLine { x: 0; y: band.markerHalfHeight }
-                        PathLine { x: band.markerHalfWidth; y: 0 }
+                        PathLine { x: 2 * band.presenter.markerHalfWidth; y: band.presenter.markerHalfHeight }
+                        PathLine { x: band.presenter.markerHalfWidth; y: 2 * band.presenter.markerHalfHeight }
+                        PathLine { x: 0; y: band.presenter.markerHalfHeight }
+                        PathLine { x: band.presenter.markerHalfWidth; y: 0 }
                     }
                     Accessible.ignored: true
                 }
@@ -192,12 +139,13 @@ Rectangle {
         parent: band.overlayRoot
         z: 5
         overlayRoot: band.overlayRoot
-        anchorRect: band.toolTipAnchor
-        toolTipText: band.toolTipText
-        visibleForControl: band.visible && band.presenter !== null && band.presenter.toolTipVisible
+        anchorRect: Qt.rect(band.x + band.timelineSplitX + band.presenter.toolTipX,
+                            band.y + band.presenter.toolTipY, 0, 0)
+        toolTipText: band.presenter.toolTipText
+        visibleForControl: band.visible && band.presenter.toolTipVisible
         controlFont: band.applicationFont
-        backgroundColor: band.inputBackground
-        textColor: band.windowText
-        outlineColor: band.outline
+        backgroundColor: band.colors.inputBackground
+        textColor: band.colors.windowText
+        outlineColor: band.colors.outline
     }
 }

@@ -15,31 +15,25 @@ Item {
 
     default property alias contentChildren: content.data
 
+    implicitWidth: Math.max(content.implicitWidth + 2 * card.appearance.dialogPadding,
+                            card.minimumWidth)
+    implicitHeight: content.implicitHeight + 2 * card.appearance.dialogPadding
 
     Rectangle {
-        id: frame
         parent: card
         anchors.fill: parent
+        color: card.appearance.background
+        border.width: card.appearance.borderWidth
+        border.color: card.appearance.outline
+        radius: card.appearance.radius
     }
 
     Column {
         parent: card
         id: content
 
-    }
-
-    Binding {
-        when: card.appearance !== null
-        restoreMode: Binding.RestoreNone
-        card.implicitWidth: Math.max(content.implicitWidth + 2 * card.appearance?.dialogPadding,
-                                     card.minimumWidth)
-        card.implicitHeight: content.implicitHeight + 2 * card.appearance?.dialogPadding
-        frame.color: card.appearance?.background
-        frame.border.width: card.appearance?.borderWidth
-        frame.border.color: card.appearance?.outline
-        frame.radius: card.appearance?.radius
-        content.x: card.appearance?.dialogPadding
-        content.y: card.appearance?.dialogPadding
-        content.spacing: card.appearance?.spacing
+        x: card.appearance.dialogPadding
+        y: card.appearance.dialogPadding
+        spacing: card.appearance.spacing
     }
 }

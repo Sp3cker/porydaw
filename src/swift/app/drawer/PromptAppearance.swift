@@ -35,24 +35,6 @@ enum PromptAppearance {
         }
     }
 
-    @MainActor
-    static func metrics(base: Double) -> [String: QVariantSettable] {
-        let layout = Layout(base: base)
-        return [
-            "borderWidth": Int(layout.borderWidth), "radius": Int(layout.radius),
-            "dialogPadding": Int(layout.dialogPadding),
-            "horizontalPadding": Int(layout.horizontalPadding),
-            "verticalPadding": Int(layout.verticalPadding),
-            "buttonPadding": Int(layout.buttonPadding), "spacing": Int(layout.spacing),
-            "dragThreshold": layout.dragThreshold,
-            "minimumWidth": Int(layout.minimumWidth), "listHeight": Int(layout.listHeight)
-        ]
-    }
-
-    @MainActor
-    static func font(typography: Typography) -> [String: QVariantSettable] {
-        typography.body.map
-    }
 }
 
 /// One retained prompt style; its owner equality-gates each native QML value.

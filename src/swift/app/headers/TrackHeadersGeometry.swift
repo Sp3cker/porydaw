@@ -336,9 +336,7 @@ extension TrackHeadersGeometry {
     static let overBudgetScopedInk = [0xFF505655, 0xFFC6D5D8, 0xFFC5CBCE].map { PaletteMath.qmlColor(argb: $0) }
     static let overBudgetTitleInk = [0xFF554F4C, 0xFFA0A0A0, 0xFF96989C].map { PaletteMath.qmlColor(argb: $0) }
     static let overBudgetSubtitleInk = [0xFF564F4A, 0xFFA0A0A0, 0xFF95989F].map { PaletteMath.qmlColor(argb: $0) }
-    static let activityActiveColors = PaletteMath.trackIdentityFills.map {
-        PaletteMath.qmlColor(argb: PaletteMath.argb($0))
-    }
+    static let activityActiveColors = PaletteMath.trackIdentityColors
     static let activityDimColors = ThemeColorTables.activityDimColors.map {
         PaletteMath.qmlColor(argb: PaletteMath.argb($0))
     }

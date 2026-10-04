@@ -1,9 +1,66 @@
 import Foundation
 import PorydawCore
 
+/// Display, editor and flag values published together for one event-list row.
+public struct EventListPublishedValues: Equatable, Sendable {
+    public var rowKind: Int = 0
+    public var rowTint: String = ""
+    public var editableMask: Int = 0
+    public var c0: String = ""
+    public var c1: String = ""
+    public var c2: String = ""
+    public var c3: String = ""
+    public var c4: String = ""
+    public var c5: String = ""
+    public var c6: String = ""
+    public var editType: String = ""
+    public var editData: String = ""
+}
+
 /// The seven visible table values are derived from the same row snapshot used
 /// for selection, editing, and the playhead. No QML copy owns MIDI data.
 extension EventListModel {
+    /// Projects display, edit and flag values from one retained row snapshot.
+    public func publishedValues(for item: EventListRow) -> EventListPublishedValues {
+        var values = EventListPublishedValues()
+        values.c0 = String(item.tick)
+        values.rowTint = item.index == playRow ? Self.playheadTint : ""
+        values.editableMask = Self.editableMask(for: item)
+        if item.isEndOfTrack {
+            values.rowKind = 2
+            values.c1 = "End of track"
+            return values
+        }
+        if let tempo = item.tempo {
+            let bpm = String(
+                Int(
+                    TimeDefaults.tempoBPM(
+                        forMicrosecondsPerQuarterNote: tempo.microsecondsPerQuarterNote
+                    ).rounded()))
+            values.rowKind = 1
+            values.c1 = "Tempo"
+            values.c5 = "\(bpm) BPM"
+            values.c6 = "Tempo \(bpm) BPM"
+            values.editType = String(EventListEventType.tempo.rawValue)
+            values.editData = bpm
+            return values
+        }
+        values.c1 = cellText(item: item, column: 1)
+        values.c2 = cellText(item: item, column: 2)
+        values.c3 = cellText(item: item, column: 3)
+        values.c4 = cellText(item: item, column: 4)
+        values.c5 = cellText(item: item, column: 5)
+        values.c6 = cellText(item: item, column: 6)
+        values.editType = String(item.typeKind)
+        let blob = item.event?.blob
+        if let blob, blob.count > 64, !values.c5.hasPrefix("\"") {
+            values.editData = cellText(item: item, column: 5, editing: true)
+        } else {
+            values.editData = values.c5
+        }
+        return values
+    }
+
     public func rowKind(row: Int) -> Int {
         guard let item = self.row(at: row) else { return -1 }
         return item.isEndOfTrack ? 2 : item.tempo != nil ? 1 : 0
@@ -11,6 +68,10 @@ extension EventListModel {
 
     public func cellText(row: Int, column: Int, editing: Bool = false) -> String {
         guard let item = self.row(at: row) else { return "" }
+        return cellText(item: item, column: column, editing: editing)
+    }
+
+    private func cellText(item: EventListRow, column: Int, editing: Bool = false) -> String {
         if column == 0 { return String(item.tick) }
         if item.isEndOfTrack { return column == 1 && !editing ? "End of track" : "" }
         if let tempo = item.tempo {

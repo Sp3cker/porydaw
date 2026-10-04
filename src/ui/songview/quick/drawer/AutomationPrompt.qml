@@ -12,8 +12,8 @@ FocusScope {
     final property bool showing: false
     readonly final property bool confirming: model !== null && model.promptKind === 1
     final property App.GridPalette promptPalette: null
-    readonly final property App.PromptStyle promptAppearance: root.model ? root.model.promptStyle : null
-    readonly final property App.PromptStyle inputAppearance: root.model ? root.model.promptInputStyle : null
+    readonly final property App.PromptStyle promptAppearance: root.model.promptStyle
+    readonly final property App.PromptStyle inputAppearance: root.model.promptInputStyle
     signal closed()
     anchors.fill: parent
     visible: showing && model !== null
@@ -70,36 +70,24 @@ FocusScope {
         Text {
             objectName: "automationPromptTitle"
             text: root.model ? root.model.promptTitle : ""
-            color: root.promptAppearance ? root.promptAppearance.text : "transparent"
-            Binding on font {
-                when: root.promptAppearance !== null
-                value: root.promptAppearance?.font
-                restoreMode: Binding.RestoreNone
-            }
+            color: root.promptAppearance.text
+            font: root.promptAppearance.font
             renderType: Text.NativeRendering
         }
         Text {
             objectName: "automationPromptMessage"
             visible: root.confirming
             text: root.model ? root.model.promptMessage : ""
-            color: root.promptAppearance ? root.promptAppearance.text : "transparent"
-            Binding on font {
-                when: root.promptAppearance !== null
-                value: root.promptAppearance?.font
-                restoreMode: Binding.RestoreNone
-            }
+            color: root.promptAppearance.text
+            font: root.promptAppearance.font
             renderType: Text.NativeRendering
         }
         Text {
             objectName: "automationPromptLabel"
             visible: !root.confirming
             text: root.model ? root.model.promptLabel : ""
-            color: root.promptAppearance ? root.promptAppearance.text : "transparent"
-            Binding on font {
-                when: root.promptAppearance !== null
-                value: root.promptAppearance?.font
-                restoreMode: Binding.RestoreNone
-            }
+            color: root.promptAppearance.text
+            font: root.promptAppearance.font
             renderType: Text.NativeRendering
         }
         DragInput {
@@ -138,22 +126,18 @@ FocusScope {
             visible: root.model !== null && root.model.promptError.length > 0
             text: root.model ? root.model.promptError : ""
             color: root.promptPalette ? root.promptPalette.errorText : "transparent"
-            Binding on font {
-                when: root.promptAppearance !== null
-                value: root.promptAppearance?.font
-                restoreMode: Binding.RestoreNone
-            }
+            font: root.promptAppearance.font
             renderType: Text.NativeRendering
         }
         Row {
             visible: root.confirming
-            spacing: root.promptAppearance ? root.promptAppearance.spacing : 0
+            spacing: root.promptAppearance.spacing
             PromptButton {
                 id: accept
                 objectName: "automationPromptAccept"
                 appearance: root.promptAppearance
                 text: root.confirming ? qsTr("Delete") : qsTr("OK")
-                minimumWidth: cancel.labelWidth + (root.promptAppearance ? 2 * root.promptAppearance.buttonPadding : 0)
+                minimumWidth: cancel.labelWidth + 2 * root.promptAppearance.buttonPadding
                 KeyNavigation.tab: cancel
                 KeyNavigation.backtab: cancel
                 onActivated: root.acceptDraft()
@@ -163,7 +147,7 @@ FocusScope {
                 objectName: "automationPromptCancel"
                 appearance: root.promptAppearance
                 text: qsTr("Cancel")
-                minimumWidth: accept.labelWidth + (root.promptAppearance ? 2 * root.promptAppearance.buttonPadding : 0)
+                minimumWidth: accept.labelWidth + 2 * root.promptAppearance.buttonPadding
                 KeyNavigation.tab: accept
                 KeyNavigation.backtab: accept
                 onActivated: root.cancelDraft()

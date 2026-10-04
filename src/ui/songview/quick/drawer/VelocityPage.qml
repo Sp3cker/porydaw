@@ -15,18 +15,12 @@ FocusScope {
     property App.MouseHints hintService: null
     property bool hintScopeAllowed: true
 
-    readonly property App.VelocityPage model: page.applicationSession?.songOpen
+    readonly property App.VelocityPage model: page.applicationSession.songOpen
                                             ? page.applicationSession.velocityPage() : null
     readonly property App.VelocityPage pageModel: page.model
-    readonly property App.PianoGrid gridModel: page.applicationSession?.songOpen
+    readonly property App.PianoGrid gridModel: page.applicationSession.songOpen
                                               ? page.applicationSession.gridPresenter() : null
-    final property App.GridPalette gridPalette
-    Binding {
-        when: page.applicationSession !== null
-        restoreMode: Binding.RestoreNone
-        page.gridPalette: page.applicationSession?.timeSigHost.palette
-        page.seedBaseFontPx: page.applicationSession?.timeSigHost.baseFontPx
-    }
+    final readonly property App.GridPalette gridPalette: page.applicationSession.timeSigHost.palette
     enabled: page.pageModel !== null
     /// The shared plot origin: the gutter the roll draws at and the container
     /// publishes as `plotOrigin`.
@@ -39,12 +33,11 @@ FocusScope {
     property real contentScrollX: 0
     property real contentPixelsPerTick: 0
     readonly property real contentDpr: page.Screen.devicePixelRatio
-    property real seedBaseFontPx
     /// The application font's line spacing and the grid's base font are the same
     /// facts the drawer chrome is measured with.
     readonly property real baseFontPx: page.gridModel
                                        ? page.gridModel.baseFontPx
-                                       : page.seedBaseFontPx
+                                       : page.applicationSession.timeSigHost.baseFontPx
 
     function pushBodyFacts(): void {
         if (!page.pageModel || page.width <= 0 || page.height <= 0)

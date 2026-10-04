@@ -10,34 +10,15 @@ Item {
     final required property Item bandSide
     final required property Item plotSide
     final required property PianoGrid gridModel
-    Binding {
-        when: root.gridModel !== null
-        restoreMode: Binding.RestoreNone
-        plotDisplay.revision: root.gridModel?.scene?.displayRevision
-        keyboardDisplay.revision: root.gridModel?.scene?.displayRevision
-        hoverChip.x: root.gridModel?.scene?.hoverChipX
-        hoverChip.y: root.gridModel?.scene?.hoverChipY
-        hoverChip.width: root.gridModel?.scene?.hoverChipWidth
-        hoverChip.height: root.gridModel?.scene?.hoverChipHeight
-        hoverChip.color: root.gridModel?.scene?.hoverChipFill
-        hoverChip.radius: root.gridModel?.scene?.hoverChipRadius
-        hoverChipText.x: root.gridModel?.scene?.hoverChipX
-        hoverChipText.y: root.gridModel?.scene?.hoverChipY
-        hoverChipText.width: root.gridModel?.scene?.hoverChipWidth
-        hoverChipText.height: root.gridModel?.scene?.hoverChipHeight
-        hoverChipText.text: root.gridModel?.scene?.hoverChipText
-        hoverChipText.color: root.gridModel?.scene?.hoverChipTextColor
-        hoverChipText.font: root.gridModel?.scene?.hoverChipFont
-    }
 
     DisplayList {
-        id: plotDisplay
         parent: root.plotSide
         objectName: "timelineRendererPlot"
         anchors.fill: parent
         clip: true
-        source: root.gridModel?.scene ?? null
+        source: root.gridModel.scene
         list: 0
+        revision: root.gridModel.scene.displayRevision
         z: 0
     }
 
@@ -49,28 +30,39 @@ Item {
         z: 3
 
         DisplayList {
-            id: keyboardDisplay
             objectName: "timelineRendererKeyboard"
             anchors.fill: parent
             clip: true
-            source: root.gridModel?.scene ?? null
+            source: root.gridModel.scene
             list: 1
+            revision: root.gridModel.scene.displayRevision
         }
     }
 
     Rectangle {
-        id: hoverChip
         parent: root.bandSide
         objectName: "timelineQuickPianoHoverChip"
-        visible: root.gridModel !== null && root.gridModel.scene.hoverChipVisible
+        x: root.gridModel.scene.hoverChipX
+        y: root.gridModel.scene.hoverChipY
+        width: root.gridModel.scene.hoverChipWidth
+        height: root.gridModel.scene.hoverChipHeight
+        visible: root.gridModel.scene.hoverChipVisible
+        color: root.gridModel.scene.hoverChipFill
+        radius: root.gridModel.scene.hoverChipRadius
         z: 8
     }
 
     Text {
-        id: hoverChipText
         parent: root.bandSide
         objectName: "timelineQuickPianoHoverChipText"
-        visible: root.gridModel !== null && root.gridModel.scene.hoverChipVisible
+        x: root.gridModel.scene.hoverChipX
+        y: root.gridModel.scene.hoverChipY
+        width: root.gridModel.scene.hoverChipWidth
+        height: root.gridModel.scene.hoverChipHeight
+        visible: root.gridModel.scene.hoverChipVisible
+        text: root.gridModel.scene.hoverChipText
+        color: root.gridModel.scene.hoverChipTextColor
+        font: root.gridModel.scene.hoverChipFont
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         textFormat: Text.PlainText

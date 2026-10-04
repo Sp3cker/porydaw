@@ -12,22 +12,12 @@ FocusScope {
     final property App.MouseHints hintService: null
     final readonly property App.HeaderVoicePicker headerModel: model as App.HeaderVoicePicker
     final readonly property App.VoiceChangesPage voiceModel: model as App.VoiceChangesPage
-    final property App.PromptStyle appearance: headerModel
-        ? headerModel.promptStyle : voiceModel ? voiceModel.promptStyle : null
-    final property string pickerTitle
-    final property string pickerFilter
-    final property int pickerIndex
-    final property bool pickerHasMatch
-
-    Binding {
-        when: pickerRoot.headerModel !== null || pickerRoot.voiceModel !== null
-        restoreMode: Binding.RestoreNone
-        pickerRoot.pickerTitle: pickerRoot.headerModel ? pickerRoot.headerModel?.pickerTitle : pickerRoot.voiceModel?.pickerTitle
-        pickerRoot.pickerFilter: pickerRoot.headerModel ? pickerRoot.headerModel?.pickerFilter : pickerRoot.voiceModel?.pickerFilter
-        pickerRoot.pickerIndex: pickerRoot.headerModel ? pickerRoot.headerModel?.pickerIndex : pickerRoot.voiceModel?.pickerIndex
-        pickerRoot.pickerHasMatch: pickerRoot.headerModel ? pickerRoot.headerModel?.pickerHasMatch : pickerRoot.voiceModel?.pickerHasMatch
-        list.model: pickerRoot.headerModel ? pickerRoot.headerModel?.pickerRows : pickerRoot.voiceModel?.pickerRows
-    }
+    final readonly property App.PromptStyle appearance: headerModel
+        ? headerModel.promptStyle : voiceModel.promptStyle
+    final readonly property string pickerTitle: headerModel ? headerModel.pickerTitle : voiceModel.pickerTitle
+    final readonly property string pickerFilter: headerModel ? headerModel.pickerFilter : voiceModel.pickerFilter
+    final readonly property int pickerIndex: headerModel ? headerModel.pickerIndex : voiceModel.pickerIndex
+    final readonly property bool pickerHasMatch: headerModel ? headerModel.pickerHasMatch : voiceModel.pickerHasMatch
 
     function releasePickerAudition(): void {
         if (headerModel) headerModel.releasePickerAudition()
@@ -88,6 +78,7 @@ FocusScope {
         width: implicitWidth
         height: implicitHeight
         appearance: pickerRoot.appearance
+        minimumWidth: pickerRoot.appearance.minimumWidth
         property bool viewReady: false
         MouseArea {
             parent: prompt
@@ -125,22 +116,34 @@ FocusScope {
         Accessible.name: pickerRoot.pickerTitle
 
         Text {
-            id: title
             objectName: "voicePickerTitle"
             text: pickerRoot.pickerTitle
+            color: pickerRoot.appearance.text
+            font: pickerRoot.appearance.font
             renderType: Text.NativeRendering
         }
 
         Rectangle {
             id: searchFrame
             objectName: "voicePickerSearchFrame"
-
+            implicitWidth: Math.max(
+                pickerRoot.appearance.minimumWidth - 2 * pickerRoot.appearance.dialogPadding,
+                Math.max(titleMetrics.advanceWidth(pickerRoot.pickerTitle), searchMetrics.advanceWidth(searchHint.text))
+                + 2 * (pickerRoot.appearance.horizontalPadding + pickerRoot.appearance.borderWidth))
+            implicitHeight: searchMetrics.height
+                + 2 * (pickerRoot.appearance.verticalPadding + pickerRoot.appearance.borderWidth)
+            color: pickerRoot.appearance.background
+            border.width: pickerRoot.appearance.borderWidth
+            border.color: search.activeFocus ? pickerRoot.appearance.focus : pickerRoot.appearance.outline
+            radius: pickerRoot.appearance.radius
 
             FontMetrics {
                 id: titleMetrics
+                font: pickerRoot.appearance.font
             }
             FontMetrics {
                 id: searchMetrics
+                font: pickerRoot.appearance.font
             }
 
             Text {
@@ -148,6 +151,9 @@ FocusScope {
                 objectName: "voicePickerSearchHint"
 
                 anchors.fill: parent
+                anchors.leftMargin: pickerRoot.appearance.horizontalPadding + pickerRoot.appearance.borderWidth
+                color: pickerRoot.appearance.placeholderText
+                font: pickerRoot.appearance.font
                 anchors.rightMargin: anchors.leftMargin
                 verticalAlignment: Text.AlignVCenter
                 text: qsTr("Search voices...")
@@ -170,6 +176,13 @@ FocusScope {
                 }
                 anchors.fill: parent
                 clip: true
+                color: pickerRoot.appearance.text
+                font: pickerRoot.appearance.font
+                padding: pickerRoot.appearance.borderWidth
+                leftPadding: pickerRoot.appearance.horizontalPadding + pickerRoot.appearance.borderWidth
+                topPadding: pickerRoot.appearance.verticalPadding + pickerRoot.appearance.borderWidth
+                selectionColor: pickerRoot.appearance.selection
+                selectedTextColor: pickerRoot.appearance.selectionText
                 rightPadding: leftPadding
                 bottomPadding: topPadding
                 renderType: TextInput.NativeRendering
@@ -205,6 +218,8 @@ FocusScope {
 
             objectName: "voicePickerList"
             width: searchFrame.implicitWidth
+            height: pickerRoot.appearance.listHeight
+            model: pickerRoot.headerModel ? pickerRoot.headerModel.pickerRows : pickerRoot.voiceModel.pickerRows
             clip: true
             focus: false
             activeFocusOnTab: true
@@ -295,17 +310,18 @@ FocusScope {
             }
 
             Text {
-                id: emptyText
                 objectName: "voicePickerEmptyText"
                 anchors.centerIn: parent
                 text: qsTr("No matching voices")
+                color: pickerRoot.appearance.text
+                font: pickerRoot.appearance.font
                 visible: !pickerRoot.pickerHasMatch
                 renderType: Text.NativeRendering
             }
         }
 
         Row {
-            id: buttons
+            spacing: pickerRoot.appearance.spacing
 
             PromptButton {
                 id: acceptButton
@@ -315,6 +331,7 @@ FocusScope {
                 appearance: prompt.appearance
                 text: qsTr("OK")
                 enabled: pickerRoot.pickerHasMatch
+                minimumWidth: cancelButton.labelWidth + 2 * pickerRoot.appearance.buttonPadding
                 KeyNavigation.tab: cancelButton
                 KeyNavigation.backtab: list
                 onActivated: prompt.acceptDisplayed()
@@ -327,46 +344,11 @@ FocusScope {
                 claimsShortcuts: false
                 appearance: prompt.appearance
                 text: qsTr("Cancel")
+                minimumWidth: acceptButton.labelWidth + 2 * pickerRoot.appearance.buttonPadding
                 KeyNavigation.tab: search
                 KeyNavigation.backtab: pickerRoot.pickerHasMatch ? acceptButton : list
                 onActivated: prompt.cancelDisplayed()
             }
         }
-    }
-
-    Binding {
-        when: pickerRoot.appearance !== null
-        restoreMode: Binding.RestoreNone
-        prompt.minimumWidth: pickerRoot.appearance?.minimumWidth
-        title.color: pickerRoot.appearance?.text
-        title.font: pickerRoot.appearance?.font
-        searchFrame.implicitWidth: Math.max(
-            pickerRoot.appearance?.minimumWidth - 2 * pickerRoot.appearance?.dialogPadding,
-            Math.max(titleMetrics.advanceWidth(pickerRoot.pickerTitle), searchMetrics.advanceWidth(searchHint.text))
-            + 2 * (pickerRoot.appearance?.horizontalPadding + pickerRoot.appearance?.borderWidth))
-        searchFrame.implicitHeight: searchMetrics.height
-            + 2 * (pickerRoot.appearance?.verticalPadding + pickerRoot.appearance?.borderWidth)
-        searchFrame.color: pickerRoot.appearance?.background
-        searchFrame.border.width: pickerRoot.appearance?.borderWidth
-        searchFrame.border.color: search.activeFocus ? pickerRoot.appearance?.focus : pickerRoot.appearance?.outline
-        searchFrame.radius: pickerRoot.appearance?.radius
-        titleMetrics.font: pickerRoot.appearance?.font
-        searchMetrics.font: pickerRoot.appearance?.font
-        searchHint.anchors.leftMargin: pickerRoot.appearance?.horizontalPadding + pickerRoot.appearance?.borderWidth
-        searchHint.color: pickerRoot.appearance?.placeholderText
-        searchHint.font: pickerRoot.appearance?.font
-        search.color: pickerRoot.appearance?.text
-        search.font: pickerRoot.appearance?.font
-        search.padding: pickerRoot.appearance?.borderWidth
-        search.leftPadding: pickerRoot.appearance?.horizontalPadding + pickerRoot.appearance?.borderWidth
-        search.topPadding: pickerRoot.appearance?.verticalPadding + pickerRoot.appearance?.borderWidth
-        search.selectionColor: pickerRoot.appearance?.selection
-        search.selectedTextColor: pickerRoot.appearance?.selectionText
-        list.height: pickerRoot.appearance?.listHeight
-        emptyText.color: pickerRoot.appearance?.text
-        emptyText.font: pickerRoot.appearance?.font
-        buttons.spacing: pickerRoot.appearance?.spacing
-        acceptButton.minimumWidth: cancelButton.labelWidth + 2 * pickerRoot.appearance?.buttonPadding
-        cancelButton.minimumWidth: acceptButton.labelWidth + 2 * pickerRoot.appearance?.buttonPadding
     }
 }

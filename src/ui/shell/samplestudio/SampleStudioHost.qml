@@ -54,6 +54,10 @@ Item {
             transientParent: host.hostWindow
         }
         onLoaded: (studio.item as SampleStudioDialog).present()
+        onStatusChanged: {
+            if (status === Loader.Null)
+                host.workflow.editorReleased()
+        }
     }
     Loader {
         id: zones
@@ -66,6 +70,10 @@ Item {
             transientParent: host.hostWindow
         }
         onLoaded: (zones.item as Sf2ZonePickerDialog).present()
+        onStatusChanged: {
+            if (status === Loader.Null)
+                host.workflow.zonePickerReleased()
+        }
     }
     Connections {
         target: host.workflow

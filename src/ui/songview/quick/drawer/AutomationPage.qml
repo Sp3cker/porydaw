@@ -15,20 +15,16 @@ FocusScope {
     final property bool hintScopeAllowed: true
     required final property App.SongTabSession applicationSession
 
-    /// The Swift owner for this document; guarded during scene teardown.
-    /// Re-evaluates when the session publishes a new document.
+    /// The Swift owner for this document, or null when no document is presented.
     readonly final property App.AutomationPage model: page.applicationSession
                                  && page.applicationSession.songOpen
-                                 ? page.applicationSession.automationPage()
-                                 : null
+                                 ? page.applicationSession.automationPage() : null
     readonly final property App.AutomationPage pageModel: page.model
 
     readonly final property App.PianoGrid gridModel: page.applicationSession
                                      && page.applicationSession.songOpen
-                                     ? page.applicationSession.gridPresenter()
-                                     : null
-    readonly final property App.GridPalette gridPalette: page.applicationSession
-        ? page.applicationSession.grid.palette : null
+                                     ? page.applicationSession.gridPresenter() : null
+    readonly final property App.GridPalette gridPalette: page.applicationSession.grid.palette
 
     /// The shared plot origin: the gutter the roll draws at and the container
     /// publishes as `plotOrigin`.
@@ -36,8 +32,7 @@ FocusScope {
                                        ? (page.gridModel.trackHeaderWidth || 0)
                                          + page.gridModel.keyboardWidth : 0
     readonly property real plotWidth: Math.max(page.width - page.plotOrigin, 0)
-    readonly property real baseFontPx: page.applicationSession
-        ? page.applicationSession.grid.baseFontPx : 0
+    readonly property real baseFontPx: page.applicationSession.grid.baseFontPx
 
     readonly property int selectorTabCount: page.pageModel ? page.pageModel.tabCount : 0
 
@@ -103,7 +98,7 @@ FocusScope {
 
         Rectangle {
             anchors.fill: parent
-            color: page.gridPalette ? page.gridPalette.chromeBackground : "transparent"
+            color: page.gridPalette.chromeBackground
         }
 
         // The production selector follows the active and focused tab.
@@ -196,6 +191,8 @@ FocusScope {
     /// Modals move to the container layer without losing their identity.
     /// Page teardown retires them even when that layer survives.
     function createModals(): void {
+        if (!page.pageModel)
+            return
         const host = page.modalHost !== null ? page.modalHost : page
         if (page.menu === null) {
             page.menu = menuComponent.createObject(host) as AutomationMenu

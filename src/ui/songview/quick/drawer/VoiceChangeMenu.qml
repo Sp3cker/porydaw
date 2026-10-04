@@ -18,12 +18,6 @@ FocusScope {
     visible: showing
     enabled: showing
     readonly property real baseFontPx: menuRoot.model ? menuRoot.model.baseFontPx : 13
-    property font bodyFont
-    Binding on bodyFont {
-        when: menuRoot.pageItem !== null && menuRoot.pageItem.applicationSession !== null
-        restoreMode: Binding.RestoreNone
-        value: menuRoot.pageItem?.applicationSession?.timeSigHost.typographyFonts.body
-    }
     readonly property App.GridPalette menuColors: menuRoot.pageItem ? menuRoot.pageItem.gridPalette : null
     readonly property point anchor: {
         const localX = menuRoot.model ? menuRoot.model.menuX : 0
@@ -59,70 +53,16 @@ FocusScope {
 
     MenuAppearance {
         id: menuAppearance
-        font: menuRoot.bodyFont
-    }
-    Binding {
-        target: menuAppearance
-        property: "background"
-        when: menuRoot.menuColors !== null
-        restoreMode: Binding.RestoreNone
-        value: menuRoot.menuColors?.menuBackground
-    }
-    Binding {
-        target: menuAppearance
-        property: "outline"
-        when: menuRoot.menuColors !== null
-        restoreMode: Binding.RestoreNone
-        value: menuRoot.menuColors?.outline
-    }
-    Binding {
-        target: menuAppearance
-        property: "text"
-        when: menuRoot.menuColors !== null
-        restoreMode: Binding.RestoreNone
-        value: menuRoot.menuColors?.windowText
-    }
-    Binding {
-        target: menuAppearance
-        property: "hoverBackground"
-        when: menuRoot.menuColors !== null
-        restoreMode: Binding.RestoreNone
-        value: menuRoot.menuColors?.menuHoverBackground
-    }
-    Binding {
-        target: menuAppearance
-        property: "hoverText"
-        when: menuRoot.menuColors !== null
-        restoreMode: Binding.RestoreNone
-        value: menuRoot.menuColors?.windowText
-    }
-    Binding {
-        target: menuAppearance
-        property: "pressedBackground"
-        when: menuRoot.menuColors !== null
-        restoreMode: Binding.RestoreNone
-        value: menuRoot.menuColors?.menuHoverBackground
-    }
-    Binding {
-        target: menuAppearance
-        property: "pressedText"
-        when: menuRoot.menuColors !== null
-        restoreMode: Binding.RestoreNone
-        value: menuRoot.menuColors?.windowText
-    }
-    Binding {
-        target: menuAppearance
-        property: "disabledText"
-        when: menuRoot.menuColors !== null
-        restoreMode: Binding.RestoreNone
-        value: menuRoot.menuColors?.disabledText
-    }
-    Binding {
-        target: menuAppearance
-        property: "separator"
-        when: menuRoot.menuColors !== null
-        restoreMode: Binding.RestoreNone
-        value: menuRoot.menuColors?.separator
+        font: menuRoot.model.promptStyle.font
+        background: menuRoot.menuColors ? menuRoot.menuColors.menuBackground : "transparent"
+        outline: menuRoot.menuColors ? menuRoot.menuColors.outline : "transparent"
+        text: menuRoot.menuColors ? menuRoot.menuColors.windowText : "transparent"
+        hoverBackground: menuRoot.menuColors ? menuRoot.menuColors.menuHoverBackground : "transparent"
+        hoverText: menuRoot.menuColors ? menuRoot.menuColors.windowText : "transparent"
+        pressedBackground: menuRoot.menuColors ? menuRoot.menuColors.menuHoverBackground : "transparent"
+        pressedText: menuRoot.menuColors ? menuRoot.menuColors.windowText : "transparent"
+        disabledText: menuRoot.menuColors ? menuRoot.menuColors.disabledText : "transparent"
+        separator: menuRoot.menuColors ? menuRoot.menuColors.separator : "transparent"
     }
 
     MouseArea {

@@ -131,9 +131,9 @@ extension SongTabsController {
         reloadsInFlight.remove(tabId)
         let closingSelected = tabId == selectedId
         app?.tabWillLeave(tab)
-        // QListModel is a reference type: no finished-array copy exists, so the
-        // workspace retires before `remove` notifies and destroys in-borrow.
-        tab.workspace.teardown()
+        // Release the shared engine before the survivor activates; presenters
+        // remain alive until the outgoing page finishes destruction.
+        tab.workspace.deactivate()
         tabs.remove(at: index)
         tabCount = tabs.count
         // A closed selection hands over to the adjacent survivor; a background
@@ -163,8 +163,7 @@ extension SongTabsController {
         let previous = tabs[index]
         let wasSelected = selectedId == state.tabId
         app?.tabWillLeave(previous)
-        // Same reference-type borrow as closeTab: retire before the model notifies.
-        previous.workspace.teardown()
+        previous.workspace.deactivate()
         tabs.remove(at: index)
         tabs.insert(tab, at: index)
         if wasSelected {
@@ -276,8 +275,6 @@ extension SongTabsController {
         deactivateSelection()
         for tab in released {
             app?.tabWillLeave(tab)
-            // Same reference-type borrow as closeTab: retire before the model notifies.
-            tab.workspace.teardown()
         }
         tabs.removeSubrange(0..<tabs.count)
         tabCount = 0

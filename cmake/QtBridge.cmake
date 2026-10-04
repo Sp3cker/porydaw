@@ -1,9 +1,7 @@
 include_guard(GLOBAL)
 
-# Declare QtBridge's private Qt dependency in the host directory scope too,
+# Acknowledge QtBridge's private Qt dependency in the host scope,
 # where Qt finalizes the application and check executables.
-# QtBridge already opts out of this warning in its subdirectory; this
-# host-scope lookup needs the same acknowledgement of its private Qt dependency.
 set(QT_NO_PRIVATE_MODULE_WARNING ON)
 find_package(Qt6 6.10 REQUIRED COMPONENTS CorePrivate)
 
@@ -31,9 +29,8 @@ FetchContent_Declare(QtBridge
 )
 FetchContent_MakeAvailable(QtBridge)
 
-# Swift's recorded plugin dependency does not invalidate Ninja object rules.
-# Publish the same stable digest with the existing transitive macro options
-# so changed patch inputs also change every consumer's compilation command.
+# Swift's plugin dependency does not invalidate Ninja object rules.
+# Propagate the patch digest so every consumer's compile command changes.
 target_compile_options(QtBridge INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:-DQTBRIDGE_PATCH_${QTBRIDGE_PATCH_INPUTS_SHA256}>"
 )

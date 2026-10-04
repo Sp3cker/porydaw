@@ -458,10 +458,11 @@ private let themeTrackIdentityID = "themelayout/DeferredThemeLayoutTest::trackId
 @MainActor
 private func themeTrackIdentityChecks(_ report: CheckReport) {
     report.expectEqual(
-        expected: 16, actual: PaletteMath.trackIdentityFills.count,
+        expected: 16, actual: PaletteMath.trackIdentityColors.count,
         cppID: themeTrackIdentityID, what: "sixteen identity fills")
-    for (index, fill) in PaletteMath.trackIdentityFills.enumerated() {
-        let channels = PaletteMath.channels(fill)
+    for (index, color) in PaletteMath.trackIdentityColors.enumerated() {
+        let fill = PaletteMath.hex(argb: PaletteMath.argb(color))
+        let channels = PaletteMath.channels(color)
         report.expect(
             fill.count == 7 && fill.hasPrefix("#"),
             cppID: themeTrackIdentityID, message: "fill \(index) is a hex color")
@@ -593,7 +594,7 @@ private func themeColorTableChecks(_ report: CheckReport) {
         let identity = PaletteMath.trackIdentityOklab(track)
         let expectedStem = PaletteMath.hex(
             PaletteMath.mixTowardOklab(identity, black, 1.0 / 3.0))
-        if ThemeColorTables.velocityStemColors[slot] != expectedStem {
+        if PaletteMath.hex(argb: PaletteMath.argb(PaletteMath.velocityStemColors[slot])) != expectedStem {
             stemMismatches += 1
             if stemExample.isEmpty { stemExample = "track=\(track) expected=\(expectedStem)" }
         }
@@ -609,7 +610,7 @@ private func themeColorTableChecks(_ report: CheckReport) {
         }
     }
     report.expect(
-        ThemeColorTables.velocityStemColors.count == 16, cppID: themeTableID,
+        PaletteMath.velocityStemColors.count == 16, cppID: themeTableID,
         message: "stem table covers all sixteen identity slots")
     let stemMessage =
         stemMismatches == 0

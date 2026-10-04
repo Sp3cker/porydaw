@@ -145,6 +145,44 @@ internal func eventListChunkLabelParity(
     report.expect(
         presenter.rowHandle(row: 0) === handle,
         cppID: pageID, message: "document refresh reuses its row handle")
+    let projection = EventListModel(
+        chunk: MidiChunk(
+            events: [
+                .channel(tick: 0, status: 0x90, data0: 60, data1: 90),
+                .meta(tick: 12, type: 0x06, data: Array(repeating: UInt8(ascii: "a"), count: 65)),
+                .meta(tick: 24, type: 0x7F, data: Array(repeating: 0x80, count: 65)),
+                .systemExclusive(tick: 36, status: 0xF0, data: Array(repeating: 0x7D, count: 65)),
+            ], endTick: 48),
+        tempos: [TempoPoint(tick: 0, microsecondsPerQuarterNote: 600_000)])
+    let expectedMasks = [35, 31, 43, 43, 35, 1]
+    for source in projection.rows {
+        let row = EventListRowHandle()
+        report.expect(
+            row.update(source, model: projection, selected: false)
+                && !row.update(source, model: projection, selected: false),
+            cppID: pageID, message: "row \(source.index) equality-gates an unchanged snapshot")
+        let cells = [row.c0, row.c1, row.c2, row.c3, row.c4, row.c5, row.c6]
+        for column in 0..<EventListModel.columnCount {
+            report.expect(
+                cells[column] == projection.cellText(row: source.index, column: column)
+                    && ((row.editableMask & (1 << column)) != 0)
+                        == projection.isCellEditable(row: source.index, column: column),
+                cppID: pageID,
+                message: "row \(source.index) column \(column) preserves text and editability")
+        }
+        report.expectEqual(
+            expected: expectedMasks[source.index], actual: row.editableMask,
+            cppID: pageID, what: "row \(source.index) publishes the native editable-column mask")
+        report.expect(
+            row.editType == projection.cellText(row: source.index, column: 1, editing: true)
+                && row.editData == projection.cellText(row: source.index, column: 5, editing: true)
+                && row.rowKind == projection.rowKind(row: source.index),
+            cppID: pageID, message: "row \(source.index) preserves editor text and kind")
+    }
+    presenter.detach()
+    report.expect(
+        presenter.rowHandle(row: 0) == nil && presenter.rowCount == 0,
+        cppID: pageID, message: "detaching clears the sole table model")
 }
 
 @MainActor
