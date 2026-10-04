@@ -546,6 +546,7 @@ if(WIN32)
     foreach(index RANGE ${porydaw_runtime_last})
         string(JSON runtime_path GET "${porydaw_swift_target_info}"
             paths runtimeLibraryPaths ${index})
+        file(TO_CMAKE_PATH "${runtime_path}" runtime_path)
         if(EXISTS "${runtime_path}/swiftCore.dll")
             file(GLOB porydaw_swift_runtime_dlls "${runtime_path}/*.dll")
             break()
