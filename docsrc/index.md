@@ -25,7 +25,7 @@ It reads and writes directly to your decomp project's files.  It's seamless, and
     - You are very comfortable with existing DAWs (Reaper, FL Studio, Ableton, etc.) and might not want to leave them.
     - Porydaw has many of the table-stakes editing/composition features and hotkeys.
         - Notably, it doesn't _currently_ have support for MIDI recording, so notes must be entered by hand.
-    - If you absolutely can't bring yourself to compose music directly in Porydaw, the [poryaaaa CLAP plugin](https://github.com/huderlem/poryaaaa/releases) is available for use in any DAW that supports CLAP plugins.
+    - If you absolutely can't bring yourself to compose music directly in Porydaw, the [poryaaaa CLAP plugin](https://github.com/Sp3cker/poryaaaa-monorepo) is available for use in any DAW that supports CLAP plugins.
 
 ## What can it do?
 
@@ -42,7 +42,7 @@ It reads and writes directly to your decomp project's files.  It's seamless, and
 
 For support, feature requests, reporting bugs, etc., the best places to reach out are:
 
-- Create an issue on Porydaw's GitHub page: https://github.com/huderlem/porydaw
+- Create an issue on Porydaw's GitHub page: https://github.com/Sp3cker/porydaw
 - Visit the `#porydaw` channel in the [pret Discord server](https://discord.gg/d5dubZ3).
 
 [pokeruby]: https://github.com/pret/pokeruby

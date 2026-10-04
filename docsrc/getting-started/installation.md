@@ -4,24 +4,26 @@
 
 To use Porydaw, you need a fully-setup Gen 3 decomp project ([pokeruby][pokeruby], [pokeemerald][pokeemerald], or [pokefirered][pokefirered]).
 
-Porydaw has no other dependencies to run it.  Simply [download the prebuilt Windows, macOS, or Linux release](https://github.com/huderlem/porydaw/releases) and run the `porydaw` executable.
+Porydaw has no other dependencies to run it.  Simply [download the prebuilt Windows, macOS, or Linux release](https://github.com/Sp3cker/porydaw/releases) and run the `porydaw` executable.
 !!! tip
     If your decomp project lives in WSL, I recommend using the Windows release. However, if for some reason the Windows release loads files too slowly, you can use the Linux version instead.
 
 ## Windows
 
-1. Download the Windows .zip file: [`porydaw-windows.zip`](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-windows.zip)
-2. Unzip the contents into a new folder if you want to keep an older install. Preferences are stored under organization `sp3cker` and do not share with older `huderlem` releases.
+1. Download the Windows .zip file: [`porydaw-windows.zip`](https://github.com/Sp3cker/porydaw/releases/latest/download/porydaw-windows.zip)
+2. Unzip the contents into a new folder if you want to keep an older install. Preferences are stored under organization `sp3cker` and do not share with upstream Porydaw releases.
 3. Run `porydaw.exe`
 4. If the SmartScreen warning apperas, click `More info -> Run anyway`
 
 ## macOS
 
+Porydaw requires macOS 26 or later.
+
 1. Download the correct macOS .zip file, depending on your computer's chip:
-    - Arm: [porydaw-macos-arm64.zip](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-macos-arm64.zip)
-    - x86_64 (Intel): [porydaw-macos-x86_64.zip](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-macos-x86_64.zip)
+    - Arm: [porydaw-macos-arm64.zip](https://github.com/Sp3cker/porydaw/releases/latest/download/porydaw-macos-arm64.zip)
+    - x86_64 (Intel): [porydaw-macos-x86_64.zip](https://github.com/Sp3cker/porydaw/releases/latest/download/porydaw-macos-x86_64.zip)
 2. Unzip the contents
-3. Open the DMG and drag to `/Applications`. This build uses bundle identifier `com.sp3cker.porydaw` and stores preferences under organization `sp3cker`, so it does not share settings with older `huderlem` releases. Dragging over an existing `/Applications/porydaw.app` still replaces that file — rename the older app first if you want both installed.
+3. Open the DMG and drag to `/Applications`. This build uses bundle identifier `com.sp3cker.porydaw` and stores preferences under organization `sp3cker`, so it does not share settings with upstream Porydaw releases. Dragging over an existing `/Applications/porydaw.app` still replaces that file — rename the older app first if you want both installed.
 
 Porydaw is not notarized with Apple, so macOS quarantines the downloaded
 app and refuses to launch it. (The warning claims the app is "damaged". It isn't, this is just how macOS treats any app that isn't notarized.)
@@ -37,7 +39,7 @@ xattr -d com.apple.quarantine /Applications/porydaw.app
 
 ## Linux
 
-1. Download the Linux .zip file: [`porydaw-linux.zip`](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-linux.zip)
+1. Download the Linux .zip file: [`porydaw-linux.zip`](https://github.com/Sp3cker/porydaw/releases/latest/download/porydaw-linux.zip)
 2. Unzip the contents
 3. Ensure the `porydaw.AppImage` is executable by running `chmod +x porydaw.AppImage`
 4. Run `./porydaw.AppImage`
@@ -46,9 +48,9 @@ xattr -d com.apple.quarantine /Applications/porydaw.app
 
 ## Building from source
 
-Porydaw is a Swift 6 + QML application built through Deno tasks against a checkout-local Qt 6.11. On macOS the Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly. The Swift app builds on macOS and Linux. Linux ARM64 has been validated with Swift 6.4.0 and Qt 6.11.2; Windows Swift build support is pending.
+Porydaw is a Swift 6 + QML application built through Deno tasks against a checkout-local Qt 6.11. On macOS the Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly. The Swift app builds on macOS, Linux, and Windows x86_64. Linux ARM64 and Windows x86_64 have been validated with Swift 6.4.0 and Qt 6.11.2.
 
-If you'd rather build Porydaw yourself, see [INSTALL.md](https://github.com/huderlem/porydaw/blob/main/INSTALL.md) for instructions on building Porydaw from source.
+If you'd rather build Porydaw yourself, see [INSTALL.md](https://github.com/Sp3cker/porydaw/blob/fork-main/INSTALL.md) for instructions on building Porydaw from source.
 
 [pokeruby]: https://github.com/pret/pokeruby
 [pokeemerald]: https://github.com/pret/pokeemerald

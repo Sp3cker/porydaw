@@ -1,14 +1,14 @@
 # Porydaw
 
-[![Actions Status](https://github.com/huderlem/porydaw/workflows/Build/badge.svg)](https://github.com/huderlem/porydaw/actions)
+[![Actions Status](https://github.com/Sp3cker/porydaw/workflows/Build/badge.svg)](https://github.com/Sp3cker/porydaw/actions)
 
 A music editor for the Pokémon generation 3 decompilation projects ([pokeruby][pokeruby], [pokeemerald][pokeemerald], and [pokefirered][pokefirered]).
 
 In Porydaw, load your decomp project directory to load the music-related project data. Then, play, edit, and create music. It sounds just like it does in-game.  When saving, Porydaw writes and creates the necessary files directly into the decomp project.  It also supports importing MIDI files, making it easy to whip up songs and voicegroups for brand new songs.
 
-Porydaw is designed for both music beginners and power users who are familiar with DAW programs.  If you've used Sappy or Anvil Studio for your musical needs in the past, then Porydaw is for you!  If you're a power user who loves your existing DAW (FL Studio, Reaper, etc.), give Porydaw a try--but if you can't be pulled away, the [poryaaaa CLAP plugin](https://github.com/huderlem/poryaaaa) helps serve that power-user workflow.
+Porydaw is designed for both music beginners and power users who are familiar with DAW programs.  If you've used Sappy or Anvil Studio for your musical needs in the past, then Porydaw is for you!  If you're a power user who loves your existing DAW (FL Studio, Reaper, etc.), give Porydaw a try--but if you can't be pulled away, the [poryaaaa CLAP plugin](https://github.com/Sp3cker/poryaaaa-monorepo) helps serve that power-user workflow.
 
-View the work-in-progress documentation: https://huderlem.github.io/porydaw
+View the work-in-progress documentation: https://sp3cker.github.io/porydaw
 
 View the [Changelog][changelog] to see what's new.
 
@@ -18,10 +18,10 @@ View the [Changelog][changelog] to see what's new.
 
 Download Porydaw below to start using it immediately. Older versions of Porydaw may be downloaded from the [Releases][releases] page.
 
- - [Download Porydaw for Windows](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-windows.zip).
- - [Download Porydaw for macOS (arm)](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-macos-arm64.zip).
- - [Download Porydaw for macOS (intel)](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-macos-x86_64.zip).
- - [Download Porydaw for Linux](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-linux.zip) (AppImage).
+ - [Download Porydaw for Windows](https://github.com/Sp3cker/porydaw/releases/latest/download/porydaw-windows.zip).
+ - [Download Porydaw for macOS (arm)](https://github.com/Sp3cker/porydaw/releases/latest/download/porydaw-macos-arm64.zip) (macOS 26 or later).
+ - [Download Porydaw for macOS (intel)](https://github.com/Sp3cker/porydaw/releases/latest/download/porydaw-macos-x86_64.zip) (macOS 26 or later).
+ - [Download Porydaw for Linux](https://github.com/Sp3cker/porydaw/releases/latest/download/porydaw-linux.zip) (AppImage).
 
 Read [INSTALL.md](INSTALL.md) for instructions on how to compile Porydaw from source.
 
@@ -43,8 +43,8 @@ the saved-session recipe and waits for scene/audio ownership to settle.
 
 Builds run through Deno tasks against a checkout-local Qt 6.11. On macOS the
 Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.
-The Swift app builds on macOS and Linux. Linux ARM64 has been validated with
-Swift 6.4.0 and Qt 6.11.2; Windows Swift build support is pending.
+The Swift app builds on macOS, Linux, and Windows x86_64. Linux ARM64 and Windows
+x86_64 have been validated with Swift 6.4.0 and Qt 6.11.2.
 
 ## Contributing
 
@@ -182,5 +182,5 @@ Porydaw's code has been built with heavy usage of Claude Code--bootstrapped with
 [pokeruby]: https://github.com/pret/pokeruby
 [pokeemerald]: https://github.com/pret/pokeemerald
 [pokefirered]: https://github.com/pret/pokefirered
-[changelog]: https://github.com/huderlem/porydaw/blob/main/CHANGELOG.md
-[releases]: https://github.com/huderlem/porydaw/releases
+[changelog]: https://github.com/Sp3cker/porydaw/blob/fork-main/CHANGELOG.md
+[releases]: https://github.com/Sp3cker/porydaw/releases

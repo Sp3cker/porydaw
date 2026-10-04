@@ -2,14 +2,14 @@
 
 Installation is not required to use Porydaw. You can download the latest release and start immediately.
 
-- [Download Porydaw for Windows](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-windows.zip).
-- [Download Porydaw for macOS (arm)](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-macos-arm64.zip).
-- [Download Porydaw for macOS (intel)](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-macos-x86_64.zip).
-- [Download Porydaw for Linux](https://github.com/huderlem/porydaw/releases/latest/download/porydaw-linux.zip) (AppImage).
+- [Download Porydaw for Windows](https://github.com/Sp3cker/porydaw/releases/latest/download/porydaw-windows.zip).
+- [Download Porydaw for macOS (arm)](https://github.com/Sp3cker/porydaw/releases/latest/download/porydaw-macos-arm64.zip) (macOS 26 or later).
+- [Download Porydaw for macOS (intel)](https://github.com/Sp3cker/porydaw/releases/latest/download/porydaw-macos-x86_64.zip) (macOS 26 or later).
+- [Download Porydaw for Linux](https://github.com/Sp3cker/porydaw/releases/latest/download/porydaw-linux.zip) (AppImage).
 
-**macOS users**: Porydaw is not notarized with Apple, so macOS quarantines the downloaded app and blocks the first launch. Copy the app into `/Applications`, then run `xattr -d com.apple.quarantine /Applications/porydaw.app` in Terminal. These steps are also in `RUN AFTER INSTALL.txt` inside the `.dmg`. This build uses bundle identifier `com.sp3cker.porydaw` and stores preferences under organization `sp3cker`, so it does not share settings with older `huderlem` releases. Dragging over an existing `/Applications/porydaw.app` still replaces that file — rename the older app first if you want both installed.
+**macOS users**: Porydaw requires macOS 26 or later. It is not notarized with Apple, so macOS quarantines the downloaded app and blocks the first launch. Copy the app into `/Applications`, then run `xattr -d com.apple.quarantine /Applications/porydaw.app` in Terminal. These steps are also in `RUN AFTER INSTALL.txt` inside the `.dmg`. This build uses bundle identifier `com.sp3cker.porydaw` and stores preferences under organization `sp3cker`, so it does not share settings with upstream Porydaw releases. Dragging over an existing `/Applications/porydaw.app` still replaces that file — rename the older app first if you want both installed.
 
-**Windows users**: Unzip into a new folder if you want to keep an older install. Preferences are stored under organization `sp3cker` and do not share with older `huderlem` releases. Unzipping over the previous folder replaces the binaries.
+**Windows users**: Unzip into a new folder if you want to keep an older install. Preferences are stored under organization `sp3cker` and do not share with upstream Porydaw releases. Unzipping over the previous folder replaces the binaries.
 
 ## Build from source
 
@@ -30,7 +30,7 @@ Install a working [Swift 6.4 toolchain](https://www.swift.org/install/) before r
 Then clone and set up the checkout:
 
 ```bash
-git clone https://github.com/huderlem/porydaw
+git clone https://github.com/Sp3cker/porydaw
 cd porydaw
 
 # Optional: inspect the selected platform setup without changing the machine.
