@@ -10,8 +10,9 @@ QtObject {
 
     function clampOrigin(requested: point, width: real, height: real,
                          boundsWidth: real, boundsHeight: real): point {
-        return Qt.point(clampAxis(requested.x, width, boundsWidth),
-                        clampAxis(requested.y, height, boundsHeight))
+        const x = requested.x
+        const y = requested.y
+        return Qt.point(clampAxis(x, width, boundsWidth), clampAxis(y, height, boundsHeight))
     }
 
     function flyoutOrigin(parentX: real, parentWidth: real, rowY: real, width: real,
