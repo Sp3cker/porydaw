@@ -102,8 +102,11 @@ Item {
         property real spacingPx: Math.max(1, Math.round(picker.baseFontPx / 3))
         x: 0
         y: trigger.height
-        width: Math.max(picker.width, picker.baseFontPx * 28.33)
-        height: picker.baseFontPx * 35
+        width: Math.min(Math.max(picker.width, picker.baseFontPx * 28.33),
+                        picker.Window.width - leftMargin - rightMargin)
+        height: Math.min(picker.baseFontPx * 35, picker.Window.height - topMargin - bottomMargin)
+        // Like the style's ComboBox and Menu popups, stay inside the window.
+        margins: spacingPx
         padding: spacingPx
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside

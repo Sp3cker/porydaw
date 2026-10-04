@@ -67,6 +67,12 @@ ShellVoicegroupSupport {
         const popup = findChild(panel, "vgSamplePickerPopup")
         verify(popup !== null, "A014 picker trigger creates the popup")
         tryCompare(popup, "opened", true, 5000, "A015 picker popup becomes visible")
+        const window = panel.Window.window
+        const frame = popup.background.mapToItem(null, 0, 0)
+        verify(frame.x >= 0 && frame.y >= 0 && frame.x + popup.width <= window.width
+               && frame.y + popup.height <= window.height,
+               "picker popup stays inside the window like every other dropdown: "
+               + [frame.x, frame.y, popup.width, popup.height, window.width, window.height])
         const list = findChild(popup, "vgSamplePickerList")
         const detail = findChild(popup, "vgSamplePickerDetail")
         const loop = "DirectSoundWaveData_fixture_loop"
