@@ -5,7 +5,7 @@ Normative target state for the Swift↔QML declaration surface. Companion to
 execution record). Current work is tracked only by the
 [authoritative parity plan](../../plans/swift-feature-parity/plan.md). Bridge
 mechanism citations point into the pinned QtBridge checkout
-(`407714006dd21107b70db6547ce75e43df0c8a75` + `qtbridge-object-return.patch`),
+(`407714006dd21107b70db6547ce75e43df0c8a75` + `qtbridge.patch`),
 materialized at `.worktrees/swift-qml-grid/build/_deps/qtbridge-src/`; paths
 below are relative to that root unless they start `src/` or `tools/` (repo
 root). Requirements use RFC 2119. Every rule names the check that enforces it:
@@ -24,9 +24,10 @@ root). Requirements use RFC 2119. Every rule names the check that enforces it:
    (`Extensions.swift:35-39` checks only `.private`);
 3. not annotated `@QtIgnored` (`QtBridgeableMacro.swift:221-223`);
 4. the type annotation is one of (`Extensions.swift:115-121,139-194`):
-   `Int`, `UInt`, `Double`, `Float`, `String`, `Bool`, `[String]` /
-   `Array<String>`, `[String: QVariantSettable]` /
-   `Dictionary<String, QVariantSettable>`, `QListModel<…>`, `QTableModel<…>`
+   `Int`, `UInt`, `Double`, `Float`, `String`, `Bool`, `QmlColor` (`QColor`),
+   `QmlFont` (`QFont`), `[String]` / `Array<String>`,
+   `[String: QVariantSettable]` / `Dictionary<String, QVariantSettable>`,
+   `QListModel<…>`, `QTableModel<…>`
    — **or** the member carries `@QtTracked` (any type then registers through
    `QVariantGettable` conformance).
 
@@ -39,6 +40,20 @@ auto-exposed** — `@QtTracked` is required for it. `public private(set) var`
 does not expose (`isPrivate` matches the `private` token;
 `src/swift/app/SongTabsController.swift:133-134` documents the workaround).
 Extension members never expose (class-body pass only).
+
+`QmlColor` carries normalized RGBA doubles and accepts 8-bit RGBA channels.
+`QmlFont` carries family, pixel size, Qt weight (1–1000), italic, absolute
+pixel letter spacing, and `HintingPreference` (default `.preferNoHinting`).
+Both are `Equatable` and `QVariantSettable`: properties, slots, signals and
+map entries retain native Qt `color`/`font` values in both directions.
+
+Registered Swift QObject types use native pointer metatypes named `ClassName*`
+and per-class list metatypes named `QQmlListProperty<ClassName>`. Their
+storage, flags and value operations follow Qt's proxy pointer/list templates;
+the pointer metatype reports the Swift class's dynamic metaobject. Creating a
+QML object still allocates the full proxy separately from pointer storage.
+The host macro ExternalProject rebuilds when its sources or the combined patch
+inputs change, so a patch change cannot leave a stale macro plugin in use.
 
 Change emission: every exposed `var` gets `didSet { emitSignal(for:) }` —
 identically whether `@QtTracked` was written or auto-attached
@@ -95,7 +110,7 @@ integration-contract M0 table).
   object MUST correspond to a signal that is emitted on some path.
   *Enforced: B2 `SIGNAL_NEVER_OBSERVED`, `HANDLER_NEVER_EMITTED`.*
 - **R7 signal shape.** `@QtSignal` parameters MUST be §1 settable types
-  (primitive/map/string-list; `QtBridgeableMacro.swift:479`). Handlers receive
+  (primitive/color/font/map/string-list; `QtBridgeableMacro.swift:479`). Handlers receive
   arguments positionally (`setParameterNames` is never called).
 - **R8 returned objects.** A slot returning a `@QtBridgeable` object to QML
   MUST use the non-sugar optional form `Optional<T>` if nil is possible —

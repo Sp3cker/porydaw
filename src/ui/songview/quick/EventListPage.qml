@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import PorydawApp
 
@@ -133,21 +135,23 @@ FocusScope {
         headerFontMetrics: headerMetrics
     }
 
-    function appearanceValue(name, fallback) {
+    function appearanceValue(name: string, fallback: var): var {
         const value = appearance ? appearance[name] : undefined
         return value === undefined || value === null ? fallback : value
     }
 
-    function valueText(value) {
+    function valueText(value: var): string {
         return value === undefined || value === null ? "" : String(value)
     }
 
+    // R7: dependency read; stays uncompiled until Wave B publishes this as row data.
     function rowIsSelected(row) {
         const revision = selectionRevision
         return controller && controller.isSelected(row)
     }
 
 
+    // R7: dependency read; stays uncompiled until Wave B publishes this as row data.
     function persistedColumnWidth(column) {
         const revision = controller ? controller.columnWidthsRevision : 0
         const candidate = controller ? Number(controller.savedColumnWidth(column))
@@ -155,35 +159,35 @@ FocusScope {
         return Math.max(minimumColumnWidth(column), candidate)
     }
 
-    function minimumColumnWidth(column) {
+    function minimumColumnWidth(column: int): real {
         const label = headerLabels.length > column ? headerLabels[column] : ""
         return Math.max(Math.ceil(tableMetrics.height * 2),
                         Math.ceil(headerMetrics.advanceWidth(label) + 2 * headerHorizontalPadding))
     }
 
-    function persistedColumnsWidth() {
+    function persistedColumnsWidth(): real {
         let width = 0
         for (let column = 0; column < resizableColumnCount; ++column)
             width += persistedColumnWidth(column)
         return width
     }
 
-    function columnWidth(column) {
+    function columnWidth(column: int): real {
         if (column < resizableColumnCount)
             return persistedColumnWidth(column)
         return Math.max(summaryMinimumWidth, table.eventTable.width - persistedColumnsWidth())
     }
 
-    function columnOffset(column) {
+    function columnOffset(column: int): real {
         let offset = 0
         for (let index = 0; index < column; ++index)
             offset += columnWidth(index)
         return offset
     }
 
-    function hoverRow(panel, row) { panel.highlightedRow = row }
+    function hoverRow(panel: QuickMenuPanel, row: int): void { panel.highlightedRow = row }
 
-    function activateRow(panel, row) {
+    function activateRow(panel: QuickMenuPanel, row: int): void {
         const item = panel.rowItem(row)
         if (!item || !item.active)
             return
@@ -191,7 +195,7 @@ FocusScope {
         controller.activateMenuAction(actionId)
         if (controller.menuOpen) {
             Qt.callLater(function() {
-                if (!controller.menuOpen)
+                if (!page.controller.menuOpen)
                     return
                 for (let index = 0; index < panel.rowCount; ++index) {
                     const candidate = panel.rowItem(index)
@@ -204,7 +208,7 @@ FocusScope {
         }
     }
 
-    function beginCellEdit(cell) {
+    function beginCellEdit(cell: EventListCell): void {
         if (!controller || editing || !cell || !cell.editable)
             return
 
@@ -224,7 +228,7 @@ FocusScope {
         })
     }
 
-    function finishCellEdit(commit, text, returnNavigationFocus) {
+    function finishCellEdit(commit: bool, text: string, returnNavigationFocus: bool): bool {
         if (!controller || !editing)
             return false
 
@@ -236,7 +240,7 @@ FocusScope {
 
 
 
-    function resetPointerState() {
+    function resetPointerState(): void {
         if (controller)
             controller.setPointerDown(false)
         dragFromRow = -1
@@ -245,12 +249,12 @@ FocusScope {
     }
 
 
-    function legalDropGap(gap) {
+    function legalDropGap(gap: int): bool {
         return controller && dragFromRow >= 0 && gap >= 0 && gap <= table.eventTable.rows
                 && controller.isLegalDrop(dragFromRow, gap)
     }
 
-    function updateDragGap(cell, mouse) {
+    function updateDragGap(cell: EventListCell, mouse: MouseEvent): void {
         const position = cell.mapToItem(table.eventTable, mouse.x, mouse.y)
         const gap = Math.max(0, Math.min(table.eventTable.rows,
                                          Math.floor((table.eventTable.contentY + position.y + rowHeight / 2)
@@ -258,14 +262,14 @@ FocusScope {
         dragDropGap = legalDropGap(gap) ? gap : -1
     }
 
-    function selectRow(row, modifiers) {
+    function selectRow(row: int, modifiers: int): void {
         if (!controller || row < 0 || row >= table.eventTable.rows)
             return
         controller.selectRow(row, modifiers)
     }
 
 
-    function moveCurrentRow(delta, modifiers) {
+    function moveCurrentRow(delta: int, modifiers: int): void {
         if (!controller || table.eventTable.rows <= 0)
             return
         const current = controller.currentRow >= 0 ? controller.currentRow : 0
@@ -276,12 +280,12 @@ FocusScope {
         table.eventTable.positionViewAtRow(target, TableView.Contain)
     }
 
-    function moveCurrentColumn(delta) {
+    function moveCurrentColumn(delta: int): void {
         currentColumn = Math.max(0, Math.min(columnCount - 1, currentColumn + delta))
         table.eventTable.positionViewAtColumn(currentColumn, TableView.Contain)
     }
 
-    function editCurrentCell() {
+    function editCurrentCell(): void {
         if (!controller || controller.currentRow < 0)
             return
         const row = controller.currentRow
@@ -292,7 +296,7 @@ FocusScope {
         })
     }
 
-    function pageCurrent(delta, modifiers) {
+    function pageCurrent(delta: int, modifiers: int): void {
         const pageRows = Math.max(1, Math.floor(table.eventTable.height / rowHeight))
         moveCurrentRow(delta * pageRows, modifiers)
     }
@@ -382,17 +386,17 @@ FocusScope {
     Connections {
         target: page.controller
 
-        function onColumnWidthsRevisionChanged() {
+        function onColumnWidthsRevisionChanged(): void {
             table.requestTableLayout()
         }
 
-        function onScrollToRow(row) {
+        function onScrollToRow(row: int): void {
             if (row >= 0)
                 table.eventTable.positionViewAtRow(row, TableView.Contain)
         }
 
 
-        function onVisibleChanged() {
+        function onVisibleChanged(): void {
             if (!page.controller.visible && page.editing)
                 page.finishCellEdit(false, "", false)
         }

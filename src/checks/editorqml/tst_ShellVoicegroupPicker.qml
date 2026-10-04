@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -7,7 +9,78 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 
 ShellVoicegroupSupport {
+    BridgeValueTypeProbe { id: bridgeValues }
+    Rectangle {
+        id: bridgeColorBinding
+        visible: false
+        color: bridgeValues.sampleColor
+    }
+    Text {
+        id: bridgeFontBinding
+        visible: false
+        font: bridgeValues.sampleFont
+    }
     SampleBinProbe { id: sampleHeader }
+
+    function test_bridgeNativeColorAndFontValues(): void {
+        bridgeValues.restoreValues()
+        tryCompare(bridgeFontBinding, "font", bridgeValues.sampleFont)
+        tryCompare(bridgeColorBinding, "color", bridgeValues.sampleColor)
+        const initialMap = bridgeValues.echoMap({
+            color: bridgeValues.sampleColor, font: bridgeValues.sampleFont
+        })
+        const colors = [
+            bridgeValues.sampleColor, bridgeColorBinding.color,
+            bridgeValues.echoColor(bridgeValues.sampleColor), initialMap.color
+        ]
+        for (const value of colors) {
+            fuzzyCompare(value.r, 51 / 255, 0.000001, "native color red")
+            fuzzyCompare(value.g, 102 / 255, 0.000001, "native color green")
+            fuzzyCompare(value.b, 153 / 255, 0.000001, "native color blue")
+            fuzzyCompare(value.a, 204 / 255, 0.000001, "native color alpha")
+        }
+        const fonts = [
+            bridgeValues.sampleFont, bridgeFontBinding.font,
+            bridgeValues.echoFont(bridgeValues.sampleFont), initialMap.font
+        ]
+        for (const value of fonts) {
+            compare(value.family, "Atkinson Hyperlegible Next", "native font family")
+            compare(value.pixelSize, 19, "native font pixel size")
+            compare(value.weight, Font.DemiBold, "native Qt font weight")
+            compare(value.italic, true, "native font italic")
+            compare(value.letterSpacing, 1.5, "absolute pixel letter spacing")
+            compare(value.hintingPreference, Font.PreferNoHinting, "unhinted by default")
+        }
+        try {
+            bridgeValues.sampleColor = Qt.rgba(1, 0, 1, 1)
+            bridgeValues.sampleFont = Qt.font({
+                family: "Atkinson Hyperlegible Next", pixelSize: 23, weight: Font.Bold,
+                italic: false, letterSpacing: -0.5,
+                hintingPreference: Font.PreferVerticalHinting
+            })
+            verify(bridgeValues.writesReachedSwift(), "QML property writes convert back to Swift")
+            tryCompare(bridgeColorBinding, "color", Qt.rgba(1, 0, 1, 1))
+            tryCompare(bridgeFontBinding, "font", bridgeValues.sampleFont)
+            const writtenMap = bridgeValues.echoMap({
+                color: bridgeValues.sampleColor, font: bridgeValues.sampleFont
+            })
+            compare(bridgeValues.echoColor(bridgeValues.sampleColor), Qt.rgba(1, 0, 1, 1))
+            compare(writtenMap.color, Qt.rgba(1, 0, 1, 1))
+            for (const value of [
+                bridgeValues.sampleFont, bridgeFontBinding.font,
+                bridgeValues.echoFont(bridgeValues.sampleFont), writtenMap.font
+            ]) {
+                compare(value.family, "Atkinson Hyperlegible Next")
+                compare(value.pixelSize, 23)
+                compare(value.weight, Font.Bold)
+                compare(value.italic, false)
+                compare(value.letterSpacing, -0.5)
+                compare(value.hintingPreference, Font.PreferVerticalHinting)
+            }
+        } finally {
+            bridgeValues.restoreValues()
+        }
+    }
 
     function expectedDetail(symbol, looped) {
         verify(sampleHeader.inspect(bootstrap.projectRoot
@@ -32,7 +105,7 @@ ShellVoicegroupSupport {
         compare(draft.macro, 0, "slot zero starts as a DirectSound voice")
         const combo = findChild(panel, "vgDrumkitCombo")
         verify(combo !== null, "the voice editor mounts its drumkit selector before the catalog")
-        verify(waitForNative(function() { return controller.drumkitChoices().length === 2 }, 15000),
+        verify(waitForNative(function() { return controller.drumkitSymbols.length === 2 }, 15000),
                "the project catalog publishes the fixture drumkits")
         draft.changeType(12, "")
         verify(waitForNative(function() { return draft.macro === 12 }, 15000),

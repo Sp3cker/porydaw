@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
 // Shared scrollbar for timeline Quick surfaces, in either orientation. The
@@ -62,49 +63,55 @@ Item {
     signal wheelRequested(real pixelX, real pixelY, real angleX, real angleY, bool inverted)
     signal hintReleased(point scenePosition)
 
-    function clampedValue(requested) {
+    function clampedValue(requested: real): real {
         return Math.max(minimum, Math.min(maximum, requested))
     }
 
-    function requestScroll(requested) {
+    function requestScroll(requested: real): void {
         if (!scrollable)
             return
         valueRequested(clampedValue(requested))
     }
-    function cancelGrab() {
+    function cancelGrab(): void {
         if (!thumbMouse.pressed)
             return
         scrollbar.cancelledWhileHeld = true
         thumbMouse.enabled = false
-        Qt.callLater(() => {
-            thumbMouse.enabled = Qt.binding(() => scrollbar.scrollable && scrollbar.thumbTravel > 0)
-        })
+        Qt.callLater(scrollbar.restoreGrabBinding)
+    }
+
+    function restoreGrabBinding(): void {
+        thumbMouse.enabled = Qt.binding(scrollbar.canGrab)
+    }
+
+    function canGrab(): bool {
+        return scrollbar.scrollable && scrollbar.thumbTravel > 0
     }
 
     // Settles the hint group from a drag owner's delivered local
     // coordinates. The policy stays with HoverHint: containment against the
     // scrollbar footprint decides releaseInside, so an outside release
     // clears even when Qt froze hover membership during the implicit grab.
-    function settleHintRelease(localX, localY) {
+    function settleHintRelease(localX: real, localY: real): void {
         thumbHint.settleRelease(scrollbar.mapToItem(null, localX, localY))
     }
 
-    function rebaseDrag() {
+    function rebaseDrag(): void {
         if (!thumbMouse || !thumbMouse.pressed || !dragThresholdReached)
             return
         dragStartValue = clampedValue(value)
         dragStartPosition = dragLastPosition
     }
 
-    function requestLine(direction) {
+    function requestLine(direction: int): void {
         requestScroll(value + direction * Math.max(0, singleStep))
     }
 
-    function requestPage(direction) {
+    function requestPage(direction: int): void {
         requestScroll(value + direction * Math.max(0, pageStep))
     }
 
-    function handleKey(event) {
+    function handleKey(event: KeyEvent): void {
         const vertical = orientation === Qt.Vertical
         if (event.key === (vertical ? Qt.Key_Up : Qt.Key_Left)) {
             requestLine(-1)
@@ -191,8 +198,8 @@ Item {
         objectName: scrollbar.thumbObjectName
         x: scrollbar.orientation === Qt.Vertical ? 0 : scrollbar.thumbPos
         y: scrollbar.orientation === Qt.Vertical ? scrollbar.thumbPos : 0
-        width: scrollbar.orientation === Qt.Vertical ? parent.width : scrollbar.thumbLength
-        height: scrollbar.orientation === Qt.Vertical ? scrollbar.thumbLength : parent.height
+        width: scrollbar.orientation === Qt.Vertical ? scrollbar.width : scrollbar.thumbLength
+        height: scrollbar.orientation === Qt.Vertical ? scrollbar.thumbLength : scrollbar.height
         visible: (scrollbar.scrollable || scrollbar.visibleWhenNotScrollable)
                  && width > 0 && height > 0
         color: thumbHover.hovered ? scrollbar.handleHoverColor : scrollbar.handleColor

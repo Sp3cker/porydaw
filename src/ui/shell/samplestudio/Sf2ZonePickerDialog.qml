@@ -1,5 +1,7 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
 import PorydawApp
@@ -65,11 +67,12 @@ DialogWindow {
                 height: 2 * dialog.unit
                 color: row.selected ? dialog.colors.selectionRing : dialog.colors.windowBackground
                 RowLayout {
+                    id: rowCells
                     anchors.fill: parent
                     anchors.leftMargin: row.group ? 0 : dialog.unit
-                    readonly property var cells: [row.sample, row.key, row.rate, row.frames, row.loop, row.notes]
+                    readonly property list<string> cells: [row.sample, row.key, row.rate, row.frames, row.loop, row.notes]
                     Repeater {
-                        model: parent.cells
+                        model: rowCells.cells
                         Label {
                             required property int index
                             required property string modelData

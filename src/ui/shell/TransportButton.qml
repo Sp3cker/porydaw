@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
 import Porydaw.Ui
@@ -44,10 +46,10 @@ Rectangle {
         enabled: control.actionable
         onTapped: control.activated()
     }
-    Keys.onReturnPressed: event => {
+    Keys.onReturnPressed: function(event: KeyEvent): void {
         if (control.actionable) { control.activated(); event.accepted = true }
     }
-    Keys.onEnterPressed: event => {
+    Keys.onEnterPressed: function(event: KeyEvent): void {
         if (control.actionable) { control.activated(); event.accepted = true }
     }
 }

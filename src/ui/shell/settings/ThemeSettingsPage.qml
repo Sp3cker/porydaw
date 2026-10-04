@@ -1,5 +1,7 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import PorydawApp
 
 Item {
@@ -9,17 +11,17 @@ Item {
     required property real unit
     required property var typography
 
-    function syncThemeChecks() {
+    function syncThemeChecks(): void {
         vanillaButton.checked = page.presenter.themeMode === "vanilla"
         darkNeutralHighButton.checked = page.presenter.themeMode === "dark-neutral-high"
         immaterialButton.checked = page.presenter.themeMode === "immaterial"
         contrastSlider.value = page.presenter.gridLineContrast
     }
-    Component.onCompleted: syncThemeChecks()
+    Component.onCompleted: page.syncThemeChecks()
     Connections {
         target: page.presenter
-        function onThemeModeChanged() { page.syncThemeChecks() }
-        function onGridLineContrastChanged() { contrastSlider.value = page.presenter.gridLineContrast }
+        function onThemeModeChanged(): void { page.syncThemeChecks() }
+        function onGridLineContrastChanged(): void { contrastSlider.value = page.presenter.gridLineContrast }
     }
 
     Column {

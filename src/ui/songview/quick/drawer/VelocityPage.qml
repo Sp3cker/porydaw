@@ -72,14 +72,14 @@ FocusScope {
     QtObject {
         id: emptyModel
 
-        readonly property var axisTicks: []
-        readonly property var axisGraduations: []
-        readonly property var axisMarkers: []
-        readonly property var axisLabels: []
-        readonly property var gridLines: []
-        readonly property var psgBands: []
-        readonly property var transientRects: []
-        readonly property var handles: []
+        readonly property list<QtObject> axisTicks: []
+        readonly property list<QtObject> axisGraduations: []
+        readonly property list<QtObject> axisMarkers: []
+        readonly property list<QtObject> axisLabels: []
+        readonly property list<QtObject> gridLines: []
+        readonly property list<QtObject> psgBands: []
+        readonly property list<QtObject> transientRects: []
+        readonly property list<QtObject> handles: []
         readonly property bool rampVisible: false
         readonly property double rampX0: 0
         readonly property double rampY0: 0
@@ -102,19 +102,20 @@ FocusScope {
         readonly property string axisAccessibleDescription: "Velocity"
         readonly property string readoutText: ""
 
-        function configureBody(width, height, rulerWidth, devicePixelRatio, baseFontPx,
-                               dragDistance) {}
-        function pointerPress(x, y, surface, button, modifiers) { return false }
-        function pointerMove(x, y, buttons) { return false }
-        function pointerRelease(x, y, button) { return false }
-        function pointerLeave() {}
-        function handleEscape() { return false }
-        function toggleDetents() {}
-        function setUseDetents(enabled) {}
-        function updatePromptDraft(text) {}
-        function acceptPrompt() { return false }
-        function cancelPrompt() {}
-        function cancelSectionInteraction() {}
+        function configureBody(width: real, height: real, rulerWidth: real,
+                               devicePixelRatio: real, baseFontPx: real,
+                               dragDistance: real): void {}
+        function pointerPress(x: real, y: real, surface: int, button: int, modifiers: int): bool { return false }
+        function pointerMove(x: real, y: real, buttons: int): bool { return false }
+        function pointerRelease(x: real, y: real, button: int): bool { return false }
+        function pointerLeave(): void {}
+        function handleEscape(): bool { return false }
+        function toggleDetents(): void {}
+        function setUseDetents(enabled: bool): void {}
+        function updatePromptDraft(text: string): void {}
+        function acceptPrompt(): bool { return false }
+        function cancelPrompt(): void {}
+        function cancelSectionInteraction(): void {}
     }
     /// The shared plot origin: the gutter the roll draws at and the container
     /// publishes as `plotOrigin`.
@@ -136,12 +137,12 @@ FocusScope {
                                        ? page.gridModel.baseFontPx
                                        : page.seedBaseFontPx
 
-    function pushBodyFacts() {
+    function pushBodyFacts(): void {
         if (!page.pageModel || page.width <= 0 || page.height <= 0)
             return
         page.pageModel.configureBody(page.width, page.height, page.plotOrigin,
                                  page.Screen.devicePixelRatio, page.baseFontPx,
-                                 Qt.styleHints.startDragDistance)
+                                 Application.styleHints.startDragDistance)
     }
 
     // Every fact `configureBody` publishes is a dependency: the owner's arrival,
@@ -302,8 +303,10 @@ FocusScope {
             }
             MoveCoalescer {
                 id: rulerMoves
-                dispatch: (x, y, buttons, modifiers) =>
-                    page.pageModel.pointerMove(x, y, buttons)
+                function dispatchMove(x: real, y: real, buttons: int, modifiers: int): bool {
+                    return page.pageModel.pointerMove(x, y, buttons)
+                }
+                dispatch: rulerMoves.dispatchMove
             }
         }
 
@@ -333,7 +336,7 @@ FocusScope {
             required property var frame
             onFrameChanged: applyScrollFrame()
             Component.onCompleted: applyScrollFrame()
-            function applyScrollFrame() {
+            function applyScrollFrame(): void {
                 if (frame) {
                     var dpr = page.Screen.devicePixelRatio
                     page.contentScrollX = Math.round(frame.x * dpr) / dpr
@@ -375,8 +378,8 @@ FocusScope {
         Item {
             id: handleContent
 
-            width: parent.width
-            height: parent.height
+            width: plot.width
+            height: plot.height
             // Stable rows translate once here from the surface scroll carrier,
             // same-turn like the roll plot content.
             x: -page.contentScrollX
@@ -390,9 +393,8 @@ FocusScope {
                     id: node
 
                     required property var model
-                    // One packed spec per handle: every child binding reads the
-                    // local map instead of paying a metaCall per property.
-                    readonly property var s: model ? model.spec : ({})
+                    // Packed Swift values remain a map until the typed publication wave.
+                    readonly property var s: node.model.spec
                     // Zoom re-evaluates only the root x and the stem end; children sit relative.
                     x: Math.round(node.s.tick * page.contentPixelsPerTick * page.contentDpr)
                        / page.contentDpr
@@ -513,8 +515,10 @@ FocusScope {
             }
             MoveCoalescer {
                 id: plotMoves
-                dispatch: (x, y, buttons, modifiers) =>
-                    page.pageModel.pointerMove(x, y, buttons)
+                function dispatchMove(x: real, y: real, buttons: int, modifiers: int): bool {
+                    return page.pageModel.pointerMove(x, y, buttons)
+                }
+                dispatch: plotMoves.dispatchMove
             }
         }
 

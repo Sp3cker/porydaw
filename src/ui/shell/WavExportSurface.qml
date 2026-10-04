@@ -1,5 +1,7 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Dialogs
 import QtQuick.Layouts
 import PorydawApp
@@ -10,22 +12,22 @@ Item {
     required property QtObject colors
     required property var windowRoot
     required property var typography
-    readonly property bool exportActive: presenter.active
-    readonly property bool optionsVisible: presenter.optionsVisible
-    readonly property bool rendering: presenter.rendering
-    readonly property bool choosing: presenter.choosingFile
-    readonly property int failureRevision: presenter.failureRevision
+    readonly property bool exportActive: surface.presenter.active
+    readonly property bool optionsVisible: surface.presenter.optionsVisible
+    readonly property bool rendering: surface.presenter.rendering
+    readonly property bool choosing: surface.presenter.choosingFile
+    readonly property int failureRevision: surface.presenter.failureRevision
     visible: false
 
-    onExportActiveChanged: ++windowRoot.actionRevision
+    onExportActiveChanged: ++surface.windowRoot.actionRevision
     onOptionsVisibleChanged: {
         if (optionsVisible && !optionsLoader.active)
             optionsLoader.active = true
         else if (optionsLoader.status === Loader.Ready && optionsLoader.item) {
             if (optionsVisible)
-                optionsLoader.item.present()
+                (optionsLoader.item as DialogWindow).present()
             else
-                optionsLoader.item.close()
+                (optionsLoader.item as DialogWindow).close()
         }
     }
     onRenderingChanged: {
@@ -33,9 +35,9 @@ Item {
             progressLoader.active = true
         else if (progressLoader.status === Loader.Ready && progressLoader.item) {
             if (rendering)
-                progressLoader.item.present()
+                (progressLoader.item as DialogWindow).present()
             else
-                progressLoader.item.close()
+                (progressLoader.item as DialogWindow).close()
         }
     }
     onChoosingChanged: {
@@ -48,7 +50,7 @@ Item {
         if (!errorLoader.active)
             errorLoader.active = true
         else if (errorLoader.status === Loader.Ready && errorLoader.item)
-            errorLoader.item.present()
+            (errorLoader.item as DialogWindow).present()
     }
 
     FontMetrics {
@@ -61,8 +63,8 @@ Item {
         id: optionsLoader
         active: false
         onLoaded: {
-            if (status === Loader.Ready && item && surface.optionsVisible)
-                item.present()
+            if (optionsLoader.status === Loader.Ready && optionsLoader.item && surface.optionsVisible)
+                (optionsLoader.item as DialogWindow).present()
         }
         sourceComponent: DialogWindow {
             id: shellWavExportDialog
@@ -74,7 +76,7 @@ Item {
             width: metrics.averageCharacterWidth * 47
             height: metrics.height * 13
             font: Qt.font(surface.typography.body)
-            onClosing: close => {
+            onClosing: function(close: CloseEvent): void {
                 if (surface.presenter.optionsVisible) {
                     close.accepted = false
                     surface.presenter.rejectOptions()
@@ -100,7 +102,7 @@ Item {
                         Layout.fillWidth: true
                         model: surface.presenter.rateLabels
                         currentIndex: surface.presenter.rateIndex
-                        onActivated: index => surface.presenter.setRateIndex(index)
+                        onActivated: function(index: int): void { surface.presenter.setRateIndex(index) }
                     }
                     Label {
                         text: qsTr("Loop count:")
@@ -129,8 +131,8 @@ Item {
                         to: 600
                         stepSize: 10
                         value: surface.presenter.fadeTenths
-                        textFromValue: value => (value / 10).toFixed(1) + " s"
-                        valueFromText: text => Math.round(parseFloat(text) * 10)
+                        textFromValue: function(value: int): string { return (value / 10).toFixed(1) + " s" }
+                        valueFromText: function(text: string): real { return Math.round(parseFloat(text) * 10) }
                         onValueModified: surface.presenter.setFadeTenths(value)
                     }
                     Label {
@@ -147,8 +149,8 @@ Item {
                         to: 600
                         stepSize: 10
                         value: surface.presenter.tailTenths
-                        textFromValue: value => (value / 10).toFixed(1) + " s"
-                        valueFromText: text => Math.round(parseFloat(text) * 10)
+                        textFromValue: function(value: int): string { return (value / 10).toFixed(1) + " s" }
+                        valueFromText: function(text: string): real { return Math.round(parseFloat(text) * 10) }
                         onValueModified: surface.presenter.setTailTenths(value)
                     }
                     Label {
@@ -197,8 +199,8 @@ Item {
         id: progressLoader
         active: false
         onLoaded: {
-            if (status === Loader.Ready && item && surface.rendering)
-                item.present()
+            if (progressLoader.status === Loader.Ready && progressLoader.item && surface.rendering)
+                (progressLoader.item as DialogWindow).present()
         }
         sourceComponent: DialogWindow {
             id: shellWavExportProgress
@@ -212,7 +214,7 @@ Item {
             width: metrics.averageCharacterWidth * 42
             height: metrics.height * 8
             font: Qt.font(surface.typography.body)
-            onClosing: close => {
+            onClosing: function(close: CloseEvent): void {
                 if (surface.presenter.rendering) {
                     close.accepted = false
                     surface.presenter.cancelRender()
@@ -252,8 +254,8 @@ Item {
         id: errorLoader
         active: false
         onLoaded: {
-            if (status === Loader.Ready && item && surface.failureRevision > 0)
-                item.present()
+            if (errorLoader.status === Loader.Ready && errorLoader.item && surface.failureRevision > 0)
+                (errorLoader.item as DialogWindow).present()
         }
         sourceComponent: DialogWindow {
             id: shellWavExportErrorDialog

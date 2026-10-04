@@ -1,5 +1,7 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import PorydawApp
 
 Item {
@@ -12,19 +14,19 @@ Item {
     readonly property real fieldX: labelWidth
     readonly property real fieldWidth: width - fieldX
 
-    function finishVoicegroupEdit() {
-        if (voicegroup.activeFocus && voicegroup.editText !== store.voicegroup)
-            store.changeVoicegroup(voicegroup.editText)
+    function finishVoicegroupEdit(): void {
+        if (voicegroup.activeFocus && voicegroup.editText !== page.store.voicegroup)
+            page.store.changeVoicegroup(voicegroup.editText)
     }
-    function reset() {
-        voicegroup.currentIndex = store.voicegroups.indexOf(store.voicegroup)
-        voicegroup.editText = store.voicegroup
-        volume.value = store.masterVolume
-        songReverb.value = store.reverb
-        songPriority.value = store.priority
-        gate.checked = store.exactGate
-        clocks.checked = store.extendedClocks
-        compression.checked = store.noCompression
+    function reset(): void {
+        voicegroup.currentIndex = page.store.voicegroups.indexOf(page.store.voicegroup)
+        voicegroup.editText = page.store.voicegroup
+        volume.value = page.store.masterVolume
+        songReverb.value = page.store.reverb
+        songPriority.value = page.store.priority
+        gate.checked = page.store.exactGate
+        clocks.checked = page.store.extendedClocks
+        compression.checked = page.store.noCompression
     }
 
     Text {
@@ -89,8 +91,8 @@ Item {
         from: -1; to: 127; value: page.store.reverb
         font: Qt.font(page.typography.body)
         editable: true
-        textFromValue: value => value === -1 ? qsTr("Default (50)") : String(value)
-        valueFromText: text => text.startsWith(qsTr("Default")) ? -1 : parseInt(text, 10)
+        textFromValue: function(value: int): string { return value === -1 ? qsTr("Default (50)") : String(value) }
+        valueFromText: function(text: string): real { return text.startsWith(qsTr("Default")) ? -1 : parseInt(text, 10) }
         onValueModified: page.store.changeReverb(value)
         ToolTip.visible: hovered
         ToolTip.text: qsTr("mid2agb -R: song reverb level. Default leaves -R unspecified (50).")

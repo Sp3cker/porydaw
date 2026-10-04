@@ -1,5 +1,7 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import Porydaw.Ui
 
 Item {
@@ -13,21 +15,21 @@ Item {
 
     FontMetrics {
         id: bodyMetrics
-        font: root.font
+        font: body.root.font
     }
 
     Connections {
-        target: shell.session
-        function onSongOpenChanged() { gridContextMenu.menu.close() }
+        target: body.shell.session
+        function onSongOpenChanged(): void { gridContextMenu.menu.close() }
     }
     Connections {
-        target: shell.session.songTabs
-        function onSelectedPageChanged() { gridContextMenu.menu.close() }
-        function onSelectedIdChanged() { gridContextMenu.menu.close() }
+        target: body.shell.session.songTabs
+        function onSelectedPageChanged(): void { gridContextMenu.menu.close() }
+        function onSelectedIdChanged(): void { gridContextMenu.menu.close() }
     }
     Connections {
-        target: shell.session.songOpen ? shell.session.gridPresenter() : null
-        function onAppliedRevisionTextChanged() { gridContextMenu.menu.close() }
+        target: body.shell.session.songOpen ? body.shell.session.gridPresenter() : null
+        function onAppliedRevisionTextChanged(): void { gridContextMenu.menu.close() }
     }
     SplitView {
         id: shellBody
@@ -42,18 +44,18 @@ Item {
             SplitView.fillHeight: true
             SplitView.minimumWidth: 200
             SplitView.maximumWidth: 480
-            SplitView.preferredWidth: Math.max(200, Math.min(480, shell.dockColumnWidth))
-            controller: shell.session.songDockController()
-            applicationSession: shell.session
-            songsRatio: shell.dockSongsRatio
-            colors: shell.session.palette
+            SplitView.preferredWidth: Math.max(200, Math.min(480, body.shell.dockColumnWidth))
+            controller: body.shell.session.songDockController()
+            applicationSession: body.shell.session
+            songsRatio: body.shell.dockSongsRatio
+            colors: body.shell.session.palette
             onSongsRatioChanged: {
-                if (body.dockSettingsReady && songsRatio !== shell.dockSongsRatio)
-                    shell.setDockSongsRatio(songsRatio)
+                if (body.dockSettingsReady && songsRatio !== body.shell.dockSongsRatio)
+                    body.shell.setDockSongsRatio(songsRatio)
             }
             onWidthChanged: {
-                if (body.dockSettingsReady && width >= 200 && width <= 480 && width !== shell.dockColumnWidth)
-                    shell.setDockColumnWidth(Math.round(width))
+                if (body.dockSettingsReady && width >= 200 && width <= 480 && width !== body.shell.dockColumnWidth)
+                    body.shell.setDockColumnWidth(Math.round(width))
             }
         }
 
@@ -63,11 +65,11 @@ Item {
             SplitView.fillWidth: true
             SplitView.fillHeight: true
             focus: true
-            controller: shell.session.songTabs
-            layoutSpaces: shell.session.layoutSpaces
-            shellRouter: shell
+            controller: body.shell.session.songTabs
+            layoutSpaces: body.shell.session.layoutSpaces
+            shellRouter: body.shell
             onContextMenuAt: (x, y) => {
-                root.actionRevision++
+                body.root.actionRevision++
                 gridContextMenu.menu.x = x
                 gridContextMenu.menu.y = y
                 gridContextMenu.menu.open()
@@ -75,10 +77,10 @@ Item {
             Text {
                 objectName: "shellEmptySongMessage"
                 anchors.centerIn: parent
-                visible: !shell.session.songOpen
+                visible: !body.shell.session.songOpen
                 text: qsTr("Open a project and song to play with the Swift core.")
-                font: Qt.font(root.chromeTypography.body)
-                color: shell.session.palette.windowText
+                font: Qt.font(body.root.chromeTypography.body)
+                color: body.shell.session.palette.windowText
                 horizontalAlignment: Text.AlignHCenter
             }
         }
@@ -86,39 +88,39 @@ Item {
     Item {
         id: polyDock
         objectName: "shellPolyphonyDock"
-        visible: shell.polyphonyVisible
+        visible: body.shell.polyphonyVisible
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.right: parent.right
-        width: Math.min(root.chromeBaseFontPx * 32, parent.width * 0.48)
+        width: Math.min(body.root.chromeBaseFontPx * 32, parent.width * 0.48)
         z: 2
         Rectangle {
             anchors.fill: parent
-            color: root.colors.windowBackground
-            border.color: root.colors.outline
+            color: body.root.colors.windowBackground
+            border.color: body.root.colors.outline
         }
         Row {
             id: polyTitle
             width: parent.width
             height: Math.max(bodyMetrics.height, body.transportToolExtent)
-                    + 2 * root.chromeSpacing.half + 2
+                    + 2 * body.root.chromeSpacing.half + 2
             Text {
                 objectName: "shellPolyphonyTitle"
                 width: parent.width - polyClose.width
                 height: parent.height
-                leftPadding: root.chromeSpacing.two
+                leftPadding: body.root.chromeSpacing.two
                 text: qsTr("Polyphony Debugger")
-                font: Qt.font(root.chromeTypography.body)
-                color: root.colors.windowText
+                font: Qt.font(body.root.chromeTypography.body)
+                color: body.root.colors.windowText
                 verticalAlignment: Text.AlignVCenter
             }
             Button {
                 id: polyClose
                 objectName: "shellPolyphonyClose"
                 height: parent.height
-                font: Qt.font(root.chromeTypography.body)
+                font: Qt.font(body.root.chromeTypography.body)
                 text: qsTr("×")
-                onClicked: shell.activate("view.polyphony_debugger")
+                onClicked: body.shell.activate("view.polyphony_debugger")
             }
         }
         PolyphonyPanel {
@@ -127,38 +129,38 @@ Item {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
-            presenter: shell.session.polyphony
-            colors: root.colors
-            typography: root.chromeTypography
-            layoutSpaces: root.chromeSpacing
-            baseFontPx: root.chromeBaseFontPx
+            presenter: body.shell.session.polyphony
+            colors: body.root.colors
+            typography: body.root.chromeTypography
+            layoutSpaces: body.root.chromeSpacing
+            baseFontPx: body.root.chromeBaseFontPx
         }
         Timer {
-            running: polyDock.visible && shell.session.songOpen
+            running: polyDock.visible && body.shell.session.songOpen
             repeat: true
             interval: 100
-            onTriggered: shell.session.polyphony.poll()
+            onTriggered: body.shell.session.polyphony.poll()
         }
     }
 
     Loader {
         id: songConfirmation
         objectName: "songConfirmationLoader"
-        active: shell.session.songDockController().confirmation.length > 0
+        active: body.shell.session.songDockController().confirmation.length > 0
         sourceComponent: SongConfirmDialog {
-            controller: shell.session.songDockController()
-            baseFontPx: root.chromeBaseFontPx
-            layoutSpaces: root.chromeSpacing
+            controller: body.shell.session.songDockController()
+            baseFontPx: body.root.chromeBaseFontPx
+            layoutSpaces: body.root.chromeSpacing
         }
         onLoaded: {
             if (status === Loader.Ready)
-                item.open()
+                (songConfirmation.item as SongConfirmDialog).open()
         }
     }
     ShellGridContextMenu {
         id: gridContextMenu
         root: body.root
-        shell: root.shellPresenter
+        shell: body.root.shellPresenter
         editorScene: editorScene
         bodyMetrics: bodyMetrics
     }

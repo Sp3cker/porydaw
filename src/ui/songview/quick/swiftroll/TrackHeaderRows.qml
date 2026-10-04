@@ -17,7 +17,7 @@ Item {
     height: parent.height
     clip: true
 
-    function itemAt(index) {
+    function itemAt(index: int): Item {
         return trackHeaderRows.itemAt(index)
     }
 
@@ -56,14 +56,14 @@ Item {
                                           : hovered ? root.appearance.buttonHoverText
                                                     : root.appearance.buttonText
 
-        function activate() {
+        function activate(): void {
             if (solo)
                 root.headersModel.activateSolo(track)
             else
                 root.headersModel.activateMute(track)
         }
 
-        function activateFromKeyboard(event) {
+        function activateFromKeyboard(event: KeyEvent): void {
             activate()
             event.accepted = true
         }
@@ -148,7 +148,7 @@ Item {
 
                 property bool complete: false
 
-                function publishSelectedTitleOffset() {
+                function publishSelectedTitleOffset(): void {
                     if (!complete || isAddTrack || !titleBold)
                         return
                     const label = root.boldMetrics.elidedText(title, Text.ElideRight,
@@ -285,11 +285,11 @@ Item {
                     visible: trackHeaderRow.isAddTrack
                     activeFocusOnTab: true
 
-                    function activate() {
+                    function activate(): void {
                         root.headersModel.activateAddTrack()
                     }
 
-                    function activateFromKeyboard(event) {
+                    function activateFromKeyboard(event: KeyEvent): void {
                         activate()
                         event.accepted = true
                     }

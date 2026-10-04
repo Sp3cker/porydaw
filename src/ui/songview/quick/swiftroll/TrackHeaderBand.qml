@@ -45,13 +45,13 @@ Item {
         onLineSpacingChanged: Qt.callLater(root.configureTextMetrics)
     }
 
-    function configureTextMetrics() {
+    function configureTextMetrics(): void {
         root.headersModel.configureTextMetrics(Math.round(normalTitleMetrics.lineSpacing),
                                                Math.round(boldTitleMetrics.lineSpacing),
                                                Math.round(subtitleMetrics.lineSpacing))
     }
 
-    function restoreHeaderFocus() {
+    function restoreHeaderFocus(): void {
         headerInput.forceActiveFocus(Qt.OtherFocusReason)
     }
 
@@ -60,7 +60,7 @@ Item {
         configureTextMetrics()
     }
 
-    function rowIndexForTrack(track) {
+    function rowIndexForTrack(track: int): int {
         if (track < 0)
             return -1
         for (let index = 0; index < trackHeaderRowArea.rowCount; ++index) {
@@ -70,7 +70,7 @@ Item {
         }
         return -1
     }
-    function hintProfileAt(x, y) {
+    function hintProfileAt(x: real, y: real): int {
         if (root.headersModel.rowHeight <= 0)
             return HintProfiles.Empty
         const index = Math.floor((y + root.headersModel.scrollY) / root.headersModel.rowHeight)
@@ -88,7 +88,7 @@ Item {
         return HintProfiles.TrackScope
     }
 
-    function deliverWheel(event) {
+    function deliverWheel(event: var): void {
         const direction = event.inverted ? -1 : 1
         root.headersModel.handleWheel(direction * event.angleDelta.x,
                                       direction * event.angleDelta.y,
@@ -171,7 +171,8 @@ Item {
                 }
                 MoveCoalescer {
                     id: headerMoves
-                    dispatch: (x, y, buttons, modifiers) => {
+                    dispatch: headerMoves.dispatchMove
+                    function dispatchMove(x: real, y: real, buttons: int, modifiers: int): void {
                         if (buttons !== Qt.NoButton)
                             root.headersModel.updatePointer(x, y, modifiers)
                         else
@@ -255,13 +256,13 @@ Item {
                 visible: headerBand.visible && rowIndex >= 0
                 property bool finishing: false
 
-                function adoptRenameDraft() {
+                function adoptRenameDraft(): void {
                     renameInput.text = root.headersModel.renameDraft
                     renameInput.forceActiveFocus(Qt.PopupFocusReason)
                     renameInput.selectAll()
                 }
 
-                function finishRename(commit, entered) {
+                function finishRename(commit: bool, entered: bool): void {
                     if (finishing || !visible)
                         return
                     finishing = true
@@ -339,7 +340,7 @@ Item {
                 Connections {
                     target: root.headersModel
 
-                    function onRenameDraftChanged() {
+                    function onRenameDraftChanged(): void {
                         if (renameEditor.visible && renameInput.text !== root.headersModel.renameDraft)
                             renameInput.text = root.headersModel.renameDraft
                     }

@@ -265,7 +265,7 @@ ShellVoicegroupSupport {
                "duty LFO mints an edited pulse voice")
         const initialPulse = draft.symbol
         verify(/^DirectSoundSynth_GoldenSun_4D[0-9A-F]{6}$/.test(initialPulse)
-               && !controller.synthCatalogChoices().includes(initialPulse),
+               && !controller.synthChoices.includes(initialPulse),
                "synth activation publishes the param-named symbol")
         const baseDuty = findChild(panel, "vgSynthBaseDutySpin")
         verify(baseDuty !== null && baseDuty.visible, "pulse parameters occupy the editor")
@@ -286,7 +286,7 @@ ShellVoicegroupSupport {
             }, 15000), "synth " + step.field + " commits its cumulative param-named symbol")
         }
         const pulse = draft.symbol
-        verify(controller.synthCatalogChoices().indexOf(pulse) < 0,
+        verify(controller.synthChoices.indexOf(pulse) < 0,
                "uncommitted synth does not masquerade as a saved definition")
         const startsBefore = saveStarts
         const finishesBefore = saveFinishes
@@ -296,7 +296,7 @@ ShellVoicegroupSupport {
         verify(waitForNative(function() { return saveStarts === startsBefore + 1 }, 5000),
                "synth Save starts one real completion receipt")
         verify(waitForNative(function() {
-            return (!controller.bankDirty && controller.synthCatalogChoices().includes(pulse))
+            return (!controller.bankDirty && controller.synthChoices.includes(pulse))
                    || app.lastSaveError.length > 0
         }, 15000), "save persists synth and refreshes catalog: " + app.lastSaveError)
         compare(app.lastSaveError, "")

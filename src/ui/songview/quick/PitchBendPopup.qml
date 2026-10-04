@@ -1,6 +1,6 @@
-// Opaque note-automation popup chrome; Swift owns both graph lanes and their
-// document transactions. The graph uses the existing scene-model/Quick Shape
-// projection instead of the retired C++ QQuickItem.
+pragma ComponentBehavior: Bound
+// Swift owns both graph lanes and their document transactions.
+// The popup projects the scene models through Quick Shapes.
 import QtQuick
 import QtQuick.Shapes
 import Porydaw.Ui
@@ -85,7 +85,7 @@ Rectangle {
     Accessible.name: qsTr("Note automation editor")
     Accessible.description: bridge ? bridge.description : ""
 
-    function resetLane(graph) {
+    function resetLane(graph: GraphCanvas): void {
         if (!bridge || !graph)
             return
         if (graph === pitchGraph)
@@ -94,12 +94,12 @@ Rectangle {
             bridge.resetModCurve()
         graph.forceActiveFocus(Qt.OtherFocusReason)
     }
-    function focusInitialGraph() { pitchGraph.forceActiveFocus(Qt.PopupFocusReason) }
+    function focusInitialGraph(): void { pitchGraph.forceActiveFocus(Qt.PopupFocusReason) }
 
     component GraphLaneLabels: Item {
         id: labels
 
-        required property Item graph
+        required property GraphCanvas graph
 
         readonly property rect canvas: graph ? graph.canvasRect : Qt.rect(0, 0, 0, 0)
 
@@ -225,7 +225,7 @@ Rectangle {
     component ResetButton: Item {
         id: resetButton
 
-        required property Item graph
+        required property GraphCanvas graph
         required property string resetDescription
 
         readonly property bool hovered: hoverHandler.hovered
@@ -284,7 +284,7 @@ Rectangle {
     component GraphCanvas: Item {
         id: graphCanvas
         property var lane
-        function inCanvas(x, y) {
+        function inCanvas(x: real, y: real): bool {
             return x >= canvasRect.x && x < canvasRect.x + canvasRect.width
                 && y >= canvasRect.y && y < canvasRect.y + canvasRect.height
         }
@@ -327,7 +327,10 @@ Rectangle {
             model: graphCanvas.lane ? graphCanvas.lane.curveLines : []
             delegate: Shape {
                 id: curveShape
-                required property var model
+                required property real x0
+                required property real y0
+                required property real x1
+                required property real y1
                 required property string strokeColor
                 required property real strokeWidth
                 anchors.fill: graphCanvas
@@ -336,11 +339,11 @@ Rectangle {
                     strokeWidth: curveShape.strokeWidth
                     fillColor: "transparent"
                     capStyle: ShapePath.RoundCap
-                    startX: curveShape.model.x0
-                    startY: curveShape.model.y0
+                    startX: curveShape.x0
+                    startY: curveShape.y0
                     PathLine {
-                        x: curveShape.model.x1
-                        y: curveShape.model.y1
+                        x: curveShape.x1
+                        y: curveShape.y1
                     }
                 }
             }
@@ -348,15 +351,14 @@ Rectangle {
         Repeater {
             model: graphCanvas.lane ? graphCanvas.lane.vertices : []
             delegate: Rectangle {
-                required property var model
+                required x
+                required y
+                required radius
                 required property string fillColor
                 required property string ringColor
                 required property real ringWidth
-                x: model.x
-                y: model.y
-                width: model.radius * 2
-                height: model.radius * 2
-                radius: width / 2
+                width: radius * 2
+                height: radius * 2
                 color: fillColor
                 border.width: ringWidth
                 border.color: ringColor
@@ -406,7 +408,7 @@ Rectangle {
 
     GraphCanvas {
         id: pitchGraph
-        lane: bridge ? bridge.currentPitch : null
+        lane: root.bridge ? root.bridge.currentPitch : null
         objectName: "pitchBendGraph"
         x: 0
         y: root.headerHeight
@@ -417,7 +419,7 @@ Rectangle {
 
     GraphCanvas {
         id: modGraph
-        lane: bridge ? bridge.currentMod : null
+        lane: root.bridge ? root.bridge.currentMod : null
         objectName: "modWheelGraph"
         x: 0
         y: root.headerHeight + root.graphHeight
@@ -488,7 +490,7 @@ Rectangle {
         verticalAlignment: Text.AlignVCenter
         color: root.secondaryTextColor
         font: root.captionFont
-        text: bridge ? bridge.noteDescription : ""
+        text: root.bridge ? root.bridge.noteDescription : ""
         renderType: Text.NativeRendering
         elide: Text.ElideRight
     }
@@ -513,7 +515,7 @@ Rectangle {
         objectName: "bendRangeSpin"
         inputObjectName: "bendRangeInput"
         accessibleName: qsTr("Pitch-bend range")
-        appearance: bridge.appearance.dragInput
+        appearance: root.bridge.appearance.dragInput
         minimumValue: 0
         maximumValue: 127
         accessibleDescription: qsTr("Pitch-bend range in semitones for this note")
@@ -522,14 +524,14 @@ Rectangle {
            + (root.controlsHeight - height) / 2
         width: root.fieldWidth
         height: root.fieldHeight
-        value: bridge ? bridge.bendRange : 0
+        value: root.bridge ? root.bridge.bendRange : 0
         onValueCommitted: (committed) => {
-            if (bridge)
-                bridge.setBendRange(committed)
+            if (root.bridge)
+                root.bridge.setBendRange(committed)
         }
         Connections {
             target: bendRangeField.textInput.Keys
-            function onShortcutOverride(event) {
+            function onShortcutOverride(event: KeyEvent): void {
                 event.accepted = event.key !== Qt.Key_Space
                     && !event.matches(StandardKey.Undo) && !event.matches(StandardKey.Redo)
             }
@@ -556,7 +558,7 @@ Rectangle {
         objectName: "lfoSpeedSpin"
         inputObjectName: "lfoSpeedInput"
         accessibleName: qsTr("LFO speed")
-        appearance: bridge.appearance.dragInput
+        appearance: root.bridge.appearance.dragInput
         minimumValue: 0
         maximumValue: 127
         accessibleDescription: qsTr("M4A LFO speed for this note")
@@ -564,14 +566,14 @@ Rectangle {
         y: bendRangeField.y
         width: root.fieldWidth
         height: root.fieldHeight
-        value: bridge ? bridge.lfoSpeed : 0
+        value: root.bridge ? root.bridge.lfoSpeed : 0
         onValueCommitted: (committed) => {
-            if (bridge)
-                bridge.setLfoSpeed(committed)
+            if (root.bridge)
+                root.bridge.setLfoSpeed(committed)
         }
         Connections {
             target: lfoSpeedField.textInput.Keys
-            function onShortcutOverride(event) {
+            function onShortcutOverride(event: KeyEvent): void {
                 event.accepted = event.key !== Qt.Key_Space
                     && !event.matches(StandardKey.Undo) && !event.matches(StandardKey.Redo)
             }

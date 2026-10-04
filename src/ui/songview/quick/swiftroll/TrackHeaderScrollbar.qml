@@ -44,22 +44,22 @@ Item {
     onSpanChanged: rebaseDrag()
     onThumbTravelChanged: rebaseDrag()
 
-    function requestScroll(value) {
+    function requestScroll(value: real): void {
         if (scrollable)
             headersModel.scrollY = Math.max(0, Math.min(span, value))
     }
 
-    function requestLine(direction) {
+    function requestLine(direction: int): void {
         requestScroll(headersModel.scrollY
                       + direction * Math.max(0, headersModel.rowHeight))
     }
 
-    function requestPage(direction) {
+    function requestPage(direction: int): void {
         requestScroll(headersModel.scrollY
                       + direction * Math.max(0, headersModel.viewportHeight))
     }
 
-    function rebaseDrag() {
+    function rebaseDrag(): void {
         if (!thumbMouse || !thumbMouse.pressed || !dragThresholdReached)
             return
         dragStartValue = Math.max(0, Math.min(span, headersModel.scrollY))

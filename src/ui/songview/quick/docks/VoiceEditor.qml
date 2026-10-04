@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
 import PorydawApp
@@ -82,8 +82,7 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.minimumHeight: 0
             Layout.preferredHeight: editor.baseFontPx * 1.85
-            model: {
-                const revision = editor.controller.catalogRevision
+            readonly property list<var> choices: {
                 const types = [{ name: qsTr("Sample"), macro: 0 },
                                { name: qsTr("Sample (no resample)"), macro: 1 },
                                { name: qsTr("Sample (alt)"), macro: 2 },
@@ -93,11 +92,12 @@ ColumnLayout {
                                { name: qsTr("Wave"), macro: 7 },
                                { name: qsTr("Noise"), macro: 9 }]
                 if (editor.controller.canMintSynths
-                        || editor.controller.synthCatalogChoices().length > 0
+                        || editor.controller.synthChoices.length > 0
                         || editor.draft.isSynth)
                     types.push({ name: qsTr("Synth (Golden Sun)"), macro: -1 })
                 return types
             }
+            model: typePicker.choices
             textRole: "name"
             valueRole: "macro"
             currentIndex: indexOfValue(editor.draft.isSynth ? -1
@@ -137,10 +137,7 @@ ColumnLayout {
             visible: editor.draft.isSynth
             Layout.fillWidth: true
             Layout.preferredHeight: editor.regularHeight
-            model: {
-                const revision = editor.controller.catalogRevision
-                return editor.controller.synthCatalogChoices()
-            }
+            model: editor.controller.synthChoices
             currentIndex: model.indexOf(editor.draft.symbol)
             displayText: editor.draft.symbol
             onActivated: editor.draft.changeType(-1, currentText)
@@ -151,10 +148,7 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: editor.baseFontPx * 1.5
             editable: true
-            model: {
-                const revision = editor.controller.catalogRevision
-                return editor.controller.drumkitChoices()
-            }
+            model: editor.controller.drumkitSymbols
             editText: editor.draft.symbol
             onActivated: editor.draft.changeType(editor.draft.macro, currentText)
             onAccepted: editor.draft.changeType(editor.draft.macro, editText)
@@ -206,7 +200,8 @@ ColumnLayout {
         ComboBox {
             objectName: "vgSynthWaveformCombo"
             Layout.fillWidth: true
-            model: [qsTr("Pulse"), qsTr("Saw"), qsTr("Triangle")]
+            readonly property list<string> choices: [qsTr("Pulse"), qsTr("Saw"), qsTr("Triangle")]
+            model: choices
             currentIndex: editor.draft.waveform
             onActivated: index => editor.draft.changeSynth("waveform", index)
         }
@@ -223,23 +218,27 @@ ColumnLayout {
             color: editor.colors.primaryText
         }
         Repeater {
-            model: [{ name: "BaseDuty", field: "baseDuty", detail: qsTr("Base duty cycle") },
-                    { name: "DutyStep", field: "dutyStep", detail: qsTr("Step per frame") },
-                    { name: "ModDepth", field: "modDepth", detail: qsTr("Modulation amount") },
-                    { name: "Phase", field: "phase", detail: qsTr("LFO phase offset") }]
+            model: ListModel {
+                ListElement { name: "BaseDuty"; field: "baseDuty"; detail: qsTr("Base duty cycle") }
+                ListElement { name: "DutyStep"; field: "dutyStep"; detail: qsTr("Step per frame") }
+                ListElement { name: "ModDepth"; field: "modDepth"; detail: qsTr("Modulation amount") }
+                ListElement { name: "Phase"; field: "phase"; detail: qsTr("LFO phase offset") }
+            }
             SpinBox {
-                required property var modelData
-                objectName: "vgSynth" + modelData.name + "Spin"
+                required property string name
+                required property string field
+                required property string detail
+                objectName: "vgSynth" + name + "Spin"
                 Layout.fillWidth: true
                 Layout.minimumWidth: editor.baseFontPx * 3.3
                 Layout.preferredHeight: editor.spinHeight
                 Layout.minimumHeight: 0
                 from: 0
                 to: 255
-                value: editor.draft[modelData.field]
-                ToolTip.text: modelData.detail
+                value: editor.draft[field]
+                ToolTip.text: detail
                 ToolTip.visible: hovered
-                onValueModified: editor.draft.changeSynth(modelData.field, value)
+                onValueModified: editor.draft.changeSynth(field, value)
             }
         }
     }
@@ -277,7 +276,8 @@ ColumnLayout {
         ComboBox {
             objectName: "vgDutyCombo"
             Layout.fillWidth: true
-            model: ["12.5%", "25%", "50%", "75%"]
+            readonly property list<string> choices: ["12.5%", "25%", "50%", "75%"]
+            model: choices
             currentIndex: editor.draft.duty
             onActivated: index => editor.draft.change("duty", index)
         }
@@ -295,7 +295,8 @@ ColumnLayout {
         ComboBox {
             objectName: "vgPeriodCombo"
             Layout.fillWidth: true
-            model: [qsTr("0 (15-bit, hiss)"), qsTr("1 (7-bit, metallic)")]
+            readonly property list<string> choices: [qsTr("0 (15-bit, hiss)"), qsTr("1 (7-bit, metallic)")]
+            model: choices
             currentIndex: editor.draft.period
             onActivated: index => editor.draft.change("period", index)
         }
@@ -311,7 +312,8 @@ ColumnLayout {
             color: editor.colors.primaryText
         }
         Repeater {
-            model: ["attack", "decay", "sustain", "release"]
+            readonly property list<string> fields: ["attack", "decay", "sustain", "release"]
+            model: fields
             SpinBox {
                 required property int index
                 required property string modelData

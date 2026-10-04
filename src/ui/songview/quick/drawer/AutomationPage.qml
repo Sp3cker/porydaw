@@ -112,26 +112,28 @@ FocusScope {
         readonly property int tapTempoIdleCommitMs: 2000
         readonly property bool tapTempoReady: false
 
-        function configureBody(width, height, gutter, devicePixelRatio, baseFontPx,
-                               dragDistance) {}
-        function pointerPress(x, y, surface, button, modifiers) { return false }
-        function pointerMove(x, y, buttons, modifiers) { return false }
-        function pointerRelease(x, y, button, modifiers) { return false }
-        function pointerDoubleClick(x, y) { return false }
-        function pointerLeave() {}
-        function handleEscape() { return false }
-        function activateParameter(index) { return false }
-        function toggleGhostParameter(index) { return false }
-        function openParameterMenu(index, x, y) { return false }
-        function dismissMenu() {}
-        function consumeMenuAction(index) { return false }
-        function updatePromptDraft(draft) {}
-        function acceptPromptDraft() { return false }
-        function cancelPrompt() {}
-        function tapTempoTap() {}
-        function tapTempoIdleElapsed() { return false }
-        function resetTapTempo() {}
-        function cancelSectionInteraction() {}
+        function configureBody(width: real, height: real, gutter: real,
+                               devicePixelRatio: real, baseFontPx: real,
+                               dragDistance: real): void {}
+        function pointerPress(x: real, y: real, surface: int, button: int,
+                              modifiers: int): bool { return false }
+        function pointerMove(x: real, y: real, buttons: int, modifiers: int): bool { return false }
+        function pointerRelease(x: real, y: real, button: int, modifiers: int): bool { return false }
+        function pointerDoubleClick(x: real, y: real): bool { return false }
+        function pointerLeave(): void {}
+        function handleEscape(): bool { return false }
+        function activateParameter(index: int): bool { return false }
+        function toggleGhostParameter(index: int): bool { return false }
+        function openParameterMenu(index: int, x: real, y: real): bool { return false }
+        function dismissMenu(): void {}
+        function consumeMenuAction(index: int): bool { return false }
+        function updatePromptDraft(draft: string): void {}
+        function acceptPromptDraft(): bool { return false }
+        function cancelPrompt(): void {}
+        function tapTempoTap(): void {}
+        function tapTempoIdleElapsed(): bool { return false }
+        function resetTapTempo(): void {}
+        function cancelSectionInteraction(): void {}
     }
 
     /// The shared plot origin: the gutter the roll draws at and the container
@@ -148,14 +150,14 @@ FocusScope {
 
     readonly property int selectorTabCount: page.pageModel.tabCount
 
-    function pushBodyFacts() {
+    function pushBodyFacts(): void {
         if (!page.pageModel || page.width <= 0 || page.height <= 0)
             return
         page.pageModel.configureBody(page.plotWidth, page.height, page.plotOrigin,
                                      page.Screen.devicePixelRatio, page.baseFontPx,
                                      Qt.styleHints.startDragDistance)
     }
-    function geometryChanged() {
+    function geometryChanged(): void {
         if (plot.input.pressed && page.pageModel.interactionActive)
             page.pageModel.cancelSectionInteraction()
         page.pushBodyFacts()
@@ -191,7 +193,7 @@ FocusScope {
 
 
     /// Where focus returns after a modal closes: this page's plot.
-    function focusOrigin() {
+    function focusOrigin(): void {
         plot.forceActiveFocus(Qt.OtherFocusReason)
     }
 
@@ -252,8 +254,8 @@ FocusScope {
     Connections {
         target: page.pageModel
 
-        function onMenuOpenChanged() { page.syncModals() }
-        function onPromptOpenChanged() { page.syncModals() }
+        function onMenuOpenChanged(): void { page.syncModals() }
+        function onPromptOpenChanged(): void { page.syncModals() }
     }
 
     /// The container's unclipped modal layer, or this page when standalone.
@@ -278,7 +280,7 @@ FocusScope {
     }
 
 
-    function syncModals() {
+    function syncModals(): void {
         if (page.menu !== null) {
             page.menu.model = page.pageModel
             page.menu.showing = page.pageModel ? page.pageModel.menuOpen : false
@@ -291,7 +293,7 @@ FocusScope {
 
     /// Modals move to the container layer without losing their identity.
     /// Page teardown retires them even when that layer survives.
-    function createModals() {
+    function createModals(): void {
         var host = page.modalHost !== null && page.modalHost !== undefined ? page.modalHost : page
         if (page.menu === null) {
             page.menu = menuComponent.createObject(host, {"model": page.pageModel,

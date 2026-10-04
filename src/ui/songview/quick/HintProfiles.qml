@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQml
 import Porydaw.Ui
 

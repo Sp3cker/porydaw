@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 // Controlled integer input: the owner applies valueCommitted to its model.
 // Appearance is injected; no popup session or document is required.
 import QtQuick
@@ -28,10 +29,10 @@ Item {
     signal valueCommitted(int committed)
     signal editingAccepted(int committed)
 
-    function selectAll() {
+    function selectAll(): void {
         focusLeaf.selectAll()
     }
-    function focusInput(reason) {
+    function focusInput(reason: int): void {
         focusLeaf.forceActiveFocus(reason)
     }
 
@@ -39,7 +40,7 @@ Item {
 
     // Returns the displayed, validated integer. A null result leaves an
     // intermediate draft corrected in place and must not accept a dialog.
-    function commitDisplayed() {
+    function commitDisplayed(): var {
         if (!state.finishEditing())
             return null
         return Number.parseInt(input.text, 10)
@@ -65,30 +66,30 @@ Item {
         readonly property real normalStepsPerPixel: 0.5
         readonly property real shiftStepsPerPixel: 0.2
 
-        function syncText() {
+        function syncText(): void {
             // External value changes always refresh the draft text, even
             // while the input has focus.
             input.text = String(control.value)
         }
 
-        function clampValue(candidate) {
+        function clampValue(candidate: real): real {
             if (isNaN(candidate))
                 return control.value
             return Math.max(control.minimumValue, Math.min(control.maximumValue, candidate))
         }
 
-        function commitSteps(steps) {
+        function commitSteps(steps: int): void {
             const next = clampValue(control.value + steps)
             if (next !== control.value)
                 control.valueCommitted(next)
         }
 
         // Full vertical displacement of the active drag; upward is positive.
-        function pressDragDistance() {
+        function pressDragDistance(): real {
             return scrubDrag.centroid.pressPosition.y - scrubDrag.centroid.position.y
         }
 
-        function scrubTo(distance) {
+        function scrubTo(distance: real): void {
             if (!scrubDrag.active)
                 return
             if (!dragging) {
@@ -113,7 +114,7 @@ Item {
         // value; empty or intermediate drafts revert to the current value
         // (correction mode CorrectToPreviousValue). The validator already
         // rejects non-numeric inserts, so the parse only sees digit text.
-        function finishEditing() {
+        function finishEditing(): bool {
             const trimmed = input.text.trim()
             const parsed = Number.parseInt(trimmed, 10)
             const acceptable = trimmed !== "" && !Number.isNaN(parsed)
@@ -123,6 +124,11 @@ Item {
             if (fixed !== control.value)
                 control.valueCommitted(fixed)
             return acceptable
+        }
+
+        function selectAllIfFocused(): void {
+            if (focusLeaf.activeFocus)
+                input.selectAll()
         }
     }
 
@@ -206,10 +212,7 @@ Item {
                 focusLeaf.forceActiveFocus(Qt.MouseFocusReason)
                 // The text input settles its own caret and selection handling
                 // on release; defer select-all so it survives dispatch order.
-                Qt.callLater(function () {
-                    if (focusLeaf.activeFocus)
-                        input.selectAll()
-                })
+                Qt.callLater(state.selectAllIfFocused)
             }
         }
 
@@ -293,7 +296,7 @@ Item {
         // Host policy marker; printable ShortcutOverride precedes QML handlers.
         readonly property bool yieldsTransportPlayPauseShortcut: true
 
-        function selectAll() {
+        function selectAll(): void {
             input.selectAll()
         }
 

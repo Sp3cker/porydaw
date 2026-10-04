@@ -1,5 +1,7 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
 import PorydawApp
@@ -24,13 +26,13 @@ DialogWindow {
     font: Qt.font(applicationSession.typographyFonts.body)
     onClosing: workflow.cancel()
 
-    Shortcut { sequences: [StandardKey.Undo]; context: Qt.WindowShortcut; onActivated: editor.undo() }
-    Shortcut { sequences: [StandardKey.Redo]; context: Qt.WindowShortcut; onActivated: editor.redo() }
-    Timer { interval: 33; repeat: true; running: audition.playing; onTriggered: audition.tick() }
-    function handleSpace(event) {
+    Shortcut { sequences: [StandardKey.Undo]; context: Qt.WindowShortcut; onActivated: dialog.editor.undo() }
+    Shortcut { sequences: [StandardKey.Redo]; context: Qt.WindowShortcut; onActivated: dialog.editor.redo() }
+    Timer { interval: 33; repeat: true; running: dialog.audition.playing; onTriggered: dialog.audition.tick() }
+    function handleSpace(event: KeyEvent): void {
         if (event.key === Qt.Key_Space && event.modifiers === Qt.NoModifier) {
             if (!event.isAutoRepeat)
-                audition.toggle()
+                dialog.audition.toggle()
             event.accepted = true
         }
     }

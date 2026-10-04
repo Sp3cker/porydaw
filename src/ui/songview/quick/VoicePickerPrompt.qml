@@ -51,8 +51,6 @@ FocusScope {
             buttonText: pickerRoot.promptPalette?.buttonText ?? "transparent",
             pressedBackground: pickerRoot.promptPalette?.buttonPressedBackground ?? "transparent",
             pressedText: pickerRoot.promptPalette?.buttonPressedText ?? "transparent",
-            // Search-hint ink: placeholderText is the legible hint ink on the
-            // window surface; outline is a line color and fails as text.
             placeholderText: pickerRoot.promptPalette?.placeholderText ?? "transparent",
             disabledText: pickerRoot.promptPalette?.disabledText ?? "transparent",
             selection: pickerRoot.promptPalette?.tabSelectedBackground ?? "transparent",
@@ -67,13 +65,13 @@ FocusScope {
             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         }
 
-        function acceptDisplayed() {
+        function acceptDisplayed(): void {
             pickerRoot.model.acceptPicker()
         }
-        function cancelDisplayed() {
+        function cancelDisplayed(): void {
             pickerRoot.model.cancelPicker()
         }
-        function activateInitialFocus() {
+        function activateInitialFocus(): void {
             search.forceActiveFocus(Qt.PopupFocusReason)
             if (pickerRoot.model.pickerIndex >= 0) {
                 list.currentIndex = pickerRoot.model.pickerIndex
@@ -84,9 +82,7 @@ FocusScope {
 
         Component.onCompleted: if (pickerRoot.showing) Qt.callLater(activateInitialFocus)
 
-        // No declined key may escape the shared popup session into timeline
-        // routing. TextInput and ListView receive their own editing/navigation
-        // keys before this terminal sink.
+        // TextInput and ListView edit first; declined keys stop inside the popup.
         Keys.onPressed: (event) => {
             if (event.key === Qt.Key_Escape)
                 cancelDisplayed()
@@ -218,10 +214,10 @@ FocusScope {
 
             Connections {
                 target: pickerRoot.model
-                function onPickerIndexChanged() {
+                function onPickerIndexChanged(): void {
                     list.currentIndex = pickerRoot.model.pickerIndex
                 }
-                function onPickerFilterChanged() {
+                function onPickerFilterChanged(): void {
                     if (list.currentIndex >= 0)
                         list.positionViewAtIndex(list.currentIndex, ListView.Center)
                 }
@@ -254,9 +250,8 @@ FocusScope {
                 id: row
 
                 required property int index
-                required property var model
-                readonly property int program: model.program
-                readonly property string label: model.label
+                required property int program
+                required property string label
 
                 objectName: "voicePickerRow_" + program
                 width: list.width
@@ -276,7 +271,7 @@ FocusScope {
                     anchors.verticalCenter: parent.verticalCenter
                     color: row.ListView.isCurrentItem ? prompt.appearance.pressedText : prompt.appearance.text
                     font: prompt.appearance.font
-                    text: label
+                    text: row.label
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
                 }

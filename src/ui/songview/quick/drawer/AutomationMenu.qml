@@ -20,11 +20,18 @@ FocusScope {
     readonly property point anchor: pageItem && parent
         ? pageItem.mapToItem(parent, model.menuX, model.menuY) : Qt.point(model.menuX, model.menuY)
     readonly property var menuColors: root.pageItem ? root.pageItem.gridPalette : null
-    readonly property var appearance: root.menuColors ? ({background: root.menuColors.menuBackground,
-        outline: root.menuColors.outline, text: root.menuColors.windowText,
-        hoverBackground: root.menuColors.menuHoverBackground, hoverText: root.menuColors.windowText,
-        disabledText: root.menuColors.disabledText, separator: root.menuColors.separator,
-        font: Qt.font(model.captionFont)}) : null
+    readonly property var appearance: root.menuColors ? menuAppearance : null
+    QtObject {
+        id: menuAppearance
+        readonly property color background: root.menuColors ? root.menuColors.menuBackground : "transparent"
+        readonly property color outline: root.menuColors ? root.menuColors.outline : "transparent"
+        readonly property color text: root.menuColors ? root.menuColors.windowText : "transparent"
+        readonly property color hoverBackground: root.menuColors ? root.menuColors.menuHoverBackground : "transparent"
+        readonly property color hoverText: root.menuColors ? root.menuColors.windowText : "transparent"
+        readonly property color disabledText: root.menuColors ? root.menuColors.disabledText : "transparent"
+        readonly property color separator: root.menuColors ? root.menuColors.separator : "transparent"
+        readonly property font font: Qt.font(root.model.captionFont)
+    }
     onShowingChanged: {
         childOpen = false
         currentRow = -1
@@ -36,13 +43,13 @@ FocusScope {
     }
     // Focus lands in the same pass the menu becomes showable: claiming while
     // still disabled would drop focus to the window root, so every stage re-checks.
-    function claimMenuFocus() {
+    function claimMenuFocus(): void {
         if (root.showing && root.visible && root.enabled)
             root.forceActiveFocus(Qt.PopupFocusReason)
     }
     onVisibleChanged: claimMenuFocus()
     onEnabledChanged: claimMenuFocus()
-    function firstEnabled(level, start, step) {
+    function firstEnabled(level: QuickMenuPanel, start: int, step: int): int {
         const count = level === panel ? model.menuRowCount : model.menuChildRowCount
         for (let i = start; i >= 0 && i < count; i += step) {
             const item = level.rowItem(i)
@@ -50,13 +57,13 @@ FocusScope {
         }
         return -1
     }
-    function hoverRow(level, index) {
+    function hoverRow(level: QuickMenuPanel, index: int): void {
         if (level === panel) {
             currentRow = index
             childOpen = !!level.rowItem(index)?.model.hasSubmenu
         } else childRow = index
     }
-    function activateRow(level, index) {
+    function activateRow(level: QuickMenuPanel, index: int): bool {
         const item = level.rowItem(index)
         if (!item || !item.model.enabled || item.model.separator) return false
         if (item.model.hasSubmenu) {
@@ -66,7 +73,7 @@ FocusScope {
         }
         return model.consumeMenuAction(item.model.actionId)
     }
-    function moveRow(delta) {
+    function moveRow(delta: int): void {
         const level = childOpen ? submenu : panel
         const current = childOpen ? childRow : currentRow
         let next = firstEnabled(level, current + delta, delta)
@@ -75,11 +82,11 @@ FocusScope {
         if (childOpen) childRow = next
         else currentRow = next
     }
-    function currentActionId() {
+    function currentActionId(): int {
         const item = (childOpen ? submenu : panel).rowItem(childOpen ? childRow : currentRow)
         return item ? item.model.actionId : -1
     }
-    function dismiss() { model.dismissMenu() }
+    function dismiss(): void { root.model.dismissMenu() }
     MouseArea {
         id: underlay
         objectName: "automationMenuUnderlay"

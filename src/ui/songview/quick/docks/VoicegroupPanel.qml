@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
 import Porydaw.Icons
@@ -18,8 +18,12 @@ ColumnLayout {
     readonly property int typeWidth: Math.round(baseFontPx * 3.75)
     readonly property int adsrWidth: Math.round(baseFontPx * 8.33)
     // Indexed by VoiceListGlyph; the reverse sample reuses the sample glyph rotated.
-    readonly property var typeIcons: [Icons.sample, Icons.sample, Icons.square1, Icons.square2,
-                                      Icons.wave, Icons.noise, Icons.keysplit, Icons.drumkit]
+    readonly property list<var> typeIcons: [Icons.sample, Icons.sample, Icons.square1, Icons.square2,
+                                          Icons.wave, Icons.noise, Icons.keysplit, Icons.drumkit]
+    readonly property QtObject emptyIcon: QtObject {
+        readonly property string glyph: ""
+        readonly property real fit: 1
+    }
     spacing: 0
 
     RowLayout {
@@ -45,7 +49,7 @@ ColumnLayout {
             editText: panel.controller.selectorText
             Connections {
                 target: panel.controller
-                function onSelectorTextChanged() {
+                function onSelectorTextChanged(): void {
                     selector.editText = panel.controller.selectorText
                 }
             }
@@ -175,7 +179,7 @@ ColumnLayout {
                             anchors.centerIn: parent
                             width: panel.baseFontPx * 1.25
                             height: width
-                            icon: row.typeIconKey < 0 ? ({})
+                            icon: row.typeIconKey < 0 ? panel.emptyIcon
                                   : panel.typeIcons[Math.floor(row.typeIconKey / 2)]
                             rotation: Math.floor(row.typeIconKey / 2) === 1 ? 180 : 0
                             color: row.altChip ? panel.colors.windowBackground
@@ -208,7 +212,7 @@ ColumnLayout {
         }
         Connections {
             target: panel.controller
-            function onRevealRequestChanged() {
+            function onRevealRequestChanged(): void {
                 voiceList.positionViewAtIndex(panel.controller.revealSlotId, ListView.Contain)
             }
         }
@@ -254,7 +258,7 @@ ColumnLayout {
         }
         onLoaded: {
             if (status === Loader.Ready)
-                item.open()
+                (newVoicegroupDialog.item as VoicegroupNewDialog).open()
         }
     }
 }

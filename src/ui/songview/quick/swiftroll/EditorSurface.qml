@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Porydaw.Ui
 
@@ -35,27 +37,27 @@ FocusScope {
     onShowEventsChanged: {
         // Current-state arbitration: the toggle returns focus to the roll only
         // when the events surface owned it or the teardown orphaned focus.
-        const eventsHeldFocus = eventPage.item && eventPage.item.activeFocus
+        const eventsHeldFocus = root.eventPage.item && (root.eventPage.item as Item).activeFocus
         if (!root.showEvents)
-            eventPage.active = false
+            root.eventPage.active = false
         if (root.eventListPresenter)
             root.eventListPresenter.setVisible(root.showEvents)
-        eventListHost.visible = root.showEvents
+        root.eventListHost.visible = root.showEvents
         if (root.showEvents)
-            eventPage.active = true
+            root.eventPage.active = true
         else if (eventsHeldFocus || root.focusOrphanedByToggle())
-            rollInput.forceActiveFocus(Qt.OtherFocusReason)
+            root.rollInput.forceActiveFocus(Qt.OtherFocusReason)
     }
     // Teardown falls back up the destroyed page's parent chain, so focus on the
     // events host or above owns no control.
-    function focusOrphanedByToggle() {
+    function focusOrphanedByToggle(): bool {
         const window = root.Window.window
         if (!window)
             return false
         const focused = window.activeFocusItem
         if (!focused || !focused.visible || !focused.enabled)
             return true
-        let host = eventListHost
+        let host = root.eventListHost
         while (host) {
             if (focused === host)
                 return true
@@ -76,7 +78,7 @@ FocusScope {
         || applicationSession.headerVoicePickerOpen || applicationSession.timeSigPromptOpen
         || rulerMenu.insertTimePromptOpen || velocityModel.promptOpen
         || pitchBendPresenter.isOpen
-    function refreshHintScope() {
+    function refreshHintScope(): void {
         if (!hintScopeCovered && hintWindowActive)
             hintService.scopeRefresh()
     }
@@ -103,14 +105,14 @@ FocusScope {
     property alias rollInput: rollBandContent.rollInput
     property alias rollHint: rollBandContent.rollHint
     Keys.onPressed: event => {
-        if (event.key === Qt.Key_Control && rollInput.containsMouse && !rollInput.pressed)
-            gridModel.updateHover(rollInput.mouseX, rollInput.mouseY,
+        if (event.key === Qt.Key_Control && root.rollInput.containsMouse && !root.rollInput.pressed)
+            gridModel.updateHover(root.rollInput.mouseX, root.rollInput.mouseY,
                                   event.modifiers | Qt.ControlModifier)
         event.accepted = false
     }
     Keys.onReleased: event => {
-        if (event.key === Qt.Key_Control && rollInput.containsMouse && !rollInput.pressed)
-            gridModel.updateHover(rollInput.mouseX, rollInput.mouseY,
+        if (event.key === Qt.Key_Control && root.rollInput.containsMouse && !root.rollInput.pressed)
+            gridModel.updateHover(root.rollInput.mouseX, root.rollInput.mouseY,
                                   event.modifiers & ~Qt.ControlModifier)
         event.accepted = false
     }
@@ -122,10 +124,10 @@ FocusScope {
     property alias drawerItem: editorDrawer
     property alias eventBand: otherEventsBand
     property alias fontMetrics: bodyFontMetrics
-    function retargetNoteMenu(x, y) {
-        const point = rollInput.mapFromItem(null, x, y)
-        return rollPlot.visible && point.x >= 0 && point.y >= 0
-            && point.x < rollInput.width && point.y < rollInput.height
+    function retargetNoteMenu(x: real, y: real): bool {
+        const point = root.rollInput.mapFromItem(null, x, y)
+        return root.rollPlot.visible && point.x >= 0 && point.y >= 0
+            && point.x < root.rollInput.width && point.y < root.rollInput.height
             && gridModel.retargetNoteMenu(point.x, point.y)
     }
 
@@ -135,13 +137,13 @@ FocusScope {
     readonly property bool editorStartupReady: viewportConfigured && visible
         && shellRouter !== null
         && shellRouter.session.songTabs.selectedId === applicationSession.tabId
-        && !showEvents && rollPlot.visible && applicationSession.isReady
-        && rollPlot.width > 0 && rollPlot.height > 0
+        && !showEvents && root.rollPlot.visible && applicationSession.isReady
+        && root.rollPlot.width > 0 && root.rollPlot.height > 0
         && gridModel.scene.displayRevision > 0 && appliedRevisionText.length > 0
     onEditorStartupReadyChanged: observeStartupEditor()
     onShellRouterChanged: observeStartupEditor()
 
-    function observeStartupEditor() {
+    function observeStartupEditor(): void {
         if (root.shellRouter && root.shellRouter.startupTraceEnabled
                 && root.editorStartupReady)
             root.shellRouter.editorReady(root.applicationSession.tabId)
@@ -158,22 +160,22 @@ FocusScope {
         // Cancellation reaches presenters even if this surface is already hidden.
         if (!visible && root.applicationSession)
             root.applicationSession.cancelGridInput(root.cancelReasonHidden)
-        if (visible && root.showEvents && eventPage.item)
+        if (visible && root.showEvents && root.eventPage.item)
             Qt.callLater(function() {
-                if (root.visible && root.showEvents && eventPage.item)
-                    eventPage.item.forceActiveFocus(Qt.OtherFocusReason)
+                if (root.visible && root.showEvents && root.eventPage.item)
+                    (root.eventPage.item as Item).forceActiveFocus(Qt.OtherFocusReason)
             })
     }
 
     Connections {
         target: root.gridModel
-        function onContextMenuRequested(x, y) {
+        function onContextMenuRequested(x: real, y: real): void {
             if (root.shellRouter) {
-                const position = rollInput.mapToItem(null, x, y)
+                const position = root.rollInput.mapToItem(null, x, y)
                 root.contextMenuAt(position.x, position.y)
             }
         }
-        function onScrollbarGrabCancelRequested() {
+        function onScrollbarGrabCancelRequested(): void {
             horizontalScrollBar.cancelGrab()
             rollScrollBar.cancelGrab()
         }
@@ -181,16 +183,16 @@ FocusScope {
 
     Connections {
         target: root.headersModel
-        function onContextMenuRequested(x, y) {
-            root.headerMenuPosition = trackHeaders.mapToItem(root, x, y)
+        function onContextMenuRequested(x: real, y: real): void {
+            root.headerMenuPosition = root.trackHeaders.mapToItem(root, x, y)
         }
         // Fork SongView::focusContent: the event-list input owns the band's
         // space while shown, else the roll band input takes focus back.
-        function onRestoreRollFocusRequested() {
-            if (root.showEvents && eventPage.item)
-                eventPage.item.forceActiveFocus(Qt.OtherFocusReason)
+        function onRestoreRollFocusRequested(): void {
+            if (root.showEvents && root.eventPage.item)
+                (root.eventPage.item as Item).forceActiveFocus(Qt.OtherFocusReason)
             else
-                rollInput.forceActiveFocus(Qt.OtherFocusReason)
+                root.rollInput.forceActiveFocus(Qt.OtherFocusReason)
         }
     }
 
@@ -204,8 +206,8 @@ FocusScope {
     EditorRollBand {
         id: rollBandContent
         root: parent
-        editorDrawer: parent.drawerItem
-        otherEventsBand: parent.eventBand
+        editorDrawer: root.drawerItem
+        otherEventsBand: root.eventBand
     }
 
     // One scroll row: its frame updates in the same dataChanged sweep as the
@@ -219,7 +221,7 @@ FocusScope {
             required property var frame
             onFrameChanged: applyScrollFrame()
             Component.onCompleted: applyScrollFrame()
-            function applyScrollFrame() {
+            function applyScrollFrame(): void {
                 if (frame) {
                     root.scrollX = frame.x
                     root.scrollY = frame.y
@@ -242,7 +244,7 @@ FocusScope {
         minimum: root.gridModel.cameraMinHScroll
         maximum: root.gridModel.cameraMaxHScroll
         value: root.gridModel.cameraScrollX
-        pageStep: rollPlot.width
+        pageStep: root.rollPlot.width
         singleStep: 1
         minimumThumbLength: root.headersModel.scrollbarMinimumThumbHeight
         accessibleName: qsTr("Timeline")
@@ -252,7 +254,7 @@ FocusScope {
         hintService: root.hintService
         hintScopeAllowed: !root.hintScopeCovered
         thumbObjectName: "timelineHorizontalScrollThumb"
-        onHintReleased: scenePosition => rollHint.receiveRelease(scenePosition)
+        onHintReleased: scenePosition => root.rollHint.receiveRelease(scenePosition)
         onGestureActiveChanged: root.gridModel.setScrollbarGrabActive(
                                     horizontalScrollBar.gestureActive
                                     || (rollScrollBar && rollScrollBar.gestureActive))
@@ -268,15 +270,15 @@ FocusScope {
         id: rollScrollBar
         objectName: "timelineRollScrollBar"
         z: 2
-        x: rollStack.x + rollStack.width
-        y: rollPlot.y
+        x: root.rollStack.x + root.rollStack.width
+        y: root.rollPlot.y
         width: root.scrollbarBreadth
-        height: rollPlot.height
+        height: root.rollPlot.height
         orientation: Qt.Vertical
         minimum: 0
         maximum: root.gridModel.cameraMaxVScroll
         value: root.gridModel.cameraScrollY
-        pageStep: rollPlot.height
+        pageStep: root.rollPlot.height
         singleStep: 1
         minimumThumbLength: root.headersModel.scrollbarMinimumThumbHeight
         accessibleName: qsTr("Piano roll")
@@ -287,7 +289,7 @@ FocusScope {
         hintService: root.hintService
         hintScopeAllowed: !root.hintScopeCovered
         thumbObjectName: "timelineRollScrollThumb"
-        onHintReleased: scenePosition => rollHint.receiveRelease(scenePosition)
+        onHintReleased: scenePosition => root.rollHint.receiveRelease(scenePosition)
         onGestureActiveChanged: root.gridModel.setScrollbarGrabActive(
                                     horizontalScrollBar.gestureActive || rollScrollBar.gestureActive)
 
@@ -303,21 +305,21 @@ FocusScope {
         anchors.fill: parent
         z: 10
         root: parent
-        rollInput: parent.rollInput
-        rulerInput: parent.rulerInput
-        trackHeaders: parent.trackHeaders
-        bodyFontMetrics: parent.fontMetrics
+        rollInput: root.rollInput
+        rulerInput: root.rulerInput
+        trackHeaders: root.trackHeaders
+        bodyFontMetrics: root.fontMetrics
     }
     EditorSurfacePrompts {
         anchors.fill: parent
         z: 11
         root: parent
-        rollInput: parent.rollInput
-        rulerInput: parent.rulerInput
-        rollPlot: parent.rollPlot
-        trackHeaders: parent.trackHeaders
-        editorDrawer: parent.drawerItem
-        bodyFontMetrics: parent.fontMetrics
+        rollInput: root.rollInput
+        rulerInput: root.rulerInput
+        rollPlot: root.rollPlot
+        trackHeaders: root.trackHeaders
+        editorDrawer: root.drawerItem
+        bodyFontMetrics: root.fontMetrics
     }
 
     // The container sizes its own height from the presenter.
@@ -345,7 +347,7 @@ FocusScope {
         gridModel: root.gridModel
         overlayRoot: root
         timelineSplitX: root.timelineSplitX
-        plotWidth: rollPlot.width
+        plotWidth: root.rollPlot.width
         applicationFont: root.bodyFont
         onHeightChanged: root.configureViewport()
     }
@@ -364,8 +366,8 @@ FocusScope {
         editGuideColor: root.gridModel.palette.editCursor
         playheadColor: root.gridModel.palette.playhead
         rollBodyVisible: !root.showEvents
-        rollPlotRect: Qt.rect(rollStack.x + rollPlot.x, rollPlot.y,
-                              rollPlot.width, rollPlot.height)
+        rollPlotRect: Qt.rect(root.rollStack.x + root.rollPlot.x, root.rollPlot.y,
+                              root.rollPlot.width, root.rollPlot.height)
         drawerRect: Qt.rect(editorDrawer.x, editorDrawer.y,
                             editorDrawer.width, editorDrawer.height)
         velocitySection: root.drawerPresenter.velocitySection
@@ -373,14 +375,14 @@ FocusScope {
         automationSection: root.drawerPresenter.automationSection
     }
 
-    function configureViewport() {
+    function configureViewport(): void {
         var dpr = Screen.devicePixelRatio > 0 ? Screen.devicePixelRatio : 1.0
-        root.gridModel.configureViewport(Math.max(rollPlot.width, 1.0),
-                                         Math.max(rollPlot.height, 1.0),
+        root.gridModel.configureViewport(Math.max(root.rollPlot.width, 1.0),
+                                         Math.max(root.rollPlot.height, 1.0),
                                          root.baseFontPx, dpr)
         root.headersModel.configureViewport(
-            Math.max(0, trackHeaders.width - root.headersModel.scrollbarWidth),
-            trackHeaders.height, root.baseFontPx, dpr)
+            Math.max(0, root.trackHeaders.width - root.headersModel.scrollbarWidth),
+            root.trackHeaders.height, root.baseFontPx, dpr)
         // Drawer plots share the roll viewport, not the scrollbar strips;
         // the container still spans the full surface behind that chrome.
         root.drawerPresenter.configureLayout(Math.max(0, root.width - root.scrollbarBreadth),
@@ -394,7 +396,7 @@ FocusScope {
         root.observeStartupEditor()
     }
 
-    function deliverWheel(event, overGutter) {
+    function deliverWheel(event: var, overGutter: bool): void {
         root.gridModel.handleWheel(event.angleDelta.x, event.angleDelta.y,
                                    event.pixelDelta.x, event.pixelDelta.y,
                                    event.modifiers, event.phase, overGutter,
@@ -407,8 +409,8 @@ FocusScope {
             hintService.setWindowActive(true)
         if (root.eventListPresenter)
             root.eventListPresenter.setVisible(root.showEvents)
-        eventListHost.visible = root.showEvents
-        eventPage.active = root.showEvents
+        root.eventListHost.visible = root.showEvents
+        root.eventPage.active = root.showEvents
         configureViewport()
     }
 }

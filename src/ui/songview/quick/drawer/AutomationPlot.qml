@@ -20,7 +20,7 @@ Item {
     required property int plotSurface
     property alias input: plotInput
 
-    function cursorFor(kind) {
+    function cursorFor(kind: int): int {
         switch (kind) {
         case 2: return Qt.SizeVerCursor
         case 3: return Qt.SizeHorCursor
@@ -92,6 +92,7 @@ Item {
     Repeater {
         model: (plot.pageModel ? plot.pageModel.ghostNameLabels : [])
         delegate: Rectangle {
+            id: ghostLabel
             required property var labelSpec
             required property string labelText
             required property var labelFont
@@ -106,9 +107,9 @@ Item {
                 id: ghostCaption
                 objectName: "automationGhostCaption"
                 anchors.fill: parent
-                text: labelText
+                text: ghostLabel.labelText
                 color: plot.gridPalette.windowText
-                font: Qt.font(labelFont)
+                font: Qt.font(ghostLabel.labelFont)
                 textFormat: Text.PlainText
                 renderType: Text.NativeRendering
                 verticalAlignment: Text.AlignVCenter
@@ -393,8 +394,9 @@ Item {
         }
         MoveCoalescer {
             id: plotMoves
-            dispatch: (x, y, buttons, modifiers) =>
-                plot.pageModel.pointerMove(x, y, buttons, modifiers)
+            dispatch: function(x: real, y: real, buttons: int, modifiers: int): bool {
+                return plot.pageModel.pointerMove(x, y, buttons, modifiers)
+            }
         }
         Accessible.role: Accessible.Canvas
         Accessible.name: qsTr("Automation plot")

@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Porydaw.Ui
 import PorydawApp
@@ -9,10 +11,10 @@ Item {
     required property real baseFontPx
     property bool dragging: false
 
-    function resizeModel() {
-        model.setViewport(width, height - seam.height)
-        model.setSeamViewport(seam.width, seam.height)
-        model.setBaseFontPx(baseFontPx)
+    function resizeModel(): void {
+        surface.model.setViewport(surface.width, surface.height - seam.height)
+        surface.model.setSeamViewport(seam.width, seam.height)
+        surface.model.setBaseFontPx(surface.baseFontPx)
     }
     onWidthChanged: resizeModel()
     onHeightChanged: resizeModel()

@@ -1,12 +1,6 @@
-// Pointer-move coalescer: the retired C++ timeline applied each move's gesture
-// state synchronously and queued only the scene rebuild behind a zero-timer,
-// so a burst of move samples rebuilt once per event-loop turn. Swift
-// presenters stay synchronous, so the same split lives at the QML edge: the
-// first move of a turn dispatches immediately (single moves keep their
-// synchronous semantics for gesture state and checks), and further moves in
-// the same turn collapse to the latest sample, delivered by the armed flush.
-// Callers flush before press, release, cancel and exit so gesture ordering is
-// preserved.
+pragma ComponentBehavior: Bound
+// Dispatch the first move synchronously; coalesce later samples until flush.
+// Callers flush before press, release, cancel and exit to preserve ordering.
 import QtQuick
 
 Timer {
@@ -23,7 +17,7 @@ Timer {
     property int pendingButtons: Qt.NoButton
     property int pendingModifiers: Qt.NoModifier
 
-    function enqueue(x, y, buttons, modifiers) {
+    function enqueue(x: real, y: real, buttons: int, modifiers: int): void {
         if (!armed) {
             armed = true
             start()
@@ -38,7 +32,7 @@ Timer {
         pending = true
     }
 
-    function flush() {
+    function flush(): void {
         stop()
         armed = false
         if (!pending)

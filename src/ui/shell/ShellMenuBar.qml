@@ -1,4 +1,6 @@
-import QtQuick.Controls
+pragma ComponentBehavior: Bound
+
+import PorydawStyle
 import QtQml.Models
 
 MenuBar {
@@ -6,9 +8,9 @@ MenuBar {
     required property var shell
     required property var windowRoot
     required property int actionRevision
-    function nativeMenuText(actionId) {
-        const shortcut = shell.actionShortcut(actionId)
-        const label = shell.menuLabel(actionId)
+    function nativeMenuText(actionId: string): string {
+        const shortcut = root.shell.actionShortcut(actionId)
+        const label = root.shell.menuLabel(actionId)
         return shortcut.length > 0 ? label + "\t" + shortcut : label
     }
         Menu {
@@ -17,7 +19,7 @@ MenuBar {
             title: qsTr("&File")
             onAboutToShow: ++root.windowRoot.actionRevision
             Instantiator {
-                model: shell.fileActionIds
+                model: root.shell.fileActionIds
                 delegate: MenuItem {
                     // No submenu/check visuals: skips per-item image loads at launch.
                     arrow: null
@@ -27,9 +29,9 @@ MenuBar {
                     text: root.nativeMenuText(modelData)
                     enabled: {
                         root.actionRevision
-                        return shell.actionEnabled(modelData)
+                        return root.shell.actionEnabled(modelData)
                     }
-                    onTriggered: shell.activate(modelData)
+                    onTriggered: root.shell.activate(modelData)
                 }
                 onObjectAdded: (index, object) => fileMenu.insertItem(index, object)
                 onObjectRemoved: (index, object) => fileMenu.removeItem(object)
@@ -39,7 +41,7 @@ MenuBar {
                 objectName: "shellFileExportSeparator"
             }
             Instantiator {
-                model: shell.fileExportActionIds
+                model: root.shell.fileExportActionIds
                 delegate: MenuItem {
                     arrow: null
                     indicator: null
@@ -48,9 +50,9 @@ MenuBar {
                     text: root.nativeMenuText(modelData)
                     enabled: {
                         root.actionRevision
-                        return shell.actionEnabled(modelData)
+                        return root.shell.actionEnabled(modelData)
                     }
-                    onTriggered: shell.activate(modelData)
+                    onTriggered: root.shell.activate(modelData)
                 }
                 onObjectAdded: (index, object) => {
                     let anchor = 0
@@ -66,7 +68,7 @@ MenuBar {
                 objectName: "shellFileQuitSeparator"
             }
             Instantiator {
-                model: shell.fileQuitActionIds
+                model: root.shell.fileQuitActionIds
                 delegate: MenuItem {
                     arrow: null
                     indicator: null
@@ -75,9 +77,9 @@ MenuBar {
                     text: root.nativeMenuText(modelData)
                     enabled: {
                         root.actionRevision
-                        return shell.actionEnabled(modelData)
+                        return root.shell.actionEnabled(modelData)
                     }
-                    onTriggered: shell.activate(modelData)
+                    onTriggered: root.shell.activate(modelData)
                 }
                 onObjectAdded: (index, object) => {
                     let anchor = 0
@@ -102,7 +104,7 @@ MenuBar {
                 text: subMenu ? subMenu.title : ""
             }
             Instantiator {
-                model: shell.editTopActionIds
+                model: root.shell.editTopActionIds
                 delegate: MenuItem {
                     arrow: null
                     indicator: null
@@ -111,9 +113,9 @@ MenuBar {
                     text: root.nativeMenuText(modelData)
                     enabled: {
                         root.actionRevision
-                        return shell.actionEnabled(modelData)
+                        return root.shell.actionEnabled(modelData)
                     }
-                    onTriggered: shell.activate(modelData)
+                    onTriggered: root.shell.activate(modelData)
                 }
                 onObjectAdded: (index, object) => editMenu.insertItem(index, object)
                 onObjectRemoved: (index, object) => editMenu.removeItem(object)
@@ -123,7 +125,7 @@ MenuBar {
                 objectName: "shellEditSectionSeparator"
             }
             Instantiator {
-                model: shell.editClipboardActionIds
+                model: root.shell.editClipboardActionIds
                 delegate: MenuItem {
                     arrow: null
                     indicator: null
@@ -132,9 +134,9 @@ MenuBar {
                     text: root.nativeMenuText(modelData)
                     enabled: {
                         root.actionRevision
-                        return shell.actionEnabled(modelData)
+                        return root.shell.actionEnabled(modelData)
                     }
-                    onTriggered: shell.activate(modelData)
+                    onTriggered: root.shell.activate(modelData)
                 }
                 onObjectAdded: (index, object) => {
                     let anchor = 0
@@ -150,7 +152,7 @@ MenuBar {
                 title: qsTr("&Time")
                 onAboutToShow: ++root.windowRoot.actionRevision
                 Instantiator {
-                    model: shell.timeActionIds
+                    model: root.shell.timeActionIds
                     delegate: MenuItem {
                         arrow: null
                         indicator: null
@@ -159,9 +161,9 @@ MenuBar {
                         text: root.nativeMenuText(modelData)
                         enabled: {
                             root.actionRevision
-                            return shell.actionEnabled(modelData)
+                            return root.shell.actionEnabled(modelData)
                         }
-                        onTriggered: shell.activate(modelData)
+                        onTriggered: root.shell.activate(modelData)
                     }
                     onObjectAdded: (index, object) => timeMenu.insertItem(index, object)
                     onObjectRemoved: (index, object) => timeMenu.removeItem(object)
@@ -173,15 +175,15 @@ MenuBar {
                 title: qsTr("&Notes")
                 onAboutToShow: ++root.windowRoot.actionRevision
                 Instantiator {
-                    model: shell.notesActionIds
+                    model: root.shell.notesActionIds
                     delegate: MenuItem {
                         arrow: null
                         indicator: null
                         required property string modelData
                         objectName: "shellAction_" + modelData
                         text: root.nativeMenuText(modelData)
-                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
-                        onTriggered: shell.activate(modelData)
+                        enabled: { root.actionRevision; return root.shell.actionEnabled(modelData) }
+                        onTriggered: root.shell.activate(modelData)
                     }
                     onObjectAdded: (index, object) => notesMenu.insertItem(index, object)
                     onObjectRemoved: (index, object) => notesMenu.removeItem(object)
@@ -193,15 +195,15 @@ MenuBar {
                 title: qsTr("&Move")
                 onAboutToShow: ++root.windowRoot.actionRevision
                 Instantiator {
-                    model: shell.moveActionIds
+                    model: root.shell.moveActionIds
                     delegate: MenuItem {
                         arrow: null
                         indicator: null
                         required property string modelData
                         objectName: "shellAction_" + modelData
                         text: root.nativeMenuText(modelData)
-                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
-                        onTriggered: shell.activate(modelData)
+                        enabled: { root.actionRevision; return root.shell.actionEnabled(modelData) }
+                        onTriggered: root.shell.activate(modelData)
                     }
                     onObjectAdded: (index, object) => moveMenu.insertItem(index, object)
                     onObjectRemoved: (index, object) => moveMenu.removeItem(object)
@@ -213,7 +215,7 @@ MenuBar {
                 title: qsTr("Tr&acks")
                 onAboutToShow: ++root.windowRoot.actionRevision
                 Instantiator {
-                    model: shell.tracksActionIds
+                    model: root.shell.tracksActionIds
                     delegate: MenuItem {
                         arrow: null
                         indicator: null
@@ -222,9 +224,9 @@ MenuBar {
                         text: root.nativeMenuText(modelData)
                         enabled: {
                             root.actionRevision
-                            return shell.actionEnabled(modelData)
+                            return root.shell.actionEnabled(modelData)
                         }
-                        onTriggered: shell.activate(modelData)
+                        onTriggered: root.shell.activate(modelData)
                     }
                     onObjectAdded: (index, object) => tracksMenu.insertItem(index, object)
                     onObjectRemoved: (index, object) => tracksMenu.removeItem(object)
@@ -236,15 +238,15 @@ MenuBar {
                 title: qsTr("&Automation")
                 onAboutToShow: ++root.windowRoot.actionRevision
                 Instantiator {
-                    model: shell.automationActionIds
+                    model: root.shell.automationActionIds
                     delegate: MenuItem {
                         arrow: null
                         indicator: null
                         required property string modelData
                         objectName: "shellAction_" + modelData
                         text: root.nativeMenuText(modelData)
-                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
-                        onTriggered: shell.activate(modelData)
+                        enabled: { root.actionRevision; return root.shell.actionEnabled(modelData) }
+                        onTriggered: root.shell.activate(modelData)
                     }
                     onObjectAdded: (index, object) => automationMenu.insertItem(index, object)
                     onObjectRemoved: (index, object) => automationMenu.removeItem(object)
@@ -256,15 +258,15 @@ MenuBar {
                 title: qsTr("&Events")
                 onAboutToShow: ++root.windowRoot.actionRevision
                 Instantiator {
-                    model: shell.eventsActionIds
+                    model: root.shell.eventsActionIds
                     delegate: MenuItem {
                         arrow: null
                         indicator: null
                         required property string modelData
                         objectName: "shellAction_" + modelData
                         text: root.nativeMenuText(modelData)
-                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
-                        onTriggered: shell.activate(modelData)
+                        enabled: { root.actionRevision; return root.shell.actionEnabled(modelData) }
+                        onTriggered: root.shell.activate(modelData)
                     }
                     onObjectAdded: (index, object) => eventsMenu.insertItem(index, object)
                     onObjectRemoved: (index, object) => eventsMenu.removeItem(object)
@@ -276,15 +278,15 @@ MenuBar {
                 title: qsTr("&Loop")
                 onAboutToShow: ++root.windowRoot.actionRevision
                 Instantiator {
-                    model: shell.loopActionIds
+                    model: root.shell.loopActionIds
                     delegate: MenuItem {
                         arrow: null
                         indicator: null
                         required property string modelData
                         objectName: "shellAction_" + modelData
                         text: root.nativeMenuText(modelData)
-                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
-                        onTriggered: shell.activate(modelData)
+                        enabled: { root.actionRevision; return root.shell.actionEnabled(modelData) }
+                        onTriggered: root.shell.activate(modelData)
                     }
                     onObjectAdded: (index, object) => loopMenu.insertItem(index, object)
                     onObjectRemoved: (index, object) => loopMenu.removeItem(object)
@@ -296,16 +298,16 @@ MenuBar {
                 title: qsTr("Trans&port")
                 onAboutToShow: ++root.windowRoot.actionRevision
                 Instantiator {
-                    model: shell.transportActionIds
+                    model: root.shell.transportActionIds
                     delegate: MenuItem {
                         arrow: null
                         required property string modelData
                         objectName: "shellAction_" + modelData
                         text: root.nativeMenuText(modelData)
-                        checkable: shell.actionCheckable(modelData)
-                        checked: { root.actionRevision; return shell.actionChecked(modelData) }
-                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
-                        onTriggered: shell.activate(modelData)
+                        checkable: root.shell.actionCheckable(modelData)
+                        checked: { root.actionRevision; return root.shell.actionChecked(modelData) }
+                        enabled: { root.actionRevision; return root.shell.actionEnabled(modelData) }
+                        onTriggered: root.shell.activate(modelData)
                     }
                     onObjectAdded: (index, object) => transportMenu.insertItem(index, object)
                     onObjectRemoved: (index, object) => transportMenu.removeItem(object)
@@ -313,15 +315,15 @@ MenuBar {
             }
             MenuSeparator {}
             Instantiator {
-                model: shell.editTailActionIds
+                model: root.shell.editTailActionIds
                 delegate: MenuItem {
                     arrow: null
                     indicator: null
                     required property string modelData
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
-                    enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
-                    onTriggered: shell.activate(modelData)
+                    enabled: { root.actionRevision; return root.shell.actionEnabled(modelData) }
+                    onTriggered: root.shell.activate(modelData)
                 }
                 onObjectAdded: (index, object) => editMenu.addItem(object)
                 onObjectRemoved: (index, object) => editMenu.removeItem(object)
@@ -335,22 +337,22 @@ MenuBar {
             onAboutToShow: ++root.windowRoot.actionRevision
             MenuSeparator { objectName: "shellViewSectionSeparator" }
             Instantiator {
-                model: shell.viewActionIds
+                model: root.shell.viewActionIds
                 delegate: MenuItem {
                     arrow: null
                     required property string modelData
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
-                    checkable: shell.actionCheckable(modelData)
+                    checkable: root.shell.actionCheckable(modelData)
                     checked: {
                         root.actionRevision
-                        return shell.actionChecked(modelData)
+                        return root.shell.actionChecked(modelData)
                     }
                     enabled: {
                         root.actionRevision
-                        return shell.actionEnabled(modelData)
+                        return root.shell.actionEnabled(modelData)
                     }
-                    onTriggered: shell.activate(modelData)
+                    onTriggered: root.shell.activate(modelData)
                 }
                 onObjectAdded: (index, object) =>
                     viewMenu.insertItem(index < 5 ? index : index + 1, object)
@@ -363,7 +365,7 @@ MenuBar {
             title: qsTr("&Tools")
             onAboutToShow: ++root.windowRoot.actionRevision
             Instantiator {
-                model: shell.toolsActionIds
+                model: root.shell.toolsActionIds
                 delegate: MenuItem {
                     arrow: null
                     indicator: null
@@ -372,9 +374,9 @@ MenuBar {
                     text: root.nativeMenuText(modelData)
                     enabled: {
                         root.actionRevision
-                        return shell.actionEnabled(modelData)
+                        return root.shell.actionEnabled(modelData)
                     }
-                    onTriggered: shell.activate(modelData)
+                    onTriggered: root.shell.activate(modelData)
                 }
                 onObjectAdded: (index, object) => toolsMenu.insertItem(index, object)
                 onObjectRemoved: (index, object) => toolsMenu.removeItem(object)
@@ -392,9 +394,9 @@ MenuBar {
                 text: root.nativeMenuText("help.about")
                 enabled: {
                     root.actionRevision
-                    return shell.actionEnabled("help.about")
+                    return root.shell.actionEnabled("help.about")
                 }
-                onTriggered: shell.activate("help.about")
+                onTriggered: root.shell.activate("help.about")
             }
         }
 }

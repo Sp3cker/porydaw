@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Dialogs
 import Porydaw.Ui
@@ -35,13 +37,13 @@ Item {
     }
     Connections {
         target: host.controller
-        function onSourcePickerRequested() { picker.open() }
-        function onWarningRequested(title, message) {
+        function onSourcePickerRequested(): void { picker.open() }
+        function onWarningRequested(title: string, message: string): void {
             warning.title = title
             warning.text = message
             warning.open()
         }
-        function onWizardOpenChanged() {
+        function onWizardOpenChanged(): void {
             if (host.controller.wizardOpen)
                 wizard.present()
             else

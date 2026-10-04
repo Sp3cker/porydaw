@@ -52,12 +52,12 @@ Item {
 
     // Current model-index lookup intentionally excludes ListView's pooled
     // delegates, which can outlive a model reset for reuse.
-    function rowItem(row) {
+    function rowItem(row: int): Item {
         return list.itemAtIndex(row)
     }
 
     // Scene-space rect of a realized row; the host anchors submenu frames on it.
-    function rowSceneRect(row) {
+    function rowSceneRect(row: int): rect {
         const rowItem = list.itemAtIndex(row)
         if (!rowItem)
             return Qt.rect(0, 0, 0, 0)
@@ -115,7 +115,7 @@ Item {
                 // a disabled row must be a disabled item, not a styling
                 // convention.
                 enabled: row.active
-                width: ListView.view.width
+                width: list.width
                 height: row.separator ? panel.separatorHeight : panel.rowHeight
 
                 readonly property bool active: !row.separator && row.available
@@ -139,9 +139,9 @@ Item {
 
                 Rectangle {
                     visible: row.separator
-                    width: parent.width
+                    width: row.width
                     height: row.separator ? panel.separatorHeight : 0
-                    y: (parent.height - height) / 2
+                    y: (row.height - height) / 2
                     color: panel.separatorColor
                 }
 
@@ -181,7 +181,7 @@ Item {
                 Text {
                     x: panel.textX
                     width: Math.max(0, panel.textRight - panel.textX)
-                    height: parent.height
+                    height: row.height
                     verticalAlignment: Text.AlignVCenter
                     color: row.rowTextColor
                     font: panel.menuFont
@@ -195,7 +195,7 @@ Item {
                     visible: panel.shortcutRight >= 0
                     x: panel.textRight
                     width: Math.max(0, panel.shortcutRight - panel.textRight)
-                    height: parent.height
+                    height: row.height
                     horizontalAlignment: Text.AlignRight
                     verticalAlignment: Text.AlignVCenter
                     // Same state ink as the label: alpha-dimmed text cannot

@@ -1,6 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
 import PorydawApp
@@ -11,23 +11,23 @@ FocusScope {
     required property SongDockController controller
     required property var colors
     required property ApplicationSession applicationSession
-    readonly property real baseFontPx: applicationSession.baseFontPx
-    readonly property var songs: controller.songListPresenter()
-    readonly property int pad: applicationSession.layoutSpaces.one
+    readonly property real baseFontPx: root.applicationSession.baseFontPx
+    readonly property var songs: root.controller.songListPresenter()
+    readonly property int pad: root.applicationSession.layoutSpaces.one
 
-    function focusSearch() {
+    function focusSearch(): void {
         search.forceActiveFocus()
         search.selectAll()
     }
 
     Connections {
         target: root.songs
-        function onSearchFocusRequestChanged() { root.focusSearch() }
-        function onSearchTextChanged() {
+        function onSearchFocusRequestChanged(): void { root.focusSearch() }
+        function onSearchTextChanged(): void {
             if (search.text !== root.songs.searchText)
                 search.text = root.songs.searchText
         }
-        function onRevealRequestChanged() {
+        function onRevealRequestChanged(): void {
             for (let i = 0; i < list.count; ++i) {
                 if (root.songs.songId(i) === root.songs.revealSongId) {
                     list.positionViewAtIndex(i, ListView.Center)
@@ -100,11 +100,11 @@ FocusScope {
                 Component.onCompleted: currentIndex = root.songs.categoryIndex
                 Connections {
                     target: root.songs
-                    function onCategoryIndexChanged() { category.currentIndex = root.songs.categoryIndex }
+                    function onCategoryIndexChanged(): void { category.currentIndex = root.songs.categoryIndex }
                 }
                 Connections {
                     target: root.songs.categories
-                    function onModelReset() { ++category.categoryModelRevision }
+                    function onModelReset(): void { ++category.categoryModelRevision }
                 }
             }
             ComboBox {
@@ -119,7 +119,7 @@ FocusScope {
                 ToolTip.visible: hovered
                 Connections {
                     target: root.songs
-                    function onSortIndexChanged() { sort.currentIndex = root.songs.sortIndex }
+                    function onSortIndexChanged(): void { sort.currentIndex = root.songs.sortIndex }
                 }
             }
         }
@@ -264,16 +264,16 @@ FocusScope {
                            separator: root.colors.outline,
                            font: Qt.font(root.applicationSession.typographyFonts.body) })
         }
-        function hoverRow(panel, index) { panel.highlightedRow = index }
-        function activateRow(panel, index) {
-            const chosenId = songId
+        function hoverRow(panel: QuickMenuPanel, index: int): void { panel.highlightedRow = index }
+        function activateRow(panel: QuickMenuPanel, index: int): void {
+            const chosenId = songMenu.songId
             switch (index) {
             case 0: root.songs.requestOpen(chosenId); break
             case 1: root.songs.requestOpenInNewTab(chosenId); break
             case 3: root.songs.requestRegister(chosenId); break
             case 4: root.songs.requestDelete(chosenId); break
             }
-            close()
+            songMenu.close()
         }
     }
 }

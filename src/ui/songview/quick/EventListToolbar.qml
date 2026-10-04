@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import PorydawApp
 
@@ -17,19 +19,19 @@ Item {
         readonly property bool pressed: tapHandler.pressed
         signal triggered()
 
-        implicitWidth: buttonText.implicitWidth + 2 * page.headerHorizontalPadding
-                       + (showArrow ? buttonArrow.implicitWidth + page.headerHorizontalPadding / 2 : 0)
-        implicitHeight: page.toolbarHeight
-        height: page.toolbarHeight
+        implicitWidth: buttonText.implicitWidth + 2 * control.page.headerHorizontalPadding
+                       + (showArrow ? buttonArrow.implicitWidth + control.page.headerHorizontalPadding / 2 : 0)
+        implicitHeight: control.page.toolbarHeight
+        height: control.page.toolbarHeight
         opacity: enabled ? 1 : 0.5
         activeFocusOnTab: true
 
         Rectangle {
             anchors.fill: parent
-            color: control.pressed ? page.buttonPressedBackground
-                  : control.hovered ? page.buttonHoverBackground : page.buttonBackground
+            color: control.pressed ? control.page.buttonPressedBackground
+                  : control.hovered ? control.page.buttonHoverBackground : control.page.buttonBackground
             border.width: 1
-            border.color: page.buttonOutline
+            border.color: control.page.buttonOutline
         }
 
         Text {
@@ -37,14 +39,14 @@ Item {
             objectName: control.objectName + "Text"
 
             anchors.left: parent.left
-            anchors.leftMargin: page.headerHorizontalPadding
+            anchors.leftMargin: control.page.headerHorizontalPadding
             anchors.right: control.showArrow ? buttonArrow.left : parent.right
-            anchors.rightMargin: control.showArrow ? page.headerHorizontalPadding / 2
-                                                    : page.headerHorizontalPadding
+            anchors.rightMargin: control.showArrow ? control.page.headerHorizontalPadding / 2
+                                                    : control.page.headerHorizontalPadding
             anchors.verticalCenter: parent.verticalCenter
             clip: true
-            color: control.pressed ? page.buttonPressedText : page.buttonText
-            font: page.controlFont
+            color: control.pressed ? control.page.buttonPressedText : control.page.buttonText
+            font: control.page.controlFont
             text: control.label
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
@@ -58,11 +60,11 @@ Item {
             objectName: control.objectName + "Arrow"
 
             anchors.right: parent.right
-            anchors.rightMargin: page.headerHorizontalPadding
+            anchors.rightMargin: control.page.headerHorizontalPadding
             anchors.verticalCenter: parent.verticalCenter
             visible: control.showArrow
-            color: control.pressed ? page.buttonPressedText : page.buttonText
-            font: page.controlFont
+            color: control.pressed ? control.page.buttonPressedText : control.page.buttonText
+            font: control.page.controlFont
             text: "\u25be"
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
@@ -103,14 +105,14 @@ Item {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: page.toolbarHeight
+        height: toolbar.page.toolbarHeight
         clip: true
 
         Rectangle {
             anchors.fill: parent
-            color: page.headerBackground
+            color: toolbar.page.headerBackground
             border.width: 1
-            border.color: page.headerOutline
+            border.color: toolbar.page.headerOutline
         }
 
         ToolbarButton {
@@ -118,18 +120,18 @@ Item {
             page: toolbar.page
 
             objectName: "eventListChunk"
-            x: page.headerHorizontalPadding
+            x: chunkButton.page.headerHorizontalPadding
             y: 0
             width: Math.max(0, Math.min(implicitWidth, Math.max(0, toolbar.width * 0.35)))
-            label: page.controller && page.controller.chunk >= 0
-                   && page.controller.chunk < page.controller.chunkLabels.length
-                   ? page.controller.chunkLabels[page.controller.chunk] : ""
+            label: chunkButton.page.controller && chunkButton.page.controller.chunk >= 0
+                   && chunkButton.page.controller.chunk < chunkButton.page.controller.chunkLabels.length
+                   ? chunkButton.page.controller.chunkLabels[chunkButton.page.controller.chunk] : ""
             toolTip: qsTr("The MIDI file chunk shown (follows the selected track)")
             showArrow: true
-            enabled: page.controller && page.controller.visible
+            enabled: chunkButton.page.controller && chunkButton.page.controller.visible
             onTriggered: {
-                const position = mapToItem(page, width / 2, height)
-                page.controller.openChunkMenu(position.x, position.y)
+                const position = mapToItem(chunkButton.page, width / 2, height)
+                chunkButton.page.controller.openChunkMenu(position.x, position.y)
             }
         }
 
@@ -138,16 +140,16 @@ Item {
             page: toolbar.page
 
             objectName: "eventListFilter"
-            x: chunkButton.x + chunkButton.width + page.headerHorizontalPadding
+            x: chunkButton.x + chunkButton.width + filterButton.page.headerHorizontalPadding
             y: 0
             width: Math.max(0, Math.min(implicitWidth, Math.max(0, toolbar.width * 0.3)))
-            label: page.controller ? page.controller.filterSummary : ""
+            label: filterButton.page.controller ? filterButton.page.controller.filterSummary : ""
             toolTip: qsTr("Which event types are shown")
             showArrow: true
-            enabled: page.controller && page.controller.visible
+            enabled: filterButton.page.controller && filterButton.page.controller.visible
             onTriggered: {
-                const position = mapToItem(page, width / 2, height)
-                page.controller.openFilterMenu(position.x, position.y)
+                const position = mapToItem(filterButton.page, width / 2, height)
+                filterButton.page.controller.openFilterMenu(position.x, position.y)
             }
         }
 
@@ -156,12 +158,12 @@ Item {
             page: toolbar.page
 
             objectName: "eventListAdd"
-            x: filterButton.x + filterButton.width + page.headerHorizontalPadding
+            x: filterButton.x + filterButton.width + addButton.page.headerHorizontalPadding
             y: 0
             label: qsTr("+ Add")
             toolTip: qsTr("Insert an event at the edit cursor (a copy of the current row, if any)")
-            enabled: page.controller && page.controller.visible
-            onTriggered: page.controller.addEvent()
+            enabled: addButton.page.controller && addButton.page.controller.visible
+            onTriggered: addButton.page.controller.addEvent()
         }
 
         ToolbarButton {
@@ -169,26 +171,26 @@ Item {
             page: toolbar.page
 
             objectName: "eventListRemove"
-            x: addButton.x + addButton.width + page.headerHorizontalPadding
+            x: addButton.x + addButton.width + removeButton.page.headerHorizontalPadding
             y: 0
             label: qsTr("Delete")
             toolTip: qsTr("Delete the selected events (Del)")
-            enabled: page.controller && page.controller.visible
-            onTriggered: page.controller.deleteSelected()
+            enabled: removeButton.page.controller && removeButton.page.controller.visible
+            onTriggered: removeButton.page.controller.deleteSelected()
         }
 
         Text {
             id: countLabel
 
             anchors.left: removeButton.right
-            anchors.leftMargin: page.headerHorizontalPadding
+            anchors.leftMargin: toolbar.page.headerHorizontalPadding
             anchors.right: parent.right
-            anchors.rightMargin: page.headerHorizontalPadding
+            anchors.rightMargin: toolbar.page.headerHorizontalPadding
             anchors.verticalCenter: parent.verticalCenter
             clip: true
-            color: page.headerText
-            font: page.controlFont
-            text: page.controller ? page.controller.countText : ""
+            color: toolbar.page.headerText
+            font: toolbar.page.controlFont
+            text: toolbar.page.controller ? toolbar.page.controller.countText : ""
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
             elide: Text.ElideLeft
@@ -196,7 +198,7 @@ Item {
             horizontalAlignment: Text.AlignRight
             verticalAlignment: Text.AlignVCenter
         }
-    readonly property var toolTipControl: chunkButton.hovered ? chunkButton
+    readonly property ToolbarButton toolTipControl: chunkButton.hovered ? chunkButton
                                           : filterButton.hovered ? filterButton
                                           : addButton.hovered ? addButton
                                           : removeButton.hovered ? removeButton : null
@@ -204,20 +206,20 @@ Item {
     readonly property rect toolTipAnchorRect: {
         if (!toolTipControl)
             return Qt.rect(0, 0, 0, 0)
-        const topLeft = toolTipControl.mapToItem(page, 0, 0)
+        const topLeft = toolTipControl.mapToItem(toolbar.page, 0, 0)
         return Qt.rect(topLeft.x, topLeft.y, toolTipControl.width, toolTipControl.height)
     }
 
     RulerToolTip {
-        parent: page
-        overlayRoot: page
+        parent: toolbar.page
+        overlayRoot: toolbar.page
         anchorRect: toolbar.toolTipAnchorRect
         toolTipText: toolbar.toolTipText
-        visibleForControl: !!toolbar.toolTipControl && (!page.controller || !page.controller.menuOpen)
-        controlFont: page.controlFont
-        backgroundColor: page.toolTipBackground
-        textColor: page.toolTipTextColor
-        outlineColor: page.toolTipOutline
+        visibleForControl: !!toolbar.toolTipControl && (!toolbar.page.controller || !toolbar.page.controller.menuOpen)
+        controlFont: toolbar.page.controlFont
+        backgroundColor: toolbar.page.toolTipBackground
+        textColor: toolbar.page.toolTipTextColor
+        outlineColor: toolbar.page.toolTipOutline
         z: 20
     }
 }

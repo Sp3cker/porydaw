@@ -189,10 +189,8 @@ public final class VoiceListController: QmlUncreatable {
     /// Last list handed to setVoicegroupChoices (native m_vgChoices).
     @QtIgnored var knownArgs: [String] = []
 
-    /// Project-scoped catalogs the bank view cannot carry, injected by the
-    /// owner exactly like setSource's symbol lists. The sample list feeds
-    /// blank-slot templates; the keysplit table map classifies picker
-    /// auditions; the synth symbol set classifies synth rows.
+    /// Project-scoped catalogs are injected by ApplicationSession, which owns writes.
+    /// QML observes the published synth and drumkit choices without mutating them.
     @QtIgnored public var sampleChoices: [String] = [] {
         didSet { if sampleChoices != oldValue { rederiveRows() } }
     }
@@ -201,14 +199,14 @@ public final class VoiceListController: QmlUncreatable {
         didSet { if synthSymbols != oldValue { rederiveRows() } }
     }
     @QtIgnored public var synthDefinitions: [String: VgSynthDesc] = [:]
-    @QtIgnored public var synthChoices: [String] = []
+    public var synthChoices: [String] = []
     @QtTracked public var canMintSynths = false
     @QtIgnored public var pickerSampleInfo: [String: PickerSampleInfo] = [:]
     @QtTracked public var pickerInfoRevision = 0
     @QtIgnored public var onPickerSampleInfoRequested: (() -> Void)?
     @QtIgnored public var adsrDefaults = VoiceListAdsrDefaults()
     @QtIgnored public var waveSymbols: [String] = []
-    @QtIgnored public var drumkitSymbols: [String] = []
+    public var drumkitSymbols: [String] = []
 
     public func sampleSymbols() -> [String] {
         sampleChoices.filter { !$0.contains("Phoneme") }
@@ -221,8 +219,6 @@ public final class VoiceListController: QmlUncreatable {
     }
     public func waveChoices() -> [String] { waveSymbols }
     public func keysplitPickerSymbols() -> [String] { keysplitTables.keys.sorted() }
-    public func drumkitChoices() -> [String] { drumkitSymbols }
-    public func synthCatalogChoices() -> [String] { synthChoices }
 
     public func requestPickerSampleInfo() {
         onPickerSampleInfoRequested?()

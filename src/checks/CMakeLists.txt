@@ -571,6 +571,7 @@ if(APPLE)
         editorqml/PolyphonyShellProbe.swift
         editorqml/WavFileProbe.swift
         editorqml/SampleBinProbe.swift
+        editorqml/BridgeValueTypeProbe.swift
         editorqml/TabsDrawerProbe.swift
         keyboard/KeybindingRegistryChecks.swift
         editorqml/ImportWizardProbe.swift

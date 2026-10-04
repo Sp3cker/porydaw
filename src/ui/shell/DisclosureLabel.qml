@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Porydaw.Icons
 
@@ -7,7 +9,7 @@ Row {
     id: root
     required property var control
     required property bool expanded
-    spacing: Math.round(control.font.pixelSize / 3)
+    spacing: Math.round(root.control.font.pixelSize / 3)
 
     AppIcon {
         anchors.verticalCenter: parent.verticalCenter

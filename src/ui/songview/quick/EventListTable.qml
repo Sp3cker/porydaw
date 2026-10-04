@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Qt.labs.qmlmodels
 import PorydawApp
@@ -14,36 +16,46 @@ Item {
 
 
 
-    function boundedContentX(value) {
+    function boundedContentX(value: real): real {
         const maximum = Math.max(0, eventTable.contentWidth - eventTable.width)
         return Math.max(0, Math.min(maximum, value))
     }
 
-    function boundedContentY(value) {
+    function boundedContentY(value: real): real {
         const maximum = Math.max(0, eventTable.contentHeight - eventTable.height)
         return Math.max(0, Math.min(maximum, value))
     }
-    function requestTableLayout() {
-        if (tableLayoutPending)
+    function requestTableLayout(): void {
+        if (table.tableLayoutPending)
             return
-        tableLayoutPending = true
-        Qt.callLater(function() {
-            tableLayoutPending = false
-            eventTable.forceLayout()
-        })
+        table.tableLayoutPending = true
+        Qt.callLater(table.applyTableLayout)
+    }
+
+    function applyTableLayout(): void {
+        table.tableLayoutPending = false
+        eventTable.forceLayout()
+    }
+
+    function widthForColumn(column: int): real {
+        return table.page.columnWidth(column)
+    }
+
+    function heightForRow(row: int): real {
+        return table.page.rowHeight
     }
     // QListModel is one-dimensional; the existing TableView remains the
     // seven-column renderer while Swift owns the cell values and row policy.
-    function publishTableRows() {
+    function publishTableRows(): void {
         tableRows.clear()
-        for (let row = 0; row < controller.rowCount; ++row)
+        for (let row = 0; row < table.controller.rowCount; ++row)
             tableRows.appendRow({c0: row, c1: row, c2: row, c3: row,
                                  c4: row, c5: row, c6: row})
     }
 
     Connections {
-        target: page.controller
-        function onTableRevisionChanged() { table.publishTableRows() }
+        target: table.page.controller
+        function onTableRevisionChanged(): void { table.publishTableRows() }
     }
 
     Item {
@@ -59,21 +71,21 @@ Item {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: page.headerHeight
+        height: table.page.headerHeight
         clip: true
 
         Rectangle {
-            width: page.rowHeaderWidth
+            width: table.page.rowHeaderWidth
             height: parent.height
-            color: page.headerBackground
+            color: table.page.headerBackground
             border.width: 1
-            border.color: page.headerOutline
+            border.color: table.page.headerOutline
         }
 
         Item {
             id: headerViewport
 
-            x: page.rowHeaderWidth
+            x: table.page.rowHeaderWidth
             width: eventTable.width
             height: parent.height
             clip: true
@@ -86,39 +98,40 @@ Item {
                 height: parent.height
 
                 Repeater {
-                    model: page.columnCount
+                    model: table.page.columnCount
 
                     delegate: Item {
                         id: section
+                        required property int index
 
-                        property int sectionColumn: index
-                        x: page.columnOffset(sectionColumn)
-                        width: page.columnWidth(sectionColumn)
+                        property int sectionColumn: section.index
+                        x: table.page.columnOffset(sectionColumn)
+                        width: table.page.columnWidth(sectionColumn)
                         height: headerContent.height
 
                         Rectangle {
                             anchors.fill: parent
-                            color: page.headerBackground
+                            color: table.page.headerBackground
                             border.width: 1
-                            border.color: page.headerOutline
+                            border.color: table.page.headerOutline
                         }
 
                         Text {
                             objectName: "eventListColumnHeaderLabel" + section.sectionColumn
                             anchors.fill: parent
-                            anchors.leftMargin: page.headerHorizontalPadding
-                            anchors.rightMargin: page.headerHorizontalPadding
+                            anchors.leftMargin: table.page.headerHorizontalPadding
+                            anchors.rightMargin: table.page.headerHorizontalPadding
                             clip: true
-                            color: page.headerText
-                            font: page.headerFont
-                            text: page.headerLabels.length > section.sectionColumn
-                                  ? page.headerLabels[section.sectionColumn] : ""
+                            color: table.page.headerText
+                            font: table.page.headerFont
+                            text: table.page.headerLabels.length > section.sectionColumn
+                                  ? table.page.headerLabels[section.sectionColumn] : ""
                             textFormat: Text.PlainText
                             renderType: Text.NativeRendering
                             elide: Text.ElideRight
                             maximumLineCount: 1
-                            horizontalAlignment: page.controller
-                                                 && (page.controller.headerAlignment(
+                            horizontalAlignment: table.page.controller
+                                                 && (table.page.controller.headerAlignment(
                                                          section.sectionColumn)
                                                      & Text.AlignRight)
                                                  ? Text.AlignRight : Text.AlignLeft
@@ -133,7 +146,7 @@ Item {
                             anchors.top: parent.top
                             anchors.bottom: parent.bottom
                             width: 8
-                            visible: section.sectionColumn < page.resizableColumnCount
+                            visible: section.sectionColumn < table.page.resizableColumnCount
                             enabled: visible
                             cursorShape: Qt.SplitHCursor
                             z: 2
@@ -141,22 +154,22 @@ Item {
                             property real pressWidth: 0
 
                             onPressed: (mouse) => {
-                                pressPageX = mapToItem(page, mouse.x, mouse.y).x
-                                pressWidth = page.persistedColumnWidth(section.sectionColumn)
-                                page.controller.setPointerDown(true)
+                                pressPageX = mapToItem(table.page, mouse.x, mouse.y).x
+                                pressWidth = table.page.persistedColumnWidth(section.sectionColumn)
+                                table.page.controller.setPointerDown(true)
                             }
                             onPositionChanged: (mouse) => {
                                 if (!pressed)
                                     return
-                                const pageX = mapToItem(page, mouse.x, mouse.y).x
-                                page.controller.resizeColumn(section.sectionColumn,
-                                                             Math.max(page.minimumColumnWidth(
+                                const pageX = mapToItem(table.page, mouse.x, mouse.y).x
+                                table.page.controller.resizeColumn(section.sectionColumn,
+                                                             Math.max(table.page.minimumColumnWidth(
                                                                           section.sectionColumn),
                                                                       pressWidth + pageX - pressPageX))
                                 table.requestTableLayout()
                             }
-                            onReleased: page.resetPointerState()
-                            onCanceled: page.resetPointerState()
+                            onReleased: table.page.resetPointerState()
+                            onCanceled: table.page.resetPointerState()
                         }
                     }
                 }
@@ -164,12 +177,12 @@ Item {
         }
 
         Rectangle {
-            x: page.rowHeaderWidth + eventTable.width
-            width: page.scrollbarBreadth
+            x: table.page.rowHeaderWidth + eventTable.width
+            width: table.page.scrollbarBreadth
             height: parent.height
-            color: page.headerBackground
+            color: table.page.headerBackground
             border.width: 1
-            border.color: page.headerOutline
+            border.color: table.page.headerOutline
         }
     }
     Item {
@@ -184,31 +197,33 @@ Item {
         Item {
             id: rowHeader
             readonly property int firstVisibleRow: Math.max(
-                0, Math.floor(eventTable.contentY / page.rowHeight))
+                0, Math.floor(eventTable.contentY / table.page.rowHeight))
             readonly property int visibleRowCount: Math.max(0, Math.min(
                 eventTable.rows - firstVisibleRow,
-                Math.ceil((eventTable.contentY + eventTable.height) / page.rowHeight)
+                Math.ceil((eventTable.contentY + eventTable.height) / table.page.rowHeight)
                     - firstVisibleRow))
 
-            width: page.rowHeaderWidth
+            width: table.page.rowHeaderWidth
             height: eventTable.height
             clip: true
 
             Rectangle {
                 anchors.fill: parent
-                color: page.headerBackground
+                color: table.page.headerBackground
                 border.width: 1
-                border.color: page.headerOutline
+                border.color: table.page.headerOutline
             }
 
             Repeater {
                 model: rowHeader.visibleRowCount
 
                 delegate: Item {
-                    property int headerRow: rowHeader.firstVisibleRow + index
-                    y: headerRow * page.rowHeight - eventTable.contentY
+                    id: rowHeaderDelegate
+                    required property int index
+                    property int headerRow: rowHeader.firstVisibleRow + rowHeaderDelegate.index
+                    y: rowHeaderDelegate.headerRow * table.page.rowHeight - eventTable.contentY
                     width: rowHeader.width
-                    height: page.rowHeight
+                    height: table.page.rowHeight
 
                     HoverHint {
                         source: parent
@@ -217,21 +232,21 @@ Item {
 
                     Rectangle {
                         anchors.fill: parent
-                        color: page.rowIsSelected(parent.headerRow) ? page.tableSelectedBackground
-                                                                     : parent.headerRow % 2
-                                                                       ? page.tableAlternateBackground
-                                                                       : page.tableBackground
+                        color: table.page.rowIsSelected(rowHeaderDelegate.headerRow) ? table.page.tableSelectedBackground
+                                                                     : rowHeaderDelegate.headerRow % 2
+                                                                       ? table.page.tableAlternateBackground
+                                                                       : table.page.tableBackground
                     }
 
                     Text {
                         objectName: "eventListRowHeaderLabel"
                         anchors.fill: parent
-                        anchors.leftMargin: page.headerHorizontalPadding
-                        anchors.rightMargin: page.headerHorizontalPadding
-                        color: page.rowIsSelected(parent.headerRow) ? page.tableSelectedText
-                                                                     : page.headerText
-                        font: page.headerFont
-                        text: parent.headerRow + 1
+                        anchors.leftMargin: table.page.headerHorizontalPadding
+                        anchors.rightMargin: table.page.headerHorizontalPadding
+                        color: table.page.rowIsSelected(rowHeaderDelegate.headerRow) ? table.page.tableSelectedText
+                                                                     : table.page.headerText
+                        font: table.page.headerFont
+                        text: rowHeaderDelegate.headerRow + 1
                         textFormat: Text.PlainText
                         renderType: Text.NativeRendering
                         horizontalAlignment: Text.AlignRight
@@ -243,8 +258,8 @@ Item {
                         acceptedButtons: Qt.LeftButton
                         cursorShape: Qt.ArrowCursor
                         onClicked: (mouse) => {
-                            page.selectRow(parent.headerRow, mouse.modifiers)
-                            page.navigationFocusRequested()
+                            table.page.selectRow(rowHeaderDelegate.headerRow, mouse.modifiers)
+                            table.page.navigationFocusRequested()
                         }
                     }
                 }
@@ -255,7 +270,7 @@ Item {
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
                 width: 1
-                color: page.headerOutline
+                color: table.page.headerOutline
             }
         }
 
@@ -265,8 +280,8 @@ Item {
             objectName: "eventListTable"
             anchors.left: rowHeader.right
             anchors.right: parent.right
-            anchors.rightMargin: page.scrollbarBreadth
-            height: Math.max(0, parent.height - page.scrollbarBreadth)
+            anchors.rightMargin: table.page.scrollbarBreadth
+            height: Math.max(0, parent.height - table.page.scrollbarBreadth)
             clip: true
             model: TableModel {
                 id: tableRows
@@ -278,30 +293,27 @@ Item {
                 TableModelColumn { display: "c5" }
                 TableModelColumn { display: "c6" }
             }
-            reuseItems: !page.editing
-            interactive: !page.draggingRows
+            reuseItems: !table.page.editing
+            interactive: !table.page.draggingRows
             boundsBehavior: Flickable.StopAtBounds
             keyNavigationEnabled: false
             pointerNavigationEnabled: false
             columnSpacing: 0
             rowSpacing: 0
-            columnWidthProvider: function(column) {
-                return page.columnWidth(column)
-            }
-            rowHeightProvider: function(row) {
-                return page.rowHeight
-            }
+            columnWidthProvider: table.widthForColumn
+            rowHeightProvider: table.heightForRow
             delegate: EventListCell {
+                id: eventCellDelegate
                 page: table.page
                 tableOwner: table
                 controller: table.controller
-                display: page.controller.cellDisplay(row, column)
-                edit: page.controller.cellEdit(row, column)
-                tickString: page.controller.tickString(row)
+                display: eventCellDelegate.page.controller.cellDisplay(row, column)
+                edit: eventCellDelegate.page.controller.cellEdit(row, column)
+                tickString: eventCellDelegate.page.controller.tickString(row)
                 cellFont: column === 0 || (column >= 2 && column <= 4)
-                          ? page.tableFont : page.bodyFont
-                alignment: page.controller.headerAlignment(column)
-                rowKind: page.controller.rowKind(row)
+                          ? eventCellDelegate.page.tableFont : eventCellDelegate.page.bodyFont
+                alignment: eventCellDelegate.page.controller.headerAlignment(column)
+                rowKind: eventCellDelegate.page.controller.rowKind(row)
             }
 
             onWidthChanged: table.requestTableLayout()
@@ -312,11 +324,11 @@ Item {
 
             objectName: "eventListDropIndicator"
             x: eventTable.x
-            y: eventTable.y + page.dragDropGap * page.rowHeight - eventTable.contentY - height / 2
+            y: eventTable.y + table.page.dragDropGap * table.page.rowHeight - eventTable.contentY - height / 2
             width: eventTable.width
-            height: Math.max(2, Math.ceil(page.rowHeight / 8))
-            visible: page.draggingRows && page.dragDropGap >= 0
-            color: page.reorderIndicator
+            height: Math.max(2, Math.ceil(table.page.rowHeight / 8))
+            visible: table.page.draggingRows && table.page.dragDropGap >= 0
+            color: table.page.reorderIndicator
             z: 4
         }
 
@@ -326,18 +338,18 @@ Item {
             objectName: "eventListVerticalScrollBar"
             x: eventTable.x + eventTable.width
             y: eventTable.y
-            width: page.scrollbarBreadth
+            width: table.page.scrollbarBreadth
             height: eventTable.height
             orientation: Qt.Vertical
             minimum: 0
             maximum: Math.max(0, eventTable.contentHeight - eventTable.height)
             value: eventTable.contentY
             pageStep: eventTable.height
-            singleStep: page.rowHeight
-            minimumThumbLength: page.rowHeight
-            handleColor: page.scrollbarHandle
-            handleHoverColor: page.scrollbarHandleHover
-            externalVisible: page.controller && page.controller.visible
+            singleStep: table.page.rowHeight
+            minimumThumbLength: table.page.rowHeight
+            handleColor: table.page.scrollbarHandle
+            handleHoverColor: table.page.scrollbarHandleHover
+            externalVisible: table.page.controller && table.page.controller.visible
             accessibleName: qsTr("Event list")
             thumbObjectName: "eventListVerticalScrollThumb"
             z: 5
@@ -348,7 +360,7 @@ Item {
                                    || (pixelY === 0 && Math.abs(angleX) > Math.abs(angleY))
                 if (horizontal)
                     return
-                const delta = pixelY !== 0 ? pixelY : angleY / 120 * page.rowHeight
+                const delta = pixelY !== 0 ? pixelY : angleY / 120 * table.page.rowHeight
                 if (delta !== 0)
                     eventTable.contentY = table.boundedContentY(eventTable.contentY
                                                                + (inverted ? delta : -delta))
@@ -362,17 +374,17 @@ Item {
             x: eventTable.x
             y: eventTable.y + eventTable.height
             width: eventTable.width
-            height: page.scrollbarBreadth
+            height: table.page.scrollbarBreadth
             orientation: Qt.Horizontal
             minimum: 0
             maximum: Math.max(0, eventTable.contentWidth - eventTable.width)
             value: eventTable.contentX
             pageStep: eventTable.width
-            singleStep: Math.max(1, page.persistedColumnWidth(0))
-            minimumThumbLength: page.scrollbarBreadth
-            handleColor: page.scrollbarHandle
-            handleHoverColor: page.scrollbarHandleHover
-            externalVisible: page.controller && page.controller.visible
+            singleStep: Math.max(1, table.page.persistedColumnWidth(0))
+            minimumThumbLength: table.page.scrollbarBreadth
+            handleColor: table.page.scrollbarHandle
+            handleHoverColor: table.page.scrollbarHandleHover
+            externalVisible: table.page.controller && table.page.controller.visible
             accessibleName: qsTr("Event list columns")
             thumbObjectName: "eventListHorizontalScrollThumb"
             z: 5
@@ -396,11 +408,11 @@ Item {
             objectName: "eventListCorner"
             x: eventTable.x + eventTable.width
             y: eventTable.y + eventTable.height
-            width: page.scrollbarBreadth
-            height: page.scrollbarBreadth
-            color: page.headerBackground
+            width: table.page.scrollbarBreadth
+            height: table.page.scrollbarBreadth
+            color: table.page.headerBackground
             border.width: 1
-            border.color: page.headerOutline
+            border.color: table.page.headerOutline
 
             HoverHint {
                 source: tableCorner

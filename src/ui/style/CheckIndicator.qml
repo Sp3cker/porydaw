@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls.Fusion as Fusion
 import Porydaw.Icons
@@ -19,7 +21,7 @@ Rectangle {
     Rectangle {
         x: 1
         y: 1
-        width: parent.width - 2
+        width: indicator.width - 2
         height: 1
         color: Fusion.Fusion.topShadow
         visible: indicator.control.enabled && !indicator.control.down
@@ -36,7 +38,7 @@ Rectangle {
 
     Rectangle {
         anchors.fill: parent
-        anchors.margins: Math.round(parent.width / 4)
+        anchors.margins: Math.round(indicator.width / 4)
         color: indicator.control.palette.text
         visible: indicator.control.checkState === Qt.PartiallyChecked
     }

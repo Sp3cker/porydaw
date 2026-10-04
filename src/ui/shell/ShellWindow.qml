@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import PorydawApp
 import Porydaw.Ui
@@ -103,7 +105,7 @@ ThemedWindow {
     Connections {
         target: root
         enabled: !shell.contentRequested
-        function onFrameSwapped() { shell.firstFrameRendered() }
+        function onFrameSwapped(): void { shell.firstFrameRendered() }
     }
 
     // This separate document is not parsed or instantiated before the window presents.
@@ -118,7 +120,7 @@ ThemedWindow {
         Component.onCompleted: setSource(Qt.resolvedUrl("ShellContent.qml"), {root: root})
         onLoaded: {
             shell.contentReady()
-            item.loadWorkspace()
+            applicationContent.item.loadWorkspace()
         }
         onItemChanged: acknowledgeRemoval()
         onStatusChanged: {
@@ -130,8 +132,9 @@ ThemedWindow {
         }
         onActiveChanged: acknowledgeRemoval()
 
-        function acknowledgeRemoval() {
-            if (!shell.sceneActive && !active && !item && status === Loader.Null)
+        function acknowledgeRemoval(): void {
+            if (!shell.sceneActive && !applicationContent.active && !applicationContent.item
+                    && applicationContent.status === Loader.Null)
                 shell.sceneDestroyed()
         }
     }
@@ -139,8 +142,8 @@ ThemedWindow {
     // Close remains operational even when deferred content has never existed.
     Connections {
         target: shell.session
-        function onAllTabsClosed() { shell.allTabsClosed() }
-        function onCloseCancelled() { shell.closeCancelled() }
+        function onAllTabsClosed(): void { shell.allTabsClosed() }
+        function onCloseCancelled(): void { shell.closeCancelled() }
     }
 
     onActiveChanged: {
@@ -151,9 +154,9 @@ ThemedWindow {
         if (!visible)
             shell.session.cancelGridInput(2)
     }
-    function trackNormalFrame() {
-        if (visibility !== Window.Maximized && width > 0 && height > 0)
-            normalFrame = { x: x, y: y, width: width, height: height }
+    function trackNormalFrame(): void {
+        if (root.visibility !== Window.Maximized && root.width > 0 && root.height > 0)
+            root.normalFrame = Qt.rect(root.x, root.y, root.width, root.height)
     }
     onXChanged: trackNormalFrame()
     onYChanged: trackNormalFrame()
@@ -168,20 +171,18 @@ ThemedWindow {
     }
     Connections {
         target: shell
-        function onCloseReadyChanged() {
+        function onCloseReadyChanged(): void {
             if (!shell.closeReady)
                 return
             if (!root.sessionStatePersisted) {
-                const frame = root.normalFrame || {
-                    x: root.x, y: root.y, width: root.width, height: root.height
-                }
+                const frame = root.normalFrame || Qt.rect(root.x, root.y, root.width, root.height)
                 shell.persistSessionState(frame.x, frame.y, frame.width, frame.height,
                                           root.visibility === Window.Maximized, shell.polyphonyVisible)
                 root.sessionStatePersisted = true
             }
             root.close()
         }
-        function onSceneActiveChanged() {
+        function onSceneActiveChanged(): void {
             ++root.actionRevision
             applicationContent.acknowledgeRemoval()
         }

@@ -1,5 +1,7 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
 import PorydawApp
@@ -11,6 +13,10 @@ Dialog {
     required property real baseFontPx
     required property var layoutSpaces
     readonly property bool hasCopySource: controller.newVoicegroupCopyLabel.length > 0
+    function canCreate(): bool {
+        return dialog.controller.isValidVoicegroupName(nameField.text)
+            && dialog.controller.newVoicegroupNameAvailable(nameField.text)
+    }
     parent: Overlay.overlay
     anchors.centerIn: parent
     modal: true
@@ -34,10 +40,7 @@ Dialog {
         const ok = dialog.footer.standardButton(Dialog.Ok)
         if (ok) {
             ok.text = qsTr("Create")
-            ok.enabled = Qt.binding(function() {
-                return dialog.controller.isValidVoicegroupName(nameField.text)
-                    && dialog.controller.newVoicegroupNameAvailable(nameField.text)
-            })
+            ok.enabled = Qt.binding(dialog.canCreate)
         }
     }
     contentItem: ColumnLayout {
@@ -69,10 +72,11 @@ Dialog {
             id: sourceCombo
             objectName: "voicegroupNewSource"
             Layout.fillWidth: true
-            model: dialog.hasCopySource
+            readonly property list<string> choices: dialog.hasCopySource
                 ? [qsTr("Copy of %1").arg(dialog.controller.newVoicegroupCopyLabel),
                    qsTr("Empty (dummy template)")]
                 : [qsTr("Empty (dummy template)")]
+            model: sourceCombo.choices
         }
     }
 }

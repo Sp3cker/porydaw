@@ -1,7 +1,8 @@
 // Original two-column parameter selector, bound directly to the Swift page.
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls as Controls
+import PorydawStyle as Controls
+import QtQuick.Templates as T
 import QtQuick.Layouts
 import Porydaw.Ui
 
@@ -34,9 +35,17 @@ Item {
                 Controls.TabButton {
                     id: tab
                     required property var model
-                    readonly property bool tempoParameter: model.tempo
-                    objectName: "automationParameterTab" + model.index
-                    text: model.label
+                    required property int index
+                    required property string label
+                    required property bool tempo
+                    required property bool active
+                    required property bool available
+                    required property int eventCount
+                    required property bool ghosted
+                    required property bool included
+                    readonly property bool tempoParameter: tempo
+                    objectName: "automationParameterTab" + index
+                    text: label
                     font: Qt.font(root.pageModel.captionFont)
                     padding: root.inset
                     rightPadding: tempoParameter
@@ -53,33 +62,33 @@ Item {
                     focusPolicy: Qt.StrongFocus
                     hoverEnabled: true
                     checkable: false
-                    checked: model.active
-                    enabled: model.available
+                    checked: active
+                    enabled: available
                     Accessible.name: tab.text
                     down: pressArea.pressed
-                    function activate() { root.pageModel.activateParameter(model.index) }
-                    function ensureVisible() {
+                    function activate(): void { root.pageModel.activateParameter(tab.index) }
+                    function ensureVisible(): void {
                         if (scroller.moving) return
-                        if (y < scroller.contentY) scroller.contentY = y
-                        else if (y + height > scroller.contentY + scroller.height)
-                            scroller.contentY = y + height - scroller.height
+                        if (tab.y < scroller.contentY) scroller.contentY = tab.y
+                        else if (tab.y + tab.height > scroller.contentY + scroller.height)
+                            scroller.contentY = tab.y + tab.height - scroller.height
                     }
                     onCheckedChanged: if (checked) ensureVisible()
                     onActiveFocusChanged: if (activeFocus) ensureVisible()
                     onClicked: activate()
-                    Controls.ContextMenu.onRequested: position => {
+                    T.ContextMenu.onRequested: position => {
                         const p = tab.mapToItem(root.sceneRoot, position.x, position.y)
-                        root.pageModel.openParameterMenu(tab.model.index, p.x, p.y)
+                        root.pageModel.openParameterMenu(tab.index, p.x, p.y)
                     }
                     MouseArea {
                         id: pressArea
-                        objectName: "automationParameterTabPress" + tab.model.index
+                        objectName: "automationParameterTabPress" + tab.index
                         anchors.fill: parent
                         acceptedButtons: Qt.LeftButton
                         onPressed: mouse => {
                             tab.forceActiveFocus()
                             if (mouse.modifiers & Qt.ControlModifier)
-                                root.pageModel.toggleGhostParameter(tab.model.index)
+                                root.pageModel.toggleGhostParameter(tab.index)
                             else tab.activate()
                         }
                     }
@@ -148,7 +157,7 @@ Item {
                     contentItem: RowLayout {
                         spacing: root.inset
                         Rectangle {
-                            opacity: tab.model.eventCount > 0 ? 1 : 0
+                            opacity: tab.eventCount > 0 ? 1 : 0
                             Layout.preferredWidth: root.pageModel.pipExtent
                             Layout.preferredHeight: width
                             radius: width / 2
@@ -167,8 +176,8 @@ Item {
                         }
                         Text {
                             objectName: "automationParameterEventCount"
-                            opacity: tab.checked && tab.model.eventCount > 0 ? 1 : 0
-                            text: tab.model.eventCount === 1 ? qsTr("1 event") : qsTr("%1 events").arg(tab.model.eventCount)
+                            opacity: tab.checked && tab.eventCount > 0 ? 1 : 0
+                            text: tab.eventCount === 1 ? qsTr("1 event") : qsTr("%1 events").arg(tab.eventCount)
                             textFormat: Text.PlainText
                             font: Qt.font(root.pageModel.minimumFont)
                             color: tab.checked ? root.pagePalette.buttonPressedText : root.pagePalette.windowText
@@ -189,7 +198,7 @@ Item {
                         border.width: root.stroke
                         border.color: root.pagePalette.automationTabOutline
                         Rectangle {
-                            visible: tab.model.ghosted
+                            visible: tab.ghosted
                             anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
                             anchors.margins: root.stroke
                             height: root.stroke
@@ -197,7 +206,7 @@ Item {
                         }
                         Rectangle {
                             objectName: "automationParameterInclusionBar"
-                            visible: tab.model.included && !tab.checked
+                            visible: tab.included && !tab.checked
                             anchors.top: parent.top; anchors.right: parent.right; anchors.bottom: parent.bottom
                             anchors.margins: root.stroke
                             width: root.pageModel.pipExtent
@@ -213,8 +222,8 @@ Item {
                     }
                     Accessible.selected: tab.checked
                     Accessible.description: (tab.tempoParameter ? qsTr("Song-global tempo parameter") : qsTr("Track automation parameter"))
-                        + (tab.model.included ? qsTr("; included in shared selection") : qsTr("; not in shared selection"))
-                        + (tab.model.ghosted ? qsTr("; shown as ghost nodes") : "")
+                        + (tab.included ? qsTr("; included in shared selection") : qsTr("; not in shared selection"))
+                        + (tab.ghosted ? qsTr("; shown as ghost nodes") : "")
                 }
             }
         }
@@ -226,7 +235,7 @@ Item {
     }
     Connections {
         target: root.pageModel
-        function onTapTempoTapCountChanged() {
+        function onTapTempoTapCountChanged(): void {
             if (root.pageModel.tapTempoTapCount > 0) idle.restart()
             else idle.stop()
         }

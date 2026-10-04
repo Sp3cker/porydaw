@@ -1,5 +1,6 @@
+pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
 import PorydawApp
@@ -15,21 +16,22 @@ Dialog {
     modal: true
     focus: true
     closePolicy: Popup.CloseOnEscape
-    width: Math.min(parent.width - 2 * baseFontPx, 30 * baseFontPx)
-    title: controller.confirmation === "register" ? qsTr("Register Song") : qsTr("Delete Song")
+    width: Math.min(parent.width - 2 * dialog.baseFontPx, 30 * dialog.baseFontPx)
+    title: dialog.controller.confirmation === "register" ? qsTr("Register Song") : qsTr("Delete Song")
     standardButtons: Dialog.Ok | Dialog.Cancel
-    onAccepted: controller.acceptConfirmation(alsoVoicegroup.checked)
+    onAccepted: dialog.controller.acceptConfirmation(alsoVoicegroup.checked)
     onClosed: {
-        if (controller.confirmation.length > 0)
-            controller.cancelConfirmation()
+        if (dialog.controller.confirmation.length > 0)
+            dialog.controller.cancelConfirmation()
     }
-    onRejected: controller.cancelConfirmation()
+    onRejected: dialog.controller.cancelConfirmation()
+    function confirmationActionText(): string {
+        return dialog.controller.confirmation === "register" ? qsTr("Register") : qsTr("Delete")
+    }
     Component.onCompleted: {
-        const ok = dialog.footer.standardButton(Dialog.Ok)
+        const ok = (dialog.footer as DialogButtonBox).standardButton(Dialog.Ok)
         if (ok) {
-            ok.text = Qt.binding(function() {
-                return controller.confirmation === "register" ? qsTr("Register") : qsTr("Delete")
-            })
+            ok.text = Qt.binding(dialog.confirmationActionText)
         }
     }
     contentItem: ColumnLayout {

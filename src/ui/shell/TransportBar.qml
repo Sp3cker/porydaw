@@ -1,6 +1,8 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Controls as Controls
+import PorydawStyle as Controls
 import Porydaw.Ui
 import PorydawApp
 import Porydaw.Icons
@@ -14,7 +16,7 @@ Rectangle {
     required property QtObject colors
     required property int baseFontPx
     required property bool songAvailable
-    onSongAvailableChanged: { if (presenter) presenter.refresh() }
+    onSongAvailableChanged: { if (bar.presenter) bar.presenter.refresh() }
     required property var typography
     required property var layoutSpaces
     readonly property int toolExtent: Math.round(Math.min(baseFontPx, 12) * 2.75)
@@ -62,8 +64,8 @@ Rectangle {
         property real verticalPadding: 0
         property real dragThreshold: bar.inset
     }
-    function restoreOutputVolume() {
-        presenter.restoreOutputVolume()
+    function restoreOutputVolume(): void {
+        bar.presenter.restoreOutputVolume()
     }
 
     Timer {
@@ -223,9 +225,10 @@ Rectangle {
                 y: Math.round((transportScaleSlot.height - height) / 2)
                 width: transportScaleSlot.rootWidth
                 height: transportScaleSlot.comboHeight
-                model: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+                readonly property list<string> noteNames: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+                model: noteNames
                 currentIndex: bar.presenter.scaleRoot
-                onActivated: index => bar.presenter.setScaleRoot(index)
+                onActivated: function(index: int): void { bar.presenter.setScaleRoot(index) }
                 enabled: bar.songAvailable
                 activeFocusOnTab: false
                 font: Qt.font(bar.typography.body)
@@ -246,7 +249,7 @@ Rectangle {
                 height: transportScaleSlot.comboHeight
                 model: bar.presenter.scaleNames
                 currentIndex: bar.presenter.scaleType
-                onActivated: index => bar.presenter.setScaleType(index)
+                onActivated: function(index: int): void { bar.presenter.setScaleType(index) }
                 enabled: bar.songAvailable
                 activeFocusOnTab: false
                 font: Qt.font(bar.typography.body)
@@ -335,7 +338,7 @@ Rectangle {
             maximumValue: 127
             Layout.preferredWidth: Math.round(bar.baseFontPx * 6 + 18)
             Layout.preferredHeight: Math.round(bar.baseFontPx * 2.1)
-            onValueCommitted: committed => bar.presenter.setMasterVolume(committed)
+            onValueCommitted: function(committed: int): void { bar.presenter.setMasterVolume(committed) }
         }
         Text {
             objectName: "transportOutputVolumeCaption"
@@ -358,7 +361,7 @@ Rectangle {
             Accessible.description: qsTr("Does not change the song volume")
             Layout.preferredWidth: implicitWidth
             Layout.preferredHeight: implicitHeight
-            onValueCommitted: percent => bar.presenter.commitOutputVolume(percent)
+            onValueCommitted: function(percent: int): void { bar.presenter.commitOutputVolume(percent) }
         }
         Item {
             visible: !bar.outputFits

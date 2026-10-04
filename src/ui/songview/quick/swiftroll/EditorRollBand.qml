@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Porydaw.Ui
 
@@ -15,32 +17,32 @@ Item {
     property alias eventPage: eventPage
     property alias rulerInput: rulerModule.rulerInput
     objectName: "swiftRollBand"
-    width: root.width
-    height: Math.max(root.height - editorDrawer.height - otherEventsBand.height
-                     - root.scrollbarBreadth, 0)
+    width: rollBandContent.root.width
+    height: Math.max(rollBandContent.root.height - editorDrawer.height - otherEventsBand.height
+                     - rollBandContent.root.scrollbarBreadth, 0)
     z: 1
 
         TrackHeaderBand {
             id: trackHeaders
             x: 0
-            y: root.gridModel.rulerHeight
-            width: root.headersModel.trackHeaderWidth
+            y: rollBandContent.root.gridModel.rulerHeight
+            width: rollBandContent.root.headersModel.trackHeaderWidth
             height: Math.max(parent.height - y, 0)
-            onWidthChanged: root.configureViewport()
-            onHeightChanged: root.configureViewport()
+            onWidthChanged: rollBandContent.root.configureViewport()
+            onHeightChanged: rollBandContent.root.configureViewport()
             bandRect: Qt.rect(0, 0, width, height)
             bandVisible: rollBandContent.visible
-            model: root.headersModel
-            controlFont: Qt.font(root.headersModel.controlFont)
-            hintService: root.hintService
-            hintScopeAllowed: !root.hintScopeCovered
+            model: rollBandContent.root.headersModel
+            controlFont: Qt.font(rollBandContent.root.headersModel.controlFont)
+            hintService: rollBandContent.root.hintService
+            hintScopeAllowed: !rollBandContent.root.hintScopeCovered
         }
 
         // The roll owns a keyboard-local coordinate space beside the headers.
         Item {
             id: rollStack
-            x: root.headersModel.trackHeaderWidth
-            width: Math.max(parent.width - x - root.scrollbarBreadth, 0)
+            x: rollBandContent.root.headersModel.trackHeaderWidth
+            width: Math.max(parent.width - x - rollBandContent.root.scrollbarBreadth, 0)
             height: parent.height
             clip: true
 
@@ -48,9 +50,9 @@ Item {
             Item {
                 id: rollGutterSide
                 objectName: "timelineQuickRollGutter"
-                visible: !root.showEvents
-                y: root.gridModel.rulerHeight
-                width: root.gridModel.keyboardWidth
+                visible: !rollBandContent.root.showEvents
+                y: rollBandContent.root.gridModel.rulerHeight
+                width: rollBandContent.root.gridModel.keyboardWidth
                 height: Math.max(parent.height - y, 0)
                 clip: true
                 MouseArea {
@@ -60,30 +62,30 @@ Item {
                     acceptedButtons: Qt.LeftButton
                     preventStealing: true
                     onPressed: function(mouse) {
-                        root.gridModel.beginKeyboardPointer(mouse.y)
+                        rollBandContent.root.gridModel.beginKeyboardPointer(mouse.y)
                         mouse.accepted = true
                     }
                     onPositionChanged: function(mouse) {
                         if (pressed)
-                            root.gridModel.updateKeyboardPointer(mouse.y)
+                            rollBandContent.root.gridModel.updateKeyboardPointer(mouse.y)
                         else
-                            root.gridModel.updateHover(mouse.x, mouse.y, mouse.modifiers)
+                            rollBandContent.root.gridModel.updateHover(mouse.x, mouse.y, mouse.modifiers)
                     }
                     onReleased: function(mouse) {
-                        root.gridModel.endKeyboardPointer()
+                        rollBandContent.root.gridModel.endKeyboardPointer()
                         mouse.accepted = true
                     }
-                    onCanceled: root.gridModel.endKeyboardPointer()
+                    onCanceled: rollBandContent.root.gridModel.endKeyboardPointer()
                     onExited: {
                         if (!pressed)
-                            root.gridModel.clearKeyboardHover()
+                            rollBandContent.root.gridModel.clearKeyboardHover()
                     }
                     z: 10
                 }
                 HoverHint {
                     source: gutterInput
-                    hintService: root.hintService
-                    scopeAllowed: !root.hintScopeCovered
+                    hintService: rollBandContent.root.hintService
+                    scopeAllowed: !rollBandContent.root.hintScopeCovered
                     gestureOwning: gutterInput.pressed
                     profile: HintProfiles.RollGutter
                 }
@@ -91,7 +93,7 @@ Item {
                 WheelHandler {
                     acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
                     onWheel: (event) => {
-                        root.deliverWheel(event, true)
+                        rollBandContent.root.deliverWheel(event, true)
                         event.accepted = true
                     }
                 }
@@ -100,15 +102,15 @@ Item {
             Item {
                 id: rollPlot
                 objectName: "timelineQuickRollPlot"
-                visible: !root.showEvents
-                x: root.gridModel.keyboardWidth
-                y: root.gridModel.rulerHeight
+                visible: !rollBandContent.root.showEvents
+                x: rollBandContent.root.gridModel.keyboardWidth
+                y: rollBandContent.root.gridModel.rulerHeight
                 width: Math.max(parent.width - x, 0)
                 height: Math.max(parent.height - y, 0)
                 clip: true
 
-                onWidthChanged: root.configureViewport()
-                onHeightChanged: root.configureViewport()
+                onWidthChanged: rollBandContent.root.configureViewport()
+                onHeightChanged: rollBandContent.root.configureViewport()
                 Item {
                     id: pianoGridSurface
                     objectName: "pianoGridSurface"
@@ -117,7 +119,7 @@ Item {
                     PianoRollCanvas {
                         bandSide: rollContentBand
                         plotSide: pianoGridSurface
-                        gridModel: root.gridModel
+                        gridModel: rollBandContent.root.gridModel
                     }
 
                     MouseArea {
@@ -133,52 +135,51 @@ Item {
                         property bool rightSweepActive: false
 
                         Component.onCompleted:
-                            root.gridModel.dragDistance = Qt.styleHints.startDragDistance
+                            rollBandContent.root.gridModel.dragDistance = Qt.styleHints.startDragDistance
 
                         ItemCursor {
-                            readonly property var kinds: [
-                                { shape: Qt.ArrowCursor, source: "" },
-                                { shape: Qt.OpenHandCursor, source: "" },
-                                { shape: Qt.ArrowCursor, source: "qrc:/cursors/left-drag.png" },
-                                { shape: Qt.ArrowCursor, source: "qrc:/cursors/right-drag.png" },
-                                { shape: Qt.ClosedHandCursor, source: "" },
-                                { shape: Qt.SizeVerCursor, source: "" }
+                            readonly property list<int> shapes: [
+                                Qt.ArrowCursor, Qt.OpenHandCursor, Qt.ArrowCursor,
+                                Qt.ArrowCursor, Qt.ClosedHandCursor, Qt.SizeVerCursor
                             ]
-                            readonly property var current: kinds[root.gridModel.cursorKind]
+                            readonly property list<string> sources: [
+                                "", "", "qrc:/cursors/left-drag.png",
+                                "qrc:/cursors/right-drag.png", "", ""
+                            ]
                             objectName: "swiftRollCursor"
                             target: rollInput
-                            shape: current.shape
-                            source: current.source
-                            extent: root.gridModel.resizeCursorExtent
-                            devicePixelRatio: root.gridModel.devicePixelRatio
+                            shape: shapes[rollBandContent.root.gridModel.cursorKind]
+                            source: sources[rollBandContent.root.gridModel.cursorKind]
+                            extent: rollBandContent.root.gridModel.resizeCursorExtent
+                            devicePixelRatio: rollBandContent.root.gridModel.devicePixelRatio
                         }
 
                         onPressed: function(mouse) {
                             rollInput.forceActiveFocus(Qt.MouseFocusReason)
                             rollMoves.flush()
                             if (mouse.button === Qt.MiddleButton)
-                                root.gridModel.beginPan(mouse.x, mouse.y)
+                                rollBandContent.root.gridModel.beginPan(mouse.x, mouse.y)
                             else if (mouse.button === Qt.RightButton) {
                                 rightSweepActive = (mouse.modifiers & Qt.ShiftModifier) !== 0
                                 if (rightSweepActive) {
-                                    root.rulerMenu.beginSweep(mouse.x, mouse.y, mouse.modifiers)
+                                    rollBandContent.root.rulerMenu.beginSweep(mouse.x, mouse.y, mouse.modifiers)
                                 } else {
-                                    root.timeSelectionMenuPosition = mapToItem(root, mouse.x, mouse.y)
-                                    root.rulerMenu.openTimeSelection(mouse.x)
-                                    timeMenuPressHandled = root.rulerMenu.menuKind === 2
-                                    root.timeMenuFocus = timeMenuPressHandled
+                                    rollBandContent.root.timeSelectionMenuPosition = mapToItem(rollBandContent.root, mouse.x, mouse.y)
+                                    rollBandContent.root.rulerMenu.openTimeSelection(mouse.x)
+                                    timeMenuPressHandled = rollBandContent.root.rulerMenu.menuKind === 2
+                                    rollBandContent.root.timeMenuFocus = timeMenuPressHandled
                                     if (!timeMenuPressHandled)
-                                        root.gridModel.beginRightPointer(mouse.x, mouse.y, mouse.modifiers)
+                                        rollBandContent.root.gridModel.beginRightPointer(mouse.x, mouse.y, mouse.modifiers)
                                 }
                             }
                             else
-                                root.gridModel.beginPointer(mouse.x, mouse.y, mouse.modifiers)
+                                rollBandContent.root.gridModel.beginPointer(mouse.x, mouse.y, mouse.modifiers)
                             mouse.accepted = true
                         }
                         onDoubleClicked: function(mouse) {
                             rollMoves.flush()
                             if (mouse.button === Qt.LeftButton)
-                                root.gridModel.doublePointer(mouse.x, mouse.y)
+                                rollBandContent.root.gridModel.doublePointer(mouse.x, mouse.y)
                             mouse.accepted = true
                         }
                         onPositionChanged: function(mouse) {
@@ -187,18 +188,18 @@ Item {
                         onReleased: function(mouse) {
                             rollMoves.flush()
                             if (mouse.button === Qt.MiddleButton)
-                                root.gridModel.endPan()
+                                rollBandContent.root.gridModel.endPan()
                             else if (mouse.button === Qt.RightButton) {
                                 if (rightSweepActive)
-                                    root.rulerMenu.endSweep(mouse.x, mouse.y)
+                                    rollBandContent.root.rulerMenu.endSweep(mouse.x, mouse.y)
                                 else if (!timeMenuPressHandled)
-                                    root.gridModel.endRightPointer(mouse.x, mouse.y, mouse.modifiers)
+                                    rollBandContent.root.gridModel.endRightPointer(mouse.x, mouse.y, mouse.modifiers)
                                 rightSweepActive = false
                                 timeMenuPressHandled = false
                             }
                             else {
-                                root.gridModel.endPointer(mouse.x, mouse.y)
-                                root.gridModel.updateHover(mouse.x, mouse.y, mouse.modifiers)
+                                rollBandContent.root.gridModel.endPointer(mouse.x, mouse.y)
+                                rollBandContent.root.gridModel.updateHover(mouse.x, mouse.y, mouse.modifiers)
                             }
                             mouse.accepted = true
                         }
@@ -206,38 +207,39 @@ Item {
                             rollMoves.flush()
                             timeMenuPressHandled = false
                             if (rightSweepActive)
-                                root.rulerMenu.cancelSweep()
+                                rollBandContent.root.rulerMenu.cancelSweep()
                             rightSweepActive = false
-                            root.gridModel.inputCancelled(root.cancelReasonPointerUngrabbed)
+                            rollBandContent.root.gridModel.inputCancelled(rollBandContent.root.cancelReasonPointerUngrabbed)
                         }
                         onExited: {
                             rollMoves.flush()
                             if (pressedButtons === Qt.NoButton)
-                                root.gridModel.clearKeyboardHover()
+                                rollBandContent.root.gridModel.clearKeyboardHover()
                         }
                         MoveCoalescer {
                             id: rollMoves
-                            dispatch: (x, y, buttons, modifiers) => {
+                            dispatch: rollMoves.dispatchMove
+                            function dispatchMove(x: real, y: real, buttons: int, modifiers: int): void {
                                 if (buttons & Qt.MiddleButton)
-                                    root.gridModel.updatePan(x, y)
+                                    rollBandContent.root.gridModel.updatePan(x, y)
                                 else if (buttons & Qt.RightButton) {
                                     if (rollInput.rightSweepActive)
-                                        root.rulerMenu.updateSweep(x, y)
+                                        rollBandContent.root.rulerMenu.updateSweep(x, y)
                                     else if (!rollInput.timeMenuPressHandled)
-                                        root.gridModel.updateRightPointer(x, y, modifiers)
+                                        rollBandContent.root.gridModel.updateRightPointer(x, y, modifiers)
                                 }
                                 else if (buttons & Qt.LeftButton)
-                                    root.gridModel.updatePointer(x, y, modifiers)
+                                    rollBandContent.root.gridModel.updatePointer(x, y, modifiers)
                                 else
-                                    root.gridModel.updateHover(x, y, modifiers)
+                                    rollBandContent.root.gridModel.updateHover(x, y, modifiers)
                             }
                         }
                     }
                     HoverHint {
                         id: rollHint
                         source: rollInput
-                        hintService: root.hintService
-                        scopeAllowed: !root.hintScopeCovered
+                        hintService: rollBandContent.root.hintService
+                        scopeAllowed: !rollBandContent.root.hintScopeCovered
                         gestureOwning: rollInput.pressed
                         profile: HintProfiles.RollPlot
                     }
@@ -246,7 +248,7 @@ Item {
                 WheelHandler {
                     acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
                     onWheel: (event) => {
-                        root.deliverWheel(event, false)
+                        rollBandContent.root.deliverWheel(event, false)
                         event.accepted = true
                     }
                 }
@@ -254,8 +256,8 @@ Item {
             Item {
                 id: rollContentBand
                 objectName: "rollContentBand"
-                visible: !root.showEvents
-                y: root.gridModel.rulerHeight
+                visible: !rollBandContent.root.showEvents
+                y: rollBandContent.root.gridModel.rulerHeight
                 width: parent.width
                 height: Math.max(parent.height - y, 0)
                 z: 3
@@ -264,8 +266,8 @@ Item {
 
         Item {
             id: eventListHost
-            x: root.headersModel.trackHeaderWidth
-            y: root.gridModel.rulerHeight
+            x: rollBandContent.root.headersModel.trackHeaderWidth
+            y: rollBandContent.root.gridModel.rulerHeight
             width: Math.max(parent.width - x, 0)
             height: Math.max(parent.height - y, 0)
             z: 4
@@ -276,19 +278,19 @@ Item {
                 anchors.fill: parent
                 active: false
                 onLoaded: {
-                    if (root.eventListPresenter) {
-                        root.eventListPresenter.setVisible(root.showEvents)
+                    if (rollBandContent.root.eventListPresenter) {
+                        rollBandContent.root.eventListPresenter.setVisible(rollBandContent.root.showEvents)
                     }
-                    if (root.showEvents && root.visible)
+                    if (rollBandContent.root.showEvents && rollBandContent.root.visible)
                         Qt.callLater(function() {
-                            if (root.showEvents && eventPage.item)
-                                eventPage.item.forceActiveFocus(Qt.OtherFocusReason)
+                            if (rollBandContent.root.showEvents && eventPage.item)
+                                (eventPage.item as Item).forceActiveFocus(Qt.OtherFocusReason)
                         })
                 }
                 sourceComponent: Component {
                     EventListPage {
                         objectName: "eventListPage"
-                        presenter: root.eventListPresenter
+                        presenter: rollBandContent.root.eventListPresenter
                     }
                 }
             }
@@ -299,6 +301,6 @@ Item {
         root: rollBandContent.root
         rollStack: rollStack
         rollBandContent: rollBandContent
-        gridMenuLoader: root.menus.gridMenuLoader
+        gridMenuLoader: rollBandContent.root.menus.gridMenuLoader
     }
 }

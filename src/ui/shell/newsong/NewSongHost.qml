@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Dialogs
 import Porydaw.Ui
@@ -25,12 +27,12 @@ Item {
     }
     Connections {
         target: host.controller
-        function onWarningRequested(title, message) {
+        function onWarningRequested(title: string, message: string): void {
             warning.title = title
             warning.text = message
             warning.open()
         }
-        function onWizardOpenChanged() {
+        function onWizardOpenChanged(): void {
             if (host.controller.wizardOpen)
                 wizard.present()
             else

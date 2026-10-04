@@ -11,9 +11,8 @@ FocusScope {
     property bool showing: false
     readonly property bool confirming: model.promptKind === 1
     readonly property var promptPalette: root.pageItem ? root.pageItem.gridPalette : null
-    QtObject {
-        id: promptAppearance
-        readonly property color background: root.promptPalette ? root.promptPalette.windowBackground : "transparent"
+    component PromptAppearance: QtObject {
+        property color background: root.promptPalette ? root.promptPalette.windowBackground : "transparent"
         readonly property color text: root.promptPalette ? root.promptPalette.windowText : "transparent"
         readonly property color outline: root.promptPalette ? root.promptPalette.outline : "transparent"
         readonly property color focus: root.promptPalette ? root.promptPalette.focusOutline : "transparent"
@@ -30,31 +29,38 @@ FocusScope {
         readonly property color buttonText: root.promptPalette ? root.promptPalette.buttonText : "transparent"
         readonly property font font: Qt.font(root.model.promptFont)
     }
+    PromptAppearance {
+        id: promptAppearance
+    }
+    PromptAppearance {
+        id: inputAppearance
+        background: promptAppearance.buttonBackground
+    }
     signal closed()
     anchors.fill: parent
     visible: showing
     enabled: showing
     z: 100
     property bool finishing: false
-    function takeFocus() {
-        if (!showing) return
-        if (confirming) cancel.forceActiveFocus(Qt.PopupFocusReason)
+    function takeFocus(): void {
+        if (!root.showing) return
+        if (root.confirming) cancel.forceActiveFocus(Qt.PopupFocusReason)
         else { field.focusInput(Qt.PopupFocusReason); field.selectAll() }
     }
     onShowingChanged: {
         if (showing) { finishing = false; Qt.callLater(takeFocus) }
         else closed()
     }
-    function acceptDraft() {
-        if (finishing || (!confirming && !field.textInput.acceptableInput)) return
-        finishing = true
-        if (!confirming) model.updatePromptDraft(field.textInput.text)
-        model.acceptPromptDraft()
+    function acceptDraft(): void {
+        if (root.finishing || (!root.confirming && !field.textInput.acceptableInput)) return
+        root.finishing = true
+        if (!root.confirming) root.model.updatePromptDraft(field.textInput.text)
+        root.model.acceptPromptDraft()
     }
-    function cancelDraft() {
-        if (finishing) return
-        finishing = true
-        model.cancelPrompt()
+    function cancelDraft(): void {
+        if (root.finishing) return
+        root.finishing = true
+        root.model.cancelPrompt()
     }
     MouseArea {
         objectName: "automationPromptUnderlay"
@@ -115,9 +121,7 @@ FocusScope {
             adjustmentsEnabled: false
             inputObjectName: "automationPromptInput"
             accessibleName: root.model.promptLabel
-            appearance: Object.assign({}, promptAppearance, {
-                background: promptAppearance.buttonBackground
-            })
+            appearance: inputAppearance
             value: Number(root.model.promptDraft)
             minimumValue: root.model.promptMinimum
             maximumValue: root.model.promptMaximum
@@ -132,7 +136,7 @@ FocusScope {
         }
         Connections {
             target: field.textInput
-            function onActiveFocusChanged() {
+            function onActiveFocusChanged(): void {
                 if (root.showing && !field.textInput.activeFocus && !root.confirming)
                     root.cancelDraft()
             }

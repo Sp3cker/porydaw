@@ -17,27 +17,8 @@ import QtBridge
 @main
 struct PorydawShellApp: QApp {
     let qmlFileName = "PorydawApplication"
-    let instantiableTypes: [QmlInstantiable.Type] = [ShellPresenter.self, ApplicationSession.self]
-    let uncreatableTypes: [QmlUncreatable.Type] = [
-        EngineSettingsStore.self,
-        EventListPresenter.self,
-        MidiImportController.self,
-        NewSongController.self,
-        PianoGrid.self,
-        PolyphonyPanelPresenter.self,
-        SampleLoopTools.self,
-        SampleStudioAudition.self,
-        SampleStudioPresenter.self,
-        SampleStudioWorkflow.self,
-        SampleWaveformModel.self,
-        Sf2ZonePickerPresenter.self,
-        SongDockController.self,
-        TransportBarPresenter.self,
-        VelocityPage.self,
-        VoiceEditorController.self,
-        VoiceListController.self,
-        WavExportPresenter.self,
-    ]
+    let instantiableTypes = PorydawQmlTypes.instantiable
+    let uncreatableTypes = PorydawQmlTypes.uncreatable
 
     init() {
         pd_startup_trace_mark("app-init")

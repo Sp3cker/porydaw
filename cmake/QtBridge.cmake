@@ -13,20 +13,30 @@ set(QTBRIDGE_PATCH_DIR
 # Reconfigure when either input changes, then invalidate FetchContent's patch
 # stamp through its recorded command: paths alone leave that stamp unchanged.
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-    "${QTBRIDGE_PATCH_DIR}/qtbridge-object-return.patch"
+    "${QTBRIDGE_PATCH_DIR}/qtbridge.patch"
     "${QTBRIDGE_PATCH_DIR}/PatchQtBridge.cmake"
 )
-file(SHA256 "${QTBRIDGE_PATCH_DIR}/qtbridge-object-return.patch" QTBRIDGE_PATCH_SHA256)
+file(SHA256 "${QTBRIDGE_PATCH_DIR}/qtbridge.patch" QTBRIDGE_PATCH_SHA256)
 file(SHA256 "${QTBRIDGE_PATCH_DIR}/PatchQtBridge.cmake" QTBRIDGE_PATCH_SCRIPT_SHA256)
+# Key both the host macro and its Swift consumers to these patch inputs.
+string(SHA256 QTBRIDGE_PATCH_INPUTS_SHA256
+    "${QTBRIDGE_PATCH_SHA256}:${QTBRIDGE_PATCH_SCRIPT_SHA256}")
 FetchContent_Declare(QtBridge
     GIT_REPOSITORY https://github.com/qt/qtbridge-swift.git
     GIT_TAG 407714006dd21107b70db6547ce75e43df0c8a75
     PATCH_COMMAND "${CMAKE_COMMAND}"
-        "-DPATCH=${QTBRIDGE_PATCH_DIR}/qtbridge-object-return.patch"
+        "-DPATCH=${QTBRIDGE_PATCH_DIR}/qtbridge.patch"
         "-DPATCH_INPUTS_SHA256=${QTBRIDGE_PATCH_SHA256}:${QTBRIDGE_PATCH_SCRIPT_SHA256}"
         -P "${QTBRIDGE_PATCH_DIR}/PatchQtBridge.cmake"
 )
 FetchContent_MakeAvailable(QtBridge)
+
+# Swift's recorded plugin dependency does not invalidate Ninja object rules.
+# Publish the same stable digest with the existing transitive macro options
+# so changed patch inputs also change every consumer's compilation command.
+target_compile_options(QtBridge INTERFACE
+    "$<$<COMPILE_LANGUAGE:Swift>:-DQTBRIDGE_PATCH_${QTBRIDGE_PATCH_INPUTS_SHA256}>"
+)
 
 if(APPLE)
     # Framework include precedence is per-target, not inherited from consumers.

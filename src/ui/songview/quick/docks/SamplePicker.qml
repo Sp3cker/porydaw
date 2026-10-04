@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Layouts
 import PorydawApp
 
@@ -19,7 +19,7 @@ Item {
         if (!visible)
             popup.close()
     }
-    readonly property var entries: {
+    readonly property list<var> entries: {
         controller.catalogRevision
         const filter = search.text.trim().toLowerCase()
         const sections = waveMode
@@ -51,21 +51,28 @@ Item {
         return rows
     }
     signal picked(string symbol)
+    readonly property font typedEntryFont: {
+        const result = Qt.font(picker.applicationSession.typographyFonts.body)
+        result.italic = true
+        return result
+    }
+    readonly property list<string> symbolPrefixes: ["DirectSoundWaveData_", "ProgrammableWaveData_", "voicegroup_"]
 
-    function displayName(symbol) {
-        for (const prefix of ["DirectSoundWaveData_", "ProgrammableWaveData_", "voicegroup_"]) {
+    function displayName(symbol: string): string {
+        for (let i = 0; i < picker.symbolPrefixes.length; i++) {
+            const prefix = picker.symbolPrefixes[i]
             if (symbol.startsWith(prefix) && symbol.length > prefix.length)
                 return symbol.slice(prefix.length)
         }
         return symbol
     }
 
-    function currentEntry() {
+    function currentEntry(): var {
         const index = list.currentIndex
         return index >= 0 && index < entries.length ? entries[index] : null
     }
 
-    function highlight(index) {
+    function highlight(index: int): void {
         const entry = entries[index]
         if (!entry || !entry.symbol)
             return
@@ -76,7 +83,7 @@ Item {
         }
     }
 
-    function commit() {
+    function commit(): void {
         const entry = currentEntry()
         if (!entry || !entry.symbol)
             return
@@ -197,9 +204,7 @@ Item {
                             Layout.fillWidth: true
                             text: entry.modelData.label
                             font: entry.modelData.typed
-                                  ? Qt.font(Object.assign({},
-                                                          picker.applicationSession.typographyFonts.body,
-                                                          { italic: true }))
+                                  ? picker.typedEntryFont
                                   : !entry.modelData.symbol
                                     ? Qt.font(picker.applicationSession.typographyFonts.bodyBold)
                                     : entry.font

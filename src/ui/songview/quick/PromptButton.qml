@@ -1,8 +1,5 @@
-// Shared Accept/Cancel chrome for the canvas prompt family: pressed/focus
-// border states, Return/Enter/Space activation, tap handling, and button
-// accessibility. Owners keep semantics — objectName, tab navigation, and the
-// activated handler — and pass their label plus an optional width floor so
-// paired buttons stay visually aligned with an input or each other.
+pragma ComponentBehavior: Bound
+// Shared prompt button chrome; owners supply labels and activation semantics.
 import QtQuick
 import Porydaw.Ui
 
@@ -34,7 +31,7 @@ Rectangle {
     radius: appearance.radius
     opacity: enabled ? 1 : 0.5
 
-    function activate() {
+    function activate(): void {
         if (enabled)
             button.activated()
     }
@@ -43,10 +40,7 @@ Rectangle {
         id: label
 
         anchors.centerIn: parent
-        // Pressed and inactive states must keep a legal ink for their
-        // surface: pressedText on the pressed fill, disabledText inside a
-        // disabled button. Appearances that predate a key fall back to the
-        // normal button ink; a missing appearance draws nothing, never throws.
+        // Older appearance maps fall back to the normal button ink.
         color: (!button.enabled ? button.appearance?.disabledText
                 : tap.pressed ? button.appearance?.pressedText : null)
                ?? button.appearance?.buttonText ?? "transparent"
@@ -68,9 +62,7 @@ Rectangle {
         button.activate()
         event.accepted = true
     }
-    // Claim the activation keys so window shortcuts never steal them from a
-    // focused prompt button; VoicePicker buttons keep their historical
-    // pass-through via claimsShortcuts: false.
+    // VoicePicker keeps pass-through via claimsShortcuts: false.
     Keys.onShortcutOverride: (event) => event.accepted = claimsShortcuts &&
         (event.key === Qt.Key_Space || event.key === Qt.Key_Return
          || event.key === Qt.Key_Enter)

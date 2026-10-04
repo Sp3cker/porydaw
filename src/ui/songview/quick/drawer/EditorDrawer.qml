@@ -37,8 +37,8 @@ FocusScope {
     required property QtObject drawerPalette
     property var hintService: null
     readonly property bool hintScopeAllowed: {
-        for (let child of modalLayer.children) {
-            if (child.visible)
+        for (let i = 0; i < modalLayer.children.length; ++i) {
+            if (modalLayer.children[i].visible)
                 return false
         }
         return true
@@ -59,7 +59,7 @@ FocusScope {
     clip: true
 
 
-    function keyNameFor(kind) {
+    function keyNameFor(kind: int): string {
         switch (kind) {
         case drawerScope.automationKind: return "automation"
         case drawerScope.velocityKind: return "velocity"
@@ -68,20 +68,26 @@ FocusScope {
         return ""
     }
 
-    function iconFor(kind) {
+    function iconFor(kind: int): var {
         switch (kind) {
         case drawerScope.automationKind: return Icons.automation
         case drawerScope.velocityKind: return Icons.velocity
         case drawerScope.voiceChangesKind: return Icons.flat
         }
-        return ({})
+        return emptyIcon
+    }
+
+    QtObject {
+        id: emptyIcon
+        readonly property string glyph: ""
+        readonly property real fit: 1
     }
 
 
     // A monotonic request names the kind whose loaded page takes focus, or -1
     // for the roll. A request whose loader has no item yet is skipped rather
     // than retried; the next transition publishes a new request.
-    function sectionLoader(kind) {
+    function sectionLoader(kind: int): Loader {
         switch (kind) {
         case drawerScope.automationKind: return automationSection.pageLoader
         case drawerScope.velocityKind: return velocitySection.pageLoader
@@ -94,7 +100,7 @@ FocusScope {
     // is the handle the presenter's -1 target resolves through. The search
     // starts at the top of this item tree so it also crosses the composition
     // that places this container.
-    function findItemByName(item, name) {
+    function findItemByName(item: Item, name: string): Item {
         if (!item)
             return null
         if (item.objectName === name)
@@ -108,7 +114,7 @@ FocusScope {
     }
     // True when keyboard focus sits inside the container-wide modal layer:
     // a menu, picker or prompt owns it, not the section chrome.
-    function modalOwnsFocus() {
+    function modalOwnsFocus(): bool {
         const window = drawerScope.Window.window
         let focus = window ? window.activeFocusItem : null
         while (focus) {
@@ -119,7 +125,7 @@ FocusScope {
         return false
     }
 
-    function executeFocusRequest() {
+    function executeFocusRequest(): void {
         // A queued section request predates a modal the user has since opened;
         // the modal keeps keyboard focus until it dismisses itself.
         if (drawerScope.modalOwnsFocus())
@@ -135,8 +141,10 @@ FocusScope {
             return
         }
         var loader = drawerScope.sectionLoader(target)
-        if (loader && loader.item)
-            loader.item.forceActiveFocus(Qt.OtherFocusReason)
+        if (loader && loader.item) {
+            const content = loader.item as Item
+            content.forceActiveFocus(Qt.OtherFocusReason)
+        }
     }
 
     component DrawerSection: Item {
@@ -161,7 +169,7 @@ FocusScope {
         // unavailable kind control-free even if it still publishes intent.
         readonly property bool available: section.sectionState.available
         readonly property bool shown: section.sectionState.available && section.sectionState.visible
-        readonly property var pageLoader: body
+        readonly property Loader pageLoader: body
 
         Rectangle {
             id: handle
@@ -176,7 +184,7 @@ FocusScope {
                    ? drawerScope.drawerPalette.selectionRing : drawerScope.drawerPalette.outline
             activeFocusOnTab: true
 
-            function adjust(direction) {
+            function adjust(direction: int): void {
                 drawerScope.presenter.adjustResizeHandle(section.kind, direction)
             }
 
@@ -252,11 +260,11 @@ FocusScope {
                                                  : drawerScope.drawerPalette.windowBackground
             activeFocusOnTab: true
 
-            function activate() {
+            function activate(): void {
                 drawerScope.presenter.toggleSection(section.kind, drawerScope.activeFocus)
             }
 
-            function activateFromPointer() {
+            function activateFromPointer(): void {
                 const hadVisibleSection = drawerScope.presenter.automationSection.visible
                                           || drawerScope.presenter.velocitySection.visible
                                           || drawerScope.presenter.voiceChangesSection.visible
@@ -265,8 +273,8 @@ FocusScope {
                                                     && (toggle.activeFocus || hadVisibleSection))
             }
 
-            function activateFromKeyboard(event) {
-                activate()
+            function activateFromKeyboard(event: KeyEvent): void {
+                toggle.activate()
                 event.accepted = true
             }
 
@@ -332,7 +340,7 @@ FocusScope {
 
             // The URL is resolved once per attach and never re-pointed, so a
             // reload happens only when the presenter publishes another one.
-            function syncSource() {
+            function syncSource(): void {
                 var url = String(section.sectionState.contentUrl)
                 if (url.length === 0) {
                     if (String(body.source).length > 0)
@@ -347,7 +355,7 @@ FocusScope {
             Connections {
                 target: section.sectionState
 
-                function onContentUrlChanged() {
+                function onContentUrlChanged(): void {
                     body.syncSource()
                 }
             }
@@ -418,7 +426,7 @@ FocusScope {
                  && drawerScope.velocityModel.detentsAvailable
         activeFocusOnTab: visible
 
-        function activate() {
+        function activate(): void {
             if (visible && drawerScope.velocityModel)
                 drawerScope.velocityModel.toggleDetents()
         }
@@ -477,7 +485,7 @@ FocusScope {
 
     Connections {
         target: drawerScope.presenter
-        function onFocusRequestChanged() {
+        function onFocusRequestChanged(): void {
             drawerScope.executeFocusRequest()
         }
     }

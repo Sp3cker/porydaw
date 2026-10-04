@@ -1,5 +1,7 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Layouts
 
 Item {
@@ -55,7 +57,7 @@ Item {
             currentIndex: page.controller.playerIndex
             ToolTip.text: qsTr("Select Background music for a song. Select Sound effect for a sound. Also select it for a fanfare.")
             ToolTip.visible: hovered
-            onActivated: index => page.controller.selectPlayer(index)
+            onActivated: function(index: int): void { page.controller.selectPlayer(index) }
         }
         Item { Layout.row: 4; Layout.columnSpan: 2; Layout.fillHeight: true }
     }

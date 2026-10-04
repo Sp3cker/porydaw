@@ -16,10 +16,10 @@ Item {
     property bool consumingOutsidePress: false
     visible: opened || consumingOutsidePress
     enabled: visible
-    function finishOutsidePress() {
+    function finishOutsidePress(): void {
         consumingOutsidePress = false
     }
-    function restoreFocusIfOwned() {
+    function restoreFocusIfOwned(): void {
         const active = promptRoot.Window.window
             ? promptRoot.Window.window.activeFocusItem : null
         let focus = active
@@ -76,13 +76,13 @@ Item {
 
         readonly property int draft: Number(promptRoot.model.promptDraft)
 
-        function acceptDisplayed() {
+        function acceptDisplayed(): void {
             const committed = velocityInput.commitDisplayed()
             if (committed !== null)
                 acceptCommitted(committed)
         }
 
-        function acceptCommitted(committed) {
+        function acceptCommitted(committed: int): void {
             if (!promptRoot.opened)
                 return
             promptRoot.model.updatePromptDraft(String(committed))
@@ -90,13 +90,13 @@ Item {
             promptRoot.model.acceptPrompt()
         }
 
-        function cancelDisplayed() {
+        function cancelDisplayed(): void {
             if (!promptRoot.opened)
                 return
             promptRoot.restoreFocusIfOwned()
             promptRoot.model.cancelPrompt()
         }
-        function activateInitialFocus() {
+        function activateInitialFocus(): void {
             velocityInput.focusInput(Qt.PopupFocusReason)
             velocityInput.selectAll()
         }

@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Dialogs
 import Porydaw.Ui
@@ -25,7 +27,8 @@ Item {
         id: alert
         objectName: "shellSampleStudioAlert"
         buttons: MessageDialog.Ok
-        parentWindow: studio.item && studio.item.visible ? studio.item : host.hostWindow
+        parentWindow: (studio.item as SampleStudioDialog)?.visible
+                      ? (studio.item as SampleStudioDialog) : host.hostWindow
     }
     MessageDialog {
         id: stereo
@@ -50,7 +53,7 @@ Item {
             audition: host.workflow.audition()
             transientParent: host.hostWindow
         }
-        onLoaded: item.present()
+        onLoaded: (studio.item as SampleStudioDialog).present()
     }
     Loader {
         id: zones
@@ -62,19 +65,19 @@ Item {
             colors: host.colors
             transientParent: host.hostWindow
         }
-        onLoaded: item.present()
+        onLoaded: (zones.item as Sf2ZonePickerDialog).present()
     }
     Connections {
         target: host.workflow
-        function onPickerRequestedChanged() {
+        function onPickerRequestedChanged(): void {
             if (host.workflow.pickerRequested) picker.open()
         }
-        function onAlertRevisionChanged() {
+        function onAlertRevisionChanged(): void {
             alert.title = host.workflow.alertTitle
             alert.text = host.workflow.alertText
             alert.open()
         }
-        function onStereoPromptOpenChanged() {
+        function onStereoPromptOpenChanged(): void {
             if (host.workflow.stereoPromptOpen) stereo.open()
             else stereo.close()
         }

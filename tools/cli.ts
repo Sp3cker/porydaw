@@ -7,6 +7,8 @@
 // deno task checks [--filter <name>] [...]  -> build, then run porydaw_checks
 // deno task checks:qml | checks:qml-roll | checks:shell [checks options]
 // deno task checks:bridge             -> QtBridge surface guard
+// deno task checks:qml-aot [--release] [--verbose] -> build, then AOT ratchet
+// deno task qml-aot:baseline          -> regenerate the AOT baseline
 // deno task format [--check] [--base <ref>] [files...]
 
 import { join } from "node:path";
@@ -18,6 +20,7 @@ import {
   CHECKS_HELP,
   parseCheckOptions,
 } from "./checks_options.ts";
+import { QML_AOT_HELP } from "./qml_aot.ts";
 
 type Lane = "checks" | "checks:qml" | "checks:qml-roll" | "checks:shell";
 
@@ -27,6 +30,7 @@ type Subcommand =
   | "build:render"
   | Lane
   | "checks:bridge"
+  | "checks:qml-aot"
   | "format";
 
 function help(command?: Subcommand): string {
@@ -43,6 +47,8 @@ function help(command?: Subcommand): string {
   check Swift/QML QtBridge surface against the baseline (read-only)
 
   deno task bridge:baseline regenerates the baseline, allowing growth`;
+    case "checks:qml-aot":
+      return QML_AOT_HELP;
     case "build:app":
     case "build:checks":
     case "build:render":
@@ -88,6 +94,8 @@ Examples:
   checks:shell     build and run the production QML shell lane
   checks:bridge    check the Swift/QML QtBridge surface
   bridge:baseline  regenerate the QtBridge surface baseline
+  checks:qml-aot   build and check production QML AOT compilation
+  qml-aot:baseline regenerate the QML AOT baseline, allowing growth
   format           format changed Swift and TypeScript (or --check)
   proof            read proof-ledger status
   proof:edit       edit proof ledgers
@@ -205,6 +213,56 @@ async function runBridge(args: string[], quiet = false): Promise<void> {
   Deno.exit(result.code);
 }
 
+async function runQmlAot(args: string[], build = true): Promise<void> {
+  if (args.includes("--help")) showHelp("checks:qml-aot");
+  const unknown = args.find((arg) =>
+    !["--release", "--verbose", "--update-baseline", "--allow-growth"].includes(
+      arg,
+    )
+  );
+  if (unknown) usage("checks:qml-aot", `unknown argument ${unknown}`);
+  const update = args.includes("--update-baseline");
+  if (args.includes("--allow-growth") && !update) {
+    usage("checks:qml-aot", "--allow-growth requires --update-baseline");
+  }
+  if (
+    update &&
+    (await Deno.permissions.query({ name: "write", path: "tools" })).state !==
+      "granted"
+  ) {
+    usage(
+      "checks:qml-aot",
+      "baseline writes require deno task qml-aot:baseline",
+    );
+  }
+  if (build) {
+    const status = await new Deno.Command("deno", {
+      args: [
+        "task",
+        "build:app",
+        ...(args.includes("--release") ? ["--release"] : []),
+      ],
+      stdout: "inherit",
+      stderr: "inherit",
+      stdin: "null",
+    }).output();
+    if (!status.success) Deno.exit(status.code);
+  }
+  const status = await new Deno.Command("deno", {
+    args: [
+      "run",
+      "--allow-read=src,tools,build",
+      ...(update ? ["--allow-write=tools"] : []),
+      "tools/qml_aot.ts",
+      ...args,
+    ],
+    stdout: "inherit",
+    stderr: "inherit",
+    stdin: "null",
+  }).output();
+  if (!status.success) Deno.exit(status.code);
+}
+
 async function runChecks(rawArgs: string[], command: Lane): Promise<void> {
   const lane = LANES[command];
   // Terminal --qt: everything after it is the Qt test payload and is never
@@ -254,6 +312,9 @@ async function runChecks(rawArgs: string[], command: Lane): Promise<void> {
     Deno.build.os === "windows" ? "release" : "debug",
     true,
   );
+  if (command === "checks") {
+    await runQmlAot(Deno.build.os === "windows" ? ["--release"] : [], false);
+  }
   const executable = Deno.build.os === "windows"
     ? `${lane.binary}.exe`
     : lane.binary;
@@ -341,6 +402,9 @@ switch (command) {
     break;
   case "checks:bridge":
     await runBridge(rest);
+    break;
+  case "checks:qml-aot":
+    await runQmlAot(rest);
     break;
   case "format":
     await runFormat(rest);

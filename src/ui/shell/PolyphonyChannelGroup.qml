@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Porydaw.Ui
 
@@ -20,11 +22,12 @@ Column {
         verticalAlignment: Text.AlignVCenter
     }
     Flow {
-        width: parent.width
+        width: group.width
         spacing: Math.round(group.em * 4 / 12)
         Repeater {
             model: group.channels
             delegate: Rectangle {
+                id: channelCell
                 required property string label
                 required property int state
                 objectName: "polyphonyChannelCell"
@@ -36,9 +39,9 @@ Column {
                     : state === 1 ? group.colors.polyphonyActiveFill : group.colors.buttonBackground
                 Text {
                     anchors.fill: parent
-                    text: label
-                    color: state === 2 ? group.colors.polyphonyReleasingText
-                        : state === 1 || state === 3 ? group.colors.polyphonyCellText : group.colors.secondaryText
+                    text: channelCell.label
+                    color: channelCell.state === 2 ? group.colors.polyphonyReleasingText
+                        : channelCell.state === 1 || channelCell.state === 3 ? group.colors.polyphonyCellText : group.colors.secondaryText
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     font: Qt.font(group.typography.caption)

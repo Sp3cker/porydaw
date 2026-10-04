@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
 
@@ -5,17 +6,13 @@ PromptCard {
     id: prompt
 
     required property var bridge
-    // GridPalette instance from the host (EditorSurface passes
-    // root.gridModel.palette). Supplies the pressed/disabled inks, which the
-    // bridge's appearance map does not carry. Nullable until the host wires
-    // it; every read below is null-safe so the map stays an object.
+    // The host supplies the pressed and disabled inks missing from the map.
     property var promptPalette: null
 
     objectName: "insertTimePrompt"
     appearance: Object.assign({}, bridge.insertTimePromptAppearance, {
         font: Qt.font(bridge.insertTimePromptFont),
-        // The pressed fill is hoverChipFill (set in Swift), so pressed text
-        // must be its mate hoverChipText, not the normal button ink.
+        // Pressed text must match the hoverChipFill surface.
         pressedText: prompt.promptPalette?.hoverChipText ?? "transparent",
         disabledText: prompt.promptPalette?.disabledText ?? "transparent"
     })
@@ -36,46 +33,44 @@ PromptCard {
 
         font: prompt.appearance.font
     }
-    function acceptDisplayed() {
+    function acceptDisplayed(): void {
         acceptCommittedDrafts(barsInput.commitDisplayed(), beatsInput.commitDisplayed(),
                               fractionsInput.commitDisplayed())
     }
 
-    function acceptFromEditing(field, committed) {
+    function acceptFromEditing(field: string, committed: int): void {
         acceptCommittedDrafts(field === "bars" ? committed : barsInput.commitDisplayed(),
                               field === "beats" ? committed : beatsInput.commitDisplayed(),
                               field === "fractions" ? committed : fractionsInput.commitDisplayed())
     }
 
-    function acceptCommittedDrafts(bars, beats, fractions) {
+    function acceptCommittedDrafts(bars: var, beats: var, fractions: var): void {
         if (bars !== null && beats !== null && fractions !== null)
             acceptCommitted(bars, beats, fractions)
     }
 
-    function acceptCommitted(bars, beats, fractions) {
+    function acceptCommitted(bars: int, beats: int, fractions: int): void {
         if (finishing)
             return
         finishing = true
         bridge.acceptInsertTimePrompt(bars, beats, fractions)
     }
 
-    function cancelDisplayed() {
+    function cancelDisplayed(): void {
         if (finishing)
             return
         finishing = true
         bridge.cancelInsertTimePrompt()
     }
 
-    function activateInitialFocus() {
+    function activateInitialFocus(): void {
         barsInput.focusInput(Qt.PopupFocusReason)
         barsInput.selectAll()
     }
 
     Component.onCompleted: Qt.callLater(activateInitialFocus)
 
-    // The focused DragInput receives normal numeric editing first. This
-    // terminal sink claims declined keys so timeline commands never leak out
-    // of the shared popup session.
+    // DragInput edits first; declined keys stop here, inside the popup session.
     Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Escape)
             cancelDisplayed()
@@ -89,21 +84,21 @@ PromptCard {
     Accessible.name: bridge.insertTimePromptTitle
 
     Text {
-        color: appearance.text
-        font: appearance.font
-        text: bridge.insertTimePromptTitle
+        color: prompt.appearance.text
+        font: prompt.appearance.font
+        text: prompt.bridge.insertTimePromptTitle
         renderType: Text.NativeRendering
     }
 
     Row {
-        spacing: appearance.spacing
+        spacing: prompt.appearance.spacing
 
         Text {
             anchors.verticalCenter: barsInput.verticalCenter
             width: prompt.labelWidth
             horizontalAlignment: Text.AlignRight
-            color: appearance.text
-            font: appearance.font
+            color: prompt.appearance.text
+            font: prompt.appearance.font
             text: qsTr("Bars:")
             renderType: Text.NativeRendering
         }
@@ -114,11 +109,11 @@ PromptCard {
             appearance: prompt.appearance
             value: prompt.draftBars
             width: prompt.inputWidth
-            minimumValue: bridge.insertTimePromptMinimumBars
-            maximumValue: bridge.insertTimePromptMaximumBars
+            minimumValue: prompt.bridge.insertTimePromptMinimumBars
+            maximumValue: prompt.bridge.insertTimePromptMaximumBars
             inputObjectName: "insertTimeBars"
             accessibleName: qsTr("Bars")
-            accessibleDescription: bridge.insertTimePromptTitle
+            accessibleDescription: prompt.bridge.insertTimePromptTitle
             onValueCommitted: (committed) => prompt.draftBars = committed
             onEditingAccepted: (committed) => prompt.acceptFromEditing("bars", committed)
             textInput.KeyNavigation.backtab: cancelButton
@@ -126,14 +121,14 @@ PromptCard {
     }
 
     Row {
-        spacing: appearance.spacing
+        spacing: prompt.appearance.spacing
 
         Text {
             anchors.verticalCenter: beatsInput.verticalCenter
             width: prompt.labelWidth
             horizontalAlignment: Text.AlignRight
-            color: appearance.text
-            font: appearance.font
+            color: prompt.appearance.text
+            font: prompt.appearance.font
             text: qsTr("Beats:")
             renderType: Text.NativeRendering
         }
@@ -144,25 +139,25 @@ PromptCard {
             appearance: prompt.appearance
             value: prompt.draftBeats
             width: prompt.inputWidth
-            minimumValue: bridge.insertTimePromptMinimumBeats
-            maximumValue: bridge.insertTimePromptMaximumBeats
+            minimumValue: prompt.bridge.insertTimePromptMinimumBeats
+            maximumValue: prompt.bridge.insertTimePromptMaximumBeats
             inputObjectName: "insertTimeBeats"
             accessibleName: qsTr("Beats")
-            accessibleDescription: bridge.insertTimePromptTitle
+            accessibleDescription: prompt.bridge.insertTimePromptTitle
             onValueCommitted: (committed) => prompt.draftBeats = committed
             onEditingAccepted: (committed) => prompt.acceptFromEditing("beats", committed)
         }
     }
 
     Row {
-        spacing: appearance.spacing
+        spacing: prompt.appearance.spacing
 
         Text {
             anchors.verticalCenter: fractionsInput.verticalCenter
             width: prompt.labelWidth
             horizontalAlignment: Text.AlignRight
-            color: appearance.text
-            font: appearance.font
+            color: prompt.appearance.text
+            font: prompt.appearance.font
             text: qsTr("Beat fractions (¼ beat):")
             renderType: Text.NativeRendering
         }
@@ -173,18 +168,18 @@ PromptCard {
             appearance: prompt.appearance
             value: prompt.draftBeatFractions
             width: prompt.inputWidth
-            minimumValue: bridge.insertTimePromptMinimumBeatFractions
-            maximumValue: bridge.insertTimePromptMaximumBeatFractions
+            minimumValue: prompt.bridge.insertTimePromptMinimumBeatFractions
+            maximumValue: prompt.bridge.insertTimePromptMaximumBeatFractions
             inputObjectName: "insertTimeBeatFractions"
             accessibleName: qsTr("Beat fractions")
-            accessibleDescription: bridge.insertTimePromptTitle
+            accessibleDescription: prompt.bridge.insertTimePromptTitle
             onValueCommitted: (committed) => prompt.draftBeatFractions = committed
             onEditingAccepted: (committed) => prompt.acceptFromEditing("fractions", committed)
         }
     }
 
     Row {
-        spacing: appearance.spacing
+        spacing: prompt.appearance.spacing
 
         PromptButton {
             id: acceptButton

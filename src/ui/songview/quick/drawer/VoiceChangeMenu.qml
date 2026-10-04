@@ -1,6 +1,6 @@
 // Captured command policy stays in Swift; original shared rows render the menu.
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import Porydaw.Ui
 
 pragma ComponentBehavior: Bound
@@ -19,8 +19,9 @@ FocusScope {
     readonly property real baseFontPx: model ? model.baseFontPx : 13
     readonly property font bodyFont: menuRoot.pageItem
         ? Qt.font((menuRoot.pageItem.applicationSession.timeSigHost
-                   || menuRoot.pageItem.applicationSession).typographyFonts.body) : Qt.font({})
+                   || menuRoot.pageItem.applicationSession).typographyFonts.body) : menuRoot.neutralFont
     readonly property var menuColors: menuRoot.pageItem ? menuRoot.pageItem.gridPalette : null
+    property font neutralFont
     readonly property point anchor: pageItem && parent
         ? pageItem.mapToItem(parent, model ? model.menuX : 0, model ? model.menuY : 0)
         : Qt.point(model ? model.menuX : 0, model ? model.menuY : 0)
@@ -33,10 +34,10 @@ FocusScope {
         }
     }
     onShowingChanged: if (!showing) closed()
-    function hoverRow(panel, index) { currentRow = index }
-    function activateRow(panel, index) { return model.activateMenuRow(index) }
-    function moveRow(delta) {
-        currentRow = Math.min(Math.max(currentRow + delta, 0), Math.max(0, panel.rowCount - 1))
+    function hoverRow(panel: Item, index: int): void { menuRoot.currentRow = index }
+    function activateRow(panel: Item, index: int): bool { return menuRoot.model.activateMenuRow(index) }
+    function moveRow(delta: int): void {
+        menuRoot.currentRow = Math.min(Math.max(menuRoot.currentRow + delta, 0), Math.max(0, panel.rowCount - 1))
     }
     Keys.onUpPressed: event => { moveRow(-1); event.accepted = true }
     Keys.onDownPressed: event => { moveRow(1); event.accepted = true }
@@ -46,6 +47,18 @@ FocusScope {
     Keys.onShortcutOverride: event => event.accepted = true
     Keys.onPressed: event => event.accepted = true
     Keys.onReleased: event => event.accepted = true
+
+    QtObject {
+        id: menuAppearance
+        readonly property color background: menuRoot.menuColors ? menuRoot.menuColors.menuBackground : "transparent"
+        readonly property color outline: menuRoot.menuColors ? menuRoot.menuColors.outline : "transparent"
+        readonly property color text: menuRoot.menuColors ? menuRoot.menuColors.windowText : "transparent"
+        readonly property color hoverBackground: menuRoot.menuColors ? menuRoot.menuColors.menuHoverBackground : "transparent"
+        readonly property color hoverText: menuRoot.menuColors ? menuRoot.menuColors.windowText : "transparent"
+        readonly property color disabledText: menuRoot.menuColors ? menuRoot.menuColors.disabledText : "transparent"
+        readonly property color separator: menuRoot.menuColors ? menuRoot.menuColors.separator : "transparent"
+        readonly property font font: menuRoot.bodyFont
+    }
 
     MouseArea {
         objectName: "voiceMenuUnderlay"
@@ -72,11 +85,6 @@ FocusScope {
         textX: Math.round(menuRoot.baseFontPx / 2)
         textRight: menuWidth - textX
         highlightedRow: menuRoot.currentRow
-        appearance: menuRoot.menuColors ? ({
-            background: menuRoot.menuColors.menuBackground, outline: menuRoot.menuColors.outline,
-            text: menuRoot.menuColors.windowText, hoverBackground: menuRoot.menuColors.menuHoverBackground,
-            hoverText: menuRoot.menuColors.windowText, disabledText: menuRoot.menuColors.disabledText,
-            separator: menuRoot.menuColors.separator, font: menuRoot.bodyFont
-        }) : null
+        appearance: menuRoot.menuColors ? menuAppearance : null
     }
 }

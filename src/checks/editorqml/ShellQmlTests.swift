@@ -95,6 +95,7 @@ enum ShellQmlLane {
         PolyphonyShellProbe.registerQmlElement()
         WavFileProbe.registerQmlElement()
         SampleBinProbe.registerQmlElement()
+        BridgeValueTypeProbe.registerQmlElement()
         ImportWizardProbe.registerQmlElement()
         SampleStudioVoiceProbe.registerQmlElement()
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)

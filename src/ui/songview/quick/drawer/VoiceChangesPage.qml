@@ -85,24 +85,25 @@ FocusScope {
     QtObject {
         id: emptyModel
 
-        readonly property var markers: []
-        readonly property var gutterTexts: []
-        readonly property var pickerRows: []
-        readonly property var menuRows: []
+        readonly property list<QtObject> markers: []
+        readonly property list<QtObject> gutterTexts: []
+        readonly property list<QtObject> pickerRows: []
+        readonly property list<QtObject> menuRows: []
         readonly property bool trackAvailable: false
         readonly property string plotMessage: ""
         readonly property string gutterTitle: "Voice"
         readonly property bool readoutVisible: false
         readonly property string readoutText: ""
         readonly property int readoutAlignment: 2
-        readonly property var readoutRect: ({ "x": 0, "y": 0, "width": 0, "height": 0 })
+        readonly property rect readoutRect: Qt.rect(0, 0, 0, 0)
         readonly property bool hoverVisible: false
         readonly property string hoverText: ""
-        readonly property var hoverLabelRect: ({ "x": 0, "y": 0, "width": 0, "height": 0 })
+        readonly property rect hoverLabelRect: Qt.rect(0, 0, 0, 0)
         readonly property int hoverHintProfile: HintProfiles.HorizontalScroll
-        readonly property var captionFont: ({})
-        readonly property var titleFont: ({})
-        readonly property var noteNameFont: ({})
+        property font neutralFont
+        readonly property font captionFont: emptyModel.neutralFont
+        readonly property font titleFont: emptyModel.neutralFont
+        readonly property font noteNameFont: emptyModel.neutralFont
         readonly property double baseFontPx: 13
         readonly property int cursorKind: 0
         readonly property bool previewVisible: false
@@ -119,23 +120,24 @@ FocusScope {
         readonly property bool auditionAvailable: false
         readonly property string auditionDiagnostic: ""
 
-        function configureBody(width, height, gutter, devicePixelRatio, baseFontPx,
-                               dragDistance) {}
-        function pointerPress(x, y, surface, button, modifiers) { return false }
-        function pointerMove(x, y, buttons) { return false }
-        function pointerRelease(x, y, button) { return false }
-        function pointerLeave() {}
-        function pointerDoubleClick(x, y) { return false }
-        function handleEscape() { return false }
-        function setPickerFilter(text) {}
-        function selectPickerRow(index) {}
-        function movePickerSelection(delta) {}
-        function acceptPicker() { return false }
-        function cancelPicker() {}
-        function activateMenuAction(actionId) { return false }
-        function dismissVoiceMenu() {}
-        function dismissModal() {}
-        function cancelSectionInteraction() {}
+        function configureBody(width: real, height: real, gutter: real,
+                               devicePixelRatio: real, baseFontPx: real,
+                               dragDistance: real): void {}
+        function pointerPress(x: real, y: real, surface: int, button: int, modifiers: int): bool { return false }
+        function pointerMove(x: real, y: real, buttons: int): bool { return false }
+        function pointerRelease(x: real, y: real, button: int): bool { return false }
+        function pointerLeave(): void {}
+        function pointerDoubleClick(x: real, y: real): bool { return false }
+        function handleEscape(): bool { return false }
+        function setPickerFilter(text: string): void {}
+        function selectPickerRow(index: int): void {}
+        function movePickerSelection(delta: int): void {}
+        function acceptPicker(): bool { return false }
+        function cancelPicker(): void {}
+        function activateMenuAction(actionId: int): bool { return false }
+        function dismissVoiceMenu(): void {}
+        function dismissModal(): void {}
+        function cancelSectionInteraction(): void {}
     }
 
     /// The shared plot origin: the gutter the roll draws at and the container
@@ -148,12 +150,12 @@ FocusScope {
     readonly property real baseFontPx: page.gridModel ? page.gridModel.baseFontPx
                                                       : page.seedBaseFontPx
 
-    function pushBodyFacts() {
+    function pushBodyFacts(): void {
         if (!page.pageModel || page.width <= 0 || page.height <= 0)
             return
         page.pageModel.configureBody(page.width, page.height, page.plotOrigin,
                                      page.Screen.devicePixelRatio, page.baseFontPx,
-                                     Qt.styleHints.startDragDistance)
+                                     Application.styleHints.startDragDistance)
     }
 
     onModelChanged: {
@@ -189,7 +191,7 @@ FocusScope {
     // Where focus returns after a modal closes: this page's plot, which stays in
     // the page even when the modal surfaces are composed into the container's
     // modal layer.
-    function focusOrigin() {
+    function focusOrigin(): void {
         plot.forceActiveFocus(Qt.OtherFocusReason)
     }
 
@@ -297,9 +299,8 @@ FocusScope {
                 id: marker
 
                 required property var model
-                // One packed spec per marker: every child binding reads the
-                // local map instead of paying a metaCall per property.
-                readonly property var s: model ? model.spec : ({})
+                // Packed Swift values remain a map until the typed publication wave.
+                readonly property var s: marker.model.spec
 
                 x: 0
                 y: 0
@@ -337,7 +338,7 @@ FocusScope {
                     visible: !marker.s.offscreen
                     text: marker.s.label
                     color: page.gridPalette.primaryText
-                    font: Qt.font(page.pageModel ? page.pageModel.captionFont : {})
+                    font: page.model ? Qt.font(page.model.captionFont) : emptyModel.captionFont
                     textFormat: Text.PlainText
                     renderType: Text.NativeRendering
                     horizontalAlignment: Text.AlignLeft
@@ -373,7 +374,7 @@ FocusScope {
             height: (page.pageModel ? page.pageModel.hoverLabelRect.height : 0)
             text: (page.pageModel ? page.pageModel.hoverText : "")
             color: page.gridPalette.primaryText
-            font: Qt.font(page.pageModel ? page.pageModel.noteNameFont : {})
+            font: page.model ? Qt.font(page.model.noteNameFont) : emptyModel.noteNameFont
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
             horizontalAlignment: Text.AlignLeft
@@ -394,7 +395,7 @@ FocusScope {
             height: (page.pageModel ? page.pageModel.readoutRect.height : 0)
             text: (page.pageModel ? page.pageModel.readoutText : "")
             color: page.gridPalette.primaryText
-            font: Qt.font(page.pageModel ? page.pageModel.captionFont : {})
+            font: page.model ? Qt.font(page.model.captionFont) : emptyModel.captionFont
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
             horizontalAlignment: page.pageModel ? page.pageModel.readoutAlignment
@@ -412,7 +413,7 @@ FocusScope {
             anchors.centerIn: parent
             text: (page.pageModel ? page.pageModel.plotMessage : "")
             color: page.gridPalette.primaryText
-            font: Qt.font(page.pageModel ? page.pageModel.captionFont : {})
+            font: page.model ? Qt.font(page.model.captionFont) : emptyModel.captionFont
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
         }
@@ -462,8 +463,10 @@ FocusScope {
             }
             MoveCoalescer {
                 id: plotMoves
-                dispatch: (x, y, buttons, modifiers) =>
-                    page.pageModel.pointerMove(x, y, buttons, modifiers)
+                function dispatchMove(x: real, y: real, buttons: int, modifiers: int): bool {
+                    return page.pageModel.pointerMove(x, y, buttons, modifiers)
+                }
+                dispatch: plotMoves.dispatchMove
             }
         }
 
@@ -508,11 +511,11 @@ FocusScope {
     Connections {
         target: page.pageModel
 
-        function onPickerOpenChanged() { page.syncModals() }
-        function onMenuOpenChanged() { page.syncModals() }
+        function onPickerOpenChanged(): void { page.syncModals() }
+        function onMenuOpenChanged(): void { page.syncModals() }
     }
 
-    function syncModals() {
+    function syncModals(): void {
         if (page.menu !== null) {
             page.menu.model = page.model
             page.menu.showing = page.pageModel ? page.pageModel.menuOpen : false
@@ -529,7 +532,7 @@ FocusScope {
     /// page (a composition that mounts the page elsewhere keeps the modals inside
     /// the page). Filled in `createModals`.
     property var modalHost: null
-    property var menu: null
+    property VoiceChangeMenu menu: null
     property var picker: null
 
     Component {
@@ -556,7 +559,7 @@ FocusScope {
     /// a fresh object per interaction. Each modal receives this page as its
     /// coordinate origin: the page publishes its anchors in its own space, and a
     /// modal hosted in the container's layer maps them there.
-    function createModals() {
+    function createModals(): void {
         var host = page.modalHost !== null && page.modalHost !== undefined ? page.modalHost : page
         if (page.menu === null) {
             page.menu = menuComponent.createObject(host, {"model": page.model,

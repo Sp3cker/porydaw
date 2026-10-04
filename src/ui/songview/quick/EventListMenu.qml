@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import PorydawApp
 import Porydaw.Ui
@@ -10,14 +12,14 @@ Loader {
     required property FontMetrics headerFontMetrics
     required property FontMetrics controlFontMetrics
         z: 10
-        active: page.controller.menuOpen
-        visible: page.controller.menuOpen
+        active: menuLoader.page.controller.menuOpen
+        visible: menuLoader.page.controller.menuOpen
         sourceComponent: Component {
             Item {
                 id: menuHost
                 focus: true
                 property string typeAhead: ""
-                function matchingRow(prefix) {
+                function matchingRow(prefix: string): int {
                     const count = menuPanel.rowCount
                     for (let offset = 1; offset <= count; ++offset) {
                         const index = (menuPanel.highlightedRow + offset + count) % count
@@ -30,7 +32,7 @@ Loader {
                 }
                 Keys.onPressed: (event) => {
                     if (event.key === Qt.Key_Escape) {
-                        page.controller.dismissMenu()
+                        menuLoader.page.controller.dismissMenu()
                     } else if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
                         const count = menuPanel.rowCount
                         if (count > 0) {
@@ -41,14 +43,14 @@ Loader {
                                 const row = (start + direction * offset + count * 2) % count
                                 const item = menuPanel.rowItem(row)
                                 if (item && item.active) {
-                                    page.hoverRow(menuPanel, row)
+                                    menuLoader.page.hoverRow(menuPanel, row)
                                     break
                                 }
                             }
                         }
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         if (menuPanel.highlightedRow >= 0)
-                            page.activateRow(menuPanel, menuPanel.highlightedRow)
+                            menuLoader.page.activateRow(menuPanel, menuPanel.highlightedRow)
                     } else if (!(event.modifiers & (Qt.ControlModifier | Qt.AltModifier
                                                      | Qt.MetaModifier))
                                && event.text.length === 1 && event.text >= " ") {
@@ -59,7 +61,7 @@ Loader {
                             row = menuHost.matchingRow(menuHost.typeAhead)
                         }
                         if (row >= 0)
-                            page.hoverRow(menuPanel, row)
+                            menuLoader.page.hoverRow(menuPanel, row)
                         typeAheadReset.restart()
                     } else {
                         event.accepted = false
@@ -75,50 +77,50 @@ Loader {
                 MouseArea {
                     anchors.fill: parent
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
-                    enabled: page.controller.menuOpen
-                    onPressed: page.controller.dismissMenu()
+                    enabled: menuLoader.page.controller.menuOpen
+                    onPressed: menuLoader.page.controller.dismissMenu()
                 }
                 QuickMenuPanel {
                     id: menuPanel
                     anchors.fill: parent
-                    host: page
+                    host: menuLoader.page
                     rootLevel: true
-                    menuModel: page.controller.menuItems
+                    menuModel: menuLoader.page.controller.menuItems
                     rowObjectNamePrefix: "eventListMenuRow_"
-                    readonly property bool showsShortcuts: page.controller.menuShortcutText.length > 0
-                    readonly property real shortcutWidth: controlFontMetrics.advanceWidth(
-                                                              page.controller.menuShortcutText)
-                    readonly property int separatorCount: page.controller.menuSeparatorCount
+                    readonly property bool showsShortcuts: menuLoader.page.controller.menuShortcutText.length > 0
+                    readonly property real shortcutWidth: menuLoader.controlFontMetrics.advanceWidth(
+                                                              menuLoader.page.controller.menuShortcutText)
+                    readonly property int separatorCount: menuLoader.page.controller.menuSeparatorCount
                     appearance: ({
-                        background: page.buttonBackground,
-                        outline: page.buttonOutline,
-                        text: page.buttonText,
-                        hoverBackground: page.buttonHoverBackground,
-                        hoverText: page.buttonText,
-                        pressedBackground: page.buttonPressedBackground,
-                        pressedText: page.buttonPressedText,
-                        disabledText: page.disabledText,
-                        separator: page.buttonOutline,
-                        font: page.controlFont
+                        background: menuLoader.page.buttonBackground,
+                        outline: menuLoader.page.buttonOutline,
+                        text: menuLoader.page.buttonText,
+                        hoverBackground: menuLoader.page.buttonHoverBackground,
+                        hoverText: menuLoader.page.buttonText,
+                        pressedBackground: menuLoader.page.buttonPressedBackground,
+                        pressedText: menuLoader.page.buttonPressedText,
+                        disabledText: menuLoader.page.disabledText,
+                        separator: menuLoader.page.buttonOutline,
+                        font: menuLoader.page.controlFont
                     })
-                    rowHeight: page.rowHeight
-                    checkX: page.cellHorizontalPadding / 2
-                    checkWidth: page.cellHorizontalPadding
-                    textX: page.cellHorizontalPadding * 2
+                    rowHeight: menuLoader.page.rowHeight
+                    checkX: menuLoader.page.cellHorizontalPadding / 2
+                    checkWidth: menuLoader.page.cellHorizontalPadding
+                    textX: menuLoader.page.cellHorizontalPadding * 2
                     textRight: showsShortcuts ? menuWidth - shortcutWidth
-                                                 - page.cellHorizontalPadding * 2
-                                              : menuWidth - page.cellHorizontalPadding
-                    shortcutRight: showsShortcuts ? menuWidth - page.cellHorizontalPadding : -1
+                                                 - menuLoader.page.cellHorizontalPadding * 2
+                                              : menuWidth - menuLoader.page.cellHorizontalPadding
+                    shortcutRight: showsShortcuts ? menuWidth - menuLoader.page.cellHorizontalPadding : -1
                     menuWidth: Math.min(parent.width, Math.max(
-                                            headerFontMetrics.advanceWidth(qsTr("Channel aftertouch")) * 2,
-                                            showsShortcuts ? controlFontMetrics.advanceWidth(
+                                            menuLoader.headerFontMetrics.advanceWidth(qsTr("Channel aftertouch")) * 2,
+                                            showsShortcuts ? menuLoader.controlFontMetrics.advanceWidth(
                                                                  qsTr("Move Event Down (Same Tick)"))
                                                             + shortcutWidth
-                                                            + page.cellHorizontalPadding * 4 : 0))
+                                                            + menuLoader.page.cellHorizontalPadding * 4 : 0))
                     menuHeight: Math.min(parent.height, (rowCount - separatorCount) * rowHeight
                                          + separatorCount * separatorHeight + 2)
                     menuOrigin: MenuPlacement.clampOrigin(
-                        Qt.point(page.controller.menuX, page.controller.menuY),
+                        Qt.point(menuLoader.page.controller.menuX, menuLoader.page.controller.menuY),
                         menuWidth, menuHeight, width, height)
                 }
                 Component.onCompleted: forceActiveFocus(Qt.PopupFocusReason)

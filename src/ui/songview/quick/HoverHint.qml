@@ -1,13 +1,6 @@
-// One reusable hover-scope group policy. A HoverHint owns exactly one logical
-// target group and is that group's only publisher into the mouse-hints
-// service. Child HoverHandlers may select the profile (by changing `profile`)
-// but never publish independently, and no ancestor publisher may cover
-// different-profile descendants: attach the publisher at the smallest item
-// that sees the whole group's hover. A child or page-wide ancestor publisher
-// over mixed profiles is a protocol violation.
-//
-// The drawer supplies popup-scope eligibility explicitly. The Swift service
-// owns application scope; this component owns the physical source lifetime.
+pragma ComponentBehavior: Bound
+// Each logical hover group has one publisher; Swift owns application scope.
+// This component owns source lifetime and retains hints across the owner's grab.
 import QtQuick
 import QtQml
 import Porydaw.Ui
@@ -43,14 +36,14 @@ HoverHandler {
     onScopeAllowedChanged: sync()
     property QtObject sourceLifetime: Connections {
         target: hint.source
-        function onVisibleChanged() { hint.sync() }
-        function onWindowChanged() { hint.sync() }
-        function onParentChanged() { hint.sync() }
+        function onVisibleChanged(): void { hint.sync() }
+        function onWindowChanged(): void { hint.sync() }
+        function onParentChanged(): void { hint.sync() }
     }
     property QtObject refresh: Connections {
         target: hint._hints()
 
-        function onScopeRefresh() {
+        function onScopeRefresh(): void {
             hint.sync()
         }
     }
@@ -59,7 +52,7 @@ HoverHandler {
     // The originating profile retained across the group's grab.
     property int _gestureProfile: HintProfiles.Empty
 
-    function _hints() {
+    function _hints(): var {
         return _service
     }
 
@@ -110,7 +103,7 @@ HoverHandler {
     // coordinates in the scene window. The containment check runs against
     // the source before any release bookkeeping, so an outside release
     // clears even when Qt froze hover membership.
-    function settleRelease(scenePosition) {
+    function settleRelease(scenePosition: point): void {
         if (!source)
             return
         releaseInside = source.contains(
@@ -120,7 +113,7 @@ HoverHandler {
 
     // A grabbed neighbor delivers its real release coordinate here when
     // Qt has not yet synthesized new hover membership for this source.
-    function receiveRelease(scenePosition) {
+    function receiveRelease(scenePosition: point): void {
         if (!source || !_service || !_sourceToken || !_sourceVisible()
                 || !scopeAllowed || gestureOwning
                 || !source.contains(source.mapFromItem(null,
@@ -133,7 +126,7 @@ HoverHandler {
 
     // Normal hover and lifecycle events claim here; receiveRelease() claims
     // from a grabbed neighbor's real coordinates before Qt updates hover.
-    function sync() {
+    function sync(): void {
         const hints = _hints()
         if (!hints || !_sourceToken)
             return
@@ -176,13 +169,13 @@ HoverHandler {
         _owned = true
     }
 
-    function _superseded(hints) {
+    function _superseded(hints: var): void {
         _owned = false
         _gestureProfile = HintProfiles.Empty
         hints.clear(_sourceToken)
     }
 
-    function _sourceVisible() {
+    function _sourceVisible(): bool {
         const win = source.Window.window
         // A detached (unparented or differently fresh) item has no window;
         // a closed or hidden window has no hover to claim.

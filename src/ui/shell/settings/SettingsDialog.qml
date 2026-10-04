@@ -1,5 +1,7 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import Porydaw.Ui
 import PorydawApp
 
@@ -21,21 +23,21 @@ DialogWindow {
     title: qsTr("Settings")
     font: Qt.font(applicationSession.typographyFonts.body)
 
-    function showSettings(songFirst) {
-        store.open()
+    function showSettings(songFirst: bool): void {
+        dialog.store.open()
         if (enginePage.item)
-            enginePage.item.reset()
+            (enginePage.item as EngineSettingsPage).reset()
         if (songPage.item)
-            songPage.item.reset()
-        selectedTab = songFirst && store.songAvailable ? 1 : 0
-        present()
+            (songPage.item as SongSettingsPage).reset()
+        dialog.selectedTab = songFirst && dialog.store.songAvailable ? 1 : 0
+        dialog.present()
     }
-    function commit() {
-        if (store.songAvailable)
-            songPage.item.finishVoicegroupEdit()
-        store.apply()
-        presenter.commitThemeMode()
-        presenter.commitGridLineContrast()
+    function commit(): void {
+        if (dialog.store.songAvailable)
+            (songPage.item as SongSettingsPage).finishVoicegroupEdit()
+        dialog.store.apply()
+        dialog.presenter.commitThemeMode()
+        dialog.presenter.commitGridLineContrast()
     }
     onClosing: {
         presenter.discardThemeMode()
@@ -129,7 +131,7 @@ DialogWindow {
         height: tabs.height - 20 * dialog.unit
         active: dialog.visible
         visible: dialog.selectedTab === 0
-        onLoaded: item.reset()
+        onLoaded: (enginePage.item as EngineSettingsPage).reset()
         sourceComponent: EngineSettingsPage {
             objectName: "settingsEnginePage"
             unit: dialog.unit; store: dialog.store; colors: dialog.colors
@@ -144,7 +146,7 @@ DialogWindow {
         height: tabs.height - 20 * dialog.unit
         active: dialog.visible
         visible: dialog.selectedTab === 1
-        onLoaded: item.reset()
+        onLoaded: (songPage.item as SongSettingsPage).reset()
         sourceComponent: SongSettingsPage {
             objectName: "settingsSongPage"
             unit: dialog.unit; store: dialog.store; colors: dialog.colors

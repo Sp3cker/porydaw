@@ -1,5 +1,7 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
 import PorydawApp
@@ -14,8 +16,8 @@ Flickable {
     contentHeight: body.implicitHeight + layoutSpaces.three * 2
     clip: true
     property bool controllersExpanded: false
-    function focusFirst() { player.forceActiveFocus() }
-    onVisibleChanged: { if (visible) focusFirst() }
+    function focusFirst(): void { player.forceActiveFocus() }
+    onVisibleChanged: { if (visible) page.focusFirst() }
     ColumnLayout {
         id: body
         x: page.layoutSpaces.three
@@ -32,7 +34,7 @@ Flickable {
                 currentIndex: page.controller.playerIndex
                 ToolTip.text: qsTr("Select Background music for a song. Select Sound effect for a sound. Also select it for a fanfare.")
                 ToolTip.visible: hovered
-                onActivated: index => page.controller.selectPlayer(index)
+                onActivated: function(index: int): void { page.controller.selectPlayer(index) }
             }
         }
         Item { Layout.preferredHeight: page.layoutSpaces.one }
@@ -79,11 +81,17 @@ Flickable {
             Repeater {
                 model: page.controller.controllerRows
                 delegate: RowLayout {
+                    id: controllerRow
+                    required property string controller
+                    required property string events
+                    required property string inGame
+                    required property bool needsAttention
+                    required property QtObject model
                     Layout.fillWidth: true
-                    Label { text: model.controller; color: page.colors.windowText }
-                    Label { text: model.function; Layout.fillWidth: true; color: page.colors.windowText }
-                    Label { text: model.events; color: page.colors.windowText }
-                    Label { text: model.inGame; color: model.needsAttention ? page.colors.warningText : page.colors.windowText }
+                    Label { text: controllerRow.controller; color: page.colors.windowText }
+                    Label { text: controllerRow.model.function; Layout.fillWidth: true; color: page.colors.windowText }
+                    Label { text: controllerRow.events; color: page.colors.windowText }
+                    Label { text: controllerRow.inGame; color: controllerRow.needsAttention ? page.colors.warningText : page.colors.windowText }
                 }
             }
         }

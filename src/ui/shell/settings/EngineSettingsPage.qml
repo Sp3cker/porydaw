@@ -1,5 +1,7 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import PorydawApp
 
 Item {
@@ -11,25 +13,25 @@ Item {
     readonly property real labelWidth: 105 + 84 * (unit - 1)
     readonly property real fieldX: labelWidth
     readonly property real fieldWidth: width - fieldX
-    readonly property var rates: [5734, 7884, 10512, 13379, 15768, 18157,
-                                  21024, 26758, 31536, 36314, 40137, 42048, 0]
-    function rateChoices() {
-        const choices = rates.slice()
-        if (choices.indexOf(store.mixRate) < 0)
-            choices.push(store.mixRate)
+    readonly property list<real> rates: [5734, 7884, 10512, 13379, 15768, 18157,
+                                        21024, 26758, 31536, 36314, 40137, 42048, 0]
+    function rateChoices(): list<real> {
+        const choices = page.rates.slice()
+        if (choices.indexOf(page.store.mixRate) < 0)
+            choices.push(page.store.mixRate)
         return choices
     }
-    function rateName(rate) {
+    function rateName(rate: real): string {
         return rate === 0 ? qsTr("Host rate (clean, no GBA resampling)")
              : rate === 13379 ? qsTr("%1 Hz (GBA default)").arg(rate)
-             : rates.indexOf(rate) < 0 ? qsTr("%1 Hz (custom)").arg(rate)
+             : page.rates.indexOf(rate) < 0 ? qsTr("%1 Hz (custom)").arg(rate)
              : qsTr("%1 Hz").arg(rate)
     }
-    function reset() {
-        polyphony.value = store.maxPcmChannels
-        mixer.currentIndex = store.mixer === "sappy" ? 1 : 0
-        rate.currentIndex = rateChoices().indexOf(store.mixRate)
-        analog.checked = store.analogFilter
+    function reset(): void {
+        polyphony.value = page.store.maxPcmChannels
+        mixer.currentIndex = page.store.mixer === "sappy" ? 1 : 0
+        rate.currentIndex = page.rateChoices().indexOf(page.store.mixRate)
+        analog.checked = page.store.analogFilter
     }
 
     Text {
@@ -46,8 +48,8 @@ Item {
         from: 1; to: page.store.maximumPcmChannels; value: page.store.maxPcmChannels
         font: Qt.font(page.typography.body)
         editable: true
-        textFromValue: value => qsTr("%1 channels").arg(value)
-        valueFromText: text => parseInt(text, 10)
+        textFromValue: function(value: int): string { return qsTr("%1 channels").arg(value) }
+        valueFromText: function(text: string): real { return parseInt(text, 10) }
         onValueModified: page.store.changeMaxPcmChannels(value)
         ToolTip.visible: hovered
         ToolTip.text: qsTr("Maximum simultaneous PCM (DirectSound) notes. The engine supports up to %1.").arg(page.store.maximumPcmChannels)
@@ -66,7 +68,7 @@ Item {
         model: [qsTr("Ipatix"), qsTr("Sappy")]
         font: Qt.font(page.typography.body)
         currentIndex: page.store.mixer === "sappy" ? 1 : 0
-        onActivated: page.store.changeMixer(index === 1 ? "sappy" : "ipatix")
+        onActivated: function(index: int): void { page.store.changeMixer(index === 1 ? "sappy" : "ipatix") }
         ToolTip.visible: hovered
         ToolTip.text: qsTr("Ipatix is the improved high-quality mixer; Sappy matches the standard Nintendo mixer.")
     }
@@ -84,7 +86,7 @@ Item {
         model: page.rateChoices().map(page.rateName)
         font: Qt.font(page.typography.body)
         currentIndex: page.rateChoices().indexOf(page.store.mixRate)
-        onActivated: page.store.changeMixRate(page.rateChoices()[index])
+        onActivated: function(index: int): void { page.store.changeMixRate(page.rateChoices()[index]) }
         ToolTip.visible: hovered
         ToolTip.text: qsTr("The GBA's DirectSound mixing rate; 13379 Hz aliases high notes as in-game.")
     }

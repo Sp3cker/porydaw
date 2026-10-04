@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Porydaw.Ui
 
@@ -11,20 +13,20 @@ Item {
     required property Item editorDrawer
     required property var bodyFontMetrics
     Connections {
-        target: root.applicationSession
-        function onTimeSigPromptOpenChanged() {
-            if (!root.applicationSession.timeSigPromptOpen)
-                rulerInput.forceActiveFocus(Qt.OtherFocusReason)
+        target: promptHost.root.applicationSession
+        function onTimeSigPromptOpenChanged(): void {
+            if (!promptHost.root.applicationSession.timeSigPromptOpen)
+                promptHost.rulerInput.forceActiveFocus(Qt.OtherFocusReason)
         }
     }
     Connections {
-        target: root.rulerMenu
-        function onInsertTimePromptOpenChanged() {
-            if (root.rulerMenu.insertTimePromptOpen) {
-                root.insertPromptHadFocus = true
-            } else if (root.insertPromptHadFocus) {
-                root.insertPromptHadFocus = false
-                rulerInput.forceActiveFocus(Qt.OtherFocusReason)
+        target: promptHost.root.rulerMenu
+        function onInsertTimePromptOpenChanged(): void {
+            if (promptHost.root.rulerMenu.insertTimePromptOpen) {
+                promptHost.root.insertPromptHadFocus = true
+            } else if (promptHost.root.insertPromptHadFocus) {
+                promptHost.root.insertPromptHadFocus = false
+                promptHost.rulerInput.forceActiveFocus(Qt.OtherFocusReason)
             }
         }
     }
@@ -33,30 +35,30 @@ Item {
         objectName: "headerVoicePickerLoader"
         anchors.fill: parent
         z: 14
-        active: root.applicationSession.headerVoicePickerOpen
+        active: promptHost.root.applicationSession.headerVoicePickerOpen
         Connections {
-            target: root.timeSigHost
-            function onAddTrackVoiceRequested() {
-                if (root.timeSigHost.songTabs.selectedId === root.applicationSession.tabId
-                        && root.headersModel.menuOpen)
-                    root.headersModel.dismissHeaderMenu()
+            target: promptHost.root.timeSigHost
+            function onAddTrackVoiceRequested(): void {
+                if (promptHost.root.timeSigHost.songTabs.selectedId === promptHost.root.applicationSession.tabId
+                        && promptHost.root.headersModel.menuOpen)
+                    promptHost.root.headersModel.dismissHeaderMenu()
             }
         }
         Connections {
-            target: root.applicationSession
-            function onHeaderVoicePickerOpenChanged() {
-                if (!root.applicationSession.headerVoicePickerOpen)
+            target: promptHost.root.applicationSession
+            function onHeaderVoicePickerOpenChanged(): void {
+                if (!promptHost.root.applicationSession.headerVoicePickerOpen)
                     Qt.callLater(function() {
-                        if (!root.applicationSession.headerVoicePickerOpen && trackHeaders.bandVisible)
-                            trackHeaders.restoreHeaderFocus()
+                        if (!promptHost.root.applicationSession.headerVoicePickerOpen && promptHost.trackHeaders.bandVisible)
+                            promptHost.trackHeaders.restoreHeaderFocus()
                     })
             }
         }
         sourceComponent: Component {
             VoicePickerPrompt {
-                model: root.headerPickerModel
-                promptPalette: root.gridModel.palette
-                hintService: root.hintService
+                model: promptHost.root.headerPickerModel
+                promptPalette: promptHost.root.gridModel.palette
+                hintService: promptHost.root.hintService
                 showing: true
             }
         }
@@ -66,18 +68,18 @@ Item {
         id: timeSigPromptLoader
         anchors.fill: parent
         z: 11
-        active: root.applicationSession.timeSigPromptOpen
+        active: promptHost.root.applicationSession.timeSigPromptOpen
         sourceComponent: Component {
             Item {
                 MouseArea {
                     anchors.fill: parent
-                    onPressed: root.timeSigHost.cancelTimeSigPrompt()
+                    onPressed: promptHost.root.timeSigHost.cancelTimeSigPrompt()
                 }
                 TimeSignaturePrompt {
                     anchors.centerIn: parent
                     width: implicitWidth
                     height: implicitHeight
-                    bridge: root.timeSigHost
+                    bridge: promptHost.root.timeSigHost
                 }
             }
         }
@@ -86,19 +88,19 @@ Item {
         id: insertTimePromptLoader
         anchors.fill: parent
         z: 11
-        active: root.rulerMenu && root.rulerMenu.insertTimePromptOpen
+        active: promptHost.root.rulerMenu && promptHost.root.rulerMenu.insertTimePromptOpen
         sourceComponent: Component {
             Item {
                 MouseArea {
                     anchors.fill: parent
-                    onPressed: root.rulerMenu.cancelInsertTimePrompt()
+                    onPressed: promptHost.root.rulerMenu.cancelInsertTimePrompt()
                 }
                 InsertTimePrompt {
                     anchors.centerIn: parent
                     width: implicitWidth
                     height: implicitHeight
-                    bridge: root.rulerMenu
-                    promptPalette: root.gridModel.palette
+                    bridge: promptHost.root.rulerMenu
+                    promptPalette: promptHost.root.gridModel.palette
                 }
             }
         }
@@ -107,17 +109,17 @@ Item {
         id: velocityPromptLoader
         anchors.fill: parent
         z: 13
-        active: root.velocityModel && (root.velocityModel.promptOpen
-                                       || root.velocityPromptRetainingRelease)
+        active: promptHost.root.velocityModel && (promptHost.root.velocityModel.promptOpen
+                                       || promptHost.root.velocityPromptRetainingRelease)
         sourceComponent: Component {
             VelocityPrompt {
                 anchors.fill: parent
-                model: root.velocityModel
-                promptPalette: root.gridModel.palette
-                focusOrigin: rollInput
-                hintService: root.hintService
+                model: promptHost.root.velocityModel
+                promptPalette: promptHost.root.gridModel.palette
+                focusOrigin: promptHost.rollInput
+                hintService: promptHost.root.hintService
                 onConsumingOutsidePressChanged: {
-                    root.velocityPromptRetainingRelease = consumingOutsidePress
+                    promptHost.root.velocityPromptRetainingRelease = consumingOutsidePress
                 }
             }
         }
@@ -127,7 +129,7 @@ Item {
         id: pitchBendPopupLoader
         anchors.fill: parent
         z: 12
-        active: root.pitchBendPresenter.isOpen
+        active: promptHost.root.pitchBendPresenter.isOpen
         visible: active
         enabled: active
         sourceComponent: Component {
@@ -137,55 +139,55 @@ Item {
                     anchors.fill: parent
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                     onPressed: (mouse) => {
-                        const rollPoint = rollInput.mapFromItem(root, mouse.x, mouse.y)
-                        const overRoll = rollPlot.visible && rollPoint.x >= 0 && rollPoint.y >= 0
-                            && rollPoint.x < rollInput.width && rollPoint.y < rollInput.height
+                        const rollPoint = promptHost.rollInput.mapFromItem(promptHost.root, mouse.x, mouse.y)
+                        const overRoll = promptHost.rollPlot.visible && rollPoint.x >= 0 && rollPoint.y >= 0
+                            && rollPoint.x < promptHost.rollInput.width && rollPoint.y < promptHost.rollInput.height
                         const hit = overRoll && mouse.button === Qt.LeftButton
-                            && root.gridModel.focusNoteUnderCursor(rollPoint.x, rollPoint.y)
-                        root.pitchBendPresenter.cancelAndClose()
+                            && promptHost.root.gridModel.focusNoteUnderCursor(rollPoint.x, rollPoint.y)
+                        promptHost.root.pitchBendPresenter.cancelAndClose()
                         mouse.accepted = hit
                         if (hit)
-                            rollInput.forceActiveFocus(Qt.MouseFocusReason)
+                            promptHost.rollInput.forceActiveFocus(Qt.MouseFocusReason)
                     }
                     onWheel: (wheel) => wheel.accepted = true
                 }
                 PitchBendPopup {
                     id: pitchBendPopup
-                    bridge: root.pitchBendPresenter
-                    fallbackFont: root.bodyFont
+                    bridge: promptHost.root.pitchBendPresenter
+                    fallbackFont: promptHost.root.bodyFont
                     width: implicitWidth
                     height: implicitHeight
                     x: Math.max(0, Math.min(
-                        root.timelineSplitX + root.pitchBendPresenter.anchorX
-                            + root.pitchBendPresenter.anchorWidth / 2 - width / 2,
+                        promptHost.root.timelineSplitX + promptHost.root.pitchBendPresenter.anchorX
+                            + promptHost.root.pitchBendPresenter.anchorWidth / 2 - width / 2,
                         parent.width - width))
                     y: {
-                        const below = root.gridModel.rulerHeight
-                            + root.pitchBendPresenter.anchorY
-                            + root.pitchBendPresenter.anchorHeight
-                            + bodyFontMetrics.height / 3
-                        const above = root.gridModel.rulerHeight
-                            + root.pitchBendPresenter.anchorY - height
-                            - bodyFontMetrics.height / 3
+                        const below = promptHost.root.gridModel.rulerHeight
+                            + promptHost.root.pitchBendPresenter.anchorY
+                            + promptHost.root.pitchBendPresenter.anchorHeight
+                            + promptHost.bodyFontMetrics.height / 3
+                        const above = promptHost.root.gridModel.rulerHeight
+                            + promptHost.root.pitchBendPresenter.anchorY - height
+                            - promptHost.bodyFontMetrics.height / 3
                         return Math.max(0, Math.min(
-                            below + height <= editorDrawer.y ? below : above,
+                            below + height <= promptHost.editorDrawer.y ? below : above,
                             parent.height - height))
                     }
                     Component.onCompleted: {
-                        root.pitchBendPresenter.configure(
-                            root.baseFontPx,
-                            bodyFontMetrics.lineSpacing,
-                            root.gridModel.devicePixelRatio)
+                        promptHost.root.pitchBendPresenter.configure(
+                            promptHost.root.baseFontPx,
+                            promptHost.bodyFontMetrics.lineSpacing,
+                            promptHost.root.gridModel.devicePixelRatio)
                         pitchBendPopup.focusInitialGraph()
                     }
-                    onFallbackFontChanged: root.pitchBendPresenter.configure(
-                        root.baseFontPx,
-                        bodyFontMetrics.lineSpacing,
-                        root.gridModel.devicePixelRatio)
+                    onFallbackFontChanged: promptHost.root.pitchBendPresenter.configure(
+                        promptHost.root.baseFontPx,
+                        promptHost.bodyFontMetrics.lineSpacing,
+                        promptHost.root.gridModel.devicePixelRatio)
                 }
                 Keys.onEscapePressed: (event) => {
-                    root.pitchBendPresenter.cancelAndClose()
-                    rollInput.forceActiveFocus(Qt.OtherFocusReason)
+                    promptHost.root.pitchBendPresenter.cancelAndClose()
+                    promptHost.rollInput.forceActiveFocus(Qt.OtherFocusReason)
                     event.accepted = true
                 }
             }

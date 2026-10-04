@@ -1,5 +1,6 @@
+pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
 import Porydaw.Icons
@@ -11,18 +12,18 @@ FocusScope {
     property var layoutSpaces: null
     property var shellRouter: null
     signal contextMenuAt(real x, real y)
-    function selectedEditorSurface() {
+    function selectedEditorSurface(): EditorSurface {
         for (let index = 0; index < pages.count; ++index) {
-            const page = pages.itemAt(index)
+            const page = pages.itemAt(index) as SongTab
             if (page && page.session === root.controller.selectedPage)
-                return page.surface
+                return page.surface as EditorSurface
         }
         return null
     }
-    function focusOwnsLocalKeys() {
+    function focusOwnsLocalKeys(): bool {
         if (closeDialog.visible)
             return true
-        const window = Window.window
+        const window = root.Window.window
         let focus = window ? window.activeFocusItem : null
         if (!focus)
             return false
@@ -37,8 +38,8 @@ FocusScope {
         }
         return true
     }
-    function eventListIsActive() {
-        const window = Window.window
+    function eventListIsActive(): bool {
+        const window = root.Window.window
         let focus = window ? window.activeFocusItem : null
         while (focus && focus !== root) {
             if (focus.objectName === "eventListPage")
@@ -61,25 +62,23 @@ FocusScope {
     // One physical pixel at any device ratio: the strip separator and every
     // control border draw this same hairline.
     readonly property real hairline: 1 / Screen.devicePixelRatio
-    // The target the close gate is asking about. C++ (WorkspaceUi::requestCloseTab)
-    // asks about one named tab ("%1 has unsaved changes. Save them?"), so the
-    // dialog names the strip's tab instead of saying "this tab", and names the
-    // bank when the close walk asks about a dirty bank no open tab holds.
+    // The close gate names the dirty tab, or the dirty bank when no open tab
+    // holds it, rather than referring to an unnamed "this tab".
     readonly property string pendingCloseTitle: {
         if (root.controller.pendingCloseBankTitle.length > 0)
             return root.controller.pendingCloseBankTitle;
         for (let i = 0; i < tabButtons.count; ++i) {
-            const button = tabButtons.itemAt(i);
+            const button = tabButtons.itemAt(i) as TabSelectButton;
             if (button && button.tabId === root.controller.pendingCloseId)
                 return button.session.title;
         }
         return "";
     }
 
-    readonly property int tabMargin: layoutSpaces
-                                     ? layoutSpaces.half : Math.max(1, Math.round(bodyMetrics.font.pixelSize * 0.125))
-    readonly property int tabPadding: layoutSpaces
-                                      ? layoutSpaces.two : Math.max(1, Math.round(bodyMetrics.font.pixelSize * 0.5))
+    readonly property int tabMargin: root.layoutSpaces
+                                     ? root.layoutSpaces.half : Math.max(1, Math.round(bodyMetrics.font.pixelSize * 0.125))
+    readonly property int tabPadding: root.layoutSpaces
+                                      ? root.layoutSpaces.two : Math.max(1, Math.round(bodyMetrics.font.pixelSize * 0.5))
     readonly property int closeExtent: 20
     readonly property int scrollExtent: 16
     readonly property int tabHeight: Math.max(closeExtent, Math.round(bodyMetrics.height))
@@ -90,7 +89,7 @@ FocusScope {
                                  : Qt.font({family: "Atkinson Hyperlegible Next"})
     }
 
-    function revealSelectedTab() {
+    function revealSelectedTab(): void {
         const selected = tabButtons.itemAt(root.controller.selectedIndex);
         if (!selected)
             return;
@@ -102,16 +101,22 @@ FocusScope {
 
     Connections {
         target: root.controller
-        function onSelectedIndexChanged() {
+        function onSelectedIndexChanged(): void {
             root.revealSelectedTab();
         }
+    }
+
+    component TabSelectButton: Button {
+        required property var model
+        readonly property QtObject session: model.display
+        readonly property int tabId: session.tabId
     }
 
     component StripButton: Button {
         id: button
         focusPolicy: Qt.NoFocus
         palette.button: down ? root.controller.palette.tabPressedBackground : hovered ? root.controller.palette.tabHoverBackground : root.controller.palette.chromeBackground
-        implicitWidth: caption.implicitWidth + leftPadding + rightPadding
+        implicitWidth: caption.implicitWidth + button.leftPadding + button.rightPadding
         implicitHeight: Math.round(button.font.pixelSize * 2)
         padding: root.tabPadding
         contentItem: Text {
@@ -167,7 +172,7 @@ FocusScope {
         enabled: root.controller.pendingCloseId < 0 && root.controller.pendingCloseBankTitle.length === 0
 
         Rectangle {
-            width: parent.width
+            width: strip.width
             height: root.hairline
             color: root.controller.palette.tabSeparator
         }
@@ -176,7 +181,7 @@ FocusScope {
             id: stripViewport
             anchors.left: parent.left
             anchors.right: scrollControls.visible ? scrollControls.left : parent.right
-            height: parent.height
+            height: strip.height
             contentWidth: tabRow.width
             contentHeight: height
             boundsBehavior: Flickable.StopAtBounds
@@ -193,11 +198,8 @@ FocusScope {
                 Repeater {
                     id: tabButtons
                     model: root.controller.tabs
-                    delegate: Button {
+                    delegate: TabSelectButton {
                         id: selectButton
-                        required property var model
-                        readonly property QtObject session: model.display
-                        readonly property int tabId: session.tabId
                         objectName: "songTabSelect_" + tabId
                         text: session.dirty ? qsTr("%1*").arg(session.title) : session.title
                         Accessible.name: session.dirty ? qsTr("%1, modified").arg(session.title) : session.title
@@ -243,8 +245,8 @@ FocusScope {
                         Button {
                             id: closeButton
                             objectName: "songTabClose_" + selectButton.tabId
-                            x: parent.width - width - 1
-                            y: Math.floor((parent.height - height) / 2)
+                            x: selectButton.width - width - 1
+                            y: Math.floor((selectButton.height - height) / 2)
                             width: root.closeExtent
                             height: root.closeExtent
                             padding: 2
@@ -300,13 +302,13 @@ FocusScope {
             id: scrollControls
             anchors.right: parent.right
             width: 2 * root.scrollExtent - 1
-            height: parent.height
+            height: strip.height
             visible: tabRow.width > strip.width
 
             ScrollButton {
                 objectName: "songTabScrollLeft"
                 pointsLeft: true
-                height: parent.height
+                height: scrollControls.height
                 enabled: !stripViewport.atXBeginning
                 Accessible.name: qsTr("Scroll tabs left")
                 onClicked: stripViewport.contentX = Math.max(0, stripViewport.contentX - stripViewport.width)
@@ -315,7 +317,7 @@ FocusScope {
                 objectName: "songTabScrollRight"
                 pointsLeft: false
                 x: root.scrollExtent - 1
-                height: parent.height
+                height: scrollControls.height
                 enabled: !stripViewport.atXEnd
                 Accessible.name: qsTr("Scroll tabs right")
                 onClicked: stripViewport.contentX = Math.min(Math.max(0, stripViewport.contentWidth - stripViewport.width), stripViewport.contentX + stripViewport.width)
@@ -336,14 +338,14 @@ FocusScope {
             id: pages
             model: root.controller.tabs
             delegate: SongTab {
-                required property var model
-                objectName: "songTab_" + model.display.tabId
+                required property var display
+                objectName: "songTab_" + display.tabId
                 anchors.fill: parent
-                session: model.display
+                session: display
                 shellRouter: root.shellRouter
                 onContextMenuAt: (x, y) => root.contextMenuAt(x, y)
                 controller: root.controller
-                visible: model.display === root.controller.selectedPage
+                visible: display === root.controller.selectedPage
                 enabled: visible
                 focus: visible
             }
