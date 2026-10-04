@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
+import "../MenuPlacement.js" as MenuPlacement
 
 FocusScope {
     id: root
@@ -111,8 +112,10 @@ FocusScope {
         arrowWidth: Math.round(root.model.baseFontPx * 0.8)
         menuWidth: Math.min(root.width, root.model.baseFontPx * 18)
         menuHeight: Math.min(root.height, root.model.menuRowCount * rowHeight + 2)
-        x: Math.max(0, Math.min(root.anchor.x, root.width - menuWidth))
-        y: Math.max(0, Math.min(root.anchor.y, root.height - menuHeight))
+        readonly property point origin: MenuPlacement.clampOrigin(
+            root.anchor, menuWidth, menuHeight, root.width, root.height)
+        x: origin.x
+        y: origin.y
         width: menuWidth
         height: menuHeight
         menuOrigin: Qt.point(0, 0)
@@ -135,9 +138,11 @@ FocusScope {
         textRight: menuWidth - Math.round(root.model.baseFontPx * 0.5)
         menuWidth: panel.menuWidth
         menuHeight: Math.min(root.height, root.model.menuChildRowCount * rowHeight + 2)
-        x: panel.x + panel.width + width <= root.width
-            ? panel.x + panel.width : Math.max(0, panel.x - width)
-        y: Math.max(0, Math.min(root.height - height, panel.y + root.currentRow * rowHeight))
+        readonly property point origin: MenuPlacement.flyoutOrigin(
+            panel.x, panel.width, panel.y + root.currentRow * rowHeight,
+            width, height, root.width, root.height)
+        x: origin.x
+        y: origin.y
         width: menuWidth
         height: menuHeight
         menuOrigin: Qt.point(0, 0)

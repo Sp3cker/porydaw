@@ -2,6 +2,7 @@
 import QtQuick
 import QtQuick.Controls
 import Porydaw.Ui
+import "../MenuPlacement.js" as MenuPlacement
 
 pragma ComponentBehavior: Bound
 
@@ -65,8 +66,10 @@ FocusScope {
         menuHeight: Math.min(rowCount * rowHeight + 2, menuRoot.height)
         width: menuWidth
         height: menuHeight
-        x: Math.min(Math.max(menuRoot.anchor.x, 0), Math.max(0, menuRoot.width - width))
-        y: Math.min(Math.max(menuRoot.anchor.y, 0), Math.max(0, menuRoot.height - height))
+        readonly property point origin: MenuPlacement.clampOrigin(
+            menuRoot.anchor, width, height, menuRoot.width, menuRoot.height)
+        x: origin.x
+        y: origin.y
         textX: Math.round(menuRoot.baseFontPx / 2)
         textRight: menuWidth - textX
         highlightedRow: menuRoot.currentRow

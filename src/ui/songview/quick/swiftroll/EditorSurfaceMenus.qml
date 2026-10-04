@@ -1,6 +1,7 @@
 import QtQuick
 import QtQml.Models
 import Porydaw.Ui
+import "../MenuPlacement.js" as MenuPlacement
 
 Item {
     id: menuHost
@@ -175,9 +176,8 @@ Item {
                     menuWidth: Math.min(parent.width, 2 + textX
                                         + headerMeasure.widestText + root.menuHorizontalPadding)
                     menuHeight: Math.min(parent.height, 2 + rowCount * rowHeight)
-                    menuOrigin: Qt.point(
-                        Math.max(0, Math.min(root.headerMenuPosition.x, width - menuWidth)),
-                        Math.max(0, Math.min(root.headerMenuPosition.y, height - menuHeight)))
+                    menuOrigin: MenuPlacement.clampOrigin(
+                        root.headerMenuPosition, menuWidth, menuHeight, width, height)
                 }
                 Component.onCompleted: forceActiveFocus(Qt.PopupFocusReason)
             }
@@ -246,9 +246,8 @@ Item {
                     menuWidth: Math.min(parent.width, 2 + textX
                                         + gridMeasure.widestText + root.menuHorizontalPadding)
                     menuHeight: Math.min(parent.height, 2 + rowCount * rowHeight)
-                    menuOrigin: Qt.point(
-                        Math.max(0, Math.min(root.gridMenuPosition.x, width - menuWidth)),
-                        Math.max(0, Math.min(root.gridMenuPosition.y, height - menuHeight)))
+                    menuOrigin: MenuPlacement.clampOrigin(
+                        root.gridMenuPosition, menuWidth, menuHeight, width, height)
                 }
                 Component.onCompleted: forceActiveFocus(Qt.PopupFocusReason)
             }
@@ -309,13 +308,10 @@ Item {
                     menuHeight: Math.min(parent.height, 2
                                          + (rowCount - rulerMeasure.separatorCount) * rowHeight
                                          + rulerMeasure.separatorCount)
-                    menuOrigin: Qt.point(
-                        Math.max(0, Math.min(root.rulerMenu.menuKind === 2
-                                             ? root.timeSelectionMenuPosition.x : root.timeSigMenuPosition.x,
-                                             width - menuWidth)),
-                        Math.max(0, Math.min(root.rulerMenu.menuKind === 2
-                                             ? root.timeSelectionMenuPosition.y : root.timeSigMenuPosition.y,
-                                             height - menuHeight)))
+                    menuOrigin: MenuPlacement.clampOrigin(
+                        root.rulerMenu.menuKind === 2 ? root.timeSelectionMenuPosition
+                                                      : root.timeSigMenuPosition,
+                        menuWidth, menuHeight, width, height)
                 }
                 Component.onCompleted: forceActiveFocus(Qt.PopupFocusReason)
             }

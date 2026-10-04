@@ -1,5 +1,6 @@
 import QtQuick
 import PorydawApp
+import "MenuPlacement.js" as MenuPlacement
 
 Loader {
     id: menuLoader
@@ -116,9 +117,9 @@ Loader {
                                                             + page.cellHorizontalPadding * 4 : 0))
                     menuHeight: Math.min(parent.height, (rowCount - separatorCount) * rowHeight
                                          + separatorCount * separatorHeight + 2)
-                    menuOrigin: Qt.point(
-                        Math.max(0, Math.min(page.controller.menuX, width - menuWidth)),
-                        Math.max(0, Math.min(page.controller.menuY, height - menuHeight)))
+                    menuOrigin: MenuPlacement.clampOrigin(
+                        Qt.point(page.controller.menuX, page.controller.menuY),
+                        menuWidth, menuHeight, width, height)
                 }
                 Component.onCompleted: forceActiveFocus(Qt.PopupFocusReason)
             }

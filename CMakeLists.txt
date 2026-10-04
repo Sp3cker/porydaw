@@ -278,6 +278,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/TimelineScrollbar.qml
         src/ui/songview/quick/HintProfiles.qml
         src/ui/songview/quick/QuickMenuPanel.qml
+        src/ui/songview/quick/MenuPlacement.js
         src/ui/songview/quick/AutomationTabs.qml
         src/ui/songview/quick/swiftroll/EditorSurface.qml
         src/ui/songview/quick/swiftroll/EditorRollBand.qml

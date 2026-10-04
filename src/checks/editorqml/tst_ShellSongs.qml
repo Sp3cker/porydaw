@@ -238,6 +238,14 @@ TestCase {
         const menu = findChild(shell, "songListContextMenu")
         compare(menu.contentItem.rowItem(3).enabled, true,
                 "the real context menu enables Register on the charmap-only row")
+        const window = menu.parent.Window.window
+        menu.x = window.width
+        menu.y = window.height
+        const frame = menu.contentItem.mapToItem(null, 0, 0)
+        verify(frame.x >= 0 && frame.y >= 0 && frame.x + menu.width <= window.width
+               && frame.y + menu.height <= window.height,
+               "a Songs menu requested past the window corner stays inside the window: "
+               + [frame.x, frame.y, menu.width, menu.height, window.width, window.height])
         menuAction("register")
         verify(waitForNative(function() {
             const dialog = findChild(shell, "songConfirmationDialog")

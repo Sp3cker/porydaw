@@ -203,8 +203,8 @@ FocusScope {
                         songMenu.canRegister = root.songs.canRegister(clickedSongId)
                         root.songs.selectSong(clickedSongId)
                         list.currentIndex = clickedIndex
-                        songMenu.x = Math.max(0, Math.min(position.x, Overlay.overlay.width - songMenu.width))
-                        songMenu.y = Math.max(0, Math.min(position.y, Overlay.overlay.height - songMenu.height))
+                        songMenu.x = position.x
+                        songMenu.y = position.y
                         songMenu.open()
                     }
                 }
@@ -230,6 +230,8 @@ FocusScope {
         property int songId: -1
         property bool canRegister: false
         padding: 0
+        // Qt keeps the popup inside the window, like the style's Menu.
+        margins: 0
         width: Math.ceil(root.baseFontPx * 15)
         height: Math.ceil(root.baseFontPx * 1.7) * 4 + root.pad
         modal: false
