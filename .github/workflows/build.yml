@@ -88,6 +88,16 @@ jobs:
           aqtsource: ${{ runner.os == 'Windows' && 'git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7' || '' }}
           arch: ${{ runner.os == 'Windows' && 'win64_msvc2022_64' || '' }}
 
+      - name: Set up Deno
+        if: runner.os == 'Windows'
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Patch Qt for Swift's Clang importer
+        if: runner.os == 'Windows'
+        run: deno run --allow-read --allow-write tools/qt_version_number_patch.ts "$env:QT_ROOT_DIR"
+
       - name: Set up MSVC environment
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1

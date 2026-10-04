@@ -24,6 +24,7 @@ import {
   NativeBuildToolsError,
 } from "./native_build_tools.ts";
 import { poryaaaaConfiguration } from "./poryaaaa_source.ts";
+import { patchQtVersionNumber } from "./qt_version_number_patch.ts";
 import { SetupProgress } from "./setup_reporter.ts";
 
 const root = Deno.cwd();
@@ -218,7 +219,7 @@ async function ensureQt(
     buildDirectory,
   );
   if (existingPrefix) {
-    await patchWindowsQtVersionNumber(existingPrefix, requestedVersion);
+    if (Deno.build.os === "windows") await patchQtVersionNumber(existingPrefix);
     return { prefix: existingPrefix, reused: true };
   }
   await run(`downloading Qt ${requestedVersion}`, environmentPython, [
@@ -236,23 +237,8 @@ async function ensureQt(
   if (!prefix) {
     throw new Error("Qt installation did not provide Qt6Config.cmake");
   }
-  await patchWindowsQtVersionNumber(prefix, requestedVersion);
+  if (Deno.build.os === "windows") await patchQtVersionNumber(prefix);
   return { prefix, reused: false };
-}
-
-async function patchWindowsQtVersionNumber(prefix: string, version: string) {
-  if (Deno.build.os !== "windows" || version !== "6.11.2") return;
-  // Swift 6.4's Clang importer cannot convert Qt::strong_ordering here.
-  const header = join(prefix, "include", "QtCore", "qversionnumber.h");
-  const source = await Deno.readTextFile(header);
-  const oldReturn = "return compareThreeWay(lhs, rhs);";
-  const fixedReturn = `const auto order = compareThreeWay(lhs, rhs);
-            return order < 0 ? std::strong_ordering::less
-                 : order > 0 ? std::strong_ordering::greater
-                             : std::strong_ordering::equal;`;
-  if (source.includes(oldReturn)) {
-    await Deno.writeTextFile(header, source.replace(oldReturn, fixedReturn));
-  }
 }
 
 async function configurePorydaw(
