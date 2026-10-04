@@ -25,6 +25,32 @@ ShellVoicegroupSupport {
         return findChild(list.itemAtIndex(index), "vgSamplePickerLoopBadge")
     }
 
+    function test_wDrumkitTypeListsCatalogDrumkits() {
+        const controller = app.voiceListController()
+        controller.selectSlot(0)
+        const draft = controller.editorModel()
+        compare(draft.macro, 0, "slot zero starts as a DirectSound voice")
+        const combo = findChild(panel, "vgDrumkitCombo")
+        verify(combo !== null, "the voice editor mounts its drumkit selector before the catalog")
+        verify(waitForNative(function() { return controller.drumkitChoices().length === 2 }, 15000),
+               "the project catalog publishes the fixture drumkits")
+        draft.changeType(12, "")
+        verify(waitForNative(function() { return draft.macro === 12 }, 15000),
+               "choosing the Drumkit type converts the voice")
+        tryCompare(combo, "visible", true, 5000, "a drumkit voice shows the drumkit selector")
+        compare(combo.editText, "fixture_drums_a", "the converted voice names the first drumkit")
+        findChild(panel, "voiceEditorScrollView").contentY = 0
+        waitForRendering(combo)
+        mouseClick(combo.indicator, combo.indicator.width / 2, combo.indicator.height / 2)
+        tryCompare(combo.popup, "opened", true, 5000, "the drumkit dropdown opens")
+        compare(combo.count, 2, "the open dropdown lists both catalog drumkits")
+        compare(combo.textAt(1), "fixture_drums_b", "the dropdown rows name the catalog drumkits")
+        combo.popup.close()
+        app.requestUndo()
+        verify(waitForNative(function() { return draft.macro === 0 }, 15000),
+               "undo restores the DirectSound voice")
+    }
+
     function test_xMountedPickerVisibilityAndMetadata() {
         const controller = app.voiceListController()
         controller.selectSlot(0)

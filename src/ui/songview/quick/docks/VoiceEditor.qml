@@ -146,11 +146,15 @@ ColumnLayout {
             onActivated: editor.draft.changeType(-1, currentText)
         }
         ComboBox {
+            objectName: "vgDrumkitCombo"
             visible: editor.draft.macro === 12
             Layout.fillWidth: true
             Layout.preferredHeight: editor.baseFontPx * 1.5
             editable: true
-            model: editor.controller.drumkitChoices()
+            model: {
+                const revision = editor.controller.catalogRevision
+                return editor.controller.drumkitChoices()
+            }
             editText: editor.draft.symbol
             onActivated: editor.draft.changeType(editor.draft.macro, currentText)
             onAccepted: editor.draft.changeType(editor.draft.macro, editText)
