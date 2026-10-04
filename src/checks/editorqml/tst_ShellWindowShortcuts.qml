@@ -21,6 +21,7 @@ ShellWindowSupport {
 
         const field = findChild(shell, "transportMasterVolumeInput")
         verify(field, "persistent master-volume field is mounted")
+        const originalVolume = field.text
         field.text = "10"
         field.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(field, "activeFocus", true, 3000)
@@ -58,7 +59,7 @@ ShellWindowSupport {
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", false, 3000)
 
-        field.text = "100"
+        field.text = originalVolume
         const scrollbar = findChild(surface, "timelineRollScrollBar")
         verify(scrollbar && scrollbar.scrollable, "timeline exposes keyboard scrolling")
         scrollbar.forceActiveFocus(Qt.TabFocusReason)

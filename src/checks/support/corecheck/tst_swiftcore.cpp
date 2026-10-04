@@ -38,6 +38,46 @@ void SwiftCoreTest::playback()
     pdc_suite_run(PDC_SUITE_PLAYBACK, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::audioController()
+{
+    pdc_suite_run(PDC_SUITE_AUDIO_CONTROLLER, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::audioAudition()
+{
+    pdc_suite_run(PDC_SUITE_AUDIO_AUDITION, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::resonance()
+{
+    pdc_suite_run(PDC_SUITE_RESONANCE, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::suppressionStartStop()
+{
+    pdc_suite_run(PDC_SUITE_SUPPRESSION_START_STOP, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::suppressionReplacement()
+{
+    pdc_suite_run(PDC_SUITE_SUPPRESSION_REPLACEMENT, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::sampleProcessing()
+{
+    pdc_suite_run(PDC_SUITE_SAMPLE_PROCESSING, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::sampleStorage()
+{
+    pdc_suite_run(PDC_SUITE_SAMPLE_STORAGE, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::sampleEditor()
+{
+    pdc_suite_run(PDC_SUITE_SAMPLE_EDITOR, reportSwiftCheck, this);
+}
+
 void SwiftCoreTest::noteEdits()
 {
     pdc_suite_run(PDC_SUITE_NOTE_EDITS, reportSwiftCheck, this);

@@ -174,7 +174,7 @@ extension PianoGrid {
             keyboardAuditionKey = note.pitch
             keyboardAuditionTrack = trackIndex
             onAudition?(trackIndex, note.pitch, note.velocity)
-            if control {
+            if control && hit.zone != .leftEdge && hit.zone != .rightEdge {
                 gesture = .velocity(
                     GridGesture.Velocity(
                         noteId: note.noteId, pressY: y, original: note.velocity))

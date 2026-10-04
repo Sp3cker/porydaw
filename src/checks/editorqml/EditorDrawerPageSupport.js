@@ -19,6 +19,17 @@
         return line ? line.mapToItem(testCase.surface, line.width / 2, 0).x : -1
     }
 
+    function playheadMatchesProjection(testCase, name, projectedX) {
+        var line = playheadLine(testCase, name)
+        if (!line)
+            return false
+        var dpr = testCase.devicePixelRatio
+        var left = line.mapToItem(testCase.surface, 0, 0).x * dpr
+        return Math.abs(line.width * dpr - 1) < 0.000001
+            && Math.abs(left - Math.round(left)) < 0.000001
+            && Math.abs(playheadSurfaceX(testCase, name) - projectedX) <= 0.5 / dpr + 0.000001
+    }
+
     function verifyPlayheadPixels(testCase, name) {
         var line = playheadLine(testCase, name)
         testCase.verify(line && line.visible && line.width > 0 && line.height > 0)

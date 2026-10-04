@@ -117,6 +117,12 @@ const std::vector<CheckDefinition> &catalog()
         swiftSuite("swiftcore-midicodec", "midiCodec");
         swiftSuite("swiftcore-musicalsemantics", "musicalSemantics");
         swiftSuite("swiftcore-playback", "playback");
+        // Independent DSP groups retain every assertion within the runner's 90-second deadline.
+        swiftSuite("swiftcore-playback-controller", "audioController");
+        swiftSuite("swiftcore-playback-audition", "audioAudition");
+        swiftSuite("swiftcore-playback-resonance", "resonance");
+        swiftSuite("swiftcore-playback-suppression-start-stop", "suppressionStartStop");
+        swiftSuite("swiftcore-playback-suppression-replacement", "suppressionReplacement");
         swiftSuite("swiftcore-noteedits", "noteEdits");
         swiftSuite("swiftcore-documenthistory", "documentHistory");
         swiftSuite("swiftcore-eventedits", "eventEdits");
@@ -127,17 +133,24 @@ const std::vector<CheckDefinition> &catalog()
         swiftSuite("swiftcore-bankhistory", "bankHistory");
         swiftSuite("swiftcore-themecolor", "themeColor");
         swiftSuite("swiftcore-displaylist", "displayList");
-        result.push_back(
-            {.name = "samplecheck",
-             .argv = strings({"--swiftsample", "{scratch}", "{mid2agb}", "sampleCheck", "{sample-corpus?}"}),
-             .handler = swiftSample,
-             .scratchKind = ScratchKind::ExistingDirectory,
-             .fixtureRootKind = FixtureRootKind::DecompProject,
-             .fixtureFiles = swiftCoreFixtures +
-                             strings({"samplesources/tone.mp3", "samplesources/tone.flac",
-                                      "samplesources/tone.ogg", "samplesources/tone.opus"}),
-             .optionalArgumentEnvironment = {{"{sample-corpus?}", "PORYDAW_SAMPLE_CORPUS"}},
-             .platforms = swiftPlatforms});
+        const auto sampleSuite = [&](const char *name, const char *suite) {
+            result.push_back(
+                {.name = name,
+                 .argv = strings({"--swiftsample", "{scratch}", "{mid2agb}", suite, "{sample-corpus?}"}),
+                 .handler = swiftSample,
+                 .scratchKind = ScratchKind::ExistingDirectory,
+                 .fixtureRootKind = FixtureRootKind::DecompProject,
+                 .fixtureFiles = swiftCoreFixtures +
+                                 strings({"samplesources/tone.mp3", "samplesources/tone.flac",
+                                          "samplesources/tone.ogg", "samplesources/tone.opus"}),
+                 .optionalArgumentEnvironment = {{"{sample-corpus?}", "PORYDAW_SAMPLE_CORPUS"}},
+                 .platforms = swiftPlatforms});
+        };
+        // Decoder/container, DSP/render/analysis, storage, and UI assertions run once each.
+        sampleSuite("samplecheck", "sampleCheck");
+        sampleSuite("samplecheck-processing", "sampleProcessing");
+        sampleSuite("samplecheck-storage", "sampleStorage");
+        sampleSuite("samplecheck-editor", "sampleEditor");
         result.push_back(
             {.name = "projectidentitycheck",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectIdentity"}),

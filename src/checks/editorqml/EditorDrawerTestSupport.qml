@@ -19,6 +19,7 @@ TestCase {
     width: 900
     height: 700
     visible: true
+    readonly property real devicePixelRatio: Screen.devicePixelRatio
 
     // DrawerSectionKind raw values (EditorDrawer.swift).
     readonly property int automationKind: 0

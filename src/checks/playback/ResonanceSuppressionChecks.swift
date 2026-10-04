@@ -8,19 +8,25 @@ func runResonanceSuppressionChecks(_ report: CheckReport) {
     resonanceLawChecks(report)
     resonanceTimingChecks(report)
     resonanceTransitionChecks(report)
-    suppressionSettleChecks(report)
 }
 
 // Per-case counterparts of playback/settle.cpp: each original case runs on a
 // fresh rig with the native AuditionVoicegroup release254 and the original
 // note-song velocity127, so the shared-sequence checkControllerSuppression is
 // not the only evidence for case independence.
-private func suppressionSettleChecks(_ report: CheckReport) {
+func runSuppressionStartStopChecks(_ report: CheckReport) {
     do {
         try checkSuppressionSongStartUnity(report)
         try checkSuppressionPausePreservesAdaptation(report)
         try checkSuppressionStopLeaksNoDelayedAudio(report)
         try checkSuppressionRestartProducesAudio(report)
+    } catch {
+        report.fail("swiftcore/SuppressionSettle", "suppression settle fixture failed: \(error)")
+    }
+}
+
+func runSuppressionReplacementChecks(_ report: CheckReport) {
+    do {
         try checkSuppressionSecondSongStart(report)
         try checkSuppressionResumeParksSequencer(report)
         try checkSuppressionPendingCutRetarget(report)

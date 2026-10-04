@@ -144,12 +144,6 @@ public func pdcSuiteRun(
         }
     case 3:
         runPlaybackSuite(report)
-        let boxedAudio = ReportBox(report)
-        MainActor.assumeIsolated {
-            runAudioControllerChecks(boxedAudio.report)
-        }
-        runAudioAuditionChecks(report)
-        runResonanceSuppressionChecks(report)
     case 4:
         // The envelope invokes this cdecl on the Qt main thread; the suite
         // runs synchronously there, so the unchecked box states the
@@ -257,6 +251,28 @@ public func pdcSuiteRun(
         let boxedSample = ReportBox(report)
         MainActor.assumeIsolated {
             runSampleChecks(boxedSample.report)
+        }
+    case 36:
+        let boxedAudio = ReportBox(report)
+        MainActor.assumeIsolated {
+            runAudioControllerChecks(boxedAudio.report)
+        }
+    case 37:
+        runAudioAuditionChecks(report)
+    case 38:
+        runResonanceSuppressionChecks(report)
+    case 39:
+        runSuppressionStartStopChecks(report)
+    case 40:
+        runSuppressionReplacementChecks(report)
+    case 41:
+        runSampleProcessingChecks(report)
+    case 42:
+        runSampleStorageChecks(report)
+    case 43:
+        let boxedSampleEditor = ReportBox(report)
+        MainActor.assumeIsolated {
+            runSampleEditorChecks(boxedSampleEditor.report)
         }
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")

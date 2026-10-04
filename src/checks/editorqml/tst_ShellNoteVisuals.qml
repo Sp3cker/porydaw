@@ -4,6 +4,7 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "GatedVisualsHelpers.js" as Helpers
+import "NativeWait.js" as NativeWait
 
 ShellNoteVisualsSupport {
 
@@ -185,11 +186,21 @@ ShellNoteVisualsSupport {
         verify(waitForNative(function() {
             return publishedNotes(context.grid).length === beforeCount + 1
         }, 5000), "the mounted roll seeds a wide name-bearing note")
+        verify(waitForNative(function() {
+            return context.fills.fetchedRevision === context.grid.scene.displayRevision
+        }, 5000), "the renderer fetches the unlabeled note revision")
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, shell, 5000),
+               "the unlabeled note frame is submitted")
         var baseline = grabShell()
         verify(baseline !== null, "the unlabeled roll renders a frame")
         shell.shellPresenter.activate("view.note_names")
         verify(waitForNative(function() { return context.session.noteNameMode }, 5000),
                "the menu enables note-name rendering")
+        verify(waitForNative(function() {
+            return context.fills.fetchedRevision === context.grid.scene.displayRevision
+        }, 5000), "the renderer fetches the labeled note revision")
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, shell, 5000),
+               "the labeled note frame is submitted")
         var named = grabShell()
         verify(named !== null, "the named roll renders a frame")
         verify(regionIdentical(baseline, named, ghost.rect),

@@ -135,6 +135,8 @@ Deno.test({
         "c++": `[ -f '${installed}' ]`,
         "apt-get": "exit 0",
         sudo: `printf installed > '${installed}'`,
+        swift:
+          '[ "$1" = "format" ] && [ "$2" = "--version" ] || exit 2\necho "swift-format version 6.4"',
         swiftc: `if [ "$1" = "--version" ]; then
 read value < '${version}'
 echo "Swift version $value"

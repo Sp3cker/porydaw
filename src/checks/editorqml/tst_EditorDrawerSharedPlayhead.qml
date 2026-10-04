@@ -48,7 +48,7 @@ EditorDrawerTestSupport {
         compare(rollClip.width, rollPlot.width + playhead.triangleHalfWidthPx,
                 "the roll segment ends at the plot right edge")
         compare(rollClip.height, rollPlot.height, "the roll segment covers the plot height")
-        compare(PageSupport.playheadSurfaceX(testCase, "sharedPlayheadRollClip"), origin + playhead.contentX,
+        verify(PageSupport.playheadMatchesProjection(testCase, "sharedPlayheadRollClip", origin + playhead.contentX),
                 "the roll line is the published projection from the shared origin")
         PageSupport.verifyPlayheadPixels(testCase, "sharedPlayheadRollClip")
 
@@ -58,8 +58,8 @@ EditorDrawerTestSupport {
         tryVerify(function() {
             return PageSupport.playheadSurfaceX(testCase, "sharedPlayheadRollClip") !== firstX
         }, 2000, "the drawn segment tracks the published position")
-        fuzzyCompare(PageSupport.playheadSurfaceX(testCase, "sharedPlayheadRollClip"),
-                     origin + playhead.contentX, 0.01,
+        verify(PageSupport.playheadMatchesProjection(testCase, "sharedPlayheadRollClip",
+                     origin + playhead.contentX),
                      "the moved line is still the published projection")
         PageSupport.verifyPlayheadPixels(testCase, "sharedPlayheadRollClip")
 
@@ -81,7 +81,7 @@ EditorDrawerTestSupport {
                          "the body segment clips to the shared plot width")
             fuzzyCompare(clip.height, state.bodyHeight, 0.01,
                          "the body segment covers the published body height")
-            fuzzyCompare(PageSupport.playheadSurfaceX(testCase, names[i]), origin + playhead.contentX, 0.01,
+            verify(PageSupport.playheadMatchesProjection(testCase, names[i], origin + playhead.contentX),
                          "the body line reads the same projected position")
             verify(clip.y + clip.height <= drawerY + barY + 0.01,
                    "no body segment covers the drawer chrome")
@@ -121,7 +121,7 @@ EditorDrawerTestSupport {
             var presenter = PageSupport.playheadPresenter(testCase)
             var drawn = PageSupport.playheadClip(testCase, "sharedPlayheadRollClip")
             return drawn.visible === presenter.visible
-                && PageSupport.playheadSurfaceX(testCase, "sharedPlayheadRollClip") === origin + presenter.contentX
+                && PageSupport.playheadMatchesProjection(testCase, "sharedPlayheadRollClip", origin + presenter.contentX)
         }, 2000, "the drawn segment catches up with the last published position")
         LayoutSupport.awaitRenderedLayout(testCase)
         compare(rollClip.x + playhead.triangleHalfWidthPx, testCase.surface.timelineSplitX,
@@ -165,8 +165,7 @@ EditorDrawerTestSupport {
         tryVerify(function() { return playhead.visible }, 1000, "the position returns")
         fuzzyCompare(playhead.tick, tick, 0.000001, "the returned position is the same tick")
         PageSupport.awaitPlayheadVisibility(testCase, "sharedPlayheadRollClip", true)
-        fuzzyCompare(PageSupport.playheadSurfaceX(testCase, "sharedPlayheadRollClip"), origin + playhead.contentX,
-                     0.01, "the returned segment reads the reprojected position")
+        verify(PageSupport.playheadMatchesProjection(testCase, "sharedPlayheadRollClip", origin + playhead.contentX), "the returned segment reads the reprojected position")
     }
 
     function test_sharedPlayheadSuspendsFollowForEveryInteraction() {

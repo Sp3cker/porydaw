@@ -16,6 +16,11 @@ class SwiftCoreTest final : public QObject
     void midiCodec();
     void musicalSemantics();
     void playback();
+    void audioController();
+    void audioAudition();
+    void resonance();
+    void suppressionStartStop();
+    void suppressionReplacement();
     void noteEdits();
     void documentHistory();
     void eventEdits();
@@ -47,6 +52,9 @@ class SwiftCoreTest final : public QObject
     void themeColor();
     void displayList();
     void sampleCheck();
+    void sampleProcessing();
+    void sampleStorage();
+    void sampleEditor();
 };
 
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);

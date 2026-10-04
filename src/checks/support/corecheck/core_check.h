@@ -41,6 +41,14 @@ enum PdcSuite {
     PDC_SUITE_THEME_COLOR = 33,
     PDC_SUITE_DISPLAY_LIST = 34,
     PDC_SUITE_SAMPLE = 35,
+    PDC_SUITE_AUDIO_CONTROLLER = 36,
+    PDC_SUITE_AUDIO_AUDITION = 37,
+    PDC_SUITE_RESONANCE = 38,
+    PDC_SUITE_SUPPRESSION_START_STOP = 39,
+    PDC_SUITE_SUPPRESSION_REPLACEMENT = 40,
+    PDC_SUITE_SAMPLE_PROCESSING = 41,
+    PDC_SUITE_SAMPLE_STORAGE = 42,
+    PDC_SUITE_SAMPLE_EDITOR = 43,
 };
 
 typedef void (*PdcCheckReport)(void *context, int failed, const char *cppId, const char *message);

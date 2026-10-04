@@ -327,7 +327,7 @@ EditorDrawerTestSupport {
             // The drawn binding catches up on the next event-loop pass, the same
             // lag every other drawn binding in this suite accounts for.
             tryVerify(function() {
-                return PageSupport.playheadSurfaceX(testCase, names[i]) === origin + playhead.contentX
+                return PageSupport.playheadMatchesProjection(testCase, names[i], origin + playhead.contentX)
             }, 2000, "the " + names[i] + " line catches up with the shared published position")
         }
     }
