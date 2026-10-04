@@ -1,0 +1,76 @@
+name: All checks
+
+on:
+  push:
+    branches: [fork-main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno task setup:check
+
+  checks-macos:
+    runs-on: xcode-27
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.11.*"
+          cache: true
+      - name: Setup tests
+        run: deno task setup:check
+      - name: Formatting
+        if: ${{ !cancelled() }}
+        run: deno task format --check
+      - name: Build checks
+        id: build
+        if: ${{ !cancelled() }}
+        run: deno task build:checks
+      - name: Native checks including opt-in checks
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: deno task checks --all --verbose --pool=1
+      - name: Shell QML checks
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: deno task checks:shell --all --verbose --pool=1
+      - name: Drawer QML checks
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: deno task checks:qml --all --verbose --pool=1
+      - name: Roll QML checks
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: deno task checks:qml-roll --all --verbose --pool=1
+      - name: Bridge surface
+        if: ${{ !cancelled() }}
+        run: deno task checks:bridge
+      - name: Proof evidence
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: deno task proof check --executed
+      - name: Retain check logs and evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-checks-macos
+          path: |
+            build/debug/build.log
+            build/debug/proof-evidence/
+            build/debug/checks-scratch/
