@@ -122,24 +122,48 @@ ShellTransportSupport {
         var homeSurface = rollSurface()
         verify(homeSurface !== null, "the roll surface mounts before the home routes")
         var homeGrid = homeSurface.gridModel
+        function verifyPlayingHome(seek, route) {
+            menu(1).triggered()
+            tryCompare(transport, "state", 3, 3000)
+            const playhead = authority.session.playheadPresenter()
+            verify(waitForNative(function() {
+                return playhead.tick >= homeGrid.ticksPerBeat
+            }, 3000), route + " has an observable playback position before seeking")
+            const before = playhead.tick
+            homeGrid.setEditCursorTick(homeGrid.ticksPerBeat * 4)
+            seek()
+            verify(waitForNative(function() { return playhead.tick < before }, 3000),
+                   route + " rewinds the actual playing audio position")
+            compare(transport.state, 3, route + " preserves playback")
+            compare(homeGrid.editCursorTick, 0, route + " homes the edit cursor while playing")
+        }
         homeGrid.setEditCursorTick(homeGrid.ticksPerBeat * 4)
         verify(homeGrid.editCursorTick > 0, "the edit cursor starts away from the origin")
+        // A paused clock retains exact zero; a playing clock exposes it for only 100 ms.
+        menu(2).triggered()
+        tryCompare(transport, "state", 2, 3000)
         mouseClick(button(0), button(0).width / 2, button(0).height / 2)
         verify(waitForNative(function() {
             transport.refresh()
             return clock.text.startsWith("0:00.0 / ")
         }, 3000), "Go to Start button seeks the actual audio playhead")
         compare(homeGrid.editCursorTick, 0, "Go to Start button homes the edit cursor")
+        verifyPlayingHome(function() {
+            mouseClick(button(0), button(0).width / 2, button(0).height / 2)
+        }, "Go to Start button")
         verify(waitForNative(function() {
             transport.refresh()
             return !clock.text.startsWith("0:00.0 / ")
         }, 3000), "audio advances again before the menu seek")
+        menu(2).triggered()
+        tryCompare(transport, "state", 2, 3000)
         menu(0).triggered()
         verify(waitForNative(function() {
             transport.refresh()
             return clock.text.startsWith("0:00.0 / ")
         }, 3000), "Go to Start menu seeks the same audio playhead")
         compare(homeGrid.editCursorTick, 0, "Go to Start menu keeps the edit cursor at the origin")
+        verifyPlayingHome(function() { menu(0).triggered() }, "Go to Start menu")
         menu(3).triggered()
         tryCompare(transport, "state", 1, 3000)
 
