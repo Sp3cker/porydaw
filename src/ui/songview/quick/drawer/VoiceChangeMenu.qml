@@ -2,7 +2,6 @@
 import QtQuick
 import QtQuick.Controls
 import Porydaw.Ui
-import "../MenuPlacement.js" as MenuPlacement
 
 pragma ComponentBehavior: Bound
 

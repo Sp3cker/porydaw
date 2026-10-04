@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
-import "../MenuPlacement.js" as MenuPlacement
 
 FocusScope {
     id: root

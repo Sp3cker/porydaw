@@ -251,6 +251,8 @@ qt_add_qml_module(porydaw_style
 )
 target_link_libraries(porydaw_style PRIVATE Qt6::Quick porydaw_icons)
 
+set_source_files_properties(src/ui/songview/quick/MenuPlacement.qml PROPERTIES
+    QT_QML_SINGLETON_TYPE TRUE)
 qt_add_qml_module(porydaw_app
     URI Porydaw.Ui
     VERSION 1.0
@@ -278,7 +280,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/TimelineScrollbar.qml
         src/ui/songview/quick/HintProfiles.qml
         src/ui/songview/quick/QuickMenuPanel.qml
-        src/ui/songview/quick/MenuPlacement.js
+        src/ui/songview/quick/MenuPlacement.qml
         src/ui/songview/quick/AutomationTabs.qml
         src/ui/songview/quick/swiftroll/EditorSurface.qml
         src/ui/songview/quick/swiftroll/EditorRollBand.qml

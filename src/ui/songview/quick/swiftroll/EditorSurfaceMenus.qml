@@ -1,7 +1,6 @@
 import QtQuick
 import QtQml.Models
 import Porydaw.Ui
-import "../MenuPlacement.js" as MenuPlacement
 
 Item {
     id: menuHost

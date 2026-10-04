@@ -1,6 +1,6 @@
 import QtQuick
 import PorydawApp
-import "MenuPlacement.js" as MenuPlacement
+import Porydaw.Ui
 
 Loader {
     id: menuLoader
