@@ -585,8 +585,8 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
     (qtPayload !== undefined || reporterMode === "verbose") &&
     result.output.length > 0
   ) {
-    // Explicit --qt run: the complete raw output (listings, -v1 runs) is
-    // the point of the mode; print it even with the quiet reporter.
+    // --qt and --verbose runs print passing checks' raw output too, so
+    // runtime QML warnings stay visible when every assertion passes.
     Deno.stdout.writeSync(encoder.encode(result.output));
   }
   const detail = lastNonemptyLine(result.output);
