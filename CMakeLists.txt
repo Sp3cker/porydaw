@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
+# Release runners use the newest SDK; without a floor the app would require that macOS.
+set(CMAKE_OSX_DEPLOYMENT_TARGET 15.0)
 project(porydaw VERSION 1.0.3 LANGUAGES C CXX)
 
 find_package(Git QUIET)
