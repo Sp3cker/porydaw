@@ -274,6 +274,22 @@ public func pdcSuiteRun(
         MainActor.assumeIsolated {
             runSampleEditorChecks(boxedSampleEditor.report)
         }
+    case 44:
+        runRenderPipelineChecks(report)
+    case 45:
+        runAnalysisChecks(report)
+    case 46:
+        runSamplePitchChecks(report, key: 33)
+    case 47:
+        runSamplePitchChecks(report, key: 45)
+    case 48:
+        runSamplePitchChecks(report, key: 57)
+    case 49:
+        runSamplePitchChecks(report, key: 69)
+    case 50:
+        runSamplePitchChecks(report, key: 81)
+    case 51:
+        runSamplePitchChecks(report, key: 93)
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

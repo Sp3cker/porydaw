@@ -49,6 +49,14 @@ enum PdcSuite {
     PDC_SUITE_SAMPLE_PROCESSING = 41,
     PDC_SUITE_SAMPLE_STORAGE = 42,
     PDC_SUITE_SAMPLE_EDITOR = 43,
+    PDC_SUITE_SAMPLE_RENDER = 44,
+    PDC_SUITE_SAMPLE_ANALYSIS = 45,
+    PDC_SUITE_SAMPLE_PITCH_33 = 46,
+    PDC_SUITE_SAMPLE_PITCH_45 = 47,
+    PDC_SUITE_SAMPLE_PITCH_57 = 48,
+    PDC_SUITE_SAMPLE_PITCH_69 = 49,
+    PDC_SUITE_SAMPLE_PITCH_81 = 50,
+    PDC_SUITE_SAMPLE_PITCH_93 = 51,
 };
 
 typedef void (*PdcCheckReport)(void *context, int failed, const char *cppId, const char *message);

@@ -78,6 +78,46 @@ void SwiftCoreTest::sampleEditor()
     pdc_suite_run(PDC_SUITE_SAMPLE_EDITOR, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::sampleRender()
+{
+    pdc_suite_run(PDC_SUITE_SAMPLE_RENDER, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::sampleAnalysis()
+{
+    pdc_suite_run(PDC_SUITE_SAMPLE_ANALYSIS, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::samplePitch33()
+{
+    pdc_suite_run(PDC_SUITE_SAMPLE_PITCH_33, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::samplePitch45()
+{
+    pdc_suite_run(PDC_SUITE_SAMPLE_PITCH_45, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::samplePitch57()
+{
+    pdc_suite_run(PDC_SUITE_SAMPLE_PITCH_57, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::samplePitch69()
+{
+    pdc_suite_run(PDC_SUITE_SAMPLE_PITCH_69, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::samplePitch81()
+{
+    pdc_suite_run(PDC_SUITE_SAMPLE_PITCH_81, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::samplePitch93()
+{
+    pdc_suite_run(PDC_SUITE_SAMPLE_PITCH_93, reportSwiftCheck, this);
+}
+
 void SwiftCoreTest::noteEdits()
 {
     pdc_suite_run(PDC_SUITE_NOTE_EDITS, reportSwiftCheck, this);

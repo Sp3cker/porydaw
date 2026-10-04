@@ -146,11 +146,20 @@ const std::vector<CheckDefinition> &catalog()
                  .optionalArgumentEnvironment = {{"{sample-corpus?}", "PORYDAW_SAMPLE_CORPUS"}},
                  .platforms = swiftPlatforms});
         };
-        // Decoder/container, DSP/render/analysis, storage, and UI assertions run once each.
+        // Decoder, DSP, rendering, analysis, storage, and UI assertions run once each.
         sampleSuite("samplecheck", "sampleCheck");
         sampleSuite("samplecheck-processing", "sampleProcessing");
         sampleSuite("samplecheck-storage", "sampleStorage");
         sampleSuite("samplecheck-editor", "sampleEditor");
+        sampleSuite("samplecheck-render", "sampleRender");
+        sampleSuite("samplecheck-analysis", "sampleAnalysis");
+        // Each pitch row retains both waveforms at all four original sample rates.
+        sampleSuite("samplecheck-pitch33", "samplePitch33");
+        sampleSuite("samplecheck-pitch45", "samplePitch45");
+        sampleSuite("samplecheck-pitch57", "samplePitch57");
+        sampleSuite("samplecheck-pitch69", "samplePitch69");
+        sampleSuite("samplecheck-pitch81", "samplePitch81");
+        sampleSuite("samplecheck-pitch93", "samplePitch93");
         result.push_back(
             {.name = "projectidentitycheck",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectIdentity"}),

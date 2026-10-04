@@ -70,13 +70,17 @@ ShellWindowSupport {
                    "scrollbar Home survives the window transport binding")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         keySequence(StandardKey.Undo)
-        tryCompare(session, "documentDirty", false, 3000)
+        verify(waitForNative(function() { return !session.documentDirty }, 3000),
+               "document Undo completes through the native run loop")
         compare(surface.gridModel.fetchNoteSummary(), originalNotes,
                 "leaving the numeric field restores document Undo")
         keySequence(StandardKey.Redo)
-        tryVerify(function() { return surface.gridModel.fetchNoteSummary() === editedNotes }, 3000)
+        verify(waitForNative(function() {
+            return surface.gridModel.fetchNoteSummary() === editedNotes
+        }, 3000), "document Redo completes through the native run loop")
         keySequence(StandardKey.Undo)
-        tryCompare(session, "documentDirty", false, 3000)
+        verify(waitForNative(function() { return !session.documentDirty }, 3000),
+               "the final Undo restores the clean document")
     }
 
     function test_cWindowShortcutsAndNumericOwnership() {

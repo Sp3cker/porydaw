@@ -55,6 +55,14 @@ class SwiftCoreTest final : public QObject
     void sampleProcessing();
     void sampleStorage();
     void sampleEditor();
+    void sampleRender();
+    void sampleAnalysis();
+    void samplePitch33();
+    void samplePitch45();
+    void samplePitch57();
+    void samplePitch69();
+    void samplePitch81();
+    void samplePitch93();
 };
 
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);

@@ -221,8 +221,9 @@ ShellNoteVisualsSupport {
             for (var y = noteRect.y + 2; y < noteRect.y + noteRect.h - 2; ++y)
                 for (var x = noteRect.x + 2; x < noteRect.x + noteRect.w - 2; ++x) {
                     var painted = rgb(named, x, y)
-                    if (Helpers.colorsNear(painted, ink)
-                            && !Helpers.colorsNear(rgb(baseline, x, y), ink)
+                    // Native glyph edges blend the ink with the fill.
+                    if (channelDelta(painted, ink) < channelDelta(Helpers.channels(noteFill), ink)
+                            && !Helpers.colorsNear(rgb(baseline, x, y), painted)
                             && contrast(painted, Helpers.channels(noteFill)) >= 2.5)
                         ++inkPixels
                 }

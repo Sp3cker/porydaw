@@ -1,22 +1,22 @@
 import Foundation
 import PorydawSample
 
-internal func runAnalysisChecks(_ report: CheckReport) {
+internal func runSamplePitchChecks(_ report: CheckReport, key: Int) {
     let matrix = report.scoped(cppID: "samplecheck/SampleProcessingTest::pitchMatrix")
-    var sineValid = true
-    var sawValid = true
     for rate in [8000.0, 13379.0, 22050.0, 44100.0] {
-        for key in [33, 45, 57, 69, 81, 93] {
-            let frequency = 440 * pow(2, Double(key - 69) / 12)
-            let sine = SampleDsp.detectPitchYin(genSine(rate, frequency, 1.5, 0.4), rate: rate)
-            sineValid = sineValid && sine.pitched && abs(centsOff(sine.f0, frequency)) <= 5
-            let saw = SampleDsp.detectPitchYin(genSaw(rate, frequency, 1.5, 0.4), rate: rate)
-            sawValid = sawValid && saw.pitched && abs(centsOff(saw.f0, frequency)) <= 5
-        }
+        let frequency = 440 * pow(2, Double(key - 69) / 12)
+        let sine = SampleDsp.detectPitchYin(genSine(rate, frequency, 1.5, 0.4), rate: rate)
+        matrix.expect(
+            sine.pitched && abs(centsOff(sine.f0, frequency)) <= 5,
+            message: "sine key \(key) at \(rate) Hz is within five cents")
+        let saw = SampleDsp.detectPitchYin(genSaw(rate, frequency, 1.5, 0.4), rate: rate)
+        matrix.expect(
+            saw.pitched && abs(centsOff(saw.f0, frequency)) <= 5,
+            message: "saw key \(key) at \(rate) Hz is within five cents")
     }
-    matrix.expect(sineValid, message: "sine pitch is within five cents")
-    matrix.expect(sawValid, message: "saw pitch is within five cents")
+}
 
+internal func runAnalysisChecks(_ report: CheckReport) {
     let negative = report.scoped(cppID: "samplecheck/SampleProcessingTest::pitchNegativeCases")
     var noise = [Float](repeating: 0, count: 13379 * 2)
     var rng: UInt32 = 0xA5A5_A5A5

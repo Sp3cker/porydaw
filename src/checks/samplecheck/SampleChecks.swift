@@ -10,8 +10,6 @@ internal func runSampleChecks(_ report: CheckReport) {
 
 internal func runSampleProcessingChecks(_ report: CheckReport) {
     runDspKernelChecks(report)
-    runRenderPipelineChecks(report)
-    runAnalysisChecks(report)
 }
 
 internal func runSampleStorageChecks(_ report: CheckReport) {
