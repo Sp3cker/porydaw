@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
-import "../../ui/shell"
+import Porydaw.Ui
 import "NativeWait.js" as NativeWait
 
 TestCase {

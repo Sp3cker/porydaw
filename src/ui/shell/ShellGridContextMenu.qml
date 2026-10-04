@@ -3,15 +3,17 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import PorydawStyle
 import QtQml.Models
+import PorydawApp
+import Porydaw.Ui
 
 Item {
     id: contextRoot
     property bool noteMenuSwallowingRelease: false
-    required property var root
-    required property var shell
-    required property var editorScene
-    required property var bodyMetrics
-    readonly property alias menu: gridContextMenu
+    required final property ShellWindow root
+    required final property ShellPresenter shell
+    required final property SongTabs editorScene
+    required final property FontMetrics bodyMetrics
+    final readonly property alias menu: gridContextMenu
 
     function finishSwallowingRelease(): void {
         contextRoot.noteMenuSwallowingRelease = false
@@ -19,10 +21,11 @@ Item {
     component ContextAction: MenuItem {
         id: contextAction
         required property string modelData
+        final readonly property ShellActionState actionState: contextRoot.shell.action(modelData)
         property int menuOrdinal: -1
         objectName: "shellContextAction_" + modelData
-        text: contextRoot.shell.actionLabel(modelData)
-        readonly property string shortcutText: contextRoot.shell.actionShortcut(modelData)
+        text: contextAction.actionState.label
+        readonly property string shortcutText: contextAction.actionState.shortcut
         readonly property color foreground: !enabled ? contextRoot.root.colors.disabledText
             : down ? contextRoot.root.colors.buttonPressedText : contextRoot.root.colors.windowText
         Accessible.description: shortcutText
@@ -55,10 +58,7 @@ Item {
                 : contextAction.highlighted ? contextRoot.root.colors.menuHoverBackground
                 : contextRoot.root.colors.menuBackground
         }
-        enabled: {
-            contextRoot.root.actionRevision
-            return contextRoot.shell.actionEnabled(modelData)
-        }
+        enabled: contextAction.actionState.enabled
         onTriggered: contextRoot.shell.activate(modelData)
     }
     component ContextSeparator: MenuSeparator {
@@ -80,7 +80,7 @@ Item {
             onPressed: (mouse) => {
                 contextRoot.noteMenuSwallowingRelease = true
                 if (mouse.button === Qt.RightButton) {
-                    const surface = contextRoot.editorScene.selectedEditorSurface()
+                    const surface = contextRoot.editorScene.selectedEditorSurface() as EditorSurface
                     const point = mapToItem(null, mouse.x, mouse.y)
                     gridContextMenu.close()
                     if (surface)
@@ -101,11 +101,11 @@ Item {
         parent: Overlay.overlay
         popupType: Popup.Item
         z: 2
-        font: Qt.font(contextRoot.root.chromeTypography.body)
+        font: contextRoot.root.chromeTypography.body
         closePolicy: Popup.CloseOnEscape
         palette.window: contextRoot.root.colors.menuBackground
         palette.dark: contextRoot.root.colors.outline
-        onAboutToShow: ++contextRoot.root.actionRevision
+        onAboutToShow: contextRoot.shell.refreshActionStates()
         // Async workspace incubation adds Instantiator rows before the static separator
         // exists, so rows insert by ordinal; ShellMenuBar's separator-anchor would misorder.
         function insertContextItem(ordinal: int, item: Item): void {
@@ -129,23 +129,23 @@ Item {
         Instantiator {
             model: contextRoot.shell.contextHeadActionIds
             delegate: contextRow
-            onObjectAdded: (index, object) => gridContextMenu.insertContextItem(index, object)
-            onObjectRemoved: (index, object) => gridContextMenu.removeItem(object)
+            onObjectAdded: (index, object) => gridContextMenu.insertContextItem(index, object as Item)
+            onObjectRemoved: (index, object) => gridContextMenu.removeItem(object as Item)
         }
         Instantiator {
             model: 1
             delegate: ContextSeparator {}
             onObjectAdded: (index, object) => gridContextMenu.insertContextItem(
-                gridContextMenu.headActionCount, object)
-            onObjectRemoved: (index, object) => gridContextMenu.removeItem(object)
+                gridContextMenu.headActionCount, object as Item)
+            onObjectRemoved: (index, object) => gridContextMenu.removeItem(object as Item)
         }
 
         Instantiator {
             model: contextRoot.shell.contextBodyActionIds
             delegate: contextRow
             onObjectAdded: (index, object) => gridContextMenu.insertContextItem(
-                gridContextMenu.headActionCount + 1 + index, object)
-            onObjectRemoved: (index, object) => gridContextMenu.removeItem(object)
+                gridContextMenu.headActionCount + 1 + index, object as Item)
+            onObjectRemoved: (index, object) => gridContextMenu.removeItem(object as Item)
         }
     }
 }

@@ -34,7 +34,7 @@ TestCase {
         id: overlayComponent
 
         SwiftRollOverlay {
-            property var appSession: session
+            applicationSession: session
         }
     }
 
@@ -243,11 +243,11 @@ TestCase {
 
         mouseMove(testCase, hoverWindow.x, hoverWindow.y)
         tryCompare(model, "hoverVisible", true, 5000)
-        verify(model.hoverText.length > 0 && model.hoverLabelRect["width"] > 0,
+        verify(model.hoverText.length > 0 && model.hoverLabelRect.width > 0,
                "the hovered automation point publishes visible label geometry")
         mouseMove(testCase, leaveWindow.x, leaveWindow.y)
         tryCompare(model, "hoverVisible", false, 5000)
-        verify(model.hoverText === "" && model.hoverLabelRect["width"] === 0,
+        verify(model.hoverText === "" && model.hoverLabelRect.width === 0,
                "the hover decor clears its projected label on leave")
     }
 

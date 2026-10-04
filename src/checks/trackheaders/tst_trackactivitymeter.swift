@@ -91,11 +91,16 @@ func trackActivityPhysicalPixelPredicates(
         var levels = Array(repeating: AudioActivityLevel(), count: 16)
         h.advanceActivity(levels: levels, elapsedSeconds: 60, playing: true)
         levels[0] = AudioActivityLevel(left: 128, right: 128)
-        let untouched = h.rows[1]
-        let driven = h.rows[0]
+        let valuesBefore = h.rows.map { [$0.activityLeftHeight, $0.activityRightHeight] }
+        let colorsBefore = h.rows.map { [$0.activityDimColor, $0.activityActiveColor] }
         h.advanceActivity(levels: levels, elapsedSeconds: 60, playing: true)
+        let valuesAfter = h.rows.map { [$0.activityLeftHeight, $0.activityRightHeight] }
+        let colorsAfter = h.rows.map { [$0.activityDimColor, $0.activityActiveColor] }
+        // QListModel's notification emitter is private; compare copied published meter roles.
         report.expect(
-            h.rows[0] !== driven && h.rows[1] === untouched,
+            valuesAfter.count == valuesBefore.count && valuesAfter[0] != valuesBefore[0]
+                && valuesAfter.indices.dropFirst().allSatisfy { valuesAfter[$0] == valuesBefore[$0] }
+                && colorsAfter == colorsBefore,
             cppID: id, message: "a level change republishes exactly the driven row")
         func physical(_ level: UInt8) -> Int {
             Int((Double(Float(level) / 255) * Double(height) * dpr).rounded())
@@ -112,12 +117,15 @@ func trackActivityPhysicalPixelPredicates(
         }
         levels[0] = AudioActivityLevel(left: UInt8(shared), right: UInt8(shared))
         h.advanceActivity(levels: levels, elapsedSeconds: 60, playing: true)
-        let within = h.rows[0]
+        let withinValues = h.rows.map { [$0.activityLeftHeight, $0.activityRightHeight] }
+        let withinColors = h.rows.map { [$0.activityDimColor, $0.activityActiveColor] }
+        let withinHeight = h.rows[0].activityLeftHeight
         levels[0] = AudioActivityLevel(left: UInt8(shared + 1), right: UInt8(shared + 1))
-        let quietNeighbor = h.rows[1]
         h.advanceActivity(levels: levels, elapsedSeconds: 60, playing: true)
+        let pixelIdenticalValues = h.rows.map { [$0.activityLeftHeight, $0.activityRightHeight] }
+        let pixelIdenticalColors = h.rows.map { [$0.activityDimColor, $0.activityActiveColor] }
         report.expect(
-            h.rows[0] === within && h.rows[1] === quietNeighbor,
+            pixelIdenticalValues == withinValues && pixelIdenticalColors == withinColors,
             cppID: id, message: "a pixel-identical level republishes nothing")
         guard let across = ((shared + 2)...255).first(where: { physical(UInt8($0)) > physical(UInt8(shared + 1)) })
         else {
@@ -127,7 +135,7 @@ func trackActivityPhysicalPixelPredicates(
         levels[0] = AudioActivityLevel(left: UInt8(across), right: UInt8(across))
         h.advanceActivity(levels: levels, elapsedSeconds: 60, playing: true)
         report.expect(
-            h.rows[0].activityLeftHeight > within.activityLeftHeight, cppID: id,
+            h.rows[0].activityLeftHeight > withinHeight, cppID: id,
             message: "crossing physical boundary changes height")
         let paused = "TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr"
         h.advanceActivity(

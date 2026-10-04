@@ -91,13 +91,13 @@ EditorDrawerTestSupport {
         var outsiderRow = outsider.parent.model
         var stem = findChild(outsider.parent, "velocityNodeStem")
         verify(stem && stem.visible && stem.width > 0 && stem.height > 0
-               && String(stem.color).toLowerCase() === outsiderRow.stemColor.toLowerCase()
+               && Qt.colorEqual(stem.color, outsiderRow.stemColor)
                && !outsiderRow.selected,
                "an outsider stem paints without a node highlight")
         var outsiderRing = findChild(outsider.parent, "velocityNodeRing")
         verify(!outsiderRow.selected && !outsiderRow.dimmed && !outsiderRing.visible
                && outsider.border.width > 0
-               && String(outsider.color).toLowerCase() === outsiderRow.fillColor.toLowerCase(),
+               && Qt.colorEqual(outsider.color, outsiderRow.fillColor),
                "the unselected node paints its base fill and outline")
         waitForRendering(testCase.surface)
         var outlineImage = grabImage(testCase.surface)
@@ -136,9 +136,8 @@ EditorDrawerTestSupport {
             firstRow = first.parent.model
             var ring = findChild(first.parent, "velocityNodeRing")
             return firstRow.selected && ring && ring.visible && ring.border.width > 0
-                && String(ring.border.color).toLowerCase() === firstRow.ringColor.toLowerCase()
-                && String(ring.border.color).toLowerCase()
-                   === String(page.gridPalette.selectionRing).toLowerCase()
+                && Qt.colorEqual(ring.border.color, firstRow.ringColor)
+                && Qt.colorEqual(ring.border.color, page.gridPalette.selectionRing)
         }, 3000, "the selected node paints the highlight ink")
         var second = VelocitySupport.velocityNodes(testCase)[1]
         var point = second.mapToItem(input, second.width / 2, second.height / 2)
@@ -152,9 +151,8 @@ EditorDrawerTestSupport {
                 return false
             outsiderRow = outsider.parent.model
             return outsiderRow.dimmed && !outsiderRow.selected && outsider.border.width === 0
-                && String(outsider.color).toLowerCase() === outsiderRow.fillColor.toLowerCase()
-                && String(outsider.color).toLowerCase()
-                   === String(page.gridPalette.outline).toLowerCase()
+                && Qt.colorEqual(outsider.color, outsiderRow.fillColor)
+                && Qt.colorEqual(outsider.color, page.gridPalette.outline)
         }, 3000, "the unselected node paints the dimmed ink")
         gridModel.setCameraHScroll(gridModel.cameraMaxHScroll)
         // Route 101's MIDI tracks end at tick 384; the next 4-beat bar is beyond that end.
@@ -173,7 +171,7 @@ EditorDrawerTestSupport {
         var barPixelY = Math.round(gridRegion.y0 + plot.height * 0.7
                                    * gridImage.height / testCase.surface.height)
         var barInk = PixelSupport.channelsOf(testCase, page.gridPalette.gridLineBar)
-        var alpha = parseInt(String(page.gridPalette.gridLineBar).slice(1, 3), 16) / 255
+        var alpha = page.gridPalette.gridLineBar.a
         var background = [gridImage.red(barPixelX + 5, barPixelY),
                           gridImage.green(barPixelX + 5, barPixelY),
                           gridImage.blue(barPixelX + 5, barPixelY)]

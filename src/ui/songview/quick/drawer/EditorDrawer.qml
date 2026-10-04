@@ -1,41 +1,21 @@
-// The editor drawer container: chrome and section bodies.
-//
-// Swift owns every layout decision (EditorDrawer.swift: metrics, stacking,
-// visibility, the resize including the voice-change spill, the focus requests
-// and the cancel sets). This file renders published values only: it invents no
-// geometry, clamp, default or focus tier, and it never reaches into a page --
-// the item at each kind's contentUrl owns its own focus, input and rendering
-// behind a FocusScope that fills its loader.
-//
-// Lifetime: one body Loader per kind, created from the URL the presenter
-// resolved at attach and left instantiated for as long as the kind stays
-// attached, so hiding a section never destroys its page. A released page
-// arrives here as an empty contentUrl and the loader drops its item; the drawer
-// keeps no reference to a page it no longer hosts, and detaching writes no key.
-//
-// Modal containment: one container-wide layer (`drawerModalLayer`) above every
-// section hosts the modal surfaces of pages that opt in through their optional
-// `modalHost` property, so a page's picker or menu is never clipped by the body
-// loader that hosts its content. The layer draws nothing and takes no input of
-// its own.
+// Swift owns drawer layout, visibility, resizing and focus requests.
+// Persistent body loaders share one unclipped modal layer.
 pragma ComponentBehavior: Bound
 
 import QtQuick
 import Porydaw.Ui
 import Porydaw.Icons
+import PorydawApp as App
 
 FocusScope {
     id: drawerScope
 
     objectName: "editorDrawer"
 
-    required property QtObject applicationSession
-    required property QtObject presenter
-    // Named `drawerPalette`, never `palette`: QQuickItem already declares a
-    // virtual `palette` member of an unrelated type, and shadowing it makes the
-    // engine warn on every instantiation and mis-handle the base property.
-    required property QtObject drawerPalette
-    property var hintService: null
+    required property App.SongTabSession applicationSession
+    required property App.EditorDrawerPresenter presenter
+    required property App.GridPalette drawerPalette
+    property App.MouseHints hintService: null
     readonly property bool hintScopeAllowed: {
         for (let i = 0; i < modalLayer.children.length; ++i) {
             if (modalLayer.children[i].visible)
@@ -43,21 +23,59 @@ FocusScope {
         }
         return true
     }
-    readonly property var velocityModel: applicationSession.songOpen
-                                        ? applicationSession.velocityPage() : null
+    readonly property App.VelocityPage velocityModel: applicationSession?.songOpen
+                                                    ? applicationSession.velocityPage() : null
 
-    // DrawerSectionKind raw values. Only the container maps a kind to its
-    // stored key names, page name and icon resource; every layout fact stays
-    // in the presenter.
+    // DrawerSectionKind raw values; layout facts stay in the presenter.
     readonly property int automationKind: 0
     readonly property int velocityKind: 1
     readonly property int voiceChangesKind: 2
 
-    // The composition places the container and gives it the surface width; the
-    // height is the presenter's own aggregate, zero while no page is attached.
-    height: presenter.height
+    // Composition supplies width; presenter geometry is retained during teardown.
+    enabled: presenter !== null
+    Binding on height {
+        when: drawerScope.presenter !== null
+        restoreMode: Binding.RestoreNone
+        value: drawerScope.presenter?.height
+    }
     clip: true
 
+    Binding {
+        when: drawerScope.presenter !== null
+        restoreMode: Binding.RestoreNone
+        bar.width: drawerScope.presenter?.barWidth
+        bar.height: drawerScope.presenter?.barHeight
+        detent.width: drawerScope.presenter?.detentSize
+        detent.height: drawerScope.presenter?.detentSize
+    }
+    Binding {
+        target: bar
+        property: "x"
+        when: drawerScope.presenter !== null
+        restoreMode: Binding.RestoreNone
+        value: drawerScope.presenter?.barX
+    }
+    Binding {
+        target: bar
+        property: "y"
+        when: drawerScope.presenter !== null
+        restoreMode: Binding.RestoreNone
+        value: drawerScope.presenter?.barY
+    }
+    Binding {
+        target: detent
+        property: "x"
+        when: drawerScope.presenter !== null
+        restoreMode: Binding.RestoreNone
+        value: drawerScope.presenter?.detentX
+    }
+    Binding {
+        target: detent
+        property: "y"
+        when: drawerScope.presenter !== null
+        restoreMode: Binding.RestoreNone
+        value: drawerScope.presenter?.detentY
+    }
 
     function keyNameFor(kind: int): string {
         switch (kind) {
@@ -84,9 +102,7 @@ FocusScope {
     }
 
 
-    // A monotonic request names the kind whose loaded page takes focus, or -1
-    // for the roll. A request whose loader has no item yet is skipped rather
-    // than retried; the next transition publishes a new request.
+    // Requests with no loaded page are skipped until the next transition.
     function sectionLoader(kind: int): Loader {
         switch (kind) {
         case drawerScope.automationKind: return automationSection.pageLoader
@@ -96,10 +112,7 @@ FocusScope {
         return null
     }
 
-    // The roll input is a sibling with no shared id, so its stable objectName
-    // is the handle the presenter's -1 target resolves through. The search
-    // starts at the top of this item tree so it also crosses the composition
-    // that places this container.
+    // Resolve the roll sibling through its stable objectName.
     function findItemByName(item: Item, name: string): Item {
         if (!item)
             return null
@@ -154,34 +167,76 @@ FocusScope {
         required property string toggleName
         required property string handleName
 
-        // The host covers the drawer: its children carry the published
-        // drawer-local rectangles, so the host itself owns no geometry and
-        // never clips; it exists to group one kind's chrome and body.
+        // Children own drawer-local geometry; this grouping host never clips.
         anchors.fill: parent
 
         readonly property string keyName: drawerScope.keyNameFor(section.kind)
         readonly property var icon: drawerScope.iconFor(section.kind)
-        readonly property var sectionState: drawerScope.presenter.section(section.kind)
-        // Available means a page is attached with a resolved URL: that kind owns
-        // a toggle, however hidden it is, and only an available visible kind
-        // owns a handle or a body. The published `visible` is already effective
-        // (requested and available), and the conjunction here keeps an
-        // unavailable kind control-free even if it still publishes intent.
-        readonly property bool available: section.sectionState.available
-        readonly property bool shown: section.sectionState.available && section.sectionState.visible
+        readonly property App.EditorDrawerSectionState sectionState: drawerScope.presenter
+            ? drawerScope.presenter.section(section.kind) : null
+        // Only available sections own chrome; shown sections also own a body.
+        readonly property bool available: section.sectionState !== null && section.sectionState.available
+        readonly property bool shown: section.available && section.sectionState.visible
         readonly property Loader pageLoader: body
+
+        Binding {
+            when: section.sectionState !== null
+            restoreMode: Binding.RestoreNone
+            handle.height: section.sectionState?.handleHeight
+            toggle.width: section.sectionState?.toggleSize
+            toggle.height: section.sectionState?.toggleSize
+            body.width: section.sectionState?.bodyWidth
+            body.height: section.sectionState?.bodyHeight
+        }
+        Binding {
+            target: handle
+            property: "y"
+            when: section.sectionState !== null
+            restoreMode: Binding.RestoreNone
+            value: section.sectionState?.handleY
+        }
+        Binding {
+            target: toggle
+            property: "x"
+            when: section.sectionState !== null
+            restoreMode: Binding.RestoreNone
+            value: section.sectionState?.toggleX
+        }
+        Binding {
+            target: toggle
+            property: "y"
+            when: section.sectionState !== null
+            restoreMode: Binding.RestoreNone
+            value: section.sectionState?.toggleY
+        }
+        Binding {
+            target: body
+            property: "x"
+            when: section.sectionState !== null
+            restoreMode: Binding.RestoreNone
+            value: section.sectionState?.bodyX
+        }
+        Binding {
+            target: body
+            property: "y"
+            when: section.sectionState !== null
+            restoreMode: Binding.RestoreNone
+            value: section.sectionState?.bodyY
+        }
 
         Rectangle {
             id: handle
 
             objectName: "drawerHandle_" + section.keyName
             x: 0
-            y: section.sectionState.handleY
             width: drawerScope.width
-            height: section.sectionState.handleHeight
             visible: section.shown
-            color: handleInput.containsMouse || handleInput.pressed
-                   ? drawerScope.drawerPalette.selectionRing : drawerScope.drawerPalette.outline
+            Binding on color {
+                when: drawerScope.drawerPalette !== null
+                restoreMode: Binding.RestoreNone
+                value: handleInput.containsMouse || handleInput.pressed
+                       ? drawerScope.drawerPalette?.selectionRing : drawerScope.drawerPalette?.outline
+            }
             activeFocusOnTab: true
 
             function adjust(direction: int): void {
@@ -200,10 +255,7 @@ FocusScope {
             // a focused control never forwards unowned song-edit arrows.
             Keys.onLeftPressed: (event) => event.accepted = true
             Keys.onRightPressed: (event) => event.accepted = true
-            // Claim only the plain Return/Enter activation keys before
-            // window-level shortcuts can take them from this focused control.
-            // A grip has no Return action, and bare Space stays unclaimed so
-            // the transport play/pause shortcut outranks incidental focus.
+            // Return/Enter belong to this grip; bare Space stays with transport.
             Keys.onShortcutOverride: (event) => event.accepted =
                 event.key === Qt.Key_Return || event.key === Qt.Key_Enter
 
@@ -223,9 +275,7 @@ FocusScope {
                 preventStealing: true
                 cursorShape: Qt.SizeVerCursor
 
-                // A drag toward the top grows the body, so the delta is
-                // measured against the scene position the press started at,
-                // never against a rect that moves with the drag.
+                // Measure growth from the press scene position, not the moving body.
                 property real pressY: 0
 
                 onPressed: (mouse) => {
@@ -243,7 +293,10 @@ FocusScope {
                     drawerScope.presenter.endResize(section.kind)
                     mouse.accepted = true
                 }
-                onCanceled: drawerScope.presenter.cancelResize()
+                onCanceled: {
+                    if (drawerScope.presenter)
+                        drawerScope.presenter.cancelResize()
+                }
             }
         }
 
@@ -251,13 +304,13 @@ FocusScope {
             id: toggle
 
             objectName: "drawerToggle_" + section.keyName
-            x: section.sectionState.toggleX
-            y: section.sectionState.toggleY
-            width: section.sectionState.toggleSize
-            height: section.sectionState.toggleSize
             visible: section.available
-            color: section.sectionState.visible ? drawerScope.drawerPalette.selectionRing
-                                                 : drawerScope.drawerPalette.windowBackground
+            Binding on color {
+                when: drawerScope.drawerPalette !== null
+                restoreMode: Binding.RestoreNone
+                value: section.shown ? drawerScope.drawerPalette?.selectionRing
+                                     : drawerScope.drawerPalette?.windowBackground
+            }
             activeFocusOnTab: true
 
             function activate(): void {
@@ -287,15 +340,19 @@ FocusScope {
             Accessible.role: Accessible.Button
             Accessible.name: section.toggleName
             Accessible.checkable: true
-            Accessible.checked: section.sectionState.visible
+            Accessible.checked: section.shown
             Accessible.focusable: true
             Accessible.onPressAction: toggle.activate()
 
             AppIcon {
                 anchors.fill: parent
                 icon: section.icon
-                color: section.sectionState.visible ? drawerScope.drawerPalette.selectionText
-                                                     : drawerScope.drawerPalette.windowText
+                Binding on color {
+                    when: drawerScope.drawerPalette !== null
+                    restoreMode: Binding.RestoreNone
+                    value: section.shown ? drawerScope.drawerPalette?.selectionText
+                                         : drawerScope.drawerPalette?.windowText
+                }
             }
 
             MouseArea {
@@ -316,19 +373,13 @@ FocusScope {
             id: body
 
             objectName: "drawerBody_" + section.keyName
-            x: section.sectionState.bodyX
-            y: section.sectionState.bodyY
-            width: section.sectionState.bodyWidth
-            height: section.sectionState.bodyHeight
             visible: section.shown
             enabled: section.shown
             active: section.available
             focus: true
             clip: true
 
-            // The container's one modal layer reaches the page after it loads,
-            // and only when the page declares the property: a page with no modal
-            // surface simply has none to fill.
+            // Supply the shared modal layer only to pages that declare it.
             onLoaded: {
                 if (body.item && body.item.hasOwnProperty("modalHost"))
                     body.item.modalHost = modalLayer
@@ -341,6 +392,8 @@ FocusScope {
             // The URL is resolved once per attach and never re-pointed, so a
             // reload happens only when the presenter publishes another one.
             function syncSource(): void {
+                if (section.sectionState === null)
+                    return
                 var url = String(section.sectionState.contentUrl)
                 if (url.length === 0) {
                     if (String(body.source).length > 0)
@@ -370,14 +423,18 @@ FocusScope {
         id: bar
 
         objectName: "drawerBar"
-        x: drawerScope.presenter.barX
-        y: drawerScope.presenter.barY
-        width: drawerScope.presenter.barWidth
-        height: drawerScope.presenter.barHeight
-        visible: drawerScope.presenter.barVisible
-        color: drawerScope.drawerPalette.chromeBackground
+        visible: drawerScope.presenter !== null && drawerScope.presenter.barVisible
+        Binding on color {
+            when: drawerScope.drawerPalette !== null
+            restoreMode: Binding.RestoreNone
+            value: drawerScope.drawerPalette?.chromeBackground
+        }
         border.width: 1
-        border.color: drawerScope.drawerPalette.outline
+        Binding on border.color {
+            when: drawerScope.drawerPalette !== null
+            restoreMode: Binding.RestoreNone
+            value: drawerScope.drawerPalette?.outline
+        }
 
         MouseArea {
             objectName: "drawerBarInput"
@@ -417,11 +474,7 @@ FocusScope {
     Item {
         id: detent
         objectName: "drawerDetent"
-        x: drawerScope.presenter.detentX
-        y: drawerScope.presenter.detentY
-        width: drawerScope.presenter.detentSize
-        height: drawerScope.presenter.detentSize
-        visible: drawerScope.presenter.velocitySection.visible
+        visible: drawerScope.presenter !== null && drawerScope.presenter.velocitySection.visible
                  && !!drawerScope.velocityModel
                  && drawerScope.velocityModel.detentsAvailable
         activeFocusOnTab: visible
@@ -451,11 +504,19 @@ FocusScope {
 
         AppIcon {
             anchors.fill: parent
-            anchors.margins: drawerScope.presenter.detentIconInset
+            Binding on anchors.margins {
+                when: drawerScope.presenter !== null
+                restoreMode: Binding.RestoreNone
+                value: drawerScope.presenter?.detentIconInset
+            }
             icon: Icons.velocityLabels
-            color: drawerScope.velocityModel && drawerScope.velocityModel.detentsEnabled
-                   ? drawerScope.drawerPalette.selectionRing
-                   : drawerScope.drawerPalette.keyboardLabel
+            Binding on color {
+                when: drawerScope.drawerPalette !== null
+                restoreMode: Binding.RestoreNone
+                value: drawerScope.velocityModel && drawerScope.velocityModel.detentsEnabled
+                       ? drawerScope.drawerPalette?.selectionRing
+                       : drawerScope.drawerPalette?.keyboardLabel
+            }
         }
 
         MouseArea {
@@ -466,13 +527,7 @@ FocusScope {
         }
     }
 
-    // Generic modal containment, one layer for the whole container: a page's
-    // modal surface (a picker, a menu) must not be clipped by the body loader
-    // that hosts the page's content, and it must sit above every section's
-    // bodies and chrome, whichever section it belongs to. The layer is declared
-    // after all of them, spans the container, takes no input and draws nothing
-    // of its own; a page that composes no modal never populates it. Opt-in pages
-    // receive it as their optional `modalHost` property right after loading.
+    // One unclipped modal layer sits above all drawer bodies and chrome.
     Item {
         id: modalLayer
 

@@ -9,9 +9,9 @@ import PorydawApp
 Item {
     id: surface
     required property WavExportPresenter presenter
-    required property QtObject colors
-    required property var windowRoot
-    required property var typography
+    required property GridPalette colors
+    required property ShellWindow windowRoot
+    required property TypographyFonts typography
     readonly property bool exportActive: surface.presenter.active
     readonly property bool optionsVisible: surface.presenter.optionsVisible
     readonly property bool rendering: surface.presenter.rendering
@@ -19,7 +19,7 @@ Item {
     readonly property int failureRevision: surface.presenter.failureRevision
     visible: false
 
-    onExportActiveChanged: ++surface.windowRoot.actionRevision
+    onExportActiveChanged: surface.windowRoot.shellPresenter.refreshActionStates()
     onOptionsVisibleChanged: {
         if (optionsVisible && !optionsLoader.active)
             optionsLoader.active = true
@@ -55,7 +55,7 @@ Item {
 
     FontMetrics {
         id: metrics
-        font: Qt.font(surface.typography.body)
+        font: surface.typography.body
     }
 
     // Keep first-use dialogs mounted for subsequent requests, like shell chrome.
@@ -75,8 +75,8 @@ Item {
             visible: false
             width: metrics.averageCharacterWidth * 47
             height: metrics.height * 13
-            font: Qt.font(surface.typography.body)
-            onClosing: function(close: CloseEvent): void {
+            font: surface.typography.body
+            onClosing: function(close) {
                 if (surface.presenter.optionsVisible) {
                     close.accepted = false
                     surface.presenter.rejectOptions()
@@ -102,7 +102,7 @@ Item {
                         Layout.fillWidth: true
                         model: surface.presenter.rateLabels
                         currentIndex: surface.presenter.rateIndex
-                        onActivated: function(index: int): void { surface.presenter.setRateIndex(index) }
+                        onActivated: function(index) { surface.presenter.setRateIndex(index) }
                     }
                     Label {
                         text: qsTr("Loop count:")
@@ -213,8 +213,8 @@ Item {
             visible: false
             width: metrics.averageCharacterWidth * 42
             height: metrics.height * 8
-            font: Qt.font(surface.typography.body)
-            onClosing: function(close: CloseEvent): void {
+            font: surface.typography.body
+            onClosing: function(close) {
                 if (surface.presenter.rendering) {
                     close.accepted = false
                     surface.presenter.cancelRender()
@@ -265,7 +265,7 @@ Item {
             title: qsTr("Export WAV")
             width: metrics.averageCharacterWidth * 52
             height: metrics.height * 7
-            font: Qt.font(surface.typography.body)
+            font: surface.typography.body
             ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: metrics.averageCharacterWidth

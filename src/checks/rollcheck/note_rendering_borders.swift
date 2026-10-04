@@ -171,7 +171,7 @@ func checkIdentityNoteColors(_ report: CheckReport, session: DocumentSession) {
     let maximum = colors[127] ?? 0
     let midpoint = colors[64] ?? 0
     report.expect(
-        zero == palette.noteVelocityZero, cppID: id,
+        zero == PaletteMath.hex(palette.noteVelocityZero), cppID: id,
         message: "A020 velocity zero uses the neutral palette fill")
     report.expect(
         publishedOpaque(zero), cppID: id,

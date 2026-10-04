@@ -134,13 +134,11 @@ EditorDrawerTestSupport {
         var hoverGrip = testCase.grip(testCase.velocityKind)
         mouseMove(hoverGrip, hoverGrip.width / 2, hoverGrip.height / 2)
         tryVerify(function() {
-            return String(hoverGrip.color).toUpperCase()
-                === String(testCase.drawerPalette().selectionRing).toUpperCase()
+            return Qt.colorEqual(hoverGrip.color, testCase.drawerPalette().selectionRing)
         }, 1000, "a hovered handle highlights")
         mouseMove(testCase.bar(), 2, 2)
         tryVerify(function() {
-            return String(hoverGrip.color).toUpperCase()
-                === String(testCase.drawerPalette().outline).toUpperCase()
+            return Qt.colorEqual(hoverGrip.color, testCase.drawerPalette().outline)
         }, 1000, "leaving the handle returns its outline")
 
         // Return and Enter activate a focused toggle and are claimed by it.

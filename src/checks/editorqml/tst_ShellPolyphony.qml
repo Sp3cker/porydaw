@@ -125,8 +125,8 @@ TestCase {
         var poly = session.polyphony
         verify(!presenter.polyphonyVisible && !dock().visible,
                "the debugger starts hidden")
-        compare(presenter.actionLabel("view.polyphony_debugger"), "Polyphony Debugger")
-        verify(presenter.actionEnabled("view.polyphony_debugger"),
+        compare(presenter.action("view.polyphony_debugger").label, "Polyphony Debugger")
+        verify(presenter.action("view.polyphony_debugger").enabled,
                "the View action is enabled before a document opens")
         presenter.activate("view.polyphony_debugger")
         tryVerify(function() { return presenter.polyphonyVisible }, 3000,

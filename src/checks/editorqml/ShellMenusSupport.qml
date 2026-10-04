@@ -106,9 +106,9 @@ TestCase {
     function checkMenuItem(menu, actionId, label) {
         var item = findChild(menu, "shellAction_" + actionId)
         verify(item !== null, "the menu owns " + actionId)
-        compare(shell.shellPresenter.actionLabel(actionId), label,
+        compare(shell.shellPresenter.action(actionId).label, label,
                 actionId + " keeps the keymap label")
-        verify(item.text.indexOf(shell.shellPresenter.menuLabel(actionId)) === 0,
+        verify(item.text.indexOf(shell.shellPresenter.action(actionId).menuLabel) === 0,
                 actionId + " shows its label, got: " + item.text)
         return item
     }

@@ -12,9 +12,9 @@ ShellEventListSupport {
         tryCompare(shell, "active", true, 3000)
         const shellPresenter = shell.shellPresenter
         const session = shellPresenter.session
-        verify(!shellPresenter.actionEnabled("view.event_list"),
+        verify(!shellPresenter.action("view.event_list").enabled,
                "MIDI Event List is disabled until the selected tab is ready")
-        compare(shellPresenter.actionLabel("view.event_list"), "MIDI Event List")
+        compare(shellPresenter.action("view.event_list").label, "MIDI Event List")
         compare(shellPresenter.viewActionIds[0], "view.event_list",
                 "MIDI Event List leads the View menu")
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
@@ -23,7 +23,7 @@ ShellEventListSupport {
         }, 30000), "song load settles")
         verify(session.songOpen, session.lastSaveError)
         waitForShellScene()
-        verify(shellPresenter.actionEnabled("view.event_list"),
+        verify(shellPresenter.action("view.event_list").enabled,
                "the ready tab enables MIDI Event List")
         const tab = findChild(shell.sceneLoader.item, "songTab_" + session.songTabs.selectedId)
         verify(tab !== null, "selected song page is present")
@@ -37,7 +37,7 @@ ShellEventListSupport {
         verify(page !== null, "existing event-list page is rendered")
         typographyPage = page
         tryVerify(function() {
-            return page.headerFont.pixelSize === presenter.appearance.headerFont.pixelSize
+            return page.headerFont.pixelSize === presenter.fonts.caption.pixelSize
         }, 3000, "mounted caption follows the current presenter typography")
         function matchesFont(text, role, label) {
             verify(text, label + " is mounted")

@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtTest
 import ShellQmlCheck 1.0
-import "../../ui/shell"
+import Porydaw.Ui
 import "NativeWait.js" as NativeWait
 
 TestCase {
@@ -162,6 +162,8 @@ TestCase {
     }
     function test_escapeDismissesAndRestoresWindowFocus() {
         const presenter = createShell()
+        shell.requestActivate()
+        tryCompare(shell, "active", true)
         presenter.activate("edit.engine_settings")
         const settings = dialog()
         tryCompare(settings, "visible", true)
@@ -188,8 +190,8 @@ TestCase {
         const surface = page ? findChild(page, "swiftRollOverlay") : null
         verify(surface && surface.gridModel, "the grid contrast journey has a mounted roll")
         const palette = surface.gridModel.palette
-        function alpha(hex) {
-            return hex.length === 9 ? parseInt(hex.substring(1, 3), 16) : 255
+        function alpha(color) {
+            return Math.round(color.a * 255)
         }
         compare(alpha(palette.gridLine), 63, "the mounted grid begins at the default opacity")
 

@@ -9,7 +9,7 @@ Item {
     id: host
     required property NewSongController controller
     required property Window hostWindow
-    required property QtObject colors
+    required property GridPalette colors
     required property ApplicationSession applicationSession
 
     MessageDialog {

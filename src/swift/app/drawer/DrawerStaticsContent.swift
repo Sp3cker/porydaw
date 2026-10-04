@@ -1,6 +1,7 @@
 import Foundation
 import NativeDisplayList
 import PorydawCore
+import QtBridge
 
 #if canImport(CoreGraphics)
     import CoreGraphics
@@ -32,7 +33,7 @@ enum DrawerStaticsContent {}
 extension DrawerStaticsContent {
     static func buildGrid(
         into writer: inout DisplayListWriter, axis: TimeAxis, grid: RollGrid,
-        camera: EditorCamera, viewport: CGSize, paletteColors: [Int: String]
+        camera: EditorCamera, viewport: CGSize, paletteColors: [Int: QmlColor]
     ) {
         let metrics = grid.metrics
         let dpr = metrics.dpr
@@ -41,7 +42,7 @@ extension DrawerStaticsContent {
         guard ppt > 0, dpr.isFinite, dpr > 0 else { return }
         let width = viewport.width
         let height = viewport.height
-        // Per-slot resolve, never per record; missing/empty matches the pack's 0.
+        // Resolve each typed slot once; missing slots are transparent.
         let bar = drawerSlotARGB(3, from: paletteColors)
         let beat = drawerSlotARGB(4, from: paletteColors)
         let sub1 = drawerSlotARGB(5, from: paletteColors)
@@ -197,10 +198,9 @@ extension DrawerStaticsContent {
                 id: UInt64(PD_DL_ID_NONE), argb: argb, flags: 0))
     }
 
-    // A missing/empty palette slot packs as UInt32(0): fully transparent, so the
-    // shared alpha gate culls it.
-    private static func drawerSlotARGB(_ slot: Int, from paletteColors: [Int: String]) -> UInt32 {
-        guard let fill = paletteColors[slot], !fill.isEmpty else { return 0 }
-        return SceneRectPacking.argb(fill)
+    // Missing slots are transparent and culled by the shared alpha gate.
+    private static func drawerSlotARGB(_ slot: Int, from paletteColors: [Int: QmlColor]) -> UInt32 {
+        guard let fill = paletteColors[slot] else { return 0 }
+        return PaletteMath.argb(fill)
     }
 }

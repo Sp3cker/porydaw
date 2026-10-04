@@ -5,16 +5,18 @@ import PorydawStyle
 import QtQuick.Dialogs
 import QtQuick.Layouts
 import Porydaw.Ui
+import PorydawApp
 
 // The shell owns chrome and dialogs independently of its deferred workspace.
 Item {
     id: content
-    required property var root
-    readonly property var shell: content.root.shellPresenter
-    readonly property alias sceneLoader: workspace
-    readonly property alias menuBar: shellMenu
-    readonly property alias header: transportBar
-    readonly property alias footer: shellStatus
+    required final property ShellWindow root
+    final readonly property ShellPresenter shell: content.root.shellPresenter
+    final readonly property SongDockController songDock: content.shell.session.songDockController()
+    final readonly property alias sceneLoader: workspace
+    final readonly property alias menuBar: shellMenu
+    final readonly property alias header: transportBar
+    final readonly property alias footer: shellStatus
 
     Component.onCompleted: {
         content.shell.session.restoreDisplayModes()
@@ -41,7 +43,7 @@ Item {
     }
     FontMetrics {
         id: captionMetrics
-        font: Qt.font(content.root.chromeTypography.caption)
+        font: content.root.chromeTypography.caption
     }
 
     // Session publications update the mounted application controls.
@@ -49,16 +51,16 @@ Item {
         target: content.shell.session
         function onProjectOpenChanged(): void {
             content.shell.projectOpenChanged()
-            ++content.root.actionRevision
+            content.shell.refreshActionStates()
         }
         function onProjectRootChanged(): void { content.shell.refreshWindowChrome() }
         function onSongOpenChanged(): void {
             content.shell.songOpenChanged()
-            ++content.root.actionRevision
+            content.shell.refreshActionStates()
         }
         function onSaveInProgressChanged(): void {
             content.shell.saveStateChanged()
-            ++content.root.actionRevision
+            content.shell.refreshActionStates()
         }
         function onDocumentDirtyChanged(): void { content.shell.refreshWindowChrome() }
         function onSongDocumentDirtyChanged(): void { content.shell.refreshWindowChrome() }
@@ -66,41 +68,49 @@ Item {
             if (content.shell.session.lastSaveError.length > 0)
                 content.shell.statusText = content.shell.session.lastSaveError
         }
-        function onCanUndoChanged(): void { ++content.root.actionRevision }
-        function onCanRedoChanged(): void { ++content.root.actionRevision }
-        function onGridCommandAvailabilityChanged(): void { ++content.root.actionRevision }
-        function onTransportAvailabilityChanged(): void { ++content.root.actionRevision }
-        function onNoteNameModeChanged(): void { ++content.root.actionRevision }
+        function onCanUndoChanged(): void { content.shell.refreshActionStates() }
+        function onCanRedoChanged(): void { content.shell.refreshActionStates() }
+        function onGridCommandAvailabilityChanged(): void { content.shell.refreshActionStates() }
+        function onTransportAvailabilityChanged(): void { content.shell.refreshActionStates() }
+        function onNoteNameModeChanged(): void { content.shell.refreshActionStates() }
         function onOpenFailed(message: string): void { content.shell.openFailed(message) }
         function onOperationFailed(message: string): void { content.shell.operationFailed(message) }
         function onStatusMessage(message: string): void { content.shell.statusText = message }
     }
     Connections {
         target: content.shell.session.sampleStudio()
-        function onEditorOpenChanged(): void { ++content.root.actionRevision }
+        function onEditorOpenChanged(): void { content.shell.refreshActionStates() }
+    }
+    Connections {
+        target: content.songDock
+        function onSongsChanged(): void { content.shell.refreshActionStates() }
     }
     Connections {
         target: content.shell.session.songTabs
-        function onSelectedTabShowsEventsChanged(): void { ++content.root.actionRevision }
+        function onSelectedTabShowsEventsChanged(): void { content.shell.refreshActionStates() }
         function onSelectedPageChanged(): void {
             content.shell.refreshWindowChrome()
-            ++content.root.actionRevision
+            content.shell.refreshActionStates()
         }
-        function onSelectedIdChanged(): void { ++content.root.actionRevision }
-        function onTabCountChanged(): void { ++content.root.actionRevision }
+        function onSelectedIdChanged(): void { content.shell.refreshActionStates() }
+        function onTabCountChanged(): void { content.shell.refreshActionStates() }
     }
     Connections {
         target: content.root.drawerSectionSource
-        function onDrawerSectionPreferenceChanged(): void { ++content.root.actionRevision }
+        function onDrawerSectionPreferenceChanged(): void { content.shell.refreshActionStates() }
     }
     Connections {
         target: content.shell.session.songOpen ? content.shell.session.eventListPresenter() : null
-        function onCurrentRowChanged(): void { ++content.root.actionRevision }
+        function onCurrentRowChanged(): void { content.shell.refreshActionStates() }
+        function onRowsPublished(): void { content.shell.refreshActionStates() }
+        function onAttachedChanged(): void { content.shell.refreshActionStates() }
+        function onVisibleChanged(): void { content.shell.refreshActionStates() }
+        function onEditingChanged(): void { content.shell.refreshActionStates() }
+        function onMenuOpenChanged(): void { content.shell.refreshActionStates() }
     }
     Connections {
         target: content.shell
-        function onPolyphonyVisibleChanged(): void { ++content.root.actionRevision }
-        function onEventListGateChanged(): void { ++content.root.actionRevision }
+        function onPolyphonyVisibleChanged(): void { content.shell.refreshActionStates() }
         function onChooseProjectRequested(): void { content.ensureProjectPicker().open() }
         function onAboutRequested(): void { content.ensureAboutDialog().open() }
         function onSettingsRequested(songFirst: bool): void { content.ensureSettingsDialog().showSettings(songFirst) }
@@ -120,16 +130,14 @@ Item {
         delegate: Item {
             id: shortcutDelegate
             required property string modelData
+            final readonly property ShellActionState actionState: content.shell.action(modelData)
             width: 0
             height: 0
             Shortcut {
                 objectName: "shellShortcut_" + shortcutDelegate.modelData
                 sequences: content.shell.actionSequences(shortcutDelegate.modelData)
                 context: Qt.WindowShortcut
-                enabled: {
-                    content.root.actionRevision
-                    return content.shell.actionEnabled(shortcutDelegate.modelData)
-                }
+                enabled: shortcutDelegate.actionState.enabled
                 onActivated: content.shell.activate(shortcutDelegate.modelData)
             }
         }
@@ -139,7 +147,6 @@ Item {
         id: shellMenu
         shell: content.root.shellPresenter
         windowRoot: content.root
-        actionRevision: content.root.actionRevision
     }
     // Deferred chrome: dialogs instantiate on first use, so startup never
     // pays for their font/button work; Loaders complete synchronously.
@@ -183,13 +190,13 @@ Item {
         }
     }
     MidiImportHost {
-        controller: content.shell.session.songDockController().midiImportController()
+        controller: content.songDock.midiImportController()
         hostWindow: content.root
         colors: content.root.colors
         applicationSession: content.shell.session
     }
     NewSongHost {
-        controller: content.shell.session.songDockController().newSongController()
+        controller: content.songDock.newSongController()
         hostWindow: content.root
         colors: content.root.colors
         applicationSession: content.shell.session
@@ -218,7 +225,7 @@ Item {
         onLoaded: {
             if (content.shell.sceneActive) {
                 content.shell.workspaceReady()
-                ++content.root.actionRevision
+                content.shell.refreshActionStates()
             }
         }
         onStatusChanged: {
@@ -265,16 +272,20 @@ Item {
                     objectName: "saveConflictNewName"
                     Layout.fillWidth: true
                     placeholderText: qsTr("mus_new_song")
+                    function applyAcceptedLabel(accepted: string, proposed: string, cursor: int): void {
+                        if (accepted !== proposed) {
+                            saveConflictNameField.text = accepted
+                            saveConflictNameField.cursorPosition = Math.min(cursor, accepted.length)
+                        }
+                        content.shell.session.saveConflictNewSongLabel = accepted
+                    }
                     onTextChanged: {
                         const previous = content.shell.session.saveConflictNewSongLabel
                         const proposed = text
                         const cursor = cursorPosition
-                        const accepted = content.shell.session.acceptSaveConflictLabelEdit(previous, proposed)
-                        if (accepted !== proposed) {
-                            text = accepted
-                            cursorPosition = Math.min(cursor, accepted.length)
-                        }
-                        content.shell.session.saveConflictNewSongLabel = accepted
+                        saveConflictNameField.applyAcceptedLabel(
+                            content.shell.session.acceptSaveConflictLabelEdit(previous, proposed),
+                            proposed, cursor)
                     }
                     onAccepted: {
                         if (saveConflictForkButton.enabled)
@@ -329,7 +340,6 @@ Item {
         baseFontPx: content.root.chromeBaseFontPx
         presenter: content.shell.session.transportBarPresenter()
         shell: content.root.shellPresenter
-        actionRevision: content.root.actionRevision
         colors: content.root.colors
         typography: content.root.chromeTypography
         layoutSpaces: content.root.chromeSpacing
@@ -349,7 +359,7 @@ Item {
         sourceComponent: FolderDialog {
             objectName: "shellProjectPicker"
             title: qsTr("Open Project")
-            onAccepted: content.shell.chooseProject(selectedFolder.toString())
+            onAccepted: content.shell.chooseProject(selectedFolder)
         }
     }
     Loader {

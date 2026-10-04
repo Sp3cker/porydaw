@@ -13,15 +13,51 @@ public final class EventListRowHandle {
     public var tick: Int = 0
     public var typeKind: Int = EventListEventType.endOfTrack.rawValue
     public var isEndOfTrack: Bool = false
+    public var rowKind: Int = -1
+    public var selected: Bool = false
+    public var editableMask: Int = 0
     public var rowTint: String = ""
+    public var c0: String = ""
+    public var c1: String = ""
+    public var c2: String = ""
+    public var c3: String = ""
+    public var c4: String = ""
+    public var c5: String = ""
+    public var c6: String = ""
+    public var editType: String = ""
+    public var editData: String = ""
 
-    init(_ source: EventListRow, tint: String) {
-        row = source.index
-        eventIndex = source.eventIndex ?? -1
-        tick = Int(source.tick)
-        typeKind = source.typeKind
-        isEndOfTrack = source.isEndOfTrack
-        rowTint = tint
+    @QtIgnored
+    func update(_ source: EventListRow, model: EventListModel, selected: Bool) -> Bool {
+        var changed = false
+        func publish<T: Equatable>(_ old: T, _ new: T, _ assign: (T) -> Void) {
+            guard old != new else { return }
+            assign(new)
+            changed = true
+        }
+        publish(row, source.index) { row = $0 }
+        publish(eventIndex, source.eventIndex ?? -1) { eventIndex = $0 }
+        publish(tick, Int(source.tick)) { tick = $0 }
+        publish(typeKind, source.typeKind) { typeKind = $0 }
+        publish(isEndOfTrack, source.isEndOfTrack) { isEndOfTrack = $0 }
+        publish(rowKind, model.rowKind(row: source.index)) { rowKind = $0 }
+        publish(self.selected, selected) { self.selected = $0 }
+        publish(rowTint, model.rowTint(row: source.index) ?? "") { rowTint = $0 }
+        var mask = 0
+        for column in 0..<EventListModel.columnCount {
+            if model.isCellEditable(row: source.index, column: column) { mask |= 1 << column }
+        }
+        publish(editableMask, mask) { editableMask = $0 }
+        publish(c0, model.cellText(row: source.index, column: 0)) { c0 = $0 }
+        publish(c1, model.cellText(row: source.index, column: 1)) { c1 = $0 }
+        publish(c2, model.cellText(row: source.index, column: 2)) { c2 = $0 }
+        publish(c3, model.cellText(row: source.index, column: 3)) { c3 = $0 }
+        publish(c4, model.cellText(row: source.index, column: 4)) { c4 = $0 }
+        publish(c5, model.cellText(row: source.index, column: 5)) { c5 = $0 }
+        publish(c6, model.cellText(row: source.index, column: 6)) { c6 = $0 }
+        publish(editType, model.cellText(row: source.index, column: 1, editing: true)) { editType = $0 }
+        publish(editData, model.cellText(row: source.index, column: 5, editing: true)) { editData = $0 }
+        return changed
     }
 }
 
@@ -35,7 +71,15 @@ public final class EventListRowHandle {
 public final class EventListPresenter: QmlUncreatable {
     private static let defaultWidthSeeds = [70.0, 120.0, 36.0, 56.0, 56.0, 140.0]
     public var rows: QListModel<EventListRowHandle> = QListModel()
-    @QtTracked public var tableRevision = 0
+    public var tableRows: QTableModel<EventListRowHandle> = QTableModel([]) {
+        QTableColumn("Tick", value: \EventListRowHandle.self)
+        QTableColumn("Type", value: \EventListRowHandle.self)
+        QTableColumn("Ch", value: \EventListRowHandle.self)
+        QTableColumn("Data 1", value: \EventListRowHandle.self)
+        QTableColumn("Data 2", value: \EventListRowHandle.self)
+        QTableColumn("Data", value: \EventListRowHandle.self)
+        QTableColumn("Summary", value: \EventListRowHandle.self)
+    }
     @QtTracked public var visible = false
     @QtTracked public var chunk = -1
     public var chunkLabels: [String] = []
@@ -47,20 +91,27 @@ public final class EventListPresenter: QmlUncreatable {
         "Data 2", "Data", "Summary",
     ]
     @QtIgnored public var columnWidths: [Double] = [] {
-        didSet { columnWidthsRevision &+= 1 }
+        didSet { publishColumnWidths() }
     }
-    @QtTracked public var columnWidthsRevision = 0
+    public var tickColumnWidth: Double = 0
+    public var typeColumnWidth: Double = 0
+    public var channelColumnWidth: Double = 0
+    public var data1ColumnWidth: Double = 0
+    public var data2ColumnWidth: Double = 0
+    public var dataColumnWidth: Double = 0
     @QtIgnored var resizedColumns: Set<Int> = []
     @QtIgnored public var selectedRows: [Int] = [] {
-        didSet { selectionRevision &+= 1 }
+        didSet { publishSelection(previous: oldValue) }
     }
-    @QtTracked public var selectionRevision = 0
     public var menuItems: QListModel<EventListMenuItem> = QListModel()
     @QtTracked public var menuShortcutText = ""
     @QtTracked public var menuSeparatorCount = 0
     @QtTracked public var menuX = 0.0
     @QtTracked public var menuY = 0.0
-    public var appearance: [String: QVariantSettable] = [:]
+    @QtTracked public var colors: GridPalette
+    @QtTracked public var fonts: TypographyFonts
+    public let playheadTint: QmlColor = PaletteMath.qmlColor(
+        argb: PaletteMath.argb(EventListModel.playheadTint))
 
     @QtTracked public var attached = false
     @QtTracked public var chunkIndex = -1
@@ -91,26 +142,26 @@ public final class EventListPresenter: QmlUncreatable {
     @QtIgnored var menuKind: EventListMenuKind?
     @QtIgnored var menuRow = -1
     @QtIgnored weak var session: DocumentSession?
-    private var appearancePalette: GridPalette
     private var typography: Typography
 
     public init(
         palette: GridPalette = GridPalette(),
         typography: Typography = Typography(baseFontPx: 13)
     ) {
-        appearancePalette = palette
+        colors = palette
+        fonts = TypographyFonts(typography: typography)
         self.typography = typography
-        appearance = EventListAppearance.roles(palette: palette, typography: typography)
+        publishColumnWidths()
     }
 
     public func refreshAppearance() {
-        appearance = EventListAppearance.roles(palette: appearancePalette, typography: typography)
+        fonts.update(typography: typography)
     }
     public func configureTypography(typography: Typography) {
         guard self.typography.baseFontPx != typography.baseFontPx else { return }
         self.typography = typography
         refreshAppearance()
-        columnWidthsRevision &+= 1
+        publishColumnWidths()
     }
 
     /// Installs one document and rebuilds its configured chunk synchronously.
@@ -131,6 +182,7 @@ public final class EventListPresenter: QmlUncreatable {
         attached = false
         model.detach()
         rows.reset(to: [])
+        tableRows.removeRows(in: 0..<rowCount)
         chunkIndex = -1
         rowCount = 0
         currentRow = -1
@@ -165,7 +217,7 @@ public final class EventListPresenter: QmlUncreatable {
 
         if change.domains.contains(.bank) {
             model.voiceNames = voiceNames()
-            tableRevision &+= 1
+            publishRowValues()
         }
 
         let documentChanged = change.domains.contains(.document) || change.trackRemap != nil
@@ -343,6 +395,39 @@ public final class EventListPresenter: QmlUncreatable {
         resizedColumns.contains(column) && columnWidths.indices.contains(column)
             ? columnWidths[column] : defaultColumnWidth(column: column)
     }
+
+    public func rowHandle(row: Int) -> Optional<EventListRowHandle> {
+        rows.indices.contains(row) ? rows[row] : nil
+    }
+
+    public func menuItem(row: Int) -> Optional<EventListMenuItem> {
+        menuItems.indices.contains(row) ? menuItems[row] : nil
+    }
+
+    func publishColumnWidths() {
+        setPublished(tickColumnWidth, savedColumnWidth(column: 0)) { tickColumnWidth = $0 }
+        setPublished(typeColumnWidth, savedColumnWidth(column: 1)) { typeColumnWidth = $0 }
+        setPublished(channelColumnWidth, savedColumnWidth(column: 2)) { channelColumnWidth = $0 }
+        setPublished(data1ColumnWidth, savedColumnWidth(column: 3)) { data1ColumnWidth = $0 }
+        setPublished(data2ColumnWidth, savedColumnWidth(column: 4)) { data2ColumnWidth = $0 }
+        setPublished(dataColumnWidth, savedColumnWidth(column: 5)) { dataColumnWidth = $0 }
+    }
+
+    private func publishSelection(previous: [Int]) {
+        for row in previous where !selectedRows.contains(row) {
+            publishSelected(row: row, selected: false)
+        }
+        for row in selectedRows where !previous.contains(row) {
+            publishSelected(row: row, selected: true)
+        }
+    }
+
+    private func publishSelected(row: Int, selected: Bool) {
+        guard rows.indices.contains(row), rows[row].selected != selected else { return }
+        let handle = rows[row]
+        handle.selected = selected
+        rows[row] = handle
+    }
     public func resizeColumn(column: Int, width: Double) {
         dispatchResizeColumn(column: column, width: width)
     }
@@ -376,6 +461,7 @@ public final class EventListPresenter: QmlUncreatable {
     }
 
     @QtSignal public func scrollToRow(row: Int)
+    @QtSignal public func rowsPublished()
 
     func clearEditing() {
         editing = false
@@ -444,17 +530,35 @@ public final class EventListPresenter: QmlUncreatable {
     }
 
     func publishRows() {
-        rows.reset(
-            to: model.rows.map {
-                EventListRowHandle($0, tint: model.rowTint(row: $0.index) ?? "")
-            })
+        if rows.count > model.rowCount {
+            tableRows.removeRows(in: model.rowCount..<rows.count)
+            rows.removeSubrange(model.rowCount..<rows.count)
+        }
+        publishRowValues()
+        for row in rows.count..<model.rowCount {
+            let handle = EventListRowHandle()
+            _ = handle.update(model.rows[row], model: model, selected: selectedRows.contains(row))
+            rows.append(handle)
+            tableRows.appendRow(handle)
+        }
         rowCount = model.rowCount
         currentRow = model.currentRow
         playRow = model.playRow
         let shown = max(0, model.rowCount - (model.rowCount > 0 ? 1 : 0))
         let total = model.chunk.events.count + (chunkIndex == 0 ? model.tempos.count : 0)
         countText = shown == total ? "\(total) event(s)" : "\(shown) of \(total) events"
-        tableRevision &+= 1
+        rowsPublished()
+    }
+
+    private func publishRowValues() {
+        rows.update {
+            for row in rows.indices where model.rows.indices.contains(row) {
+                let handle = rows[row]
+                if handle.update(model.rows[row], model: model, selected: selectedRows.contains(row)) {
+                    rows[row] = handle
+                }
+            }
+        }
     }
 
     private func publishPlayheadTransition(from oldPlayRow: Int) {
@@ -468,9 +572,11 @@ public final class EventListPresenter: QmlUncreatable {
 
     private func refreshRowHandle(at row: Int) {
         guard model.rows.indices.contains(row) else { return }
-        rows[row] = EventListRowHandle(
-            model.rows[row],
-            tint: model.rowTint(row: row) ?? "")
+        let handle = rows[row]
+        let tint = model.rowTint(row: row) ?? ""
+        guard handle.rowTint != tint else { return }
+        handle.rowTint = tint
+        rows[row] = handle
     }
 
     private func requestScroll(to row: Int) {

@@ -110,11 +110,10 @@ TimelinePanSupport {
             return scene.hoverChipVisible === true
         }, 5000, "the hover chip becomes visible")
         verify(waitForNative(function() {
-            return chip.visible && chip.width === scene.hoverChipRect.width
+            return chip.visible && chip.width === scene.hoverChipWidth
         }, 5000), "the realized chip tracks the published rect")
         compare(scene.hoverChipText, pitch.text)
-        var chipRect = scene.hoverChipRect
-        verify(chipRect.x >= 0, "the chip stays on-screen")
+        verify(scene.hoverChipX >= 0, "the chip stays on-screen")
         // The gutter updates this same grid model; its published key and
         // the scene's keyboard-label text must agree at the hovered row.
         tryVerify(function() { return g.hoverKey >= 0 }, 5000,
@@ -134,10 +133,10 @@ TimelinePanSupport {
         }, 5000, "the chip republishes the second key name")
         verify(waitForNative(function() {
             return chipText.text === scene.hoverChipText
-                && chip.width === scene.hoverChipRect.width
+                && chip.width === scene.hoverChipWidth
         }, 5000), "the realized chip tracks the republished rect")
         verify(scene.hoverChipVisible)
-        verify(scene.hoverChipRect.x >= 0, "the second chip stays on-screen")
+        verify(scene.hoverChipX >= 0, "the second chip stays on-screen")
         verify(g.hoverKey >= 0, "moving to another gutter row resolves another MIDI key")
         verify(chipText.contentWidth <= chip.width, "the second chip covers its text")
 
@@ -157,9 +156,8 @@ TimelinePanSupport {
 
         compare(gutter.parent, gutterBoxItem)
 
-        chipRect = scene.hoverChipRect
-        compare(chip.width, chipRect.width)
-        compare(chip.x, chipRect.x)
+        compare(chip.width, scene.hoverChipWidth)
+        compare(chip.x, scene.hoverChipX)
         verify(chip.visible)
         verify(chipText.visible)
         compare(chipText.x, chip.x)

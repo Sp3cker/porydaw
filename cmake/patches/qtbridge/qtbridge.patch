@@ -189,10 +189,38 @@ index 1705eed..00f5cd1 100644
      public var asArray: [Element] { storage }
  }
 diff --git a/Sources/QtBridge/QMetaObjectBuilder.swift b/Sources/QtBridge/QMetaObjectBuilder.swift
-index 102c863..fc39501 100644
+index 102c863..f1952fc 100644
 --- a/Sources/QtBridge/QMetaObjectBuilder.swift
 +++ b/Sources/QtBridge/QMetaObjectBuilder.swift
-@@ -78,6 +78,12 @@ public class QMetaObjectBuilder
+@@ -14,6 +14,8 @@ import QtBridgeCpp
+ @MainActor
+ public class QMetaObjectBuilder
+ {
++    private static var builders: [ObjectIdentifier: QMetaObjectBuilder] = [:]
++
+     private let className: String
+     private let moduleName: String
+ 
+@@ -66,18 +68,31 @@ public class QMetaObjectBuilder
+     /// This method is used by the bridging system. Don't call
+     /// it directly.
+     static public func create(from type: QObjectBuildable.Type) -> QMetaObjectBuilder {
++        let key = ObjectIdentifier(type)
++        if let builder = builders[key] { return builder }
+         let builder = QMetaObjectBuilder(type: type)
++        // Publish before registering members so self-references and mutually dependent types share one builder.
++        builders[key] = builder
+         type.registerMethodsAndProperties(for: builder)
+         builder.endMetaRegistration()
+         return builder
+     }
+ 
++    /// Returns the Qt-convention pointer metatype for this Swift class.
++    public func metaTypeId() -> Int32 { qmlElementBuilder.metaTypeId() }
++
+     internal func registerQmlElement(from type: QmlInstantiable.Type) {
+         type.registerMetaTypeInterface(for: self)
+         qmlElementBuilder.setMetaObjectFrom(self.builder)
          qmlElementBuilder.registerQmlElement()
      }
  
@@ -205,6 +233,65 @@ index 102c863..fc39501 100644
      internal func setMetaObjectTo(objectHolder: QObjectHolder) {
          builder.setMetaObjectTo(objectHolder.proxy)
      }
+@@ -174,7 +189,7 @@ public class QMetaObjectBuilder
+         name: String,
+         keyPath: WritableKeyPath<Root, Member>)
+     {
+-        registerProperty(name: name, keyPath: keyPath) { newValue, root in
++        registerProperty(name: name, keyPath: keyPath, valueFromVariant: Member.value(from:)) { newValue, root in
+             newValue != root[keyPath: keyPath]
+         }
+     }
+@@ -193,12 +208,30 @@ public class QMetaObjectBuilder
+         name: String,
+         keyPath: WritableKeyPath<Root, Member>)
+     {
+-        registerProperty(name: name, keyPath: keyPath, isChanged: { _, _ in true })
++        registerProperty(name: name, keyPath: keyPath, valueFromVariant: Member.value(from:),
++                         isChanged: { _, _ in true })
++    }
++
++    /// Registers a writable typed Swift object property.
++    public func registerProperty<Root: QObjectBuildable, Member: QObjectBuildable>(
++        name: String, keyPath: WritableKeyPath<Root, Member>)
++    {
++        registerProperty(name: name, keyPath: keyPath, valueFromVariant: Member.value(from:),
++                         isChanged: { _, _ in true })
++    }
++
++    /// Registers a writable typed Swift object property that also accepts null.
++    public func registerProperty<Root: QObjectBuildable, Member: QObjectBuildable>(
++        name: String, keyPath: WritableKeyPath<Root, Member?>)
++    {
++        registerProperty(name: name, keyPath: keyPath, valueFromVariant: Optional<Member>.value(from:),
++                         isChanged: { _, _ in true })
+     }
+ 
+-    private func registerProperty<Root: QObjectBuildable, Member: QVariantSettable>(
++    private func registerProperty<Root: QObjectBuildable, Member: QVariantGettable>(
+         name: String,
+         keyPath: WritableKeyPath<Root, Member>,
++        valueFromVariant: @escaping @MainActor (QVariant) -> Member,
+         isChanged: @escaping (Member, Root) -> Bool)
+     {
+         registerSignal(for: name)
+@@ -217,7 +250,7 @@ public class QMetaObjectBuilder
+             guard var root = root as? Root else {
+                 return false
+             }
+-            let newValue: Member = variant.value()
++            let newValue: Member = valueFromVariant(variant)
+             if !isChanged(newValue, root) {
+                 return false
+             }
+@@ -402,6 +435,7 @@ public class QMetaObjectBuilder
+ 
+     internal func endMetaRegistration() {
+         builder.endMetaRegistration()
++        qmlElementBuilder.setMetaObjectFrom(builder)
+     }
+ 
+     private func invoke(methodIndex: Int, rootPtr: UnsafeMutableRawPointer?, args: QMetaParamsList) -> QVariant {
 diff --git a/Sources/QtBridge/QMetaParamsList.swift b/Sources/QtBridge/QMetaParamsList.swift
 index 620758f..014a132 100644
 --- a/Sources/QtBridge/QMetaParamsList.swift
@@ -247,8 +334,27 @@ index 620758f..014a132 100644
 +        return params.getFont(index)
 +    }
 +}
+diff --git a/Sources/QtBridge/QObjectBuildable.swift b/Sources/QtBridge/QObjectBuildable.swift
+index 3249047..2db9f3b 100644
+--- a/Sources/QtBridge/QObjectBuildable.swift
++++ b/Sources/QtBridge/QObjectBuildable.swift
+@@ -76,5 +76,13 @@ extension QObjectBuildable {
+ 
+ extension QObjectBuildable {
+     public func toVariant() -> QVariant { QVariant(value: self) }
+-    public static func metaType() -> Int32 { return 39 }
++    public static func value(from variant: QVariant) -> Self {
++        guard let object: Self = variant.swiftObject() else {
++            preconditionFailure("Expected a bridged \(Self.self) object")
++        }
++        return object
++    }
++    public static func metaType() -> Int32 {
++        QMetaObjectBuilder.create(from: Self.self).metaTypeId()
++    }
+ }
 diff --git a/Sources/QtBridge/QVariant.swift b/Sources/QtBridge/QVariant.swift
-index c69ec15..8320e51 100644
+index c69ec15..72392e7 100644
 --- a/Sources/QtBridge/QVariant.swift
 +++ b/Sources/QtBridge/QVariant.swift
 @@ -1,6 +1,7 @@
@@ -268,7 +374,7 @@ index c69ec15..8320e51 100644
  /// | `[String]` | `QStringList` |
  /// | `[String: QVariantSettable]` | `QVariantMap` |
  ///
-@@ -77,6 +80,17 @@ public struct QVariant
+@@ -77,6 +80,22 @@ public struct QVariant
      public init(value: String) {
          self.variant = QtBridgeCpp.QVariant(value)
      }
@@ -279,32 +385,39 @@ index c69ec15..8320e51 100644
 +    }
 +    /// Creates a variant containing a native Qt font.
 +    public init(value: QmlFont) {
++        var features = CppVectorOfFontFeatures()
++        features.reserve(value.features.count)
++        for (tag, featureValue) in value.features {
++            features.push_back(QmlFontFeature(tag.toQString(), featureValue))
++        }
 +        self.variant = QmlValueTypesCpp.variantFromFont(
 +            value.family.toQString(), Int32(value.pixelSize), Int32(value.weight),
-+            value.italic, value.letterSpacing, value.hintingPreference.rawValue)
++            value.italic, value.letterSpacing, value.hintingPreference.rawValue, features)
 +    }
      /// Creates a variant containing an array of strings.
      ///
      /// - Parameter value: The string array to store.
-@@ -96,6 +110,17 @@ public struct QVariant
-         self.variant = value.objectHolder.proxy.toVariant()
-     }
- 
+@@ -93,7 +112,18 @@ public struct QVariant
+     /// - Parameter value: A Swift type annotated with the
+     /// ``QtBridgeable()`` macro.
+     public init(value: QObjectBuildable) {
+-        self.variant = value.objectHolder.proxy.toVariant()
++        self.variant = value.objectHolder.proxy.toVariant(type(of: value).metaType())
++    }
++
 +    /// Creates a variant containing an optional Swift object exposed to QML.
 +    /// A missing value is stored as a typed null QObject pointer.
 +    public init<Wrapped: QObjectBuildable>(value: Wrapped?) {
 +        if let value {
-+            self.variant = value.objectHolder.proxy.toVariant()
++            self.variant = value.objectHolder.proxy.toVariant(Wrapped.metaType())
 +        } else {
 +            self.variant = QtBridgeCpp.QVariant.fromMetaType(
 +                QMetaType(Wrapped.metaType()), nil)
 +        }
-+    }
-+
+     }
+ 
      /// Creates a variant from a Swift dictionary.
-     ///
-     /// - Parameter value: A dictionary to be bridged to
-@@ -108,6 +133,16 @@ public struct QVariant
+@@ -108,6 +138,16 @@ public struct QVariant
          self.variant = QtBridgeCpp.QVariant(map)
      }
  
@@ -321,7 +434,19 @@ index c69ec15..8320e51 100644
      internal init(model: QAbstractListModel) {
          self.variant = model.getCppModel().toVariant()
      }
-@@ -145,6 +180,8 @@ public struct QVariant
+@@ -137,6 +177,11 @@ public struct QVariant
+         return variant.toMap().toBridgeMap()
+     }
+ 
++    internal func swiftObject<T: QObjectBuildable>() -> T? {
++        guard let pointer = QObjectProxy.swiftObjectFromVariant(variant) else { return nil }
++        return Unmanaged<AnyObject>.fromOpaque(pointer).takeUnretainedValue() as? T
++    }
++
+     internal func toSettable() -> QVariantSettable? {
+         let typeId = variant.typeId()
+         if typeId == Bool.metaType() { return Bool.value(from: self) }
+@@ -145,6 +190,8 @@ public struct QVariant
          if typeId == Double.metaType() { return Double.value(from: self) }
          if typeId == Float.metaType() { return Float.value(from: self) }
          if typeId == String.metaType() { return String.value(from: self) }
@@ -330,7 +455,7 @@ index c69ec15..8320e51 100644
          if typeId == [String].metaType() { return [String].value(from: self) }
          if typeId == [String: QVariantSettable].metaType() {
              return [String: QVariantSettable].value(from: self)
-@@ -152,7 +189,7 @@ public struct QVariant
+@@ -152,7 +199,7 @@ public struct QVariant
          return nil
      }
  
@@ -339,13 +464,14 @@ index c69ec15..8320e51 100644
          return variant
      }
  }
-@@ -183,6 +220,16 @@ public protocol QVariantSettable : QVariantGettable {
+@@ -183,6 +230,17 @@ public protocol QVariantSettable : QVariantGettable {
      static func value(from variant: QVariant) -> Self
  }
  
 +extension Optional: QVariantGettable where Wrapped: QObjectBuildable {
 +    public func toVariant() -> QVariant { QVariant(value: self) }
 +    public static func metaType() -> Int32 { Wrapped.metaType() }
++    @MainActor public static func value(from variant: QVariant) -> Optional<Wrapped> { variant.swiftObject() }
 +}
 +
 +extension Data: QVariantGettable {
@@ -401,10 +527,10 @@ index 0000000..a0c2876
 +}
 diff --git a/Sources/QtBridge/QmlFont.swift b/Sources/QtBridge/QmlFont.swift
 new file mode 100644
-index 0000000..6058d94
+index 0000000..732931f
 --- /dev/null
 +++ b/Sources/QtBridge/QmlFont.swift
-@@ -0,0 +1,49 @@
+@@ -0,0 +1,60 @@
 +// Copyright (C) 2025 The Qt Company Ltd.
 +// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
 +
@@ -426,16 +552,20 @@ index 0000000..6058d94
 +    public var italic: Bool
 +    public var letterSpacing: Double
 +    public var hintingPreference: HintingPreference
++    /// OpenType feature values; tags other than four ASCII characters are skipped when converting to Qt.
++    public var features: [String: UInt32]
 +
 +    /// Creates a font with Qt's 1...1000 weight scale and absolute pixel letter spacing.
 +    public init(family: String, pixelSize: Int, weight: Int = 400, italic: Bool = false,
-+                letterSpacing: Double = 0, hintingPreference: HintingPreference = .preferNoHinting) {
++                letterSpacing: Double = 0, hintingPreference: HintingPreference = .preferNoHinting,
++                features: [String: UInt32] = [:]) {
 +        self.family = family
 +        self.pixelSize = pixelSize
 +        self.weight = weight
 +        self.italic = italic
 +        self.letterSpacing = letterSpacing
 +        self.hintingPreference = hintingPreference
++        self.features = features
 +    }
 +}
 +
@@ -447,9 +577,16 @@ index 0000000..6058d94
 +        guard let hinting = HintingPreference(rawValue: font.hintingPreference) else {
 +            preconditionFailure("Unknown Qt font hinting preference")
 +        }
++        var features: [String: UInt32] = [:]
++        features.reserveCapacity(Int(font.features.size()))
++        for index in 0..<font.features.size() {
++            let feature = font.features[index]
++            features[feature.tag.toSwiftString()] = feature.value
++        }
 +        return QmlFont(family: font.family.toSwiftString(), pixelSize: Int(font.pixelSize),
 +                       weight: Int(font.weight), italic: font.italic,
-+                       letterSpacing: font.letterSpacing, hintingPreference: hinting)
++                       letterSpacing: font.letterSpacing, hintingPreference: hinting,
++                       features: features)
 +    }
 +
 +    public static func metaType() -> Int32 { QmlValueTypesCpp.fontMetaType() }
@@ -597,10 +734,10 @@ index fb09757..a0f6385 100644
      QString m_pluginsPath;
 diff --git a/Sources/QtBridgeCpp/include/qmlvaluetypes.h b/Sources/QtBridgeCpp/include/qmlvaluetypes.h
 new file mode 100644
-index 0000000..52fbf94
+index 0000000..24f562b
 --- /dev/null
 +++ b/Sources/QtBridgeCpp/include/qmlvaluetypes.h
-@@ -0,0 +1,64 @@
+@@ -0,0 +1,92 @@
 +// Copyright (C) 2025 The Qt Company Ltd.
 +// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
 +
@@ -609,6 +746,9 @@ index 0000000..52fbf94
 +#include <QtCore/QVariant>
 +#include <QtGui/QColor>
 +#include <QtGui/QFont>
++#include <algorithm>
++#include <utility>
++#include <vector>
 +
 +struct QmlColorComponents
 +{
@@ -618,6 +758,15 @@ index 0000000..52fbf94
 +    double alpha;
 +};
 +
++struct QmlFontFeature
++{
++    QmlFontFeature(const QString &tag, quint32 value) : tag(tag), value(value) {}
++    QString tag;
++    quint32 value;
++};
++
++using CppVectorOfFontFeatures = std::vector<QmlFontFeature>;
++
 +struct QmlFontComponents
 +{
 +    QString family;
@@ -626,6 +775,7 @@ index 0000000..52fbf94
 +    bool italic;
 +    double letterSpacing;
 +    int hintingPreference;
++    CppVectorOfFontFeatures features;
 +};
 +
 +class QmlValueTypesCpp
@@ -646,7 +796,8 @@ index 0000000..52fbf94
 +    }
 +
 +    static QVariant variantFromFont(const QString &family, int pixelSize, int weight,
-+                                    bool italic, double letterSpacing, int hintingPreference)
++                                    bool italic, double letterSpacing, int hintingPreference,
++                                    const CppVectorOfFontFeatures &features)
 +    {
 +        QFont font;
 +        font.setFamily(family);
@@ -655,18 +806,45 @@ index 0000000..52fbf94
 +        font.setItalic(italic);
 +        font.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
 +        font.setHintingPreference(static_cast<QFont::HintingPreference>(hintingPreference));
++        for (const auto &feature : features) {
++            // Skip tags that are not exactly four ASCII characters, or are invalid to Qt.
++            if (feature.tag.size() != 4
++                || std::any_of(feature.tag.cbegin(), feature.tag.cend(),
++                               [](QChar character) { return character.unicode() > 0x7f; }))
++                continue;
++            if (const auto tag = QFont::Tag::fromString(feature.tag))
++                font.setFeature(*tag, feature.value);
++        }
 +        return QVariant::fromValue(font);
 +    }
 +
 +    static QmlFontComponents fontFromVariant(const QVariant &variant)
 +    {
 +        const QFont font = variant.value<QFont>();
++        CppVectorOfFontFeatures features;
++        const auto tags = font.featureTags();
++        features.reserve(tags.size());
++        for (const auto tag : tags)
++            features.emplace_back(QString::fromLatin1(tag.toString()), font.featureValue(tag));
 +        return {font.family(), font.pixelSize(), static_cast<int>(font.weight()), font.italic(),
-+                font.letterSpacing(), static_cast<int>(font.hintingPreference())};
++                font.letterSpacing(), static_cast<int>(font.hintingPreference()), std::move(features)};
 +    }
 +};
+diff --git a/Sources/QtBridgeCpp/include/qobjectproxy.h b/Sources/QtBridgeCpp/include/qobjectproxy.h
+index cf53e0f..bac52a8 100644
+--- a/Sources/QtBridgeCpp/include/qobjectproxy.h
++++ b/Sources/QtBridgeCpp/include/qobjectproxy.h
+@@ -19,6 +19,8 @@ public:
+ 
+     QObject *toObject() const;
+     QVariant toVariant() const;
++    QVariant toVariant(int typeId) const;
++    static void *swiftObjectFromVariant(const QVariant &variant);
+ 
+     QList<void *> swiftChildren() const;
+ 
 diff --git a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h b/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
-index d55dd45..ad0b7aa 100644
+index d55dd45..13b2efb 100644
 --- a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
 +++ b/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
 @@ -6,6 +6,7 @@
@@ -677,7 +855,14 @@ index d55dd45..ad0b7aa 100644
  
  #include "swiftobjectaccesor.h"
  
-@@ -21,7 +22,12 @@ class QObjectProxyImpl : public QObject,
+@@ -15,13 +16,18 @@ class QObjectProxyImpl : public QObject,
+ {
+     Q_OBJECT
+     Q_CLASSINFO("DefaultProperty", "children")
+-    Q_PROPERTY(QQmlListProperty<QObject> children READ children CONSTANT)
++    Q_PROPERTY(QQmlListProperty<QObject> children READ children CONSTANT FINAL)
+     Q_INTERFACES(QQmlParserStatus)
+ 
  public:
      QObjectProxyImpl(void *swiftObj)
      : m_swiftObj(swiftObj)
@@ -692,10 +877,16 @@ index d55dd45..ad0b7aa 100644
      using DeleterFn = void(*)(void *swiftObj);
      QObjectProxyImpl(void *swiftObj, DeleterFn deleter)
 diff --git a/Sources/QtBridgeCpp/include/swiftqmlelementbuilder.h b/Sources/QtBridgeCpp/include/swiftqmlelementbuilder.h
-index b87590b..b4f304e 100644
+index b87590b..09526d0 100644
 --- a/Sources/QtBridgeCpp/include/swiftqmlelementbuilder.h
 +++ b/Sources/QtBridgeCpp/include/swiftqmlelementbuilder.h
-@@ -20,6 +20,7 @@ public:
+@@ -15,11 +15,13 @@ public:
+     ~SwiftQmlElementBuilder();
+ 
+     void setMetaObjectFrom(SwiftMetaObjectBuilder builder);
++    int metaTypeId();
+ 
+     using CreateFn = void (*)(void *builderPtr, void *addr);
      void registerCreateFn(void *builderPtr, CreateFn fn);
  
      void registerQmlElement();
@@ -759,7 +950,7 @@ index 7e91abd..02e9132 100644
 +    return rc;
  }
 diff --git a/Sources/QtBridgeCpp/qobjectproxy.cpp b/Sources/QtBridgeCpp/qobjectproxy.cpp
-index 43b202c..0172a58 100644
+index 43b202c..103d701 100644
 --- a/Sources/QtBridgeCpp/qobjectproxy.cpp
 +++ b/Sources/QtBridgeCpp/qobjectproxy.cpp
 @@ -5,6 +5,8 @@
@@ -789,8 +980,27 @@ index 43b202c..0172a58 100644
  };
  
  QObjectProxy::QObjectProxy(void *owner)
+@@ -84,6 +88,18 @@ QVariant QObjectProxy::toVariant() const
+     return QVariant::fromValue(m_impl->object());
+ }
+ 
++QVariant QObjectProxy::toVariant(int typeId) const
++{
++    QObject *object = m_impl->object();
++    return QVariant::fromMetaType(QMetaType(typeId), &object);
++}
++
++void *QObjectProxy::swiftObjectFromVariant(const QVariant &variant)
++{
++    const auto accessor = dynamic_cast<const SwiftObjectAccesor *>(variant.value<QObject *>());
++    return accessor ? accessor->swiftObject() : nullptr;
++}
++
+ QList<void *> QObjectProxy::swiftChildren() const
+ {
+     return m_impl->swiftChildren();
 diff --git a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
-index 6dd803f..51ee057 100644
+index 6dd803f..74f6354 100644
 --- a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
 +++ b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
 @@ -4,6 +4,8 @@
@@ -852,7 +1062,20 @@ index 6dd803f..51ee057 100644
  // BuilderImpl
  
  class SwiftMetaObjectBuilder::BuilderImpl : public QDynamicMetaObjectData
-@@ -307,6 +352,23 @@ public:
+@@ -232,10 +277,11 @@ public:
+         bool hasSignal = it != m_signalNameToId.end();
+ 
+         QMetaPropertyBuilder builder = m_metaObjectBuilder->addProperty(
+-                                           QByteArray::fromStdString(name), metaType.name());
++                                           QByteArray::fromStdString(name), metaType.name(), metaType);
+         builder.setReadable(true);
+         builder.setWritable(isWritable);
+         builder.setConstant(!isWritable && !hasSignal);
++        builder.setFinal(true);
+         if (hasSignal) {
+             builder.setNotifySignal(m_metaObjectBuilder->method(it->second));
+         }
+@@ -307,6 +353,23 @@ public:
              convertedArgs.push_back(std::move(v));
          }
  
@@ -877,7 +1100,7 @@ index 6dd803f..51ee057 100644
              std::vector<void*> argv;
              argv.reserve(args.size() + 1);
 diff --git a/Sources/QtBridgeCpp/swiftqmlelementbuilder.cpp b/Sources/QtBridgeCpp/swiftqmlelementbuilder.cpp
-index cd53797..b2d225a 100644
+index cd53797..df0ed6b 100644
 --- a/Sources/QtBridgeCpp/swiftqmlelementbuilder.cpp
 +++ b/Sources/QtBridgeCpp/swiftqmlelementbuilder.cpp
 @@ -17,7 +17,9 @@ public:
@@ -891,11 +1114,17 @@ index cd53797..b2d225a 100644
      {
      }
  
-@@ -32,18 +34,18 @@ public:
+@@ -32,18 +34,24 @@ public:
          m_createFn = createFn;
      }
  
 -    void registerQmlElement()
++    int metaTypeId()
++    {
++        registerMetaTypeInterface();
++        return QMetaType(m_metaTypeInterface).id();
++    }
++
 +    void registerQmlElement(bool creatable = true)
      {
          registerMetaTypeInterface();
@@ -914,7 +1143,21 @@ index cd53797..b2d225a 100644
          rt.createValueType = nullptr;
          rt.uri = m_moduleName.data();
          rt.version = QTypeRevision::fromVersion(1, 0);
-@@ -68,30 +70,50 @@ public:
+@@ -57,7 +65,7 @@ public:
+         rt.extensionObjectCreate = nullptr;
+         rt.extensionMetaObject = nullptr;
+         rt.customParser = nullptr;
+-        rt.revision = QTypeRevision::fromVersion(0, 0);
++        rt.revision = rt.version;
+         rt.finalizerCast = QQmlPrivate::StaticCastSelector<QObjectProxyImpl, QQmlFinalizerHook>::cast();
+         rt.creationMethod = QQmlPrivate::ValueTypeCreationMethod::None;
+         QQmlPrivate::qmlregister(QQmlPrivate::TypeRegistration, &rt);
+@@ -65,33 +73,55 @@ public:
+ 
+     void registerMetaTypeInterface()
+     {
++        if (m_metaTypeInterface)
++            return;
          auto d = MetaData();
          d.self = this;
  
@@ -976,7 +1219,7 @@ index cd53797..b2d225a 100644
      static const MetaData* findMetaData(const QtPrivate::QMetaTypeInterface *iface)
      {
          if (!iface) {
-@@ -115,26 +137,6 @@ private:
+@@ -115,26 +145,6 @@ private:
          self->m_createFn(self->m_builderPtr, addr);
      }
  
@@ -1003,7 +1246,7 @@ index cd53797..b2d225a 100644
      static const QMetaObject * metaObject(
                      const QtPrivate::QMetaTypeInterface *iface)
      {
-@@ -149,10 +151,13 @@ private:
+@@ -149,10 +159,13 @@ private:
  
      std::string m_moduleName;
      std::string m_className;
@@ -1017,7 +1260,19 @@ index cd53797..b2d225a 100644
  };
  
  std::vector<SwiftQmlElementBuilder::Impl::MetaData> SwiftQmlElementBuilder::Impl::m_metaData;
-@@ -182,3 +187,8 @@ void SwiftQmlElementBuilder::registerQmlElement()
+@@ -173,6 +186,11 @@ void SwiftQmlElementBuilder::setMetaObjectFrom(SwiftMetaObjectBuilder builder)
+     m_impl->setMetaObject(builder.metaObject());
+ }
+ 
++int SwiftQmlElementBuilder::metaTypeId()
++{
++    return m_impl->metaTypeId();
++}
++
+ void SwiftQmlElementBuilder::registerCreateFn(void *builderPtr, CreateFn fn)
+ {
+     m_impl->registerCreateFn(builderPtr, fn);
+@@ -182,3 +200,8 @@ void SwiftQmlElementBuilder::registerQmlElement()
  {
      m_impl->registerQmlElement();
  }

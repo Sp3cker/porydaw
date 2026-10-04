@@ -7,19 +7,20 @@ import PorydawApp
 Item {
     id: page
     required property EngineSettingsStore store
-    required property QtObject colors
+    required property GridPalette colors
     required property real unit
-    required property var typography
+    required property TypographyFonts typography
     readonly property real labelWidth: 125 + 102 * (unit - 1)
     readonly property real fieldX: labelWidth
     readonly property real fieldWidth: width - fieldX
+    readonly property list<string> voicegroups: store.voicegroups
 
     function finishVoicegroupEdit(): void {
         if (voicegroup.activeFocus && voicegroup.editText !== page.store.voicegroup)
             page.store.changeVoicegroup(voicegroup.editText)
     }
     function reset(): void {
-        voicegroup.currentIndex = page.store.voicegroups.indexOf(page.store.voicegroup)
+        voicegroup.currentIndex = page.voicegroups.indexOf(page.store.voicegroup)
         voicegroup.editText = page.store.voicegroup
         volume.value = page.store.masterVolume
         songReverb.value = page.store.reverb
@@ -32,7 +33,7 @@ Item {
     Text {
         x: 0; y: 11 * page.unit; width: page.labelWidth; height: 22 + 12 * (page.unit - 1)
         text: qsTr("Voicegroup:"); color: page.colors.windowText
-        font: Qt.font(page.typography.body)
+        font: page.typography.body
         verticalAlignment: Text.AlignVCenter
     }
     ComboBox {
@@ -40,13 +41,13 @@ Item {
         objectName: "song.voicegroup"
         x: page.fieldX; y: 11 * page.unit
         width: page.fieldWidth; height: 22 + 12 * (page.unit - 1)
-        editable: true; model: page.store.voicegroups
+        editable: true; model: page.voicegroups
         editText: page.store.voicegroup
-        font: Qt.font(page.typography.body)
-        currentIndex: page.store.voicegroups.indexOf(page.store.voicegroup)
+        font: page.typography.body
+        currentIndex: page.voicegroups.indexOf(page.store.voicegroup)
         onModelChanged: {
             if (!activeFocus) {
-                currentIndex = page.store.voicegroups.indexOf(page.store.voicegroup)
+                currentIndex = page.voicegroups.indexOf(page.store.voicegroup)
                 editText = page.store.voicegroup
             }
         }
@@ -63,7 +64,7 @@ Item {
         x: 0; y: 39 + 24 * (page.unit - 1); width: page.labelWidth; height: 25 + 15 * (page.unit - 1)
         text: qsTr("Master volume (-V):"); color: page.colors.windowText
         verticalAlignment: Text.AlignVCenter
-        font: Qt.font(page.typography.body)
+        font: page.typography.body
     }
     SpinBox {
         id: volume
@@ -71,7 +72,7 @@ Item {
         x: page.fieldX; y: 39 + 24 * (page.unit - 1)
         width: page.fieldWidth; height: 25 + 15 * (page.unit - 1)
         from: 0; to: 127; value: page.store.masterVolume
-        font: Qt.font(page.typography.body)
+        font: page.typography.body
         editable: true
         onValueModified: page.store.changeMasterVolume(value)
         ToolTip.visible: hovered
@@ -81,7 +82,7 @@ Item {
         x: 0; y: 70 + 39 * (page.unit - 1); width: page.labelWidth; height: 25 + 15 * (page.unit - 1)
         text: qsTr("Reverb (-R):"); color: page.colors.windowText
         verticalAlignment: Text.AlignVCenter
-        font: Qt.font(page.typography.body)
+        font: page.typography.body
     }
     SpinBox {
         id: songReverb
@@ -89,7 +90,7 @@ Item {
         x: page.fieldX; y: 70 + 39 * (page.unit - 1)
         width: page.fieldWidth; height: 25 + 15 * (page.unit - 1)
         from: -1; to: 127; value: page.store.reverb
-        font: Qt.font(page.typography.body)
+        font: page.typography.body
         editable: true
         textFromValue: function(value: int): string { return value === -1 ? qsTr("Default (50)") : String(value) }
         valueFromText: function(text: string): real { return text.startsWith(qsTr("Default")) ? -1 : parseInt(text, 10) }
@@ -101,7 +102,7 @@ Item {
         x: 0; y: 101 + 54 * (page.unit - 1); width: page.labelWidth; height: 25 + 15 * (page.unit - 1)
         text: qsTr("Priority (-P):"); color: page.colors.windowText
         verticalAlignment: Text.AlignVCenter
-        font: Qt.font(page.typography.body)
+        font: page.typography.body
     }
     SpinBox {
         id: songPriority
@@ -109,7 +110,7 @@ Item {
         x: page.fieldX; y: 101 + 54 * (page.unit - 1)
         width: page.fieldWidth; height: 25 + 15 * (page.unit - 1)
         from: 0; to: 127; value: page.store.priority
-        font: Qt.font(page.typography.body)
+        font: page.typography.body
         editable: true
         onValueModified: page.store.changePriority(value)
         ToolTip.visible: hovered
@@ -120,7 +121,7 @@ Item {
         objectName: "song.exact-gate"
         x: 0; y: 132 + 69 * (page.unit - 1); width: page.width; height: 16 + 12 * (page.unit - 1)
         text: qsTr("Exact gate time (-E)"); checked: page.store.exactGate
-        font: Qt.font(page.typography.body)
+        font: page.typography.body
         onClicked: page.store.changeExactGate(checked)
     }
     CheckBox {
@@ -128,7 +129,7 @@ Item {
         objectName: "song.extended-clocks"
         x: 0; y: 154 + 81 * (page.unit - 1); width: page.width; height: 16 + 12 * (page.unit - 1)
         text: qsTr("48 clocks per beat (-X)"); checked: page.store.extendedClocks
-        font: Qt.font(page.typography.body)
+        font: page.typography.body
         onClicked: page.store.changeExtendedClocks(checked)
     }
     CheckBox {
@@ -136,13 +137,13 @@ Item {
         objectName: "song.no-compression"
         x: 0; y: 176 + 93 * (page.unit - 1); width: page.width; height: 16 + 12 * (page.unit - 1)
         text: qsTr("Disable compression (-N)"); checked: page.store.noCompression
-        font: Qt.font(page.typography.body)
+        font: page.typography.body
         onClicked: page.store.changeNoCompression(checked)
     }
     Text {
         x: 0; y: 199 * page.unit
         text: qsTr("Saved to this song's mid2agb flags (midi.cfg or songs.mk).")
-        font: Qt.font(page.typography.body)
+        font: page.typography.body
         color: page.colors.secondaryText
     }
 }

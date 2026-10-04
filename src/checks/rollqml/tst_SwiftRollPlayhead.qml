@@ -59,7 +59,7 @@ TestCase {
         id: overlayComponent
 
         SwiftRollOverlay {
-            property var appSession: session
+            applicationSession: session
         }
     }
 
@@ -206,11 +206,10 @@ TestCase {
         return { "image": image, "dpr": image.width / s.width }
     }
 
-    // The palette publishes the playhead color as a hex string; parse it to
-    // 0-255 channels for the pixel predicate.
-    function parsePlayheadColor(hex) {
-        var value = parseInt(hex.slice(1), 16)
-        return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 }
+    // Convert native palette channels to 0-255 values for the pixel predicate.
+    function parsePlayheadColor(color) {
+        return { r: Math.round(color.r * 255), g: Math.round(color.g * 255),
+                 b: Math.round(color.b * 255) }
     }
 
     function isPlayheadPixel(image, x, y, color) {

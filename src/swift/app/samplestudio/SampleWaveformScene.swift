@@ -1,11 +1,12 @@
 import Foundation
 import NativeDisplayList
 import PorydawSample
+import QtBridge
 
 @MainActor
 struct SampleWaveformScene {
     private var writer = DisplayListWriter()
-    private var paletteKey: [String] = []
+    private var paletteKey: [QmlColor] = []
     private var background: UInt32 = 0
     private var alternate: UInt32 = 0
     private var waveform: UInt32 = 0

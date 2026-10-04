@@ -226,6 +226,7 @@ extension AutomationPage {
     }
 
     func refreshFromDocumentImpl() {
+        refreshPromptStyles()
         guard let session else { return }
         let revision = session.document.revision
         func stale(_ facts: AutomationFrozenFacts) -> Bool {

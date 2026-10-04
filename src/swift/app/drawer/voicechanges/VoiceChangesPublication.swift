@@ -2,19 +2,7 @@ import Foundation
 import PorydawCore
 import QtBridge
 
-// Publication machinery for the drawer's Voice Changes section: the content
-// rebuild that republishes every static projection, the scene-input assembly
-// each build reads, the marker/span/grid/gutter apply paths that sync the
-// published primitives and item models, the picker-row publication, and the
-// readout, transient and hover-hint publications, plus the metrics and entry
-// caches those paths reuse.
-//
-// Ownership: an extension of the page, never a separate object. Published
-// state and the caches stay declared on `VoiceChangesPage` — `@QtBridgeable`
-// registers class-body members only and stored properties cannot move to an
-// extension — so this file reads and writes the page's own state and publishes
-// through `setPublished` and `syncModel`: it holds no session, no cache and no
-// bridge type of its own.
+// Equality-gated scene, row and modal publication for the retained page owner.
 
 @MainActor
 extension VoiceChangesPage {
@@ -132,7 +120,7 @@ extension VoiceChangesPage {
                         height: Float(plotHeight), argb: color))
             }
         }
-        let colors: [Int: String] = [
+        let colors: [Int: QmlColor] = [
             3: palette.gridLineBar, 4: palette.gridLineBeat,
             5: palette.gridLineSub1, 6: palette.gridLineSub2,
             7: palette.gridLineSub3, 25: palette.gridLineBeatFine,
@@ -200,9 +188,9 @@ extension VoiceChangesPage {
         let title = VoiceCaption(font: typography.captionBold)
         self.caption = caption
         self.title = title
-        setPublishedFont(&captionFont, typography.caption.map)
-        setPublishedFont(&titleFont, typography.captionBold.map)
-        setPublishedFont(&noteNameFont, typography.noteName.map)
+        setPublished(captionFont, typography.caption.qmlFont) { captionFont = $0 }
+        setPublished(titleFont, typography.captionBold.qmlFont) { titleFont = $0 }
+        setPublished(noteNameFont, typography.noteName.qmlFont) { noteNameFont = $0 }
     }
 
     /// Applies the scene's gutter lines: the title, then the change summary the
@@ -235,7 +223,6 @@ extension VoiceChangesPage {
             let hovered = marker.identity == hoverIdentity
             if marker.hovered != hovered {
                 marker.hovered = hovered
-                marker.refreshSpec()
                 markers[index] = marker
             }
         }
@@ -307,9 +294,10 @@ extension VoiceChangesPage {
         setPublished(contextSymbol, values.symbol) { contextSymbol = $0 }
         setPublished(readoutText, values.text) { readoutText = $0 }
         setPublished(readoutVisible, trackAvailable) { readoutVisible = $0 }
-        setPublishedRect(
-            &readoutRect,
-            VoiceMarkerHandle.rect(values.x, values.y, values.width, values.height))
+        setPublished(readoutX, values.x) { readoutX = $0 }
+        setPublished(readoutY, values.y) { readoutY = $0 }
+        setPublished(readoutWidth, values.width) { readoutWidth = $0 }
+        setPublished(readoutHeight, values.height) { readoutHeight = $0 }
     }
 
     // MARK: Internals: picker publication
@@ -384,22 +372,5 @@ extension VoiceChangesPage {
             pickerRows, snapshots: &pickerRowSnapshots, values: values)
     }
 
-    /// The variant-typed records compare through their published spelling:
-    /// `[String: QVariantSettable]` is not `Equatable`, and an equal record must
-    /// leave its storage untouched.
-    @QtIgnored
-    func setPublishedRect(
-        _ storage: inout [String: QVariantSettable],
-        _ value: [String: QVariantSettable]
-    ) {
-        if !VoiceMarkerHandle.rectMatches(storage, value) { storage = value }
-    }
-
-    private func setPublishedFont(
-        _ storage: inout [String: QVariantSettable],
-        _ value: [String: QVariantSettable]
-    ) {
-        if !VoiceChangesProjection.fontMatches(storage, value) { storage = value }
-    }
 
 }

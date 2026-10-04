@@ -155,9 +155,9 @@ ShellMenusSupport {
         compare(view.itemAt(view.count - 1).objectName,
                 "shellAction_transport.follow_playhead",
                 "Follow Playhead ends the View preference group")
-        compare(presenter.actionLabel("roll.copy"), "Copy Selection",
+        compare(presenter.action("roll.copy").label, "Copy Selection",
                 "menu rows show the keymap label")
-        compare(presenter.actionLabel("file.save_song"), "Save Song",
+        compare(presenter.action("file.save_song").label, "Save Song",
                 "Save Song uses the keymap wording")
         compare(findChild(file, "shellAction_file.open_project").text.indexOf("Open Project...") >= 0,
                 true, "the File menu keeps the fork Open Project ellipsis")
@@ -182,9 +182,9 @@ ShellMenusSupport {
         var loop = findChild(shell, "shellLoopMenu")
         menuOrder(loop, ["edit.set_loop_start", "edit.set_loop_end",
                          "edit.loop_from_selection", "edit.remove_loop"])
-        compare(shell.shellPresenter.actionEnabled("edit.set_loop_start"), false,
+        compare(shell.shellPresenter.action("edit.set_loop_start").enabled, false,
                 "loop rows gate on song and markers")
-        compare(shell.shellPresenter.actionEnabled("edit.remove_loop"), false,
+        compare(shell.shellPresenter.action("edit.remove_loop").enabled, false,
                 "Remove Loop Markers needs a song and marker")
     }
 
@@ -198,7 +198,7 @@ ShellMenusSupport {
             var item = findChild(editMenu, "shellAction_" + ids[index])
             verify(item !== null, "the menu owns " + ids[index])
             compare(item.enabled, false, ids[index] + " is disabled with no song")
-            compare(shell.shellPresenter.actionEnabled(ids[index]), false,
+            compare(shell.shellPresenter.action(ids[index]).enabled, false,
                     ids[index] + " reports disabled with no song")
             shell.shellPresenter.activate(ids[index])
         }
@@ -257,7 +257,7 @@ ShellMenusSupport {
         verify(routeId >= 0, "the charmap-gapped route song is listed for the File-menu journey")
         var fileMenu = findChild(shell, "shellFileMenu")
         var registerRow = checkMenuItem(fileMenu, "file.register_song", "Register Song")
-        compare(presenter.actionEnabled("file.register_song"), false,
+        compare(presenter.action("file.register_song").enabled, false,
                 "no selected tab disables File Register Song")
         compare(registerRow.enabled, false, "the File menu shows Register Song disabled with no tab")
         var target = dockRow(routeId)
@@ -269,7 +269,7 @@ ShellMenusSupport {
             return session.songTabs.tabCount === 1
                 && session.songTabs.selectedPage.title === "mus_route101"
         }, 30000), "the gapped song opens in an editor tab for its File-menu repair")
-        compare(presenter.actionEnabled("file.register_song"), true,
+        compare(presenter.action("file.register_song").enabled, true,
                 "the selected gapped tab enables File Register Song")
         fileMenu.open()
         tryVerify(function() { return registerRow.enabled }, 3000,
@@ -292,8 +292,8 @@ ShellMenusSupport {
                 && dockRow(routeId).song.registrationGapText === ""
                 && !songs.canRegister(routeId)
         }, 30000), "accepting the File-menu registration repairs the selected song")
-        compare(presenter.actionEnabled("file.register_song"), false,
-                "the repaired clean tab disables File Register Song")
+        tryCompare(presenter.action("file.register_song"), "enabled", false, 3000,
+                   "the repaired clean tab disables File Register Song")
         fileMenu.open()
         tryVerify(function() { return !registerRow.enabled }, 3000,
                   "the opened File menu disables Register Song on the clean tab")

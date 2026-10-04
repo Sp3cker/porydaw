@@ -1,18 +1,18 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import Qt.labs.qmlmodels
 import PorydawApp
+import Porydaw.Ui
 
 Item {
     id: table
 
-    required property Item page
-    required property EventListPresenter controller
-    required property FontMetrics tableFontMetrics
-    required property FontMetrics headerFontMetrics
+    final required property EventListPage page
+    final required property EventListPresenter controller
+    final required property FontMetrics tableFontMetrics
+    final required property FontMetrics headerFontMetrics
     property bool tableLayoutPending: false
-    property alias eventTable: eventTable
+    final property alias eventTable: eventTable
 
 
 
@@ -43,19 +43,6 @@ Item {
 
     function heightForRow(row: int): real {
         return table.page.rowHeight
-    }
-    // QListModel is one-dimensional; the existing TableView remains the
-    // seven-column renderer while Swift owns the cell values and row policy.
-    function publishTableRows(): void {
-        tableRows.clear()
-        for (let row = 0; row < table.controller.rowCount; ++row)
-            tableRows.appendRow({c0: row, c1: row, c2: row, c3: row,
-                                 c4: row, c5: row, c6: row})
-    }
-
-    Connections {
-        target: table.page.controller
-        function onTableRevisionChanged(): void { table.publishTableRows() }
     }
 
     Item {
@@ -283,16 +270,7 @@ Item {
             anchors.rightMargin: table.page.scrollbarBreadth
             height: Math.max(0, parent.height - table.page.scrollbarBreadth)
             clip: true
-            model: TableModel {
-                id: tableRows
-                TableModelColumn { display: "c0" }
-                TableModelColumn { display: "c1" }
-                TableModelColumn { display: "c2" }
-                TableModelColumn { display: "c3" }
-                TableModelColumn { display: "c4" }
-                TableModelColumn { display: "c5" }
-                TableModelColumn { display: "c6" }
-            }
+            model: table.controller.tableRows
             reuseItems: !table.page.editing
             interactive: !table.page.draggingRows
             boundsBehavior: Flickable.StopAtBounds
@@ -307,13 +285,10 @@ Item {
                 page: table.page
                 tableOwner: table
                 controller: table.controller
-                display: eventCellDelegate.page.controller.cellDisplay(row, column)
-                edit: eventCellDelegate.page.controller.cellEdit(row, column)
-                tickString: eventCellDelegate.page.controller.tickString(row)
                 cellFont: column === 0 || (column >= 2 && column <= 4)
                           ? eventCellDelegate.page.tableFont : eventCellDelegate.page.bodyFont
-                alignment: eventCellDelegate.page.controller.headerAlignment(column)
-                rowKind: eventCellDelegate.page.controller.rowKind(row)
+                alignment: column === 0 || (column >= 2 && column <= 4)
+                           ? Text.AlignRight : Text.AlignLeft
             }
 
             onWidthChanged: table.requestTableLayout()

@@ -97,7 +97,7 @@ func runOtherEventsBandChecks(_ report: CheckReport) {
         cppID: "swiftcore/OtherEventsBand::markers",
         message: "marker x is scroll-stable with the origin restoring the shared camera content position")
     report.expect(
-        markers.contains { $0.track == 0 && $0.color == PaletteMath.trackIdentityFills[0] },
+        markers.contains { $0.track == 0 && $0.color == PaletteMath.trackIdentityColors[0] },
         cppID: "swiftcore/OtherEventsBand::markers",
         message: "track markers use the stable track-identity fill")
     let lines = OtherEventsStrip.tooltipLines(

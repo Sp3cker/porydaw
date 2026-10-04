@@ -1,9 +1,8 @@
 pragma ComponentBehavior: Bound
-// Shared typed menu renderer. The Swift-owned menu supplies rows and the
-// QML host delivers hover and activation; each level paints only its frame.
-// The drawer-wide modal layer owns outside presses and keyboard navigation.
+// Shared menu frame; hosts own hover, activation and modal input.
 import QtQuick
 import Porydaw.Ui
+import QtQuick.Templates as T
 
 Item {
     id: panel
@@ -11,7 +10,11 @@ Item {
     required property var host
     required property var menuModel
 
-    property var appearance: null
+    final readonly property T.ApplicationWindow applicationWindow: panel.Window.window as T.ApplicationWindow
+    final property font defaultFont
+    final property MenuAppearance appearance: MenuAppearance {
+        font: panel.applicationWindow ? panel.applicationWindow.font : panel.defaultFont
+    }
     property bool rootLevel: false
     property int rowHeight: 0
     property int separatorHeight: 1
@@ -28,7 +31,7 @@ Item {
     property int highlightedRow: -1
     property int pressedRow: -1
     property string rowObjectNamePrefix: ""
-    readonly property int rowCount: list.count
+    final readonly property int rowCount: list.count
 
     objectName: rootLevel ? "quickMenuPanelRoot" : "quickMenuPanelSubmenu"
 
@@ -37,18 +40,16 @@ Item {
             list.positionViewAtIndex(highlightedRow, ListView.Contain)
     }
 
-    readonly property color backgroundColor: appearance?.background ?? "transparent"
-    readonly property color outlineColor: appearance?.outline ?? "transparent"
-    readonly property color textColor: appearance?.text ?? "transparent"
-    readonly property color hoverBackgroundColor: appearance?.hoverBackground ?? "transparent"
-    readonly property color hoverTextColor: appearance?.hoverText ?? textColor
-    readonly property color pressedBackgroundColor:
-        appearance?.pressedBackground ?? hoverBackgroundColor
-    readonly property color pressedTextColor: appearance?.pressedText ?? hoverTextColor
-    readonly property color disabledTextColor: appearance?.disabledText ?? textColor
-    readonly property color separatorColor: appearance?.separator ?? "transparent"
-    readonly property font menuFont: appearance?.font ?? (panel.Window.window
-                                                           ? panel.Window.window.font : Qt.font({}))
+    final readonly property color backgroundColor: appearance.background
+    final readonly property color outlineColor: appearance.outline
+    final readonly property color textColor: appearance.text
+    final readonly property color hoverBackgroundColor: appearance.hoverBackground
+    final readonly property color hoverTextColor: appearance.hoverText
+    final readonly property color pressedBackgroundColor: appearance.pressedBackground
+    final readonly property color pressedTextColor: appearance.pressedText
+    final readonly property color disabledTextColor: appearance.disabledText
+    final readonly property color separatorColor: appearance.separator
+    final readonly property font menuFont: appearance.font
 
     // Current model-index lookup intentionally excludes ListView's pooled
     // delegates, which can outlive a model reset for reuse.
@@ -62,7 +63,9 @@ Item {
         if (!rowItem)
             return Qt.rect(0, 0, 0, 0)
         const scene = rowItem.mapToItem(null, 0, 0)
-        return Qt.rect(scene.x, scene.y, rowItem.width, rowItem.height)
+        const rowWidth = rowItem.width
+        const rowHeight = rowItem.height
+        return Qt.rect(scene.x, scene.y, rowWidth, rowHeight)
     }
 
 
@@ -78,10 +81,8 @@ Item {
         border.color: panel.outlineColor
         border.width: 1
 
-        // Absorb presses and hover across the whole frame — the border ring,
-        // any area below the list content, and inactive rows (their disabled
-        // delegate lets events fall through) — so they never reach the
-        // underlay beneath the frame.
+        // Absorb blank-frame and inactive-row input so it never reaches
+        // the underlay beneath the menu.
         MouseArea {
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
@@ -111,9 +112,7 @@ Item {
                 readonly property bool separator: itemData.separator ?? false
                 readonly property bool available: itemData.enabled ?? true
 
-                // Canonical Qt state: Item.enabled drives accessibility, so
-                // a disabled row must be a disabled item, not a styling
-                // convention.
+                // Item.enabled owns accessibility as well as pointer input.
                 enabled: row.active
                 width: list.width
                 height: row.separator ? panel.separatorHeight : panel.rowHeight

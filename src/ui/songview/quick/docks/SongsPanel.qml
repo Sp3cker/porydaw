@@ -9,10 +9,10 @@ FocusScope {
     id: root
     objectName: "swiftSongsPanel"
     required property SongDockController controller
-    required property var colors
+    required property GridPalette colors
     required property ApplicationSession applicationSession
     readonly property real baseFontPx: root.applicationSession.baseFontPx
-    readonly property var songs: root.controller.songListPresenter()
+    readonly property SongListPresenter songs: root.controller.songListPresenter()
     readonly property int pad: root.applicationSession.layoutSpaces.one
 
     function focusSearch(): void {
@@ -72,20 +72,17 @@ FocusScope {
 
             ComboBox {
                 id: category
-                property int categoryModelRevision: 0
+                textRole: "name"
                 objectName: "songListCategory"
                 Layout.fillWidth: true
                 Layout.preferredHeight: search.height
                 model: root.songs.categories
-                displayText: {
-                    categoryModelRevision
-                    return root.songs.categoryName(currentIndex)
-                }
                 delegate: ItemDelegate {
                     required property var model
                     required property int index
                     width: category.width
-                    text: model.display.name
+                    required property string name
+                    text: name
                     onClicked: {
                         const selectedIndex = index
                         root.songs.selectCategory(selectedIndex)
@@ -102,17 +99,14 @@ FocusScope {
                     target: root.songs
                     function onCategoryIndexChanged(): void { category.currentIndex = root.songs.categoryIndex }
                 }
-                Connections {
-                    target: root.songs.categories
-                    function onModelReset(): void { ++category.categoryModelRevision }
-                }
             }
             ComboBox {
                 id: sort
                 objectName: "songListSort"
                 Layout.preferredWidth: root.baseFontPx * 7.25
                 Layout.preferredHeight: search.height
-                model: [qsTr("ID order"), qsTr("A–Z")]
+                readonly property list<string> choices: [qsTr("ID order"), qsTr("A–Z")]
+                model: choices
                 currentIndex: root.songs.sortIndex
                 onActivated: index => root.songs.selectSort(index)
                 ToolTip.text: qsTr("Sort by song ID or alphabetically")
@@ -141,7 +135,7 @@ FocusScope {
                 anchors.centerIn: parent
                 visible: root.controller.songsLoading && root.songs.rowCount === 0
                 text: qsTr("Loading…")
-                font: Qt.font(root.applicationSession.typographyFonts.body)
+                font: root.applicationSession.typographyFonts.body
                 color: root.colors.secondaryText
             }
             Rectangle {
@@ -155,7 +149,7 @@ FocusScope {
                 id: row
                 required property var model
                 required property int index
-                readonly property var song: model.display
+                readonly property SongListRow song: model.display as SongListRow
                 objectName: song ? "songListRow_" + song.songId : ""
                 x: 1
                 width: list.width - 2
@@ -188,7 +182,7 @@ FocusScope {
                     color: root.colors.selectionRing
                 }
                 ToolTip.visible: hovered && !!song && song.warning
-                                 && song.registrationGapText.length > 0
+                                 && song.registrationGapText !== ""
                 ToolTip.text: song ? qsTr("This song is missing its entry in: %1. Right-click → Register Song completes it.").arg(song.registrationGapText) : ""
                 MouseArea {
                     anchors.fill: parent
@@ -199,12 +193,14 @@ FocusScope {
                             return
                         const clickedIndex = row.index
                         const position = mapToItem(Overlay.overlay, mouse.x, mouse.y)
+                        const menuX = position.x
+                        const menuY = position.y
                         songMenu.songId = clickedSongId
                         songMenu.canRegister = root.songs.canRegister(clickedSongId)
                         root.songs.selectSong(clickedSongId)
                         list.currentIndex = clickedIndex
-                        songMenu.x = position.x
-                        songMenu.y = position.y
+                        songMenu.x = menuX
+                        songMenu.y = menuY
                         songMenu.open()
                     }
                 }
@@ -221,14 +217,27 @@ FocusScope {
             text: loadingPlaceholder.visible ? "" : root.songs.countText
         }
     }
+    component SongMenuEntry: QtObject {
+        property string actionId: ""
+        property string text: ""
+        property bool enabled: true
+        property bool separator: false
+    }
 
     Popup {
         id: songMenu
         objectName: "songListContextMenu"
         parent: Overlay.overlay
-        font: Qt.font(root.applicationSession.typographyFonts.body)
+        font: root.applicationSession.typographyFonts.body
         property int songId: -1
         property bool canRegister: false
+        readonly property list<QtObject> menuEntries: [
+            SongMenuEntry { actionId: "open"; text: qsTr("Open") },
+            SongMenuEntry { actionId: "newTab"; text: qsTr("Open in New Tab") },
+            SongMenuEntry { separator: true },
+            SongMenuEntry { actionId: "register"; text: qsTr("Register Song"); enabled: songMenu.canRegister },
+            SongMenuEntry { actionId: "delete"; text: qsTr("Delete Song…") }
+        ]
         padding: 0
         // Qt keeps the popup inside the window, like the style's Menu.
         margins: 0
@@ -243,26 +252,24 @@ FocusScope {
             host: songMenu
             rootLevel: true
             rowObjectNamePrefix: "songs.menu."
-            menuModel: [
-                { actionId: "open", text: qsTr("Open") },
-                { actionId: "newTab", text: qsTr("Open in New Tab") },
-                { separator: true, text: "" },
-                { actionId: "register", text: qsTr("Register Song"), enabled: songMenu.canRegister },
-                { actionId: "delete", text: qsTr("Delete Song…") }
-            ]
+            menuModel: songMenu.menuEntries
             menuWidth: songMenu.width
             menuHeight: songMenu.height
             rowHeight: Math.ceil(root.baseFontPx * 1.7)
             textX: root.baseFontPx
             textRight: songMenu.width - root.baseFontPx
-            appearance: ({ background: root.colors.menuBackground,
-                           outline: root.colors.outline,
-                           text: root.colors.windowText,
-                           disabledText: root.colors.secondaryText,
-                           hoverBackground: root.colors.menuHoverBackground,
-                           hoverText: root.colors.windowText,
-                           separator: root.colors.outline,
-                           font: Qt.font(root.applicationSession.typographyFonts.body) })
+            appearance: MenuAppearance {
+                background: root.colors.menuBackground
+                outline: root.colors.outline
+                text: root.colors.windowText
+                disabledText: root.colors.secondaryText
+                hoverBackground: root.colors.menuHoverBackground
+                hoverText: root.colors.windowText
+                pressedBackground: root.colors.menuHoverBackground
+                pressedText: root.colors.windowText
+                separator: root.colors.outline
+                font: root.applicationSession.typographyFonts.body
+            }
         }
         function hoverRow(panel: QuickMenuPanel, index: int): void { panel.highlightedRow = index }
         function activateRow(panel: QuickMenuPanel, index: int): void {

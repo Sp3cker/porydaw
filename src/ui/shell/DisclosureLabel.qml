@@ -1,13 +1,14 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Templates as T
 import Porydaw.Icons
 
 // A disclosure button's content: a right (closed) or down (open) triangle glyph
 // followed by the button's text, both in the button's text ink.
 Row {
     id: root
-    required property var control
+    required final property T.AbstractButton control
     required property bool expanded
     spacing: Math.round(root.control.font.pixelSize / 3)
 

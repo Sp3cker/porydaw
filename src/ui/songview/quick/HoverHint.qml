@@ -4,24 +4,21 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQml
 import Porydaw.Ui
+import PorydawApp
 HoverHandler {
     id: hint
     // A token identifies this physical source without retaining its QObject
     // in Swift. Visibility and destruction below release its ownership.
     required property Item source
-    property var hintService: null
+    property MouseHints hintService: null
     property bool scopeAllowed: true
-    property var _service: null
+    property MouseHints _service: null
     property int _sourceToken: 0
     property int profile: HintProfiles.Empty
-    // While the existing drag owner holds the group's grab (the caller binds
-    // this to that owner's active flag), the originating profile stays
-    // claimed even if Qt drops hover membership mid-gesture.
+    // Retain the originating profile while the bound drag owner holds its grab,
+    // even if Qt drops hover membership.
     property bool gestureOwning: false
-    // Whether the drag owner's actual final position is inside `source`. A
-    // drag group settles this from real release coordinates via
-    // settleRelease(); a frozen hover membership
-    // never keeps ownership after an outside release.
+    // Actual release containment overrides frozen hover membership.
     property bool releaseInside: true
 
     onHintServiceChanged: {
@@ -52,13 +49,11 @@ HoverHandler {
     // The originating profile retained across the group's grab.
     property int _gestureProfile: HintProfiles.Empty
 
-    function _hints(): var {
+    function _hints(): MouseHints {
         return _service
     }
 
-    // Pointer scope changes reclaim or clear. Launching a grab is not
-    // itself enough: a group only retains while its existing owner really
-    // holds it, per the caller's gestureOwning binding.
+    // Only the existing owner's grab retains a claimed group.
     onHoveredChanged: {
         // A real re-entry ends the previous outside-release suppression.
         if (hovered)
@@ -82,9 +77,8 @@ HoverHandler {
         }
         sync()
     }
-    // A child hover may hand the group another profile without any hover
-    // event of its own. During a retained grab the originating profile
-    // stays claimed until the grab ends.
+    // Child hover changes profiles without a new hover event; retained grabs
+    // keep their originating profile until release.
     onProfileChanged: if (!gestureOwning) sync()
     onSourceChanged: {
         if (_service && _sourceToken)
@@ -99,15 +93,13 @@ HoverHandler {
             _service.clear(_sourceToken)
     }
 
-    // Settles a completed group gesture from the drag owner's actual release
-    // coordinates in the scene window. The containment check runs against
-    // the source before any release bookkeeping, so an outside release
-    // clears even when Qt froze hover membership.
+    // Settle actual release containment before bookkeeping so outside releases
+    // clear ownership even when Qt froze hover.
     function settleRelease(scenePosition: point): void {
         if (!source)
             return
-        releaseInside = source.contains(
-                    source.mapFromItem(null, scenePosition.x, scenePosition.y))
+        const localPosition = source.mapFromItem(null, scenePosition.x, scenePosition.y)
+        releaseInside = source.contains(localPosition)
         sync()
     }
 
@@ -115,9 +107,10 @@ HoverHandler {
     // Qt has not yet synthesized new hover membership for this source.
     function receiveRelease(scenePosition: point): void {
         if (!source || !_service || !_sourceToken || !_sourceVisible()
-                || !scopeAllowed || gestureOwning
-                || !source.contains(source.mapFromItem(null,
-                                                       scenePosition.x, scenePosition.y)))
+                || !scopeAllowed || gestureOwning)
+            return
+        const localPosition = source.mapFromItem(null, scenePosition.x, scenePosition.y)
+        if (!source.contains(localPosition))
             return
         releaseInside = true
         _service.claim(_sourceToken, profile)
@@ -134,9 +127,7 @@ HoverHandler {
             _superseded(hints)
             return
         }
-        // Scope gate first: a suppressed group may not claim or keep even
-        // an empty profile. This also overrides gesture retention — scope
-        // loss ends a retained profile.
+        // Scope loss clears even a gesture-retained empty profile.
         if (!scopeAllowed) {
             _superseded(hints)
             return
@@ -159,9 +150,7 @@ HoverHandler {
             return
         }
         if (!hovered || !releaseInside) {
-            // Unhovered, or the drag settled outside: a source-checked
-            // clear, never an empty-profile reclaim by a no-longer-hovered
-            // source.
+            // Clear this source's ownership; never reclaim with an empty profile.
             _superseded(hints)
             return
         }
@@ -169,7 +158,7 @@ HoverHandler {
         _owned = true
     }
 
-    function _superseded(hints: var): void {
+    function _superseded(hints: MouseHints): void {
         _owned = false
         _gestureProfile = HintProfiles.Empty
         hints.clear(_sourceToken)

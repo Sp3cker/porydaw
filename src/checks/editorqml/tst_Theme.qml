@@ -5,14 +5,8 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "NativeWait.js" as NativeWait
 
-// Theme persistence and applied-chrome observations through the production
-// shell. Ports ThemeLayoutTest::themePersistence
-// (tst_themelayout_color.cpp:270-303) and the commit-direction rules of the
-// deleted tst_themelayout_settings.cpp dialog case: each seeded mode round-
-// trips through ShellPresenter.restoreAppearance with canonical writeback,
-// and grid contrast moves the applied grid chromatically. settingsRepair
-// (custom/#000000/#FFFFFF/80) already lives in tst_ShellWindow.qml test_b
-// and is not duplicated here.
+// Theme persistence and grid contrast direction through the production shell.
+// Canonical writeback and pinned contrast floors preserve the legacy checks.
 TestCase {
     id: testCase
     name: "Theme"
@@ -55,8 +49,8 @@ TestCase {
         wait(0)
     }
 
-    function hexChannels(hex) {
-        var body = hex.substring(1)
+    function hexChannels(color) {
+        var body = color.toString().substring(1)
         var value = parseInt(body, 16)
         if (body.length === 8) {
             return {
@@ -101,7 +95,8 @@ TestCase {
         tryCompare(shell.shellPresenter, "themeMode", data.mode)
         compare(shell.shellPresenter.gridLineContrast, data.contrast)
         var palette = shell.shellPresenter.session.palette
-        compare(palette.windowBackground, data.window)
+        verify(Qt.colorEqual(palette.windowBackground, data.window),
+               "the applied window background matches the pinned theme")
         verify(contrastRatio(palette.windowText, palette.chromeBackground) >= 4.5,
                data.mode + ": applied menu-bar pair keeps the 4.5 floor")
         verify(contrastRatio(palette.buttonPressedText, palette.buttonPressedBackground) >= 4.5,
@@ -132,15 +127,15 @@ TestCase {
         openThemedShell()
         tryCompare(shell.shellPresenter, "themeMode", "vanilla")
         var palette = shell.shellPresenter.session.palette
-        var baseline = palette.gridLine
-        var roll = palette.rollBackground
+        var baseline = palette.gridLine.toString()
+        var roll = palette.rollBackground.toString()
 
         settings.setInt("theme.grid-line-contrast", 0)
         shell.shellPresenter.restoreAppearance()
         verify(waitForNative(function() {
-            return palette.gridLine !== baseline
+            return !Qt.colorEqual(palette.gridLine, baseline)
         }, 3000), "contrast 0 moves the applied grid")
-        var softened = palette.gridLine
+        var softened = palette.gridLine.toString()
         verify(hexChannels(softened).a < hexChannels(baseline).a,
                "contrast 0 lowers the applied grid alpha")
         verify(contrastRatio(softened, roll) < contrastRatio(baseline, roll),
@@ -149,9 +144,9 @@ TestCase {
         settings.setInt("theme.grid-line-contrast", 100)
         shell.shellPresenter.restoreAppearance()
         verify(waitForNative(function() {
-            return palette.gridLine !== softened
+            return !Qt.colorEqual(palette.gridLine, softened)
         }, 3000), "contrast 100 moves the applied grid again")
-        var strengthened = palette.gridLine
+        var strengthened = palette.gridLine.toString()
         verify(hexChannels(strengthened).a > hexChannels(baseline).a,
                "contrast 100 raises the applied grid alpha")
         verify(contrastRatio(strengthened, roll) > contrastRatio(baseline, roll),
@@ -160,16 +155,12 @@ TestCase {
         settings.setInt("theme.grid-line-contrast", 50)
         shell.shellPresenter.restoreAppearance()
         verify(waitForNative(function() {
-            return palette.gridLine === baseline
+            return Qt.colorEqual(palette.gridLine, baseline)
         }, 3000), "default contrast restores the pinned grid value")
         closeThemedShell()
     }
     function test_menuChromeFollowsTheme() {
-        // Combo/popdown raster (tst_themelayout_chrome.cpp:78-133) and the
-        // dark-baseline palette pins (:135-193) observe QWidget rendering
-        // with no QWidget layer in the Swift app. The user-observable half —
-        // menu chrome follows the applied theme — lives in ShellWindow's
-        // context-menu delegate bindings, asserted here.
+        // Mounted menu chrome follows live theme changes.
         settings.setString("theme.mode", "vanilla")
         settings.setInt("theme.grid-line-contrast", 50)
         openThemedShell()
@@ -191,7 +182,7 @@ TestCase {
         compare(copyItem.background.color.toString().toUpperCase(), "#D2D0CA",
                 "resting menu item shows the item surface")
         compare(copyItem.foreground.toString().toUpperCase(),
-                palette.disabledText.toUpperCase(),
+                palette.disabledText.toString().toUpperCase(),
                 "inactive menu text shows the disabled ink")
         copyItem.highlighted = true
         verify(waitForNative(function() {

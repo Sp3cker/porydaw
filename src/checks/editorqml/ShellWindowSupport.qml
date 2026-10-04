@@ -42,11 +42,11 @@ TestCase {
     Component { id: _intrinsicShellComponent; ShellWindow { visible: true } }
     FontMetrics {
         id: _footerCaptionMetrics
-        font: shell ? Qt.font(shell.chromeTypography.caption) : Application.font
+        font: shell ? shell.chromeTypography.caption : Application.font
     }
     FontMetrics {
         id: _footerBodyMetrics
-        font: shell ? Qt.font(shell.chromeTypography.body) : Application.font
+        font: shell ? shell.chromeTypography.body : Application.font
     }
     Component {
         id: _textProbeComponent

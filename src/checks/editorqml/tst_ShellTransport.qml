@@ -47,7 +47,7 @@ ShellTransportSupport {
         function parity(index, expected) {
             const control = button(index)
             verify(control !== null, ids[index] + " button is mounted")
-            compare(authority.actionEnabled(ids[index]), expected,
+            compare(authority.action(ids[index]).enabled, expected,
                     ids[index] + " reports its expected availability")
             tryCompare(control, "actionable", expected, 3000,
                        ids[index] + " button matches command authority")
@@ -74,9 +74,9 @@ ShellTransportSupport {
         parity(5, true)
         const playPause = findChild(shell, "shellAction_transport.play_pause")
         verify(playPause !== null, "Play/Pause menu item is mounted")
-        verify(authority.actionEnabled("transport.play_pause"),
+        verify(authority.action("transport.play_pause").enabled,
                "Play/Pause command authority enables the window shortcut")
-        compare(playPause.enabled, authority.actionEnabled("transport.play_pause"),
+        compare(playPause.enabled, authority.action("transport.play_pause").enabled,
                 "Play/Pause menu and shortcut share enabled authority")
         parity(6, true)
 

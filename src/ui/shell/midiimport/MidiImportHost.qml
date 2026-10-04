@@ -9,7 +9,7 @@ Item {
     id: host
     required property MidiImportController controller
     required property Window hostWindow
-    required property QtObject colors
+    required property GridPalette colors
     required property ApplicationSession applicationSession
 
     FileDialog {
@@ -19,7 +19,7 @@ Item {
         nameFilters: [qsTr("MIDI (*.mid)")]
         fileMode: FileDialog.OpenFile
         currentFolder: host.controller.startFolder
-        onAccepted: host.controller.chooseSource(selectedFile.toString())
+        onAccepted: host.controller.chooseSource(picker.selectedFile)
     }
     MessageDialog {
         id: warning

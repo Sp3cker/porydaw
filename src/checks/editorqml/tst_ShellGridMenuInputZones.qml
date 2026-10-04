@@ -216,6 +216,7 @@ ShellGridMenuSupport {
         verify(stop !== null && pause !== null && playhead !== null)
         var play = findChild(shell, "transport.play")
         verify(play !== null)
+        tryCompare(play, "actionable", true, 3000)
         mouseClick(play, play.width / 2, play.height / 2)
         tryCompare(playhead, "playing", true)
         tryCompare(pause, "actionable", true)

@@ -3,29 +3,54 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQml.Models
 import Porydaw.Ui
+import PorydawApp as App
 
 Item {
     id: menuHost
-    required property Item root
-    required property Item rollInput
-    required property Item rulerInput
-    required property Item trackHeaders
-    required property var bodyFontMetrics
-    property alias headerMenuLoader: headerMenuLoader
-    property alias gridMenuLoader: gridMenuLoader
-    property alias timeSigMenuLoader: timeSigMenuLoader
+    final required property EditorSurface root
+    final required property MouseArea rollInput
+    final required property MouseArea rulerInput
+    final required property TrackHeaderBand trackHeaders
+    final required property FontMetrics bodyFontMetrics
+    final property alias headerMenuLoader: headerMenuLoader
+    final property alias gridMenuLoader: gridMenuLoader
+    final property alias timeSigMenuLoader: timeSigMenuLoader
+    final readonly property MenuAppearance menuAppearance: MenuAppearance {
+        font: menuHost.root.bodyFont
+    }
+    property int rulerMenuKind
+    Binding {
+        when: menuHost.root.gridModel !== null
+        restoreMode: Binding.RestoreNone
+        menuHost.menuAppearance.background: menuHost.root.gridModel?.palette?.chromeBackground
+        menuHost.menuAppearance.outline: menuHost.root.gridModel?.palette?.separator
+        menuHost.menuAppearance.text: menuHost.root.gridModel?.palette?.primaryText
+        menuHost.menuAppearance.hoverBackground: menuHost.root.gridModel?.palette?.hoverChipFill
+        menuHost.menuAppearance.hoverText: menuHost.root.gridModel?.palette?.hoverChipText
+        menuHost.menuAppearance.disabledText: menuHost.root.gridModel?.palette?.disabledText
+    }
+    Binding {
+        target: menuHost
+        property: "rulerMenuKind"
+        value: menuHost.root.rulerMenu?.menuKind
+        when: menuHost.root.rulerMenu !== null
+        restoreMode: Binding.RestoreNone
+    }
     component MenuEntry: QtObject {
-        required property var model
+        required property int index
+        required property int menuKind
         required property string text
-        readonly property var itemData: model.modelData ?? model
-        readonly property bool separator: itemData.separator ?? false
-        readonly property string shortcutText: itemData.shortcutText ?? ""
+        final readonly property App.RulerMenuRow rulerRow: menuKind === 3 && menuHost.root.rulerMenu
+            ? menuHost.root.rulerMenu.menuRow(index) : null
+        readonly property bool separator: rulerRow ? rulerRow.separator : false
+        readonly property string shortcutText: rulerRow ? rulerRow.shortcutText : ""
         readonly property real advance: menuHost.bodyFontMetrics.advanceWidth(text)
     }
 
     component MenuMeasure: Item {
         id: measure
         required property var items
+        required property int menuKind
         readonly property real widestText: {
             let width = 0
             for (let i = 0; i < entries.count; ++i) {
@@ -56,7 +81,7 @@ Item {
         Instantiator {
             id: entries
             model: measure.items
-            delegate: MenuEntry {}
+            delegate: MenuEntry { menuKind: measure.menuKind }
         }
     }
 
@@ -64,7 +89,7 @@ Item {
     // Single dismissal seam: only the closing surface still owning keyboard
     // focus may move it; a close landing while focus sits elsewhere moves nothing.
     function dismissalOwnsFocus(menuItem: Item): bool {
-        return !!(menuItem && menuItem.activeFocus)
+        return menuItem !== null && menuItem.activeFocus
     }
     // A late close finds focus on the itemless loader or up the parent chain;
     // neither owns a control, so both still route home.
@@ -87,23 +112,26 @@ Item {
         return false
     }
     function activateRow(panel: QuickMenuPanel, row: int): void {
-        const item = panel.rowItem(row)
-        if (!item || !item.active)
-            return
-        const actionId = item.itemData.actionId
         if (panel.rowObjectNamePrefix === "headerMenuRow_") {
-            menuHost.root.headersModel.activateHeaderMenuAction(actionId)
+            const item = menuHost.root.headersModel.menuItem(row)
+            if (item && item.enabled)
+                menuHost.root.headersModel.activateHeaderMenuAction(item.actionId)
         } else if (panel.rowObjectNamePrefix === "gridMenuRow_") {
-            menuHost.root.gridModel.activateGridMenuRow(actionId)
+            const item = menuHost.root.gridModel.gridMenuRow(row)
+            if (item && item.enabled)
+                menuHost.root.gridModel.activateGridMenuRow(item.actionId)
         } else if (panel.rowObjectNamePrefix === "rulerMenuRow_") {
+            const item = menuHost.root.rulerMenu.menuRow(row)
+            if (!item || !item.enabled || item.separator)
+                return
             const targetTick = menuHost.root.rulerMenu.targetTick()
             const wasTimeMenu = menuHost.root.rulerMenu.menuKind === 2
-            const openPrompt = menuHost.root.rulerMenu.activate(actionId)
+            const openPrompt = menuHost.root.rulerMenu.activate(item.actionId)
             menuHost.root.timeSigHost.closeTimeSigMenu()
             if (openPrompt)
                 menuHost.root.timeSigHost.openTimeSigPrompt(targetTick)
             else if (wasTimeMenu && !menuHost.root.rulerMenu.insertTimePromptOpen
-                     && menuHost.dismissalOwnsFocus(timeSigMenuLoader.item))
+                     && menuHost.dismissalOwnsFocus(timeSigMenuLoader.item as Item))
                 menuHost.rollInput.forceActiveFocus(Qt.OtherFocusReason)
         }
     }
@@ -114,11 +142,11 @@ Item {
                 return
             if (menuHost.root.timeSigHost && menuHost.root.timeSigHost.timeSigMenuOpen)
                 menuHost.root.timeSigHost.closeTimeSigMenu()
-            const target = menuHost.root.timeMenuFocus ? rollInput : menuHost.rulerInput
+            const target = menuHost.root.timeMenuFocus ? menuHost.rollInput : menuHost.rulerInput
             menuHost.root.timeMenuFocus = false
             if (!menuHost.root.applicationSession.timeSigPromptOpen
                 && !menuHost.root.rulerMenu.insertTimePromptOpen
-                && (menuHost.dismissalOwnsFocus(timeSigMenuLoader.item) || menuHost.dismissalFocusOrphaned()))
+                && (menuHost.dismissalOwnsFocus(timeSigMenuLoader.item as Item) || menuHost.dismissalFocusOrphaned()))
                 target.forceActiveFocus(Qt.OtherFocusReason)
         }
     }
@@ -127,7 +155,7 @@ Item {
         function onGridMenuKindChanged(): void {
             if (menuHost.root.gridModel.gridMenuKind === 0
                 && !menuHost.root.applicationSession.timeSigPromptOpen
-                && (menuHost.dismissalOwnsFocus(gridMenuLoader.item) || menuHost.dismissalFocusOrphaned()))
+                && (menuHost.dismissalOwnsFocus(gridMenuLoader.item as Item) || menuHost.dismissalFocusOrphaned()))
                 menuHost.rulerInput.forceActiveFocus(Qt.OtherFocusReason)
         }
     }
@@ -135,13 +163,14 @@ Item {
         id: headerMenuLoader
         anchors.fill: parent
         z: 10
-        active: menuHost.root.headersModel.menuOpen
+        active: menuHost.root.headersModel !== null && menuHost.root.gridModel !== null
+                && menuHost.root.headersModel.menuOpen
         Connections {
             target: menuHost.root.headersModel
             function onMenuOpenChanged(): void {
                 if (!menuHost.root.headersModel.menuOpen && !menuHost.root.applicationSession.headerVoicePickerOpen
                     && menuHost.root.headersModel.renamingTrack < 0 && menuHost.trackHeaders.bandVisible
-                    && (menuHost.dismissalOwnsFocus(headerMenuLoader.item) || menuHost.dismissalFocusOrphaned()))
+                    && (menuHost.dismissalOwnsFocus(headerMenuLoader.item as Item) || menuHost.dismissalFocusOrphaned()))
                     menuHost.trackHeaders.restoreHeaderFocus()
             }
         }
@@ -158,23 +187,16 @@ Item {
                 }
                 MenuMeasure {
                     id: headerMeasure
-                    items: menuHost.root.headersModel.menuItems
+                    items: menuHost.root.headersModel?.menuItems ?? null
+                    menuKind: 1
                 }
                 QuickMenuPanel {
                     anchors.fill: parent
                     host: menuHost
-                    menuModel: menuHost.root.headersModel.menuItems
+                    menuModel: menuHost.root.headersModel?.menuItems ?? null
                     rootLevel: true
                     rowObjectNamePrefix: "headerMenuRow_"
-                    appearance: ({
-                        background: menuHost.root.gridModel.palette.chromeBackground,
-                        outline: menuHost.root.gridModel.palette.separator,
-                        text: menuHost.root.gridModel.palette.primaryText,
-                        hoverBackground: menuHost.root.gridModel.palette.hoverChipFill,
-                        hoverText: menuHost.root.gridModel.palette.hoverChipText,
-                        disabledText: menuHost.root.gridModel.palette.disabledText,
-                        font: menuHost.root.bodyFont
-                    })
+                    appearance: menuHost.menuAppearance
                     rowHeight: Math.round(menuHost.bodyFontMetrics.height) + 2 * menuHost.root.menuVerticalPadding
                     textX: menuHost.root.menuHorizontalPadding
                     textRight: menuWidth - 1 - menuHost.root.menuHorizontalPadding
@@ -193,7 +215,7 @@ Item {
         id: gridMenuLoader
         anchors.fill: parent
         z: 10
-        active: menuHost.root.gridModel.gridMenuKind !== 0
+        active: menuHost.root.gridModel !== null && menuHost.root.gridModel.gridMenuKind !== 0
         sourceComponent: Component {
             Item {
                 focus: true
@@ -225,24 +247,17 @@ Item {
                 }
                 MenuMeasure {
                     id: gridMeasure
-                    items: menuHost.root.gridModel.gridMenuRows
+                    items: menuHost.root.gridModel?.gridMenuRows ?? null
+                    menuKind: 2
                 }
                 QuickMenuPanel {
                     id: gridPanel
                     anchors.fill: parent
                     host: menuHost
-                    menuModel: menuHost.root.gridModel.gridMenuRows
+                    menuModel: menuHost.root.gridModel?.gridMenuRows ?? null
                     rootLevel: true
                     rowObjectNamePrefix: "gridMenuRow_"
-                    appearance: ({
-                        background: menuHost.root.gridModel.palette.chromeBackground,
-                        outline: menuHost.root.gridModel.palette.separator,
-                        text: menuHost.root.gridModel.palette.primaryText,
-                        hoverBackground: menuHost.root.gridModel.palette.hoverChipFill,
-                        hoverText: menuHost.root.gridModel.palette.hoverChipText,
-                        disabledText: menuHost.root.gridModel.palette.disabledText,
-                        font: menuHost.root.bodyFont
-                    })
+                    appearance: menuHost.menuAppearance
                     rowHeight: Math.round(menuHost.bodyFontMetrics.height) + 2 * menuHost.root.menuVerticalPadding
                     checkX: menuHost.root.menuHorizontalPadding
                     checkWidth: Math.floor(rowHeight / 2)
@@ -263,7 +278,8 @@ Item {
         id: timeSigMenuLoader
         anchors.fill: parent
         z: 10
-        active: menuHost.root.rulerMenu.isOpen
+        active: menuHost.root.rulerMenu !== null && menuHost.root.gridModel !== null
+                && menuHost.root.rulerMenu.isOpen
         sourceComponent: Component {
             Item {
                 focus: true
@@ -279,23 +295,16 @@ Item {
                 }
                 MenuMeasure {
                     id: rulerMeasure
-                    items: menuHost.root.rulerMenu.rows
+                    items: menuHost.root.rulerMenu?.rows ?? null
+                    menuKind: 3
                 }
                 QuickMenuPanel {
                     anchors.fill: parent
                     host: menuHost
-                    menuModel: menuHost.root.rulerMenu.rows
+                    menuModel: menuHost.root.rulerMenu?.rows ?? null
                     rootLevel: true
                     rowObjectNamePrefix: "rulerMenuRow_"
-                    appearance: ({
-                        background: menuHost.root.gridModel.palette.chromeBackground,
-                        outline: menuHost.root.gridModel.palette.separator,
-                        text: menuHost.root.gridModel.palette.primaryText,
-                        hoverBackground: menuHost.root.gridModel.palette.hoverChipFill,
-                        hoverText: menuHost.root.gridModel.palette.hoverChipText,
-                        disabledText: menuHost.root.gridModel.palette.disabledText,
-                        font: menuHost.root.bodyFont
-                    })
+                    appearance: menuHost.menuAppearance
                     rowHeight: Math.round(menuHost.bodyFontMetrics.height) + 2 * menuHost.root.menuVerticalPadding
                     separatorHeight: 1
                     textX: menuHost.root.menuHorizontalPadding
@@ -314,8 +323,8 @@ Item {
                                          + (rowCount - rulerMeasure.separatorCount) * rowHeight
                                          + rulerMeasure.separatorCount)
                     menuOrigin: MenuPlacement.clampOrigin(
-                        menuHost.root.rulerMenu.menuKind === 2 ? menuHost.root.timeSelectionMenuPosition
-                                                      : menuHost.root.timeSigMenuPosition,
+                        menuHost.rulerMenuKind === 2 ? menuHost.root.timeSelectionMenuPosition
+                                                   : menuHost.root.timeSigMenuPosition,
                         menuWidth, menuHeight, width, height)
                 }
                 Component.onCompleted: forceActiveFocus(Qt.PopupFocusReason)

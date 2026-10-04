@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import PorydawApp
+import Porydaw.Ui
 
 FocusScope {
     id: page
@@ -9,80 +10,73 @@ FocusScope {
     anchors.fill: parent
     clip: true
 
-    required property EventListPresenter presenter
-    readonly property EventListPresenter controller: presenter
-    readonly property var appearance: controller ? controller.appearance : ({})
-    readonly property var headerLabels: controller ? controller.headerLabels : []
-    // Revision invalidates membership bindings without copying selection into QML.
-    readonly property int selectionRevision: controller ? controller.selectionRevision : 0
+    final required property EventListPresenter presenter
+    final readonly property EventListPresenter controller: presenter
+    final readonly property list<string> headerLabels: controller.headerLabels
 
-    readonly property int columnCount: 7
-    readonly property int resizableColumnCount: 6
+    final readonly property int columnCount: 7
+    final readonly property int resizableColumnCount: 6
 
-    property int currentColumn: 0
+    final property int currentColumn: 0
     // Window-wide shortcuts must only operate while that input owns navigation.
-    property bool navigationInputActive: activeFocus
+    final property bool navigationInputActive: activeFocus
 
-    readonly property int editingRow: controller ? controller.editingRow : -1
-    readonly property int editingColumn: controller ? controller.editingColumn : -1
-    property int dragFromRow: -1
-    property int dragDropGap: -1
-    property bool draggingRows: false
+    final readonly property int editingRow: controller ? controller.editingRow : -1
+    final readonly property int editingColumn: controller ? controller.editingColumn : -1
+    final property int dragFromRow: -1
+    final property int dragDropGap: -1
+    final property bool draggingRows: false
 
-    readonly property bool editing: controller && controller.editing
-    readonly property bool navigationEnabled: controller && controller.visible && navigationInputActive
+    final readonly property bool editing: controller && controller.editing
+    final readonly property bool navigationEnabled: controller && controller.visible && navigationInputActive
                                              && !editing && !controller.menuOpen
 
-    readonly property font bodyFont: Qt.font(appearanceValue("bodyFont", ({})))
-    readonly property font tableFont: Qt.font(appearanceValue("tableFont", ({})))
-    readonly property font headerFont: Qt.font(appearanceValue("headerFont", ({})))
-    readonly property font controlFont: Qt.font(appearanceValue("controlFont", ({})))
+    final readonly property font bodyFont: controller.fonts.body
+    final readonly property font tableFont: controller.fonts.tableMono
+    final readonly property font headerFont: controller.fonts.caption
+    final readonly property font controlFont: controller.fonts.body
 
-    readonly property color tableBackground: appearanceValue("tableBackground", "transparent")
-    readonly property color tableAlternateBackground: appearanceValue("tableAlternateBackground",
-                                                                        tableBackground)
-    readonly property color tableText: appearanceValue("tableText", "transparent")
-    readonly property color tableSecondaryText: appearanceValue("tableSecondaryText", tableText)
-    readonly property color tableSelectedBackground: appearanceValue("tableSelectedBackground",
-                                                                       "transparent")
-    readonly property color tableSelectedText: appearanceValue("tableSelectedText", tableText)
-    readonly property color tableOutline: appearanceValue("tableOutline", "transparent")
-    readonly property color playheadTint: appearanceValue("playheadTint", "#2CE24244")
-    readonly property color headerBackground: appearanceValue("headerBackground", tableBackground)
-    readonly property color headerText: appearanceValue("headerText", tableText)
-    readonly property color headerOutline: appearanceValue("headerOutline", tableOutline)
-    readonly property color buttonBackground: appearanceValue("buttonBackground", tableBackground)
-    readonly property color buttonText: appearanceValue("buttonText", tableText)
-    readonly property color buttonHoverBackground: appearanceValue("buttonHoverBackground",
-                                                                      buttonBackground)
-    readonly property color buttonPressedBackground: appearanceValue("buttonPressedBackground",
-                                                                        buttonHoverBackground)
-    readonly property color buttonPressedText: appearanceValue("buttonPressedText", buttonText)
-    readonly property color disabledText: appearanceValue("disabledText", tableSecondaryText)
-    readonly property color buttonOutline: appearanceValue("buttonOutline", tableOutline)
-    readonly property color inputBackground: appearanceValue("inputBackground", tableBackground)
-    readonly property color inputText: appearanceValue("inputText", tableText)
-    readonly property color inputOutline: appearanceValue("inputOutline", tableOutline)
-    readonly property color focusOutline: appearanceValue("focusOutline", inputOutline)
-    readonly property color scrollbarHandle: appearanceValue("scrollbarHandle", tableOutline)
-    readonly property color scrollbarHandleHover: appearanceValue("scrollbarHandleHover",
-                                                                     scrollbarHandle)
-    readonly property color toolTipBackground: appearanceValue("toolTipBackground", buttonBackground)
-    readonly property color toolTipTextColor: appearanceValue("toolTipText", buttonText)
-    readonly property color toolTipOutline: appearanceValue("toolTipOutline", buttonOutline)
-    readonly property color reorderIndicator: appearanceValue("reorderIndicator", focusOutline)
+    final readonly property color tableBackground: controller.colors.menuBackground
+    final readonly property color tableAlternateBackground: controller.colors.alternateBackground
+    final readonly property color tableText: controller.colors.windowText
+    final readonly property color tableSecondaryText: controller.colors.secondaryText
+    final readonly property color tableSelectedBackground: controller.colors.tabSelectedBackground
+    final readonly property color tableSelectedText: controller.colors.selectionText
+    final readonly property color tableOutline: controller.colors.outline
+    final readonly property color playheadTint: controller.playheadTint
+    final readonly property color headerBackground: controller.colors.chromeBackground
+    final readonly property color headerText: controller.colors.windowText
+    final readonly property color headerOutline: controller.colors.outline
+    final readonly property color buttonBackground: controller.colors.buttonBackground
+    final readonly property color buttonText: controller.colors.buttonText
+    final readonly property color buttonHoverBackground: controller.colors.buttonHoverBackground
+    final readonly property color buttonPressedBackground: controller.colors.buttonPressedBackground
+    final readonly property color buttonPressedText: controller.colors.buttonPressedText
+    final readonly property color disabledText: controller.colors.disabledText
+    final readonly property color buttonOutline: controller.colors.outline
+    final readonly property color inputBackground: controller.colors.buttonHoverBackground
+    final readonly property color inputText: controller.colors.windowText
+    final readonly property color inputOutline: controller.colors.outline
+    final readonly property color focusOutline: controller.colors.focusOutline
+    final readonly property color scrollbarHandle: controller.colors.scrollbarHandle
+    final readonly property color scrollbarHandleHover: controller.colors.outline
+    final readonly property color toolTipBackground: controller.colors.inputBackground
+    final readonly property color toolTipTextColor: controller.colors.windowText
+    final readonly property color toolTipOutline: controller.colors.outline
+    final readonly property color reorderIndicator: controller.colors.focusOutline
 
-    readonly property real cellHorizontalPadding: Math.max(4, Math.ceil(tableMetrics.height / 3))
-    readonly property real headerHorizontalPadding: Math.max(4, Math.ceil(headerMetrics.height / 3))
-    readonly property real rowHeight: Math.max(1, Math.ceil(tableMetrics.height + 6))
-    readonly property real toolbarHeight: Math.max(rowHeight, Math.ceil(controlMetrics.height + 4))
-    readonly property real headerHeight: Math.max(rowHeight, Math.ceil(headerMetrics.height + 8))
-    readonly property real scrollbarBreadth: Math.max(10, Math.ceil(tableMetrics.height * 0.85))
-    readonly property real rowHeaderWidth: Math.max(Math.ceil(headerMetrics.advanceWidth(
-                                                          String(Math.max(1, table.eventTable.rows)))
+    final readonly property real cellHorizontalPadding: Math.max(4, Math.ceil(tableMetrics.height / 3))
+    final readonly property real headerHorizontalPadding: Math.max(4, Math.ceil(headerMetrics.height / 3))
+    final readonly property real rowHeight: Math.max(1, Math.ceil(tableMetrics.height + 6))
+    final readonly property real toolbarHeight: Math.max(rowHeight, Math.ceil(controlMetrics.height + 4))
+    final readonly property real headerHeight: Math.max(rowHeight, Math.ceil(headerMetrics.height + 8))
+    final readonly property real scrollbarBreadth: Math.max(10, Math.ceil(tableMetrics.height * 0.85))
+    final readonly property string rowCountText: Math.max(1, table.eventTable.rows)
+    final readonly property real rowHeaderWidth: Math.max(Math.ceil(headerMetrics.advanceWidth(
+                                                          rowCountText)
                                                           + 2 * headerHorizontalPadding),
                                                     Math.ceil(headerMetrics.height * 2))
-    readonly property real summaryMinimumWidth: Math.max(
+    final readonly property real summaryMinimumWidth: Math.max(
                                                        tableMetrics.advanceWidth(qsTr("End of track"))
                                                        + 2 * cellHorizontalPadding,
                                                        headerMetrics.advanceWidth(qsTr("Summary"))
@@ -90,10 +84,7 @@ FocusScope {
 
     signal navigationFocusRequested()
     onNavigationFocusRequested: navigationFocus.forceActiveFocus(Qt.OtherFocusReason)
-    Component.onCompleted: {
-        controller.setVisible(visible)
-        table.publishTableRows()
-    }
+    Component.onCompleted: controller.setVisible(visible)
 
     // The scope remembers its last focused child. Return from cell editing
     // to a non-text leaf so Delete and Select All reach the shared router.
@@ -135,27 +126,23 @@ FocusScope {
         headerFontMetrics: headerMetrics
     }
 
-    function appearanceValue(name: string, fallback: var): var {
-        const value = appearance ? appearance[name] : undefined
-        return value === undefined || value === null ? fallback : value
+    function rowIsSelected(row: int): bool {
+        if (row < 0 || row >= controller.rowCount)
+            return false
+        const handle = controller.rowHandle(row)
+        return handle && handle.selected
     }
 
-    function valueText(value: var): string {
-        return value === undefined || value === null ? "" : String(value)
-    }
-
-    // R7: dependency read; stays uncompiled until Wave B publishes this as row data.
-    function rowIsSelected(row) {
-        const revision = selectionRevision
-        return controller && controller.isSelected(row)
-    }
-
-
-    // R7: dependency read; stays uncompiled until Wave B publishes this as row data.
-    function persistedColumnWidth(column) {
-        const revision = controller ? controller.columnWidthsRevision : 0
-        const candidate = controller ? Number(controller.savedColumnWidth(column))
-                                     : minimumColumnWidth(column)
+    function persistedColumnWidth(column: int): real {
+        let candidate = minimumColumnWidth(column)
+        switch (column) {
+        case 0: candidate = controller.tickColumnWidth; break
+        case 1: candidate = controller.typeColumnWidth; break
+        case 2: candidate = controller.channelColumnWidth; break
+        case 3: candidate = controller.data1ColumnWidth; break
+        case 4: candidate = controller.data2ColumnWidth; break
+        case 5: candidate = controller.dataColumnWidth; break
+        }
         return Math.max(minimumColumnWidth(column), candidate)
     }
 
@@ -188,18 +175,18 @@ FocusScope {
     function hoverRow(panel: QuickMenuPanel, row: int): void { panel.highlightedRow = row }
 
     function activateRow(panel: QuickMenuPanel, row: int): void {
-        const item = panel.rowItem(row)
-        if (!item || !item.active)
+        const item = controller.menuItem(row)
+        if (!item || !item.enabled || item.separator)
             return
-        const actionId = item.itemData.actionId
+        const actionId = item.actionId
         controller.activateMenuAction(actionId)
         if (controller.menuOpen) {
             Qt.callLater(function() {
                 if (!page.controller.menuOpen)
                     return
                 for (let index = 0; index < panel.rowCount; ++index) {
-                    const candidate = panel.rowItem(index)
-                    if (candidate && candidate.itemData.actionId === actionId) {
+                    const candidate = page.controller.menuItem(index)
+                    if (candidate && candidate.actionId === actionId) {
                         page.hoverRow(panel, index)
                         return
                     }
@@ -291,7 +278,7 @@ FocusScope {
         const row = controller.currentRow
         table.eventTable.positionViewAtCell(Qt.point(page.currentColumn, row), TableView.Contain)
         Qt.callLater(function() {
-            const cell = table.eventTable.itemAtCell(Qt.point(page.currentColumn, row))
+            const cell = table.eventTable.itemAtCell(Qt.point(page.currentColumn, row)) as EventListCell
             page.beginCellEdit(cell)
         })
     }
@@ -386,9 +373,12 @@ FocusScope {
     Connections {
         target: page.controller
 
-        function onColumnWidthsRevisionChanged(): void {
-            table.requestTableLayout()
-        }
+        function onTickColumnWidthChanged(): void { table.requestTableLayout() }
+        function onTypeColumnWidthChanged(): void { table.requestTableLayout() }
+        function onChannelColumnWidthChanged(): void { table.requestTableLayout() }
+        function onData1ColumnWidthChanged(): void { table.requestTableLayout() }
+        function onData2ColumnWidthChanged(): void { table.requestTableLayout() }
+        function onDataColumnWidthChanged(): void { table.requestTableLayout() }
 
         function onScrollToRow(row: int): void {
             if (row >= 0)

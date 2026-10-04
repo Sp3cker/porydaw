@@ -57,7 +57,7 @@ TestCase {
     Pane {
         anchors.fill: parent
         padding: 0
-        font: Qt.font(app.typographyFonts.body)
+        font: app.typographyFonts.body
         contentItem: VoicegroupPanel {
             id: voicePanel
             applicationSession: app

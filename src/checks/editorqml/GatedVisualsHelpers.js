@@ -1,10 +1,9 @@
 .pragma library
 
-function channels(hex) {
-    var v = parseInt(hex.slice(1), 16)
-    if (hex.length === 9)
-        return [(v >> 16) & 255, (v >> 8) & 255, v & 255, (v >> 24) & 255]
-    return [(v >> 16) & 255, (v >> 8) & 255, v & 255, 255]
+function channels(value) {
+    var color = typeof value === "string" ? Qt.color(value) : value
+    return [Math.round(color.r * 255), Math.round(color.g * 255),
+            Math.round(color.b * 255), Math.round(color.a * 255)]
 }
 
 function hexOf(pixel) {

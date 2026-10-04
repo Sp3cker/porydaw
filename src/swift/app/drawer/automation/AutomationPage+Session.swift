@@ -116,6 +116,7 @@ extension AutomationPage {
             self.onCommandAvailabilityChanged?()
         }
         self.palette = palette
+        refreshPromptStyles()
         contextTick = session.editCursor
         lastPresentation = nil
         rebuildContent()

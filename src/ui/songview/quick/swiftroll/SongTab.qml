@@ -1,17 +1,18 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
+import PorydawApp
 
 // Each page acknowledges destruction so the controller keeps its workspace
 // alive until every tab holding it has gone.
 FocusScope {
     id: root
 
-    required property QtObject session
-    required property QtObject controller
-    property var shellRouter: null
+    final required property SongTabSession session
+    final required property SongTabsController controller
+    final property ShellPresenter shellRouter: null
     readonly property bool showEvents: root.session.showsEvents
-    readonly property var surface: pageLoader.item
+    final readonly property EditorSurface surface: pageLoader.item as EditorSurface
     signal contextMenuAt(real x, real y)
 
     Component.onDestruction: root.controller.pageReleased(root.session.tabId)

@@ -2,11 +2,12 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Templates as T
+import PorydawApp
 
 // Every top-level window maps every palette group to the applied theme, so
 // controls and popups never inherit platform colors.
 T.ApplicationWindow {
-    required property QtObject colors
+    required final property GridPalette colors
     color: palette.window
 
     // Surface/text pairs preserve contrast in every palette group.

@@ -335,7 +335,7 @@ struct RollPlotBuilder {
             let dark = ink(.noteLabelDark)
             if input.showVelocityValues {
                 if typography.noteValueVisible {
-                    let pixelSize = (typography.fontMap(.noteValue)["pixelSize"] as? Int) ?? 1
+                    let pixelSize = typography.font(.noteValue).pixelSize
                     let allowance = fontPx(metrics.baseFontPx, 0.5)
                     func addValue(box: Painted, text: String, id: UInt64, argb: UInt32) {
                         if !intersects(box.x, box.y, box.w, box.h) { return }

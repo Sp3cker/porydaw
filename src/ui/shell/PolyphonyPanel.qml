@@ -9,9 +9,9 @@ Item {
     id: panel
     objectName: "polyphonyPanel"
     required property PolyphonyPanelPresenter presenter
-    required property var colors
-    required property var typography
-    required property var layoutSpaces
+    required property GridPalette colors
+    required property TypographyFonts typography
+    required property LayoutSpaces layoutSpaces
     required property real baseFontPx
     readonly property real em: baseFontPx
     readonly property real gap: layoutSpaces.two
@@ -58,7 +58,7 @@ Item {
                 height: panel.headingHeight
                 text: qsTr("Solo overflow (invert audio)")
                 checked: panel.presenter.invertChecked
-                font: Qt.font(panel.typography.body)
+                font: panel.typography.body
                 palette.windowText: panel.colors.windowText
                 ToolTip.text: qsTr("Mutes normal playback and makes ONLY the sounds lost to the polyphony limit audible.")
                 ToolTip.visible: hovered
@@ -83,7 +83,7 @@ Item {
                         text: qsTr("Channel usage")
                         width: usage.width
                         height: panel.headingHeight
-                        font: Qt.font(panel.typography.bodyBold)
+                        font: panel.typography.bodyBold
                         color: panel.colors.windowText
                     }
                     Column {
@@ -114,7 +114,7 @@ Item {
                             visible: panel.presenter.showingShadow
                             text: qsTr("Lost sounds currently playing (solo overflow):")
                             color: panel.colors.secondaryText
-                            font: Qt.font(panel.typography.body)
+                            font: panel.typography.body
                         }
                         PolyphonyChannelGroup {
                             width: grid.width
@@ -151,7 +151,7 @@ Item {
                                         overflow.width - resetButton.width - panel.gap)
                         height: panel.headingHeight
                         text: qsTr("Overflow by track")
-                        font: Qt.font(panel.typography.bodyBold)
+                        font: panel.typography.bodyBold
                         color: panel.colors.windowText
                     }
                     Button {
@@ -160,7 +160,7 @@ Item {
                         anchors.right: parent.right
                         height: panel.headingHeight
                         text: qsTr("Reset")
-                        font: Qt.font(panel.typography.body)
+                        font: panel.typography.body
                         leftPadding: panel.gap
                         rightPadding: panel.gap
                         topPadding: 0
@@ -199,7 +199,7 @@ Item {
                                         width: index === 0 ? table.trackWidth : (header.width - table.trackWidth) / 3
                                         height: header.height
                                         text: modelData
-                                        font: Qt.font(panel.typography.body)
+                                        font: panel.typography.body
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
                                         color: panel.colors.windowText
@@ -236,7 +236,7 @@ Item {
                                     Row {
                                         anchors.fill: parent
                                         Repeater {
-                                            readonly property list<string> values: [counterRow.name, String(counterRow.dropped), String(counterRow.cutOff), String(counterRow.tailCut)]
+                                            readonly property list<string> values: [counterRow.name, "" + counterRow.dropped, "" + counterRow.cutOff, "" + counterRow.tailCut]
                                             model: values
                                             delegate: Rectangle {
                                                 id: counterCell
@@ -255,7 +255,7 @@ Item {
                                                     leftPadding: panel.em / 4
                                                     text: counterCell.modelData
                                                     elide: Text.ElideRight
-                                                    font: Qt.font(panel.typography.body)
+                                                    font: panel.typography.body
                                                     verticalAlignment: Text.AlignVCenter
                                                     color: panel.colors.windowText
                                                 }
@@ -271,7 +271,7 @@ Item {
                         anchors.centerIn: table
                         visible: panel.presenter.counterCount === 0
                         text: qsTr("No overflow recorded")
-                        font: Qt.font(panel.typography.body)
+                        font: panel.typography.body
                         color: panel.colors.secondaryText
                     }
                 }
@@ -284,7 +284,7 @@ Item {
                 width: content.width
                 height: panel.headingHeight
                 text: qsTr("Recent events")
-                font: Qt.font(panel.typography.bodyBold)
+                font: panel.typography.bodyBold
                 color: panel.colors.windowText
             }
             Rectangle {
@@ -317,7 +317,7 @@ Item {
                         Text {
                             anchors.fill: parent
                             text: eventRow.text
-                            font: Qt.font(panel.typography.body)
+                            font: panel.typography.body
                             color: eventRow.kind === 0 ? panel.colors.errorText
                                 : eventRow.kind === 1 ? panel.colors.warningText : panel.colors.secondaryText
                             elide: Text.ElideRight

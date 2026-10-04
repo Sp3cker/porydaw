@@ -1,144 +1,33 @@
-// The Voice Changes drawer page: the gutter title/summary, the plot's grid, the
-// held program spans, the change markers with their labels, the hover label,
-// the current-context readout, and the page's two modal surfaces.
-//
-// Swift owns every value (VoiceChangesPage.swift): the shared camera
-// projection, the bank-slot labels, the context resolution, the marker layout
-// with its elision and stair placement, the frozen drag, and the picker/menu
-// transactions. This file renders published primitives and delivers real
-// pointer, wheel, keyboard and accessibility input to that owner. It holds no
-// tick, no label, no camera and no clock, and it reads no document: the plot
-// origin and base font arrive through `configureBody` from the same published
-// facts the roll and the container use.
-//
-// The two input surfaces are the legacy band's: `voiceGutter` never edits, and
-// `voicePlot` owns editing in the plot-local coordinate space the shared camera
-// projects into. Bare Space is never claimed here, so the window transport
-// keeps it; only the picker's search field consumes text keys, which is the
-// explicit text-entry surface the modal keeps.
-//
-// Modal surfaces: the context menu and the picker compose into the container's
-// one modal layer (`EditorDrawer.qml`'s `drawerModalLayer`), which the container
-// hands this page as its optional `modalHost` after loading, and into the page
-// itself when a composition mounts the page without one. The layer is unclipped
-// and above every section's bodies and chrome, so a modal is never cut off by
-// the body it belongs to; each modal states its anchors in this page's own
-// coordinate space and maps them into whatever surface hosts it. No legacy
-// native popup infrastructure is imported.
+// Swift owns voice-change projection, editing and modal transactions.
 pragma ComponentBehavior: Bound
 
 import QtQuick
 import Porydaw.Ui
+import PorydawApp as App
 
 FocusScope {
     id: page
 
     objectName: "voiceChangesPage"
 
-    required property QtObject applicationSession
-    property var hintService: null
+    final property App.SongTabSession applicationSession
+    required applicationSession
+    property App.MouseHints hintService: null
     property bool hintScopeAllowed: true
 
-    /// The page's Swift owner for the current document, and the neutral empty
-    /// model while there is none: `voiceChangesPage()` fails once no document is
-    /// presented, and the host removes this scene before the session releases
-    /// the page. A guarded binding is what a teardown re-evaluation resolves.
-    readonly property var model: page.applicationSession
-                                 && page.applicationSession.songOpen
-                                 ? page.applicationSession.voiceChangesPage()
-                                 : null
-    readonly property var pageModel: page.model !== null && page.model !== undefined
-                                     ? page.model : emptyModel
-
-    readonly property var gridModel: page.applicationSession
-                                     && page.applicationSession.songOpen
-                                     ? page.applicationSession.gridPresenter()
-                                     : null
-    /// The session's grid presenter while a document presentation exists, and the
-    /// palette this page draws with. The page can be re-evaluated during scene
-    /// teardown, after the session released the grid, so every palette read
-    /// below goes through this guarded expression; the fallback draws nothing.
-    readonly property var gridPalette: page.gridModel ? page.gridModel.palette : fallbackPalette
-
-    QtObject {
-        id: fallbackPalette
-
-        /// Neutral colors for the window between scene removal and the session's
-        /// release; nothing drawn then reaches a frame. Covers every role this
-        /// page reads plus the roles VoicePickerPrompt reads through promptPalette.
-        readonly property color chromeBackground: "transparent"
-        readonly property color rollBackground: "transparent"
-        readonly property color outline: "transparent"
-        readonly property color primaryText: "transparent"
-        readonly property color selectionRing: "transparent"
-        readonly property color selectionEdge: "transparent"
-        readonly property color windowBackground: "transparent"
-        readonly property color windowText: "transparent"
-        readonly property color focusOutline: "transparent"
-        readonly property color buttonBackground: "transparent"
-        readonly property color buttonText: "transparent"
-        readonly property color buttonPressedBackground: "transparent"
-        readonly property color buttonPressedText: "transparent"
-        readonly property color disabledText: "transparent"
-        readonly property color placeholderText: "transparent"
+    readonly property App.VoiceChangesPage model: page.applicationSession?.songOpen
+                                                ? page.applicationSession.voiceChangesPage() : null
+    readonly property App.VoiceChangesPage pageModel: page.model
+    readonly property App.PianoGrid gridModel: page.applicationSession?.songOpen
+                                              ? page.applicationSession.gridPresenter() : null
+    final property App.GridPalette gridPalette
+    Binding {
+        when: page.applicationSession !== null
+        restoreMode: Binding.RestoreNone
+        page.gridPalette: page.applicationSession?.timeSigHost.palette
+        page.seedBaseFontPx: page.applicationSession?.timeSigHost.baseFontPx
     }
-    QtObject {
-        id: emptyModel
-
-        readonly property list<QtObject> markers: []
-        readonly property list<QtObject> gutterTexts: []
-        readonly property list<QtObject> pickerRows: []
-        readonly property list<QtObject> menuRows: []
-        readonly property bool trackAvailable: false
-        readonly property string plotMessage: ""
-        readonly property string gutterTitle: "Voice"
-        readonly property bool readoutVisible: false
-        readonly property string readoutText: ""
-        readonly property int readoutAlignment: 2
-        readonly property rect readoutRect: Qt.rect(0, 0, 0, 0)
-        readonly property bool hoverVisible: false
-        readonly property string hoverText: ""
-        readonly property rect hoverLabelRect: Qt.rect(0, 0, 0, 0)
-        readonly property int hoverHintProfile: HintProfiles.HorizontalScroll
-        property font neutralFont
-        readonly property font captionFont: emptyModel.neutralFont
-        readonly property font titleFont: emptyModel.neutralFont
-        readonly property font noteNameFont: emptyModel.neutralFont
-        readonly property double baseFontPx: 13
-        readonly property int cursorKind: 0
-        readonly property bool previewVisible: false
-        readonly property double previewX: 0
-        readonly property bool menuOpen: false
-        readonly property double menuX: 0
-        readonly property double menuY: 0
-        readonly property bool pickerOpen: false
-        readonly property string pickerTitle: ""
-        readonly property string pickerFilter: ""
-        readonly property int pickerIndex: -1
-        readonly property bool pickerHasMatch: false
-        readonly property string pickerEmptyText: "No matching voices"
-        readonly property bool auditionAvailable: false
-        readonly property string auditionDiagnostic: ""
-
-        function configureBody(width: real, height: real, gutter: real,
-                               devicePixelRatio: real, baseFontPx: real,
-                               dragDistance: real): void {}
-        function pointerPress(x: real, y: real, surface: int, button: int, modifiers: int): bool { return false }
-        function pointerMove(x: real, y: real, buttons: int): bool { return false }
-        function pointerRelease(x: real, y: real, button: int): bool { return false }
-        function pointerLeave(): void {}
-        function pointerDoubleClick(x: real, y: real): bool { return false }
-        function handleEscape(): bool { return false }
-        function setPickerFilter(text: string): void {}
-        function selectPickerRow(index: int): void {}
-        function movePickerSelection(delta: int): void {}
-        function acceptPicker(): bool { return false }
-        function cancelPicker(): void {}
-        function activateMenuAction(actionId: int): bool { return false }
-        function dismissVoiceMenu(): void {}
-        function dismissModal(): void {}
-        function cancelSectionInteraction(): void {}
-    }
+    enabled: page.pageModel !== null
 
     /// The shared plot origin: the gutter the roll draws at and the container
     /// publishes as `plotOrigin`.
@@ -146,7 +35,7 @@ FocusScope {
                                        ? (page.gridModel.trackHeaderWidth || 0)
                                          + page.gridModel.keyboardWidth : 0
     readonly property real plotWidth: Math.max(page.width - page.plotOrigin, 0)
-    readonly property real seedBaseFontPx: 13
+    property real seedBaseFontPx
     readonly property real baseFontPx: page.gridModel ? page.gridModel.baseFontPx
                                                       : page.seedBaseFontPx
 
@@ -170,27 +59,31 @@ FocusScope {
         page.pushBodyFacts()
         page.createModals()
     }
-    Component.onDestruction: {
+    Component.onDestruction: page.destroyModals()
+
+    function destroyModals(): void {
         if (page.picker !== null) {
-            if (page.picker.model)
-                page.picker.model.releasePickerAudition()
+            const pickerModel = page.picker.model as App.VoiceChangesPage
+            if (pickerModel)
+                pickerModel.releasePickerAudition()
+            page.picker.showing = false
             page.picker.destroy()
+            page.picker = null
         }
-        if (page.menu !== null)
+        if (page.menu !== null) {
+            page.menu.showing = false
             page.menu.destroy()
+            page.menu = null
+        }
     }
 
-    // The shared clock reaches this page in Swift: `ApplicationSession` fans the
-    // presenter's distinct presentations into the page owner, so no QML surface
-    // reads the presenter or calls a page mutator through a bridge wrapper.
+    // The session fans shared-playhead publications into the Swift page owner.
 
     // A modal surface or a live gesture claims Escape; everything else passes on
     // to the window, so the shared routing keeps owning Escape.
-    Keys.onEscapePressed: (event) => event.accepted = page.pageModel.handleEscape()
+    Keys.onEscapePressed: (event) => event.accepted = page.pageModel ? page.pageModel.handleEscape() : false
 
-    // Where focus returns after a modal closes: this page's plot, which stays in
-    // the page even when the modal surfaces are composed into the container's
-    // modal layer.
+    // Modal dismissal restores focus to this page's plot.
     function focusOrigin(): void {
         plot.forceActiveFocus(Qt.OtherFocusReason)
     }
@@ -223,22 +116,25 @@ FocusScope {
         }
 
         Repeater {
-            model: (page.pageModel ? page.pageModel.gutterTexts : [])
+            model: page.pageModel ? page.pageModel.gutterTexts : null
 
             delegate: Text {
-                required property var labelSpec
+                id: gutterLabel
+                required property var model
                 required property string labelText
-                required property var labelFont
+                required property font labelFont
+                required property int horizontal
+                required property int vertical
+                required x
+                required y
+                required width
+                required height
+                required color
 
-                x: labelSpec.x
-                y: labelSpec.y
-                width: labelSpec.width
-                height: labelSpec.height
-                text: labelText
-                color: labelSpec.color
-                font: Qt.font(labelFont)
-                horizontalAlignment: labelSpec.horizontal
-                verticalAlignment: labelSpec.vertical
+                text: gutterLabel.labelText
+                font: gutterLabel.labelFont
+                horizontalAlignment: gutterLabel.horizontal
+                verticalAlignment: gutterLabel.vertical
                 textFormat: Text.PlainText
                 renderType: Text.NativeRendering
                 elide: Text.ElideRight
@@ -293,14 +189,26 @@ FocusScope {
             width: plot.width
             height: plot.height
         Repeater {
-            model: (page.pageModel ? page.pageModel.markers : [])
+            model: page.pageModel ? page.pageModel.markers : null
 
             delegate: Item {
                 id: marker
 
                 required property var model
-                // Packed Swift values remain a map until the typed publication wave.
-                readonly property var s: marker.model.spec
+                required property string primitiveName
+                required property real lineTop
+                required property real lineBottom
+                required property real lineWidth
+                required property color lineColor
+                required property bool selected
+                required property bool hovered
+                required property bool offscreen
+                required property string label
+                required property real labelX
+                required property real labelY
+                required property real labelWidth
+                required property real labelHeight
+                readonly property real markerX: marker.model.x
 
                 x: 0
                 y: 0
@@ -308,37 +216,36 @@ FocusScope {
                 height: plot.height
 
                 Rectangle {
-                    objectName: marker.s.primitiveName + "Line"
-                    x: marker.s.x
-                    y: marker.s.lineTop
-                    width: marker.s.lineWidth
-                    height: Math.max(0, marker.s.lineBottom - marker.s.lineTop)
-                    color: marker.s.lineColor
+                    objectName: marker.primitiveName + "Line"
+                    x: marker.markerX
+                    y: marker.lineTop
+                    width: marker.lineWidth
+                    height: Math.max(0, marker.lineBottom - marker.lineTop)
+                    color: marker.lineColor
                 }
 
                 Rectangle {
-                    objectName: marker.s.primitiveName + "Selection"
-                    visible: marker.s.selected || marker.s.hovered
-                    x: marker.s.x - marker.s.lineWidth
-                    y: marker.s.lineTop
-                    width: 3 * marker.s.lineWidth
-                    height: Math.max(0, marker.s.lineBottom - marker.s.lineTop)
+                    objectName: marker.primitiveName + "Selection"
+                    visible: marker.selected || marker.hovered
+                    x: marker.markerX - marker.lineWidth
+                    y: marker.lineTop
+                    width: 3 * marker.lineWidth
+                    height: Math.max(0, marker.lineBottom - marker.lineTop)
                     color: "transparent"
-                    border.width: marker.s.lineWidth
+                    border.width: marker.lineWidth
                     border.color: page.gridPalette.selectionRing
                 }
 
                 Text {
-                    objectName: marker.s.primitiveName + "Label"
-
-                    x: marker.s.labelX
-                    y: marker.s.labelY
-                    width: marker.s.labelWidth
-                    height: marker.s.labelHeight
-                    visible: !marker.s.offscreen
-                    text: marker.s.label
+                    objectName: marker.primitiveName + "Label"
+                    x: marker.labelX
+                    y: marker.labelY
+                    width: marker.labelWidth
+                    height: marker.labelHeight
+                    visible: !marker.offscreen
+                    text: marker.label
                     color: page.gridPalette.primaryText
-                    font: page.model ? Qt.font(page.model.captionFont) : emptyModel.captionFont
+                    font: page.model ? page.model.captionFont : page.applicationSession.timeSigHost.typographyFonts.caption
                     textFormat: Text.PlainText
                     renderType: Text.NativeRendering
                     horizontalAlignment: Text.AlignLeft
@@ -368,13 +275,17 @@ FocusScope {
             objectName: "voiceHoverLabel"
 
             visible: (page.pageModel ? page.pageModel.hoverVisible : false)
-            x: (page.pageModel ? page.pageModel.hoverLabelRect.x : 0)
-            y: (page.pageModel ? page.pageModel.hoverLabelRect.y : 0)
-            width: (page.pageModel ? page.pageModel.hoverLabelRect.width : 0)
-            height: (page.pageModel ? page.pageModel.hoverLabelRect.height : 0)
+            x: page.pageModel ? page.pageModel.hoverLabelX : 0
+            y: page.pageModel ? page.pageModel.hoverLabelY : 0
+            width: page.pageModel ? page.pageModel.hoverLabelWidth : 0
+            height: page.pageModel ? page.pageModel.hoverLabelHeight : 0
             text: (page.pageModel ? page.pageModel.hoverText : "")
             color: page.gridPalette.primaryText
-            font: page.model ? Qt.font(page.model.noteNameFont) : emptyModel.noteNameFont
+            Binding on font {
+                when: page.applicationSession !== null
+                restoreMode: Binding.RestoreNone
+                value: page.model ? page.model.noteNameFont : page.applicationSession?.timeSigHost.typographyFonts.noteName
+            }
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
             horizontalAlignment: Text.AlignLeft
@@ -389,13 +300,17 @@ FocusScope {
             objectName: "voiceReadout"
 
             visible: (page.pageModel ? page.pageModel.readoutVisible : false)
-            x: (page.pageModel ? page.pageModel.readoutRect.x : 0)
-            y: (page.pageModel ? page.pageModel.readoutRect.y : 0)
-            width: (page.pageModel ? page.pageModel.readoutRect.width : 0)
-            height: (page.pageModel ? page.pageModel.readoutRect.height : 0)
+            x: page.pageModel ? page.pageModel.readoutX : 0
+            y: page.pageModel ? page.pageModel.readoutY : 0
+            width: page.pageModel ? page.pageModel.readoutWidth : 0
+            height: page.pageModel ? page.pageModel.readoutHeight : 0
             text: (page.pageModel ? page.pageModel.readoutText : "")
             color: page.gridPalette.primaryText
-            font: page.model ? Qt.font(page.model.captionFont) : emptyModel.captionFont
+            Binding on font {
+                when: page.applicationSession !== null
+                restoreMode: Binding.RestoreNone
+                value: page.model ? page.model.captionFont : page.applicationSession?.timeSigHost.typographyFonts.caption
+            }
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
             horizontalAlignment: page.pageModel ? page.pageModel.readoutAlignment
@@ -413,7 +328,11 @@ FocusScope {
             anchors.centerIn: parent
             text: (page.pageModel ? page.pageModel.plotMessage : "")
             color: page.gridPalette.primaryText
-            font: page.model ? Qt.font(page.model.captionFont) : emptyModel.captionFont
+            Binding on font {
+                when: page.applicationSession !== null
+                restoreMode: Binding.RestoreNone
+                value: page.model ? page.model.captionFont : page.applicationSession?.timeSigHost.typographyFonts.caption
+            }
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
         }
@@ -455,16 +374,18 @@ FocusScope {
             onCanceled: {
                 plotMoves.flush()
                 plotHint.settleRelease(plotHint.point.scenePosition)
-                page.pageModel.cancelSectionInteraction()
+                if (page.pageModel)
+                    page.pageModel.cancelSectionInteraction()
             }
             onExited: {
                 plotMoves.flush()
-                page.pageModel.pointerLeave()
+                if (page.pageModel)
+                    page.pageModel.pointerLeave()
             }
             MoveCoalescer {
                 id: plotMoves
                 function dispatchMove(x: real, y: real, buttons: int, modifiers: int): bool {
-                    return page.pageModel.pointerMove(x, y, buttons, modifiers)
+                    return page.pageModel ? page.pageModel.pointerMove(x, y, buttons, modifiers) : false
                 }
                 dispatch: plotMoves.dispatchMove
             }
@@ -477,7 +398,7 @@ FocusScope {
             hintService: page.hintService
             scopeAllowed: page.hintScopeAllowed
             gestureOwning: plotInput.pressed
-            profile: page.pageModel.hoverHintProfile
+            profile: page.pageModel ? page.pageModel.hoverHintProfile : HintProfiles.HorizontalScroll
         }
 
         WheelHandler {
@@ -504,10 +425,7 @@ FocusScope {
 
     // ---- modal surfaces -----------------------------------------------------
 
-    // The page owns modality for its two modal surfaces; each one renders the
-    // flag it is pushed and delivers the input that drives the page. The push
-    // happens on the page's own change signals instead of a binding inside the
-    // modal's scope, which would have to read through the `var`-typed model.
+    // Modal flags follow their notifying Swift owner.
     Connections {
         target: page.pageModel
 
@@ -516,24 +434,26 @@ FocusScope {
     }
 
     function syncModals(): void {
+        if (page.model === null) {
+            page.destroyModals()
+            return
+        }
         if (page.menu !== null) {
             page.menu.model = page.model
             page.menu.showing = page.pageModel ? page.pageModel.menuOpen : false
         }
         if (page.picker !== null) {
-            if (page.picker.model && page.picker.model !== page.model)
-                page.picker.model.releasePickerAudition()
+            const pickerModel = page.picker.model as App.VoiceChangesPage
+            if (pickerModel && pickerModel !== page.model)
+                pickerModel.releasePickerAudition()
             page.picker.model = page.model
             page.picker.showing = page.pageModel ? page.pageModel.pickerOpen : false
         }
     }
 
-    /// The container's one unclipped modal layer, when the container hosts this
-    /// page (a composition that mounts the page elsewhere keeps the modals inside
-    /// the page). Filled in `createModals`.
-    property var modalHost: null
+    property Item modalHost: null
     property VoiceChangeMenu menu: null
-    property var picker: null
+    property VoicePickerPrompt picker: null
 
     Component {
         id: menuComponent
@@ -547,32 +467,28 @@ FocusScope {
         id: pickerComponent
 
         VoicePickerPrompt {
-            promptPalette: page.gridPalette
             hintService: page.hintService
             onClosed: page.focusOrigin()
         }
     }
 
-    /// Composes the two modal surfaces into the container's one modal layer, or
-    /// into the page when no layer was handed over. They are created once and only
-    /// re-pointed at the current document owner, so a case's modal state is never
-    /// a fresh object per interaction. Each modal receives this page as its
-    /// coordinate origin: the page publishes its anchors in its own space, and a
-    /// modal hosted in the container's layer maps them there.
+    // Modals are retained once and reparented onto the container's unclipped layer.
     function createModals(): void {
-        var host = page.modalHost !== null && page.modalHost !== undefined ? page.modalHost : page
+        if (page.model === null) {
+            page.destroyModals()
+            return
+        }
+        const host = page.modalHost !== null ? page.modalHost : page
         if (page.menu === null) {
             page.menu = menuComponent.createObject(host, {"model": page.model,
-                                                          "pageItem": page})
+                                                          "pageItem": page}) as VoiceChangeMenu
         } else if (page.menu.parent !== host) {
-            // The container hands its modal layer over after the page completes,
-            // so a modal created in that window moves onto the layer it belongs
-            // to instead of being rebuilt (its anchors re-resolve on the move).
+            // The container supplies its modal layer after the page completes.
             page.menu.parent = host
         }
         if (page.picker === null) {
             page.picker = pickerComponent.createObject(host, {"model": page.model,
-                                                              "pageItem": page})
+                                                              "pageItem": page}) as VoicePickerPrompt
         } else if (page.picker.parent !== host) {
             page.picker.parent = host
         }

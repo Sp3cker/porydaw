@@ -441,18 +441,18 @@ extension VoiceChangesPage {
         if let hit {
             let identity = VoiceOccurrence(hit).text
             let lineX = xForTick(hit.tick)
-            let rect = VoiceMarkerHandle.rect(
-                lineX + pad, 0, max(0, plotWidth - lineX),
-                plotHeight)
+            let labelX = lineX + pad
+            let labelWidth = max(0, plotWidth - lineX)
             guard
                 hoverIdentity != identity || hoverVisible || !hoverText.isEmpty
-                    || !VoiceMarkerHandle.rectMatches(hoverLabelRect, rect)
+                    || hoverLabelX != labelX || hoverLabelY != 0
+                    || hoverLabelWidth != labelWidth || hoverLabelHeight != plotHeight
             else { return }
             hoverIdentity = identity
             hoverTick = Double(hit.tick)
             hoverText = ""
             hoverVisible = false
-            hoverLabelRect = rect
+            publishHoverLabel(x: labelX, y: 0, width: labelWidth, height: plotHeight)
             publishMarkerHover()
             return
         }
@@ -469,11 +469,9 @@ extension VoiceChangesPage {
         hoverIdentity = nil
         hoverTick = Double(tick)
         setPublished(hoverText, label) { hoverText = $0 }
-        setPublishedRect(
-            &hoverLabelRect,
-            VoiceMarkerHandle.rect(
-                lineX + pad, 0, max(0, plotWidth - lineX),
-                plotHeight))
+        publishHoverLabel(
+            x: lineX + pad, y: 0, width: max(0, plotWidth - lineX),
+            height: plotHeight)
         setPublished(hoverVisible, true) { hoverVisible = $0 }
         publishMarkerHover()
     }
@@ -486,8 +484,15 @@ extension VoiceChangesPage {
         hoverText = ""
         hoverVisible = false
         hoverTick = 0
-        hoverLabelRect = VoiceMarkerHandle.rect(0, 0, 0, 0)
+        publishHoverLabel(x: 0, y: 0, width: 0, height: 0)
         publishMarkerHover()
+    }
+
+    private func publishHoverLabel(x: Double, y: Double, width: Double, height: Double) {
+        setPublished(hoverLabelX, x) { hoverLabelX = $0 }
+        setPublished(hoverLabelY, y) { hoverLabelY = $0 }
+        setPublished(hoverLabelWidth, width) { hoverLabelWidth = $0 }
+        setPublished(hoverLabelHeight, height) { hoverLabelHeight = $0 }
     }
 
     // MARK: Internals: gesture teardown

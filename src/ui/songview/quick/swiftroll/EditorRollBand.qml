@@ -5,17 +5,36 @@ import Porydaw.Ui
 
 Item {
     id: rollBandContent
-    required property Item root
-    required property Item editorDrawer
-    required property Item otherEventsBand
-    property alias trackHeaders: trackHeaders
-    property alias rollStack: rollStack
-    property alias rollPlot: rollPlot
-    property alias rollInput: rollInput
-    property alias rollHint: rollHint
-    property alias eventListHost: eventListHost
-    property alias eventPage: eventPage
-    property alias rulerInput: rulerModule.rulerInput
+    final required property EditorSurface root
+    final required property EditorDrawer editorDrawer
+    final required property OtherEventsBand otherEventsBand
+    final property alias trackHeaders: trackHeaders
+    final property alias rollStack: rollStack
+    final property alias rollPlot: rollPlot
+    final property alias rollInput: rollInput
+    final property alias rollHint: rollHint
+    final property alias eventListHost: eventListHost
+    final property alias eventPage: eventPage
+    final property alias rulerInput: rulerModule.rulerInput
+    Binding {
+        when: rollBandContent.root.gridModel !== null && rollBandContent.root.headersModel !== null
+        restoreMode: Binding.RestoreNone
+        trackHeaders.y: rollBandContent.root.gridModel?.rulerHeight
+        trackHeaders.width: rollBandContent.root.headersModel?.trackHeaderWidth
+        trackHeaders.controlFont: rollBandContent.root.headersModel?.controlFont
+        rollStack.x: rollBandContent.root.headersModel?.trackHeaderWidth
+        rollGutterSide.y: rollBandContent.root.gridModel?.rulerHeight
+        rollGutterSide.width: rollBandContent.root.gridModel?.keyboardWidth
+        rollPlot.x: rollBandContent.root.gridModel?.keyboardWidth
+        rollPlot.y: rollBandContent.root.gridModel?.rulerHeight
+        rollContentBand.y: rollBandContent.root.gridModel?.rulerHeight
+        eventListHost.x: rollBandContent.root.headersModel?.trackHeaderWidth
+        eventListHost.y: rollBandContent.root.gridModel?.rulerHeight
+        rollCursor.shape: rollCursor.shapes[rollBandContent.root.gridModel?.cursorKind]
+        rollCursor.source: rollCursor.sources[rollBandContent.root.gridModel?.cursorKind]
+        rollCursor.extent: rollBandContent.root.gridModel?.resizeCursorExtent
+        rollCursor.devicePixelRatio: rollBandContent.root.gridModel?.devicePixelRatio
+    }
     objectName: "swiftRollBand"
     width: rollBandContent.root.width
     height: Math.max(rollBandContent.root.height - editorDrawer.height - otherEventsBand.height
@@ -25,15 +44,13 @@ Item {
         TrackHeaderBand {
             id: trackHeaders
             x: 0
-            y: rollBandContent.root.gridModel.rulerHeight
-            width: rollBandContent.root.headersModel.trackHeaderWidth
             height: Math.max(parent.height - y, 0)
             onWidthChanged: rollBandContent.root.configureViewport()
             onHeightChanged: rollBandContent.root.configureViewport()
             bandRect: Qt.rect(0, 0, width, height)
             bandVisible: rollBandContent.visible
             model: rollBandContent.root.headersModel
-            controlFont: Qt.font(rollBandContent.root.headersModel.controlFont)
+            controlFont: rollBandContent.root.bodyFont
             hintService: rollBandContent.root.hintService
             hintScopeAllowed: !rollBandContent.root.hintScopeCovered
         }
@@ -41,7 +58,6 @@ Item {
         // The roll owns a keyboard-local coordinate space beside the headers.
         Item {
             id: rollStack
-            x: rollBandContent.root.headersModel.trackHeaderWidth
             width: Math.max(parent.width - x - rollBandContent.root.scrollbarBreadth, 0)
             height: parent.height
             clip: true
@@ -51,8 +67,6 @@ Item {
                 id: rollGutterSide
                 objectName: "timelineQuickRollGutter"
                 visible: !rollBandContent.root.showEvents
-                y: rollBandContent.root.gridModel.rulerHeight
-                width: rollBandContent.root.gridModel.keyboardWidth
                 height: Math.max(parent.height - y, 0)
                 clip: true
                 MouseArea {
@@ -103,8 +117,6 @@ Item {
                 id: rollPlot
                 objectName: "timelineQuickRollPlot"
                 visible: !rollBandContent.root.showEvents
-                x: rollBandContent.root.gridModel.keyboardWidth
-                y: rollBandContent.root.gridModel.rulerHeight
                 width: Math.max(parent.width - x, 0)
                 height: Math.max(parent.height - y, 0)
                 clip: true
@@ -138,20 +150,17 @@ Item {
                             rollBandContent.root.gridModel.dragDistance = Qt.styleHints.startDragDistance
 
                         ItemCursor {
+                            id: rollCursor
                             readonly property list<int> shapes: [
                                 Qt.ArrowCursor, Qt.OpenHandCursor, Qt.ArrowCursor,
                                 Qt.ArrowCursor, Qt.ClosedHandCursor, Qt.SizeVerCursor
                             ]
-                            readonly property list<string> sources: [
+                            readonly property list<url> sources: [
                                 "", "", "qrc:/cursors/left-drag.png",
                                 "qrc:/cursors/right-drag.png", "", ""
                             ]
                             objectName: "swiftRollCursor"
                             target: rollInput
-                            shape: shapes[rollBandContent.root.gridModel.cursorKind]
-                            source: sources[rollBandContent.root.gridModel.cursorKind]
-                            extent: rollBandContent.root.gridModel.resizeCursorExtent
-                            devicePixelRatio: rollBandContent.root.gridModel.devicePixelRatio
                         }
 
                         onPressed: function(mouse) {
@@ -257,7 +266,6 @@ Item {
                 id: rollContentBand
                 objectName: "rollContentBand"
                 visible: !rollBandContent.root.showEvents
-                y: rollBandContent.root.gridModel.rulerHeight
                 width: parent.width
                 height: Math.max(parent.height - y, 0)
                 z: 3
@@ -266,8 +274,6 @@ Item {
 
         Item {
             id: eventListHost
-            x: rollBandContent.root.headersModel.trackHeaderWidth
-            y: rollBandContent.root.gridModel.rulerHeight
             width: Math.max(parent.width - x, 0)
             height: Math.max(parent.height - y, 0)
             z: 4

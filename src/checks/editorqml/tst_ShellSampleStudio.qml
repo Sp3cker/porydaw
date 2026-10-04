@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtTest
 import ShellQmlCheck 1.0
-import "../../ui/shell"
+import Porydaw.Ui
 import "NativeWait.js" as NativeWait
 
 TestCase {
@@ -188,8 +188,14 @@ TestCase {
             return disk.exists(rootPath + "/sound/direct_sound_samples/hires_tone.wav")
                 && !child("sampleStudioDialog")
         }, 20000), "project receives committed WAV")
+        const controller = presenter.session.voiceListController()
+        controller.configureSamplePicker("", false)
         verify(waitForNative(function() {
-            return presenter.session.voiceListController().sampleSymbols().indexOf("DirectSoundWaveData_hires_tone") !== -1
+            for (let index = 0; index < controller.samplePickerCount; ++index) {
+                if (controller.samplePickerRow(index).symbol === "DirectSoundWaveData_hires_tone")
+                    return true
+            }
+            return false
         }, 15000), "catalog refresh exposes new symbol")
     }
     function test_flacOpensEditor() {

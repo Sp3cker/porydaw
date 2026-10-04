@@ -75,9 +75,7 @@ struct TrackHeadersFixture {
         guard let row = rowForTrack(track), headers.rowHeight > 0 else { return nil }
         headers.scrollY = min(Double(row * headers.rowHeight), headers.maximumScrollY)
         let rect = headers.rows[row].titleRect
-        guard let width = rect["width"] as? Double, width > 0,
-            let height = rect["height"] as? Double, height > 0
-        else { return nil }
+        guard rect.width > 0, rect.height > 0 else { return nil }
         let title = point(.title, row: row)
         guard title.x >= 0, title.x < headers.trackHeaderWidth,
             title.y >= 0, title.y < headers.viewportHeight

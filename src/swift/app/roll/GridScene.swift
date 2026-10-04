@@ -2,6 +2,15 @@ import Foundation
 import PorydawCore
 import QtBridge
 
+struct SceneRectValue: Equatable {
+    var x: Double
+    var y: Double
+    var width: Double
+    var height: Double
+    var fillColor: QmlColor
+    var primitiveName: String = ""
+}
+
 @MainActor
 @QtBridgeable
 public final class SceneRect {
@@ -9,14 +18,12 @@ public final class SceneRect {
     public var y: Double
     public var width: Double
     public var height: Double
-    public var fillColor: String
+    public var fillColor: QmlColor
     public var primitiveName: String
-
-    public var frame: [String: QVariantSettable]
 
     public init(
         x: Double, y: Double, width: Double, height: Double,
-        fillColor: String, primitiveName: String = ""
+        fillColor: QmlColor, primitiveName: String = ""
     ) {
         self.x = x
         self.y = y
@@ -24,7 +31,28 @@ public final class SceneRect {
         self.height = height
         self.fillColor = fillColor
         self.primitiveName = primitiveName
-        self.frame = ["x": x, "y": y, "width": width, "height": height]
+    }
+
+    @QtIgnored
+    convenience init(_ value: SceneRectValue) {
+        self.init(
+            x: value.x, y: value.y, width: value.width, height: value.height,
+            fillColor: value.fillColor, primitiveName: value.primitiveName)
+    }
+
+    @QtIgnored
+    func update(_ value: SceneRectValue) -> Bool {
+        guard
+            x != value.x || y != value.y || width != value.width || height != value.height
+                || fillColor != value.fillColor || primitiveName != value.primitiveName
+        else { return false }
+        if x != value.x { x = value.x }
+        if y != value.y { y = value.y }
+        if width != value.width { width = value.width }
+        if height != value.height { height = value.height }
+        if fillColor != value.fillColor { fillColor = value.fillColor }
+        if primitiveName != value.primitiveName { primitiveName = value.primitiveName }
+        return true
     }
 
     @QtIgnored
@@ -35,50 +63,110 @@ public final class SceneRect {
     }
 }
 
+struct SceneTextValue {
+    var rect: (x: Double, y: Double, w: Double, h: Double)
+    var text: String
+    var color: QmlColor
+    var font: QmlFont
+    var horizontal: Int = 0x1
+    var vertical: Int = 0x80
+    var background: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
+    var backgroundRect: (x: Double, y: Double, w: Double, h: Double) = (0, 0, 0, 0)
+}
+
 @MainActor
 @QtBridgeable
 public final class SceneText {
-    public var labelRect: [String: QVariantSettable]
-    public var labelBackgroundRect: [String: QVariantSettable]
-    public var labelClipRect: [String: QVariantSettable]
-    public var labelFont: [String: QVariantSettable]
+    public var x: Double
+    public var y: Double
+    public var width: Double
+    public var height: Double
+    public var clipX: Double = 0
+    public var clipY: Double = 0
+    public var clipWidth: Double = 0
+    public var clipHeight: Double = 0
+    public var backgroundX: Double
+    public var backgroundY: Double
+    public var backgroundWidth: Double
+    public var backgroundHeight: Double
+    public var labelFont: QmlFont
     public var labelText: String
-    public var labelColor: String
-    public var labelBackground: String
-    public var labelHorizontalAlignment: Int
-    public var labelVerticalAlignment: Int
-    public var labelSpec: [String: QVariantSettable]
+    public var color: QmlColor
+    public var background: QmlColor
+    public var horizontal: Int
+    public var vertical: Int
 
     public init(
         rect: (x: Double, y: Double, w: Double, h: Double),
-        text: String, color: String, font: [String: QVariantSettable],
+        text: String, color: QmlColor, font: QmlFont,
         horizontal: Int = 0x1, vertical: Int = 0x80,
-        background: String = "",
+        background: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0),
         backgroundRect: (x: Double, y: Double, w: Double, h: Double) = (0, 0, 0, 0)
     ) {
-        labelRect = [
-            "x": rect.x, "y": rect.y,
-            "width": rect.w, "height": rect.h,
-        ]
-        labelBackgroundRect = [
-            "x": backgroundRect.x, "y": backgroundRect.y,
-            "width": backgroundRect.w, "height": backgroundRect.h,
-        ]
-        labelClipRect = ["x": 0.0, "y": 0.0, "width": 0.0, "height": 0.0]
+        x = rect.x
+        y = rect.y
+        width = rect.w
+        height = rect.h
+        backgroundX = backgroundRect.x
+        backgroundY = backgroundRect.y
+        backgroundWidth = backgroundRect.w
+        backgroundHeight = backgroundRect.h
         labelFont = font
         labelText = text
-        labelColor = color
-        labelBackground = background
-        labelHorizontalAlignment = horizontal
-        labelVerticalAlignment = vertical
-        labelSpec = [
-            "x": rect.x, "y": rect.y, "width": rect.w, "height": rect.h,
-            "clipWidth": 0.0, "clipHeight": 0.0,
-            "backgroundX": backgroundRect.x, "backgroundY": backgroundRect.y,
-            "backgroundWidth": backgroundRect.w, "backgroundHeight": backgroundRect.h,
-            "background": background, "color": color,
-            "horizontal": horizontal, "vertical": vertical,
-        ]
+        self.color = color
+        self.background = background
+        self.horizontal = horizontal
+        self.vertical = vertical
+    }
+
+    @QtIgnored
+    convenience init(_ value: SceneTextValue) {
+        self.init(
+            rect: value.rect, text: value.text, color: value.color, font: value.font,
+            horizontal: value.horizontal, vertical: value.vertical,
+            background: value.background, backgroundRect: value.backgroundRect)
+    }
+
+    @QtIgnored
+    func update(_ value: SceneTextValue) -> Bool {
+        let geometryChanged =
+            x != value.rect.x || y != value.rect.y
+            || width != value.rect.w || height != value.rect.h
+        let backgroundChanged =
+            backgroundX != value.backgroundRect.x
+            || backgroundY != value.backgroundRect.y || backgroundWidth != value.backgroundRect.w
+            || backgroundHeight != value.backgroundRect.h || background != value.background
+        let contentChanged =
+            labelFont != value.font || labelText != value.text
+            || color != value.color || horizontal != value.horizontal || vertical != value.vertical
+        guard geometryChanged || backgroundChanged || contentChanged else { return false }
+        if x != value.rect.x { x = value.rect.x }
+        if y != value.rect.y { y = value.rect.y }
+        if width != value.rect.w { width = value.rect.w }
+        if height != value.rect.h { height = value.rect.h }
+        if backgroundX != value.backgroundRect.x { backgroundX = value.backgroundRect.x }
+        if backgroundY != value.backgroundRect.y { backgroundY = value.backgroundRect.y }
+        if backgroundWidth != value.backgroundRect.w { backgroundWidth = value.backgroundRect.w }
+        if backgroundHeight != value.backgroundRect.h { backgroundHeight = value.backgroundRect.h }
+        if labelFont != value.font { labelFont = value.font }
+        if labelText != value.text { labelText = value.text }
+        if color != value.color { color = value.color }
+        if background != value.background { background = value.background }
+        if horizontal != value.horizontal { horizontal = value.horizontal }
+        if vertical != value.vertical { vertical = value.vertical }
+        return true
+    }
+
+    @QtIgnored
+    func matches(_ other: SceneText) -> Bool {
+        x == other.x && y == other.y && width == other.width && height == other.height
+            && clipX == other.clipX && clipY == other.clipY
+            && clipWidth == other.clipWidth && clipHeight == other.clipHeight
+            && backgroundX == other.backgroundX && backgroundY == other.backgroundY
+            && backgroundWidth == other.backgroundWidth && backgroundHeight == other.backgroundHeight
+            && labelFont == other.labelFont && labelText == other.labelText
+            && color == other.color && background == other.background
+            && horizontal == other.horizontal && vertical == other.vertical
     }
 }
 
@@ -137,24 +225,27 @@ public final class GridScene {
         paletteContentCache = nil
     }
 
-    public var hoverChipRect: [String: QVariantSettable] =
-        ["x": 0.0, "y": 0.0, "width": 0.0, "height": 0.0]
+    public var hoverChipX: Double = 0
+    public var hoverChipY: Double = 0
+    public var hoverChipWidth: Double = 0
+    public var hoverChipHeight: Double = 0
     public var hoverChipVisible: Bool = false
     public var hoverChipText: String = ""
-    public var hoverChipFill: String = "#E6303030"
-    public var hoverChipTextColor: String = "#FFFFFF"
-    @QtTracked public var hoverChipFont = [String: QVariantSettable]()
+    public var hoverChipFill: QmlColor = QmlColor(red8: 48, green8: 48, blue8: 48, alpha8: 230)
+    public var hoverChipTextColor: QmlColor = QmlColor(red8: 255, green8: 255, blue8: 255)
+    public var hoverChipFont: QmlFont
     public var hoverChipRadius: Double = 0
 
     public init(typography: Typography = Typography(baseFontPx: 13)) {
-        hoverChipFont = typography.caption.map
+        hoverChipFont = typography.caption.qmlFont
     }
 
     @QtIgnored
     func rebuildHover(_ input: GridSceneInput) {
         let m = input.metrics
         let p = input.palette
-        hoverChipFont = input.fontSpec(.chip)
+        let font = input.fontSpec(.chip)
+        if hoverChipFont != font { hoverChipFont = font }
         var chipVisible = false
         if input.hoverKey >= 0, input.typography != nil {
             let row = input.camera.projection.row(forPitch: input.hoverKey)
@@ -163,13 +254,10 @@ public final class GridScene {
                 chipVisible = true
             }
         }
-        hoverChipVisible = chipVisible
-        hoverChipFill = p.hoverChipFill
-        hoverChipTextColor = p.hoverChipText
-        hoverChipRadius = m.chipRadius
-        // The hover highlight is emitted keyboard-list content: hover-only
-        // moves rebuild the lists and bump displayRevision once. The frame
-        // key makes this a no-op when hover and camera are unchanged.
+        if hoverChipVisible != chipVisible { hoverChipVisible = chipVisible }
+        if hoverChipFill != p.hoverChipFill { hoverChipFill = p.hoverChipFill }
+        if hoverChipTextColor != p.hoverChipText { hoverChipTextColor = p.hoverChipText }
+        if hoverChipRadius != m.chipRadius { hoverChipRadius = m.chipRadius }
         rebuildDisplayLists(input)
     }
 
@@ -199,7 +287,7 @@ public final class GridScene {
         }
         let name = input.keyboardNames?[input.hoverKey] ?? ""
         let text = name.isEmpty ? GridScene.keyName(input.hoverKey) : name
-        hoverChipText = text
+        if hoverChipText != text { hoverChipText = text }
         let width =
             (keyboardChipWidths?[input.hoverKey]
                 ?? (name.isEmpty
@@ -211,12 +299,10 @@ public final class GridScene {
             max(0, (top + bottom) / 2 - height / 2),
             max(0, snapshot.rollHeight - height))
         let x = max(0, m.keyboardWidth - m.chipRightInset - width)
-        guard
-            hoverChipRect["x"] as? Double != x || hoverChipRect["y"] as? Double != y
-                || hoverChipRect["width"] as? Double != width
-                || hoverChipRect["height"] as? Double != height
-        else { return }
-        hoverChipRect = ["x": x, "y": y, "width": width, "height": height]
+        if hoverChipX != x { hoverChipX = x }
+        if hoverChipY != y { hoverChipY = y }
+        if hoverChipWidth != width { hoverChipWidth = width }
+        if hoverChipHeight != height { hoverChipHeight = height }
     }
 
     static func isBlackKey(_ key: Int) -> Bool {

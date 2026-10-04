@@ -1,5 +1,4 @@
 import Foundation
-import QtBridge
 
 /// The legacy popup's font-relative chrome and graph-local editing canvas, in DIPs.
 public struct PitchBendGeometry {
@@ -54,23 +53,6 @@ public struct PitchBendGeometry {
         curveStroke = fontPxF(b, 1.0 / 7.0)
         scrubThreshold = fontPxF(b, 3.0 / 14.0)
         hairline = physicalPixel(dpr)
-    }
-
-    public var metrics: [String: QVariantSettable] {
-        [
-            "popupWidth": popupWidth, "popupHeight": popupHeight,
-            "headerHeight": headerHeight, "graphHeight": graphHeight,
-            "outerInset": outerInset, "titleHeight": titleHeight,
-            "descriptionHeight": descriptionHeight, "controlsHeight": controlsHeight,
-            "fieldWidth": fieldWidth, "fieldHeight": fieldHeight,
-            "resetWidth": resetWidth, "resetHeight": resetHeight,
-            "axisLabelHeight": axisLabelHeight, "hairline": hairline,
-            "scrubThreshold": scrubThreshold,
-        ]
-    }
-
-    public var canvasRect: [String: QVariantSettable] {
-        ["x": canvasX, "y": canvasY, "width": canvasWidth, "height": canvasHeight]
     }
 
     public func contains(_ x: Double, _ y: Double) -> Bool {

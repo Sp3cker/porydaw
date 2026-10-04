@@ -13,8 +13,30 @@ public final class PitchBendPresenter {
     @QtTracked public var lfoSpeed = 22
     @QtTracked public var noteDescription = ""
     @QtTracked public var description = ""
-    public var metrics: [String: QVariantSettable] = [:]
-    public var appearance: [String: QVariantSettable] = [:]
+    public var popupWidth: Double = 0
+    public var popupHeight: Double = 0
+    public var headerHeight: Double = 0
+    public var graphHeight: Double = 0
+    public var outerInset: Double = 0
+    public var titleHeight: Double = 0
+    public var descriptionHeight: Double = 0
+    public var controlsHeight: Double = 0
+    public var fieldWidth: Double = 0
+    public var fieldHeight: Double = 0
+    public var resetWidth: Double = 0
+    public var resetHeight: Double = 0
+    public var axisLabelHeight: Double = 0
+    public var hairline: Double = 0
+    public var scrubThreshold: Double = 0
+    public var windowBackground: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
+    public var primaryText: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
+    public var secondaryText: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
+    public var outline: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
+    public var trackColor: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
+    public var titleFont: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
+    public var captionFont: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
+    public var monospaceFont: QmlFont = QmlFont(family: gridMonoFamily, pixelSize: 13)
+    @QtTracked public var promptStyle = PromptStyle()
     @QtTracked public var anchorX = 0.0
     @QtTracked public var anchorY = 0.0
     @QtTracked public var anchorWidth = 0.0
@@ -63,31 +85,40 @@ public final class PitchBendPresenter {
             typography = Typography(baseFontPx: nextBase)
         }
         geometry = PitchBendGeometry(fontPx: fontPx, lineSpacing: lineSpacing, dpr: dpr)
-        metrics = geometry.metrics
-        appearance = [
-            "windowBackground": palette.windowBackground,
-            "primaryText": palette.primaryText,
-            "secondaryText": palette.secondaryText,
-            "outline": palette.outline,
-            "trackColor": palette.noteFill(track: note?.track ?? 0, velocity: 127),
-            "titleFont": typography.bodyBold.map,
-            "captionFont": typography.caption.map,
-            "monospaceFont": typography.bodyMono.map,
-            "dragInput": [
-                "background": palette.buttonBackground,
-                "text": palette.buttonText,
-                "outline": palette.outline,
-                "focus": palette.focusOutline,
-                "selection": palette.tabSelectedBackground,
-                "selectionText": palette.selectionText,
-                "font": typography.body.map,
-                "radius": Double(typography.space(.one)),
-                "borderWidth": geometry.hairline,
-                "horizontalPadding": Double(typography.space(.one)),
-                "verticalPadding": Double(typography.space(.half)),
-                "dragThreshold": geometry.scrubThreshold,
-            ] as [String: QVariantSettable],
-        ]
+        setPublished(popupWidth, geometry.popupWidth) { popupWidth = $0 }
+        setPublished(popupHeight, geometry.popupHeight) { popupHeight = $0 }
+        setPublished(headerHeight, geometry.headerHeight) { headerHeight = $0 }
+        setPublished(graphHeight, geometry.graphHeight) { graphHeight = $0 }
+        setPublished(outerInset, geometry.outerInset) { outerInset = $0 }
+        setPublished(titleHeight, geometry.titleHeight) { titleHeight = $0 }
+        setPublished(descriptionHeight, geometry.descriptionHeight) { descriptionHeight = $0 }
+        setPublished(controlsHeight, geometry.controlsHeight) { controlsHeight = $0 }
+        setPublished(fieldWidth, geometry.fieldWidth) { fieldWidth = $0 }
+        setPublished(fieldHeight, geometry.fieldHeight) { fieldHeight = $0 }
+        setPublished(resetWidth, geometry.resetWidth) { resetWidth = $0 }
+        setPublished(resetHeight, geometry.resetHeight) { resetHeight = $0 }
+        setPublished(axisLabelHeight, geometry.axisLabelHeight) { axisLabelHeight = $0 }
+        setPublished(hairline, geometry.hairline) { hairline = $0 }
+        setPublished(scrubThreshold, geometry.scrubThreshold) { scrubThreshold = $0 }
+        setPublished(windowBackground, palette.windowBackground) { windowBackground = $0 }
+        setPublished(primaryText, palette.primaryText) { primaryText = $0 }
+        setPublished(secondaryText, palette.secondaryText) { secondaryText = $0 }
+        setPublished(outline, palette.outline) { outline = $0 }
+        setPublished(
+            trackColor, PaletteMath.qmlColor(argb: palette.noteFillArgb(track: note?.track ?? 0, velocity: 127))
+        ) {
+            trackColor = $0
+        }
+        setPublished(titleFont, typography.bodyBold.qmlFont) { titleFont = $0 }
+        setPublished(captionFont, typography.caption.qmlFont) { captionFont = $0 }
+        setPublished(monospaceFont, typography.bodyMono.qmlFont) { monospaceFont = $0 }
+        var promptMetrics = PromptAppearance.Layout(base: fontPx)
+        promptMetrics.radius = Double(typography.space(.one))
+        promptMetrics.borderWidth = geometry.hairline
+        promptMetrics.dragThreshold = geometry.scrubThreshold
+        promptStyle.update(
+            metrics: promptMetrics, palette: palette, font: typography.body.qmlFont,
+            surface: .pitchBend)
         currentPitch?.refreshGeometry(geometry: geometry)
         currentMod?.refreshGeometry(geometry: geometry)
     }

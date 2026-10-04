@@ -1,21 +1,15 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
+import PorydawApp
 
 PromptCard {
     id: prompt
 
-    required property var bridge
-    // The host supplies the pressed and disabled inks missing from the map.
-    property var promptPalette: null
+    required final property RulerMenuPresenter bridge
 
     objectName: "insertTimePrompt"
-    appearance: Object.assign({}, bridge.insertTimePromptAppearance, {
-        font: Qt.font(bridge.insertTimePromptFont),
-        // Pressed text must match the hoverChipFill surface.
-        pressedText: prompt.promptPalette?.hoverChipText ?? "transparent",
-        disabledText: prompt.promptPalette?.disabledText ?? "transparent"
-    })
+    appearance: bridge.promptStyle
 
     property int draftBars: bridge.insertTimePromptInitialBars
     property int draftBeats: bridge.insertTimePromptInitialBeats
@@ -34,14 +28,17 @@ PromptCard {
         font: prompt.appearance.font
     }
     function acceptDisplayed(): void {
-        acceptCommittedDrafts(barsInput.commitDisplayed(), beatsInput.commitDisplayed(),
-                              fractionsInput.commitDisplayed())
+        const bars = barsInput.commitDisplayed()
+        const beats = beatsInput.commitDisplayed()
+        const fractions = fractionsInput.commitDisplayed()
+        acceptCommittedDrafts(bars, beats, fractions)
     }
 
     function acceptFromEditing(field: string, committed: int): void {
-        acceptCommittedDrafts(field === "bars" ? committed : barsInput.commitDisplayed(),
-                              field === "beats" ? committed : beatsInput.commitDisplayed(),
-                              field === "fractions" ? committed : fractionsInput.commitDisplayed())
+        const bars = field === "bars" ? committed : barsInput.commitDisplayed()
+        const beats = field === "beats" ? committed : beatsInput.commitDisplayed()
+        const fractions = field === "fractions" ? committed : fractionsInput.commitDisplayed()
+        acceptCommittedDrafts(bars, beats, fractions)
     }
 
     function acceptCommittedDrafts(bars: var, beats: var, fractions: var): void {

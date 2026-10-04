@@ -3,14 +3,15 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import PorydawStyle
 import QtQuick.Layouts
+import PorydawApp
 
 // Legacy About content uses theme ink and fixed font-derived geometry.
 // The bottom-up body layout avoids dialog implicit-size feedback.
 Dialog {
     id: about
     objectName: "shellAboutDialog"
-    required property QtObject colors
-    required property QtObject applicationSession
+    required property GridPalette colors
+    required property ApplicationSession applicationSession
     required property real baseFontPx
     // Qt has no qVersion() binding; the application version feeds the heading.
     property string porydawVersion: Qt.application.version
@@ -20,7 +21,7 @@ Dialog {
     modal: true
     focus: true
     standardButtons: Dialog.Close
-    font: Qt.font(applicationSession.typographyFonts.body)
+    font: about.applicationSession.typographyFonts.body
     width: Math.min(parent.width - 4 * baseFontPx,
                     aboutMetrics.averageCharacterWidth * 68 + 4 * baseFontPx)
     height: Math.min(parent.height - 4 * baseFontPx,

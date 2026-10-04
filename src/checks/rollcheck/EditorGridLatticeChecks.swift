@@ -155,7 +155,8 @@ func checkContentWindowBoundaryReversal(_ report: CheckReport) {
     _ = camera.setHScroll(1023)
     var input = GridSceneInput(
         metrics: metrics, grid: RollGrid(axis: axis, clockTicks: 1, metrics: metrics),
-        palette: GridPalette(), camera: camera, fontSpec: { _ in [:] })
+        palette: GridPalette(), camera: camera,
+        fontSpec: { _ in Typography(baseFontPx: 13).caption.qmlFont })
     let scene = GridScene()
     scene.rebuildStatic(input)
     scene.rebuildNotes(input)

@@ -102,10 +102,15 @@ public final class AutomationPage: EditorDrawerPage {
 
     // MARK: Published primitives
 
-    public var captionFont: [String: QVariantSettable] = [:]
-    public var titleFont: [String: QVariantSettable] = [:]
-    public var noteNameFont: [String: QVariantSettable] = [:]
-    public var minimumFont: [String: QVariantSettable] = [:]
+    public var captionFont: QmlFont = QmlFont(
+        family: gridBodyFamily, pixelSize: Int(AutomationPagePolicy.seedBaseFontPx))
+    public var titleFont: QmlFont = QmlFont(
+        family: gridBodyFamily, pixelSize: Int(AutomationPagePolicy.seedBaseFontPx))
+    public var noteNameFont: QmlFont = QmlFont(
+        family: gridBodyFamily, pixelSize: Int(AutomationPagePolicy.seedBaseFontPx))
+    public var minimumFont: QmlFont = QmlFont(
+        family: gridBodyFamily, pixelSize: Int(AutomationPagePolicy.seedBaseFontPx))
+    public var selectorInset: Double = 0
     public var pipExtent: Double = 0
     public var minimumCellHeight: Double = 0
     /// One published selector tab per catalog parameter, in selector order, and
@@ -131,26 +136,26 @@ public final class AutomationPage: EditorDrawerPage {
     public var ghostNameLabels: QListModel<SceneText> = QListModel()
     /// The range press's own band, drawn in plot coordinates.
     public var bandVisible: Bool = false
-    public var bandRect: [String: QVariantSettable] = AutomationPage.rect(0, 0, 0, 0)
+    @QtTracked public var bandRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: PaletteMath.qmlColor(argb: 0))
     /// The hover value label: the node's or the held value's own text.
     public var hoverVisible: Bool = false
     public var hoverText: String = ""
-    public var hoverLabelRect: [String: QVariantSettable] = AutomationPage.rect(0, 0, 0, 0)
+    @QtTracked public var hoverLabelRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: PaletteMath.qmlColor(argb: 0))
     public var hoverTick: Double = 0
-    /// One QtBridge notification drives both the drawn node hover ring and its
-    /// value label; separate node-model and label notifications can straddle a frame.
-    public var hoverDisplay: [String: QVariantSettable] = [
-        "visible": false, "text": "", "hasNode": false, "nodeTick": 0.0,
-        "x": 0.0, "y": 0.0, "width": 0.0, "height": 0.0,
-    ]
+    /// Ring, guide and label fields are updated together in the bridge flush.
+    @QtTracked public var hoverDisplay = AutomationHoverDisplay()
     /// The frozen gesture's own value readout: one text per move.
     public var previewLabelVisible: Bool = false
     public var previewLabelText: String = ""
-    public var previewLabelRect: [String: QVariantSettable] = AutomationPage.rect(0, 0, 0, 0)
+    @QtTracked public var previewLabelRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: PaletteMath.qmlColor(argb: 0))
     /// The effective context readout: the parameter, its held value and the tick.
     public var readoutVisible: Bool = false
     public var readoutText: String = ""
-    public var readoutRect: [String: QVariantSettable] = AutomationPage.rect(0, 0, 0, 0)
+    @QtTracked public var readoutRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: PaletteMath.qmlColor(argb: 0))
     /// The plot's accessible description: the parameter title and its readout.
     public var accessibleDescription: String = AutomationPagePolicy.accessibleName
     /// `AutomationCursorKind`'s raw value.
@@ -167,9 +172,15 @@ public final class AutomationPage: EditorDrawerPage {
     public var menuChildRows: QListModel<AutomationMenuRowHandle> = QListModel()
     public var menuRowCount: Int = 0
     public var menuChildRowCount: Int = 0
+
+    public func menuRow(index: Int, child: Bool) -> Optional<AutomationMenuRowHandle> {
+        let rows = child ? menuChildRows : menuRows
+        guard index >= 0, index < rows.count else { return nil }
+        return rows[index]
+    }
     public var promptOpen: Bool = false
-    public var promptAppearance: [String: QVariantSettable] = [:]
-    public var promptFont: [String: QVariantSettable] = [:]
+    @QtTracked public var promptStyle = PromptStyle()
+    @QtTracked public var promptInputStyle = PromptStyle()
     public var promptInputWidth: Int = 0
     public var promptKind: Int = 0
     public var promptTitle: String = ""

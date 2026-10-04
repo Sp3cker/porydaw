@@ -2,10 +2,6 @@ import NativeGridTypography
 import PorydawCore
 import QtBridge
 
-// Automation overlay publication: the pointer-, band- and gesture-dependent
-// primitives, the label/readout geometry, the prompt, menu and tap-tempo
-// publications, the typography metrics, and the shared metrics and model
-// synchronisation every publication routes through.
 
 @MainActor
 extension AutomationPage {
@@ -22,7 +18,7 @@ extension AutomationPage {
     func publishBand() {
         guard let session, let band, band.active else {
             if bandVisible { bandVisible = false }
-            bandRect = Self.rect(0, 0, 0, 0)
+            updateRect(bandRect, (0, 0, 0, 0))
             return
         }
         let projection = makeProjection(
@@ -32,7 +28,7 @@ extension AutomationPage {
         let x0 = min(max(0, projection.x(min(band.anchorTick, band.currentTick))), limit)
         let x1 = min(max(0, projection.x(max(band.anchorTick, band.currentTick))), limit)
         bandVisible = true
-        bandRect = Self.rect(x0, 0, max(0, x1 - x0), plotHeight)
+        updateRect(bandRect, (x0, 0, max(0, x1 - x0), plotHeight))
     }
 
     /// The hover label: the value the lane holds under the pointer, at
@@ -47,7 +43,6 @@ extension AutomationPage {
             let hovered = hoveredTick == node.tick
             if node.hovered != hovered {
                 node.hovered = hovered
-                node.refreshSpec()
                 nodes[index] = node
             }
         }
@@ -55,15 +50,11 @@ extension AutomationPage {
             let wasVisible = hoverVisible
             hoverVisible = false
             if wasVisible {
-                hoverDisplay = [
-                    "visible": false, "text": "", "hasNode": false, "nodeTick": 0.0,
-                    "guideX": 0.0, "ghostY": 0.0, "hasGhost": false,
-                    "x": 0.0, "y": 0.0, "width": 0.0, "height": 0.0,
-                ]
+                hoverDisplay.update(visible: false)
             }
             hoverText = ""
             hoverTick = 0
-            hoverLabelRect = Self.rect(0, 0, 0, 0)
+            updateRect(hoverLabelRect, (0, 0, 0, 0))
             return
         }
         if !hover.hasPoint && !ghostParameters.isEmpty {
@@ -81,14 +72,8 @@ extension AutomationPage {
                 hoverVisible = true
                 hoverText = label
                 hoverTick = Double(hover.tick)
-                hoverLabelRect = rect
-                hoverDisplay = [
-                    "visible": true, "text": label, "hasNode": false,
-                    "nodeTick": 0.0, "guideX": 0.0, "ghostY": 0.0,
-                    "hasGhost": false, "x": rect["x"] ?? 0.0,
-                    "y": rect["y"] ?? 0.0, "width": rect["width"] ?? 0.0,
-                    "height": rect["height"] ?? 0.0,
-                ]
+                updateRect(hoverLabelRect, rect)
+                hoverDisplay.update(visible: true, text: label, rect: rect)
                 return
             }
         }
@@ -98,19 +83,16 @@ extension AutomationPage {
         hoverVisible = true
         hoverText = hover.text
         hoverTick = Double(hover.tick)
-        hoverLabelRect = labelRect(
+        let rect = labelRect(
             text: hover.text, tick: hover.tick, x: hoverX,
             valueY: hover.value.map { projection.y($0, metadata: metadata) })
-        hoverDisplay = [
-            "visible": true, "text": hover.text, "hasNode": hoveredTick != nil,
-            "nodeTick": hoveredTick ?? 0.0,
-            "guideX": projection.x(hover.tick),
-            "ghostY": hover.value.map { projection.y($0, metadata: metadata) } ?? 0.0,
-            "hasGhost": !hover.hasPoint && hover.value != nil,
-            "x": hoverLabelRect["x"] ?? 0.0, "y": hoverLabelRect["y"] ?? 0.0,
-            "width": hoverLabelRect["width"] ?? 0.0,
-            "height": hoverLabelRect["height"] ?? 0.0,
-        ]
+        updateRect(hoverLabelRect, rect)
+        hoverDisplay.update(
+            visible: true, text: hover.text, hasNode: hoveredTick != nil,
+            nodeTick: hoveredTick ?? 0,
+            guideX: projection.x(hover.tick),
+            ghostY: hover.value.map { projection.y($0, metadata: metadata) } ?? 0,
+            hasGhost: !hover.hasPoint && hover.value != nil, rect: rect)
     }
 
     /// The frozen gesture's draft: one marker per point it would commit, the lane
@@ -137,7 +119,7 @@ extension AutomationPage {
             publishDrawingContent()
             previewLabelVisible = false
             previewLabelText = ""
-            previewLabelRect = Self.rect(0, 0, 0, 0)
+            updateRect(previewLabelRect, (0, 0, 0, 0))
             return
         }
         publishDrawingContent()
@@ -150,22 +132,25 @@ extension AutomationPage {
         guard let last = labelPoint, !previewText.isEmpty else {
             previewLabelVisible = false
             previewLabelText = ""
-            previewLabelRect = Self.rect(0, 0, 0, 0)
+            updateRect(previewLabelRect, (0, 0, 0, 0))
             return
         }
         previewLabelText = previewText
         previewLabelVisible = true
-        previewLabelRect = labelRect(
+        updateRect(
+            previewLabelRect,
+            labelRect(
             text: previewText, tick: last.tick,
             x: projection.x(last.tick),
-            valueY: projection.y(last.value, metadata: facts.metadata))
+                valueY: projection.y(last.value, metadata: facts.metadata)))
     }
 
     func publishGhostNames(_ session: DocumentSession) {
         let height = captionMetrics?.height ?? fontPx(baseFontPx, 1)
         let pad = fontPx(baseFontPx, 0.5)
         let projected = ghostProjections(session)
-        var labels: [SceneText] = []
+        let font = Typography(baseFontPx: Int(baseFontPx.rounded())).caption.qmlFont
+        var labels: [SceneTextValue] = []
         for (index, lane) in projected.enumerated() {
             guard let value = lane.heldValue(at: lane.points.last?.tick ?? 0),
                 index < ghostLabels.count
@@ -182,14 +167,16 @@ extension AutomationPage {
             let curveY = projection.y(value, metadata: lane.metadata)
             let y = min(max(0, curveY - height / 2), max(0, plotHeight - height))
             labels.append(
-                SceneText(
+                SceneTextValue(
                     rect: (max(0, plotWidth - width - pad), y, width, height),
-                    text: text, color: palette.primaryText, font: captionFont))
+                    text: text, color: palette.primaryText, font: font))
         }
         syncTexts(ghostNameLabels, labels)
     }
 
-    func hoverGhostRect(text: String, x: Double, curveY: Double) -> [String: QVariantSettable] {
+    func hoverGhostRect(
+        text: String, x: Double, curveY: Double
+    ) -> (x: Double, y: Double, width: Double, height: Double) {
         let height = noteNameMetrics?.height ?? fontPx(baseFontPx, 1)
         let pad = fontPx(baseFontPx, 0.5)
         let width = min(
@@ -197,7 +184,7 @@ extension AutomationPage {
             max(
                 fontPx(baseFontPx, 2),
                 (noteNameMetrics?.advance(text) ?? 0).rounded()))
-        return Self.rect(
+        return (
             min(max(0, x - width / 2), max(0, plotWidth - width)),
             min(max(0, curveY - height - pad), max(0, plotHeight - height)),
             width, height)
@@ -208,7 +195,7 @@ extension AutomationPage {
     func labelRect(
         text: String, tick: Tick, x: Double,
         valueY: Double?
-    ) -> [String: QVariantSettable] {
+    ) -> (x: Double, y: Double, width: Double, height: Double) {
         let height = noteNameMetrics?.height ?? fontPx(baseFontPx, 1)
         let width = max(fontPx(baseFontPx, 2), (noteNameMetrics?.advance(text) ?? 0).rounded())
         let gap = fontPx(baseFontPx, 1)
@@ -216,7 +203,7 @@ extension AutomationPage {
         let originX = min(max(0, anchor), max(0, plotWidth - width))
         let centerY = valueY ?? plotHeight / 2
         let originY = min(max(0, centerY - height / 2), max(0, plotHeight - height))
-        return Self.rect(originX.rounded(), originY.rounded(), width, height)
+        return (originX.rounded(), originY.rounded(), width, height)
     }
 
     /// The readout's own rectangle: the parameter title's width at the plot's
@@ -227,14 +214,18 @@ extension AutomationPage {
         let width = min(
             max(0, plotWidth - 2 * pad),
             max(fontPx(baseFontPx, 4), (titleMetrics?.advance(readoutText) ?? 0).rounded()))
-        readoutRect = Self.rect(
+        updateRect(
+            readoutRect,
+            (
             max(0, plotWidth - width - pad).rounded(), pad.rounded(),
-            width, height)
+                width, height
+            ))
     }
 
     /// The open prompt's published form: the captured value form or the captured
     /// lane-delete confirmation.
     func publishPrompt() {
+        refreshPromptStyles()
         if let prompt {
             promptKind = AutomationPromptKind.value.rawValue
             promptTitle = prompt.prompt.title
@@ -297,33 +288,26 @@ extension AutomationPage {
         captionMetrics = AutomationCaption(font: typography.caption)
         titleMetrics = AutomationCaption(font: typography.captionBold)
         noteNameMetrics = AutomationCaption(font: typography.noteName)
-        setFont(&captionFont, typography.caption.map)
-        setFont(&titleFont, typography.captionBold.map)
-        setFont(&noteNameFont, typography.noteName.map)
-        setFont(&minimumFont, typography.captionMinimum.map)
-        promptAppearance = PromptAppearance.metrics(base: baseFontPx)
-        setFont(&promptFont, PromptAppearance.font(typography: typography))
+        setPublished(captionFont, typography.caption.qmlFont) { captionFont = $0 }
+        setPublished(titleFont, typography.captionBold.qmlFont) { titleFont = $0 }
+        setPublished(noteNameFont, typography.noteName.qmlFont) { noteNameFont = $0 }
+        setPublished(minimumFont, typography.captionMinimum.qmlFont) { minimumFont = $0 }
+        setPublished(selectorInset, Double(typography.space(.one))) { selectorInset = $0 }
+        refreshPromptStyles()
         promptInputWidth = typography.fontPx(16)
         pipExtent = Double(typography.fontPx(0.5))
         minimumCellHeight = typography.fontPxF(4.0 / 3.0)
     }
 
-    func setFont(
-        _ storage: inout [String: QVariantSettable],
-        _ value: [String: QVariantSettable]
-    ) {
-        guard !Self.fontMatches(storage, value) else { return }
-        storage = value
-    }
-
-    static func fontMatches(
-        _ lhs: [String: QVariantSettable],
-        _ rhs: [String: QVariantSettable]
-    ) -> Bool {
-        lhs.count == rhs.count
-            && lhs.allSatisfy {
-                String(describing: $1) == String(describing: rhs[$0])
-            }
+    func refreshPromptStyles() {
+        let typography = Typography(baseFontPx: Int(baseFontPx.rounded()))
+        let metrics = PromptAppearance.Layout(base: baseFontPx)
+        promptStyle.update(
+            metrics: metrics, palette: palette, font: typography.body.qmlFont,
+            surface: .automation)
+        promptInputStyle.update(
+            metrics: metrics, palette: palette, font: typography.body.qmlFont,
+            surface: .input)
     }
 
     // MARK: Internals: shared metrics
@@ -343,23 +327,14 @@ extension AutomationPage {
             outlineWidth: fontPxF(baseFontPx, 1.0 / 12.0))
     }
 
-    static func rect(
-        _ x: Double, _ y: Double, _ width: Double,
-        _ height: Double
-    ) -> [String: QVariantSettable] {
-        ["x": x, "y": y, "width": width, "height": height]
-    }
-
-    static func rectMatches(
-        _ lhs: [String: QVariantSettable],
-        _ rhs: [String: QVariantSettable]
-    ) -> Bool {
-        for key in ["x", "y", "width", "height"] {
-            guard let left = lhs[key] as? Double, let right = rhs[key] as? Double,
-                left == right
-            else { return false }
-        }
-        return true
+    func updateRect(
+        _ rect: SceneRect,
+        _ value: (x: Double, y: Double, width: Double, height: Double)
+    ) {
+        setPublished(rect.x, value.x) { rect.x = $0 }
+        setPublished(rect.y, value.y) { rect.y = $0 }
+        setPublished(rect.width, value.width) { rect.width = $0 }
+        setPublished(rect.height, value.height) { rect.height = $0 }
     }
 
     static func identityText(_ identity: AutomationPointIdentity) -> String {
@@ -368,14 +343,20 @@ extension AutomationPage {
 
     // MARK: Internals: model synchronisation
 
-    func syncTexts(_ model: QListModel<SceneText>, _ texts: [SceneText]) {
+    func syncTexts(_ model: QListModel<SceneText>, _ texts: [SceneTextValue]) {
         model.update {
             let common = min(model.count, texts.count)
-            for index in 0..<common where !Self.textMatches(model[index], texts[index]) {
-                model[index] = texts[index]
+            for index in 0..<common {
+                let row = model[index]
+                if row.update(texts[index]) { model[index] = row }
             }
-            if model.count != texts.count {
-                model.replaceSubrange(common..<model.count, with: texts[common...])
+            if model.count > texts.count {
+                model.replaceSubrange(texts.count..<model.count, with: [])
+            } else {
+                for index in common..<texts.count {
+                    model.replaceSubrange(
+                        model.count..<model.count, with: CollectionOfOne(SceneText(texts[index])))
+                }
             }
         }
     }
@@ -390,15 +371,33 @@ extension AutomationPage {
         }
     }
 
-    func syncNodes(_ values: [AutomationNodeHandle]) {
-        nodeSnapshots = values
+    func syncNodes(_ values: [AutomationNodeValue]) {
+        syncNodeRows(nodes, values)
         if nodeCount != values.count { nodeCount = values.count }
-        let common = min(nodes.count, values.count)
-        for index in 0..<common where !nodes[index].matches(values[index]) {
-            nodes[index] = values[index]
+        if nodeSnapshots.count > values.count {
+            nodeSnapshots.removeSubrange(values.count..<nodeSnapshots.count)
+        } else {
+            for index in nodeSnapshots.count..<values.count {
+                nodeSnapshots.append(nodes[index])
+            }
         }
-        if nodes.count != values.count {
-            nodes.replaceSubrange(common..<nodes.count, with: values[common...])
+    }
+
+    func syncNodeRows(_ model: QListModel<AutomationNodeHandle>, _ values: [AutomationNodeValue]) {
+        model.update {
+            let common = min(model.count, values.count)
+            for index in 0..<common {
+                let row = model[index]
+                if row.update(values[index]) { model[index] = row }
+            }
+            if model.count > values.count {
+                model.replaceSubrange(values.count..<model.count, with: [])
+            } else {
+                for index in common..<values.count {
+                    model.replaceSubrange(
+                        model.count..<model.count, with: CollectionOfOne(AutomationNodeHandle(values[index])))
+                }
+            }
         }
     }
 
@@ -412,16 +411,6 @@ extension AutomationPage {
         }
     }
 
-    static func textMatches(_ lhs: SceneText, _ rhs: SceneText) -> Bool {
-        lhs.labelText == rhs.labelText && lhs.labelColor == rhs.labelColor
-            && lhs.labelBackground == rhs.labelBackground
-            && lhs.labelHorizontalAlignment == rhs.labelHorizontalAlignment
-            && lhs.labelVerticalAlignment == rhs.labelVerticalAlignment
-            && fontMatches(lhs.labelFont, rhs.labelFont)
-            && rectMatches(lhs.labelRect, rhs.labelRect)
-            && rectMatches(lhs.labelBackgroundRect, rhs.labelBackgroundRect)
-            && rectMatches(lhs.labelClipRect, rhs.labelClipRect)
-    }
 }
 
 /// Caption and title metrics for the page's own labels, measured through the same

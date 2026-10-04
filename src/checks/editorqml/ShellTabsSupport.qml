@@ -27,7 +27,7 @@ TestCase {
     Component { id: fixtureShellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
     FontMetrics {
         id: fixtureBodyMetrics
-        font: shell ? Qt.font(shell.shellPresenter.session.typographyFonts.body)
+        font: shell ? shell.shellPresenter.session.typographyFonts.body
                     : Qt.font({family: "Atkinson Hyperlegible Next"})
     }
     function init() {

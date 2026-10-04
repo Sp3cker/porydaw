@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
-import "../../ui/shell"
+import Porydaw.Ui
 import "NativeWait.js" as NativeWait
 
 TestCase {
@@ -116,7 +116,8 @@ TestCase {
         menu.open()
         verify(waitForNative(function() { return menu.visible }, 3000), "Edit menu opens")
         const action = child("shellAction_edit.song_settings")
-        verify(action && action.enabled, "Song Settings is enabled")
+        verify(action !== null, "Song Settings is mounted")
+        tryCompare(action, "enabled", true, 3000, "Song Settings is enabled")
         mouseClick(action, action.width / 2, action.height / 2)
         verify(waitForNative(function() {
             const dialog = child("shellSettingsDialog")
@@ -342,7 +343,7 @@ TestCase {
         fileMenu.open()
         verify(waitForNative(function() { return fileMenu.visible }, 3000), "File menu opens")
         const registerAction = child("shellAction_file.register_song")
-        verify(registerAction.enabled, "Register Song is enabled")
+        tryCompare(registerAction, "enabled", true, 3000, "Register Song is enabled")
         mouseClick(registerAction, registerAction.width / 2, registerAction.height / 2)
         verify(waitForNative(function() {
             const confirm = child("songConfirmationDialog")

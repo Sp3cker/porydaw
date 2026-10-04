@@ -38,7 +38,7 @@ TestCase {
         id: overlayComponent
 
         SwiftRollOverlay {
-            property var appSession: session
+            applicationSession: session
         }
     }
 
@@ -296,10 +296,10 @@ TestCase {
         var dpr = image.width / testCase.width
         var px = Math.floor(center.x * dpr)
         var py = Math.floor(center.y * dpr)
-        var ink = parseInt(g.palette.selectionRing.slice(1), 16)
-        var red = (ink >> 16) & 255
-        var green = (ink >> 8) & 255
-        var blue = ink & 255
+        var ink = g.palette.selectionRing
+        var red = Math.round(ink.r * 255)
+        var green = Math.round(ink.g * 255)
+        var blue = Math.round(ink.b * 255)
         verify(Math.abs(image.red(px, py) - red) <= 2
                && Math.abs(image.green(px, py) - green) <= 2
                && Math.abs(image.blue(px, py) - blue) <= 2,

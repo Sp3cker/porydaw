@@ -270,10 +270,8 @@ EditorDrawerTestSupport {
         verify(ghost.x > plot.width / 2 && ghost.x + ghost.width <= plot.width,
                "the pinned Tempo label hugs the plot's right half")
         var caption = findChild(ghost, "automationGhostCaption")
-        verify(String(ghost.color).toLowerCase()
-               === testCase.drawerPalette().chromeBackground.toLowerCase()
-               && String(caption.color).toLowerCase()
-                  === testCase.drawerPalette().windowText.toLowerCase(),
+        verify(Qt.colorEqual(ghost.color, testCase.drawerPalette().chromeBackground)
+               && Qt.colorEqual(caption.color, testCase.drawerPalette().windowText),
                "the pinned ghost caption paints window ink on opaque chrome")
         mouseMove(AutomationTabsSupport.automationGutter(testCase), 2, 2)
         waitForRendering(testCase.surface)

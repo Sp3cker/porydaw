@@ -10,8 +10,7 @@ public final class HeaderVoicePicker {
     @QtTracked public var pickerIndex = -1
     @QtTracked public var pickerHasMatch = false
     @QtTracked public var pickerRows = QListModel<VoicePickerRowHandle>()
-    public var promptAppearance: [String: QVariantSettable]
-    public var promptFont: [String: QVariantSettable]
+    @QtTracked public var promptStyle = PromptStyle()
 
     @QtIgnored public var onOpenChanged: ((Bool) -> Void)?
     @QtIgnored public var onComplete: ((Int) -> Void)?
@@ -25,9 +24,9 @@ public final class HeaderVoicePicker {
 
     public init(headers: TrackHeadersPresenter, typography: Typography) {
         self.headers = headers
-        let base = Double(typography.baseFontPx)
-        promptAppearance = PromptAppearance.metrics(base: base)
-        promptFont = PromptAppearance.font(typography: typography)
+        promptStyle.update(
+            metrics: PromptAppearance.Layout(base: Double(typography.baseFontPx)),
+            palette: headers.palette, font: typography.body.qmlFont)
     }
 
     @QtIgnored
@@ -36,6 +35,7 @@ public final class HeaderVoicePicker {
             let request = headers.pendingVoice, request.track == track,
             request.matches(session.document)
         else { return }
+        refreshPromptStyle(headers)
         releasePickerAudition()
         cache.refresh(slots: session.bankSlots)
         cache.resolve(filter: "")
@@ -57,6 +57,7 @@ public final class HeaderVoicePicker {
             cancelPicker()
             return
         }
+        refreshPromptStyle(headers)
         releasePickerAudition()
         cache.refresh(slots: session.bankSlots)
         cache.resolve(filter: pickerFilter)
@@ -136,6 +137,12 @@ public final class HeaderVoicePicker {
         publishedRows = []
         pickerRows.reset(to: [])
         onOpenChanged?(false)
+    }
+
+    private func refreshPromptStyle(_ headers: TrackHeadersPresenter) {
+        promptStyle.update(
+            metrics: PromptAppearance.Layout(base: headers.baseFontPx),
+            palette: headers.palette, font: headers.fontRoles.body.qmlFont)
     }
 
     @QtIgnored

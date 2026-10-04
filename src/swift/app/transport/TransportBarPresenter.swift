@@ -30,6 +30,7 @@ public final class TransportBarPresenter: QmlUncreatable {
     @QtTracked public var cgbText = ""
     @QtTracked public var lostText = ""
     @QtTracked public var lostVisible = false
+    @QtTracked public var promptStyle = PromptStyle()
     private weak var keyDocument: SongDocument?
     private var keyRevision: UInt64 = 0
     private var keyEvents: [(tick: Tick, label: String)] = []
@@ -41,6 +42,20 @@ public final class TransportBarPresenter: QmlUncreatable {
     @QtIgnored public func attach(session: ApplicationSession) {
         self.session = session
         refresh()
+    }
+
+    public func refreshPromptStyle(inset: Double) {
+        guard let session else { return }
+        setPublished(promptStyle.font, session.typographyFonts.body) { promptStyle.font = $0 }
+        setPublished(promptStyle.background, session.palette.buttonBackground) { promptStyle.background = $0 }
+        setPublished(promptStyle.text, session.palette.buttonText) { promptStyle.text = $0 }
+        setPublished(promptStyle.outline, session.palette.outline) { promptStyle.outline = $0 }
+        setPublished(promptStyle.focus, session.palette.focusOutline) { promptStyle.focus = $0 }
+        setPublished(promptStyle.radius, inset / 2) { promptStyle.radius = $0 }
+        setPublished(promptStyle.horizontalPadding, inset) { promptStyle.horizontalPadding = $0 }
+        setPublished(promptStyle.dragThreshold, inset) { promptStyle.dragThreshold = $0 }
+        setPublished(promptStyle.selection, session.palette.focusOutline) { promptStyle.selection = $0 }
+        setPublished(promptStyle.selectionText, session.palette.buttonText) { promptStyle.selectionText = $0 }
     }
 
     @QtIgnored

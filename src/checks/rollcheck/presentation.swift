@@ -518,10 +518,10 @@ private func checkPresenterMetrics(_ report: CheckReport, session: DocumentSessi
             && gridCameraNear(grid.cameraMaxVScroll, session.camera.snapshot.maxVScroll),
         cppID: id, message: "metric scale republish tracks the requested font and camera bounds")
     report.expect(
-        grid.scene.hoverChipFont["pixelSize"] as? Int == Typography(baseFontPx: 26).caption.pixelSize,
+        grid.scene.hoverChipFont.pixelSize == Typography(baseFontPx: 26).caption.pixelSize,
         cppID: id, message: "a larger viewport base repaints the roll hover chip with its caption role")
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     report.expect(
-        grid.scene.hoverChipFont["pixelSize"] as? Int == Typography(baseFontPx: 13).caption.pixelSize,
+        grid.scene.hoverChipFont.pixelSize == Typography(baseFontPx: 13).caption.pixelSize,
         cppID: id, message: "restoring the viewport base restores the roll hover chip caption")
 }

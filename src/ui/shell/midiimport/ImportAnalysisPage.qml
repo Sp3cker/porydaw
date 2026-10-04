@@ -9,9 +9,9 @@ import PorydawApp
 Flickable {
     id: page
     required property MidiImportController controller
-    required property QtObject colors
-    required property var typography
-    required property var layoutSpaces
+    required property GridPalette colors
+    required property TypographyFonts typography
+    required property LayoutSpaces layoutSpaces
     required property int baseFontPx
     contentHeight: body.implicitHeight + layoutSpaces.three * 2
     clip: true
@@ -25,7 +25,7 @@ Flickable {
         width: page.width - page.layoutSpaces.three * 2
         spacing: page.layoutSpaces.three
         RowLayout {
-            Label { text: qsTr("The song will be used as:"); color: page.colors.windowText; font: Qt.font(page.typography.body) }
+            Label { text: qsTr("The song will be used as:"); color: page.colors.windowText; font: page.typography.body }
             ComboBox {
                 id: player
                 objectName: "importAnalysisPlayer"
@@ -34,12 +34,12 @@ Flickable {
                 currentIndex: page.controller.playerIndex
                 ToolTip.text: qsTr("Select Background music for a song. Select Sound effect for a sound. Also select it for a fanfare.")
                 ToolTip.visible: hovered
-                onActivated: function(index: int): void { page.controller.selectPlayer(index) }
+                onActivated: function(index): void { page.controller.selectPlayer(index) }
             }
         }
         Item { Layout.preferredHeight: page.layoutSpaces.one }
-        Label { objectName: "importFileTracks"; text: page.controller.fileTracksText; color: page.colors.windowText; font: Qt.font(page.typography.body) }
-        Label { objectName: "importGameTrackLimit"; text: page.controller.gameTrackLimitText; color: page.colors.windowText; font: Qt.font(page.typography.body) }
+        Label { objectName: "importFileTracks"; text: page.controller.fileTracksText; color: page.colors.windowText; font: page.typography.body }
+        Label { objectName: "importGameTrackLimit"; text: page.controller.gameTrackLimitText; color: page.colors.windowText; font: page.typography.body }
         Label { objectName: "importStatus"; Layout.fillWidth: true; text: page.controller.statusText; font.bold: true; wrapMode: Text.WordWrap; color: page.colors.windowText }
         Label { objectName: "importSummary"; Layout.fillWidth: true; text: page.controller.summaryText; wrapMode: Text.WordWrap; color: page.colors.windowText }
         Label { objectName: "importTrackAction"; Layout.fillWidth: true; text: page.controller.trackActionText; visible: text.length > 0; wrapMode: Text.WordWrap; color: page.colors.warningText }
@@ -86,7 +86,7 @@ Flickable {
                     required property string events
                     required property string inGame
                     required property bool needsAttention
-                    required property QtObject model
+                    required property var model
                     Layout.fillWidth: true
                     Label { text: controllerRow.controller; color: page.colors.windowText }
                     Label { text: controllerRow.model.function; Layout.fillWidth: true; color: page.colors.windowText }

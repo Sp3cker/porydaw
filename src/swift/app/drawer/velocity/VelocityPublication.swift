@@ -209,48 +209,40 @@ extension VelocityPage {
         syncModel(handles, values, matches: { $0.matches($1) })
     }
 
-    private func syncRects(_ model: QListModel<SceneRect>, _ rects: [SceneRect]) {
-        syncModel(model, rects, matches: { $0.matches($1) })
-    }
-
-    private func syncTexts(_ model: QListModel<SceneText>, _ texts: [SceneText]) {
-        syncModel(model, texts, matches: matchesText)
-    }
-
-    /// `SceneText` publishes no comparison of its own; an equal record leaves
-    /// its row untouched. The font map is compared through its published
-    /// spelling, because its values are variant-typed.
-    private func matchesText(_ lhs: SceneText, _ rhs: SceneText) -> Bool {
-        lhs.labelText == rhs.labelText && lhs.labelColor == rhs.labelColor
-            && lhs.labelBackground == rhs.labelBackground
-            && lhs.labelHorizontalAlignment == rhs.labelHorizontalAlignment
-            && lhs.labelVerticalAlignment == rhs.labelVerticalAlignment
-            && Self.rectMatches(lhs.labelRect, rhs.labelRect)
-            && Self.fontMatches(lhs.labelFont, rhs.labelFont)
-    }
-
-    private static func rectMatches(
-        _ lhs: [String: QVariantSettable],
-        _ rhs: [String: QVariantSettable]
-    ) -> Bool {
-        for key in ["x", "y", "width", "height"] {
-            guard let left = lhs[key] as? Double, let right = rhs[key] as? Double,
-                left == right
-            else { return false }
+    private func syncRects(_ model: QListModel<SceneRect>, _ rects: [SceneRectValue]) {
+        model.update {
+            let common = min(model.count, rects.count)
+            for index in 0..<common {
+                let row = model[index]
+                if row.update(rects[index]) { model[index] = row }
+            }
+            if model.count > rects.count {
+                model.replaceSubrange(rects.count..<model.count, with: [])
+            } else {
+                for index in common..<rects.count {
+                    model.replaceSubrange(
+                        model.count..<model.count, with: CollectionOfOne(SceneRect(rects[index])))
+                }
+            }
         }
-        return true
     }
 
-    private static func fontMatches(
-        _ lhs: [String: QVariantSettable],
-        _ rhs: [String: QVariantSettable]
-    ) -> Bool {
-        guard lhs.count == rhs.count else { return false }
-        for (key, value) in lhs {
-            guard let other = rhs[key], String(describing: value) == String(describing: other)
-            else { return false }
+    private func syncTexts(_ model: QListModel<SceneText>, _ texts: [SceneTextValue]) {
+        model.update {
+            let common = min(model.count, texts.count)
+            for index in 0..<common {
+                let row = model[index]
+                if row.update(texts[index]) { model[index] = row }
+            }
+            if model.count > texts.count {
+                model.replaceSubrange(texts.count..<model.count, with: [])
+            } else {
+                for index in common..<texts.count {
+                    model.replaceSubrange(
+                        model.count..<model.count, with: CollectionOfOne(SceneText(texts[index])))
+                }
+            }
         }
-        return true
     }
 
     /// Publishes one build's ruler rows: the ticks, graduations, markers and

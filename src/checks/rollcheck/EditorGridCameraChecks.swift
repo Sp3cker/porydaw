@@ -78,21 +78,21 @@ private func checkHoverChipResize(
     grid.updateHover(x: 0, y: 319)
     let key = grid.hoverKey
     let scroll = session.camera.snapshot.scrollY
-    let chipHeight = grid.scene.hoverChipRect["height"] as? Double ?? .nan
+    let chipHeight = grid.scene.hoverChipHeight
     let contentKey = grid.scene.listContentKey
     report.expect(
         key >= 0 && grid.scene.hoverChipVisible
-            && gridCameraNear(grid.scene.hoverChipRect["y"] as? Double ?? .nan, 320 - chipHeight),
+            && gridCameraNear(grid.scene.hoverChipY, 320 - chipHeight),
         cppID: id, message: "the stationary hover chip begins clamped to the viewport bottom")
     grid.configureViewport(width: 640, height: 315, fontPx: 13, dpr: 2)
     report.expect(
         grid.hoverKey == key && session.camera.snapshot.scrollY == scroll
-            && gridCameraNear(grid.scene.hoverChipRect["y"] as? Double ?? .nan, 315 - chipHeight),
+            && gridCameraNear(grid.scene.hoverChipY, 315 - chipHeight),
         cppID: id, message: "height-only shrink reclamps the stationary hover chip without scrolling")
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     report.expect(
         grid.hoverKey == key && session.camera.snapshot.scrollY == scroll
-            && gridCameraNear(grid.scene.hoverChipRect["y"] as? Double ?? .nan, 320 - chipHeight),
+            && gridCameraNear(grid.scene.hoverChipY, 320 - chipHeight),
         cppID: id, message: "height-only growth restores the stationary hover chip bottom clamp")
     report.expect(
         grid.scene.listContentKey == contentKey,

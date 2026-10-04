@@ -27,8 +27,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var timeSigMenuOpen = false
     @QtTracked public var timeSigPromptInitialNumerator = 4
     @QtTracked public var timeSigPromptInitialDenominatorPow2 = 2
-    public var timeSigPromptAppearance: [String: QVariantSettable] = [:]
-    public var timeSigPromptFont: [String: QVariantSettable] = [:]
+    @QtTracked public var promptStyle = PromptStyle()
     @QtTracked public var timeSigPromptMinimumNumerator = 1
     @QtTracked public var timeSigPromptMaximumNumerator = 32
     @QtTracked public var timeSigPromptMinimumDenominatorPow2 = 0
@@ -37,10 +36,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var timeSigPromptLabel = "Numerator (1-32):"
     @QtTracked public var palette: GridPalette
     public private(set) var typography = Typography(baseFontPx: 13)
-    @QtTracked public var typographyFonts = [String: QVariantSettable]()
-    @QtTracked public var layoutSpaces = [String: QVariantSettable]()
-    @QtTracked public var baseFontPx = 0
-    @QtTracked public var bodyFontPx = 0
+    @QtTracked public var typographyFonts: TypographyFonts = TypographyFonts()
+    @QtTracked public var layoutSpaces: LayoutSpaces = LayoutSpaces()
+    @QtTracked public var baseFontPx = 13
+    @QtTracked public var bodyFontPx = 15
     private var hasCapturedTypography = false
     @QtTracked public var noteNameMode = false
     /// The open songs. Constructed with the session and never nil: the surface
@@ -150,10 +149,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public required init() {
         let palette = GridPalette()
         self.palette = palette
-        typographyFonts = Self.fontMaps(for: typography)
-        layoutSpaces = Self.spaceMap(for: typography)
-        baseFontPx = typography.baseFontPx
-        bodyFontPx = typography.bodyFontPx
         songTabs = SongTabsController(palette: palette)
         emptyDrawerPresenter = EditorDrawerPresenter()
         emptyOtherEventsBand = OtherEventsBandPresenter()
@@ -184,40 +179,23 @@ public final class ApplicationSession: QmlInstantiableStatus {
         songDock.attach(session: self)
     }
 
-    private static func fontMaps(for typography: Typography) -> [String: QVariantSettable] {
-        [
-            "body": typography.body.map,
-            "bodyBold": typography.bodyBold.map,
-            "bodyMono": typography.bodyMono.map,
-            "tableMono": typography.tableMono.map,
-            "caption": typography.caption.map,
-            "captionBold": typography.captionBold.map,
-            "noteName": typography.noteName.map,
-        ]
-    }
-
-    private static func spaceMap(for typography: Typography) -> [String: QVariantSettable] {
-        [
-            "zero": typography.space(.zero),
-            "half": typography.space(.half),
-            "one": typography.space(.one),
-            "two": typography.space(.two),
-            "three": typography.space(.three),
-            "four": typography.space(.four),
-            "six": typography.space(.six),
-            "eight": typography.space(.eight),
-        ]
-    }
-
     public func configureTypography(baseFontPx: Int) {
         guard !hasCapturedTypography else { return }
         hasCapturedTypography = true
         typography = Typography(baseFontPx: baseFontPx)
-        typographyFonts = Self.fontMaps(for: typography)
-        layoutSpaces = Self.spaceMap(for: typography)
-        self.baseFontPx = typography.baseFontPx
-        bodyFontPx = typography.bodyFontPx
+        typographyFonts.update(typography: typography)
+        layoutSpaces.update(typography: typography)
+        setPublished(self.baseFontPx, typography.baseFontPx) { self.baseFontPx = $0 }
+        setPublished(bodyFontPx, typography.bodyFontPx) { bodyFontPx = $0 }
+        refreshPromptStyle()
         eventList.configureTypography(typography: typography)
+    }
+
+    @QtIgnored
+    public func refreshPromptStyle() {
+        promptStyle.update(
+            metrics: PromptAppearance.Layout(base: workspace?.grid.baseFontPx ?? Double(baseFontPx)),
+            palette: palette, font: typography.body.qmlFont, surface: .chrome)
     }
 
     public func componentComplete() {}

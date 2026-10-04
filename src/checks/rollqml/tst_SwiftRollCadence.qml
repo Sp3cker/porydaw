@@ -37,7 +37,7 @@ TestCase {
 
     Component {
         id: overlayComponent
-        SwiftRollOverlay { property var appSession: session }
+        SwiftRollOverlay { applicationSession: session }
     }
 
     function waitForNative(predicate, timeoutMs) {

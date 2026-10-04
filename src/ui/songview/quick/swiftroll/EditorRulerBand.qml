@@ -6,45 +6,68 @@ import Porydaw.Icons
 
 Item {
     id: rulerModule
-    required property Item root
-    required property Item rollStack
-    required property Item rollBandContent
-    required property Item gridMenuLoader
-    property alias rulerInput: rulerInput
+    final required property EditorSurface root
+    final required property Item rollStack
+    final required property Item rollBandContent
+    final required property Loader gridMenuLoader
+    final property alias rulerInput: rulerInput
+    property string divisionText
+    property string feelText
+    property color toolTipBackground
+    property color toolTipText
+    property color toolTipOutline
+    Binding {
+        when: rulerModule.root.gridModel !== null && rulerModule.root.headersModel !== null
+        restoreMode: Binding.RestoreNone
+        rulerBand.height: rulerModule.root.gridModel?.rulerHeight
+        rulerGutter.width: rulerModule.root.gridModel?.keyboardWidth
+        rulerGutter.color: rulerModule.root.gridModel?.palette?.chromeBackground
+        rulerSeparator.y: rulerModule.root.gridModel?.rulerHeight - 0.5
+        rulerSeparator.width: rulerModule.root.gridModel?.keyboardWidth
+        rulerSeparator.height: 1 / rulerModule.root.gridModel?.devicePixelRatio
+        rulerSeparator.color: rulerModule.root.gridModel?.palette?.separator
+        rulerPlot.x: rulerModule.root.gridModel?.keyboardWidth
+        rulerMarks.revision: rulerModule.root.gridModel?.scene?.displayRevision
+        rulerControls.width: rulerModule.root.headersModel?.trackHeaderWidth + rulerModule.root.gridModel?.keyboardWidth
+        rulerControls.height: rulerModule.root.gridModel?.rulerHeight
+        rulerControls.controlsStroke: 1 / (rulerModule.root.gridModel?.devicePixelRatio > 0
+                                          ? rulerModule.root.gridModel?.devicePixelRatio : 1)
+        gridLabel.color: rulerModule.root.gridModel?.palette?.primaryText
+        rulerModule.divisionText: rulerModule.root.gridModel?.gridDivisionControlText
+        rulerModule.feelText: rulerModule.root.gridModel?.gridFeelControlText
+        rulerModule.toolTipBackground: rulerModule.root.gridModel?.palette?.chromeBackground
+        rulerModule.toolTipText: rulerModule.root.gridModel?.palette?.windowText
+        rulerModule.toolTipOutline: rulerModule.root.gridModel?.palette?.outline
+    }
             Item {
                 id: rulerBand
                 parent: rulerModule.rollStack
                 objectName: "timelineQuickRuler"
                 width: parent.width
-                height: rulerModule.root.gridModel.rulerHeight
                 clip: true
 
                 Rectangle {
+                    id: rulerGutter
                     objectName: "timelineQuickRulerGutterChrome"
-                    width: rulerModule.root.gridModel.keyboardWidth
                     height: parent.height
-                    color: rulerModule.root.gridModel.palette.chromeBackground
                 }
                 Rectangle {
-                    y: rulerModule.root.gridModel.rulerHeight - 0.5
-                    width: rulerModule.root.gridModel.keyboardWidth
-                    height: 1 / rulerModule.root.gridModel.devicePixelRatio
-                    color: rulerModule.root.gridModel.palette.separator
+                    id: rulerSeparator
                 }
 
                 Item {
-                    x: rulerModule.root.gridModel.keyboardWidth
+                    id: rulerPlot
                     width: Math.max(parent.width - x, 0)
                     height: parent.height
                     clip: true
 
                     DisplayList {
+                        id: rulerMarks
                         anchors.fill: parent
                         objectName: "timelineQuickRulerMarks"
                         clip: true
-                        source: rulerModule.root.gridModel.scene
+                        source: rulerModule.root.gridModel?.scene ?? null
                         list: 2
-                        revision: rulerModule.root.gridModel.scene.displayRevision
                     }
                     MouseArea {
                         id: rulerInput
@@ -101,15 +124,10 @@ Item {
             id: rulerControls
             parent: rulerModule.rollBandContent
             objectName: "timelineRulerControls"
-            width: rulerModule.root.headersModel.trackHeaderWidth
-                + rulerModule.root.gridModel.keyboardWidth
-            height: rulerModule.root.gridModel.rulerHeight
             clip: true
             readonly property real controlsInset: 8
             readonly property real controlsGap: 4
-            readonly property real controlsStroke:
-                1 / (rulerModule.root.gridModel.devicePixelRatio > 0
-                     ? rulerModule.root.gridModel.devicePixelRatio : 1)
+            property real controlsStroke
             readonly property font controlsFont: rulerModule.root.bodyFont
             readonly property real gridLabelWidth:
                 Math.min(gridLabel.implicitWidth,
@@ -134,8 +152,8 @@ Item {
                     rulerModule.root.gridMenuPosition = mapToItem(rulerModule.root, width / 2, height)
                     rulerModule.root.gridModel.openGridMenu(menuKind)
                     Qt.callLater(function() {
-                        if ((rulerModule.gridMenuLoader as Loader).item)
-                            ((rulerModule.gridMenuLoader as Loader).item as Item).forceActiveFocus(Qt.PopupFocusReason)
+                        if (rulerModule.gridMenuLoader.item)
+                            (rulerModule.gridMenuLoader.item as Item).forceActiveFocus(Qt.PopupFocusReason)
                     })
                 }
 
@@ -143,11 +161,17 @@ Item {
                     id: gridControlBackground
                     objectName: "gridControlBackground"
                     anchors.fill: parent
-                    color: gridControl.controlPressed
-                        ? rulerModule.root.gridModel.palette.buttonPressedBackground
-                        : rulerModule.root.gridModel.palette.buttonHoverBackground
                     border.width: rulerControls.controlsStroke
-                    border.color: rulerModule.root.gridModel.palette.outline
+                    Binding {
+                        when: rulerModule.root.gridModel !== null
+                        restoreMode: Binding.RestoreNone
+                        gridControlBackground.color: gridControl.controlPressed
+                            ? rulerModule.root.gridModel?.palette?.buttonPressedBackground
+                            : rulerModule.root.gridModel?.palette?.buttonHoverBackground
+                        gridControlBackground.border.color: rulerModule.root.gridModel?.palette?.outline
+                        gridControlLabel.color: rulerModule.root.gridModel?.palette?.buttonText
+                        gridControlArrow.color: rulerModule.root.gridModel?.palette?.buttonText
+                    }
                 }
                 Text {
                     id: gridControlLabel
@@ -158,7 +182,6 @@ Item {
                     anchors.rightMargin: rulerControls.controlsGap / 2
                     anchors.verticalCenter: parent.verticalCenter
                     clip: true
-                    color: rulerModule.root.gridModel.palette.buttonText
                     font: rulerControls.controlsFont
                     text: gridControl.controlText
                     textFormat: Text.PlainText
@@ -176,7 +199,6 @@ Item {
                     width: rulerControls.controlsFont.pixelSize
                     height: width
                     icon: Icons.comboArrow
-                    color: rulerModule.root.gridModel.palette.buttonText
                 }
                 MouseArea {
                     id: gridArea
@@ -193,7 +215,6 @@ Item {
                 width: rulerControls.gridLabelWidth
                 anchors.verticalCenter: parent.verticalCenter
                 clip: true
-                color: rulerModule.root.gridModel.palette.primaryText
                 font: rulerControls.controlsFont
                 text: qsTr("Grid")
                 textFormat: Text.PlainText
@@ -210,7 +231,7 @@ Item {
                 width: rulerControls.controlWidth
                 height: Math.min(parent.height,
                     gridLabel.implicitHeight + rulerControls.controlsInset)
-                controlText: rulerModule.root.gridModel.gridDivisionControlText
+                controlText: rulerModule.divisionText
                 menuKind: 1
                 controlToolTip: qsTr("Editing snap grid. Auto follows the zoom one step finer than the drawn grid; a fixed division snaps to that note value; Clock snaps to the mid2agb clock grid.")
             }
@@ -224,12 +245,13 @@ Item {
                 width: rulerControls.controlWidth
                 height: Math.min(parent.height,
                     gridLabel.implicitHeight + rulerControls.controlsInset)
-                controlText: rulerModule.root.gridModel.gridFeelControlText
+                controlText: rulerModule.feelText
                 menuKind: 2
                 controlToolTip: qsTr("Straight or triplet beat subdivisions.")
             }
         }
     RulerToolTip {
+        id: rulerToolTip
         objectName: "timelineRulerToolTip"
         parent: rulerModule.root
         z: 4
@@ -244,8 +266,8 @@ Item {
             ? divisionControl.controlToolTip : feelControl.controlToolTip
         visibleForControl: divisionControl.controlHovered || feelControl.controlHovered
         controlFont: rulerControls.controlsFont
-        backgroundColor: rulerModule.root.gridModel.palette.chromeBackground
-        textColor: rulerModule.root.gridModel.palette.windowText
-        outlineColor: rulerModule.root.gridModel.palette.outline
+        backgroundColor: rulerModule.toolTipBackground
+        textColor: rulerModule.toolTipText
+        outlineColor: rulerModule.toolTipOutline
     }
 }

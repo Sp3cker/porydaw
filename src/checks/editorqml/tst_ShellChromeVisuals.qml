@@ -206,13 +206,14 @@ TestCase {
         var barInk = palette.gridLineBar
         var beatInk = grid.visibleGridTicks === 1 ? palette.gridLineBeatFine
                                                   : palette.gridLineBeat
-        var expectedBarNatural = Helpers.channels(probe.sourceOver(barInk, palette.rollBackground))
+        var expectedBarNatural = Helpers.channels(
+                    probe.sourceOver(barInk.toString(), palette.rollBackground.toString()))
         var expectedBarAccidental = Helpers.channels(
-                    probe.sourceOver(barInk, palette.accidentalLane))
+                    probe.sourceOver(barInk.toString(), palette.accidentalLane.toString()))
         var expectedBeatNatural = Helpers.channels(
-                    probe.sourceOver(beatInk, palette.rollBackground))
+                    probe.sourceOver(beatInk.toString(), palette.rollBackground.toString()))
         var expectedBeatAccidental = Helpers.channels(
-                    probe.sourceOver(beatInk, palette.accidentalLane))
+                    probe.sourceOver(beatInk.toString(), palette.accidentalLane.toString()))
         verify(!Helpers.colorsNear(expectedBarNatural, natural)
                && !Helpers.colorsNear(expectedBarAccidental, accidental),
                "the theme keeps bar lines distinguishable from both row roles")

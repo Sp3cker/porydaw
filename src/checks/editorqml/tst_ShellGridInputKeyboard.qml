@@ -19,8 +19,8 @@ ShellGridInputSupport {
             return current && current.selected
         }, 5000), "left click selects the routing note")
         var snap = grid.snapTicks
-        verify(shell.shellPresenter.actionEnabled("roll.nudge_right"),
-              "Nudge Right is enabled for the selection")
+        tryCompare(shell.shellPresenter.action("roll.nudge_right"), "enabled", true, 3000,
+                   "Nudge Right is enabled for the selection")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
         keyClick(Qt.Key_Right)
@@ -124,7 +124,7 @@ ShellGridInputSupport {
         var surface = selectedSurface()
         var grid = surface.gridModel
         var roll = rollInput(surface)
-        verify(shell.shellPresenter.actionEnabled("transport.play_pause"),
+        verify(shell.shellPresenter.action("transport.play_pause").enabled,
               "Play/Pause is enabled with a song open")
         var playhead = session.playheadPresenter()
         compare(playhead.playing, false, "transport starts stopped")
@@ -444,10 +444,10 @@ ShellGridInputSupport {
         function selectionFrame() {
             return RollNoteFaces.grab(testCase, statics)
         }
-        var edgeHex = String(page.gridPalette.selectionEdge).slice(-6)
-        var edgeRgb = [parseInt(edgeHex.slice(0, 2), 16),
-                       parseInt(edgeHex.slice(2, 4), 16),
-                       parseInt(edgeHex.slice(4, 6), 16)]
+        var edge = page.gridPalette.selectionEdge
+        var edgeRgb = [Math.round(edge.r * 255),
+                       Math.round(edge.g * 255),
+                       Math.round(edge.b * 255)]
         function paintedEdge(frame, x) {
             var scale = frame.width / statics.width
             var row = Math.floor(frame.height * 0.65)

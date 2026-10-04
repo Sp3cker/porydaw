@@ -10,7 +10,7 @@ struct GridSceneInput {
     var camera: EditorCamera
     var scale: ScaleProjection = ScaleProjection()
     var typography: GridTypography?
-    var fontSpec: (GridFontKind) -> [String: QVariantSettable]
+    var fontSpec: (GridFontKind) -> QmlFont
     var fonts: [GridFontKind: GridFontSpec] = [:]
     var notes: [GridNote] = []
     var displayedNote: (GridNote) -> (tick: Int, end: Int, pitch: Int) = {
@@ -80,13 +80,15 @@ extension GridScene {
     func rebuildStatic(_ input: GridSceneInput) {
         let snapshot = input.camera.snapshot
         // The carrier's width hands drawer delegates the same-turn zoom scale.
-        sync(
-            cameraScroll,
-            [
-                SceneRect(
-                    x: snapshot.scrollX, y: snapshot.scrollY, width: snapshot.pixelsPerTick, height: 0,
-                    fillColor: "")
-            ])
+        let value = SceneRectValue(
+            x: snapshot.scrollX, y: snapshot.scrollY, width: snapshot.pixelsPerTick, height: 0,
+            fillColor: QmlColor(red: 0, green: 0, blue: 0, alpha: 0))
+        if cameraScroll.count == 0 {
+            cameraScroll.append(SceneRect(value))
+        } else {
+            let row = cameraScroll[0]
+            if row.update(value) { cameraScroll[0] = row }
+        }
         rebuildHover(input)
     }
 }

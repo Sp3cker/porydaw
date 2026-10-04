@@ -18,6 +18,9 @@ int pd_qmltypes_method_kind_signal(void);
 int pd_qmltypes_method_kind_slot(void);
 int pd_qmltypes_method_access_public(void);
 
+// Matches QtBridge's element export version 1.0.
+int pd_qmltypes_export_revision(void);
+
 #ifdef __cplusplus
 }
 #endif

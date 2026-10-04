@@ -102,15 +102,15 @@ private func typographyLayoutCheckRoles(_ report: CheckReport) {
                 message: "the \(kind) face at base \(base) resolves to an installed font file")
         }
         let header = TrackHeadersPresenter(typography: typography)
-        for (name, map) in [
-            ("controls", header.controlFont),
-            ("normal title", header.normalTitleFont),
-            ("selected title", header.boldTitleFont),
-            ("subtitle", header.subtitleFont),
-            ("prompt", prompt),
+        for (name, family, weight) in [
+            ("controls", header.controlFont.family, header.controlFont.weight),
+            ("normal title", header.normalTitleFont.family, header.normalTitleFont.weight),
+            ("selected title", header.boldTitleFont.family, header.boldTitleFont.weight),
+            ("subtitle", header.subtitleFont.family, header.subtitleFont.weight),
+            ("prompt", prompt["family"] as? String ?? "", prompt["weight"] as? Int ?? -1),
         ] {
             report.expect(
-                bundled(map["family"] as? String ?? "", map["weight"] as? Int ?? -1),
+                bundled(family, weight),
                 cppID: typographyLayoutFaceID,
                 message: "\(name) at base \(base) publishes a bundled font face")
         }
@@ -164,13 +164,15 @@ private func typographyLayoutCheckRoles(_ report: CheckReport) {
 @MainActor
 private func typographyLayoutCheckCapture(_ report: CheckReport) {
     let session = ApplicationSession()
+    let fonts = session.typographyFonts
+    let spaces = session.layoutSpaces
     session.configureTypography(baseFontPx: 26)
     report.expect(
         session.baseFontPx == 26 && session.bodyFontPx == 29,
         cppID: typographyLayoutBaseID,
         message: "the first session capture publishes a 26-pixel base and 29-pixel body")
     report.expect(
-        session.layoutSpaces["two"] as? Int == 13,
+        session.layoutSpaces.two == 13,
         cppID: typographyLayoutScaleID,
         message: "the session publishes Two spacing at the captured 26-pixel base")
     session.configureTypography(baseFontPx: 13)
@@ -179,9 +181,20 @@ private func typographyLayoutCheckCapture(_ report: CheckReport) {
         cppID: typographyLayoutBaseID,
         message: "a later different base cannot replace the first session capture")
     report.expect(
-        session.layoutSpaces["half"] as? Int == 3,
+        session.layoutSpaces.half == 3,
         cppID: typographyLayoutScaleID,
         message: "the first session capture keeps Half spacing after a second call")
+    report.expect(
+        session.typographyFonts === fonts && session.layoutSpaces === spaces,
+        cppID: typographyLayoutBaseID,
+        message: "typography capture updates retained font and spacing objects in place")
+    report.expect(
+        fonts.body.pixelSize == 29 && fonts.caption.pixelSize == 26
+            && fonts.body.hintingPreference == .preferNoHinting
+            && fonts.body.features == ["tnum": 1]
+            && fonts.tableMono.letterSpacing == -1 && spaces.six == 39,
+        cppID: typographyLayoutScaleID,
+        message: "typed font and spacing roles preserve sizes, unhinted tabular figures, and Six spacing")
 }
 
 @MainActor
@@ -365,13 +378,13 @@ private func typographyLayoutCheckFaceContracts(_ report: CheckReport) {
         cppID: typographyLayoutFaceID,
         message: "the note-name role map pins the unhinted preference")
     report.expect(
-        AutomationPage(baseFontPx: 16).captionFont["hintingPreference"] as? Int == fontPreferNoHinting,
+        AutomationPage(baseFontPx: 16).captionFont.hintingPreference == .preferNoHinting,
         cppID: typographyLayoutFaceID,
-        message: "the automation caption map pins the unhinted preference")
+        message: "the automation caption pins the unhinted preference")
     report.expect(
-        VoiceChangesPage(baseFontPx: 16).captionFont["hintingPreference"] as? Int == fontPreferNoHinting,
+        VoiceChangesPage(baseFontPx: 16).captionFont.hintingPreference == .preferNoHinting,
         cppID: typographyLayoutFaceID,
-        message: "the voice caption map pins the unhinted preference")
+        message: "the voice caption pins the unhinted preference")
 }
 
 @MainActor

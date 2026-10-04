@@ -7,7 +7,7 @@ public final class OtherEventsMarkerHandle {
     public var tick: Int = 0
     public var track: Int = -1
     public var x: Double = 0
-    public var color: String = ""
+    public var color: QmlColor = PaletteMath.qmlColor(argb: 0)
     public var label: String = ""
 
     public init(_ marker: OtherEventsMarker) {
@@ -16,22 +16,21 @@ public final class OtherEventsMarkerHandle {
         x = marker.x
         color = marker.color
         label = marker.label
-        refreshSpec()
-    }
-
-    /// Everything the delegate needs in one map: the delegate's model-data
-    /// object exposes stored properties only, so this is a stored role.
-    public var spec: [String: QVariantSettable] = [:]
-
-    @QtIgnored
-    func refreshSpec() {
-        spec = ["x": x, "color": color]
     }
 
     @QtIgnored
-    func matches(_ other: OtherEventsMarkerHandle) -> Bool {
-        tick == other.tick && track == other.track && x == other.x
-            && color == other.color && label == other.label
+    func update(_ marker: OtherEventsMarker) -> Bool {
+        let tick = Int(marker.tick)
+        guard
+            self.tick != tick || track != marker.track || x != marker.x
+                || color != marker.color || label != marker.label
+        else { return false }
+        setPublished(self.tick, tick) { self.tick = $0 }
+        setPublished(track, marker.track) { track = $0 }
+        setPublished(x, marker.x) { x = $0 }
+        setPublished(color, marker.color) { color = $0 }
+        setPublished(label, marker.label) { label = $0 }
+        return true
     }
 }
 
@@ -50,9 +49,9 @@ public final class OtherEventsBandPresenter {
     public var toolTipText: String = ""
     public var toolTipX: Double = 0
     public var toolTipY: Double = 0
-    public var toolTipBackground: String = ""
-    public var toolTipTextColor: String = ""
-    public var toolTipOutline: String = ""
+    public var toolTipBackground: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var toolTipTextColor: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var toolTipOutline: QmlColor = PaletteMath.qmlColor(argb: 0)
 
     private var session: DocumentSession?
     private var colors: GridPalette?
@@ -77,9 +76,9 @@ public final class OtherEventsBandPresenter {
         markerHalfWidth = fontPx(baseFontPx, 1.0 / 3.0)
         markerHalfHeight = fontPx(baseFontPx, 5.0 / 12.0)
         gutterInset = fontPx(baseFontPx, 0.5)
-        toolTipBackground = palette.inputBackground
-        toolTipTextColor = palette.windowText
-        toolTipOutline = palette.outline
+        setPublished(toolTipBackground, palette.inputBackground) { toolTipBackground = $0 }
+        setPublished(toolTipTextColor, palette.windowText) { toolTipTextColor = $0 }
+        setPublished(toolTipOutline, palette.outline) { toolTipOutline = $0 }
         refreshDocument()
     }
 
@@ -93,9 +92,9 @@ public final class OtherEventsBandPresenter {
         markerHalfWidth = fontPx(baseFontPx, 1.0 / 3.0)
         markerHalfHeight = fontPx(baseFontPx, 5.0 / 12.0)
         gutterInset = fontPx(baseFontPx, 0.5)
-        toolTipBackground = colors.inputBackground
-        toolTipTextColor = colors.windowText
-        toolTipOutline = colors.outline
+        setPublished(toolTipBackground, colors.inputBackground) { toolTipBackground = $0 }
+        setPublished(toolTipTextColor, colors.windowText) { toolTipTextColor = $0 }
+        setPublished(toolTipOutline, colors.outline) { toolTipOutline = $0 }
         refreshCamera()
     }
 
@@ -117,18 +116,21 @@ public final class OtherEventsBandPresenter {
             pixelsPerTick: session.camera.pixelsPerTick, palette: colors)
         if next != publishedMarkers {
             publishedMarkers = next
-            // In-place writes keep existing delegates alive; reset(to:) would
-            // destroy them all on every zoom tick.
-            let fresh = next.map(OtherEventsMarkerHandle.init)
-            let common = min(markers.count, fresh.count)
-            for i in 0..<common where !markers[i].matches(fresh[i]) {
-                markers[i] = fresh[i]
-            }
-            if markers.count > fresh.count {
-                markers.replaceSubrange(fresh.count..<markers.count, with: [])
-            } else if fresh.count > markers.count {
-                markers.replaceSubrange(
-                    markers.count..<markers.count, with: fresh[markers.count...])
+            markers.update {
+                let common = min(markers.count, next.count)
+                for index in 0..<common {
+                    let row = markers[index]
+                    if row.update(next[index]) { markers[index] = row }
+                }
+                if markers.count > next.count {
+                    markers.replaceSubrange(next.count..<markers.count, with: [])
+                } else {
+                    for index in common..<next.count {
+                        markers.replaceSubrange(
+                            markers.count..<markers.count,
+                            with: CollectionOfOne(OtherEventsMarkerHandle(next[index])))
+                    }
+                }
             }
             markerCount = next.count
             markerRevision += 1

@@ -2,32 +2,8 @@ import Foundation
 import PorydawCore
 import QtBridge
 
-// The production Velocity page: one deep owner for the drawer's Velocity
-// section, following `src/ui/editordrawer/velocityarea/` and `velocityaxis.*`
-// for behaviour. It publishes primitives and stable item models for QML and
-// owns no camera, clock, viewport, history or selection storage: selection
-// lives in `DocumentSession`, the horizontal projection is `EditorCamera`, and
-// the playhead is the composition-owned segment the page only reads.
-//
-// Ownership: `ApplicationSession` creates the page for the current document,
-// attaches it before `songOpen` publishes, refreshes it from the session's
-// existing document/grid/playhead publications, and cancels it synchronously
-// before the document owners retire.
-//
-// Split: the scene build vocabulary and orchestration
-// (`VelocityScene.swift`), the pure scene-value helpers it calls
-// (`VelocitySceneValues.swift`) and the plot-relative maths
-// (`VelocityProjection.swift`) are value layers this page feeds from its
-// session and its live gesture/hover state;
-// `VelocityInteraction.swift` holds the gesture, hover and prompt machinery
-// behind this page's Qt seam, and `VelocityPublication.swift` holds the
-// content rebuild and every publish apply path. Published state and the reuse
-// caches stay declared on this type — `@QtBridgeable` registers class-body
-// members only and stored properties cannot move to an extension — and the
-// Qt-facing input methods stay here for the same reason: each is a one-line
-// forward into its `dispatch*` implementation.
-//
-
+// Owns velocity projection, input and prompt transactions for the current document.
+// Publication and scene helpers share this owner's retained state.
 // MARK: - Page vocabulary
 
 /// The page's published constants. The base font seed mirrors the grid's
@@ -89,33 +65,14 @@ public final class VelocityHandle {
     public var outlineWidth: Double = 0
     public var ringRadius: Double = 0
     public var ringWidth: Double = 0
-    public var fillColor: String = ""
-    public var stemColor: String = ""
-    public var ringColor: String = ""
-    public var outlineColor: String = ""
+    public var fillColor: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var stemColor: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var ringColor: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var outlineColor: QmlColor = PaletteMath.qmlColor(argb: 0)
     public var primitiveName: String = ""
 
     public init() {}
 
-    /// Everything a delegate needs, packed into one map: the delegate's
-    /// model-data object exposes stored properties only, so this is a stored
-    /// role — `refreshSpec()` must run after fields are assigned.
-    public var spec: [String: QVariantSettable] = [:]
-
-    @QtIgnored
-    func refreshSpec() {
-        spec = [
-            "tick": tick, "endTick": endTick, "y": y,
-            "stemWidth": stemWidth, "stemColor": stemColor,
-            "nodeRadius": nodeRadius, "fillColor": fillColor,
-            "outlineRadius": outlineRadius, "outlineWidth": outlineWidth,
-            "outlineColor": outlineColor,
-            "ringRadius": ringRadius, "ringWidth": ringWidth,
-            "ringColor": ringColor,
-            "selected": selected, "hovered": hovered, "dimmed": dimmed,
-            "primitiveName": primitiveName,
-        ]
-    }
 
     /// The model's no-op rule: an unchanged handle stays in place, so an
     /// unchanged row emits nothing.
@@ -196,10 +153,9 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     public var rampY0: Double = 0
     public var rampLength: Double = 0
     public var rampSlopeY: Double = 0
-    public var rampColor: String = ""
+    public var rampColor: QmlColor = PaletteMath.qmlColor(argb: 0)
     public var promptOpen: Bool = false
-    public var promptAppearance: [String: QVariantSettable] = [:]
-    public var promptFont: [String: QVariantSettable] = [:]
+    @QtTracked public var promptStyle = PromptStyle()
     public var promptDraft: String = ""
     public var promptError: String = ""
     public var promptTitle: String = "Note velocity"
@@ -311,8 +267,7 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
             return Int(min(max(preferred, minimum), maximum))
         }
         geometry = VelocityNodeGeometry(baseFontPx: base, devicePixelRatio: 1)
-        promptAppearance = PromptAppearance.metrics(base: base)
-        promptFont = PromptAppearance.font(typography: Typography(baseFontPx: Int(base.rounded())))
+        refreshPromptStyle(base: base)
     }
 
     /// Installs the document and palette owners. Called before the container
@@ -376,10 +331,17 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
         if self.devicePixelRatio != nextDpr { self.devicePixelRatio = nextDpr }
         if self.baseFontPx != nextFont {
             self.baseFontPx = nextFont
-            promptAppearance = PromptAppearance.metrics(base: nextFont)
-            promptFont = PromptAppearance.font(typography: Typography(baseFontPx: Int(nextFont.rounded())))
+            refreshPromptStyle()
         }
         if changed { rebuildContent() }
+    }
+    @QtIgnored
+    func refreshPromptStyle(base: Double? = nil) {
+        let base = base ?? baseFontPx
+        let typography = Typography(baseFontPx: Int(base.rounded()))
+        promptStyle.update(
+            metrics: PromptAppearance.Layout(base: base), palette: palette,
+            font: typography.body.qmlFont, surface: .velocity)
     }
 
     // MARK: Session refresh
@@ -388,6 +350,7 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     /// whose captured identity no longer matches cancels, then content rebuilds.
     @QtIgnored
     public func refreshFromDocument() {
+        refreshPromptStyle()
         guard let session else { return }
         if let gesture,
             gesture.revision != session.document.revision

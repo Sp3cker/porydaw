@@ -45,6 +45,8 @@ add_library(PorydawApp STATIC
     newsong/NewSongController.swift
     EditorCommandRouter.swift
     typography/Typography.swift
+    theme/TypographyFonts.swift
+    theme/LayoutSpaces.swift
     transport/TransportBarPresenter.swift
     SongTabsController.swift
     SongTabsController+Close.swift
@@ -57,6 +59,7 @@ add_library(PorydawApp STATIC
     voicelist/VoiceListSemantics.swift
     voicelist/VoiceListController.swift
     voicelist/VoiceListController+Bank.swift
+    voicelist/SamplePickerRows.swift
     voicelist/VoiceEditorController.swift
     voicelist/VoicegroupCatalog.swift
     MouseHints.swift
@@ -151,6 +154,7 @@ add_library(PorydawApp STATIC
     shell/BundledFont.swift
     shell/PreferencesStore.swift
     shell/ShellPresenter.swift
+    shell/ShellActionState.swift
     shell/ShellAppearance.swift
     shell/EngineSettingsStore.swift
 )

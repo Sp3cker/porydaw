@@ -12,6 +12,14 @@ struct GridFontSpec {
     let letterSpacing: Double
     let features: [String: QVariantSettable] = ["tnum": 1]
 
+    private static let qmlFeatures: [String: UInt32] = ["tnum": 1]
+
+    var qmlFont: QmlFont {
+        QmlFont(
+            family: family, pixelSize: pixelSize, weight: weight,
+            letterSpacing: letterSpacing, features: Self.qmlFeatures)
+    }
+
     var map: [String: QVariantSettable] {
         [
             "family": family,
@@ -49,7 +57,7 @@ struct GridTypography {
     private let chipWidths: [Double]
     private let noteNameWidths: [Double]
     private let noteValueMetrics: NativeFontMetrics
-    private let fontMaps: [GridFontKind: [String: QVariantSettable]]
+    private let qmlFonts: [GridFontKind: QmlFont]
 
     init(fonts: [GridFontKind: GridFontSpec], rowHeight: Double, pixel: Double = 1) {
         func measure(_ kind: GridFontKind) -> NativeFontMetrics {
@@ -95,10 +103,14 @@ struct GridTypography {
         let noteName = measure(.noteName)
         noteNameOccupiedHeight = noteName.extents.height
         noteNameWidths = (0..<128).map { noteName.advance(GridScene.keyName($0)) }
-        var maps = fonts.mapValues { $0.map }
-        maps[.keyLabel]!["pixelSize"] = keyLabelFit
-        maps[.noteValue] = valueSpec.map
-        fontMaps = maps
+        var values = fonts.mapValues { $0.qmlFont }
+        guard var keyLabelFont = values[.keyLabel] else {
+            preconditionFailure("GridTypography requires the key-label font")
+        }
+        keyLabelFont.pixelSize = keyLabelFit
+        values[.keyLabel] = keyLabelFont
+        values[.noteValue] = valueSpec.qmlFont
+        qmlFonts = values
     }
 
     static func barLabel(_ bar: Int) -> String { "\(bar)" }
@@ -127,7 +139,12 @@ struct GridTypography {
     func noteNameAdvance(pitch: Int) -> Double { noteNameWidths[pitch] }
     func noteValueAdvance(_ text: String) -> Double { noteValueMetrics.advance(text) }
 
-    func fontMap(_ kind: GridFontKind) -> [String: QVariantSettable] { fontMaps[kind]! }
+    func font(_ kind: GridFontKind) -> QmlFont {
+        guard let value = qmlFonts[kind] else {
+            preconditionFailure("GridTypography requires every grid font")
+        }
+        return value
+    }
 
     static func fonts(metrics _: GridMetrics, typography: Typography) -> [GridFontKind: GridFontSpec] {
         let rulerPx = max(

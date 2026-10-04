@@ -2,15 +2,16 @@ pragma ComponentBehavior: Bound
 // Shared prompt button chrome; owners supply labels and activation semantics.
 import QtQuick
 import Porydaw.Ui
+import PorydawApp
 
 Rectangle {
     id: button
 
-    required property var appearance
+    required final property PromptStyle appearance
 
-    property string text: ""
-    property real minimumWidth: 0
-    readonly property real labelWidth: label.implicitWidth
+    final property string text: ""
+    final property real minimumWidth: 0
+    final readonly property real labelWidth: label.implicitWidth
     // VoicePicker buttons historically leave Space/Return/Enter to shortcut
     // dispatch; the prompt family claims them. Callers keep that difference.
     property bool claimsShortcuts: true
@@ -23,12 +24,6 @@ Rectangle {
     Accessible.focusable: enabled
     Accessible.onPressAction: button.activate()
 
-    implicitWidth: Math.max(labelWidth + 2 * appearance.buttonPadding, minimumWidth)
-    implicitHeight: label.implicitHeight + 2 * appearance.buttonPadding
-    color: tap.pressed ? appearance.pressedBackground : appearance.buttonBackground
-    border.width: appearance.borderWidth
-    border.color: activeFocus ? appearance.focus : appearance.outline
-    radius: appearance.radius
     opacity: enabled ? 1 : 0.5
 
     function activate(): void {
@@ -40,11 +35,6 @@ Rectangle {
         id: label
 
         anchors.centerIn: parent
-        // Older appearance maps fall back to the normal button ink.
-        color: (!button.enabled ? button.appearance?.disabledText
-                : tap.pressed ? button.appearance?.pressedText : null)
-               ?? button.appearance?.buttonText ?? "transparent"
-        font: button.appearance.font
         text: button.text
         textFormat: Text.PlainText
         renderType: Text.NativeRendering
@@ -71,5 +61,20 @@ Rectangle {
         id: tap
 
         onTapped: button.activate()
+    }
+
+    Binding {
+        when: button.appearance !== null
+        restoreMode: Binding.RestoreNone
+        button.implicitWidth: Math.max(button.labelWidth + 2 * button.appearance?.buttonPadding,
+                                       button.minimumWidth)
+        button.implicitHeight: label.implicitHeight + 2 * button.appearance?.buttonPadding
+        button.color: tap.pressed ? button.appearance?.pressedBackground : button.appearance?.buttonBackground
+        button.border.width: button.appearance?.borderWidth
+        button.border.color: button.activeFocus ? button.appearance?.focus : button.appearance?.outline
+        button.radius: button.appearance?.radius
+        label.color: !button.enabled ? button.appearance?.disabledText
+                   : tap.pressed ? button.appearance?.pressedText : button.appearance?.buttonText
+        label.font: button.appearance?.font
     }
 }

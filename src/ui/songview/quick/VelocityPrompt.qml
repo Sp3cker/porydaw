@@ -2,15 +2,14 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Porydaw.Ui
-import PorydawApp
+import PorydawApp as App
 
 Item {
     id: promptRoot
     objectName: "velocityPrompt"
-    required property VelocityPage model
-    required property var promptPalette
-    required property var focusOrigin
-    property var hintService: null
+    required final property App.VelocityPage model
+    required final property Item focusOrigin
+    final property App.MouseHints hintService: null
     property bool hintScopeAllowed: true
     readonly property bool opened: model.promptOpen
     property bool consumingOutsidePress: false
@@ -61,20 +60,9 @@ Item {
         anchors.centerIn: parent
         width: implicitWidth
         height: implicitHeight
-        appearance: Object.assign({}, promptRoot.model.promptAppearance, {
-            font: Qt.font(promptRoot.model.promptFont),
-            background: promptRoot.promptPalette?.windowBackground ?? "transparent",
-            outline: promptRoot.promptPalette?.outline ?? "transparent",
-            text: promptRoot.promptPalette?.windowText ?? "transparent",
-            focus: promptRoot.promptPalette?.focusOutline ?? "transparent",
-            buttonBackground: promptRoot.promptPalette?.buttonBackground ?? "transparent",
-            buttonText: promptRoot.promptPalette?.buttonText ?? "transparent",
-            pressedBackground: promptRoot.promptPalette?.buttonPressedBackground ?? "transparent",
-            pressedText: promptRoot.promptPalette?.buttonPressedText ?? "transparent",
-            disabledText: promptRoot.promptPalette?.disabledText ?? "transparent"
-        })
+        appearance: promptRoot.model.promptStyle
 
-        readonly property int draft: Number(promptRoot.model.promptDraft)
+        readonly property int draft: +promptRoot.model.promptDraft
 
         function acceptDisplayed(): void {
             const committed = velocityInput.commitDisplayed()
@@ -85,7 +73,7 @@ Item {
         function acceptCommitted(committed: int): void {
             if (!promptRoot.opened)
                 return
-            promptRoot.model.updatePromptDraft(String(committed))
+            promptRoot.model.updatePromptDraft("" + committed)
             promptRoot.restoreFocusIfOwned()
             promptRoot.model.acceptPrompt()
         }
@@ -141,7 +129,7 @@ Item {
             inputObjectName: "noteVelocityInput"
             accessibleName: promptRoot.model.promptLabel
             accessibleDescription: promptRoot.model.promptTitle
-            onValueCommitted: committed => promptRoot.model.updatePromptDraft(String(committed))
+            onValueCommitted: committed => promptRoot.model.updatePromptDraft("" + committed)
             onEditingAccepted: (committed) => prompt.acceptCommitted(committed)
             textInput.KeyNavigation.tab: acceptButton
             textInput.KeyNavigation.backtab: cancelButton

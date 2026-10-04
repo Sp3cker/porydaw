@@ -86,8 +86,8 @@ ShellWindowSupport {
         compare(shell.height, session.baseFontPx * 57, "window height follows fontPx(57)")
         compare(shell.chromeTypography.caption.pixelSize, caption.pixelSize,
                 "shell role map follows captured session")
-        compare(shell.font.pixelSize, body.pixelSize,
-                "window font follows captured body role")
+        tryVerify(function() { return shell.font.pixelSize === body.pixelSize }, 3000,
+                  "window font follows captured body role")
         waitForShellScene()
         const status = findChild(shell, "shellStatusText")
         const title = findChild(shell, "shellPolyphonyTitle")

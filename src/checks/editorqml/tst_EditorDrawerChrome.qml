@@ -94,7 +94,7 @@ EditorDrawerTestSupport {
         grid.setCameraHScroll(0)
         tryCompare(presenter, "labelCount", 3)
         compare(label.text, "Other events (3)", "the route101 fixture publishes the full strip count")
-        compare(String(label.color).toLowerCase(), String(grid.palette.windowText).toLowerCase(),
+        compare(Qt.colorEqual(label.color, grid.palette.windowText), true,
                 "the label uses the live palette text role")
         compare(gutter.width, testCase.surface.timelineSplitX,
                 "the gutter input spans the shared header and keyboard width")
@@ -105,8 +105,8 @@ EditorDrawerTestSupport {
         var marker = null
         for (var i = 0; i < markers.count; ++i) {
             var candidate = markers.itemAt(i)
-            if (candidate.s.x > presenter.markerHalfWidth
-                && candidate.s.x < input.width - presenter.markerHalfWidth) {
+            if (candidate.markerX > presenter.markerHalfWidth
+                && candidate.markerX < input.width - presenter.markerHalfWidth) {
                 marker = candidate
                 break
             }
@@ -115,7 +115,7 @@ EditorDrawerTestSupport {
         fuzzyCompare(marker.x + presenter.markerHalfWidth,
                      marker.model.tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX,
                      0.01, "the marker follows the same tick projection as the roll")
-        verify(marker.s.color !== "", "the marker receives a track or file palette color")
+        verify(marker.color.a > 0, "the marker receives a track or file palette color")
         var tooltip = findChild(testCase.surface, "timelineOtherEventsToolTip")
         verify(tooltip && !tooltip.visible && tooltip.toolTipText === "",
                "A123 the mounted Other Events tooltip starts empty and hidden")
@@ -125,7 +125,7 @@ EditorDrawerTestSupport {
                 tooltipLabel = child
         }
         verify(tooltipLabel, "the Other Events tooltip contains a rendered text item")
-        mouseMove(input, marker.s.x, band.height / 2)
+        mouseMove(input, marker.markerX, band.height / 2)
         tryCompare(presenter, "toolTipVisible", true)
         verify(presenter.toolTipText.includes(marker.model.label),
                "the hover tooltip describes the visible marker")
@@ -133,8 +133,8 @@ EditorDrawerTestSupport {
                "the tooltip names the event scope and formatted time")
         tryCompare(tooltip, "visible", true, 5000,
                    "A129 the hovered marker shows the mounted Other Events tooltip")
-        var pointer = input.mapToItem(testCase.surface, marker.s.x, band.height / 2)
-        fuzzyCompare(presenter.toolTipX, marker.s.x, 0.01,
+        var pointer = input.mapToItem(testCase.surface, marker.markerX, band.height / 2)
+        fuzzyCompare(presenter.toolTipX, marker.markerX, 0.01,
                      "the hover position is measured in the physical plot input")
         fuzzyCompare(presenter.toolTipY, band.height / 2, 0.01,
                      "the hover height is measured in the physical plot input")
@@ -146,7 +146,7 @@ EditorDrawerTestSupport {
                && /^\d+:\d\d · (Track \d+|File) · /.test(tooltipLabel.text),
                "the painted tooltip shows the marker label scope and formatted time")
         testCase.rollInput().forceActiveFocus()
-        mouseClick(input, marker.s.x, band.height / 2)
+        mouseClick(input, marker.markerX, band.height / 2)
         compare(testCase.rollInput().activeFocus, true,
                 "clicking the event band does not steal the roll's keyboard focus")
         var ruler = findChild(testCase.surface, "timelineRulerInput")
@@ -160,7 +160,7 @@ EditorDrawerTestSupport {
                    "A133 leaving for the ruler hides the mounted tooltip")
         compare(tooltipLabel.text, "",
                 "leaving for the ruler clears the painted tooltip text")
-        mouseMove(input, marker.s.x, band.height / 2)
+        mouseMove(input, marker.markerX, band.height / 2)
         tryCompare(presenter, "toolTipVisible", true)
         session.cancelGridInput(1)
         tryCompare(presenter, "toolTipVisible", false, 1000,
@@ -171,13 +171,13 @@ EditorDrawerTestSupport {
                 "cancelling input clears the painted Other Events tooltip")
         var oldScroll = grid.cameraScrollX
         var revisionBeforeScroll = presenter.markerRevision
-        var stableX = marker.s.x
+        var stableX = marker.markerX
         mouseWheel(input, input.width / 2, input.height / 2,
                    0, -120, Qt.NoButton, Qt.ShiftModifier)
         tryVerify(function() { return grid.cameraScrollX > oldScroll },
                   1000, "the marker plot routes Shift-wheel into horizontal grid scrolling")
-        verify(presenter.markerRevision === revisionBeforeScroll && marker.s.x === stableX
-               && Math.abs(marker.s.x - marker.model.tick * grid.beatWidth / grid.ticksPerBeat) < 0.01,
+        verify(presenter.markerRevision === revisionBeforeScroll && marker.markerX === stableX
+               && Math.abs(marker.markerX - marker.model.tick * grid.beatWidth / grid.ticksPerBeat) < 0.01,
                "a scroll-only camera change keeps the published markers at scroll-stable tick-times-zoom x")
         var beatBeforeZoom = grid.beatWidth
         grid.handleWheel(0, 120, 0, 0, Qt.NoModifier, 0, false, input.width / 2, input.height / 2)
@@ -185,7 +185,7 @@ EditorDrawerTestSupport {
             var zoomed = markers.itemAt(0)
             return grid.beatWidth !== beatBeforeZoom
                 && presenter.markerRevision > revisionBeforeScroll
-                && zoomed && Math.abs(zoomed.s.x
+                && zoomed && Math.abs(zoomed.markerX
                     - zoomed.model.tick * grid.beatWidth / grid.ticksPerBeat) < 0.01
         }, 1000, "a zoom republishes the event markers at the new tick-times-zoom x")
         grid.handleWheel(0, -120, 0, 0, Qt.NoModifier, 0, false, input.width / 2, input.height / 2)

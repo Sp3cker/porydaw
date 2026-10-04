@@ -47,9 +47,10 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
     shell.activate(id: "edit.undo")
     guard
         until({
-            peer.document.history.canUndo && peer.document.history.canRedo
-                && shell.actionEnabled(id: "edit.undo")
-                && shell.actionEnabled(id: "edit.redo")
+            shell.refreshActionStates()
+            return peer.document.history.canUndo && peer.document.history.canRedo
+                && shell.action(id: "edit.undo")?.enabled == true
+                && shell.action(id: "edit.redo")?.enabled == true
         })
     else {
         report.fail(id, "selected peer fixture requires both Undo and Redo before the bank edit")
@@ -66,8 +67,9 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
         if change.domains.contains(.history) && !change.domains.contains(.bank)
             && origin.document.history.bankTransitionInFlight
         {
-            pendingUndo = shell.actionEnabled(id: "edit.undo")
-            pendingRedo = shell.actionEnabled(id: "edit.redo")
+            shell.refreshActionStates()
+            pendingUndo = shell.action(id: "edit.undo")?.enabled
+            pendingRedo = shell.action(id: "edit.redo")?.enabled
         }
     }
     var publishedUndo: Bool?
@@ -78,7 +80,8 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
         peerChange?(change)
         guard let origin, let peer, let shell else { return }
         if change.domains.contains(.bank), peer.bankSlots[0].voice == edited {
-            publishedUndo = shell.actionEnabled(id: "edit.undo")
+            shell.refreshActionStates()
+            publishedUndo = shell.action(id: "edit.undo")?.enabled
             publishedCount = origin.document.history.undoCount == historyBefore + 1
             publishedIndex = origin.document.history.undoIndex == historyBefore + 1
         }
@@ -107,7 +110,8 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
         publishedUndo == true, cppID: id,
         message: "selected tab Undo is restored when the bank edit becomes visible")
     app.songTabs.selectTab(tabId: originID)
-    let undoEnabled = shell.actionEnabled(id: "edit.undo")
+    shell.refreshActionStates()
+    let undoEnabled = shell.action(id: "edit.undo")?.enabled == true
     shell.activate(id: "edit.undo")
     _ = until({
         origin.document.history.undoIndex == historyBefore
@@ -150,14 +154,15 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
     let tabsBefore = app.songTabs.tabCount
     app.songTabs.requestClose(tabId: originID)
     let closeRefused = app.songTabs.pendingCloseId == closeBefore && app.songTabs.tabCount == tabsBefore
+    shell.refreshActionStates()
     report.expect(
         origin.document.history.beginBankTransition() == nil
             && app.songTabs.pendingBankTabId == originID
             && !app.songTabs.closeEnabled(tabId: originID)
             && app.songTabs.closeEnabled(tabId: peerID)
             && closeRefused
-            && !shell.actionEnabled(id: "edit.undo")
-            && !shell.actionEnabled(id: "edit.redo"),
+            && shell.action(id: "edit.undo")?.enabled == false
+            && shell.action(id: "edit.redo")?.enabled == false,
         cppID: id,
         message: "pending bank transition refuses origin-tab close while the non-origin tab stays close-enabled")
     origin.document.history.endBankTransition(held)

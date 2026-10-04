@@ -248,23 +248,20 @@ func drawerTypographyRoles(_ report: CheckReport) {
         let typography = Typography(baseFontPx: base)
         let automation = AutomationPage(baseFontPx: Double(base))
         let voice = VoiceChangesPage(baseFontPx: Double(base))
-        func expect(_ map: [String: QVariantSettable], _ role: GridFontSpec, _ label: String) {
+        func expect(_ font: QmlFont, _ role: GridFontSpec, _ label: String) {
             report.expect(
-                (map["family"] as? String) == role.family
-                    && (map["pixelSize"] as? Int) == role.pixelSize
-                    && (map["weight"] as? Int) == role.weight
-                    && (map["letterSpacing"] as? Double) == role.letterSpacing,
+                font == role.qmlFont,
                 cppID: cppID, message: "\(label) follows the typography role at \(base)")
         }
         expect(automation.captionFont, typography.caption, "automation caption")
         expect(automation.titleFont, typography.captionBold, "automation title")
         expect(automation.minimumFont, typography.captionMinimum, "tab minimum")
         expect(automation.noteNameFont, typography.noteName, "automation hover")
-        expect(automation.promptFont, typography.body, "automation prompt")
+        expect(automation.promptStyle.font, typography.body, "automation prompt")
         expect(voice.captionFont, typography.caption, "voice caption")
         expect(voice.titleFont, typography.captionBold, "voice gutter title")
         expect(voice.noteNameFont, typography.noteName, "voice hover")
-        expect(PromptAppearance.font(typography: typography), typography.body, "prompt")
+        expect(voice.promptStyle.font, typography.body, "prompt")
         report.expect(
             typography.captionMinimum.pixelSize == typography.fontPx(2.0 / 3.0)
                 && typography.captionMinimum.family == typography.caption.family
@@ -274,18 +271,16 @@ func drawerTypographyRoles(_ report: CheckReport) {
             automation.pipExtent == Double(typography.fontPx(0.5))
                 && automation.minimumCellHeight == typography.fontPxF(4.0 / 3.0),
             cppID: cppID, message: "tab pip and minimum height follow the base font")
-        let metrics = PromptAppearance.metrics(base: Double(base))
+        let metrics = PromptAppearance.Layout(base: Double(base))
         report.expect(
-            (metrics["radius"] as? Int) == typography.space(.half)
-                && (metrics["dialogPadding"] as? Int) == typography.space(.one)
-                && (metrics["verticalPadding"] as? Int) == typography.space(.half)
-                && (metrics["dragThreshold"] as? Double) == typography.fontPxF(1),
+            metrics.radius == Double(typography.space(.half))
+                && metrics.dialogPadding == Double(typography.space(.one))
+                && metrics.verticalPadding == Double(typography.space(.half))
+                && metrics.dragThreshold == typography.fontPxF(1),
             cppID: cppID, message: "prompt geometry follows session layout tokens")
         report.expect(
-            (automation.promptAppearance["dialogPadding"] as? Int)
-                == typography.space(.one)
-                && (automation.promptAppearance["buttonPadding"] as? Int)
-                    == typography.space(.one)
+            automation.promptStyle.dialogPadding == Double(typography.space(.one))
+                && automation.promptStyle.buttonPadding == Double(typography.space(.one))
                 && automation.promptInputWidth == typography.fontPx(16),
             cppID: cppID, message: "automation prompt publishes font-relative padding and width")
     }

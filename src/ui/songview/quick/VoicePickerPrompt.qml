@@ -2,14 +2,60 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Porydaw.Ui
+import PorydawApp as App
 
 FocusScope {
     id: pickerRoot
     objectName: "voicePicker"
-    required property var model
-    required property var promptPalette
-    property var pageItem: null
-    property var hintService: null
+    required final property var model
+    final property Item pageItem: null
+    final property App.MouseHints hintService: null
+    final readonly property App.HeaderVoicePicker headerModel: model as App.HeaderVoicePicker
+    final readonly property App.VoiceChangesPage voiceModel: model as App.VoiceChangesPage
+    final property App.PromptStyle appearance: headerModel
+        ? headerModel.promptStyle : voiceModel ? voiceModel.promptStyle : null
+    final property string pickerTitle
+    final property string pickerFilter
+    final property int pickerIndex
+    final property bool pickerHasMatch
+
+    Binding {
+        when: pickerRoot.headerModel !== null || pickerRoot.voiceModel !== null
+        restoreMode: Binding.RestoreNone
+        pickerRoot.pickerTitle: pickerRoot.headerModel ? pickerRoot.headerModel?.pickerTitle : pickerRoot.voiceModel?.pickerTitle
+        pickerRoot.pickerFilter: pickerRoot.headerModel ? pickerRoot.headerModel?.pickerFilter : pickerRoot.voiceModel?.pickerFilter
+        pickerRoot.pickerIndex: pickerRoot.headerModel ? pickerRoot.headerModel?.pickerIndex : pickerRoot.voiceModel?.pickerIndex
+        pickerRoot.pickerHasMatch: pickerRoot.headerModel ? pickerRoot.headerModel?.pickerHasMatch : pickerRoot.voiceModel?.pickerHasMatch
+        list.model: pickerRoot.headerModel ? pickerRoot.headerModel?.pickerRows : pickerRoot.voiceModel?.pickerRows
+    }
+
+    function releasePickerAudition(): void {
+        if (headerModel) headerModel.releasePickerAudition()
+        else if (voiceModel) voiceModel.releasePickerAudition()
+    }
+    function acceptPicker(): void {
+        if (headerModel) headerModel.acceptPicker()
+        else if (voiceModel) voiceModel.acceptPicker()
+    }
+    function cancelPicker(): void {
+        if (headerModel) headerModel.cancelPicker()
+        else if (voiceModel) voiceModel.cancelPicker()
+    }
+    function setPickerFilter(text: string): void {
+        if (headerModel) headerModel.setPickerFilter(text)
+        else if (voiceModel) voiceModel.setPickerFilter(text)
+    }
+    function currentPickerIndex(): int {
+        return headerModel ? headerModel.pickerIndex : voiceModel ? voiceModel.pickerIndex : -1
+    }
+    function selectPickerRow(index: int): void {
+        if (headerModel) headerModel.selectPickerRow(index)
+        else if (voiceModel) voiceModel.selectPickerRow(index)
+    }
+    function pressAndHoldPickerRow(index: int): void {
+        if (headerModel) headerModel.pressAndHoldPickerRow(index)
+        else if (voiceModel) voiceModel.pressAndHoldPickerRow(index)
+    }
     property bool showing: false
     signal closed()
     anchors.fill: parent
@@ -19,11 +65,11 @@ FocusScope {
         if (showing)
             Qt.callLater(prompt.activateInitialFocus)
         else {
-            model.releasePickerAudition()
+            releasePickerAudition()
             closed()
         }
     }
-    Component.onDestruction: model.releasePickerAudition()
+    Component.onDestruction: releasePickerAudition()
     Keys.onShortcutOverride: event => {
         event.accepted = event.key !== Qt.Key_Space || search.activeFocus
     }
@@ -31,7 +77,7 @@ FocusScope {
         objectName: "voicePickerUnderlay"
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-        onPressed: pickerRoot.model.cancelPicker()
+        onPressed: pickerRoot.cancelPicker()
     }
 
     PromptCard {
@@ -41,22 +87,7 @@ FocusScope {
         anchors.centerIn: parent
         width: implicitWidth
         height: implicitHeight
-        appearance: Object.assign({}, pickerRoot.model.promptAppearance, {
-            font: Qt.font(pickerRoot.model.promptFont),
-            background: pickerRoot.promptPalette?.windowBackground ?? "transparent",
-            outline: pickerRoot.promptPalette?.outline ?? "transparent",
-            text: pickerRoot.promptPalette?.windowText ?? "transparent",
-            focus: pickerRoot.promptPalette?.focusOutline ?? "transparent",
-            buttonBackground: pickerRoot.promptPalette?.buttonBackground ?? "transparent",
-            buttonText: pickerRoot.promptPalette?.buttonText ?? "transparent",
-            pressedBackground: pickerRoot.promptPalette?.buttonPressedBackground ?? "transparent",
-            pressedText: pickerRoot.promptPalette?.buttonPressedText ?? "transparent",
-            placeholderText: pickerRoot.promptPalette?.placeholderText ?? "transparent",
-            disabledText: pickerRoot.promptPalette?.disabledText ?? "transparent",
-            selection: pickerRoot.promptPalette?.tabSelectedBackground ?? "transparent",
-            selectionText: pickerRoot.promptPalette?.selectionText ?? "transparent"
-        })
-        minimumWidth: prompt.appearance.minimumWidth
+        appearance: pickerRoot.appearance
         property bool viewReady: false
         MouseArea {
             parent: prompt
@@ -66,16 +97,16 @@ FocusScope {
         }
 
         function acceptDisplayed(): void {
-            pickerRoot.model.acceptPicker()
+            pickerRoot.acceptPicker()
         }
         function cancelDisplayed(): void {
-            pickerRoot.model.cancelPicker()
+            pickerRoot.cancelPicker()
         }
         function activateInitialFocus(): void {
             search.forceActiveFocus(Qt.PopupFocusReason)
-            if (pickerRoot.model.pickerIndex >= 0) {
-                list.currentIndex = pickerRoot.model.pickerIndex
-                list.positionViewAtIndex(pickerRoot.model.pickerIndex, ListView.Center)
+            if (pickerRoot.pickerIndex >= 0) {
+                list.currentIndex = pickerRoot.pickerIndex
+                list.positionViewAtIndex(pickerRoot.pickerIndex, ListView.Center)
             }
             viewReady = true
         }
@@ -91,13 +122,12 @@ FocusScope {
         Keys.onReleased: (event) => event.accepted = true
 
         Accessible.role: Accessible.Client
-        Accessible.name: pickerRoot.model.pickerTitle
+        Accessible.name: pickerRoot.pickerTitle
 
         Text {
+            id: title
             objectName: "voicePickerTitle"
-            color: prompt.appearance.text
-            font: prompt.appearance.font
-            text: pickerRoot.model.pickerTitle
+            text: pickerRoot.pickerTitle
             renderType: Text.NativeRendering
         }
 
@@ -105,25 +135,12 @@ FocusScope {
             id: searchFrame
             objectName: "voicePickerSearchFrame"
 
-            implicitWidth: Math.max(
-                               prompt.appearance.minimumWidth - 2 * prompt.appearance.dialogPadding,
-                               Math.max(titleMetrics.advanceWidth(pickerRoot.model.pickerTitle),
-                                        searchMetrics.advanceWidth(searchHint.text))
-                               + 2 * (prompt.appearance.horizontalPadding + prompt.appearance.borderWidth))
-            implicitHeight: searchMetrics.height
-                            + 2 * (prompt.appearance.verticalPadding + prompt.appearance.borderWidth)
-            color: prompt.appearance.background
-            border.width: prompt.appearance.borderWidth
-            border.color: search.activeFocus ? prompt.appearance.focus : prompt.appearance.outline
-            radius: prompt.appearance.radius
 
             FontMetrics {
                 id: titleMetrics
-                font: prompt.appearance.font
             }
             FontMetrics {
                 id: searchMetrics
-                font: prompt.appearance.font
             }
 
             Text {
@@ -131,11 +148,8 @@ FocusScope {
                 objectName: "voicePickerSearchHint"
 
                 anchors.fill: parent
-                anchors.leftMargin: prompt.appearance.horizontalPadding + prompt.appearance.borderWidth
                 anchors.rightMargin: anchors.leftMargin
                 verticalAlignment: Text.AlignVCenter
-                color: prompt.appearance.placeholderText
-                font: prompt.appearance.font
                 text: qsTr("Search voices...")
                 visible: search.text.length === 0
                 renderType: Text.NativeRendering
@@ -156,27 +170,20 @@ FocusScope {
                 }
                 anchors.fill: parent
                 clip: true
-                color: prompt.appearance.text
-                font: prompt.appearance.font
-                padding: prompt.appearance.borderWidth
-                leftPadding: prompt.appearance.horizontalPadding + prompt.appearance.borderWidth
                 rightPadding: leftPadding
-                topPadding: prompt.appearance.verticalPadding + prompt.appearance.borderWidth
                 bottomPadding: topPadding
-                selectionColor: prompt.appearance.selection ?? prompt.appearance.focus
-                selectedTextColor: prompt.appearance.selectionText ?? prompt.appearance.text
                 renderType: TextInput.NativeRendering
                 activeFocusOnTab: true
                 selectByMouse: true
-                text: pickerRoot.model.pickerFilter
+                text: pickerRoot.pickerFilter
                 Accessible.role: Accessible.EditableText
                 Accessible.name: searchHint.text
-                Accessible.description: pickerRoot.model.pickerTitle
+                Accessible.description: pickerRoot.pickerTitle
                 Accessible.editable: true
                 KeyNavigation.tab: list
                 KeyNavigation.backtab: cancelButton
 
-                onTextChanged: pickerRoot.model.setPickerFilter(text)
+                onTextChanged: pickerRoot.setPickerFilter(text)
                 Keys.onReturnPressed: (event) => {
                     prompt.acceptDisplayed()
                     event.accepted = true
@@ -186,7 +193,7 @@ FocusScope {
                     event.accepted = true
                 }
                 Keys.onDownPressed: (event) => {
-                    if (pickerRoot.model.pickerHasMatch)
+                    if (pickerRoot.pickerHasMatch)
                         list.forceActiveFocus(Qt.TabFocusReason)
                     event.accepted = true
                 }
@@ -198,24 +205,22 @@ FocusScope {
 
             objectName: "voicePickerList"
             width: searchFrame.implicitWidth
-            height: prompt.appearance.listHeight
             clip: true
             focus: false
             activeFocusOnTab: true
-            model: pickerRoot.model.pickerRows
             boundsBehavior: Flickable.StopAtBounds
             highlightFollowsCurrentItem: true
             highlightMoveDuration: 0
             Accessible.role: Accessible.List
             Accessible.name: qsTr("Voices")
             Accessible.description: qsTr("Click and hold to audition (middle C).")
-            KeyNavigation.tab: pickerRoot.model.pickerHasMatch ? acceptButton : cancelButton
+            KeyNavigation.tab: pickerRoot.pickerHasMatch ? acceptButton : cancelButton
             KeyNavigation.backtab: search
 
             Connections {
                 target: pickerRoot.model
                 function onPickerIndexChanged(): void {
-                    list.currentIndex = pickerRoot.model.pickerIndex
+                    list.currentIndex = pickerRoot.currentPickerIndex()
                 }
                 function onPickerFilterChanged(): void {
                     if (list.currentIndex >= 0)
@@ -224,8 +229,8 @@ FocusScope {
             }
 
             onCurrentIndexChanged: {
-                if (prompt.viewReady && currentIndex !== pickerRoot.model.pickerIndex)
-                    pickerRoot.model.selectPickerRow(currentIndex)
+                if (prompt.viewReady && currentIndex !== pickerRoot.currentPickerIndex())
+                    pickerRoot.selectPickerRow(currentIndex)
             }
 
             Keys.onReturnPressed: (event) => {
@@ -259,7 +264,7 @@ FocusScope {
                 Accessible.role: Accessible.ListItem
                 Accessible.name: label
                 Accessible.selected: ListView.isCurrentItem
-                Accessible.onPressAction: pickerRoot.model.selectPickerRow(row.index)
+                Accessible.onPressAction: pickerRoot.selectPickerRow(row.index)
 
                 Text {
                     id: rowText
@@ -280,28 +285,27 @@ FocusScope {
                     acceptedButtons: Qt.LeftButton
                     onPressed: {
                         list.currentIndex = row.index
-                        pickerRoot.model.pressAndHoldPickerRow(row.index)
+                        pickerRoot.pressAndHoldPickerRow(row.index)
                     }
-                    onReleased: pickerRoot.model.releasePickerAudition()
-                    onCanceled: pickerRoot.model.releasePickerAudition()
+                    onReleased: pickerRoot.releasePickerAudition()
+                    onCanceled: pickerRoot.releasePickerAudition()
                     onClicked: list.forceActiveFocus(Qt.MouseFocusReason)
                     onDoubleClicked: prompt.acceptDisplayed()
                 }
             }
 
             Text {
+                id: emptyText
                 objectName: "voicePickerEmptyText"
                 anchors.centerIn: parent
-                color: prompt.appearance.text
-                font: prompt.appearance.font
                 text: qsTr("No matching voices")
-                visible: !pickerRoot.model.pickerHasMatch
+                visible: !pickerRoot.pickerHasMatch
                 renderType: Text.NativeRendering
             }
         }
 
         Row {
-            spacing: prompt.appearance.spacing
+            id: buttons
 
             PromptButton {
                 id: acceptButton
@@ -310,8 +314,7 @@ FocusScope {
                 claimsShortcuts: false
                 appearance: prompt.appearance
                 text: qsTr("OK")
-                enabled: pickerRoot.model.pickerHasMatch
-                minimumWidth: cancelButton.labelWidth + 2 * prompt.appearance.buttonPadding
+                enabled: pickerRoot.pickerHasMatch
                 KeyNavigation.tab: cancelButton
                 KeyNavigation.backtab: list
                 onActivated: prompt.acceptDisplayed()
@@ -324,11 +327,46 @@ FocusScope {
                 claimsShortcuts: false
                 appearance: prompt.appearance
                 text: qsTr("Cancel")
-                minimumWidth: acceptButton.labelWidth + 2 * prompt.appearance.buttonPadding
                 KeyNavigation.tab: search
-                KeyNavigation.backtab: pickerRoot.model.pickerHasMatch ? acceptButton : list
+                KeyNavigation.backtab: pickerRoot.pickerHasMatch ? acceptButton : list
                 onActivated: prompt.cancelDisplayed()
             }
         }
+    }
+
+    Binding {
+        when: pickerRoot.appearance !== null
+        restoreMode: Binding.RestoreNone
+        prompt.minimumWidth: pickerRoot.appearance?.minimumWidth
+        title.color: pickerRoot.appearance?.text
+        title.font: pickerRoot.appearance?.font
+        searchFrame.implicitWidth: Math.max(
+            pickerRoot.appearance?.minimumWidth - 2 * pickerRoot.appearance?.dialogPadding,
+            Math.max(titleMetrics.advanceWidth(pickerRoot.pickerTitle), searchMetrics.advanceWidth(searchHint.text))
+            + 2 * (pickerRoot.appearance?.horizontalPadding + pickerRoot.appearance?.borderWidth))
+        searchFrame.implicitHeight: searchMetrics.height
+            + 2 * (pickerRoot.appearance?.verticalPadding + pickerRoot.appearance?.borderWidth)
+        searchFrame.color: pickerRoot.appearance?.background
+        searchFrame.border.width: pickerRoot.appearance?.borderWidth
+        searchFrame.border.color: search.activeFocus ? pickerRoot.appearance?.focus : pickerRoot.appearance?.outline
+        searchFrame.radius: pickerRoot.appearance?.radius
+        titleMetrics.font: pickerRoot.appearance?.font
+        searchMetrics.font: pickerRoot.appearance?.font
+        searchHint.anchors.leftMargin: pickerRoot.appearance?.horizontalPadding + pickerRoot.appearance?.borderWidth
+        searchHint.color: pickerRoot.appearance?.placeholderText
+        searchHint.font: pickerRoot.appearance?.font
+        search.color: pickerRoot.appearance?.text
+        search.font: pickerRoot.appearance?.font
+        search.padding: pickerRoot.appearance?.borderWidth
+        search.leftPadding: pickerRoot.appearance?.horizontalPadding + pickerRoot.appearance?.borderWidth
+        search.topPadding: pickerRoot.appearance?.verticalPadding + pickerRoot.appearance?.borderWidth
+        search.selectionColor: pickerRoot.appearance?.selection
+        search.selectedTextColor: pickerRoot.appearance?.selectionText
+        list.height: pickerRoot.appearance?.listHeight
+        emptyText.color: pickerRoot.appearance?.text
+        emptyText.font: pickerRoot.appearance?.font
+        buttons.spacing: pickerRoot.appearance?.spacing
+        acceptButton.minimumWidth: cancelButton.labelWidth + 2 * pickerRoot.appearance?.buttonPadding
+        cancelButton.minimumWidth: acceptButton.labelWidth + 2 * pickerRoot.appearance?.buttonPadding
     }
 }

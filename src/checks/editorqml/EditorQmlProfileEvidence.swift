@@ -1,4 +1,5 @@
 import Foundation
+import PorydawApp
 
 extension EditorQmlLane {
     /// One reference pane's production identity: the composition component the
@@ -269,11 +270,11 @@ extension EditorQmlBootstrap {
         }
         let paletteRecord: [String: Any] = [
             "source": EditorQmlLane.profilePaletteSource,
-            "windowBackground": palette.windowBackground,
-            "chromeBackground": palette.chromeBackground,
-            "rollBackground": palette.rollBackground,
-            "keyboardLabel": palette.keyboardLabel,
-            "selectionRing": palette.selectionRing,
+            "windowBackground": PaletteMath.hex(palette.windowBackground),
+            "chromeBackground": PaletteMath.hex(palette.chromeBackground),
+            "rollBackground": PaletteMath.hex(palette.rollBackground),
+            "keyboardLabel": PaletteMath.hex(palette.keyboardLabel),
+            "selectionRing": PaletteMath.hex(palette.selectionRing)
         ]
         let metadata: [String: Any] = [
             "profile": EditorQmlBootstrap.stagedProfile,

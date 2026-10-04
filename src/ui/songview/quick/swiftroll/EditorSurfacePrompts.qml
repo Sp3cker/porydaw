@@ -5,13 +5,13 @@ import Porydaw.Ui
 
 Item {
     id: promptHost
-    required property Item root
-    required property Item rollInput
-    required property Item rulerInput
-    required property Item rollPlot
-    required property Item trackHeaders
-    required property Item editorDrawer
-    required property var bodyFontMetrics
+    final required property EditorSurface root
+    final required property MouseArea rollInput
+    final required property MouseArea rulerInput
+    final required property Item rollPlot
+    final required property TrackHeaderBand trackHeaders
+    final required property EditorDrawer editorDrawer
+    final required property FontMetrics bodyFontMetrics
     Connections {
         target: promptHost.root.applicationSession
         function onTimeSigPromptOpenChanged(): void {
@@ -35,7 +35,8 @@ Item {
         objectName: "headerVoicePickerLoader"
         anchors.fill: parent
         z: 14
-        active: promptHost.root.applicationSession.headerVoicePickerOpen
+        active: promptHost.root.applicationSession !== null && promptHost.root.headerPickerModel !== null
+                && promptHost.root.applicationSession.headerVoicePickerOpen
         Connections {
             target: promptHost.root.timeSigHost
             function onAddTrackVoiceRequested(): void {
@@ -49,7 +50,8 @@ Item {
             function onHeaderVoicePickerOpenChanged(): void {
                 if (!promptHost.root.applicationSession.headerVoicePickerOpen)
                     Qt.callLater(function() {
-                        if (!promptHost.root.applicationSession.headerVoicePickerOpen && promptHost.trackHeaders.bandVisible)
+                        if (promptHost.root.applicationSession
+                                && !promptHost.root.applicationSession.headerVoicePickerOpen && promptHost.trackHeaders.bandVisible)
                             promptHost.trackHeaders.restoreHeaderFocus()
                     })
             }
@@ -57,7 +59,7 @@ Item {
         sourceComponent: Component {
             VoicePickerPrompt {
                 model: promptHost.root.headerPickerModel
-                promptPalette: promptHost.root.gridModel.palette
+                appearance: promptHost.root.headerPickerModel?.promptStyle ?? null
                 hintService: promptHost.root.hintService
                 showing: true
             }
@@ -68,7 +70,8 @@ Item {
         id: timeSigPromptLoader
         anchors.fill: parent
         z: 11
-        active: promptHost.root.applicationSession.timeSigPromptOpen
+        active: promptHost.root.applicationSession !== null && promptHost.root.timeSigHost !== null
+                && promptHost.root.applicationSession.timeSigPromptOpen
         sourceComponent: Component {
             Item {
                 MouseArea {
@@ -100,7 +103,6 @@ Item {
                     width: implicitWidth
                     height: implicitHeight
                     bridge: promptHost.root.rulerMenu
-                    promptPalette: promptHost.root.gridModel.palette
                 }
             }
         }
@@ -115,7 +117,6 @@ Item {
             VelocityPrompt {
                 anchors.fill: parent
                 model: promptHost.root.velocityModel
-                promptPalette: promptHost.root.gridModel.palette
                 focusOrigin: promptHost.rollInput
                 hintService: promptHost.root.hintService
                 onConsumingOutsidePressChanged: {
@@ -129,7 +130,8 @@ Item {
         id: pitchBendPopupLoader
         anchors.fill: parent
         z: 12
-        active: promptHost.root.pitchBendPresenter.isOpen
+        active: promptHost.root.pitchBendPresenter !== null && promptHost.root.gridModel !== null
+                && promptHost.root.pitchBendPresenter.isOpen
         visible: active
         enabled: active
         sourceComponent: Component {
@@ -157,21 +159,25 @@ Item {
                     fallbackFont: promptHost.root.bodyFont
                     width: implicitWidth
                     height: implicitHeight
-                    x: Math.max(0, Math.min(
-                        promptHost.root.timelineSplitX + promptHost.root.pitchBendPresenter.anchorX
-                            + promptHost.root.pitchBendPresenter.anchorWidth / 2 - width / 2,
-                        parent.width - width))
-                    y: {
-                        const below = promptHost.root.gridModel.rulerHeight
-                            + promptHost.root.pitchBendPresenter.anchorY
-                            + promptHost.root.pitchBendPresenter.anchorHeight
-                            + promptHost.bodyFontMetrics.height / 3
-                        const above = promptHost.root.gridModel.rulerHeight
-                            + promptHost.root.pitchBendPresenter.anchorY - height
-                            - promptHost.bodyFontMetrics.height / 3
-                        return Math.max(0, Math.min(
-                            below + height <= promptHost.editorDrawer.y ? below : above,
-                            parent.height - height))
+                    Binding {
+                        when: promptHost.root.pitchBendPresenter !== null && promptHost.root.gridModel !== null
+                        restoreMode: Binding.RestoreNone
+                        pitchBendPopup.x: Math.max(0, Math.min(
+                            promptHost.root.timelineSplitX + promptHost.root.pitchBendPresenter?.anchorX
+                                + promptHost.root.pitchBendPresenter?.anchorWidth / 2 - pitchBendPopup.width / 2,
+                            pitchBendPopup.parent.width - pitchBendPopup.width))
+                        pitchBendPopup.y: {
+                            const below = promptHost.root.gridModel?.rulerHeight
+                                + promptHost.root.pitchBendPresenter?.anchorY
+                                + promptHost.root.pitchBendPresenter?.anchorHeight
+                                + promptHost.bodyFontMetrics.height / 3
+                            const above = promptHost.root.gridModel?.rulerHeight
+                                + promptHost.root.pitchBendPresenter?.anchorY - pitchBendPopup.height
+                                - promptHost.bodyFontMetrics.height / 3
+                            return Math.max(0, Math.min(
+                                below + pitchBendPopup.height <= promptHost.editorDrawer.y ? below : above,
+                                pitchBendPopup.parent.height - pitchBendPopup.height))
+                        }
                     }
                     Component.onCompleted: {
                         promptHost.root.pitchBendPresenter.configure(
@@ -180,10 +186,13 @@ Item {
                             promptHost.root.gridModel.devicePixelRatio)
                         pitchBendPopup.focusInitialGraph()
                     }
-                    onFallbackFontChanged: promptHost.root.pitchBendPresenter.configure(
-                        promptHost.root.baseFontPx,
-                        promptHost.bodyFontMetrics.lineSpacing,
-                        promptHost.root.gridModel.devicePixelRatio)
+                    onFallbackFontChanged: {
+                        if (promptHost.root.pitchBendPresenter && promptHost.root.gridModel)
+                            promptHost.root.pitchBendPresenter.configure(
+                                promptHost.root.baseFontPx,
+                                promptHost.bodyFontMetrics.lineSpacing,
+                                promptHost.root.gridModel.devicePixelRatio)
+                    }
                 }
                 Keys.onEscapePressed: (event) => {
                     promptHost.root.pitchBendPresenter.cancelAndClose()

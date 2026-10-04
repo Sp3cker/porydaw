@@ -44,11 +44,15 @@ func drawerVoiceMarkerDragTransactions(
             expected: incremental.map(\.label), actual: redrawn.map(\.label),
             cppID: drawerVoiceMoveID, what: "drag and redraw agree on label elision")
         for (before, after) in zip(incremental, redrawn) {
-            for component in ["x", "y", "width", "height"] {
+            let components: [(String, Double, Double)] = [
+                ("x", before.labelX, after.labelX),
+                ("y", before.labelY, after.labelY),
+                ("width", before.labelWidth, after.labelWidth),
+                ("height", before.labelHeight, after.labelHeight),
+            ]
+            for (component, expected, actual) in components {
                 report.expectEqual(
-                    expected: before.labelRect[component] as? Double,
-                    actual:
-                        after.labelRect[component] as? Double, cppID: drawerVoiceMoveID,
+                    expected: expected, actual: actual, cppID: drawerVoiceMoveID,
                     what: "drag and redraw agree on label \(component)")
             }
             report.expectEqual(

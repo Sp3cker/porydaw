@@ -55,14 +55,12 @@ TestCase {
         }
     }
 
-    // The production overlay reads `appSession` as a context property — the
-    // window installs it with setContextProperty before loading the document.
-    // A property declared on the created instance is the same lookup result.
+    // Supply the real application session to the production composition.
     Component {
         id: overlayComponent
 
         SwiftRollOverlay {
-            property var appSession: session
+            applicationSession: session
         }
     }
 
@@ -176,8 +174,7 @@ TestCase {
         return findChild(testCase.selectedSurface(), "timelineQuickRollPlot")
     }
 
-    function pixelNear(image, x, y, hex, tolerance) {
-        var expected = Qt.color(hex)
+    function pixelNear(image, x, y, expected, tolerance) {
         return Math.abs(image.red(x, y) - expected.r * 255) <= tolerance
                && Math.abs(image.green(x, y) - expected.g * 255) <= tolerance
                && Math.abs(image.blue(x, y) - expected.b * 255) <= tolerance
@@ -199,7 +196,7 @@ TestCase {
                && background.height >= surface.height - 1,
                "the roll background covers the surface")
         compare(background.color.toString(),
-                Qt.color(session.palette.rollBackground).toString(),
+                session.palette.rollBackground.toString(),
                 "the background item carries the session palette's roll background")
         var image = grabImage(surface)
         verify(image.width > 0 && image.height > 0,
@@ -391,8 +388,10 @@ TestCase {
         var gridRoles = ["gridLine", "gridLineSub1", "gridLineSub2", "gridLineSub3",
                          "gridLineBeat", "gridLineBeatFine", "gridLineBar", "rowLine"]
         var original = {}
-        for (var i = 0; i < gridRoles.length; ++i)
-            original[gridRoles[i]] = palette[gridRoles[i]]
+        for (var i = 0; i < gridRoles.length; ++i) {
+            const color = palette[gridRoles[i]]
+            original[gridRoles[i]] = Qt.rgba(color.r, color.g, color.b, color.a)
+        }
 
         function grab() {
             wait(0)

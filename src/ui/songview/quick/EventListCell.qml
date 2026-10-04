@@ -2,21 +2,20 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import PorydawApp
+import Porydaw.Ui
 
 Item {
     id: cell
-    required property Item page
-    required property Item tableOwner
-    required property EventListPresenter controller
+    final required property EventListPage page
+    final required property EventListTable tableOwner
+    final required property EventListPresenter controller
 
         required property int row
         required property int column
-        required property var display
-        required property var edit
-        required property var tickString
-        required property font cellFont
-        required property int alignment
-        required property var rowKind
+        final required property EventListRowHandle edit
+        final required property font cellFont
+        final required property int alignment
+        final property int rowKind
 
         property real pressX: 0
         property real pressY: 0
@@ -27,23 +26,42 @@ Item {
         readonly property bool editing: cell.page.editingRow === row && cell.page.editingColumn === column
         readonly property bool current: cell.page.controller && cell.page.controller.currentRow === row
                                         && cell.page.currentColumn === column
-        readonly property bool selected: cell.page.rowIsSelected(row)
+        final property bool selected
         readonly property bool numericEditor: column >= 2 && column <= 4
         readonly property bool tickEditor: column === 0
         readonly property bool blobEditor: column === 5
-        readonly property bool editable: {
-            const editValue = edit
-            return cell.page.controller && cell.page.controller.isCellEditable(row, column)
-        }
-        readonly property string displayedText: tickEditor ? cell.page.valueText(tickString)
-                                                           : cell.page.valueText(display)
-        readonly property string editorText: tickEditor ? cell.page.valueText(tickString)
-                                                        : cell.page.valueText(edit)
+        final property bool editable
+        final property string displayedText
+        final property string editorText
         readonly property int horizontalAlignment: (alignment & Text.AlignRight)
                                                   ? Text.AlignRight : Text.AlignLeft
 
+        Binding {
+            cell.rowKind: cell.edit.rowKind
+            cell.selected: cell.edit.selected
+            cell.editable: (cell.edit.editableMask & (1 << cell.column)) !== 0
+            cell.displayedText: cell.textForColumn(cell.column)
+            cell.editorText: cell.column === 1 ? cell.edit.editType
+                             : cell.column === 5 ? cell.edit.editData : cell.displayedText
+            when: cell.edit !== null
+            restoreMode: Binding.RestoreNone
+        }
+
         implicitWidth: cell.page.columnWidth(column)
         implicitHeight: cell.page.rowHeight
+
+        function textForColumn(column: int): string {
+            switch (column) {
+            case 0: return edit.c0
+            case 1: return edit.c1
+            case 2: return edit.c2
+            case 3: return edit.c3
+            case 4: return edit.c4
+            case 5: return edit.c5
+            case 6: return edit.c6
+            default: return ""
+            }
+        }
 
         function focusEditor(): void {
             if (!editor.visible)
@@ -204,10 +222,10 @@ Item {
                 cell.pressX = mouse.x
                 cell.pressY = mouse.y
                 cell.pressWasCurrent = cell.page.controller && cell.page.controller.currentRow === cell.row
-                                       && cell.page.rowIsSelected(cell.row)
+                                       && cell.selected
                 cell.page.currentColumn = cell.column
                 if (mouse.button === Qt.RightButton) {
-                    if (!cell.page.rowIsSelected(cell.row))
+                    if (!cell.selected)
                         cell.page.selectRow(cell.row, Qt.NoModifier)
                 } else {
                     cell.page.selectRow(cell.row, mouse.modifiers)

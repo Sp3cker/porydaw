@@ -10,7 +10,7 @@ Item {
     required property SampleStudioWorkflow workflow
     required property Window hostWindow
     required property ApplicationSession applicationSession
-    required property QtObject colors
+    required property GridPalette colors
 
     FileDialog {
         id: picker
@@ -20,7 +20,7 @@ Item {
                       qsTr("All files (*)")]
         fileMode: FileDialog.OpenFile
         currentFolder: host.workflow.pickerFolder
-        onAccepted: host.workflow.chooseSource(selectedFile.toString())
+        onAccepted: host.workflow.chooseSource(selectedFile)
         onRejected: host.workflow.cancelSource()
     }
     MessageDialog {
@@ -47,10 +47,10 @@ Item {
             workflow: host.workflow
             applicationSession: host.applicationSession
             colors: host.colors
-            editor: host.workflow.editor()
-            tools: host.workflow.loopTools()
-            waveformModel: host.workflow.waveform()
-            audition: host.workflow.audition()
+            editor: host.workflow.editor() as SampleStudioPresenter
+            tools: host.workflow.loopTools() as SampleLoopTools
+            waveformModel: host.workflow.waveform() as SampleWaveformModel
+            audition: host.workflow.audition() as SampleStudioAudition
             transientParent: host.hostWindow
         }
         onLoaded: (studio.item as SampleStudioDialog).present()
@@ -60,7 +60,7 @@ Item {
         active: host.workflow.zonePickerOpen
         sourceComponent: Sf2ZonePickerDialog {
             workflow: host.workflow
-            picker: host.workflow.zonePicker()
+            picker: host.workflow.zonePicker() as Sf2ZonePickerPresenter
             applicationSession: host.applicationSession
             colors: host.colors
             transientParent: host.hostWindow

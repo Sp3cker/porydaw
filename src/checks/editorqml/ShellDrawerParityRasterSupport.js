@@ -17,11 +17,9 @@
     }
 
     function colorChannels(testCase, color) {
-        var hex = String(color).replace("#", "")
-        if (hex.length === 8)
-            hex = hex.slice(2)
-        return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16),
-                parseInt(hex.slice(4, 6), 16)]
+        var value = typeof color === "string" ? Qt.color(color) : color
+        return [Math.round(value.r * 255), Math.round(value.g * 255),
+                Math.round(value.b * 255)]
     }
 
     function paintedColor(testCase, image, capture, item, color) {
@@ -48,9 +46,9 @@
     }
 
     function compositedColor(testCase, base, overlay) {
-        var color = String(overlay).replace("#", "")
-        var alpha = color.length === 8 ? parseInt(color.slice(0, 2), 16) / 255 : 1
-        var ink = colorChannels(testCase, overlay)
+        var color = typeof overlay === "string" ? Qt.color(overlay) : overlay
+        var alpha = color.a
+        var ink = colorChannels(testCase, color)
         return base.map(function(channel, index) {
             return Math.round(channel * (1 - alpha) + ink[index] * alpha)
         })

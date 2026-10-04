@@ -58,17 +58,12 @@ TestCase {
         function onOperationFailed(message) { testCase.openFailure = message }
     }
 
-    // The production overlay reads `appSession` as a context property — the
-    // window installs it with setContextProperty before loading the document.
-    // A property declared on the created instance is the same lookup result:
-    // the overlay's own context object answers the unqualified name before any
-    // context property would, so the composition binds the real session
-    // without a C++ host.
+    // Supply the real application session to the production composition.
     Component {
         id: overlayComponent
 
         SwiftRollOverlay {
-            property var appSession: session
+            applicationSession: session
         }
     }
 

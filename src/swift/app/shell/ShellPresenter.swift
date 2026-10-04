@@ -148,6 +148,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
     }()
 
     private let keybindings = KeybindingRegistry()
+    private var actionStates: [String: ShellActionState] = [:]
+    private let clipboard = GridClipboard()
+    private var clipboardObserver: UUID?
     public let regularFontSource: String = BundledFont.regular.source
     public let semiboldFontSource: String = BundledFont.semibold.source
     public let monoFontSource: String = BundledFont.mono.source
@@ -235,18 +238,45 @@ public final class ShellPresenter: QmlInstantiableStatus {
         windowActionIds = Self.windowIds
         contextHeadActionIds = Self.contextHeadIds
         contextBodyActionIds = Self.contextBodyIds
+        let transport = session.transportBarPresenter()
+        let availabilityChanged = transport.onAvailabilityChanged
+        transport.onAvailabilityChanged = { [weak self] in
+            availabilityChanged?()
+            self?.refreshActionStates()
+        }
+        clipboardObserver = clipboard.addChangeObserver { [weak self] in
+            self?.refreshActionStates()
+        }
         pd_startup_trace_mark("presenter-end")
     }
 
-    public func componentComplete() {}
-
-    public func actionLabel(id: String) -> String {
-        guard Self.byId[id] != nil else { return "" }
-        return id == "help.about" ? "About porydaw" : keybindings.label(id)
+    isolated deinit {
+        if let clipboardObserver { clipboard.removeChangeObserver(clipboardObserver) }
     }
 
-    public func menuLabel(id: String) -> String {
-        Self.menuLabels[id] ?? actionLabel(id: id)
+    public func componentComplete() {
+        refreshActionStates()
+    }
+
+    /// Returns the same retained state for every lookup of a known action.
+    public func action(id: String) -> Optional<ShellActionState> {
+        if let state = actionStates[id] { return state }
+        guard Self.byId[id] != nil else { return nil }
+        let label = id == "help.about" ? "About porydaw" : keybindings.label(id)
+        let state = ShellActionState(
+            enabled: isActionEnabled(id: id), checked: isActionChecked(id: id),
+            checkable: isActionCheckable(id: id), label: label,
+            menuLabel: Self.menuLabels[id] ?? label,
+            shortcut: keybindings.sequences(id).first?.nativeText ?? "")
+        actionStates[id] = state
+        return state
+    }
+
+    /// Existing availability triggers publish only changed action properties.
+    public func refreshActionStates() {
+        for (id, state) in actionStates {
+            state.update(enabled: isActionEnabled(id: id), checked: isActionChecked(id: id))
+        }
     }
 
     /// Portable Qt sequence text, including every platform StandardKey
@@ -256,18 +286,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         return keybindings.sequences(id).map(\.portableText)
     }
 
-    /// The native menu advertises only QAction::shortcut()'s primary sequence.
-    private var lastEventListGate:
-        (
-            attached: Bool, visible: Bool, editing: Bool, menuOpen: Bool,
-            tableRevision: Int
-        )?
-
-    public func actionShortcut(id: String) -> String {
-        keybindings.sequences(id).first?.nativeText ?? ""
-    }
-
-    public func actionEnabled(id: String) -> Bool {
+    private func isActionEnabled(id: String) -> Bool {
         guard sceneActive, let action = Self.byId[id] else { return false }
         if session.wavExportPresenter().active { return false }
         if id == "view.polyphony_debugger" || id == "edit.preferences"
@@ -276,21 +295,11 @@ public final class ShellPresenter: QmlInstantiableStatus {
             return true
         }
         if id == "eventlist.move_up" || id == "eventlist.move_down" {
-            guard session.songOpen else {
-                lastEventListGate = nil
+            guard session.songOpen else { return false }
+            let events = session.eventListPresenter()
+            guard events.attached, events.visible, !events.editing, !events.menuOpen else {
                 return false
             }
-            let events = session.eventListPresenter()
-            let gate = (
-                attached: events.attached, visible: events.visible,
-                editing: events.editing, menuOpen: events.menuOpen,
-                tableRevision: events.tableRevision
-            )
-            if lastEventListGate.map({ $0 == gate }) != true {
-                lastEventListGate = gate
-                eventListGateChanged()
-            }
-            guard gate.attached, gate.visible, !gate.editing, !gate.menuOpen else { return false }
             return events.model.row(at: events.currentRow)?.eventIndex != nil
         }
         if let command = action.command {
@@ -331,7 +340,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         }
     }
 
-    public func actionCheckable(id: String) -> Bool {
+    private func isActionCheckable(id: String) -> Bool {
         switch id {
         case "view.event_list", "view.automation_drawer", "view.velocity_drawer",
             "view.voice_changes_drawer", "view.polyphony_debugger",
@@ -342,7 +351,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         }
     }
 
-    public func actionChecked(id: String) -> Bool {
+    private func isActionChecked(id: String) -> Bool {
         switch id {
         case "view.event_list": return session.songTabs.selectedTabShowsEvents
         case "view.automation_drawer":
@@ -362,7 +371,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     /// An action activation has the same enabled gate as QAction::triggered.
     public func activate(id: String) {
-        guard actionEnabled(id: id) else { return }
+        guard isActionEnabled(id: id) else { return }
+        defer { refreshActionStates() }
         if let command = Self.byId[id]?.command {
             if command == .moveEventUp || command == .moveEventDown {
                 session.performEventListCommand(command: command.rawValue)
@@ -438,6 +448,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         eventList: Bool
     ) -> Bool {
         guard sceneActive, session.songOpen else { return false }
+        defer { refreshActionStates() }
         if !eventList && key == 0x0100_0000 && !autoRepeat && session.handleGridEscape() {
             return true
         }
@@ -465,6 +476,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     public func releaseEditorKey(autoRepeat: Bool) -> Bool {
         guard sceneActive, session.songOpen, !autoRepeat else { return false }
+        defer { refreshActionStates() }
         return session.releaseGridKey(autoRepeat: autoRepeat)
     }
 
@@ -498,6 +510,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         // still reaches the live QML scene (ApplicationSession.hostClosing).
         session.hostClosing()
         sceneActive = false
+        refreshActionStates()
     }
 
     /// Called after Loader invalidates the scene's QML contexts and detaches
@@ -547,6 +560,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     public func workspaceReady() {
         guard sceneActive, !closing else { return }
         hasLoadedWorkspace = true
+        refreshActionStates()
         pd_startup_trace_mark("workspace-ready")
         pd_startup_trace_next_frame("workspace-frame")
     }
@@ -614,6 +628,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     public func projectOpenChanged() {
         refreshWindowChrome()
+        refreshActionStates()
         if session.projectOpen {
             statusText = "Opened " + session.projectRoot
         }
@@ -622,10 +637,12 @@ public final class ShellPresenter: QmlInstantiableStatus {
     public func songOpenChanged() {
         if session.songOpen { statusText = "Song open" }
         refreshWindowChrome()
+        refreshActionStates()
     }
 
     public func saveStateChanged() {
         refreshWindowChrome()
+        refreshActionStates()
         guard !session.saveInProgress, !session.lastSaveError.isEmpty else { return }
         criticalRequested(title: "Save Failed", message: session.lastSaveError)
     }
@@ -662,6 +679,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         polyphonyVisible = state.contains("debugger")
         session.polyphony.setVisible(showing: polyphonyVisible)
         session.songDockController().presenter.restoreFromPreferences()
+        refreshActionStates()
     }
 
     public func persistSessionState(
@@ -735,6 +753,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     private func applyAppearance() {
         ShellAppearance.apply(to: session.palette, mode: themeMode, contrast: gridLineContrast)
+        session.refreshPromptStyle()
         session.eventListPresenter().refreshAppearance()
         // Shared roles update direct bindings; each open workspace also owns
         // color snapshots and display lists, including those in hidden tabs.
@@ -761,6 +780,5 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtSignal public func settingsRequested(songFirst: Bool)
     @QtSignal public func aboutRequested()
     @QtSignal public func quitRequested()
-    @QtSignal public func eventListGateChanged()
     @QtSignal public func criticalRequested(title: String, message: String)
 }

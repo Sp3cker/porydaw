@@ -200,8 +200,12 @@ extension PianoGrid {
     }
 
     @QtIgnored
-    private func fontSpec(_ kind: GridFontKind) -> [String: QVariantSettable] {
-        typography?.fontMap(kind) ?? measurementFonts[kind]!.map
+    private func fontSpec(_ kind: GridFontKind) -> QmlFont {
+        if let typography { return typography.font(kind) }
+        guard let font = measurementFonts[kind] else {
+            preconditionFailure("PianoGrid requires measured fonts before scene publication")
+        }
+        return font.qmlFont
     }
 
     @QtIgnored

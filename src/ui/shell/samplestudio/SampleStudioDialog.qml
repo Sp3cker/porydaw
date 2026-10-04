@@ -23,7 +23,7 @@ DialogWindow {
     minimumWidth: 40 * unit
     minimumHeight: 23.33 * unit
     title: editor.windowTitle
-    font: Qt.font(applicationSession.typographyFonts.body)
+    font: applicationSession.typographyFonts.body
     onClosing: workflow.cancel()
 
     Shortcut { sequences: [StandardKey.Undo]; context: Qt.WindowShortcut; onActivated: dialog.editor.undo() }
@@ -207,8 +207,8 @@ DialogWindow {
                         RowLayout {
                             Label { text: qsTr("Fine tune (cents):"); color: dialog.colors.windowText }
                             AuditionTextField {
-                                text: String(dialog.editor.fineTuneCents)
-                                onEditingFinished: dialog.editor.setFineTuneCents(Number(text))
+                                text: "" + dialog.editor.fineTuneCents
+                                onEditingFinished: dialog.editor.setFineTuneCents(+text)
                             }
                         }
                         RowLayout {

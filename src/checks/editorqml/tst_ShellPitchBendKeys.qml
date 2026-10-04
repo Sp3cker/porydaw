@@ -16,6 +16,7 @@ ShellPitchBendSupport {
             return opened.grid.appliedRevisionText !== baseline
         }, 5000), "the popup stroke creates an undoable song revision")
         const edited = opened.grid.appliedRevisionText
+        tryCompare(findChild(shell, "shellAction_edit.undo"), "enabled", true, 3000)
         keySequence(StandardKey.Undo)
         verify(waitForNative(function() {
             return graph.curveSegmentCount === original

@@ -1,28 +1,34 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
+import PorydawApp as App
 
 Item {
     id: trackHeaderScrollBar
 
-    required property var headersModel
+    required property App.TrackHeadersPresenter headersModel
     required property bool bandVisible
     required property color scrollbarHandle
     required property color scrollbarHandleHover
     required property real rowAreaWidth
 
-    signal wheelDelivered(var event)
+    signal wheelDelivered(WheelEvent event)
 
     objectName: "timelineTrackHeaderScrollBar"
     x: rowAreaWidth
-    width: Math.max(0, headersModel.scrollbarWidth)
+    Binding {
+        when: trackHeaderScrollBar.headersModel !== null
+        restoreMode: Binding.RestoreNone
+        trackHeaderScrollBar.width: Math.max(0, trackHeaderScrollBar.headersModel?.scrollbarWidth)
+        trackHeaderScrollBar.span: Math.max(0, trackHeaderScrollBar.headersModel?.maximumScrollY)
+    }
     height: parent.height
     z: 4
     visible: bandVisible && scrollable
     activeFocusOnTab: scrollable || activeFocus
 
-    readonly property real span: Math.max(0, headersModel.maximumScrollY)
-    readonly property bool scrollable: span > 0
+    property real span
+    readonly property bool scrollable: headersModel !== null && span > 0
     readonly property real thumbLength: {
         if (!(height > 0) || !scrollable)
             return 0
@@ -60,7 +66,7 @@ Item {
     }
 
     function rebaseDrag(): void {
-        if (!thumbMouse || !thumbMouse.pressed || !dragThresholdReached)
+        if (!headersModel || !thumbMouse || !thumbMouse.pressed || !dragThresholdReached)
             return
         dragStartValue = Math.max(0, Math.min(span, headersModel.scrollY))
         dragStartPosition = dragLastPosition

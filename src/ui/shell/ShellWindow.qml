@@ -6,31 +6,33 @@ import Porydaw.Ui
 ThemedWindow {
     id: root
     objectName: "shellWindow"
-    readonly property alias shellPresenter: shell
-    readonly property var sceneLoader: applicationContent.item ? applicationContent.item.sceneLoader : null
-    readonly property var drawerSectionSource: shell.session.songTabs.selectedPage
+    final readonly property ShellPresenter shellPresenter: shell
+    final readonly property ShellContent loadedContent: applicationContent.status === Loader.Ready
+        ? applicationContent.item as ShellContent : null
+    final readonly property Loader sceneLoader: root.loadedContent ? root.loadedContent.sceneLoader : null
+    final readonly property EditorDrawerPresenter drawerSectionSource: shell.session.songTabs.selectedPage
                                                ? shell.session.songTabs.selectedPage.drawerPresenter() : null
     colors: shell.session.palette
     property bool establishApplicationIdentity: false
-    property int actionRevision: 0
-    property var normalFrame: null
+    property rect normalFrame
+    property bool normalFrameValid: false
     property bool sessionStatePersisted: false
     property bool windowPrepared: false
     readonly property int bodyFontPx: shell.session.bodyFontPx
     property int chromeBaseFontPx: shell.session.baseFontPx
-    property var chromeTypography: shell.session.typographyFonts
-    property var chromeSpacing: shell.session.layoutSpaces
+    final property TypographyFonts chromeTypography: shell.session.typographyFonts
+    final property LayoutSpaces chromeSpacing: shell.session.layoutSpaces
     property font typographyCaptureFont: Application.font
     width: root.chromeBaseFontPx * 92
     height: root.chromeBaseFontPx * 57
     title: shell.windowTitle
     visible: root.windowPrepared
     color: shell.session.palette.windowBackground
-    font: Qt.font(root.chromeTypography.body)
+    font: root.chromeTypography.body
     contentItem.enabled: shell.sceneActive
-    menuBar: applicationContent.item ? applicationContent.item.menuBar : null
-    header: applicationContent.item ? applicationContent.item.header : null
-    footer: applicationContent.item ? applicationContent.item.footer : null
+    menuBar: root.loadedContent ? root.loadedContent.menuBar : null
+    header: root.loadedContent ? root.loadedContent.header : null
+    footer: root.loadedContent ? root.loadedContent.footer : null
 
     ShellPresenter {
         id: shell
@@ -84,7 +86,9 @@ ThemedWindow {
         if (shell.windowX >= 0) {
             const centerX = shell.windowX + shell.windowWidth / 2
             const centerY = shell.windowY + shell.windowHeight / 2
-            for (const screen of Qt.application.screens) {
+            const screens = Application.screens
+            for (let index = 0; index < screens.length; ++index) {
+                const screen = screens[index]
                 if (centerX >= screen.virtualX && centerX < screen.virtualX + screen.width
                         && centerY >= screen.virtualY && centerY < screen.virtualY + screen.height) {
                     root.x = shell.windowX
@@ -120,7 +124,8 @@ ThemedWindow {
         Component.onCompleted: setSource(Qt.resolvedUrl("ShellContent.qml"), {root: root})
         onLoaded: {
             shell.contentReady()
-            applicationContent.item.loadWorkspace()
+            const content = applicationContent.item as ShellContent
+            content.loadWorkspace()
         }
         onItemChanged: acknowledgeRemoval()
         onStatusChanged: {
@@ -155,8 +160,10 @@ ThemedWindow {
             shell.session.cancelGridInput(2)
     }
     function trackNormalFrame(): void {
-        if (root.visibility !== Window.Maximized && root.width > 0 && root.height > 0)
+        if (root.visibility !== Window.Maximized && root.width > 0 && root.height > 0) {
             root.normalFrame = Qt.rect(root.x, root.y, root.width, root.height)
+            root.normalFrameValid = true
+        }
     }
     onXChanged: trackNormalFrame()
     onYChanged: trackNormalFrame()
@@ -175,7 +182,7 @@ ThemedWindow {
             if (!shell.closeReady)
                 return
             if (!root.sessionStatePersisted) {
-                const frame = root.normalFrame || Qt.rect(root.x, root.y, root.width, root.height)
+                const frame = root.normalFrameValid ? root.normalFrame : Qt.rect(root.x, root.y, root.width, root.height)
                 shell.persistSessionState(frame.x, frame.y, frame.width, frame.height,
                                           root.visibility === Window.Maximized, shell.polyphonyVisible)
                 root.sessionStatePersisted = true
@@ -183,7 +190,7 @@ ThemedWindow {
             root.close()
         }
         function onSceneActiveChanged(): void {
-            ++root.actionRevision
+            shell.refreshActionStates()
             applicationContent.acknowledgeRemoval()
         }
     }

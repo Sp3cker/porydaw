@@ -7,9 +7,9 @@ import PorydawApp
 Item {
     id: page
     required property ShellPresenter presenter
-    required property QtObject colors
+    required property GridPalette colors
     required property real unit
-    required property var typography
+    required property TypographyFonts typography
 
     function syncThemeChecks(): void {
         vanillaButton.checked = page.presenter.themeMode === "vanilla"
@@ -37,14 +37,14 @@ Item {
                 width: parent.width
                 text: qsTr("Theme:")
                 color: page.colors.windowText
-                font: Qt.font(page.typography.body)
+                font: page.typography.body
             }
             RadioButton {
                 id: vanillaButton
                 objectName: "vanillaModeButton"
                 width: themeRow.width
                 text: qsTr("Vanilla")
-                font: Qt.font(page.typography.body)
+                font: page.typography.body
                 onClicked: page.presenter.previewThemeMode("vanilla")
                 // Keep visible labels in the themed windowText ink.
                 contentItem: Item {}
@@ -64,7 +64,7 @@ Item {
                 objectName: "darkNeutralHighModeButton"
                 width: themeRow.width
                 text: qsTr("Dark Neutral High")
-                font: Qt.font(page.typography.body)
+                font: page.typography.body
                 onClicked: page.presenter.previewThemeMode("dark-neutral-high")
                 contentItem: Item {}
                 Text {
@@ -83,7 +83,7 @@ Item {
                 objectName: "immaterialModeButton"
                 width: themeRow.width
                 text: qsTr("Immaterial")
-                font: Qt.font(page.typography.body)
+                font: page.typography.body
                 onClicked: page.presenter.previewThemeMode("immaterial")
                 contentItem: Item {}
                 Text {
@@ -111,7 +111,7 @@ Item {
                 verticalAlignment: Text.AlignVCenter
                 text: qsTr("Grid contrast:")
                 color: page.colors.windowText
-                font: Qt.font(page.typography.body)
+                font: page.typography.body
             }
             Slider {
                 id: contrastSlider
@@ -124,7 +124,7 @@ Item {
                 Accessible.name: qsTr("Grid Line Contrast")
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("50 uses the theme default. Lower values soften grid lines; higher values strengthen them.")
-                font: Qt.font(page.typography.body)
+                font: page.typography.body
                 onMoved: page.presenter.setGridLineContrast(Math.round(value))
             }
         }

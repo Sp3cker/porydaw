@@ -91,8 +91,9 @@
         return collected
     }
     function channelsOf(testCase, color) {
-        var value = parseInt(String(color).slice(-6), 16)
-        return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff]
+        return [Math.round(color.r * 255),
+                Math.round(color.g * 255),
+                Math.round(color.b * 255)]
     }
 
     function pixelDistance(testCase, image, x, y, target) {

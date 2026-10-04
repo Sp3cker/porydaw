@@ -356,6 +356,7 @@ ShellTransportSupport {
         grid.setEditCursorTick(grid.ticksPerBeat * 4)
         var cursor = grid.editCursorTick
         verify(cursor > 0, "the stopped edit cursor starts away from the origin")
+        tryCompare(rewind, "actionable", true, 3000)
         mouseClick(rewind, rewind.width / 2, rewind.height / 2)
         compare(grid.editCursorTick, 0, "Home homes the stopped edit cursor")
         verify(Math.abs(session.playheadPresenter().tick) < 0.5,
@@ -516,6 +517,7 @@ ShellTransportSupport {
         verify(x > 1 && x + grid.beatWidth + grid.snapTicks * grid.beatWidth
                / grid.ticksPerBeat < roll.width - 1 && y > grid.rowHeight
                && y < roll.height - 1, "a fresh note cell is visible in the roll")
+        tryCompare(play, "actionable", true, 3000)
         mouseClick(play, play.width / 2, play.height / 2)
         tryCompare(bar.presenter, "state", 3, 3000)
         mousePress(roll, x, y, Qt.LeftButton)

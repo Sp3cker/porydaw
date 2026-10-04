@@ -462,7 +462,7 @@ TestCase {
         const scale = image.width / shell.contentItem.width
         // The legacy amber #C08030 sat 2.0:1 on the window; the warning ink is
         // the theme's warningText (docs/adr/0002-text-contrast-first.md).
-        const warningInk = Qt.color(shell.shellPresenter.session.palette.warningText)
+        const warningInk = shell.shellPresenter.session.palette.warningText
         let paintedWarning = false
         for (let y = Math.floor(origin.y * scale);
             y < Math.ceil((origin.y + warningRow.height) * scale) && !paintedWarning; ++y) {

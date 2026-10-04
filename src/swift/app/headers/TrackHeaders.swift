@@ -38,10 +38,14 @@ public final class TrackHeadersPresenter {
         willSet { _scrollY.maximum = newValue }
     }
     @HeaderScrollPosition public var scrollY: Double = 0
-    public var muteButtonRect: [String: QVariantSettable] = HeaderRect().map
-    public var soloButtonRect: [String: QVariantSettable] = HeaderRect().map
-    public var voiceLineRect: [String: QVariantSettable] = HeaderRect().map
-    public var renameEditorRect: [String: QVariantSettable] = HeaderRect().map
+    @QtTracked public var muteButtonRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: PaletteMath.qmlColor(argb: 0))
+    @QtTracked public var soloButtonRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: PaletteMath.qmlColor(argb: 0))
+    @QtTracked public var voiceLineRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: PaletteMath.qmlColor(argb: 0))
+    @QtTracked public var renameEditorRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: PaletteMath.qmlColor(argb: 0))
     public var renamingTrack: Int = -1
     public var renameDraft: String = ""
     public var renamePlaceholder: String = ""
@@ -51,11 +55,30 @@ public final class TrackHeadersPresenter {
     public var rowRebuildCount: Int = 0
     public var lastCancelReason: Int = -1
     public var cursorKind: Int = 0
-    public var controlFont: [String: QVariantSettable] = [:]
-    public var appearance: [String: QVariantSettable] = [:]
-    public var normalTitleFont: [String: QVariantSettable] = [:]
-    public var boldTitleFont: [String: QVariantSettable] = [:]
-    public var subtitleFont: [String: QVariantSettable] = [:]
+    public var controlFont: QmlFont
+    public var normalTitleFont: QmlFont
+    public var boldTitleFont: QmlFont
+    public var subtitleFont: QmlFont
+    public var buttonBackground: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var buttonText: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var buttonHoverBackground: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var buttonHoverText: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var buttonPressedBackground: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var buttonPressedText: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var buttonOutline: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var focusOutline: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var muteCheckedBackground: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var muteCheckedText: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var soloCheckedBackground: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var soloCheckedText: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var inputBackground: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var inputText: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var inputOutline: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var scrollbarHandle: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var scrollbarHandleHover: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var reorderIndicator: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var selectionBackground: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var selectionText: QmlColor = PaletteMath.qmlColor(argb: 0)
     /// Supplied by the same Qt host style hints as every other pointer surface.
     public var dragDistance: Double = 0
 
@@ -92,11 +115,11 @@ public final class TrackHeadersPresenter {
 
     public init(typography: Typography = Typography(baseFontPx: 13)) {
         fontRoles = typography
-        controlFont = typography.body.map
-        normalTitleFont = typography.body.map
-        boldTitleFont = typography.bodyBold.map
-        subtitleFont = typography.caption.map
-        appearance = TrackHeadersGeometry.appearance(palette: palette)
+        controlFont = typography.body.qmlFont
+        normalTitleFont = controlFont
+        boldTitleFont = typography.bodyBold.qmlFont
+        subtitleFont = typography.caption.qmlFont
+        publishAppearance()
     }
 
     @QtIgnored
@@ -111,7 +134,7 @@ public final class TrackHeadersPresenter {
     /// The existing row refresh preserves interaction and measured text state.
     @QtIgnored
     public func refreshAppearance() {
-        appearance = TrackHeadersGeometry.appearance(palette: palette)
+        publishAppearance()
         refreshFromDocument()
     }
 
@@ -184,8 +207,8 @@ public final class TrackHeadersPresenter {
             next.append(
                 TrackHeaderSnapshot(
                     isAddTrack: true, title: "+ Add track",
-                    titleFont: fontRoles.body,
-                    subtitleFont: fontRoles.caption))
+                    titleFont: normalTitleFont,
+                    subtitleFont: subtitleFont))
         }
         if structural {
             snapshots = next
@@ -256,6 +279,16 @@ public final class TrackHeadersPresenter {
 
     public func configureViewport(width: Double, height: Double, fontPx: Double, dpr: Double) {
         configureGeometry(width: width, height: height, base: fontPx, dpr: dpr)
+    }
+
+    public func rowAt(index: Int) -> Optional<TrackHeaderRowHandle> {
+        guard index >= 0, index < rows.count else { return nil }
+        return rows[index]
+    }
+
+    public func menuItem(index: Int) -> Optional<TrackHeaderMenuItem> {
+        guard index >= 0, index < menuItems.count else { return nil }
+        return menuItems[index]
     }
 
     /// QML's FontMetrics supplies native Qt measurements, not layout policy.
@@ -489,7 +522,8 @@ public final class TrackHeadersPresenter {
     func publishRow(_ row: TrackHeaderSnapshot, at index: Int) {
         guard row != snapshots[index] else { return }
         snapshots[index] = row
-        rows[index] = TrackHeaderRowHandle(row)
+        rows[index].update(row)
+        rows[index] = rows[index]
     }
 }
 
@@ -500,15 +534,18 @@ public final class TrackHeaderRowHandle {
     public var track: Int = -1
     public var title: String = ""
     public var subtitle: String = ""
-    public var titleRect: [String: QVariantSettable] = [:]
-    public var subtitleRect: [String: QVariantSettable] = [:]
-    public var selectedTitleOffset: [String: QVariantSettable] = [:]
-    public var titleFont: [String: QVariantSettable] = [:]
-    public var subtitleFont: [String: QVariantSettable] = [:]
-    public var baseColor: String = "#00000000"
-    public var overlayColor: String = "#00000000"
-    public var titleColor: String = "#00000000"
-    public var subtitleColor: String = "#00000000"
+    @QtTracked public var titleRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: PaletteMath.qmlColor(argb: 0))
+    @QtTracked public var subtitleRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: PaletteMath.qmlColor(argb: 0))
+    public var selectedTitleOffsetX: Double = 0
+    public var selectedTitleOffsetY: Double = 0
+    public var titleFont: QmlFont
+    public var subtitleFont: QmlFont
+    public var baseColor: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var overlayColor: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var titleColor: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var subtitleColor: QmlColor = PaletteMath.qmlColor(argb: 0)
     public var titleBold: Bool = false
     public var muteChecked: Bool = false
     public var soloChecked: Bool = false
@@ -518,25 +555,46 @@ public final class TrackHeaderRowHandle {
     public var soloPressed: Bool = false
     public var addHovered: Bool = false
     public var addPressed: Bool = false
-    public var activityDimColor: String = "#00000000"
-    public var activityActiveColor: String = "#00000000"
+    public var activityDimColor: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var activityActiveColor: QmlColor = PaletteMath.qmlColor(argb: 0)
     public var activityLeftHeight: Double = 0
     public var activityRightHeight: Double = 0
 
     init(_ row: TrackHeaderSnapshot) {
-        isAddTrack = row.isAddTrack; track = row.track
-        title = row.title; subtitle = row.subtitle
-        titleRect = row.titleRect.map; subtitleRect = row.subtitleRect.map
-        selectedTitleOffset = ["x": row.selectedTitleOffset.x, "y": row.selectedTitleOffset.y]
-        titleFont = row.titleFont.map; subtitleFont = row.subtitleFont.map
-        baseColor = row.baseColor; overlayColor = row.overlayColor
-        titleColor = row.titleColor; subtitleColor = row.subtitleColor
-        titleBold = row.titleBold; muteChecked = row.muteChecked; soloChecked = row.soloChecked
-        muteHovered = row.muteHovered; mutePressed = row.mutePressed
-        soloHovered = row.soloHovered; soloPressed = row.soloPressed
-        addHovered = row.addHovered; addPressed = row.addPressed
-        activityDimColor = row.activityDimColor; activityActiveColor = row.activityActiveColor
-        activityLeftHeight = row.activityLeftHeight; activityRightHeight = row.activityRightHeight
+        titleFont = row.titleFont
+        subtitleFont = row.subtitleFont
+        update(row)
+    }
+
+    @QtIgnored
+    func update(_ row: TrackHeaderSnapshot) {
+        if isAddTrack != row.isAddTrack { isAddTrack = row.isAddTrack }
+        if track != row.track { track = row.track }
+        if title != row.title { title = row.title }
+        if subtitle != row.subtitle { subtitle = row.subtitle }
+        _ = titleRect.update(row.titleRect.sceneValue)
+        _ = subtitleRect.update(row.subtitleRect.sceneValue)
+        if selectedTitleOffsetX != row.selectedTitleOffset.x { selectedTitleOffsetX = row.selectedTitleOffset.x }
+        if selectedTitleOffsetY != row.selectedTitleOffset.y { selectedTitleOffsetY = row.selectedTitleOffset.y }
+        if titleFont != row.titleFont { titleFont = row.titleFont }
+        if subtitleFont != row.subtitleFont { subtitleFont = row.subtitleFont }
+        if baseColor != row.baseColor { baseColor = row.baseColor }
+        if overlayColor != row.overlayColor { overlayColor = row.overlayColor }
+        if titleColor != row.titleColor { titleColor = row.titleColor }
+        if subtitleColor != row.subtitleColor { subtitleColor = row.subtitleColor }
+        if titleBold != row.titleBold { titleBold = row.titleBold }
+        if muteChecked != row.muteChecked { muteChecked = row.muteChecked }
+        if soloChecked != row.soloChecked { soloChecked = row.soloChecked }
+        if muteHovered != row.muteHovered { muteHovered = row.muteHovered }
+        if mutePressed != row.mutePressed { mutePressed = row.mutePressed }
+        if soloHovered != row.soloHovered { soloHovered = row.soloHovered }
+        if soloPressed != row.soloPressed { soloPressed = row.soloPressed }
+        if addHovered != row.addHovered { addHovered = row.addHovered }
+        if addPressed != row.addPressed { addPressed = row.addPressed }
+        if activityDimColor != row.activityDimColor { activityDimColor = row.activityDimColor }
+        if activityActiveColor != row.activityActiveColor { activityActiveColor = row.activityActiveColor }
+        if activityLeftHeight != row.activityLeftHeight { activityLeftHeight = row.activityLeftHeight }
+        if activityRightHeight != row.activityRightHeight { activityRightHeight = row.activityRightHeight }
     }
 }
 

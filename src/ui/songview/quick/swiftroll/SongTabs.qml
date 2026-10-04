@@ -1,16 +1,18 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import PorydawStyle
+import QtQuick.Templates as T
 import QtQuick.Layouts
 import Porydaw.Ui
 import Porydaw.Icons
+import PorydawApp
 
 FocusScope {
     id: root
 
-    required property QtObject controller
-    property var layoutSpaces: null
-    property var shellRouter: null
+    final required property SongTabsController controller
+    final property LayoutSpaces layoutSpaces: null
+    final property ShellPresenter shellRouter: null
     signal contextMenuAt(real x, real y)
     function selectedEditorSurface(): EditorSurface {
         for (let index = 0; index < pages.count; ++index) {
@@ -50,9 +52,9 @@ FocusScope {
     }
     Keys.onPressed: event => {
         if (root.shellRouter && !root.focusOwnsLocalKeys()) {
-            const route = root.eventListIsActive() ? "routeEventListKey" : "routeEditorKey"
-            event.accepted = root.shellRouter[route](event.key, event.modifiers,
-                                                      event.isAutoRepeat)
+            event.accepted = root.eventListIsActive()
+                ? root.shellRouter.routeEventListKey(event.key, event.modifiers, event.isAutoRepeat)
+                : root.shellRouter.routeEditorKey(event.key, event.modifiers, event.isAutoRepeat)
         }
     }
     Keys.onReleased: event => {
@@ -65,12 +67,14 @@ FocusScope {
     // The close gate names the dirty tab, or the dirty bank when no open tab
     // holds it, rather than referring to an unnamed "this tab".
     readonly property string pendingCloseTitle: {
-        if (root.controller.pendingCloseBankTitle.length > 0)
+        if (!root.controller)
+            return "";
+        if (root.controller.pendingCloseBankTitle !== "")
             return root.controller.pendingCloseBankTitle;
         for (let i = 0; i < tabButtons.count; ++i) {
             const button = tabButtons.itemAt(i) as TabSelectButton;
             if (button && button.tabId === root.controller.pendingCloseId)
-                return button.session.title;
+                return button.session?.title;
         }
         return "";
     }
@@ -85,11 +89,16 @@ FocusScope {
                                      + 2 * tabMargin + 2
     FontMetrics {
         id: bodyMetrics
-        font: root.Window.window ? root.Window.window.font
-                                 : Qt.font({family: "Atkinson Hyperlegible Next"})
+        readonly property T.ApplicationWindow hostWindow: root.Window.window as T.ApplicationWindow
+        final property font fallbackFont
+        fallbackFont.family: "Atkinson Hyperlegible Next"
+        font: hostWindow ? hostWindow.font
+                         : fallbackFont
     }
 
     function revealSelectedTab(): void {
+        if (!root.controller)
+            return;
         const selected = tabButtons.itemAt(root.controller.selectedIndex);
         if (!selected)
             return;
@@ -107,15 +116,25 @@ FocusScope {
     }
 
     component TabSelectButton: Button {
+        id: tabSelectButton
         required property var model
-        readonly property QtObject session: model.display
-        readonly property int tabId: session.tabId
+        final readonly property SongTabSession session: model.display as SongTabSession
+        property int tabId
+        Binding on tabId {
+            when: tabSelectButton.session !== null
+            value: tabSelectButton.session?.tabId ?? 0
+        }
     }
 
     component StripButton: Button {
         id: button
         focusPolicy: Qt.NoFocus
-        palette.button: down ? root.controller.palette.tabPressedBackground : hovered ? root.controller.palette.tabHoverBackground : root.controller.palette.chromeBackground
+        Binding on palette.button {
+            when: root.controller !== null
+            value: button.down ? root.controller?.palette?.tabPressedBackground
+                  : button.hovered ? root.controller?.palette?.tabHoverBackground
+                                   : root.controller?.palette?.chromeBackground
+        }
         implicitWidth: caption.implicitWidth + button.leftPadding + button.rightPadding
         implicitHeight: Math.round(button.font.pixelSize * 2)
         padding: root.tabPadding
@@ -123,8 +142,11 @@ FocusScope {
             id: caption
             text: button.text
             font: button.font
-            color: button.down ? root.controller.palette.buttonPressedText
-                               : root.controller.palette.windowText
+            Binding on color {
+                when: root.controller !== null
+                value: button.down ? root.controller?.palette?.buttonPressedText
+                                   : root.controller?.palette?.windowText
+            }
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
@@ -133,7 +155,11 @@ FocusScope {
         background: Rectangle {
             color: button.palette.button
             border.width: root.hairline
-            border.color: button.activeFocus ? root.controller.palette.windowText : root.controller.palette.outline
+            Binding on border.color {
+                when: root.controller !== null
+                value: button.activeFocus ? root.controller?.palette?.windowText
+                                         : root.controller?.palette?.outline
+            }
         }
     }
 
@@ -149,14 +175,25 @@ FocusScope {
                 width: root.scrollExtent
                 height: root.scrollExtent
                 icon: control.pointsLeft ? Icons.scrollTabsLeft : Icons.scrollTabsRight
-                color: control.enabled ? root.controller.palette.windowText
-                                       : root.controller.palette.disabledText
+                Binding on color {
+                    when: root.controller !== null
+                    value: control.enabled ? root.controller?.palette?.windowText
+                                           : root.controller?.palette?.disabledText
+                }
             }
         }
         background: Rectangle {
-            color: control.down ? root.controller.palette.tabPressedBackground : control.hovered ? root.controller.palette.tabHoverBackground : root.controller.palette.tabBackground
+            Binding on color {
+                when: root.controller !== null
+                value: control.down ? root.controller?.palette?.tabPressedBackground
+                      : control.hovered ? root.controller?.palette?.tabHoverBackground
+                                        : root.controller?.palette?.tabBackground
+            }
             border.width: root.hairline
-            border.color: root.controller.palette.outline
+            Binding on border.color {
+                when: root.controller !== null
+                value: root.controller?.palette?.outline
+            }
         }
         ToolTip.visible: hovered
         ToolTip.text: Accessible.name
@@ -168,13 +205,20 @@ FocusScope {
         anchors.left: parent.left
         anchors.right: parent.right
         height: Math.max(Math.round(bodyMetrics.lineSpacing), root.scrollExtent) + 2 * root.tabMargin + 2
-        color: root.controller.palette.windowBackground
-        enabled: root.controller.pendingCloseId < 0 && root.controller.pendingCloseBankTitle.length === 0
+        Binding on color {
+            when: root.controller !== null
+            value: root.controller?.palette?.windowBackground
+        }
+        enabled: root.controller !== null && root.controller.pendingCloseId < 0
+                 && root.controller.pendingCloseBankTitle === ""
 
         Rectangle {
             width: strip.width
             height: root.hairline
-            color: root.controller.palette.tabSeparator
+            Binding on color {
+                when: root.controller !== null
+                value: root.controller?.palette?.tabSeparator
+            }
         }
 
         Flickable {
@@ -197,12 +241,20 @@ FocusScope {
 
                 Repeater {
                     id: tabButtons
-                    model: root.controller.tabs
+                    model: root.controller?.tabs
                     delegate: TabSelectButton {
                         id: selectButton
                         objectName: "songTabSelect_" + tabId
-                        text: session.dirty ? qsTr("%1*").arg(session.title) : session.title
-                        Accessible.name: session.dirty ? qsTr("%1, modified").arg(session.title) : session.title
+                        Binding on text {
+                            when: selectButton.session !== null
+                            value: selectButton.session?.dirty
+                                ? qsTr("%1*").arg(selectButton.session?.title) : selectButton.session?.title ?? ""
+                        }
+                        Binding on Accessible.name {
+                            when: selectButton.session !== null
+                            value: selectButton.session?.dirty
+                                ? qsTr("%1, modified").arg(selectButton.session?.title) : selectButton.session?.title ?? ""
+                        }
                         checked: root.controller.selectedId === tabId
                         focusPolicy: Qt.NoFocus
                         padding: 0
@@ -251,7 +303,7 @@ FocusScope {
                             height: root.closeExtent
                             padding: 2
                             focusPolicy: Qt.NoFocus
-                            enabled: !selectButton.session.bankTransitionPending
+                            enabled: selectButton.session !== null && !selectButton.session.bankTransitionPending
                             contentItem: Item {
                                 AppIcon {
                                     anchors.centerIn: parent
@@ -267,7 +319,10 @@ FocusScope {
                                 }
                             }
                             background: Item {}
-                            Accessible.name: qsTr("Close %1").arg(selectButton.session.title)
+                            Binding on Accessible.name {
+                                when: selectButton.session !== null
+                                value: qsTr("Close %1").arg(selectButton.session?.title ?? "")
+                            }
                             ToolTip.visible: hovered
                             ToolTip.text: Accessible.name
                             onClicked: root.controller.requestClose(selectButton.tabId)
@@ -280,11 +335,11 @@ FocusScope {
                             yAxis.enabled: false
                             onActiveChanged: {
                                 if (!active) {
-                                    const drop = selectButton.mapToItem(tabRow, centroid.position.x, centroid.position.y);
+                                    const dropX = selectButton.mapToItem(tabRow, centroid.position.x, centroid.position.y).x;
                                     let destination = tabButtons.count - 1;
                                     for (let i = 0; i < tabButtons.count; ++i) {
                                         const candidate = tabButtons.itemAt(i);
-                                        if (drop.x < candidate.x + candidate.width) {
+                                        if (dropX < candidate.x + candidate.width) {
                                             destination = i;
                                             break;
                                         }
@@ -336,16 +391,16 @@ FocusScope {
 
         Repeater {
             id: pages
-            model: root.controller.tabs
+            model: root.controller?.tabs
             delegate: SongTab {
-                required property var display
-                objectName: "songTab_" + display.tabId
+                required property var model
+                objectName: "songTab_" + session.tabId
                 anchors.fill: parent
-                session: display
+                session: model.display as SongTabSession
                 shellRouter: root.shellRouter
                 onContextMenuAt: (x, y) => root.contextMenuAt(x, y)
                 controller: root.controller
-                visible: display === root.controller.selectedPage
+                visible: session === root.controller.selectedPage
                 enabled: visible
                 focus: visible
             }
@@ -365,7 +420,8 @@ FocusScope {
         title: qsTr("Unsaved Changes")
         modal: true
         focus: true
-        visible: root.controller.pendingCloseId >= 0 || root.controller.pendingCloseBankTitle.length > 0
+        visible: root.controller !== null
+                 && (root.controller.pendingCloseId >= 0 || root.controller.pendingCloseBankTitle !== "")
         closePolicy: Popup.CloseOnEscape
         onRejected: root.controller.cancelClose()
         Label {

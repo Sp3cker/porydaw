@@ -7,18 +7,37 @@ import PorydawApp
 Item {
     id: root
 
-    required property Item bandSide
-    required property Item plotSide
-    required property PianoGrid gridModel
+    final required property Item bandSide
+    final required property Item plotSide
+    final required property PianoGrid gridModel
+    Binding {
+        when: root.gridModel !== null
+        restoreMode: Binding.RestoreNone
+        plotDisplay.revision: root.gridModel?.scene?.displayRevision
+        keyboardDisplay.revision: root.gridModel?.scene?.displayRevision
+        hoverChip.x: root.gridModel?.scene?.hoverChipX
+        hoverChip.y: root.gridModel?.scene?.hoverChipY
+        hoverChip.width: root.gridModel?.scene?.hoverChipWidth
+        hoverChip.height: root.gridModel?.scene?.hoverChipHeight
+        hoverChip.color: root.gridModel?.scene?.hoverChipFill
+        hoverChip.radius: root.gridModel?.scene?.hoverChipRadius
+        hoverChipText.x: root.gridModel?.scene?.hoverChipX
+        hoverChipText.y: root.gridModel?.scene?.hoverChipY
+        hoverChipText.width: root.gridModel?.scene?.hoverChipWidth
+        hoverChipText.height: root.gridModel?.scene?.hoverChipHeight
+        hoverChipText.text: root.gridModel?.scene?.hoverChipText
+        hoverChipText.color: root.gridModel?.scene?.hoverChipTextColor
+        hoverChipText.font: root.gridModel?.scene?.hoverChipFont
+    }
 
     DisplayList {
+        id: plotDisplay
         parent: root.plotSide
         objectName: "timelineRendererPlot"
         anchors.fill: parent
         clip: true
-        source: root.gridModel.scene
+        source: root.gridModel?.scene ?? null
         list: 0
-        revision: root.gridModel.scene.displayRevision
         z: 0
     }
 
@@ -30,39 +49,28 @@ Item {
         z: 3
 
         DisplayList {
+            id: keyboardDisplay
             objectName: "timelineRendererKeyboard"
             anchors.fill: parent
             clip: true
-            source: root.gridModel.scene
+            source: root.gridModel?.scene ?? null
             list: 1
-            revision: root.gridModel.scene.displayRevision
         }
     }
 
     Rectangle {
+        id: hoverChip
         parent: root.bandSide
         objectName: "timelineQuickPianoHoverChip"
-        x: root.gridModel.scene.hoverChipRect.x
-        y: root.gridModel.scene.hoverChipRect.y
-        width: root.gridModel.scene.hoverChipRect.width
-        height: root.gridModel.scene.hoverChipRect.height
-        visible: root.gridModel.scene.hoverChipVisible
-        color: root.gridModel.scene.hoverChipFill
-        radius: root.gridModel.scene.hoverChipRadius
+        visible: root.gridModel !== null && root.gridModel.scene.hoverChipVisible
         z: 8
     }
 
     Text {
+        id: hoverChipText
         parent: root.bandSide
         objectName: "timelineQuickPianoHoverChipText"
-        x: root.gridModel.scene.hoverChipRect.x
-        y: root.gridModel.scene.hoverChipRect.y
-        width: root.gridModel.scene.hoverChipRect.width
-        height: root.gridModel.scene.hoverChipRect.height
-        visible: root.gridModel.scene.hoverChipVisible
-        text: root.gridModel.scene.hoverChipText
-        color: root.gridModel.scene.hoverChipTextColor
-        font: Qt.font(root.gridModel.scene.hoverChipFont)
+        visible: root.gridModel !== null && root.gridModel.scene.hoverChipVisible
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         textFormat: Text.PlainText

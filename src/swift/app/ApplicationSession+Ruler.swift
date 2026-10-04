@@ -35,18 +35,7 @@ extension ApplicationSession {
             numerator: signature.numerator, denominatorPower: signature.denomPow2)
         timeSigPromptInitialNumerator = min(32, max(1, signature.numerator))
         timeSigPromptInitialDenominatorPow2 = min(5, max(0, signature.denomPow2))
-        var appearance = PromptAppearance.metrics(base: workspace.grid.baseFontPx)
-        timeSigPromptFont = PromptAppearance.font(typography: typography)
-        appearance["background"] = palette.chromeBackground
-        appearance["text"] = palette.primaryText
-        appearance["buttonText"] = palette.primaryText
-        appearance["buttonBackground"] = palette.chromeBackground
-        appearance["pressedBackground"] = palette.hoverChipFill
-        appearance["focus"] = palette.editCursor
-        appearance["selection"] = palette.tabSelectedBackground
-        appearance["selectionText"] = palette.selectionText
-        appearance["outline"] = palette.separator
-        timeSigPromptAppearance = appearance
+        refreshPromptStyle()
         timeSigMenuOpen = false
         timeSigPromptOpen = true
         songTabs.publishTimeSigFlags()

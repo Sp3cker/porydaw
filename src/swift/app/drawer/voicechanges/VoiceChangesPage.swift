@@ -2,58 +2,8 @@ import Foundation
 import PorydawCore
 import QtBridge
 
-// The production Voice Changes presenter for the drawer section, following
-// `src/ui/editordrawer/voicechangearea/` (`voicechangearea.cpp`,
-// `voicechangemenu.cpp`) and the rendering half in
-// `src/ui/songview/quick/voicechangequick.cpp` for behaviour. Pure lane rules,
-// static scene computation and stale-target transaction drafting live in the
-// sibling responsibility files; this page publishes their results and sequences
-// QML interaction. It owns no camera, clock, viewport, history or document lookup:
-// every mutation goes through one existing `SongDocument` lane operation.
-//
-// Ownership: `ApplicationSession` creates the page for the current document,
-// attaches it before `songOpen` publishes, refreshes it from the session's
-// existing document/camera/playhead publications, and cancels it synchronously
-// before the document owners retire.
-//
-// Split: the lane policy (`VoiceLanePolicy.swift`), the bridge row types and
-// projection (`VoiceChangesProjection.swift`), the scene values and
-// construction (`VoiceChangesScene.swift`), the captured-mutation drafting
-// (`VoiceChangesTransactions.swift`) and the pointer/modal dispatch
-// (`VoiceChangesInteraction.swift`) are the sibling responsibility files;
-// `VoiceChangesPublication.swift` holds the content rebuild and every publish
-// apply path. Published state and the caches stay declared on this type —
-// `@QtBridgeable` registers class-body members only and stored properties
-// cannot move to an extension — and the Qt-facing input methods stay here for
-// the same reason: each is a one-line forward into its `dispatch*`
-// implementation.
-//
-// Identity: a voice event is identified by the document revision and track it
-// was projected from plus its lane occurrence (`LanePoint`'s chunk, event
-// index, tick and value). A gesture, picker or context menu freezes that
-// occurrence when it opens and revalidates it before every commit, so a motion
-// draft, a filter keystroke or a camera scroll can never retarget another
-// occurrence.
-//
-// Voice context: the active program is the track's first program advanced by
-// every change at or before the context tick. While transport is playing the
-// context tick is the rounded shared-playhead tick; while stopped it is
-// `DocumentSession.editCursor`. Slots resolve through the current
-// `DocumentSession.bankSlots`; a slot with no parsed voice is published as blank
-// (`slotBlank == true`, empty symbol) and never gains a name — only the program
-// number and its declared type name are drawn, exactly as the legacy
-// `paintTextFor` falls back from the voice name to the type name to "Voice".
-//
-// Snapping: a plain drag preview and every picker/menu insertion tick snap on the
-// shared editing lattice (`GridMetrics.snapTick`), and a drag with the alt
-// modifier held snaps on the legacy clock lattice exactly —
-// `Grid::snapTick(tick, fine: true)` over `Grid::fineGridTicks()`, which is
-// `SongDocument::ticksPerClock()`: both facts come from the document itself
-// (`ticksPerBeat` and the song config's `extendedClocks`).
-//
-// Picker audition uses a typed callback supplied by its audio owner when that
-// capability exists. The page pairs each held program with its release before
-// a picker, document or callback owner is replaced.
+// Owns voice-change projection, input and modal transactions for the current document.
+// Publication and scene helpers share this owner's retained state.
 
 // MARK: - Page vocabulary
 /// Where a pointer event landed in the page body. Mirrors the legacy
@@ -109,11 +59,10 @@ public final class VoiceChangesPage: EditorDrawerPage {
     public var plotHeight: Double = 0
     public var devicePixelRatio: Double = 1
     public var baseFontPx: Double = GridCameraPolicy.seedBaseFontPx
-    public var promptAppearance: [String: QVariantSettable] = [:]
-    public var promptFont: [String: QVariantSettable] = [:]
-    public var captionFont: [String: QVariantSettable] = [:]
-    public var titleFont: [String: QVariantSettable] = [:]
-    public var noteNameFont: [String: QVariantSettable] = [:]
+    @QtTracked public var promptStyle = PromptStyle()
+    public var captionFont: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
+    public var titleFont: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
+    public var noteNameFont: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
     /// `false` while no track is presented: the plot draws its own message then
     /// and the gutter carries the title alone.
     public var trackAvailable: Bool = false
@@ -124,7 +73,10 @@ public final class VoiceChangesPage: EditorDrawerPage {
     /// context tick resolves to, right-aligned in the plot.
     public var readoutText: String = ""
     public var readoutVisible: Bool = false
-    public var readoutRect: [String: QVariantSettable] = VoiceMarkerHandle.rect(0, 0, 0, 0)
+    public var readoutX: Double = 0
+    public var readoutY: Double = 0
+    public var readoutWidth: Double = 0
+    public var readoutHeight: Double = 0
     public var readoutAlignment: Int = VoiceChangesPagePolicy.readoutAlignment
     public var contextSlot: Int = -1
     public var contextBlank: Bool = true
@@ -133,7 +85,10 @@ public final class VoiceChangesPage: EditorDrawerPage {
     /// marker's own tick with no label.
     public var hoverVisible: Bool = false
     public var hoverText: String = ""
-    public var hoverLabelRect: [String: QVariantSettable] = VoiceMarkerHandle.rect(0, 0, 0, 0)
+    public var hoverLabelX: Double = 0
+    public var hoverLabelY: Double = 0
+    public var hoverLabelWidth: Double = 0
+    public var hoverLabelHeight: Double = 0
     public var hoverTick: Double = 0
     /// The current legacy lane hint: marker-specific while the pointer hits a
     /// change rule, horizontal scrolling everywhere else in the plot.
@@ -267,8 +222,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
         let maximum = Int((Double(minimum) * VoiceChangesPagePolicy.maximumBodyRows).rounded())
         bodyPolicy = EditorDrawerBodyPolicy(maximumBodyHeight: maximum) { _, _ in minimum }
         self.baseFontPx = base
-        promptAppearance = PromptAppearance.metrics(base: base)
-        promptFont = PromptAppearance.font(typography: Typography(baseFontPx: Int(base.rounded())))
+        refreshPromptStyle()
         publishTypography()
     }
 
@@ -282,6 +236,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
         entriesTrack = nil
         pickerCache.refresh(slots: session.bankSlots)
         self.palette = palette
+        refreshPromptStyle()
         contextTick = session.editCursor
         presentedContextEndTick = TimeDefaults.noTick
         presentedContextStartTick = 0
@@ -336,11 +291,18 @@ public final class VoiceChangesPage: EditorDrawerPage {
         self.devicePixelRatio = nextDpr
         if fontChanged {
             self.baseFontPx = nextFont
-            promptAppearance = PromptAppearance.metrics(base: nextFont)
-            promptFont = PromptAppearance.font(typography: Typography(baseFontPx: Int(nextFont.rounded())))
+            refreshPromptStyle()
             publishTypography()
         }
         if changed { rebuildContent() }
+    }
+
+    @QtIgnored
+    func refreshPromptStyle() {
+        let typography = Typography(baseFontPx: Int(baseFontPx.rounded()))
+        promptStyle.update(
+            metrics: PromptAppearance.Layout(base: baseFontPx), palette: palette,
+            font: typography.body.qmlFont, surface: .window)
     }
 
     // MARK: Session refresh
@@ -351,6 +313,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
     @QtIgnored
     public func refreshFromDocument() {
         guard let session else { return }
+        refreshPromptStyle()
         presentedContextEndTick = TimeDefaults.noTick
         presentedContextStartTick = 0
         pickerCache.refresh(slots: session.bankSlots)

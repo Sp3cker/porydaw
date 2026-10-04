@@ -265,6 +265,9 @@ public final class DocumentWorkspace {
         guard !isTornDown else { return }
         grid.reloadVisuals()
         trackHeaders.refreshAppearance()
+        velocityPage.refreshPromptStyle()
+        voiceChangesPage.refreshPromptStyle()
+        automationPage.refreshPromptStyles()
         voiceChangesPage.rebuildContent()
         automationPage.publishContent(session)
         automationPage.publishDrawingContent()

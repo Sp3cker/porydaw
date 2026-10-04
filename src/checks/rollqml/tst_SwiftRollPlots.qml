@@ -39,7 +39,7 @@ TestCase {
         id: overlayComponent
 
         SwiftRollOverlay {
-            property var appSession: session
+            applicationSession: session
         }
     }
 
@@ -786,7 +786,7 @@ TestCase {
         var natural = expectedTint(before, x, y)
         var second = expectedTint(before, x, Math.round(y - 2 * h))
         var accidental = expectedTint(before, x, Math.round(y - h))
-        verify(Math.abs(Qt.color(grid.palette.scaleHighlight).a - 51 / 255) < 0.001,
+        verify(Math.abs(grid.palette.scaleHighlight.a - 51 / 255) < 0.001,
                "Highlight retains the fork's translucent tint")
         transport.setScaleHighlight(true)
         var highlighted = RollNoteFaces.grab(testCase, s)

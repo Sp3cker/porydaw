@@ -7,7 +7,7 @@ import PorydawApp
 Item {
     id: surface
     required property SampleWaveformModel model
-    required property QtObject colors
+    required property GridPalette colors
     required property real baseFontPx
     property bool dragging: false
 

@@ -5,14 +5,17 @@ import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
 import PorydawApp
+import QtQuick.Templates as T
 
 Dialog {
     id: dialog
     objectName: "voicegroupNewDialog"
     required property VoiceListController controller
     required property real baseFontPx
-    required property var layoutSpaces
-    readonly property bool hasCopySource: controller.newVoicegroupCopyLabel.length > 0
+    required property LayoutSpaces layoutSpaces
+    readonly property bool hasCopySource: controller.newVoicegroupCopyLabel !== ""
+    final readonly property T.DialogButtonBox buttonBox: footer as T.DialogButtonBox
+    final property T.AbstractButton createButton: null
     function canCreate(): bool {
         return dialog.controller.isValidVoicegroupName(nameField.text)
             && dialog.controller.newVoicegroupNameAvailable(nameField.text)
@@ -25,7 +28,11 @@ Dialog {
     width: Math.min(parent.width - 2 * baseFontPx, 30 * baseFontPx)
     title: qsTr("New Voicegroup")
     standardButtons: Dialog.Ok | Dialog.Cancel
-    onOpened: nameField.forceActiveFocus()
+    onOpened: {
+        dialog.createButton = dialog.buttonBox.standardButton(Dialog.Ok)
+        dialog.createButton.text = qsTr("Create")
+        nameField.forceActiveFocus()
+    }
     onAccepted: {
         controller.newVoicegroupName = nameField.text
         controller.newVoicegroupUseCopy = hasCopySource && sourceCombo.currentIndex === 0
@@ -36,12 +43,10 @@ Dialog {
         if (controller.newVoicegroupPrompt)
             controller.cancelNewVoicegroup()
     }
-    Component.onCompleted: {
-        const ok = dialog.footer.standardButton(Dialog.Ok)
-        if (ok) {
-            ok.text = qsTr("Create")
-            ok.enabled = Qt.binding(dialog.canCreate)
-        }
+    Binding {
+        target: dialog.createButton
+        property: "enabled"
+        value: dialog.canCreate()
     }
     contentItem: ColumnLayout {
         spacing: dialog.layoutSpaces.four
@@ -59,7 +64,7 @@ Dialog {
             text: dialog.controller.newVoicegroupName
             onTextChanged: dialog.controller.newVoicegroupName = text
             onAccepted: {
-                if (dialog.footer.standardButton(Dialog.Ok).enabled)
+                if (dialog.createButton.enabled)
                     dialog.accept()
             }
         }

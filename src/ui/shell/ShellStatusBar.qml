@@ -5,10 +5,10 @@ import PorydawApp
 
 Rectangle {
     id: statusBar
-    required property var root
-    required property var shell
-    required property var bodyMetrics
-    required property var captionMetrics
+    required final property ShellWindow root
+    required final property ShellPresenter shell
+    required final property FontMetrics bodyMetrics
+    required final property FontMetrics captionMetrics
         readonly property int statusTopInset: 3
         readonly property int statusBottomInset: 2
         readonly property int statusGripHeight: 13 + 4
@@ -31,7 +31,7 @@ Rectangle {
             anchors.bottomMargin: statusBar.statusBottomInset
             anchors.leftMargin: statusBar.root.chromeSpacing.two
             text: statusBar.shell.sceneActive ? statusBar.shell.statusText : qsTr("Closing…")
-            font: Qt.font(statusBar.root.chromeTypography.caption)
+            font: statusBar.root.chromeTypography.caption
             color: statusBar.root.colors.windowText
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
@@ -49,7 +49,7 @@ Rectangle {
                 polyMeter.visible ? polyMeter.width + statusBar.root.chromeSpacing.two * 2 : 0))
             text: statusBar.shell.mouseHints.text
             textFormat: Text.PlainText
-            font: Qt.font(statusBar.root.chromeTypography.caption)
+            font: statusBar.root.chromeTypography.caption
             color: statusBar.root.colors.windowText
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
@@ -64,11 +64,11 @@ Rectangle {
             anchors.verticalCenterOffset: (statusBar.statusTopInset - statusBar.statusBottomInset) / 2
             spacing: statusBar.bodyMetrics.advanceWidth(" ") / 2
             visible: polyMeter.presenter.polyMeterVisible
-            readonly property TransportBarPresenter presenter: statusBar.shell.session.transportBarPresenter()
+            final readonly property TransportBarPresenter presenter: statusBar.shell.session.transportBarPresenter()
             Text {
                 objectName: "shellPolyPcmCaption"
                 text: qsTr("PCM")
-                font: Qt.font(statusBar.root.chromeTypography.body)
+                font: statusBar.root.chromeTypography.body
                 color: statusBar.root.colors.windowText
             }
             Rectangle {
@@ -82,7 +82,7 @@ Rectangle {
                     anchors.leftMargin: polyMeter.spacing
                     anchors.rightMargin: polyMeter.spacing
                     text: polyMeter.presenter.pcmText
-                    font: Qt.font(statusBar.root.chromeTypography.bodyMono)
+                    font: statusBar.root.chromeTypography.bodyMono
                     color: statusBar.root.colors.polyphonyValueText
                     horizontalAlignment: Text.AlignRight
                     verticalAlignment: Text.AlignVCenter
@@ -91,13 +91,13 @@ Rectangle {
             Text {
                 text: "·"
                 color: statusBar.root.colors.windowText
-                font: Qt.font(statusBar.root.chromeTypography.body)
+                font: statusBar.root.chromeTypography.body
             }
             Text {
                 objectName: "shellPolyCgbCaption"
                 text: qsTr("CGB")
                 color: statusBar.root.colors.windowText
-                font: Qt.font(statusBar.root.chromeTypography.body)
+                font: statusBar.root.chromeTypography.body
             }
             Rectangle {
                 implicitWidth: cgbValue.implicitWidth + polyMeter.spacing * 2
@@ -110,7 +110,7 @@ Rectangle {
                     anchors.leftMargin: polyMeter.spacing
                     anchors.rightMargin: polyMeter.spacing
                     text: polyMeter.presenter.cgbText
-                    font: Qt.font(statusBar.root.chromeTypography.bodyMono)
+                    font: statusBar.root.chromeTypography.bodyMono
                     color: statusBar.root.colors.polyphonyValueText
                     horizontalAlignment: Text.AlignRight
                     verticalAlignment: Text.AlignVCenter
@@ -120,7 +120,7 @@ Rectangle {
                 visible: polyMeter.presenter.lostVisible
                 text: "·"
                 color: statusBar.root.colors.windowText
-                font: Qt.font(statusBar.root.chromeTypography.body)
+                font: statusBar.root.chromeTypography.body
             }
             Rectangle {
                 visible: polyMeter.presenter.lostVisible
@@ -135,7 +135,7 @@ Rectangle {
                     anchors.rightMargin: polyMeter.spacing
                     text: polyMeter.presenter.lostText
                     color: statusBar.root.colors.polyphonyValueText
-                    font: Qt.font(statusBar.root.chromeTypography.body)
+                    font: statusBar.root.chromeTypography.body
                     horizontalAlignment: Text.AlignRight
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -143,7 +143,7 @@ Rectangle {
             Text {
                 visible: polyMeter.presenter.lostVisible
                 text: qsTr("notes lost")
-                font: Qt.font(statusBar.root.chromeTypography.body)
+                font: statusBar.root.chromeTypography.body
                 color: statusBar.root.colors.windowText
             }
         }

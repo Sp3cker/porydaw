@@ -118,7 +118,7 @@ func drawerVelocityContentBlobChecks(
         message: "band gesture in scroll-stable px publishes the transient fill and dashed frame")
     _ = page.pointerRelease(x: stableEnd, y: 40, button: 2)
     let cleared = page.displayRevision
-    page.palette.gridLineBar = "#FF214365"
+    page.palette.gridLineBar = PaletteMath.qmlColor(argb: 0xFF214365)
     page.refreshFromDocument()
     guard let recolored = velocityDisplayRects(page.displayList(list: 0)) else {
         report.fail(

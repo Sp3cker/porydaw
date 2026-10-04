@@ -173,7 +173,7 @@ TestCase {
         var noteProbe = null
         for (var d = 0; d < delegates.length && noteProbe === null; ++d) {
             var nc = delegates[d]
-            var fill = Helpers.channels(String(nc.fillColor))
+            var fill = Helpers.channels(nc.fillColor)
             var nx0 = Math.max(nc.x + 3, reticle.x + 3)
             var ny0 = Math.max(nc.y + 3, reticle.y + 3)
             var nx1 = Math.min(nc.x + nc.width - 3, reticle.x + reticle.w - 3)
@@ -207,7 +207,7 @@ TestCase {
             }
         verify(outside.length === 3, "three untouched flat pixels sit outside the reticle")
 
-        var selectionFill = String(grid.palette.selectionFill)
+        var selectionFill = grid.palette.selectionFill
         mouseMove(plot, sx, sy)
         mousePress(plot, sx, sy, Qt.RightButton)
         mouseMove(plot, fx, fy, -1, Qt.RightButton)
@@ -250,7 +250,7 @@ TestCase {
                 + ", expected " + Helpers.hexOf(expectedNote)
                 + ", actual " + Helpers.hexOf(actualNote))
 
-        var edge = Helpers.channels(String(grid.palette.selectionEdge))
+        var edge = Helpers.channels(grid.palette.selectionEdge)
         var wret = win(reticle.x, reticle.y)
         var left = Math.floor(wret.x * dpr)
         var right = Math.ceil((wret.x + reticle.w) * dpr)

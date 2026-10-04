@@ -3,12 +3,13 @@ pragma ComponentBehavior: Bound
 // Appearance is injected; no popup session or document is required.
 import QtQuick
 import Porydaw.Ui
+import PorydawApp
 
 Item {
     id: control
 
-    required property var appearance
-    property var hintService: null
+    required final property PromptStyle appearance
+    final property MouseHints hintService: null
     property bool hintScopeAllowed: true
 
     property int value: 0
@@ -20,9 +21,8 @@ Item {
     property int inputMaximumValue: maximumValue
     property string accessibleName: ""
     property string accessibleDescription: ""
-    // When false the field is a plain numeric editor: no scrub drag, wheel
-    // stepping, or arrow/PageUp/PageDown adjustments, and pointer text
-    // selection is enabled instead.
+    // Plain editors allow pointer selection but disable drag, wheel
+    // and arrow/Page-key adjustments.
     property bool adjustmentsEnabled: true
     property alias textInput: focusLeaf
 
@@ -46,10 +46,6 @@ Item {
         return Number.parseInt(input.text, 10)
     }
 
-    implicitWidth: Math.max(fontMetrics.advanceWidth(String(minimumValue)),
-                            fontMetrics.advanceWidth(String(maximumValue)))
-                   + 2 * (appearance.horizontalPadding + appearance.borderWidth)
-    implicitHeight: fontMetrics.height + 2 * (appearance.verticalPadding + appearance.borderWidth)
 
     onValueChanged: state.syncText()
     Component.onCompleted: state.syncText()
@@ -69,11 +65,11 @@ Item {
         function syncText(): void {
             // External value changes always refresh the draft text, even
             // while the input has focus.
-            input.text = String(control.value)
+            input.text = "" + control.value
         }
 
         function clampValue(candidate: real): real {
-            if (isNaN(candidate))
+            if (candidate !== candidate)
                 return control.value
             return Math.max(control.minimumValue, Math.min(control.maximumValue, candidate))
         }
@@ -110,17 +106,15 @@ Item {
             }
         }
 
-        // QAbstractSpinBox::interpret parity: acceptable text becomes the
-        // value; empty or intermediate drafts revert to the current value
-        // (correction mode CorrectToPreviousValue). The validator already
-        // rejects non-numeric inserts, so the parse only sees digit text.
+        // QAbstractSpinBox correction parity: empty/intermediate drafts revert
+        // to the current value; acceptable digit text commits.
         function finishEditing(): bool {
             const trimmed = input.text.trim()
             const parsed = Number.parseInt(trimmed, 10)
-            const acceptable = trimmed !== "" && !Number.isNaN(parsed)
+            const acceptable = trimmed !== "" && parsed === parsed
                 && parsed >= control.minimumValue && parsed <= control.maximumValue
             const fixed = acceptable ? parsed : control.value
-            input.text = String(fixed)
+            input.text = "" + fixed
             if (fixed !== control.value)
                 control.valueCommitted(fixed)
             return acceptable
@@ -135,15 +129,11 @@ Item {
     FontMetrics {
         id: fontMetrics
 
-        font: control.appearance.font
     }
 
     Rectangle {
+        id: frame
         anchors.fill: parent
-        color: control.appearance.background
-        radius: control.appearance.radius
-        border.width: control.appearance.borderWidth
-        border.color: focusLeaf.activeFocus ? control.appearance.focus : control.appearance.outline
     }
 
     TextInput {
@@ -151,15 +141,6 @@ Item {
 
         anchors.fill: parent
         clip: true
-        color: control.appearance.text
-        font: control.appearance.font
-        padding: control.appearance.borderWidth
-        leftPadding: control.appearance.horizontalPadding + control.appearance.borderWidth
-        rightPadding: control.appearance.horizontalPadding + control.appearance.borderWidth
-        topPadding: control.appearance.verticalPadding + control.appearance.borderWidth
-        bottomPadding: control.appearance.verticalPadding + control.appearance.borderWidth
-        selectionColor: control.appearance?.selection ?? control.appearance?.focus ?? "transparent"
-        selectedTextColor: control.appearance?.selectionText ?? control.appearance?.text ?? "transparent"
         renderType: TextInput.NativeRendering
         horizontalAlignment: TextInput.AlignHCenter
         verticalAlignment: TextInput.AlignVCenter
@@ -168,13 +149,8 @@ Item {
             bottom: control.minimumValue
             top: control.inputMaximumValue
         }
-        // The editor never takes focus: the focusLeaf sibling owns keyboard
-        // focus and edits this text through direct API calls, so a focused
-        // field never claims a ShortcutOverride for keys it does not handle.
-        // Pointer presses still reach it for text selection when adjustments
-        // are disabled. TextInput defaults activeFocusOnTab to true, so the
-        // tab chain must exclude it explicitly. The caret follows the leaf's
-        // focus since the editor itself never focuses.
+        // The sibling leaf owns keyboard focus and caret visibility, letting
+        // unhandled shortcuts escape; pointer selection remains with this input.
         activeFocusOnPress: false
         activeFocusOnTab: false
         persistentSelection: true
@@ -182,17 +158,8 @@ Item {
         cursorVisible: focusLeaf.activeFocus
         Accessible.ignored: true
 
-        // One hint group over the field: Shift + vertical drag adjusts more
-        // finely, Control + wheel steps by ten. The deferred tap-select-all
-        // below supersedes ordinary Shift-click text selection, so the
-        // generic selection profile is never advertised alongside the
-        // drag/wheel alternatives. The macOS Shift-wheel axis compensation
-        // inside the WheelHandler is part of the same stepping action, not
-        // a distinct alternative. While the existing scrub drag holds the
-        // grab, HoverHint retains the originating profile; when the drag
-        // ends, the group settles from the drag's actual final centroid
-        // position mapped into the field, so an outside release clears
-        // even with frozen hover membership.
+        // One scrub profile survives the owner's grab; settling from actual
+        // release coordinates clears it outside even with frozen hover.
         HoverHint {
             id: scrubHint
             objectName: control.inputObjectName + "ScrubHint"
@@ -216,10 +183,7 @@ Item {
             }
         }
 
-        // Plain-editor pointer focus: with adjustments disabled the press
-        // moves keyboard focus to the leaf while drag text selection stays
-        // with the input's own selectByMouse handling. A PointHandler only
-        // takes a passive grab, so the press still reaches the TextInput.
+        // A passive grab focuses plain editors without stealing text selection.
         PointHandler {
             acceptedButtons: Qt.LeftButton
             enabled: !control.adjustmentsEnabled
@@ -235,7 +199,6 @@ Item {
             acceptedButtons: Qt.LeftButton
             enabled: control.adjustmentsEnabled
             target: null
-            dragThreshold: control.appearance.dragThreshold
             xAxis.enabled: false
             onActiveChanged: {
                 if (active) {
@@ -249,19 +212,15 @@ Item {
                     // is not dropped.
                     state.scrubTo(state.pressDragDistance())
                 } else {
-                    // Settle the hint group from the drag's actual final
-                    // centroid position: an outside release clears even
-                    // when Qt froze hover membership during the grab.
+                    // Actual release containment overrides frozen hover.
                     scrubHint.settleRelease(scrubDrag.centroid.scenePosition)
                 }
             }
             onCentroidChanged: state.scrubTo(state.pressDragDistance())
         }
 
-        // QAbstractSpinBox::wheelEvent parity (Qt 6): accumulate angle deltas
-        // into a persistent remainder; each full 120-unit notch becomes one
-        // step. On macOS Shift converts a mouse wheel's horizontal axis back
-        // to the vertical step axis. Control multiplies the step by 10.
+        // Accumulate 120-unit angle notches; macOS Shift uses the horizontal
+        // axis and Control steps by ten, matching QAbstractSpinBox.
         WheelHandler {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
             enabled: control.adjustmentsEnabled
@@ -301,9 +260,8 @@ Item {
         }
 
         onActiveFocusChanged: {
-            // Focus loss finishes the draft like the original editingFinished:
-            // an adjusting field commits or corrects, a plain editor only
-            // corrects (its owner cancels on focus loss).
+            // Focus loss commits/corrects adjusting fields; plain editors only
+            // correct invalid text because their owner cancels on focus loss.
             if (!activeFocus && (control.adjustmentsEnabled || !input.acceptableInput))
                 state.finishEditing()
         }
@@ -370,9 +328,8 @@ Item {
                 input.cut()
                 event.accepted = true
             } else if (event.matches(StandardKey.Paste)) {
-                // paste() inserts clipboard text without the per-character
-                // filter the digit branch applies; roll back a draft that
-                // falls outside the numeric character domain.
+                // Clipboard insertion bypasses the character filter; restore
+                // the prior draft and selection when the result is not numeric.
                 const priorText = input.text
                 const priorCursor = input.cursorPosition
                 const priorStart = input.selectionStart
@@ -455,9 +412,8 @@ Item {
                                && (input.text.indexOf("-") < 0
                                    || (input.selectionStart === 0
                                        && input.selectedText.indexOf("-") >= 0))))) {
-                // The IntValidator accepts digits and a leading minus; the
-                // editor's own insert API applies the same characters without
-                // routing the key event through the input.
+                // Insert the validator's digit/minus domain without delivering
+                // the key to TextInput, which would claim unhandled shortcuts.
                 if (input.selectedText.length > 0)
                     input.remove(input.selectionStart, input.selectionEnd)
                 input.insert(input.cursorPosition, event.text)
@@ -470,5 +426,29 @@ Item {
         Accessible.description: control.accessibleDescription
         Accessible.editable: true
         Accessible.focusable: true
+    }
+
+    Binding {
+        when: control.appearance !== null
+        restoreMode: Binding.RestoreNone
+        control.implicitWidth: Math.max(fontMetrics.advanceWidth("" + control.minimumValue),
+                                       fontMetrics.advanceWidth("" + control.maximumValue))
+                               + 2 * (control.appearance?.horizontalPadding + control.appearance?.borderWidth)
+        control.implicitHeight: fontMetrics.height + 2 * (control.appearance?.verticalPadding + control.appearance?.borderWidth)
+        fontMetrics.font: control.appearance?.font
+        frame.color: control.appearance?.background
+        frame.radius: control.appearance?.radius
+        frame.border.width: control.appearance?.borderWidth
+        frame.border.color: focusLeaf.activeFocus ? control.appearance?.focus : control.appearance?.outline
+        input.color: control.appearance?.text
+        input.font: control.appearance?.font
+        input.padding: control.appearance?.borderWidth
+        input.leftPadding: control.appearance?.horizontalPadding + control.appearance?.borderWidth
+        input.rightPadding: control.appearance?.horizontalPadding + control.appearance?.borderWidth
+        input.topPadding: control.appearance?.verticalPadding + control.appearance?.borderWidth
+        input.bottomPadding: control.appearance?.verticalPadding + control.appearance?.borderWidth
+        input.selectionColor: control.appearance?.selection
+        input.selectedTextColor: control.appearance?.selectionText
+        scrubDrag.dragThreshold: control.appearance?.dragThreshold
     }
 }

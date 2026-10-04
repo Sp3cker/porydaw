@@ -2,21 +2,22 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import PorydawApp
+import Porydaw.Ui
 
 Item {
     id: toolbar
-    required property Item page
-    required property EventListPresenter controller
+    final required property EventListPage page
+    final required property EventListPresenter controller
 
     component ToolbarButton: Item {
         id: control
-        required property Item page
+        final required property EventListPage page
 
-        property string label: ""
-        property string toolTip: ""
-        property bool showArrow: false
-        readonly property bool hovered: hoverHandler.hovered
-        readonly property bool pressed: tapHandler.pressed
+        final property string label: ""
+        final property string toolTip: ""
+        final property bool showArrow: false
+        final readonly property bool hovered: hoverHandler.hovered
+        final readonly property bool pressed: tapHandler.pressed
         signal triggered()
 
         implicitWidth: buttonText.implicitWidth + 2 * control.page.headerHorizontalPadding

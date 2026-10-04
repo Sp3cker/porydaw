@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import PorydawStyle
+import QtQuick.Templates as T
 import QtQuick.Layouts
 import Porydaw.Ui
 import PorydawApp
@@ -10,7 +11,7 @@ Dialog {
     objectName: "songConfirmationDialog"
     required property SongDockController controller
     required property real baseFontPx
-    required property var layoutSpaces
+    required property LayoutSpaces layoutSpaces
     parent: Overlay.overlay
     anchors.centerIn: parent
     modal: true
@@ -21,7 +22,7 @@ Dialog {
     standardButtons: Dialog.Ok | Dialog.Cancel
     onAccepted: dialog.controller.acceptConfirmation(alsoVoicegroup.checked)
     onClosed: {
-        if (dialog.controller.confirmation.length > 0)
+        if (dialog.controller.confirmation !== "")
             dialog.controller.cancelConfirmation()
     }
     onRejected: dialog.controller.cancelConfirmation()
@@ -29,7 +30,7 @@ Dialog {
         return dialog.controller.confirmation === "register" ? qsTr("Register") : qsTr("Delete")
     }
     Component.onCompleted: {
-        const ok = (dialog.footer as DialogButtonBox).standardButton(Dialog.Ok)
+        const ok = (dialog.footer as DialogButtonBox).standardButton(Dialog.Ok) as T.AbstractButton
         if (ok) {
             ok.text = Qt.binding(dialog.confirmationActionText)
         }
@@ -57,7 +58,7 @@ Dialog {
             objectName: "songDeleteVoicegroup"
             Layout.fillWidth: true
             visible: dialog.controller.confirmation === "delete"
-                && dialog.controller.deletableVoicegroup.length > 0
+                && dialog.controller.deletableVoicegroup !== ""
             checked: true
             text: qsTr("Also delete voicegroup %1 (used only by this song)")
                 .arg(dialog.controller.deletableVoicegroup)

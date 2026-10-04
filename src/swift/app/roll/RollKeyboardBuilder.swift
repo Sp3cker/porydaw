@@ -100,9 +100,8 @@ struct RollKeyboardBuilder {
         // Key labels: fitted-size gate, visible-row cull, drum-width rule,
         // right alignment, drum-mode label backgrounds as rects.
         var usedKeyFont = false
-        if let typography = input.typography,
-            let fit = input.fontSpec(.keyLabel)["pixelSize"] as? Int, fit > 0
-        {
+        let fit = input.fontSpec(.keyLabel).pixelSize
+        if let typography = input.typography, fit > 0 {
             let drum = input.keyboardNames != nil
             let inset = metrics.keyLabelRightInset
             let labelHeight = keyLabelHeight(input, fit: fit)

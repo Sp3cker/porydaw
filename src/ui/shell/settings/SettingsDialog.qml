@@ -14,6 +14,7 @@ DialogWindow {
     readonly property real unit: applicationSession.baseFontPx / 12
     readonly property real engineTabWidth: 64 + 42 * (unit - 1)
     property int selectedTab: 0
+    readonly property string songLabel: store.songLabel
     width: 560
     height: 580
     minimumWidth: width
@@ -21,7 +22,7 @@ DialogWindow {
     maximumWidth: width
     maximumHeight: height
     title: qsTr("Settings")
-    font: Qt.font(applicationSession.typographyFonts.body)
+    font: applicationSession.typographyFonts.body
 
     function showSettings(songFirst: bool): void {
         dialog.store.open()
@@ -74,7 +75,7 @@ DialogWindow {
                 height: tabBar.height
                 width: dialog.engineTabWidth
                 text: qsTr("Engine")
-                font: Qt.font(dialog.applicationSession.typographyFonts.body)
+                font: dialog.applicationSession.typographyFonts.body
                 palette.active.buttonText: dialog.selectedTab === 0 ? dialog.colors.selectionText : dialog.colors.buttonText
                 palette.inactive.buttonText: dialog.selectedTab === 0 ? dialog.colors.selectionText : dialog.colors.buttonText
                 palette.disabled.buttonText: dialog.colors.disabledText
@@ -90,9 +91,9 @@ DialogWindow {
                 objectName: "settingsSongTab"
                 height: tabBar.height
                 width: tabBar.width - engineTab.width - themeTab.width
-                text: dialog.store.songLabel.length > 0
-                      ? qsTr("Song (%1)").arg(dialog.store.songLabel) : qsTr("Song")
-                font: Qt.font(dialog.applicationSession.typographyFonts.body)
+                text: dialog.songLabel.length > 0
+                      ? qsTr("Song (%1)").arg(dialog.songLabel) : qsTr("Song")
+                font: dialog.applicationSession.typographyFonts.body
                 enabled: dialog.store.songAvailable
                 palette.active.buttonText: dialog.selectedTab === 1 ? dialog.colors.selectionText : dialog.colors.buttonText
                 palette.inactive.buttonText: dialog.selectedTab === 1 ? dialog.colors.selectionText : dialog.colors.buttonText
@@ -110,7 +111,7 @@ DialogWindow {
                 height: tabBar.height
                 width: dialog.engineTabWidth
                 text: qsTr("Theme")
-                font: Qt.font(dialog.applicationSession.typographyFonts.body)
+                font: dialog.applicationSession.typographyFonts.body
                 palette.active.buttonText: dialog.selectedTab === 2 ? dialog.colors.selectionText : dialog.colors.buttonText
                 palette.inactive.buttonText: dialog.selectedTab === 2 ? dialog.colors.selectionText : dialog.colors.buttonText
                 palette.disabled.buttonText: dialog.colors.disabledText
@@ -179,7 +180,7 @@ DialogWindow {
             objectName: "settingsApply"
             x: 0; width: (parent.width - 2 * dialog.unit) / 3
             height: parent.height; text: qsTr("Apply")
-            font: Qt.font(dialog.applicationSession.typographyFonts.body)
+            font: dialog.applicationSession.typographyFonts.body
             enabled: !dialog.store.isApplying
             onClicked: dialog.commit()
         }
@@ -188,7 +189,7 @@ DialogWindow {
             objectName: "settingsCancel"
             x: applyButton.width + dialog.unit
             width: applyButton.width; height: parent.height; text: qsTr("Cancel")
-            font: Qt.font(dialog.applicationSession.typographyFonts.body)
+            font: dialog.applicationSession.typographyFonts.body
             onClicked: dialog.close()
         }
         Button {
@@ -196,7 +197,7 @@ DialogWindow {
             objectName: "settingsOK"
             x: cancelButton.x + cancelButton.width + dialog.unit
             width: applyButton.width; height: parent.height; text: qsTr("OK")
-            font: Qt.font(dialog.applicationSession.typographyFonts.body)
+            font: dialog.applicationSession.typographyFonts.body
             enabled: !dialog.store.isApplying
             onClicked: {
                 dialog.commit()

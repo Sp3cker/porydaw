@@ -17,7 +17,7 @@ DialogWindow {
     width: 60 * unit
     height: 40 * unit
     title: picker.title
-    font: Qt.font(applicationSession.typographyFonts.body)
+    font: applicationSession.typographyFonts.body
     onClosing: workflow.cancelZone()
 
     ColumnLayout {

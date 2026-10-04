@@ -98,7 +98,7 @@ func checkDrumPadLabels(_ report: CheckReport) {
             RollContentProbe(grid).keyboardHighlightRects().count == 1,
             cppID: id, message: "A040 the hovered pad paints one keyboard highlight record")
         report.expect(
-            chip.hoverChipRect["width"] as? Double
+            chip.hoverChipWidth
                 == (grid.typography?.chipAdvance("fixture_named_pad_long_label_123") ?? 0)
                     + grid.metrics.chipHPadding,
             cppID: id, message: "A039 the full hover chip has measured text width")

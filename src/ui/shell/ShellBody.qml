@@ -3,12 +3,14 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import PorydawStyle
 import Porydaw.Ui
+import PorydawApp
 
 Item {
     id: body
-    required property var root
+    required final property ShellWindow root
     required property int transportToolExtent
-    readonly property var shell: body.root.shellPresenter
+    final readonly property ShellPresenter shell: body.root.shellPresenter
+    final readonly property SongDockController songDock: body.shell.session.songDockController()
     property bool dockSettingsReady: false
 
     Component.onCompleted: body.dockSettingsReady = true
@@ -45,7 +47,7 @@ Item {
             SplitView.minimumWidth: 200
             SplitView.maximumWidth: 480
             SplitView.preferredWidth: Math.max(200, Math.min(480, body.shell.dockColumnWidth))
-            controller: body.shell.session.songDockController()
+            controller: body.songDock
             applicationSession: body.shell.session
             songsRatio: body.shell.dockSongsRatio
             colors: body.shell.session.palette
@@ -69,7 +71,7 @@ Item {
             layoutSpaces: body.shell.session.layoutSpaces
             shellRouter: body.shell
             onContextMenuAt: (x, y) => {
-                body.root.actionRevision++
+                body.shell.refreshActionStates()
                 gridContextMenu.menu.x = x
                 gridContextMenu.menu.y = y
                 gridContextMenu.menu.open()
@@ -79,7 +81,7 @@ Item {
                 anchors.centerIn: parent
                 visible: !body.shell.session.songOpen
                 text: qsTr("Open a project and song to play with the Swift core.")
-                font: Qt.font(body.root.chromeTypography.body)
+                font: body.root.chromeTypography.body
                 color: body.shell.session.palette.windowText
                 horizontalAlignment: Text.AlignHCenter
             }
@@ -110,7 +112,7 @@ Item {
                 height: parent.height
                 leftPadding: body.root.chromeSpacing.two
                 text: qsTr("Polyphony Debugger")
-                font: Qt.font(body.root.chromeTypography.body)
+                font: body.root.chromeTypography.body
                 color: body.root.colors.windowText
                 verticalAlignment: Text.AlignVCenter
             }
@@ -118,7 +120,7 @@ Item {
                 id: polyClose
                 objectName: "shellPolyphonyClose"
                 height: parent.height
-                font: Qt.font(body.root.chromeTypography.body)
+                font: body.root.chromeTypography.body
                 text: qsTr("×")
                 onClicked: body.shell.activate("view.polyphony_debugger")
             }
@@ -146,9 +148,9 @@ Item {
     Loader {
         id: songConfirmation
         objectName: "songConfirmationLoader"
-        active: body.shell.session.songDockController().confirmation.length > 0
+        active: body.songDock.confirmation.length > 0
         sourceComponent: SongConfirmDialog {
-            controller: body.shell.session.songDockController()
+            controller: body.songDock
             baseFontPx: body.root.chromeBaseFontPx
             layoutSpaces: body.root.chromeSpacing
         }

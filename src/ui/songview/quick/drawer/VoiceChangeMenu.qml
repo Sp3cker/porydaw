@@ -2,29 +2,38 @@
 import QtQuick
 import PorydawStyle
 import Porydaw.Ui
+import PorydawApp as App
 
 pragma ComponentBehavior: Bound
 
 FocusScope {
     id: menuRoot
     objectName: "voiceChangeMenu"
-    required property var model
-    property var pageItem: null
+    required property App.VoiceChangesPage model
+    property VoiceChangesPage pageItem: null
     property bool showing: false
     property int currentRow: 0
     signal closed()
     anchors.fill: parent
     visible: showing
     enabled: showing
-    readonly property real baseFontPx: model ? model.baseFontPx : 13
-    readonly property font bodyFont: menuRoot.pageItem
-        ? Qt.font((menuRoot.pageItem.applicationSession.timeSigHost
-                   || menuRoot.pageItem.applicationSession).typographyFonts.body) : menuRoot.neutralFont
-    readonly property var menuColors: menuRoot.pageItem ? menuRoot.pageItem.gridPalette : null
-    property font neutralFont
-    readonly property point anchor: pageItem && parent
-        ? pageItem.mapToItem(parent, model ? model.menuX : 0, model ? model.menuY : 0)
-        : Qt.point(model ? model.menuX : 0, model ? model.menuY : 0)
+    readonly property real baseFontPx: menuRoot.model ? menuRoot.model.baseFontPx : 13
+    property font bodyFont
+    Binding on bodyFont {
+        when: menuRoot.pageItem !== null && menuRoot.pageItem.applicationSession !== null
+        restoreMode: Binding.RestoreNone
+        value: menuRoot.pageItem?.applicationSession?.timeSigHost.typographyFonts.body
+    }
+    readonly property App.GridPalette menuColors: menuRoot.pageItem ? menuRoot.pageItem.gridPalette : null
+    readonly property point anchor: {
+        const localX = menuRoot.model ? menuRoot.model.menuX : 0
+        const localY = menuRoot.model ? menuRoot.model.menuY : 0
+        if (menuRoot.pageItem !== null && menuRoot.parent !== null) {
+            const mapped = menuRoot.pageItem.mapToItem(menuRoot.parent, localX, localY)
+            return Qt.point(mapped.x, mapped.y)
+        }
+        return Qt.point(localX, localY)
+    }
     // Focus only once enabled: a disabled item's focus request parks active
     // focus on the window root until the enabled binding catches up.
     onEnabledChanged: {
@@ -48,16 +57,72 @@ FocusScope {
     Keys.onPressed: event => event.accepted = true
     Keys.onReleased: event => event.accepted = true
 
-    QtObject {
+    MenuAppearance {
         id: menuAppearance
-        readonly property color background: menuRoot.menuColors ? menuRoot.menuColors.menuBackground : "transparent"
-        readonly property color outline: menuRoot.menuColors ? menuRoot.menuColors.outline : "transparent"
-        readonly property color text: menuRoot.menuColors ? menuRoot.menuColors.windowText : "transparent"
-        readonly property color hoverBackground: menuRoot.menuColors ? menuRoot.menuColors.menuHoverBackground : "transparent"
-        readonly property color hoverText: menuRoot.menuColors ? menuRoot.menuColors.windowText : "transparent"
-        readonly property color disabledText: menuRoot.menuColors ? menuRoot.menuColors.disabledText : "transparent"
-        readonly property color separator: menuRoot.menuColors ? menuRoot.menuColors.separator : "transparent"
-        readonly property font font: menuRoot.bodyFont
+        font: menuRoot.bodyFont
+    }
+    Binding {
+        target: menuAppearance
+        property: "background"
+        when: menuRoot.menuColors !== null
+        restoreMode: Binding.RestoreNone
+        value: menuRoot.menuColors?.menuBackground
+    }
+    Binding {
+        target: menuAppearance
+        property: "outline"
+        when: menuRoot.menuColors !== null
+        restoreMode: Binding.RestoreNone
+        value: menuRoot.menuColors?.outline
+    }
+    Binding {
+        target: menuAppearance
+        property: "text"
+        when: menuRoot.menuColors !== null
+        restoreMode: Binding.RestoreNone
+        value: menuRoot.menuColors?.windowText
+    }
+    Binding {
+        target: menuAppearance
+        property: "hoverBackground"
+        when: menuRoot.menuColors !== null
+        restoreMode: Binding.RestoreNone
+        value: menuRoot.menuColors?.menuHoverBackground
+    }
+    Binding {
+        target: menuAppearance
+        property: "hoverText"
+        when: menuRoot.menuColors !== null
+        restoreMode: Binding.RestoreNone
+        value: menuRoot.menuColors?.windowText
+    }
+    Binding {
+        target: menuAppearance
+        property: "pressedBackground"
+        when: menuRoot.menuColors !== null
+        restoreMode: Binding.RestoreNone
+        value: menuRoot.menuColors?.menuHoverBackground
+    }
+    Binding {
+        target: menuAppearance
+        property: "pressedText"
+        when: menuRoot.menuColors !== null
+        restoreMode: Binding.RestoreNone
+        value: menuRoot.menuColors?.windowText
+    }
+    Binding {
+        target: menuAppearance
+        property: "disabledText"
+        when: menuRoot.menuColors !== null
+        restoreMode: Binding.RestoreNone
+        value: menuRoot.menuColors?.disabledText
+    }
+    Binding {
+        target: menuAppearance
+        property: "separator"
+        when: menuRoot.menuColors !== null
+        restoreMode: Binding.RestoreNone
+        value: menuRoot.menuColors?.separator
     }
 
     MouseArea {
@@ -71,7 +136,7 @@ FocusScope {
         objectName: "voiceMenuPanel"
         rowObjectNamePrefix: "voiceMenuRow_"
         host: menuRoot
-        menuModel: menuRoot.model ? menuRoot.model.menuRows : []
+        menuModel: menuRoot.model ? menuRoot.model.menuRows : null
         rootLevel: true
         rowHeight: Math.round(menuRoot.baseFontPx * 1.6)
         menuWidth: Math.min(Math.round(menuRoot.baseFontPx * 14), menuRoot.width)
@@ -85,6 +150,6 @@ FocusScope {
         textX: Math.round(menuRoot.baseFontPx / 2)
         textRight: menuWidth - textX
         highlightedRow: menuRoot.currentRow
-        appearance: menuRoot.menuColors ? menuAppearance : null
+        appearance: menuAppearance
     }
 }

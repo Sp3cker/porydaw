@@ -16,17 +16,44 @@ internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
         cppID: unboundID,
         message: "an empty tab strip has no document-bound command router")
     report.expect(
-        !shell.actionEnabled(id: "roll.copy"), cppID: unboundID,
+        shell.action(id: "roll.copy")?.enabled == false, cppID: unboundID,
         message: "the empty shell disables Copy")
     report.expect(
-        !shell.actionEnabled(id: "roll.solo_tracks"), cppID: unboundID,
+        shell.action(id: "roll.solo_tracks")?.enabled == false, cppID: unboundID,
         message: "the empty shell disables Solo Tracks")
     report.expect(
-        !shell.actionEnabled(id: "edit.insert_time"), cppID: unboundID,
+        shell.action(id: "edit.insert_time")?.enabled == false, cppID: unboundID,
         message: "the empty shell disables Insert Time")
     report.expect(
-        !shell.actionEnabled(id: "edit.delete_time"), cppID: unboundID,
+        shell.action(id: "edit.delete_time")?.enabled == false, cppID: unboundID,
         message: "the empty shell disables Delete Time")
+    guard let polyphonyAction = shell.action(id: "view.polyphony_debugger") else {
+        report.fail(unboundID, "the known polyphony action has no state")
+        return
+    }
+    report.expect(
+        shell.action(id: "view.polyphony_debugger") === polyphonyAction
+            && shell.action(id: "unknown.action") == nil
+            && polyphonyAction.enabled && !polyphonyAction.checked
+            && polyphonyAction.checkable && polyphonyAction.label == "Polyphony Debugger",
+        cppID: unboundID, message: "known actions retain their identity and unknown ids have no state")
+    shell.activate(id: "view.polyphony_debugger")
+    report.expect(
+        polyphonyAction.checked && shell.action(id: "view.polyphony_debugger") === polyphonyAction,
+        cppID: unboundID, message: "activation updates the retained action state in place")
+    shell.activate(id: "view.polyphony_debugger")
+    shell.sceneActive = false
+    shell.refreshActionStates()
+    report.expect(
+        !polyphonyAction.enabled && !polyphonyAction.checked,
+        cppID: unboundID, message: "scene removal refresh disables the retained action state")
+    shell.sceneActive = true
+    shell.refreshActionStates()
+    shell.refreshActionStates()
+    report.expect(
+        polyphonyAction.enabled && !polyphonyAction.checked
+            && shell.action(id: "view.polyphony_debugger") === polyphonyAction,
+        cppID: unboundID, message: "unchanged refreshes preserve action identity and values")
 
     let service = ProjectService()
     let session: DocumentSession

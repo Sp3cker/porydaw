@@ -147,10 +147,10 @@ ShellWindowSupport {
         soloActivatedSpy.clear()
         editMenu.open()
         tryCompare(editMenu, "visible", true, 3000)
-        compare(menuCopy.enabled, true, "Copy is enabled by the selected note")
-        compare(menuSolo.enabled, true, "Solo is enabled for the selected track")
+        tryCompare(menuCopy, "enabled", true, 3000, "Copy is enabled by the selected note")
+        tryCompare(menuSolo, "enabled", true, 3000, "Solo is enabled for the selected track")
         editMenu.close()
-        compare(shell.shellPresenter.actionEnabled("roll.copy"), true)
+        compare(shell.shellPresenter.action("roll.copy").enabled, true)
         var noteSummaryBeforeCopy = surface.gridModel.fetchNoteSummary()
         var beforeCopy = JSON.parse(surface.gridModel.fetchNoteSummary())
         var copied = beforeCopy.filter(function(note) { return note.selected })
@@ -401,13 +401,13 @@ ShellWindowSupport {
                "the unloaded shell publishes its edit command set through the Edit menu")
         verify(session.songTabs.selectedPage === null,
                "the unloaded shell binds no song page target")
-        compare(shell.shellPresenter.actionEnabled("roll.copy"), false,
+        compare(shell.shellPresenter.action("roll.copy").enabled, false,
                 "the unloaded shell disables Copy with no workspace")
-        compare(shell.shellPresenter.actionEnabled("roll.solo_tracks"), false,
+        compare(shell.shellPresenter.action("roll.solo_tracks").enabled, false,
                 "the unloaded shell disables Solo with no workspace")
-        compare(shell.shellPresenter.actionEnabled("edit.insert_time"), false,
+        compare(shell.shellPresenter.action("edit.insert_time").enabled, false,
                 "the unloaded shell disables Insert Time with no workspace")
-        compare(shell.shellPresenter.actionEnabled("edit.delete_time"), false,
+        compare(shell.shellPresenter.action("edit.delete_time").enabled, false,
                 "the unloaded shell disables Delete Time with no workspace")
     }
 

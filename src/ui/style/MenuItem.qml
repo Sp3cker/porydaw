@@ -1,4 +1,5 @@
 pragma ComponentBehavior: Bound
+pragma ValueTypeBehavior: Addressable, Assertable
 
 import QtQuick
 import QtQuick.Controls.Fusion as Fusion
@@ -17,7 +18,7 @@ Fusion.MenuItem {
         rotation: control.mirrored ? 180 : 0
         icon: Icons.submenuArrow
         color: control.down || control.hovered || control.highlighted
-               ? Fusion.Fusion.highlightedText(control.palette) : control.palette.text
+               ? (Fusion.Fusion.highlightedText(control.palette) as color) : control.palette.text
     }
 
     indicator: CheckIndicator {

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import QtBridge
 
 public struct OtherEventsStripItem: Equatable {
     public let tick: Tick
@@ -12,7 +13,7 @@ public struct OtherEventsMarker: Equatable {
     public let tick: Tick
     public let track: Int
     public let x: Double
-    public let color: String
+    public let color: QmlColor
     public let label: String
 }
 
@@ -102,7 +103,7 @@ public enum OtherEventsStrip {
         items.map { item in
             let color =
                 item.track >= 0
-                ? PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(item.track)]
+                ? PaletteMath.trackIdentityColors[PaletteMath.trackIdentityIndex(item.track)]
                 : palette.outline
             return OtherEventsMarker(
                 tick: item.tick, track: item.track,

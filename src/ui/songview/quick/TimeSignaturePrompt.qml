@@ -1,19 +1,15 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
+import PorydawApp
 
 PromptCard {
     id: prompt
 
-    required property var bridge
+    required final property ApplicationSession bridge
 
     objectName: "timeSignaturePrompt"
-    appearance: Object.assign({}, bridge.timeSigPromptAppearance, {
-        font: Qt.font(bridge.timeSigPromptFont),
-        // Pressed text must match the hoverChipFill surface.
-        pressedText: bridge.palette.hoverChipText,
-        disabledText: bridge.palette.disabledText
-    })
+    appearance: bridge.promptStyle
 
     property int draftNumerator: bridge.timeSigPromptInitialNumerator
     property int draftDenominatorPow2: bridge.timeSigPromptInitialDenominatorPow2
@@ -155,7 +151,7 @@ PromptCard {
                     color: denominatorTap.pressed || denominatorButton.selected
                            ? prompt.appearance.pressedText : prompt.appearance.buttonText
                     font: prompt.appearance.font
-                    text: String(1 << denominatorButton.modelData)
+                    text: 1 << denominatorButton.modelData
                     renderType: Text.NativeRendering
                 }
 

@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
-import "../../ui/shell"
+import Porydaw.Ui
 import "NativeWait.js" as NativeWait
 
 TestCase {
@@ -98,6 +98,7 @@ TestCase {
                  presenter: session.eventListPresenter() }
     }
     function cellAt(table, row, column) {
+        table.forceLayout()
         table.positionViewAtRow(row, TableView.Contain)
         table.forceLayout()
         tryVerify(function() {

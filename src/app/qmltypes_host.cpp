@@ -3,6 +3,7 @@
 #include <QtCore/qcoreapplication.h>
 #include <QtCore/qmetaobject.h>
 #include <QtCore/qmetatype.h>
+#include <QtCore/qtyperevision.h>
 
 #include <new>
 
@@ -49,4 +50,9 @@ int pd_qmltypes_method_kind_slot(void)
 int pd_qmltypes_method_access_public(void)
 {
     return static_cast<int>(QMetaMethod::Public);
+}
+
+int pd_qmltypes_export_revision(void)
+{
+    return QTypeRevision::fromVersion(1, 0).toEncodedVersion<int>();
 }

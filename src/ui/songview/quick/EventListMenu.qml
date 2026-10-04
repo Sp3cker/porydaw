@@ -7,10 +7,10 @@ import Porydaw.Ui
 Loader {
     id: menuLoader
 
-    required property Item page
-    required property EventListPresenter controller
-    required property FontMetrics headerFontMetrics
-    required property FontMetrics controlFontMetrics
+    final required property EventListPage page
+    final required property EventListPresenter controller
+    final required property FontMetrics headerFontMetrics
+    final required property FontMetrics controlFontMetrics
         z: 10
         active: menuLoader.page.controller.menuOpen
         visible: menuLoader.page.controller.menuOpen
@@ -23,9 +23,9 @@ Loader {
                     const count = menuPanel.rowCount
                     for (let offset = 1; offset <= count; ++offset) {
                         const index = (menuPanel.highlightedRow + offset + count) % count
-                        const row = menuPanel.rowItem(index)
-                        if (row && row.active
-                            && row.itemData.text.toLowerCase().startsWith(prefix.toLowerCase()))
+                        const row = menuLoader.controller.menuItem(index)
+                        if (row && row.enabled && !row.separator
+                            && row.text.toLowerCase().startsWith(prefix.toLowerCase()))
                             return index
                     }
                     return -1
@@ -41,8 +41,8 @@ Loader {
                                     ? menuPanel.highlightedRow : (direction > 0 ? -1 : 0)
                             for (let offset = 1; offset <= count; ++offset) {
                                 const row = (start + direction * offset + count * 2) % count
-                                const item = menuPanel.rowItem(row)
-                                if (item && item.active) {
+                                const item = menuLoader.controller.menuItem(row)
+                                if (item && item.enabled && !item.separator) {
                                     menuLoader.page.hoverRow(menuPanel, row)
                                     break
                                 }
@@ -91,18 +91,18 @@ Loader {
                     readonly property real shortcutWidth: menuLoader.controlFontMetrics.advanceWidth(
                                                               menuLoader.page.controller.menuShortcutText)
                     readonly property int separatorCount: menuLoader.page.controller.menuSeparatorCount
-                    appearance: ({
-                        background: menuLoader.page.buttonBackground,
-                        outline: menuLoader.page.buttonOutline,
-                        text: menuLoader.page.buttonText,
-                        hoverBackground: menuLoader.page.buttonHoverBackground,
-                        hoverText: menuLoader.page.buttonText,
-                        pressedBackground: menuLoader.page.buttonPressedBackground,
-                        pressedText: menuLoader.page.buttonPressedText,
-                        disabledText: menuLoader.page.disabledText,
-                        separator: menuLoader.page.buttonOutline,
+                    appearance: MenuAppearance {
+                        background: menuLoader.page.buttonBackground
+                        outline: menuLoader.page.buttonOutline
+                        text: menuLoader.page.buttonText
+                        hoverBackground: menuLoader.page.buttonHoverBackground
+                        hoverText: menuLoader.page.buttonText
+                        pressedBackground: menuLoader.page.buttonPressedBackground
+                        pressedText: menuLoader.page.buttonPressedText
+                        disabledText: menuLoader.page.disabledText
+                        separator: menuLoader.page.buttonOutline
                         font: menuLoader.page.controlFont
-                    })
+                    }
                     rowHeight: menuLoader.page.rowHeight
                     checkX: menuLoader.page.cellHorizontalPadding / 2
                     checkWidth: menuLoader.page.cellHorizontalPadding

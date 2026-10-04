@@ -204,6 +204,38 @@ public enum PaletteMath {
         return UInt32(c.a) << 24 | UInt32(c.r) << 16 | UInt32(c.g) << 8 | UInt32(c.b)
     }
 
+    public static func qmlColor(argb: UInt32) -> QmlColor {
+        QmlColor(
+            red8: UInt8((argb >> 16) & 255), green8: UInt8((argb >> 8) & 255),
+            blue8: UInt8(argb & 255), alpha8: UInt8(argb >> 24))
+    }
+
+    public static func argb(_ color: QmlColor) -> UInt32 {
+        let red = UInt32((color.red * 255).rounded())
+        let green = UInt32((color.green * 255).rounded())
+        let blue = UInt32((color.blue * 255).rounded())
+        let alpha = UInt32((color.alpha * 255).rounded())
+        return alpha << 24 | red << 16 | green << 8 | blue
+    }
+
+    public static func hex(_ color: QmlColor) -> String {
+        hex(argb: argb(color))
+    }
+
+    public static func channels(_ color: QmlColor) -> (r: Int, g: Int, b: Int, a: Int) {
+        (
+            Int((color.red * 255).rounded()), Int((color.green * 255).rounded()),
+            Int((color.blue * 255).rounded()), Int((color.alpha * 255).rounded())
+        )
+    }
+
+    public static func contrastRatio(_ first: QmlColor, _ second: QmlColor) -> Double {
+        let firstLuminance = relativeLuminance(argb: argb(first))
+        let secondLuminance = relativeLuminance(argb: argb(second))
+        return (max(firstLuminance, secondLuminance) + 0.05)
+            / (min(firstLuminance, secondLuminance) + 0.05)
+    }
+
     public static func trackIdentityIndex(_ track: Int) -> Int {
         ((track % trackIdentityFills.count) + trackIdentityFills.count)
             % trackIdentityFills.count
@@ -219,6 +251,10 @@ public enum PaletteMath {
         "#73CD54", "#5854CD", "#CD7D54", "#54CD9F", "#C354CD", "#B5CD54",
         "#5491CD", "#CD546F", "#54CD5E", "#8154CD",
     ]
+    public static let trackIdentityColors = trackIdentityFills.map { qmlColor(argb: argb($0)) }
+    public static let velocityStemColors = ThemeColorTables.velocityStemColors.map {
+        qmlColor(argb: argb($0))
+    }
 }
 
 @MainActor
@@ -226,90 +262,90 @@ public enum PaletteMath {
 public final class GridPalette {
     @QtIgnored public var theme: ThemePreset = .vanilla
 
-    public var windowBackground: String = "#C9C1BB"
-    public var rollBackground: String = "#D4CCC7"
-    public var accidentalLane: String = "#B4ACA6"
-    public var scaleHighlight: String = "#33B595FC"
-    public var chromeBackground: String = "#BDB5AF"
-    public var separator: String = "#5B5652"
-    public var outline: String = "#8C857F"
-    public var focusOutline: String = "#8C857F"
-    public var scrollbarHandle: String = "#A49D97"
-    public var buttonBackground: String = "#E1DBD6"
-    public var buttonText: String = "#302C29"
-    public var buttonPressedBackground: String = "#F5B61C"
-    public var buttonPressedText: String = "#302C29"
-    public var buttonHoverBackground: String = "#ECE7E1"
-    public var menuBackground: String = "#D2D0CA"
-    public var menuHoverBackground: String = "#E7E2DC"
-    public var disabledText: String = "#8B847E"
-    public var polyphonyValueBackground: String = "#E1DBD6"
-    public var polyphonyValueText: String = "#302C29"
-    public var selectionText: String = "#302C29"
+    public var windowBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFC9C1BB)
+    public var rollBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFD4CCC7)
+    public var accidentalLane: QmlColor = PaletteMath.qmlColor(argb: 0xFFB4ACA6)
+    public var scaleHighlight: QmlColor = PaletteMath.qmlColor(argb: 0x33B595FC)
+    public var chromeBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFBDB5AF)
+    public var separator: QmlColor = PaletteMath.qmlColor(argb: 0xFF5B5652)
+    public var outline: QmlColor = PaletteMath.qmlColor(argb: 0xFF8C857F)
+    public var focusOutline: QmlColor = PaletteMath.qmlColor(argb: 0xFF8C857F)
+    public var scrollbarHandle: QmlColor = PaletteMath.qmlColor(argb: 0xFFA49D97)
+    public var buttonBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFE1DBD6)
+    public var buttonText: QmlColor = PaletteMath.qmlColor(argb: 0xFF302C29)
+    public var buttonPressedBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFF5B61C)
+    public var buttonPressedText: QmlColor = PaletteMath.qmlColor(argb: 0xFF302C29)
+    public var buttonHoverBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFECE7E1)
+    public var menuBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFD2D0CA)
+    public var menuHoverBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFE7E2DC)
+    public var disabledText: QmlColor = PaletteMath.qmlColor(argb: 0xFF8B847E)
+    public var polyphonyValueBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFE1DBD6)
+    public var polyphonyValueText: QmlColor = PaletteMath.qmlColor(argb: 0xFF302C29)
+    public var selectionText: QmlColor = PaletteMath.qmlColor(argb: 0xFF302C29)
     /// Editable-field and tooltip surface: the preset's input swatch, which
     /// keeps text and placeholder ink above 4.5:1 in every theme.
-    public var inputBackground: String = "#F3F0ED"
+    public var inputBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFF3F0ED)
     /// Alternating list-row surface.
-    public var alternateBackground: String = "#D1CBC5"
-    public var sampleWaveformInk: String = "#005B63"
-    public var sampleCropHandle: String = "#92681F"
-    public var sampleLoopHandle: String = "#2A7292"
-    public var sampleSeamEndInk: String = "#C54444"
+    public var alternateBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFD1CBC5)
+    public var sampleWaveformInk: QmlColor = PaletteMath.qmlColor(argb: 0xFF005B63)
+    public var sampleCropHandle: QmlColor = PaletteMath.qmlColor(argb: 0xFF92681F)
+    public var sampleLoopHandle: QmlColor = PaletteMath.qmlColor(argb: 0xFF2A7292)
+    public var sampleSeamEndInk: QmlColor = PaletteMath.qmlColor(argb: 0xFFC54444)
     /// Placeholder ink in empty fields; legible text, never the disabled ink.
-    public var placeholderText: String = "#4D4742"
-    /// Severity inks for warning and error text on window, chrome, item,
-    /// control, and input surfaces. Selected rows use `selectionText` instead.
-    public var warningText: String = "#644100"
-    public var errorText: String = "#8D1B1F"
+    public var placeholderText: QmlColor = PaletteMath.qmlColor(argb: 0xFF4D4742)
+    /// Severity inks on window, chrome, item, control, and input surfaces.
+    /// Selected rows use `selectionText` instead.
+    public var warningText: QmlColor = PaletteMath.qmlColor(argb: 0xFF644100)
+    public var errorText: QmlColor = PaletteMath.qmlColor(argb: 0xFF8D1B1F)
 
-    public var polyphonyFlashBackground: String = "#D92626"
+    public var polyphonyFlashBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFD92626)
 
     /// Polyphony channel cells: fixed identity fills shared by every theme,
     /// each with the ink that keeps 4.5:1 on it (white on amber is 3.26:1).
-    public var polyphonyActiveFill: String = "#228445"
-    public var polyphonyReleasingFill: String = "#B98527"
-    public var polyphonyShadowFill: String = "#2859A4"
-    public var polyphonyCellText: String = "#FFFFFF"
-    public var polyphonyReleasingText: String = "#1A1A1A"
+    public var polyphonyActiveFill: QmlColor = PaletteMath.qmlColor(argb: 0xFF228445)
+    public var polyphonyReleasingFill: QmlColor = PaletteMath.qmlColor(argb: 0xFFB98527)
+    public var polyphonyShadowFill: QmlColor = PaletteMath.qmlColor(argb: 0xFF2859A4)
+    public var polyphonyCellText: QmlColor = PaletteMath.qmlColor(argb: 0xFFFFFFFF)
+    public var polyphonyReleasingText: QmlColor = PaletteMath.qmlColor(argb: 0xFF1A1A1A)
 
-    /// The tab strip's chrome: the window chrome one step lighter per state, the
-    /// active tab's accent, the pressed (dropping) fill, and the strip's own
-    /// separator line.
-    public var tabBackground: String = "#E1DBD6"
-    public var tabHoverBackground: String = "#ECE7E1"
-    public var tabSelectedBackground: String = "#B9E8EE"
-    public var tabPressedBackground: String = "#F5B61C"
-    public var tabSeparator: String = "#9E9893"
-    public var automationNodeInk: String = "#EA3C3C"
-    public var automationTabBackground: String = "#E7E1DB"
-    public var automationTabOutline: String = "#8C857F"
+    /// Tab strip control, hover, selected, pressed, and separator roles.
+    public var tabBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFE1DBD6)
+    public var tabHoverBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFECE7E1)
+    public var tabSelectedBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFB9E8EE)
+    public var tabPressedBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFF5B61C)
+    public var tabSeparator: QmlColor = PaletteMath.qmlColor(argb: 0xFF9E9893)
+    public var automationNodeInk: QmlColor = PaletteMath.qmlColor(argb: 0xFFEA3C3C)
+    public var automationTabBackground: QmlColor = PaletteMath.qmlColor(argb: 0xFFE7E1DB)
+    public var automationTabOutline: QmlColor = PaletteMath.qmlColor(argb: 0xFF8C857F)
 
-    public var keyboardNatural: String = "#F4F4F4"
-    public var keyboardBlack: String = "#202224"
-    public var keyboardSeparator: String = "#BCB4AF"
-    public var keyboardLabel: String = "#1A1A1A"
-    public var keyboardActiveKey: String = "#B9E8EE"
-    public var keyboardHover: String = "#50B9E8EE"
+    public var keyboardNatural: QmlColor = PaletteMath.qmlColor(argb: 0xFFF4F4F4)
+    public var keyboardBlack: QmlColor = PaletteMath.qmlColor(argb: 0xFF202224)
+    public var keyboardSeparator: QmlColor = PaletteMath.qmlColor(argb: 0xFFBCB4AF)
+    public var keyboardLabel: QmlColor = PaletteMath.qmlColor(argb: 0xFF1A1A1A)
+    public var keyboardActiveKey: QmlColor = PaletteMath.qmlColor(argb: 0xFFB9E8EE)
+    public var keyboardHover: QmlColor = PaletteMath.qmlColor(argb: 0x50B9E8EE)
 
-    public var gridLine: String = "#3F040000"
-    public var gridLineSub1: String = "#1F040000"
-    public var gridLineSub2: String = "#19040000"
-    public var gridLineSub3: String = "#13040000"
-    public var gridLineBeat: String = "#28040000"
-    public var gridLineBeatFine: String = "#31040000"
-    public var gridLineBar: String = "#3F040000"
-    public var rowLine: String = "#0C040000"
+    public var gridLine: QmlColor = PaletteMath.qmlColor(argb: 0x3F040000)
+    public var gridLineSub1: QmlColor = PaletteMath.qmlColor(argb: 0x1F040000)
+    public var gridLineSub2: QmlColor = PaletteMath.qmlColor(argb: 0x19040000)
+    public var gridLineSub3: QmlColor = PaletteMath.qmlColor(argb: 0x13040000)
+    public var gridLineBeat: QmlColor = PaletteMath.qmlColor(argb: 0x28040000)
+    public var gridLineBeatFine: QmlColor = PaletteMath.qmlColor(argb: 0x31040000)
+    public var gridLineBar: QmlColor = PaletteMath.qmlColor(argb: 0x3F040000)
+    public var rowLine: QmlColor = PaletteMath.qmlColor(argb: 0x0C040000)
 
-    public var preRollMask: String = "#B0A6A1"
-    public var rulerPreRollMask: String = "#9D938E"
+    public var preRollMask: QmlColor = PaletteMath.qmlColor(argb: 0xFFB0A6A1)
+    public var rulerPreRollMask: QmlColor = PaletteMath.qmlColor(argb: 0xFF9D938E)
 
-    public var noteVelocityZero: String = "#8B847E"
-    public let noteLabelAaLight: String = "#FFFFFF"
-    public let noteLabelAaDark: String = "#000000"
+    public var noteVelocityZero: QmlColor = PaletteMath.qmlColor(argb: 0xFF8B847E)
+    public var noteLabelAaLight: QmlColor = PaletteMath.qmlColor(argb: 0xFFFFFFFF)
+    public var noteLabelAaDark: QmlColor = PaletteMath.qmlColor(argb: 0xFF000000)
     public func noteLabelInk(forFill fill: String) -> String {
-        PaletteMath.aaContrastInk(
-            fill: fill, light: keyboardNatural, dark: keyboardBlack,
-            fallbackLight: noteLabelAaLight, fallbackDark: noteLabelAaDark)
+        PaletteMath.hex(
+            argb: PaletteMath.aaContrastInk(
+                fill: PaletteMath.argb(fill), light: PaletteMath.argb(keyboardNatural),
+                dark: PaletteMath.argb(keyboardBlack), fallbackLight: PaletteMath.argb(noteLabelAaLight),
+                fallbackDark: PaletteMath.argb(noteLabelAaDark)))
     }
     @QtIgnored func noteFillArgb(track: Int, velocity: Int) -> UInt32 {
         ThemeColorTables.noteFill(theme, track: track, velocity: velocity)
@@ -324,24 +360,23 @@ public final class GridPalette {
         PaletteMath.hex(argb: ghostFillArgb(track: track, accidentalRow: accidentalRow))
     }
 
-    public var noteBorder: String = "#FF000000"
-    public var selectionRing: String = "#B9E8EE"
-    public var selectionFill: String = "#1EB9E8EE"
-    public var selectionEdge: String = "#00CADB"
+    public var noteBorder: QmlColor = PaletteMath.qmlColor(argb: 0xFF000000)
+    public var selectionRing: QmlColor = PaletteMath.qmlColor(argb: 0xFFB9E8EE)
+    public var selectionFill: QmlColor = PaletteMath.qmlColor(argb: 0x1EB9E8EE)
+    public var selectionEdge: QmlColor = PaletteMath.qmlColor(argb: 0xFF00CADB)
 
-    public var primaryText: String = "#302C29"
-    public var windowText: String = "#302C29"
-    public var secondaryText: String = "#4D4742"
-    public var editCursor: String = "#302C29"
-    public var playhead: String = "#E24242"
-    public var hoverChipFill: String = "#E6303030"
-    public var hoverChipText: String = "#FFFFFF"
+    public var primaryText: QmlColor = PaletteMath.qmlColor(argb: 0xFF302C29)
+    public var windowText: QmlColor = PaletteMath.qmlColor(argb: 0xFF302C29)
+    public var secondaryText: QmlColor = PaletteMath.qmlColor(argb: 0xFF4D4742)
+    public var editCursor: QmlColor = PaletteMath.qmlColor(argb: 0xFF302C29)
+    public var playhead: QmlColor = PaletteMath.qmlColor(argb: 0xFFE24242)
+    public var hoverChipFill: QmlColor = PaletteMath.qmlColor(argb: 0xE6303030)
+    public var hoverChipText: QmlColor = PaletteMath.qmlColor(argb: 0xFFFFFFFF)
     /// Implicit time signatures recede to the secondary ink; the disabled ink
     /// is reserved for inactive controls and fails text contrast.
-    public var implicitSignature: String = "#4D4742"
-    /// Ruler beat labels. Secondary ink: every ruler label keeps 4.5:1 on the
-    /// chrome surface (docs/adr/0002-text-contrast-first.md).
-    public var rulerDetailText: String = "#4D4742"
+    public var implicitSignature: QmlColor = PaletteMath.qmlColor(argb: 0xFF4D4742)
+    /// Ruler beat labels keep AA contrast on the chrome surface.
+    public var rulerDetailText: QmlColor = PaletteMath.qmlColor(argb: 0xFF4D4742)
 
     public init() {}
 }

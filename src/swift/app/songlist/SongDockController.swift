@@ -17,6 +17,7 @@ public final class SongDockController: QmlUncreatable {
     @QtTracked public var deletableVoicegroup = ""
     @QtTracked public var busy = false
     @QtTracked public var songsLoading = false
+    @QtSignal public func songsChanged()
 
     private weak var session: ApplicationSession?
     private var service: ProjectService?
@@ -54,6 +55,7 @@ public final class SongDockController: QmlUncreatable {
         presenter.setSongs(songs)
         songsLoading = true
         syncSelection()
+        songsChanged()
     }
 
     @QtIgnored
@@ -67,6 +69,7 @@ public final class SongDockController: QmlUncreatable {
         presenter.setSongs([])
         songsLoading = false
         clearConfirmation()
+        songsChanged()
     }
 
     @QtIgnored
@@ -80,6 +83,7 @@ public final class SongDockController: QmlUncreatable {
         presenter.setSongs(songs)
         session?.refreshSongLabels(songs.map(\.label))
         syncSelection()
+        songsChanged()
     }
     // File-menu ingress: the fork acts on the selected tab regardless of
     // dock filter state, so this resolves through the full snapshot listing.

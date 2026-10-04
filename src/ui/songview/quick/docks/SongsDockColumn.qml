@@ -10,7 +10,7 @@ SplitView {
     orientation: Qt.Vertical
     required property SongDockController controller
     required property ApplicationSession applicationSession
-    required property var colors
+    required property GridPalette colors
     readonly property real baseFontPx: dock.applicationSession.baseFontPx
     // Normalized usable-height fraction persisted as swiftDock/songsRatio.
     // Divider write-back keeps both panes' controls and one complete list row.

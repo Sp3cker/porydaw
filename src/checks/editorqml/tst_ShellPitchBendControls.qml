@@ -58,8 +58,8 @@ ShellPitchBendSupport {
                "the actual roll selects the note")
         const item = findChild(shell, "shellAction_roll.pitch_bend")
         verify(item !== null, "the Edit menu owns the pitch bend row")
-        verify(shell.shellPresenter.actionEnabled("roll.pitch_bend"),
-               "the selection enables the menu row")
+        tryCompare(shell.shellPresenter.action("roll.pitch_bend"), "enabled", true, 3000,
+                   "the selection enables the menu row")
         tryVerify(function() { return item.enabled }, 3000,
                   "the menu row follows the selection")
         const before = grid.appliedRevisionText

@@ -71,14 +71,16 @@ TestCase {
         wait(0)
     }
 
-    function glyphRendersInk(bar, item, expectedHex) {
+    function glyphRendersInk(bar, item, expectedColor) {
         waitForRendering(bar)
         var image = grabImage(bar)
         verify(image.width > 0 && image.height > 0,
                "the transport bar renders a frame for " + item.objectName)
         var dpr = image.width / bar.width
         var origin = item.mapToItem(bar, 0, 0)
-        var expected = Helpers.channels(expectedHex)
+        var expected = [Math.round(expectedColor.r * 255),
+                        Math.round(expectedColor.g * 255),
+                        Math.round(expectedColor.b * 255)]
         var x0 = Math.max(0, Math.floor(origin.x * dpr))
         var y0 = Math.max(0, Math.floor(origin.y * dpr))
         var x1 = Math.min(image.width - 1,

@@ -5,13 +5,14 @@ import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
 import Porydaw.Icons
+import PorydawApp
 
 ColumnLayout {
     id: panel
     objectName: "voicegroupPanel"
-    required property QtObject applicationSession
-    required property QtObject controller
-    readonly property QtObject colors: applicationSession.palette
+    required property ApplicationSession applicationSession
+    required property VoiceListController controller
+    readonly property GridPalette colors: applicationSession.palette
     readonly property real baseFontPx: applicationSession.baseFontPx
     readonly property int rowHeight: Math.round(baseFontPx * 1.33)
     readonly property int headerHeight: Math.round(baseFontPx * 1.83)

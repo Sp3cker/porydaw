@@ -105,6 +105,11 @@ public final class VoiceListController: QmlUncreatable {
     public var rows: QListModel<VoiceListRowHandle> = QListModel()
     /// The selector's -G choices (display name + raw arg per entry).
     public var argChoices: QListModel<VoiceListArgChoice> = QListModel()
+    public var samplePickerRows: QListModel<SamplePickerRow> = QListModel()
+    public var samplePickerCount: Int = 0
+    @QtIgnored var samplePickerFilter = ""
+    @QtIgnored var samplePickerWaveMode = false
+    @QtIgnored var samplePickerDetails: [String: String] = [:]
     @QtIgnored public let editor = VoiceEditorController()
 
     public func editorModel() -> VoiceEditorController { editor }
@@ -192,51 +197,56 @@ public final class VoiceListController: QmlUncreatable {
     /// Project-scoped catalogs are injected by ApplicationSession, which owns writes.
     /// QML observes the published synth and drumkit choices without mutating them.
     @QtIgnored public var sampleChoices: [String] = [] {
-        didSet { if sampleChoices != oldValue { rederiveRows() } }
+        didSet {
+            if sampleChoices != oldValue {
+                rederiveRows()
+                refreshSamplePickerRows()
+            }
+        }
     }
-    @QtIgnored public var keysplitTables: [String: String] = [:]
+    @QtIgnored public var keysplitTables: [String: String] = [:] {
+        didSet { if keysplitTables != oldValue { refreshSamplePickerRows() } }
+    }
     @QtIgnored public var synthSymbols: Set<String> = [] {
         didSet { if synthSymbols != oldValue { rederiveRows() } }
     }
     @QtIgnored public var synthDefinitions: [String: VgSynthDesc] = [:]
     public var synthChoices: [String] = []
     @QtTracked public var canMintSynths = false
-    @QtIgnored public var pickerSampleInfo: [String: PickerSampleInfo] = [:]
+    @QtIgnored public var pickerSampleInfo: [String: PickerSampleInfo] = [:] {
+        didSet {
+            if pickerSampleInfo != oldValue {
+                refreshSamplePickerDetails()
+                refreshSamplePickerRows()
+            }
+        }
+    }
     @QtTracked public var pickerInfoRevision = 0
     @QtIgnored public var onPickerSampleInfoRequested: (() -> Void)?
     @QtIgnored public var adsrDefaults = VoiceListAdsrDefaults()
-    @QtIgnored public var waveSymbols: [String] = []
+    @QtIgnored public var waveSymbols: [String] = [] {
+        didSet { if waveSymbols != oldValue { refreshSamplePickerRows() } }
+    }
     public var drumkitSymbols: [String] = []
 
-    public func sampleSymbols() -> [String] {
-        sampleChoices.filter { !$0.contains("Phoneme") }
+    public func sampleDisplayName(symbol: String) -> String {
+        Self.sampleDisplayName(symbol)
     }
-    public func phonemeSymbols() -> [String] {
-        sampleChoices.filter { $0.contains("Phoneme") }
+
+    public func configureSamplePicker(filter: String, waveMode: Bool) {
+        guard samplePickerFilter != filter || samplePickerWaveMode != waveMode else { return }
+        samplePickerFilter = filter
+        samplePickerWaveMode = waveMode
+        refreshSamplePickerRows()
     }
-    public func samplePickerSymbols() -> [String] {
-        keysplitTables.keys.sorted() + sampleChoices
+
+    public func samplePickerRow(index: Int) -> Optional<SamplePickerRow> {
+        guard index >= 0, index < samplePickerRows.count else { return nil }
+        return samplePickerRows[index]
     }
-    public func waveChoices() -> [String] { waveSymbols }
-    public func keysplitPickerSymbols() -> [String] { keysplitTables.keys.sorted() }
 
     public func requestPickerSampleInfo() {
         onPickerSampleInfoRequested?()
-    }
-
-    public func pickerRowLoops(symbol: String) -> Bool {
-        pickerSampleInfo[symbol]?.looped ?? false
-    }
-
-    public func pickerDetail(symbol: String, keysplit: Bool, typed: Bool) -> String {
-        if typed { return "Unlisted symbol" }
-        if keysplit { return "Keysplit instrument" }
-        guard let info = pickerSampleInfo[symbol] else { return "" }
-        let mode = info.looped ? "Loops" : "One-shot"
-        let seconds = String(
-            format: "%.2f", locale: Locale(identifier: "en_US_POSIX"),
-            info.seconds)
-        return "\(mode) · \(info.rateHz) Hz · \(seconds) s"
     }
 
     @QtIgnored weak var session: DocumentSession?

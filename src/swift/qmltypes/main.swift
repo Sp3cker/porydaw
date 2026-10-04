@@ -171,7 +171,7 @@ private struct MetaObjectWalk {
         if let export {
             // QtBridge's SwiftQmlElementBuilder registers every element at version 1.0.
             result += "        exports: [\(quoted("\(export.uri)/\(export.name) 1.0"))]\n"
-            result += "        exportMetaObjectRevisions: [0]\n"
+            result += "        exportMetaObjectRevisions: [\(pd_qmltypes_export_revision())]\n"
             if !export.creatable {
                 result += "        isCreatable: false\n"
             }
@@ -293,7 +293,8 @@ private struct PorydawQmlTypesCommand {
         let module = directory.appendingPathComponent("PorydawApp", isDirectory: true)
         try FileManager.default.createDirectory(at: module, withIntermediateDirectories: true)
         try qmltypes.write(to: module.appendingPathComponent("PorydawApp.qmltypes"), atomically: true, encoding: .utf8)
-        try "module PorydawApp\ntypeinfo PorydawApp.qmltypes\ndepends QtQml 2.0\n".write(
+        // QColor/QFont value types (QmlColor/QmlFont properties) are declared by QtQuick.
+        try "module PorydawApp\ntypeinfo PorydawApp.qmltypes\ndepends QtQuick\n".write(
             to: module.appendingPathComponent("qmldir"), atomically: true, encoding: .utf8)
     }
 
