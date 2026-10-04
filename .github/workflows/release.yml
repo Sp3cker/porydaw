@@ -78,14 +78,15 @@ jobs:
           echo "SAFE_TAG=$(printf '%s' "${{ inputs.tag }}" | sed 's/[^A-Za-z0-9._\/-]\{1,\}/-/g')" >> "$GITHUB_ENV"
 
       - name: Package AppImage
-        # linuxdeploy bundles Qt libraries and plugins. The QML sources are
-        # embedded in the executable, so QML_SOURCES_PATHS tells its Qt plugin
-        # which imported runtime modules to include.
+        # linuxdeploy bundles Qt and the Swift runtime libraries. The shell QML and
+        # bundled fonts load from the executable's directory, so they sit beside it.
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
-          QML_SOURCES_PATHS: src/ui/songview/quick
+          QML_SOURCES_PATHS: src/ui
           VERSION: ${{ env.SAFE_TAG }}
         run: |
+          mkdir -p AppDir/usr/bin
+          cp build/PorydawApplication.qml build/*.ttf build/*.otf AppDir/usr/bin/
           curl -fLO https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           curl -fLO https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-qt-x86_64.AppImage
@@ -116,10 +117,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Xcode 27 (Swift 6.4) is arm64-only; the Intel image's newest is Xcode 26.6.
         include:
-          - os: macos-latest
+          - os: xcode-27
             arch: arm64
-          - os: macos-15-intel
+          - os: macos-26-intel
             arch: x86_64
     runs-on: ${{ matrix.os }}
     env:
@@ -158,7 +160,7 @@ jobs:
         # hdiutil create is occasionally flaky on CI runners ("resource
         # busy"), hence the retry loop.
         run: |
-          macdeployqt build/porydaw.app -qmldir=src/ui/songview/quick -codesign=-
+          macdeployqt build/porydaw.app -qmldir=src/ui -codesign=-
           codesign --verify --deep --strict --verbose=2 build/porydaw.app
           mkdir dmg-root
           cp -R build/porydaw.app dmg-root/
@@ -214,8 +216,22 @@ jobs:
           aqtsource: git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7
           arch: win64_msvc2022_64
 
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Patch Qt for Swift's Clang importer
+        run: deno run --allow-read --allow-write tools/qt_version_number_patch.ts "$env:QT_ROOT_DIR"
+
       - name: Set up MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Set up Swift
+        uses: compnerd/gha-setup-swift@main
+        with:
+          swift-version: swift-6.4.0-release
+          swift-build: 6.4.0-RELEASE
 
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPORYDAW_BUILD_CHECKS=OFF
