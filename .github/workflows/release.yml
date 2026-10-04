@@ -146,7 +146,6 @@ jobs:
         run: >-
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPORYDAW_BUILD_CHECKS=OFF
           -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
-          -DCMAKE_Swift_COMPILER_TARGET=${{ matrix.arch }}-apple-macosx15.0
 
       - name: Build
         run: cmake --build build -j3

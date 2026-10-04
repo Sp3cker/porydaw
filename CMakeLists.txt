@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 # Release runners use the newest SDK; without a floor the app would require that macOS.
-set(CMAKE_OSX_DEPLOYMENT_TARGET 15.0)
+# InlineArray (core, playback, sample) sets the floor at macOS 26.
+set(CMAKE_OSX_DEPLOYMENT_TARGET 26.0)
 project(porydaw VERSION 1.0.3 LANGUAGES C CXX)
 
 find_package(Git QUIET)
@@ -156,6 +157,16 @@ if(POLICY CMP0157)
     cmake_policy(SET CMP0157 NEW)
     set(CMAKE_Swift_COMPILATION_MODE
         "$<IF:$<CONFIG:Debug>,incremental,wholemodule>")
+endif()
+if(APPLE AND NOT CMAKE_Swift_COMPILER_TARGET)
+    # CMake gives only C/C++ the deployment floor; Swift needs it in its target triple.
+    if(CMAKE_OSX_ARCHITECTURES)
+        set(porydaw_swift_arch "${CMAKE_OSX_ARCHITECTURES}")
+    else()
+        set(porydaw_swift_arch "${CMAKE_HOST_SYSTEM_PROCESSOR}")
+    endif()
+    set(CMAKE_Swift_COMPILER_TARGET
+        "${porydaw_swift_arch}-apple-macosx${CMAKE_OSX_DEPLOYMENT_TARGET}")
 endif()
 enable_language(Swift)
 if(WIN32)
