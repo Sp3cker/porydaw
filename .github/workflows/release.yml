@@ -245,10 +245,21 @@ jobs:
       - name: Prep Release Directory
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path "$env:BUILD_NAME"
-          Get-ChildItem -Path build -Exclude "*.obj", "*.ninja*", "CMakeFiles", ".cmake", "*.a", "*.lib", "porydaw_checks*" | Copy-Item -Destination "$env:BUILD_NAME" -Recurse
+          cmake --install build --prefix "$env:BUILD_NAME"
           Copy-Item RELEASE-README.txt "$env:BUILD_NAME/README.txt"
-          Compress-Archive -Path "$env:BUILD_NAME" -DestinationPath "$env:BUILD_NAME.zip"
+
+      # Proves the staged folder is self-contained: no Qt or Swift on PATH.
+      - name: Launch staged porydaw.exe
+        shell: pwsh
+        run: |
+          $env:Path = "$env:SystemRoot\System32;$env:SystemRoot"
+          Remove-Item Env:QT_PLUGIN_PATH, Env:QML2_IMPORT_PATH -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath "$env:BUILD_NAME\porydaw.exe" -ArgumentList --version -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "porydaw.exe --version exited $($p.ExitCode)" }
+
+      - name: Zip Release Directory
+        shell: pwsh
+        run: Compress-Archive -Path "$env:BUILD_NAME" -DestinationPath "$env:BUILD_NAME.zip"
 
       - name: Release
         uses: softprops/action-gh-release@v2

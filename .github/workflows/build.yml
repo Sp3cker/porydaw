@@ -153,13 +153,22 @@ jobs:
           name: porydaw-macos
           path: build/porydaw.dmg
 
-      - name: Prep Windows Artifact Directory
+      - name: Stage Windows Artifact Directory
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path porydaw-windows
-          Get-ChildItem -Path build -Exclude "*.obj", "*.ninja*", "CMakeFiles", ".cmake", "*.a", "*.lib", "porydaw_checks*" | Copy-Item -Destination porydaw-windows -Recurse
+          cmake --install build --prefix porydaw-windows
           if (Test-Path RELEASE-README.txt) { Copy-Item RELEASE-README.txt porydaw-windows/README.txt }
+
+      # Proves the staged folder is self-contained: no Qt or Swift on PATH.
+      - name: Launch staged porydaw.exe
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:Path = "$env:SystemRoot\System32;$env:SystemRoot"
+          Remove-Item Env:QT_PLUGIN_PATH, Env:QML2_IMPORT_PATH -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath porydaw-windows\porydaw.exe -ArgumentList --version -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "porydaw.exe --version exited $($p.ExitCode)" }
 
       - name: Upload Windows artifact
         if: runner.os == 'Windows'

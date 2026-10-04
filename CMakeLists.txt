@@ -518,16 +518,17 @@ if(WIN32)
     # target ships with Qt 6.3+; without it the build still succeeds and
     # the DLLs must come from PATH.
     get_target_property(porydaw_qt_core_type Qt6::Core TYPE)
+    set(porydaw_windeployqt_args
+        --qmldir "${PROJECT_SOURCE_DIR}/src/ui"
+        --no-translations
+        --no-opengl-sw
+        --no-system-d3d-compiler
+        --no-system-dxc-compiler)
     if(porydaw_qt_core_type STREQUAL "STATIC_LIBRARY")
         # Nothing to deploy.
     elseif(TARGET Qt6::windeployqt)
         add_custom_command(TARGET porydaw POST_BUILD
-            COMMAND Qt6::windeployqt
-                    --qmldir "${PROJECT_SOURCE_DIR}/src/ui"
-                    --no-translations
-                    --no-opengl-sw
-                    --no-system-d3d-compiler
-                    "$<TARGET_FILE:porydaw>"
+            COMMAND Qt6::windeployqt ${porydaw_windeployqt_args} "$<TARGET_FILE:porydaw>"
             VERBATIM
         )
     else()
@@ -557,6 +558,16 @@ if(WIN32)
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different
                 ${porydaw_swift_runtime_dlls} "$<TARGET_FILE_DIR:porydaw>"
         COMMAND_EXPAND_LISTS VERBATIM)
+    # `cmake --install` stages the release folder from runtime files only, not the build tree.
+    install(TARGETS porydaw RUNTIME DESTINATION .)
+    install(FILES ${shell_qml} ${porydaw_fonts} ${porydaw_swift_runtime_dlls} DESTINATION .)
+    if(TARGET Qt6::windeployqt AND NOT porydaw_qt_core_type STREQUAL "STATIC_LIBRARY")
+        set(porydaw_install_deploy_args "")
+        foreach(arg IN LISTS porydaw_windeployqt_args)
+            string(APPEND porydaw_install_deploy_args " \"${arg}\"")
+        endforeach()
+        install(CODE "execute_process(COMMAND \"$<TARGET_FILE:Qt6::windeployqt>\"${porydaw_install_deploy_args} --skip-plugin-types qmltooling,generic \"\${CMAKE_INSTALL_PREFIX}/porydaw.exe\" COMMAND_ERROR_IS_FATAL ANY)")
+    endif()
 endif()
 
 if(WIN32)
