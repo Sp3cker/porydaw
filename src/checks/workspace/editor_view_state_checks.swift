@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCoreCheckNative
 
 @MainActor
@@ -82,8 +82,8 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
     report.expectEqual(
         expected: decoded, actual: EditorViewStateCodec.loadLanes(store: store),
         cppID: codec, what: "application preferences retain one lane blob")
-    let stagedLanes = CheckEnvironment.fixturePath("settings.plist").flatMap { path in
-        UserDefaults(suiteName: path)?.data(forKey: "editorDrawer.automationLanes")
+    let stagedLanes = CheckEnvironment.fixturePath("settings.plist").flatMap {
+        stagedPlist($0)["editorDrawer.automationLanes"] as? Data
     }
     report.expectEqual(
         expected: decoded,
@@ -210,10 +210,6 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
         case bytes(Data)
         case text(String)
     }
-    guard let stagedPreferences = UserDefaults(suiteName: plistPath) else {
-        report.fail(stored, "could not address staged preferences domain")
-        return
-    }
     let poisonCases: [(String, LanePoison, EditorLaneState)] = [
         ("invalid JSON", .bytes(Data("{ not json".utf8)), EditorLaneState()),
         ("empty bytes", .bytes(Data()), EditorLaneState()),
@@ -234,12 +230,12 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
         EditorViewStateCodec.saveLanes(full, store: store)
         switch poison {
         case .bytes(let value):
-            stagedPreferences.set(value, forKey: laneKey)
+            store.setStoredObject(value, key: laneKey)
         case .text(let value):
-            stagedPreferences.set(value, forKey: laneKey)
+            store.setStoredObject(value, key: laneKey)
         }
         store.synchronize()
-        let persisted = stagedPreferences.object(forKey: laneKey)
+        let persisted = stagedPlist(plistPath)[laneKey]
         let staged: Bool
         switch poison {
         case .bytes(let value): staged = (persisted as? Data) == value
@@ -257,7 +253,7 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
             expected: expected, actual: loaded,
             cppID: stored, what: "stored \(name) defaults or clamps only lane members")
         fresh.synchronize()
-        let after = stagedPreferences.object(forKey: laneKey)
+        let after = store.storedObject(key: laneKey)
         let unchanged: Bool
         switch poison {
         case .bytes(let value): unchanged = (after as? Data) == value
@@ -297,4 +293,14 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
     report.expectEqual(
         expected: EditorLaneState(), actual: EditorViewStateCodec.loadLanes(store: clearedStore),
         cppID: stored, what: "an empty preference domain restores default lane preferences")
+}
+
+/// The staged settings plist as written to disk.
+private func stagedPlist(_ path: String) -> [String: Any] {
+    guard let data = FileManager.default.contents(atPath: path),
+        // ReadOptions is Int on macOS (C++ interop) and an OptionSet on Linux.
+        let plist = try? PropertyListSerialization.propertyList(
+            from: data, options: .init(), format: nil) as? [String: Any]
+    else { return [:] }
+    return plist
 }

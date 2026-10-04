@@ -8,8 +8,9 @@ import QtBridge
 @QtBridgeable
 public final class PreferencesStore: QmlInstantiableStatus {
     private static var applicationID = "com.sp3cker.porydaw"
-    private static var isStaged = false
     private static var defaults = userDefaults(for: applicationID)
+    /// Check staging; corelibs Foundation has no path-backed `UserDefaults` domain.
+    private static var stagedFile: StagedPreferencesFile?
 
     public required init() {}
     public func componentComplete() {}
@@ -24,21 +25,24 @@ public final class PreferencesStore: QmlInstantiableStatus {
                 preconditionFailure("Could not clear staged preferences at \(path): \(error)")
             }
         }
-        applicationID = path
-        isStaged = true
-        defaults = userDefaults(for: path)
-        defaults.removePersistentDomain(forName: path)
-        _ = defaults.synchronize()
+        stagedFile = StagedPreferencesFile(path: path)
     }
 
     public static func configureShared(applicationName: String) {
-        guard !isStaged else { return }
+        guard stagedFile == nil else { return }
         applicationID = "com.sp3cker." + applicationName
         defaults = userDefaults(for: applicationID)
     }
 
+    /// The stored object exactly as persisted, for checks that inspect or poison the domain.
+    func storedObject(key: String) -> Any? {
+        Self.stagedFile.map { $0.values[key] } ?? Self.defaults.object(forKey: key)
+    }
+
+    func setStoredObject(_ object: Any, key: String) { set(key, object) }
+
     private func value(_ key: String) -> Any? {
-        let value = Self.defaults.object(forKey: key)
+        let value = storedObject(key: key)
         if let text = value as? String, text == "@Invalid()" { return nil }
         return value
     }
@@ -118,13 +122,19 @@ public final class PreferencesStore: QmlInstantiableStatus {
     public func remove(key: String) { set(key, nil) }
 
     public func resetPreferences() -> Bool {
+        if let staged = Self.stagedFile {
+            staged.values.removeAll()
+            return staged.synchronize()
+        }
         let defaults = Self.defaults
-        guard defaults.synchronize(), let keys = Self.storedKeys() else { return false }
-        for key in keys { defaults.removeObject(forKey: key) }
+        guard defaults.synchronize() else { return false }
+        for key in (defaults.persistentDomain(forName: Self.applicationID) ?? [:]).keys {
+            defaults.removeObject(forKey: key)
+        }
         return defaults.synchronize()
     }
 
-    public func synchronize() { _ = Self.defaults.synchronize() }
+    public func synchronize() { _ = Self.stagedFile?.synchronize() ?? Self.defaults.synchronize() }
 
     func strings(_ key: String) -> [String]? { value(key) as? [String] }
 
@@ -143,26 +153,13 @@ public final class PreferencesStore: QmlInstantiableStatus {
     }
 
     private func set(_ key: String, _ value: Any?) {
-        if let value {
+        if let staged = Self.stagedFile {
+            staged.values[key] = value
+        } else if let value {
             Self.defaults.set(value, forKey: key)
         } else {
             Self.defaults.removeObject(forKey: key)
         }
-    }
-
-    /// Keys persisted in the active domain. On macOS, `persistentDomain(forName:)` for a staged
-    /// path domain comes from a second in-process cache that never observes `set(_:forKey:)`,
-    /// so the staged plist also contributes its keys once it exists.
-    private static func storedKeys() -> Set<String>? {
-        var keys = Set((defaults.persistentDomain(forName: applicationID) ?? [:]).keys)
-        guard isStaged, FileManager.default.fileExists(atPath: applicationID) else { return keys }
-        guard let data = FileManager.default.contents(atPath: applicationID),
-            // ReadOptions is Int on macOS (C++ interop) and an OptionSet on Linux.
-            let entries = try? PropertyListSerialization.propertyList(
-                from: data, options: .init(), format: nil) as? [String: Any]
-        else { return nil }
-        keys.formUnion(entries.keys)
-        return keys
     }
 
     /// The main bundle's own identifier is not a valid suite name (`UserDefaults(suiteName:)`
@@ -173,5 +170,22 @@ public final class PreferencesStore: QmlInstantiableStatus {
             preconditionFailure("Could not create preferences domain \(applicationID)")
         }
         return defaults
+    }
+}
+
+/// The staged domain: the whole plist in memory, written atomically on synchronize.
+@MainActor
+private final class StagedPreferencesFile {
+    let path: String
+    var values: [String: Any] = [:]
+
+    init(path: String) { self.path = path }
+
+    func synchronize() -> Bool {
+        guard
+            let data = try? PropertyListSerialization.data(
+                fromPropertyList: values, format: .xml, options: 0)
+        else { return false }
+        return (try? data.write(to: URL(fileURLWithPath: path), options: .atomic)) != nil
     }
 }

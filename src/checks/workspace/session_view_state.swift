@@ -1,6 +1,6 @@
 import CoreFoundation
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
 
@@ -24,12 +24,6 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     defer { _ = store.resetPreferences() }
     let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-view-state")
     let recipeID = "workspace/WorkspaceSessionTest::restoreProjectOnly"
-    let plistPath = URL(fileURLWithPath: fixtureRoot, isDirectory: true)
-        .appendingPathComponent("settings.plist").path
-    guard let stagedPreferences = UserDefaults(suiteName: plistPath) else {
-        report.fail(recipeID, "could not address staged preferences domain")
-        return
-    }
     _ = store.resetPreferences()
     store.setString(key: "lastProjectDir", value: root)
     store.setString(key: "lastSongLabel", value: "mus_session_test")
@@ -56,7 +50,7 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
     func storedSessionKeys() -> [String: Any] {
         var values: [String: Any] = [:]
         for key in sessionKeys {
-            guard let value = stagedPreferences.object(forKey: key) else { continue }
+            guard let value = store.storedObject(key: key) else { continue }
             values[key] = value
         }
         return values
@@ -119,7 +113,7 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                        cppID: recipeID, what: "normalization omits missing and duplicate songs")
     report.expectEqual(expected: "mus_session_test", actual: available.selectedSong,
                        cppID: recipeID, what: "a missing selected song falls back to the first live tab")
-    stagedPreferences.set([String](), forKey: "lastOpenSongs")
+    store.setStoredObject([String](), key: "lastOpenSongs")
     store.setString(key: "lastSongLabel", value: "mus_session_test")
     report.expect(store.hasValue(key: "lastOpenSongs"), cppID: recipeID,
                   message: "the explicitly empty ordered-song key is present before load")
@@ -248,21 +242,21 @@ func runSessionViewStateChecks(_ report: CheckReport, store: PreferencesStore,
                        what: "the live session retains every seeded lane preference after drawer changes")
     let laneKey = "editorDrawer.automationLanes"
     let malformed = Data("{ not json".utf8)
-    stagedPreferences.set(malformed, forKey: laneKey)
+    store.setStoredObject(malformed, key: laneKey)
     store.synchronize()
     report.expect(
-        (stagedPreferences.object(forKey: laneKey) as? Data) == malformed,
+        (store.storedObject(key: laneKey) as? Data) == malformed,
                   cppID: idStored, message: "live editor poison enters the persisted preference domain")
     let poisoned = PreferencesStore()
     report.expect(EditorViewStateCodec.loadChrome(store: poisoned) == backgroundChange
                   && EditorViewStateCodec.loadLanes(store: poisoned) == EditorLaneState(),
                   cppID: idStored, message: "poisoned live editor reload defaults only lane members")
     report.expect(
-        (stagedPreferences.object(forKey: laneKey) as? Data) == malformed,
+        (store.storedObject(key: laneKey) as? Data) == malformed,
                   cppID: idStored, message: "reading live poisoned lanes leaves the preference unchanged")
     second.drawerPresenter().setSectionBodyHeight(kind: DrawerSectionKind.velocity.rawValue, height: 181)
     let healed = PreferencesStore()
-    let canonical = stagedPreferences.object(forKey: laneKey) as? Data
+    let canonical = store.storedObject(key: laneKey) as? Data
     let compact = canonical.map { $0.first == 123 && !$0.contains(10) } ?? false
     report.expect(compact
                   && EditorViewStateCodec.loadChrome(store: healed) == second.drawerPresenter().chromeState
