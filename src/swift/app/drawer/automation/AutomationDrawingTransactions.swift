@@ -25,8 +25,10 @@ public struct AutomationSweepTransaction: Sendable {
     private var slopOriginX: Double
     private var slopOriginY: Double
 
-    public init(facts: AutomationFrozenFacts, mode: Mode, mapped: AutomationLanePoint,
-                rawTick: Double, pressX: Double, pressY: Double) {
+    public init(
+        facts: AutomationFrozenFacts, mode: Mode, mapped: AutomationLanePoint,
+        rawTick: Double, pressX: Double, pressY: Double
+    ) {
         self.facts = facts
         self.mode = mode
         anchor = mapped
@@ -43,8 +45,10 @@ public struct AutomationSweepTransaction: Sendable {
 
     /// `SweepGesture::dragPosition`: the effective pointer once the stroke is
     /// live, ignoring motion below the activation distance.
-    public mutating func dragPosition(x: Double, y: Double, activate: Bool,
-                                      activationDistance: Double) -> (x: Double, y: Double)? {
+    public mutating func dragPosition(
+        x: Double, y: Double, activate: Bool,
+        activationDistance: Double
+    ) -> (x: Double, y: Double)? {
         guard slopExceeded else {
             let travel = abs(x - pressX) + abs(y - pressY)
             guard activate, travel >= activationDistance else { return nil }
@@ -64,22 +68,27 @@ public struct AutomationSweepTransaction: Sendable {
 
     /// `SweepGesture::update`: step the draft through every grid tick between the
     /// previous and the current raw tick, interpolating the value across them.
-    public mutating func update(mapped: AutomationLanePoint, first: Tick, last: Tick,
-                                rawTick: Double, fine: Bool,
-                                projection: AutomationProjection) {
+    public mutating func update(
+        mapped: AutomationLanePoint, first: Tick, last: Tick,
+        rawTick: Double, fine: Bool,
+        projection: AutomationProjection
+    ) {
         current = mapped
         extend(first: first, last: last, rawTick: rawTick, fine: fine, projection: projection)
     }
 
-    private mutating func extend(first: Tick, last: Tick, rawTick: Double, fine: Bool,
-                                 projection: AutomationProjection) {
+    private mutating func extend(
+        first: Tick, last: Tick, rawTick: Double, fine: Bool,
+        projection: AutomationProjection
+    ) {
         let from = previousRawTick
         var tick = first
         while true {
             var value = current.value
             if rawTick != from {
                 let fraction = min(max((Double(tick) - from) / (rawTick - from), 0), 1)
-                value = previousValue
+                value =
+                    previousValue
                     + Int((fraction * Double(current.value - previousValue)).rounded())
             }
             AutomationSweepTransaction.upsert(&points, AutomationLanePoint(tick: tick, value: value))
@@ -105,8 +114,9 @@ public struct AutomationSweepTransaction: Sendable {
         var result: [AutomationLanePoint] = []
         var tick = first.tick
         while true {
-            let value = AutomationInterpolation.ramp.value(at: Double(tick), from: first,
-                                                           to: last)
+            let value = AutomationInterpolation.ramp.value(
+                at: Double(tick), from: first,
+                to: last)
             result.append(AutomationLanePoint(tick: tick, value: value))
             if tick >= last.tick { break }
             let next = projection.nextGridTick(after: tick, fine: fine)
@@ -127,8 +137,9 @@ public struct AutomationSweepTransaction: Sendable {
             let restore = projection.nextGridTick(after: tickEnd, fine: fine)
             if restore > tickEnd { tickEnd = restore }
         }
-        return AutomationLaneReplacement.heldSpan(facts.freeze(), begin: first.tick, end: tickEnd,
-                                                  points: result)
+        return AutomationLaneReplacement.heldSpan(
+            facts.freeze(), begin: first.tick, end: tickEnd,
+            points: result)
     }
 
     /// The live draft the page paints while the stroke runs.
@@ -164,8 +175,10 @@ public struct AutomationPencilTransaction: Sendable {
         public var point: AutomationLanePoint
         public var continuousValue: Double
 
-        public init(rawTick: Double, logicalX: Double, logicalY: Double,
-                    point: AutomationLanePoint, continuousValue: Double) {
+        public init(
+            rawTick: Double, logicalX: Double, logicalY: Double,
+            point: AutomationLanePoint, continuousValue: Double
+        ) {
             self.rawTick = rawTick
             self.logicalX = logicalX
             self.logicalY = logicalY
@@ -193,12 +206,15 @@ public struct AutomationPencilTransaction: Sendable {
     private var verticalSlopOriginY: Double
     private var verticalSlopExceeded = false
 
-    public init?(facts: AutomationFrozenFacts, firstSample: Sample,
-                firstCell: AutomationGridCell, clockTicks: Tick) {
+    public init?(
+        facts: AutomationFrozenFacts, firstSample: Sample,
+        firstCell: AutomationGridCell, clockTicks: Tick
+    ) {
         guard firstSample.rawTick.isFinite, firstSample.logicalX.isFinite,
-              firstSample.continuousValue.isFinite,
-              firstCell.tickBegin < firstCell.tickEnd,
-              firstCell.tickEnd <= facts.songEndTick else { return nil }
+            firstSample.continuousValue.isFinite,
+            firstCell.tickBegin < firstCell.tickEnd,
+            firstCell.tickEnd <= facts.songEndTick
+        else { return nil }
         self.facts = facts
         self.clockTicks = max(1, clockTicks)
         freeze = facts.freeze(includingLeadIn: true)
@@ -210,11 +226,14 @@ public struct AutomationPencilTransaction: Sendable {
         verticalSlopOriginX = firstSample.logicalX
         verticalSlopOriginY = firstSample.logicalY
         initialPoint = AutomationLanePoint(
-            tick: firstCell.tickBegin, value: Self.rounded(firstSample.continuousValue,
-                                                           metadata: facts.metadata))
-        preview = AutomationLaneEdit(parameter: facts.parameter, revision: facts.revision,
-                                     tickBegin: tickBegin, tickEnd: tickEnd, points: [],
-                                     unchanged: true)
+            tick: firstCell.tickBegin,
+            value: Self.rounded(
+                firstSample.continuousValue,
+                metadata: facts.metadata))
+        preview = AutomationLaneEdit(
+            parameter: facts.parameter, revision: facts.revision,
+            tickBegin: tickBegin, tickEnd: tickEnd, points: [],
+            unchanged: true)
         eraseStrokePoints(in: firstCell.tickBegin, firstCell.tickEnd)
         AutomationSweepTransaction.upsert(&strokePoints, initialPoint)
         rebuildPreview()
@@ -223,16 +242,19 @@ public struct AutomationPencilTransaction: Sendable {
     /// `PencilGesture::update`'s value track: while the pointer only wobbles
     /// within the vertical slop, or the axis is locked to time, the stroke keeps
     /// its previous continuous value instead of following y.
-    public mutating func sampleValue(logicalX: Double, logicalY: Double, locking: Bool,
-                                     freehand: Bool, verticalSlopDistance: Double,
-                                     plotHeight: Double, displaySpan: Int? = nil) -> Double {
+    public mutating func sampleValue(
+        logicalX: Double, logicalY: Double, locking: Bool,
+        freehand: Bool, verticalSlopDistance: Double,
+        plotHeight: Double, displaySpan: Int? = nil
+    ) -> Double {
         var withinVerticalSlop = false
         if !freehand, !locking, !verticalSlopExceeded {
             let dx = abs(logicalX - verticalSlopOriginX)
             let dy = abs(logicalY - verticalSlopOriginY)
             let travel = dx + dy
             if dy < verticalSlopDistance,
-               travel < verticalSlopDistance || dy == 0 || dx > dy * Self.pencilSlopAspect {
+                travel < verticalSlopDistance || dy == 0 || dx > dy * Self.pencilSlopAspect
+            {
                 withinVerticalSlop = true
             } else {
                 verticalSlopExceeded = true
@@ -246,10 +268,12 @@ public struct AutomationPencilTransaction: Sendable {
             verticalSlopOriginY = logicalY
         }
         let span = Double(displaySpan ?? (facts.metadata.maximum - facts.metadata.minimum))
-        let delta = locking || withinVerticalSlop
+        let delta =
+            locking || withinVerticalSlop
             ? 0 : (previousY - logicalY) * span / max(1, plotHeight)
-        return min(max(previous.continuousValue + delta, Double(facts.metadata.minimum)),
-                   Double(facts.metadata.maximum))
+        return min(
+            max(previous.continuousValue + delta, Double(facts.metadata.minimum)),
+            Double(facts.metadata.maximum))
     }
 
     /// `kPencilSlopAspect`: horizontal travel above this multiple of the
@@ -264,11 +288,13 @@ public struct AutomationPencilTransaction: Sendable {
     /// value the stroke had at the cell's midpoint. Leaving the first cell
     /// restores its original point.
     @discardableResult
-    public mutating func applySnappedSegment(_ sample: Sample,
-                                             cells: [AutomationGridCell]) -> Bool {
+    public mutating func applySnappedSegment(
+        _ sample: Sample,
+        cells: [AutomationGridCell]
+    ) -> Bool {
         guard sample.rawTick.isFinite, sample.logicalX.isFinite, sample.continuousValue.isFinite,
-              !cells.isEmpty,
-              cells.allSatisfy({ $0.tickBegin < $0.tickEnd && $0.tickEnd <= facts.songEndTick })
+            !cells.isEmpty,
+            cells.allSatisfy({ $0.tickBegin < $0.tickEnd && $0.tickEnd <= facts.songEndTick })
         else { return false }
         let sample = Self.normalized(sample, songEndTick: facts.songEndTick)
         let previousWasFreehand = freehandStart != nil
@@ -292,26 +318,32 @@ public struct AutomationPencilTransaction: Sendable {
             if cell.contains(previous.rawTick) { startingCell = index }
             if cell.contains(sample.rawTick) { endingCell = index }
         }
-        let exitsInitialCell = !initialCellExited && initialCell.contains(previous.rawTick)
+        let exitsInitialCell =
+            !initialCellExited && initialCell.contains(previous.rawTick)
             && !initialCell.contains(sample.rawTick)
         let restoreInitialPoint = exitsInitialCell && (snappedStart == nil || continuesSnappedLine)
 
         for (index, cell) in cells.enumerated() {
             if snappedStart != nil, let startingCell, index == startingCell, index != endingCell,
-               !previousWasFreehand, !continuesSnappedLine {
+                !previousWasFreehand, !continuesSnappedLine
+            {
                 continue
             }
             let midpoint = Double(cell.tickBegin) + Double(cell.tickEnd - cell.tickBegin) / 2.0
             let sampleTick = min(max(midpoint, interpolationBegin), interpolationEnd)
-            let fraction = deltaTick == 0 ? 1
+            let fraction =
+                deltaTick == 0
+                ? 1
                 : min(max((sampleTick - anchor.rawTick) / deltaTick, 0), 1)
-            let continuous = anchor.continuousValue
+            let continuous =
+                anchor.continuousValue
                 + (sample.continuousValue - anchor.continuousValue) * fraction
             eraseStrokePoints(in: cell.tickBegin, cell.tickEnd)
             AutomationSweepTransaction.upsert(
                 &strokePoints,
-                AutomationLanePoint(tick: cell.tickBegin,
-                                    value: Self.rounded(continuous, metadata: facts.metadata)))
+                AutomationLanePoint(
+                    tick: cell.tickBegin,
+                    value: Self.rounded(continuous, metadata: facts.metadata)))
             tickBegin = min(tickBegin, cell.tickBegin)
             tickEnd = max(tickEnd, cell.tickEnd)
         }
@@ -355,10 +387,13 @@ public struct AutomationPencilTransaction: Sendable {
         provisionalEndpoint = nil
 
         func apply(at logicalX: Double, provisional: Bool, interior: Bool) {
-            let fraction = deltaX == 0 ? 1
+            let fraction =
+                deltaX == 0
+                ? 1
                 : min(max((logicalX - previous.logicalX) / deltaX, 0), 1)
             let rawTick = previous.rawTick + (sample.rawTick - previous.rawTick) * fraction
-            let continuous = previous.continuousValue
+            let continuous =
+                previous.continuousValue
                 + (sample.continuousValue - previous.continuousValue) * fraction
             let integerTick = Self.clampedTick(rawTick, songEndTick: facts.songEndTick)
             let clockTick = (integerTick / clockTicks) * clockTicks
@@ -369,8 +404,9 @@ public struct AutomationPencilTransaction: Sendable {
             } else if !interior || preservedTurnTick != point.tick {
                 AutomationSweepTransaction.upsert(&strokePoints, point)
             }
-            let rangeEnd = Self.nextClockTick(clockTick, clockTicks: clockTicks,
-                                              songEndTick: facts.songEndTick)
+            let rangeEnd = Self.nextClockTick(
+                clockTick, clockTicks: clockTicks,
+                songEndTick: facts.songEndTick)
             tickBegin = min(tickBegin, clockTick)
             tickEnd = max(tickEnd, rangeEnd)
         }
@@ -382,8 +418,9 @@ public struct AutomationPencilTransaction: Sendable {
             var x = previous.logicalX.rounded(.up) - 1
             while x > sample.logicalX { apply(at: x, provisional: false, interior: true); x -= 1 }
         }
-        apply(at: sample.logicalX, provisional: sample.logicalX.rounded(.down) != sample.logicalX,
-              interior: false)
+        apply(
+            at: sample.logicalX, provisional: sample.logicalX.rounded(.down) != sample.logicalX,
+            interior: false)
 
         freehandStart = previous
         self.previous = sample
@@ -395,18 +432,21 @@ public struct AutomationPencilTransaction: Sendable {
     /// The stroke's held-span replacement: the canonical points the release
     /// commits, with the trailing held value restored.
     public func completion() -> AutomationLaneEdit {
-        AutomationLaneReplacement.heldSpan(freeze, begin: tickBegin, end: tickEnd,
-                                           points: strokePoints)
+        AutomationLaneReplacement.heldSpan(
+            freeze, begin: tickBegin, end: tickEnd,
+            points: strokePoints)
     }
 
     private mutating func rebuildPreview() {
         var points = strokePoints
         if let provisional = provisionalEndpoint, provisional.tick >= tickBegin,
-           provisional.tick <= tickEnd {
+            provisional.tick <= tickEnd
+        {
             AutomationSweepTransaction.upsert(&points, provisional)
         }
-        preview = AutomationLaneReplacement.heldSpan(freeze, begin: tickBegin, end: tickEnd,
-                                                     points: points)
+        preview = AutomationLaneReplacement.heldSpan(
+            freeze, begin: tickBegin, end: tickEnd,
+            points: points)
     }
 
     private mutating func eraseStrokePoints(in begin: Tick, _ end: Tick) {
@@ -430,21 +470,30 @@ public struct AutomationPencilTransaction: Sendable {
         return tick + clockTicks
     }
 
-    private static func rounded(_ continuous: Double,
-                                metadata: AutomationParameterMetadata) -> Int {
-        metadata.clamp(Int(min(max(continuous, Double(metadata.minimum)),
-                               Double(metadata.maximum)).rounded()))
+    private static func rounded(
+        _ continuous: Double,
+        metadata: AutomationParameterMetadata
+    ) -> Int {
+        metadata.clamp(
+            Int(
+                min(
+                    max(continuous, Double(metadata.minimum)),
+                    Double(metadata.maximum)
+                ).rounded()))
     }
 
     /// `collinearForward`: the provisional endpoint stands only while the
     /// previous and current segments continue the same forward line.
-    static func collinearForward(_ previousAxis: Double, _ previousValue: Double,
-                                 _ axis: Double, _ value: Double) -> Bool {
+    static func collinearForward(
+        _ previousAxis: Double, _ previousValue: Double,
+        _ axis: Double, _ value: Double
+    ) -> Bool {
         if previousAxis == 0 || axis == 0 || (previousAxis > 0) != (axis > 0) { return false }
         let left = previousAxis * value
         let right = previousValue * axis
-        let tolerance = max(Double.ulpOfOne * 64 * max(1, abs(left), abs(right)),
-                            0.5 * max(abs(previousAxis), abs(axis)))
+        let tolerance = max(
+            Double.ulpOfOne * 64 * max(1, abs(left), abs(right)),
+            0.5 * max(abs(previousAxis), abs(axis)))
         return abs(left - right) <= tolerance
     }
 }

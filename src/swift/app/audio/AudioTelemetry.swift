@@ -61,8 +61,9 @@ final class AudioTelemetry {
     func consume() -> [AudioActivityLevel] {
         (0..<tracks).map {
             let value = peaks[$0].exchange(0, ordering: .relaxed)
-            return AudioActivityLevel(left: UInt8(truncatingIfNeeded: value),
-                                      right: UInt8(truncatingIfNeeded: value >> 8))
+            return AudioActivityLevel(
+                left: UInt8(truncatingIfNeeded: value),
+                right: UInt8(truncatingIfNeeded: value >> 8))
         }
     }
     func publish(engine: UnsafeMutablePointer<M4AEngine>, position: UInt64) {
@@ -106,7 +107,8 @@ final class AudioTelemetry {
         for i in 0..<tracks {
             var observed = peaks[i].load(ordering: .relaxed)
             while true {
-                let result = peaks[i].compareExchange(expected: observed,
+                let result = peaks[i].compareExchange(
+                    expected: observed,
                     desired: maximum(observed, scratch[i]), ordering: .relaxed)
                 if result.exchanged { break }
                 observed = result.original
@@ -146,7 +148,8 @@ final class AudioTelemetry {
             $0.withMemoryRebound(to: M4APCMChannel.self, capacity: Int(TOTAL_PCM_CHANNELS)) { ptr in
                 (0..<Int(TOTAL_PCM_CHANNELS)).map {
                     let ch = ptr[$0]
-                    return AudioPolyChannel(on: ch.status & 0xC7 != 0, releasing: ch.status & 0x44 != 0,
+                    return AudioPolyChannel(
+                        on: ch.status & 0xC7 != 0, releasing: ch.status & 0x44 != 0,
                         track: UInt8(truncatingIfNeeded: ch.trackIndex), midiKey: ch.midiKey)
                 }
             }
@@ -155,12 +158,14 @@ final class AudioTelemetry {
             $0.withMemoryRebound(to: M4ACGBChannel.self, capacity: Int(TOTAL_CGB_CHANNELS)) { ptr in
                 (0..<Int(TOTAL_CGB_CHANNELS)).map {
                     let ch = ptr[$0]
-                    return AudioPolyChannel(on: ch.status & 0xC7 != 0, releasing: ch.status & 0x44 != 0,
+                    return AudioPolyChannel(
+                        on: ch.status & 0xC7 != 0, releasing: ch.status & 0x44 != 0,
                         track: UInt8(truncatingIfNeeded: ch.trackIndex), midiKey: ch.midiKey)
                 }
             }
         }
-        return AudioPolySnapshot(maxPcmChannels: engine.pointee.maxPcmChannels,
+        return AudioPolySnapshot(
+            maxPcmChannels: engine.pointee.maxPcmChannels,
             invert: engine.pointee.polyDebugInvert, pcm: pcm, cgb: cgb,
             drop: counters(&engine.pointee.polyDropCount), steal: counters(&engine.pointee.polyStealCount),
             tailCut: counters(&engine.pointee.polyTailCutCount), eventTotal: total, events: events)

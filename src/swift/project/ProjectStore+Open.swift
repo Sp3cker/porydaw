@@ -70,7 +70,8 @@ extension ProjectStore {
         let root = URL(fileURLWithPath: projectRoot, isDirectory: true)
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: projectRoot, isDirectory: &isDirectory),
-              isDirectory.boolValue else {
+            isDirectory.boolValue
+        else {
             throw ProjectStoreOpenError.directoryDoesNotExist(projectRoot)
         }
 
@@ -101,7 +102,8 @@ extension ProjectStore {
             budgets[player.name] = player.trackCount >= 0 ? player.trackCount : 16
         }
 
-        return ProjectSnapshot(root: projectRoot, songs: catalog.songs,
-                               players: catalog.players, trackBudgets: budgets)
+        return ProjectSnapshot(
+            root: projectRoot, songs: catalog.songs,
+            players: catalog.players, trackBudgets: budgets)
     }
 }

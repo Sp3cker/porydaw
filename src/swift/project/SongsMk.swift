@@ -75,11 +75,12 @@ public enum SongsMk {
                 }
                 let spelled = flags.map { flag -> String in
                     guard let letter = flagLetter(flag), let old = existing[letter],
-                          old.expanded.compare(flag, options: .caseInsensitive) == .orderedSame
+                        old.expanded.compare(flag, options: .caseInsensitive) == .orderedSame
                     else { return flag }
                     return old.spelling
                 }
-                let prefix = line.range(of: "$@").map { String(line[..<$0.upperBound]) }
+                let prefix =
+                    line.range(of: "$@").map { String(line[..<$0.upperBound]) }
                     ?? "\t$(MID) $< $@"
                 var updated = Data((prefix + (spelled.isEmpty ? "" : " " + spelled.joined(separator: " "))).utf8)
                 if raw.last == 13 { updated.append(13) }
@@ -113,8 +114,9 @@ public enum SongsMk {
     }
 
     private static func regex(_ pattern: String) -> NSRegularExpression {
-        do { return try NSRegularExpression(pattern: pattern) }
-        catch { preconditionFailure("Invalid fixed songs.mk regex: \(error)") }
+        do { return try NSRegularExpression(pattern: pattern) } catch {
+            preconditionFailure("Invalid fixed songs.mk regex: \(error)")
+        }
     }
 
     private static func text(of raw: Data) -> String {
@@ -124,7 +126,8 @@ public enum SongsMk {
     private static func capture(_ group: Int, in text: String, pattern: NSRegularExpression) -> String? {
         let range = NSRange(text.startIndex..<text.endIndex, in: text)
         guard let match = pattern.firstMatch(in: text, range: range),
-              let captured = Range(match.range(at: group), in: text) else { return nil }
+            let captured = Range(match.range(at: group), in: text)
+        else { return nil }
         return String(text[captured])
     }
 
@@ -133,8 +136,9 @@ public enum SongsMk {
         let text = String(uncommented)
         let range = NSRange(text.startIndex..<text.endIndex, in: text)
         guard let match = variablePattern.firstMatch(in: text, range: range),
-              let name = Range(match.range(at: 1), in: text),
-              let value = Range(match.range(at: 2), in: text) else { return }
+            let name = Range(match.range(at: 1), in: text),
+            let value = Range(match.range(at: 2), in: text)
+        else { return }
         variables[String(text[name])] = text[value].trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
@@ -150,7 +154,8 @@ public enum SongsMk {
             if matches.isEmpty { break }
             for match in matches.reversed() {
                 guard let whole = Range(match.range, in: text),
-                      let name = Range(match.range(at: 1), in: text) else { continue }
+                    let name = Range(match.range(at: 1), in: text)
+                else { continue }
                 text.replaceSubrange(whole, with: variables[String(text[name])] ?? "")
             }
         }

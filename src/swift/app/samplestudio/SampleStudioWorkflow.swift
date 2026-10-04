@@ -39,10 +39,12 @@ public final class SampleStudioWorkflow: QmlUncreatable {
 
     public func requestImport(slot: Int) {
         guard let session, session.projectOpen, let service = session.catalogService,
-              !editorOpen, !zonePickerOpen, !stereoPromptOpen, !committing, pendingTask == nil,
-              slot < 0 || (slot < VoiceListController.slotCount
-                           && session.voiceList.isBound && !session.voiceList.isLoading
-                           && session.voiceList.session != nil) else { return }
+            !editorOpen, !zonePickerOpen, !stereoPromptOpen, !committing, pendingTask == nil,
+            slot < 0
+                || (slot < VoiceListController.slotCount
+                    && session.voiceList.isBound && !session.voiceList.isLoading
+                    && session.voiceList.session != nil)
+        else { return }
         destinationSlot = slot
         editName = nil
         reopenFromSource = false
@@ -61,21 +63,26 @@ public final class SampleStudioWorkflow: QmlUncreatable {
             }
             guard let self else { return }
             let directory = session.preferences.string(key: "lastSampleDir", fallback: "")
-            self.pickerFolder = URL(fileURLWithPath: directory.isEmpty ? NSHomeDirectory() : directory,
-                                    isDirectory: true).absoluteString
+            self.pickerFolder =
+                URL(
+                    fileURLWithPath: directory.isEmpty ? NSHomeDirectory() : directory,
+                    isDirectory: true
+                ).absoluteString
             self.pickerRequested = true
         }
     }
 
     public func requestEdit(slot: Int) {
         guard let session, session.projectOpen, let service = session.catalogService,
-              !editorOpen, !zonePickerOpen, !stereoPromptOpen, !committing, pendingTask == nil,
-              slot >= 0, slot < VoiceListController.slotCount,
-              session.voiceList.isBound, !session.voiceList.isLoading,
-              session.voiceList.session != nil else { return }
+            !editorOpen, !zonePickerOpen, !stereoPromptOpen, !committing, pendingTask == nil,
+            slot >= 0, slot < VoiceListController.slotCount,
+            session.voiceList.isBound, !session.voiceList.isLoading,
+            session.voiceList.session != nil
+        else { return }
         let prefix = "DirectSoundWaveData_"
         guard let symbol = session.voiceList.slots[slot].voice?.symbol,
-              symbol.hasPrefix(prefix) else {
+            symbol.hasPrefix(prefix)
+        else {
             showAlert(title: "Edit Sample", text: "This voice does not reference a project sample.")
             return
         }
@@ -87,8 +94,9 @@ public final class SampleStudioWorkflow: QmlUncreatable {
             defer { self?.pendingTask = nil }
             do {
                 let committed = try await service.readCommittedSample(name: name)
-                let result = try SampleReopen.resolve(wav: committed.wav,
-                                                      wavPath: committed.wavPath,
+                let result = try SampleReopen.resolve(
+                    wav: committed.wav,
+                    wavPath: committed.wavPath,
                     provenance: provenance)
                 guard let self, self.session?.catalogService === service else { return }
                 self.editName = name
@@ -130,8 +138,9 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                 zonePresenter = Sf2ZonePickerPresenter(file: file)
                 zonePickerOpen = true
             } catch {
-                showAlert(title: "Import Sample",
-                          text: "\(url.lastPathComponent): \(error.message)")
+                showAlert(
+                    title: "Import Sample",
+                    text: "\(url.lastPathComponent): \(error.message)")
             }
         } else {
             decodeSource()
@@ -151,7 +160,8 @@ public final class SampleStudioWorkflow: QmlUncreatable {
 
     public func acceptZone() {
         guard zonePickerOpen, let sf2File, let zonePresenter,
-              zonePresenter.canAccept else { return }
+            zonePresenter.canAccept
+        else { return }
         do {
             let zone = zonePresenter.selectedZone
             let sample = try Sf2Reader.extractZone(sf2File, index: zone)
@@ -171,7 +181,8 @@ public final class SampleStudioWorkflow: QmlUncreatable {
 
     public func accept() {
         guard !committing, let session, let service = session.catalogService,
-              let presenter, presenter.canCommit else { return }
+            let presenter, presenter.canCommit
+        else { return }
         committing = true
         player?.close()
         var provenance = SampleProvenance()
@@ -211,9 +222,10 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                         return
                     }
                 }
-                session.statusMessage(message: editing
-                    ? "Saved \(name) - the ROM's .bin recompiles on the next build"
-                    : "Imported \(name) - DirectSoundWaveData_\(name) is now available to voicegroups")
+                session.statusMessage(
+                    message: editing
+                        ? "Saved \(name) - the ROM's .bin recompiles on the next build"
+                        : "Imported \(name) - DirectSoundWaveData_\(name) is now available to voicegroups")
                 self.close()
             } catch {
                 self?.showAlert(title: "Sample", text: String(describing: error))
@@ -260,16 +272,19 @@ public final class SampleStudioWorkflow: QmlUncreatable {
 
     private func decodeSource(promptForPhaseCancellation: Bool = true) {
         do {
-            let sample = try SampleImport.decode(sourceBytes, sourcePath: sourcePath,
-                                                 leftChannelOnly: leftOnly)
+            let sample = try SampleImport.decode(
+                sourceBytes, sourcePath: sourcePath,
+                leftChannelOnly: leftOnly)
             if sample.phaseCancelStereo && !leftOnly && promptForPhaseCancellation {
-                stereoPromptText = "The left and right channels of \(URL(fileURLWithPath: sourcePath).lastPathComponent) are phase-cancelling — the mono mix may sound hollow.\n\nImport the left channel only instead?"
+                stereoPromptText =
+                    "The left and right channels of \(URL(fileURLWithPath: sourcePath).lastPathComponent) are phase-cancelling — the mono mix may sound hollow.\n\nImport the left channel only instead?"
                 stereoPromptOpen = true
             } else {
                 open(sample)
             }
         } catch {
-            showAlert(title: "Import Sample", text: "\(URL(fileURLWithPath: sourcePath).lastPathComponent): \(error.message)")
+            showAlert(
+                title: "Import Sample", text: "\(URL(fileURLWithPath: sourcePath).lastPathComponent): \(error.message)")
         }
     }
 
@@ -277,21 +292,26 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         guard let session else { return }
         let root = session.projectRoot
         let presenter = SampleStudioPresenter(source: sample) { name in
-            SampleRegistrar.validate(projectRoot: root, name: name,
-                                     existingSymbols: VoicegroupSource.directSoundSymbols(root))
+            SampleRegistrar.validate(
+                projectRoot: root, name: name,
+                existingSymbols: VoicegroupSource.directSoundSymbols(root))
         }
         if let editName { presenter.setEditTarget(name: editName) }
         if let restoredParams { presenter.applyParamsExternal(restoredParams) }
         let wave = SampleWaveformModel(presenter: presenter, palette: session.palette)
-        let voice = session.voiceList.slots.indices.contains(destinationSlot)
+        let voice =
+            session.voiceList.slots.indices.contains(destinationSlot)
             ? session.voiceList.slots[destinationSlot].voice : nil
         let destinationAdsr: VoiceListAdsr? = voice.flatMap {
-            VoiceListSemantics.macroIsCgb($0.macro) ? nil
-                : VoiceListAdsr(attack: $0.attack, decay: $0.decay,
-                                sustain: $0.sustain, release: $0.release)
+            VoiceListSemantics.macroIsCgb($0.macro)
+                ? nil
+                : VoiceListAdsr(
+                    attack: $0.attack, decay: $0.decay,
+                    sustain: $0.sustain, release: $0.release)
         }
-        let player = SampleStudioAudition(presenter: presenter, output: session.audio,
-                                           destinationAdsr: destinationAdsr)
+        let player = SampleStudioAudition(
+            presenter: presenter, output: session.audio,
+            destinationAdsr: destinationAdsr)
         player.onPlayhead = { [weak wave] frame in wave?.setPlayhead(sourceFrame: frame) }
         self.presenter = presenter
         tools = SampleLoopTools(presenter: presenter)
@@ -303,23 +323,29 @@ public final class SampleStudioWorkflow: QmlUncreatable {
 
     private func assign(name: String, slot: Int) async throws {
         guard let session, session.voiceList.isBound, !session.voiceList.isLoading,
-              session.voiceList.session != nil,
-              session.voiceList.slots.indices.contains(slot) else {
+            session.voiceList.session != nil,
+            session.voiceList.slots.indices.contains(slot)
+        else {
             throw ProjectServiceError.operationFailed("The destination voicegroup is no longer available.")
         }
         let symbol = "DirectSoundWaveData_\(name)"
         let current = session.voiceList.slots[slot].voice
         var voice: BankVoice
-        if let current, [BankVoiceMacro.directSound, BankVoiceMacro.directSoundNoResample,
-                         BankVoiceMacro.directSoundAlt].contains(current.macro) {
+        if let current,
+            [
+                BankVoiceMacro.directSound, BankVoiceMacro.directSoundNoResample,
+                BankVoiceMacro.directSoundAlt,
+            ].contains(current.macro)
+        {
             voice = current
         } else {
             voice = BankVoice()
             voice.macro = BankVoiceMacro.directSound
             voice.key = 60
             voice.pan = 0
-            let adsr = VoiceListSemantics.defaultAdsr(session.voiceList.adsrDefaults,
-                                                       macro: voice.macro, symbol: symbol)
+            let adsr = VoiceListSemantics.defaultAdsr(
+                session.voiceList.adsrDefaults,
+                macro: voice.macro, symbol: symbol)
             voice.attack = adsr.attack
             voice.decay = adsr.decay
             voice.sustain = adsr.sustain

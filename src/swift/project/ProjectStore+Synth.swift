@@ -61,11 +61,13 @@ private enum SynthDefinitions {
         let original = (try? ProjectFileStore.read(path)) ?? Data()
         let lineEnding = original.range(of: Data("\r\n".utf8)) == nil ? "\n" : "\r\n"
         let lines = String(decoding: original, as: UTF8.self).components(separatedBy: "\n")
-        let alignIndent = lines.last(where: { $0.trimmingCharacters(in: .whitespaces).hasPrefix(".align") })
+        let alignIndent =
+            lines.last(where: { $0.trimmingCharacters(in: .whitespaces).hasPrefix(".align") })
             .map(indent) ?? "\t"
-        let macroIndent = lines.last(where: {
-            $0.trimmingCharacters(in: .whitespaces).hasPrefix("set_synth_")
-        }).map(indent) ?? "\t"
+        let macroIndent =
+            lines.last(where: {
+                $0.trimmingCharacters(in: .whitespaces).hasPrefix("set_synth_")
+            }).map(indent) ?? "\t"
         var appended = ""
         for (symbol, descriptor) in definitions {
             if let existing = catalog.find(symbol) {
@@ -85,15 +87,17 @@ private enum SynthDefinitions {
             if !original.isEmpty || !appended.isEmpty { appended += lineEnding }
             appended += "\(alignIndent).align 2\(lineEnding)\(symbol)::\(lineEnding)\(macroIndent)\(word)"
             if descriptor.waveform == 0 {
-                appended += String(format: " 0x%02X, 0x%02X, 0x%02X, 0x%02X",
-                                   UInt8(truncatingIfNeeded: descriptor.baseDuty),
-                                   UInt8(truncatingIfNeeded: descriptor.dutyStep),
-                                   UInt8(truncatingIfNeeded: descriptor.modDepth),
-                                   UInt8(truncatingIfNeeded: descriptor.phase))
+                appended += String(
+                    format: " 0x%02X, 0x%02X, 0x%02X, 0x%02X",
+                    UInt8(truncatingIfNeeded: descriptor.baseDuty),
+                    UInt8(truncatingIfNeeded: descriptor.dutyStep),
+                    UInt8(truncatingIfNeeded: descriptor.modDepth),
+                    UInt8(truncatingIfNeeded: descriptor.phase))
             }
             appended += lineEnding
         }
-        let include = !appended.isEmpty || ProjectFileStore.exists(path)
+        let include =
+            !appended.isEmpty || ProjectFileStore.exists(path)
             ? try assemblyInclude(root: root) : nil
         if !appended.isEmpty {
             var updated = original
@@ -110,8 +114,10 @@ private enum SynthDefinitions {
     }
 
     private static func assemblyInclude(root: String) throws -> (path: String, bytes: Data)? {
-        let known = ["\(root)/data/sound_data.s", "\(root)/sound/sound_data.s",
-                     "\(root)/sound_data.s", "\(root)/sound/direct_sound_data.inc"]
+        let known = [
+            "\(root)/data/sound_data.s", "\(root)/sound/sound_data.s",
+            "\(root)/sound_data.s", "\(root)/sound/direct_sound_data.inc",
+        ]
         let files = ["\(root)/data", root].flatMap { directory in
             (try? FileManager.default.contentsOfDirectory(atPath: directory))?.filter {
                 $0.hasSuffix(".s")
@@ -124,19 +130,21 @@ private enum SynthDefinitions {
             if anchor == nil {
                 let lines = String(decoding: data, as: UTF8.self).components(separatedBy: "\n")
                 if let index = lines.firstIndex(where: {
-                    $0.trimmingCharacters(in: .whitespaces).hasPrefix(".include") &&
-                        $0.contains("sound/direct_sound_data.inc")
-                }) { anchor = (path, lines, index) }
+                    $0.trimmingCharacters(in: .whitespaces).hasPrefix(".include")
+                        && $0.contains("sound/direct_sound_data.inc")
+                }) {
+                    anchor = (path, lines, index)
+                }
             }
         }
         guard let (path, lines, index) = anchor else {
             throw VoicegroupStoreError.operationFailed(
-                "Cannot find where sound/direct_sound_data.inc is assembled; include sound/direct_sound_synth_data.inc next to it and save again.")
+                "Cannot find where sound/direct_sound_data.inc is assembled; include sound/direct_sound_synth_data.inc next to it and save again."
+            )
         }
         let anchorLine = lines[index]
         let crlf = anchorLine.hasSuffix("\r")
-        let inserted = "\(indent(anchorLine)).include \"sound/direct_sound_synth_data.inc\"" +
-            (crlf ? "\r" : "")
+        let inserted = "\(indent(anchorLine)).include \"sound/direct_sound_synth_data.inc\"" + (crlf ? "\r" : "")
         var updated = lines
         updated.insert(inserted, at: index + 1)
         return (path, Data(updated.joined(separator: "\n").utf8))

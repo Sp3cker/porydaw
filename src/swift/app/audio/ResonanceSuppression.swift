@@ -6,8 +6,10 @@ public struct ResonanceParameters {
     public var guardDb: Float = 6
     public var timingMs: Float = 150
     public var knotDepthDb: [Float] = [0, 0, 0, 0, 0, 10, 10, 10, 10, 10, 10, 10]
-    public var knotActive: [Bool] = [false, false, false, false, false, false,
-                                     false, true, true, true, true, false]
+    public var knotActive: [Bool] = [
+        false, false, false, false, false, false,
+        false, true, true, true, true, false,
+    ]
     public var forceMaskOne = false
     public init() {}
 }
@@ -251,8 +253,9 @@ public final class ResonanceSuppression {
         for k in 0...1024 {
             let frequency = Double(k) * sampleRate / 2048
             var value = effective[0]
-            if frequency >= frequencies[11] { value = effective[11] }
-            else if frequency > frequencies[0] {
+            if frequency >= frequencies[11] {
+                value = effective[11]
+            } else if frequency > frequencies[0] {
                 var upper = 1
                 while upper < 12 && frequency > frequencies[upper] { upper += 1 }
                 if upper < 12 {

@@ -29,35 +29,42 @@ internal func bankPreviewFailure(report: CheckReport, session: DocumentSession, 
                 try await session.applyBankEdit(
                     slot: 0, value: rejected, expected: session.bankSlots[0].voice)
             }
-            report.fail("vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
-                        "blocked preview directory should reject the bank edit")
+            report.fail(
+                "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                "blocked preview directory should reject the bank edit")
         } catch {
             let refusal = error as? ProjectServiceError
             let previewRefusal: Bool
             if case .operationFailed? = refusal { previewRefusal = true } else { previewRefusal = false }
             report.expect(
                 previewRefusal,
-                          cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
                 message: "preview filesystem failure refuses as a typed preview failure")
         }
     } catch {
-        report.fail("vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
-                    "could not block the preview directory: \(error)")
+        report.fail(
+            "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+            "could not block the preview directory: \(error)")
     }
-    report.expectEqual(expected: previewSlots, actual: session.bankSlots,
-                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
-                       what: "preview failure preserves every visible bank slot")
-    report.expectEqual(expected: previewDirty, actual: session.bankDirty,
-                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
-                       what: "preview failure preserves visible dirty state")
-    report.expectEqual(expected: previewSourceBytes, actual: bytes(at: previewSourcePath),
-                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
-                       what: "preview failure leaves source file bytes unchanged")
+    report.expectEqual(
+        expected: previewSlots, actual: session.bankSlots,
+        cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+        what: "preview failure preserves every visible bank slot")
+    report.expectEqual(
+        expected: previewDirty, actual: session.bankDirty,
+        cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+        what: "preview failure preserves visible dirty state")
+    report.expectEqual(
+        expected: previewSourceBytes, actual: bytes(at: previewSourcePath),
+        cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+        what: "preview failure leaves source file bytes unchanged")
 }
 
 @MainActor
-internal func bankBlankMaterialization(report: CheckReport, session: DocumentSession,
-                                       service: ProjectService) {
+internal func bankBlankMaterialization(
+    report: CheckReport, session: DocumentSession,
+    service: ProjectService
+) {
     let id = "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions"
     let newVoice = BankVoice(macro: BankVoiceMacro.square1, key: 65, pan: 5, sweep: 0, duty: 2)
     let beforeMaterializationSlots = session.bankSlots
@@ -69,64 +76,75 @@ internal func bankBlankMaterialization(report: CheckReport, session: DocumentSes
             try await session.applyBankEdit(slot: 3, value: newVoice, expected: nil)
         }
         let originalToken = materialized.materializationToken
-        report.expect(originalToken != nil && session.document.history.canUndo,
-                      cppID: id,
-                      message: "blank-slot materialization records a reversible bank command")
-        report.expectEqual(expected: materializedSlots, actual: session.bankSlots,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
-                           what: "blank materialization publishes the requested voice and preserves other slots")
-        report.expect(session.bankLease.withVoices({ $0?.advanced(by: 3).pointee.type })
-                      == UInt8(VOICE_SQUARE_1),
-                      cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
-                      message: "materialized blank slot has square-one engine type")
+        report.expect(
+            originalToken != nil && session.document.history.canUndo,
+            cppID: id,
+            message: "blank-slot materialization records a reversible bank command")
+        report.expectEqual(
+            expected: materializedSlots, actual: session.bankSlots,
+            cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+            what: "blank materialization publishes the requested voice and preserves other slots")
+        report.expect(
+            session.bankLease.withVoices({ $0?.advanced(by: 3).pointee.type })
+                == UInt8(VOICE_SQUARE_1),
+            cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+            message: "materialized blank slot has square-one engine type")
 
         // Undo materialization reverts the slot
         _ = try runBlocking {
             try await session.undo()
         }
-        report.expectEqual(expected: beforeMaterializationSlots, actual: session.bankSlots,
-                           cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
-                           what: "undo restores the complete pre-materialization bank view")
-        report.expect(session.document.history.canRedo && !session.document.isDirty,
-                      cppID: id,
-                      message: "blank-slot undo reverts and redo rematerializes with a fresh token")
+        report.expectEqual(
+            expected: beforeMaterializationSlots, actual: session.bankSlots,
+            cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+            what: "undo restores the complete pre-materialization bank view")
+        report.expect(
+            session.document.history.canRedo && !session.document.isDirty,
+            cppID: id,
+            message: "blank-slot undo reverts and redo rematerializes with a fresh token")
 
         // Redo materialization re-creates the voice
         _ = try runBlocking {
             try await session.redo()
         }
-        report.expectEqual(expected: materializedSlots, actual: session.bankSlots,
-                           cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
-                           what: "redo rematerializes the voice without changing other slots")
-        report.expect(session.bankLease.withVoices({ $0?.advanced(by: 3).pointee.type })
-                      == UInt8(VOICE_SQUARE_1),
-                      cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
-                      message: "redo restores the blank slot square-one engine type")
+        report.expectEqual(
+            expected: materializedSlots, actual: session.bankSlots,
+            cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+            what: "redo rematerializes the voice without changing other slots")
+        report.expect(
+            session.bankLease.withVoices({ $0?.advanced(by: 3).pointee.type })
+                == UInt8(VOICE_SQUARE_1),
+            cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+            message: "redo restores the blank slot square-one engine type")
         if let originalToken {
             do {
                 _ = try runBlocking {
-                    try await service.bankRevert(lease: session.bankLease,
-                                                         token: originalToken)
+                    try await service.bankRevert(
+                        lease: session.bankLease,
+                        token: originalToken)
                 }
                 report.fail(id, "redo reused a spent blank materialization token")
             } catch let error as ProjectServiceError {
-                report.expect(error == .bankConflict
-                              && session.bankSlots == materializedSlots
-                              && session.document.history.canUndo,
-                              cppID: id,
-                              message: "blank-slot undo reverts and redo rematerializes with a fresh token")
+                report.expect(
+                    error == .bankConflict
+                        && session.bankSlots == materializedSlots
+                        && session.document.history.canUndo,
+                    cppID: id,
+                    message: "blank-slot undo reverts and redo rematerializes with a fresh token")
             } catch {
                 report.fail(id, "spent token yielded unexpected error: \(error)")
             }
         }
         _ = try runBlocking { try await session.undo() }
-        report.expect(session.bankSlots == beforeMaterializationSlots,
-                      cppID: id,
-                      message: "fresh redo token permits a second undo without disturbing other slots")
+        report.expect(
+            session.bankSlots == beforeMaterializationSlots,
+            cppID: id,
+            message: "fresh redo token permits a second undo without disturbing other slots")
         _ = try runBlocking { try await session.redo() }
     } catch {
-        report.fail("vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
-                    "blank materialization cycle threw: \(error)")
+        report.fail(
+            "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+            "blank materialization cycle threw: \(error)")
     }
 }
 
@@ -135,21 +153,24 @@ internal func bankBlankMaterialization(report: CheckReport, session: DocumentSes
 @MainActor
 internal func bankSaveMergeBoundaryParity(report: CheckReport, fixtureRoot: String) {
     let id = "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules"
-    let document = SongDocument(file: MidiFile(chunks: [
-        MidiChunk(events: [.channel(status: 0xC0, data0: 0)]),
-    ]))
+    let document = SongDocument(
+        file: MidiFile(chunks: [
+            MidiChunk(events: [.channel(status: 0xC0, data0: 0)])
+        ]))
     let first = MergingBoundaryAction(before: 0, after: 1)
     document.history.recordConfirmedBank(first)
     document.history.markSaved(document.history.currentIdentity)
     document.history.recordConfirmedBank(MergingBoundaryAction(before: 1, after: 2))
-    report.expect(document.history.undoCount == 1 && document.history.undoIndex == 1
-                  && first.merges == 1,
-                  cppID: id, message: "A038: markSaved keeps adjacent bank edits mergeable")
+    report.expect(
+        document.history.undoCount == 1 && document.history.undoIndex == 1
+            && first.merges == 1,
+        cppID: id, message: "A038: markSaved keeps adjacent bank edits mergeable")
     document.history.sealBankMerge()
     document.history.recordConfirmedBank(MergingBoundaryAction(before: 2, after: 3))
     let undone = (try? runBlocking { try await document.history.undo() }) == true
-    report.expect(document.history.undoCount == 2 && document.history.undoIndex == 1 && undone,
-                  cppID: id, message: "A039: explicit seal leaves two reachable bank steps")
+    report.expect(
+        document.history.undoCount == 2 && document.history.undoIndex == 1 && undone,
+        cppID: id, message: "A039: explicit seal leaves two reachable bank steps")
 
     let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-bank-save-seal")
     let service = ProjectService()
@@ -169,17 +190,19 @@ internal func bankSaveMergeBoundaryParity(report: CheckReport, fixtureRoot: Stri
         }.lease.bankToken
         try runBlocking { try await session.save() }
         let cleanLease = session.bankLease.bankToken
-        report.expect(!session.bankDirty && cleanLease != editedLease,
-                      cppID: id, message: "save receipt publishes a fresh clean bank lease")
+        report.expect(
+            !session.bankDirty && cleanLease != editedLease,
+            cppID: id, message: "save receipt publishes a fresh clean bank lease")
         var secondEdit = firstEdit
         secondEdit.pan = firstEdit.pan == 25 ? 26 : 25
         _ = try runBlocking {
             try await session.applyBankEdit(slot: 0, value: secondEdit, expected: firstEdit)
             return try await session.undo()
         }
-        report.expect(session.bankSlots[0].voice == firstEdit
-                      && session.document.history.canUndo,
-                      cppID: id, message: "post-save clean-bank edit seals the earlier command")
+        report.expect(
+            session.bankSlots[0].voice == firstEdit
+                && session.document.history.canUndo,
+            cppID: id, message: "post-save clean-bank edit seals the earlier command")
     } catch {
         report.fail(id, "bank save merge boundary threw: \(error)")
     }
@@ -223,23 +246,27 @@ internal func bankMergeSealing(report: CheckReport, session: DocumentSession) {
         _ = try runBlocking {
             try await session.applyBankEdit(slot: 0, value: panVoice2, expected: panVoice1)
         }
-        report.expect(session.document.history.undoIndex == beforeMergeIndex + 1,
-                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
-                      message: "adjacent same-slot edits merge and self-canceling pairs vanish")
-        report.expectEqual(expected: Int32(25), actual: session.bankSlots[0].voice?.pan,
-                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
-                           what: "second pan edit applied")
+        report.expect(
+            session.document.history.undoIndex == beforeMergeIndex + 1,
+            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+            message: "adjacent same-slot edits merge and self-canceling pairs vanish")
+        report.expectEqual(
+            expected: Int32(25), actual: session.bankSlots[0].voice?.pan,
+            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+            what: "second pan edit applied")
 
         // A single undo should revert all the way past the merged pan edits
         _ = try runBlocking {
             try await session.undo()
         }
-        report.expectEqual(expected: Int32(15), actual: session.bankSlots[0].voice?.pan,
-                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
-                           what: "undo reverts merged pan edits to origin in one step")
+        report.expectEqual(
+            expected: Int32(15), actual: session.bankSlots[0].voice?.pan,
+            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+            what: "undo reverts merged pan edits to origin in one step")
     } catch {
-        report.fail("voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
-                    "merge rules threw: \(error)")
+        report.fail(
+            "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+            "merge rules threw: \(error)")
     }
 
     do {
@@ -253,17 +280,20 @@ internal func bankMergeSealing(report: CheckReport, session: DocumentSession) {
         _ = try runBlocking {
             try await session.applyBankEdit(slot: 0, value: panOrigin, expected: panOut)
         }
-        report.expect(session.document.history.undoIndex == beforeCancellationIndex,
-                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
-                      message: "adjacent same-slot edits merge and self-canceling pairs vanish")
+        report.expect(
+            session.document.history.undoIndex == beforeCancellationIndex,
+            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+            message: "adjacent same-slot edits merge and self-canceling pairs vanish")
         let reachedPreceding = try runBlocking { try await session.undo() }
-        report.expect(reachedPreceding && session.bankSlots[3].kind == BankSlotKind.none,
-                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
-                      message: "real-service pan A-to-B-to-A removes its entry so undo reaches the preceding materialization")
+        report.expect(
+            reachedPreceding && session.bankSlots[3].kind == BankSlotKind.none,
+            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+            message: "real-service pan A-to-B-to-A removes its entry so undo reaches the preceding materialization")
         _ = try runBlocking { try await session.redo() }
     } catch {
-        report.fail("voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
-                    "real-service self-cancelling pan merge threw: \(error)")
+        report.fail(
+            "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+            "real-service self-cancelling pan merge threw: \(error)")
     }
 }
 
@@ -305,21 +335,25 @@ internal func bankMissingBasisAndApplied(report: CheckReport, fixtureRoot: Strin
             report.fail(id, "occupied slot zero with no expected basis must conflict")
         } catch {
             let conflict = error as? ProjectServiceError
-            report.expect(conflict == .bankConflict, cppID: id,
-                          message: "A049: missing-basis bank edit yields the bank conflict variant")
+            report.expect(
+                conflict == .bankConflict, cppID: id,
+                message: "A049: missing-basis bank edit yields the bank conflict variant")
         }
-        report.expect(session.document.history.undoCount == historyCount
-                      && session.document.history.undoIndex == historyIndex
-                      && session.document.history.canUndo == undoBefore
-                      && session.document.history.canRedo == redoBefore,
-                      cppID: id, message: "missing-basis conflict records no history action")
-        report.expect(session.bankSlots == slotsBefore && session.bankDirty == dirtyBefore
-                      && session.bankLoadName == loadNameBefore
-                      && session.bankLease.sourcePath == originalPath
-                      && session.bankLease.sectionLabel == originalSection
-                      && session.bankLease === leaseBefore
-                      && session.bankLease.publicationRevision == revisionBefore,
-                      cppID: id, message: "A091: missing-basis conflict leaves the complete published bank view and revision unchanged")
+        report.expect(
+            session.document.history.undoCount == historyCount
+                && session.document.history.undoIndex == historyIndex
+                && session.document.history.canUndo == undoBefore
+                && session.document.history.canRedo == redoBefore,
+            cppID: id, message: "missing-basis conflict records no history action")
+        report.expect(
+            session.bankSlots == slotsBefore && session.bankDirty == dirtyBefore
+                && session.bankLoadName == loadNameBefore
+                && session.bankLease.sourcePath == originalPath
+                && session.bankLease.sectionLabel == originalSection
+                && session.bankLease === leaseBefore
+                && session.bankLease.publicationRevision == revisionBefore,
+            cppID: id,
+            message: "A091: missing-basis conflict leaves the complete published bank view and revision unchanged")
 
         let appliedOutcome: Result<AppliedBankEdit, Error> = Result {
             try runBlocking {
@@ -327,34 +361,41 @@ internal func bankMissingBasisAndApplied(report: CheckReport, fixtureRoot: Strin
             }
         }
         let returnedReceipt = try? appliedOutcome.get()
-        report.expect(returnedReceipt?.dirty == true, cppID: id,
-                      message: "A051: matching edit returns a bank-dirty applied receipt")
+        report.expect(
+            returnedReceipt?.dirty == true, cppID: id,
+            message: "A051: matching edit returns a bank-dirty applied receipt")
         guard let applied = returnedReceipt else {
             report.fail(id, "matching edit must return an applied bank receipt")
             return
         }
-        report.expect(applied.lease.sourcePath == originalPath
-                      && applied.lease.sectionLabel == originalSection,
-                      cppID: id, message: "A053: applied view retains the bank identity captured at initial load")
-        report.expect(applied.slots.indices.contains(0) && applied.slots[0].voice == edited,
-                      cppID: id, message: "A055: applied view contains the complete edited literal voice")
-        report.expect(session.bankSlots == applied.slots && session.bankDirty == applied.dirty
-                      && session.bankLoadName == applied.loadName
-                      && session.bankLease.sourcePath == applied.lease.sourcePath
-                      && session.bankLease.sectionLabel == applied.lease.sectionLabel
-                      && session.bankLease === applied.lease
-                      && session.bankLease.publicationRevision == applied.lease.publicationRevision
-                      && applied.lease.publicationRevision > revisionBefore,
-                      cppID: id, message: "matching edit returns the complete freshly adopted document bank view")
-        report.expect(session.bankSlots.indices.contains(0)
-                      && session.bankSlots[0] == BankSlotView(kind: BankSlotKind.editable, voice: edited),
-                      cppID: id, message: "matching edit publishes the independent complete edited slot literal")
-        report.expect(applied.materializationToken == nil, cppID: id,
-                      message: "A056: matching occupied-slot edit has no blank materialization")
-        report.expect(session.bankSlots.first?.voice == edited
-                      && session.document.history.undoCount == historyCount + 1
-                      && session.document.history.canUndo,
-                      cppID: id, message: "matching edit publishes the edited literal and records one undo action")
+        report.expect(
+            applied.lease.sourcePath == originalPath
+                && applied.lease.sectionLabel == originalSection,
+            cppID: id, message: "A053: applied view retains the bank identity captured at initial load")
+        report.expect(
+            applied.slots.indices.contains(0) && applied.slots[0].voice == edited,
+            cppID: id, message: "A055: applied view contains the complete edited literal voice")
+        report.expect(
+            session.bankSlots == applied.slots && session.bankDirty == applied.dirty
+                && session.bankLoadName == applied.loadName
+                && session.bankLease.sourcePath == applied.lease.sourcePath
+                && session.bankLease.sectionLabel == applied.lease.sectionLabel
+                && session.bankLease === applied.lease
+                && session.bankLease.publicationRevision == applied.lease.publicationRevision
+                && applied.lease.publicationRevision > revisionBefore,
+            cppID: id, message: "matching edit returns the complete freshly adopted document bank view")
+        report.expect(
+            session.bankSlots.indices.contains(0)
+                && session.bankSlots[0] == BankSlotView(kind: BankSlotKind.editable, voice: edited),
+            cppID: id, message: "matching edit publishes the independent complete edited slot literal")
+        report.expect(
+            applied.materializationToken == nil, cppID: id,
+            message: "A056: matching occupied-slot edit has no blank materialization")
+        report.expect(
+            session.bankSlots.first?.voice == edited
+                && session.document.history.undoCount == historyCount + 1
+                && session.document.history.canUndo,
+            cppID: id, message: "matching edit publishes the edited literal and records one undo action")
     } catch {
         report.fail(id, "fresh bank conflict scenario failed: \(error)")
     }
@@ -369,41 +410,52 @@ internal func bankConflicts(report: CheckReport, session: DocumentSession, servi
         // Expected value mismatch (stale voice) must trigger bankConflict
         let staleVoice = BankVoice(macro: BankVoiceMacro.square1, key: 99, pan: 99)
         _ = try runBlocking {
-            try await session.applyBankEdit(slot: 0, value: BankVoice(),
-                                            expected: staleVoice)
+            try await session.applyBankEdit(
+                slot: 0, value: BankVoice(),
+                expected: staleVoice)
         }
-        report.fail("project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
-                    "stale expected voice should trigger bankConflict")
+        report.fail(
+            "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+            "stale expected voice should trigger bankConflict")
     } catch let error as ProjectServiceError {
-        report.expectEqual(expected: ProjectServiceError.bankConflict, actual: error,
-                           cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
-                           what: "stale expected voice triggers bankConflict")
+        report.expectEqual(
+            expected: ProjectServiceError.bankConflict, actual: error,
+            cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+            what: "stale expected voice triggers bankConflict")
     } catch {
-        report.fail("project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
-                    "unexpected error type: \(error)")
+        report.fail(
+            "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+            "unexpected error type: \(error)")
     }
-    report.expectEqual(expected: undoBeforeInitialConflict, actual: session.document.history.canUndo,
-                       cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
-                       what: "initial conflict leaves canUndo unchanged")
-    report.expectEqual(expected: redoBeforeInitialConflict, actual: session.document.history.canRedo,
-                       cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
-                       what: "initial conflict leaves canRedo unchanged")
+    report.expectEqual(
+        expected: undoBeforeInitialConflict, actual: session.document.history.canUndo,
+        cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+        what: "initial conflict leaves canUndo unchanged")
+    report.expectEqual(
+        expected: redoBeforeInitialConflict, actual: session.document.history.canRedo,
+        cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+        what: "initial conflict leaves canRedo unchanged")
 
     // Materializing an already occupied slot must conflict
     do {
         _ = try runBlocking {
-            try await service.bankApply(lease: session.bankLease, slot: 0,
-                                        value: BankVoice(), expected: nil)
+            try await service.bankApply(
+                lease: session.bankLease, slot: 0,
+                value: BankVoice(), expected: nil)
         }
-        report.fail("projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
-                    "materializing occupied slot 0 must trigger bankConflict")
+        report.fail(
+            "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
+            "materializing occupied slot 0 must trigger bankConflict")
     } catch let error as ProjectServiceError {
-        report.expectEqual(expected: ProjectServiceError.bankConflict, actual: error,
-                           cppID: "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
-                           what: "materializing occupied slot triggers bankConflict")
+        report.expectEqual(
+            expected: ProjectServiceError.bankConflict, actual: error,
+            cppID:
+                "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
+            what: "materializing occupied slot triggers bankConflict")
     } catch {
-        report.fail("projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
-                    "unexpected error type: \(error)")
+        report.fail(
+            "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
+            "unexpected error type: \(error)")
     }
 
     // Reverting with an unknown or spent token must conflict
@@ -411,15 +463,18 @@ internal func bankConflicts(report: CheckReport, session: DocumentSession, servi
         _ = try runBlocking {
             try await service.bankRevert(lease: session.bankLease, token: 999_999)
         }
-        report.fail("vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
-                    "unknown token must trigger conflict")
+        report.fail(
+            "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
+            "unknown token must trigger conflict")
     } catch let error as ProjectServiceError {
-        report.expectEqual(expected: ProjectServiceError.bankConflict, actual: error,
-                           cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
-                           what: "unknown token triggers bankConflict")
+        report.expectEqual(
+            expected: ProjectServiceError.bankConflict, actual: error,
+            cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
+            what: "unknown token triggers bankConflict")
     } catch {
-        report.fail("vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
-                    "unexpected error type: \(error)")
+        report.fail(
+            "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
+            "unexpected error type: \(error)")
     }
 }
 
@@ -448,7 +503,8 @@ internal func releaseEditorBankHistorySemantics(_ report: CheckReport, fixtureRo
                 report.fail(cppID, "fixture slot 0 has no editable voice")
                 continue
             }
-            let target = row.target < 0
+            let target =
+                row.target < 0
                 ? (original.release < 255 ? original.release + 1 : original.release - 1)
                 : row.target
             if row.pixelsUp != 0 {
@@ -473,16 +529,20 @@ internal func releaseEditorBankHistorySemantics(_ report: CheckReport, fixtureRo
             _ = try runBlocking { [edited] in
                 try await session.applyBankEdit(slot: 0, value: edited, expected: beforeTarget)
             }
-            let appliedThroughBankPipeline = session.bankSlots[0].voice?.release == target
+            let appliedThroughBankPipeline =
+                session.bankSlots[0].voice?.release == target
                 && session.bankDirty && !session.document.isDirty
             let undone = try runBlocking {
                 try await session.undo()
             }
-            report.expect(appliedThroughBankPipeline && undone
-                && session.bankSlots[0].voice?.release == original.release
-                && !session.document.isDirty,
+            report.expect(
+                appliedThroughBankPipeline && undone
+                    && session.bankSlots[0].voice?.release == original.release
+                    && !session.document.isDirty,
                 cppID: cppID,
-                message: "the production bank pipeline publishes release \(target) and one undo restores the original without dirtying the song")
+                message:
+                    "the production bank pipeline publishes release \(target) and one undo restores the original without dirtying the song"
+            )
         } catch {
             report.fail(cppID, "production release edit or bank undo failed: \(error)")
         }
@@ -496,25 +556,30 @@ internal func releaseBoundaryEngineParity(_ report: CheckReport, fixtureRoot: St
     let service = ProjectService()
     let fixtures = fixtureRoot
     do {
-        let rich = try String(contentsOfFile: fixtures + "/sound/voicegroups/fixture_rich.inc",
-                              encoding: .utf8)
+        let rich = try String(
+            contentsOfFile: fixtures + "/sound/voicegroups/fixture_rich.inc",
+            encoding: .utf8)
         let sampleVoice = rich.split(separator: "\n", omittingEmptySubsequences: false)
         guard sampleVoice.count > 2, sampleVoice[2].contains("voice_directsound") else {
             report.fail(id, "rich fixture does not contain the DirectSound release boundary voice")
             return
         }
         try (sampleVoice.prefix(3).joined(separator: "\n") + "\n")
-            .write(toFile: root + "/sound/voicegroups/fixture_rich.inc",
-                   atomically: true, encoding: .utf8)
+            .write(
+                toFile: root + "/sound/voicegroups/fixture_rich.inc",
+                atomically: true, encoding: .utf8)
         try """
         .include "sound/voicegroups/test_vg.inc"
         .include "sound/voicegroups/fixture_rich.inc"
-        """.write(toFile: root + "/sound/voice_groups.inc",
-                   atomically: true, encoding: .utf8)
-        try FileManager.default.copyItem(atPath: fixtures + "/sound/direct_sound_data.inc",
-                                         toPath: root + "/sound/direct_sound_data.inc")
-        try FileManager.default.copyItem(atPath: fixtures + "/sound/direct_sound_samples",
-                                         toPath: root + "/sound/direct_sound_samples")
+        """.write(
+            toFile: root + "/sound/voice_groups.inc",
+            atomically: true, encoding: .utf8)
+        try FileManager.default.copyItem(
+            atPath: fixtures + "/sound/direct_sound_data.inc",
+            toPath: root + "/sound/direct_sound_data.inc")
+        try FileManager.default.copyItem(
+            atPath: fixtures + "/sound/direct_sound_samples",
+            toPath: root + "/sound/direct_sound_samples")
         let assembly = root + "/data/sound_data.s"
         try FileManager.default.createDirectory(
             atPath: root + "/data", withIntermediateDirectories: true)
@@ -530,8 +595,10 @@ internal func releaseBoundaryEngineParity(_ report: CheckReport, fixtureRoot: St
             return
         }
         let adjacent = previous.release == 255 ? 254 : previous.release + 1
-        for (name, value) in [("adjacent", adjacent), ("lower-bound", Int32(0)),
-                              ("upper-bound", Int32(255))] {
+        for (name, value) in [
+            ("adjacent", adjacent), ("lower-bound", Int32(0)),
+            ("upper-bound", Int32(255)),
+        ] {
             let expected = previous
             var next = expected
             next.release = value
@@ -539,9 +606,10 @@ internal func releaseBoundaryEngineParity(_ report: CheckReport, fixtureRoot: St
             _ = try runBlocking {
                 try await session.applyBankEdit(slot: 0, value: edited, expected: expected)
             }
-            report.expect(session.bankLease.withVoices({ $0?.pointee.release }) == UInt8(value),
-                          cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[\(name)]",
-                          message: "release \(name) converges to the exact engine byte")
+            report.expect(
+                session.bankLease.withVoices({ $0?.pointee.release }) == UInt8(value),
+                cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[\(name)]",
+                message: "release \(name) converges to the exact engine byte")
             previous = edited
         }
     } catch {

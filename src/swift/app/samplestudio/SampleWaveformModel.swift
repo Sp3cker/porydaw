@@ -199,11 +199,12 @@ public final class SampleWaveformModel: QmlUncreatable {
 
     private func rebuild() {
         scene.setPalette(palette)
-        lists[0] = scene.buildMain(samples: presenter.source.buffer, pyramid: pyramid, width: width,
-                                   height: height, scroll: scroll, spp: spp, gain: displayGain,
-                                   cropStart: presenter.cropStart, cropEnd: presenter.cropEnd,
-                                   loopOn: presenter.loopOn, loopStart: presenter.loopStart,
-                                   loopEnd: presenter.loopEnd, playheadFrame: playheadFrame, fontPx: baseFontPx)
+        lists[0] = scene.buildMain(
+            samples: presenter.source.buffer, pyramid: pyramid, width: width,
+            height: height, scroll: scroll, spp: spp, gain: displayGain,
+            cropStart: presenter.cropStart, cropEnd: presenter.cropEnd,
+            loopOn: presenter.loopOn, loopStart: presenter.loopStart,
+            loopEnd: presenter.loopEnd, playheadFrame: playheadFrame, fontPx: baseFontPx)
         lists[1] = scene.buildSeam(end: endWindow, start: startWindow, width: seamWidth, height: seamHeight)
         displayRevision += 1
     }

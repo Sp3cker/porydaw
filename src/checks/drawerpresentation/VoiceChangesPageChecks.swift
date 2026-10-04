@@ -66,7 +66,7 @@ let drawerVoiceCollisionID = "swiftcore/VoiceChangesPage::collisionAndBlankSlotC
 func drawerVoiceVoiceChangesPageFixture(programs: [Int], division: UInt16 = 24) -> MidiFile {
     func clamped(_ value: Int) -> UInt8 { UInt8(min(max(value, 0), 127)) }
     let conductor: [MidiEvent] = [
-        .meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20]),
+        .meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20])
     ]
     let primary: [MidiEvent] = [
         .channel(tick: 0, status: 0xC0, data0: clamped(programs[0])),
@@ -82,11 +82,13 @@ func drawerVoiceVoiceChangesPageFixture(programs: [Int], division: UInt16 = 24) 
         .channel(tick: 0, status: 0x90, data0: 67, data1: 80),
         .channel(tick: 48, status: 0x80, data0: 67),
     ]
-    return MidiFile(division: division, chunks: [
-        MidiChunk(events: conductor, endTick: 192),
-        MidiChunk(events: primary, endTick: 192),
-        MidiChunk(events: secondary, endTick: 192),
-    ])
+    return MidiFile(
+        division: division,
+        chunks: [
+            MidiChunk(events: conductor, endTick: 192),
+            MidiChunk(events: primary, endTick: 192),
+            MidiChunk(events: secondary, endTick: 192),
+        ])
 }
 
 /// The page attached to its own synthetic session over the suite's service and
@@ -97,17 +99,22 @@ struct drawerVoiceVoiceChangesFixture {
     let page: VoiceChangesPage
     let document: SongDocument
 
-    init(suite: DocumentSession, service: ProjectService, programs: [Int],
-         division: UInt16 = 24, baseFontPx: Double = 13) {
-        let document = SongDocument(file: drawerVoiceVoiceChangesPageFixture(programs: programs,
-                                                                  division: division),
-                                    config: suite.document.state.config,
-                                    source: suite.document.source,
-                                    trackBudget: suite.document.trackBudget)
-        let session = DocumentSession(document: document, service: service,
-                                      lease: suite.bankLease, slots: suite.bankSlots,
-                                      dirty: false, loadName: suite.bankLoadName,
-                                      sampleRate: 48_000)
+    init(
+        suite: DocumentSession, service: ProjectService, programs: [Int],
+        division: UInt16 = 24, baseFontPx: Double = 13
+    ) {
+        let document = SongDocument(
+            file: drawerVoiceVoiceChangesPageFixture(
+                programs: programs,
+                division: division),
+            config: suite.document.state.config,
+            source: suite.document.source,
+            trackBudget: suite.document.trackBudget)
+        let session = DocumentSession(
+            document: document, service: service,
+            lease: suite.bankLease, slots: suite.bankSlots,
+            dirty: false, loadName: suite.bankLoadName,
+            sampleRate: 48_000)
         session.selectedTrack = 0
         session.clearSelectedNotes()
         session.editCursor = 0
@@ -115,8 +122,9 @@ struct drawerVoiceVoiceChangesFixture {
         self.document = document
         page = VoiceChangesPage(baseFontPx: baseFontPx)
         page.attach(session: session, palette: GridPalette())
-        page.configureBody(width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
-                           baseFontPx: baseFontPx, dragDistance: 10)
+        page.configureBody(
+            width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
+            baseFontPx: baseFontPx, dragDistance: 10)
         // Mirror the workspace's domain routing: cursor publication updates only
         // the stopped readout; document-derived domains rebuild content.
         session.onChange = { [weak page] change in
@@ -148,8 +156,10 @@ struct drawerVoiceVoiceChangesFixture {
 // MARK: - Suite entry
 
 @MainActor
-internal func runVoiceChangesPageChecks(_ report: CheckReport, session _: DocumentSession,
-                                        service _: ProjectService) {
+internal func runVoiceChangesPageChecks(
+    _ report: CheckReport, session _: DocumentSession,
+    service _: ProjectService
+) {
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
         report.fail(drawerVoiceProjectionID, "the staged rich bank fixture is unavailable")
         return
@@ -170,12 +180,14 @@ internal func runVoiceChangesPageChecks(_ report: CheckReport, session _: Docume
         try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: scratch)
         try runBlocking { try await service.open(root: scratch.path) }
         let loaded = try runBlocking { try await service.openSong(label: "mus_gym") }
-        let document = SongDocument(file: drawerVoiceVoiceChangesPageFixture(programs: [0, 1, 2]),
-                                    config: loaded.config, source: loaded.source,
-                                    trackBudget: loaded.trackBudget)
-        session = DocumentSession(document: document, service: service,
-                                  lease: loaded.bank, slots: loaded.bankSlots,
-                                  dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+        let document = SongDocument(
+            file: drawerVoiceVoiceChangesPageFixture(programs: [0, 1, 2]),
+            config: loaded.config, source: loaded.source,
+            trackBudget: loaded.trackBudget)
+        session = DocumentSession(
+            document: document, service: service,
+            lease: loaded.bank, slots: loaded.bankSlots,
+            dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
     } catch {
         report.fail(drawerVoiceProjectionID, "could not load the rich bank fixture: \(error)")
         return
@@ -183,9 +195,10 @@ internal func runVoiceChangesPageChecks(_ report: CheckReport, session _: Docume
     let editable = session.bankSlots.indices.filter { session.bankSlots[$0].voice != nil }
     let namedCount = editable.filter { !(session.bankSlots[$0].voice?.symbol.isEmpty ?? true) }.count
     guard editable.count >= 3 && namedCount > 0 else {
-        report.fail(drawerVoiceProjectionID,
-                    "the staged bank exposes \(editable.count) parsed slots and \(namedCount) named "
-                    + "editable slots; the Voice Changes cases need three parsed and one named")
+        report.fail(
+            drawerVoiceProjectionID,
+            "the staged bank exposes \(editable.count) parsed slots and \(namedCount) named "
+                + "editable slots; the Voice Changes cases need three parsed and one named")
         return
     }
     let programs = [editable[0], editable[1], editable[2]]

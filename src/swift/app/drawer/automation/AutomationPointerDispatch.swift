@@ -2,8 +2,10 @@ import PorydawCore
 
 @MainActor
 extension AutomationPage {
-    func dispatchPointerPress(x: Double, y: Double, surface: Int, button: Int,
-                             modifiers: Int = 0) -> Bool {
+    func dispatchPointerPress(
+        x: Double, y: Double, surface: Int, button: Int,
+        modifiers: Int = 0
+    ) -> Bool {
         pointerLeave()
         guard session != nil, surface == AutomationInputSurface.plot.rawValue else { return false }
         hoverX = x
@@ -22,9 +24,10 @@ extension AutomationPage {
             let projection = makeProjection(facts: facts, camera: liveCamera())
             let tick = projection.tick(atX: x, fine: false)
             let inside = selectionContains(x: x, facts: facts, projection: projection)
-            band = AutomationRangeBand(revision: facts.revision, parameter: facts.parameter,
-                                       anchorTick: tick, currentTick: tick,
-                                       pressX: x, pressY: y, insideSelection: inside)
+            band = AutomationRangeBand(
+                revision: facts.revision, parameter: facts.parameter,
+                anchorTick: tick, currentTick: tick,
+                pressX: x, pressY: y, insideSelection: inside)
             publishBand()
             publishInteractionState()
             return true
@@ -55,7 +58,8 @@ extension AutomationPage {
         }
         if var live = band {
             live.currentTick = snapped(tickAtX: x, modifiers: modifiers)
-            live.active = live.active
+            live.active =
+                live.active
                 || abs(x - live.pressX) + abs(y - live.pressY) >= dragDistance
             band = live
             publishBand()
@@ -73,15 +77,18 @@ extension AutomationPage {
             return true
         }
         previousX = x
-        updateGesture(x: x, y: y, active: active, facts: facts,
-                      projection: projection, activateSweep: true)
+        updateGesture(
+            x: x, y: y, active: active, facts: facts,
+            projection: projection, activateSweep: true)
         publishPreview()
         return true
     }
 
-    func updateGesture(x: Double, y: Double, active: AutomationModifiers,
-                       facts: AutomationFrozenFacts, projection: AutomationProjection,
-                       activateSweep: Bool) {
+    func updateGesture(
+        x: Double, y: Double, active: AutomationModifiers,
+        facts: AutomationFrozenFacts, projection: AutomationProjection,
+        activateSweep: Bool
+    ) {
         guard let gesture else { return }
         switch gesture {
         case let .node(transaction):
@@ -90,32 +97,41 @@ extension AutomationPage {
                 x: x, y: y, shiftHeld: active.shift,
                 activationDistance: geometry.nodeDragActivationDistance)
             if update.phase != .pending {
-                _ = transaction.update(update, mapped: mappedPoint(
-                    x: update.effectiveX, y: update.effectiveY, facts: facts,
-                    modifiers: active, projection: projection))
+                _ = transaction.update(
+                    update,
+                    mapped: mappedPoint(
+                        x: update.effectiveX, y: update.effectiveY, facts: facts,
+                        modifiers: active, projection: projection))
             }
             self.gesture = .node(transaction)
-            cursorKind = transaction.drag.axisLock == .time ? AutomationCursorKind.sizeHorizontal.rawValue
-                : transaction.drag.axisLock == .value ? AutomationCursorKind.sizeVertical.rawValue
-                : AutomationCursorKind.arrow.rawValue
+            cursorKind =
+                transaction.drag.axisLock == .time
+                ? AutomationCursorKind.sizeHorizontal.rawValue
+                : transaction.drag.axisLock == .value
+                    ? AutomationCursorKind.sizeVertical.rawValue
+                    : AutomationCursorKind.arrow.rawValue
         case let .phantom(transaction):
             var transaction = transaction
             let update = transaction.drag.update(
                 x: x, y: y, shiftHeld: active.shift,
                 activationDistance: geometry.nodeDragActivationDistance)
-            _ = transaction.update(update, mappedValue: projection.value(
-                atY: update.effectiveY, metadata: facts.metadata))
+            _ = transaction.update(
+                update,
+                mappedValue: projection.value(
+                    atY: update.effectiveY, metadata: facts.metadata))
             self.gesture = .phantom(transaction)
             cursorKind = AutomationCursorKind.sizeVertical.rawValue
         case let .sweep(transaction):
             var transaction = transaction
-            update(sweep: &transaction, x: x, y: y, modifiers: active, facts: facts,
-                   projection: projection, activate: activateSweep)
+            update(
+                sweep: &transaction, x: x, y: y, modifiers: active, facts: facts,
+                projection: projection, activate: activateSweep)
             self.gesture = .sweep(transaction)
         case let .pencil(transaction):
             var transaction = transaction
-            update(pencil: &transaction, x: x, y: y, facts: facts,
-                   projection: projection, modifiers: active)
+            update(
+                pencil: &transaction, x: x, y: y, facts: facts,
+                projection: projection, modifiers: active)
             self.gesture = .pencil(transaction)
         }
     }
@@ -150,16 +166,22 @@ extension AutomationPage {
         if let facts = frozenFacts(modifiers: .init()) {
             let projection = makeProjection(facts: facts, camera: liveCamera())
             if let lane = laneProjection(facts: facts, projection: projection),
-               (!isPencilMode || projection.markersVisible()),
-               let hit = lane.hitTest(x: x, y: y, radius: geometry.pointHitRadius),
-               (!isPencilMode || projection.cell(atRawTick: projection.rawTick(atX: x))
-                   .contains(Double(hit.tick))),
-               let source = source(of: hit.identity, facts: facts),
-               commit(AutomationNodeResolver.deletions(
-                   revision: facts.revision,
-                   [AutomationNodeResolver.LaneDeletes(parameter: facts.parameter,
-                                                       snapshot: facts.snapshot,
-                                                       ticks: [source.tick])])) {
+                (!isPencilMode || projection.markersVisible()),
+                let hit = lane.hitTest(x: x, y: y, radius: geometry.pointHitRadius),
+                (!isPencilMode
+                    || projection.cell(atRawTick: projection.rawTick(atX: x))
+                        .contains(Double(hit.tick))),
+                let source = source(of: hit.identity, facts: facts),
+                commit(
+                    AutomationNodeResolver.deletions(
+                        revision: facts.revision,
+                        [
+                            AutomationNodeResolver.LaneDeletes(
+                                parameter: facts.parameter,
+                                snapshot: facts.snapshot,
+                                ticks: [source.tick])
+                        ]))
+            {
                 refreshFromDocument()
                 return true
             }
@@ -177,7 +199,8 @@ extension AutomationPage {
 
     func dispatchEscape() -> Bool {
         if prompt != nil || laneDelete != nil || menu != nil || gesture != nil || band != nil
-            || panActive || tapGuard != nil {
+            || panActive || tapGuard != nil
+        {
             cancelSectionInteraction()
             return true
         }

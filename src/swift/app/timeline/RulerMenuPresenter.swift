@@ -53,7 +53,7 @@ public final class RulerMenuPresenter {
     private static let controlModifier = 0x0400_0000
     @QtTracked public var isOpen = false
     public var rows: QListModel<RulerMenuRow> = QListModel()
-    @QtTracked public var menuKind = 0 // 1: ruler background; 2: selected time range
+    @QtTracked public var menuKind = 0  // 1: ruler background; 2: selected time range
     @QtTracked public var insertTimePromptOpen = false
     public var insertTimePromptAppearance: [String: QVariantSettable] = [:]
     public var insertTimePromptFont: [String: QVariantSettable] = [:]
@@ -133,22 +133,29 @@ public final class RulerMenuPresenter {
         let hasLoop = loop.loopStartTick != TimeDefaults.noTick || loop.loopEndTick != TimeDefaults.noTick
         var items: [RulerMenuRow] = []
         if inside {
-            items = [RulerMenuRow(Action.loopFromSelection.rawValue),
-                     RulerMenuRow(Action.insertTime.rawValue,
-                                  automation.selectionCommandAvailable(command: .insertTime)),
-                     RulerMenuRow(Action.duplicate.rawValue,
-                                  automation.selectionCommandAvailable(command: .duplicate)),
-                     RulerMenuRow(Action.removeContents.rawValue,
-                                  automation.selectionCommandAvailable(command: .deleteTime)),
-                     RulerMenuRow(Action.clearSelection.rawValue),
-                     .divider(), RulerMenuRow(Action.removeLoop.rawValue, hasLoop)]
+            items = [
+                RulerMenuRow(Action.loopFromSelection.rawValue),
+                RulerMenuRow(
+                    Action.insertTime.rawValue,
+                    automation.selectionCommandAvailable(command: .insertTime)),
+                RulerMenuRow(
+                    Action.duplicate.rawValue,
+                    automation.selectionCommandAvailable(command: .duplicate)),
+                RulerMenuRow(
+                    Action.removeContents.rawValue,
+                    automation.selectionCommandAvailable(command: .deleteTime)),
+                RulerMenuRow(Action.clearSelection.rawValue),
+                .divider(), RulerMenuRow(Action.removeLoop.rawValue, hasLoop),
+            ]
         } else {
-            items = [RulerMenuRow(Action.insertTime.rawValue, tick < TimeDefaults.maxTick),
-                     RulerMenuRow(Action.paste.rawValue, canPaste),
-                     .divider(), RulerMenuRow(Action.setLoopStart.rawValue),
-                     RulerMenuRow(Action.setLoopEnd.rawValue),
-                     RulerMenuRow(Action.removeLoop.rawValue, hasLoop),
-                     .divider(), RulerMenuRow(Action.editTimeSignature.rawValue)]
+            items = [
+                RulerMenuRow(Action.insertTime.rawValue, tick < TimeDefaults.maxTick),
+                RulerMenuRow(Action.paste.rawValue, canPaste),
+                .divider(), RulerMenuRow(Action.setLoopStart.rawValue),
+                RulerMenuRow(Action.setLoopEnd.rawValue),
+                RulerMenuRow(Action.removeLoop.rawValue, hasLoop),
+                .divider(), RulerMenuRow(Action.editTimeSignature.rawValue),
+            ]
             let explicit = press.chip == tick
             items.append(RulerMenuRow(Action.removeTimeSignature.rawValue, explicit))
         }
@@ -164,15 +171,16 @@ public final class RulerMenuPresenter {
         guard contentX.isFinite else { return }
         let raw = session.camera.tickAtContentX(contentX)
         guard raw.isFinite,
-              let selection = session.timeSelection, selection.isActive,
-              selection.contains(TimeDefaults.tick(from: max(0, raw)))
+            let selection = session.timeSelection, selection.isActive,
+            selection.contains(TimeDefaults.tick(from: max(0, raw)))
         else { return }
         publishTimeSelection(selection: selection, tick: snapped(raw))
     }
 
     public func openTimeSelection(tick: Tick) {
         guard let selection = session.timeSelection, selection.isActive,
-              selection.contains(tick) else { return }
+            selection.contains(tick)
+        else { return }
         publishTimeSelection(selection: selection, tick: tick)
     }
 
@@ -183,21 +191,29 @@ public final class RulerMenuPresenter {
         capturedSelection = selection
         if automation.hasMenu { automation.dismissMenu() }
         if grid.gridMenuKind != 0 { grid.dismissGridMenu() }
-        publish([RulerMenuRow(Action.copy.rawValue,
-                              automation.selectionCommandAvailable(command: .copy)),
-                 RulerMenuRow(Action.cut.rawValue,
-                              automation.selectionCommandAvailable(command: .cut)),
-                 RulerMenuRow(Action.deleteSelection.rawValue,
-                              automation.selectionCommandAvailable(command: .delete)),
-                 RulerMenuRow(Action.insertTime.rawValue,
-                              automation.selectionCommandAvailable(command: .insertTime)),
-                 RulerMenuRow(Action.duplicate.rawValue,
-                              automation.selectionCommandAvailable(command: .duplicate)),
-                 RulerMenuRow(Action.removeContents.rawValue,
-                              automation.selectionCommandAvailable(command: .deleteTime)),
-                 RulerMenuRow(Action.paste.rawValue, canPaste),
-                 .divider(),
-                 RulerMenuRow(Action.clearSelection.rawValue)])
+        publish([
+            RulerMenuRow(
+                Action.copy.rawValue,
+                automation.selectionCommandAvailable(command: .copy)),
+            RulerMenuRow(
+                Action.cut.rawValue,
+                automation.selectionCommandAvailable(command: .cut)),
+            RulerMenuRow(
+                Action.deleteSelection.rawValue,
+                automation.selectionCommandAvailable(command: .delete)),
+            RulerMenuRow(
+                Action.insertTime.rawValue,
+                automation.selectionCommandAvailable(command: .insertTime)),
+            RulerMenuRow(
+                Action.duplicate.rawValue,
+                automation.selectionCommandAvailable(command: .duplicate)),
+            RulerMenuRow(
+                Action.removeContents.rawValue,
+                automation.selectionCommandAvailable(command: .deleteTime)),
+            RulerMenuRow(Action.paste.rawValue, canPaste),
+            .divider(),
+            RulerMenuRow(Action.clearSelection.rawValue),
+        ])
         menuKind = 2
     }
 
@@ -226,9 +242,10 @@ public final class RulerMenuPresenter {
     /// the existing form, after the menu is already dismissed.
     public func activate(actionId: Int) -> Bool {
         guard isOpen, let action = Action(rawValue: actionId),
-              rowSnapshot.contains(where: { $0.actionId == actionId && $0.enabled && !$0.separator })
+            rowSnapshot.contains(where: { $0.actionId == actionId && $0.enabled && !$0.separator })
         else { return false }
-        let valid = session.document.revision == capturedRevision
+        let valid =
+            session.document.revision == capturedRevision
             && session.editCursor == capturedCursor
             && session.timeSelection == capturedSelection
         close()
@@ -247,7 +264,7 @@ public final class RulerMenuPresenter {
         case .editTimeSignature: return true
         case .removeTimeSignature: session.document.deleteTimeSignature(at: capturedTick)
         case .loopFromSelection, .duplicate, .removeContents, .clearSelection,
-             .copy, .cut, .paste, .insertTime, .deleteSelection:
+            .copy, .cut, .paste, .insertTime, .deleteSelection:
             let command: EditCommand
             switch action {
             case .loopFromSelection: command = .loopFromSelection
@@ -268,7 +285,8 @@ public final class RulerMenuPresenter {
 
     public func openInsertTimePromptAtCursor() -> Bool {
         guard !session.isClosed, session.editCursor < TimeDefaults.maxTick,
-              session.timeSelection?.isActive != true else { return false }
+            session.timeSelection?.isActive != true
+        else { return false }
         capturedTick = session.editCursor
         openInsertTimePrompt()
         return true
@@ -276,8 +294,10 @@ public final class RulerMenuPresenter {
 
     private func openInsertTimePrompt() {
         let segment = session.projectionCache.timeAxis.segmentAt(capturedTick)
-        pendingInsert = (capturedTick, session.document.revision,
-                         segment.beatTicks, segment.beatsPerBar)
+        pendingInsert = (
+            capturedTick, session.document.revision,
+            segment.beatTicks, segment.beatsPerBar
+        )
         insertTimePromptMaximumBeats = Int(segment.beatsPerBar - 1)
         var appearance = PromptAppearance.metrics(base: grid.baseFontPx)
         insertTimePromptFont = PromptAppearance.font(
@@ -304,7 +324,8 @@ public final class RulerMenuPresenter {
     public func acceptInsertTimePrompt(bars: Int, beats: Int, fractions: Int) {
         let barsOK = insertTimePromptMinimumBars <= bars && bars <= insertTimePromptMaximumBars
         let beatsOK = insertTimePromptMinimumBeats <= beats && beats <= insertTimePromptMaximumBeats
-        let fracsOK = insertTimePromptMinimumBeatFractions <= fractions
+        let fracsOK =
+            insertTimePromptMinimumBeatFractions <= fractions
             && fractions <= insertTimePromptMaximumBeatFractions
         guard let pendingInsert, barsOK, beatsOK, fracsOK else { return }
         cancelInsertTimePrompt()
@@ -335,8 +356,11 @@ public final class RulerMenuPresenter {
 
     public func updateSweep(contentX: Double, pointerY: Double = 0) {
         guard let sweepAnchor, contentX.isFinite, pointerY.isFinite else { return }
-        guard sweepWasRange || abs(contentX - sweepPressX) + abs(pointerY - sweepPressY)
-            >= grid.dragDistance else { return }
+        guard
+            sweepWasRange
+                || abs(contentX - sweepPressX) + abs(pointerY - sweepPressY)
+                    >= grid.dragDistance
+        else { return }
         sweepWasRange = true
         let raw = session.camera.tickAtContentX(contentX)
         guard raw.isFinite else { return }
@@ -347,9 +371,10 @@ public final class RulerMenuPresenter {
         }
         let start = min(sweepAnchor, tick)
         let end = max(sweepAnchor, tick)
-        session.applyTimeSelection(AutomationTimeSelection(
-            range: TimeRange(startTick: start, endTick: end),
-            scope: .tracks(sweepTrackScope(start: start, end: end))))
+        session.applyTimeSelection(
+            AutomationTimeSelection(
+                range: TimeRange(startTick: start, endTick: end),
+                scope: .tracks(sweepTrackScope(start: start, end: end))))
     }
 
     public func endSweep(contentX: Double, pointerY: Double = 0) {
@@ -378,9 +403,9 @@ public final class RulerMenuPresenter {
         guard sweepMultiTrack else { return mask }
         for track in 0..<session.document.engineTracks.usedTrackCount where track != primary {
             for note in session.document.notes(in: track)
-                where note.tick < end && start < note.tick + note.duration {
-                    mask.insert(track)
-                    break
+            where note.tick < end && start < note.tick + note.duration {
+                mask.insert(track)
+                break
             }
         }
         return mask
@@ -392,10 +417,12 @@ public final class RulerMenuPresenter {
         let tolerance = max(4, grid.baseFontPx * 0.5)
         for signature in session.document.timeSignatures.reversed() {
             let x = session.camera.contentX(tick: Double(signature.tick))
-            let labelWidth = Double("\(signature.numerator)/\(1 << min(signature.denominatorPower, 6))".count)
+            let labelWidth =
+                Double("\(signature.numerator)/\(1 << min(signature.denominatorPower, 6))".count)
                 * grid.baseFontPx * 0.6
             if abs(x - contentX) <= tolerance
-                || (contentX >= x && contentX <= x + tolerance + labelWidth) {
+                || (contentX >= x && contentX <= x + tolerance + labelWidth)
+            {
                 return signature.tick
             }
         }
@@ -411,7 +438,8 @@ public final class RulerMenuPresenter {
         close()
         for row in items {
             guard let action = Action(rawValue: row.actionId),
-                  let id = Self.keybindingIds[action] else { continue }
+                let id = Self.keybindingIds[action]
+            else { continue }
             row.text = keybindings.label(id)
             row.shortcutText = keybindings.sequences(id).first?.nativeText ?? ""
         }

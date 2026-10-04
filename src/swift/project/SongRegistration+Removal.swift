@@ -27,7 +27,9 @@ extension SongRegistration {
         if var file = try? RegistrationLines(path: tablePath) {
             let scan = SongTableScan(file.texts, label: label)
             if scan.labelIndex == 0 {
-                throw SongRegistrationError.failed("\(label) is the first song_table.inc entry (song ID 0), the engine's fallback song — it cannot be deleted.")
+                throw SongRegistrationError.failed(
+                    "\(label) is the first song_table.inc entry (song ID 0), the engine's fallback song — it cannot be deleted."
+                )
             }
             if scan.labelLine >= 0 && scan.labelLine == scan.lastSongLine {
                 file.remove(scan.labelLine)
@@ -37,7 +39,9 @@ extension SongRegistration {
                     file.remove(tail.lastSongLine)
                 }
             } else if scan.labelLine >= 0 {
-                file.replace(scan.labelLine, "\(scan.labelIndent)song \(scan.firstLabel), \(scan.firstPlayer), \(scan.firstPlayerNum)")
+                file.replace(
+                    scan.labelLine,
+                    "\(scan.labelIndent)song \(scan.firstLabel), \(scan.firstPlayer), \(scan.firstPlayerNum)")
             }
             try file.save(tablePath)
         }
@@ -61,8 +65,9 @@ extension SongRegistration {
                     continue
                 }
                 if let match = RegistrationText.match(RegistrationText.define, text),
-                   match.group(2) != constant && !RegistrationText.isMarker(match.group(2)),
-                   let value = Int(match.group(3)) {
+                    match.group(2) != constant && !RegistrationText.isMarker(match.group(2)),
+                    let value = Int(match.group(3))
+                {
                     definitions.append((match.group(2), value))
                 }
             }
@@ -75,8 +80,11 @@ extension SongRegistration {
                     if isNumeric && Int(marker.group(3)) != ownValue { continue }
                     if !isNumeric && marker.group(3) != constant { continue }
                     guard let preceding else { continue }
-                    file.replace(index, marker.group(1) + (isNumeric
-                        ? String(preceding.1) : preceding.0) + marker.group(4))
+                    file.replace(
+                        index,
+                        marker.group(1)
+                            + (isNumeric
+                                ? String(preceding.1) : preceding.0) + marker.group(4))
                 }
                 file.remove(own)
             }
@@ -87,14 +95,18 @@ extension SongRegistration {
         if var file = try? RegistrationLines(path: ldPath) {
             if let index = file.lines.indices.first(where: {
                 file.text($0).contains("sound/songs/midi/\(label).o")
-            }) { file.remove(index) }
+            }) {
+                file.remove(index)
+            }
             try file.save(ldPath)
         }
         let charmapPath = root + "/charmap.txt"
         if var file = try? RegistrationLines(path: charmapPath) {
             if let index = file.lines.indices.first(where: {
                 RegistrationText.match(RegistrationText.charmap, file.text($0))?.group(1) == constant
-            }) { file.remove(index) }
+            }) {
+                file.remove(index)
+            }
             try file.save(charmapPath)
         }
         try DebugSoundLists.remove(root: root, constant: constant)
@@ -107,7 +119,9 @@ extension SongRegistration {
                 let line = file.text($0)
                 guard let colon = line.firstIndex(of: ":") else { return false }
                 return line[..<colon].trimmingCharacters(in: .whitespacesAndNewlines) == "\(label).mid"
-            }) { file.remove(index) }
+            }) {
+                file.remove(index)
+            }
             try file.save(cfgPath)
         }
         let mkPath = root + "/songs.mk"
@@ -121,7 +135,8 @@ extension SongRegistration {
                 for _ in index..<last { file.remove(index) }
                 if index > 0 && file.text(index - 1).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     && (index >= file.lines.count
-                        || file.text(index).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+                        || file.text(index).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                {
                     file.remove(index - 1)
                 }
             }

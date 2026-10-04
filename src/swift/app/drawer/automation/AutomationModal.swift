@@ -57,8 +57,6 @@ struct AutomationLaneDeleteConfirmation {
     let message: String
 }
 
-
-
 @MainActor
 extension AutomationPage {
     /// The captured point's own value prompt, revalidated against the captured
@@ -66,8 +64,10 @@ extension AutomationPage {
     /// dispatch revalidates before it opens a form. The projected engine node has
     /// no written occurrence, so its promotion goes through the same resolver the
     /// press path uses.
-    func openCapturedPointPrompt(tick: Tick, value: Int,
-                                        facts: AutomationFrozenFacts) -> Bool {
+    func openCapturedPointPrompt(
+        tick: Tick, value: Int,
+        facts: AutomationFrozenFacts
+    ) -> Bool {
         guard let session, facts.revision == session.document.revision else { return false }
         return openPrompt(tick: tick, value: value)
     }
@@ -80,19 +80,24 @@ extension AutomationPage {
         laneDelete = nil
         publishPrompt()
         guard confirmation.facts.revision == session.document.revision,
-              confirmation.facts.parameter == activeParameter,
-              confirmation.facts.parameter.track == nil
-                || confirmation.facts.parameter.track == activeTrack() else {
+            confirmation.facts.parameter == activeParameter,
+            confirmation.facts.parameter.track == nil
+                || confirmation.facts.parameter.track == activeTrack()
+        else {
             publishInteractionState()
             return false
         }
         let ticks = confirmation.facts.snapshot.sources.map(\.tick)
         guard !ticks.isEmpty,
-              let plan = AutomationNodeResolver.deletions(
-                  revision: confirmation.facts.revision,
-                  [AutomationNodeResolver.LaneDeletes(parameter: confirmation.facts.parameter,
-                                                      snapshot: confirmation.facts.snapshot,
-                                                      ticks: ticks)]) else {
+            let plan = AutomationNodeResolver.deletions(
+                revision: confirmation.facts.revision,
+                [
+                    AutomationNodeResolver.LaneDeletes(
+                        parameter: confirmation.facts.parameter,
+                        snapshot: confirmation.facts.snapshot,
+                        ticks: ticks)
+                ])
+        else {
             publishInteractionState()
             return false
         }
@@ -101,25 +106,32 @@ extension AutomationPage {
         return committed
     }
 
-    func openPointMenu(hit: AutomationProjectedPoint, facts: AutomationFrozenFacts,
-                               x: Double, y: Double) {
-        _ = openMenu(facts: facts, target: .point(tick: hit.tick, value: hit.value),
-                     x: x + plotOrigin, y: y)
+    func openPointMenu(
+        hit: AutomationProjectedPoint, facts: AutomationFrozenFacts,
+        x: Double, y: Double
+    ) {
+        _ = openMenu(
+            facts: facts, target: .point(tick: hit.tick, value: hit.value),
+            x: x + plotOrigin, y: y)
     }
 
     func openRangeMenu(x: Double, y: Double) {
         guard let selection, selection.isActive, let facts = frozenFacts(modifiers: .init()),
-              selection.covers(facts.parameter, usedTracks: usedTracks()) else { return }
+            selection.covers(facts.parameter, usedTracks: usedTracks())
+        else { return }
         _ = openMenu(facts: facts, target: .range, x: x + plotOrigin, y: y)
     }
 
     @discardableResult
-    func openMenu(facts: AutomationFrozenFacts, target: AutomationMenuTarget,
-                          x: Double, y: Double) -> Bool {
+    func openMenu(
+        facts: AutomationFrozenFacts, target: AutomationMenuTarget,
+        x: Double, y: Double
+    ) -> Bool {
         guard session != nil else { return false }
         let wasOpen = menu != nil
-        var state = AutomationMenuState(facts: facts, target: target,
-                                        anchorX: max(0, x), anchorY: max(0, y), rows: [])
+        var state = AutomationMenuState(
+            facts: facts, target: target,
+            anchorX: max(0, x), anchorY: max(0, y), rows: [])
         state.rows = menuRows(for: target, facts: facts)
         guard !state.rows.isEmpty else { return false }
         menu = state
@@ -134,8 +146,10 @@ extension AutomationPage {
     /// The rows one captured target publishes. Availability is read from the
     /// frozen facts and the accepted clipboard alone, so a row never claims an
     /// action the capture cannot perform.
-    func menuRows(for target: AutomationMenuTarget,
-                          facts: AutomationFrozenFacts) -> [AutomationMenuRowHandle] {
+    func menuRows(
+        for target: AutomationMenuTarget,
+        facts: AutomationFrozenFacts
+    ) -> [AutomationMenuRowHandle] {
         switch target {
         case let .point(tick, _):
             // Delete only ever writes what the document holds: the projected
@@ -143,30 +157,37 @@ extension AutomationPage {
             // disabled; Set Value stays enabled and promotes it.
             let written = !facts.snapshot.occurrences(at: tick).isEmpty
             return [
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.setValue.rawValue,
-                                        text: "Set Value", enabled: true),
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.deleteNode.rawValue,
-                                        text: "Delete", enabled: written),
+                AutomationMenuRowHandle(
+                    actionId: AutomationMenuAction.setValue.rawValue,
+                    text: "Set Value", enabled: true),
+                AutomationMenuRowHandle(
+                    actionId: AutomationMenuAction.deleteNode.rawValue,
+                    text: "Delete", enabled: written),
             ]
         case .lane:
             var rows = [
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.copyLane.rawValue,
-                                        text: facts.parameter.isTempo ? "Copy" : "Copy CC lane",
-                                        enabled: facts.snapshot.eventCount > 0),
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.pasteLane.rawValue,
-                                        text: facts.parameter.isTempo
-                                              ? "Paste" : "Paste CC lane (replace)",
-                                        enabled: laneClipPoints(facts.parameter) != nil),
+                AutomationMenuRowHandle(
+                    actionId: AutomationMenuAction.copyLane.rawValue,
+                    text: facts.parameter.isTempo ? "Copy" : "Copy CC lane",
+                    enabled: facts.snapshot.eventCount > 0),
+                AutomationMenuRowHandle(
+                    actionId: AutomationMenuAction.pasteLane.rawValue,
+                    text: facts.parameter.isTempo
+                        ? "Paste" : "Paste CC lane (replace)",
+                    enabled: laneClipPoints(facts.parameter) != nil),
                 AutomationMenuRowHandle(separator: true),
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.clearLane.rawValue,
-                                        text: facts.parameter.isTempo ? "Clear Tempo"
-                                                                      : "Clear events",
-                                        enabled: facts.snapshot.eventCount > 0),
+                AutomationMenuRowHandle(
+                    actionId: AutomationMenuAction.clearLane.rawValue,
+                    text: facts.parameter.isTempo
+                        ? "Clear Tempo"
+                        : "Clear events",
+                    enabled: facts.snapshot.eventCount > 0),
             ]
             if !facts.parameter.isTempo {
-                rows.append(AutomationMenuRowHandle(
-                    actionId: AutomationMenuAction.deleteLaneEvents.rawValue,
-                    text: "Delete automation events", enabled: facts.snapshot.eventCount > 0))
+                rows.append(
+                    AutomationMenuRowHandle(
+                        actionId: AutomationMenuAction.deleteLaneEvents.rawValue,
+                        text: "Delete automation events", enabled: facts.snapshot.eventCount > 0))
             }
             if facts.metadata.zoomable {
                 let row = AutomationMenuRowHandle(
@@ -179,17 +200,22 @@ extension AutomationPage {
         case .range:
             let covered = resolvedSelectionScope() != nil
             return [
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.rangeCopy.rawValue,
-                                        text: "Copy", enabled: covered),
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.rangeCut.rawValue,
-                                        text: "Cut", enabled: covered),
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.rangePaste.rawValue,
-                                        text: "Paste", enabled: selectionCommandAvailable(command: .paste)),
+                AutomationMenuRowHandle(
+                    actionId: AutomationMenuAction.rangeCopy.rawValue,
+                    text: "Copy", enabled: covered),
+                AutomationMenuRowHandle(
+                    actionId: AutomationMenuAction.rangeCut.rawValue,
+                    text: "Cut", enabled: covered),
+                AutomationMenuRowHandle(
+                    actionId: AutomationMenuAction.rangePaste.rawValue,
+                    text: "Paste", enabled: selectionCommandAvailable(command: .paste)),
                 AutomationMenuRowHandle(separator: true),
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.rangeDelete.rawValue,
-                                        text: "Delete", enabled: covered),
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.rangeClear.rawValue,
-                                        text: "Clear Selection", enabled: true),
+                AutomationMenuRowHandle(
+                    actionId: AutomationMenuAction.rangeDelete.rawValue,
+                    text: "Delete", enabled: covered),
+                AutomationMenuRowHandle(
+                    actionId: AutomationMenuAction.rangeClear.rawValue,
+                    text: "Clear Selection", enabled: true),
             ]
         }
     }
@@ -245,14 +271,14 @@ extension AutomationPage {
         return committed
     }
 
-
     /// A copied lane may be pasted into another parameter; clamp at destination.
     func laneClipPoints(_ parameter: AutomationParameter) -> [AutomationLanePoint]? {
         guard !laneClipboardPoints.isEmpty else { return nil }
         let metadata = AutomationParameterMetadata(parameter: parameter)
         return laneClipboardPoints.map {
-            AutomationLanePoint(tick: $0.tick,
-                                value: min(metadata.maximum, max(metadata.minimum, $0.value)))
+            AutomationLanePoint(
+                tick: $0.tick,
+                value: min(metadata.maximum, max(metadata.minimum, $0.value)))
         }
     }
 
@@ -288,8 +314,9 @@ extension AutomationPage {
         frozenCamera = nil
         publishPrompt()
         guard prompt.facts.revision == session.document.revision,
-              prompt.facts.parameter == activeParameter,
-              prompt.facts.parameter.track == nil || prompt.facts.parameter.track == activeTrack() else {
+            prompt.facts.parameter == activeParameter,
+            prompt.facts.parameter.track == nil || prompt.facts.parameter.track == activeTrack()
+        else {
             publishInteractionState()
             return false
         }
@@ -298,9 +325,10 @@ extension AutomationPage {
         case .none:
             break
         case let .move(move):
-            committed = commit(AutomationNodeResolver.moves([
-                AutomationNodeResolver.LaneMoves(prompt.facts, [move])
-            ]))
+            committed = commit(
+                AutomationNodeResolver.moves([
+                    AutomationNodeResolver.LaneMoves(prompt.facts, [move])
+                ]))
         case let .insert(edit):
             committed = AutomationCommit.apply(edit, in: session.document)
         }
@@ -346,10 +374,14 @@ extension AutomationPage {
 
     func deleteCapturedPoints(at ticks: [Tick]) -> Bool {
         guard !ticks.isEmpty, let facts = frozenFacts(modifiers: .init()),
-              commit(AutomationNodeResolver.deletions(
-                  revision: facts.revision,
-                  [AutomationNodeResolver.LaneDeletes(parameter: facts.parameter,
-                                                      snapshot: facts.snapshot, ticks: ticks)]))
+            commit(
+                AutomationNodeResolver.deletions(
+                    revision: facts.revision,
+                    [
+                        AutomationNodeResolver.LaneDeletes(
+                            parameter: facts.parameter,
+                            snapshot: facts.snapshot, ticks: ticks)
+                    ]))
         else { return false }
         refreshFromDocument()
         return true
@@ -357,17 +389,19 @@ extension AutomationPage {
 
     func deleteCapturedSelection() -> Bool {
         guard let session, let selection, let scope = resolvedSelectionScope() else { return false }
-        let changed = ClipboardSemantics.deleteTimeRange(selection.range, scope: scope,
-                                                        from: session.document)
+        let changed = ClipboardSemantics.deleteTimeRange(
+            selection.range, scope: scope,
+            from: session.document)
         if changed { refreshFromDocument() }
         return changed
     }
 
     func copyCapturedTimeSelection() -> Bool {
         guard let session, let selection, let scope = resolvedSelectionScope(),
-              let clip = ClipboardSemantics.extractTimeRange(
+            let clip = ClipboardSemantics.extractTimeRange(
                 selection.range, scope: scope, from: session.document,
-                unterminatedDuration: selectionSnapDuration()) else { return false }
+                unterminatedDuration: selectionSnapDuration())
+        else { return false }
         return clipboard.write(clip, ticksPerBeat: UInt32(session.document.ticksPerBeat))
     }
 
@@ -398,16 +432,17 @@ extension AutomationPage {
     func consumeCapturedMenuAction(actionId: Int) -> Bool {
         guard let session, let live = menu else { return false }
         let childRows: [AutomationMenuRowHandle]
-        if case .lane = live.target { childRows = rangeMenuRows(facts: live.facts) }
-        else { childRows = [] }
+        if case .lane = live.target { childRows = rangeMenuRows(facts: live.facts) } else { childRows = [] }
         guard let row = (live.rows + childRows).first(where: { $0.actionId == actionId }) else {
             return false
         }
         guard row.enabled, !row.separator,
-              let action = AutomationMenuAction(rawValue: row.actionId) else { return false }
+            let action = AutomationMenuAction(rawValue: row.actionId)
+        else { return false }
         guard live.facts.revision == session.document.revision,
-              live.facts.parameter == activeParameter,
-              live.facts.parameter.track == nil || live.facts.parameter.track == activeTrack() else {
+            live.facts.parameter == activeParameter,
+            live.facts.parameter.track == nil || live.facts.parameter.track == activeTrack()
+        else {
             dismissMenu()
             return false
         }
@@ -417,9 +452,10 @@ extension AutomationPage {
 
         switch (action, live.target) {
         case (.rangeAuto, .lane), (.range16, .lane), (.range32, .lane),
-             (.range64, .lane), (.range127, .lane):
+            (.range64, .lane), (.range127, .lane):
             let ranges: [AutomationMenuAction: Int] = [
-                .rangeAuto: 0, .range16: 16, .range32: 32, .range64: 64, .range127: 127]
+                .rangeAuto: 0, .range16: 16, .range32: 32, .range64: 64, .range127: 127,
+            ]
             guard let range = ranges[action] else { return false }
             laneRanges[live.facts.parameter] = range
             onLaneRangeChanged?(live.facts.parameter, range)
@@ -458,11 +494,13 @@ extension AutomationPage {
 
     func rangeMenuRows(facts: AutomationFrozenFacts) -> [AutomationMenuRowHandle] {
         guard facts.metadata.zoomable else { return [] }
-        let selected = laneRanges[facts.parameter]
+        let selected =
+            laneRanges[facts.parameter]
             ?? Int(AutomationCatalog.defaultRange(facts.parameter.controller ?? 0))
         let entries: [(AutomationMenuAction, Int, String)] = [
             (.rangeAuto, 0, "Auto (fit to data)"), (.range16, 16, "0–16"),
-            (.range32, 32, "0–32"), (.range64, 64, "0–64"), (.range127, 127, "0–127 (full)")]
+            (.range32, 32, "0–32"), (.range64, 64, "0–64"), (.range127, 127, "0–127 (full)"),
+        ]
         return entries.map { action, value, text in
             let row = AutomationMenuRowHandle(actionId: action.rawValue, text: text, enabled: true)
             row.checkable = true
@@ -475,7 +513,8 @@ extension AutomationPage {
         guard let prompt else { return nil }
         let trimmed = promptDraft.trimmingCharacters(in: .whitespaces)
         guard let value = Int(trimmed),
-              value >= prompt.prompt.minimum, value <= prompt.prompt.maximum else {
+            value >= prompt.prompt.minimum, value <= prompt.prompt.maximum
+        else {
             return "Enter a whole number from \(prompt.prompt.minimum)"
                 + " to \(prompt.prompt.maximum)."
         }

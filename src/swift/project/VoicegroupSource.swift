@@ -58,8 +58,10 @@ public final class VoicegroupSource {
         let indices = ["\(projectRoot)/sound/voice_groups.inc", "\(projectRoot)/sound/voicegroups.inc"]
         var probes = indices
         if !base.isEmpty {
-            probes += ["\(projectRoot)/sound/voicegroups/\(base).inc",
-                       "\(projectRoot)/sound/voicegroups/vg_\(base).inc"]
+            probes += [
+                "\(projectRoot)/sound/voicegroups/\(base).inc",
+                "\(projectRoot)/sound/voicegroups/vg_\(base).inc",
+            ]
         }
         for path in probes where ProjectFileStore.exists(path) {
             guard let bytes = try? ProjectFileStore.read(path) else { continue }
@@ -72,8 +74,9 @@ public final class VoicegroupSource {
 
         // Index files win even when the corresponding per-file source is found by the scan.
         var candidates = indices.filter { ProjectFileStore.exists($0) }
-        candidates += (try? ProjectFileStore.listRecursive(
-            url: URL(filePath: "\(projectRoot)/sound/voicegroups"), ext: ".inc")) ?? []
+        candidates +=
+            (try? ProjectFileStore.listRecursive(
+                url: URL(filePath: "\(projectRoot)/sound/voicegroups"), ext: ".inc")) ?? []
         let needle = Array(base.utf8)
         for path in candidates {
             guard let bytes = try? ProjectFileStore.read(path) else { continue }
@@ -202,7 +205,9 @@ public final class VoicegroupSource {
         guard let declaration = declarations.first(where: { $0.symbol == symbol }) else { return .absent }
         if declarations.count > 1 {
             guard declaration.isLabel else {
-                return .invalid("\(path) declares \(symbol) with the voice_group macro inside a multi-voicegroup file — not an editable layout.")
+                return .invalid(
+                    "\(path) declares \(symbol) with the voice_group macro inside a multi-voicegroup file — not an editable layout."
+                )
             }
             sectionLabel = symbol
             loadName = symbol
@@ -221,10 +226,12 @@ public final class VoicegroupSource {
             let line = String(decoding: raw[..<end], as: UTF8.self)
             let range = NSRange(line.startIndex..<line.endIndex, in: line)
             if let match = macroDeclaration.firstMatch(in: line, range: range),
-               let name = Range(match.range(at: 1), in: line) {
+                let name = Range(match.range(at: 1), in: line)
+            {
                 found.append(.init(symbol: "voicegroup_" + String(line[name]), isLabel: false))
             } else if let match = labelDeclaration.firstMatch(in: line, range: range),
-                      let name = Range(match.range(at: 1), in: line) {
+                let name = Range(match.range(at: 1), in: line)
+            {
                 found.append(.init(symbol: String(line[name]), isLabel: true))
             }
         }
@@ -301,9 +308,10 @@ public final class VoicegroupSource {
 
     private func parsedSource(_ content: [UInt8]) -> ParsedSource? {
         let split = Self.splitLines(content)
-        var parsed = ParsedSource(lines: [], slotToLine: [Int](repeating: -1, count: 128),
-                                  sectionBegin: isMonolithic ? -1 : 0, sectionEnd: split.lines.count,
-                                  endsWithNewline: split.endsWithNewline)
+        var parsed = ParsedSource(
+            lines: [], slotToLine: [Int](repeating: -1, count: 128),
+            sectionBegin: isMonolithic ? -1 : 0, sectionEnd: split.lines.count,
+            endsWithNewline: split.endsWithNewline)
         parsed.lines.reserveCapacity(split.lines.count)
         let marker = Array((sectionLabel + "::").utf8)
         var active = !isMonolithic
@@ -321,8 +329,9 @@ public final class VoicegroupSource {
                 guard text.starts(with: marker) else { continue }
                 active = true
                 parsed.sectionBegin = index
-            } else if isMonolithic && voices > 0 &&
-                        (Self.containsAfterFirst(text, Self.doubleColon) || text.starts(with: Self.alignPrefix)) {
+            } else if isMonolithic && voices > 0
+                && (Self.containsAfterFirst(text, Self.doubleColon) || text.starts(with: Self.alignPrefix))
+            {
                 done = true
                 parsed.sectionEnd = index
                 continue
@@ -334,8 +343,7 @@ public final class VoicegroupSource {
                 continue
             }
             let matchedMacro = Self.macros.first(where: { text.starts(with: $0.prefix) })
-            let readOnly = text.starts(with: Self.cryReversePrefix) ||
-                text.starts(with: Self.cryPrefix)
+            let readOnly = text.starts(with: Self.cryReversePrefix) || text.starts(with: Self.cryPrefix)
             guard matchedMacro != nil || readOnly else { continue }
             line.slot = nextSlot
             nextSlot += 1
@@ -360,8 +368,8 @@ public final class VoicegroupSource {
     }
 
     private static func decode(_ macro: VgMacro, pieces: [[UInt8]]) -> VgVoice? {
-        let expected = macro == .keysplitAll ? 1 : macro == .keysplit ? 2 :
-            (macro == .square1 || macro == .square1Alt ? 8 : 7)
+        let expected =
+            macro == .keysplitAll ? 1 : macro == .keysplit ? 2 : (macro == .square1 || macro == .square1Alt ? 8 : 7)
         guard pieces.count == expected else { return nil }
         let values = pieces.map { piece in
             var start = 0
@@ -371,8 +379,7 @@ public final class VoicegroupSource {
             return Array(piece[start..<end])
         }
         for (index, value) in values.enumerated() {
-            let symbol = macro == .keysplit || macro == .keysplitAll ||
-                (vgMacroHasSymbol(macro) && index == 2)
+            let symbol = macro == .keysplit || macro == .keysplitAll || (vgMacroHasSymbol(macro) && index == 2)
             guard symbol ? !value.isEmpty : isInteger(value) else { return nil }
         }
         var voice = VgVoice(macro: macro)

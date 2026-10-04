@@ -91,8 +91,10 @@ enum GridGesture {
                 oppositeTick: oppositeTick, leading: leading))
     }
 
-    func updated(x: Double, y: Double, metrics: GridMetrics, grid: RollGrid,
-                 camera: EditorCamera, scale: ScaleProjection) -> GridGesture {
+    func updated(
+        x: Double, y: Double, metrics: GridMetrics, grid: RollGrid,
+        camera: EditorCamera, scale: ScaleProjection
+    ) -> GridGesture {
         func pitch(_ y: Double) -> Int {
             camera.projection.pitch(
                 atY: y, keyHeight: camera.snapshot.keyHeight,
@@ -116,9 +118,10 @@ enum GridGesture {
             let gridTicks = Int(grid.snapTicksAt(Tick(max(0, state.anchorTick)), camera: camera))
             if tick >= Double(state.anchorTick) {
                 state.tick = state.anchorTick
-                state.duration = max(
-                    state.anchorTick + gridTicks,
-                    Int(grid.snapTickUp(tick, camera: camera))) - state.anchorTick
+                state.duration =
+                    max(
+                        state.anchorTick + gridTicks,
+                        Int(grid.snapTickUp(tick, camera: camera))) - state.anchorTick
             } else {
                 state.tick = Int(grid.snapTickDown(tick, camera: camera))
                 state.duration = state.anchorTick + gridTicks - state.tick
@@ -128,16 +131,20 @@ enum GridGesture {
             return .draw(state)
         case .move(var state):
             let tick = camera.tickAtContentX(x)
-            let gridTicks = Int(grid.snapTicksAt(TimeDefaults.tick(from: max(0, state.pressTick)),
-                                                 camera: camera))
+            let gridTicks = Int(
+                grid.snapTicksAt(
+                    TimeDefaults.tick(from: max(0, state.pressTick)),
+                    camera: camera))
             state.dTick = Int(((tick - state.pressTick) / Double(gridTicks)).rounded()) * gridTicks
             if scale.fold {
                 let projection = camera.projection
-                let currentRow = projection.row(atY: y, keyHeight: camera.snapshot.keyHeight,
-                                                  scrollY: camera.snapshot.scrollY, dpr: metrics.dpr)
+                let currentRow = projection.row(
+                    atY: y, keyHeight: camera.snapshot.keyHeight,
+                    scrollY: camera.snapshot.scrollY, dpr: metrics.dpr)
                 let grabRow = projection.row(forPitch: state.pressKey)
                 if currentRow != PitchProjection.hiddenRow,
-                   grabRow != PitchProjection.hiddenRow {
+                    grabRow != PitchProjection.hiddenRow
+                {
                     var degrees = 0
                     if currentRow < grabRow {
                         for row in currentRow..<grabRow {
@@ -166,7 +173,8 @@ enum GridGesture {
         case .resize(var state):
             let tick = camera.tickAtContentX(x)
             let desired = Double(state.gripTick) + (tick - state.pressTick)
-            let snapped = state.leading
+            let snapped =
+                state.leading
                 ? min(
                     Int(grid.snapTick(desired, camera: camera)),
                     Int(grid.snapTickDown(Double(state.oppositeTick) - 1.0, camera: camera)))
@@ -181,8 +189,9 @@ enum GridGesture {
             guard abs(x - state.pressX) + abs(y - state.pressY) >= state.threshold else {
                 return .pendingMenu(state)
             }
-            return .band(Band(
-                pressX: state.pressX, pressY: state.pressY, curX: x, curY: y))
+            return .band(
+                Band(
+                    pressX: state.pressX, pressY: state.pressY, curX: x, curY: y))
         case .band(var state):
             state.curX = x
             state.curY = y

@@ -25,7 +25,8 @@ final class AudioTransport {
 
     init(sampleRate: Double, periodFrames: Int) {
         rampSamples = max(1, UInt32(sampleRate * 0.01))
-        settleSamples = UInt32(max(1, periodFrames)) + max(1, UInt32(sampleRate * 2 / 59.7275))
+        settleSamples =
+            UInt32(max(1, periodFrames)) + max(1, UInt32(sampleRate * 2 / 59.7275))
             + 2 * 1536 + max(1, UInt32((sampleRate / 8192).rounded(.up)))
     }
 
@@ -116,8 +117,7 @@ final class AudioTransport {
                 hold = settleSamples
                 target = requested
                 let prior = applied
-                if target == .playing && prior != .playing { remaining = 0 }
-                else { applied = target }
+                if target == .playing && prior != .playing { remaining = 0 } else { applied = target }
                 return .cut(target, resetStats: target == .playing && prior == .stopped)
             }
         } else {

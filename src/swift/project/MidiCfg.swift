@@ -28,7 +28,8 @@ public enum MidiCfg {
     /// Changes only the first matching song line, retaining other lines and their line endings.
     public static func writeMidiCfgLine(midiDir: URL, label: String, flags: [String]) throws {
         let path = midiDir.appendingPathComponent("midi.cfg").path
-        let content = FileManager.default.fileExists(atPath: path)
+        let content =
+            FileManager.default.fileExists(atPath: path)
             ? try ProjectFileStore.read(path) : Data()
         let split = ProjectFileStore.splitLines(content)
         var lines = split.lines

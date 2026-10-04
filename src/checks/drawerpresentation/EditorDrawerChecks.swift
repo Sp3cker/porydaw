@@ -45,7 +45,9 @@ final class drawerLayoutDrawerHarness {
     let trace = drawerLayoutDrawerCancelTrace()
 
     @discardableResult
-    func apply(_ operation: (inout EditorDrawerLayout) -> EditorDrawerChangeSet)
+    func apply(
+        _ operation: (inout EditorDrawerLayout) -> EditorDrawerChangeSet
+    )
         -> EditorDrawerChangeSet
     {
         var working = layout
@@ -69,9 +71,10 @@ final class drawerLayoutDrawerStubPage: EditorDrawerPage {
 
     private let harness: drawerLayoutDrawerHarness
 
-    init(kind: DrawerSectionKind, url: String, policy: EditorDrawerBodyPolicy,
-         harness: drawerLayoutDrawerHarness)
-    {
+    init(
+        kind: DrawerSectionKind, url: String, policy: EditorDrawerBodyPolicy,
+        harness: drawerLayoutDrawerHarness
+    ) {
         sectionKind = kind
         contentUrl = url
         bodyPolicy = policy
@@ -87,11 +90,13 @@ final class drawerLayoutDrawerStubPage: EditorDrawerPage {
 
 /// Test-owned page policy: a default body height bounded by the container's
 /// piano-roll reserve, exactly like the production automation default.
-func drawerLayoutDrawerStubPolicy(declaredMaximum: Int? = nil,
-                              divisor: Int = 5) -> EditorDrawerBodyPolicy
-{
+func drawerLayoutDrawerStubPolicy(
+    declaredMaximum: Int? = nil,
+    divisor: Int = 5
+) -> EditorDrawerBodyPolicy {
     EditorDrawerBodyPolicy(maximumBodyHeight: declaredMaximum) { hostHeight, metrics in
-        min(max(hostHeight / divisor, metrics.minimumBody),
+        min(
+            max(hostHeight / divisor, metrics.minimumBody),
             metrics.maximumDefaultBodyHeight(hostHeight: hostHeight))
     }
 }
@@ -105,31 +110,39 @@ func drawerLayoutDrawerMetrics() -> EditorDrawerMetrics {
 func drawerLayoutMakeDrawerHarness(hostHeight: Int = drawerLayoutDrawerHostHeight) -> drawerLayoutDrawerHarness {
     let harness = drawerLayoutDrawerHarness()
     harness.apply {
-        $0.configureHost(hostWidth: drawerLayoutDrawerHostWidth, hostHeight: hostHeight,
-                         gutterWidth: drawerLayoutDrawerGutterWidth)
+        $0.configureHost(
+            hostWidth: drawerLayoutDrawerHostWidth, hostHeight: hostHeight,
+            gutterWidth: drawerLayoutDrawerGutterWidth)
     }
     harness.apply { $0.configureMetrics(drawerLayoutDrawerMetrics()) }
     return harness
 }
 
 @MainActor
-func drawerLayoutMakeDrawerPage(_ kind: DrawerSectionKind, harness: drawerLayoutDrawerHarness) -> drawerLayoutDrawerStubPage {
+func drawerLayoutMakeDrawerPage(
+    _ kind: DrawerSectionKind, harness: drawerLayoutDrawerHarness
+) -> drawerLayoutDrawerStubPage {
     switch kind {
     case .velocity:
-        drawerLayoutDrawerStubPage(kind: .velocity, url: drawerLayoutDrawerVelocityUrl,
-                       policy: drawerLayoutDrawerStubPolicy(divisor: 6), harness: harness)
+        drawerLayoutDrawerStubPage(
+            kind: .velocity, url: drawerLayoutDrawerVelocityUrl,
+            policy: drawerLayoutDrawerStubPolicy(divisor: 6), harness: harness)
     case .voiceChanges:
-        drawerLayoutDrawerStubPage(kind: .voiceChanges, url: drawerLayoutDrawerVoiceChangesUrl,
-                       policy: drawerLayoutDrawerStubPolicy(declaredMaximum: drawerLayoutDrawerMinimumBody * 5 / 2),
-                       harness: harness)
+        drawerLayoutDrawerStubPage(
+            kind: .voiceChanges, url: drawerLayoutDrawerVoiceChangesUrl,
+            policy: drawerLayoutDrawerStubPolicy(declaredMaximum: drawerLayoutDrawerMinimumBody * 5 / 2),
+            harness: harness)
     case .automation:
-        drawerLayoutDrawerStubPage(kind: .automation, url: drawerLayoutDrawerAutomationUrl,
-                       policy: drawerLayoutDrawerStubPolicy(), harness: harness)
+        drawerLayoutDrawerStubPage(
+            kind: .automation, url: drawerLayoutDrawerAutomationUrl,
+            policy: drawerLayoutDrawerStubPolicy(), harness: harness)
     }
 }
 
 @MainActor
-func drawerLayoutAttachDrawerPages(_ harness: drawerLayoutDrawerHarness)
+func drawerLayoutAttachDrawerPages(
+    _ harness: drawerLayoutDrawerHarness
+)
     -> [DrawerSectionKind: drawerLayoutDrawerStubPage]
 {
     var pages: [DrawerSectionKind: drawerLayoutDrawerStubPage] = [:]
@@ -156,7 +169,9 @@ func drawerLayoutStoreDrawerHeight(_ harness: drawerLayoutDrawerHarness, _ kind:
 /// Three attached, visible sections with stored heights 60 (velocity), 50 (voice
 /// changes) and 100 (automations).
 @MainActor
-func drawerLayoutMakeStoredDrawerHarness(hostHeight: Int = drawerLayoutDrawerHostHeight)
+func drawerLayoutMakeStoredDrawerHarness(
+    hostHeight: Int = drawerLayoutDrawerHostHeight
+)
     -> (harness: drawerLayoutDrawerHarness, pages: [DrawerSectionKind: drawerLayoutDrawerStubPage])
 {
     let harness = drawerLayoutMakeDrawerHarness(hostHeight: hostHeight)
@@ -169,51 +184,61 @@ func drawerLayoutMakeStoredDrawerHarness(hostHeight: Int = drawerLayoutDrawerHos
 }
 
 @MainActor
-func drawerLayoutExpectDrawerBody(_ report: CheckReport, cppID: String, message: String,
-                              _ geometry: EditorDrawerSectionGeometry,
-                              x: Int, y: Int, width: Int, height: Int)
-{
-    report.expect(geometry.bodyX == x && geometry.bodyY == y && geometry.bodyWidth == width &&
-                  geometry.bodyHeight == height, cppID: cppID, message: message)
+func drawerLayoutExpectDrawerBody(
+    _ report: CheckReport, cppID: String, message: String,
+    _ geometry: EditorDrawerSectionGeometry,
+    x: Int, y: Int, width: Int, height: Int
+) {
+    report.expect(
+        geometry.bodyX == x && geometry.bodyY == y && geometry.bodyWidth == width && geometry.bodyHeight == height,
+        cppID: cppID, message: message)
 }
 
 @MainActor
-func drawerLayoutExpectDrawerHandle(_ report: CheckReport, cppID: String, message: String,
-                                _ geometry: EditorDrawerSectionGeometry,
-                                _ body: EditorDrawerSectionGeometry,
-                                y: Int, height: Int)
-{
-    report.expect(geometry.handleY == y && geometry.handleHeight == height &&
-                  geometry.bodyX == body.bodyX && geometry.bodyWidth == body.bodyWidth,
-                  cppID: cppID, message: message)
+func drawerLayoutExpectDrawerHandle(
+    _ report: CheckReport, cppID: String, message: String,
+    _ geometry: EditorDrawerSectionGeometry,
+    _ body: EditorDrawerSectionGeometry,
+    y: Int, height: Int
+) {
+    report.expect(
+        geometry.handleY == y && geometry.handleHeight == height && geometry.bodyX == body.bodyX
+            && geometry.bodyWidth == body.bodyWidth,
+        cppID: cppID, message: message)
 }
 
 @MainActor
-func drawerLayoutExpectDrawerToggle(_ report: CheckReport, cppID: String, message: String,
-                                _ geometry: EditorDrawerSectionGeometry,
-                                x: Int, y: Int, size: Int)
-{
-    report.expect(geometry.toggleX == x && geometry.toggleY == y && geometry.toggleSize == size,
-                  cppID: cppID, message: message)
+func drawerLayoutExpectDrawerToggle(
+    _ report: CheckReport, cppID: String, message: String,
+    _ geometry: EditorDrawerSectionGeometry,
+    x: Int, y: Int, size: Int
+) {
+    report.expect(
+        geometry.toggleX == x && geometry.toggleY == y && geometry.toggleSize == size,
+        cppID: cppID, message: message)
 }
 
 @MainActor
-func drawerLayoutExpectDrawerPreference(_ report: CheckReport, cppID: String,
-                                    _ change: EditorDrawerChangeSet,
-                                    _ kind: DrawerSectionKind, visible: Bool,
-                                    storedBodyHeight: Int?, message: String)
-{
-    report.expect(change.sectionPreferences.contains {
-        $0.kind == kind && $0.visible == visible && $0.storedBodyHeight == storedBodyHeight
-    }, cppID: cppID, message: message)
+func drawerLayoutExpectDrawerPreference(
+    _ report: CheckReport, cppID: String,
+    _ change: EditorDrawerChangeSet,
+    _ kind: DrawerSectionKind, visible: Bool,
+    storedBodyHeight: Int?, message: String
+) {
+    report.expect(
+        change.sectionPreferences.contains {
+            $0.kind == kind && $0.visible == visible && $0.storedBodyHeight == storedBodyHeight
+        }, cppID: cppID, message: message)
 }
 
 @MainActor
-func drawerLayoutExpectNoDrawerRecords(_ report: CheckReport, cppID: String,
-                                   _ change: EditorDrawerChangeSet, message: String)
-{
-    report.expect(change.sectionPreferences.isEmpty && change.activePagePreference == nil,
-                  cppID: cppID, message: message)
+func drawerLayoutExpectNoDrawerRecords(
+    _ report: CheckReport, cppID: String,
+    _ change: EditorDrawerChangeSet, message: String
+) {
+    report.expect(
+        change.sectionPreferences.isEmpty && change.activePagePreference == nil,
+        cppID: cppID, message: message)
 }
 
 @MainActor
@@ -224,11 +249,12 @@ func drawerTypographyRoles(_ report: CheckReport) {
         let automation = AutomationPage(baseFontPx: Double(base))
         let voice = VoiceChangesPage(baseFontPx: Double(base))
         func expect(_ map: [String: QVariantSettable], _ role: GridFontSpec, _ label: String) {
-            report.expect((map["family"] as? String) == role.family
-                          && (map["pixelSize"] as? Int) == role.pixelSize
-                          && (map["weight"] as? Int) == role.weight
-                          && (map["letterSpacing"] as? Double) == role.letterSpacing,
-                          cppID: cppID, message: "\(label) follows the typography role at \(base)")
+            report.expect(
+                (map["family"] as? String) == role.family
+                    && (map["pixelSize"] as? Int) == role.pixelSize
+                    && (map["weight"] as? Int) == role.weight
+                    && (map["letterSpacing"] as? Double) == role.letterSpacing,
+                cppID: cppID, message: "\(label) follows the typography role at \(base)")
         }
         expect(automation.captionFont, typography.caption, "automation caption")
         expect(automation.titleFont, typography.captionBold, "automation title")
@@ -239,25 +265,29 @@ func drawerTypographyRoles(_ report: CheckReport) {
         expect(voice.titleFont, typography.captionBold, "voice gutter title")
         expect(voice.noteNameFont, typography.noteName, "voice hover")
         expect(PromptAppearance.font(typography: typography), typography.body, "prompt")
-        report.expect(typography.captionMinimum.pixelSize == typography.fontPx(2.0 / 3.0)
-                      && typography.captionMinimum.family == typography.caption.family
-                      && typography.captionMinimum.weight == typography.caption.weight,
-                      cppID: cppID, message: "minimum caption uses the caption face and floor")
-        report.expect(automation.pipExtent == Double(typography.fontPx(0.5))
-                      && automation.minimumCellHeight == typography.fontPxF(4.0 / 3.0),
-                      cppID: cppID, message: "tab pip and minimum height follow the base font")
+        report.expect(
+            typography.captionMinimum.pixelSize == typography.fontPx(2.0 / 3.0)
+                && typography.captionMinimum.family == typography.caption.family
+                && typography.captionMinimum.weight == typography.caption.weight,
+            cppID: cppID, message: "minimum caption uses the caption face and floor")
+        report.expect(
+            automation.pipExtent == Double(typography.fontPx(0.5))
+                && automation.minimumCellHeight == typography.fontPxF(4.0 / 3.0),
+            cppID: cppID, message: "tab pip and minimum height follow the base font")
         let metrics = PromptAppearance.metrics(base: Double(base))
-        report.expect((metrics["radius"] as? Int) == typography.space(.half)
-                      && (metrics["dialogPadding"] as? Int) == typography.space(.one)
-                      && (metrics["verticalPadding"] as? Int) == typography.space(.half)
-                      && (metrics["dragThreshold"] as? Double) == typography.fontPxF(1),
-                      cppID: cppID, message: "prompt geometry follows session layout tokens")
-        report.expect((automation.promptAppearance["dialogPadding"] as? Int)
-                          == typography.space(.one)
-                      && (automation.promptAppearance["buttonPadding"] as? Int)
-                          == typography.space(.one)
-                      && automation.promptInputWidth == typography.fontPx(16),
-                      cppID: cppID, message: "automation prompt publishes font-relative padding and width")
+        report.expect(
+            (metrics["radius"] as? Int) == typography.space(.half)
+                && (metrics["dialogPadding"] as? Int) == typography.space(.one)
+                && (metrics["verticalPadding"] as? Int) == typography.space(.half)
+                && (metrics["dragThreshold"] as? Double) == typography.fontPxF(1),
+            cppID: cppID, message: "prompt geometry follows session layout tokens")
+        report.expect(
+            (automation.promptAppearance["dialogPadding"] as? Int)
+                == typography.space(.one)
+                && (automation.promptAppearance["buttonPadding"] as? Int)
+                    == typography.space(.one)
+                && automation.promptInputWidth == typography.fontPx(16),
+            cppID: cppID, message: "automation prompt publishes font-relative padding and width")
     }
 }
 

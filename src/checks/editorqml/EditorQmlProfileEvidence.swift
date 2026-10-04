@@ -49,8 +49,10 @@ extension EditorQmlLane {
     /// roles the record must carry. The parent validates exactly these names, so a
     /// role that stops being recorded fails the lane instead of vanishing.
     static let profilePaletteSource = "GridPalette"
-    static let profilePaletteRoles = ["windowBackground", "chromeBackground", "rollBackground",
-                                      "keyboardLabel", "selectionRing"]
+    static let profilePaletteRoles = [
+        "windowBackground", "chromeBackground", "rollBackground",
+        "keyboardLabel", "selectionRing",
+    ]
 
     /// The fixture root `run_checks.ts` stages for `fixtureRootKind`
     /// `decomp-project` (`src/checks/fixtures/decompproject`).
@@ -85,7 +87,7 @@ extension EditorQmlLane {
     /// read.
     static func profileEvidence(path: String) -> String {
         guard let data = FileManager.default.contents(atPath: path),
-              let record = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            let record = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
         else { return " (no readable metadata)" }
         func value(_ key: String) -> String {
             record[key].map { "\($0)" } ?? "?"
@@ -115,8 +117,10 @@ extension EditorQmlLane {
     /// requested device pixel ratio. A pane that was never captured, or captured
     /// under another identity, is never accepted on the strength of the file's
     /// name.
-    static func profileMetadataMismatch(path: String, profile: String, pane: String,
-                                        staged: (root: String, label: String)) -> String? {
+    static func profileMetadataMismatch(
+        path: String, profile: String, pane: String,
+        staged: (root: String, label: String)
+    ) -> String? {
         guard let data = FileManager.default.contents(atPath: path) else {
             return "unreadable metadata"
         }
@@ -133,20 +137,20 @@ extension EditorQmlLane {
             return "the lane declares no reference profile \(profile)"
         }
         guard let requestedDpr = (record["requestedDpr"] as? NSNumber)?.doubleValue,
-              let requestedFont = (record["requestedFontPx"] as? NSNumber)?.doubleValue,
-              let observedDpr = (record["observedDpr"] as? NSNumber)?.doubleValue,
-              let observedFont = (record["observedFontPx"] as? NSNumber)?.doubleValue
+            let requestedFont = (record["requestedFontPx"] as? NSNumber)?.doubleValue,
+            let observedDpr = (record["observedDpr"] as? NSNumber)?.doubleValue,
+            let observedFont = (record["observedFontPx"] as? NSNumber)?.doubleValue
         else {
             return "metadata carries no requested or observed device pixel ratio and font"
         }
         guard abs(requestedDpr - referenceProfile.dpr) < 0.001,
-              abs(observedDpr - requestedDpr) < 0.001
+            abs(observedDpr - requestedDpr) < 0.001
         else {
             return "metadata records dpr \(requestedDpr) requested / \(observedDpr) observed,"
                 + " not the profile's \(referenceProfile.dpr)"
         }
         guard abs(requestedFont - Double(referenceProfile.fontPx)) < 0.001,
-              abs(observedFont - requestedFont) < 0.001
+            abs(observedFont - requestedFont) < 0.001
         else {
             return "metadata records font \(requestedFont) requested / \(observedFont) observed,"
                 + " not the profile's \(referenceProfile.fontPx)"
@@ -184,15 +188,15 @@ extension EditorQmlLane {
                 + ", not \(expectedFixture ?? "nothing")"
         }
         guard let logicalWidth = (record["logicalWidth"] as? NSNumber)?.doubleValue,
-              let logicalHeight = (record["logicalHeight"] as? NSNumber)?.doubleValue,
-              logicalWidth > 0, logicalHeight > 0
+            let logicalHeight = (record["logicalHeight"] as? NSNumber)?.doubleValue,
+            logicalWidth > 0, logicalHeight > 0
         else {
             return "metadata carries no logical size"
         }
         guard let region = record["region"] as? [String: Any],
-              let regionWidth = (region["width"] as? NSNumber)?.doubleValue,
-              let regionHeight = (region["height"] as? NSNumber)?.doubleValue,
-              abs(regionWidth - logicalWidth) <= 1, abs(regionHeight - logicalHeight) <= 1
+            let regionWidth = (region["width"] as? NSNumber)?.doubleValue,
+            let regionHeight = (region["height"] as? NSNumber)?.doubleValue,
+            abs(regionWidth - logicalWidth) <= 1, abs(regionHeight - logicalHeight) <= 1
         else {
             return "metadata's region does not cover its logical size"
         }
@@ -206,7 +210,7 @@ extension EditorQmlLane {
             return "the capture's PNG carries no readable header"
         }
         guard abs(pixels.width - logicalWidth * requestedDpr) <= 1,
-              abs(pixels.height - logicalHeight * requestedDpr) <= 1
+            abs(pixels.height - logicalHeight * requestedDpr) <= 1
         else {
             return "the PNG is \(Int(pixels.width))x\(Int(pixels.height)) at dpr \(requestedDpr),"
                 + " not the recorded \(logicalWidth)x\(logicalHeight) logical size"
@@ -219,8 +223,8 @@ extension EditorQmlLane {
     /// the image it names at the requested device pixel ratio.
     private static func pngPixelSize(path: String) -> (width: Double, height: Double)? {
         guard let handle = FileHandle(forReadingAtPath: path),
-              let data = try? handle.read(upToCount: 24), data.count == 24,
-              data.prefix(8) == Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+            let data = try? handle.read(upToCount: 24), data.count == 24,
+            data.prefix(8) == Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
         else { return nil }
         func bigEndian32(_ offset: Int) -> Double {
             data.dropFirst(offset).prefix(4).reduce(0) { $0 * 256 + Double($1) }
@@ -236,35 +240,41 @@ extension EditorQmlBootstrap {
     /// passes silently. The record carries the pane's production component and
     /// drawn root, the theme and the palette the capture rendered under, the
     /// staged fixture identity, and the exact logical size it covered.
-    func writeProfileMetadataImpl(pane: String, observedDpr: Double, observedFontPx: Double,
-                                     drawnRoot: String, logicalWidth: Double, logicalHeight: Double,
-                                     regionX: Int, regionY: Int,
-                                     regionWidth: Int, regionHeight: Int) -> Bool {
+    func writeProfileMetadataImpl(
+        pane: String, observedDpr: Double, observedFontPx: Double,
+        drawnRoot: String, logicalWidth: Double, logicalHeight: Double,
+        regionX: Int, regionY: Int,
+        regionWidth: Int, regionHeight: Int
+    ) -> Bool {
         guard profileActive, !pane.isEmpty, logicalWidth > 0, logicalHeight > 0 else { return false }
         let requestedDpr = EditorQmlBootstrap.stagedProfileDpr
         let requestedFont = Double(EditorQmlBootstrap.stagedProfileFontPx)
         guard abs(observedDpr - requestedDpr) < 0.001,
-              abs(observedFontPx - requestedFont) < 0.001
+            abs(observedFontPx - requestedFont) < 0.001
         else { return false }
         // The palette the captured pages were attached to — the production grid's
         // own role table, read live rather than copied from a constant — and the
         // fixture identity of the project this process staged and opened.
         let stagedPalette = session.flatMap { $0.songOpen ? $0.gridPresenter().palette : nil }
-        let stagedFixture = EditorQmlLane.fixtureIdentity(root: projectRoot,
-                                                          label: EditorQmlBootstrap.stagedSongLabel)
+        let stagedFixture = EditorQmlLane.fixtureIdentity(
+            root: projectRoot,
+            label: EditorQmlBootstrap.stagedSongLabel)
         guard let identity = EditorQmlLane.paneIdentities[pane], identity.drawnRoot == drawnRoot,
-              let palette = stagedPalette, let fixture = stagedFixture
+            let palette = stagedPalette, let fixture = stagedFixture
         else {
-            reportProfileRefusal(pane: pane, drawnRoot: drawnRoot, palette: stagedPalette != nil,
-                                 fixture: stagedFixture)
+            reportProfileRefusal(
+                pane: pane, drawnRoot: drawnRoot, palette: stagedPalette != nil,
+                fixture: stagedFixture)
             return false
         }
-        let paletteRecord: [String: Any] = ["source": EditorQmlLane.profilePaletteSource,
-                                            "windowBackground": palette.windowBackground,
-                                            "chromeBackground": palette.chromeBackground,
-                                            "rollBackground": palette.rollBackground,
-                                            "keyboardLabel": palette.keyboardLabel,
-                                            "selectionRing": palette.selectionRing]
+        let paletteRecord: [String: Any] = [
+            "source": EditorQmlLane.profilePaletteSource,
+            "windowBackground": palette.windowBackground,
+            "chromeBackground": palette.chromeBackground,
+            "rollBackground": palette.rollBackground,
+            "keyboardLabel": palette.keyboardLabel,
+            "selectionRing": palette.selectionRing,
+        ]
         let metadata: [String: Any] = [
             "profile": EditorQmlBootstrap.stagedProfile,
             "pane": pane,
@@ -282,20 +292,26 @@ extension EditorQmlBootstrap {
             "region": ["x": regionX, "y": regionY, "width": regionWidth, "height": regionHeight],
             "capture": EditorQmlLane.profileCaptureLabel,
         ]
-        guard let data = try? JSONSerialization.data(withJSONObject: metadata,
-                                                     options: [.sortedKeys])
+        guard
+            let data = try? JSONSerialization.data(
+                withJSONObject: metadata,
+                options: [.sortedKeys])
         else { return false }
-        let path = EditorQmlBootstrap.profileArtifactPath(
-            scratch: projectRoot, profile: EditorQmlBootstrap.stagedProfile, pane: pane) + ".json"
+        let path =
+            EditorQmlBootstrap.profileArtifactPath(
+                scratch: projectRoot, profile: EditorQmlBootstrap.stagedProfile, pane: pane) + ".json"
         return (try? data.write(to: URL(fileURLWithPath: path))) != nil
     }
 
     /// A refused record names itself in the child's own output: the parent prints
     /// that output when the child fails, so a missing pane identity, palette or
     /// fixture is a named refusal instead of a silent `false`.
-    private func reportProfileRefusal(pane: String, drawnRoot: String, palette: Bool,
-                                      fixture: String?) {
-        let line = "editorqml-drawer: refused \(pane) profile metadata (drawnRoot=\"\(drawnRoot)\","
+    private func reportProfileRefusal(
+        pane: String, drawnRoot: String, palette: Bool,
+        fixture: String?
+    ) {
+        let line =
+            "editorqml-drawer: refused \(pane) profile metadata (drawnRoot=\"\(drawnRoot)\","
             + " knownPane=\(EditorQmlLane.paneIdentities[pane] != nil), palette=\(palette),"
             + " fixture=\"\(fixture ?? "")\", profile=\"\(profileName)\")\n"
         FileHandle.standardError.write(Data(line.utf8))

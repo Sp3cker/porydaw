@@ -10,8 +10,10 @@ public struct TimelineScrollbar: Equatable, Sendable {
     public let trackLength: Double
     public let minimumThumbLength: Double
 
-    public init(minimum: Double, maximum: Double, value: Double,
-                pageStep: Double, trackLength: Double, minimumThumbLength: Double) {
+    public init(
+        minimum: Double, maximum: Double, value: Double,
+        pageStep: Double, trackLength: Double, minimumThumbLength: Double
+    ) {
         self.minimum = minimum
         self.maximum = maximum
         self.value = value
@@ -40,21 +42,29 @@ public struct TimelineScrollbar: Equatable, Sendable {
         max(minimum, min(maximum, requested))
     }
 
-    public func dragValue(from startValue: Double, startPosition: Double,
-                          position: Double) -> Double {
+    public func dragValue(
+        from startValue: Double, startPosition: Double,
+        position: Double
+    ) -> Double {
         guard thumbTravel > 0 else { return clamp(startValue) }
         return clamp(startValue + (position - startPosition) / thumbTravel * span)
     }
 
     /// Uses already-inverted platform deltas: do not flip their sign a second time.
-    public static func wheelDips(horizontal: Bool, pixelX: Double, pixelY: Double,
-                                 angleX: Double, angleY: Double,
-                                 wheelScrollLines: Double) -> Double {
-        let pixel = horizontal ? (pixelX != 0 ? pixelX : pixelY)
-                               : (pixelY != 0 ? pixelY : pixelX)
+    public static func wheelDips(
+        horizontal: Bool, pixelX: Double, pixelY: Double,
+        angleX: Double, angleY: Double,
+        wheelScrollLines: Double
+    ) -> Double {
+        let pixel =
+            horizontal
+            ? (pixelX != 0 ? pixelX : pixelY)
+            : (pixelY != 0 ? pixelY : pixelX)
         if pixel != 0 { return -pixel }
-        let angle = horizontal ? (angleX != 0 ? angleX : angleY)
-                               : (angleY != 0 ? angleY : angleX)
+        let angle =
+            horizontal
+            ? (angleX != 0 ? angleX : angleY)
+            : (angleY != 0 ? angleY : angleX)
         return -angle * wheelScrollLines / 120
     }
 }

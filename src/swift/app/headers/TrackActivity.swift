@@ -44,8 +44,10 @@ public struct TrackActivity {
     }
 
     @discardableResult
-    public mutating func advance(_ levels: [AudioActivityLevel], elapsedSeconds: Float,
-                                 playing: Bool) -> Bool {
+    public mutating func advance(
+        _ levels: [AudioActivityLevel], elapsedSeconds: Float,
+        playing: Bool
+    ) -> Bool {
         precondition(levels.count == 16)
         let elapsed = max(0, elapsedSeconds)
         if !playing {
@@ -53,8 +55,7 @@ public struct TrackActivity {
             var animating = false
             func fill(_ value: inout Float) {
                 value += (1 - value) * amount
-                if elapsed > 0 && 1 - value < 0.002 { value = 1 }
-                else if value < 1 { animating = true }
+                if elapsed > 0 && 1 - value < 0.002 { value = 1 } else if value < 1 { animating = true }
             }
             for index in intensities.indices {
                 fill(&intensities[index].left)
@@ -86,9 +87,11 @@ public struct TrackActivity {
         return true
     }
 
-    public static func physicalHeight(_ intensity: Float, meterHeight: Int,
-                                      dpr: Double, playing: Bool,
-                                      maximumIntensity: Float = 1) -> Int {
+    public static func physicalHeight(
+        _ intensity: Float, meterHeight: Int,
+        dpr: Double, playing: Bool,
+        maximumIntensity: Float = 1
+    ) -> Int {
         let painted = playing ? min(intensity, maximumIntensity) : intensity
         return Int((Double(painted) * Double(meterHeight) * dpr).rounded())
     }
@@ -97,8 +100,10 @@ public struct TrackActivity {
 extension TrackHeadersPresenter {
     /// Runs on the workspace's existing display cadence, including paused fill.
     @discardableResult
-    public func advanceActivity(levels: [AudioActivityLevel], elapsedSeconds: Float,
-                                playing: Bool) -> Bool {
+    public func advanceActivity(
+        levels: [AudioActivityLevel], elapsedSeconds: Float,
+        playing: Bool
+    ) -> Bool {
         let animating = activity.advance(levels, elapsedSeconds: elapsedSeconds, playing: playing)
         activityPlaying = playing
         for index in snapshots.indices where !snapshots[index].isAddTrack {
@@ -112,8 +117,10 @@ extension TrackHeadersPresenter {
     }
 
     func activityHeight(_ intensity: Float) -> Double {
-        Double(TrackActivity.physicalHeight(intensity,
-            meterHeight: max(0, rowHeight - separatorWidth), dpr: devicePixelRatio,
-            playing: activityPlaying)) / devicePixelRatio
+        Double(
+            TrackActivity.physicalHeight(
+                intensity,
+                meterHeight: max(0, rowHeight - separatorWidth), dpr: devicePixelRatio,
+                playing: activityPlaying)) / devicePixelRatio
     }
 }

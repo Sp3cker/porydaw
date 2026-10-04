@@ -90,8 +90,10 @@ extension ApplicationSession {
         }
     }
 
-    private func startProjectSwitch(path: String, label: String?,
-                                    restore: WorkspaceTabRecipe?) {
+    private func startProjectSwitch(
+        path: String, label: String?,
+        restore: WorkspaceTabRecipe?
+    ) {
         if songDock.presenter.songListings.isEmpty { songDock.songsLoading = true }
         let priorTask = activeReplacementTask
         prefetchedSong = nil

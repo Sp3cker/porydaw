@@ -36,9 +36,11 @@ final class ServiceBankAction: BankHistoryAction {
     private let inbox: BankResultInbox
     private(set) var current: AppliedBankEdit
 
-    init(service: ProjectService, slot: Int, before: BankVoice?, after: BankVoice,
-         token: UInt64?, materializedBlank: Bool, current: AppliedBankEdit,
-         inbox: BankResultInbox) {
+    init(
+        service: ProjectService, slot: Int, before: BankVoice?, after: BankVoice,
+        token: UInt64?, materializedBlank: Bool, current: AppliedBankEdit,
+        inbox: BankResultInbox
+    ) {
         self.service = service
         self.slot = slot
         self.before = before
@@ -55,26 +57,30 @@ final class ServiceBankAction: BankHistoryAction {
             switch direction {
             case .undo:
                 if materializedBlank, let live = token {
-                    result = try await service.bankRevert(lease: current.lease, token: live,
-                                                          publishResult: false)
+                    result = try await service.bankRevert(
+                        lease: current.lease, token: live,
+                        publishResult: false)
                     token = nil
                 } else if let restore = before {
-                    result = try await service.bankApply(lease: current.lease, slot: slot,
-                                                         value: restore, expected: after,
-                                                         publishResult: false)
+                    result = try await service.bankApply(
+                        lease: current.lease, slot: slot,
+                        value: restore, expected: after,
+                        publishResult: false)
                 } else {
                     throw ProjectServiceError.operationFailed("Bank undo has no pre-edit voice.")
                 }
             case .redo:
                 if materializedBlank, token == nil {
-                    result = try await service.bankApply(lease: current.lease, slot: slot,
-                                                         value: after, expected: nil,
-                                                         publishResult: false)
+                    result = try await service.bankApply(
+                        lease: current.lease, slot: slot,
+                        value: after, expected: nil,
+                        publishResult: false)
                     token = result.materializationToken
                 } else if let reapply = before {
-                    result = try await service.bankApply(lease: current.lease, slot: slot,
-                                                         value: after, expected: reapply,
-                                                         publishResult: false)
+                    result = try await service.bankApply(
+                        lease: current.lease, slot: slot,
+                        value: after, expected: reapply,
+                        publishResult: false)
                 } else {
                     throw ProjectServiceError.operationFailed("Bank redo has no pre-edit voice.")
                 }
@@ -93,24 +99,25 @@ final class ServiceBankAction: BankHistoryAction {
 
     func merged(with newer: any BankHistoryAction) -> (any BankHistoryAction)? {
         guard let other = newer as? ServiceBankAction,
-              other.service === service,
-              other.slot == slot,
-              BankBindingIdentity(other.current.lease) == BankBindingIdentity(current.lease),
-              !materializedBlank, !other.materializedBlank,
-              token == nil, other.token == nil,
-              let oldest = before, let middle = other.before,
-              middle == after,
-              bankChangedFieldMask(oldest, after) == bankChangedFieldMask(middle, other.after)
+            other.service === service,
+            other.slot == slot,
+            BankBindingIdentity(other.current.lease) == BankBindingIdentity(current.lease),
+            !materializedBlank, !other.materializedBlank,
+            token == nil, other.token == nil,
+            let oldest = before, let middle = other.before,
+            middle == after,
+            bankChangedFieldMask(oldest, after) == bankChangedFieldMask(middle, other.after)
         else { return nil }
-        return ServiceBankAction(service: service, slot: slot, before: oldest,
-                                 after: other.after, token: nil, materializedBlank: false,
-                                 current: other.current, inbox: inbox)
+        return ServiceBankAction(
+            service: service, slot: slot, before: oldest,
+            after: other.after, token: nil, materializedBlank: false,
+            current: other.current, inbox: inbox)
     }
 
     func rebaseCurrent(with newer: any BankHistoryAction) {
         guard let other = newer as? ServiceBankAction,
-              other.service === service,
-              BankBindingIdentity(other.current.lease) == BankBindingIdentity(current.lease)
+            other.service === service,
+            BankBindingIdentity(other.current.lease) == BankBindingIdentity(current.lease)
         else { return }
         current = other.current
     }
@@ -134,5 +141,3 @@ private func bankChangedFieldMask(_ before: BankVoice, _ after: BankVoice) -> UI
     if before.release != after.release { mask |= 1 << 11 }
     return mask
 }
-
-

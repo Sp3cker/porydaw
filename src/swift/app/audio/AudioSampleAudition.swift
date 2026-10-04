@@ -55,12 +55,15 @@ final class AudioSampleAudition {
     private func publish(_ index: Int, key: UInt8) {
         generation &+= 1
         slots[index].generation = generation
-        publication.store(generation << 16 | UInt64(index) << 8 | UInt64(key & 127),
-                          ordering: .releasing)
+        publication.store(
+            generation << 16 | UInt64(index) << 8 | UInt64(key & 127),
+            ordering: .releasing)
     }
 
-    func publish(samples: [Int8], frequency: UInt32, loopStart: UInt32,
-                 looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8) -> Bool {
+    func publish(
+        samples: [Int8], frequency: UInt32, loopStart: UInt32,
+        looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
+    ) -> Bool {
         guard !samples.isEmpty, let index = retiredSlot() else { return false }
         let bytes = replaceBytes(index, count: samples.count + 1)
             .bindMemory(to: Int8.self, capacity: samples.count + 1)
@@ -75,7 +78,7 @@ final class AudioSampleAudition {
         waves[index].size = UInt32(samples.count)
         waves[index].data = bytes
         slots[index].tone = ToneData()
-        slots[index].tone.type = 0 // VOICE_DIRECTSOUND
+        slots[index].tone.type = 0  // VOICE_DIRECTSOUND
         slots[index].tone.key = toneKey
         slots[index].tone.wav = waves.advanced(by: index)
         slots[index].tone.attack = adsr.attack
@@ -96,7 +99,7 @@ final class AudioSampleAudition {
         wave16.withUnsafeBytes { bytes.copyMemory(from: $0.baseAddress!, byteCount: 16) }
         waves[index] = WaveData()
         slots[index].tone = ToneData()
-        slots[index].tone.type = 3 // VOICE_PROGRAMMABLE_WAVE
+        slots[index].tone.type = 3  // VOICE_PROGRAMMABLE_WAVE
         slots[index].tone.key = 60
         slots[index].tone.wavePointer = words
         slots[index].tone.attack = adsr.attack & 7

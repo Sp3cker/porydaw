@@ -30,7 +30,8 @@ public struct SampleProvenance: Sendable, Equatable {
             sha256 = (try? box.decode(String.self, forKey: .sha256)) ?? ""
             leftOnly = (try? box.decode(Bool.self, forKey: .leftOnly)) ?? false
             if let value = try? box.decode(Double.self, forKey: .sf2Zone), value.isFinite,
-                value >= Double(Int.min), value < Double(Int.max) {
+                value >= Double(Int.min), value < Double(Int.max)
+            {
                 sf2Zone = Int(value)
             } else {
                 sf2Zone = -1
@@ -72,8 +73,10 @@ public struct SampleProvenance: Sendable, Equatable {
         init(from decoder: Decoder) throws {
             let box = try decoder.container(keyedBy: CodingKeys.self)
             guard !box.allKeys.isEmpty else {
-                throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath,
-                    debugDescription: "Missing sample parameters"))
+                throw DecodingError.dataCorrupted(
+                    .init(
+                        codingPath: decoder.codingPath,
+                        debugDescription: "Missing sample parameters"))
             }
             // QJsonObject stores these as doubles, even when the JSON token has a decimal/exponent.
             func whole(_ key: CodingKeys, default fallback: Int = 0) -> Int {
@@ -97,7 +100,8 @@ public struct SampleProvenance: Sendable, Equatable {
             crossfadeOn = (try? box.decode(Bool.self, forKey: .crossfadeOn)) ?? false
             ditherOn = (try? box.decode(Bool.self, forKey: .ditherOn)) ?? false
             let pitch = (try? box.decode(Double.self, forKey: .exactPitchOverride)) ?? 0
-            exactPitchOverride = pitch.isFinite && pitch >= 0 && pitch < 4_294_967_296
+            exactPitchOverride =
+                pitch.isFinite && pitch >= 0 && pitch < 4_294_967_296
                 ? UInt32(pitch) : 0
         }
 
@@ -122,7 +126,8 @@ public struct SampleProvenance: Sendable, Equatable {
 
     /// Encodes the version-one keys without depending on key order.
     public func jsonData() -> Data {
-        let document = Document(version: version,
+        let document = Document(
+            version: version,
             source: Source(path: sourcePath, sha256: sourceSha256, leftOnly: leftOnly, sf2Zone: sf2Zone),
             params: Parameters(params))
         let encoder = JSONEncoder()

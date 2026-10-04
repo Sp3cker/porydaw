@@ -88,11 +88,14 @@ extension AutomationPage {
     /// The document's tick-zero tempo in whole BPM, or `nil` when it has none.
     @QtIgnored public var tempoBpmAtTickZero: Int? {
         guard let session,
-              let point = session.document.state.tempo.first(where: { $0.tick == 0 }) else {
+            let point = session.document.state.tempo.first(where: { $0.tick == 0 })
+        else {
             return nil
         }
-        return Int(TimeDefaults.tempoBPM(
-            forMicrosecondsPerQuarterNote: point.microsecondsPerQuarterNote).rounded())
+        return Int(
+            TimeDefaults.tempoBPM(
+                forMicrosecondsPerQuarterNote: point.microsecondsPerQuarterNote
+            ).rounded())
     }
 
     /// Whether the accepted clipboard holds points for the active parameter, which

@@ -32,8 +32,9 @@ extension ApplicationSession {
 
     func routeEventListCommandImpl(command: Int, autoRepeat: Bool) -> Int {
         guard let command = EditCommand(rawValue: command), eventList.attached,
-              eventList.visible, !eventList.editing, !eventList.menuOpen,
-              let workspace else {
+            eventList.visible, !eventList.editing, !eventList.menuOpen,
+            let workspace
+        else {
             return EditKeyDecision.decline.rawValue
         }
         let available: Bool
@@ -43,12 +44,15 @@ extension ApplicationSession {
         default:
             available = commandRouter?.isAvailable(command) ?? false
         }
-        return EditKeyArbiter.decide(command: command, surface: EditSurfaceState(
-            pointerGestureActive: eventList.pointerDown,
-            timeSelectionActive: workspace.session.timeSelection?.isActive == true,
-            noteSelectionEmpty: workspace.session.selectedNotes.isEmpty,
-            origin: .eventList, autoRepeat: autoRepeat,
-            commandAvailable: available)).rawValue
+        return EditKeyArbiter.decide(
+            command: command,
+            surface: EditSurfaceState(
+                pointerGestureActive: eventList.pointerDown,
+                timeSelectionActive: workspace.session.timeSelection?.isActive == true,
+                noteSelectionEmpty: workspace.session.selectedNotes.isEmpty,
+                origin: .eventList, autoRepeat: autoRepeat,
+                commandAvailable: available)
+        ).rawValue
     }
 
     func performEventListCommandImpl(command: Int) {

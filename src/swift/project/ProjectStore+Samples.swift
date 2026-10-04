@@ -25,8 +25,9 @@ extension ProjectStore {
                 try SampleRegistrar.register(projectRoot: projectRoot, name: request.name, wav: request.wav)
             }
         } catch let error as SampleRegistrationError {
-            throw VoicegroupStoreError.operationFailed(error.message.isEmpty
-                ? "Could not commit \(request.name)." : error.message)
+            throw VoicegroupStoreError.operationFailed(
+                error.message.isEmpty
+                    ? "Could not commit \(request.name)." : error.message)
         }
         guard let context = ProjectContext.open(projectRoot: projectRoot) else {
             throw VoicegroupStoreError.operationFailed("Could not refresh the project sample maps.")

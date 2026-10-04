@@ -59,7 +59,8 @@ public struct KeybindingRegistry {
     /// Match any single-stroke binding, ignoring Keypad and GroupSwitch modifiers.
     public func matches(_ key: Int, _ modifiers: Int, _ id: String) -> Bool {
         guard key != 0, key != Self.unknownKey, !Self.modifierKeys.contains(key),
-              Self.byID[id]?.holdChord == 0 else { return false }
+            Self.byID[id]?.holdChord == 0
+        else { return false }
         let combined = key | (modifiers & Self.shortcutModifierMask)
         return sequences(id).contains { $0.strokes.count == 1 && $0.strokes[0] == combined }
     }
@@ -89,8 +90,10 @@ public struct KeybindingRegistry {
         let keys: String
         let holdChord: Int
 
-        init(_ id: String, _ scope: KeybindingScope, _ label: String,
-             standard: Standard? = nil, keys: String = "", holdChord: Int = 0) {
+        init(
+            _ id: String, _ scope: KeybindingScope, _ label: String,
+            standard: Standard? = nil, keys: String = "", holdChord: Int = 0
+        ) {
             self.id = id
             self.scope = scope
             self.label = label
@@ -166,10 +169,12 @@ public struct KeybindingRegistry {
         .init("roll.grid_triplet", .editorRouted, "Toggle Triplet Grid", keys: "Ctrl+3"),
         .init("roll.mute_tracks", .editorRouted, "Mute Selected Tracks", keys: "M"),
         .init("roll.solo_tracks", .window, "Solo Selected Tracks", keys: "S"),
-        .init("roll.velocity_drag", .editorRouted, "Adjust Velocity (Hold + Drag Note)",
-              holdChord: controlModifier),
-        .init("velocity.detent_unlock", .editorRouted, "Unlock Detents (Hold)",
-              holdChord: controlModifier),
+        .init(
+            "roll.velocity_drag", .editorRouted, "Adjust Velocity (Hold + Drag Note)",
+            holdChord: controlModifier),
+        .init(
+            "velocity.detent_unlock", .editorRouted, "Unlock Detents (Hold)",
+            holdChord: controlModifier),
         .init("automation.pencil_mode", .editorRouted, "Toggle Pencil Mode", keys: "B"),
         .init("eventlist.move_up", .editorRouted, "Move Event Up (Same Tick)", keys: "Alt+Up"),
         .init("eventlist.move_down", .editorRouted, "Move Event Down (Same Tick)", keys: "Alt+Down"),

@@ -155,7 +155,8 @@ public final class TrackHeadersPresenter {
         let trackCount = document.engineTracks.usedTrackCount
         let hasAdd = trackCount > 0 && document.canAddTrack
         let expectedCount = trackCount + (hasAdd ? 1 : 0)
-        let structural = snapshots.count != expectedCount
+        let structural =
+            snapshots.count != expectedCount
             || (structuralRevision == document.revision && appliedRevision != document.revision)
         if structural {
             cancelTransientState()
@@ -180,10 +181,11 @@ public final class TrackHeadersPresenter {
             next.append(makeSnapshot(track: track, session: session, program: span.program))
         }
         if hasAdd {
-            next.append(TrackHeaderSnapshot(
-                isAddTrack: true, title: "+ Add track",
-                titleFont: fontRoles.body,
-                subtitleFont: fontRoles.caption))
+            next.append(
+                TrackHeaderSnapshot(
+                    isAddTrack: true, title: "+ Add track",
+                    titleFont: fontRoles.body,
+                    subtitleFont: fontRoles.caption))
         }
         if structural {
             snapshots = next
@@ -193,7 +195,8 @@ public final class TrackHeadersPresenter {
             for index in next.indices {
                 // Native glyph centering belongs to the rendered text/font pair.
                 if next[index].title == snapshots[index].title,
-                   next[index].titleBold == snapshots[index].titleBold {
+                    next[index].titleBold == snapshots[index].titleBold
+                {
                     next[index].selectedTitleOffset = snapshots[index].selectedTitleOffset
                 }
                 publishRow(next[index], at: index)
@@ -220,17 +223,19 @@ public final class TrackHeadersPresenter {
 
         let trackCount = session.document.engineTracks.usedTrackCount
         guard resolvedPrograms.count == trackCount,
-              resolvedProgramStarts.count == trackCount,
-              resolvedProgramEnds.count == trackCount,
-              snapshots.count >= trackCount else {
+            resolvedProgramStarts.count == trackCount,
+            resolvedProgramEnds.count == trackCount,
+            snapshots.count >= trackCount
+        else {
             refreshFromDocument()
             return
         }
         let contextTick = playing ? nextTick : session.editCursor
         for track in 0..<trackCount {
             if playing && !playingChanged,
-               contextTick >= resolvedProgramStarts[track],
-               contextTick < resolvedProgramEnds[track] {
+                contextTick >= resolvedProgramStarts[track],
+                contextTick < resolvedProgramEnds[track]
+            {
                 continue
             }
             let span = resolvedProgramSpan(track: track, session: session, tick: contextTick)
@@ -240,7 +245,8 @@ public final class TrackHeadersPresenter {
             resolvedPrograms[track] = span.program
             var row = makeSnapshot(track: track, session: session, program: span.program)
             if row.title == snapshots[track].title,
-               row.titleBold == snapshots[track].titleBold {
+                row.titleBold == snapshots[track].titleBold
+            {
                 row.selectedTitleOffset = snapshots[track].selectedTitleOffset
             }
             publishRow(row, at: track)
@@ -253,14 +259,18 @@ public final class TrackHeadersPresenter {
     }
 
     /// QML's FontMetrics supplies native Qt measurements, not layout policy.
-    public func configureTextMetrics(titleLineSpacing: Double, boldLineSpacing: Double,
-                                     subtitleLineSpacing: Double) {
+    public func configureTextMetrics(
+        titleLineSpacing: Double, boldLineSpacing: Double,
+        subtitleLineSpacing: Double
+    ) {
         guard titleLineSpacing.isFinite, boldLineSpacing.isFinite,
-              subtitleLineSpacing.isFinite, titleLineSpacing > 0,
-              boldLineSpacing > 0, subtitleLineSpacing > 0 else { return }
-        let next = HeaderTextMetrics(title: Int(titleLineSpacing.rounded()),
-                                    bold: Int(boldLineSpacing.rounded()),
-                                    subtitle: Int(subtitleLineSpacing.rounded()))
+            subtitleLineSpacing.isFinite, titleLineSpacing > 0,
+            boldLineSpacing > 0, subtitleLineSpacing > 0
+        else { return }
+        let next = HeaderTextMetrics(
+            title: Int(titleLineSpacing.rounded()),
+            bold: Int(boldLineSpacing.rounded()),
+            subtitle: Int(subtitleLineSpacing.rounded()))
         guard next != textMetrics else { return }
         textMetrics = next
         publishGeometry()
@@ -269,7 +279,8 @@ public final class TrackHeadersPresenter {
 
     public func setSelectedTitleOffset(track: Int, x: Double, y: Double) {
         guard x.isFinite, y.isFinite, snapshots.indices.contains(track),
-              snapshots[track].track == track else { return }
+            snapshots[track].track == track
+        else { return }
         var row = snapshots[track]
         row.selectedTitleOffset = row.titleBold ? HeaderPoint(x: x, y: y) : HeaderPoint()
         publishRow(row, at: track)
@@ -287,7 +298,8 @@ public final class TrackHeadersPresenter {
 
     public func activateAddTrack() {
         guard let session, !session.isClosed, session.document.engineTracks.usedTrackCount > 0,
-              session.document.canAddTrack else { return }
+            session.document.canAddTrack
+        else { return }
         pendingVoice = PendingHeaderMenu(document: session.document, track: -1)
         onAddTrackRequested?()
     }
@@ -330,15 +342,21 @@ public final class TrackHeadersPresenter {
     }
     public func updateHover(x: Double, y: Double) { hover(x: x, y: y) }
     public func clearHover() {
-        if pointer.dragging { pointer.hoverRow = -1; pointer.hoverTarget = .none }
-        else { pointer = HeaderPointerState() }
+        if pointer.dragging {
+            pointer.hoverRow = -1; pointer.hoverTarget = .none
+        } else {
+            pointer = HeaderPointerState()
+        }
         publishPointerVisuals()
     }
-    public func handleWheel(angleDeltaX: Double, angleDeltaY: Double,
-                            pixelDeltaX: Double, pixelDeltaY: Double,
-                            modifiers: Int, phase: Int) -> Bool {
-        scrollWheel(angleDeltaX: angleDeltaX, angleDeltaY: angleDeltaY,
-                    pixelDeltaX: pixelDeltaX, pixelDeltaY: pixelDeltaY)
+    public func handleWheel(
+        angleDeltaX: Double, angleDeltaY: Double,
+        pixelDeltaX: Double, pixelDeltaY: Double,
+        modifiers: Int, phase: Int
+    ) -> Bool {
+        scrollWheel(
+            angleDeltaX: angleDeltaX, angleDeltaY: angleDeltaY,
+            pixelDeltaX: pixelDeltaX, pixelDeltaY: pixelDeltaY)
     }
     public func inputCancelled(reason: Int) {
         guard GridCancelReason(rawValue: reason) != nil else { return }
@@ -378,23 +396,29 @@ public final class TrackHeadersPresenter {
         guard let target = pendingVoice else { return }
         pendingVoice = nil
         guard (0...127).contains(program), let session,
-              target.matches(session.document) else { return }
+            target.matches(session.document)
+        else { return }
         if target.track < 0 {
             if session.document.canAddTrack,
-               let track = session.document.addTrack(voice: program) { selectTrack(track) }
+                let track = session.document.addTrack(voice: program)
+            {
+                selectTrack(track)
+            }
         } else if validTrack(target.track) {
             let points = session.document.lanePoints(track: target.track, lane: .voice)
             if let firstTick = points.first?.tick,
-               let firstChange = points.last(where: { $0.tick == firstTick }) {
+                let firstChange = points.last(where: { $0.tick == firstTick })
+            {
                 if program != firstChange.value {
                     session.document.moveLanePoints(
                         track: target.track, lane: .voice,
                         moves: [LanePointMove(point: firstChange, tick: firstTick, value: program)])
                 }
             } else {
-                session.document.writeLane(track: target.track, lane: .voice,
-                                           from: 0, through: 0,
-                                           points: [LaneWrite(tick: 0, value: program)])
+                session.document.writeLane(
+                    track: target.track, lane: .voice,
+                    from: 0, through: 0,
+                    points: [LaneWrite(tick: 0, value: program)])
             }
         }
         refreshFromDocument()
@@ -438,12 +462,16 @@ public final class TrackHeadersPresenter {
     func showHeaderMenu(track: Int, x: Double, y: Double) {
         guard let session, validTrack(track) else { return }
         dismissHeaderMenu()
-        let labels = ["Change voice...", "Show voice in voicegroup", "Rename track...",
-                      "Duplicate track", "Delete track"]
-        menuItems.reset(to: labels.enumerated().map { index, text in
-            TrackHeaderMenuItem(actionId: index + 1, text: text,
-                                enabled: index != 3 || session.document.canAddTrack)
-        })
+        let labels = [
+            "Change voice...", "Show voice in voicegroup", "Rename track...",
+            "Duplicate track", "Delete track",
+        ]
+        menuItems.reset(
+            to: labels.enumerated().map { index, text in
+                TrackHeaderMenuItem(
+                    actionId: index + 1, text: text,
+                    enabled: index != 3 || session.document.canAddTrack)
+            })
         pendingMenu = PendingHeaderMenu(document: session.document, track: track)
         menuOpen = true
         contextMenuRequested(x: x, y: y)

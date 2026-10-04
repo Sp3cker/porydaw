@@ -52,15 +52,19 @@ extension EditorQmlBootstrap {
     /// one. Running out of time is not: the open is still in flight, the suite's
     /// own bounded wait has not run yet, so the lane names what it saw and keeps
     /// the request alive for that wait instead of inventing a second timeout.
-    private func reportOpenOutcome(_ session: ApplicationSession, songLabel: String,
-                                   initialError: String) -> Bool {
+    private func reportOpenOutcome(
+        _ session: ApplicationSession, songLabel: String,
+        initialError: String
+    ) -> Bool {
         let failure = session.lastSaveError
         let state = "projectOpen=\(session.projectOpen) songOpen=\(session.songOpen)"
-        let reason = !failure.isEmpty && failure != initialError
+        let reason =
+            !failure.isEmpty && failure != initialError
             ? "failed (\(state)): \(failure)"
             : "is still in flight (\(state)) after \(EditorQmlBootstrap.openTimeout)s"
-        FileHandle.standardError.write(Data(
-            "editorqml-drawer: opening \"\(songLabel)\" at \(projectRoot) \(reason)\n".utf8))
+        FileHandle.standardError.write(
+            Data(
+                "editorqml-drawer: opening \"\(songLabel)\" at \(projectRoot) \(reason)\n".utf8))
         return failure.isEmpty || failure == initialError
     }
     /// Attaches a real `DrawerTestPage` in the kind's slot. Rejects an unknown
@@ -70,10 +74,10 @@ extension EditorQmlBootstrap {
     func attachTestSectionImpl(kind: Int, contentUrl: String) -> Bool {
         let trimmedUrl = contentUrl.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let session,
-              let sectionKind = DrawerSectionKind(rawValue: kind),
-              testPages[sectionKind] == nil,
-              !trimmedUrl.isEmpty,
-              URL(string: trimmedUrl) != nil
+            let sectionKind = DrawerSectionKind(rawValue: kind),
+            testPages[sectionKind] == nil,
+            !trimmedUrl.isEmpty,
+            URL(string: trimmedUrl) != nil
         else { return false }
         let page = DrawerTestPage(
             sectionKind: sectionKind,
@@ -92,8 +96,8 @@ extension EditorQmlBootstrap {
     /// `pageCancelCount` before this returns.
     func detachTestSectionImpl(kind: Int) {
         guard let session,
-              let sectionKind = DrawerSectionKind(rawValue: kind),
-              let page = testPages.removeValue(forKey: sectionKind)
+            let sectionKind = DrawerSectionKind(rawValue: kind),
+            let page = testPages.removeValue(forKey: sectionKind)
         else { return }
         session.drawerPresenter().detachSection(page)
     }

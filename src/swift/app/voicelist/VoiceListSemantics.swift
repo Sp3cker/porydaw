@@ -33,8 +33,10 @@ public struct VoiceListRow: Equatable, Sendable {
     public var altChip: Bool
     public var used: Bool
 
-    public init(slot: Int, title: String, typeName: String = "", adsr: String = "",
-                glyph: VoiceListGlyph? = nil, altChip: Bool = false, used: Bool = false) {
+    public init(
+        slot: Int, title: String, typeName: String = "", adsr: String = "",
+        glyph: VoiceListGlyph? = nil, altChip: Bool = false, used: Bool = false
+    ) {
         self.slot = slot
         self.title = title
         self.typeName = typeName
@@ -44,7 +46,6 @@ public struct VoiceListRow: Equatable, Sendable {
         self.used = used
     }
 }
-
 
 /// A value draft for editing a slot, mirroring VgVoiceDraft: editable slots
 /// edit in place; None-kind slots materialize the blank template;
@@ -91,8 +92,10 @@ public struct VoiceListAdsrDefaults: Equatable, Sendable {
     public var bySymbol: [String: VoiceListAdsr]
     public var byFamily: [Int32: VoiceListAdsr]
 
-    public init(bySymbol: [String: VoiceListAdsr] = [:],
-                byFamily: [Int32: VoiceListAdsr] = [:]) {
+    public init(
+        bySymbol: [String: VoiceListAdsr] = [:],
+        byFamily: [Int32: VoiceListAdsr] = [:]
+    ) {
         self.bySymbol = bySymbol
         self.byFamily = byFamily
     }
@@ -153,9 +156,9 @@ public enum VoiceListSemantics {
     public static func macroHasSymbol(_ macro: Int32) -> Bool {
         switch macro {
         case BankVoiceMacro.directSound, BankVoiceMacro.directSoundNoResample,
-             BankVoiceMacro.directSoundAlt, BankVoiceMacro.programmableWave,
-             BankVoiceMacro.programmableWaveAlt, BankVoiceMacro.keysplit,
-             BankVoiceMacro.keysplitAll:
+            BankVoiceMacro.directSoundAlt, BankVoiceMacro.programmableWave,
+            BankVoiceMacro.programmableWaveAlt, BankVoiceMacro.keysplit,
+            BankVoiceMacro.keysplitAll:
             return true
         default:
             return false
@@ -167,7 +170,7 @@ public enum VoiceListSemantics {
     public static func isDirectSoundFamily(_ macro: Int32) -> Bool {
         switch macro {
         case BankVoiceMacro.directSound, BankVoiceMacro.directSoundNoResample,
-             BankVoiceMacro.directSoundAlt:
+            BankVoiceMacro.directSoundAlt:
             return true
         default:
             return false
@@ -196,8 +199,8 @@ public enum VoiceListSemantics {
     public static func macroIsCgb(_ macro: Int32) -> Bool {
         switch macro {
         case BankVoiceMacro.directSound, BankVoiceMacro.directSoundNoResample,
-             BankVoiceMacro.directSoundAlt, BankVoiceMacro.keysplit,
-             BankVoiceMacro.keysplitAll:
+            BankVoiceMacro.directSoundAlt, BankVoiceMacro.keysplit,
+            BankVoiceMacro.keysplitAll:
             return false
         default:
             return true
@@ -209,7 +212,7 @@ public enum VoiceListSemantics {
     public static func adsrFamily(forMacro macro: Int32) -> Int32 {
         switch macro {
         case BankVoiceMacro.directSound, BankVoiceMacro.directSoundNoResample,
-             BankVoiceMacro.directSoundAlt:
+            BankVoiceMacro.directSoundAlt:
             return BankVoiceMacro.directSound
         case BankVoiceMacro.square1, BankVoiceMacro.square1Alt:
             return BankVoiceMacro.square1
@@ -226,8 +229,10 @@ public enum VoiceListSemantics {
 
     /// vgDefaultAdsr: project-typical envelope for the symbol, then the
     /// family, then the full-sustain fallback with a short release tail.
-    public static func defaultAdsr(_ defaults: VoiceListAdsrDefaults, macro: Int32,
-                                   symbol: String) -> VoiceListAdsr {
+    public static func defaultAdsr(
+        _ defaults: VoiceListAdsrDefaults, macro: Int32,
+        symbol: String
+    ) -> VoiceListAdsr {
         if !symbol.isEmpty, let bySymbol = defaults.bySymbol[symbol] {
             return bySymbol
         }
@@ -243,8 +248,7 @@ public enum VoiceListSemantics {
     /// vgVoiceStructuralChange: macro or symbol moved, so a scalar ToneData
     /// poke is not enough and the bank must reload from rendered source.
     public static func structuralChange(before: BankVoice, after: BankVoice) -> Bool {
-        before.macro != after.macro || before.symbol != after.symbol ||
-            before.keysplitTable != after.keysplitTable
+        before.macro != after.macro || before.symbol != after.symbol || before.keysplitTable != after.keysplitTable
     }
 
     /// m4aVoiceTypeName + the browser's synth/keysplit/alt-chip layering
@@ -341,4 +345,3 @@ public enum VoiceListSemantics {
         return "_" + text
     }
 }
-

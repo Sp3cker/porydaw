@@ -175,8 +175,10 @@ public final class PianoGrid: QmlUncreatable {
     /// - Parameter palette: The palette the roll draws with. The application
     ///   passes the session's one instance so every tab shares it, and a
     ///   standalone grid — checks, fixtures — keeps a palette of its own.
-    public init(session: DocumentSession, palette: GridPalette? = nil,
-                typography: Typography = Typography(baseFontPx: 13)) {
+    public init(
+        session: DocumentSession, palette: GridPalette? = nil,
+        typography: Typography = Typography(baseFontPx: 13)
+    ) {
         self.session = session
         roleTypography = typography
         scene.hoverChipFont = typography.caption.map
@@ -230,8 +232,10 @@ public final class PianoGrid: QmlUncreatable {
         refreshNotes()
     }
 
-    public func configureViewport(width: Double, height: Double,
-                                  fontPx: Double, dpr: Double) {
+    public func configureViewport(
+        width: Double, height: Double,
+        fontPx: Double, dpr: Double
+    ) {
         configureViewportImpl(width: width, height: height, fontPx: fontPx, dpr: dpr)
     }
 
@@ -241,28 +245,37 @@ public final class PianoGrid: QmlUncreatable {
 
     public func setCameraVScroll(value: Double) { setCameraVScrollImpl(value: value) }
 
-    public func scrollHorizontalByWheel(pixelX: Double, pixelY: Double,
-                                        angleX: Double, angleY: Double,
-                                        wheelScrollLines: Double) {
-        scrollHorizontalByWheelImpl(pixelX: pixelX, pixelY: pixelY, angleX: angleX,
-                                    angleY: angleY, wheelScrollLines: wheelScrollLines)
+    public func scrollHorizontalByWheel(
+        pixelX: Double, pixelY: Double,
+        angleX: Double, angleY: Double,
+        wheelScrollLines: Double
+    ) {
+        scrollHorizontalByWheelImpl(
+            pixelX: pixelX, pixelY: pixelY, angleX: angleX,
+            angleY: angleY, wheelScrollLines: wheelScrollLines)
     }
 
-    public func scrollVerticalByWheel(pixelX: Double, pixelY: Double,
-                                      angleX: Double, angleY: Double,
-                                      wheelScrollLines: Double) {
-        scrollVerticalByWheelImpl(pixelX: pixelX, pixelY: pixelY, angleX: angleX,
-                                  angleY: angleY, wheelScrollLines: wheelScrollLines)
+    public func scrollVerticalByWheel(
+        pixelX: Double, pixelY: Double,
+        angleX: Double, angleY: Double,
+        wheelScrollLines: Double
+    ) {
+        scrollVerticalByWheelImpl(
+            pixelX: pixelX, pixelY: pixelY, angleX: angleX,
+            angleY: angleY, wheelScrollLines: wheelScrollLines)
     }
 
-    public func handleWheel(angleDeltaX: Double, angleDeltaY: Double,
-                            pixelDeltaX: Double, pixelDeltaY: Double,
-                            modifiers: Int, phase: Int, overGutter: Bool,
-                            anchorX: Double, anchorY: Double) {
-        handleWheelImpl(angleDeltaX: angleDeltaX, angleDeltaY: angleDeltaY,
-                        pixelDeltaX: pixelDeltaX, pixelDeltaY: pixelDeltaY,
-                        modifiers: modifiers, phase: phase, overGutter: overGutter,
-                        anchorX: anchorX, anchorY: anchorY)
+    public func handleWheel(
+        angleDeltaX: Double, angleDeltaY: Double,
+        pixelDeltaX: Double, pixelDeltaY: Double,
+        modifiers: Int, phase: Int, overGutter: Bool,
+        anchorX: Double, anchorY: Double
+    ) {
+        handleWheelImpl(
+            angleDeltaX: angleDeltaX, angleDeltaY: angleDeltaY,
+            pixelDeltaX: pixelDeltaX, pixelDeltaY: pixelDeltaY,
+            modifiers: modifiers, phase: phase, overGutter: overGutter,
+            anchorX: anchorX, anchorY: anchorY)
     }
 
     public func setEditCursorTick(tick: Int) {
@@ -394,7 +407,6 @@ public final class PianoGrid: QmlUncreatable {
     }
 
 }
-
 
 @MainActor
 @QtBridgeable

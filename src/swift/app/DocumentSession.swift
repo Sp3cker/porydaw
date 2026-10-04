@@ -4,7 +4,6 @@ import PorydawProject
 
 // MARK: - Public session types
 
-
 /// The session state affected by a completed operation.
 public struct SessionChangeDomains: OptionSet, Sendable {
     public let rawValue: UInt8
@@ -29,8 +28,10 @@ public struct SessionChange: Sendable {
     public var trackRemap: TrackRemap?
     public var domains: SessionChangeDomains
 
-    public init(revision: UInt64, trackRemap: TrackRemap? = nil,
-                domains: SessionChangeDomains = [.document, .dirty, .history]) {
+    public init(
+        revision: UInt64, trackRemap: TrackRemap? = nil,
+        domains: SessionChangeDomains = [.document, .dirty, .history]
+    ) {
         self.revision = revision
         self.trackRemap = trackRemap
         self.domains = domains
@@ -89,7 +90,6 @@ public final class DocumentSession {
     public private(set) var lastKnownMidiBytes: [UInt8]?
     public private(set) var editorViewState = EditorViewState()
 
-
     /// Selection order is authoritative; membership is its cached lookup index.
     /// Both are session-only and never dirty the document or enter history.
     public internal(set) var selectedNoteOrder: [NoteID] = []
@@ -121,8 +121,9 @@ public final class DocumentSession {
     public internal(set) var camera: EditorCamera
     var grid: RollGrid
     var gridClockTicks: Tick {
-        TimelineSnapPolicy.clockTicks(division: document.ticksPerBeat,
-                                      extendedClocks: document.state.config.extendedClocks)
+        TimelineSnapPolicy.clockTicks(
+            division: document.ticksPerBeat,
+            extendedClocks: document.state.config.extendedClocks)
     }
     public var mutedTracks: Set<Int> = [] {
         didSet {
@@ -187,14 +188,17 @@ public final class DocumentSession {
     internal var pendingTrackRemap: TrackRemap?
     internal var publishedTrackTime = TrackTimeSelection()
 
-    public init(document: SongDocument, service: ProjectService,
-                lease: NativeBankLease, slots: [BankSlotView], dirty: Bool,
-                loadName: String, sampleRate: Double = 48_000) {
+    public init(
+        document: SongDocument, service: ProjectService,
+        lease: NativeBankLease, slots: [BankSlotView], dirty: Bool,
+        loadName: String, sampleRate: Double = 48_000
+    ) {
         self.document = document
         self.service = service
-        sharedBank = service.bankViews.state(for: AppliedBankEdit(
-            lease: lease, slots: slots, dirty: dirty, loadName: loadName,
-            materializationToken: nil))
+        sharedBank = service.bankViews.state(
+            for: AppliedBankEdit(
+                lease: lease, slots: slots, dirty: dirty, loadName: loadName,
+                materializationToken: nil))
         let timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
         self.timeline = timeline
         let limits = GridCameraPolicy.limits(baseFontPx: GridCameraPolicy.seedBaseFontPx)
@@ -204,13 +208,17 @@ public final class DocumentSession {
             viewportWidth: 0,
             rollHeight: 0,
             limits: limits)
-        grid = RollGrid(axis: TimeAxis(map: TimeMap(
-            ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
-            lengthTicks: timeline.lengthTicks,
-            timeSigs: document.timeSignatures.map {
-                TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
-                             denomPow2: $0.denominatorPower)
-            })), clockTicks: TimelineSnapPolicy.clockTicks(
+        grid = RollGrid(
+            axis: TimeAxis(
+                map: TimeMap(
+                    ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
+                    lengthTicks: timeline.lengthTicks,
+                    timeSigs: document.timeSignatures.map {
+                        TimeSigPoint(
+                            tick: $0.tick, numerator: $0.numerator,
+                            denomPow2: $0.denominatorPower)
+                    })),
+            clockTicks: TimelineSnapPolicy.clockTicks(
                 division: document.ticksPerBeat,
                 extendedClocks: document.state.config.extendedClocks))
         document.onChange = { [weak self] change in
@@ -323,8 +331,10 @@ public final class DocumentSession {
     /// Opens a song through the service, adopts it as the document (tempo
     /// metas stripped, authoritative tempo held by state), and composes the
     /// session. MIDI decode failure throws; nothing half-adopted is kept.
-    public static func open(service: ProjectService, label: String,
-                            sampleRate: Double = 48_000) async throws -> DocumentSession {
+    public static func open(
+        service: ProjectService, label: String,
+        sampleRate: Double = 48_000
+    ) async throws -> DocumentSession {
         let loaded = try await service.openSong(label: label)
         let midiBytes = loaded.midiBytes
         let file = try await Task { @concurrent in try MidiFile.decode(midiBytes) }.value
@@ -389,8 +399,10 @@ public final class DocumentSession {
     /// Confirmed user bank edit: applies through the service, then records the
     /// replayable action. Conflicts throw and record nothing.
     @discardableResult
-    public func applyBankEdit(slot: Int, value: BankVoice,
-                              expected: BankVoice?) async throws -> AppliedBankEdit {
+    public func applyBankEdit(
+        slot: Int, value: BankVoice,
+        expected: BankVoice?
+    ) async throws -> AppliedBankEdit {
         try requireOpen()
         guard !bankPersistenceInFlight else {
             throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
@@ -408,16 +420,19 @@ public final class DocumentSession {
             }
             flushPendingBankNotification()
         }
-        let result = try await service.bankApply(lease: bankLease, slot: slot,
-                                                 value: value, expected: expected,
-                                                 publishResult: false)
+        let result = try await service.bankApply(
+            lease: bankLease, slot: slot,
+            value: value, expected: expected,
+            publishResult: false)
         let materializationToken = expected == nil ? result.materializationToken : nil
         withStateChanges {
-            document.history.finishBankTransition(transition, recording: ServiceBankAction(
-                service: service, slot: slot, before: expected, after: value,
-                token: materializationToken,
-                materializedBlank: materializationToken != nil,
-                current: result, inbox: inbox))
+            document.history.finishBankTransition(
+                transition,
+                recording: ServiceBankAction(
+                    service: service, slot: slot, before: expected, after: value,
+                    token: materializationToken,
+                    materializedBlank: materializationToken != nil,
+                    current: result, inbox: inbox))
             ownsTransition = false
             adoptBank(result)
             pendingBankNotification = false
@@ -440,7 +455,8 @@ public final class DocumentSession {
     public func selectVoicegroup(_ arg: String) async throws {
         try requireOpen()
         guard !arg.isEmpty, arg != document.state.config.voicegroupArgument,
-              !bankPersistenceInFlight, !document.history.bankTransitionInFlight else { return }
+            !bankPersistenceInFlight, !document.history.bankTransitionInFlight
+        else { return }
         bankPersistenceInFlight = true
         defer {
             bankPersistenceInFlight = false
@@ -503,7 +519,8 @@ public final class DocumentSession {
         withStateChanges {
             var domains: SessionChangeDomains = [.dirty, .history]
             if changed, let preparedBank,
-               document.state.config.voicegroupArgument != previousArg {
+                document.state.config.voicegroupArgument != previousArg
+            {
                 adoptBank(preparedBank)
                 domains.insert(.bank)
             }
@@ -535,6 +552,5 @@ public final class DocumentSession {
         sharedBank.detach(self)
         return true
     }
-
 
 }

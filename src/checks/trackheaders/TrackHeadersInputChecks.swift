@@ -3,8 +3,10 @@ import PorydawApp
 import PorydawCore
 
 @MainActor
-internal func runTrackHeadersInputChecks(_ report: CheckReport, session: DocumentSession,
-                                        service: ProjectService) {
+internal func runTrackHeadersInputChecks(
+    _ report: CheckReport, session: DocumentSession,
+    service: ProjectService
+) {
     selectionAndVoiceRouteThroughHeaders(report, suite: session, service: service)
     headerSelectionTargetsResolve(report, suite: session, service: service)
     trackHeaderScopeTransitions(report, suite: session, service: service)
@@ -33,8 +35,10 @@ internal func runTrackHeadersInputChecks(_ report: CheckReport, session: Documen
 }
 
 @MainActor
-func rulerScopeHeaderRecordsGuard(_ report: CheckReport, suite: DocumentSession,
-                                 service: ProjectService) {
+func rulerScopeHeaderRecordsGuard(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
     let id = "swiftcore/PianoRoll::timelineRulerScope"
     let fx = TrackHeadersFixture(suite: suite, service: service)
     guard let seed = fx.document.notes(in: 0).first else {
@@ -42,15 +46,17 @@ func rulerScopeHeaderRecordsGuard(_ report: CheckReport, suite: DocumentSession,
         return
     }
     fx.document.moveNotes([seed.id], byTicks: 24, byKeys: -11)
-    report.expect(fx.rowForTrack(0) != nil, cppID: id, message: "the Quick track-header model resolves for the ruler scope")
+    report.expect(
+        fx.rowForTrack(0) != nil, cppID: id, message: "the Quick track-header model resolves for the ruler scope")
     guard fx.rowForTrack(0) != nil else {
         return
     }
     let document = fx.document
     let trackCount = document.engineTracks.usedTrackCount
     let rows = (0..<fx.headers.rows.count).map { fx.headers.rows[$0] }
-    report.expect(rows.filter { !$0.isAddTrack }.map(\.track) == Array(0..<trackCount)
-                  && rows.count == trackCount + (document.canAddTrack ? 1 : 0)
-                  && rows.last?.isAddTrack == document.canAddTrack,
-                  cppID: id, message: "header records follow used timeline tracks with one conditional trailing add row")
+    report.expect(
+        rows.filter { !$0.isAddTrack }.map(\.track) == Array(0..<trackCount)
+            && rows.count == trackCount + (document.canAddTrack ? 1 : 0)
+            && rows.last?.isAddTrack == document.canAddTrack,
+        cppID: id, message: "header records follow used timeline tracks with one conditional trailing add row")
 }

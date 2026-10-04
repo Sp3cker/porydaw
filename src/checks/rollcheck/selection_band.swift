@@ -22,11 +22,14 @@ func checkSelectionBandSweep(_ report: CheckReport, session: DocumentSession) {
     }
     guard let pitch,
         let added = try? session.document.addNotes([
-            NewNote(track: grid.trackIndex, tick: 24, pitch: UInt8(pitch),
-                    duration: 24, velocity: 100),
-            NewNote(track: grid.trackIndex, tick: 96, pitch: UInt8(pitch),
-                    duration: 24, velocity: 73)
-        ]), added.count == 2 else {
+            NewNote(
+                track: grid.trackIndex, tick: 24, pitch: UInt8(pitch),
+                duration: 24, velocity: 100),
+            NewNote(
+                track: grid.trackIndex, tick: 96, pitch: UInt8(pitch),
+                duration: 24, velocity: 73),
+        ]), added.count == 2
+    else {
         report.fail(id, "could not seed the two selection-band notes")
         return
     }
@@ -38,7 +41,8 @@ func checkSelectionBandSweep(_ report: CheckReport, session: DocumentSession) {
     let roll = PianoGrid(session: session)
     roll.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     guard let a = selectionRect(added[0], grid: roll),
-          let b = selectionRect(added[1], grid: roll) else {
+        let b = selectionRect(added[1], grid: roll)
+    else {
         report.fail(id, "selection-band notes were not projected")
         return
     }
@@ -46,16 +50,21 @@ func checkSelectionBandSweep(_ report: CheckReport, session: DocumentSession) {
     let history = session.document.history.currentIdentity
     session.clearSelectedNotes()
     roll.beginRightPointer(x: 1, y: 0)
-    roll.updateRightPointer(x: max(a.x + a.width, b.x + b.width) + 4,
-                            y: max(a.y + a.height, b.y + b.height) + 4)
-    report.expect(session.selectedNotes.isEmpty, cppID: id,
-                  message: "band preview does not commit note selection before release")
-    roll.endRightPointer(x: max(a.x + a.width, b.x + b.width) + 4,
-                         y: max(a.y + a.height, b.y + b.height) + 4)
-    report.expect(session.selectedNotes.isSuperset(of: Set(added)), cppID: id,
-                  message: "band release selects both swept note identities")
-    report.expect(session.document.revision == revision
-        && session.document.history.currentIdentity == history, cppID: id,
+    roll.updateRightPointer(
+        x: max(a.x + a.width, b.x + b.width) + 4,
+        y: max(a.y + a.height, b.y + b.height) + 4)
+    report.expect(
+        session.selectedNotes.isEmpty, cppID: id,
+        message: "band preview does not commit note selection before release")
+    roll.endRightPointer(
+        x: max(a.x + a.width, b.x + b.width) + 4,
+        y: max(a.y + a.height, b.y + b.height) + 4)
+    report.expect(
+        session.selectedNotes.isSuperset(of: Set(added)), cppID: id,
+        message: "band release selects both swept note identities")
+    report.expect(
+        session.document.revision == revision
+            && session.document.history.currentIdentity == history, cppID: id,
         message: "selection sweep changes no document or undo command")
     let bx0 = b.x + 1
     let by0 = b.y + 1
@@ -94,8 +103,9 @@ func checkSelectionBandSweep(_ report: CheckReport, session: DocumentSession) {
             && !additive.ringRects(added[0]).isEmpty
             && !additive.ringRects(added[1]).isEmpty, cppID: id,
         message: "Ctrl-release band adds the swept note without clearing the old selection")
-    checkDeferredModifierSelection(report, session: session, grid: roll,
-                                   a: a, b: b, ids: added)
+    checkDeferredModifierSelection(
+        report, session: session, grid: roll,
+        a: a, b: b, ids: added)
 }
 
 @MainActor
@@ -119,9 +129,11 @@ func checkSelectionNonScaleMove(_ report: CheckReport, session: DocumentSession)
     }
     guard let pitch,
         let added = try? session.document.addNotes([
-            NewNote(track: grid.trackIndex, tick: Tick(tick), pitch: UInt8(pitch),
-                    duration: Tick(duration), velocity: 93)
-        ]), let noteID = added.first else {
+            NewNote(
+                track: grid.trackIndex, tick: Tick(tick), pitch: UInt8(pitch),
+                duration: Tick(duration), velocity: 93)
+        ]), let noteID = added.first
+    else {
         report.fail(id, "could not seed the wide move note")
         return
     }
@@ -152,52 +164,65 @@ func checkSelectionNonScaleMove(_ report: CheckReport, session: DocumentSession)
     let y = rect.y + rect.height / 2
     let targetX = x + Double(2 * snap) * session.camera.snapshot.pixelsPerTick
     roll.beginPointer(x: x, y: y, modifiers: 0)
-    report.expect(session.selectedNoteOrder == [noteID], cppID: id,
-                  message: "body press selects exactly the grabbed note")
+    report.expect(
+        session.selectedNoteOrder == [noteID], cppID: id,
+        message: "body press selects exactly the grabbed note")
     let previewHistory = session.document.history.currentIdentity
     roll.updatePointer(x: targetX, y: y)
-    report.expect(session.document.history.currentIdentity == previewHistory
-        && session.document.note(noteID)?.tick == Tick(tick), cppID: id,
+    report.expect(
+        session.document.history.currentIdentity == previewHistory
+            && session.document.note(noteID)?.tick == Tick(tick), cppID: id,
         message: "move preview does not commit before release")
     roll.endPointer(x: targetX, y: y)
-    report.expect(session.document.note(noteID).map {
-        $0.tick == Tick(tick + 2 * snap) && Int($0.pitch) == pitch
-            && $0.duration == Tick(duration)
-    } == true, cppID: id, message: "move release keeps the same NoteID at the target")
-    report.expect(!session.document.notes(in: roll.trackIndex).contains {
-        $0.tick == Tick(tick) && Int($0.pitch) == pitch
-    }, cppID: id, message: "move release vacates the original cell")
-    report.expect(session.selectedNoteOrder == [noteID], cppID: id,
-                  message: "move release retains the moved note as the selection")
-    report.expect(session.document.history.currentIdentity != previewHistory, cppID: id,
-                  message: "move release commits one undoable edit")
-    report.expect(session.document.history.undoCount == addedCount + 1, cppID: id,
-                  message: "non-Scale move release pushes exactly one command")
+    report.expect(
+        session.document.note(noteID).map {
+            $0.tick == Tick(tick + 2 * snap) && Int($0.pitch) == pitch
+                && $0.duration == Tick(duration)
+        } == true, cppID: id, message: "move release keeps the same NoteID at the target")
+    report.expect(
+        !session.document.notes(in: roll.trackIndex).contains {
+            $0.tick == Tick(tick) && Int($0.pitch) == pitch
+        }, cppID: id, message: "move release vacates the original cell")
+    report.expect(
+        session.selectedNoteOrder == [noteID], cppID: id,
+        message: "move release retains the moved note as the selection")
+    report.expect(
+        session.document.history.currentIdentity != previewHistory, cppID: id,
+        message: "move release commits one undoable edit")
+    report.expect(
+        session.document.history.undoCount == addedCount + 1, cppID: id,
+        message: "non-Scale move release pushes exactly one command")
     let movedIdentity = session.document.history.currentIdentity
     roll.performCommand(command: EditCommand.nudgeRight.rawValue)
-    report.expect(session.document.note(noteID).map {
-        $0.tick == Tick(tick + 3 * snap) && Int($0.pitch) == pitch
-    } == true, cppID: id, message: "right nudge moves the same NoteID without reselecting")
-    report.expect(session.selectedNoteOrder == [noteID], cppID: id,
-                  message: "right nudge retains the moved note as the selection")
-    report.expect(session.document.history.currentIdentity != movedIdentity, cppID: id,
-                  message: "right nudge commits an undoable edit")
-    report.expect(session.document.history.undoCount == addedCount + 2, cppID: id,
-                  message: "Right nudge after the move pushes exactly one command")
+    report.expect(
+        session.document.note(noteID).map {
+            $0.tick == Tick(tick + 3 * snap) && Int($0.pitch) == pitch
+        } == true, cppID: id, message: "right nudge moves the same NoteID without reselecting")
+    report.expect(
+        session.selectedNoteOrder == [noteID], cppID: id,
+        message: "right nudge retains the moved note as the selection")
+    report.expect(
+        session.document.history.currentIdentity != movedIdentity, cppID: id,
+        message: "right nudge commits an undoable edit")
+    report.expect(
+        session.document.history.undoCount == addedCount + 2, cppID: id,
+        message: "Right nudge after the move pushes exactly one command")
     if session.document.history.currentIdentity != movedIdentity {
         _ = session.document.history.undoDocument()
     }
     if session.document.history.currentIdentity != addedIdentity {
         _ = session.document.history.undoDocument()
-        report.expect(session.document.history.currentIdentity == addedIdentity
-            && session.document.note(noteID).map {
-                $0.tick == Tick(tick) && Int($0.pitch) == pitch
-                    && $0.duration == Tick(duration)
-            } == true, cppID: id,
+        report.expect(
+            session.document.history.currentIdentity == addedIdentity
+                && session.document.note(noteID).map {
+                    $0.tick == Tick(tick) && Int($0.pitch) == pitch
+                        && $0.duration == Tick(duration)
+                } == true, cppID: id,
             message: "undo restores the original note identity and position")
     }
-    report.expect((try? session.document.captureSave().bytes) == plantedBytes, cppID: id,
-                  message: "undoing the non-Scale move and Right nudge restores exact MIDI bytes")
+    report.expect(
+        (try? session.document.captureSave().bytes) == plantedBytes, cppID: id,
+        message: "undoing the non-Scale move and Right nudge restores exact MIDI bytes")
 }
 
 @MainActor
@@ -212,18 +237,22 @@ private func checkDeferredModifierSelection(
     let by = b.y + b.height / 2
     session.setSelectedNotes([ids[0]])
     grid.beginPointer(x: bx, y: by, modifiers: 0x0200_0000)
-    report.expect(session.selectedNoteOrder == ids, cppID: id,
-                  message: "Shift press extends selection without replacing its first note")
+    report.expect(
+        session.selectedNoteOrder == ids, cppID: id,
+        message: "Shift press extends selection without replacing its first note")
     grid.endPointer(x: bx, y: by)
     let revision = session.document.revision
     let history = session.document.history.currentIdentity
     grid.beginPointer(x: ax, y: ay, modifiers: 0x0400_0000)
-    report.expect(session.selectedNoteOrder == ids, cppID: id,
-                  message: "Ctrl press defers removal of an already-selected note")
+    report.expect(
+        session.selectedNoteOrder == ids, cppID: id,
+        message: "Ctrl press defers removal of an already-selected note")
     grid.endPointer(x: ax, y: ay)
-    report.expect(session.selectedNoteOrder == [ids[1]], cppID: id,
-                  message: "Ctrl release toggles the pressed note without changing the other")
-    report.expect(session.document.revision == revision
-        && session.document.history.currentIdentity == history, cppID: id,
+    report.expect(
+        session.selectedNoteOrder == [ids[1]], cppID: id,
+        message: "Ctrl release toggles the pressed note without changing the other")
+    report.expect(
+        session.document.revision == revision
+            && session.document.history.currentIdentity == history, cppID: id,
         message: "modifier selection clicks push no document edit")
 }

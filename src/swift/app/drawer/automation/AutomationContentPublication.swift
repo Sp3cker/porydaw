@@ -26,13 +26,16 @@ extension AutomationPage {
         return facts(parameter: activeParameter, modifiers: modifiers, session: session)
     }
 
-    func facts(parameter: AutomationParameter, modifiers: AutomationModifiers,
-                       session: DocumentSession) -> AutomationFrozenFacts {
+    func facts(
+        parameter: AutomationParameter, modifiers: AutomationModifiers,
+        session: DocumentSession
+    ) -> AutomationFrozenFacts {
         let snapshot = projectionFacts.snapshot(parameter, session: session)
-        return AutomationFrozenFacts(parameter: parameter, snapshot: snapshot,
-                                     camera: session.camera.snapshot, selection: selection,
-                                     modifiers: modifiers,
-                                     songEndTick: session.timeline.lengthTicks)
+        return AutomationFrozenFacts(
+            parameter: parameter, snapshot: snapshot,
+            camera: session.camera.snapshot, selection: selection,
+            modifiers: modifiers,
+            songEndTick: session.timeline.lengthTicks)
     }
 
     /// The projection a live gesture maps through: the camera it froze at press.
@@ -40,19 +43,24 @@ extension AutomationPage {
 
     func liveCamera() -> EditorCamera {
         guard let session else {
-            return EditorCamera(ticksPerBeat: 24, lengthTicks: nil, viewportWidth: 0, rollHeight: 0,
-                                limits: GridCameraPolicy.limits(
-                                    baseFontPx: GridCameraPolicy.seedBaseFontPx))
+            return EditorCamera(
+                ticksPerBeat: 24, lengthTicks: nil, viewportWidth: 0, rollHeight: 0,
+                limits: GridCameraPolicy.limits(
+                    baseFontPx: GridCameraPolicy.seedBaseFontPx))
         }
         return session.camera
     }
 
-    func makeProjection(facts: AutomationFrozenFacts,
-                                camera: EditorCamera) -> AutomationProjection {
-        let bounds = AutomationPlotBounds(width: plotWidth, height: plotHeight,
-                                          devicePixelRatio: devicePixelRatio)
+    func makeProjection(
+        facts: AutomationFrozenFacts,
+        camera: EditorCamera
+    ) -> AutomationProjection {
+        let bounds = AutomationPlotBounds(
+            width: plotWidth, height: plotHeight,
+            devicePixelRatio: devicePixelRatio)
         if let session {
-            return projectionFacts.projection(snapshot: facts.snapshot, session: session,
+            return projectionFacts.projection(
+                snapshot: facts.snapshot, session: session,
                 camera: camera, bounds: bounds, geometry: geometry, font: baseFontPx,
                 range: laneRanges[facts.parameter])
         }
@@ -65,8 +73,10 @@ extension AutomationPage {
                 snapshot: facts.snapshot, range: laneRanges[facts.parameter]))
     }
 
-    func laneProjection(facts: AutomationFrozenFacts,
-                                projection: AutomationProjection) -> AutomationLaneProjection? {
+    func laneProjection(
+        facts: AutomationFrozenFacts,
+        projection: AutomationProjection
+    ) -> AutomationLaneProjection? {
         guard session != nil else { return nil }
         return projection.project(facts.snapshot, selection: selection, usedTracks: usedTracks())
     }
@@ -81,7 +91,6 @@ extension AutomationPage {
         return session.camera.viewX(tick: Double(tick), dpr: devicePixelRatio)
     }
     // MARK: Internals: publication
-
 
     /// The selector's published tabs: one entry per catalog parameter, with the
     /// active, ghost, shared-selection and event-count facts the strip renders.
@@ -142,20 +151,25 @@ extension AutomationPage {
         let pad = Typography(baseFontPx: Int(baseFontPx.rounded())).space(.one)
         var labels: [SceneText] = []
         for label in lane.scaleLabels {
-            let width = max(fontPx(baseFontPx, 2),
-                            (captionMetrics?.advance(label.text) ?? 0).rounded())
+            let width = max(
+                fontPx(baseFontPx, 2),
+                (captionMetrics?.advance(label.text) ?? 0).rounded())
             let y = min(max(0, label.y - height / 2), max(0, plotHeight - height))
-            labels.append(SceneText(rect: (Double(pad), y.rounded(), width, height),
-                                    text: label.text, color: palette.primaryText,
-                                    font: captionFont))
+            labels.append(
+                SceneText(
+                    rect: (Double(pad), y.rounded(), width, height),
+                    text: label.text, color: palette.primaryText,
+                    font: captionFont))
         }
         syncTexts(valueLabels, labels)
     }
 
     /// The active parameter's nodes and origin phantom, minus those a live draw
     /// replaces; markers draw only at a zoom that can show them.
-    func nodeHandles(_ lane: AutomationLaneProjection,
-                             projection: AutomationProjection) -> [AutomationNodeHandle] {
+    func nodeHandles(
+        _ lane: AutomationLaneProjection,
+        projection: AutomationProjection
+    ) -> [AutomationNodeHandle] {
         guard projection.markersVisible() else { return [] }
         let paint = nodePaint
         let replaced = previewEdit.flatMap { edit in
@@ -163,15 +177,19 @@ extension AutomationPage {
         }
         var values: [AutomationNodeHandle] = []
         if let phantom = lane.originPhantom, !(replaced?.contains(phantom.point.tick) ?? false) {
-            values.append(nodeHandle(phantom.point, paint: paint, parameter: lane.parameter,
-                                     projection: projection, phantom: true))
+            values.append(
+                nodeHandle(
+                    phantom.point, paint: paint, parameter: lane.parameter,
+                    projection: projection, phantom: true))
         }
         let radius = max(paint.nodeRadius, paint.ringRadius) + paint.outlineWidth
         let begin = automationPartitionIndex(lane.points) { $0.x < -radius }
         let end = automationPartitionIndex(lane.points) { $0.x <= plotWidth + radius }
         for point in lane.points[begin..<end] where !(replaced?.contains(point.tick) ?? false) {
-            values.append(nodeHandle(point, paint: paint, parameter: lane.parameter,
-                                     projection: projection, phantom: false))
+            values.append(
+                nodeHandle(
+                    point, paint: paint, parameter: lane.parameter,
+                    projection: projection, phantom: false))
         }
         return values
     }
@@ -185,10 +203,12 @@ extension AutomationPage {
         syncNodes(nodeHandles(lane, projection: cameraProjection))
     }
 
-    func nodeHandle(_ point: AutomationProjectedPoint, paint: AutomationNodePaint,
-                            parameter: AutomationParameter,
-                            projection: AutomationProjection,
-                            phantom: Bool) -> AutomationNodeHandle {
+    func nodeHandle(
+        _ point: AutomationProjectedPoint, paint: AutomationNodePaint,
+        parameter: AutomationParameter,
+        projection: AutomationProjection,
+        phantom: Bool
+    ) -> AutomationNodeHandle {
         let node = AutomationNodeHandle()
         // Plot-relative x rides the row, so a zoom's x and scroll land in one frame.
         node.x = phantom ? 0 : point.x
@@ -201,7 +221,8 @@ extension AutomationPage {
         node.outlineColor = palette.automationNodeInk
         node.ringColor = palette.selectionRing
         node.selected = point.selected
-        node.hovered = hover?.hasPoint == true && hover?.parameter == parameter
+        node.hovered =
+            hover?.hasPoint == true && hover?.parameter == parameter
             && hover?.tick == point.tick
         node.projected = point.projected
         node.phantom = phantom

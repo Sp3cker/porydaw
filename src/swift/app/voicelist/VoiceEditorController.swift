@@ -79,10 +79,11 @@ public final class VoiceEditorController: QmlUncreatable {
         pending = Task { [weak self, weak owner] in
             await previous?.value
             guard let self, let owner, owner.isCurrentEditOrigin(origin),
-                  owner.currentSlot == slot,
-                  let draft = owner.voiceDraft(slot),
-                  draft.voice.macro != BankVoiceMacro.keysplit,
-                  draft.voice.macro != BankVoiceMacro.keysplitAll else { return }
+                owner.currentSlot == slot,
+                let draft = owner.voiceDraft(slot),
+                draft.voice.macro != BankVoiceMacro.keysplit,
+                draft.voice.macro != BankVoiceMacro.keysplitAll
+            else { return }
             var voice = draft.voice
             let cgb = !VoiceListSemantics.isDirectSoundFamily(voice.macro)
             let envelopeMax = cgb ? 7 : 255
@@ -112,14 +113,16 @@ public final class VoiceEditorController: QmlUncreatable {
     /// is a pseudo-type: its voice remains DirectSound with a synth symbol.
     public func changeType(macro newMacro: Int, symbol newSymbol: String) {
         guard let owner, editable, (-1...12).contains(newMacro),
-              let origin = owner.editOrigin() else { return }
+            let origin = owner.editOrigin()
+        else { return }
         let slot = owner.currentSlot
         let previous = pending
         pending = Task { [weak self, weak owner] in
             await previous?.value
             guard let self, let owner, owner.isCurrentEditOrigin(origin),
-                  owner.currentSlot == slot,
-                  let draft = owner.voiceDraft(slot) else { return }
+                owner.currentSlot == slot,
+                let draft = owner.voiceDraft(slot)
+            else { return }
             let old = draft.voice
             var voice = old
             let selectedMacro = Int32(newMacro)
@@ -137,8 +140,10 @@ public final class VoiceEditorController: QmlUncreatable {
                         symbol = try await owner.mintSynth(VgSynthDesc())
                     }
                     guard owner.isCurrentEditOrigin(origin),
-                          owner.currentSlot == slot else { return }
-                    voice.macro = VoiceListSemantics.isDirectSoundFamily(old.macro)
+                        owner.currentSlot == slot
+                    else { return }
+                    voice.macro =
+                        VoiceListSemantics.isDirectSoundFamily(old.macro)
                         ? old.macro : BankVoiceMacro.directSound
                     voice.symbol = symbol
                     voice.keysplitTable = ""
@@ -149,15 +154,20 @@ public final class VoiceEditorController: QmlUncreatable {
                     return
                 }
             } else if VoiceListSemantics.macroHasSymbol(selectedMacro) {
-                let wave = selectedMacro == BankVoiceMacro.programmableWave ||
-                    selectedMacro == BankVoiceMacro.programmableWaveAlt
+                let wave =
+                    selectedMacro == BankVoiceMacro.programmableWave
+                    || selectedMacro == BankVoiceMacro.programmableWaveAlt
                 let drumkit = selectedMacro == BankVoiceMacro.keysplitAll
-                let choices = wave ? owner.waveSymbols
+                let choices =
+                    wave
+                    ? owner.waveSymbols
                     : drumkit ? owner.drumkitSymbols : owner.sampleChoices
-                if symbol.isEmpty || (selectedMacro != old.macro
-                                      || (owner.synthDescriptor(symbol: old.symbol) != nil
-                                          && symbol == old.symbol))
-                    && !choices.contains(symbol) && owner.keysplitTables[symbol] == nil {
+                if symbol.isEmpty
+                    || (selectedMacro != old.macro
+                        || (owner.synthDescriptor(symbol: old.symbol) != nil
+                            && symbol == old.symbol))
+                        && !choices.contains(symbol) && owner.keysplitTables[symbol] == nil
+                {
                     symbol = choices.first ?? ""
                 }
                 guard !symbol.isEmpty else { return }
@@ -224,15 +234,17 @@ public final class VoiceEditorController: QmlUncreatable {
     /// after the new symbol can be minted. The save action persists both.
     public func changeSynth(field: String, value: Int) {
         guard let owner, editable, isSynth,
-              let origin = owner.editOrigin() else { return }
+            let origin = owner.editOrigin()
+        else { return }
         let slot = owner.currentSlot
         let previous = pending
         pending = Task { [weak self, weak owner] in
             await previous?.value
             guard let self, let owner, owner.isCurrentEditOrigin(origin),
-                  owner.currentSlot == slot,
-                  let draft = owner.voiceDraft(slot),
-                  var descriptor = owner.synthDescriptor(symbol: draft.voice.symbol) else { return }
+                owner.currentSlot == slot,
+                let draft = owner.voiceDraft(slot),
+                var descriptor = owner.synthDescriptor(symbol: draft.voice.symbol)
+            else { return }
             let old = descriptor
             switch field {
             case "waveform" where (0...2).contains(value):
@@ -251,7 +263,8 @@ public final class VoiceEditorController: QmlUncreatable {
             do {
                 let symbol = try await owner.mintSynth(descriptor)
                 guard owner.isCurrentEditOrigin(origin),
-                      owner.currentSlot == slot else { return }
+                    owner.currentSlot == slot
+                else { return }
                 var voice = draft.voice
                 voice.symbol = symbol
                 _ = try await owner.applyVoiceEdit(slot: slot, voice: voice)

@@ -36,9 +36,11 @@ public enum AutomationAxisLock: Equatable, Sendable {
 
     /// `resolveAxisLock`: only a shift-held move past the activation distance
     /// picks an axis, and it keeps the axis it picked.
-    public static func resolve(current: AutomationAxisLock, shiftHeld: Bool,
-                               originX: Double, originY: Double, x: Double, y: Double,
-                               activationDistance: Double) -> AutomationAxisLock {
+    public static func resolve(
+        current: AutomationAxisLock, shiftHeld: Bool,
+        originX: Double, originY: Double, x: Double, y: Double,
+        activationDistance: Double
+    ) -> AutomationAxisLock {
         guard shiftHeld else { return .none }
         if current != .none { return current }
         let dx = x - originX
@@ -49,8 +51,11 @@ public enum AutomationAxisLock: Equatable, Sendable {
 
     /// `applyAxisLock`: a time lock keeps the original value, a value lock keeps
     /// the original tick.
-    public func applied(original: AutomationLanePoint, to current: AutomationLanePoint)
-        -> AutomationLanePoint {
+    public func applied(
+        original: AutomationLanePoint, to current: AutomationLanePoint
+    )
+        -> AutomationLanePoint
+    {
         switch self {
         case .none: return current
         case .time: return AutomationLanePoint(tick: current.tick, value: original.value)
@@ -75,8 +80,10 @@ public struct AutomationPointDrag: Equatable, Sendable {
         public let effectiveY: Double
         public let axisLock: AutomationAxisLock
 
-        public init(phase: Phase, effectiveX: Double, effectiveY: Double,
-                    axisLock: AutomationAxisLock) {
+        public init(
+            phase: Phase, effectiveX: Double, effectiveY: Double,
+            axisLock: AutomationAxisLock
+        ) {
             self.phase = phase
             self.effectiveX = effectiveX
             self.effectiveY = effectiveY
@@ -100,13 +107,16 @@ public struct AutomationPointDrag: Equatable, Sendable {
         slopOriginY = pressY
     }
 
-    public mutating func update(x: Double, y: Double, shiftHeld: Bool,
-                                activationDistance: Double) -> Update {
+    public mutating func update(
+        x: Double, y: Double, shiftHeld: Bool,
+        activationDistance: Double
+    ) -> Update {
         guard exceeded else {
             let travel = abs(x - pressX) + abs(y - pressY)
             guard travel >= activationDistance else {
-                return Update(phase: .pending, effectiveX: pressX, effectiveY: pressY,
-                              axisLock: .none)
+                return Update(
+                    phase: .pending, effectiveX: pressX, effectiveY: pressY,
+                    axisLock: .none)
             }
             exceeded = true
             slopOriginX = x
@@ -119,8 +129,9 @@ public struct AutomationPointDrag: Equatable, Sendable {
         if shiftHeld, axisLock == .none {
             return Update(phase: .reset, effectiveX: pressX, effectiveY: pressY, axisLock: .none)
         }
-        return Update(phase: .dragging, effectiveX: pressX + x - slopOriginX,
-                      effectiveY: pressY + y - slopOriginY, axisLock: axisLock)
+        return Update(
+            phase: .dragging, effectiveX: pressX + x - slopOriginX,
+            effectiveY: pressY + y - slopOriginY, axisLock: axisLock)
     }
 
     public func release() -> AutomationPointRelease {
@@ -146,9 +157,11 @@ public struct AutomationFrozenFacts: Equatable, Sendable {
     public let modifiers: AutomationModifiers
     public let snapshot: AutomationLaneSnapshot
 
-    public init(parameter: AutomationParameter, snapshot: AutomationLaneSnapshot,
-                camera: EditorCamera.Snapshot, selection: AutomationTimeSelection?,
-                modifiers: AutomationModifiers, songEndTick: Tick) {
+    public init(
+        parameter: AutomationParameter, snapshot: AutomationLaneSnapshot,
+        camera: EditorCamera.Snapshot, selection: AutomationTimeSelection?,
+        modifiers: AutomationModifiers, songEndTick: Tick
+    ) {
         self.revision = snapshot.revision
         self.parameter = parameter
         self.metadata = snapshot.metadata
@@ -184,9 +197,10 @@ public struct AutomationFrozenFacts: Equatable, Sendable {
         if includingLeadIn, let leadIn = snapshot.leadInValue {
             original.insert(AutomationLanePoint(tick: 0, value: metadata.clamp(leadIn)), at: 0)
         }
-        return AutomationLaneFreeze(parameter: parameter, revision: revision,
-                                    metadata: metadata, songEndTick: songEndTick,
-                                    original: original)
+        return AutomationLaneFreeze(
+            parameter: parameter, revision: revision,
+            metadata: metadata, songEndTick: songEndTick,
+            original: original)
     }
 }
 
@@ -199,9 +213,11 @@ public struct AutomationLaneFreeze: Equatable, Sendable {
     public let songEndTick: Tick
     public let original: [AutomationLanePoint]
 
-    public init(parameter: AutomationParameter, revision: UInt64,
-                metadata: AutomationParameterMetadata, songEndTick: Tick,
-                original: [AutomationLanePoint]) {
+    public init(
+        parameter: AutomationParameter, revision: UInt64,
+        metadata: AutomationParameterMetadata, songEndTick: Tick,
+        original: [AutomationLanePoint]
+    ) {
         self.parameter = parameter
         self.revision = revision
         self.metadata = metadata

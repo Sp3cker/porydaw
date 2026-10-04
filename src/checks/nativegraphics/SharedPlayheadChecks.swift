@@ -44,11 +44,13 @@ func near(_ lhs: Double, _ rhs: Double, tolerance: Double = 1e-9) -> Bool {
 /// Hand-derived: the mapping under check must resolve both segments.
 func sharedPlayheadFixture() -> MidiFile {
     let tempo = { (tick: Tick, microseconds: UInt32) -> MidiEvent in
-        .meta(tick: tick, type: 0x51, data: [
-            UInt8((microseconds >> 16) & 0xFF),
-            UInt8((microseconds >> 8) & 0xFF),
-            UInt8(microseconds & 0xFF),
-        ])
+        .meta(
+            tick: tick, type: 0x51,
+            data: [
+                UInt8((microseconds >> 16) & 0xFF),
+                UInt8((microseconds >> 8) & 0xFF),
+                UInt8(microseconds & 0xFF),
+            ])
     }
     let conductor: [MidiEvent] = [
         tempo(0, 500_000),
@@ -62,10 +64,12 @@ func sharedPlayheadFixture() -> MidiFile {
         .channel(tick: 72, status: 0x90, data0: 67, data1: 100),
         .channel(tick: 96, status: 0x80, data0: 67),
     ]
-    return MidiFile(division: 24, chunks: [
-        MidiChunk(events: conductor, endTick: 192),
-        MidiChunk(events: notes, endTick: 192),
-    ])
+    return MidiFile(
+        division: 24,
+        chunks: [
+            MidiChunk(events: conductor, endTick: 192),
+            MidiChunk(events: notes, endTick: 192),
+        ])
 }
 
 // MARK: - Check-side owners
@@ -77,7 +81,8 @@ private final class SharedPlayheadStubPage: EditorDrawerPage {
     let sectionKind: DrawerSectionKind = .velocity
     let contentUrl = "file:///shared-playhead/velocity.qml"
     let bodyPolicy = EditorDrawerBodyPolicy { hostHeight, metrics in
-        min(max(hostHeight / 5, metrics.minimumBody),
+        min(
+            max(hostHeight / 5, metrics.minimumBody),
             metrics.maximumDefaultBodyHeight(hostHeight: hostHeight))
     }
     private(set) var interactionActive = false
@@ -96,15 +101,19 @@ private final class SharedPlayheadStubPage: EditorDrawerPage {
 /// closing would close the suite's service) and exists to prove that the shared
 /// playhead maps through whichever timeline its document owns.
 @MainActor
-private func sharedPlayheadReplacementSession(_ session: DocumentSession,
-                                              service: ProjectService) -> DocumentSession {
-    let document = SongDocument(file: sharedPlayheadFixture(),
-                                config: session.document.state.config,
-                                source: session.document.source,
-                                trackBudget: session.document.trackBudget)
-    return DocumentSession(document: document, service: service,
-                           lease: session.bankLease, slots: session.bankSlots,
-                           dirty: false, loadName: session.bankLoadName, sampleRate: 48_000)
+private func sharedPlayheadReplacementSession(
+    _ session: DocumentSession,
+    service: ProjectService
+) -> DocumentSession {
+    let document = SongDocument(
+        file: sharedPlayheadFixture(),
+        config: session.document.state.config,
+        source: session.document.source,
+        trackBudget: session.document.trackBudget)
+    return DocumentSession(
+        document: document, service: service,
+        lease: session.bankLease, slots: session.bankSlots,
+        dirty: false, loadName: session.bankLoadName, sampleRate: 48_000)
 }
 
 /// What the grid publishes as content: the content key, display revision and
@@ -147,8 +156,10 @@ private func pumpSharedPlayheadRunLoop(_ seconds: TimeInterval) {
 }
 
 @MainActor
-func runSharedPlayheadChecks(_ report: CheckReport, session: DocumentSession,
-                             service: ProjectService) {
+func runSharedPlayheadChecks(
+    _ report: CheckReport, session: DocumentSession,
+    service: ProjectService
+) {
     checkPureMapping(report)
     checkPureVisibilityFollowAndWrap(report)
     checkPresenterAgainstSession(report, session: session, service: service)
@@ -165,8 +176,9 @@ private func checkCompoundCommandPublication(
     automation.attach(session: session, palette: GridPalette())
     defer { automation.detach() }
     let ruler = RulerMenuPresenter(session: session, grid: grid, automation: automation)
-    let commands = EditorCommandRouter(session: session, grid: grid, automation: automation,
-                                       rulerMenu: ruler)
+    let commands = EditorCommandRouter(
+        session: session, grid: grid, automation: automation,
+        rulerMenu: ruler)
     guard let source = session.document.notes(in: 0).first else {
         report.fail(compoundCommandID, "compound command fixture has no source note")
         return
@@ -197,32 +209,42 @@ private func checkCompoundCommandPublication(
 
     let expectedCursor = Tick(120) + max(1, source.duration)
     let inserted = session.selectedNoteOrder.compactMap(session.document.note)
-    report.expectEqual(expected: 1, actual: publications.count, cppID: compoundCommandID,
-                       what: "paste publishes one completed session change")
-    report.expectEqual(expected:
-        [.document, .selection, .dirty, .history, .cursor],
+    report.expectEqual(
+        expected: 1, actual: publications.count, cppID: compoundCommandID,
+        what: "paste publishes one completed session change")
+    report.expectEqual(
+        expected: [.document, .selection, .dirty, .history, .cursor],
         actual: publications.first?.domains ?? [],
         cppID: compoundCommandID,
         what: "paste publication aggregates document, selection, and cursor domains")
-    report.expectEqual(expected: [expectedCursor], actual: observedCursors, cppID: compoundCommandID,
-                       what: "the only observer sees the completed paste cursor")
-    report.expectEqual(expected: [session.selectedNoteOrder], actual: observedSelections, cppID: compoundCommandID,
-                       what: "the only observer sees the completed pasted selection")
-    report.expectEqual(expected: [1], actual: observedPlaybackCounts, cppID: compoundCommandID,
-                       what: "playback is published before the completed session state")
-    report.expectEqual(expected: Int(expectedCursor), actual: grid.editCursorTick, cppID: compoundCommandID,
-                       what: "cursor-domain routing updates the lightweight grid presentation")
-    report.expectEqual(expected: 1, actual: inserted.count, cppID: compoundCommandID,
-                       what: "paste selects one inserted note")
-    report.expect(inserted.first?.tick == 120 && inserted.first?.id != source.id,
-                  cppID: compoundCommandID,
-                  message: "the completed selection names the inserted destination note")
-    report.expectEqual(expected: revision + 1, actual: session.document.revision, cppID: compoundCommandID,
-                       what: "paste commits one document revision")
-    report.expect(session.document.history.currentIdentity != history, cppID: compoundCommandID,
-                  message: "paste commits one history state")
-    report.expectEqual(expected: 1, actual: playbackCount, cppID: compoundCommandID,
-                       what: "paste rebuilds and publishes playback exactly once")
+    report.expectEqual(
+        expected: [expectedCursor], actual: observedCursors, cppID: compoundCommandID,
+        what: "the only observer sees the completed paste cursor")
+    report.expectEqual(
+        expected: [session.selectedNoteOrder], actual: observedSelections, cppID: compoundCommandID,
+        what: "the only observer sees the completed pasted selection")
+    report.expectEqual(
+        expected: [1], actual: observedPlaybackCounts, cppID: compoundCommandID,
+        what: "playback is published before the completed session state")
+    report.expectEqual(
+        expected: Int(expectedCursor), actual: grid.editCursorTick, cppID: compoundCommandID,
+        what: "cursor-domain routing updates the lightweight grid presentation")
+    report.expectEqual(
+        expected: 1, actual: inserted.count, cppID: compoundCommandID,
+        what: "paste selects one inserted note")
+    report.expect(
+        inserted.first?.tick == 120 && inserted.first?.id != source.id,
+        cppID: compoundCommandID,
+        message: "the completed selection names the inserted destination note")
+    report.expectEqual(
+        expected: revision + 1, actual: session.document.revision, cppID: compoundCommandID,
+        what: "paste commits one document revision")
+    report.expect(
+        session.document.history.currentIdentity != history, cppID: compoundCommandID,
+        message: "paste commits one history state")
+    report.expectEqual(
+        expected: 1, actual: playbackCount, cppID: compoundCommandID,
+        what: "paste rebuilds and publishes playback exactly once")
 
     publications.removeAll()
     observedCursors.removeAll()
@@ -236,26 +258,33 @@ private func checkCompoundCommandPublication(
 
     session.editCursor = movedCursor
 
-    report.expectEqual(expected: [.cursor], actual: publications.map(\.domains), cppID: compoundCommandID,
-                       what: "a cursor-only move publishes only the cursor domain")
-    report.expectEqual(expected: Int(movedCursor), actual: grid.editCursorTick, cppID: compoundCommandID,
-                       what: "cursor publication updates the grid without a content refresh")
-    report.expect(session.document.revision == cursorRevision
-                      && session.document.isDirty == cursorDirty,
-                  cppID: compoundCommandID,
-                  message: "cursor-only publication preserves revision and dirty state")
-    report.expectEqual(expected: cursorHistory, actual: session.document.history.currentIdentity,
-                       cppID: compoundCommandID,
-                       what: "cursor-only publication creates no history entry")
-    report.expectEqual(expected: 0, actual: playbackCount, cppID: compoundCommandID,
-                       what: "cursor-only publication rebuilds no playback timeline")
+    report.expectEqual(
+        expected: [.cursor], actual: publications.map(\.domains), cppID: compoundCommandID,
+        what: "a cursor-only move publishes only the cursor domain")
+    report.expectEqual(
+        expected: Int(movedCursor), actual: grid.editCursorTick, cppID: compoundCommandID,
+        what: "cursor publication updates the grid without a content refresh")
+    report.expect(
+        session.document.revision == cursorRevision
+            && session.document.isDirty == cursorDirty,
+        cppID: compoundCommandID,
+        message: "cursor-only publication preserves revision and dirty state")
+    report.expectEqual(
+        expected: cursorHistory, actual: session.document.history.currentIdentity,
+        cppID: compoundCommandID,
+        what: "cursor-only publication creates no history entry")
+    report.expectEqual(
+        expected: 0, actual: playbackCount, cppID: compoundCommandID,
+        what: "cursor-only publication rebuilds no playback timeline")
 }
 
 // MARK: - Presenter against the real owners
 
 @MainActor
-private func checkPresenterAgainstSession(_ report: CheckReport, session: DocumentSession,
-                                         service: ProjectService) {
+private func checkPresenterAgainstSession(
+    _ report: CheckReport, session: DocumentSession,
+    service: ProjectService
+) {
     let grid = PianoGrid(session: session)
     let drawer = EditorDrawerPresenter()
     let page = SharedPlayheadStubPage()
@@ -282,89 +311,108 @@ private func checkPresenterAgainstSession(_ report: CheckReport, session: Docume
     presenter.setFollowEnabled(false)
 
     checkPublicationAndReprojection(report, session: session, presenter: presenter)
-    checkAggregateSuspension(report, session: session, grid: grid, drawer: drawer,
-                             page: page, presenter: presenter)
+    checkAggregateSuspension(
+        report, session: session, grid: grid, drawer: drawer,
+        page: page, presenter: presenter)
     checkStaticContentInvariant(report, session: session, grid: grid, presenter: presenter)
-    checkReplacementAndPolling(report, session: session, service: service, grid: grid,
-                               drawer: drawer, presenter: presenter)
+    checkReplacementAndPolling(
+        report, session: session, service: service, grid: grid,
+        drawer: drawer, presenter: presenter)
 }
 
-
-
 @MainActor
-private func checkAggregateSuspension(_ report: CheckReport, session: DocumentSession,
-                                      grid: PianoGrid, drawer: EditorDrawerPresenter,
-                                      page: SharedPlayheadStubPage,
-                                      presenter: SharedPlayheadPresenter) {
+private func checkAggregateSuspension(
+    _ report: CheckReport, session: DocumentSession,
+    grid: PianoGrid, drawer: EditorDrawerPresenter,
+    page: SharedPlayheadStubPage,
+    presenter: SharedPlayheadPresenter
+) {
     presenter.setFollowEnabled(true)
     let playing = SharedPlayheadPolicy.playingTransport
     let farSample = session.timeline.sample(for: 2_000)
-    report.expect(grid.interactionActive == false && drawer.interactionActive == false,
-                  cppID: aggregateID, message: "idle owners report no interaction")
+    report.expect(
+        grid.interactionActive == false && drawer.interactionActive == false,
+        cppID: aggregateID, message: "idle owners report no interaction")
 
     _ = session.mutateCamera { _ = $0.setHScroll(0) }
     let parked = session.camera.snapshot
     _ = presenter.observe(sample: farSample, transport: playing)
     let following = session.camera.snapshot
-    report.expect(following.scrollX != parked.scrollX, cppID: aggregateID,
-                  message: "an idle aggregate lets follow scroll the camera")
+    report.expect(
+        following.scrollX != parked.scrollX, cppID: aggregateID,
+        message: "an idle aggregate lets follow scroll the camera")
 
     _ = session.mutateCamera { _ = $0.setHScroll(parked.scrollX) }
     grid.beginPointer(x: 200, y: 40, modifiers: 0)
-    report.expect(grid.interactionActive, cppID: aggregateID,
-                  message: "a live roll gesture reports interaction")
+    report.expect(
+        grid.interactionActive, cppID: aggregateID,
+        message: "a live roll gesture reports interaction")
     _ = presenter.observe(sample: farSample, transport: playing)
-    report.expect(session.camera.snapshot == parked, cppID: aggregateID,
-                  message: "a live roll gesture suspends follow")
+    report.expect(
+        session.camera.snapshot == parked, cppID: aggregateID,
+        message: "a live roll gesture suspends follow")
     grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
-    report.expect(grid.interactionActive == false, cppID: aggregateID,
-                  message: "cancelling the gesture clears the grid's interaction")
+    report.expect(
+        grid.interactionActive == false, cppID: aggregateID,
+        message: "cancelling the gesture clears the grid's interaction")
     _ = presenter.observe(sample: farSample, transport: playing)
-    report.expect(session.camera.snapshot == following, cppID: aggregateID,
-                  message: "ending the gesture lets the next observation follow")
+    report.expect(
+        session.camera.snapshot == following, cppID: aggregateID,
+        message: "ending the gesture lets the next observation follow")
 
     drawer.attachSection(page)
-    drawer.setSectionVisible(kind: DrawerSectionKind.velocity.rawValue, visible: true,
-                             drawerOwnsFocus: false)
+    drawer.setSectionVisible(
+        kind: DrawerSectionKind.velocity.rawValue, visible: true,
+        drawerOwnsFocus: false)
     drawer.beginResize(kind: DrawerSectionKind.velocity.rawValue)
-    report.expect(drawer.interactionActive, cppID: aggregateID,
-                  message: "a live drawer resize reports interaction")
+    report.expect(
+        drawer.interactionActive, cppID: aggregateID,
+        message: "a live drawer resize reports interaction")
     _ = session.mutateCamera { _ = $0.setHScroll(parked.scrollX) }
     _ = presenter.observe(sample: farSample, transport: playing)
-    report.expect(session.camera.snapshot == parked, cppID: aggregateID,
-                  message: "a drawer resize suspends follow")
+    report.expect(
+        session.camera.snapshot == parked, cppID: aggregateID,
+        message: "a drawer resize suspends follow")
     drawer.endResize(kind: DrawerSectionKind.velocity.rawValue)
-    report.expect(drawer.interactionActive == false, cppID: aggregateID,
-                  message: "ending the resize clears the aggregate")
+    report.expect(
+        drawer.interactionActive == false, cppID: aggregateID,
+        message: "ending the resize clears the aggregate")
 
     page.setInteractionActive(true)
-    report.expect(drawer.interactionActive, cppID: aggregateID,
-                  message: "an attached page's interaction joins the aggregate")
+    report.expect(
+        drawer.interactionActive, cppID: aggregateID,
+        message: "an attached page's interaction joins the aggregate")
     _ = session.mutateCamera { _ = $0.setHScroll(parked.scrollX) }
     _ = presenter.observe(sample: farSample, transport: playing)
-    report.expect(session.camera.snapshot == parked, cppID: aggregateID,
-                  message: "a page interaction suspends follow")
+    report.expect(
+        session.camera.snapshot == parked, cppID: aggregateID,
+        message: "a page interaction suspends follow")
 
     presenter.setExplicitSuspension(true)
     page.setInteractionActive(false)
     _ = presenter.observe(sample: farSample, transport: playing)
-    report.expect(session.camera.snapshot == parked, cppID: aggregateID,
-                  message: "an explicit suspension suspends follow with no owner gesture")
+    report.expect(
+        session.camera.snapshot == parked, cppID: aggregateID,
+        message: "an explicit suspension suspends follow with no owner gesture")
 
     presenter.setExplicitSuspension(false)
     drawer.detachSection(page)
-    report.expect(page.cancelCount == 1 && page.interactionActive == false, cppID: aggregateID,
-                  message: "detach cancels the page's interaction synchronously")
+    report.expect(
+        page.cancelCount == 1 && page.interactionActive == false, cppID: aggregateID,
+        message: "detach cancels the page's interaction synchronously")
     _ = presenter.observe(sample: farSample, transport: playing)
-    report.expect(session.camera.snapshot == following, cppID: aggregateID,
-                  message: "clearing every suspension restores the same follow target")
+    report.expect(
+        session.camera.snapshot == following, cppID: aggregateID,
+        message: "clearing every suspension restores the same follow target")
 }
 
 /// 128 distinct authoritative positions publish 128 presentations and leave the
 /// grid, the document, the history, the camera and the edit cursor untouched.
 @MainActor
-private func checkStaticContentInvariant(_ report: CheckReport, session: DocumentSession,
-                                        grid: PianoGrid, presenter: SharedPlayheadPresenter) {
+private func checkStaticContentInvariant(
+    _ report: CheckReport, session: DocumentSession,
+    grid: PianoGrid, presenter: SharedPlayheadPresenter
+) {
     presenter.setFollowEnabled(false)
     _ = session.mutateCamera { _ = $0.setHScroll(0) }
     let camera = session.camera.snapshot
@@ -379,33 +427,42 @@ private func checkStaticContentInvariant(_ report: CheckReport, session: Documen
     for step in 0..<128 {
         _ = presenter.observe(sample: session.timeline.sample(for: Tick(step)), transport: 0)
     }
-    report.expect(presenter.presentationCount == count + 128, cppID: staticContentID,
-                  message: "128 distinct authoritative samples present 128 positions")
-    report.expect(near(presenter.tick, 127, tolerance: 0.5), cppID: staticContentID,
-                  message: "the last presented position is the last authoritative sample")
-    report.expect(gridContentSnapshot(grid) == content, cppID: staticContentID,
-                  message: "playhead-only updates rebuild no grid scene content")
-    report.expect(session.camera.snapshot == camera, cppID: staticContentID,
-                  message: "playhead-only updates move no camera")
-    report.expect(session.document.revision == revision && session.document.isDirty == dirty,
-                  cppID: staticContentID,
-                  message: "playhead-only updates leave the document revision and dirty state")
-    report.expect(session.document.history.canUndo == canUndo
-                      && session.document.history.canRedo == canRedo,
-                  cppID: staticContentID,
-                  message: "playhead-only updates consume no history")
-    report.expect(session.editCursor == editCursor, cppID: staticContentID,
-                  message: "the edit cursor stays a separate document-session value")
+    report.expect(
+        presenter.presentationCount == count + 128, cppID: staticContentID,
+        message: "128 distinct authoritative samples present 128 positions")
+    report.expect(
+        near(presenter.tick, 127, tolerance: 0.5), cppID: staticContentID,
+        message: "the last presented position is the last authoritative sample")
+    report.expect(
+        gridContentSnapshot(grid) == content, cppID: staticContentID,
+        message: "playhead-only updates rebuild no grid scene content")
+    report.expect(
+        session.camera.snapshot == camera, cppID: staticContentID,
+        message: "playhead-only updates move no camera")
+    report.expect(
+        session.document.revision == revision && session.document.isDirty == dirty,
+        cppID: staticContentID,
+        message: "playhead-only updates leave the document revision and dirty state")
+    report.expect(
+        session.document.history.canUndo == canUndo
+            && session.document.history.canRedo == canRedo,
+        cppID: staticContentID,
+        message: "playhead-only updates consume no history")
+    report.expect(
+        session.editCursor == editCursor, cppID: staticContentID,
+        message: "the edit cursor stays a separate document-session value")
 }
 
 /// A replacement document maps the same samples through its own timeline, and a
 /// cancelled generation can never publish into it. Polling is one task per
 /// attached document, cancelled with the attached presentation.
 @MainActor
-private func checkReplacementAndPolling(_ report: CheckReport, session: DocumentSession,
-                                        service: ProjectService, grid: PianoGrid,
-                                        drawer: EditorDrawerPresenter,
-                                        presenter: SharedPlayheadPresenter) {
+private func checkReplacementAndPolling(
+    _ report: CheckReport, session: DocumentSession,
+    service: ProjectService, grid: PianoGrid,
+    drawer: EditorDrawerPresenter,
+    presenter: SharedPlayheadPresenter
+) {
     // The sample is built through the replacement document's own timeline: its
     // tempo map resolves 60 (48 ticks at 1000 samples/tick up to the boundary at
     // tick 48, then 12 at 500) to 54000 samples. The retired document maps that
@@ -418,46 +475,58 @@ private func checkReplacementAndPolling(_ report: CheckReport, session: Document
     presenter.attach(session: replacement, audio: nil, grid: grid, drawer: drawer)
     presenter.setFollowEnabled(false)
     let replacementToken = presenter.lifecycleToken
-    report.expect(replacementToken != beforeToken, cppID: lifecycleID,
-                  message: "installing a replacement document starts a new generation")
-    report.expect(presenter.observe(SharedPlayheadObservation(sample: sample, transport: 0),
-                                    token: beforeToken) == false,
-                  cppID: lifecycleID,
-                  message: "an observation from the retired generation publishes nothing")
+    report.expect(
+        replacementToken != beforeToken, cppID: lifecycleID,
+        message: "installing a replacement document starts a new generation")
+    report.expect(
+        presenter.observe(
+            SharedPlayheadObservation(sample: sample, transport: 0),
+            token: beforeToken) == false,
+        cppID: lifecycleID,
+        message: "an observation from the retired generation publishes nothing")
     _ = presenter.observe(sample: sample, transport: 0)
-    report.expect(!near(presenter.tick, retiredTick, tolerance: mappingTolerance)
-                      && near(presenter.tick, 60, tolerance: mappingTolerance),
-                  cppID: lifecycleID,
-                  message: "the same sample maps through the replacement document's timeline"
-                      + " (sample \(sample), retired tick \(retiredTick),"
-                      + " replacement tick \(presenter.tick))")
+    report.expect(
+        !near(presenter.tick, retiredTick, tolerance: mappingTolerance)
+            && near(presenter.tick, 60, tolerance: mappingTolerance),
+        cppID: lifecycleID,
+        message: "the same sample maps through the replacement document's timeline"
+            + " (sample \(sample), retired tick \(retiredTick),"
+            + " replacement tick \(presenter.tick))")
 
     presenter.detach()
-    report.expect(!presenter.timelineAttached && !presenter.visible && presenter.tick == 0
-                      && presenter.playing == false,
-                  cppID: lifecycleID,
-                  message: "retirement clears the attached presentation synchronously")
-    report.expect(presenter.lifecycleToken != replacementToken, cppID: lifecycleID,
-                  message: "retirement advances the generation")
-    report.expect(presenter.observe(sample: sample, transport: 0) == false, cppID: lifecycleID,
-                  message: "with no document attached nothing publishes")
+    report.expect(
+        !presenter.timelineAttached && !presenter.visible && presenter.tick == 0
+            && presenter.playing == false,
+        cppID: lifecycleID,
+        message: "retirement clears the attached presentation synchronously")
+    report.expect(
+        presenter.lifecycleToken != replacementToken, cppID: lifecycleID,
+        message: "retirement advances the generation")
+    report.expect(
+        presenter.observe(sample: sample, transport: 0) == false, cppID: lifecycleID,
+        message: "with no document attached nothing publishes")
 
     presenter.attach(session: session, audio: nil, grid: grid, drawer: drawer)
     presenter.startPolling()
-    report.expect(presenter.isPolling, cppID: pollingID,
+    report.expect(
+        presenter.isPolling, cppID: pollingID,
         message: "an attached document starts polling")
     presenter.startPolling()
-    report.expect(presenter.isPolling, cppID: pollingID,
+    report.expect(
+        presenter.isPolling, cppID: pollingID,
         message: "repeated start keeps polling active")
     presenter.stopPolling()
-    report.expect(!presenter.isPolling && presenter.timelineAttached, cppID: pollingID,
-                  message: "stopping polling keeps the attached presentation")
+    report.expect(
+        !presenter.isPolling && presenter.timelineAttached, cppID: pollingID,
+        message: "stopping polling keeps the attached presentation")
     presenter.startPolling()
     presenter.detach()
     let settled = presenter.presentationCount
     pumpSharedPlayheadRunLoop(0.05)
-    report.expect(!presenter.isPolling && !presenter.timelineAttached, cppID: pollingID,
-                  message: "cancellation stops polling and clears the attachment before release")
-    report.expect(presenter.presentationCount == settled, cppID: pollingID,
-                  message: "a cancelled task publishes no late presentation")
+    report.expect(
+        !presenter.isPolling && !presenter.timelineAttached, cppID: pollingID,
+        message: "cancellation stops polling and clears the attachment before release")
+    report.expect(
+        presenter.presentationCount == settled, cppID: pollingID,
+        message: "a cancelled task publishes no late presentation")
 }

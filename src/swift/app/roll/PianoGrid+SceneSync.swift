@@ -34,10 +34,12 @@ extension PianoGrid {
         default:
             showVelocityValues = false
         }
-        let initial = session.timeline.tracks.indices.contains(trackIndex)
+        let initial =
+            session.timeline.tracks.indices.contains(trackIndex)
             ? session.timeline.tracks[trackIndex].firstProgram : -1
         let program = max(0, initial)
-        let drumNames = session.bankSlots.indices.contains(program)
+        let drumNames =
+            session.bankSlots.indices.contains(program)
             ? session.bankSlots[program].drumPadNames : nil
         let selectedNotes: Set<NoteID> =
             selectionBand != nil
@@ -153,7 +155,10 @@ extension PianoGrid {
         if notes == lastEndTickNotes, length == lastEndTickLength,
             drawPreview?.tick == lastEndTickPreview?.tick,
             drawPreview?.duration == lastEndTickPreview?.duration,
-            drawPreview?.pitch == lastEndTickPreview?.pitch { return }
+            drawPreview?.pitch == lastEndTickPreview?.pitch
+        {
+            return
+        }
         lastEndTickNotes = notes
         lastEndTickPreview = drawPreview
         lastEndTickLength = length
@@ -167,11 +172,16 @@ extension PianoGrid {
     @QtIgnored
     private func updateTypography() -> Bool {
         let cameraRowHeight = session.camera.snapshot.keyHeight
-        let key = (fontPx: metrics.baseFontPx, dpr: metrics.dpr,
-                   rowHeight: cameraRowHeight)
+        let key = (
+            fontPx: metrics.baseFontPx, dpr: metrics.dpr,
+            rowHeight: cameraRowHeight
+        )
         if let current = typographyKey,
-           current.fontPx == key.fontPx && current.dpr == key.dpr
-            && current.rowHeight == key.rowHeight { return false }
+            current.fontPx == key.fontPx && current.dpr == key.dpr
+                && current.rowHeight == key.rowHeight
+        {
+            return false
+        }
         measurementFonts = GridTypography.fonts(
             metrics: metrics, typography: roleTypography)
         let measured = GridTypography(
@@ -226,9 +236,11 @@ extension PianoGrid {
         guard let pitch = camera.projection.nearestVisiblePitch(to: middle) else { return 0 }
         let centerRow = camera.projection.row(forPitch: pitch)
         return max(
-            0, Double(centerRow) * camera.snapshot.keyHeight
-                - max(fontPx(metrics.baseFontPx, 50.0 / 3.0),
-                      camera.snapshot.rollHeight) / 2)
+            0,
+            Double(centerRow) * camera.snapshot.keyHeight
+                - max(
+                    fontPx(metrics.baseFontPx, 50.0 / 3.0),
+                    camera.snapshot.rollHeight) / 2)
     }
 
     @QtIgnored

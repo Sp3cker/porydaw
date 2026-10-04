@@ -18,11 +18,13 @@ public enum Xcmd {
     }
 
     private static let echoVolumeDescriptor =
-        Descriptor(lane: echoVolumeLane, selector: 0x08, minimum: 0, maximum: 127,
-                   defaultValue: 0, mnemonic: "xIECV", displayName: "Echo volume")
+        Descriptor(
+            lane: echoVolumeLane, selector: 0x08, minimum: 0, maximum: 127,
+            defaultValue: 0, mnemonic: "xIECV", displayName: "Echo volume")
     private static let echoLengthDescriptor =
-        Descriptor(lane: echoLengthLane, selector: 0x09, minimum: 0, maximum: 127,
-                   defaultValue: 0, mnemonic: "xIECL", displayName: "Echo length")
+        Descriptor(
+            lane: echoLengthLane, selector: 0x09, minimum: 0, maximum: 127,
+            defaultValue: 0, mnemonic: "xIECL", displayName: "Echo length")
     public static let descriptors = [echoVolumeDescriptor, echoLengthDescriptor]
     private static let descriptorsByLane =
         Dictionary(uniqueKeysWithValues: descriptors.map { ($0.lane, $0) })
@@ -37,8 +39,10 @@ public enum Xcmd {
         public var value: UInt8
         public var channel: UInt8
 
-        public init(index: UInt64, tick: Tick, stream: UInt8, controller: UInt8,
-                    value: UInt8, channel: UInt8 = 0) {
+        public init(
+            index: UInt64, tick: Tick, stream: UInt8, controller: UInt8,
+            value: UInt8, channel: UInt8 = 0
+        ) {
             self.index = index
             self.tick = tick
             self.stream = stream
@@ -151,9 +155,12 @@ public enum Xcmd {
         result.reserveCapacity(chunk.events.count)
         for (index, event) in chunk.events.enumerated() {
             guard case let .channel(status, controller, value) = event.payload,
-                  status >> 4 == 0xB else { continue }
-            result.append(Event(index: UInt64(index), tick: event.tick, stream: stream,
-                                controller: controller, value: value, channel: status & 0x0F))
+                status >> 4 == 0xB
+            else { continue }
+            result.append(
+                Event(
+                    index: UInt64(index), tick: event.tick, stream: stream,
+                    controller: controller, value: value, channel: status & 0x0F))
         }
         return result
     }
@@ -164,12 +171,15 @@ public enum Xcmd {
         points.reserveCapacity(parsed.events.count)
         for block in parsed.blocks {
             guard let descriptor = descriptor(forSelector: block.selector),
-                  !block.payloads.isEmpty else { continue }
+                !block.payloads.isEmpty
+            else { continue }
             for ordinal in block.payloads {
                 let event = parsed.events[ordinal].source
-                points.append(Point(lane: descriptor.lane, tick: event.tick, value: event.value,
-                                    index: event.index, stream: event.stream,
-                                    channel: event.channel))
+                points.append(
+                    Point(
+                        lane: descriptor.lane, tick: event.tick, value: event.value,
+                        index: event.index, stream: event.stream,
+                        channel: event.channel))
             }
         }
         var consumed = Set<UInt64>()
@@ -200,20 +210,28 @@ public enum Xcmd {
             } else {
                 kind = .completeEchoPoints
                 exportClass = .supported
-                if descriptor?.lane == echoVolumeLane { volume += block.payloads.count }
-                else { length += block.payloads.count }
+                if descriptor?.lane == echoVolumeLane {
+                    volume += block.payloads.count
+                } else {
+                    length += block.payloads.count
+                }
             }
-            result.append(TrafficBlock(kind: kind, exportClass: exportClass,
-                                       stream: block.stream, selector: block.selector,
-                                       payloadCount: block.payloads.count,
-                                       firstTick: block.firstTick, lastTick: block.lastTick))
+            result.append(
+                TrafficBlock(
+                    kind: kind, exportClass: exportClass,
+                    stream: block.stream, selector: block.selector,
+                    payloadCount: block.payloads.count,
+                    firstTick: block.firstTick, lastTick: block.lastTick))
         }
-        return TrafficAssessment(echoVolumePoints: volume, echoLengthPoints: length,
-                                 blocks: result)
+        return TrafficAssessment(
+            echoVolumePoints: volume, echoLengthPoints: length,
+            blocks: result)
     }
 
-    public static func rewrite(_ events: [Event], removing identities: [UInt64],
-                               writing writes: [PointWrite]) -> Patch? {
+    public static func rewrite(
+        _ events: [Event], removing identities: [UInt64],
+        writing writes: [PointWrite]
+    ) -> Patch? {
         let parsed = parse(events)
         var writesByKey: [PointKey: (order: Int, write: PointWrite)] = [:]
         writesByKey.reserveCapacity(writes.count)
@@ -235,15 +253,17 @@ public enum Xcmd {
             let event = parsed.events[ordinal]
             let block = parsed.blocks[event.block]
             guard !event.isSelector, descriptor(forSelector: block.selector) != nil,
-                  !block.payloads.isEmpty else { return nil }
+                !block.payloads.isEmpty
+            else { return nil }
             removedIdentities.insert(identity)
             touched.insert(event.block)
         }
         for (blockIndex, block) in parsed.blocks.enumerated() {
-            for write in normalized where write.stream == block.stream &&
-                write.tick >= block.firstTick && write.tick <= block.lastTick {
+            for write in normalized
+            where write.stream == block.stream && write.tick >= block.firstTick && write.tick <= block.lastTick {
                 guard descriptor(forSelector: block.selector) != nil,
-                      !block.payloads.isEmpty else { return nil }
+                    !block.payloads.isEmpty
+                else { return nil }
                 touched.insert(blockIndex)
             }
         }
@@ -254,24 +274,33 @@ public enum Xcmd {
             rebuildKnown(block, parsed: parsed, removals: &removals, emissions: &emissions) {
                 _, event, selector, output in
                 guard let lane = descriptor(forSelector: selector)?.lane,
-                      !removedIdentities.contains(event.index),
-                      writesByKey[PointKey(stream: event.stream, tick: event.tick,
-                                           lane: lane)] == nil else { return }
-                appendPoint(to: &output, tick: event.tick, selector: selector,
-                            value: event.value, channel: event.channel)
+                    !removedIdentities.contains(event.index),
+                    writesByKey[
+                        PointKey(
+                            stream: event.stream, tick: event.tick,
+                            lane: lane)] == nil
+                else { return }
+                appendPoint(
+                    to: &output, tick: event.tick, selector: selector,
+                    value: event.value, channel: event.channel)
             }
         }
         for write in normalized {
             guard let descriptor = descriptor(forLane: write.lane) else { return nil }
-            appendPoint(to: &emissions, tick: write.tick, selector: descriptor.selector,
-                        value: UInt8(min(max(write.value, Int(descriptor.minimum)),
-                                         Int(descriptor.maximum))), channel: write.channel)
+            appendPoint(
+                to: &emissions, tick: write.tick, selector: descriptor.selector,
+                value: UInt8(
+                    min(
+                        max(write.value, Int(descriptor.minimum)),
+                        Int(descriptor.maximum))), channel: write.channel)
         }
         return finish(removals, emissions)
     }
 
-    public static func reconcile(_ events: [Event], removing removals: [UInt64],
-                                 moving moves: [Relocation], copying copies: [Relocation]) -> Patch? {
+    public static func reconcile(
+        _ events: [Event], removing removals: [UInt64],
+        moving moves: [Relocation], copying copies: [Relocation]
+    ) -> Patch? {
         let parsed = parse(events)
         enum Kind: Equatable { case remove, move, copy }
         struct Operation { let kind: Kind; let relocation: Relocation? }
@@ -279,23 +308,30 @@ public enum Xcmd {
         var requests: [Request] = []
         requests.reserveCapacity(removals.count + moves.count + copies.count)
         for identity in removals {
-            requests.append(Request(identity: identity,
-                                    operation: Operation(kind: .remove, relocation: nil)))
+            requests.append(
+                Request(
+                    identity: identity,
+                    operation: Operation(kind: .remove, relocation: nil)))
         }
         for relocation in moves {
-            requests.append(Request(identity: relocation.index,
-                                    operation: Operation(kind: .move, relocation: relocation)))
+            requests.append(
+                Request(
+                    identity: relocation.index,
+                    operation: Operation(kind: .move, relocation: relocation)))
         }
         for relocation in copies {
-            requests.append(Request(identity: relocation.index,
-                                    operation: Operation(kind: .copy, relocation: relocation)))
+            requests.append(
+                Request(
+                    identity: relocation.index,
+                    operation: Operation(kind: .copy, relocation: relocation)))
         }
         var operations: [Int: Operation] = [:]
         operations.reserveCapacity(requests.count)
         for request in requests {
             guard let ordinal = parsed.indexOf[request.identity] else { return nil }
             if let old = operations[ordinal],
-               old.kind != request.operation.kind || old.relocation != request.operation.relocation {
+                old.kind != request.operation.kind || old.relocation != request.operation.relocation
+            {
                 return nil
             }
             operations[ordinal] = request.operation
@@ -306,21 +342,25 @@ public enum Xcmd {
         for (ordinal, operation) in operations {
             let event = parsed.events[ordinal]
             let block = parsed.blocks[event.block]
-            let knownGlue = event.isSelector && descriptor(forSelector: block.selector) != nil &&
-                !block.payloads.isEmpty
+            let knownGlue =
+                event.isSelector && descriptor(forSelector: block.selector) != nil && !block.payloads.isEmpty
             if knownGlue { continue }
             blockOperations[event.block].affected += 1
             if let kind = blockOperations[event.block].kind, kind != operation.kind {
                 blockOperations[event.block].mixed = true
-            } else { blockOperations[event.block].kind = operation.kind }
+            } else {
+                blockOperations[event.block].kind = operation.kind
+            }
         }
         for index in parsed.blocks.indices {
             let block = parsed.blocks[index]
             let operation = blockOperations[index]
             let memberCount = block.payloads.count + (block.selectorOrdinal == nil ? 0 : 1)
-            if operation.affected > 0 &&
-                (descriptor(forSelector: block.selector) == nil || block.payloads.isEmpty) &&
-                (operation.mixed || operation.affected != memberCount) { return nil }
+            if operation.affected > 0 && (descriptor(forSelector: block.selector) == nil || block.payloads.isEmpty)
+                && (operation.mixed || operation.affected != memberCount)
+            {
+                return nil
+            }
         }
         for (ordinal, operation) in operations where operation.kind != .remove {
             guard let relocation = operation.relocation else { return nil }
@@ -328,13 +368,15 @@ public enum Xcmd {
             for blockIndex in parsed.blocks.indices where blockIndex != source.block {
                 let block = parsed.blocks[blockIndex]
                 guard block.stream == source.source.stream,
-                      block.firstTick <= relocation.tick && relocation.tick <= block.lastTick else {
+                    block.firstTick <= relocation.tick && relocation.tick <= block.lastTick
+                else {
                     continue
                 }
                 let blockOperation = blockOperations[blockIndex]
                 var survives = blockOperation.affected == 0 || blockOperation.kind == .copy
                 if descriptor(forSelector: block.selector) != nil && !block.payloads.isEmpty,
-                   blockOperation.affected > 0 {
+                    blockOperation.affected > 0
+                {
                     survives = block.payloads.contains { ordinal in
                         operations[ordinal]?.kind != .remove && operations[ordinal]?.kind != .move
                     }
@@ -354,18 +396,21 @@ public enum Xcmd {
                 rebuildKnown(block, parsed: parsed, removals: &removed, emissions: &emitted) {
                     ordinal, event, selector, output in
                     guard let operation = operations[ordinal] else {
-                        appendPoint(to: &output, tick: event.tick, selector: selector,
-                                    value: event.value, channel: event.channel)
+                        appendPoint(
+                            to: &output, tick: event.tick, selector: selector,
+                            value: event.value, channel: event.channel)
                         return
                     }
                     if operation.kind == .remove { return }
                     if operation.kind == .copy {
-                        appendPoint(to: &output, tick: event.tick, selector: selector,
-                                    value: event.value, channel: event.channel)
+                        appendPoint(
+                            to: &output, tick: event.tick, selector: selector,
+                            value: event.value, channel: event.channel)
                     }
                     if let relocation = operation.relocation {
-                        appendPoint(to: &output, tick: relocation.tick, selector: selector,
-                                    value: event.value, channel: relocation.channel)
+                        appendPoint(
+                            to: &output, tick: relocation.tick, selector: selector,
+                            value: event.value, channel: relocation.channel)
                     }
                 }
             } else {
@@ -375,9 +420,11 @@ public enum Xcmd {
                 if kind != .remove {
                     for ordinal in members {
                         guard let relocation = operations[ordinal]?.relocation else { return nil }
-                        emitted.append(Emission(tick: relocation.tick, controller: 0, value: 0,
-                                                sourceIndex: parsed.events[ordinal].source.index,
-                                                channel: relocation.channel))
+                        emitted.append(
+                            Emission(
+                                tick: relocation.tick, controller: 0, value: 0,
+                                sourceIndex: parsed.events[ordinal].source.index,
+                                channel: relocation.channel))
                     }
                 }
             }
@@ -393,11 +440,13 @@ public enum Xcmd {
             if descriptor(forSelector: block.selector) != nil && !block.payloads.isEmpty {
                 rebuildKnown(block, parsed: parsed, removals: &removed, emissions: &emitted) {
                     _, event, selector, output in
-                    appendPoint(to: &output, tick: event.tick, selector: selector,
-                                value: event.value, channel: event.channel)
+                    appendPoint(
+                        to: &output, tick: event.tick, selector: selector,
+                        value: event.value, channel: event.channel)
                 }
             } else if descriptor(forSelector: block.selector) != nil,
-                      let selector = block.selectorOrdinal {
+                let selector = block.selectorOrdinal
+            {
                 removed.insert(parsed.events[selector].source.index)
             }
         }
@@ -427,36 +476,47 @@ private extension Xcmd {
         parsed.blocks.reserveCapacity(events.count)
         parsed.indexOf.reserveCapacity(events.count)
         var open: [UInt8: Int] = [:]
-        for event in events where event.controller == selectorController ||
-            event.controller == payloadController || event.controller == alternatePayloadController {
+        for event in events
+        where event.controller == selectorController || event.controller == payloadController
+            || event.controller == alternatePayloadController
+        {
             let isSelector = event.controller == selectorController
             let blockIndex: Int
             if isSelector {
                 blockIndex = parsed.blocks.count
-                parsed.blocks.append(Block(stream: event.stream, selector: event.value,
-                                           selectorOrdinal: nil, firstTick: event.tick,
-                                           lastTick: event.tick))
+                parsed.blocks.append(
+                    Block(
+                        stream: event.stream, selector: event.value,
+                        selectorOrdinal: nil, firstTick: event.tick,
+                        lastTick: event.tick))
                 open[event.stream] = blockIndex
             } else if let existing = open[event.stream] {
                 blockIndex = existing
             } else {
                 blockIndex = parsed.blocks.count
-                parsed.blocks.append(Block(stream: event.stream, firstTick: event.tick,
-                                           lastTick: event.tick))
+                parsed.blocks.append(
+                    Block(
+                        stream: event.stream, firstTick: event.tick,
+                        lastTick: event.tick))
                 open[event.stream] = blockIndex
             }
             let ordinal = parsed.events.count
-            parsed.events.append(ParsedEvent(source: event, block: blockIndex,
-                                             isSelector: isSelector))
+            parsed.events.append(
+                ParsedEvent(
+                    source: event, block: blockIndex,
+                    isSelector: isSelector))
             if parsed.indexOf[event.index] == nil { parsed.indexOf[event.index] = ordinal }
 
-            if isSelector { parsed.blocks[blockIndex].selectorOrdinal = ordinal }
-            else {
+            if isSelector {
+                parsed.blocks[blockIndex].selectorOrdinal = ordinal
+            } else {
                 parsed.blocks[blockIndex].payloads.append(ordinal)
-                parsed.blocks[blockIndex].firstTick = min(parsed.blocks[blockIndex].firstTick,
-                                                          event.tick)
-                parsed.blocks[blockIndex].lastTick = max(parsed.blocks[blockIndex].lastTick,
-                                                         event.tick)
+                parsed.blocks[blockIndex].firstTick = min(
+                    parsed.blocks[blockIndex].firstTick,
+                    event.tick)
+                parsed.blocks[blockIndex].lastTick = max(
+                    parsed.blocks[blockIndex].lastTick,
+                    event.tick)
             }
         }
         return parsed
@@ -476,18 +536,23 @@ private extension Xcmd {
             emit(ordinal, event, block.selector, &emissions)
         }
     }
-    static func appendPoint(to emissions: inout [Emission], tick: Tick, selector: UInt8,
-                            value: UInt8, channel: UInt8) {
-        emissions.append(Emission(tick: tick, controller: selectorController, value: selector,
-                                  sourceIndex: nil, channel: channel))
-        emissions.append(Emission(tick: tick, controller: payloadController, value: value,
-                                  sourceIndex: nil, channel: channel))
+    static func appendPoint(
+        to emissions: inout [Emission], tick: Tick, selector: UInt8,
+        value: UInt8, channel: UInt8
+    ) {
+        emissions.append(
+            Emission(
+                tick: tick, controller: selectorController, value: selector,
+                sourceIndex: nil, channel: channel))
+        emissions.append(
+            Emission(
+                tick: tick, controller: payloadController, value: value,
+                sourceIndex: nil, channel: channel))
     }
 
     static func finish(_ removals: Set<UInt64>, _ emissions: [Emission]) -> Patch {
         let ordered = emissions.enumerated().sorted {
-            $0.element.tick == $1.element.tick ? $0.offset < $1.offset :
-                $0.element.tick < $1.element.tick
+            $0.element.tick == $1.element.tick ? $0.offset < $1.offset : $0.element.tick < $1.element.tick
         }.map(\.element)
         return Patch(removeEvents: removals.sorted(), inserts: ordered)
     }

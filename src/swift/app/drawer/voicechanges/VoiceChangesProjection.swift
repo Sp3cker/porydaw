@@ -49,17 +49,22 @@ public final class VoiceMarkerHandle: QVariantGettable {
         ]
     }
 
-    static func rect(_ x: Double, _ y: Double, _ w: Double, _ h: Double)
+    static func rect(
+        _ x: Double, _ y: Double, _ w: Double, _ h: Double
+    )
         -> [String: QVariantSettable]
     {
         ["x": x, "y": y, "width": w, "height": h]
     }
 
-    static func rectMatches(_ lhs: [String: QVariantSettable],
-                            _ rhs: [String: QVariantSettable]) -> Bool {
+    static func rectMatches(
+        _ lhs: [String: QVariantSettable],
+        _ rhs: [String: QVariantSettable]
+    ) -> Bool {
         for key in ["x", "y", "width", "height"] {
             guard let left = lhs[key] as? Double, let right = rhs[key] as? Double,
-                  left == right else { return false }
+                left == right
+            else { return false }
         }
         return true
     }
@@ -259,7 +264,6 @@ struct VoiceMarkerProjectionInput {
     var displayX: (Tick) -> Double
 }
 
-
 struct VoiceGutterProjectionInput {
     var plotHeight: Double
     var plotOrigin: Double
@@ -282,7 +286,6 @@ struct VoiceReadoutProjection {
     var rect: [String: QVariantSettable]
 }
 
-
 /// Pure layout/projection of lane data into published marker, span, picker and
 /// menu records. The page supplies camera, palette and interaction facts.
 @MainActor
@@ -293,8 +296,9 @@ enum VoiceChangesProjection {
         for (index, point) in points.enumerated() {
             let identity = VoiceOccurrence(point).text
             projected.append(
-                VoiceProjectionEntry(tick: point.tick, value: point.value,
-                                     identity: identity, sourceOrder: index))
+                VoiceProjectionEntry(
+                    tick: point.tick, value: point.value,
+                    identity: identity, sourceOrder: index))
         }
         return projected.sorted { left, right in
             if left.tick != right.tick { return left.tick < right.tick }
@@ -303,11 +307,13 @@ enum VoiceChangesProjection {
     }
 
     /// Only the frozen occurrence moves; equal ticks keep source order.
-    static func moving(_ entries: [VoiceProjectionEntry], drag: VoiceDragState?)
+    static func moving(
+        _ entries: [VoiceProjectionEntry], drag: VoiceDragState?
+    )
         -> [VoiceProjectionEntry]
     {
         guard let drag, drag.active,
-              let index = entries.firstIndex(where: { $0.identity == drag.identity })
+            let index = entries.firstIndex(where: { $0.identity == drag.identity })
         else { return entries }
         var result = entries
         var moved = result.remove(at: index)
@@ -318,7 +324,8 @@ enum VoiceChangesProjection {
             let middle = (lower + upper) / 2
             let entry = result[middle]
             if entry.tick < moved.tick
-                || (entry.tick == moved.tick && entry.sourceOrder < moved.sourceOrder) {
+                || (entry.tick == moved.tick && entry.sourceOrder < moved.sourceOrder)
+            {
                 lower = middle + 1
             } else {
                 upper = middle
@@ -328,34 +335,38 @@ enum VoiceChangesProjection {
         return result
     }
 
-
     static func gutterTexts(_ input: VoiceGutterProjectionInput) -> [SceneText] {
         let top = max(0, (input.plotHeight - input.titleHeight - input.captionHeight) / 2)
-        var texts = [SceneText(
+        var texts = [
+            SceneText(
                 rect: (input.pad, top, max(0, input.plotOrigin - input.pad), input.titleHeight),
-            text: input.title,
-            color: input.titleColor,
-            font: input.titleFont,
-            horizontal: 0x1,
-            vertical: 0x80)]
+                text: input.title,
+                color: input.titleColor,
+                font: input.titleFont,
+                horizontal: 0x1,
+                vertical: 0x80)
+        ]
         if let summary = input.summary {
-            texts.append(SceneText(
+            texts.append(
+                SceneText(
                     rect: (
                         input.pad, top + input.titleHeight,
                         max(0, input.plotOrigin - input.pad), input.captionHeight
                     ),
-                text: summary,
-                color: input.captionColor,
-                font: input.captionFont,
-                horizontal: 0x1,
-                vertical: 0x80))
+                    text: summary,
+                    color: input.captionColor,
+                    font: input.captionFont,
+                    horizontal: 0x1,
+                    vertical: 0x80))
         }
         return texts
     }
 
-    static func readout(firstProgram: Int, tick: Tick, points: [LanePoint],
-                        slots: [BankSlotView], pad: Double,
-                        plotWidth: Double, plotHeight: Double) -> VoiceReadoutProjection {
+    static func readout(
+        firstProgram: Int, tick: Tick, points: [LanePoint],
+        slots: [BankSlotView], pad: Double,
+        plotWidth: Double, plotHeight: Double
+    ) -> VoiceReadoutProjection {
         let slot = VoiceLanePolicy.slot(firstProgram: firstProgram, tick: tick, points: points)
         let view = slots.indices.contains(slot) ? slots[slot] : nil
         let label = VoiceLanePolicy.label(slot: slot, view: view)
@@ -367,15 +378,17 @@ enum VoiceChangesProjection {
             rect: VoiceMarkerHandle.rect(pad, 0, max(0, plotWidth - 2 * pad), plotHeight))
     }
 
-
-    static func markers(_ input: VoiceMarkerProjectionInput,
-                        reusing previous: [String: VoiceMarkerHandle] = [:])
+    static func markers(
+        _ input: VoiceMarkerProjectionInput,
+        reusing previous: [String: VoiceMarkerHandle] = [:]
+    )
         -> [VoiceMarkerHandle]
     {
         let labelHeight = input.caption.height
         let centerY = input.plotHeight / 2 - labelHeight / 2
-        let stairStep = min(input.stairLimit,
-                            (input.plotHeight - labelHeight - 2 * input.pad) / 2)
+        let stairStep = min(
+            input.stairLimit,
+            (input.plotHeight - labelHeight - 2 * input.pad) / 2)
         let canStair = stairStep > 1
         var stairUp = true
         var lastXEnd = -Double.infinity
@@ -394,7 +407,8 @@ enum VoiceChangesProjection {
             } else {
                 let label = VoiceLanePolicy.label(slot: entry.value, view: view)
                 let source = label.isEmpty ? "No voice" : label
-                drawn = input.caption.advance(source) > maxWidth && maxWidth > 0
+                drawn =
+                    input.caption.advance(source) > maxWidth && maxWidth > 0
                     ? input.caption.elided(source, toWidth: maxWidth.rounded(.down))
                     : source
                 labelWidth = min(input.caption.advance(drawn), maxWidth)
@@ -414,11 +428,12 @@ enum VoiceChangesProjection {
             // Stair state propagates through overlapping neighbors. Walk the
             // cheap state, retaining every unaffected immutable published row.
             if let old, old.tick == Double(entry.tick), old.value == entry.value,
-               old.label == drawn,
-               old.labelRect["y"] as? Double == labelY,
-               old.selected == (input.selectedIdentity == entry.identity),
-               old.hovered == (input.hoverIdentity == entry.identity),
-               old.preview == (input.previewIdentity == entry.identity) {
+                old.label == drawn,
+                old.labelRect["y"] as? Double == labelY,
+                old.selected == (input.selectedIdentity == entry.identity),
+                old.hovered == (input.hoverIdentity == entry.identity),
+                old.preview == (input.previewIdentity == entry.identity)
+            {
                 values.append(old)
                 continue
             }
@@ -446,7 +461,9 @@ enum VoiceChangesProjection {
         return values
     }
 
-    static func pickerRows(programs: [Int], slots: [BankSlotView], selected: Int)
+    static func pickerRows(
+        programs: [Int], slots: [BankSlotView], selected: Int
+    )
         -> [VoicePickerRowHandle]
     {
         programs.map { program in
@@ -462,10 +479,13 @@ enum VoiceChangesProjection {
     }
 
     static func menuRows(for target: VoiceTarget) -> [VoiceMenuRowHandle] {
-        let values: [(Int, String)] = target.occurrence == nil
+        let values: [(Int, String)] =
+            target.occurrence == nil
             ? [(VoiceChangesPagePolicy.insertVoiceChangeAction, "Insert voice change")]
-            : [(VoiceChangesPagePolicy.changeVoiceAction, "Change voice"),
-               (VoiceChangesPagePolicy.deleteMarkerAction, "Delete")]
+            : [
+                (VoiceChangesPagePolicy.changeVoiceAction, "Change voice"),
+                (VoiceChangesPagePolicy.deleteMarkerAction, "Delete"),
+            ]
         return values.map { action, text in
             let row = VoiceMenuRowHandle()
             row.actionId = action
@@ -474,20 +494,24 @@ enum VoiceChangesProjection {
         }
     }
 
-
     static func syncTexts(_ model: QListModel<SceneText>, _ values: [SceneText]) {
         syncModel(model, values, matches: textMatches)
     }
 
-    static func syncPickerRows(_ model: QListModel<VoicePickerRowHandle>,
-                               _ values: [VoicePickerRowHandle]) {
+    static func syncPickerRows(
+        _ model: QListModel<VoicePickerRowHandle>,
+        _ values: [VoicePickerRowHandle]
+    ) {
         syncModel(model, values, matches: { $0.matches($1) })
     }
 
-    static func publishPickerRows(_ model: QListModel<VoicePickerRowHandle>,
-                                  snapshots: inout [VoicePickerRowHandle],
-                                  values: [VoicePickerRowHandle]) {
-        let samePrograms = snapshots.count == values.count
+    static func publishPickerRows(
+        _ model: QListModel<VoicePickerRowHandle>,
+        snapshots: inout [VoicePickerRowHandle],
+        values: [VoicePickerRowHandle]
+    ) {
+        let samePrograms =
+            snapshots.count == values.count
             && zip(snapshots, values).allSatisfy { $0.program == $1.program }
         snapshots = values
         if samePrograms {
@@ -497,8 +521,10 @@ enum VoiceChangesProjection {
         }
     }
 
-    static func syncMenuRows(_ model: QListModel<VoiceMenuRowHandle>,
-                             _ values: [VoiceMenuRowHandle]) {
+    static func syncMenuRows(
+        _ model: QListModel<VoiceMenuRowHandle>,
+        _ values: [VoiceMenuRowHandle]
+    ) {
         syncModel(model, values, matches: { $0.matches($1) })
     }
 
@@ -513,10 +539,13 @@ enum VoiceChangesProjection {
             }
     }
 
-    static func fontMatches(_ lhs: [String: QVariantSettable],
-                            _ rhs: [String: QVariantSettable]) -> Bool {
-        lhs.count == rhs.count && lhs.allSatisfy {
-            String(describing: $1) == String(describing: rhs[$0])
-        }
+    static func fontMatches(
+        _ lhs: [String: QVariantSettable],
+        _ rhs: [String: QVariantSettable]
+    ) -> Bool {
+        lhs.count == rhs.count
+            && lhs.allSatisfy {
+                String(describing: $1) == String(describing: rhs[$0])
+            }
     }
 }

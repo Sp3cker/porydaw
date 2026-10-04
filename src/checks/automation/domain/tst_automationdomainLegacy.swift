@@ -5,9 +5,12 @@ import PorydawCore
 // Exact legacy tempo/CC row fixtures for the resolver and commit boundary.
 @MainActor
 private final class DrawerDomainCheckFixture {
-    let document = SongDocument(file: MidiFile(division: 24, chunks: [
-        MidiChunk(events: [.channel(status: 0xC0, data0: 0)], endTick: 9216),
-    ]))
+    let document = SongDocument(
+        file: MidiFile(
+            division: 24,
+            chunks: [
+                MidiChunk(events: [.channel(status: 0xC0, data0: 0)], endTick: 9216)
+            ]))
     let parameter: AutomationParameter
     let camera: EditorCamera.Snapshot
 
@@ -23,8 +26,9 @@ private final class DrawerDomainCheckFixture {
     }
 
     var snapshot: Snapshot {
-        Snapshot(bytes: try! document.captureSave().bytes, revision: document.revision,
-                 identity: document.history.currentIdentity)
+        Snapshot(
+            bytes: try! document.captureSave().bytes, revision: document.revision,
+            identity: document.history.currentIdentity)
     }
 
     var lane: AutomationLaneSnapshot {
@@ -32,28 +36,37 @@ private final class DrawerDomainCheckFixture {
     }
 
     var facts: AutomationFrozenFacts {
-        AutomationFrozenFacts(parameter: parameter, snapshot: lane, camera: camera,
-                              selection: nil, modifiers: .init(), songEndTick: 9216)
+        AutomationFrozenFacts(
+            parameter: parameter, snapshot: lane, camera: camera,
+            selection: nil, modifiers: .init(), songEndTick: 9216)
     }
 
     var points: [String] { lane.displaySeries.map { "\($0.tick):\($0.value)" } }
 
     func set(_ points: [(Tick, Int)]) {
         if parameter.isTempo {
-            document.editTempo(TempoEdit(remove: document.state.tempo, add: points.map {
-                TempoPoint(tick: $0.0,
-                           microsecondsPerQuarterNote: TimeDefaults.microsecondsPerQuarterNote(forBPM: $0.1))
-            }))
+            document.editTempo(
+                TempoEdit(
+                    remove: document.state.tempo,
+                    add: points.map {
+                        TempoPoint(
+                            tick: $0.0,
+                            microsecondsPerQuarterNote: TimeDefaults.microsecondsPerQuarterNote(forBPM: $0.1))
+                    }))
         } else {
-            document.writeLane(track: 0, lane: parameter.lane!, from: 0,
-                               through: TimeDefaults.noTick,
-                               points: points.map { LaneWrite(tick: $0.0, value: $0.1) })
+            document.writeLane(
+                track: 0, lane: parameter.lane!, from: 0,
+                through: TimeDefaults.noTick,
+                points: points.map { LaneWrite(tick: $0.0, value: $0.1) })
         }
     }
 
     func insert(_ tick: Tick, _ value: UInt8) {
-        document.insertRawEvent(chunk: 0, event: .channel(tick: tick, status: 0xB0,
-                                                         data0: 11, data1: value))
+        document.insertRawEvent(
+            chunk: 0,
+            event: .channel(
+                tick: tick, status: 0xB0,
+                data0: 11, data1: value))
     }
 
     func raw(_ tick: Tick) -> [Int] {
@@ -70,18 +83,22 @@ private final class DrawerDomainCheckFixture {
     }
 
     func delete(_ ticks: [Tick]) -> Bool {
-        guard let plan = AutomationNodeResolver.deletions(revision: document.revision,
-            [.init(parameter: parameter, snapshot: lane, ticks: ticks)]) else { return false }
+        guard
+            let plan = AutomationNodeResolver.deletions(
+                revision: document.revision,
+                [.init(parameter: parameter, snapshot: lane, ticks: ticks)])
+        else { return false }
         return AutomationCommit.apply(plan, in: document)
     }
 
     func replace(_ begin: Tick, _ end: Tick, _ points: [(Tick, Int)]) {
         // Like NodeLane::replaceSpan, this is an explicit accepted replacement,
         // below gesture no-op planning. The document compares the stored bytes.
-        _ = AutomationCommit.apply(AutomationLaneEdit(
-            parameter: parameter, revision: document.revision, tickBegin: begin,
-            tickEnd: end, points: points.map { AutomationLanePoint(tick: $0.0, value: $0.1) },
-            unchanged: false), in: document)
+        _ = AutomationCommit.apply(
+            AutomationLaneEdit(
+                parameter: parameter, revision: document.revision, tickBegin: begin,
+                tickEnd: end, points: points.map { AutomationLanePoint(tick: $0.0, value: $0.1) },
+                unchanged: false), in: document)
     }
 
     func oneEdit(_ before: Snapshot) -> Bool {
@@ -105,8 +122,9 @@ func drawerAutomationLegacyResolverRows(_ report: CheckReport, camera: EditorCam
     for parameter in [AutomationParameter.tempo, .controlChange(track: 0, controller: 11)] {
         let row = parameter.isTempo ? "tempo" : "cc"
         func expect(_ condition: @autoclosure () -> Bool, _ line: Int) {
-            report.expect(condition(), cppID: "automation-domain/AutomationDomainTest::legacyResolverRows",
-                          message: "tst_automationdomain.cpp:\(line) row=\(row)")
+            report.expect(
+                condition(), cppID: "automation-domain/AutomationDomainTest::legacyResolverRows",
+                message: "tst_automationdomain.cpp:\(line) row=\(row)")
         }
 
         let deletion = DrawerDomainCheckFixture(parameter, camera: camera)
@@ -120,8 +138,10 @@ func drawerAutomationLegacyResolverRows(_ report: CheckReport, camera: EditorCam
         expect(deletion.oneEdit(beforeDelete), 308)
         expect(deletion.points == ["0:120", "288:110"], 309)
         if !parameter.isTempo { expect(deletion.raw(96).isEmpty, 311) }
-        expect(deletion.replay(beforeDelete, ["0:120", "96:100", "288:110"],
-                               ["0:120", "288:110"]), 312)
+        expect(
+            deletion.replay(
+                beforeDelete, ["0:120", "96:100", "288:110"],
+                ["0:120", "288:110"]), 312)
 
         if !parameter.isTempo {
             deletion.set([(0, 64)])
@@ -138,10 +158,12 @@ func drawerAutomationLegacyResolverRows(_ report: CheckReport, camera: EditorCam
 
         let moving = DrawerDomainCheckFixture(parameter, camera: camera)
         if parameter.isTempo {
-            moving.document.editTempo(TempoEdit(add: [
-                TempoPoint(tick: 96, microsecondsPerQuarterNote: 499999),
-                TempoPoint(tick: 288, microsecondsPerQuarterNote: TimeDefaults.microsecondsPerQuarterNote(forBPM: 110)),
-            ]))
+            moving.document.editTempo(
+                TempoEdit(add: [
+                    TempoPoint(tick: 96, microsecondsPerQuarterNote: 499999),
+                    TempoPoint(
+                        tick: 288, microsecondsPerQuarterNote: TimeDefaults.microsecondsPerQuarterNote(forBPM: 110)),
+                ]))
         } else {
             moving.set([(288, 40)])
             moving.insert(96, 10)
@@ -170,8 +192,9 @@ func drawerAutomationLegacyResolverRows(_ report: CheckReport, camera: EditorCam
             let rewritePoints = moving.points
             expect(moving.move([(96, 192, 140)]), 359)
             expect(moving.oneEdit(rewriteBefore), 360)
-            expect(moving.document.state.tempo.first?.microsecondsPerQuarterNote
-                == TimeDefaults.microsecondsPerQuarterNote(forBPM: 140), 361)
+            expect(
+                moving.document.state.tempo.first?.microsecondsPerQuarterNote
+                    == TimeDefaults.microsecondsPerQuarterNote(forBPM: 140), 361)
             expect(moving.replay(rewriteBefore, rewritePoints, ["192:140", "288:110"]), 362)
         }
 
@@ -198,8 +221,9 @@ func drawerAutomationLegacyResolverRows(_ report: CheckReport, camera: EditorCam
 @MainActor
 func drawerAutomationLegacyMetadataRows(_ report: CheckReport, camera: EditorCamera.Snapshot) {
     func expect(_ condition: @autoclosure () -> Bool, _ line: Int, row: String) {
-        report.expect(condition(), cppID: "automation-domain/AutomationDomainTest::legacyMetadataRows",
-                      message: "tst_automationdomain.cpp:\(line) row=\(row)")
+        report.expect(
+            condition(), cppID: "automation-domain/AutomationDomainTest::legacyMetadataRows",
+            message: "tst_automationdomain.cpp:\(line) row=\(row)")
     }
     for parameter in [AutomationParameter.tempo, .controlChange(track: 0, controller: 11)] {
         let row = parameter.isTempo ? "tempo" : "cc"
@@ -210,10 +234,14 @@ func drawerAutomationLegacyMetadataRows(_ report: CheckReport, camera: EditorCam
         if parameter.isTempo {
             fixture.set([(288, 110), (0, 120), (96, 150)])
             expect(fixture.points == ["0:120", "96:150", "288:110"], 226, row: row)
-            fixture.document.editTempo(TempoEdit(remove: fixture.document.state.tempo, add: [
-                TempoPoint(tick: 0, microsecondsPerQuarterNote: TimeDefaults.microsecondsPerQuarterNote(forBPM: 150)),
-                TempoPoint(tick: 96, microsecondsPerQuarterNote: 398406),
-            ]))
+            fixture.document.editTempo(
+                TempoEdit(
+                    remove: fixture.document.state.tempo,
+                    add: [
+                        TempoPoint(
+                            tick: 0, microsecondsPerQuarterNote: TimeDefaults.microsecondsPerQuarterNote(forBPM: 150)),
+                        TempoPoint(tick: 96, microsecondsPerQuarterNote: 398406),
+                    ]))
             let metadata = fixture.lane.metadata
             let fractional = Int(TimeDefaults.tempoBPM(forMicrosecondsPerQuarterNote: 398406).rounded())
             expect(AutomationCatalog.title(parameter) == "Tempo (BPM)", 253, row: row)
@@ -230,8 +258,10 @@ func drawerAutomationLegacyMetadataRows(_ report: CheckReport, camera: EditorCam
             expect(fixture.points == ["0:64", "96:20", "288:40"], 234, row: row)
             expect(fixture.raw(96) == [10, 20], 235, row: row)
             let bend = AutomationParameterMetadata(parameter: .pitchBend(track: 0))
-            let modType = AutomationParameterMetadata(parameter: .controlChange(track: 0, controller: TimeDefaults.ccModulationType))
-            let tune = AutomationParameterMetadata(parameter: .controlChange(track: 0, controller: TimeDefaults.ccFineTune))
+            let modType = AutomationParameterMetadata(
+                parameter: .controlChange(track: 0, controller: TimeDefaults.ccModulationType))
+            let tune = AutomationParameterMetadata(
+                parameter: .controlChange(track: 0, controller: TimeDefaults.ccFineTune))
             expect(bend.minimum == -8192, 263, row: row)
             expect(bend.maximum == 8191, 264, row: row)
             expect(modType.minimum == 0, 266, row: row)
@@ -241,14 +271,19 @@ func drawerAutomationLegacyMetadataRows(_ report: CheckReport, camera: EditorCam
             expect(prompt.maximum == 63, 273, row: row)
             expect(prompt.initialValue == 0, 274, row: row)
             expect(tune.neutral == 64, 275, row: row)
-            fixture.document.writeLane(track: 0, lane: .controller(TimeDefaults.ccFineTune),
-                                       from: 0, through: 96, points: [
-                LaneWrite(tick: 0, value: prompt.minimum + prompt.storedOffset),
-                LaneWrite(tick: 48, value: prompt.initialValue + prompt.storedOffset),
-                LaneWrite(tick: 96, value: prompt.maximum + prompt.storedOffset),
-            ])
-            let tuneSnapshot = AutomationLaneSnapshot(parameter: tune.parameter, in: fixture.document, songEndTick: 9216)
-            expect(tuneSnapshot.displaySeries.map { "\($0.tick):\($0.value)" } == ["0:0", "48:64", "96:127"], 280, row: row)
+            fixture.document.writeLane(
+                track: 0, lane: .controller(TimeDefaults.ccFineTune),
+                from: 0, through: 96,
+                points: [
+                    LaneWrite(tick: 0, value: prompt.minimum + prompt.storedOffset),
+                    LaneWrite(tick: 48, value: prompt.initialValue + prompt.storedOffset),
+                    LaneWrite(tick: 96, value: prompt.maximum + prompt.storedOffset),
+                ])
+            let tuneSnapshot = AutomationLaneSnapshot(
+                parameter: tune.parameter, in: fixture.document, songEndTick: 9216)
+            expect(
+                tuneSnapshot.displaySeries.map { "\($0.tick):\($0.value)" } == ["0:0", "48:64", "96:127"], 280, row: row
+            )
             expect(bend.neutral == 0, 281, row: row)
             expect(bend.prompt(storedValue: 0).storedOffset == 0, 282, row: row)
             expect(modType.neutral == nil, 283, row: row)
@@ -261,8 +296,9 @@ func drawerAutomationLegacyDefaultPromotion(_ report: CheckReport, camera: Edito
     let fixture = DrawerDomainCheckFixture(.controlChange(track: 0, controller: 11), camera: camera)
     let document = fixture.document
     func expect(_ condition: @autoclosure () -> Bool, _ line: Int) {
-        report.expect(condition(), cppID: "automation-domain/AutomationDomainTest::defaultNodePromotion",
-                      message: "tst_automationdomain.cpp:\(line)")
+        report.expect(
+            condition(), cppID: "automation-domain/AutomationDomainTest::defaultNodePromotion",
+            message: "tst_automationdomain.cpp:\(line)")
     }
     func lane(_ parameter: AutomationParameter) -> AutomationLaneSnapshot {
         AutomationLaneSnapshot(parameter: parameter, in: document, songEndTick: 9216)
@@ -283,28 +319,36 @@ func drawerAutomationLegacyDefaultPromotion(_ report: CheckReport, camera: Edito
     expect(lane(.controlChange(track: 0, controller: TimeDefaults.ccFineTune)).leadInValue == 64, 499)
     expect(lane(.controlChange(track: 0, controller: TimeDefaults.ccModulationType)).leadInValue == 0, 502)
     expect(lane(.controlChange(track: 0, controller: TimeDefaults.ccLFODelay)).leadInValue == 0, 505)
-    document.writeLane(track: 0, lane: .controller(TimeDefaults.ccModulationType), from: 0,
-                       through: TimeDefaults.noTick, points: [LaneWrite(tick: 0, value: 7)])
-    expect(document.lanePoints(track: 0, lane: .controller(TimeDefaults.ccModulationType))
-        .filter { $0.tick == 0 }.map(\.value) == [2], 510)
+    document.writeLane(
+        track: 0, lane: .controller(TimeDefaults.ccModulationType), from: 0,
+        through: TimeDefaults.noTick, points: [LaneWrite(tick: 0, value: 7)])
+    expect(
+        document.lanePoints(track: 0, lane: .controller(TimeDefaults.ccModulationType))
+            .filter { $0.tick == 0 }.map(\.value) == [2], 510)
 
     for (parameter, value, base, defaultPoints) in [
         (volume, 100, 514, ["0:127"]), (pan, 32, 527, ["0:64"]),
     ] {
         let before = fixture.snapshot
-        let facts = AutomationFrozenFacts(parameter: parameter, snapshot: lane(parameter),
-                                          camera: camera, selection: nil, modifiers: .init(),
-                                          songEndTick: 9216)
-        let resolved = AutomationNodeResolver.moves([.init(facts, [
-            AutomationNodeMove(parameter: parameter, sourceTick: 0, tick: 96, value: value),
-        ])])
+        let facts = AutomationFrozenFacts(
+            parameter: parameter, snapshot: lane(parameter),
+            camera: camera, selection: nil, modifiers: .init(),
+            songEndTick: 9216)
+        let resolved = AutomationNodeResolver.moves([
+            .init(
+                facts,
+                [
+                    AutomationNodeMove(parameter: parameter, sourceTick: 0, tick: 96, value: value)
+                ])
+        ])
         expect(resolved != nil, base)
         guard let resolved else { return }
         expect(!resolved.isEmpty, base + 3)
         _ = AutomationCommit.apply(resolved, in: document)
         expect(fixture.oneEdit(before), base + 5)
-        expect(document.lanePoints(track: 0, lane: parameter.lane!)
-            .filter { $0.tick == 96 }.map(\.value) == [value], base + 6)
+        expect(
+            document.lanePoints(track: 0, lane: parameter.lane!)
+                .filter { $0.tick == 96 }.map(\.value) == [value], base + 6)
         _ = document.history.undoDocument()
         expect(fixture.snapshot.bytes == before.bytes, base + 8)
         expect(points(parameter) == defaultPoints, base + 9)
@@ -316,8 +360,9 @@ func drawerAutomationLegacySpanRows(_ report: CheckReport, camera: EditorCamera.
     for parameter in [AutomationParameter.tempo, .controlChange(track: 0, controller: 11)] {
         let row = parameter.isTempo ? "tempo" : "cc"
         func expect(_ condition: @autoclosure () -> Bool, _ line: Int) {
-            report.expect(condition(), cppID: "automation-domain/AutomationDomainTest::replaceSpans",
-                          message: "tst_automationdomain.cpp:\(line) row=\(row)")
+            report.expect(
+                condition(), cppID: "automation-domain/AutomationDomainTest::replaceSpans",
+                message: "tst_automationdomain.cpp:\(line) row=\(row)")
         }
         let fixture = DrawerDomainCheckFixture(parameter, camera: camera)
         let emptyBefore = fixture.snapshot
@@ -346,16 +391,20 @@ func drawerAutomationLegacySpanRows(_ report: CheckReport, camera: EditorCamera.
         expect(fixture.replay(clearBefore, original, []), 461)
 
         if parameter.isTempo {
-            fixture.document.editTempo(TempoEdit(remove: fixture.document.state.tempo, add: [
-                TempoPoint(tick: 96, microsecondsPerQuarterNote: 398406),
-            ]))
+            fixture.document.editTempo(
+                TempoEdit(
+                    remove: fixture.document.state.tempo,
+                    add: [
+                        TempoPoint(tick: 96, microsecondsPerQuarterNote: 398406)
+                    ]))
             let displayed = Int(TimeDefaults.tempoBPM(forMicrosecondsPerQuarterNote: 398406).rounded())
             let fractionalBefore = fixture.snapshot
             let beforePoints = fixture.points
             fixture.replace(96, 96, [(96, displayed)])
             expect(fixture.oneEdit(fractionalBefore), 469)
-            expect(fixture.document.state.tempo.first?.microsecondsPerQuarterNote
-                == TimeDefaults.microsecondsPerQuarterNote(forBPM: displayed), 470)
+            expect(
+                fixture.document.state.tempo.first?.microsecondsPerQuarterNote
+                    == TimeDefaults.microsecondsPerQuarterNote(forBPM: displayed), 470)
             expect(fixture.replay(fractionalBefore, beforePoints, ["96:\(displayed)"]), 471)
         }
     }

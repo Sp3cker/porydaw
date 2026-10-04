@@ -71,16 +71,21 @@ public final class SampleLoopTools: QmlUncreatable {
             let cents = (exact - Double(nearest)) * 100
             let name = midiKeyName(nearest)
             pitchApplyText = "Use detected pitch (\(name))"
-            pitchApplyToolTip = "Set the base key and cents from the detected pitch: \(name) \(cents >= 0 ? "+" : "")\(SampleStudioReadouts.decimal(cents, places: 0))¢ (\(SampleStudioReadouts.decimal(pitch.f0, places: 1)) Hz)."
+            pitchApplyToolTip =
+                "Set the base key and cents from the detected pitch: \(name) \(cents >= 0 ? "+" : "")\(SampleStudioReadouts.decimal(cents, places: 0))¢ (\(SampleStudioReadouts.decimal(pitch.f0, places: 1)) Hz)."
         }
         let seam = presenter.processed.seam
         seamBadgeVisible = p.loopOn && presenter.processed.looped && seam.valid
         if seamBadgeVisible {
-            seamBadgeSeverity = seam.ampLsb <= 2 && seam.derivLsb <= 3 ? 0
+            seamBadgeSeverity =
+                seam.ampLsb <= 2 && seam.derivLsb <= 3
+                ? 0
                 : seam.ampLsb <= 4 && seam.derivLsb <= 6 ? 1 : 2
             seamBadgeText = ["seam: clean", "seam: fair", "seam: click"][seamBadgeSeverity]
         }
-        if candidatesValid && (candidateCropStart != p.cropStart || candidateCropEnd != p.cropEnd || candidateRate != p.targetRate) {
+        if candidatesValid
+            && (candidateCropStart != p.cropStart || candidateCropEnd != p.cropEnd || candidateRate != p.targetRate)
+        {
             candidatesValid = false
             candidateIndex = -1
             suggestStatus = ""
@@ -101,7 +106,9 @@ public final class SampleLoopTools: QmlUncreatable {
 
     private func ensureCandidates() -> Bool {
         let p = presenter.params
-        if candidatesValid && candidateCropStart == p.cropStart && candidateCropEnd == p.cropEnd && candidateRate == p.targetRate {
+        if candidatesValid && candidateCropStart == p.cropStart && candidateCropEnd == p.cropEnd
+            && candidateRate == p.targetRate
+        {
             return !candidates.isEmpty
         }
         detectPitchIfNeeded()
@@ -121,8 +128,9 @@ public final class SampleLoopTools: QmlUncreatable {
         }
         let ratio = presenter.source.sampleRate > 0 ? analysis.outputRate / presenter.source.sampleRate : 1
         let period = pitch.pitched && pitch.f0 > 0 ? analysis.outputRate / pitch.f0 : 0
-        let found = SampleDsp.suggestLoop(analysis.preview, rate: analysis.outputRate, period: period,
-                                          regionA: Int((0.40 * Double(count)).rounded()), regionB: count - 1)
+        let found = SampleDsp.suggestLoop(
+            analysis.preview, rate: analysis.outputRate, period: period,
+            regionA: Int((0.40 * Double(count)).rounded()), regionB: count - 1)
         for candidate in found {
             let start = p.cropStart + Int((Double(candidate.loopStart) / ratio).rounded())
             let end = p.cropStart + Int((Double(candidate.loopEnd) / ratio).rounded())

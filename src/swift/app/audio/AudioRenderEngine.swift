@@ -111,8 +111,10 @@ public final class AudioRenderEngine {
         if songLoaded { transportState.pendingSeek.store(sample, ordering: .releasing) }
     }
 
-    public func bind(timeline: PlaybackTimeline,
-                     voicegroup: UnsafeMutablePointer<ToneData>?, settings: AudioSettings) {
+    public func bind(
+        timeline: PlaybackTimeline,
+        voicegroup: UnsafeMutablePointer<ToneData>?, settings: AudioSettings
+    ) {
         transportState.reset()
         suppression.reset()
         handoff.reset(timeline)
@@ -169,8 +171,10 @@ public final class AudioRenderEngine {
         }
         resetPreview()
     }
-    public static func bindEngineVoicegroup(_ engine: UnsafeMutablePointer<M4AEngine>,
-                                            voicegroup: UnsafeMutablePointer<ToneData>?) {
+    public static func bindEngineVoicegroup(
+        _ engine: UnsafeMutablePointer<M4AEngine>,
+        voicegroup: UnsafeMutablePointer<ToneData>?
+    ) {
         m4a_engine_set_voicegroup(engine, voicegroup)
     }
     public static func applySettings(_ settings: AudioSettings, to engine: UnsafeMutablePointer<M4AEngine>) {
@@ -206,7 +210,9 @@ public final class AudioRenderEngine {
             releaseMainNotes()
             player.seek(position, timeline: timeline)
             telemetry.playhead.store(position, ordering: .relaxed)
-        } else { player.replaceTimeline(position, timeline: timeline) }
+        } else {
+            player.replaceTimeline(position, timeline: timeline)
+        }
         Sequencer.chase(engine: main, timeline: timeline, position: position)
         Sequencer.primeVoices(engine: main, timeline: timeline, position: position)
     }
@@ -254,16 +260,20 @@ public final class AudioRenderEngine {
             let count = min(Int(frames) - done, capacity)
             if transportState.applied == .playing, let timeline = handoff.active {
                 let looping = loopEnabled
-                player.render(engine: main, timeline: timeline.pointee,
-                              left: UnsafeMutableBufferPointer(start: left, count: count),
-                              right: UnsafeMutableBufferPointer(start: right, count: count),
-                              looping: looping, muteMask: appliedMute)
-                if !(looping && timeline.pointee.hasLoop) &&
-                    player.position > timeline.pointee.lengthSamples + UInt64(3 * sampleRate) {
+                player.render(
+                    engine: main, timeline: timeline.pointee,
+                    left: UnsafeMutableBufferPointer(start: left, count: count),
+                    right: UnsafeMutableBufferPointer(start: right, count: count),
+                    looping: looping, muteMask: appliedMute)
+                if !(looping && timeline.pointee.hasLoop)
+                    && player.position > timeline.pointee.lengthSamples + UInt64(3 * sampleRate)
+                {
                     transportState.requested = .stopped
                     transition()
                 }
-            } else { m4a_engine_process(main, left, right, Int32(count)) }
+            } else {
+                m4a_engine_process(main, left, right, Int32(count))
+            }
             m4a_engine_process(preview, previewLeft, previewRight, Int32(count))
             let block = output + done * 2
             for i in 0..<count {

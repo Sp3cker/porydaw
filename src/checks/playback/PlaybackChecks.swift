@@ -22,8 +22,9 @@ func runPlaybackSuite(_ report: CheckReport) {
     let projectionPath = URL(fileURLWithPath: fixtureRoot)
         .appendingPathComponent("swiftcore-projection.mid").path
     guard playbackPairWriteFixture(projectionSong(), path: projectionPath, cppID: mappingID, report: report),
-          let projectionTimeline = playbackPairLoadSwiftTimeline(
-              path: projectionPath, cppID: mappingID, report: report) else { return }
+        let projectionTimeline = playbackPairLoadSwiftTimeline(
+            path: projectionPath, cppID: mappingID, report: report)
+    else { return }
     checkEngineTrackMapping(projectionTimeline, report: report)
     checkNoteIdentities(report)
     checkMidiEngineBounds(report)
@@ -34,42 +35,58 @@ func runPlaybackSuite(_ report: CheckReport) {
 
     let defaultPath = URL(fileURLWithPath: fixtureRoot)
         .appendingPathComponent("swiftcore-controller-default.mid").path
-    guard playbackPairWriteFixture(controllerSong(controller: nil, tick: 0), path: defaultPath,
-                       cppID: controllerDefaultsID, report: report) else { return }
+    guard
+        playbackPairWriteFixture(
+            controllerSong(controller: nil, tick: 0), path: defaultPath,
+            cppID: controllerDefaultsID, report: report)
+    else { return }
     compareControllerDefaults(fixtureRoot: fixtureRoot, defaultPath: defaultPath, report: report)
 
     let originalPath = URL(fileURLWithPath: fixtureRoot)
         .appendingPathComponent("swiftcore-replace-original.mid").path
     let replacementPath = URL(fileURLWithPath: fixtureRoot)
         .appendingPathComponent("swiftcore-replace-updated.mid").path
-    guard playbackPairWriteFixture(playbackCheckReplacementSong(replacement: false), path: originalPath,
-                       cppID: playbackCheckLiveReplacementID, report: report),
-          playbackPairWriteFixture(playbackCheckReplacementSong(replacement: true), path: replacementPath,
-                       cppID: playbackCheckLiveReplacementID, report: report),
-          let original = playbackPairLoadSwiftTimeline(path: originalPath, cppID: playbackCheckLiveReplacementID,
-                                           report: report),
-          let replacement = playbackPairLoadSwiftTimeline(path: replacementPath, cppID: playbackCheckLiveReplacementID,
-                                              report: report) else { return }
+    guard
+        playbackPairWriteFixture(
+            playbackCheckReplacementSong(replacement: false), path: originalPath,
+            cppID: playbackCheckLiveReplacementID, report: report),
+        playbackPairWriteFixture(
+            playbackCheckReplacementSong(replacement: true), path: replacementPath,
+            cppID: playbackCheckLiveReplacementID, report: report),
+        let original = playbackPairLoadSwiftTimeline(
+            path: originalPath, cppID: playbackCheckLiveReplacementID,
+            report: report),
+        let replacement = playbackPairLoadSwiftTimeline(
+            path: replacementPath, cppID: playbackCheckLiveReplacementID,
+            report: report)
+    else { return }
     guard checkReplacementRows(original: original, replacement: replacement, report: report) else { return }
     checkCgbReplacementRows(report)
 }
 
 private func checkProjectFixture(path: String, report: CheckReport) {
-    guard let timeline = playbackPairLoadSwiftTimeline(path: path, cppID: exactSamplesID,
-                                           report: report) else { return }
-    report.expect(!timeline.events.isEmpty, cppID: exactSamplesID,
-                  message: "project fixture produced no playback events")
-    report.expectEqual(expected: playbackCheckSampleRate, actual: timeline.sampleRate, cppID: exactSamplesID,
-                       what: "project fixture sample rate")
-    report.expect(timeline.usedTrackCount > 0 &&
-                  timeline.usedTrackCount <= TrackLimits.hardwareCapacity,
-                  cppID: exactSamplesID,
-                  message: "project fixture engine-track count is out of range")
-    report.expect(zip(timeline.events, timeline.events.dropFirst())
-        .allSatisfy { $0.0.sample <= $0.1.sample },
+    guard
+        let timeline = playbackPairLoadSwiftTimeline(
+            path: path, cppID: exactSamplesID,
+            report: report)
+    else { return }
+    report.expect(
+        !timeline.events.isEmpty, cppID: exactSamplesID,
+        message: "project fixture produced no playback events")
+    report.expectEqual(
+        expected: playbackCheckSampleRate, actual: timeline.sampleRate, cppID: exactSamplesID,
+        what: "project fixture sample rate")
+    report.expect(
+        timeline.usedTrackCount > 0 && timeline.usedTrackCount <= TrackLimits.hardwareCapacity,
+        cppID: exactSamplesID,
+        message: "project fixture engine-track count is out of range")
+    report.expect(
+        zip(timeline.events, timeline.events.dropFirst())
+            .allSatisfy { $0.0.sample <= $0.1.sample },
         cppID: exactSamplesID, message: "project fixture events are not sample ordered")
-    report.expectEqual(expected: Optional(timeline.lengthSamples), actual: timeline.events.last?.sample,
-                       cppID: exactSamplesID, what: "project fixture terminal sample")
+    report.expectEqual(
+        expected: Optional(timeline.lengthSamples), actual: timeline.events.last?.sample,
+        cppID: exactSamplesID, what: "project fixture terminal sample")
 }
 
 private func checkExactSamples(_ report: CheckReport) {
@@ -79,19 +96,23 @@ private func checkExactSamples(_ report: CheckReport) {
     ]
     let tolerance = 0.5 / 229.6875 + 1e-12
     for (tick, sample) in expected {
-        report.expectEqual(expected: sample, actual: timeline.sample(for: tick), cppID: exactSamplesID,
-                           what: "sample at tick \(tick)")
-        report.expect(abs(timeline.tick(for: sample) - Double(tick)) <= tolerance,
-                      cppID: exactSamplesID,
-                      message: "tick inverse at sample \(sample) exceeded half-sample tolerance")
+        report.expectEqual(
+            expected: sample, actual: timeline.sample(for: tick), cppID: exactSamplesID,
+            what: "sample at tick \(tick)")
+        report.expect(
+            abs(timeline.tick(for: sample) - Double(tick)) <= tolerance,
+            cppID: exactSamplesID,
+            message: "tick inverse at sample \(sample) exceeded half-sample tolerance")
     }
 
     let tempos = timeline.events.filter { $0.type == playbackTempoEventType && $0.tick == 1 }
-    report.expectEqual(expected: [UInt64(230), 230], actual: tempos.map(\.sample), cppID: exactSamplesID,
-                       what: "same-tick tempo samples")
-    report.expectEqual(expected: [150, 100],
-                       actual: tempos.map { Int($0.data0) | Int($0.data1) << 7 },
-                       cppID: exactSamplesID, what: "same-tick tempo order")
+    report.expectEqual(
+        expected: [UInt64(230), 230], actual: tempos.map(\.sample), cppID: exactSamplesID,
+        what: "same-tick tempo samples")
+    report.expectEqual(
+        expected: [150, 100],
+        actual: tempos.map { Int($0.data0) | Int($0.data1) << 7 },
+        cppID: exactSamplesID, what: "same-tick tempo order")
     let authoritative = PlaybackTimeline.build(
         file: exactTempoSong(),
         tempo: [TempoPoint(tick: 1, microsecondsPerQuarterNote: 600_000)],
@@ -99,64 +120,85 @@ private func checkExactSamples(_ report: CheckReport) {
     let authoritativeTempos = authoritative.events.filter {
         $0.type == playbackTempoEventType && $0.tick == 1
     }
-    report.expectEqual(expected: 1, actual: authoritativeTempos.count, cppID: exactSamplesID,
-                       what: "last-wins authoritative tempo count")
-    report.expectEqual(expected: [100],
-                       actual: authoritativeTempos.map { Int($0.data0) | Int($0.data1) << 7 },
-                       cppID: exactSamplesID, what: "last-wins authoritative tempo")
+    report.expectEqual(
+        expected: 1, actual: authoritativeTempos.count, cppID: exactSamplesID,
+        what: "last-wins authoritative tempo count")
+    report.expectEqual(
+        expected: [100],
+        actual: authoritativeTempos.map { Int($0.data0) | Int($0.data1) << 7 },
+        cppID: exactSamplesID, what: "last-wins authoritative tempo")
     let noteOn = timeline.events.first { $0.type == 0x9 }
-    report.expectEqual(expected: Optional(UInt64(505)), actual: noteOn?.sample, cppID: exactSamplesID,
-                       what: "note-on exact sample")
-    report.expectEqual(expected: Optional(UInt8(0)), actual: noteOn?.track, cppID: exactSamplesID,
-                       what: "note-on engine track")
+    report.expectEqual(
+        expected: Optional(UInt64(505)), actual: noteOn?.sample, cppID: exactSamplesID,
+        what: "note-on exact sample")
+    report.expectEqual(
+        expected: Optional(UInt8(0)), actual: noteOn?.track, cppID: exactSamplesID,
+        what: "note-on engine track")
 }
 
 private func checkEngineTrackMapping(_ timeline: PlaybackTimeline, report: CheckReport) {
-    report.expectEqual(expected: 16, actual: timeline.usedTrackCount, cppID: mappingID,
-                       what: "used engine tracks")
-    report.expectEqual(expected: 2, actual: timeline.droppedTracks, cppID: mappingID,
-                       what: "dropped channel chunks")
-    report.expectEqual(expected: 51, actual: timeline.events.count, cppID: mappingID,
-                       what: "tempo and mapped channel event count")
-    report.expect(timeline.tracks.allSatisfy { $0.used }, cppID: mappingID,
-                  message: "a mapped engine track was unused")
-    report.expectEqual(expected: Array(repeating: 1, count: 16), actual: timeline.tracks.map(\.noteCount),
-                       cppID: mappingID, what: "per-track note counts")
-    report.expectEqual(expected: Array(0..<16), actual: timeline.tracks.map(\.firstProgram),
-                       cppID: mappingID, what: "per-track first programs")
+    report.expectEqual(
+        expected: 16, actual: timeline.usedTrackCount, cppID: mappingID,
+        what: "used engine tracks")
+    report.expectEqual(
+        expected: 2, actual: timeline.droppedTracks, cppID: mappingID,
+        what: "dropped channel chunks")
+    report.expectEqual(
+        expected: 51, actual: timeline.events.count, cppID: mappingID,
+        what: "tempo and mapped channel event count")
+    report.expect(
+        timeline.tracks.allSatisfy { $0.used }, cppID: mappingID,
+        message: "a mapped engine track was unused")
+    report.expectEqual(
+        expected: Array(repeating: 1, count: 16), actual: timeline.tracks.map(\.noteCount),
+        cppID: mappingID, what: "per-track note counts")
+    report.expectEqual(
+        expected: Array(0..<16), actual: timeline.tracks.map(\.firstProgram),
+        cppID: mappingID, what: "per-track first programs")
 
     let noteOns = timeline.events.filter { $0.type == 0x9 }
-    report.expectEqual(expected: Array(UInt8(0)...UInt8(15)), actual: noteOns.map(\.track),
-                       cppID: mappingID, what: "note-on engine tracks")
-    report.expectEqual(expected: Array(UInt8(48)...UInt8(63)), actual: noteOns.map(\.data0),
-                       cppID: mappingID, what: "note-on keys from retained chunks")
+    report.expectEqual(
+        expected: Array(UInt8(0)...UInt8(15)), actual: noteOns.map(\.track),
+        cppID: mappingID, what: "note-on engine tracks")
+    report.expectEqual(
+        expected: Array(UInt8(48)...UInt8(63)), actual: noteOns.map(\.data0),
+        cppID: mappingID, what: "note-on keys from retained chunks")
 }
 
 private func checkNoteIdentities(_ report: CheckReport) {
-    let file = MidiFile(division: playbackCheckDivision, chunks: [
-        MidiChunk(events: [
-            .channel(tick: 24, status: 0x90, data0: 60, data1: 100, noteID: NoteID(1)),
-            .channel(tick: 24, status: 0x90, data0: 60, data1: 100, noteID: NoteID(2)),
-            .channel(tick: 48, status: 0x80, data0: 60),
-        ], endTick: 48),
-    ])
+    let file = MidiFile(
+        division: playbackCheckDivision,
+        chunks: [
+            MidiChunk(
+                events: [
+                    .channel(tick: 24, status: 0x90, data0: 60, data1: 100, noteID: NoteID(1)),
+                    .channel(tick: 24, status: 0x90, data0: 60, data1: 100, noteID: NoteID(2)),
+                    .channel(tick: 48, status: 0x80, data0: 60),
+                ], endTick: 48)
+        ])
     let timeline = PlaybackTimeline.build(file: file, sampleRate: playbackCheckSampleRate)
     let noteOns = timeline.events.filter { $0.type == 0x9 && $0.tick == 24 }
-    report.expectEqual(expected: [UInt64(1), 2], actual: noteOns.map(\.noteID.rawValue),
-                       cppID: identitiesID, what: "stamped note-on identities")
+    report.expectEqual(
+        expected: [UInt64(1), 2], actual: noteOns.map(\.noteID.rawValue),
+        cppID: identitiesID, what: "stamped note-on identities")
     let noteOff = timeline.events.first { $0.type == 0x8 && $0.tick == 48 }
-    report.expectEqual(expected: Optional(UInt64(0)), actual: noteOff?.noteID.rawValue, cppID: identitiesID,
-                       what: "ordinary note-off identity")
+    report.expectEqual(
+        expected: Optional(UInt64(0)), actual: noteOff?.noteID.rawValue, cppID: identitiesID,
+        what: "ordinary note-off identity")
 }
 
-private func compareControllerDefaults(fixtureRoot: String, defaultPath: String,
-                                       report: CheckReport) {
+private func compareControllerDefaults(
+    fixtureRoot: String, defaultPath: String,
+    report: CheckReport
+) {
     for index in 0..<TimeDefaults.controllerDefaultCount {
         let controller = TimeDefaults.controllerDefault(at: index)
-        var nonDefault: UInt8 = controller.controller == TimeDefaults.ccPWMCycle
+        var nonDefault: UInt8 =
+            controller.controller == TimeDefaults.ccPWMCycle
             ? 1 : (controller.value == 127 ? 91 : controller.value + 17)
         if nonDefault == controller.value { nonDefault ^= 1 }
-        var overrideValue: UInt8 = controller.controller == TimeDefaults.ccPWMCycle
+        var overrideValue: UInt8 =
+            controller.controller == TimeDefaults.ccPWMCycle
             ? 2 : (controller.value == 0 ? 73 : controller.value - 1)
         if overrideValue == nonDefault { overrideValue = (overrideValue + 11) & 0x7F }
 
@@ -164,11 +206,16 @@ private func compareControllerDefaults(fixtureRoot: String, defaultPath: String,
             .appendingPathComponent("swiftcore-controller-\(controller.controller)-").path
         let nonDefaultPath = prefix + "nondefault.mid"
         let overridePath = prefix + "override.mid"
-        guard playbackPairWriteFixture(controllerSong(controller: (controller.controller, nonDefault), tick: 0),
-                           path: nonDefaultPath, cppID: controllerDefaultsID, report: report),
-              playbackPairWriteFixture(controllerSong(controller: (controller.controller, overrideValue),
-                                          tick: 12),
-                           path: overridePath, cppID: controllerDefaultsID, report: report) else {
+        guard
+            playbackPairWriteFixture(
+                controllerSong(controller: (controller.controller, nonDefault), tick: 0),
+                path: nonDefaultPath, cppID: controllerDefaultsID, report: report),
+            playbackPairWriteFixture(
+                controllerSong(
+                    controller: (controller.controller, overrideValue),
+                    tick: 12),
+                path: overridePath, cppID: controllerDefaultsID, report: report)
+        else {
             return
         }
 
@@ -179,35 +226,49 @@ private func compareControllerDefaults(fixtureRoot: String, defaultPath: String,
             }
             m4a_engine_set_portamento_enabled(engine.pointer, true)
             m4a_engine_set_pwm_enabled(engine.pointer, true)
-            guard prepareSwift(path: nonDefaultPath, native: native, engine: engine,
-                               position: playbackCheckSamplesPerTick, chase: true, prime: false,
-                               report: report) else { return }
+            guard
+                prepareSwift(
+                    path: nonDefaultPath, native: native, engine: engine,
+                    position: playbackCheckSamplesPerTick, chase: true, prime: false,
+                    report: report)
+            else { return }
             let applied = controllerField(engine.pointer, controller: controller.controller)
-            report.expectEqual(expected: expectedControllerField(controller.controller, nonDefault), actual: applied,
-                               cppID: controllerDefaultsID,
-                               what: "\(native ? "native" : "Swift") CC \(controller.controller) non-default")
+            report.expectEqual(
+                expected: expectedControllerField(controller.controller, nonDefault), actual: applied,
+                cppID: controllerDefaultsID,
+                what: "\(native ? "native" : "Swift") CC \(controller.controller) non-default")
 
-            guard prepareSwift(path: defaultPath, native: native, engine: engine,
-                               position: playbackCheckSamplesPerTick, chase: true, prime: false,
-                               report: report) else { return }
+            guard
+                prepareSwift(
+                    path: defaultPath, native: native, engine: engine,
+                    position: playbackCheckSamplesPerTick, chase: true, prime: false,
+                    report: report)
+            else { return }
             let restored = controllerField(engine.pointer, controller: controller.controller)
-            report.expectEqual(expected: expectedControllerField(controller.controller, controller.value),
-                               actual: restored, cppID: controllerDefaultsID,
-                               what: "\(native ? "native" : "Swift") CC \(controller.controller) default")
+            report.expectEqual(
+                expected: expectedControllerField(controller.controller, controller.value),
+                actual: restored, cppID: controllerDefaultsID,
+                what: "\(native ? "native" : "Swift") CC \(controller.controller) default")
 
-            guard prepareSwift(path: overridePath, native: native, engine: engine,
-                               position: 13 * playbackCheckSamplesPerTick, chase: true, prime: false,
-                               report: report) else { return }
+            guard
+                prepareSwift(
+                    path: overridePath, native: native, engine: engine,
+                    position: 13 * playbackCheckSamplesPerTick, chase: true, prime: false,
+                    report: report)
+            else { return }
             let overridden = controllerField(engine.pointer, controller: controller.controller)
-            report.expectEqual(expected: expectedControllerField(controller.controller, overrideValue),
-                               actual: overridden, cppID: controllerDefaultsID,
-                               what: "\(native ? "native" : "Swift") CC \(controller.controller) pre-seek")
+            report.expectEqual(
+                expected: expectedControllerField(controller.controller, overrideValue),
+                actual: overridden, cppID: controllerDefaultsID,
+                what: "\(native ? "native" : "Swift") CC \(controller.controller) pre-seek")
         }
     }
 }
 
-private func controllerField(_ engine: UnsafeMutablePointer<M4AEngine>,
-                             controller: UInt8) -> Int32 {
+private func controllerField(
+    _ engine: UnsafeMutablePointer<M4AEngine>,
+    controller: UInt8
+) -> Int32 {
     let track = playbackPairEngineTrack(engine, index: 0)
     switch controller {
     case TimeDefaults.ccModulation:
@@ -237,16 +298,19 @@ private func controllerField(_ engine: UnsafeMutablePointer<M4AEngine>,
     }
 }
 
-private func prepareSwift(path: String, native: Bool, engine: PlaybackCheckEngine,
-                          position: UInt64, chase: Bool, prime: Bool,
-                          report: CheckReport) -> Bool {
+private func prepareSwift(
+    path: String, native: Bool, engine: PlaybackCheckEngine,
+    position: UInt64, chase: Bool, prime: Bool,
+    report: CheckReport
+) -> Bool {
     if native {
         var data: UnsafeMutablePointer<PdPlaybackData>?
         var error = [CChar](repeating: 0, count: 512)
         let loaded = path.withCString { pathPointer in
             error.withUnsafeMutableBufferPointer {
-                pdPlaybackDataLoadFile(pathPointer, playbackCheckSampleRate, &data,
-                                       $0.baseAddress, $0.count)
+                pdPlaybackDataLoadFile(
+                    pathPointer, playbackCheckSampleRate, &data,
+                    $0.baseAddress, $0.count)
             }
         }
         guard loaded, let data else {
@@ -258,27 +322,35 @@ private func prepareSwift(path: String, native: Bool, engine: PlaybackCheckEngin
         if prime { pdPlayerPrime(engine.pointer, data, position) }
         return true
     }
-    guard let timeline = playbackPairLoadSwiftTimeline(path: path, cppID: controllerDefaultsID,
-                                           report: report) else { return false }
+    guard
+        let timeline = playbackPairLoadSwiftTimeline(
+            path: path, cppID: controllerDefaultsID,
+            report: report)
+    else { return false }
     if chase { Sequencer.chase(engine: engine.pointer, timeline: timeline, position: position) }
     if prime { Sequencer.primeVoices(engine: engine.pointer, timeline: timeline, position: position) }
     return true
 }
 
-internal func playbackPairLoadSwiftTimeline(path: String, cppID: String,
-                               report: CheckReport) -> PlaybackTimeline? {
+internal func playbackPairLoadSwiftTimeline(
+    path: String, cppID: String,
+    report: CheckReport
+) -> PlaybackTimeline? {
     do {
         let bytes = try Data(contentsOf: URL(fileURLWithPath: path))
-        return PlaybackTimeline.build(file: try MidiFile.decode(Array(bytes)),
-                                      sampleRate: playbackCheckSampleRate)
+        return PlaybackTimeline.build(
+            file: try MidiFile.decode(Array(bytes)),
+            sampleRate: playbackCheckSampleRate)
     } catch {
         report.fail(cppID, "Swift timeline load failed for \(path): \(error)")
         return nil
     }
 }
 
-internal func playbackPairWriteFixture(_ file: MidiFile, path: String, cppID: String,
-                          report: CheckReport) -> Bool {
+internal func playbackPairWriteFixture(
+    _ file: MidiFile, path: String, cppID: String,
+    report: CheckReport
+) -> Bool {
     do {
         try Data(file.encoded()).write(to: URL(fileURLWithPath: path))
         return true
@@ -289,18 +361,22 @@ internal func playbackPairWriteFixture(_ file: MidiFile, path: String, cppID: St
 }
 
 private func exactTempoSong() -> MidiFile {
-    MidiFile(division: 96, chunks: [
-        MidiChunk(events: [
-            .meta(tick: 1, type: 0x51, data: [0x06, 0x1A, 0x80]),
-            .meta(tick: 1, type: 0x51, data: [0x09, 0x27, 0xC0]),
-            .meta(tick: 3, type: 0x01, data: Array("[".utf8)),
-            .meta(tick: 9, type: 0x01, data: Array("]".utf8)),
-        ], endTick: 9),
-        MidiChunk(events: [
-            .channel(tick: 2, status: 0x90, data0: 60, data1: 100),
-            .channel(tick: 4, status: 0x80, data0: 60),
-        ], endTick: 4),
-    ])
+    MidiFile(
+        division: 96,
+        chunks: [
+            MidiChunk(
+                events: [
+                    .meta(tick: 1, type: 0x51, data: [0x06, 0x1A, 0x80]),
+                    .meta(tick: 1, type: 0x51, data: [0x09, 0x27, 0xC0]),
+                    .meta(tick: 3, type: 0x01, data: Array("[".utf8)),
+                    .meta(tick: 9, type: 0x01, data: Array("]".utf8)),
+                ], endTick: 9),
+            MidiChunk(
+                events: [
+                    .channel(tick: 2, status: 0x90, data0: 60, data1: 100),
+                    .channel(tick: 4, status: 0x80, data0: 60),
+                ], endTick: 4),
+        ])
 }
 
 private func projectionSong() -> MidiFile {
@@ -317,10 +393,12 @@ private func projectionSong() -> MidiFile {
         let channel = UInt8(track & 0x0F)
         chunks[track + 2].events = [
             .channel(tick: Tick(track), status: 0xC0 | channel, data0: UInt8(track)),
-            .channel(tick: Tick(11 + track), status: 0x90 | channel,
-                     data0: UInt8(48 + track), data1: 96, noteID: NoteID(UInt64(track + 1))),
-            .channel(tick: Tick(31 + track), status: 0x80 | channel,
-                     data0: UInt8(48 + track)),
+            .channel(
+                tick: Tick(11 + track), status: 0x90 | channel,
+                data0: UInt8(48 + track), data1: 96, noteID: NoteID(UInt64(track + 1))),
+            .channel(
+                tick: Tick(31 + track), status: 0x80 | channel,
+                data0: UInt8(48 + track)),
         ]
     }
     return MidiFile(division: 37, chunks: chunks)
@@ -329,16 +407,20 @@ private func projectionSong() -> MidiFile {
 private func controllerSong(controller: (UInt8, UInt8)?, tick: Tick) -> MidiFile {
     var events = [MidiEvent.channel(tick: 0, status: 0xC0, data0: 0)]
     if let controller {
-        events.append(.channel(tick: tick, status: 0xB0,
-                               data0: controller.0, data1: controller.1))
+        events.append(
+            .channel(
+                tick: tick, status: 0xB0,
+                data0: controller.0, data1: controller.1))
     }
-    return MidiFile(division: playbackCheckDivision, chunks: [
-        MidiChunk(events: [.meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20])],
-                  endTick: 48),
-        MidiChunk(events: events, endTick: 48),
-    ])
+    return MidiFile(
+        division: playbackCheckDivision,
+        chunks: [
+            MidiChunk(
+                events: [.meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20])],
+                endTick: 48),
+            MidiChunk(events: events, endTick: 48),
+        ])
 }
-
 
 private func expectedControllerField(_ controller: UInt8, _ value: UInt8) -> Int32 {
     if controller == TimeDefaults.ccPan || controller == TimeDefaults.ccFineTune {

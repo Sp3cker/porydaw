@@ -16,12 +16,17 @@ struct SampleWaveformScene {
 
     mutating func setPalette(_ palette: GridPalette) {
         if paletteKey.count == 7,
-           paletteKey[0] == palette.menuBackground, paletteKey[1] == palette.alternateBackground,
-           paletteKey[2] == palette.sampleWaveformInk, paletteKey[3] == palette.sampleCropHandle,
-           paletteKey[4] == palette.sampleLoopHandle, paletteKey[5] == palette.sampleSeamEndInk,
-           paletteKey[6] == palette.playhead { return }
-        paletteKey = [palette.menuBackground, palette.alternateBackground, palette.sampleWaveformInk,
-                      palette.sampleCropHandle, palette.sampleLoopHandle, palette.sampleSeamEndInk, palette.playhead]
+            paletteKey[0] == palette.menuBackground, paletteKey[1] == palette.alternateBackground,
+            paletteKey[2] == palette.sampleWaveformInk, paletteKey[3] == palette.sampleCropHandle,
+            paletteKey[4] == palette.sampleLoopHandle, paletteKey[5] == palette.sampleSeamEndInk,
+            paletteKey[6] == palette.playhead
+        {
+            return
+        }
+        paletteKey = [
+            palette.menuBackground, palette.alternateBackground, palette.sampleWaveformInk,
+            palette.sampleCropHandle, palette.sampleLoopHandle, palette.sampleSeamEndInk, palette.playhead,
+        ]
         background = PaletteMath.argb(palette.menuBackground)
         alternate = PaletteMath.argb(palette.alternateBackground)
         waveform = PaletteMath.argb(palette.sampleWaveformInk)
@@ -31,17 +36,20 @@ struct SampleWaveformScene {
         playhead = PaletteMath.argb(palette.playhead)
     }
 
-    mutating func buildMain(samples: [Float], pyramid: SamplePeakPyramid, width: Double, height: Double,
-                            scroll: Double, spp: Double, gain: Double, cropStart: Int, cropEnd: Int,
-                            loopOn: Bool, loopStart: Int, loopEnd: Int, playheadFrame: Int?,
-                            fontPx: Double) -> Data {
+    mutating func buildMain(
+        samples: [Float], pyramid: SamplePeakPyramid, width: Double, height: Double,
+        scroll: Double, spp: Double, gain: Double, cropStart: Int, cropEnd: Int,
+        loopOn: Bool, loopStart: Int, loopEnd: Int, playheadFrame: Int?,
+        fontPx: Double
+    ) -> Data {
         guard width > 0, height > 0 else { return writer.finish() }
         rect(0, 0, width, height, background, width: width, height: height)
         guard !samples.isEmpty else { return writer.finish() }
         func position(_ frame: Int) -> Double { ((Double(frame) - scroll) / spp).rounded() }
         if loopOn {
-            rect(position(loopStart), 0, position(loopEnd) - position(loopStart), height,
-                 (loop & 0x00FF_FFFF) | 0x1C00_0000, width: width, height: height)
+            rect(
+                position(loopStart), 0, position(loopEnd) - position(loopStart), height,
+                (loop & 0x00FF_FFFF) | 0x1C00_0000, width: width, height: height)
         }
         let middle = height / 2
         let scale = height * 0.48
@@ -62,8 +70,9 @@ struct SampleWaveformScene {
         func handle(_ frame: Int, color: UInt32, lower: Bool, left: Bool) {
             let x = position(frame)
             rect(x, 0, fontPx / 12, height, color, width: width, height: height)
-            rect(left ? x : x - gripWidth + 1, lower ? height - gripHeight : 0,
-                 gripWidth, gripHeight, color, width: width, height: height)
+            rect(
+                left ? x : x - gripWidth + 1, lower ? height - gripHeight : 0,
+                gripWidth, gripHeight, color, width: width, height: height)
         }
         handle(cropStart, color: crop, lower: false, left: true)
         handle(cropEnd, color: crop, lower: false, left: false)
@@ -71,7 +80,9 @@ struct SampleWaveformScene {
             handle(loopStart, color: loop, lower: true, left: true)
             handle(loopEnd, color: loop, lower: true, left: false)
         }
-        if let playheadFrame { rect(position(playheadFrame), 0, fontPx / 12, height, playhead, width: width, height: height) }
+        if let playheadFrame {
+            rect(position(playheadFrame), 0, fontPx / 12, height, playhead, width: width, height: height)
+        }
         return writer.finish()
     }
 
@@ -89,12 +100,16 @@ struct SampleWaveformScene {
         return writer.finish()
     }
 
-    private mutating func rect(_ x: Double, _ y: Double, _ w: Double, _ h: Double,
-                               _ color: UInt32, width: Double, height: Double) {
+    private mutating func rect(
+        _ x: Double, _ y: Double, _ w: Double, _ h: Double,
+        _ color: UInt32, width: Double, height: Double
+    ) {
         let x0 = max(0, x), y0 = max(0, y)
         let x1 = min(width, x + w), y1 = min(height, y + h)
         guard x1 > x0, y1 > y0 else { return }
-        writer.rect(PdDlRect(x: x0, y: y0, w: x1 - x0, h: y1 - y0,
-                             id: UInt64(PD_DL_ID_NONE), argb: color, flags: 0))
+        writer.rect(
+            PdDlRect(
+                x: x0, y: y0, w: x1 - x0, h: y1 - y0,
+                id: UInt64(PD_DL_ID_NONE), argb: color, flags: 0))
     }
 }

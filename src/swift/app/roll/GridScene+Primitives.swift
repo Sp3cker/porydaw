@@ -2,10 +2,8 @@ import Foundation
 import PorydawCore
 import QtBridge
 
-
 @MainActor
 extension GridScene {
-
 
     func sync(_ model: QListModel<SceneRect>, _ rects: [SceneRect]) {
         model.update {

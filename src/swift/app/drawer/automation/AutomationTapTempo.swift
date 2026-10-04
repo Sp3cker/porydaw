@@ -98,7 +98,8 @@ extension AutomationPage {
         }
         if tapGuard == nil { tapGuard = (session.document.revision, activeParameter) }
         guard tapGuard?.revision == session.document.revision,
-              tapGuard?.parameter == activeParameter else {
+            tapGuard?.parameter == activeParameter
+        else {
             resetTapTempo()
             return
         }
@@ -109,9 +110,10 @@ extension AutomationPage {
 
     func commitTapTempoAfterIdle() -> Bool {
         guard let session, tapSession.readyToCommit,
-              let guardValue = tapGuard,
-              guardValue.revision == session.document.revision,
-              guardValue.parameter == activeParameter else {
+            let guardValue = tapGuard,
+            guardValue.revision == session.document.revision,
+            guardValue.parameter == activeParameter
+        else {
             resetTapTempo()
             return false
         }
@@ -121,9 +123,10 @@ extension AutomationPage {
         guard existing?.microsecondsPerQuarterNote != target else { return false }
         // One `SongDocument.editTempo` call per session: the draft replaces the
         // tick-zero point and nothing else in the stream moves.
-        session.document.editTempo(TempoEdit(
-            remove: session.document.state.tempo.filter { $0.tick == 0 },
-            add: [TempoPoint(tick: 0, microsecondsPerQuarterNote: target)]))
+        session.document.editTempo(
+            TempoEdit(
+                remove: session.document.state.tempo.filter { $0.tick == 0 },
+                add: [TempoPoint(tick: 0, microsecondsPerQuarterNote: target)]))
         refreshFromDocument()
         return true
     }

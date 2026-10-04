@@ -13,10 +13,12 @@ public struct VoicegroupCatalog: Sendable {
     public var canMintSynths: Bool
     public var defaults: VoiceListAdsrDefaults
 
-    public init(groupArgs: [String], samples: [String], waves: [String], drumkits: [String],
-                keysplits: [String: String], synths: [String],
-                synthDefinitions: [String: VgSynthDesc], canMintSynths: Bool,
-                defaults: VoiceListAdsrDefaults) {
+    public init(
+        groupArgs: [String], samples: [String], waves: [String], drumkits: [String],
+        keysplits: [String: String], synths: [String],
+        synthDefinitions: [String: VgSynthDesc], canMintSynths: Bool,
+        defaults: VoiceListAdsrDefaults
+    ) {
         self.groupArgs = groupArgs
         self.samples = samples
         self.waves = waves

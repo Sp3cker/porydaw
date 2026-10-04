@@ -30,8 +30,9 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
         while document.history.currentIdentity != initialIdentity && document.history.canUndo {
             guard document.history.undoDocument() else { break }
         }
-        report.expect((try? document.state.file.encoded()) == originalBytes,
-                      cppID: id, message: "A015 undoing the selected frame fixture restores original song bytes")
+        report.expect(
+            (try? document.state.file.encoded()) == originalBytes,
+            cppID: id, message: "A015 undoing the selected frame fixture restores original song bytes")
     }
     guard let note = session.document.note(noteID) else {
         report.fail(id, "note rendering seed disappeared")
@@ -80,11 +81,13 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
 
     let seededIdentity = document.history.currentIdentity
     guard let seededBytes = try? document.state.file.encoded(),
-          let tinyIDNote = try? document.addNotes([
-              NewNote(track: grid.trackIndex, tick: note.tick + note.duration,
-                      pitch: note.pitch, duration: note.duration, velocity: 100)
-          ]).first,
-          document.note(tinyIDNote) != nil else {
+        let tinyIDNote = try? document.addNotes([
+            NewNote(
+                track: grid.trackIndex, tick: note.tick + note.duration,
+                pitch: note.pitch, duration: note.duration, velocity: 100)
+        ]).first,
+        document.note(tinyIDNote) != nil
+    else {
         report.fail(tinyID, "tiny note fixture cannot seed the adjacent face")
         return
     }
@@ -104,8 +107,9 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
     }
     let tinyProbe = RollContentProbe(grid)
     let tinyBorders = tinyProbe.borderRects(tinyIDNote)
-    report.expect(!tinyBorders.isEmpty, cppID: tinyID,
-                  message: "A002 5.0-key-height note plots its frame border rects")
+    report.expect(
+        !tinyBorders.isEmpty, cppID: tinyID,
+        message: "A002 5.0-key-height note plots its frame border rects")
     report.expect(
         grid.notes.first(where: { $0.noteId == tinyIDNote })?.ghost == false
             && !session.selectedNotes.contains(tinyIDNote),
@@ -124,8 +128,9 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
     while document.history.currentIdentity != seededIdentity && document.history.canUndo {
         guard document.history.undoDocument() else { break }
     }
-    report.expect((try? document.state.file.encoded()) == seededBytes,
-                  cppID: tinyID, message: "A005 undoing the tiny frame fixture restores seeded song bytes")
+    report.expect(
+        (try? document.state.file.encoded()) == seededBytes,
+        cppID: tinyID, message: "A005 undoing the tiny frame fixture restores seeded song bytes")
 }
 
 @MainActor
@@ -143,8 +148,10 @@ func checkIdentityNoteColors(_ report: CheckReport, session: DocumentSession) {
     let track = grid.trackIndex
     var colors: [Int: UInt32] = [:]
     for velocity in [1, 64, 127] {
-        guard session.document.setVelocities([NoteVelocity(noteID: noteID, velocity: velocity)],
-                                              expectedRevision: session.document.revision) != nil
+        guard
+            session.document.setVelocities(
+                [NoteVelocity(noteID: noteID, velocity: velocity)],
+                expectedRevision: session.document.revision) != nil
         else {
             report.fail(id, "could not set fixture velocity \(velocity)")
             return
@@ -163,29 +170,32 @@ func checkIdentityNoteColors(_ report: CheckReport, session: DocumentSession) {
     let minimum = colors[1] ?? 0
     let maximum = colors[127] ?? 0
     let midpoint = colors[64] ?? 0
-    report.expect(zero == palette.noteVelocityZero, cppID: id,
-                  message: "A020 velocity zero uses the neutral palette fill")
-    report.expect(publishedOpaque(zero), cppID: id,
-                  message: "A021 velocity zero palette fill is opaque")
+    report.expect(
+        zero == palette.noteVelocityZero, cppID: id,
+        message: "A020 velocity zero uses the neutral palette fill")
+    report.expect(
+        publishedOpaque(zero), cppID: id,
+        message: "A021 velocity zero palette fill is opaque")
     report.expect(
         minimum == RollContentProbe.argb(palette.noteFill(track: track, velocity: 1))
             && argbOpaque(minimum), cppID: id,
-                  message: "the minimum MIDI note velocity publishes its opaque palette fill")
+        message: "the minimum MIDI note velocity publishes its opaque palette fill")
     report.expect(
         maximum == RollContentProbe.argb(palette.noteFill(track: track, velocity: 127)),
-                  cppID: id, message: "A022 published full velocity uses the track identity fill")
+        cppID: id, message: "A022 published full velocity uses the track identity fill")
     report.expect(
         argbOpaque(maximum), cppID: id,
-                  message: "A023 published full velocity is opaque")
+        message: "A023 published full velocity is opaque")
     report.expect(
         argbOpaque(midpoint), cppID: id,
-                  message: "A024 published middle velocity is opaque")
+        message: "A024 published middle velocity is opaque")
     report.expect(
         midpoint != RollContentProbe.argb(zero) && midpoint != minimum
             && midpoint != maximum, cppID: id,
-                  message: "A025 published middle velocity differs from both endpoints")
+        message: "A025 published middle velocity differs from both endpoints")
     let immaterial = GridPalette()
     ShellAppearance.apply(to: immaterial, mode: "immaterial", contrast: 50)
-    report.expectEqual(expected: "#7DC36B", actual: immaterial.noteFill(track: 6, velocity: 100),
-                       cppID: id, what: "immaterial track-six velocity-100 native note color")
+    report.expectEqual(
+        expected: "#7DC36B", actual: immaterial.noteFill(track: 6, velocity: 100),
+        cppID: id, what: "immaterial track-six velocity-100 native note color")
 }

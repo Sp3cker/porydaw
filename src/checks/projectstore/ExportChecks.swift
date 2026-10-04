@@ -38,9 +38,11 @@ private func withExportFixture(
 ) throws {
     var isDirectory: ObjCBool = false
     guard let root = CheckEnvironment.fixtureRoot,
-          FileManager.default.fileExists(atPath: root, isDirectory: &isDirectory),
-          isDirectory.boolValue else {
-        throw ExportCheckError.failed("exportcheck project root is not a directory: \(CheckEnvironment.fixtureRoot ?? "")")
+        FileManager.default.fileExists(atPath: root, isDirectory: &isDirectory),
+        isDirectory.boolValue
+    else {
+        throw ExportCheckError.failed(
+            "exportcheck project root is not a directory: \(CheckEnvironment.fixtureRoot ?? "")")
     }
     guard !label.isEmpty else {
         throw ExportCheckError.failed("exportcheck requires a song label")
@@ -81,8 +83,8 @@ private func le16(_ bytes: Data, _ offset: Int) -> UInt16 {
 }
 
 private func le32(_ bytes: Data, _ offset: Int) -> UInt32 {
-    UInt32(bytes[offset]) | UInt32(bytes[offset + 1]) << 8 |
-        UInt32(bytes[offset + 2]) << 16 | UInt32(bytes[offset + 3]) << 24
+    UInt32(bytes[offset]) | UInt32(bytes[offset + 1]) << 8 | UInt32(bytes[offset + 2]) << 16 | UInt32(bytes[offset + 3])
+        << 24
 }
 
 private func correlation(_ baseline: Data, _ suppressed: Data, lag: Int) -> Double {
@@ -105,8 +107,10 @@ private func correlation(_ baseline: Data, _ suppressed: Data, lag: Int) -> Doub
 }
 
 @MainActor
-private func exportCase(_ name: String, labels: [String], _ report: CheckReport,
-                        _ body: (ExportFixture) throws -> Void) {
+private func exportCase(
+    _ name: String, labels: [String], _ report: CheckReport,
+    _ body: (ExportFixture) throws -> Void
+) {
     for label in labels {
         let cppID = "exportcheck/MidiExportTest::\(name)"
         do {
@@ -176,13 +180,11 @@ internal func runExportChecks(_ report: CheckReport) {
         guard wav.count >= 44 else { throw ExportCheckError.failed("WAV header truncated") }
         report.expect(
             String(decoding: wav[0..<4], as: UTF8.self) == "RIFF" && le32(wav, 4) == UInt32(wav.count - 8)
-                &&
-                          String(decoding: wav[8..<12], as: UTF8.self) == "WAVE" &&
-                          String(decoding: wav[12..<16], as: UTF8.self) == "fmt " &&
-                le32(wav, 16) == 16 && le16(wav, 20) == 1 && le16(wav, 22) == 2 && le32(wav, 24) == UInt32(exportRate)
-                && le32(wav, 28) == UInt32(exportRate * 4) &&
-                          le16(wav, 32) == 4 && le16(wav, 34) == 16 &&
-                String(decoding: wav[36..<40], as: UTF8.self) == "data"
+                && String(decoding: wav[8..<12], as: UTF8.self) == "WAVE"
+                && String(decoding: wav[12..<16], as: UTF8.self) == "fmt " && le32(wav, 16) == 16 && le16(wav, 20) == 1
+                && le16(wav, 22) == 2 && le32(wav, 24) == UInt32(exportRate)
+                && le32(wav, 28) == UInt32(exportRate * 4) && le16(wav, 32) == 4 && le16(wav, 34) == 16
+                && String(decoding: wav[36..<40], as: UTF8.self) == "data"
                 && le32(wav, 40) == UInt32(totals.totalFrames * 4),
             cppID: "exportcheck/MidiExportTest::offlineExportProducesValidRiffPcm",
             message: "S011: RIFF stereo PCM header fields match expected values")
@@ -221,7 +223,8 @@ internal func runExportChecks(_ report: CheckReport) {
                 settings: fixture.settings, options: options, progress: { _ in true })
         }
         let bytes = try Data(contentsOf: path)
-        let peak = stride(from: 44, to: bytes.count - 1, by: 2)
+        let peak =
+            stride(from: 44, to: bytes.count - 1, by: 2)
             .map { abs(Int(Int16(bitPattern: le16(bytes, $0)))) }.max() ?? 0
         report.expect(
             result == .completed && totals.totalFrames == totals.fadeStartFrame

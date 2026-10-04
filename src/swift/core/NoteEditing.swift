@@ -56,9 +56,11 @@ extension SongDocument {
             guard UInt64(note.tick) + UInt64(duration) <= UInt64(TimeDefaults.maxTick) else {
                 throw NoteEditError.tickOverflow
             }
-            spans.append(PlannedNote(track: note.track, chunk: mapping.chunk, pitch: note.pitch,
-                                     tick: note.tick,
-                                     endTick: UInt64(note.tick) + UInt64(duration)))
+            spans.append(
+                PlannedNote(
+                    track: note.track, chunk: mapping.chunk, pitch: note.pitch,
+                    tick: note.tick,
+                    endTick: UInt64(note.tick) + UInt64(duration)))
         }
         guard participantsAreCompatible(spans, allowExactDuplicates: true) else {
             throw NoteEditError.conflictingEditedNotes
@@ -74,12 +76,14 @@ extension SongDocument {
             let duration = max(note.duration, 1)
             let id = mintNoteID()
             insertedIDs.append(id)
-            insertions[mapping.chunk].append(.channel(
-                tick: note.tick, status: 0x90 | mapping.channel, data0: note.pitch,
-                data1: clampVelocity(Int(note.velocity)), noteID: id))
-            insertions[mapping.chunk].append(.channel(
-                tick: note.tick + duration, status: 0x90 | mapping.channel,
-                data0: note.pitch, data1: 0))
+            insertions[mapping.chunk].append(
+                .channel(
+                    tick: note.tick, status: 0x90 | mapping.channel, data0: note.pitch,
+                    data1: clampVelocity(Int(note.velocity)), noteID: id))
+            insertions[mapping.chunk].append(
+                .channel(
+                    tick: note.tick + duration, status: 0x90 | mapping.channel,
+                    data0: note.pitch, data1: 0))
         }
         for chunk in insertions.indices where !insertions[chunk].isEmpty {
             mutation.apply(removing: [], inserting: insertions[chunk], chunk: chunk)
@@ -96,19 +100,22 @@ extension SongDocument {
         commit(mutation, group: nil, operation: .deleteNotes)
     }
 
-
     /// `delta` is cumulative from the gesture's starting edge when `group` is
     /// reused; it is not a per-update increment.
     /// A nonzero trailing resize terminates notes that have no end event.
-    public func resizeNotes(_ ids: [NoteID], edge: ResizeEdge, byTicks delta: Int64,
-                            group: HistoryGroup? = nil) {
+    public func resizeNotes(
+        _ ids: [NoteID], edge: ResizeEdge, byTicks delta: Int64,
+        group: HistoryGroup? = nil
+    ) {
         guard history.acceptsDocumentMutation else { return }
         guard !ids.isEmpty else { return }
         let operation = HistoryOperation.resizeNotes(ids.sorted { $0.rawValue < $1.rawValue }, edge)
         let base = origin(for: group, operation: operation)
         guard let original = resolve(ids, in: base) else { return }
-        guard let durations = edge == .trailing
-            ? resizeNotesDurations(original.span, byTicks: delta) : [] else { return }
+        guard
+            let durations = edge == .trailing
+                ? resizeNotesDurations(original.span, byTicks: delta) : []
+        else { return }
         var relocations: [RelocatedNote] = []
         relocations.reserveCapacity(original.count)
         for (index, note) in original.enumerated() {
@@ -116,18 +123,22 @@ extension SongDocument {
             let end: UInt64?
             switch edge {
             case .leading:
-                tick = note.endTick.map { min(shiftedTick(note.tick, by: delta), Tick($0 - 1)) }
+                tick =
+                    note.endTick.map { min(shiftedTick(note.tick, by: delta), Tick($0 - 1)) }
                     ?? shiftedTick(note.tick, by: delta)
                 end = note.endTick
             case .trailing:
                 tick = note.tick
                 end = delta == 0 ? note.endTick : UInt64(tick) + UInt64(durations[index])
             }
-            relocations.append(RelocatedNote(original: note, tick: tick,
-                                              pitch: note.pitch, endTick: end))
+            relocations.append(
+                RelocatedNote(
+                    original: note, tick: tick,
+                    pitch: note.pitch, endTick: end))
         }
-        relocate(ids, base: base, group: group, operation: operation,
-                 relocations: relocations)
+        relocate(
+            ids, base: base, group: group, operation: operation,
+            relocations: relocations)
     }
 
     /// Plans trailing-edge lengths in input order without changing the document.
@@ -149,8 +160,7 @@ extension SongDocument {
         order.reserveCapacity(notes.count)
         for index in notes.indices where !notes[index].isUnterminated { order.append(index) }
         order.sort {
-            (notes[$0].track, notes[$0].pitch, notes[$0].tick) <
-                (notes[$1].track, notes[$1].pitch, notes[$1].tick)
+            (notes[$0].track, notes[$0].pitch, notes[$0].tick) < (notes[$1].track, notes[$1].pitch, notes[$1].tick)
         }
         for index in order.indices.dropFirst() {
             let previous = order[index - 1]
@@ -160,7 +170,7 @@ extension SongDocument {
             guard a.track == b.track, a.pitch == b.pitch else { continue }
             if delta > 0 { durations[previous] = min(durations[previous], b.tick - a.tick) }
             guard durations[previous] > 0,
-                  UInt64(a.tick) + UInt64(durations[previous]) <= UInt64(b.tick)
+                UInt64(a.tick) + UInt64(durations[previous]) <= UInt64(b.tick)
             else { return nil }
         }
         return durations
@@ -171,9 +181,9 @@ extension SongDocument {
     /// A capped reversal is therefore a separate undo step, unlike a drag update.
     public func resizeNoteLengths(_ ids: [NoteID], byTicks delta: Int64) {
         guard history.acceptsDocumentMutation, delta != 0, !ids.isEmpty,
-              let current = resolve(ids, in: state),
-              let durations = resizeNotesDurations(current.span, byTicks: delta),
-              zip(current, durations).contains(where: { $0.isUnterminated || $0.duration != $1 })
+            let current = resolve(ids, in: state),
+            let durations = resizeNotesDurations(current.span, byTicks: delta),
+            zip(current, durations).contains(where: { $0.isUnterminated || $0.duration != $1 })
         else { return }
         let orderedIDs = ids.sorted { $0.rawValue < $1.rawValue }
         var base = state
@@ -186,7 +196,8 @@ extension SongDocument {
                 var candidate = state
                 previous.changes.apply(to: &candidate, direction: .undo)
                 if let notes = resolve(ids, in: candidate),
-                   resizeNotesDurations(notes.span, byTicks: sum.partialValue) == durations {
+                    resizeNotesDurations(notes.span, byTicks: sum.partialValue) == durations
+                {
                     base = candidate
                     original = notes
                     total = sum.partialValue
@@ -195,15 +206,19 @@ extension SongDocument {
             }
         }
         let relocations = zip(original, durations).map { note, duration in
-            RelocatedNote(original: note, tick: note.tick, pitch: note.pitch,
-                          endTick: UInt64(note.tick) + UInt64(duration))
+            RelocatedNote(
+                original: note, tick: note.tick, pitch: note.pitch,
+                endTick: UInt64(note.tick) + UInt64(duration))
         }
-        relocate(ids, base: base, group: group ?? HistoryGroup(),
-                 operation: .resizeNoteLengths(orderedIDs, total), relocations: relocations)
+        relocate(
+            ids, base: base, group: group ?? HistoryGroup(),
+            operation: .resizeNoteLengths(orderedIDs, total), relocations: relocations)
     }
 
-    public func setVelocities(_ velocities: [NoteVelocity],
-                              expectedRevision: UInt64) -> UInt64? {
+    public func setVelocities(
+        _ velocities: [NoteVelocity],
+        expectedRevision: UInt64
+    ) -> UInt64? {
         guard history.acceptsDocumentMutation else { return nil }
         guard expectedRevision == revision else { return nil }
         var valuesByID: [NoteID: Int] = [:]
@@ -239,8 +254,9 @@ extension SongDocument {
             guard let velocity = valuesByID[note.id] else { continue }
             let target = clampVelocity(velocity)
             guard target != note.velocity,
-                  case let .channel(status, pitch, _) =
-                    mutation.state.file.chunks[note.chunk].events[note.onIndex].payload else {
+                case let .channel(status, pitch, _) =
+                    mutation.state.file.chunks[note.chunk].events[note.onIndex].payload
+            else {
                 continue
             }
             var event = mutation.state.file.chunks[note.chunk].events[note.onIndex]
@@ -251,10 +267,11 @@ extension SongDocument {
         commit(mutation, group: nil, operation: .setVelocities, changed: changed)
     }
 
-
     @discardableResult
-    internal func relocate(_ ids: [NoteID], base: SongState, group: HistoryGroup?,
-                           operation: HistoryOperation, relocations: [RelocatedNote]) -> Bool {
+    internal func relocate(
+        _ ids: [NoteID], base: SongState, group: HistoryGroup?,
+        operation: HistoryOperation, relocations: [RelocatedNote]
+    ) -> Bool {
         guard ids.count == relocations.count else { return false }
         var active: [Int] = []
         active.reserveCapacity(relocations.count)
@@ -263,12 +280,15 @@ extension SongDocument {
         for (index, relocation) in relocations.enumerated() {
             let note = relocation.original
             if let end = relocation.endTick {
-                spans.append(PlannedNote(track: note.track, chunk: note.chunk,
-                                         pitch: relocation.pitch, tick: relocation.tick,
-                                         endTick: end))
+                spans.append(
+                    PlannedNote(
+                        track: note.track, chunk: note.chunk,
+                        pitch: relocation.pitch, tick: relocation.tick,
+                        endTick: end))
             }
             if relocation.tick == note.tick, relocation.pitch == note.pitch,
-               relocation.endTick == note.endTick {
+                relocation.endTick == note.endTick
+            {
                 continue
             }
             active.append(index)
@@ -277,13 +297,16 @@ extension SongDocument {
         guard participantsAreCompatible(spans, allowExactDuplicates: false) else { return false }
         var mutation = DocumentMutation(base)
         let activeIDs = active.map { ids[$0] }
-        applyEditedWins(spans: spans, editedIDs: Set(ids),
-                        to: &mutation, reference: base)
+        applyEditedWins(
+            spans: spans, editedIDs: Set(ids),
+            to: &mutation, reference: base)
         let editedTracks = Set(relocations.map { $0.original.track })
         var removals = Array(repeating: [Int](), count: mutation.state.file.chunks.count)
         var insertions = Array(repeating: [MidiEvent](), count: mutation.state.file.chunks.count)
-        if let selectedInCandidate = resolve(activeIDs, in: mutation.state,
-                                             tracks: editedTracks) {
+        if let selectedInCandidate = resolve(
+            activeIDs, in: mutation.state,
+            tracks: editedTracks)
+        {
             collectRemovals(selectedInCandidate, into: &removals)
         } else if !activeIDs.isEmpty {
             return false
@@ -304,30 +327,37 @@ extension SongDocument {
                     end = base.file.chunks[note.chunk].events[endIndex]
                     end.tick = Tick(endTick)
                     if case let .channel(status, _, velocity) = end.payload {
-                        end.payload = .channel(status: status, data0: relocation.pitch,
-                                               data1: velocity)
+                        end.payload = .channel(
+                            status: status, data0: relocation.pitch,
+                            data1: velocity)
                     }
                 } else {
-                    end = .channel(tick: Tick(endTick), status: 0x90 | note.channel,
-                                   data0: relocation.pitch, data1: 0)
+                    end = .channel(
+                        tick: Tick(endTick), status: 0x90 | note.channel,
+                        data0: relocation.pitch, data1: 0)
                 }
                 insertions[note.chunk].append(end)
             }
         }
         for chunk in removals.indices {
             guard !removals[chunk].isEmpty || !insertions[chunk].isEmpty else { continue }
-            mutation.apply(removing: removals[chunk], inserting: insertions[chunk],
-                           chunk: chunk)
+            mutation.apply(
+                removing: removals[chunk], inserting: insertions[chunk],
+                chunk: chunk)
         }
-        commit(mutation, group: group, operation: operation,
-               changed: !active.isEmpty || group != nil,
-               returnsToOrigin: active.isEmpty)
+        commit(
+            mutation, group: group, operation: operation,
+            changed: !active.isEmpty || group != nil,
+            returnsToOrigin: active.isEmpty)
         return true
     }
 
-    internal func resolve(_ ids: [NoteID], in songState: SongState,
-                          tracks: Set<Int>? = nil) -> [Note]? {
-        let notesByID = tracks.map { NoteProjection.index(of: $0, in: songState.file) }
+    internal func resolve(
+        _ ids: [NoteID], in songState: SongState,
+        tracks: Set<Int>? = nil
+    ) -> [Note]? {
+        let notesByID =
+            tracks.map { NoteProjection.index(of: $0, in: songState.file) }
             ?? projection(for: songState).index
         var seen: Set<NoteID> = []
         var result: [Note] = []
@@ -356,9 +386,11 @@ extension SongDocument {
         }
     }
 
-    private func applyEditedWins(spans: [PlannedNote], editedIDs: Set<NoteID>,
-                                 to mutation: inout DocumentMutation,
-                                 reference: SongState? = nil) {
+    private func applyEditedWins(
+        spans: [PlannedNote], editedIDs: Set<NoteID>,
+        to mutation: inout DocumentMutation,
+        reference: SongState? = nil
+    ) {
         guard !spans.isEmpty else { return }
         let source = reference ?? mutation.state
         let orderedSpans = spans.sorted {
@@ -377,14 +409,15 @@ extension SongDocument {
             let stationaryNotes = sourceNotes.indices.contains(track) ? sourceNotes[track] : []
             for stationary in stationaryNotes {
                 guard !stationary.isUnterminated, !editedIDs.contains(stationary.id),
-                      let originalEnd = stationary.endTick else { continue }
+                    let originalEnd = stationary.endTick
+                else { continue }
                 var start = stationary.tick
                 var end = originalEnd
                 var trimStart = false
                 var trimEnd = false
                 var covered = false
                 for span in orderedSpans
-                    where span.track == track && span.pitch == stationary.pitch {
+                where span.track == track && span.pitch == stationary.pitch {
                     guard span.endTick > UInt64(start), UInt64(span.tick) < end else { continue }
                     if start < span.tick {
                         end = UInt64(span.tick)
@@ -422,8 +455,9 @@ extension SongDocument {
         }
         for chunk in removals.indices {
             guard !removals[chunk].isEmpty || !insertions[chunk].isEmpty else { continue }
-            mutation.apply(removing: removals[chunk], inserting: insertions[chunk],
-                           chunk: chunk)
+            mutation.apply(
+                removing: removals[chunk], inserting: insertions[chunk],
+                chunk: chunk)
         }
     }
 }
@@ -443,8 +477,10 @@ private struct PlannedNote {
     let endTick: UInt64
 }
 
-private func participantsAreCompatible(_ spans: [PlannedNote],
-                                       allowExactDuplicates: Bool) -> Bool {
+private func participantsAreCompatible(
+    _ spans: [PlannedNote],
+    allowExactDuplicates: Bool
+) -> Bool {
     let sorted = spans.sorted {
         ($0.track, $0.pitch, $0.tick) < ($1.track, $1.pitch, $1.tick)
     }
@@ -453,9 +489,11 @@ private func participantsAreCompatible(_ spans: [PlannedNote],
         let previous = sorted[index - 1]
         let current = sorted[index]
         guard previous.track == current.track, previous.pitch == current.pitch,
-              previous.endTick > UInt64(current.tick) else { continue }
-        if !allowExactDuplicates || previous.tick != current.tick ||
-            previous.endTick != current.endTick { return false }
+            previous.endTick > UInt64(current.tick)
+        else { continue }
+        if !allowExactDuplicates || previous.tick != current.tick || previous.endTick != current.endTick {
+            return false
+        }
     }
     return true
 }

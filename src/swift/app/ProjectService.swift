@@ -69,10 +69,12 @@ public struct BankVoice: Equatable, Sendable {
     public var sustain: Int32
     public var release: Int32
 
-    public init(macro: Int32 = BankVoiceMacro.directSound, key: Int32 = 60, pan: Int32 = 0,
-                symbol: String = "", keysplitTable: String = "", sweep: Int32 = 0,
-                duty: Int32 = 2, period: Int32 = 0, attack: Int32 = 0, decay: Int32 = 0,
-                sustain: Int32 = 0, release: Int32 = 0) {
+    public init(
+        macro: Int32 = BankVoiceMacro.directSound, key: Int32 = 60, pan: Int32 = 0,
+        symbol: String = "", keysplitTable: String = "", sweep: Int32 = 0,
+        duty: Int32 = 2, period: Int32 = 0, attack: Int32 = 0, decay: Int32 = 0,
+        sustain: Int32 = 0, release: Int32 = 0
+    ) {
         self.macro = macro
         self.key = key
         self.pan = pan
@@ -140,9 +142,11 @@ public struct BankSlotView: Equatable, Sendable {
     /// Detached display names indexed by MIDI key for a loaded drumkit.
     public var drumPadNames: [String]?
 
-    public init(kind: Int32 = BankSlotKind.none, voice: BankVoice? = nil,
-                tone: BankTone? = nil, subvoiceMacros: [Int32]? = nil,
-                drumPadNames: [String]? = nil, isSynth: Bool = false) {
+    public init(
+        kind: Int32 = BankSlotKind.none, voice: BankVoice? = nil,
+        tone: BankTone? = nil, subvoiceMacros: [Int32]? = nil,
+        drumPadNames: [String]? = nil, isSynth: Bool = false
+    ) {
         self.kind = kind
         self.voice = voice
         self.tone = tone
@@ -153,7 +157,8 @@ public struct BankSlotView: Equatable, Sendable {
 
     public func subvoiceMacro(forKey key: Int) -> Int32? {
         guard (0..<128).contains(key), let subvoiceMacros,
-              subvoiceMacros.indices.contains(key), subvoiceMacros[key] >= 0 else { return nil }
+            subvoiceMacros.indices.contains(key), subvoiceMacros[key] >= 0
+        else { return nil }
         return subvoiceMacros[key]
     }
 }
@@ -191,7 +196,8 @@ public final class NativeBankLease: Sendable {
         let voices = handle.withNativeBank { box -> UnsafeMutablePointer<ToneData>? in
             let nativeLease = pd_bank_lease_native(box)
             guard let storage = nativeLease.pointee.__getUnsafe(),
-                  let offset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices) else {
+                let offset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices)
+            else {
                 return nil
             }
             return UnsafeMutableRawPointer(mutating: storage).advanced(by: offset)
@@ -223,9 +229,11 @@ public struct SongListing: Equatable, Sendable {
     /// when the registration is complete.
     public var registrationGaps: [String]
 
-    public init(id: Int, label: String, constant: String, player: String,
-                midiPath: String, trackBudget: Int, hasMid: Bool, hasCfg: Bool,
-                registered: Bool, registrationGaps: [String]) {
+    public init(
+        id: Int, label: String, constant: String, player: String,
+        midiPath: String, trackBudget: Int, hasMid: Bool, hasCfg: Bool,
+        registered: Bool, registrationGaps: [String]
+    ) {
         self.id = id
         self.label = label
         self.constant = constant
@@ -296,8 +304,10 @@ public struct SongRegistrationPlan: Equatable, Sendable {
     /// "songs.h", ...); empty when the registration is already complete.
     public var missingFiles: [String]
 
-    public init(label: String, constant: String, player: String, songId: Int,
-                missingFiles: [String]) {
+    public init(
+        label: String, constant: String, player: String, songId: Int,
+        missingFiles: [String]
+    ) {
         self.label = label
         self.constant = constant
         self.player = player
@@ -323,9 +333,11 @@ public struct SongDeletionPlan: Equatable, Sendable {
     /// The display form of deletableVoicegroupName.
     public var deletableVoicegroupDisplay: String?
 
-    public init(tableIndex: Int, tableCount: Int, lastEntry: Bool, inSongsH: Bool,
-                inLdScript: Bool, inCharmap: Bool, inDebugMenu: Bool,
-                deletableVoicegroupName: String?, deletableVoicegroupDisplay: String?) {
+    public init(
+        tableIndex: Int, tableCount: Int, lastEntry: Bool, inSongsH: Bool,
+        inLdScript: Bool, inCharmap: Bool, inDebugMenu: Bool,
+        deletableVoicegroupName: String?, deletableVoicegroupDisplay: String?
+    ) {
         self.tableIndex = tableIndex
         self.tableCount = tableCount
         self.lastEntry = lastEntry
@@ -387,11 +399,12 @@ internal func projectVoice(_ voice: BankVoice) throws -> PorydawProject.VgVoice 
     guard let macro = PorydawProject.VgMacro(rawValue: voice.macro) else {
         throw ProjectServiceError.operationFailed("Voice macro ordinal is out of range.")
     }
-    return PorydawProject.VgVoice(macro: macro, key: Int(voice.key), pan: Int(voice.pan),
-                   symbol: voice.symbol, keysplitTable: voice.keysplitTable,
-                   sweep: Int(voice.sweep), duty: Int(voice.duty), period: Int(voice.period),
-                   attack: Int(voice.attack), decay: Int(voice.decay),
-                   sustain: Int(voice.sustain), release: Int(voice.release))
+    return PorydawProject.VgVoice(
+        macro: macro, key: Int(voice.key), pan: Int(voice.pan),
+        symbol: voice.symbol, keysplitTable: voice.keysplitTable,
+        sweep: Int(voice.sweep), duty: Int(voice.duty), period: Int(voice.period),
+        attack: Int(voice.attack), decay: Int(voice.decay),
+        sustain: Int(voice.sustain), release: Int(voice.release))
 }
 
 private func copyVoice(_ voice: PorydawProject.VgVoice) -> BankVoice {
@@ -405,10 +418,11 @@ private func copyVoice(_ voice: PorydawProject.VgVoice) -> BankVoice {
     let decay = Int32(voice.decay)
     let sustain = Int32(voice.sustain)
     let release = Int32(voice.release)
-    return BankVoice(macro: macro, key: key, pan: pan, symbol: voice.symbol,
-                     keysplitTable: voice.keysplitTable, sweep: sweep, duty: duty,
-                     period: period, attack: attack, decay: decay,
-                     sustain: sustain, release: release)
+    return BankVoice(
+        macro: macro, key: key, pan: pan, symbol: voice.symbol,
+        keysplitTable: voice.keysplitTable, sweep: sweep, duty: duty,
+        period: period, attack: attack, decay: decay,
+        sustain: sustain, release: release)
 }
 
 private func copySlots(_ lease: ProjectBankLease) -> [BankSlotView] {
@@ -419,38 +433,46 @@ private func copySlots(_ lease: ProjectBankLease) -> [BankSlotView] {
             let voice = slot.voice.map(copyVoice)
             let loaded: ToneData? = bank.flatMap { storage in
                 guard slot.kind != .none, index < 128,
-                      let voicesOffset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices)
+                    let voicesOffset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices)
                 else { return nil }
                 return UnsafeRawPointer(storage).advanced(by: voicesOffset)
                     .assumingMemoryBound(to: ToneData.self)[index]
             }
-            let synth = loaded.map {
-                $0.type & 0xE7 == 0 && $0.wav?.pointee.size == 0 && $0.wav?.pointee.data != nil
-            } ?? false
+            let synth =
+                loaded.map {
+                    $0.type & 0xE7 == 0 && $0.wav?.pointee.size == 0 && $0.wav?.pointee.data != nil
+                } ?? false
             let tone: BankTone? = bank.flatMap { storage in
                 guard voice == nil, let loaded,
-                      let namesOffset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voiceNames)
+                    let namesOffset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voiceNames)
                 else { return nil }
                 let names = UnsafeRawPointer(storage).advanced(by: namesOffset)
                     .assumingMemoryBound(to: CChar.self)
                 let start = names.advanced(by: index * Int(VG_VOICE_NAME_LEN))
-                let length = (0..<Int(VG_VOICE_NAME_LEN)).first(where: {
-                    start[$0] == 0
-                }) ?? Int(VG_VOICE_NAME_LEN)
+                let length =
+                    (0..<Int(VG_VOICE_NAME_LEN)).first(where: {
+                        start[$0] == 0
+                    }) ?? Int(VG_VOICE_NAME_LEN)
                 let bytes = UnsafeRawPointer(start).assumingMemoryBound(to: UInt8.self)
-                let name = String(decoding: UnsafeBufferPointer(start: bytes, count: length),
-                                  as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-                let adsr = loaded.type == UInt8(VOICE_KEYSPLIT)
-                    || loaded.type == UInt8(VOICE_KEYSPLIT_ALL) ? nil
-                    : BankToneAdsr(attack: Int32(loaded.attack), decay: Int32(loaded.decay),
-                                   sustain: Int32(loaded.sustain), release: Int32(loaded.release))
+                let name = String(
+                    decoding: UnsafeBufferPointer(start: bytes, count: length),
+                    as: UTF8.self
+                ).trimmingCharacters(in: .whitespacesAndNewlines)
+                let adsr =
+                    loaded.type == UInt8(VOICE_KEYSPLIT)
+                        || loaded.type == UInt8(VOICE_KEYSPLIT_ALL)
+                    ? nil
+                    : BankToneAdsr(
+                        attack: Int32(loaded.attack), decay: Int32(loaded.decay),
+                        sustain: Int32(loaded.sustain), release: Int32(loaded.release))
                 return BankTone(name: name, type: Int32(loaded.type), isSynth: synth, adsr: adsr)
             }
             let subvoices = loaded.flatMap(copySubvoiceMacros)
             let drumPadNames: [String]? = loaded.flatMap { tone in
                 guard tone.type == UInt8(VOICE_KEYSPLIT_ALL),
-                      let subgroup = tone.subGroup?.assumingMemoryBound(to: ToneData.self),
-                      let bank else { return nil }
+                    let subgroup = tone.subGroup?.assumingMemoryBound(to: ToneData.self),
+                    let bank
+                else { return nil }
                 return (0..<128).map { key in
                     guard let name = voicegroup_subgroup_slot_name(bank, subgroup, Int32(key))
                     else { return "" }
@@ -461,9 +483,10 @@ private func copySlots(_ lease: ProjectBankLease) -> [BankSlotView] {
                     return String(decoding: bounded.prefix(length), as: UTF8.self)
                 }
             }
-            return BankSlotView(kind: slot.kind.rawValue, voice: voice, tone: tone,
-                                subvoiceMacros: subvoices, drumPadNames: drumPadNames,
-                                isSynth: synth)
+            return BankSlotView(
+                kind: slot.kind.rawValue, voice: voice, tone: tone,
+                subvoiceMacros: subvoices, drumPadNames: drumPadNames,
+                isSynth: synth)
         }
     }
 }
@@ -474,7 +497,8 @@ private func copySubvoiceMacros(_ tone: ToneData) -> [Int32]? {
     let split = tone.type & UInt8(VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL)
     guard split != 0 else { return nil }
     guard let group = tone.subGroup?.assumingMemoryBound(to: ToneData.self),
-          tone.type & UInt8(VOICE_KEYSPLIT) == 0 || tone.keySplitTable != nil else {
+        tone.type & UInt8(VOICE_KEYSPLIT) == 0 || tone.keySplitTable != nil
+    else {
         return Array(repeating: -1, count: 128)
     }
     return (0..<128).map { key in
@@ -502,9 +526,10 @@ private func copySubvoiceMacros(_ tone: ToneData) -> [Int32]? {
 }
 
 internal func appliedBank(_ lease: ProjectBankLease, token: UInt64?) -> AppliedBankEdit {
-    AppliedBankEdit(lease: NativeBankLease(handle: lease), slots: copySlots(lease),
-                    dirty: lease.dirty, loadName: lease.loadName,
-                    materializationToken: token == 0 ? nil : token)
+    AppliedBankEdit(
+        lease: NativeBankLease(handle: lease), slots: copySlots(lease),
+        dirty: lease.dirty, loadName: lease.loadName,
+        materializationToken: token == 0 ? nil : token)
 }
 
 internal func bankEditResult(_ result: ProjectBankEditOutcome) throws -> AppliedBankEdit {

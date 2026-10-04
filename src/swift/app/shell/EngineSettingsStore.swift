@@ -126,8 +126,9 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
 
     public func apply() {
         guard !isApplying else { return }
-        let engine = EngineSettings(mixer: mixer, maxPcmChannels: String(maxPcmChannels),
-                                    mixRate: String(mixRate), analogFilter: String(analogFilter))
+        let engine = EngineSettings(
+            mixer: mixer, maxPcmChannels: String(maxPcmChannels),
+            mixRate: String(mixRate), analogFilter: String(analogFilter))
         if engine != committed {
             committed = engine
             session?.setEngineSettings(engine)

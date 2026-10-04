@@ -41,12 +41,12 @@ public final class AudioDevice {
                 }
             }
             #if os(Linux)
-            if !nullBackendForced {
-                // The original private ALSA variadic no-op handler cannot be supplied
-                // as a typed Swift C callback. ALSA stderr remains unsuppressed here.
-                // Failure deliberately leaves context nil for miniaudio's default policy.
-                _ = initializeContext(backends: [ma_backend_pulseaudio, ma_backend_alsa])
-            }
+                if !nullBackendForced {
+                    // The original private ALSA variadic no-op handler cannot be supplied
+                    // as a typed Swift C callback. ALSA stderr remains unsuppressed here.
+                    // Failure deliberately leaves context nil for miniaudio's default policy.
+                    _ = initializeContext(backends: [ma_backend_pulseaudio, ma_backend_alsa])
+                }
             #endif
 
             let device = UnsafeMutablePointer<ma_device>.allocate(capacity: 1)
@@ -54,13 +54,13 @@ public final class AudioDevice {
             var config = ma_device_config_init(ma_device_type_playback)
             config.playback.format = ma_format_f32
             config.playback.channels = 2
-            config.sampleRate = 0 // Negotiate the device's native rate.
+            config.sampleRate = 0  // Negotiate the device's native rate.
             config.dataCallback = audioDeviceRender
             var period = Self.parsePeriod(environment["PORYDAW_AUDIO_PERIOD_MS"])
             #if os(Linux)
-            if (period ?? 0) <= 0, Self.runningUnderWSL {
-                period = 30
-            }
+                if (period ?? 0) <= 0, Self.runningUnderWSL {
+                    period = 30
+                }
             #endif
             if let period, period > 0 {
                 config.periodSizeInMilliseconds = UInt32(min(500, max(1, period)))
@@ -106,7 +106,7 @@ public final class AudioDevice {
         if let device {
             startStop.sync {}
             if deviceInitialized {
-                ma_device_uninit(device) // Joins/parks callbacks before releasing their borrower.
+                ma_device_uninit(device)  // Joins/parks callbacks before releasing their borrower.
             }
             device.deallocate()
             self.device = nil
@@ -160,18 +160,19 @@ public final class AudioDevice {
             radix = digits.first == "0" ? 8 : 10
         }
         guard let first = digits.utf8.first,
-              (48...57).contains(first) || (radix == 16 && ((65...70).contains(first) || (97...102).contains(first))),
-              let magnitude = Int64(digits, radix: radix), magnitude >= 0 else { return nil }
+            (48...57).contains(first) || (radix == 16 && ((65...70).contains(first) || (97...102).contains(first))),
+            let magnitude = Int64(digits, radix: radix), magnitude >= 0
+        else { return nil }
         return Int32(exactly: negative ? -magnitude : magnitude)
     }
 
     #if os(Linux)
-    private static var runningUnderWSL: Bool {
-        guard let release = try? String(contentsOfFile: "/proc/sys/kernel/osrelease", encoding: .utf8) else {
-            return false
+        private static var runningUnderWSL: Bool {
+            guard let release = try? String(contentsOfFile: "/proc/sys/kernel/osrelease", encoding: .utf8) else {
+                return false
+            }
+            return release.lowercased().contains("microsoft")
         }
-        return release.lowercased().contains("microsoft")
-    }
     #endif
 }
 

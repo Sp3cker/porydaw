@@ -244,9 +244,11 @@ func parityParams(_ profile: ParityProfile, sourceRate: Double, params initial: 
 
 func writeWav2AgbProject(root: String) throws {
     try ProjectFixtureFiles.write(root + "/Makefile", "include audio_rules.mk\n")
-    try ProjectFixtureFiles.write(root + "/audio_rules.mk",
+    try ProjectFixtureFiles.write(
+        root + "/audio_rules.mk",
         "SOUND_BIN_DIR := $(OBJ_DIR)/sound\n\n$(SOUND_BIN_DIR)/%.bin: sound/%.wav \n\t$(WAV2AGB) -b $< $@\n")
-    try ProjectFixtureFiles.write(root + "/sound/direct_sound_data.inc",
+    try ProjectFixtureFiles.write(
+        root + "/sound/direct_sound_data.inc",
         "\t.align 2\nDirectSoundWaveData_existing::\n\t.incbin \"sound/direct_sound_samples/existing.bin\"\n")
     try ProjectFixtureFiles.write(root + "/sound/direct_sound_samples/existing.wav", "placeholder")
     try ProjectFixtureFiles.write(root + "/sound/direct_sound_samples/existing.bin", "placeholder")
@@ -254,9 +256,11 @@ func writeWav2AgbProject(root: String) throws {
 }
 
 func writeAif2PcmProject(root: String) throws {
-    try ProjectFixtureFiles.write(root + "/audio_rules.mk",
+    try ProjectFixtureFiles.write(
+        root + "/audio_rules.mk",
         "$(SOUND_BIN_DIR)/%.bin: $(SAMPLE_SUBDIR)/%.aif\n\t$(AIF2PCM) $< $@\n")
-    try ProjectFixtureFiles.write(root + "/sound/direct_sound_data.inc",
+    try ProjectFixtureFiles.write(
+        root + "/sound/direct_sound_data.inc",
         "\t.align 2\nDirectSoundWaveData_existing::\n\t.incbin \"sound/direct_sound_samples/existing.bin\"\n")
 }
 

@@ -96,16 +96,20 @@ struct DebugSoundLists {
         var file = try RegistrationLines(path: path)
         let scan = DebugSoundLists(file.texts)
         guard !scan.lists.contains(where: { $0.names.contains(constant) }),
-              let target = scan.target(constant: constant, forceBgm: plan.debugUseBgmList)
+            let target = scan.target(constant: constant, forceBgm: plan.debugUseBgmList)
         else { return }
-        let style = target.names.isEmpty
+        let style =
+            target.names.isEmpty
             ? scan.lists.first(where: { !$0.names.isEmpty }) ?? target : target
-        let ids = Dictionary(RegistrationText.lines(root, "include/constants/songs.h").compactMap { line
-            -> (String, Int)? in
-            guard let match = RegistrationText.match(RegistrationText.define, line),
-                  let id = Int(match.group(3)) else { return nil }
-            return (match.group(2), id)
-        }, uniquingKeysWith: { first, _ in first })
+        let ids = Dictionary(
+            RegistrationText.lines(root, "include/constants/songs.h").compactMap {
+                line
+                    -> (String, Int)? in
+                guard let match = RegistrationText.match(RegistrationText.define, line),
+                    let id = Int(match.group(3))
+                else { return nil }
+                return (match.group(2), id)
+            }, uniquingKeysWith: { first, _ in first })
         var after = -1
         for index in target.names.indices where (ids[target.names[index]] ?? Int.max) < plan.songId {
             after = index

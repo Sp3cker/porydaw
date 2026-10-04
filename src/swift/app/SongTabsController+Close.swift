@@ -7,8 +7,9 @@ extension SongTabsController {
     @QtIgnored
     func requestReload(tabId: Int) {
         guard pendingCloseId == -1, pendingCloseBank == nil,
-              !reloadsInFlight.contains(tabId),
-              let index = tabIndex(of: tabId) else { return }
+            !reloadsInFlight.contains(tabId),
+            let index = tabIndex(of: tabId)
+        else { return }
         reloadId = tabId
         if tabs[index].dirty {
             if tabId != selectedId { select(tabId: tabId) }
@@ -23,7 +24,8 @@ extension SongTabsController {
     @QtIgnored
     func requestReplacement(tabId: Int, label: String) {
         guard pendingCloseId == -1, pendingCloseBank == nil,
-              !reloadsInFlight.contains(tabId), tab(id: tabId) != nil else { return }
+            !reloadsInFlight.contains(tabId), tab(id: tabId) != nil
+        else { return }
         replacementLabel = label
         requestReload(tabId: tabId)
     }
@@ -53,7 +55,6 @@ extension SongTabsController {
         clearPendingCloseBank()
         advanceCloseAll()
     }
-
 
     /// Walks every tab through the close gate, then every dirty bank of the
     /// project, asking about each dirty one in turn and reporting the walk's
@@ -137,7 +138,8 @@ extension SongTabsController {
         tabCount = tabs.count
         // A closed selection hands over to the adjacent survivor; a background
         // close leaves the selection and its activation alone.
-        let survivorIndex = closingSelected
+        let survivorIndex =
+            closingSelected
             ? min(index, tabs.count - 1)
             : tabIndex(of: selectedId) ?? -1
         publishSelection(index: survivorIndex)
@@ -151,7 +153,8 @@ extension SongTabsController {
     /// selection the user made while the old document was loading.
     func finishReload(_ tab: SongTabSession, restoring state: ReloadedTab) -> Bool {
         guard reloadsInFlight.contains(state.tabId),
-              let index = tabIndex(of: state.tabId) else { return false }
+            let index = tabIndex(of: state.tabId)
+        else { return false }
         guard state.matches(tabs[index]) else {
             cancelReload(tabId: state.tabId)
             return false
@@ -181,7 +184,8 @@ extension SongTabsController {
     /// tab changed in flight, keep its newer document command-ready instead.
     func failReload(restoring state: ReloadedTab) {
         guard reloadsInFlight.contains(state.tabId),
-              let index = tabIndex(of: state.tabId) else { return }
+            let index = tabIndex(of: state.tabId)
+        else { return }
         guard state.matches(tabs[index]) else {
             cancelReload(tabId: state.tabId)
             return

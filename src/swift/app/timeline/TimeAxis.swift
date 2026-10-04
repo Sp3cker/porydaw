@@ -9,8 +9,8 @@ import PorydawCore
 /// Time-signature change from SMF meta 0x58; mirrors C++ `TimeSigPoint`.
 public struct TimeSigPoint: Equatable, Sendable {
     public var tick: Tick
-    public var numerator: UInt8       // blank (0) reads as 4 via beatsPerBarFor
-    public var denomPow2: UInt8       // denominator = 1 << denomPow2
+    public var numerator: UInt8  // blank (0) reads as 4 via beatsPerBarFor
+    public var denomPow2: UInt8  // denominator = 1 << denomPow2
     public init(tick: Tick, numerator: UInt8, denomPow2: UInt8) {
         self.tick = tick
         self.numerator = numerator
@@ -26,9 +26,11 @@ public struct TimeMap: Equatable, Sendable {
     public var loopStartTick: Tick = TimeDefaults.noTick
     public var loopEndTick: Tick = TimeDefaults.noTick
     public var timeSigs: [TimeSigPoint] = []
-    public init(ticksPerBeat: UInt32 = 24, lengthTicks: Tick = 0,
-                loopStartTick: Tick = TimeDefaults.noTick,
-                loopEndTick: Tick = TimeDefaults.noTick, timeSigs: [TimeSigPoint] = []) {
+    public init(
+        ticksPerBeat: UInt32 = 24, lengthTicks: Tick = 0,
+        loopStartTick: Tick = TimeDefaults.noTick,
+        loopEndTick: Tick = TimeDefaults.noTick, timeSigs: [TimeSigPoint] = []
+    ) {
         self.ticksPerBeat = ticksPerBeat
         self.lengthTicks = lengthTicks
         self.loopStartTick = loopStartTick
@@ -50,7 +52,7 @@ public struct GridSegment: Equatable, Sendable {
 struct ResolvedTimeSignature: Equatable {
     var tick: Tick = 0
     var numerator: Int = 4
-    var denomPow2: Int = 2              // RAW exponent, not clamped
+    var denomPow2: Int = 2  // RAW exponent, not clamped
     var implicit: Bool = true
 }
 
@@ -71,9 +73,9 @@ public struct TimeAxis: Equatable, Sendable {
     }
 
     var ticksPerBeat: UInt32 { max(1, map.ticksPerBeat) }  // fallback axis is 24
-    var lengthTicks: Tick { map.lengthTicks }              // 0 unbound
-    var loopStartTick: Tick { map.loopStartTick }          // kNoTick when absent
-    var loopEndTick: Tick { map.loopEndTick }              // kNoTick when absent
+    var lengthTicks: Tick { map.lengthTicks }  // 0 unbound
+    var loopStartTick: Tick { map.loopStartTick }  // kNoTick when absent
+    var loopEndTick: Tick { map.loopEndTick }  // kNoTick when absent
 
     /// Actual 0x58 events only, in order; empty on the fallback axis.
     var explicitTimeSignatures: [TimeSigPoint] { map.timeSigs }
@@ -94,8 +96,8 @@ public struct TimeAxis: Equatable, Sendable {
     }
 
     func signatureAt(_ tick: Tick) -> ResolvedTimeSignature {
-        var resolved = ResolvedTimeSignature()              // implicit opening 4/4 at tick 0
-        for ts in map.timeSigs {                            // tick-sorted
+        var resolved = ResolvedTimeSignature()  // implicit opening 4/4 at tick 0
+        for ts in map.timeSigs {  // tick-sorted
             if ts.tick > tick {
                 break
             }
@@ -110,9 +112,9 @@ public struct TimeAxis: Equatable, Sendable {
     }
 
     public func segmentAt(_ tick: Tick) -> GridSegment {
-        var seg = GridSegment()                             // implicit opening 4/4 at tick 0
+        var seg = GridSegment()  // implicit opening 4/4 at tick 0
         seg.beatTicks = ticksPerBeat
-        for ts in map.timeSigs {                            // tick-sorted
+        for ts in map.timeSigs {  // tick-sorted
             if ts.tick > tick {
                 seg.next = ts.tick
                 break
@@ -127,8 +129,10 @@ public struct TimeAxis: Equatable, Sendable {
 
     /// Bar/beat lines over [tickBegin, tickEnd): 1-based, bars counted
     /// across signature changes including partial measures.
-    func forEachGridLine(from tickBegin: Tick, to tickEnd: Tick,
-                         _ visitor: (Tick, _ isBar: Bool, _ bar: Int, _ beat: Int) -> Void) {
+    func forEachGridLine(
+        from tickBegin: Tick, to tickEnd: Tick,
+        _ visitor: (Tick, _ isBar: Bool, _ bar: Int, _ beat: Int) -> Void
+    ) {
         if tickEnd <= tickBegin {
             return
         }
@@ -138,10 +142,10 @@ public struct TimeAxis: Equatable, Sendable {
         // Streaming walk over the implicit opening segment plus the explicit
         // signature segments, merging same-tick duplicates (the last at a tick
         // wins). `next` always indexes the first signature strictly after seg.start.
-        var seg = GridSegment()                             // implicit opening 4/4 at tick 0
+        var seg = GridSegment()  // implicit opening 4/4 at tick 0
         seg.beatTicks = tpb
         var next = 0
-        while next < sigs.count && sigs[next].tick == 0 {   // prologue consumes tick-0 duplicates
+        while next < sigs.count && sigs[next].tick == 0 {  // prologue consumes tick-0 duplicates
             seg.beatTicks = beatTicksFor(tpb, sigs[next].denomPow2)
             seg.beatsPerBar = beatsPerBarFor(sigs[next].numerator)
             next += 1
@@ -152,7 +156,8 @@ public struct TimeAxis: Equatable, Sendable {
             let clampedEnd: Tick = min(segEnd, tickEnd)
             if seg.start < clampedEnd {
                 // Skip below-range beats without visiting.
-                var k: UInt64 = tickBegin > seg.start
+                var k: UInt64 =
+                    tickBegin > seg.start
                     ? (UInt64(tickBegin) - UInt64(seg.start)) / UInt64(seg.beatTicks)
                     : 0
                 // In range: seg.start + k * beatTicks <= tickBegin <= kMaxTick.

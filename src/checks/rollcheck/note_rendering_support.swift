@@ -11,7 +11,9 @@ func probeFill(_ grid: PianoGrid, _ id: NoteID) -> UInt32? {
 /// Viewport-space face of a plotted note: the decoded fill rect. Nil when
 /// the note is culled (off-screen) or absent.
 @MainActor
-func decodedNoteBox(_ grid: PianoGrid, _ id: NoteID)
+func decodedNoteBox(
+    _ grid: PianoGrid, _ id: NoteID
+)
     -> (x: Double, y: Double, w: Double, h: Double)?
 {
     guard let face = RollContentProbe(grid).fillRect(id) else { return nil }
@@ -38,8 +40,10 @@ func noteValueLabeled(_ grid: PianoGrid, id: NoteID) -> (text: String, boxW: Dou
 }
 
 @MainActor
-func renderingSeed(_ report: CheckReport, id: String,
-                           session: DocumentSession, grid: PianoGrid) -> NoteID? {
+func renderingSeed(
+    _ report: CheckReport, id: String,
+    session: DocumentSession, grid: PianoGrid
+) -> NoteID? {
     let camera = session.camera
     let projection = camera.projection
     let snapshot = camera.snapshot
@@ -50,11 +54,14 @@ func renderingSeed(_ report: CheckReport, id: String,
     for pitch in (24...115).reversed() {
         let row = projection.row(forPitch: pitch)
         guard row != PitchProjection.hiddenRow,
-              let top = projection.rowTop(row, keyHeight: snapshot.keyHeight,
-                                          scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
-              let bottom = projection.rowBottom(row, keyHeight: snapshot.keyHeight,
-                                                scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
-              top >= 0, bottom <= snapshot.rollHeight else { continue }
+            let top = projection.rowTop(
+                row, keyHeight: snapshot.keyHeight,
+                scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
+            let bottom = projection.rowBottom(
+                row, keyHeight: snapshot.keyHeight,
+                scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
+            top >= 0, bottom <= snapshot.rollHeight
+        else { continue }
         for probe in stride(from: 40, to: Int(snapshot.viewportWidth) - 40, by: 24) {
             let tick = grid.snapTickDown(camera.tickAtContentX(Double(probe)))
             let cell = grid.gridCell(at: tick)
@@ -64,15 +71,19 @@ func renderingSeed(_ report: CheckReport, id: String,
             let right = camera.contentX(tick: Double(tick + duration))
             let snap = camera.contentX(tick: Double(tick + grid.snapTicks))
             guard left >= 0, right - left >= 12, snap - left >= 8,
-                  right < snapshot.viewportWidth,
-                  !occupied.contains(where: { note in
-                      Int(note.pitch) == pitch && Int(note.tick) < tick + duration
-                          && Int(note.tick) + Int(note.duration) > tick
-                  }) else { continue }
-            guard let added = try? session.document.addNotes([
-                NewNote(track: track, tick: Tick(tick), pitch: UInt8(pitch),
+                right < snapshot.viewportWidth,
+                !occupied.contains(where: { note in
+                    Int(note.pitch) == pitch && Int(note.tick) < tick + duration
+                        && Int(note.tick) + Int(note.duration) > tick
+                })
+            else { continue }
+            guard
+                let added = try? session.document.addNotes([
+                    NewNote(
+                        track: track, tick: Tick(tick), pitch: UInt8(pitch),
                         duration: Tick(duration), velocity: 100)
-            ]), let id = added.first else {
+                ]), let id = added.first
+            else {
                 report.fail(id, "note rendering fixture could not insert the free cell")
                 return nil
             }
@@ -83,7 +94,6 @@ func renderingSeed(_ report: CheckReport, id: String,
     report.fail(id, "note rendering fixture has no visible free cell (40px initial probe)")
     return nil
 }
-
 
 func renderingNear(_ lhs: Double, _ rhs: Double) -> Bool {
     abs(lhs - rhs) < 1e-6
@@ -101,10 +111,12 @@ struct GhostSeed {
 }
 
 @MainActor
-func ghostSeed(_ report: CheckReport, id: String, session: DocumentSession,
-                       grid: PianoGrid, track: Int, spanCells: Int,
-                       nearPitch: Int? = nil, nearTick: Int? = nil,
-                       excluding: Set<Int> = []) -> GhostSeed? {
+func ghostSeed(
+    _ report: CheckReport, id: String, session: DocumentSession,
+    grid: PianoGrid, track: Int, spanCells: Int,
+    nearPitch: Int? = nil, nearTick: Int? = nil,
+    excluding: Set<Int> = []
+) -> GhostSeed? {
     let camera = session.camera
     let projection = camera.projection
     let snapshot = camera.snapshot
@@ -130,12 +142,15 @@ func ghostSeed(_ report: CheckReport, id: String, session: DocumentSession,
         if excluding.contains(pitch) { continue }
         let row = projection.row(forPitch: pitch)
         guard row != PitchProjection.hiddenRow,
-              let top = projection.rowTop(row, keyHeight: snapshot.keyHeight,
-                                          scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
-              let bottom = projection.rowBottom(row, keyHeight: snapshot.keyHeight,
-                                                scrollY: snapshot.scrollY,
-                                                dpr: grid.devicePixelRatio),
-              top >= 0, bottom <= snapshot.rollHeight else { continue }
+            let top = projection.rowTop(
+                row, keyHeight: snapshot.keyHeight,
+                scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
+            let bottom = projection.rowBottom(
+                row, keyHeight: snapshot.keyHeight,
+                scrollY: snapshot.scrollY,
+                dpr: grid.devicePixelRatio),
+            top >= 0, bottom <= snapshot.rollHeight
+        else { continue }
         for probe in probes {
             let tick = probe.tick
             let cell = grid.gridCell(at: tick)
@@ -145,15 +160,19 @@ func ghostSeed(_ report: CheckReport, id: String, session: DocumentSession,
             let right = camera.contentX(tick: Double(tick + duration))
             let snap = camera.contentX(tick: Double(tick + grid.snapTicks))
             guard left >= 0, right - left >= 12, snap - left >= 8,
-                  right < snapshot.viewportWidth,
-                  !occupied.contains(where: { note in
-                      Int(note.pitch) == pitch && Int(note.tick) < tick + duration
-                          && Int(note.tick) + Int(note.duration) > tick
-                  }) else { continue }
-            guard let added = try? session.document.addNotes([
-                NewNote(track: track, tick: Tick(tick), pitch: UInt8(pitch),
+                right < snapshot.viewportWidth,
+                !occupied.contains(where: { note in
+                    Int(note.pitch) == pitch && Int(note.tick) < tick + duration
+                        && Int(note.tick) + Int(note.duration) > tick
+                })
+            else { continue }
+            guard
+                let added = try? session.document.addNotes([
+                    NewNote(
+                        track: track, tick: Tick(tick), pitch: UInt8(pitch),
                         duration: Tick(duration), velocity: 100)
-            ]), let noteID = added.first else {
+                ]), let noteID = added.first
+            else {
                 report.fail(id, "ghost fixture could not insert the free cell")
                 return nil
             }

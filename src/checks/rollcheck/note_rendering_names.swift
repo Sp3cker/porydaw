@@ -33,8 +33,10 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     _ = session.mutateCamera { _ = $0.setTimeZoom(280) }
     grid.refreshCamera()
     _ = session.mutateCamera { camera in
-        _ = camera.setHScroll(max(camera.snapshot.minHScroll,
-                                  camera.contentX(tick: Double(tick)) - 160))
+        _ = camera.setHScroll(
+            max(
+                camera.snapshot.minHScroll,
+                camera.contentX(tick: Double(tick)) - 160))
     }
     grid.refreshCamera()
     grid.setNoteNameMode(enabled: true)
@@ -53,7 +55,7 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     report.expect(
         content.noteNameMode && content.selectedTrack == record.track
             && wide.count == 1 && wide.first?.id == noteID.rawValue, cppID: id,
-                  message: "a wide selected-track note gets exactly one name label")
+        message: "a wide selected-track note gets exactly one name label")
     func slot(_ kind: RollPaletteSlot) -> UInt32? {
         content.slot(kind)
     }
@@ -81,20 +83,22 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     grid.refreshCamera()
     report.expect(
         labeledNotes().isEmpty, cppID: id,
-                  message: "a too-narrow note gets no name label")
+        message: "a too-narrow note gets no name label")
     // Below the key-height threshold: wide again, but rows too short.
     _ = session.mutateCamera { _ = $0.setTimeZoom(280) }
     grid.refreshCamera()
     _ = session.mutateCamera { camera in
-        _ = camera.setHScroll(max(camera.snapshot.minHScroll,
-                                  camera.contentX(tick: Double(tick)) - 160))
+        _ = camera.setHScroll(
+            max(
+                camera.snapshot.minHScroll,
+                camera.contentX(tick: Double(tick)) - 160))
         _ = camera.setKeyHeight(8)
         _ = camera.setVScroll(max(0, (127.5 - Double(pitch)) * 8 - 160))
     }
     grid.refreshCamera()
     report.expect(
         labeledNotes().isEmpty, cppID: id,
-                  message: "no name labels below the key-height threshold")
+        message: "no name labels below the key-height threshold")
     // Ghost exclusion from the real plotted list: an adjacent-row
     // other-track note decodes no name label while the mode is on.
     session.mutateCamera { camera in
@@ -104,8 +108,10 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     }
     grid.refreshCamera()
     let ghostIdentity = session.document.history.currentIdentity
-    let neighborPitches = [pitch - 1, pitch + 1, pitch - 2, pitch + 2, pitch - 3, pitch + 3,
-                           pitch - 4, pitch + 4, pitch - 5, pitch + 5, pitch - 6, pitch + 6]
+    let neighborPitches = [
+        pitch - 1, pitch + 1, pitch - 2, pitch + 2, pitch - 3, pitch + 3,
+        pitch - 4, pitch + 4, pitch - 5, pitch + 5, pitch - 6, pitch + 6,
+    ]
     func pitchFree(_ candidate: Int) -> Bool {
         candidate != pitch && (24...115).contains(candidate)
             && session.camera.projection.row(forPitch: candidate) != PitchProjection.hiddenRow
@@ -117,21 +123,26 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     }
     let ghostPitch = neighborPitches.first(where: pitchFree)
     if session.document.canAddTrack, let ghostPitch,
-       let other = session.document.addTrack(voice: 0), other != grid.trackIndex,
-       let ghostID = try? session.document.addNotes([NewNote(
-           track: other, tick: note.tick, pitch: UInt8(ghostPitch),
-           duration: note.duration, velocity: 100)]).first {
+        let other = session.document.addTrack(voice: 0), other != grid.trackIndex,
+        let ghostID = try? session.document.addNotes([
+            NewNote(
+                track: other, tick: note.tick, pitch: UInt8(ghostPitch),
+                duration: note.duration, velocity: 100)
+        ]).first
+    {
         // Center between the seed and ghost rows so both faces decode.
         let snapshot = session.camera.snapshot
         let seedRow = session.camera.projection.row(forPitch: pitch)
         let ghostRow = session.camera.projection.row(forPitch: ghostPitch)
         if let seedTop = session.camera.projection.contentRowTop(
-               seedRow, keyHeight: snapshot.keyHeight, dpr: grid.devicePixelRatio),
-           let ghostTop = session.camera.projection.contentRowTop(
-               ghostRow, keyHeight: snapshot.keyHeight, dpr: grid.devicePixelRatio) {
+            seedRow, keyHeight: snapshot.keyHeight, dpr: grid.devicePixelRatio),
+            let ghostTop = session.camera.projection.contentRowTop(
+                ghostRow, keyHeight: snapshot.keyHeight, dpr: grid.devicePixelRatio)
+        {
             session.mutateCamera { camera in
-                _ = camera.setVScroll(max(
-                    0, min(seedTop, ghostTop) + snapshot.keyHeight / 2 - snapshot.rollHeight / 2))
+                _ = camera.setVScroll(
+                    max(
+                        0, min(seedTop, ghostTop) + snapshot.keyHeight / 2 - snapshot.rollHeight / 2))
             }
         }
         grid.refreshFromSession()
@@ -151,7 +162,8 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     // Undo the fixture track and note: later suites provision their own
     // second track from a single-track song.
     while session.document.history.currentIdentity != ghostIdentity
-              && session.document.history.canUndo {
+        && session.document.history.canUndo
+    {
         guard session.document.history.undoDocument() else { break }
     }
     grid.refreshFromSession()
@@ -170,27 +182,37 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     grid.refreshCamera()
     defer {
         while session.document.history.currentIdentity != beforeIdentity
-                  && session.document.history.canUndo {
+            && session.document.history.canUndo
+        {
             guard session.document.history.undoDocument() else { break }
         }
-        report.expect(session.document.state == beforeState
-                          && session.document.history.currentIdentity == beforeIdentity,
-                      cppID: id, message: "note-name fixture undo restores the document")
+        report.expect(
+            session.document.state == beforeState
+                && session.document.history.currentIdentity == beforeIdentity,
+            cppID: id, message: "note-name fixture undo restores the document")
     }
-    guard let short = ghostSeed(report, id: id, session: session, grid: grid,
-                                track: grid.trackIndex, spanCells: 1,
-                                nearPitch: pitch, excluding: [pitch]),
-          let wide = ghostSeed(report, id: id, session: session, grid: grid,
-                               track: grid.trackIndex, spanCells: 12,
-                               nearPitch: pitch, excluding: [pitch, short.pitch]) else { return }
+    guard
+        let short = ghostSeed(
+            report, id: id, session: session, grid: grid,
+            track: grid.trackIndex, spanCells: 1,
+            nearPitch: pitch, excluding: [pitch]),
+        let wide = ghostSeed(
+            report, id: id, session: session, grid: grid,
+            track: grid.trackIndex, spanCells: 12,
+            nearPitch: pitch, excluding: [pitch, short.pitch])
+    else { return }
     let nextTick = short.tick + short.duration
-    guard !session.document.notes(in: grid.trackIndex).contains(where: {
-        Int($0.pitch) == short.pitch && Int($0.tick) < nextTick + short.duration
-            && Int($0.tick) + Int($0.duration) > nextTick
-    }), let adjacent = try? session.document.addNotes([
-        NewNote(track: grid.trackIndex, tick: Tick(nextTick), pitch: UInt8(short.pitch),
+    guard
+        !session.document.notes(in: grid.trackIndex).contains(where: {
+            Int($0.pitch) == short.pitch && Int($0.tick) < nextTick + short.duration
+                && Int($0.tick) + Int($0.duration) > nextTick
+        }),
+        let adjacent = try? session.document.addNotes([
+            NewNote(
+                track: grid.trackIndex, tick: Tick(nextTick), pitch: UInt8(short.pitch),
                 duration: Tick(short.duration), velocity: 1)
-    ]).first else {
+        ]).first
+    else {
         report.fail(id, "adjacent short name-note fixture could not be seeded")
         return
     }
@@ -199,31 +221,40 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     func hasLabel(_ noteID: NoteID) -> Bool {
         noteNameLabeled(grid, session: session, id: noteID)
     }
-    report.expect(!hasLabel(short.id), cppID: id,
-                  message: "an abutting short same-pitch note carries no label (first)")
-    report.expect(!hasLabel(adjacent), cppID: id,
-                  message: "an abutting short same-pitch note carries no label (second)")
-    report.expect(hasLabel(wide.id), cppID: id,
-                  message: "a distant wide note keeps its label")
+    report.expect(
+        !hasLabel(short.id), cppID: id,
+        message: "an abutting short same-pitch note carries no label (first)")
+    report.expect(
+        !hasLabel(adjacent), cppID: id,
+        message: "an abutting short same-pitch note carries no label (second)")
+    report.expect(
+        hasLabel(wide.id), cppID: id,
+        message: "a distant wide note keeps its label")
     let noteFonts = GridTypography.fonts(
         metrics: grid.metrics, typography: Typography(baseFontPx: 13))
     let measured = GridTypography(fonts: noteFonts, rowHeight: 32, pixel: grid.metrics.pixel)
-    let fitHeight = measured.noteNameOccupiedHeight.rounded(.up)
+    let fitHeight =
+        measured.noteNameOccupiedHeight.rounded(.up)
         + 2 * grid.metrics.spaceHalf + grid.metrics.pixel
     session.mutateCamera { camera in
         _ = camera.setKeyHeight(fitHeight)
         _ = camera.setVScroll(max(0, (127.5 - Double(wide.pitch)) * fitHeight - 160))
     }
     grid.refreshCamera()
-    report.expect(hasLabel(wide.id), cppID: id,
-                  message: "a row at the exact padded fit still labels")
+    report.expect(
+        hasLabel(wide.id), cppID: id,
+        message: "a row at the exact padded fit still labels")
     session.mutateCamera { camera in
         _ = camera.setKeyHeight(fitHeight - grid.metrics.pixel)
-        _ = camera.setVScroll(max(0, (127.5 - Double(wide.pitch))
-                                 * (fitHeight - grid.metrics.pixel) - 160))
+        _ = camera.setVScroll(
+            max(
+                0,
+                (127.5 - Double(wide.pitch))
+                    * (fitHeight - grid.metrics.pixel) - 160))
     }
     grid.refreshCamera()
-    report.expect(!hasLabel(wide.id), cppID: id,
-                  message: "one pixel shorter the label hides instead of shrinking")
+    report.expect(
+        !hasLabel(wide.id), cppID: id,
+        message: "one pixel shorter the label hides instead of shrinking")
     grid.setNoteNameMode(enabled: false)
 }

@@ -88,7 +88,8 @@ public final class GatedVisualsProbe: QmlInstantiableStatus {
         let backup = Self.backupURL(projectRoot: projectRoot, label: label)
         do {
             if FileManager.default.fileExists(atPath: backup.path),
-               !FileManager.default.fileExists(atPath: song.path) {
+                !FileManager.default.fileExists(atPath: song.path)
+            {
                 try FileManager.default.moveItem(at: backup, to: song)
             } else if FileManager.default.fileExists(atPath: backup.path) {
                 try FileManager.default.removeItem(at: backup)
@@ -111,7 +112,8 @@ public final class GatedVisualsProbe: QmlInstantiableStatus {
         let channel = { (source: Int, destination: Int) in
             (source * s.a + destination * (255 - s.a) + 127) / 255
         }
-        return PaletteMath.hex(r: channel(s.r, d.r), g: channel(s.g, d.g),
-                               b: channel(s.b, d.b))
+        return PaletteMath.hex(
+            r: channel(s.r, d.r), g: channel(s.g, d.g),
+            b: channel(s.b, d.b))
     }
 }

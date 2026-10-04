@@ -14,8 +14,11 @@ extension EventListModel {
         if column == 0 { return String(item.tick) }
         if item.isEndOfTrack { return column == 1 && !editing ? "End of track" : "" }
         if let tempo = item.tempo {
-            let bpm = String(Int(TimeDefaults.tempoBPM(
-                forMicrosecondsPerQuarterNote: tempo.microsecondsPerQuarterNote).rounded()))
+            let bpm = String(
+                Int(
+                    TimeDefaults.tempoBPM(
+                        forMicrosecondsPerQuarterNote: tempo.microsecondsPerQuarterNote
+                    ).rounded()))
             switch column {
             case 1: return editing ? String(EventListEventType.tempo.rawValue) : "Tempo"
             case 5: return editing ? bpm : "\(bpm) BPM"
@@ -41,7 +44,8 @@ extension EventListModel {
         case 5:
             guard let blob = event.blob else { return "" }
             if let meta = event.metaType, (1...7).contains(meta),
-               blob.allSatisfy({ (32..<127).contains($0) }) {
+                blob.allSatisfy({ (32..<127).contains($0) })
+            {
                 return "\"\(String(decoding: blob, as: UTF8.self))\""
             }
             let bytes = editing ? blob : Array(blob.prefix(64))
@@ -94,7 +98,8 @@ extension EventListModel {
     private static func blobDisplayText(_ event: MidiEvent) -> String {
         guard let blob = event.blob else { return "" }
         if let meta = event.metaType, (0x01...0x07).contains(meta),
-           !blob.isEmpty, blob.allSatisfy({ (0x20..<0x7F).contains($0) }) {
+            !blob.isEmpty, blob.allSatisfy({ (0x20..<0x7F).contains($0) })
+        {
             return "\"\(String(decoding: blob, as: UTF8.self))\""
         }
         if blob.count > 64 {
@@ -106,7 +111,8 @@ extension EventListModel {
 
     private static func metaIsLoopMarker(_ event: MidiEvent, _ marker: UInt8) -> Bool {
         guard event.isMeta, let meta = event.metaType, (0x01...0x07).contains(meta),
-              let blob = event.blob else { return false }
+            let blob = event.blob
+        else { return false }
         let text = String(decoding: blob.prefix(32), as: UTF8.self)
             .trimmingCharacters(in: .whitespaces)
         return text.utf8.count == 1 && text.utf8.first == marker
@@ -116,25 +122,32 @@ extension EventListModel {
         guard let meta = event.metaType else { return "" }
         let name = metaName(meta)
         if meta == 0x58, let blob = event.blob, blob.count >= 2 {
-            return "Time signature \(midiTimeSignatureLabel(numerator: Int(blob[0]), denominatorPowerOfTwo: Int(blob[1])))"
+            return
+                "Time signature \(midiTimeSignatureLabel(numerator: Int(blob[0]), denominatorPowerOfTwo: Int(blob[1])))"
         }
         if (0x01...0x07).contains(meta) {
             var text = "\(name) \(blobDisplayText(event))"
-            if metaIsLoopMarker(event, UInt8(ascii: "[")) { text += " — loop start" }
-            else if metaIsLoopMarker(event, UInt8(ascii: "]")) { text += " — loop end" }
+            if metaIsLoopMarker(event, UInt8(ascii: "[")) {
+                text += " — loop start"
+            } else if metaIsLoopMarker(event, UInt8(ascii: "]")) {
+                text += " — loop end"
+            }
             return text
         }
         return name
     }
 
-    private static func summary(_ event: MidiEvent, kind: EventListEventType,
-                                voiceNames: [String]) -> String {
+    private static func summary(
+        _ event: MidiEvent, kind: EventListEventType,
+        voiceNames: [String]
+    ) -> String {
         switch event.payload {
         case let .channel(_, data0, data1):
             switch kind {
-            case .noteOn: return data1 == 0
-                ? "Note off \(midiKeyName(Int(data0))) (velocity-0 note-on)"
-                : "Note on \(midiKeyName(Int(data0))), velocity \(data1)"
+            case .noteOn:
+                return data1 == 0
+                    ? "Note off \(midiKeyName(Int(data0))) (velocity-0 note-on)"
+                    : "Note on \(midiKeyName(Int(data0))), velocity \(data1)"
             case .noteOff: return "Note off \(midiKeyName(Int(data0)))"
             case .polyTouch: return "Poly aftertouch \(midiKeyName(Int(data0))) = \(data1)"
             case .cc:
@@ -159,8 +172,11 @@ extension EventListModel {
         }
         let digits = trimmed.filter { $0 != " " && $0 != "," }
         guard !digits.isEmpty, digits.utf8.count.isMultiple(of: 2),
-              digits.utf8.allSatisfy({ (48...57).contains($0) || (65...70).contains($0)
-                  || (97...102).contains($0) }) else { return nil }
+            digits.utf8.allSatisfy({
+                (48...57).contains($0) || (65...70).contains($0)
+                    || (97...102).contains($0)
+            })
+        else { return nil }
         var result: [UInt8] = []
         result.reserveCapacity(digits.utf8.count / 2)
         var pairs = digits.utf8.makeIterator()

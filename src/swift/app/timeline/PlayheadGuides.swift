@@ -145,7 +145,8 @@ public final class PlayheadGuidesPresenter {
 
     private func isVisible(tick: Double, contentX: Double) -> Bool {
         guard timelineAttached, tick.isFinite, tick >= 0, contentX.isFinite,
-              let session else { return false }
+            let session
+        else { return false }
         let width = session.camera.snapshot.viewportWidth
         return contentX >= 0 && contentX < width
     }
@@ -160,9 +161,10 @@ public final class PlayheadGuidesPresenter {
         let editTick = session.map { Double($0.editCursor) } ?? 0
         let editX = projectedX(tick: editTick)
         let editVisible = isVisible(tick: editTick, contentX: editX) && !hoverVisible
-        let next = Presentation(timelineAttached: session != nil && timelineAttached,
-                                 hoverContentX: hoverX, hoverVisible: hoverVisible,
-                                 editContentX: editX, editVisible: editVisible)
+        let next = Presentation(
+            timelineAttached: session != nil && timelineAttached,
+            hoverContentX: hoverX, hoverVisible: hoverVisible,
+            editContentX: editX, editVisible: editVisible)
         guard next != published else { return false }
         published = next
         presentationCount &+= 1

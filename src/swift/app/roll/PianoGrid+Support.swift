@@ -5,19 +5,19 @@ import PorydawAppCommands
 
 @MainActor
 extension PianoGrid {
-enum QtFact {
-    static let shiftModifier = 0x0200_0000
-    static let controlModifier = 0x0400_0000
-}
+    enum QtFact {
+        static let shiftModifier = 0x0200_0000
+        static let controlModifier = 0x0400_0000
+    }
 
-enum GridCursorKind: Int {
-    case arrow = 0
-    case openHand = 1
-    case leftEdge = 2
-    case rightEdge = 3
-    case closedHand = 4
+    enum GridCursorKind: Int {
+        case arrow = 0
+        case openHand = 1
+        case leftEdge = 2
+        case rightEdge = 3
+        case closedHand = 4
         case velocity = 5
-}
+    }
 
     /// True while a pointer gesture owns the roll. Swift-only: the shared
     /// playhead suspends follow while a gesture is live, and no gesture state is
@@ -57,10 +57,12 @@ enum GridCursorKind: Int {
             projected.reserveCapacity(noteCount)
             func emit(track: Int) {
                 for note in session.document.notes(in: track) {
-                    projected.append(GridNote(noteId: note.id, tick: Int(note.tick),
-                        duration: Int(note.isUnterminated ? max(1, snap) : max(1, note.duration)),
-                        pitch: Int(note.pitch), track: note.track,
-                        velocity: Int(note.velocity), ghost: track != valid))
+                    projected.append(
+                        GridNote(
+                            noteId: note.id, tick: Int(note.tick),
+                            duration: Int(note.isUnterminated ? max(1, snap) : max(1, note.duration)),
+                            pitch: Int(note.pitch), track: note.track,
+                            velocity: Int(note.velocity), ghost: track != valid))
                 }
             }
             emit(track: valid)

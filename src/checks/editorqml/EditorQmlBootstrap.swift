@@ -100,8 +100,10 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
     /// `file://` URL the pane's PNG is written to.
     public func profilePngUrl(pane: String) -> String {
         guard !pane.isEmpty else { return "" }
-        return URL(fileURLWithPath: EditorQmlBootstrap.profileArtifactPath(
-            scratch: projectRoot, profile: EditorQmlBootstrap.stagedProfile, pane: pane)).absoluteString
+        return URL(
+            fileURLWithPath: EditorQmlBootstrap.profileArtifactPath(
+                scratch: projectRoot, profile: EditorQmlBootstrap.stagedProfile, pane: pane)
+        ).absoluteString
             + ".png"
     }
 
@@ -115,14 +117,17 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
         return (try? String(contentsOf: url, encoding: .utf8)) ?? ""
     }
 
-    public func writeProfileMetadata(pane: String, observedDpr: Double, observedFontPx: Double,
-                                     drawnRoot: String, logicalWidth: Double, logicalHeight: Double,
-                                     regionX: Int, regionY: Int,
-                                     regionWidth: Int, regionHeight: Int) -> Bool {
-        writeProfileMetadataImpl(pane: pane, observedDpr: observedDpr, observedFontPx: observedFontPx,
-                                 drawnRoot: drawnRoot, logicalWidth: logicalWidth,
-                                 logicalHeight: logicalHeight, regionX: regionX, regionY: regionY,
-                                 regionWidth: regionWidth, regionHeight: regionHeight)
+    public func writeProfileMetadata(
+        pane: String, observedDpr: Double, observedFontPx: Double,
+        drawnRoot: String, logicalWidth: Double, logicalHeight: Double,
+        regionX: Int, regionY: Int,
+        regionWidth: Int, regionHeight: Int
+    ) -> Bool {
+        writeProfileMetadataImpl(
+            pane: pane, observedDpr: observedDpr, observedFontPx: observedFontPx,
+            drawnRoot: drawnRoot, logicalWidth: logicalWidth,
+            logicalHeight: logicalHeight, regionX: regionX, regionY: regionY,
+            regionWidth: regionWidth, regionHeight: regionHeight)
     }
 
     // ---- the document-bound page's own lifecycle ---------------------------
@@ -318,7 +323,6 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
 
     public func requestAutomationRedo() -> Bool { requestHistory(redo: true) }
 
-
     /// The page's live interaction fact, read from the owner the container's
     /// follow gate reads.
     public func automationInteractionActive() -> Bool {
@@ -440,7 +444,8 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
     /// The page's published explicit time selection as `start:end`, or `""`.
     public func automationSelectionRange() -> String {
         guard let page = session?.automationPage(), let selection = page.selection,
-              selection.isActive else { return "" }
+            selection.isActive
+        else { return "" }
         return "\(selection.range.startTick):\(selection.range.endTick)"
     }
 
@@ -517,10 +522,6 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
     }
     public func detachTestSection(kind: Int) { detachTestSectionImpl(kind: kind) }
 
-
-
-
-
     /// Test-only policy knob for the voice-changes spill case: declares a
     /// maximum body height (logical pixels) for that kind; `0` clears it.
     public func setTestSectionMaximumBodyHeight(kind: Int, maximum: Int) {
@@ -554,15 +555,19 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
         return wasPolling
     }
 
-    public func presentHeaderActivity(track: Int, left: Int, right: Int,
-                                      playing: Bool) -> Bool {
-        precondition((0..<16).contains(track) && (0...255).contains(left)
-                     && (0...255).contains(right))
+    public func presentHeaderActivity(
+        track: Int, left: Int, right: Int,
+        playing: Bool
+    ) -> Bool {
+        precondition(
+            (0..<16).contains(track) && (0...255).contains(left)
+                && (0...255).contains(right))
         guard let session else { return false }
         var levels = Array(repeating: AudioActivityLevel(), count: 16)
         levels[track] = AudioActivityLevel(left: UInt8(left), right: UInt8(right))
-        session.trackHeadersPresenter().advanceActivity(levels: levels,
-                                                        elapsedSeconds: 60, playing: playing)
+        session.trackHeadersPresenter().advanceActivity(
+            levels: levels,
+            elapsedSeconds: 60, playing: playing)
         return true
     }
 
@@ -589,7 +594,8 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
     /// container reads. `true` means the page now reports it.
     public func setTestSectionInteraction(kind: Int, active: Bool) -> Bool {
         guard let sectionKind = DrawerSectionKind(rawValue: kind),
-              let page = testPages[sectionKind] else { return false }
+            let page = testPages[sectionKind]
+        else { return false }
         page.setInteractionActive(active)
         return page.interactionActive == active
     }

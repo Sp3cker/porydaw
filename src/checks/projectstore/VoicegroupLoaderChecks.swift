@@ -37,9 +37,11 @@ private final class LoaderAdapter: Sendable {
         }
     }
 
-    func read(_ paths: UnsafePointer<UnsafePointer<CChar>?>, count: Int,
-              out: UnsafeMutablePointer<VoicegroupFileBlob>, error: UnsafeMutablePointer<CChar>?,
-              capacity: Int) -> Bool {
+    func read(
+        _ paths: UnsafePointer<UnsafePointer<CChar>?>, count: Int,
+        out: UnsafeMutablePointer<VoicegroupFileBlob>, error: UnsafeMutablePointer<CChar>?,
+        capacity: Int
+    ) -> Bool {
         let names = (0..<count).compactMap { paths[$0].map { String(cString: $0) } }
         guard names.count == count else { return false }
         state.withLock { state in
@@ -106,8 +108,9 @@ private final class LoaderAdapter: Sendable {
     }
 
     var fileIo: VoicegroupFileIo {
-        VoicegroupFileIo(user: Unmanaged.passUnretained(self).toOpaque(),
-                         readBatch: loaderReadBatch, releaseBatch: loaderReleaseBatch)
+        VoicegroupFileIo(
+            user: Unmanaged.passUnretained(self).toOpaque(),
+            readBatch: loaderReadBatch, releaseBatch: loaderReleaseBatch)
     }
 }
 
@@ -155,18 +158,24 @@ private func loaderStage(_ root: URL) throws {
         try FileManager.default.copyItem(at: sample, to: root.appendingPathComponent(relative))
         let symbol = "DirectSoundWaveData_check_batch_\(suffix)"
         definitions += "\(symbol)::\n\t.incbin \"\(relative)\"\n\n"
-        group += "\tvoice_directsound 60, 0, \(symbol), \(255 - index * 2), \(128 + index * 2), \(200 - index * 5), \(64 + index)\n"
+        group +=
+            "\tvoice_directsound 60, 0, \(symbol), \(255 - index * 2), \(128 + index * 2), \(200 - index * 5), \(64 + index)\n"
     }
     let sound = root.appendingPathComponent("sound/direct_sound_data.inc")
-    try FileHandle(forWritingTo: sound).withHandle { try $0.seekToEnd(); try $0.write(contentsOf: Data(definitions.utf8)) }
+    try FileHandle(forWritingTo: sound).withHandle {
+        try $0.seekToEnd(); try $0.write(contentsOf: Data(definitions.utf8))
+    }
     try Data(group.utf8).write(to: root.appendingPathComponent("sound/voicegroups/check_batch.inc"))
     let include = root.appendingPathComponent("sound/voice_groups.inc")
     try FileHandle(forWritingTo: include).withHandle {
         try $0.seekToEnd()
         try $0.write(contentsOf: Data("    .include \"sound/voicegroups/check_batch.inc\"\n".utf8))
     }
-    try Data("\t.align 2\nvoice_group check_alias_kit, 60\n\tvoice_directsound 60, 0, DirectSoundWaveData_fixture_drum, 255, 80, 144, 40\n\tvoice_directsound 60, 0, DirectSoundWaveData_fixture_pluck, 240, 140, 176, 64\n".utf8)
-        .write(to: root.appendingPathComponent("sound/voicegroups/check_alias_parts.inc"))
+    try Data(
+        "\t.align 2\nvoice_group check_alias_kit, 60\n\tvoice_directsound 60, 0, DirectSoundWaveData_fixture_drum, 255, 80, 144, 40\n\tvoice_directsound 60, 0, DirectSoundWaveData_fixture_pluck, 240, 140, 176, 64\n"
+            .utf8
+    )
+    .write(to: root.appendingPathComponent("sound/voicegroups/check_alias_parts.inc"))
     try Data("\t.align 2\nvoice_group check_alias_host\n\tvoice_keysplit_all voicegroup_check_alias_kit\n".utf8)
         .write(to: root.appendingPathComponent("sound/voicegroups/check_alias_host.inc"))
 }
@@ -187,8 +196,11 @@ private func loaderContext(_ root: URL, _ adapter: LoaderAdapter) -> OpaquePoint
     return root.path.withCString { voicegroup_project_open($0, nil, &fileIo) }
 }
 
-private func loaderProjectBank(_ context: OpaquePointer, _ root: URL, _ name: String)
-    -> UnsafeMutablePointer<LoadedVoiceGroup>? {
+private func loaderProjectBank(
+    _ context: OpaquePointer, _ root: URL, _ name: String
+)
+    -> UnsafeMutablePointer<LoadedVoiceGroup>?
+{
     root.appendingPathComponent("sound/voicegroups/\(name).inc").path.withCString { path in
         var target = VoicegroupTarget(filePath: path, sectionLabel: nil)
         return voicegroup_project_load(context, &target)
@@ -211,10 +223,10 @@ private func loaderSameWave(_ lhs: UnsafeMutablePointer<WaveData>?, _ rhs: Unsaf
     if lhs == nil || rhs == nil { return false }
     guard let lhs, let rhs else { return false }
     let a = lhs.pointee, b = rhs.pointee
-    return a.type == b.type && a.status == b.status && a.freq == b.freq &&
-        a.loopStart == b.loopStart && a.size == b.size &&
-        loaderBytes(a.data.map(UnsafeRawPointer.init), Int(a.size)) ==
-        loaderBytes(b.data.map(UnsafeRawPointer.init), Int(b.size))
+    return a.type == b.type && a.status == b.status && a.freq == b.freq && a.loopStart == b.loopStart
+        && a.size == b.size
+        && loaderBytes(a.data.map(UnsafeRawPointer.init), Int(a.size))
+            == loaderBytes(b.data.map(UnsafeRawPointer.init), Int(b.size))
 }
 
 private func loaderSameTones(_ a: UnsafePointer<ToneData>?, _ b: UnsafePointer<ToneData>?, depth: Int) -> Bool {
@@ -222,49 +234,66 @@ private func loaderSameTones(_ a: UnsafePointer<ToneData>?, _ b: UnsafePointer<T
     guard let a, let b else { return true }
     return (0..<128).allSatisfy { index in
         let x = a[index], y = b[index]
-        guard x.type == y.type && x.key == y.key && x.length == y.length && x.panSweep == y.panSweep &&
-                x.attack == y.attack && x.decay == y.decay && x.sustain == y.sustain && x.release == y.release else {
+        guard
+            x.type == y.type && x.key == y.key && x.length == y.length && x.panSweep == y.panSweep
+                && x.attack == y.attack && x.decay == y.decay && x.sustain == y.sustain && x.release == y.release
+        else {
             return false
         }
         if x.type & UInt8(VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL) != 0 {
-            guard loaderBytes(x.keySplitTable.map(UnsafeRawPointer.init), 128) ==
-                    loaderBytes(y.keySplitTable.map(UnsafeRawPointer.init), 128) else { return false }
-            return depth > 0 ? loaderSameTones(x.subGroup?.assumingMemoryBound(to: ToneData.self),
-                                               y.subGroup?.assumingMemoryBound(to: ToneData.self), depth: depth - 1)
+            guard
+                loaderBytes(x.keySplitTable.map(UnsafeRawPointer.init), 128)
+                    == loaderBytes(y.keySplitTable.map(UnsafeRawPointer.init), 128)
+            else { return false }
+            return depth > 0
+                ? loaderSameTones(
+                    x.subGroup?.assumingMemoryBound(to: ToneData.self),
+                    y.subGroup?.assumingMemoryBound(to: ToneData.self), depth: depth - 1)
                 : (x.subGroup == nil) == (y.subGroup == nil)
         }
         if x.type == UInt8(VOICE_PROGRAMMABLE_WAVE) || x.type == UInt8(VOICE_PROGRAMMABLE_WAVE_ALT) {
-            return loaderBytes(x.wavePointer.map(UnsafeRawPointer.init), 16) ==
-                loaderBytes(y.wavePointer.map(UnsafeRawPointer.init), 16)
+            return loaderBytes(x.wavePointer.map(UnsafeRawPointer.init), 16)
+                == loaderBytes(y.wavePointer.map(UnsafeRawPointer.init), 16)
         }
-        if x.type & 0x07 == UInt8(VOICE_SQUARE_1) ||
-            x.type & 0x07 == UInt8(VOICE_SQUARE_2) ||
-            x.type & 0x07 == UInt8(VOICE_NOISE) {
+        if x.type & 0x07 == UInt8(VOICE_SQUARE_1) || x.type & 0x07 == UInt8(VOICE_SQUARE_2)
+            || x.type & 0x07 == UInt8(VOICE_NOISE)
+        {
             return x.wav == y.wav
         }
         return loaderSameWave(x.wav, y.wav)
     }
 }
 
-private func loaderSameBank(_ a: UnsafeMutablePointer<LoadedVoiceGroup>,
-                            _ b: UnsafeMutablePointer<LoadedVoiceGroup>) -> Bool {
+private func loaderSameBank(
+    _ a: UnsafeMutablePointer<LoadedVoiceGroup>,
+    _ b: UnsafeMutablePointer<LoadedVoiceGroup>
+) -> Bool {
     let x = a.pointee, y = b.pointee
-    guard x.waveDataCount == y.waveDataCount && x.progWaveCount == y.progWaveCount &&
-            x.subGroupCount == y.subGroupCount && x.keySplitTableCount == y.keySplitTableCount else { return false }
+    guard
+        x.waveDataCount == y.waveDataCount && x.progWaveCount == y.progWaveCount && x.subGroupCount == y.subGroupCount
+            && x.keySplitTableCount == y.keySplitTableCount
+    else { return false }
     let namesEqual = withUnsafeBytes(of: x.voiceNames) { left in
         withUnsafeBytes(of: y.voiceNames) { right in left.elementsEqual(right) }
     }
     guard namesEqual else { return false }
     for index in 0..<Int(x.waveDataCount) where !loaderSameWave(x.waveDatas[index], y.waveDatas[index]) { return false }
-    for index in 0..<Int(x.progWaveCount) where
-        loaderBytes(x.progWaves[index].map(UnsafeRawPointer.init), 16) !=
-        loaderBytes(y.progWaves[index].map(UnsafeRawPointer.init), 16) { return false }
-    for index in 0..<Int(x.keySplitTableCount) where
-        loaderBytes(x.keySplitTables[index].map(UnsafeRawPointer.init), 128) !=
-        loaderBytes(y.keySplitTables[index].map(UnsafeRawPointer.init), 128) { return false }
-    for index in 0..<Int(x.subGroupCount) where
-        !loaderSameTones(x.subGroups[index].map { UnsafePointer($0) },
-                         y.subGroups[index].map { UnsafePointer($0) }, depth: 3) {
+    for index in 0..<Int(x.progWaveCount)
+    where
+        loaderBytes(x.progWaves[index].map(UnsafeRawPointer.init), 16)
+        != loaderBytes(y.progWaves[index].map(UnsafeRawPointer.init), 16)
+    { return false }
+    for index in 0..<Int(x.keySplitTableCount)
+    where
+        loaderBytes(x.keySplitTables[index].map(UnsafeRawPointer.init), 128)
+        != loaderBytes(y.keySplitTables[index].map(UnsafeRawPointer.init), 128)
+    { return false }
+    for index in 0..<Int(x.subGroupCount)
+    where
+        !loaderSameTones(
+            x.subGroups[index].map { UnsafePointer($0) },
+            y.subGroups[index].map { UnsafePointer($0) }, depth: 3)
+    {
         return false
     }
     return withUnsafePointer(to: &a.pointee.voices) { ap in
@@ -287,15 +316,16 @@ private func loaderSubgroupNames(_ bank: UnsafeMutablePointer<LoadedVoiceGroup>,
         (10, Int(VOICE_KEYSPLIT_ALL), 38, "fixture_pluck"),
         (11, Int(VOICE_KEYSPLIT_ALL), 36, "fixture_pluck"),
         (11, Int(VOICE_KEYSPLIT_ALL), 37, "fixture_named_pad_long_label_123"),
-        (11, Int(VOICE_KEYSPLIT_ALL), 38, "fixture_drum")
+        (11, Int(VOICE_KEYSPLIT_ALL), 38, "fixture_drum"),
     ]
     var allMatch = true
     var unnamed = true
     for (program, type, slot, expected) in entries {
         let tone = loaderTone(bank, program)
         guard Int(tone.type) == type, let subgroup = tone.subGroup?.assumingMemoryBound(to: ToneData.self),
-              let names = voicegroup_subgroup_names(bank, subgroup),
-              let actual = voicegroup_subgroup_slot_name(bank, subgroup, Int32(slot)) else {
+            let names = voicegroup_subgroup_names(bank, subgroup),
+            let actual = voicegroup_subgroup_slot_name(bank, subgroup, Int32(slot))
+        else {
             allMatch = false
             unnamed = false
             continue
@@ -306,25 +336,27 @@ private func loaderSubgroupNames(_ bank: UnsafeMutablePointer<LoadedVoiceGroup>,
         allMatch = allMatch && String(cString: actual) == expected && fromTable == expected
         if expected.isEmpty { unnamed = unnamed && actual.pointee == 0 }
     }
-    report.expect(allMatch, cppID: cppID,
-                  message: "keysplit and drumkit subgroups publish their per-slot display names")
-    report.expect(unnamed, cppID: cppID,
-                  message: "registered but unnamed subgroup slots are empty, not missing")
+    report.expect(
+        allMatch, cppID: cppID,
+        message: "keysplit and drumkit subgroups publish their per-slot display names")
+    report.expect(
+        unnamed, cppID: cppID,
+        message: "registered but unnamed subgroup slots are empty, not missing")
     let subgroup = loaderTone(bank, 8).subGroup?.assumingMemoryBound(to: ToneData.self)
     let invalid = withUnsafePointer(to: &bank.pointee.voices) { voices in
         voices.withMemoryRebound(to: ToneData.self, capacity: 128) { top in
-            voicegroup_subgroup_names(nil, subgroup) == nil &&
-                voicegroup_subgroup_names(bank, nil) == nil &&
-                voicegroup_subgroup_names(bank, top) == nil &&
-                voicegroup_subgroup_slot_name(nil, subgroup, 0) == nil &&
-                voicegroup_subgroup_slot_name(bank, nil, 0) == nil &&
-                voicegroup_subgroup_slot_name(bank, top, 0) == nil &&
-                voicegroup_subgroup_slot_name(bank, subgroup, -1) == nil &&
-                voicegroup_subgroup_slot_name(bank, subgroup, 128) == nil
+            voicegroup_subgroup_names(nil, subgroup) == nil && voicegroup_subgroup_names(bank, nil) == nil
+                && voicegroup_subgroup_names(bank, top) == nil && voicegroup_subgroup_slot_name(nil, subgroup, 0) == nil
+                && voicegroup_subgroup_slot_name(bank, nil, 0) == nil
+                && voicegroup_subgroup_slot_name(bank, top, 0) == nil
+                && voicegroup_subgroup_slot_name(bank, subgroup, -1) == nil
+                && voicegroup_subgroup_slot_name(bank, subgroup, 128) == nil
         }
     }
-    report.expect(invalid, cppID: cppID,
-                  message: "subgroup name lookups reject null banks, null subgroups, unregistered subgroups and out-of-range slots")
+    report.expect(
+        invalid, cppID: cppID,
+        message:
+            "subgroup name lookups reject null banks, null subgroups, unregistered subgroups and out-of-range slots")
 }
 
 internal func runVoicegroupLoaderChecks(_ report: CheckReport) {
@@ -337,10 +369,13 @@ internal func runVoicegroupLoaderChecks(_ report: CheckReport) {
             loaderBatch(root, report)
             loaderTransport(root, report)
             let midi = root.appendingPathComponent("sound/songs/midi/mus_gym.mid")
-            try FileManager.default.createDirectory(at: midi.deletingLastPathComponent(),
-                                                    withIntermediateDirectories: true)
-            try Data([0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0, 96,
-                      0x4d, 0x54, 0x72, 0x6b, 0, 0, 0, 4, 0, 0xff, 0x2f, 0]).write(to: midi)
+            try FileManager.default.createDirectory(
+                at: midi.deletingLastPathComponent(),
+                withIntermediateDirectories: true)
+            try Data([
+                0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0, 96,
+                0x4d, 0x54, 0x72, 0x6b, 0, 0, 0, 4, 0, 0xff, 0x2f, 0,
+            ]).write(to: midi)
             loaderBench(root, report)
         }
     } catch {
@@ -373,8 +408,9 @@ private func loaderParity(_ root: URL, _ report: CheckReport) {
             report.fail(cppID, "warm \(name) did not load")
             return false
         }
-        warm = warm && loaderSameBank(again, expected) &&
-            ["direct_sound_data.inc", "programmable_wave_data.inc", "keysplit_tables.inc"].allSatisfy { part in
+        warm =
+            warm && loaderSameBank(again, expected)
+            && ["direct_sound_data.inc", "programmable_wave_data.inc", "keysplit_tables.inc"].allSatisfy { part in
                 !adapter.state.withLock { $0.requested.keys.contains(where: { $0.contains(part) }) }
             }
         voicegroup_free(again)
@@ -383,25 +419,35 @@ private func loaderParity(_ root: URL, _ report: CheckReport) {
     for name in ["fixture_rich", "check_batch"] {
         guard compareBank(name) else { return }
     }
-    report.expect(parity, cppID: cppID,
-                  message: "one-shot and context banks load the same voices, names, waves and subgroups")
-    report.expect(warm, cppID: cppID,
-                  message: "a warm context reload reuses the parsed maps without re-reading sound data")
+    report.expect(
+        parity, cppID: cppID,
+        message: "one-shot and context banks load the same voices, names, waves and subgroups")
+    report.expect(
+        warm, cppID: cppID,
+        message: "a warm context reload reuses the parsed maps without re-reading sound data")
     let samples = ["DirectSoundWaveData_fixture_loop"]
     let waves = ["ProgrammableWaveData_fixture_pulse"]
     let keys = ["fixture_keys"]
     let tables = ["keysplit_fixture"]
-    func compare(_ body: (UnsafePointer<UnsafePointer<CChar>?>?, UnsafePointer<UnsafePointer<CChar>?>?,
-                          UnsafePointer<UnsafePointer<CChar>?>?, UnsafePointer<UnsafePointer<CChar>?>?) -> Bool) -> Bool {
-        samples[0].withCString { sample in waves[0].withCString { wave in
-            keys[0].withCString { key in tables[0].withCString { table in
-                var s: [UnsafePointer<CChar>?] = [sample]
-                var w: [UnsafePointer<CChar>?] = [wave]
-                var k: [UnsafePointer<CChar>?] = [key]
-                var t: [UnsafePointer<CChar>?] = [table]
-                return body(&s, &w, &k, &t)
-            } }
-        } }
+    func compare(
+        _ body: (
+            UnsafePointer<UnsafePointer<CChar>?>?, UnsafePointer<UnsafePointer<CChar>?>?,
+            UnsafePointer<UnsafePointer<CChar>?>?, UnsafePointer<UnsafePointer<CChar>?>?
+        ) -> Bool
+    ) -> Bool {
+        samples[0].withCString { sample in
+            waves[0].withCString { wave in
+                keys[0].withCString { key in
+                    tables[0].withCString { table in
+                        var s: [UnsafePointer<CChar>?] = [sample]
+                        var w: [UnsafePointer<CChar>?] = [wave]
+                        var k: [UnsafePointer<CChar>?] = [key]
+                        var t: [UnsafePointer<CChar>?] = [table]
+                        return body(&s, &w, &k, &t)
+                    }
+                }
+            }
+        }
     }
     let matched = root.path.withCString { path in
         compare { s, w, k, t in
@@ -410,19 +456,20 @@ private func loaderParity(_ root: URL, _ report: CheckReport) {
             guard let other = voicegroup_project_load_samples(context, s, 1, w, 1, k, t, 1) else { return false }
             defer { voicegroup_free_samples(other) }
             let x = one.pointee, y = other.pointee
-            return x.count == 1 && y.count == x.count && y.progWaveCount == x.progWaveCount &&
-                y.keysplitCount == x.keysplitCount && x.waves[0] != nil &&
-                loaderSameWave(x.waves[0], y.waves[0]) &&
-                loaderBytes(x.progWaves[0].map(UnsafeRawPointer.init), 16) ==
-                loaderBytes(y.progWaves[0].map(UnsafeRawPointer.init), 16) &&
-                loaderBytes(x.keysplits[0].table.map(UnsafeRawPointer.init), 128) ==
-                loaderBytes(y.keysplits[0].table.map(UnsafeRawPointer.init), 128) &&
-                loaderSameTones(x.keysplits[0].subGroup.map { UnsafePointer($0) },
-                                y.keysplits[0].subGroup.map { UnsafePointer($0) }, depth: 3)
+            return x.count == 1 && y.count == x.count && y.progWaveCount == x.progWaveCount
+                && y.keysplitCount == x.keysplitCount && x.waves[0] != nil && loaderSameWave(x.waves[0], y.waves[0])
+                && loaderBytes(x.progWaves[0].map(UnsafeRawPointer.init), 16)
+                    == loaderBytes(y.progWaves[0].map(UnsafeRawPointer.init), 16)
+                && loaderBytes(x.keysplits[0].table.map(UnsafeRawPointer.init), 128)
+                    == loaderBytes(y.keysplits[0].table.map(UnsafeRawPointer.init), 128)
+                && loaderSameTones(
+                    x.keysplits[0].subGroup.map { UnsafePointer($0) },
+                    y.keysplits[0].subGroup.map { UnsafePointer($0) }, depth: 3)
         }
     }
-    report.expect(matched, cppID: cppID,
-                  message: "context and one-shot sample sets resolve identical waves, prog waves and keysplit tables")
+    report.expect(
+        matched, cppID: cppID,
+        message: "context and one-shot sample sets resolve identical waves, prog waves and keysplit tables")
 }
 
 private func loaderAlias(_ root: URL, _ report: CheckReport) {
@@ -435,19 +482,25 @@ private func loaderAlias(_ root: URL, _ report: CheckReport) {
         guard let raw = voicegroup_subgroup_slot_name(host, kit, Int32(slot)) else { return nil }
         return String(cString: raw)
     }
-    report.expect(tone.type == UInt8(VOICE_KEYSPLIT_ALL) && kit != nil &&
-                  names == ["", "fixture_drum", "fixture_pluck", ""], cppID: cppID,
-                  message: "a declared voice_group name resolves through a mismatched file name")
-    guard let direct = loaderBank(root, "check_alias_kit") else { report.fail(cppID, "declared kit did not load"); return }
+    report.expect(
+        tone.type == UInt8(VOICE_KEYSPLIT_ALL) && kit != nil && names == ["", "fixture_drum", "fixture_pluck", ""],
+        cppID: cppID,
+        message: "a declared voice_group name resolves through a mismatched file name")
+    guard let direct = loaderBank(root, "check_alias_kit") else {
+        report.fail(cppID, "declared kit did not load"); return
+    }
     defer { voicegroup_free(direct) }
-    report.expect(loaderTone(direct, 59).wav == nil && loaderTone(direct, 60).wav != nil &&
-                  loaderTone(direct, 61).wav != nil && loaderTone(direct, 62).wav == nil, cppID: cppID,
-                  message: "the declared kit loads top-level with its starting-note window")
+    report.expect(
+        loaderTone(direct, 59).wav == nil && loaderTone(direct, 60).wav != nil && loaderTone(direct, 61).wav != nil
+            && loaderTone(direct, 62).wav == nil, cppID: cppID,
+        message: "the declared kit loads top-level with its starting-note window")
 }
 
 private func loaderBatch(_ root: URL, _ report: CheckReport) {
     let cppID = "voicegroup/VoicegroupLoaderChecks::batchAdapters"
-    guard let expected = loaderBank(root, "check_batch") else { report.fail(cppID, "batch oracle did not load"); return }
+    guard let expected = loaderBank(root, "check_batch") else {
+        report.fail(cppID, "batch oracle did not load"); return
+    }
     defer { voicegroup_free(expected) }
     func compareWidth(_ width: Int) -> Bool {
         let adapter = LoaderAdapter(root: root, width: width)
@@ -462,18 +515,22 @@ private func loaderBatch(_ root: URL, _ report: CheckReport) {
         }
         defer { voicegroup_free(loaded) }
         let state = adapter.state.withLock { $0 }
-        report.expect(loaderSameBank(loaded, expected), cppID: cppID,
-                      message: "serial and four-wide adapters preserve the bank")
-        report.expect(state.maxInFlight == width, cppID: cppID,
-                      message: "observed batch concurrency is exactly the adapter width")
-        report.expect(state.populated > 0 && state.populated == state.released &&
-                      state.requested.values.allSatisfy { $0 == 1 }, cppID: cppID,
-                      message: "every populated blob is released and each path is requested once")
-        report.expect((0..<batchAssetCount).allSatisfy { index in
-            let name = String(format: "check_batch_%02d.bin", index)
-            let path = root.appendingPathComponent("sound/direct_sound_samples").appendingPathComponent(name).path
-            return state.requested[path] == 1
-        }, cppID: cppID, message: "every staged batch asset is requested exactly once")
+        report.expect(
+            loaderSameBank(loaded, expected), cppID: cppID,
+            message: "serial and four-wide adapters preserve the bank")
+        report.expect(
+            state.maxInFlight == width, cppID: cppID,
+            message: "observed batch concurrency is exactly the adapter width")
+        report.expect(
+            state.populated > 0 && state.populated == state.released && state.requested.values.allSatisfy { $0 == 1 },
+            cppID: cppID,
+            message: "every populated blob is released and each path is requested once")
+        report.expect(
+            (0..<batchAssetCount).allSatisfy { index in
+                let name = String(format: "check_batch_%02d.bin", index)
+                let path = root.appendingPathComponent("sound/direct_sound_samples").appendingPathComponent(name).path
+                return state.requested[path] == 1
+            }, cppID: cppID, message: "every staged batch asset is requested exactly once")
         return true
     }
     for width in [1, 4] {
@@ -483,7 +540,9 @@ private func loaderBatch(_ root: URL, _ report: CheckReport) {
 
 private func loaderTransport(_ root: URL, _ report: CheckReport) {
     let cppID = "voicegroup/VoicegroupLoaderChecks::transportFailure"
-    guard let expected = loaderBank(root, "check_batch") else { report.fail(cppID, "failure oracle did not load"); return }
+    guard let expected = loaderBank(root, "check_batch") else {
+        report.fail(cppID, "failure oracle did not load"); return
+    }
     defer { voicegroup_free(expected) }
     let adapter = LoaderAdapter(root: root)
     adapter.failureSuffix = "check_batch_07.bin"
@@ -492,15 +551,17 @@ private func loaderTransport(_ root: URL, _ report: CheckReport) {
     let failed = loaderProjectBank(context, root, "check_batch")
     if let failed { voicegroup_free(failed) }
     let counts = adapter.state.withLock { $0 }
-    report.expect(failed == nil && counts.populated >= 1 && counts.populated == counts.released, cppID: cppID,
-                  message: "a failed batch releases its partial blobs")
+    report.expect(
+        failed == nil && counts.populated >= 1 && counts.populated == counts.released, cppID: cppID,
+        message: "a failed batch releases its partial blobs")
     adapter.failureSuffix = nil
     adapter.reset()
     let healed = loaderProjectBank(context, root, "check_batch")
     let matches = healed.map { loaderSameBank($0, expected) } == true
     if let healed { voicegroup_free(healed) }
-    report.expect(matches, cppID: cppID,
-                  message: "the context heals and loads after a failed batch")
+    report.expect(
+        matches, cppID: cppID,
+        message: "the context heals and loads after a failed batch")
 }
 
 private func loaderBench(_ root: URL, _ report: CheckReport) {
@@ -512,17 +573,20 @@ private func loaderBench(_ root: URL, _ report: CheckReport) {
         guard case .success(let snapshot)? = open, case .success(let info)? = song else {
             report.fail(cppID, "bench project or mus_gym did not open"); return
         }
-        report.expect(SongName(info.label) != nil, cppID: cppID,
-                      message: "the bench song label resolves to a valid song name")
-        report.expect(snapshot.isOpen && info.isPlayable, cppID: cppID,
-                      message: "the project opens and locates a playable song")
+        report.expect(
+            SongName(info.label) != nil, cppID: cppID,
+            message: "the bench song label resolves to a valid song name")
+        report.expect(
+            snapshot.isOpen && info.isPlayable, cppID: cppID,
+            message: "the project opens and locates a playable song")
         let argument = info.cfg.voicegroupArgument
         let first = awaitValue { try await store.loadBank(voicegroupArg: argument) }
         let warm = awaitValue { try await store.loadBank(voicegroupArg: argument) }
         guard case .success(let a)? = first, case .success(let b)? = warm else {
             report.fail(cppID, "bench bank did not load"); return
         }
-        report.expect(a.bankToken == b.bankToken, cppID: cppID,
-                      message: "a warm reload reuses the loaded bank identity")
+        report.expect(
+            a.bankToken == b.bankToken, cppID: cppID,
+            message: "a warm reload reuses the loaded bank identity")
     }
 }

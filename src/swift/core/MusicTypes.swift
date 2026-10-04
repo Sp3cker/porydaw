@@ -79,8 +79,9 @@ public enum TimeDefaults {
 
     @inlinable
     public static func controllerDefault(at index: Int) -> ControllerDefault {
-        precondition(index >= 0 && index < controllerDefaultCount,
-                     "controller default index out of range")
+        precondition(
+            index >= 0 && index < controllerDefaultCount,
+            "controller default index out of range")
         switch index {
         case 0:
             return ControllerDefault(controller: ccModulation, value: 0)
@@ -135,16 +136,19 @@ public enum TimeDefaults {
     public static func laneDomain(for controller: UInt8) -> LaneDomain {
         switch controller {
         case laneCCBend:
-            return LaneDomain(minimum: minimumBendValue, maximum: maximumBendValue,
-                              centered: true, zoomable: false)
+            return LaneDomain(
+                minimum: minimumBendValue, maximum: maximumBendValue,
+                centered: true, zoomable: false)
         case ccPan, ccFineTune:
-            return LaneDomain(minimum: minimumCCValue, maximum: maximumCCValue,
-                              centered: true, zoomable: false)
+            return LaneDomain(
+                minimum: minimumCCValue, maximum: maximumCCValue,
+                centered: true, zoomable: false)
         case ccModulationType:
             return LaneDomain(minimum: 0, maximum: 2, centered: false, zoomable: false)
         default:
-            return LaneDomain(minimum: minimumCCValue, maximum: maximumCCValue,
-                              centered: false, zoomable: true)
+            return LaneDomain(
+                minimum: minimumCCValue, maximum: maximumCCValue,
+                centered: false, zoomable: true)
         }
     }
 
@@ -162,7 +166,8 @@ public enum TimeDefaults {
     }
 
     public static func clampTempoMicrosecondsPerQuarterNote(_ value: UInt32) -> UInt32 {
-        min(max(value, microsecondsPerQuarterNote(forBPM: maximumTempoBPM)),
+        min(
+            max(value, microsecondsPerQuarterNote(forBPM: maximumTempoBPM)),
             microsecondsPerQuarterNote(forBPM: minimumTempoBPM))
     }
 }

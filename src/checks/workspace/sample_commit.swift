@@ -18,7 +18,8 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
         try Data("include audio_rules.mk\n".utf8).write(to: URL(filePath: root + "/Makefile"))
         try Data("$(SOUND_BIN_DIR)/%.bin: sound/%.wav\n\t$(WAV2AGB) -b $< $@\n".utf8)
             .write(to: URL(filePath: root + "/audio_rules.mk"))
-        try FileManager.default.createDirectory(atPath: sound + "/direct_sound_samples", withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            atPath: sound + "/direct_sound_samples", withIntermediateDirectories: true)
         try runBlocking { try await service.open(root: root) }
         let first = try runBlocking { try await DocumentSession.open(service: service, label: "mus_session_test") }
         let peer = try runBlocking { try await DocumentSession.open(service: service, label: "mus_session_test2") }
@@ -50,8 +51,9 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
         assigned.macro = BankVoiceMacro.directSound
         assigned.symbol = symbol
         _ = try runBlocking { try await first.applyBankEdit(slot: 0, value: assigned, expected: original) }
-        check.expect(first.bankSlots[0].voice == assigned && peer.bankSlots[0].voice == assigned,
-                     message: "new sample assignment reaches both sessions")
+        check.expect(
+            first.bankSlots[0].voice == assigned && peer.bankSlots[0].voice == assigned,
+            message: "new sample assignment reaches both sessions")
         let initialAudio = first.bankLease.withVoices { voices -> [Int8]? in
             guard let wave = voices?[0].wav, let data = wave.pointee.data else { return nil }
             return (0..<64).map { data[$0] }
@@ -60,8 +62,9 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
             guard let wave = voices?[0].wav, let data = wave.pointee.data else { return nil }
             return (0..<64).map { data[$0] }
         }
-        check.expect(initialAudio == rendered.s8 && peerAudio == rendered.s8,
-                     message: "new registered sample plays rendered bytes in both sessions")
+        check.expect(
+            initialAudio == rendered.s8 && peerAudio == rendered.s8,
+            message: "new registered sample plays rendered bytes in both sessions")
         let historyCount = first.document.history.undoCount
         let peerHistoryCount = peer.document.history.undoCount
         guard var unsaved = peer.bankSlots[1].voice else {
@@ -81,11 +84,13 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
         try runBlocking { try await service.commitSample(.init(name: name, wav: updatedWav, update: true)) }
         let afterInc = try Data(contentsOf: URL(filePath: inc))
         check.expect(afterInc == beforeInc, message: "sample update preserves registration bytes")
-        check.expect(first.bankSlots[1].voice == unsaved && peer.bankSlots[1].voice == unsaved
-                     && first.bankDirty == dirty && peer.bankDirty == peerDirty,
-                     message: "rebind preserves unsaved edit and dirty state")
-        check.expect(first.document.history.undoCount == editCount && peer.document.history.undoCount == peerEditCount,
-                     message: "sample update adds no bank history command")
+        check.expect(
+            first.bankSlots[1].voice == unsaved && peer.bankSlots[1].voice == unsaved
+                && first.bankDirty == dirty && peer.bankDirty == peerDirty,
+            message: "rebind preserves unsaved edit and dirty state")
+        check.expect(
+            first.document.history.undoCount == editCount && peer.document.history.undoCount == peerEditCount,
+            message: "sample update adds no bank history command")
         let refreshed = first.bankLease.withVoices { voices -> [Int8]? in
             guard let wave = voices?[0].wav, let data = wave.pointee.data else { return nil }
             return (0..<64).map { data[$0] }
@@ -94,8 +99,9 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
             guard let wave = voices?[0].wav, let data = wave.pointee.data else { return nil }
             return (0..<64).map { data[$0] }
         }
-        check.expect(refreshed == rendered.s8 && peerRefreshed == rendered.s8,
-                     message: "both live bank leases play updated bytes")
+        check.expect(
+            refreshed == rendered.s8 && peerRefreshed == rendered.s8,
+            message: "both live bank leases play updated bytes")
         let beforeRefusal = first.bankLease.publicationRevision
         let peerBeforeRefusal = peer.bankLease.publicationRevision
         do {
@@ -108,20 +114,23 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
         } catch {
             check.expect(false, message: "duplicate name refuses as a typed registrar failure")
         }
-        check.expect(first.bankLease.publicationRevision == beforeRefusal
-                     && peer.bankLease.publicationRevision == peerBeforeRefusal
-                     && first.document.history.undoCount == editCount
-                     && peer.document.history.undoCount == peerEditCount,
-                     message: "refused duplicate publishes no bank edit")
+        check.expect(
+            first.bankLease.publicationRevision == beforeRefusal
+                && peer.bankLease.publicationRevision == peerBeforeRefusal
+                && first.document.history.undoCount == editCount
+                && peer.document.history.undoCount == peerEditCount,
+            message: "refused duplicate publishes no bank edit")
         try runBlocking { _ = try await peer.undo() }
         try runBlocking { _ = try await first.undo() }
-        check.expect(first.bankSlots[0].voice == original && peer.bankSlots[0].voice == original
-                     && first.document.history.undoCount >= historyCount
-                     && peer.document.history.undoCount >= peerHistoryCount,
-                     message: "undo assignment restores voices without undoing sample registration")
-        check.expect(FileManager.default.fileExists(atPath: sound + "/direct_sound_samples/\(name).wav")
-                     && afterInc.contains(Data(symbol.utf8)),
-                     message: "undo assignment retains committed WAV and assembly symbol")
+        check.expect(
+            first.bankSlots[0].voice == original && peer.bankSlots[0].voice == original
+                && first.document.history.undoCount >= historyCount
+                && peer.document.history.undoCount >= peerHistoryCount,
+            message: "undo assignment restores voices without undoing sample registration")
+        check.expect(
+            FileManager.default.fileExists(atPath: sound + "/direct_sound_samples/\(name).wav")
+                && afterInc.contains(Data(symbol.utf8)),
+            message: "undo assignment retains committed WAV and assembly symbol")
     } catch {
         check.expect(false, message: "sample commit lifecycle failed: \(error)")
     }

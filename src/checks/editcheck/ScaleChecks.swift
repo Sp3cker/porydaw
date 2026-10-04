@@ -45,37 +45,50 @@ func checkScaleTables(_ report: CheckReport) {
     let rootNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
     report.expectEqual(expected: rootNames.count, actual: ScaleID.rootCount, cppID: roots, what: "root count")
     for index in 0..<ScaleID.rootCount {
-        report.expectEqual(expected: rootNames[index], actual: ScaleID.rootDisplayName(index), cppID: roots,
-                           what: "root name")
+        report.expectEqual(
+            expected: rootNames[index], actual: ScaleID.rootDisplayName(index), cppID: roots,
+            what: "root name")
     }
     report.expectEqual(expected: ScaleID.major, actual: ScaleID.defaultScale, cppID: roots, what: "default scale")
     report.expectEqual(expected: 0, actual: ScaleID.defaultRoot, cppID: roots, what: "default root")
 
     let neighbors = "scalecheck/ScaleCheckTest::membershipAndNeighbors"
-    report.expect(ScaleID.major.isPitch(60, root: 0), cppID: neighbors,
-                  message: "C is a C-major pitch")
-    report.expect(!ScaleID.major.isPitch(61, root: 0), cppID: neighbors,
-                  message: "C# is not a C-major pitch")
-    report.expect(ScaleID.major.isPitch(62, root: 2), cppID: neighbors,
-                  message: "D is a D-major pitch")
-    report.expect(!ScaleID.major.isPitch(60, root: 2), cppID: neighbors,
-                  message: "C is not a D-major pitch")
-    report.expectEqual(expected: 62, actual: ScaleID.major.firstPitchAbove(61, root: 0), cppID: neighbors,
-                       what: "first pitch above C#")
-    report.expectEqual(expected: 60, actual: ScaleID.major.firstPitchBelow(61, root: 0), cppID: neighbors,
-                       what: "first pitch below C#")
-    report.expectEqual(expected: -1, actual: ScaleID.major.firstPitchAbove(127, root: 0), cppID: neighbors,
-                       what: "no pitch above top")
-    report.expectEqual(expected: -1, actual: ScaleID.major.firstPitchBelow(0, root: 0), cppID: neighbors,
-                       what: "no pitch below bottom")
-    report.expectEqual(expected: 62, actual: ScaleID.major.pitch(60, steps: 1, root: 0), cppID: neighbors,
-                       what: "one degree above C")
-    report.expectEqual(expected: 60, actual: ScaleID.major.pitch(62, steps: -1, root: 0), cppID: neighbors,
-                       what: "one degree below D")
-    report.expectEqual(expected: 65, actual: ScaleID.major.pitch(60, steps: 3, root: 0), cppID: neighbors,
-                       what: "three degrees above C")
-    report.expectEqual(expected: 62, actual: ScaleID.major.pitch(67, steps: -3, root: 0), cppID: neighbors,
-                       what: "three degrees below G")
+    report.expect(
+        ScaleID.major.isPitch(60, root: 0), cppID: neighbors,
+        message: "C is a C-major pitch")
+    report.expect(
+        !ScaleID.major.isPitch(61, root: 0), cppID: neighbors,
+        message: "C# is not a C-major pitch")
+    report.expect(
+        ScaleID.major.isPitch(62, root: 2), cppID: neighbors,
+        message: "D is a D-major pitch")
+    report.expect(
+        !ScaleID.major.isPitch(60, root: 2), cppID: neighbors,
+        message: "C is not a D-major pitch")
+    report.expectEqual(
+        expected: 62, actual: ScaleID.major.firstPitchAbove(61, root: 0), cppID: neighbors,
+        what: "first pitch above C#")
+    report.expectEqual(
+        expected: 60, actual: ScaleID.major.firstPitchBelow(61, root: 0), cppID: neighbors,
+        what: "first pitch below C#")
+    report.expectEqual(
+        expected: -1, actual: ScaleID.major.firstPitchAbove(127, root: 0), cppID: neighbors,
+        what: "no pitch above top")
+    report.expectEqual(
+        expected: -1, actual: ScaleID.major.firstPitchBelow(0, root: 0), cppID: neighbors,
+        what: "no pitch below bottom")
+    report.expectEqual(
+        expected: 62, actual: ScaleID.major.pitch(60, steps: 1, root: 0), cppID: neighbors,
+        what: "one degree above C")
+    report.expectEqual(
+        expected: 60, actual: ScaleID.major.pitch(62, steps: -1, root: 0), cppID: neighbors,
+        what: "one degree below D")
+    report.expectEqual(
+        expected: 65, actual: ScaleID.major.pitch(60, steps: 3, root: 0), cppID: neighbors,
+        what: "three degrees above C")
+    report.expectEqual(
+        expected: 62, actual: ScaleID.major.pitch(67, steps: -3, root: 0), cppID: neighbors,
+        what: "three degrees below G")
 
     let diatonic = "scalecheck/ScaleCheckTest::diatonicDestinations"
     let rows: [(sources: [UInt8], steps: [Int], expected: [UInt8], accepted: Bool)] = [

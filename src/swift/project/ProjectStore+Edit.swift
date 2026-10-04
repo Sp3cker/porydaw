@@ -40,10 +40,12 @@ extension ProjectStore {
     public func preview(lease: ProjectBankLease) async throws -> ProjectBankLease? {
         let store = try editingStore()
         guard let handle = store.preview(id: lease.id),
-              let current = store.currentPublication(id: lease.id) else { return nil }
-        return try adoptBankLease(view: LoadedBankView(
-            id: lease.id, bank: handle, loadName: current.loadName,
-            dirty: current.dirty, slotViews: current.slotViews))
+            let current = store.currentPublication(id: lease.id)
+        else { return nil }
+        return try adoptBankLease(
+            view: LoadedBankView(
+                id: lease.id, bank: handle, loadName: current.loadName,
+                dirty: current.dirty, slotViews: current.slotViews))
     }
 
     private func editingStore() throws -> VoicegroupStore {
@@ -57,8 +59,9 @@ extension ProjectStore {
         switch result {
         case .applied(let applied):
             let adopted = try adoptBankLease(view: applied.view)
-            return .applied(lease: adopted, materialization: applied.materialization,
-                            materializationToken: applied.materializationToken)
+            return .applied(
+                lease: adopted, materialization: applied.materialization,
+                materializationToken: applied.materializationToken)
         case .conflict(let conflict):
             return .conflict(voicegroup: conflict.voicegroup)
         }

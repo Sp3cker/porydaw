@@ -41,8 +41,10 @@ public struct SharedPlayheadInteractions: Equatable, Sendable {
     public var drawerActive: Bool
     public var explicitSuspension: Bool
 
-    public init(gridActive: Bool = false, drawerActive: Bool = false,
-                explicitSuspension: Bool = false) {
+    public init(
+        gridActive: Bool = false, drawerActive: Bool = false,
+        explicitSuspension: Bool = false
+    ) {
         self.gridActive = gridActive
         self.drawerActive = drawerActive
         self.explicitSuspension = explicitSuspension
@@ -118,9 +120,11 @@ public struct SharedPlayheadPresentation: Equatable, Sendable {
             baseFontPx: GridCameraPolicy.seedBaseFontPx)
     public var trianglePointsUp: Bool = SharedPlayheadAppearance.trianglePointsUp
 
-    public init(tick: Double = 0, contentX: Double = 0, timelineAttached: Bool = false,
-                visible: Bool = false, playing: Bool = false,
-                baseFontPx: Double = SharedPlayheadAppearance.seedBaseFontPx) {
+    public init(
+        tick: Double = 0, contentX: Double = 0, timelineAttached: Bool = false,
+        visible: Bool = false, playing: Bool = false,
+        baseFontPx: Double = SharedPlayheadAppearance.seedBaseFontPx
+    ) {
         self.tick = tick
         self.contentX = contentX
         self.timelineAttached = timelineAttached
@@ -159,11 +163,14 @@ public enum SharedPlayheadPolicy {
 
     /// Projects one tick through the camera. The playhead stays attached while a
     /// timeline exists; only a projected x inside the viewport renders.
-    public static func presentation(tick: Double, transport: Int32,
-                                    timelineAttached: Bool,
-                                    camera: EditorCamera,
-                                    baseFontPx: Double = SharedPlayheadAppearance.seedBaseFontPx)
-        -> SharedPlayheadPresentation {
+    public static func presentation(
+        tick: Double, transport: Int32,
+        timelineAttached: Bool,
+        camera: EditorCamera,
+        baseFontPx: Double = SharedPlayheadAppearance.seedBaseFontPx
+    )
+        -> SharedPlayheadPresentation
+    {
         let x = camera.contentX(tick: tick)
         let width = camera.snapshot.viewportWidth
         return SharedPlayheadPresentation(
@@ -179,9 +186,11 @@ public enum SharedPlayheadPolicy {
     /// nothing. Follow runs only while playing, with follow enabled and no
     /// aggregate interaction, and only once the projected x leaves
     /// `[0, 0.85 * viewportWidth]`; the camera performs its own clamping.
-    public static func followTarget(tick: Double, camera: EditorCamera, playing: Bool,
-                                    followEnabled: Bool,
-                                    interactions: SharedPlayheadInteractions) -> Double? {
+    public static func followTarget(
+        tick: Double, camera: EditorCamera, playing: Bool,
+        followEnabled: Bool,
+        interactions: SharedPlayheadInteractions
+    ) -> Double? {
         guard playing, followEnabled, !interactions.suspendsFollow else { return nil }
         let snapshot = camera.snapshot
         let x = camera.contentX(tick: tick)
@@ -277,8 +286,10 @@ public final class SharedPlayheadPresenter {
     /// the audio binding is installed: `ApplicationSession` calls `startPolling`
     /// after every owner is in place.
     @QtIgnored
-    public func attach(session: DocumentSession, audio: NativeAudio?, grid: PianoGrid?,
-                       drawer: EditorDrawerPresenter?) {
+    public func attach(
+        session: DocumentSession, audio: NativeAudio?, grid: PianoGrid?,
+        drawer: EditorDrawerPresenter?
+    ) {
         lifecycleToken &+= 1
         self.session = session
         self.audio = audio
@@ -325,8 +336,9 @@ public final class SharedPlayheadPresenter {
                 let now = ContinuousClock.now
                 let elapsed = previous.duration(to: now).components
                 previous = now
-                self.onPoll?(Float(elapsed.seconds) + Float(elapsed.attoseconds) / 1e18,
-                             self.playing, presentationChanged)
+                self.onPoll?(
+                    Float(elapsed.seconds) + Float(elapsed.attoseconds) / 1e18,
+                    self.playing, presentationChanged)
             }
         }
     }
@@ -355,9 +367,10 @@ public final class SharedPlayheadPresenter {
     public func refreshProjection() {
         guard let session, let retained else { return }
         let tick = session.timeline.tick(for: retained.sample)
-        apply(SharedPlayheadPolicy.presentation(
-            tick: tick, transport: retained.transport, timelineAttached: true,
-            camera: session.camera, baseFontPx: currentBaseFontPx))
+        apply(
+            SharedPlayheadPolicy.presentation(
+                tick: tick, transport: retained.transport, timelineAttached: true,
+                camera: session.camera, baseFontPx: currentBaseFontPx))
     }
 
     /// Presents one injected observation for the current generation. This is the
@@ -366,8 +379,9 @@ public final class SharedPlayheadPresenter {
     @discardableResult
     @QtIgnored
     public func observe(sample: UInt64, transport: Int32) -> Bool {
-        observe(SharedPlayheadObservation(sample: sample, transport: transport),
-                token: lifecycleToken)
+        observe(
+            SharedPlayheadObservation(sample: sample, transport: transport),
+            token: lifecycleToken)
     }
 
     /// Accepts one observation for the generation that produced it: the sole
@@ -388,9 +402,10 @@ public final class SharedPlayheadPresenter {
             // presentation below reads the camera this mutation produced.
             _ = session.mutateCamera { $0.setHScroll(target) }
         }
-        return apply(SharedPlayheadPolicy.presentation(
-            tick: tick, transport: observation.transport, timelineAttached: true,
-            camera: session.camera, baseFontPx: currentBaseFontPx))
+        return apply(
+            SharedPlayheadPolicy.presentation(
+                tick: tick, transport: observation.transport, timelineAttached: true,
+                camera: session.camera, baseFontPx: currentBaseFontPx))
     }
 
     /// Enables or disables follow. Default enabled; no QML command exists.
@@ -408,9 +423,10 @@ public final class SharedPlayheadPresenter {
     // MARK: Internals
 
     private var interactions: SharedPlayheadInteractions {
-        SharedPlayheadInteractions(gridActive: grid?.interactionActive ?? false,
-                                   drawerActive: drawer?.interactionActive ?? false,
-                                   explicitSuspension: explicitSuspension)
+        SharedPlayheadInteractions(
+            gridActive: grid?.interactionActive ?? false,
+            drawerActive: drawer?.interactionActive ?? false,
+            explicitSuspension: explicitSuspension)
     }
     private var currentBaseFontPx: Double {
         grid?.baseFontPx ?? GridCameraPolicy.seedBaseFontPx
@@ -418,8 +434,9 @@ public final class SharedPlayheadPresenter {
 
     @discardableResult
     private func observeCurrent(token: UInt64) -> Bool {
-        let observation = SharedPlayheadObservation(sample: audio?.playheadSamples ?? 0,
-                                                    transport: audio?.transport ?? 0)
+        let observation = SharedPlayheadObservation(
+            sample: audio?.playheadSamples ?? 0,
+            transport: audio?.transport ?? 0)
         return observe(observation, token: token)
     }
 

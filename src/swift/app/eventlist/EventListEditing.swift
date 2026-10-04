@@ -5,34 +5,40 @@ import PorydawAppEventList
 @MainActor
 extension EventListPresenter {
     func dispatchCanStepEditing() -> Bool {
-        editing && ((2...4).contains(editingColumn)
-            || (editingColumn == 5 && model.row(at: editingRow)?.tempo != nil))
+        editing
+            && ((2...4).contains(editingColumn)
+                || (editingColumn == 5 && model.row(at: editingRow)?.tempo != nil))
     }
 
     func dispatchSteppedEditingText(currentText: String, delta: Int) -> String {
         guard canStepEditing(), delta != 0, let current = Int(currentText) else {
             return currentText
         }
-        let bounds = editingColumn == 2 ? 1...16
+        let bounds =
+            editingColumn == 2
+            ? 1...16
             : editingColumn == 5 ? 20...255 : 0...127
         guard bounds.contains(current) else { return currentText }
         return String(max(bounds.lowerBound, min(bounds.upperBound, current + delta)))
     }
 
     public func commitCellEdit(row: Int, column: Int, text: String) -> Bool {
-        let convertingToTempo = column == 1 && chunkIndex == 0
+        let convertingToTempo =
+            column == 1 && chunkIndex == 0
             && text.trimmingCharacters(in: .whitespacesAndNewlines)
                 == String(EventListEventType.tempo.rawValue)
             && model.row(at: row)?.event != nil
         guard let session, !session.isClosed,
-              session.document.rawChunks.indices.contains(chunkIndex),
-              model.validatesEdit(row: row, column: column, text: text) || convertingToTempo,
-              let item = model.row(at: row) else { return false }
+            session.document.rawChunks.indices.contains(chunkIndex),
+            model.validatesEdit(row: row, column: column, text: text) || convertingToTempo,
+            let item = model.row(at: row)
+        else { return false }
         let document = session.document
         let input = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if item.isEndOfTrack {
             guard let tick = Tick(input),
-                  tick >= (model.chunk.events.last?.tick ?? 0) else { return false }
+                tick >= (model.chunk.events.last?.tick ?? 0)
+            else { return false }
             document.setChunkEnd(chunkIndex, tick: tick)
             return true
         }
@@ -40,24 +46,39 @@ extension EventListPresenter {
             switch column {
             case 0:
                 guard let tick = Tick(input) else { return false }
-                document.editTempo(TempoEdit(remove: [tempo], add: [
-                    TempoPoint(tick: tick,
-                               microsecondsPerQuarterNote: tempo.microsecondsPerQuarterNote)]))
+                document.editTempo(
+                    TempoEdit(
+                        remove: [tempo],
+                        add: [
+                            TempoPoint(
+                                tick: tick,
+                                microsecondsPerQuarterNote: tempo.microsecondsPerQuarterNote)
+                        ]))
             case 1:
                 guard let kind = Int(input) else { return false }
                 if kind == EventListEventType.tempo.rawValue { return true }
-                guard let newEvent = Self.retyped(MidiEvent.meta(tick: tempo.tick, type: 6,
-                                                                   data: []), as: kind) else {
+                guard
+                    let newEvent = Self.retyped(
+                        MidiEvent.meta(
+                            tick: tempo.tick, type: 6,
+                            data: []), as: kind)
+                else {
                     return false
                 }
-                document.editRawAndTempo(chunk: chunkIndex, deleting: [],
-                                         tempo: TempoEdit(remove: [tempo]), inserting: newEvent)
+                document.editRawAndTempo(
+                    chunk: chunkIndex, deleting: [],
+                    tempo: TempoEdit(remove: [tempo]), inserting: newEvent)
             case 5:
                 guard let bpm = Int(input) else { return false }
-                document.editTempo(TempoEdit(remove: [tempo], add: [TempoPoint(
-                    tick: tempo.tick,
-                    microsecondsPerQuarterNote: TimeDefaults.microsecondsPerQuarterNote(
-                        forBPM: bpm))]))
+                document.editTempo(
+                    TempoEdit(
+                        remove: [tempo],
+                        add: [
+                            TempoPoint(
+                                tick: tempo.tick,
+                                microsecondsPerQuarterNote: TimeDefaults.microsecondsPerQuarterNote(
+                                    forBPM: bpm))
+                        ]))
             default: return false
             }
             return true
@@ -65,9 +86,12 @@ extension EventListPresenter {
         guard let event = item.event, let index = item.eventIndex else { return false }
         if column == 1, input == String(EventListEventType.tempo.rawValue) {
             guard chunkIndex == 0 else { return false }
-            document.editRawAndTempo(chunk: chunkIndex, deleting: [index],
-                                     tempo: TempoEdit(add: [TempoPoint(
-                                        tick: event.tick, microsecondsPerQuarterNote: 500_000)]))
+            document.editRawAndTempo(
+                chunk: chunkIndex, deleting: [index],
+                tempo: TempoEdit(add: [
+                    TempoPoint(
+                        tick: event.tick, microsecondsPerQuarterNote: 500_000)
+                ]))
             return true
         }
         var replacement = event
@@ -82,9 +106,11 @@ extension EventListPresenter {
             replacement = changed
         case 2:
             guard let value = UInt8(input),
-                  case let .channel(status, data0, data1) = event.payload else { return false }
-            replacement.payload = .channel(status: (status & 0xF0) | (value - 1),
-                                           data0: data0, data1: data1)
+                case let .channel(status, data0, data1) = event.payload
+            else { return false }
+            replacement.payload = .channel(
+                status: (status & 0xF0) | (value - 1),
+                data0: data0, data1: data1)
         case 3:
             guard let value = UInt8(input) else { return false }
             switch event.payload {
@@ -95,7 +121,8 @@ extension EventListPresenter {
             }
         case 4:
             guard let value = UInt8(input),
-                  case let .channel(status, data0, _) = event.payload else { return false }
+                case let .channel(status, data0, _) = event.payload
+            else { return false }
             replacement.payload = .channel(status: status, data0: data0, data1: value)
         case 5:
             guard let bytes = EventListModel.parseBlob(input) else { return false }
@@ -119,38 +146,50 @@ extension EventListPresenter {
             let old: (UInt8, UInt8)
             if case let .channel(_, data0, data1) = event.payload {
                 old = (data0, data1)
-            } else { old = (0, 0) }
-            return .channel(tick: event.tick, status: status, data0: old.0,
-                            data1: kind == 4 || kind == 5 ? 0 : old.1)
+            } else {
+                old = (0, 0)
+            }
+            return .channel(
+                tick: event.tick, status: status, data0: old.0,
+                data1: kind == 4 || kind == 5 ? 0 : old.1)
         case 7, 8:
             status = kind == 7 ? 0xF0 : 0xF7
             return .systemExclusive(tick: event.tick, status: status, data: event.blob ?? [])
         case 10:
-            return .meta(tick: event.tick, type: event.metaType ?? 6,
-                         data: event.blob ?? [])
+            return .meta(
+                tick: event.tick, type: event.metaType ?? 6,
+                data: event.blob ?? [])
         default: return nil
         }
     }
 
     func dispatchAddEvent() {
         guard let session, !session.isClosed,
-              session.document.rawChunks.indices.contains(chunkIndex) else { return }
+            session.document.rawChunks.indices.contains(chunkIndex)
+        else { return }
         if let row = model.row(at: currentRow), row.isEndOfTrack { return }
         if chunkIndex == 0, let tempo = model.row(at: currentRow)?.tempo {
-            session.document.editTempo(TempoEdit(add: [TempoPoint(
-                tick: session.editCursor,
-                microsecondsPerQuarterNote: tempo.microsecondsPerQuarterNote)]))
+            session.document.editTempo(
+                TempoEdit(add: [
+                    TempoPoint(
+                        tick: session.editCursor,
+                        microsecondsPerQuarterNote: tempo.microsecondsPerQuarterNote)
+                ]))
             selectedRows = []
             selectionAnchor = -1
             if let row = model.rows.firstIndex(where: { $0.tempo?.tick == session.editCursor })
-                ?? model.rows.firstIndex(where: { $0.eventIndex != nil
-                                                && $0.tick == session.editCursor }) {
+                ?? model.rows.firstIndex(where: {
+                    $0.eventIndex != nil
+                        && $0.tick == session.editCursor
+                })
+            {
                 focusRow(row: row)
                 selectedRows = [row]
             }
             return
         }
-        var event = model.row(at: currentRow)?.event
+        var event =
+            model.row(at: currentRow)?.event
             ?? .channel(status: 0xB0, data0: 7, data1: 100)
         event.tick = session.editCursor
         session.document.insertRawEvent(chunk: chunkIndex, event: event)
@@ -164,8 +203,9 @@ extension EventListPresenter {
 
     func insertCopyOfRow(row: Int) {
         guard let session, !session.isClosed,
-              session.document.rawChunks.indices.contains(chunkIndex),
-              let item = model.row(at: row) else { return }
+            session.document.rawChunks.indices.contains(chunkIndex),
+            let item = model.row(at: row)
+        else { return }
         if let tempo = item.tempo {
             session.document.editTempo(TempoEdit(add: [tempo]))
         } else if let event = item.event {
@@ -186,7 +226,8 @@ extension EventListPresenter {
 
     func dispatchDeleteSelected() {
         guard let session, !session.isClosed,
-              session.document.rawChunks.indices.contains(chunkIndex) else { return }
+            session.document.rawChunks.indices.contains(chunkIndex)
+        else { return }
         let selection = selectedRows.compactMap { model.row(at: $0) }
         let indices = selection.compactMap(\.eventIndex)
         let tempos = selection.compactMap(\.tempo)
@@ -199,8 +240,9 @@ extension EventListPresenter {
             model.setCurrentRow(-1)
             currentRow = -1
         }
-        session.document.editRawAndTempo(chunk: chunkIndex, deleting: indices,
-                                         tempo: TempoEdit(remove: tempos))
+        session.document.editRawAndTempo(
+            chunk: chunkIndex, deleting: indices,
+            tempo: TempoEdit(remove: tempos))
         if deletable == 1, rowCount > 0 {
             focusRow(row: max(0, min(priorRow, rowCount - 1)))
         }

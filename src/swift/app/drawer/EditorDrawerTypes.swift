@@ -57,8 +57,10 @@ public struct EditorDrawerMetrics: Equatable, Sendable {
     public let resizeStep: Int
     public let pixel: Int
 
-    public init(barHeight: Int, handleHeight: Int, minimumBody: Int, pianoRollReserve: Int,
-                toggleInset: Int, resizeStep: Int, pixel: Int) {
+    public init(
+        barHeight: Int, handleHeight: Int, minimumBody: Int, pianoRollReserve: Int,
+        toggleInset: Int, resizeStep: Int, pixel: Int
+    ) {
         self.barHeight = barHeight
         self.handleHeight = handleHeight
         self.minimumBody = minimumBody
@@ -194,11 +196,13 @@ public struct EditorDrawerChangeSet: Equatable, Sendable {
     public let activePagePreference: DrawerSectionKind?
     public let cancelledSections: [DrawerSectionKind]
 
-    public init(published: Bool, snapshot: EditorDrawerSnapshot,
-                focusRequest: EditorDrawerFocusRequest?,
-                sectionPreferences: [EditorDrawerSectionPreference],
-                activePagePreference: DrawerSectionKind?,
-                cancelledSections: [DrawerSectionKind]) {
+    public init(
+        published: Bool, snapshot: EditorDrawerSnapshot,
+        focusRequest: EditorDrawerFocusRequest?,
+        sectionPreferences: [EditorDrawerSectionPreference],
+        activePagePreference: DrawerSectionKind?,
+        cancelledSections: [DrawerSectionKind]
+    ) {
         self.published = published
         self.snapshot = snapshot
         self.focusRequest = focusRequest
@@ -209,9 +213,10 @@ public struct EditorDrawerChangeSet: Equatable, Sendable {
 
     /// The result of an operation that changed nothing and published nothing.
     public static func untouched(_ snapshot: EditorDrawerSnapshot) -> EditorDrawerChangeSet {
-        EditorDrawerChangeSet(published: false, snapshot: snapshot, focusRequest: nil,
-                              sectionPreferences: [], activePagePreference: nil,
-                              cancelledSections: [])
+        EditorDrawerChangeSet(
+            published: false, snapshot: snapshot, focusRequest: nil,
+            sectionPreferences: [], activePagePreference: nil,
+            cancelledSections: [])
     }
 
     public var isEmpty: Bool {

@@ -55,8 +55,9 @@ func checkGridCameraWheel(
         overGutter: false, anchorX: anchorX, anchorY: 100)
     report.expect(
         gridCameraNear(angleZoom, 35 * pow(1.0015, 120), tolerance: 1e-7)
-            && gridCameraNear(session.camera.snapshot.pixelsPerBeat,
-                    angleZoom * pow(1.0015, 120), tolerance: 1e-7),
+            && gridCameraNear(
+                session.camera.snapshot.pixelsPerBeat,
+                angleZoom * pow(1.0015, 120), tolerance: 1e-7),
         cppID: gridCameraWheelID, message: "pixel deltas receive five-times angle weighting")
     report.expect(
         counters.camera == 2,
@@ -164,8 +165,10 @@ private func checkVerticalCameraWheelContract(
             $0.restore(pixelsPerBeat: 35, keyHeight: 8, scrollX: 0, scrollY: 300)
         }
     }
-    func wheel(angle: Double = 0, pixel: Double = 0, phase: QtScrollPhase = .noScroll,
-               overGutter: Bool = false) {
+    func wheel(
+        angle: Double = 0, pixel: Double = 0, phase: QtScrollPhase = .noScroll,
+        overGutter: Bool = false
+    ) {
         grid.handleWheel(
             angleDeltaX: 0, angleDeltaY: angle, pixelDeltaX: 0, pixelDeltaY: pixel,
             modifiers: overGutter ? 0 : 0x0400_0000, phase: phase.rawValue,
@@ -178,63 +181,77 @@ private func checkVerticalCameraWheelContract(
     restore()
     wheel(angle: 120)
     let full = session.camera.snapshot
-    report.expect(gridCameraNear(full.keyHeight, partial.keyHeight, tolerance: 1e-12)
-                      && gridCameraNear(full.scrollY, partial.scrollY, tolerance: 1e-10),
-                  cppID: id, message: "four quarter-notch pitch zooms equal one full notch")
+    report.expect(
+        gridCameraNear(full.keyHeight, partial.keyHeight, tolerance: 1e-12)
+            && gridCameraNear(full.scrollY, partial.scrollY, tolerance: 1e-10),
+        cppID: id, message: "four quarter-notch pitch zooms equal one full notch")
     wheel(angle: 120, phase: .momentum)
-    report.expect(session.camera.snapshot == full, cppID: id,
-                  message: "pitch-zoom momentum leaves height and scroll unchanged")
+    report.expect(
+        session.camera.snapshot == full, cppID: id,
+        message: "pitch-zoom momentum leaves height and scroll unchanged")
 
     restore()
-    let anchoredRow = (anchorY + session.camera.snapshot.scrollY)
+    let anchoredRow =
+        (anchorY + session.camera.snapshot.scrollY)
         / session.camera.snapshot.keyHeight
     wheel(angle: 30)
     let anchored = session.camera.snapshot
-    report.expect(gridCameraNear((anchorY + anchored.scrollY) / anchored.keyHeight,
-                       anchoredRow, tolerance: 1e-12),
-                  cppID: id, message: "quarter-notch zoom holds the fractional pitch row")
+    report.expect(
+        gridCameraNear(
+            (anchorY + anchored.scrollY) / anchored.keyHeight,
+            anchoredRow, tolerance: 1e-12),
+        cppID: id, message: "quarter-notch zoom holds the fractional pitch row")
     restore()
     for _ in 0..<10 { wheel(angle: 120) }
-    report.expect(gridCameraNear(session.camera.snapshot.keyHeight, 16, tolerance: 1e-12),
-                  cppID: id, message: "ten pitch notches clamp at the font-scaled 16px maximum")
+    report.expect(
+        gridCameraNear(session.camera.snapshot.keyHeight, 16, tolerance: 1e-12),
+        cppID: id, message: "ten pitch notches clamp at the font-scaled 16px maximum")
     restore()
     wheel(pixel: 240)
-    report.expect(gridCameraNear(session.camera.snapshot.keyHeight, 16, tolerance: 1e-12),
-                  cppID: id, message: "240px wheel delta reaches the same pitch-height maximum")
+    report.expect(
+        gridCameraNear(session.camera.snapshot.keyHeight, 16, tolerance: 1e-12),
+        cppID: id, message: "240px wheel delta reaches the same pitch-height maximum")
     let gutterBefore = session.camera.snapshot.scrollY
     wheel(pixel: 1, overGutter: true)
-    report.expect(gridCameraNear(session.camera.snapshot.scrollY, gutterBefore - 0.5, tolerance: 1e-12),
-                  cppID: id, message: "one gutter pixel pans pitch by a negative half-pixel")
+    report.expect(
+        gridCameraNear(session.camera.snapshot.scrollY, gutterBefore - 0.5, tolerance: 1e-12),
+        cppID: id, message: "one gutter pixel pans pitch by a negative half-pixel")
 
     restore()
     for _ in 0..<4 { wheel(angle: 30) }
     for _ in 0..<4 { wheel(angle: -30) }
     let returned = session.camera.snapshot
-    report.expect(gridCameraNear(returned.keyHeight, 8, tolerance: 1e-12)
-                      && gridCameraNear(returned.scrollY, 300, tolerance: 1e-10),
-                  cppID: id, message: "opposite quarter-notches restore pitch height and offset")
+    report.expect(
+        gridCameraNear(returned.keyHeight, 8, tolerance: 1e-12)
+            && gridCameraNear(returned.scrollY, 300, tolerance: 1e-10),
+        cppID: id, message: "opposite quarter-notches restore pitch height and offset")
     _ = session.mutateCamera {
         $0.restore(pixelsPerBeat: 35, keyHeight: 9.375, scrollX: 0, scrollY: 257.625)
     }
     let fractional = session.camera.snapshot
-    report.expect(fractional.keyHeight == 9.375 && fractional.scrollY == 257.625,
-                  cppID: id, message: "fractional pitch height and scroll restore without rounding")
+    report.expect(
+        fractional.keyHeight == 9.375 && fractional.scrollY == 257.625,
+        cppID: id, message: "fractional pitch height and scroll restore without rounding")
     let boundaryRow = 40
     let boundary = ((Double(boundaryRow) * fractional.keyHeight - fractional.scrollY) * 2).rounded() / 2
     grid.updateHover(x: 4, y: boundary - 0.25)
-    report.expect(grid.hoverKey == 128 - boundaryRow, cppID: id,
-                  message: "DPR-snapped row boundary minus a quarter pixel selects upper pitch")
+    report.expect(
+        grid.hoverKey == 128 - boundaryRow, cppID: id,
+        message: "DPR-snapped row boundary minus a quarter pixel selects upper pitch")
     grid.updateHover(x: 4, y: boundary + 0.25)
-    report.expect(grid.hoverKey == 127 - boundaryRow, cppID: id,
-                  message: "DPR-snapped row boundary plus a quarter pixel selects lower pitch")
+    report.expect(
+        grid.hoverKey == 127 - boundaryRow, cppID: id,
+        message: "DPR-snapped row boundary plus a quarter pixel selects lower pitch")
     grid.clearKeyboardHover()
-    report.expect(grid.hoverKey == -1, cppID: id,
-                  message: "leaving the keyboard clears the projected hover pitch")
+    report.expect(
+        grid.hoverKey == -1, cppID: id,
+        message: "leaving the keyboard clears the projected hover pitch")
     _ = session.mutateCamera {
         $0.restore(pixelsPerBeat: 35, keyHeight: 11, scrollX: 0, scrollY: 217)
     }
-    report.expect(session.camera.snapshot.keyHeight == 11 && session.camera.snapshot.scrollY == 217,
-                  cppID: id, message: "integral pitch height and scroll restore exactly")
+    report.expect(
+        session.camera.snapshot.keyHeight == 11 && session.camera.snapshot.scrollY == 217,
+        cppID: id, message: "integral pitch height and scroll restore exactly")
 }
 
 @MainActor
@@ -244,21 +261,27 @@ private func checkKeyboardGutterHoverTracksRows(
     let id = "swiftcore/EditorCamera::keyboardGutterHoverTracksRows"
     let y = 160.0
     let camera = session.camera.snapshot
-    let expected = session.camera.projection.pitch(
-        atY: y, keyHeight: camera.keyHeight, scrollY: camera.scrollY, dpr: 2) ?? -1
+    let expected =
+        session.camera.projection.pitch(
+            atY: y, keyHeight: camera.keyHeight, scrollY: camera.scrollY, dpr: 2) ?? -1
     grid.updateHover(x: 4, y: y)
-    report.expect(expected > 0 && grid.hoverKey == expected, cppID: id,
-                  message: "gutter midpoint hover selects the projected pitch")
-    report.expect(RollContentProbe(grid).keyboardHighlightRects().count == 1, cppID: id,
-                  message: "gutter midpoint hover paints one keyboard highlight record")
+    report.expect(
+        expected > 0 && grid.hoverKey == expected, cppID: id,
+        message: "gutter midpoint hover selects the projected pitch")
+    report.expect(
+        RollContentProbe(grid).keyboardHighlightRects().count == 1, cppID: id,
+        message: "gutter midpoint hover paints one keyboard highlight record")
     grid.updateHover(x: 4, y: y + camera.keyHeight)
-    report.expect(grid.hoverKey == expected - 1, cppID: id,
-                  message: "adjacent lower gutter row changes hover pitch by one")
+    report.expect(
+        grid.hoverKey == expected - 1, cppID: id,
+        message: "adjacent lower gutter row changes hover pitch by one")
     grid.clearKeyboardHover()
-    report.expect(grid.hoverKey == -1, cppID: id,
-                  message: "gutter leave clears the hover pitch")
-    report.expect(RollContentProbe(grid).keyboardHighlightRects().isEmpty, cppID: id,
-                  message: "gutter leave removes the painted keyboard highlight")
+    report.expect(
+        grid.hoverKey == -1, cppID: id,
+        message: "gutter leave clears the hover pitch")
+    report.expect(
+        RollContentProbe(grid).keyboardHighlightRects().isEmpty, cppID: id,
+        message: "gutter leave removes the painted keyboard highlight")
 }
 
 @MainActor
@@ -270,8 +293,9 @@ private func checkHorizontalCameraWheelContract(
     let anchorX = 73.375
     func restore(_ pixelsPerBeat: Double = 300.125, _ scrollX: Double = 23.625) {
         _ = session.mutateCamera {
-            $0.restore(pixelsPerBeat: pixelsPerBeat, keyHeight: 13,
-                       scrollX: scrollX, scrollY: 100)
+            $0.restore(
+                pixelsPerBeat: pixelsPerBeat, keyHeight: 13,
+                scrollX: scrollX, scrollY: 100)
         }
     }
     func wheel(angle: Double = 0, pixelY: Double = 0, pixelX: Double = 0) {
@@ -289,39 +313,48 @@ private func checkHorizontalCameraWheelContract(
     let full = session.camera.snapshot
     // camera.cpp:278 fixes the full-notch expectation for its 300.125 scale fixture.
     let expectedScale = 359.2664053212564
-    report.expect(gridCameraNear(full.pixelsPerBeat, expectedScale,
-                       tolerance: expectedScale * 1e-12)
-                      && gridCameraNear(full.pixelsPerBeat, partial.pixelsPerBeat, tolerance: 1e-12)
-                      && gridCameraNear(full.scrollX, partial.scrollX, tolerance: 1e-9),
-                  cppID: id, message: "four quarter-notch time zooms equal a full notch")
+    report.expect(
+        gridCameraNear(
+            full.pixelsPerBeat, expectedScale,
+            tolerance: expectedScale * 1e-12)
+            && gridCameraNear(full.pixelsPerBeat, partial.pixelsPerBeat, tolerance: 1e-12)
+            && gridCameraNear(full.scrollX, partial.scrollX, tolerance: 1e-9),
+        cppID: id, message: "four quarter-notch time zooms equal a full notch")
     restore()
     wheel(pixelY: 24)
-    report.expect(gridCameraNear(session.camera.snapshot.pixelsPerBeat, full.pixelsPerBeat,
-                       tolerance: 1e-12)
-                      && gridCameraNear(session.camera.snapshot.scrollX, full.scrollX, tolerance: 1e-9),
-                  cppID: id, message: "24px wheel equals one full angle notch")
+    report.expect(
+        gridCameraNear(
+            session.camera.snapshot.pixelsPerBeat, full.pixelsPerBeat,
+            tolerance: 1e-12)
+            && gridCameraNear(session.camera.snapshot.scrollX, full.scrollX, tolerance: 1e-9),
+        cppID: id, message: "24px wheel equals one full angle notch")
     restore()
     wheel(pixelX: 8)
-    report.expect(gridCameraNear(session.camera.snapshot.scrollX, 23.625 - 8, tolerance: 1e-12)
-                      && gridCameraNear(session.camera.snapshot.pixelsPerBeat, 300.125, tolerance: 1e-12),
-                  cppID: id, message: "horizontal pixel wheel pans without changing scale")
+    report.expect(
+        gridCameraNear(session.camera.snapshot.scrollX, 23.625 - 8, tolerance: 1e-12)
+            && gridCameraNear(session.camera.snapshot.pixelsPerBeat, 300.125, tolerance: 1e-12),
+        cppID: id, message: "horizontal pixel wheel pans without changing scale")
     restore(300.125, 0)
     wheel(pixelX: 8)
-    report.expect(session.camera.snapshot.scrollX == -8, cppID: id,
-                  message: "A099 eight-pixel wheel pan from bound zero reaches negative eight")
+    report.expect(
+        session.camera.snapshot.scrollX == -8, cppID: id,
+        message: "A099 eight-pixel wheel pan from bound zero reaches negative eight")
     restore()
     let tick = session.camera.tickAtContentX(anchorX)
     wheel(angle: 30)
-    report.expect(gridCameraNear(session.camera.tickAtContentX(anchorX), tick, tolerance: 1e-9),
-                  cppID: id, message: "quarter-notch time zoom preserves fractional tick anchor")
+    report.expect(
+        gridCameraNear(session.camera.tickAtContentX(anchorX), tick, tolerance: 1e-9),
+        cppID: id, message: "quarter-notch time zoom preserves fractional tick anchor")
     restore()
     for _ in 0..<4 { wheel(angle: 30) }
     for _ in 0..<4 { wheel(angle: -30) }
-    report.expect(gridCameraNear(session.camera.snapshot.pixelsPerBeat, 300.125, tolerance: 1e-10)
-                      && gridCameraNear(session.camera.snapshot.scrollX, 23.625, tolerance: 1e-9),
-                  cppID: id, message: "opposite quarter-notches restore scale and offset")
+    report.expect(
+        gridCameraNear(session.camera.snapshot.pixelsPerBeat, 300.125, tolerance: 1e-10)
+            && gridCameraNear(session.camera.snapshot.scrollX, 23.625, tolerance: 1e-9),
+        cppID: id, message: "opposite quarter-notches restore scale and offset")
     restore(311.375, 47.625)
-    report.expect(session.camera.snapshot.pixelsPerBeat == 311.375
-                      && session.camera.snapshot.scrollX == 47.625,
-                  cppID: id, message: "fractional time scale and offset restore exactly")
+    report.expect(
+        session.camera.snapshot.pixelsPerBeat == 311.375
+            && session.camera.snapshot.scrollX == 47.625,
+        cppID: id, message: "fractional time scale and offset restore exactly")
 }

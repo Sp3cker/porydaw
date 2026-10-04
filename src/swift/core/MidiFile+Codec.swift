@@ -35,8 +35,7 @@ internal func parseTrack(_ input: inout ParserSpan, index: Int) throws -> MidiCh
         }
         let eventTick = Tick(tick)
         let first: UInt8
-        do { first = try UInt8(parsing: &input) }
-        catch { throw malformed("truncated event") }
+        do { first = try UInt8(parsing: &input) } catch { throw malformed("truncated event") }
 
         if first == 0xFF {
             runningStatus = nil
@@ -73,8 +72,7 @@ internal func parseTrack(_ input: inout ParserSpan, index: Int) throws -> MidiCh
             if first & 0x80 != 0 {
                 status = first
                 runningStatus = first
-                do { data0 = try UInt8(parsing: &input) }
-                catch { throw malformed("truncated event data") }
+                do { data0 = try UInt8(parsing: &input) } catch { throw malformed("truncated event data") }
             } else {
                 guard let current = runningStatus else {
                     throw malformed("data byte with no running status")
@@ -88,8 +86,7 @@ internal func parseTrack(_ input: inout ParserSpan, index: Int) throws -> MidiCh
             var data1: UInt8 = 0
             let type = status >> 4
             if type != 0xC && type != 0xD {
-                do { data1 = try UInt8(parsing: &input) }
-                catch { throw malformed("truncated event data") }
+                do { data1 = try UInt8(parsing: &input) } catch { throw malformed("truncated event data") }
             }
             events.append(.channel(tick: eventTick, status: status, data0: data0, data1: data1))
         }
@@ -118,8 +115,9 @@ internal extension Array where Element == UInt8 {
 
     mutating func appendVariableLength(_ value: UInt32, track: Int, event: Int) throws {
         guard value <= 0x0FFF_FFFF else {
-            throw MidiCodecError.invalidEvent(track: track, event: event,
-                                              reason: "delta time exceeds MIDI VLQ range")
+            throw MidiCodecError.invalidEvent(
+                track: track, event: event,
+                reason: "delta time exceeds MIDI VLQ range")
         }
         if value < 0x80 {
             append(UInt8(value))
@@ -140,8 +138,9 @@ internal extension Array where Element == UInt8 {
 
     mutating func appendVariableLengthCount(_ count: Int, track: Int, event: Int) throws {
         guard count <= Int(0x0FFF_FFFF) else {
-            throw MidiCodecError.invalidEvent(track: track, event: event,
-                                              reason: "payload exceeds MIDI VLQ range")
+            throw MidiCodecError.invalidEvent(
+                track: track, event: event,
+                reason: "payload exceeds MIDI VLQ range")
         }
         try appendVariableLength(UInt32(count), track: track, event: event)
     }

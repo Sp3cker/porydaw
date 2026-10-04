@@ -54,14 +54,16 @@ internal func runProjectStoreActorSuite(_ report: CheckReport) {
         try await store.writeFile(file.path, data: payload)
         return try await store.readFile(file.path)
     }
-    report.expect(roundTrip?.success == payload, cppID: "\(id)/A01",
-                  message: "actor file write and read preserve binary bytes")
+    report.expect(
+        roundTrip?.success == payload, cppID: "\(id)/A01",
+        message: "actor file write and read preserve binary bytes")
 
     let missing = projectRoot.appendingPathComponent("missing.mid").path
     let unreadable = awaitValue { try await store.readFile(missing) }
     if case .some(.failure(let error)) = unreadable,
-       let fileError = error as? ProjectFileStoreError,
-       fileError == .cannotRead(path: missing) {
+        let fileError = error as? ProjectFileStoreError,
+        fileError == .cannotRead(path: missing)
+    {
         report.pass("\(id)/A02", row: "read returns the missing file path in its error")
     } else {
         report.fail("\(id)/A02", "missing file did not produce cannotRead for its path")
@@ -78,16 +80,18 @@ internal func runProjectStoreActorSuite(_ report: CheckReport) {
     }
     let writesSucceeded = parallel.wait()
     let final = awaitValue { try await store.readFile(competing) }
-    report.expect(writesSucceeded && final?.success.map(candidates.contains) == true,
-                  cppID: "\(id)/A03",
-                  message: "concurrent atomic writes leave one complete payload")
+    report.expect(
+        writesSucceeded && final?.success.map(candidates.contains) == true,
+        cppID: "\(id)/A03",
+        message: "concurrent atomic writes leave one complete payload")
 
     let missingParent = projectRoot.appendingPathComponent("absent/song.mid").path
     let unwritable = awaitValue { try await store.writeFile(missingParent, data: payload) }
     if case .some(.failure(let error)) = unwritable,
-       let fileError = error as? ProjectFileStoreError,
-       fileError == .cannotWrite(path: missingParent),
-       !FileManager.default.fileExists(atPath: missingParent) {
+        let fileError = error as? ProjectFileStoreError,
+        fileError == .cannotWrite(path: missingParent),
+        !FileManager.default.fileExists(atPath: missingParent)
+    {
         report.pass("\(id)/A04", row: "write returns the destination path when its parent is missing")
     } else {
         report.fail("\(id)/A04", "missing parent did not produce cannotWrite without a file")
@@ -102,16 +106,19 @@ internal func runProjectStoreActorSuite(_ report: CheckReport) {
             \t.incbin "sound/direct_sound_samples/actor.bin"
             """
         let scanned = awaitValue {
-            try await store.writeFile(groups.appendingPathComponent("actor.inc").path,
-                                      data: Data("voicegroup_actor::\n".utf8))
-            try await store.writeFile(sound.appendingPathComponent("direct_sound_data.inc").path,
-                                      data: Data(sampleLines.utf8))
+            try await store.writeFile(
+                groups.appendingPathComponent("actor.inc").path,
+                data: Data("voicegroup_actor::\n".utf8))
+            try await store.writeFile(
+                sound.appendingPathComponent("direct_sound_data.inc").path,
+                data: Data(sampleLines.utf8))
             return await store.voicegroupCatalog()
         }
-        report.expect(scanned?.success?.groups.groupArgs == ["_actor"]
-                          && scanned?.success?.direct.directSound == ["DirectSoundWaveData_actor"],
-                      cppID: "\(id)/A05",
-                      message: "actor catalog scans its project root for groups and samples")
+        report.expect(
+            scanned?.success?.groups.groupArgs == ["_actor"]
+                && scanned?.success?.direct.directSound == ["DirectSoundWaveData_actor"],
+            cppID: "\(id)/A05",
+            message: "actor catalog scans its project root for groups and samples")
     } catch {
         report.fail("\(id)/A05", "could not create catalog fixture: \(error)")
     }

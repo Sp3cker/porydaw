@@ -24,10 +24,11 @@ extension DocumentSession {
         if var active = sanitized {
             switch active.scope {
             case .lanes:
-                active.lanes = Set(active.lanes.filter {
-                    guard let track = $0.track else { return false }
-                    return (0..<16).contains(track)
-                })
+                active.lanes = Set(
+                    active.lanes.filter {
+                        guard let track = $0.track else { return false }
+                        return (0..<16).contains(track)
+                    })
                 sanitized = active.lanes.isEmpty && !active.tempo ? nil : active
             case let .tracks(scope):
                 let stored = Set(scope.filter { (0..<16).contains($0) })
@@ -53,8 +54,9 @@ extension DocumentSession {
 
     public func timeSelectionCoversTrack(_ track: Int) -> Bool {
         guard (0..<document.engineTracks.usedTrackCount).contains(track),
-              let selection = timeSelection, selection.isActive,
-              case let .tracks(scope) = selection.scope else { return false }
+            let selection = timeSelection, selection.isActive,
+            case let .tracks(scope) = selection.scope
+        else { return false }
         return scope.contains(track)
     }
 
@@ -69,14 +71,17 @@ extension DocumentSession {
 
     internal var trackTimeSelection: TrackTimeSelection {
         guard let selection = timeSelection, selection.isActive,
-              case .tracks = selection.scope else { return TrackTimeSelection() }
-        return TrackTimeSelection(startTick: selection.range.startTick,
-                                  endTick: selection.range.endTick, trackScope: selectedTracks)
+            case .tracks = selection.scope
+        else { return TrackTimeSelection() }
+        return TrackTimeSelection(
+            startTick: selection.range.startTick,
+            endTick: selection.range.endTick, trackScope: selectedTracks)
     }
 
     public func selectPrimaryTrack(_ track: Int) {
         guard (0..<document.engineTracks.usedTrackCount).contains(track),
-              selectedTrack != track else { return }
+            selectedTrack != track
+        else { return }
         adjustTrackScope(track: track, action: .plain)
     }
 
@@ -93,8 +98,7 @@ extension DocumentSession {
             scope = [track]
             clearNotes = true
         case .toggle:
-            if scope.contains(track) { scope.remove(track) }
-            else { scope.insert(track) }
+            if scope.contains(track) { scope.remove(track) } else { scope.insert(track) }
             guard !scope.isEmpty else { return }
             if !scope.contains(primary) {
                 primary = scope.min()!
@@ -112,7 +116,8 @@ extension DocumentSession {
                 publishChange([.selection])
             }
             if var selection = timeSelection, case .tracks = selection.scope,
-               selection.scope != .tracks(scope) {
+                selection.scope != .tracks(scope)
+            {
                 selection.scope = .tracks(scope)
                 timeSelection = selection
                 publishChange([.selection])

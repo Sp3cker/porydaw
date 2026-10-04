@@ -5,10 +5,13 @@ import PorydawPlayback
 import PorydawSample
 
 extension AudioRenderEngine: SampleAuditionOutput {
-    public func auditionSample(samples: [Int8], frequency: UInt32, loopStart: UInt32,
-                               looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8) -> Bool {
-        audition.publishSample(samples: samples, frequency: frequency, loopStart: loopStart,
-                               looped: looped, key: key, adsr: adsr, toneKey: toneKey)
+    public func auditionSample(
+        samples: [Int8], frequency: UInt32, loopStart: UInt32,
+        looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
+    ) -> Bool {
+        audition.publishSample(
+            samples: samples, frequency: frequency, loopStart: loopStart,
+            looped: looped, key: key, adsr: adsr, toneKey: toneKey)
     }
 
     public func auditionSampleOff() { audition.sampleOff() }
@@ -23,18 +26,24 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         let presenter = SampleStudioPresenter(source: source, validateName: { _ in nil })
         let unavailable = SampleStudioAudition(presenter: presenter, output: nil, destinationAdsr: nil)
         let strip = report.scoped(cppID: "samplecheck/SampleProcessingTest::editorAuditionStrip")
-        strip.expect(source.sourcePath == "fix/hires_tone.wav" && source.sampleRate == 44_100,
-                     message: "A087 editor-strip high resolution source imports")
-        strip.expect(!unavailable.available && unavailable.playToolTip == "Audio is unavailable.",
-                     message: "A088 unavailable audio disables Play")
+        strip.expect(
+            source.sourcePath == "fix/hires_tone.wav" && source.sampleRate == 44_100,
+            message: "A087 editor-strip high resolution source imports")
+        strip.expect(
+            !unavailable.available && unavailable.playToolTip == "Audio is unavailable.",
+            message: "A088 unavailable audio disables Play")
         let engineResult = Result { try AudioRenderEngine(sampleRate: 48_000, periodFrames: 512) }
-        scope.expect({ if case .success = engineResult { return true }; return false }(),
-                     message: "A117 audition engine initializes")
+        scope.expect(
+            {
+                if case .success = engineResult { return true }; return false
+            }(),
+            message: "A117 audition engine initializes")
         guard case .success(let renderer) = engineResult else { return }
         defer { renderer.unload() }
         let audition = SampleStudioAudition(presenter: presenter, output: renderer, destinationAdsr: nil)
-        scope.expect(audition.available && !audition.playing && audition.playText == "Play",
-                     message: "A121 idle audition is stopped")
+        scope.expect(
+            audition.available && !audition.playing && audition.playText == "Play",
+            message: "A121 idle audition is stopped")
         var pcm = [Float](repeating: 0, count: 48_000 * 2)
         pcm.withUnsafeMutableBufferPointer { buffer in
             renderer.render(buffer.baseAddress!, frames: 48_000)
@@ -54,14 +63,17 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         scope.expect(playhead != nil, message: "looped playhead follows rendered frames")
         let oldBytes = presenter.processed.s8
         presenter.beginMarkerGesture()
-        presenter.dragMarkers(cropStart: presenter.cropStart, cropEnd: presenter.cropEnd,
-                              loopStart: presenter.loopStart + 32, loopEnd: presenter.loopEnd - 16)
+        presenter.dragMarkers(
+            cropStart: presenter.cropStart, cropEnd: presenter.cropEnd,
+            loopStart: presenter.loopStart + 32, loopEnd: presenter.loopEnd - 16)
         presenter.endMarkerGesture()
-        scope.expect(presenter.processed.s8 != oldBytes && audition.playing,
-                     message: "loop marker drag republishes changed render while sounding")
+        scope.expect(
+            presenter.processed.s8 != oldBytes && audition.playing,
+            message: "loop marker drag republishes changed render while sounding")
         audition.advance(bySeconds: 10)
-        scope.expect(playhead.map { $0 >= presenter.cropStart && $0 < presenter.loopEnd } == true,
-                     message: "looped playhead wraps inside source loop")
+        scope.expect(
+            playhead.map { $0 >= presenter.cropStart && $0 < presenter.loopEnd } == true,
+            message: "looped playhead wraps inside source loop")
         audition.stop()
         scope.expect(!audition.playing && audition.playText == "Play", message: "A125 Stop restores Play text")
         pcm.withUnsafeMutableBufferPointer { buffer in
@@ -73,13 +85,16 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         audition.setAuditionKeyText(text: "A3 (57)")
         scope.expect(audition.auditionKey == 57 && audition.playing, message: "key choice restarts sounding audition")
         audition.advance(bySeconds: 0.05)
-        let expectedAdvance = 0.05 * Double(presenter.processed.freq) / 1024
+        let expectedAdvance =
+            0.05 * Double(presenter.processed.freq) / 1024
             * pow(2, -3.0 / 12.0) * source.sampleRate / presenter.processed.outputRate
-        scope.expect(playhead.map { abs(Double($0 - presenter.cropStart) - expectedAdvance) <= 1 } == true,
-                     message: "non-C4 audition key advances playhead at audible pitch")
+        scope.expect(
+            playhead.map { abs(Double($0 - presenter.cropStart) - expectedAdvance) <= 1 } == true,
+            message: "non-C4 audition key advances playhead at audible pitch")
         audition.close()
-        scope.expect(!audition.available && !audition.playing && playhead == nil,
-                     message: "close releases the audition owner and playhead")
+        scope.expect(
+            !audition.available && !audition.playing && playhead == nil,
+            message: "close releases the audition owner and playhead")
         let oneShot = SampleStudioPresenter(source: source, validateName: { _ in nil })
         oneShot.setLoopOn(enabled: false)
         let repeating = SampleStudioAudition(presenter: oneShot, output: renderer, destinationAdsr: nil)

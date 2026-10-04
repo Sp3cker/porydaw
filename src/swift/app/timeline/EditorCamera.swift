@@ -13,8 +13,9 @@ public struct PitchProjection: Equatable, Sendable {
         precondition(visiblePitches.count <= 128)
         for index in visiblePitches.indices {
             precondition(visiblePitches[index] < 128)
-            precondition(index == visiblePitches.startIndex ||
-                         visiblePitches[index] > visiblePitches[visiblePitches.index(before: index)])
+            precondition(
+                index == visiblePitches.startIndex
+                    || visiblePitches[index] > visiblePitches[visiblePitches.index(before: index)])
         }
         pitchesByRow = Array(visiblePitches.reversed())
         rowsByPitch = Array(repeating: Int8(Self.hiddenRow), count: 128)
@@ -37,8 +38,7 @@ public struct PitchProjection: Equatable, Sendable {
         var end = pitchesByRow.count
         while firstNotHigher < end {
             let middle = firstNotHigher + (end - firstNotHigher) / 2
-            if Int(pitchesByRow[middle]) > pitch { firstNotHigher = middle + 1 }
-            else { end = middle }
+            if Int(pitchesByRow[middle]) > pitch { firstNotHigher = middle + 1 } else { end = middle }
         }
         if firstNotHigher == 0 { return Int(pitchesByRow[0]) }
         if firstNotHigher == pitchesByRow.count { return Int(pitchesByRow[pitchesByRow.count - 1]) }
@@ -71,16 +71,19 @@ public struct PitchProjection: Equatable, Sendable {
 
     public func row(atY y: Double, keyHeight: Double, scrollY: Double, dpr: Double) -> Int {
         guard visibleRowCount > 0, y.isFinite, keyHeight.isFinite, keyHeight > 0,
-              let top = rowTop(0, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr),
-              let bottom = rowBottom(visibleRowCount - 1, keyHeight: keyHeight,
-                                     scrollY: scrollY, dpr: dpr),
-              y >= top, y < bottom else { return Self.hiddenRow }
+            let top = rowTop(0, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr),
+            let bottom = rowBottom(
+                visibleRowCount - 1, keyHeight: keyHeight,
+                scrollY: scrollY, dpr: dpr),
+            y >= top, y < bottom
+        else { return Self.hiddenRow }
         var first = 0
         var end = visibleRowCount
         while first < end {
             let middle = first + (end - first) / 2
-            let edge = Self.snappedEdge(middle + 1, keyHeight: keyHeight,
-                                        scrollY: scrollY, dpr: dpr)
+            let edge = Self.snappedEdge(
+                middle + 1, keyHeight: keyHeight,
+                scrollY: scrollY, dpr: dpr)
             if y < edge { end = middle } else { first = middle + 1 }
         }
         return first
@@ -90,8 +93,10 @@ public struct PitchProjection: Equatable, Sendable {
         visiblePitch(at: row(atY: y, keyHeight: keyHeight, scrollY: scrollY, dpr: dpr))
     }
 
-    private static func snappedEdge(_ row: Int, keyHeight: Double,
-                                    scrollY: Double, dpr: Double) -> Double {
+    private static func snappedEdge(
+        _ row: Int, keyHeight: Double,
+        scrollY: Double, dpr: Double
+    ) -> Double {
         let scale = dpr.isFinite && dpr > 0 ? dpr : 1
         return (Double(row) * keyHeight * scale).rounded() / scale
             - (scrollY * scale).rounded() / scale
@@ -109,10 +114,12 @@ public struct EditorCamera: Sendable {
         public let revealViewportFraction: Double
         public let minimumPlotWidth: Double
 
-        public init(defaultPixelsPerBeat: Double, minPixelsPerBeat: Double,
-                    maxPixelsPerBeat: Double, defaultKeyHeight: Double,
-                    minKeyHeight: Double, maxKeyHeight: Double,
-                    revealViewportFraction: Double, minimumPlotWidth: Double) {
+        public init(
+            defaultPixelsPerBeat: Double, minPixelsPerBeat: Double,
+            maxPixelsPerBeat: Double, defaultKeyHeight: Double,
+            minKeyHeight: Double, maxKeyHeight: Double,
+            revealViewportFraction: Double, minimumPlotWidth: Double
+        ) {
             self.defaultPixelsPerBeat = defaultPixelsPerBeat
             self.minPixelsPerBeat = minPixelsPerBeat
             self.maxPixelsPerBeat = maxPixelsPerBeat
@@ -153,8 +160,10 @@ public struct EditorCamera: Sendable {
         public static let zoom = Change(rawValue: 1 << 2)
         public static let geometry = Change(rawValue: 1 << 3)
 
-        public static func between(_ old: Snapshot, _ new: Snapshot,
-                                   projectionChanged: Bool = false) -> Change {
+        public static func between(
+            _ old: Snapshot, _ new: Snapshot,
+            projectionChanged: Bool = false
+        ) -> Change {
             var result: Change = []
             if old.scrollX != new.scrollX { result.insert(.scrollX) }
             if old.scrollY != new.scrollY { result.insert(.scrollY) }
@@ -193,18 +202,22 @@ public struct EditorCamera: Sendable {
     private var keyHeight: Double
     private var scrollY: Double
 
-    public init(ticksPerBeat: UInt32, lengthTicks: UInt64?, viewportWidth: Double,
-                rollHeight: Double, limits: Limits,
-                projection: PitchProjection = PitchProjection()) {
+    public init(
+        ticksPerBeat: UInt32, lengthTicks: UInt64?, viewportWidth: Double,
+        rollHeight: Double, limits: Limits,
+        projection: PitchProjection = PitchProjection()
+    ) {
         self.limits = limits
         self.ticksPerBeat = max(1, ticksPerBeat)
         self.lengthTicks = lengthTicks
         self.viewportWidth = Self.dimension(viewportWidth, floor: limits.minimumPlotWidth)
         self.rollHeight = Self.dimension(rollHeight, floor: 0)
-        pixelsPerBeat = Self.clampFinite(limits.defaultPixelsPerBeat,
-                                         limits.minPixelsPerBeat, limits.maxPixelsPerBeat)
-        keyHeight = Self.clampFinite(limits.defaultKeyHeight,
-                                     limits.minKeyHeight, limits.maxKeyHeight)
+        pixelsPerBeat = Self.clampFinite(
+            limits.defaultPixelsPerBeat,
+            limits.minPixelsPerBeat, limits.maxPixelsPerBeat)
+        keyHeight = Self.clampFinite(
+            limits.defaultKeyHeight,
+            limits.minKeyHeight, limits.maxKeyHeight)
         scrollX = 0
         scrollY = 0
         self.projection = projection
@@ -212,11 +225,12 @@ public struct EditorCamera: Sendable {
     }
 
     public var snapshot: Snapshot {
-        Snapshot(pixelsPerBeat: pixelsPerBeat, pixelsPerTick: pixelsPerTick,
-                 scrollX: scrollX, keyHeight: keyHeight, scrollY: scrollY,
-                 minHScroll: minHScroll, maxHScroll: maxHScroll,
-                 maxVScroll: maxVScroll, viewportWidth: viewportWidth,
-                 rollHeight: rollHeight)
+        Snapshot(
+            pixelsPerBeat: pixelsPerBeat, pixelsPerTick: pixelsPerTick,
+            scrollX: scrollX, keyHeight: keyHeight, scrollY: scrollY,
+            minHScroll: minHScroll, maxHScroll: maxHScroll,
+            maxVScroll: maxVScroll, viewportWidth: viewportWidth,
+            rollHeight: rollHeight)
     }
 
     public var pixelsPerTick: Double { pixelsPerBeat / Double(ticksPerBeat) }
@@ -308,8 +322,9 @@ public struct EditorCamera: Sendable {
         }
         let oldZoom = pixelsPerBeat
         let oldScroll = scrollX
-        pixelsPerBeat = Self.clampFinite(oldZoom * factor,
-                                         limits.minPixelsPerBeat, limits.maxPixelsPerBeat)
+        pixelsPerBeat = Self.clampFinite(
+            oldZoom * factor,
+            limits.minPixelsPerBeat, limits.maxPixelsPerBeat)
         let anchorBeat = (anchorContentX + oldScroll) / oldZoom
         _ = setHScroll(anchorBeat * pixelsPerBeat - anchorContentX)
         return ZoomResult(zoomChanged: pixelsPerBeat != oldZoom, scrollChanged: scrollX != oldScroll)
@@ -326,8 +341,10 @@ public struct EditorCamera: Sendable {
         return true
     }
 
-    public mutating func restore(pixelsPerBeat: Double, keyHeight: Double,
-                                 scrollX: Double, scrollY: Double) {
+    public mutating func restore(
+        pixelsPerBeat: Double, keyHeight: Double,
+        scrollX: Double, scrollY: Double
+    ) {
         _ = setTimeZoom(pixelsPerBeat.isFinite ? pixelsPerBeat : limits.defaultPixelsPerBeat)
         _ = setKeyHeight(keyHeight.isFinite ? keyHeight : limits.defaultKeyHeight)
         _ = setHScroll(scrollX.isFinite ? scrollX : 0)
@@ -341,18 +358,25 @@ public struct EditorCamera: Sendable {
         return setHScroll(Double(tick) * pixelsPerTick - viewportWidth * limits.revealViewportFraction)
     }
 
-    @discardableResult public mutating func ensureRangeVisible(startTick: UInt64, endTick: UInt64,
-                                                                preferEnd: Bool, dpr: Double) -> Bool {
+    @discardableResult public mutating func ensureRangeVisible(
+        startTick: UInt64, endTick: UInt64,
+        preferEnd: Bool, dpr: Double
+    ) -> Bool {
         let x0 = contentX(tick: Double(startTick)), x1 = contentX(tick: Double(endTick))
         let physicalPixel = dpr.isFinite && dpr > 0 ? 1 / dpr : 1
         let right = viewportWidth - physicalPixel
         let displayed0 = viewX(tick: Double(startTick), dpr: dpr)
         let displayed1 = viewX(tick: Double(endTick), dpr: dpr)
         let delta: Double
-        if displayed1 - displayed0 > right { delta = preferEnd ? x1 - right : x0 }
-        else if displayed1 > right { delta = x1 - right }
-        else if displayed0 < 0 { delta = x0 }
-        else { return false }
+        if displayed1 - displayed0 > right {
+            delta = preferEnd ? x1 - right : x0
+        } else if displayed1 > right {
+            delta = x1 - right
+        } else if displayed0 < 0 {
+            delta = x0
+        } else {
+            return false
+        }
         return setHScroll(scrollX + delta)
     }
 

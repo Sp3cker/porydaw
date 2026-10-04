@@ -51,20 +51,23 @@ public final class Sf2ZonePickerPresenter: QmlUncreatable {
     public func select(row: Int) {
         guard row >= 0 && row < rows.count else { return }
         let choice = rows[row]
-        if choice.group { model.selectGroup(title: choice.sample) }
-        else { model.select(zoneIndex: choice.zoneIndex) }
+        if choice.group { model.selectGroup(title: choice.sample) } else { model.select(zoneIndex: choice.zoneIndex) }
         publish()
     }
 
     private func publish() {
         var result: [Sf2ZonePickerRow] = []
         for group in model.groups {
-            result.append(Sf2ZonePickerRow(group: true, zoneIndex: -1,
-                                           columns: [group.title, "", "", "", "", ""]))
+            result.append(
+                Sf2ZonePickerRow(
+                    group: true, zoneIndex: -1,
+                    columns: [group.title, "", "", "", "", ""]))
             for row in group.rows {
-                result.append(Sf2ZonePickerRow(group: false, zoneIndex: row.zoneIndex,
-                                               columns: row.columns,
-                                               selected: row.zoneIndex == model.selectedZone))
+                result.append(
+                    Sf2ZonePickerRow(
+                        group: false, zoneIndex: row.zoneIndex,
+                        columns: row.columns,
+                        selected: row.zoneIndex == model.selectedZone))
             }
         }
         rows.reset(to: result)

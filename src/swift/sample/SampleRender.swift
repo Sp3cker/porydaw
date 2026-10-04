@@ -38,18 +38,21 @@ public enum SampleRender {
             let ratio = Double(outputLoopLength) / Double(sourceLoopLength)
             outputRate = sourceRate * ratio
             let outputStart = Int((Double(loopStart) * ratio).rounded())
-            grid = SampleDsp.resampleSinc(grid, ratio: ratio, outCount: outputStart + outputLoopLength,
-                                          loopWrapStart: loopStart, loopWrapExclusive: loopEnd + 1)
+            grid = SampleDsp.resampleSinc(
+                grid, ratio: ratio, outCount: outputStart + outputLoopLength,
+                loopWrapStart: loopStart, loopWrapExclusive: loopEnd + 1)
             loopStart = outputStart
         } else {
             outputRate = targetRate
-            grid = SampleDsp.resampleSinc(grid, ratio: initialRatio,
-                                          outCount: max(1, Int((Double(length) * initialRatio).rounded())))
+            grid = SampleDsp.resampleSinc(
+                grid, ratio: initialRatio,
+                outCount: max(1, Int((Double(length) * initialRatio).rounded())))
         }
         let count = grid.count
         if p.normalizeMode != .off {
-            let (gain, warning) = SampleDsp.normalizeGain(grid, loopedMode: loopOn && p.normalizeMode != .oneShot,
-                                                           loopStart: loopStart)
+            let (gain, warning) = SampleDsp.normalizeGain(
+                grid, loopedMode: loopOn && p.normalizeMode != .oneShot,
+                loopStart: loopStart)
             result.normalizeGain = gain
             if let warning { result.warnings.append(warning) }
             if gain != 1 { for index in grid.indices { grid[index] = Float(Double(grid[index]) * gain) } }
@@ -80,8 +83,9 @@ public enum SampleRender {
                     let t = Double(index + 1) / Double(fade)
                     let weight = correlation > 0.9 ? 1 - t : pow(cos(.pi * t / 2), 2)
                     let destination = count - fade + index
-                    grid[destination] = Float(weight * Double(grid[destination])
-                        + (1 - weight) * Double(grid[loopStart - fade + index]))
+                    grid[destination] = Float(
+                        weight * Double(grid[destination])
+                            + (1 - weight) * Double(grid[loopStart - fade + index]))
                 }
             } else {
                 result.warnings.append("loop start too close to the sample start for a crossfade bake — skipped.")

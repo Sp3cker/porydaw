@@ -8,13 +8,17 @@ extension ProjectStore {
 
     public func registrationStatuses() throws -> [String: RegistrationStatus] {
         guard let openedSnapshot, openedSnapshot.isOpen else { throw ProjectStoreReadError.notOpen }
-        return SongRegistration.statuses(root: projectRoot, entries: openedSnapshot.songs.map {
-            ($0.label, $0.constant)
-        })
+        return SongRegistration.statuses(
+            root: projectRoot,
+            entries: openedSnapshot.songs.map {
+                ($0.label, $0.constant)
+            })
     }
 
-    public func registrationPlan(label: String, constant: String,
-                                 player: String) throws -> RegistrationPlan {
+    public func registrationPlan(
+        label: String, constant: String,
+        player: String
+    ) throws -> RegistrationPlan {
         guard openedSnapshot?.isOpen == true else { throw ProjectStoreReadError.notOpen }
         return SongRegistration.plan(root: projectRoot, label: label, constant: constant, player: player)
     }
@@ -34,9 +38,10 @@ extension ProjectStore {
         guard SongName(label) != nil else {
             throw SongRegistrationError.failed("Song label \(label) is not a valid identity.")
         }
-        let id = try SongRegistration.register(root: projectRoot, label: label,
-                                               constant: constant.isEmpty ? label.uppercased() : constant,
-                                               player: player.isEmpty ? "MUSIC_PLAYER_BGM" : player)
+        let id = try SongRegistration.register(
+            root: projectRoot, label: label,
+            constant: constant.isEmpty ? label.uppercased() : constant,
+            player: player.isEmpty ? "MUSIC_PLAYER_BGM" : player)
         _ = try await open()
         return id
     }
@@ -44,18 +49,22 @@ extension ProjectStore {
     public func deletableVoicegroup(label: String) throws -> String? {
         guard let songs = openedSnapshot?.songs else { throw ProjectStoreReadError.notOpen }
         guard let song = songs.last(where: { $0.label == label }),
-              !song.cfg.voicegroupArgument.isEmpty else { return nil }
+            !song.cfg.voicegroupArgument.isEmpty
+        else { return nil }
         let arg = song.cfg.voicegroupArgument
         guard !songs.contains(where: { $0.label != label && $0.cfg.voicegroupArgument == arg })
         else { return nil }
         let root = projectRoot + "/sound/voicegroups/"
-        guard let name = SongCatalog.voicegroupCandidates(cfg: song.cfg).first(where: {
-            ProjectFileStore.exists(root + $0 + ".inc")
-        }) else { return nil }
+        guard
+            let name = SongCatalog.voicegroupCandidates(cfg: song.cfg).first(where: {
+                ProjectFileStore.exists(root + $0 + ".inc")
+            })
+        else { return nil }
         let symbol = "voicegroup" + arg
         let catalog = VoicegroupSource.catalogScan(projectRoot)
         guard !catalog.keysplits.contains(where: { $0.symbol == symbol }),
-              !catalog.drumkits.contains(symbol) else { return nil }
+            !catalog.drumkits.contains(symbol)
+        else { return nil }
         let reference = RegistrationText.dynamic(#"(?<![A-Za-z0-9_])\#(symbol)(?![A-Za-z0-9_])"#)
         for directory in ["src", "include"] {
             guard let files = FileManager.default.enumerator(atPath: projectRoot + "/" + directory)
@@ -80,7 +89,8 @@ extension ProjectStore {
         let constant = info.flatMap { $0.constant.isEmpty ? nil : $0.constant } ?? label.uppercased()
         let plan = SongRegistration.removalPlan(root: projectRoot, label: label, constant: constant)
         guard plan.tableIndex != 0 else {
-            throw SongRegistrationError.failed("\(label) is the engine's fallback song (song ID 0) and cannot be deleted.")
+            throw SongRegistrationError.failed(
+                "\(label) is the engine's fallback song (song ID 0) and cannot be deleted.")
         }
         var problems: [String] = []
         var voicegroup = voicegroupName ?? ""
@@ -95,15 +105,19 @@ extension ProjectStore {
         do { try ProjectFileStore.remove(midiDir + "/\(label).mid") } catch {
             problems.append(error.localizedDescription)
         }
-        do { try ProjectFileStore.remove(midiDir + "/\(label).s") }
-        catch { problems.append(error.localizedDescription) }
-        do { try SongRegistration.removeFlags(root: projectRoot, label: label) }
-        catch { problems.append(error.localizedDescription) }
-        do { try SongRegistration.unregister(root: projectRoot, label: label, constant: constant) }
-        catch { problems.append(error.localizedDescription) }
+        do { try ProjectFileStore.remove(midiDir + "/\(label).s") } catch {
+            problems.append(error.localizedDescription)
+        }
+        do { try SongRegistration.removeFlags(root: projectRoot, label: label) } catch {
+            problems.append(error.localizedDescription)
+        }
+        do { try SongRegistration.unregister(root: projectRoot, label: label, constant: constant) } catch {
+            problems.append(error.localizedDescription)
+        }
         if !voicegroup.isEmpty {
-            do { try SongRegistration.deleteVoicegroup(root: projectRoot, name: voicegroup) }
-            catch { problems.append(error.localizedDescription) }
+            do { try SongRegistration.deleteVoicegroup(root: projectRoot, name: voicegroup) } catch {
+                problems.append(error.localizedDescription)
+            }
         }
         if !problems.isEmpty { throw SongRegistrationError.failed(problems.joined(separator: "\n")) }
         _ = try await open()
@@ -118,13 +132,16 @@ extension SongRegistration {
             if let index = file.lines.indices.first(where: {
                 let text = file.text($0).trimmingCharacters(in: .whitespacesAndNewlines)
                 return text.hasPrefix(".include") && text.contains(needle)
-            }) { file.remove(index) }
+            }) {
+                file.remove(index)
+            }
             try file.save(hub)
         }
         let path = root + "/sound/voicegroups/\(name).inc"
         if ProjectFileStore.exists(path) {
-            do { try ProjectFileStore.remove(path) }
-            catch { throw SongRegistrationError.failed("Cannot delete \(path)") }
+            do { try ProjectFileStore.remove(path) } catch {
+                throw SongRegistrationError.failed("Cannot delete \(path)")
+            }
         }
     }
 }

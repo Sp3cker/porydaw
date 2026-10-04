@@ -33,10 +33,12 @@ public struct VgVoice: Equatable, Sendable {
     public var sustain: Int
     public var release: Int
 
-    public init(macro: VgMacro = .directSound, key: Int = 60, pan: Int = 0,
-                symbol: String = "", keysplitTable: String = "", sweep: Int = 0,
-                duty: Int = 2, period: Int = 0, attack: Int = 0, decay: Int = 0,
-                sustain: Int = 0, release: Int = 0) {
+    public init(
+        macro: VgMacro = .directSound, key: Int = 60, pan: Int = 0,
+        symbol: String = "", keysplitTable: String = "", sweep: Int = 0,
+        duty: Int = 2, period: Int = 0, attack: Int = 0, decay: Int = 0,
+        sustain: Int = 0, release: Int = 0
+    ) {
         self.macro = macro
         self.key = key
         self.pan = pan
@@ -97,8 +99,10 @@ public struct VgSynthDesc: Equatable, Sendable {
     public var modDepth: Int
     public var phase: Int
 
-    public init(waveform: Int = 0, baseDuty: Int = 0x80, dutyStep: Int = 0,
-                modDepth: Int = 0, phase: Int = 0) {
+    public init(
+        waveform: Int = 0, baseDuty: Int = 0x80, dutyStep: Int = 0,
+        modDepth: Int = 0, phase: Int = 0
+    ) {
         self.waveform = waveform
         self.baseDuty = baseDuty
         self.dutyStep = dutyStep
@@ -108,9 +112,9 @@ public struct VgSynthDesc: Equatable, Sendable {
 
     public static func == (lhs: VgSynthDesc, rhs: VgSynthDesc) -> Bool {
         guard lhs.waveform == rhs.waveform else { return false }
-        return lhs.waveform != 0 ||
-            (lhs.baseDuty == rhs.baseDuty && lhs.dutyStep == rhs.dutyStep &&
-             lhs.modDepth == rhs.modDepth && lhs.phase == rhs.phase)
+        return lhs.waveform != 0
+            || (lhs.baseDuty == rhs.baseDuty && lhs.dutyStep == rhs.dutyStep && lhs.modDepth == rhs.modDepth
+                && lhs.phase == rhs.phase)
     }
 }
 
@@ -143,8 +147,10 @@ public struct LoadedBankView: Sendable {
     public let dirty: Bool
     public let slotViews: [VoicegroupSlotView]
 
-    public init(id: VoicegroupId, bank: BankHandle, loadName: String, dirty: Bool,
-                slotViews: [VoicegroupSlotView]) {
+    public init(
+        id: VoicegroupId, bank: BankHandle, loadName: String, dirty: Bool,
+        slotViews: [VoicegroupSlotView]
+    ) {
         self.id = id
         self.bank = bank
         self.loadName = loadName
@@ -161,8 +167,10 @@ public struct BlankSlotMaterialization: Equatable, Sendable {
     public let headerBefore: [UInt8]
     public let headerAfter: [UInt8]
 
-    public init(firstAddedSlot: Int, addedLines: [[UInt8]], rewroteHeader: Bool,
-                headerBefore: [UInt8], headerAfter: [UInt8]) {
+    public init(
+        firstAddedSlot: Int, addedLines: [[UInt8]], rewroteHeader: Bool,
+        headerBefore: [UInt8], headerAfter: [UInt8]
+    ) {
         self.firstAddedSlot = firstAddedSlot
         self.addedLines = addedLines
         self.rewroteHeader = rewroteHeader
@@ -216,8 +224,10 @@ public struct VoicegroupEditAppliedResult: Sendable {
     public let materialization: BlankSlotMaterialization?
     public let materializationToken: UInt64?
 
-    public init(view: LoadedBankView, materialization: BlankSlotMaterialization? = nil,
-                materializationToken: UInt64? = nil) {
+    public init(
+        view: LoadedBankView, materialization: BlankSlotMaterialization? = nil,
+        materializationToken: UInt64? = nil
+    ) {
         self.view = view
         self.materialization = materialization
         self.materializationToken = materializationToken
@@ -309,7 +319,8 @@ public func vgMacroVoiceType(_ macro: VgMacro) -> UInt8 {
 public func vgMacroHasSymbol(_ macro: VgMacro) -> Bool {
     switch macro {
     case .directSound, .directSoundNoResample, .directSoundAlt,
-         .progWave, .progWaveAlt, .keysplit, .keysplitAll: true
+        .progWave, .progWaveAlt, .keysplit, .keysplitAll:
+        true
     case .square1, .square1Alt, .square2, .square2Alt, .noise, .noiseAlt: false
     }
 }
@@ -319,7 +330,8 @@ public func vgMacroIsCgb(_ macro: VgMacro) -> Bool {
     switch macro {
     case .directSound, .directSoundNoResample, .directSoundAlt, .keysplit, .keysplitAll: false
     case .square1, .square1Alt, .square2, .square2Alt,
-         .progWave, .progWaveAlt, .noise, .noiseAlt: true
+        .progWave, .progWaveAlt, .noise, .noiseAlt:
+        true
     }
 }
 
@@ -348,11 +360,12 @@ public func vgSynthWaveformName(_ waveform: Int) -> String {
 public func vgSynthSymbolName(_ desc: VgSynthDesc) -> String {
     switch desc.waveform {
     case 0:
-        return String(format: "DirectSoundSynth_GoldenSun_%02X%02X%02X%02X",
-                      UInt8(truncatingIfNeeded: desc.baseDuty),
-                      UInt8(truncatingIfNeeded: desc.dutyStep),
-                      UInt8(truncatingIfNeeded: desc.modDepth),
-                      UInt8(truncatingIfNeeded: desc.phase))
+        return String(
+            format: "DirectSoundSynth_GoldenSun_%02X%02X%02X%02X",
+            UInt8(truncatingIfNeeded: desc.baseDuty),
+            UInt8(truncatingIfNeeded: desc.dutyStep),
+            UInt8(truncatingIfNeeded: desc.modDepth),
+            UInt8(truncatingIfNeeded: desc.phase))
     case 1: return "DirectSoundSynth_GoldenSun_Saw"
     default: return "DirectSoundSynth_GoldenSun_Triangle"
     }
@@ -369,6 +382,5 @@ public func vgDefaultAdsr(_ defaults: VgAdsrDefaults, _ macro: VgMacro, _ symbol
 
 /// Returns true when scalar ToneData updates cannot reproduce the edit.
 public func vgVoiceStructuralChange(_ before: VgVoice, _ after: VgVoice) -> Bool {
-    before.macro != after.macro || before.symbol != after.symbol ||
-        before.keysplitTable != after.keysplitTable
+    before.macro != after.macro || before.symbol != after.symbol || before.keysplitTable != after.keysplitTable
 }

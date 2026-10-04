@@ -88,14 +88,17 @@ extension TrackHeadersPresenter {
             showHeaderMenu(track: track, x: x, y: y)
             return true
         } else if target != .mute && target != .solo {
-            let action: DocumentSession.TrackScopeAction = modifiers & 0x0400_0000 != 0
+            let action: DocumentSession.TrackScopeAction =
+                modifiers & 0x0400_0000 != 0
                 ? .toggle : modifiers & 0x0200_0000 != 0 ? .range : .plain
             session.adjustTrackScope(track: track, action: action)
             if let primary = session.selectedTrack { onTrackSelected?(primary) }
             refreshFromDocument()
             guard button == 1, modifiers & (0x0200_0000 | 0x0400_0000) == 0 else { return true }
             pointer.dragArmed = true
-        } else if button != 1 { return true }
+        } else if button != 1 {
+            return true
+        }
         pointer.pressedRow = row
         pointer.pressedTrack = track
         pointer.pressedTarget = target
@@ -111,10 +114,11 @@ extension TrackHeadersPresenter {
         hover(x: x, y: y)
         if pointer.dragging { updateReorder(y: y); return true }
         if pointer.dragArmed, abs(x - pointer.pressX) + abs(y - pointer.pressY) >= dragDistance,
-           snapshots.count - (snapshots.last?.isAddTrack == true ? 1 : 0) >= 2 {
+            snapshots.count - (snapshots.last?.isAddTrack == true ? 1 : 0) >= 2
+        {
             pointer.dragArmed = false
             pointer.dragging = true
-            cursorKind = 18 // Qt::ClosedHandCursor.
+            cursorKind = 18  // Qt::ClosedHandCursor.
             updateReorder(y: y)
             return true
         }
@@ -137,7 +141,8 @@ extension TrackHeadersPresenter {
         pointer = HeaderPointerState()
         publishPointerVisuals()
         guard button == 1, row == pressed.pressedRow, target == pressed.pressedTarget,
-              let session, pressed.target?.matches(session.document) == true else { return true }
+            let session, pressed.target?.matches(session.document) == true
+        else { return true }
         switch target {
         case .addTrack: activateAddTrack()
         case .mute: activateMute(track: pressed.pressedTrack)
@@ -158,8 +163,7 @@ extension TrackHeadersPresenter {
         guard target == .body || target == .voice else { return true }
         let track = snapshots[row].track
         selectTrack(track)
-        if target == .voice { requestTrackVoice(track: track) }
-        else { beginRename(track: track) }
+        if target == .voice { requestTrackVoice(track: track) } else { beginRename(track: track) }
         return true
     }
 
@@ -180,7 +184,8 @@ extension TrackHeadersPresenter {
     func finishReorder(commit: Bool) {
         guard pointer.dragging else { return }
         let source = pointer.pressedTrack
-        let slot = reorderIndicatorVisible
+        let slot =
+            reorderIndicatorVisible
             ? Int(((reorderIndicatorY + scrollY) / Double(rowHeight)).rounded()) : -1
         let target = pointer.target
         pointer.dragging = false
@@ -189,16 +194,19 @@ extension TrackHeadersPresenter {
         reorderIndicatorY = 0
         cursorKind = 0
         guard commit, let session, target?.matches(session.document) == true,
-              validTrack(source), slot >= 0,
-              slot <= session.document.engineTracks.usedTrackCount,
-              slot != source, slot != source + 1 else { return }
+            validTrack(source), slot >= 0,
+            slot <= session.document.engineTracks.usedTrackCount,
+            slot != source, slot != source + 1
+        else { return }
         let destination = slot > source ? slot - 1 : slot
         finishRename(commit: true, restoreRollFocus: false)
         if session.document.moveTrack(source, to: destination) { refreshFromDocument() }
     }
 
-    func scrollWheel(angleDeltaX: Double, angleDeltaY: Double,
-                     pixelDeltaX: Double, pixelDeltaY: Double) -> Bool {
+    func scrollWheel(
+        angleDeltaX: Double, angleDeltaY: Double,
+        pixelDeltaX: Double, pixelDeltaY: Double
+    ) -> Bool {
         guard session != nil, rowHeight > 0 else { return false }
         let pixel = pixelDeltaX != 0 || pixelDeltaY != 0
         let x = pixel ? pixelDeltaX : angleDeltaX

@@ -83,15 +83,21 @@ let drawerAutomationPointRangeID =
 
 // MARK: - Fixture
 
-func drawerAutomationAutomationMidi(division: UInt16 = 24, volume: [(Tick, UInt8)] = [],
-                            pan: [(Tick, UInt8)] = [], modulation: [(Tick, UInt8)] = [],
-                            lfo: [(Tick, UInt8)] = [], echo: [(Tick, UInt8)] = [],
-                            tempo: [(Tick, UInt32)] = [(0, 500_000)],
-                            endTick: Tick = 192, tailTick: Tick? = nil) -> MidiFile {
+func drawerAutomationAutomationMidi(
+    division: UInt16 = 24, volume: [(Tick, UInt8)] = [],
+    pan: [(Tick, UInt8)] = [], modulation: [(Tick, UInt8)] = [],
+    lfo: [(Tick, UInt8)] = [], echo: [(Tick, UInt8)] = [],
+    tempo: [(Tick, UInt32)] = [(0, 500_000)],
+    endTick: Tick = 192, tailTick: Tick? = nil
+) -> MidiFile {
     var conductor: [MidiEvent] = tempo.map { tick, microseconds in
-        .meta(tick: tick, type: 0x51, data: [UInt8((microseconds >> 16) & 0xFF),
-                                             UInt8((microseconds >> 8) & 0xFF),
-                                             UInt8(microseconds & 0xFF)])
+        .meta(
+            tick: tick, type: 0x51,
+            data: [
+                UInt8((microseconds >> 16) & 0xFF),
+                UInt8((microseconds >> 8) & 0xFF),
+                UInt8(microseconds & 0xFF),
+            ])
     }
     conductor.append(.meta(tick: 0, type: 0x58, data: [4, 2, 24, 8]))
     var events: [MidiEvent] = [
@@ -101,8 +107,11 @@ func drawerAutomationAutomationMidi(division: UInt16 = 24, volume: [(Tick, UInt8
     events += volume.map { .channel(tick: $0.0, status: 0xB0, data0: 0x07, data1: $0.1) }
     events += pan.map { .channel(tick: $0.0, status: 0xB0, data0: 0x0A, data1: $0.1) }
     events += modulation.map { .channel(tick: $0.0, status: 0xB0, data0: 0x01, data1: $0.1) }
-    events += lfo.map { .channel(tick: $0.0, status: 0xB0,
-                                 data0: TimeDefaults.ccLFOSpeed, data1: $0.1) }
+    events += lfo.map {
+        .channel(
+            tick: $0.0, status: 0xB0,
+            data0: TimeDefaults.ccLFOSpeed, data1: $0.1)
+    }
     // A note ending at the requested tail keeps the document's musical length
     // at least that long, which every lane stroke's restored seam is measured
     // against.
@@ -113,10 +122,12 @@ func drawerAutomationAutomationMidi(division: UInt16 = 24, volume: [(Tick, UInt8
     }
     events.sort { $0.tick < $1.tick }
     conductor.sort { $0.tick < $1.tick }
-    return MidiFile(division: division, chunks: [
-        MidiChunk(events: conductor, endTick: resolvedEnd),
-        MidiChunk(events: events, endTick: resolvedEnd),
-    ])
+    return MidiFile(
+        division: division,
+        chunks: [
+            MidiChunk(events: conductor, endTick: resolvedEnd),
+            MidiChunk(events: events, endTick: resolvedEnd),
+        ])
 }
 
 @MainActor
@@ -125,28 +136,33 @@ struct drawerAutomationAutomationFixture {
     let page: AutomationPage
     let document: SongDocument
 
-    init(suite: DocumentSession, service: ProjectService, division: UInt16 = 24,
-         volume: [(Tick, UInt8)] = [], pan: [(Tick, UInt8)] = [],
-         modulation: [(Tick, UInt8)] = [], lfo: [(Tick, UInt8)] = [],
-         echo: [(Tick, UInt8)] = [],
-         tempo: [(Tick, UInt32)] = [(0, 500_000)], baseFontPx: Double = 13,
-         plotted: Bool = true, config: SongConfig? = nil, tailTick: Tick? = 576) {
+    init(
+        suite: DocumentSession, service: ProjectService, division: UInt16 = 24,
+        volume: [(Tick, UInt8)] = [], pan: [(Tick, UInt8)] = [],
+        modulation: [(Tick, UInt8)] = [], lfo: [(Tick, UInt8)] = [],
+        echo: [(Tick, UInt8)] = [],
+        tempo: [(Tick, UInt32)] = [(0, 500_000)], baseFontPx: Double = 13,
+        plotted: Bool = true, config: SongConfig? = nil, tailTick: Tick? = 576
+    ) {
         let document = SongDocument(
-            file: drawerAutomationAutomationMidi(division: division, volume: volume, pan: pan,
-                                 modulation: modulation, lfo: lfo, echo: echo, tempo: tempo,
-                                 tailTick: tailTick),
+            file: drawerAutomationAutomationMidi(
+                division: division, volume: volume, pan: pan,
+                modulation: modulation, lfo: lfo, echo: echo, tempo: tempo,
+                tailTick: tailTick),
             config: config ?? suite.document.state.config, source: suite.document.source,
             trackBudget: suite.document.trackBudget)
-        let session = DocumentSession(document: document, service: service,
-                                      lease: suite.bankLease, slots: suite.bankSlots,
-                                      dirty: false, loadName: suite.bankLoadName,
-                                      sampleRate: 48_000)
+        let session = DocumentSession(
+            document: document, service: service,
+            lease: suite.bankLease, slots: suite.bankSlots,
+            dirty: false, loadName: suite.bankLoadName,
+            sampleRate: 48_000)
         if !echo.isEmpty {
             // XCMD lanes are selector/payload traffic, not raw controller
             // events: they are written through the document's own lane API.
-            document.writeLane(track: 0, lane: .controller(Xcmd.echoVolumeLane), from: 0,
-                               through: TimeDefaults.noTick,
-                               points: echo.map { LaneWrite(tick: $0.0, value: Int($0.1)) })
+            document.writeLane(
+                track: 0, lane: .controller(Xcmd.echoVolumeLane), from: 0,
+                through: TimeDefaults.noTick,
+                points: echo.map { LaneWrite(tick: $0.0, value: Int($0.1)) })
         }
         session.selectedTrack = 0
         self.session = session
@@ -154,15 +170,17 @@ struct drawerAutomationAutomationFixture {
         page = AutomationPage(baseFontPx: baseFontPx)
         page.attach(session: session, palette: GridPalette())
         if plotted {
-            page.configureBody(width: 480, height: 120, gutter: 0, devicePixelRatio: 1,
-                               baseFontPx: baseFontPx, dragDistance: 10)
+            page.configureBody(
+                width: 480, height: 120, gutter: 0, devicePixelRatio: 1,
+                baseFontPx: baseFontPx, dragDistance: 10)
         }
         session.onChange = { [weak page] change in
             let content: SessionChangeDomains = [.document, .bank]
             if !change.domains.intersection(content).isEmpty {
                 page?.refreshFromDocument()
             } else if change.domains.contains(.selection),
-                      page?.menuOpen == true || page?.promptOpen == true {
+                page?.menuOpen == true || page?.promptOpen == true
+            {
                 page?.refreshFromDocument()
             } else if change.domains.contains(.cursor) {
                 page?.refreshEditCursor()
@@ -201,8 +219,10 @@ struct drawerAutomationAutomationFixture {
 
     var tempoValues: [String] {
         document.state.tempo.map { point in
-            let bpm = Int(TimeDefaults.tempoBPM(
-                forMicrosecondsPerQuarterNote: point.microsecondsPerQuarterNote).rounded())
+            let bpm = Int(
+                TimeDefaults.tempoBPM(
+                    forMicrosecondsPerQuarterNote: point.microsecondsPerQuarterNote
+                ).rounded())
             return "\(point.tick):\(bpm)"
         }
     }
@@ -227,16 +247,21 @@ struct drawerAutomationAutomationFixture {
 
     /// The frozen facts of one parameter at the current revision, exactly as a
     /// press freezes them.
-    func facts(_ parameter: AutomationParameter,
-               modifiers: AutomationModifiers = .init()) -> AutomationFrozenFacts {
-        AutomationFrozenFacts(parameter: parameter, snapshot: laneSnapshot(parameter),
-                              camera: session.camera.snapshot, selection: page.selection,
-                              modifiers: modifiers, songEndTick: songEndTick)
+    func facts(
+        _ parameter: AutomationParameter,
+        modifiers: AutomationModifiers = .init()
+    ) -> AutomationFrozenFacts {
+        AutomationFrozenFacts(
+            parameter: parameter, snapshot: laneSnapshot(parameter),
+            camera: session.camera.snapshot, selection: page.selection,
+            modifiers: modifiers, songEndTick: songEndTick)
     }
 
-    func makeProjection(_ parameter: AutomationParameter,
-                        selection: AutomationTimeSelection? = nil,
-                        width: Double = 480, height: Double = 120) -> AutomationLaneProjection {
+    func makeProjection(
+        _ parameter: AutomationParameter,
+        selection: AutomationTimeSelection? = nil,
+        width: Double = 480, height: Double = 120
+    ) -> AutomationLaneProjection {
         let facts = facts(parameter)
         let projection = AutomationProjection(
             camera: session.camera,
@@ -244,8 +269,9 @@ struct drawerAutomationAutomationFixture {
             geometry: page.geometry,
             snapPolicy: AutomationProjectionCache().snapPolicy(session: session, font: page.baseFontPx, dpr: 1),
             songEndTick: songEndTick)
-        return projection.project(facts.snapshot, selection: selection,
-                                  usedTracks: Set(0..<document.engineTracks.usedTrackCount))
+        return projection.project(
+            facts.snapshot, selection: selection,
+            usedTracks: Set(0..<document.engineTracks.usedTrackCount))
     }
 
     func projection(_ parameter: AutomationParameter) -> AutomationLaneProjection {
@@ -280,21 +306,26 @@ struct drawerAutomationAutomationFixture {
     /// taken. A release's return value is the commit's outcome, so a caller
     /// asserts the lane it produced.
     @discardableResult
-    func drag(_ parameter: AutomationParameter, from: (tick: Tick, value: Int),
-              to target: Int, armPixels: Double = 30, modifiers: Int) -> Bool {
+    func drag(
+        _ parameter: AutomationParameter, from: (tick: Tick, value: Int),
+        to target: Int, armPixels: Double = 30, modifiers: Int
+    ) -> Bool {
         let surface = AutomationInputSurface.plot.rawValue
         let button = AutomationQtButton.left
         let pressX = x(from.tick)
         let pressY = y(parameter, from.value)
         let targetY = y(parameter, target)
-        let pressed = page.pointerPress(x: pressX, y: pressY, surface: surface, button: button,
-                                        modifiers: modifiers)
+        let pressed = page.pointerPress(
+            x: pressX, y: pressY, surface: surface, button: button,
+            modifiers: modifiers)
         let armY = pressY - armPixels
         _ = page.pointerMove(x: pressX, y: armY, buttons: button, modifiers: modifiers)
-        _ = page.pointerMove(x: pressX, y: armY + (targetY - pressY), buttons: button,
-                             modifiers: modifiers)
-        _ = page.pointerRelease(x: pressX, y: armY + (targetY - pressY), button: button,
-                                modifiers: modifiers)
+        _ = page.pointerMove(
+            x: pressX, y: armY + (targetY - pressY), buttons: button,
+            modifiers: modifiers)
+        _ = page.pointerRelease(
+            x: pressX, y: armY + (targetY - pressY), button: button,
+            modifiers: modifiers)
         return pressed
     }
 }
@@ -325,8 +356,10 @@ final class drawerAutomationPorydawSelectionClipboardState {
 }
 
 @MainActor
-internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSession,
-                                      service: ProjectService) {
+internal func runAutomationPageChecks(
+    _ report: CheckReport, session: DocumentSession,
+    service: ProjectService
+) {
     let clipboardState = drawerAutomationPorydawSelectionClipboardState()
     defer { clipboardState.restore() }
     drawerAutomationParameterCatalogAndMetadata(report)
@@ -429,42 +462,49 @@ func drawerAutomationTapHintCatalog(_ report: CheckReport) {
     hints.setWindowActive(active: true)
     hints.claim(sourceToken: token, profile: 27)
     let tap = hints.text
-    report.expect(!tap.isEmpty, cppID: id,
-                  message: "the tap hint publishes its catalog text")
+    report.expect(
+        !tap.isEmpty, cppID: id,
+        message: "the tap hint publishes its catalog text")
     hints.claim(sourceToken: token, profile: 25)
-    report.expect(!hints.text.isEmpty && hints.text != tap, cppID: id,
-                  message: "the tap and ghost hints stay distinct")
+    report.expect(
+        !hints.text.isEmpty && hints.text != tap, cppID: id,
+        message: "the tap and ghost hints stay distinct")
 }
 
 @MainActor
-func drawerAutomationTempoPromptInsertion(_ report: CheckReport, suite: DocumentSession,
-                                          service: ProjectService) {
+func drawerAutomationTempoPromptInsertion(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
     let id = "swiftcore/AutomationPage::tempoPromptInsertion"
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service)
     fixture.activate(.tempo)
     let before = fixture.snapshot
     let originalTempo = fixture.tempoValues
     let undoCount = fixture.document.history.undoCount
-    report.expect(fixture.page.openPrompt(tick: 96, value: 120)
-                  && fixture.page.promptOpen && fixture.snapshot == before, cppID: id,
-                  message: "the tempo insertion prompt opens without a write")
-    report.expect(fixture.page.promptTitle == "Set tempo"
-                  && fixture.page.promptLabel == "BPM:"
-                  && fixture.page.promptMinimum == TimeDefaults.minimumTempoBPM
-                  && fixture.page.promptMaximum == TimeDefaults.maximumTempoBPM
-                  && fixture.page.promptDraft == "120", cppID: id,
-                  message: "the tempo insertion prompt publishes its displayed domain")
-    report.expect(fixture.page.acceptPrompt(displayedValue: 90)
-                  && fixture.tempoValues.contains("96:90")
-                  && fixture.document.revision == before.revision + 1
-                  && fixture.document.history.undoCount == undoCount + 1
-                  && fixture.document.history.canUndo, cppID: id,
-                  message: "the typed tempo draft commits at the prompt's tick")
+    report.expect(
+        fixture.page.openPrompt(tick: 96, value: 120)
+            && fixture.page.promptOpen && fixture.snapshot == before, cppID: id,
+        message: "the tempo insertion prompt opens without a write")
+    report.expect(
+        fixture.page.promptTitle == "Set tempo"
+            && fixture.page.promptLabel == "BPM:"
+            && fixture.page.promptMinimum == TimeDefaults.minimumTempoBPM
+            && fixture.page.promptMaximum == TimeDefaults.maximumTempoBPM
+            && fixture.page.promptDraft == "120", cppID: id,
+        message: "the tempo insertion prompt publishes its displayed domain")
+    report.expect(
+        fixture.page.acceptPrompt(displayedValue: 90)
+            && fixture.tempoValues.contains("96:90")
+            && fixture.document.revision == before.revision + 1
+            && fixture.document.history.undoCount == undoCount + 1
+            && fixture.document.history.canUndo, cppID: id,
+        message: "the typed tempo draft commits at the prompt's tick")
     let undone = fixture.undo()
-    report.expect(undone && fixture.tempoValues == originalTempo, cppID: id,
-                  message: "undo restores the pre-insertion tempo")
+    report.expect(
+        undone && fixture.tempoValues == originalTempo, cppID: id,
+        message: "undo restores the pre-insertion tempo")
 }
-
 
 let drawerAutomationTapTempoID = "swiftcore/AutomationPage::tapTempoCadenceAndCommit"
 let drawerAutomationModifierMappingID = "swiftcore/AutomationPage::qtModifierMapping"
@@ -474,7 +514,6 @@ let drawerAutomationModifierMappingID = "swiftcore/AutomationPage::qtModifierMap
 /// starts a fresh session, and the idle window records exactly one tempo edit
 /// and one history entry — or nothing at all for a stale capture, a moved
 /// parameter and a draft that names the tempo already in place.
-
 
 /// The Qt modifier bits QML carries and the policy they arm, both directions,
 /// plus one real pointer route driven by the raw bits a QML event supplies.

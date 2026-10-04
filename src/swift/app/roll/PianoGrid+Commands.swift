@@ -47,9 +47,12 @@ extension PianoGrid {
                 var found = false
                 for id in session.selectedNoteOrder {
                     guard let note = session.document.note(id),
-                          note.track == session.selectedTrack else { continue }
-                    edgePitch = upward ? max(edgePitch, Int(note.pitch))
-                                       : min(edgePitch, Int(note.pitch))
+                        note.track == session.selectedTrack
+                    else { continue }
+                    edgePitch =
+                        upward
+                        ? max(edgePitch, Int(note.pitch))
+                        : min(edgePitch, Int(note.pitch))
                     found = true
                 }
                 if found {
@@ -70,7 +73,8 @@ extension PianoGrid {
                 var last: UInt64 = 0
                 for id in session.selectedNoteOrder {
                     guard let note = session.document.note(id),
-                          note.track == session.selectedTrack else { continue }
+                        note.track == session.selectedTrack
+                    else { continue }
                     first = min(first, UInt64(note.tick))
                     let duration = note.isUnterminated ? grid : max(1, note.duration)
                     last = max(last, UInt64(note.tick) + UInt64(duration))
@@ -78,8 +82,9 @@ extension PianoGrid {
                 if first != UInt64.max {
                     let preferEnd = command == .nudgeRight
                     session.mutateCamera { camera in
-                        _ = camera.ensureRangeVisible(startTick: first, endTick: last,
-                                                      preferEnd: preferEnd, dpr: devicePixelRatio)
+                        _ = camera.ensureRangeVisible(
+                            startTick: first, endTick: last,
+                            preferEnd: preferEnd, dpr: devicePixelRatio)
                     }
                 }
             default:
@@ -102,10 +107,13 @@ extension PianoGrid {
 
     func activateGridMenuRowImpl(actionId: Int) {
         let kind = gridMenuKind
-        guard (kind == 1 && session.grid.selections.contains { $0.toMenuId() == actionId })
-            || (kind == 2 && (0...1).contains(actionId)) else { return }
+        guard
+            (kind == 1 && session.grid.selections.contains { $0.toMenuId() == actionId })
+                || (kind == 2 && (0...1).contains(actionId))
+        else { return }
         dismissGridMenu()
-        let changed = kind == 1
+        let changed =
+            kind == 1
             ? session.grid.setSelection(GridSelection.fromMenuId(actionId))
             : session.grid.setFeel(actionId == 1 ? .triplet : .straight)
         guard changed else { return }
@@ -128,17 +136,21 @@ extension PianoGrid {
         tripletGrid = session.grid.feel == .triplet
         gridFeelControlText = tripletGrid ? "Triplet" : "Straight"
         if gridMenuKind == 1 {
-            gridMenuRows.reset(to: session.grid.selections.map { item in
-                let text = gridDivisionText(item)
-                return GridSubdivisionMenuItem(actionId: item.toMenuId(), text: text,
-                                               checked: item == selection)
-            })
+            gridMenuRows.reset(
+                to: session.grid.selections.map { item in
+                    let text = gridDivisionText(item)
+                    return GridSubdivisionMenuItem(
+                        actionId: item.toMenuId(), text: text,
+                        checked: item == selection)
+                })
         } else if gridMenuKind == 2 {
             gridMenuRows.reset(to: [
-                GridSubdivisionMenuItem(actionId: 0, text: "Straight",
-                                        checked: !tripletGrid),
-                GridSubdivisionMenuItem(actionId: 1, text: "Triplet",
-                                        checked: tripletGrid),
+                GridSubdivisionMenuItem(
+                    actionId: 0, text: "Straight",
+                    checked: !tripletGrid),
+                GridSubdivisionMenuItem(
+                    actionId: 1, text: "Triplet",
+                    checked: tripletGrid),
             ])
         }
     }

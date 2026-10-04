@@ -14,24 +14,28 @@ internal enum ResonanceCheckFixture {
         for i in 5...11 { p.knotActive[i] = true }
         return p
     }
-    static func fill(_ signal: inout [Float], begin: Int, end: Int, frequency: Double,
-                     db: Double, add: Bool = false, rate: Double = ResonanceCheckFixture.rate) {
+    static func fill(
+        _ signal: inout [Float], begin: Int, end: Int, frequency: Double,
+        db: Double, add: Bool = false, rate: Double = ResonanceCheckFixture.rate
+    ) {
         let amplitude = Double(Float(pow(10, db / 20)))
         let omega = 2 * Double.pi * frequency / rate
         for frame in begin..<min(end, signal.count / 2) {
             let value = Float(amplitude * sin(omega * Double(frame)))
             for c in 0..<2 {
-                if add { signal[2 * frame + c] += value }
-                else { signal[2 * frame + c] = value }
+                if add { signal[2 * frame + c] += value } else { signal[2 * frame + c] = value }
             }
         }
     }
-    static func sine(_ seconds: Double, _ frequency: Double, _ db: Double,
-                     onset: Double = 0, rate: Double = ResonanceCheckFixture.rate) -> [Float] {
+    static func sine(
+        _ seconds: Double, _ frequency: Double, _ db: Double,
+        onset: Double = 0, rate: Double = ResonanceCheckFixture.rate
+    ) -> [Float] {
         let count = Int((seconds * rate).rounded())
         var signal = [Float](repeating: 0, count: count * 2)
-        fill(&signal, begin: Int((onset * rate).rounded()), end: count,
-             frequency: frequency, db: db, rate: rate)
+        fill(
+            &signal, begin: Int((onset * rate).rounded()), end: count,
+            frequency: frequency, db: db, rate: rate)
         return signal
     }
     static func noise(_ seconds: Double, _ scale: Float, _ seed: UInt32) -> [Float] {
@@ -41,8 +45,10 @@ internal enum ResonanceCheckFixture {
             return (Float(state >> 8) * (2 / 16777216) - 1) * scale
         }
     }
-    static func feed(_ signal: inout [Float], _ processor: ResonanceSuppression,
-                     from: Int = 0, to: Int? = nil, chunk: Int = 512) {
+    static func feed(
+        _ signal: inout [Float], _ processor: ResonanceSuppression,
+        from: Int = 0, to: Int? = nil, chunk: Int = 512
+    ) {
         let end = to ?? signal.count / 2
         signal.withUnsafeMutableBufferPointer { buffer in
             for frame in stride(from: from, to: end, by: chunk) {
@@ -56,8 +62,10 @@ internal enum ResonanceCheckFixture {
         result.setEnabled(true)
         return result
     }
-    static func render(_ signal: [Float], _ p: ResonanceParameters = ResonanceParameters(),
-                       enabled: Bool = true) -> [Float] {
+    static func render(
+        _ signal: [Float], _ p: ResonanceParameters = ResonanceParameters(),
+        enabled: Bool = true
+    ) -> [Float] {
         let engine = processor(p)
         engine.setEnabled(enabled)
         var result = signal
@@ -85,8 +93,10 @@ internal enum ResonanceCheckFixture {
         guard lhs.count == rhs.count else { return false }
         return (from * 2..<lhs.count).allSatisfy { lhs[$0].bitPattern == rhs[$0].bitPattern }
     }
-    static func reduction(_ output: [Float], source: Double, frequency: Double = 1000,
-                          db: Double = -15, window: Double = 0.1) -> Double {
+    static func reduction(
+        _ output: [Float], source: Double, frequency: Double = 1000,
+        db: Double = -15, window: Double = 0.1
+    ) -> Double {
         db - amplitude(output, frames(source) + latency, frames(window), frequency)
     }
 }

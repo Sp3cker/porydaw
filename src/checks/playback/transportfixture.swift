@@ -9,12 +9,17 @@ internal let playbackCheckDivision: UInt16 = 24
 internal let playbackCheckSamplesPerTick: UInt64 = 1_000
 
 internal func playbackCheckSilentTimeline(program: UInt8 = 0, finalTick: Tick = 4800) -> PlaybackTimeline {
-    let file = MidiFile(division: 24, chunks: [
-        MidiChunk(events: [.meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20])], endTick: 4800),
-        MidiChunk(events: [.channel(tick: 0, status: 0xC0, data0: program),
-                           .channel(tick: finalTick, status: 0xB0, data0: 7, data1: 100)], endTick: 4800),
-        MidiChunk(events: [.channel(tick: 0, status: 0xC1, data0: 1)], endTick: 4800),
-    ])
+    let file = MidiFile(
+        division: 24,
+        chunks: [
+            MidiChunk(events: [.meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20])], endTick: 4800),
+            MidiChunk(
+                events: [
+                    .channel(tick: 0, status: 0xC0, data0: program),
+                    .channel(tick: finalTick, status: 0xB0, data0: 7, data1: 100),
+                ], endTick: 4800),
+            MidiChunk(events: [.channel(tick: 0, status: 0xC1, data0: 1)], endTick: 4800),
+        ])
     return PlaybackTimeline.build(file: file, sampleRate: playbackCheckSampleRate)
 }
 
@@ -31,7 +36,8 @@ internal final class PlaybackCheckEngine {
 
     init?() {
         guard let handle = pdc_playback_engine_create(playbackCheckSampleRate),
-              let rawPointer = pdc_playback_engine_pointer(handle) else {
+            let rawPointer = pdc_playback_engine_pointer(handle)
+        else {
             return nil
         }
         self.handle = handle
@@ -47,12 +53,10 @@ internal func playbackCheckPcmKeys(_ engine: UnsafeMutablePointer<M4AEngine>) ->
     var keys: [UInt8] = []
     withUnsafePointer(to: &engine.pointee.pcmChannels) { storage in
         let channels = UnsafeRawPointer(storage).assumingMemoryBound(to: M4APCMChannel.self)
-        let count = MemoryLayout.size(ofValue: storage.pointee) /
-            MemoryLayout<M4APCMChannel>.stride
+        let count = MemoryLayout.size(ofValue: storage.pointee) / MemoryLayout<M4APCMChannel>.stride
         for index in 0..<count {
             let channel = channels[index]
-            if channel.status & playbackCheckChannelOn != 0 &&
-                channel.status & playbackCheckChannelStop == 0 {
+            if channel.status & playbackCheckChannelOn != 0 && channel.status & playbackCheckChannelStop == 0 {
                 keys.append(channel.midiKey)
             }
         }
@@ -60,9 +64,11 @@ internal func playbackCheckPcmKeys(_ engine: UnsafeMutablePointer<M4AEngine>) ->
     return keys.sorted()
 }
 
-internal func renderPlaybackCheckFrames(_ sequencer: inout Sequencer,
-                          engine: UnsafeMutablePointer<M4AEngine>,
-                          timeline: PlaybackTimeline, frames: UInt64) {
+internal func renderPlaybackCheckFrames(
+    _ sequencer: inout Sequencer,
+    engine: UnsafeMutablePointer<M4AEngine>,
+    timeline: PlaybackTimeline, frames: UInt64
+) {
     var rendered: UInt64 = 0
     var left = [Float](repeating: 0, count: 512)
     var right = [Float](repeating: 0, count: 512)
@@ -94,23 +100,24 @@ internal func playbackCheckReplacementSong(replacement: Bool, program: UInt8 = 0
             $0.element.tick == $1.element.tick ? $0.offset < $1.offset : $0.element.tick < $1.element.tick
         }.map(\.element)
     }
-    return MidiFile(division: playbackCheckDivision, chunks: [
-        MidiChunk(events: [.meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20])],
-                  endTick: 48),
-        MidiChunk(events: events, endTick: 48),
-    ])
+    return MidiFile(
+        division: playbackCheckDivision,
+        chunks: [
+            MidiChunk(
+                events: [.meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20])],
+                endTick: 48),
+            MidiChunk(events: events, endTick: 48),
+        ])
 }
 
 internal func playbackCheckCgbKeys(_ engine: UnsafeMutablePointer<M4AEngine>) -> [UInt8] {
     var keys: [UInt8] = []
     withUnsafePointer(to: &engine.pointee.cgbChannels) { storage in
         let channels = UnsafeRawPointer(storage).assumingMemoryBound(to: M4ACGBChannel.self)
-        let count = MemoryLayout.size(ofValue: storage.pointee) /
-            MemoryLayout<M4ACGBChannel>.stride
+        let count = MemoryLayout.size(ofValue: storage.pointee) / MemoryLayout<M4ACGBChannel>.stride
         for index in 0..<count {
             let channel = channels[index]
-            if channel.status & playbackCheckChannelOn != 0 &&
-                channel.status & playbackCheckChannelStop == 0 {
+            if channel.status & playbackCheckChannelOn != 0 && channel.status & playbackCheckChannelStop == 0 {
                 keys.append(channel.midiKey)
             }
         }

@@ -15,8 +15,10 @@ public struct AutomationNodeDragTarget: Equatable, Sendable {
     public let maximum: Int
     public var current: AutomationLanePoint
 
-    public init(parameter: AutomationParameter, source: AutomationSourcePoint,
-                minimum: Int, maximum: Int) {
+    public init(
+        parameter: AutomationParameter, source: AutomationSourcePoint,
+        minimum: Int, maximum: Int
+    ) {
         self.parameter = parameter
         self.source = source
         self.minimum = minimum
@@ -46,62 +48,81 @@ public struct AutomationNodeDragTransaction: Sendable {
     public let selectionDrag: Bool
     public var drag: AutomationPointDrag
 
-    public init(facts: AutomationFrozenFacts, targets: [AutomationNodeDragTarget],
-                grabbedPoint: Int, selectionDrag: Bool, press: (x: Double, y: Double),
-                deleteOnStationary: Bool) {
+    public init(
+        facts: AutomationFrozenFacts, targets: [AutomationNodeDragTarget],
+        grabbedPoint: Int, selectionDrag: Bool, press: (x: Double, y: Double),
+        deleteOnStationary: Bool
+    ) {
         self.facts = facts
         laneFacts = [facts]
         self.targets = targets
         self.grabbedPoint = targets.indices.contains(grabbedPoint) ? grabbedPoint : 0
         self.selectionDrag = selectionDrag
-        drag = AutomationPointDrag(pressX: press.x, pressY: press.y,
-                                   deleteOnStationary: deleteOnStationary)
+        drag = AutomationPointDrag(
+            pressX: press.x, pressY: press.y,
+            deleteOnStationary: deleteOnStationary)
     }
 
     /// One grabbed node with nothing selected behind it.
-    public static func single(facts: AutomationFrozenFacts, source: AutomationSourcePoint,
-                              press: (x: Double, y: Double),
-                              deleteOnStationary: Bool) -> AutomationNodeDragTransaction {
+    public static func single(
+        facts: AutomationFrozenFacts, source: AutomationSourcePoint,
+        press: (x: Double, y: Double),
+        deleteOnStationary: Bool
+    ) -> AutomationNodeDragTransaction {
         AutomationNodeDragTransaction(
             facts: facts,
-            targets: [AutomationNodeDragTarget(parameter: facts.parameter, source: source,
-                                               minimum: facts.metadata.minimum,
-                                               maximum: facts.metadata.maximum)],
+            targets: [
+                AutomationNodeDragTarget(
+                    parameter: facts.parameter, source: source,
+                    minimum: facts.metadata.minimum,
+                    maximum: facts.metadata.maximum)
+            ],
             grabbedPoint: 0, selectionDrag: false, press: press,
             deleteOnStationary: deleteOnStationary)
     }
 
     /// `collectSelectedNodeDrags`: every point of the covered parameters inside
     /// the frozen selection joins the shared delta, in catalog order.
-    public static func selection(facts: AutomationFrozenFacts,
-                                 lanes: [(parameter: AutomationParameter,
-                                          snapshot: AutomationLaneSnapshot)],
-                                 grabbed: (parameter: AutomationParameter,
-                                           source: AutomationSourcePoint),
-                                 range: TimeRange, press: (x: Double, y: Double),
-                                 deleteOnStationary: Bool) -> AutomationNodeDragTransaction? {
+    public static func selection(
+        facts: AutomationFrozenFacts,
+        lanes: [(
+            parameter: AutomationParameter,
+            snapshot: AutomationLaneSnapshot
+        )],
+        grabbed: (
+            parameter: AutomationParameter,
+            source: AutomationSourcePoint
+        ),
+        range: TimeRange, press: (x: Double, y: Double),
+        deleteOnStationary: Bool
+    ) -> AutomationNodeDragTransaction? {
         var targets: [AutomationNodeDragTarget] = []
         var grabbedPoint: Int?
         for lane in lanes {
             let metadata = AutomationParameterMetadata(parameter: lane.parameter)
             for source in lane.snapshot.sources where range.contains(source.tick) {
                 if lane.parameter == grabbed.parameter, source.tick == grabbed.source.tick,
-                   source.identity == grabbed.source.identity {
+                    source.identity == grabbed.source.identity
+                {
                     grabbedPoint = targets.count
                 }
-                targets.append(AutomationNodeDragTarget(parameter: lane.parameter, source: source,
-                                                        minimum: metadata.minimum,
-                                                        maximum: metadata.maximum))
+                targets.append(
+                    AutomationNodeDragTarget(
+                        parameter: lane.parameter, source: source,
+                        minimum: metadata.minimum,
+                        maximum: metadata.maximum))
             }
         }
         guard let grabbedPoint, !targets.isEmpty else { return nil }
-        var transaction = AutomationNodeDragTransaction(facts: facts, targets: targets,
-                                             grabbedPoint: grabbedPoint, selectionDrag: true,
-                                             press: press, deleteOnStationary: deleteOnStationary)
+        var transaction = AutomationNodeDragTransaction(
+            facts: facts, targets: targets,
+            grabbedPoint: grabbedPoint, selectionDrag: true,
+            press: press, deleteOnStationary: deleteOnStationary)
         transaction.laneFacts = lanes.map {
-            AutomationFrozenFacts(parameter: $0.parameter, snapshot: $0.snapshot,
-                                  camera: facts.camera, selection: facts.selection,
-                                  modifiers: facts.modifiers, songEndTick: facts.songEndTick)
+            AutomationFrozenFacts(
+                parameter: $0.parameter, snapshot: $0.snapshot,
+                camera: facts.camera, selection: facts.selection,
+                modifiers: facts.modifiers, songEndTick: facts.songEndTick)
         }
         return transaction
     }
@@ -113,10 +134,13 @@ public struct AutomationNodeDragTransaction: Sendable {
     /// `NodeDragGesture::update`: a reset restores the grabbed node's source, a
     /// drag maps the pointer and applies the axis lock, and every participant
     /// follows the grabbed node's delta.
-    public mutating func update(_ update: AutomationPointDrag.Update,
-                                mapped: AutomationLanePoint) -> AutomationAxisLock {
+    public mutating func update(
+        _ update: AutomationPointDrag.Update,
+        mapped: AutomationLanePoint
+    ) -> AutomationAxisLock {
         guard let grabbedTarget = grabbed, update.phase != .pending else { return .none }
-        let current = update.phase == .reset
+        let current =
+            update.phase == .reset
             ? grabbedTarget.original
             : update.axisLock.applied(original: grabbedTarget.original, to: mapped)
         applyDrag(grabCurrent: current)
@@ -133,15 +157,17 @@ public struct AutomationNodeDragTransaction: Sendable {
         for index in targets.indices {
             targets[index].current = AutomationLanePoint(
                 tick: TimeDefaults.shiftTickClamped(targets[index].original.tick, by: dTick),
-                value: min(max(targets[index].original.value + dValue, targets[index].minimum),
-                           targets[index].maximum))
+                value: min(
+                    max(targets[index].original.value + dValue, targets[index].minimum),
+                    targets[index].maximum))
         }
     }
 
     public func finish() -> AutomationNodeDragFinish {
         guard let grabbedTarget = grabbed else {
-            return AutomationNodeDragFinish(release: .noOp, changed: false, dTick: 0,
-                                            selectionDrag: selectionDrag)
+            return AutomationNodeDragFinish(
+                release: .noOp, changed: false, dTick: 0,
+                selectionDrag: selectionDrag)
         }
         return AutomationNodeDragFinish(
             release: drag.release(),
@@ -154,8 +180,9 @@ public struct AutomationNodeDragTransaction: Sendable {
     /// previewed destination.
     public var moves: [AutomationNodeMove] {
         targets.map {
-            AutomationNodeMove(parameter: $0.parameter, sourceTick: $0.source.tick,
-                               tick: $0.current.tick, value: $0.current.value)
+            AutomationNodeMove(
+                parameter: $0.parameter, sourceTick: $0.source.tick,
+                tick: $0.current.tick, value: $0.current.value)
         }
     }
 
@@ -169,23 +196,30 @@ public struct AutomationPhantomDragTransaction: Sendable {
     public private(set) var target: AutomationNodeDragTarget
     public var drag: AutomationPointDrag
 
-    public init(facts: AutomationFrozenFacts, source: AutomationSourcePoint,
-                press: (x: Double, y: Double)) {
+    public init(
+        facts: AutomationFrozenFacts, source: AutomationSourcePoint,
+        press: (x: Double, y: Double)
+    ) {
         self.facts = facts
-        target = AutomationNodeDragTarget(parameter: facts.parameter, source: source,
-                                          minimum: facts.metadata.minimum,
-                                          maximum: facts.metadata.maximum)
+        target = AutomationNodeDragTarget(
+            parameter: facts.parameter, source: source,
+            minimum: facts.metadata.minimum,
+            maximum: facts.metadata.maximum)
         drag = AutomationPointDrag(pressX: press.x, pressY: press.y, deleteOnStationary: false)
     }
 
     /// A reset restores the source value; a drag clamps the mapped value at the
     /// original tick. The axis is always the value axis.
-    public mutating func update(_ update: AutomationPointDrag.Update,
-                                mappedValue: Int) -> AutomationAxisLock {
+    public mutating func update(
+        _ update: AutomationPointDrag.Update,
+        mappedValue: Int
+    ) -> AutomationAxisLock {
         guard update.phase != .pending else { return .none }
-        target.current = update.phase == .dragging
-            ? AutomationLanePoint(tick: target.original.tick,
-                                  value: min(max(mappedValue, target.minimum), target.maximum))
+        target.current =
+            update.phase == .dragging
+            ? AutomationLanePoint(
+                tick: target.original.tick,
+                value: min(max(mappedValue, target.minimum), target.maximum))
             : target.original
         return .value
     }
@@ -200,8 +234,9 @@ public struct AutomationPhantomDragTransaction: Sendable {
 
     public var move: AutomationNodeMove? {
         guard let target = finish() else { return nil }
-        return AutomationNodeMove(parameter: target.parameter, sourceTick: target.source.tick,
-                                  tick: target.original.tick, value: target.current.value)
+        return AutomationNodeMove(
+            parameter: target.parameter, sourceTick: target.source.tick,
+            tick: target.original.tick, value: target.current.value)
     }
 }
 
@@ -217,9 +252,11 @@ public struct AutomationPromptTransaction: Equatable, Sendable {
     public let forExistingNode: Bool
     public let prompt: AutomationValuePrompt
 
-    public init?(facts: AutomationFrozenFacts, anchor: AutomationLanePoint,
-                source: AutomationSourcePoint?, forExistingNode: Bool,
-                metadata: AutomationParameterMetadata) {
+    public init?(
+        facts: AutomationFrozenFacts, anchor: AutomationLanePoint,
+        source: AutomationSourcePoint?, forExistingNode: Bool,
+        metadata: AutomationParameterMetadata
+    ) {
         guard anchor.tick <= facts.songEndTick else { return nil }
         self.facts = facts
         self.anchor = anchor
@@ -239,15 +276,18 @@ public struct AutomationPromptTransaction: Equatable, Sendable {
         let stored = storedValue(displayed: displayed)
         if forExistingNode {
             guard stored != anchor.value else { return .none }
-            return .move(AutomationNodeMove(parameter: facts.parameter, sourceTick: anchor.tick,
-                                            tick: anchor.tick, value: stored))
+            return .move(
+                AutomationNodeMove(
+                    parameter: facts.parameter, sourceTick: anchor.tick,
+                    tick: anchor.tick, value: stored))
         }
         let duplicate = facts.snapshot.occurrences(at: anchor.tick)
             .contains { $0.value == stored }
         guard !duplicate else { return .none }
-        return .insert(AutomationLaneReplacement.pointRange(
-            facts.freeze(), begin: anchor.tick, end: anchor.tick,
-            points: [AutomationLanePoint(tick: anchor.tick, value: stored)]))
+        return .insert(
+            AutomationLaneReplacement.pointRange(
+                facts.freeze(), begin: anchor.tick, end: anchor.tick,
+                points: [AutomationLanePoint(tick: anchor.tick, value: stored)]))
     }
 }
 

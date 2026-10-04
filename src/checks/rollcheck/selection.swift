@@ -4,7 +4,6 @@ import Foundation
 import PorydawCore
 import QtBridge
 
-
 @MainActor
 func runSelectionChecks(_ report: CheckReport, session: DocumentSession, fixtureRoot: String) {
     checkSelectionBandSweep(report, session: session)
@@ -44,13 +43,13 @@ func visibleRow(_ grid: PianoGrid, height: Double = 320) -> (pitch: Int, y: Doub
     for pitch in 24...115 {
         let row = camera.projection.row(forPitch: pitch)
         guard row != PitchProjection.hiddenRow,
-              let top = camera.projection.rowTop(
+            let top = camera.projection.rowTop(
                 row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
                 dpr: grid.devicePixelRatio),
-              let bottom = camera.projection.rowBottom(
+            let bottom = camera.projection.rowBottom(
                 row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
                 dpr: grid.devicePixelRatio),
-              top >= 0 && bottom <= height
+            top >= 0 && bottom <= height
         else { continue }
         return (pitch, (top + bottom) / 2)
     }
@@ -58,21 +57,25 @@ func visibleRow(_ grid: PianoGrid, height: Double = 320) -> (pitch: Int, y: Doub
 }
 
 @MainActor
-func velocityPairSeed(session: DocumentSession, grid: PianoGrid)
+func velocityPairSeed(
+    session: DocumentSession, grid: PianoGrid
+)
     -> (ids: [NoteID], rects: [SceneRect])?
 {
     let tick = 240
     session.mutateCamera { camera in
-        _ = camera.setHScroll(max(
-            camera.snapshot.minHScroll, camera.contentX(tick: Double(tick)) - 100))
+        _ = camera.setHScroll(
+            max(
+                camera.snapshot.minHScroll, camera.contentX(tick: Double(tick)) - 100))
     }
     grid.refreshCamera()
     let duration = 4 * grid.snapTicks
     var pitches: [Int] = []
     for y in [160.0, 200.0, 120.0, 240.0, 80.0] {
-        guard let candidate = session.camera.projection.pitch(
-            atY: y, keyHeight: session.camera.snapshot.keyHeight,
-            scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
+        guard
+            let candidate = session.camera.projection.pitch(
+                atY: y, keyHeight: session.camera.snapshot.keyHeight,
+                scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
         else { continue }
         let clash = session.document.notes(in: grid.trackIndex).contains {
             Int($0.pitch) == candidate && Int($0.tick) < tick + 2 * duration
@@ -83,10 +86,12 @@ func velocityPairSeed(session: DocumentSession, grid: PianoGrid)
     }
     guard pitches.count == 2,
         let added = try? session.document.addNotes([
-            NewNote(track: grid.trackIndex, tick: Tick(tick), pitch: UInt8(pitches[0]),
-                    duration: Tick(duration), velocity: 93),
-            NewNote(track: grid.trackIndex, tick: Tick(tick), pitch: UInt8(pitches[1]),
-                    duration: Tick(duration), velocity: 100),
+            NewNote(
+                track: grid.trackIndex, tick: Tick(tick), pitch: UInt8(pitches[0]),
+                duration: Tick(duration), velocity: 93),
+            NewNote(
+                track: grid.trackIndex, tick: Tick(tick), pitch: UInt8(pitches[1]),
+                duration: Tick(duration), velocity: 100),
         ]), added.count == 2
     else { return nil }
     grid.refreshFromSession()
@@ -103,7 +108,8 @@ func selectionRestore(
     let document = session.document
     var steps = 0
     while document.history.currentIdentity != baseline.identity
-        && document.history.canUndo && steps < 32 {
+        && document.history.canUndo && steps < 32
+    {
         guard document.history.undoDocument() else {
             report.fail(id, "a non-document history entry interrupted the selection undo drain")
             return
@@ -112,11 +118,11 @@ func selectionRestore(
     }
     do {
         let restored = try document.captureSave()
-        report.expect(document.history.currentIdentity == baseline.identity
-            && restored.bytes == baseline.bytes, cppID: id, message: message)
+        report.expect(
+            document.history.currentIdentity == baseline.identity
+                && restored.bytes == baseline.bytes, cppID: id, message: message)
     } catch {
         report.fail(id, "could not encode the restored MIDI document: \(error)")
     }
     session.setSelectedNotes(selection)
 }
-

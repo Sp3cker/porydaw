@@ -10,12 +10,15 @@ struct VoicegroupCreateError: Error, LocalizedError {
 extension VoicegroupSource {
     /// Writes `sound/voicegroups/<name>.inc`, copying the source file's voice
     /// lines or the 128-line dummy template, in the siblings' header style.
-    public static func createVoicegroup(projectRoot: String, name: String,
-                                        copyFromFile: String, copySectionLabel: String) throws {
+    public static func createVoicegroup(
+        projectRoot: String, name: String,
+        copyFromFile: String, copySectionLabel: String
+    ) throws {
         let dir = projectRoot + "/sound/voicegroups"
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: dir, isDirectory: &isDir),
-              isDir.boolValue else {
+            isDir.boolValue
+        else {
             throw VoicegroupCreateError(message: "sound/voicegroups/ does not exist in this project.")
         }
         let target = dir + "/" + name + ".inc"
@@ -105,7 +108,8 @@ fileprivate func siblingHeaderStyle(dir: String) -> (labelStyle: Bool, alignBefo
     }
     let siblings = entries.filter { $0.hasSuffix(".inc") }.sorted()
     guard let first = siblings.first,
-          let bytes = try? ProjectFileStore.read(dir + "/" + first) else {
+        let bytes = try? ProjectFileStore.read(dir + "/" + first)
+    else {
         return (false, false, false)
     }
     let crlf = bytes.range(of: Data([13, 10])) != nil
@@ -147,7 +151,8 @@ fileprivate func copiedVoicegroupLines(_ content: Data, copySectionLabel: String
         body.append(Data(line))
     }
     while let last = body.last,
-          String(decoding: last, as: UTF8.self).trimmingCharacters(in: .whitespaces).isEmpty {
+        String(decoding: last, as: UTF8.self).trimmingCharacters(in: .whitespaces).isEmpty
+    {
         body.removeLast()
     }
     return body

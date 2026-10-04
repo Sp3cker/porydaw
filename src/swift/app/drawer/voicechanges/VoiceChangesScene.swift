@@ -127,18 +127,22 @@ struct VoiceChangesSceneSnapshot {
     /// palette and the two typography handles are the page's `@MainActor`
     /// objects, which is why they are parameters here and not input fields.
     @MainActor
-    static func build(_ input: VoiceChangesSceneInput, palette: GridPalette,
-                      title: VoiceCaption?, caption: VoiceCaption?) -> Self {
+    static func build(
+        _ input: VoiceChangesSceneInput, palette: GridPalette,
+        title: VoiceCaption?, caption: VoiceCaption?
+    ) -> Self {
         Self(
             trackAvailable: input.trackAvailable,
             entries: input.entries,
-            gutterTexts: VoiceChangesScene.gutterTexts(input, palette: palette, title: title,
-                                                      caption: caption),
-            readout: VoiceChangesScene.readout(firstProgram: input.firstProgram,
-                                               tick: input.contextTick, points: input.points,
-                                               slots: input.slots, pad: input.pad,
-                                               plotWidth: input.plotWidth,
-                                               plotHeight: input.plotHeight))
+            gutterTexts: VoiceChangesScene.gutterTexts(
+                input, palette: palette, title: title,
+                caption: caption),
+            readout: VoiceChangesScene.readout(
+                firstProgram: input.firstProgram,
+                tick: input.contextTick, points: input.points,
+                slots: input.slots, pad: input.pad,
+                plotWidth: input.plotWidth,
+                plotHeight: input.plotHeight))
     }
 }
 
@@ -152,16 +156,19 @@ enum VoiceChangesScene {
     // MARK: Plot queries
 
     /// The shared camera's plot-local x for one tick.
-    static func xForTick(_ tick: Tick, camera: EditorCamera,
-                         devicePixelRatio: Double) -> Double {
+    static func xForTick(
+        _ tick: Tick, camera: EditorCamera,
+        devicePixelRatio: Double
+    ) -> Double {
         camera.viewX(tick: Double(tick), dpr: devicePixelRatio)
     }
 
-
     /// The nearest marker whose drawn x is inside the font-relative hit radius;
     /// ties keep the later point, exactly as the legacy scan does.
-    static func markerHit(at x: Double, points: [LanePoint], camera: EditorCamera,
-                          devicePixelRatio: Double, hitRadius: Double) -> LanePoint? {
+    static func markerHit(
+        at x: Double, points: [LanePoint], camera: EditorCamera,
+        devicePixelRatio: Double, hitRadius: Double
+    ) -> LanePoint? {
         VoiceLanePolicy.marker(
             at: x, points: points,
             displayX: { xForTick($0, camera: camera, devicePixelRatio: devicePixelRatio) },
@@ -172,15 +179,19 @@ enum VoiceChangesScene {
 
     /// The tick the voice context resolves at: the shared playhead while the
     /// transport plays, the edit cursor while it is stopped.
-    static func effectiveContextTick(playing: Bool, presentedTick: Tick,
-                                     editCursor: Tick) -> Tick {
+    static func effectiveContextTick(
+        playing: Bool, presentedTick: Tick,
+        editCursor: Tick
+    ) -> Tick {
         playing ? presentedTick : editCursor
     }
 
     /// The context identity of one tick: the slot it resolves to, and the
     /// playing state it resolved under.
-    static func contextKey(tick: Tick, firstProgram: Int, points: [LanePoint],
-                           playing: Bool) -> VoiceContextKey {
+    static func contextKey(
+        tick: Tick, firstProgram: Int, points: [LanePoint],
+        playing: Bool
+    ) -> VoiceContextKey {
         let slot = VoiceLanePolicy.slot(firstProgram: firstProgram, tick: tick, points: points)
         return VoiceContextKey(slot: slot, playing: playing)
     }
@@ -196,59 +207,65 @@ enum VoiceChangesScene {
 
     /// The projected marker entries: the document's own entries with the frozen
     /// drag's preview applied.
-    static func projectedEntries(_ entries: [VoiceProjectionEntry],
-                                 interaction: VoiceInteractionSnapshot) -> [VoiceProjectionEntry] {
+    static func projectedEntries(
+        _ entries: [VoiceProjectionEntry],
+        interaction: VoiceInteractionSnapshot
+    ) -> [VoiceProjectionEntry] {
         VoiceChangesProjection.moving(entries, drag: interaction.drag)
     }
 
     /// The gutter's two lines, vertically centered: the title, then the change
     /// summary the legacy band publishes while a track is presented.
-    static func gutterTexts(_ input: VoiceChangesSceneInput, palette: GridPalette,
-                            title: VoiceCaption?, caption: VoiceCaption?) -> [SceneText] {
-        VoiceChangesProjection.gutterTexts(VoiceGutterProjectionInput(
-            plotHeight: input.plotHeight,
-            plotOrigin: input.plotOrigin,
+    static func gutterTexts(
+        _ input: VoiceChangesSceneInput, palette: GridPalette,
+        title: VoiceCaption?, caption: VoiceCaption?
+    ) -> [SceneText] {
+        VoiceChangesProjection.gutterTexts(
+            VoiceGutterProjectionInput(
+                plotHeight: input.plotHeight,
+                plotOrigin: input.plotOrigin,
                 pad: input.pad,
-            title: input.gutterTitle,
-            summary: input.trackAvailable ? countSummary(input.points) : nil,
-            titleFont: title?.fontMap ?? [:],
-            captionFont: caption?.fontMap ?? [:],
-            titleHeight: title?.height ?? 0,
-            captionHeight: caption?.height ?? 0,
-            titleColor: palette.primaryText,
-            captionColor: palette.secondaryText))
+                title: input.gutterTitle,
+                summary: input.trackAvailable ? countSummary(input.points) : nil,
+                titleFont: title?.fontMap ?? [:],
+                captionFont: caption?.fontMap ?? [:],
+                titleHeight: title?.height ?? 0,
+                captionHeight: caption?.height ?? 0,
+                titleColor: palette.primaryText,
+                captionColor: palette.secondaryText))
     }
-
-
 
     /// The marker projection: one marker rule and one label box per entry, with
     /// the legacy elision, stair placement and offscreen rule. The page's own
     /// geometry lookup arrives here and every unaffected row reuses it.
-    static func markers(_ input: VoiceChangesSceneInput, palette: GridPalette,
-                        caption: VoiceCaption?,
-                        reusing previous: [String: VoiceMarkerHandle] = [:])
+    static func markers(
+        _ input: VoiceChangesSceneInput, palette: GridPalette,
+        caption: VoiceCaption?,
+        reusing previous: [String: VoiceMarkerHandle] = [:]
+    )
         -> [VoiceMarkerHandle]
     {
         guard input.plotWidth > 0, input.plotHeight > 0, input.trackAvailable, let caption
         else { return [] }
-        return VoiceChangesProjection.markers(VoiceMarkerProjectionInput(
-            entries: input.entries,
-            slots: input.slots,
-            plotWidth: input.plotWidth,
-            plotHeight: input.plotHeight,
-            pad: input.pad,
-            gap: input.gap,
-            stairLimit: input.stairLimit,
-            physicalPixel: physicalPixel(input.devicePixelRatio),
-            labelColor: palette.primaryText,
-            lineColor: PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(input.track)],
-            selectedIdentity: input.interaction.drag?.identity
-                ?? (input.interaction.selectedIdentity.isEmpty
-                    ? nil : input.interaction.selectedIdentity),
-            hoverIdentity: input.interaction.hoverIdentity,
-            previewIdentity: input.interaction.drag?.active == true
-                ? input.interaction.drag?.identity : nil,
-            caption: caption,
+        return VoiceChangesProjection.markers(
+            VoiceMarkerProjectionInput(
+                entries: input.entries,
+                slots: input.slots,
+                plotWidth: input.plotWidth,
+                plotHeight: input.plotHeight,
+                pad: input.pad,
+                gap: input.gap,
+                stairLimit: input.stairLimit,
+                physicalPixel: physicalPixel(input.devicePixelRatio),
+                labelColor: palette.primaryText,
+                lineColor: PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(input.track)],
+                selectedIdentity: input.interaction.drag?.identity
+                    ?? (input.interaction.selectedIdentity.isEmpty
+                        ? nil : input.interaction.selectedIdentity),
+                hoverIdentity: input.interaction.hoverIdentity,
+                previewIdentity: input.interaction.drag?.active == true
+                    ? input.interaction.drag?.identity : nil,
+                caption: caption,
                 displayX: {
                     input.camera.contentTickX(
                         tick: Double($0), dpr: input.devicePixelRatio)
@@ -258,17 +275,20 @@ enum VoiceChangesScene {
 
     /// The readout: the label of the program the effective context tick resolves
     /// to, right-aligned in the plot.
-    static func readout(firstProgram: Int, tick: Tick, points: [LanePoint],
-                        slots: [BankSlotView], pad: Double, plotWidth: Double,
-                        plotHeight: Double) -> VoiceReadoutValues {
-        VoiceReadoutValues(VoiceChangesProjection.readout(
-            firstProgram: firstProgram,
-            tick: tick,
-            points: points,
-            slots: slots,
-            pad: pad,
-            plotWidth: plotWidth,
-            plotHeight: plotHeight))
+    static func readout(
+        firstProgram: Int, tick: Tick, points: [LanePoint],
+        slots: [BankSlotView], pad: Double, plotWidth: Double,
+        plotHeight: Double
+    ) -> VoiceReadoutValues {
+        VoiceReadoutValues(
+            VoiceChangesProjection.readout(
+                firstProgram: firstProgram,
+                tick: tick,
+                points: points,
+                slots: slots,
+                pad: pad,
+                plotWidth: plotWidth,
+                plotHeight: plotHeight))
     }
 
     // MARK: Summary
@@ -276,7 +296,8 @@ enum VoiceChangesScene {
     /// The change summary the legacy band publishes while a track is presented.
     private static func countSummary(_ points: [LanePoint]) -> String {
         let count = points.count
-        return count == 0 ? "no voice set · double-click to add"
+        return count == 0
+            ? "no voice set · double-click to add"
             : "\(count) change(s) · double-click to edit"
     }
 }

@@ -58,8 +58,10 @@ extension VoiceChangesPage {
     /// menu is open dismisses it and starts nothing: the dismissal never
     /// retargets the captured occurrence.
     @discardableResult
-    func dispatchPointerPress(x: Double, y: Double, surface: Int, button: Int,
-                              modifiers: Int) -> Bool {
+    func dispatchPointerPress(
+        x: Double, y: Double, surface: Int, button: Int,
+        modifiers: Int
+    ) -> Bool {
         guard session != nil, let input = VoiceInputSurface(rawValue: surface) else { return false }
         if picker != nil || menu != nil {
             dismissModal()
@@ -128,8 +130,9 @@ extension VoiceChangesPage {
             drag = live
             cursorKind = 3
             if changed {
-                projectMarkers(markerEntries(),
-                               reuseGeometry: true)
+                projectMarkers(
+                    markerEntries(),
+                    reuseGeometry: true)
                 publishTransient()
             }
             return true
@@ -205,13 +208,12 @@ extension VoiceChangesPage {
         selectPickerProgram(pickerCache.program(at: index))
     }
 
-
     func dispatchPressAndHoldPickerRow(index: Int) {
         guard let live = picker, let session,
-              VoiceChangesTransactions.isCurrent(
-                  live.target, revision: session.document.revision,
-                  track: session.selectedTrack ?? -1),
-              pickerRowSnapshots.indices.contains(index)
+            VoiceChangesTransactions.isCurrent(
+                live.target, revision: session.document.revision,
+                track: session.selectedTrack ?? -1),
+            pickerRowSnapshots.indices.contains(index)
         else {
             releasePickerAudition()
             return
@@ -258,13 +260,13 @@ extension VoiceChangesPage {
         let slotCount = slotViews().count
         cancelPicker()
         guard let session, let track = currentTrack(session),
-              let mutation = VoiceChangesTransactions.picker(
-                  target,
-                  program: selected,
-                  slotCount: slotCount,
-                  revision: session.document.revision,
-                  track: track,
-                  points: session.projectionCache.lanePoints(track: track, lane: .voice))
+            let mutation = VoiceChangesTransactions.picker(
+                target,
+                program: selected,
+                slotCount: slotCount,
+                revision: session.document.revision,
+                track: track,
+                points: session.projectionCache.lanePoints(track: track, lane: .voice))
         else { return false }
         commit(mutation)
         return true
@@ -294,20 +296,21 @@ extension VoiceChangesPage {
         guard let live = menu else { return false }
         dismissVoiceMenu()
         guard let session, let track = currentTrack(session),
-              VoiceChangesTransactions.isCurrent(
-                  live.target, revision: session.document.revision, track: track)
+            VoiceChangesTransactions.isCurrent(
+                live.target, revision: session.document.revision, track: track)
         else { return false }
         switch actionId {
         case VoiceChangesPagePolicy.changeVoiceAction,
-             VoiceChangesPagePolicy.insertVoiceChangeAction:
+            VoiceChangesPagePolicy.insertVoiceChangeAction:
             openPicker(live.target)
             return true
         case VoiceChangesPagePolicy.deleteMarkerAction:
-            guard let mutation = VoiceChangesTransactions.delete(
-                live.target,
-                revision: session.document.revision,
-                track: track,
-                points: session.projectionCache.lanePoints(track: track, lane: .voice))
+            guard
+                let mutation = VoiceChangesTransactions.delete(
+                    live.target,
+                    revision: session.document.revision,
+                    track: track,
+                    points: session.projectionCache.lanePoints(track: track, lane: .voice))
             else { return false }
             commit(mutation)
             return true
@@ -346,7 +349,8 @@ extension VoiceChangesPage {
 
     func currentTrack(_ session: DocumentSession) -> Int? {
         guard let track = session.selectedTrack, track >= 0,
-              track < session.timeline.tracks.count else { return nil }
+            track < session.timeline.tracks.count
+        else { return nil }
         return track
     }
 
@@ -371,13 +375,19 @@ extension VoiceChangesPage {
         case let .move(track, occurrence, tick):
             session.document.moveLanePoints(
                 track: track, lane: .voice,
-                moves: [LanePointMove(point: occurrence.point, tick: tick,
-                                      value: occurrence.value)])
+                moves: [
+                    LanePointMove(
+                        point: occurrence.point, tick: tick,
+                        value: occurrence.value)
+                ])
         case let .replace(track, occurrence, value):
             session.document.moveLanePoints(
                 track: track, lane: .voice,
-                moves: [LanePointMove(point: occurrence.point, tick: occurrence.tick,
-                                      value: value)])
+                moves: [
+                    LanePointMove(
+                        point: occurrence.point, tick: occurrence.tick,
+                        value: value)
+                ])
         case let .insert(track, tick, value):
             session.document.writeLane(
                 track: track, lane: .voice, from: tick, through: tick,
@@ -391,9 +401,11 @@ extension VoiceChangesPage {
     private func openPicker(_ target: VoiceTarget) {
         releasePickerAudition()
         let filter = ""
-        let initial = target.occurrence?.value
-            ?? VoiceLanePolicy.slot(firstProgram: firstProgram(), tick: target.tick,
-                                    points: lanePoints())
+        let initial =
+            target.occurrence?.value
+            ?? VoiceLanePolicy.slot(
+                firstProgram: firstProgram(), tick: target.tick,
+                points: lanePoints())
         pickerCache.resolve(filter: filter)
         picker = VoiceChangesTransactions.openPicker(
             target: target, filter: filter, program: pickerCache.initialProgram(initial))
@@ -429,10 +441,12 @@ extension VoiceChangesPage {
         if let hit {
             let identity = VoiceOccurrence(hit).text
             let lineX = xForTick(hit.tick)
-            let rect = VoiceMarkerHandle.rect(lineX + pad, 0, max(0, plotWidth - lineX),
-                                              plotHeight)
-            guard hoverIdentity != identity || hoverVisible || !hoverText.isEmpty
-                || !VoiceMarkerHandle.rectMatches(hoverLabelRect, rect)
+            let rect = VoiceMarkerHandle.rect(
+                lineX + pad, 0, max(0, plotWidth - lineX),
+                plotHeight)
+            guard
+                hoverIdentity != identity || hoverVisible || !hoverText.isEmpty
+                    || !VoiceMarkerHandle.rectMatches(hoverLabelRect, rect)
             else { return }
             hoverIdentity = identity
             hoverTick = Double(hit.tick)
@@ -443,8 +457,9 @@ extension VoiceChangesPage {
             return
         }
         let tick = snapTick(at: x)
-        let slot = VoiceLanePolicy.slot(firstProgram: firstProgram(), tick: tick,
-                                        points: lanePoints())
+        let slot = VoiceLanePolicy.slot(
+            firstProgram: firstProgram(), tick: tick,
+            points: lanePoints())
         let label = VoiceLanePolicy.hoverLabel(contextLabel(at: slot))
         guard !label.isEmpty else {
             clearHover()
@@ -454,9 +469,11 @@ extension VoiceChangesPage {
         hoverIdentity = nil
         hoverTick = Double(tick)
         setPublished(hoverText, label) { hoverText = $0 }
-        setPublishedRect(&hoverLabelRect,
-                         VoiceMarkerHandle.rect(lineX + pad, 0, max(0, plotWidth - lineX),
-                                                plotHeight))
+        setPublishedRect(
+            &hoverLabelRect,
+            VoiceMarkerHandle.rect(
+                lineX + pad, 0, max(0, plotWidth - lineX),
+                plotHeight))
         setPublished(hoverVisible, true) { hoverVisible = $0 }
         publishMarkerHover()
     }

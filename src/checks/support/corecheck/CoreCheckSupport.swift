@@ -1,10 +1,10 @@
 import Foundation
 import PorydawCoreCheckNative
 
-public typealias PdcCheckCallback = @convention(c) (
-    UnsafeMutableRawPointer?, Int32, UnsafePointer<CChar>?, UnsafePointer<CChar>?
-) -> Void
-
+public typealias PdcCheckCallback =
+    @convention(c) (
+        UnsafeMutableRawPointer?, Int32, UnsafePointer<CChar>?, UnsafePointer<CChar>?
+    ) -> Void
 
 /// Same-thread synchronous handoff of a CheckReport into MainActor-isolated
 /// suites; see pdcSuiteRun.
@@ -56,8 +56,10 @@ struct CheckReport {
         }
     }
 
-    func expectEqual<T: Equatable>(expected: T, actual: T, cppID: String,
-                                    what: String) {
+    func expectEqual<T: Equatable>(
+        expected: T, actual: T, cppID: String,
+        what: String
+    ) {
         if expected == actual {
             pass(cppID, row: what)
         } else {
@@ -124,8 +126,10 @@ enum CheckEnvironment {
 }
 
 @_cdecl("pdc_suite_run")
-public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
-                        _ context: UnsafeMutableRawPointer?) {
+public func pdcSuiteRun(
+    _ suite: UInt32, _ callback: PdcCheckCallback?,
+    _ context: UnsafeMutableRawPointer?
+) {
     let report = CheckReport(callback: callback, context: context)
     switch suite {
     case 1:

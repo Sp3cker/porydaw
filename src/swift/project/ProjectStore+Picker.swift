@@ -3,8 +3,9 @@ import PorydawProjectNative
 
 /// A detached audio preview; no pointer into the project loader escapes its worker.
 public enum PickerSound: Sendable {
-    case sample(bytes: [Int8], frequency: UInt32, loopStart: UInt32,
-                looped: Bool, toneKey: UInt8, envelope: (UInt8, UInt8, UInt8, UInt8)?)
+    case sample(
+        bytes: [Int8], frequency: UInt32, loopStart: UInt32,
+        looped: Bool, toneKey: UInt8, envelope: (UInt8, UInt8, UInt8, UInt8)?)
     case wave(bytes: [UInt8], envelope: (UInt8, UInt8, UInt8, UInt8)?)
 }
 
@@ -38,7 +39,8 @@ extension ProjectStore {
         info.reserveCapacity(cache.direct.count)
         for (index, symbol) in cache.direct.enumerated() {
             guard index < Int(set.count), let wave = set.waves[index],
-                  wave.pointee.data != nil, wave.pointee.size > 0 else { continue }
+                wave.pointee.data != nil, wave.pointee.size > 0
+            else { continue }
             let rateHz = Int(wave.pointee.freq / 1024)
             guard rateHz > 0 else { continue }
             info[symbol] = PickerSampleInfo(
@@ -59,17 +61,20 @@ extension ProjectStore {
         switch kind {
         case "sample":
             guard let index = cache.direct.firstIndex(of: symbol),
-                  index < Int(set.raw.pointee.count),
-                  let wave = set.raw.pointee.waves[index] else { return nil }
+                index < Int(set.raw.pointee.count),
+                let wave = set.raw.pointee.waves[index]
+            else { return nil }
             return Self.sampleSound(wave)
         case "wave":
             guard let index = cache.waves.firstIndex(of: symbol),
-                  index < Int(set.raw.pointee.progWaveCount),
-                  let wave = set.raw.pointee.progWaves[index] else { return nil }
+                index < Int(set.raw.pointee.progWaveCount),
+                let wave = set.raw.pointee.progWaves[index]
+            else { return nil }
             return Self.waveSound(wave)
         case "keysplit":
             guard let index = cache.keysplits.firstIndex(where: { $0.symbol == symbol }),
-                  index < Int(set.raw.pointee.keysplitCount) else { return nil }
+                index < Int(set.raw.pointee.keysplitCount)
+            else { return nil }
             let split = set.raw.pointee.keysplits[index]
             guard let table = split.table, let group = split.subGroup else { return nil }
             let subIndex = Int(table[60])
@@ -96,11 +101,14 @@ extension ProjectStore {
         let direct = VoicegroupSource.directSoundSymbols(projectRoot)
         let waves = VoicegroupSource.progWaveSymbols(projectRoot)
         let keysplits = VoicegroupSource.keysplitInstruments(projectRoot)
-        guard let set = projectContext.loadSamples(
-            direct: direct, wave: waves, keysplit: keysplits.map(\.symbol),
-            tables: keysplits.map(\.table)) else { return nil }
-        let cache = PickerSampleCache(set: set, direct: direct, waves: waves,
-                                      keysplits: keysplits)
+        guard
+            let set = projectContext.loadSamples(
+                direct: direct, wave: waves, keysplit: keysplits.map(\.symbol),
+                tables: keysplits.map(\.table))
+        else { return nil }
+        let cache = PickerSampleCache(
+            set: set, direct: direct, waves: waves,
+            keysplits: keysplits)
         pickerSamples = cache
         return cache
     }
@@ -110,11 +118,13 @@ extension ProjectStore {
         envelope: (UInt8, UInt8, UInt8, UInt8)? = nil
     ) -> PickerSound? {
         guard let data = wave.pointee.data, wave.pointee.size > 0,
-              let size = Int(exactly: wave.pointee.size) else { return nil }
-        return .sample(bytes: Array(UnsafeBufferPointer(start: data, count: size)),
-                       frequency: wave.pointee.freq, loopStart: wave.pointee.loopStart,
-                       looped: wave.pointee.status & 0x4000 != 0,
-                       toneKey: toneKey, envelope: envelope)
+            let size = Int(exactly: wave.pointee.size)
+        else { return nil }
+        return .sample(
+            bytes: Array(UnsafeBufferPointer(start: data, count: size)),
+            frequency: wave.pointee.freq, loopStart: wave.pointee.loopStart,
+            looped: wave.pointee.status & 0x4000 != 0,
+            toneKey: toneKey, envelope: envelope)
     }
 
     private static func waveSound(

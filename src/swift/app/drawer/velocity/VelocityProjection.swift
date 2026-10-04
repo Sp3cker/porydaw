@@ -18,8 +18,10 @@ struct VelocityProjection: Sendable {
     var devicePixelRatio: Double
     var axis: VelocityAxisModel
 
-    init(camera: EditorCamera?, geometry: VelocityNodeGeometry, devicePixelRatio: Double,
-         axis: VelocityAxisModel) {
+    init(
+        camera: EditorCamera?, geometry: VelocityNodeGeometry, devicePixelRatio: Double,
+        axis: VelocityAxisModel
+    ) {
         self.camera = camera
         self.geometry = geometry
         self.devicePixelRatio = devicePixelRatio
@@ -55,8 +57,10 @@ struct VelocityProjection: Sendable {
     /// selected handle beats an unselected one, then the nearer hit, then the
     /// later row of the passed set.
     @MainActor
-    func hitTest(x: Double, y: Double, includeStems: Bool,
-                 handles: [VelocityHandle]) -> NoteID? {
+    func hitTest(
+        x: Double, y: Double, includeStems: Bool,
+        handles: [VelocityHandle]
+    ) -> NoteID? {
         // Pointers address published handle coordinates, which are
         // scroll-stable, so they compare directly against the stable handle
         // rows with no scroll shift.
@@ -72,12 +76,14 @@ struct VelocityProjection: Sendable {
             let dy = handle.y - y
             let distance = dx * dx + dy * dy
             let circleHit = distance <= radius * radius
-            let stemHit = includeStems
+            let stemHit =
+                includeStems
                 && x >= handle.x - geometry.durationLineHorizontalSlop
                 && x <= handle.endX + geometry.durationLineHorizontalSlop
                 && abs(y - handle.y) <= geometry.durationLineVerticalRadius
             if circleHit || stemHit {
-                let better = best == nil
+                let better =
+                    best == nil
                     || (circleHit && !bestCircle)
                     || (circleHit == bestCircle && handle.selected && !bestSelected)
                     || (circleHit == bestCircle && handle.selected == bestSelected

@@ -176,10 +176,12 @@ public enum ShellAppearance {
         palette.gridLineBeat = relativeAlpha(grid, 160)
         palette.gridLineBeatFine = relativeAlpha(grid, 200)
         palette.rowLine = relativeAlpha(grid, 50)
-        palette.preRollMask = PaletteMath.hex(PaletteMath.mixTowardOklab(
-            PaletteMath.oklab(r: roll.r, g: roll.g, b: roll.b), gridLab, 0.15))
-        palette.rulerPreRollMask = PaletteMath.hex(PaletteMath.mixTowardOklab(
-            PaletteMath.oklab(r: chrome.r, g: chrome.g, b: chrome.b), gridLab, 0.15))
+        palette.preRollMask = PaletteMath.hex(
+            PaletteMath.mixTowardOklab(
+                PaletteMath.oklab(r: roll.r, g: roll.g, b: roll.b), gridLab, 0.15))
+        palette.rulerPreRollMask = PaletteMath.hex(
+            PaletteMath.mixTowardOklab(
+                PaletteMath.oklab(r: chrome.r, g: chrome.g, b: chrome.b), gridLab, 0.15))
         palette.noteVelocityZero = colors.disabledText
         palette.implicitSignature = colors.secondary
         palette.rulerDetailText = colors.secondary
@@ -200,8 +202,9 @@ public enum ShellAppearance {
 
     private static func relativeAlpha(_ hex: String, _ fraction: Int) -> String {
         let color = PaletteMath.channels(hex)
-        return PaletteMath.hex(r: color.r, g: color.g, b: color.b,
-                               a: (color.a * fraction + 127) / 255)
+        return PaletteMath.hex(
+            r: color.r, g: color.g, b: color.b,
+            a: (color.a * fraction + 127) / 255)
     }
 
     private static func gridColor(_ grid: String, background: String, contrast: Int) -> String {
@@ -213,17 +216,20 @@ public enum ShellAppearance {
         }
         if contrast < 50 {
             let weight = Double(contrast) / 50
-            return PaletteMath.hex(r: mix(original.r, backdrop.r, weight),
-                                   g: mix(original.g, backdrop.g, weight),
-                                   b: mix(original.b, backdrop.b, weight),
-                                   a: (original.a * contrast + 25) / 50)
+            return PaletteMath.hex(
+                r: mix(original.r, backdrop.r, weight),
+                g: mix(original.g, backdrop.g, weight),
+                b: mix(original.b, backdrop.b, weight),
+                a: (original.a * contrast + 25) / 50)
         }
-        let endpoint = PaletteMath.relativeLuminance(r: original.r, g: original.g, b: original.b)
-            <= PaletteMath.relativeLuminance(r: backdrop.r, g: backdrop.g, b: backdrop.b) ? 0 : 255
+        let endpoint =
+            PaletteMath.relativeLuminance(r: original.r, g: original.g, b: original.b)
+                <= PaletteMath.relativeLuminance(r: backdrop.r, g: backdrop.g, b: backdrop.b) ? 0 : 255
         let weight = Double(contrast - 50) / 50
-        return PaletteMath.hex(r: mix(endpoint, original.r, weight),
-                               g: mix(endpoint, original.g, weight),
-                               b: mix(endpoint, original.b, weight),
-                               a: original.a + ((255 - original.a) * (contrast - 50) + 25) / 50)
+        return PaletteMath.hex(
+            r: mix(endpoint, original.r, weight),
+            g: mix(endpoint, original.g, weight),
+            b: mix(endpoint, original.b, weight),
+            a: original.a + ((255 - original.a) * (contrast - 50) + 25) / 50)
     }
 }

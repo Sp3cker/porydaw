@@ -42,34 +42,42 @@ private func adoptionAndPairing(_ report: CheckReport) {
     file.chunks[0].events.append(.meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20]))
     let document = SongDocument(file: file)
     let notes = document.notes(in: 0)
-    report.expectEqual(expected: 3, actual: notes.count,
-                       cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
-                       what: "all note-ons projected")
-    report.expectEqual(expected: [Tick(8), Tick(6), Tick(0)], actual: notes.map(\.duration),
-                       cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
-                       what: "first following matching ends pair exactly")
-    report.expect(notes[2].isUnterminated,
-                  cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
-                  message: "unterminated note is preserved")
-    report.expect(notes.allSatisfy { $0.id.isAssigned } && Set(notes.map(\.id)).count == 3,
-                  cppID: "noteidcheck/NoteIdentityCheckTest::adoptedSmfRemintsForeignIds",
-                  message: "adoption remints unique document identities")
-    report.expect(!document.rawChunks.flatMap(\.events).contains(where: { $0.metaType == 0x51 }),
-                  cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
-                  message: "typed tempo is removed from raw chunks")
-    report.expectEqual(expected: [TempoPoint(tick: 0, microsecondsPerQuarterNote: 500_000)],
-                       actual: document.state.tempo,
-                       cppID: "editcheck/EditCheckTest::formatZeroGlobals",
-                       what: "valid conductor tempo becomes typed state")
+    report.expectEqual(
+        expected: 3, actual: notes.count,
+        cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
+        what: "all note-ons projected")
+    report.expectEqual(
+        expected: [Tick(8), Tick(6), Tick(0)], actual: notes.map(\.duration),
+        cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
+        what: "first following matching ends pair exactly")
+    report.expect(
+        notes[2].isUnterminated,
+        cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
+        message: "unterminated note is preserved")
+    report.expect(
+        notes.allSatisfy { $0.id.isAssigned } && Set(notes.map(\.id)).count == 3,
+        cppID: "noteidcheck/NoteIdentityCheckTest::adoptedSmfRemintsForeignIds",
+        message: "adoption remints unique document identities")
+    report.expect(
+        !document.rawChunks.flatMap(\.events).contains(where: { $0.metaType == 0x51 }),
+        cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
+        message: "typed tempo is removed from raw chunks")
+    report.expectEqual(
+        expected: [TempoPoint(tick: 0, microsecondsPerQuarterNote: 500_000)],
+        actual: document.state.tempo,
+        cppID: "editcheck/EditCheckTest::formatZeroGlobals",
+        what: "valid conductor tempo becomes typed state")
 
     let decoded = (try? file.encoded()).flatMap { try? MidiFile.decode($0) }
-    report.expect(decoded?.chunks.flatMap(\.events).filter(\.isNoteOn)
-        .allSatisfy { !($0.noteID?.isAssigned ?? false) } == true,
+    report.expect(
+        decoded?.chunks.flatMap(\.events).filter(\.isNoteOn)
+            .allSatisfy { !($0.noteID?.isAssigned ?? false) } == true,
         cppID: "noteidcheck/NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned",
         message: "serialized MIDI carries no note identity")
-    report.expect(document.state.file.chunks[1].events[3].status == 0x80,
-                  cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
-                  message: "note-end status is retained during adoption")
+    report.expect(
+        document.state.file.chunks[1].events[3].status == 0x80,
+        cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
+        message: "note-end status is retained during adoption")
 }
 
 @MainActor
@@ -89,18 +97,24 @@ private func lifecycleFixturePairing(_ report: CheckReport) {
         }
         let notes = document.notes(in: track)
         report.expectEqual(expected: 4, actual: notes.count, cppID: cppID, what: "fixture pairing count")
-        report.expectEqual(expected: [2, 4, 6, 8], actual: notes.map(\.onIndex), cppID: cppID,
-                           what: "fixture note-on event indices")
-        report.expectEqual(expected: [3, 5, 7, 9], actual: notes.map(\.endIndex), cppID: cppID,
-                           what: "fixture note-end event indices")
-        report.expectEqual(expected: [Tick(24), 24, 0, 24], actual: notes.map(\.duration), cppID: cppID,
-                           what: "fixture note durations")
-        report.expectEqual(expected: [UInt8(0x3C), 0x3C, 0x3E, 0x40], actual: notes.map(\.pitch),
-                           cppID: cppID, what: "fixture note keys")
-        report.expectEqual(expected: [UInt8(0x64), 0x6E, 0x50, 0x60], actual: notes.map(\.velocity),
-                           cppID: cppID, what: "fixture note velocities")
-        report.expectEqual(expected: [UInt8](repeating: 0, count: 4), actual: notes.map(\.channel),
-                           cppID: cppID, what: "fixture note channels")
+        report.expectEqual(
+            expected: [2, 4, 6, 8], actual: notes.map(\.onIndex), cppID: cppID,
+            what: "fixture note-on event indices")
+        report.expectEqual(
+            expected: [3, 5, 7, 9], actual: notes.map(\.endIndex), cppID: cppID,
+            what: "fixture note-end event indices")
+        report.expectEqual(
+            expected: [Tick(24), 24, 0, 24], actual: notes.map(\.duration), cppID: cppID,
+            what: "fixture note durations")
+        report.expectEqual(
+            expected: [UInt8(0x3C), 0x3C, 0x3E, 0x40], actual: notes.map(\.pitch),
+            cppID: cppID, what: "fixture note keys")
+        report.expectEqual(
+            expected: [UInt8(0x64), 0x6E, 0x50, 0x60], actual: notes.map(\.velocity),
+            cppID: cppID, what: "fixture note velocities")
+        report.expectEqual(
+            expected: [UInt8](repeating: 0, count: 4), actual: notes.map(\.channel),
+            cppID: cppID, what: "fixture note channels")
     } catch {
         report.fail(cppID, "fixture decode or reparse failed: \(error)")
     }
@@ -123,10 +137,12 @@ private func interleavedFixturePairing(_ report: CheckReport) {
         .channel(tick: 39, status: 0x80, data0: 0x83, data1: 0),
     ]
     do {
-        let file = MidiFile(division: 24, chunks: [
-            MidiChunk(endTick: 40),
-            MidiChunk(events: events, endTick: 40),
-        ])
+        let file = MidiFile(
+            division: 24,
+            chunks: [
+                MidiChunk(endTick: 40),
+                MidiChunk(events: events, endTick: 40),
+            ])
         let document = SongDocument(file: try MidiFile.decode(file.encoded()))
         guard let track = document.engineTracks.tracks.firstIndex(where: { $0.midiChunk == 1 })
         else {
@@ -135,20 +151,27 @@ private func interleavedFixturePairing(_ report: CheckReport) {
         }
         let notes = document.notes(in: track)
         report.expectEqual(expected: 5, actual: notes.count, cppID: cppID, what: "interleaved pairing count")
-        report.expectEqual(expected: [0, 1, 5, 7, 8], actual: notes.map(\.onIndex), cppID: cppID,
-                           what: "interleaved note-on indices")
-        report.expectEqual(expected: [6, 3, 6, nil, 10], actual: notes.map(\.endIndex), cppID: cppID,
-                           what: "interleaved note-end indices")
-        report.expectEqual(expected: [Tick(20), 5, 10, 0, 8], actual: notes.map(\.duration), cppID: cppID,
-                           what: "interleaved durations")
-        report.expectEqual(expected: [UInt8(60), 62, 60, 64, 0x83], actual: notes.map(\.pitch),
-                           cppID: cppID, what: "interleaved keys")
-        report.expectEqual(expected: [UInt8(100), 80, 90, 50, 60], actual: notes.map(\.velocity),
-                           cppID: cppID, what: "interleaved velocities")
-        report.expectEqual(expected: [UInt8](repeating: 0, count: 5), actual: notes.map(\.channel),
-                           cppID: cppID, what: "interleaved channels")
-        report.expectEqual(expected: [false, false, false, true, false], actual: notes.map(\.isUnterminated),
-                           cppID: cppID, what: "unterminated note visibility")
+        report.expectEqual(
+            expected: [0, 1, 5, 7, 8], actual: notes.map(\.onIndex), cppID: cppID,
+            what: "interleaved note-on indices")
+        report.expectEqual(
+            expected: [6, 3, 6, nil, 10], actual: notes.map(\.endIndex), cppID: cppID,
+            what: "interleaved note-end indices")
+        report.expectEqual(
+            expected: [Tick(20), 5, 10, 0, 8], actual: notes.map(\.duration), cppID: cppID,
+            what: "interleaved durations")
+        report.expectEqual(
+            expected: [UInt8(60), 62, 60, 64, 0x83], actual: notes.map(\.pitch),
+            cppID: cppID, what: "interleaved keys")
+        report.expectEqual(
+            expected: [UInt8(100), 80, 90, 50, 60], actual: notes.map(\.velocity),
+            cppID: cppID, what: "interleaved velocities")
+        report.expectEqual(
+            expected: [UInt8](repeating: 0, count: 5), actual: notes.map(\.channel),
+            cppID: cppID, what: "interleaved channels")
+        report.expectEqual(
+            expected: [false, false, false, true, false], actual: notes.map(\.isUnterminated),
+            cppID: cppID, what: "unterminated note visibility")
     } catch {
         report.fail(cppID, "interleaved fixture encode or reparse failed: \(error)")
     }
@@ -163,28 +186,36 @@ private func unterminatedPairingLargeFixture(_ report: CheckReport) {
     for index in 0..<noteCount {
         events.append(.channel(tick: Tick(index), status: 0x90, data0: 60, data1: 100))
     }
-    let file = MidiFile(division: 24, chunks: [
-        MidiChunk(endTick: Tick(noteCount)),
-        MidiChunk(events: events, endTick: Tick(noteCount)),
-    ])
+    let file = MidiFile(
+        division: 24,
+        chunks: [
+            MidiChunk(endTick: Tick(noteCount)),
+            MidiChunk(events: events, endTick: Tick(noteCount)),
+        ])
     do {
         let parsed = try MidiFile.decode(file.encoded())
         let pairingStart = ProcessInfo.processInfo.systemUptime
         let document = SongDocument(file: parsed)
         let notes = document.notes(in: 0)
         let pairingMilliseconds = (ProcessInfo.processInfo.systemUptime - pairingStart) * 1_000
-        report.expectEqual(expected: noteCount, actual: notes.count, cppID: cppID,
-                           what: "unterminated note pairing count")
-        report.expectEqual(expected: 0, actual: notes.first?.onIndex, cppID: cppID,
-                           what: "first unterminated note index")
-        report.expectEqual(expected: noteCount - 1, actual: notes.last?.onIndex, cppID: cppID,
-                           what: "last unterminated note index")
-        report.expectEqual(expected: true, actual: notes.first?.isUnterminated, cppID: cppID,
-                           what: "first note has no end")
-        report.expectEqual(expected: true, actual: notes.last?.isUnterminated, cppID: cppID,
-                           what: "last note has no end")
-        report.expect(pairingMilliseconds <= 10_000, cppID: cppID,
-                      message: "pairing 300000 unterminated note-ons stays within 10000 ms")
+        report.expectEqual(
+            expected: noteCount, actual: notes.count, cppID: cppID,
+            what: "unterminated note pairing count")
+        report.expectEqual(
+            expected: 0, actual: notes.first?.onIndex, cppID: cppID,
+            what: "first unterminated note index")
+        report.expectEqual(
+            expected: noteCount - 1, actual: notes.last?.onIndex, cppID: cppID,
+            what: "last unterminated note index")
+        report.expectEqual(
+            expected: true, actual: notes.first?.isUnterminated, cppID: cppID,
+            what: "first note has no end")
+        report.expectEqual(
+            expected: true, actual: notes.last?.isUnterminated, cppID: cppID,
+            what: "last note has no end")
+        report.expect(
+            pairingMilliseconds <= 10_000, cppID: cppID,
+            message: "pairing 300000 unterminated note-ons stays within 10000 ms")
         if pairingMilliseconds > 10_000 {
             report.fail(cppID, "pairing 300000 unterminated note-ons took \(pairingMilliseconds) ms")
         }
@@ -195,180 +226,217 @@ private func unterminatedPairingLargeFixture(_ report: CheckReport) {
 
 @MainActor
 private func insertionAndCollision(_ report: CheckReport) {
-    let document = SongDocument(file: baseFile(events: [
-        .channel(tick: 0, status: 0x90, data0: 60, data1: 91),
-        .channel(tick: 100, status: 0x90, data0: 60, data1: 0),
-    ]))
+    let document = SongDocument(
+        file: baseFile(events: [
+            .channel(tick: 0, status: 0x90, data0: 60, data1: 91),
+            .channel(tick: 100, status: 0x90, data0: 60, data1: 0),
+        ]))
     let initialRevision = document.revision
     do {
         _ = try document.addNotes([
             NewNote(track: 0, tick: 10, pitch: 60, duration: 20, velocity: 80),
             NewNote(track: 0, tick: 20, pitch: 60, duration: 20, velocity: 90),
         ])
-        report.fail("editcheck/EditCheckTest::noteBatchCollisionRejects",
-                    "overlapping edited participants were accepted")
+        report.fail(
+            "editcheck/EditCheckTest::noteBatchCollisionRejects",
+            "overlapping edited participants were accepted")
     } catch NoteEditError.conflictingEditedNotes {
-        report.expectEqual(expected: initialRevision, actual: document.revision,
-                           cppID: "editcheck/EditCheckTest::noteBatchCollisionRejects",
-                           what: "rejected batch leaves revision unchanged")
+        report.expectEqual(
+            expected: initialRevision, actual: document.revision,
+            cppID: "editcheck/EditCheckTest::noteBatchCollisionRejects",
+            what: "rejected batch leaves revision unchanged")
     } catch {
-        report.fail("editcheck/EditCheckTest::noteBatchCollisionRejects",
-                    "unexpected rejection: \(error)")
+        report.fail(
+            "editcheck/EditCheckTest::noteBatchCollisionRejects",
+            "unexpected rejection: \(error)")
     }
 
     let duplicateIDs = try? document.addNotes([
         NewNote(track: 0, tick: 110, pitch: 61, duration: 10, velocity: 81),
         NewNote(track: 0, tick: 110, pitch: 61, duration: 10, velocity: 81),
     ])
-    report.expect(duplicateIDs?.count == 2 && duplicateIDs?[0] != duplicateIDs?[1],
-                  cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
-                  message: "exact duplicate insertions receive distinct identities")
-    report.expectEqual(expected: 2, actual: document.notes(in: 0).filter {
-        $0.tick == 110 && $0.pitch == 61 && $0.duration == 10
-    }.count, cppID: "editcheck/EditCheckTest::noteEditingBatch",
-    what: "exact duplicate insertions remain distinct notes")
+    report.expect(
+        duplicateIDs?.count == 2 && duplicateIDs?[0] != duplicateIDs?[1],
+        cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
+        message: "exact duplicate insertions receive distinct identities")
+    report.expectEqual(
+        expected: 2,
+        actual: document.notes(in: 0).filter {
+            $0.tick == 110 && $0.pitch == 61 && $0.duration == 10
+        }.count, cppID: "editcheck/EditCheckTest::noteEditingBatch",
+        what: "exact duplicate insertions remain distinct notes")
 
     let revisionBeforeNoOp = document.revision
     document.deleteNotes([])
-    report.expectEqual(expected: revisionBeforeNoOp, actual: document.revision,
-                       cppID: "editcheck/EditCheckTest::documentPublicationNetZero",
-                       what: "empty delete is a no-op")
+    report.expectEqual(
+        expected: revisionBeforeNoOp, actual: document.revision,
+        cppID: "editcheck/EditCheckTest::documentPublicationNetZero",
+        what: "empty delete is a no-op")
 }
 
 @MainActor
 private func movementAndResize(_ report: CheckReport) {
     let document = SongDocument(file: baseFile(events: []))
-    guard let ids = try? document.addNotes([
-        NewNote(track: 0, tick: 0, pitch: 70, duration: 4, velocity: 100),
-        NewNote(track: 0, tick: 0, pitch: 69, duration: 2, velocity: 90),
-        NewNote(track: 0, tick: 20, pitch: 64, duration: 10, velocity: 80),
-    ]), ids.count == 3 else {
+    guard
+        let ids = try? document.addNotes([
+            NewNote(track: 0, tick: 0, pitch: 70, duration: 4, velocity: 100),
+            NewNote(track: 0, tick: 0, pitch: 69, duration: 2, velocity: 90),
+            NewNote(track: 0, tick: 20, pitch: 64, duration: 10, velocity: 80),
+        ]), ids.count == 3
+    else {
         report.fail(noteEditsBasicID, "fixture insertion failed")
         return
     }
     document.moveNotes([ids[1]], byTicks: 0, byKeys: 1)
     let trimmed = document.notes(in: 0).first { $0.id == ids[0] }
-    report.expectEqual(expected: Tick(2), actual: trimmed?.tick,
-                       cppID: "editcheck/EditCheckTest::noteMoveOverlap",
-                       what: "edited note wins and stationary tail survives")
-    report.expectEqual(expected: Tick(2), actual: trimmed?.duration,
-                       cppID: "editcheck/EditCheckTest::noteMoveCollision",
-                       what: "tail trim preserves surviving duration")
-    report.expectEqual(expected: ids[0], actual: trimmed?.id,
-                       cppID: "editcheck/EditCheckTest::documentCrossingIdentities",
-                       what: "stationary trim preserves identity")
+    report.expectEqual(
+        expected: Tick(2), actual: trimmed?.tick,
+        cppID: "editcheck/EditCheckTest::noteMoveOverlap",
+        what: "edited note wins and stationary tail survives")
+    report.expectEqual(
+        expected: Tick(2), actual: trimmed?.duration,
+        cppID: "editcheck/EditCheckTest::noteMoveCollision",
+        what: "tail trim preserves surviving duration")
+    report.expectEqual(
+        expected: ids[0], actual: trimmed?.id,
+        cppID: "editcheck/EditCheckTest::documentCrossingIdentities",
+        what: "stationary trim preserves identity")
     document.history.undoDocument()
-    report.expectEqual(expected: Tick(0), actual: document.note(ids[0])?.tick,
-                       cppID: "editcheck/EditCheckTest::noteMoveBatch",
-                       what: "one undo restores collision victim")
+    report.expectEqual(
+        expected: Tick(0), actual: document.note(ids[0])?.tick,
+        cppID: "editcheck/EditCheckTest::noteMoveBatch",
+        what: "one undo restores collision victim")
     document.history.redoDocument()
-    report.expectEqual(expected: UInt8(70), actual: document.note(ids[1])?.pitch,
-                       cppID: "editcheck/EditCheckTest::noteMoveMerge",
-                       what: "redo restores edited pitch")
+    report.expectEqual(
+        expected: UInt8(70), actual: document.note(ids[1])?.pitch,
+        cppID: "editcheck/EditCheckTest::noteMoveMerge",
+        what: "redo restores edited pitch")
 
     let rejectionDocument = SongDocument(file: baseFile(events: []))
-    guard let rejectionIDs = try? rejectionDocument.addNotes([
-        NewNote(track: 0, tick: 20, pitch: 1, duration: 20, velocity: 81),
-        NewNote(track: 0, tick: 20, pitch: 2, duration: 20, velocity: 92),
-    ]) else {
-        report.fail("editcheck/EditCheckTest::noteMoveCollisionRejects",
-                    "rejection fixture insertion failed")
+    guard
+        let rejectionIDs = try? rejectionDocument.addNotes([
+            NewNote(track: 0, tick: 20, pitch: 1, duration: 20, velocity: 81),
+            NewNote(track: 0, tick: 20, pitch: 2, duration: 20, velocity: 92),
+        ])
+    else {
+        report.fail(
+            "editcheck/EditCheckTest::noteMoveCollisionRejects",
+            "rejection fixture insertion failed")
         return
     }
     let revision = rejectionDocument.revision
     rejectionDocument.moveNotes(rejectionIDs, toPitches: [3, 3])
-    report.expectEqual(expected: revision, actual: rejectionDocument.revision,
-                       cppID: "editcheck/EditCheckTest::noteMoveCollisionRejects",
-                       what: "conflicting pitch destinations reject whole operation")
+    report.expectEqual(
+        expected: revision, actual: rejectionDocument.revision,
+        cppID: "editcheck/EditCheckTest::noteMoveCollisionRejects",
+        what: "conflicting pitch destinations reject whole operation")
     rejectionDocument.moveNotes([rejectionIDs[0]], byTicks: 0, byKeys: 0)
-    report.expectEqual(expected: revision, actual: rejectionDocument.revision,
-                       cppID: "editcheck/EditCheckTest::noteMoveRejects",
-                       what: "zero movement creates no entry")
+    report.expectEqual(
+        expected: revision, actual: rejectionDocument.revision,
+        cppID: "editcheck/EditCheckTest::noteMoveRejects",
+        what: "zero movement creates no entry")
 
     document.resizeNotes([ids[2]], edge: .leading, byTicks: 30)
-    report.expectEqual(expected: Tick(29), actual: document.note(ids[2])?.tick,
-                       cppID: noteEditsBasicID,
-                       what: "leading resize clamps to one tick")
-    report.expectEqual(expected: Tick(1), actual: document.note(ids[2])?.duration,
-                       cppID: "editcheck/EditCheckTest::noteResizeStopsAtNextSelectedStart",
-                       what: "resize enforces minimum duration")
+    report.expectEqual(
+        expected: Tick(29), actual: document.note(ids[2])?.tick,
+        cppID: noteEditsBasicID,
+        what: "leading resize clamps to one tick")
+    report.expectEqual(
+        expected: Tick(1), actual: document.note(ids[2])?.duration,
+        cppID: "editcheck/EditCheckTest::noteResizeStopsAtNextSelectedStart",
+        what: "resize enforces minimum duration")
     document.resizeNotes([ids[2]], edge: .leading, byTicks: -9)
-    report.expectEqual(expected: UInt64(30), actual: document.note(ids[2])?.endTick,
-                       cppID: noteEditsBasicID,
-                       what: "leading resize preserves note end")
+    report.expectEqual(
+        expected: UInt64(30), actual: document.note(ids[2])?.endTick,
+        cppID: noteEditsBasicID,
+        what: "leading resize preserves note end")
 
-    let unterminated = SongDocument(file: baseFile(events: [
-        .channel(tick: 5, status: 0x90, data0: 62, data1: 75),
-    ]))
+    let unterminated = SongDocument(
+        file: baseFile(events: [
+            .channel(tick: 5, status: 0x90, data0: 62, data1: 75)
+        ]))
     guard let unterminatedID = unterminated.notes(in: 0).first?.id else {
-        report.fail("smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
-                    "unterminated fixture was not projected")
+        report.fail(
+            "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
+            "unterminated fixture was not projected")
         return
     }
     unterminated.moveNotes([unterminatedID], byTicks: 3, byKeys: 2)
-    report.expect(unterminated.note(unterminatedID)?.isUnterminated == true,
-                  cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
-                  message: "moving an unterminated note does not invent an end")
+    report.expect(
+        unterminated.note(unterminatedID)?.isUnterminated == true,
+        cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
+        message: "moving an unterminated note does not invent an end")
 }
 
 @MainActor
 private func velocityEditing(_ report: CheckReport) {
     let document = SongDocument(file: baseFile(events: []))
-    guard let ids = try? document.addNotes([
-        NewNote(track: 0, tick: 0, pitch: 60, duration: 8, velocity: 100),
-        NewNote(track: 0, tick: 12, pitch: 62, duration: 8, velocity: 90),
-        NewNote(track: 0, tick: 24, pitch: 64, duration: 8, velocity: 0),
-    ]) else { return }
-    report.expectEqual(expected: UInt8(1), actual: document.note(ids[2])?.velocity,
-                       cppID: "editcheck/EditCheckTest::documentVelocityAtomic",
-                       what: "inserted velocity zero shares the domain floor")
+    guard
+        let ids = try? document.addNotes([
+            NewNote(track: 0, tick: 0, pitch: 60, duration: 8, velocity: 100),
+            NewNote(track: 0, tick: 12, pitch: 62, duration: 8, velocity: 90),
+            NewNote(track: 0, tick: 24, pitch: 64, duration: 8, velocity: 0),
+        ])
+    else { return }
+    report.expectEqual(
+        expected: UInt8(1), actual: document.note(ids[2])?.velocity,
+        cppID: "editcheck/EditCheckTest::documentVelocityAtomic",
+        what: "inserted velocity zero shares the domain floor")
     let revision = document.revision
-    let changed = document.setVelocities([
-        NoteVelocity(noteID: ids[0], velocity: 0),
-        NoteVelocity(noteID: ids[1], velocity: 200),
-        NoteVelocity(noteID: ids[0], velocity: 99),
-    ], expectedRevision: revision)
-    report.expect(changed == revision + 1 && document.note(ids[0])?.velocity == 99 &&
-        document.note(ids[1])?.velocity == 127,
+    let changed = document.setVelocities(
+        [
+            NoteVelocity(noteID: ids[0], velocity: 0),
+            NoteVelocity(noteID: ids[1], velocity: 200),
+            NoteVelocity(noteID: ids[0], velocity: 99),
+        ], expectedRevision: revision)
+    report.expect(
+        changed == revision + 1 && document.note(ids[0])?.velocity == 99 && document.note(ids[1])?.velocity == 127,
         cppID: "editcheck/EditCheckTest::documentVelocityAtomic",
         message: "batch velocity is atomic, clamped, and last-write-wins")
     let beforeStale = document.state
-    report.expect(document.setVelocities([NoteVelocity(noteID: ids[0], velocity: 20)],
-                                         expectedRevision: revision) == nil &&
-        document.state == beforeStale,
+    report.expect(
+        document.setVelocities(
+            [NoteVelocity(noteID: ids[0], velocity: 20)],
+            expectedRevision: revision) == nil && document.state == beforeStale,
         cppID: "editcheck/EditCheckTest::documentVelocityRejects",
         message: "stale velocity revision rejects without mutation")
     let beforeNudge = document.revision
     document.nudgeVelocities(ids, by: -200)
-    report.expect(document.note(ids[0])?.velocity == 1 && document.note(ids[1])?.velocity == 1,
-                  cppID: "velocity-model/VelocityModelTest::gestureClampedDeltaAndCancellation",
-                  message: "relative velocity clamps each note")
+    report.expect(
+        document.note(ids[0])?.velocity == 1 && document.note(ids[1])?.velocity == 1,
+        cppID: "velocity-model/VelocityModelTest::gestureClampedDeltaAndCancellation",
+        message: "relative velocity clamps each note")
     let beforeInvalid = document.revision
-    let invalid = document.setVelocities([
-        NoteVelocity(noteID: ids[0], velocity: 80),
-        NoteVelocity(noteID: NoteID(), velocity: 70),
-    ], expectedRevision: beforeInvalid)
-    report.expect(invalid == nil && document.revision == beforeInvalid,
-                  cppID: "velocity-model/VelocityModelTest::gestureAtomicity",
-                  message: "one invalid participant rejects the whole batch")
-    report.expectEqual(expected: beforeNudge + 1, actual: beforeInvalid,
-                       cppID: "velocity-model/VelocityModelTest::gestureCompletionAndDeltaFromOriginals",
-                       what: "one relative batch publishes one revision")
+    let invalid = document.setVelocities(
+        [
+            NoteVelocity(noteID: ids[0], velocity: 80),
+            NoteVelocity(noteID: NoteID(), velocity: 70),
+        ], expectedRevision: beforeInvalid)
+    report.expect(
+        invalid == nil && document.revision == beforeInvalid,
+        cppID: "velocity-model/VelocityModelTest::gestureAtomicity",
+        message: "one invalid participant rejects the whole batch")
+    report.expectEqual(
+        expected: beforeNudge + 1, actual: beforeInvalid,
+        cppID: "velocity-model/VelocityModelTest::gestureCompletionAndDeltaFromOriginals",
+        what: "one relative batch publishes one revision")
     document.history.undoDocument()
-    let restored = document.note(ids[0])?.velocity == 99 &&
-        document.note(ids[1])?.velocity == 127
+    let restored = document.note(ids[0])?.velocity == 99 && document.note(ids[1])?.velocity == 127
     document.history.redoDocument()
-    report.expect(restored && document.note(ids[0])?.velocity == 1,
-                  cppID: "velocity-model/VelocityModelTest::gestureLifecycle",
-                  message: "velocity batch participates in undo and redo")
+    report.expect(
+        restored && document.note(ids[0])?.velocity == 1,
+        cppID: "velocity-model/VelocityModelTest::gestureLifecycle",
+        message: "velocity batch participates in undo and redo")
 }
 @MainActor
 private func compatibilityRegressions(_ report: CheckReport) {
     let rejection = SongDocument(file: baseFile(events: []))
-    guard let selected = try? rejection.addNotes([
-        NewNote(track: 0, tick: 0, pitch: 60, duration: 4, velocity: 90),
-        NewNote(track: 0, tick: 0, pitch: 62, duration: 4, velocity: 91),
-    ]), selected.count == 2, let saved = try? rejection.captureSave() else { return }
+    guard
+        let selected = try? rejection.addNotes([
+            NewNote(track: 0, tick: 0, pitch: 60, duration: 4, velocity: 90),
+            NewNote(track: 0, tick: 0, pitch: 62, duration: 4, velocity: 91),
+        ]), selected.count == 2, let saved = try? rejection.captureSave()
+    else { return }
     rejection.didSave(saved)
     rejection.nudgeVelocities([selected[0]], by: 1)
     _ = rejection.history.undoDocument()
@@ -377,9 +445,9 @@ private func compatibilityRegressions(_ report: CheckReport) {
     let dirty = rejection.isDirty
     let redo = rejection.history.canRedo
     rejection.moveNotes(selected, toPitches: [60, 60])
-    report.expect(rejection.state == before && rejection.revision == revision &&
-        rejection.isDirty == dirty && rejection.history.canRedo == redo &&
-        Set(rejection.notes(in: 0).map(\.id)) == Set(selected),
+    report.expect(
+        rejection.state == before && rejection.revision == revision && rejection.isDirty == dirty
+            && rejection.history.canRedo == redo && Set(rejection.notes(in: 0).map(\.id)) == Set(selected),
         cppID: "editcheck/EditCheckTest::noteBatchCollisionRejects",
         message: "unchanged selected participant rejects collision without consuming redo")
 
@@ -387,10 +455,11 @@ private func compatibilityRegressions(_ report: CheckReport) {
         MidiEventPayload.channel(status: 0x80, data0: 64, data1: 55),
         MidiEventPayload.channel(status: 0x90, data0: 64, data1: 0),
     ] {
-        let exact = SongDocument(file: baseFile(events: [
-            MidiEvent(tick: 8, payload: .channel(status: 0x90, data0: 64, data1: 88)),
-            MidiEvent(tick: 16, payload: endPayload),
-        ]))
+        let exact = SongDocument(
+            file: baseFile(events: [
+                MidiEvent(tick: 8, payload: .channel(status: 0x90, data0: 64, data1: 88)),
+                MidiEvent(tick: 16, payload: endPayload),
+            ]))
         guard let id = exact.notes(in: 0).first?.id else { continue }
         let originalEnd = noteEndPayload(exact, id: id)
         exact.moveNotes([id], byTicks: 4, byKeys: 2)
@@ -399,35 +468,39 @@ private func compatibilityRegressions(_ report: CheckReport) {
         let undoneEnd = noteEndPayload(exact, id: id)
         _ = exact.history.redoDocument()
         let redoneEnd = noteEndPayload(exact, id: id)
-        report.expect(originalEnd == endPayload && movedEnd == shiftedEndPayload(endPayload, pitch: 66) &&
-            undoneEnd == endPayload && redoneEnd == shiftedEndPayload(endPayload, pitch: 66),
+        report.expect(
+            originalEnd == endPayload && movedEnd == shiftedEndPayload(endPayload, pitch: 66) && undoneEnd == endPayload
+                && redoneEnd == shiftedEndPayload(endPayload, pitch: 66),
             cppID: "editcheck/EditCheckTest::noteMoveBatch",
             message: "move and history preserve the original note-end form and release velocity")
     }
 
-    let resized = SongDocument(file: baseFile(events: [
-        .channel(tick: 8, status: 0x90, data0: 65, data1: 88),
-        .channel(tick: 16, status: 0x80, data0: 65, data1: 47),
-    ]))
+    let resized = SongDocument(
+        file: baseFile(events: [
+            .channel(tick: 8, status: 0x90, data0: 65, data1: 88),
+            .channel(tick: 16, status: 0x80, data0: 65, data1: 47),
+        ]))
     if let id = resized.notes(in: 0).first?.id {
         resized.resizeNotes([id], edge: .trailing, byTicks: 2)
-        report.expect(noteEndPayload(resized, id: id) ==
-            .channel(status: 0x80, data0: 65, data1: 47),
+        report.expect(
+            noteEndPayload(resized, id: id) == .channel(status: 0x80, data0: 65, data1: 47),
             cppID: "editcheck/EditCheckTest::noteResizeStopsAtNextSelectedStart",
             message: "resize retains explicit note-off bytes")
     }
 
-    let overlap = SongDocument(file: baseFile(events: [
-        .channel(tick: 0, status: 0x90, data0: 67, data1: 88),
-        .channel(tick: 20, status: 0x80, data0: 67, data1: 39),
-    ]))
+    let overlap = SongDocument(
+        file: baseFile(events: [
+            .channel(tick: 0, status: 0x90, data0: 67, data1: 88),
+            .channel(tick: 20, status: 0x80, data0: 67, data1: 39),
+        ]))
     _ = try? overlap.addNotes([
-        NewNote(track: 0, tick: 10, pitch: 67, duration: 4, velocity: 70),
+        NewNote(track: 0, tick: 10, pitch: 67, duration: 4, velocity: 70)
     ])
     let retainedEnd = overlap.rawChunks[1].events.first { event in
         event.tick == 10 && event.isNoteEnd
     }?.payload
-    report.expect(retainedEnd == .channel(status: 0x80, data0: 67, data1: 39),
+    report.expect(
+        retainedEnd == .channel(status: 0x80, data0: 67, data1: 39),
         cppID: "editcheck/EditCheckTest::noteMoveOverlap",
         message: "collision trim retains the stationary note's end-event bytes")
 }
@@ -444,9 +517,12 @@ private func shiftedEndPayload(_ payload: MidiEventPayload, pitch: UInt8) -> Mid
 }
 
 func baseFile(events: [MidiEvent]) -> MidiFile {
-    MidiFile(division: 24, chunks: [
-        MidiChunk(events: [], endTick: 128),
-        MidiChunk(events: [.channel(tick: 0, status: 0xC0, data0: 0)] + events,
-                  endTick: 128),
-    ])
+    MidiFile(
+        division: 24,
+        chunks: [
+            MidiChunk(events: [], endTick: 128),
+            MidiChunk(
+                events: [.channel(tick: 0, status: 0xC0, data0: 0)] + events,
+                endTick: 128),
+        ])
 }

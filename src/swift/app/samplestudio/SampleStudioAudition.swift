@@ -7,8 +7,10 @@ import QtBridge
 
 @MainActor
 public protocol SampleAuditionOutput: AnyObject {
-    func auditionSample(samples: [Int8], frequency: UInt32, loopStart: UInt32,
-                        looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8) -> Bool
+    func auditionSample(
+        samples: [Int8], frequency: UInt32, loopStart: UInt32,
+        looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
+    ) -> Bool
     func auditionSampleOff()
 }
 
@@ -49,7 +51,10 @@ public final class SampleStudioAudition: QmlUncreatable {
         available = output != nil
         hasDestinationAdsr = destinationAdsr != nil
         useDestinationAdsr = destinationAdsr != nil
-        playToolTip = output == nil ? "Audio is unavailable." : "Audition the render — looped when the loop is enabled; one-shots repeat with a short gap until stopped. Space toggles this from anywhere in the dialog."
+        playToolTip =
+            output == nil
+            ? "Audio is unavailable."
+            : "Audition the render — looped when the loop is enabled; one-shots repeat with a short gap until stopped. Space toggles this from anywhere in the dialog."
         presenter.addRenderObserver { [weak self] in
             guard let self, self.playing, self.looped else { return }
             self.start(looped: true)
@@ -129,20 +134,23 @@ public final class SampleStudioAudition: QmlUncreatable {
         looped = requestedLoop && rendered.looped
         let envelope: AudioADSR
         if useDestinationAdsr, let destinationAdsr {
-            envelope = AudioADSR(attack: UInt8(clamping: destinationAdsr.attack),
-                                 decay: UInt8(clamping: destinationAdsr.decay),
-                                 sustain: UInt8(clamping: destinationAdsr.sustain),
-                                 release: UInt8(clamping: destinationAdsr.release))
+            envelope = AudioADSR(
+                attack: UInt8(clamping: destinationAdsr.attack),
+                decay: UInt8(clamping: destinationAdsr.decay),
+                sustain: UInt8(clamping: destinationAdsr.sustain),
+                release: UInt8(clamping: destinationAdsr.release))
         } else {
             envelope = AudioADSR()
         }
-        republishPending = !output.auditionSample(samples: rendered.s8, frequency: rendered.freq,
+        republishPending = !output.auditionSample(
+            samples: rendered.s8, frequency: rendered.freq,
             loopStart: rendered.loopStart, looped: looped, key: UInt8(auditionKey),
             adsr: envelope, toneKey: 60)
         size = rendered.s8.count
         loopStart = Int(rendered.loopStart)
         rate = Double(rendered.freq) / 1024 * pow(2, Double(auditionKey - 60) / 12)
-        ratio = rendered.outputRate > 0 && presenter.source.sampleRate > 0
+        ratio =
+            rendered.outputRate > 0 && presenter.source.sampleRate > 0
             ? rendered.outputRate / presenter.source.sampleRate : 1
         crop = presenter.params.cropStart
         position = 0

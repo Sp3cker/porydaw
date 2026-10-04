@@ -11,15 +11,21 @@ private func polyOverflowTimeline() -> PlaybackTimeline {
     let notes: [(on: Tick, off: Tick, key: UInt8)] = [
         (96, 144, 60), (24, 216, 62), (120, 200, 64), (148, 216, 65),
     ]
-    let chunks = [MidiChunk(events: [
-        .meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20]),
-    ], endTick: 384)] + notes.map { note in
-        MidiChunk(events: [
-            .channel(tick: 0, status: 0xC0, data0: 0),
-            .channel(tick: note.on, status: 0x90, data0: note.key, data1: 100),
-            .channel(tick: note.off, status: 0x80, data0: note.key),
-        ], endTick: 384)
-    }
+    let chunks =
+        [
+            MidiChunk(
+                events: [
+                    .meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20])
+                ], endTick: 384)
+        ]
+        + notes.map { note in
+            MidiChunk(
+                events: [
+                    .channel(tick: 0, status: 0xC0, data0: 0),
+                    .channel(tick: note.on, status: 0x90, data0: note.key, data1: 100),
+                    .channel(tick: note.off, status: 0x80, data0: note.key),
+                ], endTick: 384)
+        }
     return PlaybackTimeline.build(file: MidiFile(division: 24, chunks: chunks), sampleRate: 48_000)
 }
 
@@ -65,8 +71,10 @@ private struct PolyRenderResult {
     var shadowOnAfterSteal = false
 }
 
-private func polyRender(_ engine: UnsafeMutablePointer<M4AEngine>,
-                        timeline: PlaybackTimeline) -> PolyRenderResult {
+private func polyRender(
+    _ engine: UnsafeMutablePointer<M4AEngine>,
+    timeline: PlaybackTimeline
+) -> PolyRenderResult {
     var sequencer = Sequencer()
     var result = PolyRenderResult()
     var left = [Float](repeating: 0, count: polyChunk)
@@ -74,9 +82,10 @@ private func polyRender(_ engine: UnsafeMutablePointer<M4AEngine>,
     for rendered in stride(from: 0, to: 220_000, by: polyChunk) {
         left.withUnsafeMutableBufferPointer { leftBuffer in
             right.withUnsafeMutableBufferPointer { rightBuffer in
-                sequencer.render(engine: engine, timeline: timeline,
-                                 left: leftBuffer, right: rightBuffer,
-                                 looping: false, muteMask: 0)
+                sequencer.render(
+                    engine: engine, timeline: timeline,
+                    left: leftBuffer, right: rightBuffer,
+                    looping: false, muteMask: 0)
             }
         }
         let peak = zip(left, right).reduce(Float(0)) { maximum, pair in
@@ -102,8 +111,9 @@ private func checkPolyOverflow(_ timeline: PlaybackTimeline, _ report: CheckRepo
     guard let engine = polyEngine(report, cppID: id) else { return }
     _ = polyRender(engine.pointer, timeline: timeline)
     let pointer = engine.pointer
-    report.expectEqual(expected: UInt32(3), actual: pointer.pointee.polyEventTotal, cppID: id,
-                       what: "overflow event total")
+    report.expectEqual(
+        expected: UInt32(3), actual: pointer.pointee.polyEventTotal, cppID: id,
+        what: "overflow event total")
     let steals = polyCounters(&pointer.pointee.polyStealCount)
     let drops = polyCounters(&pointer.pointee.polyDropCount)
     let tailCuts = polyCounters(&pointer.pointee.polyTailCutCount)
@@ -136,10 +146,12 @@ private func checkPolyLiveSentinel(_ report: CheckReport) {
     m4a_engine_program_change(pointer, 1, 0)
     m4a_engine_note_on(pointer, 1, 60, 100)
     m4a_engine_note_on(pointer, 0, 67, 100)
-    report.expectEqual(expected: UInt32(1), actual: pointer.pointee.polyEventTotal, cppID: id,
-                       what: "live event total")
-    report.expectEqual(expected: UInt32.max, actual: polyEvents(pointer, count: 1)[0].tick, cppID: id,
-                       what: "live sentinel tick")
+    report.expectEqual(
+        expected: UInt32(1), actual: pointer.pointee.polyEventTotal, cppID: id,
+        what: "live event total")
+    report.expectEqual(
+        expected: UInt32.max, actual: polyEvents(pointer, count: 1)[0].tick, cppID: id,
+        what: "live sentinel tick")
 }
 
 private func checkPolyNormal(_ timeline: PlaybackTimeline, _ report: CheckReport) {
@@ -182,13 +194,16 @@ private func checkPolyAudition(_ report: CheckReport) {
     for _ in 0..<8 {
         left.withUnsafeMutableBufferPointer { leftBuffer in
             right.withUnsafeMutableBufferPointer { rightBuffer in
-                m4a_engine_process(pointer, leftBuffer.baseAddress, rightBuffer.baseAddress,
-                                   Int32(polyChunk))
+                m4a_engine_process(
+                    pointer, leftBuffer.baseAddress, rightBuffer.baseAddress,
+                    Int32(polyChunk))
             }
         }
-        peak = max(peak, zip(left, right).reduce(Float(0)) { maximum, pair in
-            max(maximum, max(abs(pair.0), abs(pair.1)))
-        })
+        peak = max(
+            peak,
+            zip(left, right).reduce(Float(0)) { maximum, pair in
+                max(maximum, max(abs(pair.0), abs(pair.1)))
+            })
     }
     report.expect(peak > 1e-4, cppID: id, message: "audition stays audible with invert")
 }
@@ -196,16 +211,20 @@ private func checkPolyAudition(_ report: CheckReport) {
 private func checkPolyChannelModes(_ report: CheckReport) {
     for (name, controller): (String, UInt8) in [("allNotesOff", 0x7B), ("allSoundOff", 0x78)] {
         let id = polyPrefix + "channelModeLeavesCompiledGateIntact[\(name)]"
-        let file = MidiFile(division: 24, chunks: [
-            MidiChunk(events: [.meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20])],
-                      endTick: 96),
-            MidiChunk(events: [
-                .channel(tick: 0, status: 0xC0, data0: 0),
-                .channel(tick: 0, status: 0x90, data0: 60, data1: 100),
-                .channel(tick: 24, status: 0xB0, data0: controller),
-                .channel(tick: 96, status: 0x80, data0: 60),
-            ], endTick: 96),
-        ])
+        let file = MidiFile(
+            division: 24,
+            chunks: [
+                MidiChunk(
+                    events: [.meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20])],
+                    endTick: 96),
+                MidiChunk(
+                    events: [
+                        .channel(tick: 0, status: 0xC0, data0: 0),
+                        .channel(tick: 0, status: 0x90, data0: 60, data1: 100),
+                        .channel(tick: 24, status: 0xB0, data0: controller),
+                        .channel(tick: 96, status: 0x80, data0: 60),
+                    ], endTick: 96),
+            ])
         let timeline = PlaybackTimeline.build(file: file, sampleRate: 48_000)
         guard let engine = polyEngine(report, cppID: id) else { continue }
         var sequencer = Sequencer()
@@ -214,9 +233,10 @@ private func checkPolyChannelModes(_ report: CheckReport) {
         for _ in 0..<(49 * Int(polySamplesPerTick) / polyChunk) {
             left.withUnsafeMutableBufferPointer { leftBuffer in
                 right.withUnsafeMutableBufferPointer { rightBuffer in
-                    sequencer.render(engine: engine.pointer, timeline: timeline,
-                                     left: leftBuffer, right: rightBuffer,
-                                     looping: false, muteMask: 0)
+                    sequencer.render(
+                        engine: engine.pointer, timeline: timeline,
+                        left: leftBuffer, right: rightBuffer,
+                        looping: false, muteMask: 0)
                 }
             }
         }
@@ -230,8 +250,9 @@ private func checkPolyChannelModes(_ report: CheckReport) {
 func runPolyphonyEngineChecks(_ report: CheckReport) {
     let timeline = polyOverflowTimeline()
     let buildID = polyPrefix + "overflowCountersAndRing"
-    report.expect(!timeline.events.isEmpty, cppID: buildID,
-                  message: "overflow timeline built")
+    report.expect(
+        !timeline.events.isEmpty, cppID: buildID,
+        message: "overflow timeline built")
     checkPolyOverflow(timeline, report)
     checkPolyLiveSentinel(report)
     checkPolyNormal(timeline, report)

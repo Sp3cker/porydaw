@@ -1,7 +1,9 @@
 import PorydawPlaybackNative
 
-private func withKeysplitEngine(_ report: CheckReport, cppID: String,
-                                _ check: (UnsafeMutablePointer<M4AEngine>) -> Void) {
+private func withKeysplitEngine(
+    _ report: CheckReport, cppID: String,
+    _ check: (UnsafeMutablePointer<M4AEngine>) -> Void
+) {
     guard let engine = PlaybackCheckEngine() else {
         report.fail(cppID, "M4A engine initialization failed")
         return
@@ -32,12 +34,14 @@ internal func checkMidiEngineBounds(_ report: CheckReport) {
     let programID = "midienginecheck/MidiEngineBoundsTest::programChangesRejectOutOfRangeValues"
     withKeysplitEngine(report, cppID: programID) { engine in
         m4a_engine_program_change(engine, 0, 5)
-        report.expectEqual(expected: UInt8(5), actual: engine.pointee.tracks.0.currentProgram,
-                           cppID: programID, what: "valid program selects keysplit voice")
+        report.expectEqual(
+            expected: UInt8(5), actual: engine.pointee.tracks.0.currentProgram,
+            cppID: programID, what: "valid program selects keysplit voice")
         m4a_engine_program_change(engine, 0, 128)
         m4a_engine_program_change(engine, 0, 255)
-        report.expectEqual(expected: UInt8(5), actual: engine.pointee.tracks.0.currentProgram,
-                           cppID: programID, what: "invalid programs retain selection")
+        report.expectEqual(
+            expected: UInt8(5), actual: engine.pointee.tracks.0.currentProgram,
+            cppID: programID, what: "invalid programs retain selection")
     }
 
     let keyID = "midienginecheck/MidiEngineBoundsTest::noteOnsRejectOutOfRangeKeys"
@@ -49,8 +53,9 @@ internal func checkMidiEngineBounds(_ report: CheckReport) {
         withUnsafePointer(to: &engine.pointee.pcmChannels) { storage in
             let channels = UnsafeRawPointer(storage).assumingMemoryBound(to: M4APCMChannel.self)
             for index in 0..<Int(TOTAL_PCM_CHANNELS) {
-                report.expect(channels[index].status & playbackCheckChannelOn == 0,
-                              cppID: keyID, message: "PCM channel \(index) remains off")
+                report.expect(
+                    channels[index].status & playbackCheckChannelOn == 0,
+                    cppID: keyID, message: "PCM channel \(index) remains off")
             }
         }
     }

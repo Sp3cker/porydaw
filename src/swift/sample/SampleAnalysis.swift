@@ -24,7 +24,8 @@ extension SampleDsp {
         let fraction = lag - Double(integer)
         var sum = 0.0
         for j in 0..<half {
-            let delayed = Double(x[start + j + integer]) * (1 - fraction)
+            let delayed =
+                Double(x[start + j + integer]) * (1 - fraction)
                 + Double(x[start + j + integer + 1]) * fraction
             let delta = Double(x[start + j]) - delayed
             sum += delta * delta
@@ -87,7 +88,8 @@ extension SampleDsp {
             func normalized(_ lag: Double, _ value: Double) -> Double {
                 let index = min(high - 1, max(1, Int(floor(lag))))
                 let fraction = lag - Double(index)
-                let cumulativeAtLag = cumulativeEnergy[index] * (1 - fraction)
+                let cumulativeAtLag =
+                    cumulativeEnergy[index] * (1 - fraction)
                     + cumulativeEnergy[index + 1] * fraction
                 return cumulativeAtLag > 0 ? value * lag / cumulativeAtLag : 1
             }
@@ -122,7 +124,8 @@ extension SampleDsp {
         guard frames.count >= 3 else { return PitchResult() }
         let frequencies = frames.map(\.0).sorted()
         let middle = frequencies.count / 2
-        let median = frequencies.count % 2 == 1 ? frequencies[middle] : (frequencies[middle - 1] + frequencies[middle]) / 2
+        let median =
+            frequencies.count % 2 == 1 ? frequencies[middle] : (frequencies[middle - 1] + frequencies[middle]) / 2
         guard frequencies.allSatisfy({ abs(1200 * log2($0 / median)) <= 50 }) else { return PitchResult() }
         var result = PitchResult()
         result.pitched = true
@@ -149,7 +152,9 @@ extension SampleDsp {
     }
 
     /// Rank loop endpoints using period multiples and level-gated seam correlation.
-    public static func suggestLoop(_ x: [Float], rate: Double, period: Double, regionA: Int, regionB: Int) -> [LoopCandidate] {
+    public static func suggestLoop(
+        _ x: [Float], rate: Double, period: Double, regionA: Int, regionB: Int
+    ) -> [LoopCandidate] {
         let samples = x.span
         let n = samples.count
         guard n >= 256, rate.isFinite, rate > 0, rate < 4_000_000,
@@ -207,7 +212,8 @@ extension SampleDsp {
                 let fullB = power(start - width, start + width)
                 let head = power(start, start + tenth)
                 let tail = power(end + 1 - tenth, end + 1)
-                let gates = fullA > 0 && fullB > 0 && head > 0 && tail > 0
+                let gates =
+                    fullA > 0 && fullB > 0 && head > 0 && tail > 0
                     && abs(10 * log10(fullA / fullB)) <= 1.5
                     && abs(10 * log10(head / tail)) <= 1.0
                 let item = Coarse(ncc: ncc, length: length, end: end)
@@ -245,19 +251,27 @@ extension SampleDsp {
             let tenth = max(1, item.length / 10)
             let head = power(start, start + tenth)
             let tail = power(bestEnd + 1 - tenth, bestEnd + 1)
-            let gates = difference <= 1.5 && head > 0 && tail > 0
+            let gates =
+                difference <= 1.5 && head > 0 && tail > 0
                 && abs(10 * log10(head / tail)) <= 1.0
-            let score = 0.6 * bestNcc + 0.2 * (1 - min(difference, 1.5) / 1.5)
+            let score =
+                0.6 * bestNcc + 0.2 * (1 - min(difference, 1.5) / 1.5)
                 + 0.2 * log(Double(item.length)) / logMaximum
-            scored.append(LoopCandidate(loopStart: start, loopEnd: bestEnd, ncc: bestNcc,
-                                        score: score, passedGates: gates))
+            scored.append(
+                LoopCandidate(
+                    loopStart: start, loopEnd: bestEnd, ncc: bestNcc,
+                    score: score, passedGates: gates))
         }
         scored.sort { lhs, rhs in lhs.passedGates == rhs.passedGates ? lhs.score > rhs.score : lhs.passedGates }
         let dedupe = pitched ? max(8, Int((period / 2).rounded())) : 64
         var result: [LoopCandidate] = []
         for candidate in scored {
-            if result.contains(where: { abs($0.loopStart - candidate.loopStart) <= dedupe
-                && abs($0.loopEnd - candidate.loopEnd) <= dedupe }) { continue }
+            if result.contains(where: {
+                abs($0.loopStart - candidate.loopStart) <= dedupe
+                    && abs($0.loopEnd - candidate.loopEnd) <= dedupe
+            }) {
+                continue
+            }
             result.append(candidate)
             if result.count == 5 { break }
         }
@@ -269,7 +283,8 @@ extension SampleDsp {
         let samples = x.span
         let n = samples.count
         guard n >= 32, loopStart >= 0, loopEnd >= 0, loopStart < n, loopEnd < n,
-            period.isFinite, period >= 0 else { return }
+            period.isFinite, period >= 0
+        else { return }
         let width = period > 0 ? min(512, max(128, Int((min(256, period) * 2).rounded()))) : 128
         var bestStart = loopStart
         var bestEnd = loopEnd

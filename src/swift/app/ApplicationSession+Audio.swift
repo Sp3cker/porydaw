@@ -65,10 +65,12 @@ extension ApplicationSession {
             guard let session = self?.workspace?.session else { return }
             let previousNotes = session.selectedNoteOrder
             session.selectPrimaryTrack(track)
-            guard let note = session.document.notes(in: track).last(where: {
-                $0.tick <= tick && Int($0.pitch) == key
-                    && UInt64(tick) < UInt64($0.tick) + UInt64($0.duration)
-            }) else {
+            guard
+                let note = session.document.notes(in: track).last(where: {
+                    $0.tick <= tick && Int($0.pitch) == key
+                        && UInt64(tick) < UInt64($0.tick) + UInt64($0.duration)
+                })
+            else {
                 session.setSelectedNotes(previousNotes)
                 return
             }
@@ -82,9 +84,11 @@ extension ApplicationSession {
     func connectVoiceAudition() {
         voiceList.onAuditionVoice = { [weak self] voice, key, velocity in
             guard (0..<128).contains(voice), (0..<128).contains(key),
-                  (0..<128).contains(velocity) else { return }
-            self?.audio?.previewVoice(program: UInt8(voice), key: UInt8(key),
-                                      velocity: UInt8(velocity))
+                (0..<128).contains(velocity)
+            else { return }
+            self?.audio?.previewVoice(
+                program: UInt8(voice), key: UInt8(key),
+                velocity: UInt8(velocity))
         }
         voiceList.onVoicegroupChangeRequested = { [weak self] arg in
             guard let self, let session = self.selectedDocument else { return }
@@ -114,31 +118,35 @@ extension ApplicationSession {
         voiceList.onSaveRequested = { [weak self] in self?.requestSave() }
         voiceList.onPickerSampleInfoRequested = { [weak self] in
             guard let self, let service = self.catalogService,
-                  let session = self.selectedDocument else { return }
+                let session = self.selectedDocument
+            else { return }
             self.voiceList.pickerInfoRevision += 1
             let revision = self.voiceList.pickerInfoRevision
             self.voiceList.pickerSampleInfo = [:]
             Task { [weak self, weak session] in
                 let info = await service.pickerSampleInfo()
                 guard let self, let session, self.selectedDocument === session,
-                      self.catalogService === service,
-                      self.voiceList.pickerInfoRevision == revision else { return }
+                    self.catalogService === service,
+                    self.voiceList.pickerInfoRevision == revision
+                else { return }
                 self.voiceList.pickerSampleInfo = info
                 self.voiceList.pickerInfoRevision += 1
             }
         }
         voiceList.onSampleAuditionRequested = { [weak self] symbol, kind, adsr in
             guard let self, let service = self.catalogService,
-                  let session = self.selectedDocument else { return }
+                let session = self.selectedDocument
+            else { return }
             self.audio?.auditionSampleOff()
             self.pickerAuditionRevision += 1
             let revision = self.pickerAuditionRevision
             Task { [weak self, weak session] in
                 let sound = await service.pickerSound(symbol: symbol, kind: kind)
                 guard let self, let session, self.selectedDocument === session,
-                      self.catalogService === service,
-                      self.pickerAuditionRevision == revision,
-                      let audio = self.audio, let sound else { return }
+                    self.catalogService === service,
+                    self.pickerAuditionRevision == revision,
+                    let audio = self.audio, let sound
+                else { return }
                 let chosen = AudioADSR(
                     attack: UInt8(truncatingIfNeeded: adsr.attack),
                     decay: UInt8(truncatingIfNeeded: adsr.decay),
@@ -146,16 +154,19 @@ extension ApplicationSession {
                     release: UInt8(truncatingIfNeeded: adsr.release))
                 switch sound {
                 case .sample(let bytes, let frequency, let loopStart, let looped, let toneKey, let envelope):
-                    let envelope = envelope.map {
-                        AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
-                    } ?? chosen
-                    _ = audio.auditionSample(samples: bytes, frequency: frequency,
-                                             loopStart: loopStart, looped: looped,
-                                             key: 60, adsr: envelope, toneKey: toneKey)
+                    let envelope =
+                        envelope.map {
+                            AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
+                        } ?? chosen
+                    _ = audio.auditionSample(
+                        samples: bytes, frequency: frequency,
+                        loopStart: loopStart, looped: looped,
+                        key: 60, adsr: envelope, toneKey: toneKey)
                 case .wave(let bytes, let envelope):
-                    let envelope = envelope.map {
-                        AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
-                    } ?? chosen
+                    let envelope =
+                        envelope.map {
+                            AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
+                        } ?? chosen
                     _ = audio.auditionWave(wave16: bytes, key: 60, adsr: envelope)
                 }
             }
@@ -169,7 +180,8 @@ extension ApplicationSession {
     func playImpl() {
         guard let audio, audio.songLoaded else { return }
         if audio.transport == AudioTransportState.stopped.rawValue,
-           let session = workspace?.session {
+            let session = workspace?.session
+        {
             publishSeek(tick: session.editCursor, timeline: session.timeline, startPlayback: true)
             transportBar.refresh()
         } else {
@@ -204,7 +216,8 @@ extension ApplicationSession {
         session.editCursor = 0
         _ = session.mutateCamera { $0.setHScroll($0.snapshot.minHScroll) }
         if let audio, audio.songLoaded,
-           audio.transport != AudioTransportState.stopped.rawValue {
+            audio.transport != AudioTransportState.stopped.rawValue
+        {
             publishSeek(tick: 0, timeline: session.timeline, startPlayback: false)
         } else {
             playhead.refreshImmediate()

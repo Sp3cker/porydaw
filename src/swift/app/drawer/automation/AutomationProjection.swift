@@ -35,7 +35,8 @@ public struct AutomationPlotGeometry: Equatable, Sendable {
     public let valuePlotPadding: Double
 
     public init(baseFontPx: Double) {
-        let base = baseFontPx.isFinite && baseFontPx > 0
+        let base =
+            baseFontPx.isFinite && baseFontPx > 0
             ? baseFontPx
             : GridCameraPolicy.seedBaseFontPx
         let nodePaintRadius = fontPxF(base, 3.0 / 16.0)
@@ -48,8 +49,10 @@ public struct AutomationPlotGeometry: Equatable, Sendable {
         nodeDragActivationDistance = fontPx(base, 5.0 / 12.0)
         pointDetailThreshold = fontPx(base, 1.0 / 2.0)
         // Endpoint centers sit at the painted outer edge, marker stroke included.
-        valuePlotPadding = (max(nodePaintRadius + nodeOutlineDipWidth,
-                                selectedRingRadius + selectedRingDipWidth * 0.5)).rounded()
+        valuePlotPadding =
+            (max(
+                nodePaintRadius + nodeOutlineDipWidth,
+                selectedRingRadius + selectedRingDipWidth * 0.5)).rounded()
     }
 }
 
@@ -62,7 +65,8 @@ public struct AutomationPlotBounds: Equatable, Sendable {
     public init(width: Double = 0, height: Double = 0, devicePixelRatio: Double = 1) {
         self.width = max(0, width.isFinite ? width : 0)
         self.height = max(0, height.isFinite ? height : 0)
-        self.devicePixelRatio = devicePixelRatio.isFinite && devicePixelRatio > 0
+        self.devicePixelRatio =
+            devicePixelRatio.isFinite && devicePixelRatio > 0
             ? devicePixelRatio : 1
     }
 }
@@ -79,8 +83,9 @@ public struct AutomationSnapPolicy {
     }
 
     public func snap(_ tick: Double, fine: Bool, camera: EditorCamera) -> Tick {
-        fine ? TimelineSnapPolicy.fineSnap(tick, clockTicks: clockTicks)
-             : grid.snapTick(tick, camera: camera)
+        fine
+            ? TimelineSnapPolicy.fineSnap(tick, clockTicks: clockTicks)
+            : grid.snapTick(tick, camera: camera)
     }
 
     public func snapDown(_ tick: Double, fine: Bool, camera: EditorCamera) -> Tick {
@@ -123,9 +128,11 @@ public struct AutomationProjection {
         return Int(AutomationCatalog.autoRange(maximum: maximum))
     }
 
-    public init(camera: EditorCamera, bounds: AutomationPlotBounds,
-                geometry: AutomationPlotGeometry, snapPolicy: AutomationSnapPolicy,
-                songEndTick: Tick, displayMaximum: Int? = nil) {
+    public init(
+        camera: EditorCamera, bounds: AutomationPlotBounds,
+        geometry: AutomationPlotGeometry, snapPolicy: AutomationSnapPolicy,
+        songEndTick: Tick, displayMaximum: Int? = nil
+    ) {
         self.camera = camera
         self.bounds = bounds
         self.geometry = geometry
@@ -155,7 +162,8 @@ public struct AutomationProjection {
 
     public func insertionTick(atX x: Double, pencil: Bool) -> Tick {
         let rawTick = rawTick(atX: x)
-        return pencil ? cell(atRawTick: rawTick).tickBegin
+        return pencil
+            ? cell(atRawTick: rawTick).tickBegin
             : snapPolicy.snap(rawTick, fine: true, camera: camera)
     }
 
@@ -170,8 +178,9 @@ public struct AutomationProjection {
         let clamped = min(max(0, rawTick), Double(songEndTick))
         let position = clamped >= Double(songEndTick) ? songEndTick - 1 : Tick(clamped)
         let begin = snapPolicy.snapDown(Double(position), fine: false, camera: camera)
-        return AutomationGridCell(tickBegin: begin,
-                                  tickEnd: nextGridTick(after: begin, fine: false))
+        return AutomationGridCell(
+            tickBegin: begin,
+            tickEnd: nextGridTick(after: begin, fine: false))
     }
 
     /// Every cell the pointer crossed from `previous` to `current`, in traversal
@@ -219,7 +228,8 @@ public struct AutomationProjection {
         let bottom = max(top, bounds.height - geometry.valuePlotPadding)
         let clamped = min(max(y, top), bottom)
         let span = Double((displayMaximum ?? metadata.maximum) - metadata.minimum)
-        let exact = Double(metadata.minimum)
+        let exact =
+            Double(metadata.minimum)
             + (bottom - clamped) * span / max(1.0, bottom - top)
         return metadata.clamp(Int(exact.rounded()))
     }
@@ -233,15 +243,19 @@ public struct AutomationProjection {
     // MARK: Lane projection
 
     /// Project one frozen lane snapshot. Pure: nothing here mutates the document.
-    public func project(_ snapshot: AutomationLaneSnapshot,
-                        selection: AutomationTimeSelection? = nil,
-                        usedTracks: Set<Int> = []) -> AutomationLaneProjection {
+    public func project(
+        _ snapshot: AutomationLaneSnapshot,
+        selection: AutomationTimeSelection? = nil,
+        usedTracks: Set<Int> = []
+    ) -> AutomationLaneProjection {
         let metadata = snapshot.metadata
         let covers = selection?.covers(snapshot.parameter, usedTracks: usedTracks) ?? false
         let range = covers ? selection?.range : nil
 
-        func projected(_ tick: Tick, _ value: Int, identity: AutomationPointIdentity,
-                       projectedNode: Bool) -> AutomationProjectedPoint {
+        func projected(
+            _ tick: Tick, _ value: Int, identity: AutomationPointIdentity,
+            projectedNode: Bool
+        ) -> AutomationProjectedPoint {
             AutomationProjectedPoint(
                 identity: identity, tick: tick, value: value,
                 x: x(tick), y: y(value, metadata: metadata),
@@ -252,16 +266,18 @@ public struct AutomationProjection {
         // Display points: the synthetic tick-zero node first, then the written
         // occurrences with the last at a tick winning, as the lane adapters do.
         let points: [AutomationProjectedPoint] = snapshot.displaySeries.map { item in
-            projected(item.tick, item.value, identity: item.identity,
-                      projectedNode: item.projected)
+            projected(
+                item.tick, item.value, identity: item.identity,
+                projectedNode: item.projected)
         }
 
         let leadIn = snapshot.leadInValue.map {
-            projected(0, metadata.clamp($0),
-                      identity: AutomationPointIdentity(
-                          revision: snapshot.revision, parameter: snapshot.parameter, tick: 0,
-                          occurrence: -1, value: metadata.clamp($0)),
-                      projectedNode: true)
+            projected(
+                0, metadata.clamp($0),
+                identity: AutomationPointIdentity(
+                    revision: snapshot.revision, parameter: snapshot.parameter, tick: 0,
+                    occurrence: -1, value: metadata.clamp($0)),
+                projectedNode: true)
         }
 
         let segments = AutomationCurveSegment.curve(
@@ -280,17 +296,21 @@ public struct AutomationProjection {
     public func scaleLabels(metadata: AutomationParameterMetadata) -> [AutomationScaleLabel] {
         let maximum = displayMaximum ?? metadata.maximum
         var labels: [AutomationScaleLabel] = [
-            AutomationScaleLabel(role: .maximum, value: maximum,
-                                 text: metadata.valueText(maximum),
-                                 y: y(maximum, metadata: metadata)),
-            AutomationScaleLabel(role: .minimum, value: metadata.minimum,
-                                 text: metadata.valueText(metadata.minimum),
-                                 y: y(metadata.minimum, metadata: metadata)),
+            AutomationScaleLabel(
+                role: .maximum, value: maximum,
+                text: metadata.valueText(maximum),
+                y: y(maximum, metadata: metadata)),
+            AutomationScaleLabel(
+                role: .minimum, value: metadata.minimum,
+                text: metadata.valueText(metadata.minimum),
+                y: y(metadata.minimum, metadata: metadata)),
         ]
         if let neutral = metadata.neutral {
-            labels.append(AutomationScaleLabel(role: .neutral, value: neutral,
-                                               text: metadata.valueText(neutral),
-                                               y: y(neutral, metadata: metadata)))
+            labels.append(
+                AutomationScaleLabel(
+                    role: .neutral, value: neutral,
+                    text: metadata.valueText(neutral),
+                    y: y(neutral, metadata: metadata)))
         }
         return labels
     }

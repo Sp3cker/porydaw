@@ -7,8 +7,10 @@ public struct AudioADSR {
     public var sustain: UInt8
     public var release: UInt8
 
-    public init(attack: UInt8 = 255, decay: UInt8 = 0,
-                sustain: UInt8 = 255, release: UInt8 = 165) {
+    public init(
+        attack: UInt8 = 255, decay: UInt8 = 0,
+        sustain: UInt8 = 255, release: UInt8 = 165
+    ) {
         self.attack = attack
         self.decay = decay
         self.sustain = sustain
@@ -35,26 +37,33 @@ public final class AudioAudition {
 
     public func previewNote(track: UInt8, key: UInt8, velocity: UInt8) {
         noteGeneration &+= 1
-        noteCommand.store(UInt32(noteGeneration) << 24 | UInt32(track & 15) << 16 |
-                          UInt32(key & 127) << 8 | UInt32(velocity), ordering: .releasing)
+        noteCommand.store(
+            UInt32(noteGeneration) << 24 | UInt32(track & 15) << 16 | UInt32(key & 127) << 8 | UInt32(velocity),
+            ordering: .releasing)
     }
 
     public func previewVoice(program: UInt8, key: UInt8, velocity: UInt8) {
         voiceGeneration &+= 1
-        voiceCommand.store(UInt64(voiceGeneration) << 32 | UInt64(program & 127) << 16 |
-                           UInt64(key & 127) << 8 | UInt64(velocity), ordering: .releasing)
+        voiceCommand.store(
+            UInt64(voiceGeneration) << 32 | UInt64(program & 127) << 16 | UInt64(key & 127) << 8 | UInt64(velocity),
+            ordering: .releasing)
     }
 
-    public func previewNoteTimed(track: UInt8, key: UInt8, velocity: UInt8,
-                                 durationSamples: UInt32) {
+    public func previewNoteTimed(
+        track: UInt8, key: UInt8, velocity: UInt8,
+        durationSamples: UInt32
+    ) {
         timed.publish(track: track, key: key, velocity: velocity, duration: durationSamples)
     }
 
-    public func publishSample(samples: [Int8], frequency: UInt32, loopStart: UInt32,
-                              looped: Bool, key: UInt8, adsr: AudioADSR,
-                              toneKey: UInt8) -> Bool {
-        self.samples.publish(samples: samples, frequency: frequency, loopStart: loopStart,
-                             looped: looped, key: key, adsr: adsr, toneKey: toneKey)
+    public func publishSample(
+        samples: [Int8], frequency: UInt32, loopStart: UInt32,
+        looped: Bool, key: UInt8, adsr: AudioADSR,
+        toneKey: UInt8
+    ) -> Bool {
+        self.samples.publish(
+            samples: samples, frequency: frequency, loopStart: loopStart,
+            looped: looped, key: key, adsr: adsr, toneKey: toneKey)
     }
 
     public func publishWave(wave16: [UInt8], key: UInt8, adsr: AudioADSR) -> Bool {
@@ -63,9 +72,11 @@ public final class AudioAudition {
 
     public func sampleOff() { samples.off() }
 
-    public func apply(main: UnsafeMutablePointer<M4AEngine>,
-                      preview: UnsafeMutablePointer<M4AEngine>, frames: UInt32,
-                      deferTimed: Bool) {
+    public func apply(
+        main: UnsafeMutablePointer<M4AEngine>,
+        preview: UnsafeMutablePointer<M4AEngine>, frames: UInt32,
+        deferTimed: Bool
+    ) {
         let note = noteCommand.load(ordering: .acquiring)
         if note != appliedNote {
             appliedNote = note
@@ -111,8 +122,10 @@ public final class AudioAudition {
     }
 
     /// Audio callback at zero output gain; commands queued during the fade survive.
-    public func cut(main: UnsafeMutablePointer<M4AEngine>,
-                    preview: UnsafeMutablePointer<M4AEngine>) {
+    public func cut(
+        main: UnsafeMutablePointer<M4AEngine>,
+        preview: UnsafeMutablePointer<M4AEngine>
+    ) {
         m4a_engine_all_sound_off(main)
         m4a_engine_all_sound_off(preview)
         timed.clear(dropQueued: false)
@@ -172,8 +185,9 @@ final class TimedAuditions {
         if velocity > 0 && duration == 0 { return }
         let position = write.load(ordering: .relaxed)
         if position &- read.load(ordering: .acquiring) >= 64 { return }
-        ring[Int(position % 64)] = Command(track: track & 15, key: key & 127,
-                                          velocity: velocity, duration: duration)
+        ring[Int(position % 64)] = Command(
+            track: track & 15, key: key & 127,
+            velocity: velocity, duration: duration)
         write.store(position &+ 1, ordering: .releasing)
     }
 
@@ -220,8 +234,9 @@ final class TimedAuditions {
                 m4a_engine_note_off(engine, Int32(active[slot].track), active[slot].key)
             }
             m4a_engine_note_on(engine, Int32(command.track), command.key, command.velocity)
-            active[slot] = Active(track: command.track, key: command.key,
-                                  remaining: Int64(command.duration))
+            active[slot] = Active(
+                track: command.track, key: command.key,
+                remaining: Int64(command.duration))
         }
         read.store(position, ordering: .releasing)
         var index = 0

@@ -33,14 +33,18 @@ func openRulerMenu(_ menu: RulerMenuPresenter, at contentX: Double) {
 func rulerMenuDocument(_ session: DocumentSession) -> SongDocument {
     // As in makeResizeSeed, the requested cell has velocity 100. The loop
     // endpoints are its right edge and one snap cell beyond that edge.
-    return SongDocument(file: MidiFile(division: 24, chunks: [
-        MidiChunk(events: [], endTick: 200),
-        MidiChunk(events: [
-            .channel(tick: 0, status: 0xC0, data0: 0),
-            .channel(tick: rulerSeedTick, status: 0x90, data0: 60, data1: 100),
-            .channel(tick: rulerSeedTick + 6, status: 0x80, data0: 60),
-        ], endTick: 200),
-    ]), config: session.document.state.config, source: session.document.source,
+    return SongDocument(
+        file: MidiFile(
+            division: 24,
+            chunks: [
+                MidiChunk(events: [], endTick: 200),
+                MidiChunk(
+                    events: [
+                        .channel(tick: 0, status: 0xC0, data0: 0),
+                        .channel(tick: rulerSeedTick, status: 0x90, data0: 60, data1: 100),
+                        .channel(tick: rulerSeedTick + 6, status: 0x80, data0: 60),
+                    ], endTick: 200),
+            ]), config: session.document.state.config, source: session.document.source,
         trackBudget: session.document.trackBudget)
 }
 
@@ -61,9 +65,12 @@ private func checkRulerSelectedKeyboardScope(_ report: CheckReport, session: Doc
         let firstTick = seed.tick
         let lastTick = firstTick + 4 * seed.snap
         guard document.canAddTrack, let other = document.addTrack(voice: 0),
-              let ghost = try? document.addNotes([NewNote(
-                  track: other, tick: firstTick + seed.snap, pitch: UInt8(seed.pitch),
-                  duration: seed.snap, velocity: 90)]).first else {
+            let ghost = try? document.addNotes([
+                NewNote(
+                    track: other, tick: firstTick + seed.snap, pitch: UInt8(seed.pitch),
+                    duration: seed.snap, velocity: 90)
+            ]).first
+        else {
             report.fail(id, "cannot add the overlapping ruler-scope note")
             return
         }
@@ -76,22 +83,25 @@ private func checkRulerSelectedKeyboardScope(_ report: CheckReport, session: Doc
             }
         }
         let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
-        menu.beginSweep(contentX: session.camera.contentX(tick: Double(firstTick)),
-                        pointerY: 0, modifiers: 0x0400_0000)
+        menu.beginSweep(
+            contentX: session.camera.contentX(tick: Double(firstTick)),
+            pointerY: 0, modifiers: 0x0400_0000)
         menu.updateSweep(contentX: session.camera.contentX(tick: Double(lastTick)))
         menu.endSweep(contentX: session.camera.contentX(tick: Double(lastTick)))
-        report.expect(automation.selection?.range == TimeRange(startTick: firstTick, endTick: lastTick)
-                      && automation.selection?.scope == .tracks(expectedScope)
-                      && expectedScope.contains(other) && document.note(ghost) != nil,
-                      cppID: id,
-                      message: "A026 modified ruler sweep selects exactly every overlapping note track and span")
+        report.expect(
+            automation.selection?.range == TimeRange(startTick: firstTick, endTick: lastTick)
+                && automation.selection?.scope == .tracks(expectedScope)
+                && expectedScope.contains(other) && document.note(ghost) != nil,
+            cppID: id,
+            message: "A026 modified ruler sweep selects exactly every overlapping note track and span")
         session.clearTimeSelection()
         while document.history.currentIdentity != postSeedIdentity && document.history.canUndo {
             guard document.history.undoDocument() else { break }
         }
-        report.expect(coreTimeBytes(document) == postSeedBytes
-                      && document.history.currentIdentity == postSeedIdentity,
-                      cppID: id, message: "A039 ruler transpose and sweep unwind to post-seed bytes")
+        report.expect(
+            coreTimeBytes(document) == postSeedBytes
+                && document.history.currentIdentity == postSeedIdentity,
+            cppID: id, message: "A039 ruler transpose and sweep unwind to post-seed bytes")
     }
 }
 
@@ -104,6 +114,7 @@ func checkRulerLoopBuildTotality(_ report: CheckReport, session: DocumentSession
     document.setLoop(end: false, tick: 6)
     document.setLoop(end: true, tick: 18)
     let marked = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expect(marked.hasLoop, cppID: id,
-                  message: "A137: the loop-marked document always builds a looped timeline")
+    report.expect(
+        marked.hasLoop, cppID: id,
+        message: "A137: the loop-marked document always builds a looped timeline")
 }

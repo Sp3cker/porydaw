@@ -33,7 +33,8 @@ public struct VelocityNodeGeometry: Equatable, Sendable {
     public init() {}
 
     public init(baseFontPx: Double, devicePixelRatio: Double) {
-        let base = baseFontPx.isFinite && baseFontPx > 0
+        let base =
+            baseFontPx.isFinite && baseFontPx > 0
             ? baseFontPx
             : GridCameraPolicy.seedBaseFontPx
         let dpr = devicePixelRatio.isFinite && devicePixelRatio > 0 ? devicePixelRatio : 1
@@ -188,10 +189,12 @@ public struct VelocityAxisModel: Sendable {
     public func yToVelocity(_ y: Double) -> Int {
         guard drawableSpan != 0 else { return Self.minimumVelocity }
         let clampedY = min(max(y, top), bottom)
-        let scaled = (bottom - clampedY) * Double(Self.maximumVelocity - Self.minimumVelocity)
+        let scaled =
+            (bottom - clampedY) * Double(Self.maximumVelocity - Self.minimumVelocity)
             / drawableSpan
-        return min(max(Self.minimumVelocity + Int(scaled.rounded()), Self.minimumVelocity),
-                   Self.maximumVelocity)
+        return min(
+            max(Self.minimumVelocity + Int(scaled.rounded()), Self.minimumVelocity),
+            Self.maximumVelocity)
     }
 
     public func levelToY(_ level: Int) -> Double {
@@ -260,7 +263,8 @@ public struct VelocityAxisModel: Sendable {
         buildContinuousTicks()
         buildContinuousMarkers(activeValues: activeValues)
         if mode == .intrinsic { buildIntrinsicRows() }
-        accessibleDescription = map.levelCount == 0
+        accessibleDescription =
+            map.levelCount == 0
             ? "Velocity"
             : "Velocity. \(map.voiceName) has \(map.levelCount) volume levels."
     }
@@ -272,8 +276,10 @@ public struct VelocityAxisModel: Sendable {
 
     private mutating func addLabel(_ velocity: Int) {
         guard labels.count < Self.maximumContinuousLabels else { return }
-        labels.append(VelocityAxisLabel(velocity: velocity, y: velocityToY(velocity),
-                                        text: String(velocity)))
+        labels.append(
+            VelocityAxisLabel(
+                velocity: velocity, y: velocityToY(velocity),
+                text: String(velocity)))
     }
 
     /// `VelocityAxis::buildContinuousTicks`: the ruler thins out as the body
@@ -341,7 +347,7 @@ public struct VelocityAxisModel: Sendable {
         var labelStride = 1
         let levelHeight = drawableSpan / Double(levelCount)
         while labelStride <= levelCount,
-              levelHeight * Double(labelStride) < max(0, geometry.labelHeight)
+            levelHeight * Double(labelStride) < max(0, geometry.labelHeight)
         {
             labelStride *= 2
         }

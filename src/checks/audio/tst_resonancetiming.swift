@@ -17,10 +17,14 @@ func resonanceTimingChecks(_ report: CheckReport) {
         P.feed(&output, processor, from: second)
         let old = P.reduction(output, source: 2.5)
         var best = 300.0
-        for source in stride(from: second + P.frames(0.01), to: second + P.frames(0.8) - P.frames(0.05), by: P.frames(0.01)) {
+        for source in stride(
+            from: second + P.frames(0.01), to: second + P.frames(0.8) - P.frames(0.05), by: P.frames(0.01))
+        {
             best = min(best, -15 - P.amplitude(output, source + P.latency, P.frames(0.05), 1000))
         }
-        expect(recovered42 >= -1 && recovered43 >= -1, "releaseRecoversAcrossGap", "released gains \(recovered42), \(recovered43)")
+        expect(
+            recovered42 >= -1 && recovered43 >= -1, "releaseRecoversAcrossGap",
+            "released gains \(recovered42), \(recovered43)")
         expect(old > 10 && best <= old * 0.3, "releaseRecoversAcrossGap", "re-gate \(best), old \(old) dB")
     }
     do {

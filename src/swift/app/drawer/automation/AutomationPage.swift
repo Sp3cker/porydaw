@@ -20,7 +20,8 @@ public enum AutomationPagePolicy {
 @QtBridgeable
 public final class AutomationPage: EditorDrawerPage {
     /// The fixed production QML URL, resolved once by the container at attach.
-    public static let contentUrl = QmlEngineAccess.moduleResourcePrefix + "src/ui/songview/quick/drawer/AutomationPage.qml"
+    public static let contentUrl =
+        QmlEngineAccess.moduleResourcePrefix + "src/ui/songview/quick/drawer/AutomationPage.qml"
 
     @QtIgnored public let sectionKind: DrawerSectionKind = .automation
     @QtIgnored public var contentUrl: String { Self.contentUrl }
@@ -202,8 +203,6 @@ public final class AutomationPage: EditorDrawerPage {
     /// The playing tick the last presentation carried.
     @QtIgnored public internal(set) var presentedTick: Tick = 0
 
-
-
     @QtIgnored weak var session: DocumentSession?
     @QtIgnored var selectionTransitionToken: UUID?
     @QtIgnored var gesture: AutomationGesture?
@@ -263,7 +262,8 @@ public final class AutomationPage: EditorDrawerPage {
             let maximum = max(minimum, metrics.maximumDefaultBodyHeight(hostHeight: hostHeight))
             return min(max(hostHeight / 5, minimum), maximum)
         }
-        self.baseFontPx = baseFontPx.isFinite && baseFontPx > 0
+        self.baseFontPx =
+            baseFontPx.isFinite && baseFontPx > 0
             ? baseFontPx : AutomationPagePolicy.seedBaseFontPx
         geometry = AutomationPlotGeometry(baseFontPx: self.baseFontPx)
         publishTypography()
@@ -283,12 +283,15 @@ public final class AutomationPage: EditorDrawerPage {
     /// The page body's own facts, pushed by the production QML as it lays out:
     /// the same plot size, plot origin, device pixel ratio, base font and drag
     /// distance the roll and the sibling pages measure with.
-    public func configureBody(width: Double, height: Double, gutter: Double,
-                              devicePixelRatio: Double, baseFontPx: Double,
-                              dragDistance: Double) {
-        configureBodyImpl(width: width, height: height, gutter: gutter,
-                          devicePixelRatio: devicePixelRatio, baseFontPx: baseFontPx,
-                          dragDistance: dragDistance)
+    public func configureBody(
+        width: Double, height: Double, gutter: Double,
+        devicePixelRatio: Double, baseFontPx: Double,
+        dragDistance: Double
+    ) {
+        configureBodyImpl(
+            width: width, height: height, gutter: gutter,
+            devicePixelRatio: devicePixelRatio, baseFontPx: baseFontPx,
+            dragDistance: dragDistance)
     }
 
     // MARK: Refresh
@@ -296,7 +299,6 @@ public final class AutomationPage: EditorDrawerPage {
     public func refreshFromDocument() {
         refreshFromDocumentImpl()
     }
-
 
     /// Camera-only publication: the same points at new plot positions. A live
     /// gesture keeps its own frozen projection, so only the drawn content moves.
@@ -319,7 +321,8 @@ public final class AutomationPage: EditorDrawerPage {
     @discardableResult
     public func activateParameter(index: Int) -> Bool {
         guard session != nil, index != activeParameterIndex,
-              index >= 0, index < AutomationCatalog.count else { return false }
+            index >= 0, index < AutomationCatalog.count
+        else { return false }
         cancelSectionInteraction()
         activeParameterIndex = index
         rebuildContent()
@@ -339,7 +342,7 @@ public final class AutomationPage: EditorDrawerPage {
     @discardableResult
     public func toggleGhostParameter(index: Int) -> Bool {
         guard session != nil, index >= 0, index < AutomationCatalog.count,
-              let parameter = AutomationCatalog.parameter(at: index, track: activeTrack() ?? 0)
+            let parameter = AutomationCatalog.parameter(at: index, track: activeTrack() ?? 0)
         else { return false }
         if index == activeParameterIndex {
             // The active parameter owns every pin: toggling it clears them all,
@@ -363,16 +366,19 @@ public final class AutomationPage: EditorDrawerPage {
 
     /// The selection a band over `[first, last)` publishes for the parameters it
     /// covered, defaulting to the active one.
-    public func selectRange(from first: Tick, to last: Tick,
-                            lanes: Set<AutomationParameter>? = nil) {
+    public func selectRange(
+        from first: Tick, to last: Tick,
+        lanes: Set<AutomationParameter>? = nil
+    ) {
         guard last > first else {
             clearTimeSelection()
             return
         }
         let covered = lanes ?? Set([activeParameter])
-        applyTimeSelection(AutomationTimeSelection(
-            range: TimeRange(startTick: first, endTick: last), scope: .lanes,
-            lanes: covered, tempo: covered.contains(.tempo)))
+        applyTimeSelection(
+            AutomationTimeSelection(
+                range: TimeRange(startTick: first, endTick: last), scope: .lanes,
+                lanes: covered, tempo: covered.contains(.tempo)))
     }
 
     // MARK: Pointer input
@@ -382,8 +388,10 @@ public final class AutomationPage: EditorDrawerPage {
     /// press's frozen gesture. Every plot press first clears a time selection it
     /// lands outside of, exactly as the production band does.
     @discardableResult
-    public func pointerPress(x: Double, y: Double, surface: Int, button: Int,
-                             modifiers: Int = 0) -> Bool {
+    public func pointerPress(
+        x: Double, y: Double, surface: Int, button: Int,
+        modifiers: Int = 0
+    ) -> Bool {
         return dispatchPointerPress(x: x, y: y, surface: surface, button: button, modifiers: modifiers)
     }
 
@@ -445,7 +453,6 @@ public final class AutomationPage: EditorDrawerPage {
         return openCapturedPrompt(tick: tick, value: value, insertion: true)
     }
 
-
     /// The prompt's acceptance: one commit, or nothing when it changes nothing.
     /// The captured revision is revalidated by the accept policy below.
     @discardableResult
@@ -487,9 +494,10 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored
     public func hoverDeleteAvailable() -> Bool {
         guard plotFocused, isPencilMode, let session, hover != nil,
-              session.selectedNotes.isEmpty, selection?.isActive != true,
-              gesture == nil, band == nil, !panActive,
-              menu == nil, prompt == nil, laneDelete == nil else { return false }
+            session.selectedNotes.isEmpty, selection?.isActive != true,
+            gesture == nil, band == nil, !panActive,
+            menu == nil, prompt == nil, laneDelete == nil
+        else { return false }
         return true
     }
 
@@ -528,7 +536,8 @@ public final class AutomationPage: EditorDrawerPage {
         guard retarget, let facts = frozenFacts(modifiers: .init()) else { return }
         let projection = makeProjection(facts: facts, camera: liveCamera())
         guard let lane = laneProjection(facts: facts, projection: projection),
-              let hit = lane.hitTest(x: x, y: y, radius: geometry.pointHitRadius) else { return }
+            let hit = lane.hitTest(x: x, y: y, radius: geometry.pointHitRadius)
+        else { return }
         openPointMenu(hit: hit, facts: facts, x: x, y: y)
     }
 
@@ -597,4 +606,3 @@ public final class AutomationPage: EditorDrawerPage {
     }
 
 }
-

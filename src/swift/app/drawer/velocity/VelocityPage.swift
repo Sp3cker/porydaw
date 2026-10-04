@@ -145,7 +145,8 @@ public final class VelocityHandle {
 @QtBridgeable
 public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     /// The fixed production QML URL, resolved once by the container at attach.
-    public static let contentUrl = QmlEngineAccess.moduleResourcePrefix + "src/ui/songview/quick/drawer/VelocityPage.qml"
+    public static let contentUrl =
+        QmlEngineAccess.moduleResourcePrefix + "src/ui/songview/quick/drawer/VelocityPage.qml"
 
     @QtIgnored public let sectionKind: DrawerSectionKind = .velocity
     @QtIgnored public var contentUrl: String { Self.contentUrl }
@@ -298,7 +299,8 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     }
 
     public init(baseFontPx: Double = VelocityPagePolicy.seedBaseFontPx) {
-        let base = baseFontPx.isFinite && baseFontPx > 0
+        let base =
+            baseFontPx.isFinite && baseFontPx > 0
             ? baseFontPx
             : GridCameraPolicy.seedBaseFontPx
         bodyPolicy = EditorDrawerBodyPolicy { hostHeight, _ in
@@ -346,20 +348,24 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
 
     /// The page body's own facts, pushed by the production QML as it lays out:
     /// the same plot origin and base font the roll and the container use.
-    public func configureBody(width: Double, height: Double, rulerWidth: Double,
-                              devicePixelRatio: Double, baseFontPx: Double,
-                              dragDistance: Double) {
+    public func configureBody(
+        width: Double, height: Double, rulerWidth: Double,
+        devicePixelRatio: Double, baseFontPx: Double,
+        dragDistance: Double
+    ) {
         let nextWidth = max(0, width.isFinite ? width : 0)
         let nextHeight = max(0, height.isFinite ? height : 0)
         let nextRuler = max(0, rulerWidth.isFinite ? rulerWidth : 0)
         let nextDpr = devicePixelRatio.isFinite && devicePixelRatio > 0 ? devicePixelRatio : 1
-        let nextFont = baseFontPx.isFinite && baseFontPx > 0
+        let nextFont =
+            baseFontPx.isFinite && baseFontPx > 0
             ? baseFontPx
             : GridCameraPolicy.seedBaseFontPx
         if dragDistance.isFinite, dragDistance > 0, dragDistance != self.dragDistance {
             self.dragDistance = dragDistance
         }
-        let changed = nextWidth != plotWidth || nextHeight != plotHeight
+        let changed =
+            nextWidth != plotWidth || nextHeight != plotHeight
             || nextRuler != self.rulerWidth || nextDpr != self.devicePixelRatio
             || nextFont != self.baseFontPx
         if plotWidth != nextWidth { plotWidth = nextWidth }
@@ -381,8 +387,9 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     @QtIgnored
     public func refreshFromDocument() {
         guard let session else { return }
-        if let gesture, gesture.revision != session.document.revision
-            || gesture.track != (session.selectedTrack ?? -1)
+        if let gesture,
+            gesture.revision != session.document.revision
+                || gesture.track != (session.selectedTrack ?? -1)
         {
             cancelSectionInteraction()
         }
@@ -398,8 +405,9 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     public func refreshEditCursor() {
         guard let session, !playing else { return }
         contextTick = session.editCursor
-        let presented = VelocityScene.presentation(session, playing: false,
-                                                   contextTick: contextTick)
+        let presented = VelocityScene.presentation(
+            session, playing: false,
+            contextTick: contextTick)
         let next = VelocityContextKey(context: presented, playing: false)
         guard lastContextKey != next else { return }
         rebuildContent()
@@ -415,7 +423,7 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
         guard let session else { return }
         let resolvedTick = velocityContextTick(tick)
         if let last = lastPresentedPublication, last.tick == resolvedTick,
-           last.playing == playing
+            last.playing == playing
         {
             return
         }
@@ -425,8 +433,8 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
         self.playing = playing
         contextTick = resolvedTick
         if playing && !playingChanged,
-           resolvedTick >= presentedContextTick,
-           resolvedTick < (resolvedContextValue.endTick ?? TimeDefaults.noTick)
+            resolvedTick >= presentedContextTick,
+            resolvedTick < (resolvedContextValue.endTick ?? TimeDefaults.noTick)
         {
             presentedContextTick = resolvedTick
             presentedPlaying = playing
@@ -462,10 +470,13 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
 
     /// One press. `true` means the page consumed it.
     @discardableResult
-    public func pointerPress(x: Double, y: Double, surface: Int, button: Int,
-                             modifiers: Int) -> Bool {
-        return dispatchPointerPress(x: x, y: y, surface: surface, button: button,
-                                    modifiers: modifiers)
+    public func pointerPress(
+        x: Double, y: Double, surface: Int, button: Int,
+        modifiers: Int
+    ) -> Bool {
+        return dispatchPointerPress(
+            x: x, y: y, surface: surface, button: button,
+            modifiers: modifiers)
     }
 
     /// One move. With no live gesture this is hover only.

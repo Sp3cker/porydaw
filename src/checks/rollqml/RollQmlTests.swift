@@ -61,14 +61,16 @@ enum RollQmlLane {
 
     private static var manifestLine: String {
         let files = fixtureFiles.map { "\"" + $0 + "\"" }.joined(separator: ",")
-        let entry = #"{"name":"\#(entryName)","argv":["{scratch}"],"binary":"checks","windowing":"offscreen","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
+        let entry =
+            #"{"name":"\#(entryName)","argv":["{scratch}"],"binary":"checks","windowing":"offscreen","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
         return #"{"checks":[\#(entry)]}"#
     }
 
     static func main() {
-        exit(MainActor.assumeIsolated {
-            run(arguments: Array(CommandLine.arguments.dropFirst()))
-        })
+        exit(
+            MainActor.assumeIsolated {
+                run(arguments: Array(CommandLine.arguments.dropFirst()))
+            })
     }
 
     @MainActor
@@ -78,7 +80,7 @@ enum RollQmlLane {
             return 0
         }
         guard let scratch = arguments.first, !scratch.isEmpty,
-              FileManager.default.fileExists(atPath: scratch)
+            FileManager.default.fileExists(atPath: scratch)
         else {
             return fail("usage: roll_qml_tests <staged-project-directory> [--qt <Qt args>]")
         }
@@ -94,8 +96,9 @@ enum RollQmlLane {
         // The bootstrap serves the staged path to QML, so it must be known
         // before Qt Quick Test builds any QML object.
         RollQmlBootstrap.stage(projectRoot: scratch)
-        PreferencesStore.stageShared(plistPath: URL(fileURLWithPath: scratch, isDirectory: true)
-            .appendingPathComponent("settings.plist").path)
+        PreferencesStore.stageShared(
+            plistPath: URL(fileURLWithPath: scratch, isDirectory: true)
+                .appendingPathComponent("settings.plist").path)
 
         if let suiteFile = ProcessInfo.processInfo.environment[suiteEnvironmentKey] {
             // Suite child: one file, one Qt Quick Test run, one exit status.
@@ -138,8 +141,11 @@ enum RollQmlLane {
         // ApplicationSession itself supplies the Swift ruler form bridge.
         let inputFile = URL(fileURLWithPath: inputDirectory, isDirectory: true)
             .appendingPathComponent(file).path
-        let laneArguments = [CommandLine.arguments.first ?? "roll_qml_tests",
-                             "-input", inputFile] + payload
+        let laneArguments =
+            [
+                CommandLine.arguments.first ?? "roll_qml_tests",
+                "-input", inputFile,
+            ] + payload
         var argv: [UnsafeMutablePointer<Int8>?] = laneArguments.map { strdup($0) }
         defer { argv.forEach { free($0) } }
         return app.runQtQuickTests(Int32(laneArguments.count), &argv)
@@ -180,8 +186,9 @@ enum RollQmlLane {
             do {
                 try child.run()
             } catch {
-                FileHandle.standardError.write(Data(
-                    "\(entryName): \(suite): could not start the suite child (\(error))\n".utf8))
+                FileHandle.standardError.write(
+                    Data(
+                        "\(entryName): \(suite): could not start the suite child (\(error))\n".utf8))
                 failures += 1
                 continue
             }
@@ -191,12 +198,14 @@ enum RollQmlLane {
             FileHandle.standardOutput.write(Data(output.utf8))
             try? FileHandle.standardOutput.synchronize()
             if child.terminationReason == .uncaughtSignal {
-                FileHandle.standardError.write(Data(
-                    "\(entryName): \(suite): child died on signal \(child.terminationStatus)\n".utf8))
+                FileHandle.standardError.write(
+                    Data(
+                        "\(entryName): \(suite): child died on signal \(child.terminationStatus)\n".utf8))
                 failures += 1
             } else if child.terminationStatus != 0 {
-                FileHandle.standardError.write(Data(
-                    "\(entryName): \(suite): child exited \(child.terminationStatus)\n".utf8))
+                FileHandle.standardError.write(
+                    Data(
+                        "\(entryName): \(suite): child exited \(child.terminationStatus)\n".utf8))
                 failures += 1
             }
         }

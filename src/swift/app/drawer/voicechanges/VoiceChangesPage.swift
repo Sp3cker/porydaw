@@ -90,7 +90,8 @@ enum VoiceHintProfile {
 @QtBridgeable
 public final class VoiceChangesPage: EditorDrawerPage {
     /// The fixed production QML URL, resolved once by the container at attach.
-    public static let contentUrl = QmlEngineAccess.moduleResourcePrefix + "src/ui/songview/quick/drawer/VoiceChangesPage.qml"
+    public static let contentUrl =
+        QmlEngineAccess.moduleResourcePrefix + "src/ui/songview/quick/drawer/VoiceChangesPage.qml"
 
     @QtIgnored public let sectionKind: DrawerSectionKind = .voiceChanges
     @QtIgnored public var contentUrl: String { Self.contentUrl }
@@ -257,9 +258,9 @@ public final class VoiceChangesPage: EditorDrawerPage {
     @QtIgnored var cachedEmptyDisplayList: Data?
     @QtIgnored var markerLookup: [String: VoiceMarkerHandle] = [:]
 
-
     public init(baseFontPx: Double = VoiceChangesPagePolicy.seedBaseFontPx) {
-        let base = baseFontPx.isFinite && baseFontPx > 0
+        let base =
+            baseFontPx.isFinite && baseFontPx > 0
             ? baseFontPx
             : GridCameraPolicy.seedBaseFontPx
         let minimum = max(1, Int((base * 17.0 / 5.0).rounded()))
@@ -309,21 +310,25 @@ public final class VoiceChangesPage: EditorDrawerPage {
 
     /// The page body's own facts, pushed by the production QML as it lays out:
     /// the same plot origin and base font the roll and the container use.
-    public func configureBody(width: Double, height: Double, gutter: Double,
-                              devicePixelRatio: Double, baseFontPx: Double,
-                              dragDistance: Double) {
+    public func configureBody(
+        width: Double, height: Double, gutter: Double,
+        devicePixelRatio: Double, baseFontPx: Double,
+        dragDistance: Double
+    ) {
         let nextWidth = max(0, width.isFinite ? width : 0)
         let nextHeight = max(0, height.isFinite ? height : 0)
         let nextGutter = max(0, gutter.isFinite ? gutter : 0)
         let nextDpr = devicePixelRatio.isFinite && devicePixelRatio > 0 ? devicePixelRatio : 1
-        let nextFont = baseFontPx.isFinite && baseFontPx > 0
+        let nextFont =
+            baseFontPx.isFinite && baseFontPx > 0
             ? baseFontPx
             : GridCameraPolicy.seedBaseFontPx
         if dragDistance.isFinite, dragDistance > 0, dragDistance != self.dragDistance {
             self.dragDistance = dragDistance
         }
         let fontChanged = nextFont != self.baseFontPx
-        let changed = nextWidth != plotWidth || nextHeight != plotHeight
+        let changed =
+            nextWidth != plotWidth || nextHeight != plotHeight
             || nextGutter != plotOrigin || nextDpr != self.devicePixelRatio || fontChanged
         plotWidth = nextWidth
         plotHeight = nextHeight
@@ -399,7 +404,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
         // the shared playhead's tick rounded to the nearest whole tick.
         let resolvedTick = velocityContextTick(tick)
         if let last = lastPresentedPublication, last.tick == resolvedTick,
-           last.playing == playing
+            last.playing == playing
         {
             return
         }
@@ -409,8 +414,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
         self.playing = playing
         contextTick = resolvedTick
         if playing && !playingChanged,
-           resolvedTick >= presentedContextStartTick,
-           resolvedTick < presentedContextEndTick
+            resolvedTick >= presentedContextStartTick,
+            resolvedTick < presentedContextEndTick
         {
             presentedContextTick = resolvedTick
             presentedPlaying = playing
@@ -429,7 +434,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
         presentedContextSlot = next.slot
         presentedPlaying = playing
         presentedContextStartTick = points.last { $0.tick <= effectiveTick }?.tick ?? 0
-        presentedContextEndTick = VoiceLanePolicy.endTick(after: effectiveTick, points: points)
+        presentedContextEndTick =
+            VoiceLanePolicy.endTick(after: effectiveTick, points: points)
             ?? TimeDefaults.noTick
         if contextChanged { clearHover() }
         if contextChanged || playingChanged {
@@ -460,8 +466,10 @@ public final class VoiceChangesPage: EditorDrawerPage {
     // MARK: Pointer input
 
     @discardableResult
-    public func pointerPress(x: Double, y: Double, surface: Int, button: Int,
-                             modifiers: Int) -> Bool {
+    public func pointerPress(
+        x: Double, y: Double, surface: Int, button: Int,
+        modifiers: Int
+    ) -> Bool {
         return dispatchPointerPress(x: x, y: y, surface: surface, button: button, modifiers: modifiers)
     }
 

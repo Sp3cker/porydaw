@@ -20,16 +20,18 @@ public final class DocumentWorkspace {
         public var timeSignaturePromptInvalidated: (DocumentSession, UInt64) -> Void
         public var transportPlayingChanged: (Bool) -> Void
 
-        public init(addTrackVoiceRequested: @escaping () -> Void = {},
-                    changeTrackVoiceRequested: @escaping (Int) -> Void,
-                    revealTrackVoiceRequested: @escaping (Int) -> Void,
-                    headerVoicePickerOpenChanged: @escaping (Bool) -> Void = { _ in },
-                    headerVoicePickerCompleted: ((Int) -> Void)? = nil,
-                    gridCommandAvailabilityChanged: @escaping () -> Void,
-                    sessionStateChanged: @escaping () -> Void,
-                    publicationFailed: @escaping (String) -> Void,
-                    timeSignaturePromptInvalidated: @escaping (DocumentSession, UInt64) -> Void,
-                    transportPlayingChanged: @escaping (Bool) -> Void = { _ in }) {
+        public init(
+            addTrackVoiceRequested: @escaping () -> Void = {},
+            changeTrackVoiceRequested: @escaping (Int) -> Void,
+            revealTrackVoiceRequested: @escaping (Int) -> Void,
+            headerVoicePickerOpenChanged: @escaping (Bool) -> Void = { _ in },
+            headerVoicePickerCompleted: ((Int) -> Void)? = nil,
+            gridCommandAvailabilityChanged: @escaping () -> Void,
+            sessionStateChanged: @escaping () -> Void,
+            publicationFailed: @escaping (String) -> Void,
+            timeSignaturePromptInvalidated: @escaping (DocumentSession, UInt64) -> Void,
+            transportPlayingChanged: @escaping (Bool) -> Void = { _ in }
+        ) {
             self.addTrackVoiceRequested = addTrackVoiceRequested
             self.timeSignaturePromptInvalidated = timeSignaturePromptInvalidated
             self.changeTrackVoiceRequested = changeTrackVoiceRequested
@@ -71,11 +73,13 @@ public final class DocumentWorkspace {
     private var isActive = false
     private var isTornDown = false
 
-    public init(session: DocumentSession, audio: NativeAudio,
-                playhead: SharedPlayheadPresenter,
-                playheadGuides: PlayheadGuidesPresenter,
-                eventList: EventListPresenter, palette: GridPalette,
-                typography: Typography, callbacks: Callbacks) {
+    public init(
+        session: DocumentSession, audio: NativeAudio,
+        playhead: SharedPlayheadPresenter,
+        playheadGuides: PlayheadGuidesPresenter,
+        eventList: EventListPresenter, palette: GridPalette,
+        typography: Typography, callbacks: Callbacks
+    ) {
         self.session = session
         appliedSongConfig = session.document.state.config
         self.audio = audio
@@ -91,7 +95,8 @@ public final class DocumentWorkspace {
         let grid = PianoGrid(session: session, palette: palette, typography: typography)
         self.grid = grid
         let otherEventsBand = OtherEventsBandPresenter()
-        otherEventsBand.configure(session: session, palette: grid.palette,
+        otherEventsBand.configure(
+            session: session, palette: grid.palette,
             baseFontPx: Double(typography.baseFontPx), appFontLineSpacing: 0)
         self.otherEventsBand = otherEventsBand
         let pitchBend = PitchBendPresenter(
@@ -146,7 +151,6 @@ public final class DocumentWorkspace {
             session.setEditorViewState(next)
         }
 
-
         headers.onTrackSelected = { [weak grid] track in
             grid?.setTrack(index: track)
         }
@@ -161,7 +165,8 @@ public final class DocumentWorkspace {
         headers.onRevealTrackVoiceRequested = callbacks.revealTrackVoiceRequested
         grid.onAudition = { [weak audio] track, key, velocity in
             guard let audio, (0...15).contains(track), (0...127).contains(key),
-                  (0...127).contains(velocity) else { return }
+                (0...127).contains(velocity)
+            else { return }
             audio.previewNote(track: UInt8(track), key: UInt8(key), velocity: UInt8(velocity))
         }
         voiceChangesPage.onAuditionVoice = { [weak audio] program, key, velocity in
@@ -191,8 +196,9 @@ public final class DocumentWorkspace {
         guard !isActive, !isTornDown else { return }
         isActive = true
         do {
-            try audio.bind(timeline: session.timeline, bank: session.bankLease,
-                           config: session.document.state.config)
+            try audio.bind(
+                timeline: session.timeline, bank: session.bankLease,
+                config: session.document.state.config)
             audio.setMuteMask(Self.trackMask(session.mutedTracks))
             audio.setSoloMask(Self.trackMask(session.soloedTracks))
             appliedSongConfig = session.document.state.config
@@ -223,8 +229,9 @@ public final class DocumentWorkspace {
             guard presentationChanged || hasLevels || self.trackHeaders.activityAnimating else {
                 return
             }
-            _ = self.trackHeaders.advanceActivity(levels: levels,
-                                                  elapsedSeconds: elapsed, playing: playing)
+            _ = self.trackHeaders.advanceActivity(
+                levels: levels,
+                elapsedSeconds: elapsed, playing: playing)
         }
         drawer.attachSections([velocityPage, voiceChangesPage, automationPage])
         for kind in [DrawerSectionKind.velocity, .voiceChanges, .automation] {
@@ -234,9 +241,10 @@ public final class DocumentWorkspace {
         let engineTracks = session.document.engineTracks
         let initialChunk: Int
         if let track = session.selectedTrack,
-           (0..<engineTracks.usedTrackCount).contains(track),
-           engineTracks.tracks.indices.contains(track),
-           let chunk = engineTracks.tracks[track].midiChunk {
+            (0..<engineTracks.usedTrackCount).contains(track),
+            engineTracks.tracks.indices.contains(track),
+            let chunk = engineTracks.tracks[track].midiChunk
+        {
             initialChunk = chunk
         } else {
             // The native controller starts on chunk zero when no track is selected.
@@ -268,7 +276,8 @@ public final class DocumentWorkspace {
         drawer.inputCancelled(reason: reason)
         otherEventsBand.inputCancelled()
         if reason == GridCancelReason.windowDeactivated.rawValue
-            || reason == GridCancelReason.hidden.rawValue {
+            || reason == GridCancelReason.hidden.rawValue
+        {
             pitchBend.settleAndClose()
         }
     }

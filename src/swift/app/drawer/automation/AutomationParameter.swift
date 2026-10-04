@@ -50,18 +50,19 @@ public enum AutomationParameter: Hashable, Sendable {
 /// selector order (mix, pitch, the XCMD echo lanes, the MODT/TUNE/LFODL trio),
 /// then song-global Tempo.
 public enum AutomationCatalog {
-    public static let controllers: [UInt8] = [
-        TimeDefaults.ccVolume,
-        TimeDefaults.ccPan,
-        TimeDefaults.ccModulation,
-        TimeDefaults.laneCCBend,
-        TimeDefaults.ccLFOSpeed,
-        TimeDefaults.ccBendRange,
-    ] + Xcmd.descriptors.map(\.lane) + [
-        TimeDefaults.ccModulationType,
-        TimeDefaults.ccFineTune,
-        TimeDefaults.ccLFODelay,
-    ]
+    public static let controllers: [UInt8] =
+        [
+            TimeDefaults.ccVolume,
+            TimeDefaults.ccPan,
+            TimeDefaults.ccModulation,
+            TimeDefaults.laneCCBend,
+            TimeDefaults.ccLFOSpeed,
+            TimeDefaults.ccBendRange,
+        ] + Xcmd.descriptors.map(\.lane) + [
+            TimeDefaults.ccModulationType,
+            TimeDefaults.ccFineTune,
+            TimeDefaults.ccLFODelay,
+        ]
 
     /// Volume, Pan, Modulation, Pitch bend, LFO speed, Bend range, the XCMD
     /// lanes, LFO type, Fine tune, LFO delay, Tempo.
@@ -72,8 +73,9 @@ public enum AutomationCatalog {
     }
 
     public static func parameter(track: Int, controller: UInt8) -> AutomationParameter {
-        controller == TimeDefaults.laneCCBend ? .pitchBend(track: track)
-                                              : .controlChange(track: track, controller: controller)
+        controller == TimeDefaults.laneCCBend
+            ? .pitchBend(track: track)
+            : .controlChange(track: track, controller: controller)
     }
 
     public static func index(of parameter: AutomationParameter, track: Int) -> Int? {
@@ -199,8 +201,10 @@ public struct AutomationParameterMetadata: Equatable, Sendable {
 
     /// The neutral snap of `updateValuePoint`: within the font-relative radius
     /// the value locks onto the parameter's neutral, and the tick never moves.
-    public func snappedValue(_ value: Int, snapValue: Bool, plotHeight: Double,
-                             neutralSnapRadius: Double) -> Int {
+    public func snappedValue(
+        _ value: Int, snapValue: Bool, plotHeight: Double,
+        neutralSnapRadius: Double
+    ) -> Int {
         let clamped = clamp(value)
         guard snapValue, let neutral else { return clamped }
         let span = maximum - minimum

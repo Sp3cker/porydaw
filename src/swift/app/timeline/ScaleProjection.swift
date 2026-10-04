@@ -40,9 +40,10 @@ public struct ScaleProjection: Equatable, Sendable {
         let order = notes.indices.sorted { notes[$0].pitch < notes[$1].pitch }
         let sources = order.map { notes[$0].pitch }
         var mapped = Array(repeating: UInt8(0), count: notes.count)
-        guard ScaleID.resolveDiatonicDestinations(
-            scale: scale, root: root, sources: sources,
-            steps: Array(repeating: steps, count: notes.count), dests: &mapped)
+        guard
+            ScaleID.resolveDiatonicDestinations(
+                scale: scale, root: root, sources: sources,
+                steps: Array(repeating: steps, count: notes.count), dests: &mapped)
         else { return nil }
         var result = mapped
         for (index, original) in order.enumerated() { result[original] = mapped[index] }

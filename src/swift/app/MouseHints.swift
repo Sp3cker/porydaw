@@ -74,8 +74,16 @@ public final class MouseHints {
         case 15: parts = [shift + " Drag: constrain to axis", ticks, neutral, horizontal]
         case 16: parts = [shift + " Drag: constrain to value", neutral, horizontal]
         case 17: parts = [shift + " Drag: draw ramp", ticks, neutral, horizontal]
-        case 18: parts = [control + " Drag: draw freehand", shift + " Drag: hold value", alt + " Right-drag: draw in ticks", horizontal]
-        case 19: parts = [control + " Drag: paint velocities without detents", shift + " Drag: draw ramp", control + " Right-drag: marquee adds notes", horizontal]
+        case 18:
+            parts = [
+                control + " Drag: draw freehand", shift + " Drag: hold value", alt + " Right-drag: draw in ticks",
+                horizontal,
+            ]
+        case 19:
+            parts = [
+                control + " Drag: paint velocities without detents", shift + " Drag: draw ramp",
+                control + " Right-drag: marquee adds notes", horizontal,
+            ]
         case 20: parts = [control + " Click: set exact velocity"]
         case 21: parts = [alt + " Drag: move with fine time", horizontal]
         case 22: parts = [alt + " Drag: move in time finely"]

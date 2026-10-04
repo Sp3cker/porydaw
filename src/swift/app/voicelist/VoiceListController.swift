@@ -155,9 +155,14 @@ public final class VoiceListController: QmlUncreatable {
     @QtIgnored public var onEditSampleRequested: ((_ slot: Int) -> Void)?
     /// The sample picker's browse audition: play the symbol's committed data
     /// through the selected voice's envelope.
-    @QtIgnored public var onSampleAuditionRequested: ((_ symbol: String,
-                                                      _ kind: VoiceListAuditionKind,
-                                                      _ adsr: VoiceListAdsr) -> Void)?
+    @QtIgnored public var onSampleAuditionRequested:
+        (
+            (
+                _ symbol: String,
+                _ kind: VoiceListAuditionKind,
+                _ adsr: VoiceListAdsr
+            ) -> Void
+        )?
     @QtIgnored public var onSampleAuditionStopRequested: (() -> Void)?
     /// Whether the New Voicegroup prompt is mounted. Owned by the controller
     /// so the dialog survives selector refreshes while it is open.
@@ -232,17 +237,19 @@ public final class VoiceListController: QmlUncreatable {
         if keysplit { return "Keysplit instrument" }
         guard let info = pickerSampleInfo[symbol] else { return "" }
         let mode = info.looped ? "Loops" : "One-shot"
-        let seconds = String(format: "%.2f", locale: Locale(identifier: "en_US_POSIX"),
-                             info.seconds)
+        let seconds = String(
+            format: "%.2f", locale: Locale(identifier: "en_US_POSIX"),
+            info.seconds)
         return "\(mode) · \(info.rateHz) Hz · \(seconds) s"
     }
 
     @QtIgnored weak var session: DocumentSession?
 
     public init() {
-        rows.reset(to: (0..<VoiceListController.slotCount).map { slot in
-            VoiceListRowHandle(VoiceListRow(slot: slot, title: String(format: "%03d", slot)))
-        })
+        rows.reset(
+            to: (0..<VoiceListController.slotCount).map { slot in
+                VoiceListRowHandle(VoiceListRow(slot: slot, title: String(format: "%03d", slot)))
+            })
         editor.owner = self
     }
 
@@ -254,8 +261,9 @@ public final class VoiceListController: QmlUncreatable {
     /// resolved arg already stands.
     public func commitVoicegroupSelection() {
         guard !isLoading, selectorEnabled else { return }
-        let arg = VoiceListSemantics.voicegroupArg(fromDisplay: selectorText.trimmingCharacters(
-            in: .whitespaces), knownArgs: knownArgs)
+        let arg = VoiceListSemantics.voicegroupArg(
+            fromDisplay: selectorText.trimmingCharacters(
+                in: .whitespaces), knownArgs: knownArgs)
         guard arg != currentArg else { return }
         currentArg = arg
         onVoicegroupChangeRequested?(arg)
@@ -295,16 +303,18 @@ public final class VoiceListController: QmlUncreatable {
         releaseVoice()
         guard !isLoading, slots.indices.contains(slot) else { return }
         if let voice = slots[slot].voice,
-           voice.macro == BankVoiceMacro.keysplit ||
-               voice.macro == BankVoiceMacro.keysplitAll {
-            guard let leaf = slots[slot].subvoiceMacro(
-                forKey: Int(VoiceListSemantics.auditionKey)),
-                  VoiceListSemantics.isDirectSoundFamily(leaf) ||
-                  VoiceListSemantics.isWaveMacro(leaf) else { return }
+            voice.macro == BankVoiceMacro.keysplit || voice.macro == BankVoiceMacro.keysplitAll
+        {
+            guard
+                let leaf = slots[slot].subvoiceMacro(
+                    forKey: Int(VoiceListSemantics.auditionKey)),
+                VoiceListSemantics.isDirectSoundFamily(leaf) || VoiceListSemantics.isWaveMacro(leaf)
+            else { return }
         }
         soundingVoice = slot
-        onAuditionVoice?(slot, VoiceListSemantics.auditionKey,
-                         VoiceListSemantics.auditionVelocity)
+        onAuditionVoice?(
+            slot, VoiceListSemantics.auditionKey,
+            VoiceListSemantics.auditionVelocity)
     }
 
     public func releaseVoice() {
@@ -323,13 +333,15 @@ public final class VoiceListController: QmlUncreatable {
         var adsr = VoiceListAdsr()
         if let voice, VoiceListSemantics.isWaveMacro(voice.macro) {
             kind = .wave
-            adsr = VoiceListAdsr(attack: voice.attack & 0x07, decay: voice.decay & 0x07,
-                                 sustain: voice.sustain & 0x0F, release: voice.release & 0x07)
+            adsr = VoiceListAdsr(
+                attack: voice.attack & 0x07, decay: voice.decay & 0x07,
+                sustain: voice.sustain & 0x0F, release: voice.release & 0x07)
         } else if keysplitTables[symbol] != nil {
             kind = .keysplit
         } else if let voice, VoiceListSemantics.isDirectSoundFamily(voice.macro) {
-            adsr = VoiceListAdsr(attack: voice.attack & 0xFF, decay: voice.decay & 0xFF,
-                                 sustain: voice.sustain & 0xFF, release: voice.release & 0xFF)
+            adsr = VoiceListAdsr(
+                attack: voice.attack & 0xFF, decay: voice.decay & 0xFF,
+                sustain: voice.sustain & 0xFF, release: voice.release & 0xFF)
         }
         onSampleAuditionRequested?(symbol, kind, adsr)
     }
@@ -354,8 +366,9 @@ public final class VoiceListController: QmlUncreatable {
         case BankSlotKind.none:
             var voice = BankVoice()
             voice.symbol = sampleChoices.first ?? ""
-            let adsr = VoiceListSemantics.defaultAdsr(adsrDefaults, macro: voice.macro,
-                                                      symbol: voice.symbol)
+            let adsr = VoiceListSemantics.defaultAdsr(
+                adsrDefaults, macro: voice.macro,
+                symbol: voice.symbol)
             voice.attack = adsr.attack
             voice.release = adsr.release
             return VoiceListDraft(voice: voice, materializesBlank: true)
@@ -385,8 +398,8 @@ public final class VoiceListController: QmlUncreatable {
     public func requestVoiceEdit(slot: Int, voice: BankVoice) {
         guard let draft = voiceDraft(slot) else { return }
         if !draft.materializesBlank && voice == draft.voice { return }
-        let structural = draft.materializesBlank ||
-            VoiceListSemantics.structuralChange(before: draft.voice, after: voice)
+        let structural =
+            draft.materializesBlank || VoiceListSemantics.structuralChange(before: draft.voice, after: voice)
         onVoiceEditRequested?(slot, voice, structural)
     }
 
@@ -478,13 +491,15 @@ public final class VoiceListController: QmlUncreatable {
         let useCopy = newVoicegroupUseCopy
         Task { [weak self] in
             guard let self, let session = self.session, !session.isClosed,
-                  let service = self.projectService else { return }
+                let service = self.projectService
+            else { return }
             do {
                 let lease = session.bankLease
                 let copyFile = useCopy ? lease.sourcePath : ""
                 let copyLabel = useCopy ? lease.sectionLabel : ""
-                try await service.createVoicegroup(name: name, copyFromFile: copyFile,
-                                                   copySectionLabel: copyLabel)
+                try await service.createVoicegroup(
+                    name: name, copyFromFile: copyFile,
+                    copySectionLabel: copyLabel)
                 let args = try await service.voicegroupArgs()
                 try await session.selectVoicegroup("_" + name)
                 self.setVoicegroupChoices(args)

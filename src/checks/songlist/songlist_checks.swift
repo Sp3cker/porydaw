@@ -13,14 +13,17 @@ import PorydawPlayback
 // projectSession suite (or a dedicated suite) inside swift_core_check.
 
 @MainActor
-private func songListing(_ id: Int, _ label: String, constant: String = "",
-                         registered: Bool = true, gaps: [String] = [],
-                         playable: Bool = true) -> SongListing {
-    SongListing(id: id, label: label,
-                constant: constant.isEmpty ? label.uppercased() : constant,
-                player: "MUSIC_PLAYER_BGM", midiPath: "/p/sound/songs/midi/\(label).mid",
-                trackBudget: 16, hasMid: playable, hasCfg: true,
-                registered: registered, registrationGaps: gaps)
+private func songListing(
+    _ id: Int, _ label: String, constant: String = "",
+    registered: Bool = true, gaps: [String] = [],
+    playable: Bool = true
+) -> SongListing {
+    SongListing(
+        id: id, label: label,
+        constant: constant.isEmpty ? label.uppercased() : constant,
+        player: "MUSIC_PLAYER_BGM", midiPath: "/p/sound/songs/midi/\(label).mid",
+        trackBudget: 16, hasMid: playable, hasCfg: true,
+        registered: registered, registrationGaps: gaps)
 }
 
 @MainActor
@@ -34,7 +37,7 @@ private func songListFixture() -> [SongListing] {
         songListing(5, "noscore"),
         songListing(6, "mus_stray", registered: false, gaps: ["song_table.inc", "songs.h"]),
         songListing(7, "mus_partial", gaps: ["songs.h"]),
-        songListing(8, "mus_ghost", playable: false), // registered but no .mid
+        songListing(8, "mus_ghost", playable: false),  // registered but no .mid
     ]
 }
 
@@ -42,7 +45,6 @@ private func songListFixture() -> [SongListing] {
 private func rowLabels(_ presenter: SongListPresenter) -> [String] {
     (0..<presenter.rows.count).map { presenter.rows[$0].label }
 }
-
 
 @MainActor
 private func categoryPrefixes(_ presenter: SongListPresenter) -> [String] {
@@ -71,37 +73,49 @@ private func songListPlayableGateAndBadges(_ report: CheckReport) {
     presenter.setSongs(songListFixture())
 
     // setSongs drops non-playable entries; strays and partials stay.
-    report.expectEqual(expected: 8, actual: presenter.totalCount, cppID: id,
-                       what: "unregistered and partial songs list; the mid-less entry drops")
     report.expectEqual(
-        expected: ["mus_route101", "mus_route102", "se_door", "se_bell", "ph_letter_a", "noscore",
-         "mus_stray", "mus_partial"],
+        expected: 8, actual: presenter.totalCount, cppID: id,
+        what: "unregistered and partial songs list; the mid-less entry drops")
+    report.expectEqual(
+        expected: [
+            "mus_route101", "mus_route102", "se_door", "se_bell", "ph_letter_a", "noscore",
+            "mus_stray", "mus_partial",
+        ],
         actual: rowLabels(presenter), cppID: id, what: "snapshot order preserved")
-    report.expectEqual(expected: "8 songs", actual: presenter.countText, cppID: id,
-                       what: "unfiltered count caption")
+    report.expectEqual(
+        expected: "8 songs", actual: presenter.countText, cppID: id,
+        what: "unfiltered count caption")
 
     let stray = presenter.rows[6]
-    report.expectEqual(expected: "mus_stray  ⚠ not registered", actual: stray.text, cppID: id,
-                       what: "unregistered badge text")
+    report.expectEqual(
+        expected: "mus_stray  ⚠ not registered", actual: stray.text, cppID: id,
+        what: "unregistered badge text")
     report.expectEqual(expected: true, actual: stray.warning, cppID: id, what: "unregistered row warns")
-    report.expectEqual(expected: "song_table.inc, songs.h", actual: stray.registrationGapText, cppID: id,
-                       what: "unregistered tooltip lists every missing file")
+    report.expectEqual(
+        expected: "song_table.inc, songs.h", actual: stray.registrationGapText, cppID: id,
+        what: "unregistered tooltip lists every missing file")
     let partial = presenter.rows[7]
-    report.expectEqual(expected: "mus_partial  ⚠ not fully registered", actual: partial.text, cppID: id,
-                       what: "partial badge text")
+    report.expectEqual(
+        expected: "mus_partial  ⚠ not fully registered", actual: partial.text, cppID: id,
+        what: "partial badge text")
     report.expectEqual(expected: true, actual: partial.warning, cppID: id, what: "partial row warns")
-    report.expectEqual(expected: "songs.h", actual: partial.registrationGapText, cppID: id,
-                       what: "partial tooltip names the missing file")
-    report.expectEqual(expected: false, actual: presenter.rows[0].warning, cppID: id,
-                       what: "fully registered row stays plain")
+    report.expectEqual(
+        expected: "songs.h", actual: partial.registrationGapText, cppID: id,
+        what: "partial tooltip names the missing file")
+    report.expectEqual(
+        expected: false, actual: presenter.rows[0].warning, cppID: id,
+        what: "fully registered row stays plain")
 
     // Register Song enablement: incomplete registrations only.
-    report.expectEqual(expected: true, actual: presenter.canRegister(songId: 6), cppID: id,
-                       what: "stray offers Register Song")
-    report.expectEqual(expected: true, actual: presenter.canRegister(songId: 7), cppID: id,
-                       what: "partial offers Register Song")
-    report.expectEqual(expected: false, actual: presenter.canRegister(songId: 0), cppID: id,
-                       what: "complete registration disables Register Song")
+    report.expectEqual(
+        expected: true, actual: presenter.canRegister(songId: 6), cppID: id,
+        what: "stray offers Register Song")
+    report.expectEqual(
+        expected: true, actual: presenter.canRegister(songId: 7), cppID: id,
+        what: "partial offers Register Song")
+    report.expectEqual(
+        expected: false, actual: presenter.canRegister(songId: 0), cppID: id,
+        what: "complete registration disables Register Song")
 }
 
 // MARK: - Categories
@@ -114,34 +128,43 @@ private func songListCategories(_ report: CheckReport) {
 
     // mus_ has four playable entries, se_ two; ph_ and the underscore-less
     // label are singletons and pool into Other.
-    report.expectEqual(expected: ["", "mus_", "se_", SongListPresenter.otherPrefix],
-                       actual: categoryPrefixes(presenter), cppID: id,
-                       what: "categories are multi-song prefixes, biggest first, Other last")
-    report.expectEqual(expected: ["All (8)", "Music (mus_) (4)", "Sound effects (se_) (2)", "Other (2)"],
-                       actual: categoryNames(presenter), cppID: id,
-                       what: "category names carry friendly labels and counts")
+    report.expectEqual(
+        expected: ["", "mus_", "se_", SongListPresenter.otherPrefix],
+        actual: categoryPrefixes(presenter), cppID: id,
+        what: "categories are multi-song prefixes, biggest first, Other last")
+    report.expectEqual(
+        expected: ["All (8)", "Music (mus_) (4)", "Sound effects (se_) (2)", "Other (2)"],
+        actual: categoryNames(presenter), cppID: id,
+        what: "category names carry friendly labels and counts")
 
     selectCategory(presenter, "se_")
-    report.expectEqual(expected: ["se_door", "se_bell"], actual: rowLabels(presenter), cppID: id,
-                       what: "category filters to its prefix")
-    report.expectEqual(expected: "2 of 8 songs", actual: presenter.countText, cppID: id,
-                       what: "filtered count caption")
-    report.expectEqual(expected: "se_", actual: presenter.categoryPrefix(), cppID: id,
-                       what: "categoryPrefix reports the combo data")
+    report.expectEqual(
+        expected: ["se_door", "se_bell"], actual: rowLabels(presenter), cppID: id,
+        what: "category filters to its prefix")
+    report.expectEqual(
+        expected: "2 of 8 songs", actual: presenter.countText, cppID: id,
+        what: "filtered count caption")
+    report.expectEqual(
+        expected: "se_", actual: presenter.categoryPrefix(), cppID: id,
+        what: "categoryPrefix reports the combo data")
 
     selectCategory(presenter, SongListPresenter.otherPrefix)
-    report.expectEqual(expected: ["ph_letter_a", "noscore"], actual: rowLabels(presenter), cppID: id,
-                       what: "Other pools singleton prefixes and underscore-less labels")
+    report.expectEqual(
+        expected: ["ph_letter_a", "noscore"], actual: rowLabels(presenter), cppID: id,
+        what: "Other pools singleton prefixes and underscore-less labels")
 
     // A category that disappears on the next setSongs falls back to All.
     selectCategory(presenter, "se_")
     presenter.setSongs([songListing(0, "mus_a"), songListing(1, "mus_b")])
-    report.expectEqual(expected: 0, actual: presenter.categoryIndex, cppID: id,
-                       what: "vanished category falls back to All")
-    report.expectEqual(expected: "", actual: presenter.categoryPrefix(), cppID: id,
-                       what: "fallback reports the All prefix")
-    report.expectEqual(expected: ["mus_a", "mus_b"], actual: rowLabels(presenter), cppID: id,
-                       what: "fallback shows every song")
+    report.expectEqual(
+        expected: 0, actual: presenter.categoryIndex, cppID: id,
+        what: "vanished category falls back to All")
+    report.expectEqual(
+        expected: "", actual: presenter.categoryPrefix(), cppID: id,
+        what: "fallback reports the All prefix")
+    report.expectEqual(
+        expected: ["mus_a", "mus_b"], actual: rowLabels(presenter), cppID: id,
+        what: "fallback shows every song")
 }
 
 // MARK: - Search
@@ -154,42 +177,51 @@ private func songListSearch(_ report: CheckReport) {
 
     // Per-word AND over label + constant.
     presenter.updateSearch(text: "mus route")
-    report.expectEqual(expected: ["mus_route101", "mus_route102"], actual: rowLabels(presenter), cppID: id,
-                       what: "multi-word query requires every word")
+    report.expectEqual(
+        expected: ["mus_route101", "mus_route102"], actual: rowLabels(presenter), cppID: id,
+        what: "multi-word query requires every word")
     presenter.updateSearch(text: "route stray")
-    report.expectEqual(expected: [], actual: rowLabels(presenter), cppID: id,
-                       what: "no song contains both words")
-    report.expectEqual(expected: "0 of 8 songs", actual: presenter.countText, cppID: id,
-                       what: "empty result count caption")
+    report.expectEqual(
+        expected: [], actual: rowLabels(presenter), cppID: id,
+        what: "no song contains both words")
+    report.expectEqual(
+        expected: "0 of 8 songs", actual: presenter.countText, cppID: id,
+        what: "empty result count caption")
 
     // The constant participates: MUS_STRAY's constant matches "stray".
     presenter.updateSearch(text: "mus_stray")
-    report.expectEqual(expected: ["mus_stray"], actual: rowLabels(presenter), cppID: id,
-                       what: "constant text matches")
+    report.expectEqual(
+        expected: ["mus_stray"], actual: rowLabels(presenter), cppID: id,
+        what: "constant text matches")
 
     // Single-word fuzzy fallback: subsequence, not substring.
     presenter.updateSearch(text: "musrival")
-    report.expectEqual(expected: [], actual: rowLabels(presenter), cppID: id,
-                       what: "non-subsequence finds nothing")
+    report.expectEqual(
+        expected: [], actual: rowLabels(presenter), cppID: id,
+        what: "non-subsequence finds nothing")
     presenter.updateSearch(text: "msray")
-    report.expectEqual(expected: ["mus_stray"], actual: rowLabels(presenter), cppID: id,
-                       what: "subsequence query finds mus_stray")
+    report.expectEqual(
+        expected: ["mus_stray"], actual: rowLabels(presenter), cppID: id,
+        what: "subsequence query finds mus_stray")
     // Fuzzy applies to single-word queries only.
     presenter.updateSearch(text: "ms ray")
-    report.expectEqual(expected: [], actual: rowLabels(presenter), cppID: id,
-                       what: "multi-word queries never fall back to fuzzy")
+    report.expectEqual(
+        expected: [], actual: rowLabels(presenter), cppID: id,
+        what: "multi-word queries never fall back to fuzzy")
 
     // Search composes with the category.
     presenter.updateSearch(text: "")
     selectCategory(presenter, "mus_")
     presenter.updateSearch(text: "route")
-    report.expectEqual(expected: ["mus_route101", "mus_route102"], actual: rowLabels(presenter), cppID: id,
-                       what: "search narrows inside the category")
+    report.expectEqual(
+        expected: ["mus_route101", "mus_route102"], actual: rowLabels(presenter), cppID: id,
+        what: "search narrows inside the category")
 
     // Clearing restores the full category.
     presenter.updateSearch(text: "  ")
-    report.expectEqual(expected: 4, actual: presenter.rowCount, cppID: id,
-                       what: "whitespace-only search is empty")
+    report.expectEqual(
+        expected: 4, actual: presenter.rowCount, cppID: id,
+        what: "whitespace-only search is empty")
 }
 
 // MARK: - Sort
@@ -201,18 +233,20 @@ private func songListSort(_ report: CheckReport) {
     presenter.setSongs([
         songListing(0, "mus_beta"),
         songListing(1, "mus_Alpha"),
-        songListing(2, "mus_alpha"), // case tie with id 1; id order wins
+        songListing(2, "mus_alpha"),  // case tie with id 1; id order wins
         songListing(3, "se_door"),
     ])
 
     presenter.selectSort(index: 1)
-    report.expectEqual(expected: ["mus_Alpha", "mus_alpha", "mus_beta", "se_door"],
-                       actual: rowLabels(presenter), cppID: id,
-                       what: "A–Z is case-insensitive with an ID tie-break")
+    report.expectEqual(
+        expected: ["mus_Alpha", "mus_alpha", "mus_beta", "se_door"],
+        actual: rowLabels(presenter), cppID: id,
+        what: "A–Z is case-insensitive with an ID tie-break")
     presenter.selectSort(index: 0)
-    report.expectEqual(expected: ["mus_beta", "mus_Alpha", "mus_alpha", "se_door"],
-                       actual: rowLabels(presenter), cppID: id,
-                       what: "ID order restores snapshot order")
+    report.expectEqual(
+        expected: ["mus_beta", "mus_Alpha", "mus_alpha", "se_door"],
+        actual: rowLabels(presenter), cppID: id,
+        what: "ID order restores snapshot order")
 }
 
 // MARK: - Current song, selection and activation
@@ -234,34 +268,42 @@ private func songListSelectionAndActivation(_ report: CheckReport) {
 
     // The loaded song selects and reveals.
     presenter.setCurrentSong(songId: 1)
-    report.expectEqual(expected: 1, actual: presenter.selectedSongId, cppID: id,
-                       what: "setCurrentSong selects the loaded song")
-    report.expectEqual(expected: 1, actual: presenter.revealSongId, cppID: id,
-                       what: "setCurrentSong scrolls the row into view")
-    report.expectEqual(expected: true, actual: presenter.rows[1].current, cppID: id,
-                       what: "the loaded row carries the current flag")
+    report.expectEqual(
+        expected: 1, actual: presenter.selectedSongId, cppID: id,
+        what: "setCurrentSong selects the loaded song")
+    report.expectEqual(
+        expected: 1, actual: presenter.revealSongId, cppID: id,
+        what: "setCurrentSong scrolls the row into view")
+    report.expectEqual(
+        expected: true, actual: presenter.rows[1].current, cppID: id,
+        what: "the loaded row carries the current flag")
 
     // Selection survives a rebuild while the search stays empty.
     selectCategory(presenter, "mus_")
-    report.expectEqual(expected: 1, actual: presenter.selectedSongId, cppID: id,
-                       what: "rebuild re-selects the loaded song")
+    report.expectEqual(
+        expected: 1, actual: presenter.selectedSongId, cppID: id,
+        what: "rebuild re-selects the loaded song")
 
     // Mid-search the selection clears so Enter takes the first match.
     presenter.updateSearch(text: "route")
-    report.expectEqual(expected: -1, actual: presenter.selectedSongId, cppID: id,
-                       what: "search clears the selection")
+    report.expectEqual(
+        expected: -1, actual: presenter.selectedSongId, cppID: id,
+        what: "search clears the selection")
     presenter.activateSelection()
-    report.expectEqual(expected: [0], actual: activated, cppID: id,
-                       what: "Enter activates the first visible match")
+    report.expectEqual(
+        expected: [0], actual: activated, cppID: id,
+        what: "Enter activates the first visible match")
 
     // A filtered-out loaded song deselects; -1 deselects outright.
     presenter.updateSearch(text: "")
     selectCategory(presenter, "se_")
-    report.expectEqual(expected: -1, actual: presenter.selectedSongId, cppID: id,
-                       what: "filtered-out loaded song deselects")
+    report.expectEqual(
+        expected: -1, actual: presenter.selectedSongId, cppID: id,
+        what: "filtered-out loaded song deselects")
     presenter.setCurrentSong(songId: -1)
-    report.expectEqual(expected: -1, actual: presenter.selectedSongId, cppID: id,
-                       what: "-1 deselects")
+    report.expectEqual(
+        expected: -1, actual: presenter.selectedSongId, cppID: id,
+        what: "-1 deselects")
 
     // Activation and context actions carry the native song ID.
     selectCategory(presenter, "")
@@ -269,8 +311,9 @@ private func songListSelectionAndActivation(_ report: CheckReport) {
     presenter.requestOpenInNewTab(songId: 6)
     presenter.requestRegister(songId: 6)
     presenter.requestDelete(songId: 6)
-    report.expectEqual(expected: [0, 6], actual: activated, cppID: id,
-                       what: "activation emits the native song ID")
+    report.expectEqual(
+        expected: [0, 6], actual: activated, cppID: id,
+        what: "activation emits the native song ID")
     report.expectEqual(expected: [6], actual: newTab, cppID: id, what: "open-in-new-tab emits the native ID")
     report.expectEqual(expected: [6], actual: registered, cppID: id, what: "register emits the native ID")
     report.expectEqual(expected: [6], actual: deleted, cppID: id, what: "delete emits the native ID")
@@ -278,24 +321,29 @@ private func songListSelectionAndActivation(_ report: CheckReport) {
     // Activating an id that isn't visible is a no-op.
     presenter.updateSearch(text: "route101")
     presenter.activateSong(songId: 6)
-    report.expectEqual(expected: [0, 6], actual: activated, cppID: id,
-                       what: "invisible ids cannot activate")
+    report.expectEqual(
+        expected: [0, 6], actual: activated, cppID: id,
+        what: "invisible ids cannot activate")
 
     // Context actions only target visible rows; Register additionally needs
     // an incomplete registration (the native action's enablement).
     presenter.requestOpenInNewTab(songId: 6)
     presenter.requestRegister(songId: 6)
     presenter.requestDelete(songId: 6)
-    report.expectEqual(expected: [6], actual: newTab, cppID: id,
-                       what: "invisible ids cannot open in a new tab")
-    report.expectEqual(expected: [6], actual: registered, cppID: id,
-                       what: "invisible ids cannot register")
-    report.expectEqual(expected: [6], actual: deleted, cppID: id,
-                       what: "invisible ids cannot delete")
+    report.expectEqual(
+        expected: [6], actual: newTab, cppID: id,
+        what: "invisible ids cannot open in a new tab")
+    report.expectEqual(
+        expected: [6], actual: registered, cppID: id,
+        what: "invisible ids cannot register")
+    report.expectEqual(
+        expected: [6], actual: deleted, cppID: id,
+        what: "invisible ids cannot delete")
     presenter.updateSearch(text: "")
     presenter.requestRegister(songId: 0)
-    report.expectEqual(expected: [6], actual: registered, cppID: id,
-                       what: "a fully registered song cannot register")
+    report.expectEqual(
+        expected: [6], actual: registered, cppID: id,
+        what: "a fully registered song cannot register")
 }
 
 // MARK: - Filter restore
@@ -308,33 +356,40 @@ private func songListRestoreFilters(_ report: CheckReport) {
     // Before any project, the restored category reports as pending so a
     // project-less run doesn't wipe it.
     presenter.restoreFilters(search: "route", sort: 1, category: "se_")
-    report.expectEqual(expected: "route", actual: presenter.searchText, cppID: id,
-                       what: "restored search text")
+    report.expectEqual(
+        expected: "route", actual: presenter.searchText, cppID: id,
+        what: "restored search text")
     report.expectEqual(expected: 1, actual: presenter.sortIndex, cppID: id, what: "restored sort")
-    report.expectEqual(expected: "se_", actual: presenter.categoryPrefix(), cppID: id,
-                       what: "pending category reports before songs arrive")
+    report.expectEqual(
+        expected: "se_", actual: presenter.categoryPrefix(), cppID: id,
+        what: "pending category reports before songs arrive")
 
     // Once songs arrive the pending category applies.
     presenter.setSongs(songListFixture())
-    report.expectEqual(expected: "se_", actual: presenter.categoryPrefix(), cppID: id,
-                       what: "pending category applies on first rebuild")
-    report.expectEqual(expected: [], actual: rowLabels(presenter), cppID: id,
-                       what: "restored search and category compose")
+    report.expectEqual(
+        expected: "se_", actual: presenter.categoryPrefix(), cppID: id,
+        what: "pending category applies on first rebuild")
+    report.expectEqual(
+        expected: [], actual: rowLabels(presenter), cppID: id,
+        what: "restored search and category compose")
 
     // A restored category the project lacks falls back to All.
     let fresh = SongListPresenter()
     fresh.restoreFilters(search: "", sort: 0, category: "xy_")
     fresh.setSongs(songListFixture())
-    report.expectEqual(expected: 0, actual: fresh.categoryIndex, cppID: id,
-                       what: "unknown restored category falls back to All")
-    report.expectEqual(expected: "", actual: fresh.categoryPrefix(), cppID: id,
-                       what: "fallback clears the pending prefix")
+    report.expectEqual(
+        expected: 0, actual: fresh.categoryIndex, cppID: id,
+        what: "unknown restored category falls back to All")
+    report.expectEqual(
+        expected: "", actual: fresh.categoryPrefix(), cppID: id,
+        what: "fallback clears the pending prefix")
 
     // Out-of-range sort indexes are ignored.
     let sorted = SongListPresenter()
     sorted.restoreFilters(search: "", sort: 7, category: "")
-    report.expectEqual(expected: 0, actual: sorted.sortIndex, cppID: id,
-                       what: "out-of-range sort index is ignored")
+    report.expectEqual(
+        expected: 0, actual: sorted.sortIndex, cppID: id,
+        what: "out-of-range sort index is ignored")
 }
 
 @MainActor
@@ -354,11 +409,12 @@ private func songListPreferenceRestore(_ report: CheckReport) {
     let presenter = SongListPresenter()
     presenter.restoreFromPreferences()
     presenter.setSongs(songListFixture())
-    report.expectEqual(expected: true,
-                       actual: presenter.searchText == "route" && presenter.sortIndex == 1
-                           && presenter.categoryPrefix() == "mus_"
-                           && rowLabels(presenter) == ["mus_route101", "mus_route102"],
-                       cppID: id, what: "stored song filters restore into the songs presenter")
+    report.expectEqual(
+        expected: true,
+        actual: presenter.searchText == "route" && presenter.sortIndex == 1
+            && presenter.categoryPrefix() == "mus_"
+            && rowLabels(presenter) == ["mus_route101", "mus_route102"],
+        cppID: id, what: "stored song filters restore into the songs presenter")
 }
 
 // MARK: - New Song label laws (fork newsongwizard identity field)
@@ -368,14 +424,18 @@ private func songListNewSongLabelLaws(_ report: CheckReport) {
     let id = "swiftcore/SongList::newSongLabelLaws"
     let presenter = SongListPresenter()
     presenter.setSongs(songListFixture())
-    report.expectEqual(expected: true, actual: presenter.songLabelTaken(label: "mus_route101"),
-                       cppID: id, what: "a playable snapshot song trips the taken hint")
-    report.expectEqual(expected: true, actual: presenter.songLabelTaken(label: "mus_ghost"),
-                       cppID: id, what: "a mid-less table entry still trips the taken hint")
-    report.expectEqual(expected: false, actual: presenter.songLabelTaken(label: "mus_stray"),
-                       cppID: id, what: "an unregistered stray reaches the service refusal, not the hint")
-    report.expectEqual(expected: false, actual: presenter.songLabelTaken(label: "mus_free_song"),
-                       cppID: id, what: "a free label leaves the taken hint off")
+    report.expectEqual(
+        expected: true, actual: presenter.songLabelTaken(label: "mus_route101"),
+        cppID: id, what: "a playable snapshot song trips the taken hint")
+    report.expectEqual(
+        expected: true, actual: presenter.songLabelTaken(label: "mus_ghost"),
+        cppID: id, what: "a mid-less table entry still trips the taken hint")
+    report.expectEqual(
+        expected: false, actual: presenter.songLabelTaken(label: "mus_stray"),
+        cppID: id, what: "an unregistered stray reaches the service refusal, not the hint")
+    report.expectEqual(
+        expected: false, actual: presenter.songLabelTaken(label: "mus_free_song"),
+        cppID: id, what: "a free label leaves the taken hint off")
 }
 
 // MARK: - Entry point

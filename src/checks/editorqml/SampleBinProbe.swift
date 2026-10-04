@@ -17,7 +17,8 @@ public final class SampleBinProbe: QmlInstantiableStatus {
         rateHz = 0
         seconds = 0
         guard let bytes = try? Data(contentsOf: URL(fileURLWithPath: path)),
-              bytes.count >= 16 else { return false }
+            bytes.count >= 16
+        else { return false }
         func u32(_ offset: Int) -> UInt32 {
             UInt32(bytes[offset]) | UInt32(bytes[offset + 1]) << 8
                 | UInt32(bytes[offset + 2]) << 16 | UInt32(bytes[offset + 3]) << 24

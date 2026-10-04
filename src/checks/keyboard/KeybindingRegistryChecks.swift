@@ -41,14 +41,16 @@ public func runKeybindingRegistryChecks(
         settingsSeeds,
         "transpose-up remains the shipped Up sequence")
     onAssertion(
-        !registry.matches(QtKeyCode.u.rawValue,
-                          QtKeyboardModifier.control.rawValue | QtKeyboardModifier.alt.rawValue,
-                          "roll.transpose_up"),
+        !registry.matches(
+            QtKeyCode.u.rawValue,
+            QtKeyboardModifier.control.rawValue | QtKeyboardModifier.alt.rawValue,
+            "roll.transpose_up"),
         settingsSeeds,
         "Ctrl+Alt+U does not replace transpose-up")
     onAssertion(
-        registry.matches(QtKeyCode.up.rawValue, QtKeyboardModifier.none.rawValue,
-                         "roll.transpose_up"),
+        registry.matches(
+            QtKeyCode.up.rawValue, QtKeyboardModifier.none.rawValue,
+            "roll.transpose_up"),
         settingsSeeds,
         "Up remains transpose-up")
     onAssertion(
@@ -56,8 +58,9 @@ public func runKeybindingRegistryChecks(
         settingsSeeds,
         "play-pause remains the shipped Space sequence")
     onAssertion(
-        registry.matches(QtKeyCode.space.rawValue, QtKeyboardModifier.none.rawValue,
-                         "transport.play_pause"),
+        registry.matches(
+            QtKeyCode.space.rawValue, QtKeyboardModifier.none.rawValue,
+            "transport.play_pause"),
         settingsSeeds,
         "Space remains play-pause")
     onAssertion(
@@ -109,9 +112,9 @@ public func runKeybindingRegistryChecks(
         }
     }
     onAssertion(
-        registry.sequences("edit.insert_time").map(\.strokes) ==
-            [[QtKeyCode.i.rawValue | QtKeyboardModifier.control.rawValue |
-                QtKeyboardModifier.shift.rawValue]],
+        registry.sequences("edit.insert_time").map(\.strokes) == [
+            [QtKeyCode.i.rawValue | QtKeyboardModifier.control.rawValue | QtKeyboardModifier.shift.rawValue]
+        ],
         deliveryScopes,
         "Insert Time keeps Ctrl+Shift+I")
     onAssertion(
@@ -119,8 +122,7 @@ public func runKeybindingRegistryChecks(
         deliveryScopes,
         "Delete Time remains unbound")
     onAssertion(
-        registry.sequences("automation.pencil_mode").map(\.strokes) ==
-            [[QtKeyCode.b.rawValue]],
+        registry.sequences("automation.pencil_mode").map(\.strokes) == [[QtKeyCode.b.rawValue]],
         deliveryScopes,
         "Pencil Mode keeps unmodified B")
     // Qt's portable Control bit resolves to Command for standard keys on macOS.
@@ -157,11 +159,18 @@ public func runKeybindingRegistryChecks(
         ("automation-pencil", "automation.pencil_mode", QtKeyCode.b.rawValue, QtKeyboardModifier.none.rawValue, true),
         ("pitch-bend", "roll.pitch_bend", QtKeyCode.g.rawValue, QtKeyboardModifier.none.rawValue, true),
         ("play-pause", "transport.play_pause", QtKeyCode.space.rawValue, QtKeyboardModifier.none.rawValue, true),
-        ("control-not-play-pause", "transport.play_pause", QtKeyCode.space.rawValue, QtKeyboardModifier.control.rawValue, false),
-        ("insert-time", "edit.insert_time", QtKeyCode.i.rawValue,
-         QtKeyboardModifier.control.rawValue | QtKeyboardModifier.shift.rawValue, true),
-        ("duplicate-time", "roll.duplicate_time", QtKeyCode.d.rawValue,
-         QtKeyboardModifier.control.rawValue, true),
+        (
+            "control-not-play-pause", "transport.play_pause", QtKeyCode.space.rawValue,
+            QtKeyboardModifier.control.rawValue, false
+        ),
+        (
+            "insert-time", "edit.insert_time", QtKeyCode.i.rawValue,
+            QtKeyboardModifier.control.rawValue | QtKeyboardModifier.shift.rawValue, true
+        ),
+        (
+            "duplicate-time", "roll.duplicate_time", QtKeyCode.d.rawValue,
+            QtKeyboardModifier.control.rawValue, true
+        ),
     ]
     for row in rows {
         onAssertion(
@@ -172,15 +181,15 @@ public func runKeybindingRegistryChecks(
 
     let modifierChords = "KeymapCheckTest::modifierChords"
     onAssertion(
-        registry.matchesModifier(QtKeyboardModifier.control.rawValue |
-                                QtKeyboardModifier.keypad.rawValue,
-                                "roll.velocity_drag"),
+        registry.matchesModifier(
+            QtKeyboardModifier.control.rawValue | QtKeyboardModifier.keypad.rawValue,
+            "roll.velocity_drag"),
         modifierChords,
         "Control plus Keypad arms velocity drag")
     onAssertion(
-        !registry.matchesModifier(QtKeyboardModifier.control.rawValue |
-                                 QtKeyboardModifier.shift.rawValue,
-                                 "roll.velocity_drag"),
+        !registry.matchesModifier(
+            QtKeyboardModifier.control.rawValue | QtKeyboardModifier.shift.rawValue,
+            "roll.velocity_drag"),
         modifierChords,
         "Control plus Shift does not arm velocity drag")
 }

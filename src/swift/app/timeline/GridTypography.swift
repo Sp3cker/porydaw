@@ -74,9 +74,10 @@ struct GridTypography {
             preconditionFailure("GridTypography requires the key-label face")
         }
         let keyLabelFit = measure(.keyLabel).fittedSize(rowHeight: rowHeight)
-        keyLabelMetrics = NativeFontMetrics(GridFontSpec(
-            family: keyLabelBase.family, pixelSize: keyLabelFit,
-            weight: keyLabelBase.weight, letterSpacing: keyLabelBase.letterSpacing))
+        keyLabelMetrics = NativeFontMetrics(
+            GridFontSpec(
+                family: keyLabelBase.family, pixelSize: keyLabelFit,
+                weight: keyLabelBase.weight, letterSpacing: keyLabelBase.letterSpacing))
         guard let valueBase = fonts[.noteValue] else {
             preconditionFailure("GridTypography requires the note-value face")
         }
@@ -129,14 +130,16 @@ struct GridTypography {
     func fontMap(_ kind: GridFontKind) -> [String: QVariantSettable] { fontMaps[kind]! }
 
     static func fonts(metrics _: GridMetrics, typography: Typography) -> [GridFontKind: GridFontSpec] {
-        let rulerPx = max(typography.fontPx(1.0 / 12.0),
-                          typography.caption.pixelSize - 1)
+        let rulerPx = max(
+            typography.fontPx(1.0 / 12.0),
+            typography.caption.pixelSize - 1)
         let beatPx = max(typography.fontPx(1.0 / 12.0), rulerPx - 1)
         let spacing = typography.fontPxF(-1.0 / 24.0)
         let noteNamePx = max(1, typography.noteName.pixelSize - 2)
         func derived(_ role: GridFontSpec, px: Int, spacing: Double? = nil) -> GridFontSpec {
-            GridFontSpec(family: role.family, pixelSize: px, weight: role.weight,
-                         letterSpacing: spacing ?? role.letterSpacing)
+            GridFontSpec(
+                family: role.family, pixelSize: px, weight: role.weight,
+                letterSpacing: spacing ?? role.letterSpacing)
         }
         return [
             .ruler: derived(typography.bodyMono, px: rulerPx, spacing: spacing),

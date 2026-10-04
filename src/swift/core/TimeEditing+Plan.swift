@@ -25,11 +25,17 @@ extension SongDocument {
                 let logicalLane = xcmdLaneByChunk[chunk][index].map { Lane.controller($0) }
                 let lane = logicalLane ?? lane(of: event)
                 let covered: Bool
-                if isTempoEvent(event) { covered = false }
-                else if scope.wholeSong { covered = !event.isChannel || engineTrack >= 0 }
-                else if event.isChannel && scope.tracks.contains(engineTrack) { covered = true }
-                else if let lane { covered = scope.coversLane(track: engineTrack, lane: lane) }
-                else { covered = false }
+                if isTempoEvent(event) {
+                    covered = false
+                } else if scope.wholeSong {
+                    covered = !event.isChannel || engineTrack >= 0
+                } else if event.isChannel && scope.tracks.contains(engineTrack) {
+                    covered = true
+                } else if let lane {
+                    covered = scope.coversLane(track: engineTrack, lane: lane)
+                } else {
+                    covered = false
+                }
                 guard covered else { continue }
                 selected[chunk][index] = true
                 affected[chunk] = true
@@ -46,25 +52,35 @@ extension SongDocument {
                     if let logicalLane, case let .controller(controller) = logicalLane {
                         data0 = controller
                     } else if case let .channel(_, first, _) = event.payload,
-                              event.typeNibble == 0xA || event.typeNibble == 0xB { data0 = first }
-                    else { data0 = 0 }
-                    stream = TimeStream(kind: .channel, chunk: chunk,
-                                        status: event.status, data0: data0)
+                        event.typeNibble == 0xA || event.typeNibble == 0xB
+                    {
+                        data0 = first
+                    } else {
+                        data0 = 0
+                    }
+                    stream = TimeStream(
+                        kind: .channel, chunk: chunk,
+                        status: event.status, data0: data0)
                 } else {
                     kind = .other; stream = nil
                 }
-                events.append(TimeEventRef(chunk: chunk, index: index, tick: event.tick,
-                                           kind: kind, stream: stream))
+                events.append(
+                    TimeEventRef(
+                        chunk: chunk, index: index, tick: event.tick,
+                        kind: kind, stream: stream))
             }
         }
         var notes: [Note] = []
         for track in 0..<map.usedTrackCount where scope.coversTrack(track) {
             guard let chunk = map.tracks[track].midiChunk else { continue }
-            for note in NoteProjection.pair(events: file.chunks[chunk].events,
-                                            channel: map.tracks[track].channel,
-                                            chunk: chunk, track: track) {
+            for note in NoteProjection.pair(
+                events: file.chunks[chunk].events,
+                channel: map.tracks[track].channel,
+                chunk: chunk, track: track)
+            {
                 guard selected[chunk][note.onIndex],
-                      note.endIndex.map({ selected[chunk][$0] }) ?? true else { continue }
+                    note.endIndex.map({ selected[chunk][$0] }) ?? true
+                else { continue }
                 notes.append(note)
             }
         }
@@ -74,8 +90,10 @@ extension SongDocument {
         return TimePlan(events: events, notes: notes, selected: selected, affectedChunks: affected)
     }
 
-    func admits(range: TimeRange, scope: TimeScope, mode: TimeTransformMode,
-                plan: TimePlan, state: SongState) -> Bool {
+    func admits(
+        range: TimeRange, scope: TimeScope, mode: TimeTransformMode,
+        plan: TimePlan, state: SongState
+    ) -> Bool {
         guard mode != .duplicate || range.endTick <= TimeDefaults.maxTick - range.span else {
             return false
         }
@@ -96,25 +114,31 @@ extension SongDocument {
         return true
     }
 
-    func planRemove(range: TimeRange, scope: TimeScope, plan: TimePlan, state: SongState,
-                    actions: inout TimeActions, extra: inout [[MidiEvent]]) {
+    func planRemove(
+        range: TimeRange, scope: TimeScope, plan: TimePlan, state: SongState,
+        actions: inout TimeActions, extra: inout [[MidiEvent]]
+    ) {
         let s = range.startTick, e = range.endTick, span = range.span
         var taken = plan.selected.map { Array(repeating: false, count: $0.count) }
         for note in plan.notes {
             if note.tick >= e {
-                actions.move(chunk: note.chunk, index: note.onIndex, to: note.tick - span,
-                             preserveIdentity: true)
+                actions.move(
+                    chunk: note.chunk, index: note.onIndex, to: note.tick - span,
+                    preserveIdentity: true)
                 taken[note.chunk][note.onIndex] = true
                 if let endIndex = note.endIndex {
                     let end = state.file.chunks[note.chunk].events[endIndex].tick
-                    actions.move(chunk: note.chunk, index: endIndex, to: end - span,
-                                 preserveIdentity: false)
+                    actions.move(
+                        chunk: note.chunk, index: endIndex, to: end - span,
+                        preserveIdentity: false)
                     taken[note.chunk][endIndex] = true
                 }
             } else if note.tick >= s {
                 actions.remove(chunk: note.chunk, index: note.onIndex)
                 taken[note.chunk][note.onIndex] = true
-                if let end = note.endIndex { actions.remove(chunk: note.chunk, index: end); taken[note.chunk][end] = true }
+                if let end = note.endIndex {
+                    actions.remove(chunk: note.chunk, index: end); taken[note.chunk][end] = true
+                }
             } else {
                 taken[note.chunk][note.onIndex] = true
                 if let end = note.endIndex { taken[note.chunk][end] = true }
@@ -122,17 +146,26 @@ extension SongDocument {
         }
         for ref in plan.events where ref.kind == .note && !taken[ref.chunk][ref.index] {
             if ref.tick < s { continue }
-            if ref.tick >= e { actions.move(chunk: ref.chunk, index: ref.index, to: ref.tick - span,
-                                             preserveIdentity: state.file.chunks[ref.chunk].events[ref.index].isNoteOn) }
-            else { actions.remove(chunk: ref.chunk, index: ref.index) }
+            if ref.tick >= e {
+                actions.move(
+                    chunk: ref.chunk, index: ref.index, to: ref.tick - span,
+                    preserveIdentity: state.file.chunks[ref.chunk].events[ref.index].isNoteOn)
+            } else {
+                actions.remove(chunk: ref.chunk, index: ref.index)
+            }
         }
         applyRemoveToValueStreams(range: range, plan: plan, state: state, actions: &actions)
         if scope.wholeSong {
             for ref in plan.events where ref.kind == .other {
-                if ref.tick >= e { actions.move(chunk: ref.chunk, index: ref.index, to: ref.tick - span,
-                                                preserveIdentity: false) }
-                else if ref.tick > s { actions.move(chunk: ref.chunk, index: ref.index, to: s,
-                                                    preserveIdentity: false) }
+                if ref.tick >= e {
+                    actions.move(
+                        chunk: ref.chunk, index: ref.index, to: ref.tick - span,
+                        preserveIdentity: false)
+                } else if ref.tick > s {
+                    actions.move(
+                        chunk: ref.chunk, index: ref.index, to: s,
+                        preserveIdentity: false)
+                }
             }
             for chunk in actions.endTicks.indices {
                 let end = actions.endTicks[chunk]
@@ -141,19 +174,23 @@ extension SongDocument {
         }
     }
 
-    func planInsert(range: TimeRange, plan: TimePlan, state: SongState,
-                    actions: inout TimeActions, extra: inout [[MidiEvent]]) {
+    func planInsert(
+        range: TimeRange, plan: TimePlan, state: SongState,
+        actions: inout TimeActions, extra: inout [[MidiEvent]]
+    ) {
         let s = range.startTick, e = range.endTick, span = range.span
         var taken = plan.selected.map { Array(repeating: false, count: $0.count) }
         for note in plan.notes {
             let end = note.endIndex.map { state.file.chunks[note.chunk].events[$0].tick }
             if note.tick >= s {
-                actions.move(chunk: note.chunk, index: note.onIndex, to: note.tick + span,
-                             preserveIdentity: true)
+                actions.move(
+                    chunk: note.chunk, index: note.onIndex, to: note.tick + span,
+                    preserveIdentity: true)
                 taken[note.chunk][note.onIndex] = true
                 if let endIndex = note.endIndex, let end {
-                    actions.move(chunk: note.chunk, index: endIndex, to: end + span,
-                                 preserveIdentity: false)
+                    actions.move(
+                        chunk: note.chunk, index: endIndex, to: end + span,
+                        preserveIdentity: false)
                     taken[note.chunk][endIndex] = true
                 }
             } else if let end, end == s {
@@ -163,20 +200,24 @@ extension SongDocument {
                 taken[note.chunk][note.onIndex] = true; taken[note.chunk][endIndex] = true
                 actions.remove(chunk: note.chunk, index: endIndex)
                 var firstEnd = state.file.chunks[note.chunk].events[endIndex]; firstEnd.tick = s
-                var secondOn = state.file.chunks[note.chunk].events[note.onIndex]; secondOn.tick = e; secondOn.noteID = nil
+                var secondOn = state.file.chunks[note.chunk].events[note.onIndex]; secondOn.tick = e;
+                secondOn.noteID = nil
                 var secondEnd = state.file.chunks[note.chunk].events[endIndex]; secondEnd.tick = end + span
                 extra[note.chunk].append(contentsOf: [firstEnd, secondOn, secondEnd])
             } else if note.isUnterminated {
                 taken[note.chunk][note.onIndex] = true
-                extra[note.chunk].append(.channel(tick: s, status: 0x80 | note.channel,
-                                                  data0: note.pitch))
+                extra[note.chunk].append(
+                    .channel(
+                        tick: s, status: 0x80 | note.channel,
+                        data0: note.pitch))
                 var second = state.file.chunks[note.chunk].events[note.onIndex]
                 second.tick = e; second.noteID = nil; extra[note.chunk].append(second)
             }
         }
         for ref in plan.events where !taken[ref.chunk][ref.index] && ref.tick >= s {
-            actions.move(chunk: ref.chunk, index: ref.index, to: ref.tick + span,
-                         preserveIdentity: state.file.chunks[ref.chunk].events[ref.index].isNoteOn)
+            actions.move(
+                chunk: ref.chunk, index: ref.index, to: ref.tick + span,
+                preserveIdentity: state.file.chunks[ref.chunk].events[ref.index].isNoteOn)
             if ref.kind == .signature && ref.tick == s {
                 var copy = state.file.chunks[ref.chunk].events[ref.index]; copy.tick = s
                 extra[ref.chunk].append(copy)
@@ -185,8 +226,10 @@ extension SongDocument {
         shiftEndsRight(range: range, threshold: s, plan: plan, actions: &actions)
     }
 
-    func planDuplicate(range: TimeRange, scope: TimeScope, plan: TimePlan, state: SongState,
-                       actions: inout TimeActions, extra: inout [[MidiEvent]]) {
+    func planDuplicate(
+        range: TimeRange, scope: TimeScope, plan: TimePlan, state: SongState,
+        actions: inout TimeActions, extra: inout [[MidiEvent]]
+    ) {
         let s = range.startTick, e = range.endTick, span = range.span
         var paired = plan.selected.map { Array(repeating: false, count: $0.count) }
         var taken = paired
@@ -195,11 +238,15 @@ extension SongDocument {
             if let endIndex = note.endIndex { paired[note.chunk][endIndex] = true }
             let end = note.endIndex.map { state.file.chunks[note.chunk].events[$0].tick }
             if note.tick >= e {
-                actions.move(chunk: note.chunk, index: note.onIndex, to: note.tick + span,
-                             preserveIdentity: true); taken[note.chunk][note.onIndex] = true
+                actions.move(
+                    chunk: note.chunk, index: note.onIndex, to: note.tick + span,
+                    preserveIdentity: true);
+                taken[note.chunk][note.onIndex] = true
                 if let endIndex = note.endIndex, let end {
-                    actions.move(chunk: note.chunk, index: endIndex, to: end + span,
-                                 preserveIdentity: false); taken[note.chunk][endIndex] = true
+                    actions.move(
+                        chunk: note.chunk, index: endIndex, to: end + span,
+                        preserveIdentity: false);
+                    taken[note.chunk][endIndex] = true
                 }
             } else if let end, let endIndex = note.endIndex {
                 if end == e {
@@ -216,8 +263,9 @@ extension SongDocument {
             }
         }
         for ref in plan.events where !taken[ref.chunk][ref.index] && ref.tick >= e {
-            actions.move(chunk: ref.chunk, index: ref.index, to: ref.tick + span,
-                         preserveIdentity: state.file.chunks[ref.chunk].events[ref.index].isNoteOn)
+            actions.move(
+                chunk: ref.chunk, index: ref.index, to: ref.tick + span,
+                preserveIdentity: state.file.chunks[ref.chunk].events[ref.index].isNoteOn)
         }
         for note in plan.notes where note.tick < e {
             let end = note.endIndex.map { state.file.chunks[note.chunk].events[$0].tick } ?? e
@@ -228,11 +276,14 @@ extension SongDocument {
             let off: MidiEvent
             if let endIndex = note.endIndex {
                 var value = state.file.chunks[note.chunk].events[endIndex]; value.tick = sourceEnd + span; off = value
-            } else { off = .channel(tick: sourceEnd + span, status: 0x80 | note.channel, data0: note.pitch) }
+            } else {
+                off = .channel(tick: sourceEnd + span, status: 0x80 | note.channel, data0: note.pitch)
+            }
             extra[note.chunk].append(contentsOf: [on, off])
         }
-        seedAndCopyValueStreams(range: range, plan: plan, state: state,
-                                actions: &actions, extra: &extra)
+        seedAndCopyValueStreams(
+            range: range, plan: plan, state: state,
+            actions: &actions, extra: &extra)
         if scope.wholeSong {
             for ref in plan.events where ref.kind == .other && range.contains(ref.tick) {
                 var copy = state.file.chunks[ref.chunk].events[ref.index]; copy.tick += span

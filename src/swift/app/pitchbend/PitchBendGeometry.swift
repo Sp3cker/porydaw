@@ -57,14 +57,16 @@ public struct PitchBendGeometry {
     }
 
     public var metrics: [String: QVariantSettable] {
-        ["popupWidth": popupWidth, "popupHeight": popupHeight,
-         "headerHeight": headerHeight, "graphHeight": graphHeight,
-         "outerInset": outerInset, "titleHeight": titleHeight,
-         "descriptionHeight": descriptionHeight, "controlsHeight": controlsHeight,
-         "fieldWidth": fieldWidth, "fieldHeight": fieldHeight,
-         "resetWidth": resetWidth, "resetHeight": resetHeight,
-         "axisLabelHeight": axisLabelHeight, "hairline": hairline,
-         "scrubThreshold": scrubThreshold]
+        [
+            "popupWidth": popupWidth, "popupHeight": popupHeight,
+            "headerHeight": headerHeight, "graphHeight": graphHeight,
+            "outerInset": outerInset, "titleHeight": titleHeight,
+            "descriptionHeight": descriptionHeight, "controlsHeight": controlsHeight,
+            "fieldWidth": fieldWidth, "fieldHeight": fieldHeight,
+            "resetWidth": resetWidth, "resetHeight": resetHeight,
+            "axisLabelHeight": axisLabelHeight, "hairline": hairline,
+            "scrubThreshold": scrubThreshold,
+        ]
     }
 
     public var canvasRect: [String: QVariantSettable] {

@@ -9,11 +9,13 @@ func runResizeChecks(_ report: CheckReport, session: DocumentSession) {
     let originalSelection = session.selectedNoteOrder
     defer {
         session.mutateCamera {
-            $0.updateViewport(width: originalCamera.viewportWidth,
-                              rollHeight: originalCamera.rollHeight)
-            $0.restore(pixelsPerBeat: originalCamera.pixelsPerBeat,
-                       keyHeight: originalCamera.keyHeight,
-                       scrollX: originalCamera.scrollX, scrollY: originalCamera.scrollY)
+            $0.updateViewport(
+                width: originalCamera.viewportWidth,
+                rollHeight: originalCamera.rollHeight)
+            $0.restore(
+                pixelsPerBeat: originalCamera.pixelsPerBeat,
+                keyHeight: originalCamera.keyHeight,
+                scrollX: originalCamera.scrollX, scrollY: originalCamera.scrollY)
         }
         session.setSelectedNotes(originalSelection)
     }
@@ -32,18 +34,23 @@ private struct ResizeCell {
 }
 
 @MainActor
-private func resizeFreeCell(_ grid: PianoGrid, session: DocumentSession,
-                            firstProbe: Int = 8) -> ResizeCell? {
+private func resizeFreeCell(
+    _ grid: PianoGrid, session: DocumentSession,
+    firstProbe: Int = 8
+) -> ResizeCell? {
     let camera = session.camera
     let snapshot = camera.snapshot
     for pitch in (24...115).reversed() {
         let row = camera.projection.row(forPitch: pitch)
         guard row != PitchProjection.hiddenRow,
-              let top = camera.projection.rowTop(row, keyHeight: snapshot.keyHeight,
-                                                  scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
-              let bottom = camera.projection.rowBottom(row, keyHeight: snapshot.keyHeight,
-                                                        scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
-              top >= 0, bottom <= 320 else { continue }
+            let top = camera.projection.rowTop(
+                row, keyHeight: snapshot.keyHeight,
+                scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
+            let bottom = camera.projection.rowBottom(
+                row, keyHeight: snapshot.keyHeight,
+                scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
+            top >= 0, bottom <= 320
+        else { continue }
         for probe in stride(from: firstProbe, to: 600, by: 24) {
             let tick = grid.snapTickDown(camera.tickAtContentX(Double(probe)))
             let cell = grid.gridCell(at: tick)
@@ -51,8 +58,9 @@ private func resizeFreeCell(_ grid: PianoGrid, session: DocumentSession,
             guard (tick - cell.start) % max(1, duration) == 0 else { continue }
             let x0 = camera.viewX(tick: Double(tick), dpr: grid.devicePixelRatio)
             let x1 = camera.viewX(tick: Double(tick + duration), dpr: grid.devicePixelRatio)
-            let snapX = camera.viewX(tick: Double(tick + grid.snapTicks),
-                                        dpr: grid.devicePixelRatio)
+            let snapX = camera.viewX(
+                tick: Double(tick + grid.snapTicks),
+                dpr: grid.devicePixelRatio)
             guard x0 >= 0, x1 - x0 >= 12, snapX - x0 >= 8, x1 < 640 else { continue }
             let occupied = (0..<session.document.engineTracks.usedTrackCount).contains { track in
                 session.document.notes(in: track).contains { note in
@@ -87,10 +95,13 @@ private func checkResizeOffGrid(_ report: CheckReport, session: DocumentSession)
         return
     }
     let offDuration = d.duration + d.duration / 4
-    guard let noteID = try? document.addNotes([
-        NewNote(track: grid.trackIndex, tick: Tick(d.tick), pitch: UInt8(d.pitch),
+    guard
+        let noteID = try? document.addNotes([
+            NewNote(
+                track: grid.trackIndex, tick: Tick(d.tick), pitch: UInt8(d.pitch),
                 duration: Tick(offDuration), velocity: 100)
-    ]).first, let before = try? document.captureSave().bytes else {
+        ]).first, let before = try? document.captureSave().bytes
+    else {
         report.fail(id, "off-grid note fixture could not be serialized")
         return
     }
@@ -101,22 +112,27 @@ private func checkResizeOffGrid(_ report: CheckReport, session: DocumentSession)
         return
     }
     let y = rect.y + rect.height / 2
-    let right = session.camera.viewX(tick: Double(d.tick + offDuration),
-                                        dpr: grid.devicePixelRatio)
+    let right = session.camera.viewX(
+        tick: Double(d.tick + offDuration),
+        dpr: grid.devicePixelRatio)
     let inset = grid.edgeGripReach / 2
     grid.beginPointer(x: right - inset, y: y, modifiers: 0)
-    report.expect(grid.activeNoteId == noteID.rawValue && grid.statusText.contains("Resizing"),
-                  cppID: id, message: "right edge grips the off-grid note")
-    let pull = session.camera.viewX(tick: Double(d.tick) + 1.9 * Double(d.duration),
-                                       dpr: grid.devicePixelRatio)
+    report.expect(
+        grid.activeNoteId == noteID.rawValue && grid.statusText.contains("Resizing"),
+        cppID: id, message: "right edge grips the off-grid note")
+    let pull = session.camera.viewX(
+        tick: Double(d.tick) + 1.9 * Double(d.duration),
+        dpr: grid.devicePixelRatio)
     grid.updatePointer(x: pull, y: y)
     grid.endPointer(x: pull, y: y)
-    report.expect(document.note(noteID).map {
-        Int($0.tick) == d.tick && Int($0.duration) == 2 * d.duration
-    } == true, cppID: id, message: "off-grid right edge ends exactly two ruler cells after start")
-    report.expect(resizeUndoTo(planted, session: session)
-                      && (try? document.captureSave().bytes) == before,
-                  cppID: id, message: "Undo restores the planted off-grid MIDI bytes")
+    report.expect(
+        document.note(noteID).map {
+            Int($0.tick) == d.tick && Int($0.duration) == 2 * d.duration
+        } == true, cppID: id, message: "off-grid right edge ends exactly two ruler cells after start")
+    report.expect(
+        resizeUndoTo(planted, session: session)
+            && (try? document.captureSave().bytes) == before,
+        cppID: id, message: "Undo restores the planted off-grid MIDI bytes")
 }
 
 @MainActor
@@ -127,28 +143,35 @@ private func checkResizeSelection(_ report: CheckReport, session: DocumentSessio
     defer { _ = resizeUndoTo(start, session: session); session.clearSelectedNotes() }
     let grid = makeCameraGrid(session: session)
     guard let a = resizeFreeCell(grid, session: session, firstProbe: 40),
-          let aID = try? document.addNotes([
-              NewNote(track: grid.trackIndex, tick: Tick(a.tick), pitch: UInt8(a.pitch),
-                      duration: Tick(a.duration), velocity: 100)
-          ]).first,
-          let b = resizeFreeCell(grid, session: session, firstProbe: 64),
-          let bID = try? document.addNotes([
-              NewNote(track: grid.trackIndex, tick: Tick(b.tick), pitch: UInt8(b.pitch),
-                      duration: Tick(b.duration), velocity: 73)
-          ]).first else {
+        let aID = try? document.addNotes([
+            NewNote(
+                track: grid.trackIndex, tick: Tick(a.tick), pitch: UInt8(a.pitch),
+                duration: Tick(a.duration), velocity: 100)
+        ]).first,
+        let b = resizeFreeCell(grid, session: session, firstProbe: 64),
+        let bID = try? document.addNotes([
+            NewNote(
+                track: grid.trackIndex, tick: Tick(b.tick), pitch: UInt8(b.pitch),
+                duration: Tick(b.duration), velocity: 73)
+        ]).first
+    else {
         report.fail(id, "velocity-pair seed could not find two free cells")
         return
     }
-    let firstProbe = Int(ceil(session.camera.viewX(
-        tick: Double(b.tick + 2 * b.duration), dpr: grid.devicePixelRatio)))
+    let firstProbe = Int(
+        ceil(
+            session.camera.viewX(
+                tick: Double(b.tick + 2 * b.duration), dpr: grid.devicePixelRatio)))
     guard let d = resizeFreeCell(grid, session: session, firstProbe: firstProbe),
-          let dID = try? document.addNotes([
-              NewNote(track: grid.trackIndex, tick: Tick(d.tick), pitch: UInt8(d.pitch),
-                      duration: Tick(2 * d.duration), velocity: 100)
-          ]).first,
-          let before = try? document.captureSave().bytes,
-          let bBefore = document.note(bID), document.note(aID) != nil,
-          document.note(dID) != nil else {
+        let dID = try? document.addNotes([
+            NewNote(
+                track: grid.trackIndex, tick: Tick(d.tick), pitch: UInt8(d.pitch),
+                duration: Tick(2 * d.duration), velocity: 100)
+        ]).first,
+        let before = try? document.captureSave().bytes,
+        let bBefore = document.note(bID), document.note(aID) != nil,
+        document.note(dID) != nil
+    else {
         report.fail(id, "selection resize could not seed its grabbed note")
         return
     }
@@ -166,38 +189,51 @@ private func checkResizeSelection(_ report: CheckReport, session: DocumentSessio
     let selected = document.history.currentIdentity
     let commandCount = document.history.undoCount
     let revision = document.revision
-    let edge = session.camera.viewX(tick: Double(d.tick + 2 * d.duration),
-                                       dpr: grid.devicePixelRatio) - grid.edgeGripReach / 2
+    let edge =
+        session.camera.viewX(
+            tick: Double(d.tick + 2 * d.duration),
+            dpr: grid.devicePixelRatio) - grid.edgeGripReach / 2
     let y = dRect.y + dRect.height / 2
     grid.beginPointer(x: edge, y: y, modifiers: 0x0400_0000)
     grid.endPointer(x: edge, y: y)
-    report.expect(session.selectedNotes == Set([bID, dID]), cppID: id,
-                  message: "stationary Ctrl+edge joins grabbed note to selection")
-    report.expect(document.note(dID).map { Int($0.duration) == 2 * d.duration } == true,
-                  cppID: id, message: "stationary Ctrl+edge does not resize grabbed note")
-    report.expect(document.history.currentIdentity == selected && document.revision == revision,
-                  cppID: id, message: "stationary Ctrl+edge creates no history entry")
-    let cellWidth = session.camera.viewX(tick: Double(d.tick + 3 * d.duration),
-                                            dpr: grid.devicePixelRatio)
-        - session.camera.viewX(tick: Double(d.tick + 2 * d.duration),
-                                  dpr: grid.devicePixelRatio)
+    report.expect(
+        session.selectedNotes == Set([bID, dID]), cppID: id,
+        message: "stationary Ctrl+edge joins grabbed note to selection")
+    report.expect(
+        document.note(dID).map { Int($0.duration) == 2 * d.duration } == true,
+        cppID: id, message: "stationary Ctrl+edge does not resize grabbed note")
+    report.expect(
+        document.history.currentIdentity == selected && document.revision == revision,
+        cppID: id, message: "stationary Ctrl+edge creates no history entry")
+    let cellWidth =
+        session.camera.viewX(
+            tick: Double(d.tick + 3 * d.duration),
+            dpr: grid.devicePixelRatio)
+        - session.camera.viewX(
+            tick: Double(d.tick + 2 * d.duration),
+            dpr: grid.devicePixelRatio)
     grid.beginPointer(x: edge, y: y, modifiers: 0)
     grid.updatePointer(x: edge + cellWidth, y: y)
     grid.endPointer(x: edge + cellWidth, y: y)
-    report.expect(document.note(dID).map { Int($0.duration) == 3 * d.duration } == true,
+    report.expect(
+        document.note(dID).map { Int($0.duration) == 3 * d.duration } == true,
         cppID: id, message: "unmodified edge drag grows grabbed note by exactly one cell")
-    report.expect(document.note(bID).map {
-        Int($0.duration) == Int(bBefore.duration) + d.duration
+    report.expect(
+        document.note(bID).map {
+            Int($0.duration) == Int(bBefore.duration) + d.duration
         } == true, cppID: id, message: "edge drag grows the rest of selection by one cell")
-    report.expect(document.revision == revision + 1
-                      && document.history.currentIdentity != selected,
-                  cppID: id, message: "one selection resize gesture commits one transaction")
-    report.expect(document.history.undoCount == commandCount + 1, cppID: id,
+    report.expect(
+        document.revision == revision + 1
+            && document.history.currentIdentity != selected,
+        cppID: id, message: "one selection resize gesture commits one transaction")
+    report.expect(
+        document.history.undoCount == commandCount + 1, cppID: id,
         message: "grouped edge resize pushes exactly one undo command")
-    report.expect(document.history.undoDocument()
-                      && document.history.currentIdentity == planted
-                      && (try? document.captureSave().bytes) == before,
-                  cppID: id, message: "Undo restores the planted selection MIDI bytes")
+    report.expect(
+        document.history.undoDocument()
+            && document.history.currentIdentity == planted
+            && (try? document.captureSave().bytes) == before,
+        cppID: id, message: "Undo restores the planted selection MIDI bytes")
 }
 
 @MainActor
@@ -208,11 +244,13 @@ private func checkResizeMinimum(_ report: CheckReport, session: DocumentSession)
     defer { _ = resizeUndoTo(start, session: session); session.clearSelectedNotes() }
     let grid = makeCameraGrid(session: session)
     guard let d = resizeFreeCell(grid, session: session, firstProbe: 88),
-          let noteID = try? document.addNotes([
-              NewNote(track: grid.trackIndex, tick: Tick(d.tick), pitch: UInt8(d.pitch),
-                      duration: Tick(2 * d.duration), velocity: 100)
-          ]).first,
-          let before = try? document.captureSave().bytes else {
+        let noteID = try? document.addNotes([
+            NewNote(
+                track: grid.trackIndex, tick: Tick(d.tick), pitch: UInt8(d.pitch),
+                duration: Tick(2 * d.duration), velocity: 100)
+        ]).first,
+        let before = try? document.captureSave().bytes
+    else {
         report.fail(id, "no free grid cell for the minimum resize")
         return
     }
@@ -223,46 +261,58 @@ private func checkResizeMinimum(_ report: CheckReport, session: DocumentSession)
         return
     }
     let snap = grid.snapTicks
-    let edge = session.camera.viewX(tick: Double(d.tick + 2 * d.duration),
-                                       dpr: grid.devicePixelRatio) - grid.edgeGripReach / 2
+    let edge =
+        session.camera.viewX(
+            tick: Double(d.tick + 2 * d.duration),
+            dpr: grid.devicePixelRatio) - grid.edgeGripReach / 2
     let y = rect.y + rect.height / 2
-    let overshoot = session.camera.viewX(tick: Double(d.tick) - 0.5 * Double(d.duration),
-                                            dpr: grid.devicePixelRatio)
+    let overshoot = session.camera.viewX(
+        tick: Double(d.tick) - 0.5 * Double(d.duration),
+        dpr: grid.devicePixelRatio)
     grid.beginPointer(x: edge, y: y, modifiers: 0)
     grid.updatePointer(x: overshoot, y: y)
     grid.endPointer(x: overshoot, y: y)
-    report.expect(document.note(noteID).map {
-        Int($0.tick) == d.tick && Int($0.duration) == snap
-    } == true, cppID: id, message: "overshot edge clamps at one snap cell")
+    report.expect(
+        document.note(noteID).map {
+            Int($0.tick) == d.tick && Int($0.duration) == snap
+        } == true, cppID: id, message: "overshot edge clamps at one snap cell")
     let originalZoom = session.camera.snapshot.pixelsPerBeat
     let originalScroll = session.camera.snapshot.scrollX
     session.mutateCamera {
         _ = $0.setTimeZoom(4.0)
-        _ = $0.setHScroll(max(0, Double(d.tick) * 4.0
-                                / Double(document.ticksPerBeat) - 100.0))
+        _ = $0.setHScroll(
+            max(
+                0,
+                Double(d.tick) * 4.0
+                    / Double(document.ticksPerBeat) - 100.0))
     }
     grid.refreshCamera()
-    let narrowLeft = session.camera.viewX(tick: Double(d.tick),
-                                              dpr: grid.devicePixelRatio)
-    let narrowRight = session.camera.viewX(tick: Double(d.tick + snap),
-                                               dpr: grid.devicePixelRatio)
-    report.expect(narrowRight - narrowLeft <= 3, cppID: id,
-                  message: "minimum-duration note spans at most three pixels at narrow zoom")
+    let narrowLeft = session.camera.viewX(
+        tick: Double(d.tick),
+        dpr: grid.devicePixelRatio)
+    let narrowRight = session.camera.viewX(
+        tick: Double(d.tick + snap),
+        dpr: grid.devicePixelRatio)
+    report.expect(
+        narrowRight - narrowLeft <= 3, cppID: id,
+        message: "minimum-duration note spans at most three pixels at narrow zoom")
     guard let narrow = selectionRect(noteID, grid: grid) else {
         report.fail(id, "narrow minimum-duration note is not projected")
         return
     }
     grid.updateHover(x: narrow.x + narrow.width / 2, y: narrow.y + narrow.height / 2)
-    report.expect(grid.cursorKind == 0, cppID: id,
-                  message: "a too-narrow note body presents the arrow instead of an edge grip")
+    report.expect(
+        grid.cursorKind == 0, cppID: id,
+        message: "a too-narrow note body presents the arrow instead of an edge grip")
     session.mutateCamera {
         _ = $0.setTimeZoom(originalZoom)
         _ = $0.setHScroll(originalScroll)
     }
     grid.refreshCamera()
-    report.expect(resizeUndoTo(planted, session: session)
-                      && (try? document.captureSave().bytes) == before,
-                  cppID: id, message: "Undo restores the planted minimum-resize MIDI bytes")
+    report.expect(
+        resizeUndoTo(planted, session: session)
+            && (try? document.captureSave().bytes) == before,
+        cppID: id, message: "Undo restores the planted minimum-resize MIDI bytes")
 }
 
 @MainActor
@@ -273,13 +323,16 @@ private func checkResizeAbutting(_ report: CheckReport, session: DocumentSession
     defer { _ = resizeUndoTo(start, session: session); session.clearSelectedNotes() }
     let grid = makeCameraGrid(session: session)
     guard let g = resizeFreeCell(grid, session: session),
-          let ids = try? document.addNotes([
-              NewNote(track: grid.trackIndex, tick: Tick(g.tick), pitch: UInt8(g.pitch),
-                      duration: Tick(g.duration), velocity: 100),
-              NewNote(track: grid.trackIndex, tick: Tick(g.tick + g.duration),
-                      pitch: UInt8(g.pitch), duration: Tick(g.duration), velocity: 100)
-          ]), ids.count == 2,
-          let before = try? document.captureSave().bytes else {
+        let ids = try? document.addNotes([
+            NewNote(
+                track: grid.trackIndex, tick: Tick(g.tick), pitch: UInt8(g.pitch),
+                duration: Tick(g.duration), velocity: 100),
+            NewNote(
+                track: grid.trackIndex, tick: Tick(g.tick + g.duration),
+                pitch: UInt8(g.pitch), duration: Tick(g.duration), velocity: 100),
+        ]), ids.count == 2,
+        let before = try? document.captureSave().bytes
+    else {
         report.fail(id, "no free grid cell for the abutting-notes resize")
         return
     }
@@ -290,49 +343,62 @@ private func checkResizeAbutting(_ report: CheckReport, session: DocumentSession
         return
     }
     let snap = grid.snapTicks
-    let boundary = session.camera.viewX(tick: Double(g.tick + g.duration),
-                                           dpr: grid.devicePixelRatio)
+    let boundary = session.camera.viewX(
+        tick: Double(g.tick + g.duration),
+        dpr: grid.devicePixelRatio)
     let inset = grid.edgeGripReach / 2
     let y = rect.y + rect.height / 2
-    let pullLeft = session.camera.viewX(tick: Double(g.tick + g.duration - snap),
-                                           dpr: grid.devicePixelRatio)
+    let pullLeft = session.camera.viewX(
+        tick: Double(g.tick + g.duration - snap),
+        dpr: grid.devicePixelRatio)
     grid.updateHover(x: boundary - inset, y: y)
-    report.expect(grid.cursorKind == 3, cppID: id,
-                  message: "boundary-left hover shows the first note's right-drag cursor")
+    report.expect(
+        grid.cursorKind == 3, cppID: id,
+        message: "boundary-left hover shows the first note's right-drag cursor")
     grid.updateHover(x: boundary + inset, y: y)
-    report.expect(grid.cursorKind == 2, cppID: id,
-                  message: "boundary-right hover shows the second note's left-drag cursor")
+    report.expect(
+        grid.cursorKind == 2, cppID: id,
+        message: "boundary-right hover shows the second note's left-drag cursor")
     grid.beginPointer(x: boundary - inset, y: y, modifiers: 0)
-    report.expect(grid.activeNoteId == ids[0].rawValue && grid.statusText.contains("Resizing"),
-                  cppID: id, message: "boundary-left grip targets the first note")
+    report.expect(
+        grid.activeNoteId == ids[0].rawValue && grid.statusText.contains("Resizing"),
+        cppID: id, message: "boundary-left grip targets the first note")
     grid.updatePointer(x: pullLeft, y: y)
     grid.endPointer(x: pullLeft, y: y)
-    report.expect(document.note(ids[0]).map {
-        Int($0.tick) == g.tick && Int($0.duration) == g.duration - snap
-    } == true, cppID: id, message: "boundary-left drag shortens first note by one snap cell")
-    report.expect(document.note(ids[1]).map {
-        Int($0.tick) == g.tick + g.duration && Int($0.duration) == g.duration
-    } == true, cppID: id, message: "boundary-left drag leaves second note unchanged")
-    report.expect(document.history.undoDocument(), cppID: id,
-                  message: "Undo reverses the first boundary gesture")
+    report.expect(
+        document.note(ids[0]).map {
+            Int($0.tick) == g.tick && Int($0.duration) == g.duration - snap
+        } == true, cppID: id, message: "boundary-left drag shortens first note by one snap cell")
+    report.expect(
+        document.note(ids[1]).map {
+            Int($0.tick) == g.tick + g.duration && Int($0.duration) == g.duration
+        } == true, cppID: id, message: "boundary-left drag leaves second note unchanged")
+    report.expect(
+        document.history.undoDocument(), cppID: id,
+        message: "Undo reverses the first boundary gesture")
     grid.refreshFromSession()
     session.clearSelectedNotes()
-    let pullRight = session.camera.viewX(tick: Double(g.tick + g.duration + snap),
-                                            dpr: grid.devicePixelRatio)
+    let pullRight = session.camera.viewX(
+        tick: Double(g.tick + g.duration + snap),
+        dpr: grid.devicePixelRatio)
     grid.beginPointer(x: boundary + inset, y: y, modifiers: 0)
-    report.expect(grid.activeNoteId == ids[1].rawValue && grid.statusText.contains("Resizing"),
-                  cppID: id, message: "boundary-right grip targets the second note")
+    report.expect(
+        grid.activeNoteId == ids[1].rawValue && grid.statusText.contains("Resizing"),
+        cppID: id, message: "boundary-right grip targets the second note")
     grid.updatePointer(x: pullRight, y: y)
     grid.endPointer(x: pullRight, y: y)
-    report.expect(document.note(ids[1]).map {
-        Int($0.tick) == g.tick + g.duration + snap && Int($0.duration) == g.duration - snap
-    } == true, cppID: id, message: "boundary-right drag advances second start one snap cell")
-    report.expect(document.note(ids[0]).map {
-        Int($0.tick) == g.tick && Int($0.duration) == g.duration
-    } == true, cppID: id, message: "boundary-right drag leaves first note unchanged")
-    report.expect(resizeUndoTo(planted, session: session)
-                      && (try? document.captureSave().bytes) == before,
-                  cppID: id, message: "Undo restores the planted abutting pair MIDI bytes")
+    report.expect(
+        document.note(ids[1]).map {
+            Int($0.tick) == g.tick + g.duration + snap && Int($0.duration) == g.duration - snap
+        } == true, cppID: id, message: "boundary-right drag advances second start one snap cell")
+    report.expect(
+        document.note(ids[0]).map {
+            Int($0.tick) == g.tick && Int($0.duration) == g.duration
+        } == true, cppID: id, message: "boundary-right drag leaves first note unchanged")
+    report.expect(
+        resizeUndoTo(planted, session: session)
+            && (try? document.captureSave().bytes) == before,
+        cppID: id, message: "Undo restores the planted abutting pair MIDI bytes")
 }
 @MainActor
 private func checkResizeHoverCursor(_ report: CheckReport, session: DocumentSession) {
@@ -354,10 +420,13 @@ private func checkResizeHoverCursor(_ report: CheckReport, session: DocumentSess
         report.fail(id, "no free four-cell span for the hover cursor")
         return
     }
-    guard let noteID = try? document.addNotes([
-        NewNote(track: grid.trackIndex, tick: Tick(d.tick), pitch: UInt8(d.pitch),
+    guard
+        let noteID = try? document.addNotes([
+            NewNote(
+                track: grid.trackIndex, tick: Tick(d.tick), pitch: UInt8(d.pitch),
                 duration: Tick(span), velocity: 100)
-    ]).first else {
+        ]).first
+    else {
         report.fail(id, "hover-cursor note could not be planted")
         return
     }
@@ -368,14 +437,17 @@ private func checkResizeHoverCursor(_ report: CheckReport, session: DocumentSess
     }
     let y = rect.y + rect.height / 2
     grid.updateHover(x: rect.x + rect.width - 1, y: y)
-    report.expect(grid.cursorKind == 3, cppID: id,
-                  message: "the right edge grip publishes the right-drag cursor")
+    report.expect(
+        grid.cursorKind == 3, cppID: id,
+        message: "the right edge grip publishes the right-drag cursor")
     grid.updateHover(x: rect.x, y: y)
-    report.expect(grid.cursorKind == 2, cppID: id,
-                  message: "the left edge grip publishes the left-drag cursor")
+    report.expect(
+        grid.cursorKind == 2, cppID: id,
+        message: "the left edge grip publishes the left-drag cursor")
     grid.updateHover(x: rect.x + rect.width / 2, y: y)
-    report.expect(grid.cursorKind == 0, cppID: id,
-                  message: "the note body publishes the arrow cursor")
+    report.expect(
+        grid.cursorKind == 0, cppID: id,
+        message: "the note body publishes the arrow cursor")
 }
 
 @MainActor
@@ -386,9 +458,10 @@ private func checkEdgeResize(_ report: CheckReport, session: DocumentSession) {
     let track = setupGrid.trackIndex
     var freePitch = -1
     pitchScan: for candidateY in stride(from: 300.0, through: 20.0, by: -20) {
-        guard let candidate = session.camera.projection.pitch(
-            atY: candidateY, keyHeight: session.camera.snapshot.keyHeight,
-            scrollY: session.camera.snapshot.scrollY, dpr: setupGrid.devicePixelRatio)
+        guard
+            let candidate = session.camera.projection.pitch(
+                atY: candidateY, keyHeight: session.camera.snapshot.keyHeight,
+                scrollY: session.camera.snapshot.scrollY, dpr: setupGrid.devicePixelRatio)
         else { continue }
         let occupied = session.document.notes(in: track).contains { note in
             Int(note.pitch) == candidate
@@ -401,11 +474,14 @@ private func checkEdgeResize(_ report: CheckReport, session: DocumentSession) {
     }
     guard freePitch >= 0,
         let added = try? session.document.addNotes([
-            NewNote(track: track, tick: 24, pitch: UInt8(freePitch),
-                    duration: Tick(12 + snap / 4), velocity: 80),
-            NewNote(track: track, tick: 96, pitch: UInt8(freePitch),
-                    duration: 12, velocity: 80)
-        ]), added.count == 2 else {
+            NewNote(
+                track: track, tick: 24, pitch: UInt8(freePitch),
+                duration: Tick(12 + snap / 4), velocity: 80),
+            NewNote(
+                track: track, tick: 96, pitch: UInt8(freePitch),
+                duration: 12, velocity: 80),
+        ]), added.count == 2
+    else {
         report.fail(id, "edge-resize fixture could not seed a free row")
         return
     }
@@ -477,10 +553,12 @@ private func checkEdgeResize(_ report: CheckReport, session: DocumentSession) {
             && session.document.note(b).map { Int($0.duration) == 12 } == true,
         cppID: id, message: "stationary Ctrl+edge click joins the note without resizing")
     grid.beginPointer(x: bEdgeX, y: bRowY, modifiers: 0)
-    grid.updatePointer(x: bEdgeX + Double(snap) * session.camera.snapshot.pixelsPerTick,
-                       y: bRowY)
-    grid.endPointer(x: bEdgeX + Double(snap) * session.camera.snapshot.pixelsPerTick,
-                    y: bRowY)
+    grid.updatePointer(
+        x: bEdgeX + Double(snap) * session.camera.snapshot.pixelsPerTick,
+        y: bRowY)
+    grid.endPointer(
+        x: bEdgeX + Double(snap) * session.camera.snapshot.pixelsPerTick,
+        y: bRowY)
     report.expect(
         session.document.note(b).map { Int($0.duration) == 12 + snap } == true
             && session.document.note(a).map {
@@ -489,12 +567,16 @@ private func checkEdgeResize(_ report: CheckReport, session: DocumentSession) {
         cppID: id, message: "edge drag resizes the grabbed note and the joined selection")
     // Abutting boundary: a press just left of the shared boundary grips the
     // left note's trailing edge; just right grips the right note's leading edge.
-    guard let cPair = try? session.document.addNotes([
-        NewNote(track: track, tick: 240, pitch: UInt8(freePitch),
+    guard
+        let cPair = try? session.document.addNotes([
+            NewNote(
+                track: track, tick: 240, pitch: UInt8(freePitch),
                 duration: 12, velocity: 80),
-        NewNote(track: track, tick: 252, pitch: UInt8(freePitch),
-                duration: 12, velocity: 80)
-    ]), cPair.count == 2 else {
+            NewNote(
+                track: track, tick: 252, pitch: UInt8(freePitch),
+                duration: 12, velocity: 80),
+        ]), cPair.count == 2
+    else {
         report.fail(id, "abutting fixture could not seed the pair")
         return
     }

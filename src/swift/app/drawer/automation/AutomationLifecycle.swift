@@ -22,20 +22,21 @@ extension AutomationPage {
     /// primitives, preserving the page's lifecycle and publication order.
     func rebuildContent(selectionOnly: Bool = false) {
         let session = self.session
-        let snapshot = session.map {
-            AutomationSceneSnapshot.build(
-                session: $0, cache: projectionFacts,
-                selectedTrack: $0.selectedTrack,
-                camera: $0.camera,
-                activeParameterIndex: activeParameterIndex,
-                ghostPins: ghostPins,
-                selection: selection,
-                plotWidth: plotWidth,
-                plotHeight: plotHeight,
-                devicePixelRatio: devicePixelRatio,
-                baseFontPx: baseFontPx,
-                geometry: geometry, laneRanges: laneRanges)
-        } ?? .detached
+        let snapshot =
+            session.map {
+                AutomationSceneSnapshot.build(
+                    session: $0, cache: projectionFacts,
+                    selectedTrack: $0.selectedTrack,
+                    camera: $0.camera,
+                    activeParameterIndex: activeParameterIndex,
+                    ghostPins: ghostPins,
+                    selection: selection,
+                    plotWidth: plotWidth,
+                    plotHeight: plotHeight,
+                    devicePixelRatio: devicePixelRatio,
+                    baseFontPx: baseFontPx,
+                    geometry: geometry, laneRanges: laneRanges)
+            } ?? .detached
 
         guard let active = snapshot.active else {
             parameterLabels = snapshot.parameterLabels
@@ -123,7 +124,9 @@ extension AutomationPage {
             case (true, .node):
                 profile = AutomationHintProfile.node
             default:
-                profile = pencilMode ? AutomationHintProfile.pencil
+                profile =
+                    pencilMode
+                    ? AutomationHintProfile.pencil
                     : AutomationHintProfile.sweep
             }
         } else {
@@ -175,7 +178,8 @@ extension AutomationPage {
             hasBand: band != nil,
             isPanning: panActive,
             hasTapSession: tapGuard != nil)
-        let eligibilityChanged = interactionActive != active
+        let eligibilityChanged =
+            interactionActive != active
             || publishedPointerGestureActive != pointerGestureActive
         if interactionActive != active { interactionActive = active }
         publishedPointerGestureActive = pointerGestureActive
@@ -200,9 +204,11 @@ extension AutomationPage {
         if configuration.changed { rebuildContent() }
     }
 
-    func configureBodyImpl(width: Double, height: Double, gutter: Double,
-                              devicePixelRatio: Double, baseFontPx: Double,
-                              dragDistance: Double) {
+    func configureBodyImpl(
+        width: Double, height: Double, gutter: Double,
+        devicePixelRatio: Double, baseFontPx: Double,
+        dragDistance: Double
+    ) {
         let configuration = AutomationBodySceneConfiguration.resolve(
             width: width,
             height: height,
@@ -232,8 +238,9 @@ extension AutomationPage {
         if let prompt, stale(prompt.facts) { cancelPrompt() }
         if let laneDelete, stale(laneDelete.facts) { cancelPrompt() }
         if let live = menu,
-           stale(live.facts) || live.facts.parameter != activeParameter
-               || live.facts.selection != selection {
+            stale(live.facts) || live.facts.parameter != activeParameter
+                || live.facts.selection != selection
+        {
             menu = nil
             publishMenuRows()
         }

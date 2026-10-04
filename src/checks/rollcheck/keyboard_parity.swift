@@ -28,19 +28,24 @@ private func withBandKeyFixture(
         session.selectedTrack = originalTrack
         session.setSelectedNotes(originalSelection)
         _ = session.mutateCamera {
-            $0.updateViewport(width: originalCamera.viewportWidth,
-                              rollHeight: originalCamera.rollHeight)
-            $0.restore(pixelsPerBeat: originalCamera.pixelsPerBeat,
-                       keyHeight: originalCamera.keyHeight, scrollX: originalCamera.scrollX,
-                       scrollY: originalCamera.scrollY)
+            $0.updateViewport(
+                width: originalCamera.viewportWidth,
+                rollHeight: originalCamera.rollHeight)
+            $0.restore(
+                pixelsPerBeat: originalCamera.pixelsPerBeat,
+                keyHeight: originalCamera.keyHeight, scrollX: originalCamera.scrollX,
+                scrollY: originalCamera.scrollY)
         }
-        report.expect(document.state == before && document.history.currentIdentity == identity
-            && session.camera.snapshot == originalCamera,
+        report.expect(
+            document.state == before && document.history.currentIdentity == identity
+                && session.camera.snapshot == originalCamera,
             cppID: id, message: "band key fixture restores document, history, and camera")
     }
-    guard let track = (0..<document.engineTracks.usedTrackCount).first(where: {
-        !document.notes(in: $0).isEmpty
-    }), let noteID = document.notes(in: track).first?.id else {
+    guard
+        let track = (0..<document.engineTracks.usedTrackCount).first(where: {
+            !document.notes(in: $0).isEmpty
+        }), let noteID = document.notes(in: track).first?.id
+    else {
         report.fail(id, "no existing note available for the band key fixture")
         return
     }
@@ -66,25 +71,29 @@ private func checkBandKeyDeleteEligibility(_ report: CheckReport, session: Docum
             pointerGestureActive: grid.interactionActive, timeSelectionActive: false,
             noteSelectionEmpty: session.selectedNotes.isEmpty, origin: .timeline,
             autoRepeat: false, commandAvailable: grid.commandAvailable(command: EditCommand.delete.rawValue))
-        report.expect(!emptySurface.commandAvailable
-            && EditKeyArbiter.decide(command: .delete, surface: emptySurface) == .decline,
+        report.expect(
+            !emptySurface.commandAvailable
+                && EditKeyArbiter.decide(command: .delete, surface: emptySurface) == .decline,
             cppID: id, message: "empty note and time selection declines Delete")
         grid.performCommand(command: EditCommand.delete.rawValue)
-        report.expect(document.state == emptyState && document.revision == emptyRevision
-            && document.history.currentIdentity == emptyIdentity,
+        report.expect(
+            document.state == emptyState && document.revision == emptyRevision
+                && document.history.currentIdentity == emptyIdentity,
             cppID: id, message: "empty Delete cannot mutate the document")
         session.setSelectedNotes([noteID])
         let selectedSurface = EditSurfaceState(
             pointerGestureActive: grid.interactionActive, timeSelectionActive: false,
             noteSelectionEmpty: session.selectedNotes.isEmpty, origin: .timeline,
             autoRepeat: false, commandAvailable: grid.commandAvailable(command: EditCommand.delete.rawValue))
-        report.expect(selectedSurface.commandAvailable
-            && EditKeyArbiter.decide(command: .delete, surface: selectedSurface) == .execute,
+        report.expect(
+            selectedSurface.commandAvailable
+                && EditKeyArbiter.decide(command: .delete, surface: selectedSurface) == .execute,
             cppID: id, message: "selected note executes Delete")
         let selectedRevision = document.revision
         grid.performCommand(command: EditCommand.delete.rawValue)
-        report.expect(document.note(noteID) == nil && document.revision == selectedRevision + 1,
-                      cppID: id, message: "selected Delete removes the note in one revision")
+        report.expect(
+            document.note(noteID) == nil && document.revision == selectedRevision + 1,
+            cppID: id, message: "selected Delete removes the note in one revision")
     }
 }
 
@@ -98,17 +107,20 @@ private func checkBandKeyAutoRepeat(_ report: CheckReport, session: DocumentSess
             pointerGestureActive: grid.interactionActive, timeSelectionActive: false,
             noteSelectionEmpty: session.selectedNotes.isEmpty, origin: .timeline,
             autoRepeat: true, commandAvailable: eligible)
-        report.expect(eligible
-            && EditKeyArbiter.decide(command: .pencilMode, surface: repeatSurface) == .consume,
+        report.expect(
+            eligible
+                && EditKeyArbiter.decide(command: .pencilMode, surface: repeatSurface) == .consume,
             cppID: id, message: "repeated eligible pencil key is consumed")
         var firstSurface = repeatSurface
         firstSurface.autoRepeat = false
-        report.expect(grid.pencilMode == initialPencilMode
-            && EditKeyArbiter.decide(command: .pencilMode, surface: firstSurface) == .execute,
+        report.expect(
+            grid.pencilMode == initialPencilMode
+                && EditKeyArbiter.decide(command: .pencilMode, surface: firstSurface) == .execute,
             cppID: id, message: "first pencil key executes without a repeat toggle")
         grid.performCommand(command: EditCommand.pencilMode.rawValue)
-        report.expect(grid.pencilMode != initialPencilMode, cppID: id,
-                      message: "the executing first press toggles pencil mode")
+        report.expect(
+            grid.pencilMode != initialPencilMode, cppID: id,
+            message: "the executing first press toggles pencil mode")
     }
 }
 
@@ -123,15 +135,19 @@ private func checkBandKeyCancelReasons(_ report: CheckReport, session: DocumentS
         let y = found.y
         let originalState = session.document.state
         let originalRevision = session.document.revision
-        for reason in [GridCancelReason.focusLost, .pointerUngrabbed, .hidden,
-                       .windowDeactivated] {
+        for reason in [
+            GridCancelReason.focusLost, .pointerUngrabbed, .hidden,
+            .windowDeactivated,
+        ] {
             grid.beginPointer(x: 88, y: y, modifiers: 0)
-            report.expect(grid.interactionActive, cppID: id,
-                          message: "pointer gesture opens before \(reason) cancellation")
+            report.expect(
+                grid.interactionActive, cppID: id,
+                message: "pointer gesture opens before \(reason) cancellation")
             grid.inputCancelled(reason: reason.rawValue)
-            report.expect(!grid.interactionActive && grid.lastCancelReason == reason.rawValue
-                && session.document.state == originalState
-                && session.document.revision == originalRevision,
+            report.expect(
+                !grid.interactionActive && grid.lastCancelReason == reason.rawValue
+                    && session.document.state == originalState
+                    && session.document.revision == originalRevision,
                 cppID: id, message: "\(reason) resets gesture and records its reason")
         }
     }

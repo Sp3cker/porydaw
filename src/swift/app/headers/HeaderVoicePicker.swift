@@ -33,8 +33,9 @@ public final class HeaderVoicePicker {
     @QtIgnored
     public func open(track: Int) {
         guard let headers, let session = headers.session, !session.isClosed,
-              let request = headers.pendingVoice, request.track == track,
-              request.matches(session.document) else { return }
+            let request = headers.pendingVoice, request.track == track,
+            request.matches(session.document)
+        else { return }
         releasePickerAudition()
         cache.refresh(slots: session.bankSlots)
         cache.resolve(filter: "")
@@ -51,7 +52,8 @@ public final class HeaderVoicePicker {
     public func refresh() {
         guard pickerOpen else { return }
         guard let headers, let session = headers.session,
-              let request = headers.pendingVoice, request.matches(session.document) else {
+            let request = headers.pendingVoice, request.matches(session.document)
+        else {
             cancelPicker()
             return
         }
@@ -86,7 +88,7 @@ public final class HeaderVoicePicker {
 
     public func pressAndHoldPickerRow(index: Int) {
         guard pickerOpen, let headers, let session = headers.session,
-              let request = headers.pendingVoice, request.matches(session.document)
+            let request = headers.pendingVoice, request.matches(session.document)
         else {
             releasePickerAudition()
             return
@@ -119,8 +121,7 @@ public final class HeaderVoicePicker {
             return
         }
         close()
-        if let onComplete { onComplete(program) }
-        else { headers?.completeVoiceRequest(program: program) }
+        if let onComplete { onComplete(program) } else { headers?.completeVoiceRequest(program: program) }
     }
 
     @QtIgnored

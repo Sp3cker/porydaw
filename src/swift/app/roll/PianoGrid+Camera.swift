@@ -5,8 +5,10 @@ import PorydawAppCommands
 
 @MainActor
 extension PianoGrid {
-    func configureViewportImpl(width: Double, height: Double,
-                               fontPx: Double, dpr: Double) {
+    func configureViewportImpl(
+        width: Double, height: Double,
+        fontPx: Double, dpr: Double
+    ) {
         let oldFont = metrics.baseFontPx
         let newFont = max(1, fontPx)
         let nextBase = Int(newFont.rounded())
@@ -28,10 +30,10 @@ extension PianoGrid {
             let priorScale = camera.snapshot
             let scaledPixelsPerBeat =
                 priorScale.pixelsPerBeat
-                    * newLimits.defaultPixelsPerBeat / oldLimits.defaultPixelsPerBeat
+                * newLimits.defaultPixelsPerBeat / oldLimits.defaultPixelsPerBeat
             let scaledKeyHeight =
                 priorScale.keyHeight
-                    * newLimits.defaultKeyHeight / oldLimits.defaultKeyHeight
+                * newLimits.defaultKeyHeight / oldLimits.defaultKeyHeight
             camera.updateLimits(newLimits)
             if newFont != oldFont {
                 _ = camera.setTimeZoom(scaledPixelsPerBeat)
@@ -70,28 +72,34 @@ extension PianoGrid {
         session.mutateCamera { _ = $0.setVScroll(value) }
     }
 
-    func scrollHorizontalByWheelImpl(pixelX: Double, pixelY: Double,
-                                     angleX: Double, angleY: Double,
-                                     wheelScrollLines: Double) {
+    func scrollHorizontalByWheelImpl(
+        pixelX: Double, pixelY: Double,
+        angleX: Double, angleY: Double,
+        wheelScrollLines: Double
+    ) {
         let delta = TimelineScrollbar.wheelDips(
             horizontal: true, pixelX: pixelX, pixelY: pixelY,
             angleX: angleX, angleY: angleY, wheelScrollLines: wheelScrollLines)
         session.mutateCamera { _ = $0.scrollByPx(delta) }
     }
 
-    func scrollVerticalByWheelImpl(pixelX: Double, pixelY: Double,
-                                   angleX: Double, angleY: Double,
-                                   wheelScrollLines: Double) {
+    func scrollVerticalByWheelImpl(
+        pixelX: Double, pixelY: Double,
+        angleX: Double, angleY: Double,
+        wheelScrollLines: Double
+    ) {
         let delta = TimelineScrollbar.wheelDips(
             horizontal: false, pixelX: pixelX, pixelY: pixelY,
             angleX: angleX, angleY: angleY, wheelScrollLines: wheelScrollLines)
         session.mutateCamera { _ = $0.scrollRollBy(delta) }
     }
 
-    func handleWheelImpl(angleDeltaX: Double, angleDeltaY: Double,
-                         pixelDeltaX: Double, pixelDeltaY: Double,
-                         modifiers: Int, phase: Int, overGutter: Bool,
-                         anchorX: Double, anchorY: Double) {
+    func handleWheelImpl(
+        angleDeltaX: Double, angleDeltaY: Double,
+        pixelDeltaX: Double, pixelDeltaY: Double,
+        modifiers: Int, phase: Int, overGutter: Bool,
+        anchorX: Double, anchorY: Double
+    ) {
         guard let phase = QtScrollPhase(rawValue: phase) else {
             preconditionFailure("Unsupported Qt scroll phase: \(phase)")
         }

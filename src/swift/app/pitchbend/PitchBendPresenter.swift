@@ -33,14 +33,17 @@ public final class PitchBendPresenter {
     @QtIgnored public var onAuditionFromTick: ((Tick) -> Void)?
     @QtIgnored public var onSoloTracksRequested: (() -> Void)?
 
-    public init(session: DocumentSession, grid: PianoGrid, palette: GridPalette,
-                typography: Typography = Typography(baseFontPx: 13)) {
+    public init(
+        session: DocumentSession, grid: PianoGrid, palette: GridPalette,
+        typography: Typography = Typography(baseFontPx: 13)
+    ) {
         self.session = session
         self.grid = grid
         self.palette = palette
         self.typography = typography
-        geometry = PitchBendGeometry(fontPx: grid.baseFontPx,
-                                     lineSpacing: grid.baseFontPx, dpr: 1)
+        geometry = PitchBendGeometry(
+            fontPx: grid.baseFontPx,
+            lineSpacing: grid.baseFontPx, dpr: 1)
         configure(fontPx: grid.baseFontPx, lineSpacing: grid.baseFontPx, dpr: 1)
     }
 
@@ -93,10 +96,11 @@ public final class PitchBendPresenter {
     @discardableResult
     public func openSelected() -> Bool {
         guard !session.isClosed, let selectedTrack = session.selectedTrack,
-              let note = session.selectedNoteOrder.lazy.compactMap({
-                  self.session.document.note($0)
-              }).first(where: { $0.track == selectedTrack }),
-              let endTick = note.endTick, endTick <= UInt64(Tick.max) else { return false }
+            let note = session.selectedNoteOrder.lazy.compactMap({
+                self.session.document.note($0)
+            }).first(where: { $0.track == selectedTrack }),
+            let endTick = note.endTick, endTick <= UInt64(Tick.max)
+        else { return false }
         let end = Int(endTick)
         guard end > Int(note.tick) else { return false }
         cancelAndClose()
@@ -111,10 +115,12 @@ public final class PitchBendPresenter {
         anchorHeight = session.camera.snapshot.keyHeight
         (bendRange, endRange) = controllerValues(0x14, fallback: 2)
         (lfoSpeed, endSpeed) = controllerValues(0x15, fallback: 22)
-        let pitch = PitchBendLane(kernel: kernel(for: .pitchBend, lane: .pitch, note: note),
-                                  palette: palette, track: note.track)
-        let mod = PitchBendLane(kernel: kernel(for: .controller(1), lane: .modulation, note: note),
-                                palette: palette, track: note.track)
+        let pitch = PitchBendLane(
+            kernel: kernel(for: .pitchBend, lane: .pitch, note: note),
+            palette: palette, track: note.track)
+        let mod = PitchBendLane(
+            kernel: kernel(for: .controller(1), lane: .modulation, note: note),
+            palette: palette, track: note.track)
         pitch.bendRange = bendRange
         pitch.rebuild()
         pitch.onCommit = { [weak self, weak pitch] sampledStroke in
@@ -178,10 +184,13 @@ public final class PitchBendPresenter {
         let bounded = min(127, max(0, value))
         guard isOpen, bounded != bendRange, let note, spanStillPresent() else { return }
         let before = session.document.revision
-        session.document.writeLane(track: note.track, lane: .controller(0x14),
-                                   from: note.tick, through: Tick(noteEnd),
-                                   points: [LaneWrite(tick: note.tick, value: bounded),
-                                            LaneWrite(tick: Tick(noteEnd), value: endRange)])
+        session.document.writeLane(
+            track: note.track, lane: .controller(0x14),
+            from: note.tick, through: Tick(noteEnd),
+            points: [
+                LaneWrite(tick: note.tick, value: bounded),
+                LaneWrite(tick: Tick(noteEnd), value: endRange),
+            ])
         guard session.document.revision != before else { return }
         bendRange = bounded
         currentPitch?.bendRange = bounded
@@ -193,10 +202,13 @@ public final class PitchBendPresenter {
         let bounded = min(127, max(0, value))
         guard isOpen, bounded != lfoSpeed, let note, spanStillPresent() else { return }
         let before = session.document.revision
-        session.document.writeLane(track: note.track, lane: .controller(0x15),
-                                   from: note.tick, through: Tick(noteEnd),
-                                   points: [LaneWrite(tick: note.tick, value: bounded),
-                                            LaneWrite(tick: Tick(noteEnd), value: endSpeed)])
+        session.document.writeLane(
+            track: note.track, lane: .controller(0x15),
+            from: note.tick, through: Tick(noteEnd),
+            points: [
+                LaneWrite(tick: note.tick, value: bounded),
+                LaneWrite(tick: Tick(noteEnd), value: endSpeed),
+            ])
         guard session.document.revision != before else { return }
         lfoSpeed = bounded
         refreshDescription()
@@ -258,8 +270,10 @@ public final class PitchBendPresenter {
         return (first, last)
     }
 
-    private func kernel(for lane: Lane, lane graphLane: PitchBendKernel.Lane,
-                        note: Note) -> PitchBendKernel {
+    private func kernel(
+        for lane: Lane, lane graphLane: PitchBendKernel.Lane,
+        note: Note
+    ) -> PitchBendKernel {
         var entering = 0
         var ending = 0
         var points: [Int: Int] = [:]
@@ -274,18 +288,23 @@ public final class PitchBendPresenter {
         points[Int(note.tick)] = entering
         points[noteEnd] = ending
         let session = self.session
-        return PitchBendKernel(lane: graphLane, geometry: geometry,
-                               startTick: Int(note.tick), endTick: noteEnd,
-                               fineTicks: Int(session.grid.fineGridTicks(camera: session.camera)),
-                               snap: { [unowned session] tick, fine in
-                                   Int(session.grid.snapTick(tick, camera: session.camera,
-                                                             fine: fine))
-                               },
-                               snapUp: { [unowned session] tick, fine in
-                                   Int(session.grid.snapTickUp(tick + 0.5,
-                                                               camera: session.camera, fine: fine))
-                               },
-                               points: points, endValue: ending)
+        return PitchBendKernel(
+            lane: graphLane, geometry: geometry,
+            startTick: Int(note.tick), endTick: noteEnd,
+            fineTicks: Int(session.grid.fineGridTicks(camera: session.camera)),
+            snap: { [unowned session] tick, fine in
+                Int(
+                    session.grid.snapTick(
+                        tick, camera: session.camera,
+                        fine: fine))
+            },
+            snapUp: { [unowned session] tick, fine in
+                Int(
+                    session.grid.snapTickUp(
+                        tick + 0.5,
+                        camera: session.camera, fine: fine))
+            },
+            points: points, endValue: ending)
     }
 
     private func spanStillPresent() -> Bool {
@@ -306,9 +325,11 @@ public final class PitchBendPresenter {
             var previousTick = 0
             var hasPrevious = false
             for point in sorted {
-                let endpoint = point.tick == graph.kernel.startTick
+                let endpoint =
+                    point.tick == graph.kernel.startTick
                     || point.tick == graph.kernel.endTick
-                let fineSample = hasPrevious && point.tick > previousTick
+                let fineSample =
+                    hasPrevious && point.tick > previousTick
                     && point.tick - previousTick == graph.kernel.fineTicks
                 if endpoint || !hasPrevious || point.value != previousValue || fineSample {
                     points.append(LaneWrite(tick: Tick(point.tick), value: point.value))
@@ -322,14 +343,16 @@ public final class PitchBendPresenter {
                 points.append(LaneWrite(tick: Tick(point.tick), value: point.value))
             }
         }
-        session.document.writeLane(track: note.track, lane: lane,
-                                   from: note.tick, through: Tick(noteEnd),
-                                   points: points)
+        session.document.writeLane(
+            track: note.track, lane: lane,
+            from: note.tick, through: Tick(noteEnd),
+            points: points)
     }
 
     private func refreshDescription() {
         noteDescription = note.map { "\(midiKeyName(Int($0.pitch))) · note-scoped · channel-wide" } ?? ""
-        description = "BENDR is \(bendRange) semitones and LFO speed is \(lfoSpeed) for this note. "
+        description =
+            "BENDR is \(bendRange) semitones and LFO speed is \(lfoSpeed) for this note. "
             + "Edit pitch bend and modulation; scroll inside the pitch bend graph to change "
             + "BENDR, and hold Shift while drawing for angled lines. Both lanes affect every "
             + "sounding note on this MIDI channel."

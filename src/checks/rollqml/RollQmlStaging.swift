@@ -31,8 +31,10 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     public func resetPreferences() -> Bool {
         preferences.resetPreferences()
     }
-    public func seedDrawerPreferences(velocityVisible: Bool, automationVisible: Bool,
-                                      voiceChangesVisible: Bool, activePage: Int) {
+    public func seedDrawerPreferences(
+        velocityVisible: Bool, automationVisible: Bool,
+        voiceChangesVisible: Bool, activePage: Int
+    ) {
         preferences.setBool(key: "editorDrawer.velocityVisible", value: velocityVisible)
         preferences.setInt(key: "editorDrawer.velocityHeight", value: 160)
         preferences.setBool(key: "editorDrawer.automationVisible", value: automationVisible)
@@ -41,7 +43,6 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
         preferences.setInt(key: "editorDrawer.voiceChangesHeight", value: 90)
         preferences.setString(key: "editorDrawer.activePage", value: activePage == 1 ? "velocity" : "automations")
     }
-
 
     static func stage(projectRoot: String) {
         stagedProjectRoot = projectRoot
@@ -61,7 +62,6 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     private var document: DocumentSession? {
         session?.selectedDocument
     }
-
 
     // ---- the run loop and the staged project --------------------------------
 
@@ -100,18 +100,21 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     /// one. Running out of time is not: the open is still in flight, the suite's
     /// own bounded wait has not run yet, so the lane names what it saw and keeps
     /// the request alive for that wait instead of inventing a second timeout.
-    private func reportOpenOutcome(_ session: ApplicationSession, songLabel: String,
-                                   initialError: String) -> Bool {
+    private func reportOpenOutcome(
+        _ session: ApplicationSession, songLabel: String,
+        initialError: String
+    ) -> Bool {
         let failure = session.lastSaveError
         let state = "projectOpen=\(session.projectOpen) songOpen=\(session.songOpen)"
-        let reason = !failure.isEmpty && failure != initialError
+        let reason =
+            !failure.isEmpty && failure != initialError
             ? "failed (\(state)): \(failure)"
             : "is still in flight (\(state)) after \(RollQmlBootstrap.openTimeout)s"
-        FileHandle.standardError.write(Data(
-            "swiftroll-window: opening \"\(songLabel)\" at \(projectRoot) \(reason)\n".utf8))
+        FileHandle.standardError.write(
+            Data(
+                "swiftroll-window: opening \"\(songLabel)\" at \(projectRoot) \(reason)\n".utf8))
         return failure.isEmpty || failure == initialError
     }
-
 
     // ---- the host's own close path ------------------------------------------
 
@@ -164,7 +167,8 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
             releasedGrid = nil
         }
         guard document.onCameraChange == nil, document.onCameraChangeDetailed == nil,
-              document.onChange == nil, document.onPlayback == nil else { return false }
+            document.onChange == nil, document.onPlayback == nil
+        else { return false }
         let priorBeatWidth = grid.beatWidth
         let priorRevisionText = grid.appliedRevisionText
         let priorRevision = document.document.revision
@@ -229,7 +233,6 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
         document?.document.history.redoDocument() ?? false
     }
 
-
     public func setTimeSigCursor(tick: Double) -> Bool {
         guard let document, tick.isFinite, tick >= 0 else { return false }
         document.editCursor = TimeDefaults.tick(from: tick)
@@ -291,12 +294,14 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     private func timeSigSegment(tick: Double) -> GridSegment? {
         guard let document, tick.isFinite, tick >= 0 else { return nil }
         let song = document.document
-        let axis = TimeAxis(map: TimeMap(
-            ticksPerBeat: UInt32(song.ticksPerBeat),
-            timeSigs: song.timeSignatures.map {
-                TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
-                             denomPow2: $0.denominatorPower)
-            }))
+        let axis = TimeAxis(
+            map: TimeMap(
+                ticksPerBeat: UInt32(song.ticksPerBeat),
+                timeSigs: song.timeSignatures.map {
+                    TimeSigPoint(
+                        tick: $0.tick, numerator: $0.numerator,
+                        denomPow2: $0.denominatorPower)
+                }))
         return axis.segmentAt(TimeDefaults.tick(from: tick))
     }
 
@@ -410,11 +415,14 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
         document?.camera.pixelsPerTick ?? 0
     }
 
-    public func presentHeaderActivity(track: Int, left: Int, right: Int,
-                                      playing: Bool) -> Bool {
+    public func presentHeaderActivity(
+        track: Int, left: Int, right: Int,
+        playing: Bool
+    ) -> Bool {
         guard let session else { return false }
-        pushTrackActivity(presenter: session.trackHeadersPresenter(), track: track,
-                          left: left, right: right, elapsed: 60, playing: playing)
+        pushTrackActivity(
+            presenter: session.trackHeadersPresenter(), track: track,
+            left: left, right: right, elapsed: 60, playing: playing)
         return true
     }
 
@@ -444,12 +452,15 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
 
     public func seedDuplicateInitialVoice(track: Int, first: Int, last: Int) -> Bool {
         guard let document, (0...127).contains(first), (0...127).contains(last),
-              (0..<document.document.engineTracks.usedTrackCount).contains(track)
+            (0..<document.document.engineTracks.usedTrackCount).contains(track)
         else { return false }
         let tick = document.document.lanePoints(track: track, lane: .voice).first?.tick ?? 0
-        document.document.writeLane(track: track, lane: .voice, from: tick, through: tick,
-                                    points: [LaneWrite(tick: tick, value: first),
-                                             LaneWrite(tick: tick, value: last)])
+        document.document.writeLane(
+            track: track, lane: .voice, from: tick, through: tick,
+            points: [
+                LaneWrite(tick: tick, value: first),
+                LaneWrite(tick: tick, value: last),
+            ])
         return true
     }
 
@@ -459,14 +470,18 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     }
 
     @QtIgnored
-    public func pushTrackActivity(presenter: TrackHeadersPresenter, track: Int,
-                                  left: Int, right: Int, elapsed: Double,
-                                  playing: Bool) {
-        precondition((0..<16).contains(track) && (0...255).contains(left)
-                     && (0...255).contains(right))
+    public func pushTrackActivity(
+        presenter: TrackHeadersPresenter, track: Int,
+        left: Int, right: Int, elapsed: Double,
+        playing: Bool
+    ) {
+        precondition(
+            (0..<16).contains(track) && (0...255).contains(left)
+                && (0...255).contains(right))
         var levels = Array(repeating: AudioActivityLevel(), count: 16)
         levels[track] = AudioActivityLevel(left: UInt8(left), right: UInt8(right))
-        presenter.advanceActivity(levels: levels, elapsedSeconds: Float(elapsed),
-                                  playing: playing)
+        presenter.advanceActivity(
+            levels: levels, elapsedSeconds: Float(elapsed),
+            playing: playing)
     }
 }

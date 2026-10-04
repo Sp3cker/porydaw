@@ -37,9 +37,11 @@ public struct VelocityVoiceContext: Sendable {
     public var endTick: Tick?
     public var symbol: String
 
-    public init(status: VelocityContextStatus,
-                map: VelocityMap = VelocityMap(voiceKind: .unresolved),
-                slot: Int = -1, endTick: Tick? = nil, symbol: String = "") {
+    public init(
+        status: VelocityContextStatus,
+        map: VelocityMap = VelocityMap(voiceKind: .unresolved),
+        slot: Int = -1, endTick: Tick? = nil, symbol: String = ""
+    ) {
         self.status = status
         self.map = map
         self.slot = slot
@@ -82,8 +84,10 @@ struct VelocityContextKey: Equatable {
 public enum VelocityContextPolicy {
     /// The track's first program, then the last voice change at or before
     /// `tick`; the returned end tick is the next change.
-    public static func slot(firstProgram: Int, tick: Tick,
-                            voiceChanges: [LanePoint]) -> (slot: Int, endTick: Tick?) {
+    public static func slot(
+        firstProgram: Int, tick: Tick,
+        voiceChanges: [LanePoint]
+    ) -> (slot: Int, endTick: Tick?) {
         var slot = firstProgram
         var endTick: Tick?
         for change in voiceChanges where change.tick <= tick {
@@ -101,7 +105,7 @@ public enum VelocityContextPolicy {
     public static func voiceKind(macro: Int32) -> VoiceKind? {
         switch macro {
         case BankVoiceMacro.directSound, BankVoiceMacro.directSoundNoResample,
-             BankVoiceMacro.directSoundAlt:
+            BankVoiceMacro.directSoundAlt:
             return .directSound
         case BankVoiceMacro.square1, BankVoiceMacro.square1Alt:
             return .square1
@@ -117,7 +121,9 @@ public enum VelocityContextPolicy {
     }
 
     /// One context from the published bank slots.
-    public static func resolve(slot: Int, endTick: Tick?, slots: [BankSlotView], key: Int? = nil)
+    public static func resolve(
+        slot: Int, endTick: Tick?, slots: [BankSlotView], key: Int? = nil
+    )
         -> VelocityVoiceContext
     {
         guard slot >= 0, slots.indices.contains(slot), let voice = slots[slot].voice else {
@@ -126,39 +132,47 @@ public enum VelocityContextPolicy {
         let macro: Int32
         if voice.macro == BankVoiceMacro.keysplit || voice.macro == BankVoiceMacro.keysplitAll {
             guard let key else {
-                return VelocityVoiceContext(status: .keysplitSubvoice,
-                                            map: VelocityMap(voiceKind: .keyless),
-                                            slot: slot, endTick: endTick, symbol: voice.symbol)
+                return VelocityVoiceContext(
+                    status: .keysplitSubvoice,
+                    map: VelocityMap(voiceKind: .keyless),
+                    slot: slot, endTick: endTick, symbol: voice.symbol)
             }
             guard let child = slots[slot].subvoiceMacro(forKey: key) else {
-                return VelocityVoiceContext(status: .invalidSubvoice,
-                                            map: VelocityMap(voiceKind: .invalid),
-                                            slot: slot, endTick: endTick, symbol: voice.symbol)
+                return VelocityVoiceContext(
+                    status: .invalidSubvoice,
+                    map: VelocityMap(voiceKind: .invalid),
+                    slot: slot, endTick: endTick, symbol: voice.symbol)
             }
             macro = child
         } else {
             macro = voice.macro
         }
         guard let kind = voiceKind(macro: macro) else {
-            return VelocityVoiceContext(status: .invalidSubvoice,
-                                        map: VelocityMap(voiceKind: .invalid),
-                                        slot: slot, endTick: endTick, symbol: voice.symbol)
+            return VelocityVoiceContext(
+                status: .invalidSubvoice,
+                map: VelocityMap(voiceKind: .invalid),
+                slot: slot, endTick: endTick, symbol: voice.symbol)
         }
-        return VelocityVoiceContext(status: .resolved, map: VelocityMap(voiceKind: kind),
-                                    slot: slot, endTick: endTick, symbol: voice.symbol)
+        return VelocityVoiceContext(
+            status: .resolved, map: VelocityMap(voiceKind: kind),
+            slot: slot, endTick: endTick, symbol: voice.symbol)
     }
 
     /// Resolves the program span and its value mapping in one pure operation.
-    static func resolve(firstProgram: Int, tick: Tick, voiceChanges: [LanePoint],
-                        slots: [BankSlotView], key: Int? = nil) -> VelocityVoiceContext {
+    static func resolve(
+        firstProgram: Int, tick: Tick, voiceChanges: [LanePoint],
+        slots: [BankSlotView], key: Int? = nil
+    ) -> VelocityVoiceContext {
         let span = slot(firstProgram: firstProgram, tick: tick, voiceChanges: voiceChanges)
         return resolve(slot: span.slot, endTick: span.endTick, slots: slots, key: key)
     }
 
     /// Resolves the context presented by a selection. Compatible PSG notes keep
     /// their intrinsic map; other resolved selections use the continuous domain.
-    static func presentation(selectedNotes: [Note], effectiveTick: Tick,
-                             resolve: (Tick, Int?) -> VelocityVoiceContext) -> VelocityVoiceContext {
+    static func presentation(
+        selectedNotes: [Note], effectiveTick: Tick,
+        resolve: (Tick, Int?) -> VelocityVoiceContext
+    ) -> VelocityVoiceContext {
         guard let first = selectedNotes.first else { return resolve(effectiveTick, nil) }
         let source = resolve(first.tick, Int(first.pitch))
         guard source.status == .resolved else { return source }

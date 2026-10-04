@@ -34,11 +34,15 @@ public final class GridInputClipProbe: QmlInstantiableStatus {
     public func readClipJson() -> String {
         let box = GridInputClipReadBox()
         let context = Unmanaged.passUnretained(box).toOpaque()
-        guard pd_clipboard_read(context, { rawContext, bytes, count in
-            guard let rawContext, let bytes else { return }
-            Unmanaged<GridInputClipReadBox>.fromOpaque(rawContext)
-                .takeUnretainedValue().data = Data(bytes: bytes, count: count)
-        }), let data = box.data, !data.isEmpty else { return "" }
+        guard
+            pd_clipboard_read(
+                context,
+                { rawContext, bytes, count in
+                    guard let rawContext, let bytes else { return }
+                    Unmanaged<GridInputClipReadBox>.fromOpaque(rawContext)
+                        .takeUnretainedValue().data = Data(bytes: bytes, count: count)
+                }), let data = box.data, !data.isEmpty
+        else { return "" }
         return String(data: data, encoding: .utf8) ?? ""
     }
 
@@ -53,15 +57,20 @@ public final class GridInputClipProbe: QmlInstantiableStatus {
     public func clipSummary() -> String {
         let box = GridInputClipReadBox()
         let context = Unmanaged.passUnretained(box).toOpaque()
-        guard pd_clipboard_read(context, { rawContext, bytes, count in
-            guard let rawContext, let bytes else { return }
-            Unmanaged<GridInputClipReadBox>.fromOpaque(rawContext)
-                .takeUnretainedValue().data = Data(bytes: bytes, count: count)
-        }), let data = box.data, let decoded = ClipboardCodec.decode(data) else { return "[]" }
+        guard
+            pd_clipboard_read(
+                context,
+                { rawContext, bytes, count in
+                    guard let rawContext, let bytes else { return }
+                    Unmanaged<GridInputClipReadBox>.fromOpaque(rawContext)
+                        .takeUnretainedValue().data = Data(bytes: bytes, count: count)
+                }), let data = box.data, let decoded = ClipboardCodec.decode(data)
+        else { return "[]" }
         let tracks = decoded.clip.tracks
         let notes = tracks.first?.notes ?? []
         let key = notes.first.map { Int($0.key) } ?? -1
-        return "[\(tracks.count),\(notes.count),\(key),\(decoded.clip.span),\(decoded.ticksPerBeat),\(decoded.clip.lanes.count),\(decoded.clip.tempo.count)]"
+        return
+            "[\(tracks.count),\(notes.count),\(key),\(decoded.clip.span),\(decoded.ticksPerBeat),\(decoded.clip.lanes.count),\(decoded.clip.tempo.count)]"
     }
 }
 

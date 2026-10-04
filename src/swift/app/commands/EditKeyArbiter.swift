@@ -15,16 +15,18 @@ public enum EditKeyDecision: Int {
 /// plain values only — Swift never observes Qt, the focus chain, or the
 /// selection model directly.
 public struct EditSurfaceState {
-    public var pointerGestureActive: Bool   // live grid gesture
+    public var pointerGestureActive: Bool  // live grid gesture
     public var timeSelectionActive: Bool
     public var noteSelectionEmpty: Bool
     public var origin: EditKeyOrigin
     public var autoRepeat: Bool
-    public var commandAvailable: Bool       // host answers eligibility (editCommandAvailable analog)
+    public var commandAvailable: Bool  // host answers eligibility (editCommandAvailable analog)
 
-    public init(pointerGestureActive: Bool, timeSelectionActive: Bool,
-                noteSelectionEmpty: Bool, origin: EditKeyOrigin,
-                autoRepeat: Bool, commandAvailable: Bool) {
+    public init(
+        pointerGestureActive: Bool, timeSelectionActive: Bool,
+        noteSelectionEmpty: Bool, origin: EditKeyOrigin,
+        autoRepeat: Bool, commandAvailable: Bool
+    ) {
         self.pointerGestureActive = pointerGestureActive
         self.timeSelectionActive = timeSelectionActive
         self.noteSelectionEmpty = noteSelectionEmpty
@@ -33,7 +35,6 @@ public struct EditSurfaceState {
         self.commandAvailable = commandAvailable
     }
 }
-
 
 public enum EditKeyArbiter {
 
@@ -117,7 +118,8 @@ public enum EditKeyArbiter {
                     : (policy.terminalWhenUnmatched ? .consume : .decline)  // :475-478
             }
             if target == .notes && surface.autoRepeat
-                && policy.autoRepeatRule == .consumeWhenEligible {
+                && policy.autoRepeatRule == .consumeWhenEligible
+            {
                 return .consume  // editkeyrouting.cpp:480-482
             }
             return .execute  // editkeyrouting.cpp:483 → :489

@@ -20,9 +20,10 @@ enum EditorQmlLane {
     private static let suiteEnvironmentKey = "PORYDAW_EDITOR_QML_SUITE"
 
     static func main() {
-        exit(MainActor.assumeIsolated {
-            runLane(arguments: Array(CommandLine.arguments.dropFirst()))
-        })
+        exit(
+            MainActor.assumeIsolated {
+                runLane(arguments: Array(CommandLine.arguments.dropFirst()))
+            })
     }
 
     @MainActor
@@ -47,15 +48,16 @@ enum EditorQmlLane {
         }
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: scratch, isDirectory: &isDirectory),
-              isDirectory.boolValue
+            isDirectory.boolValue
         else {
             return fail("scratch directory does not exist: \(scratch)")
         }
         // The bootstrap serves these staged paths to QML, so they must be
         // known before Qt Quick Test builds any QML object.
         EditorQmlBootstrap.stage(projectRoot: scratch)
-        PreferencesStore.stageShared(plistPath: URL(fileURLWithPath: scratch, isDirectory: true)
-            .appendingPathComponent("settings.plist").path)
+        PreferencesStore.stageShared(
+            plistPath: URL(fileURLWithPath: scratch, isDirectory: true)
+                .appendingPathComponent("settings.plist").path)
         EditorQmlBootstrap.stageSongLabel("mus_route101")
         if isDisplayListCheck {
             return runSuite(file: "tst_DisplayListSameFrame.qml", payload: payload)
@@ -64,20 +66,23 @@ enum EditorQmlLane {
         let environment = ProcessInfo.processInfo.environment
         if let profileName = environment[childEnvironmentKey] {
             guard let profile = referenceProfiles.first(where: { $0.name == profileName }),
-                  environment[suiteEnvironmentKey] == "tst_EditorDrawerReferenceProfiles.qml"
+                environment[suiteEnvironmentKey] == "tst_EditorDrawerReferenceProfiles.qml"
             else { return fail("unknown reference profile or suite: \(profileName)") }
             setenv("QT_SCALE_FACTOR", "1", 0)
             setenv("QT_SCALE_FACTOR", String(profile.dpr), 1)
-            EditorQmlBootstrap.stageProfile(profile: profile.name, dpr: profile.dpr,
-                                            fontPx: profile.fontPx, panes: profile.panes)
-            return runSuite(file: "tst_EditorDrawerReferenceProfiles.qml",
-                            payload: [profilePencilCaseName, profileCaseName])
+            EditorQmlBootstrap.stageProfile(
+                profile: profile.name, dpr: profile.dpr,
+                fontPx: profile.fontPx, panes: profile.panes)
+            return runSuite(
+                file: "tst_EditorDrawerReferenceProfiles.qml",
+                payload: [profilePencilCaseName, profileCaseName])
         }
         if environment[physicalDpr2ChildKey] != nil {
             guard environment[suiteEnvironmentKey] == "tst_EditorDrawerAutomationTransactions.qml",
-                  environment["QT_SCALE_FACTOR"] == "2",
-                  environment["QT_QPA_PLATFORM"] == "offscreen",
-                  payload == [physicalDpr2CaseName] else {
+                environment["QT_SCALE_FACTOR"] == "2",
+                environment["QT_QPA_PLATFORM"] == "offscreen",
+                payload == [physicalDpr2CaseName]
+            else {
                 return fail("physical DPR2 child requires only the mounted boundary case")
             }
         }
@@ -91,8 +96,7 @@ enum EditorQmlLane {
             return runSuite(file: suite, payload: payload)
         }
         let suites: [String]
-        do { suites = try drawerSuites() }
-        catch { return fail("could not list drawer suites: \(error)") }
+        do { suites = try drawerSuites() } catch { return fail("could not list drawer suites: \(error)") }
         guard !suites.isEmpty else { return fail("no drawer suites") }
         let selectors = payload.filter { $0.contains("::") }
         let requested: [String]
@@ -107,7 +111,8 @@ enum EditorQmlLane {
             }
             requested = suites.filter { owners.contains($0) }
         }
-        let jobs = requested
+        let jobs =
+            requested
             .filter { selectors.isEmpty || $0 != "tst_EditorDrawerReferenceProfiles.qml" }
             .flatMap { suite -> [(suite: String, phase: String, payload: [String])] in
                 let selected = selectors.filter { suiteSelectors[suite]?.contains($0) == true }
@@ -118,12 +123,14 @@ enum EditorQmlLane {
             }
         let outcomes = Mutex(Array(repeating: Int32(1), count: jobs.count))
         let queue = OperationQueue()
-        queue.maxConcurrentOperationCount = min(6, ProcessInfo.processInfo.activeProcessorCount,
-                                                max(1, jobs.count))
+        queue.maxConcurrentOperationCount = min(
+            6, ProcessInfo.processInfo.activeProcessorCount,
+            max(1, jobs.count))
         let operations = jobs.enumerated().map { index, job in
             BlockOperation {
-                let result = runPhaseChild(scratch: scratch, suite: job.suite,
-                                           phase: job.phase, payload: job.payload)
+                let result = runPhaseChild(
+                    scratch: scratch, suite: job.suite,
+                    phase: job.phase, payload: job.payload)
                 outcomes.withLock { $0[index] = result }
             }
         }
@@ -172,8 +179,6 @@ enum EditorQmlLane {
         return qTestApp.runQtQuickTests(Int32(laneArguments.count), &argv)
     }
 
-
-
     private static func drawerSuites() throws -> [String] {
         try FileManager.default.contentsOfDirectory(atPath: EditorQmlPaths.testDirectory)
             .filter { $0 == inputFileName || ($0.hasPrefix("tst_EditorDrawer") && $0.hasSuffix(".qml")) }
@@ -183,45 +188,118 @@ enum EditorQmlLane {
         let cases: [(String, String)] = [
             ("", "noPageContributesNothing hostedChromeAndStacking"),
             ("ContainerResize", "toggleRetainsStoredHeight resizeClampAndCancellation"),
-            ("ContainerLifecycle", "voiceChangesSpillAndDetach focusReturnAndPageCancellation mountedDrawerFocusFallbackWalk"),
-            ("SharedPlayhead", "sharedPlayheadRendersRollAndVisibleBodies sharedPlayheadHidesOutOfViewportAndReprojects sharedPlayheadSuspendsFollowForEveryInteraction"),
-            ("Chrome", "numericFieldWindowShortcutPriority_data numericFieldWindowShortcutPriority bundledFontsResolveInEditorLane otherEventsBandMountsBetweenDrawerAndScrollbar otherEventsProjectionHoverAndWheel drawerTypographyFromMountedSession productionDrawerBlankBarFocus"),
-            ("Headers", "quickSurfacePublishesAndRendersHeaders trackActivityRenderedMeterParity headerVoiceChangeAltersRetainedRaster hoveringHeadersDoesNotCreateTooltip headerCtrlScopeKeepsPrimaryAndRendersOverlay"),
-            ("VelocityRaster", "productionVelocityPageMountsAndRenders productionVelocityMountedInk productionVelocityScrollAlignment productionVelocityTransientInk productionVelocityDetentRepaint"),
-            ("VelocityHitTargets", "productionVelocityCoincidentNodePriority productionVelocityStemGestureCancellation productionVelocityOverlapTargetsVisibleNode"),
-            ("VelocityEditing", "velocityHintsResumeAfterOutsideRelease productionVelocityPointerEdit productionVelocityNumericInput productionVelocityCancellation productionVelocityPlayheadPerformance productionVelocityContextIsExact"),
-            ("VelocityPrompt", "productionVelocityPromptTransaction productionVelocityPromptButtonsAndFocus productionVelocityPromptValidationAndDismissal productionVelocityPromptBoundedKeys"),
+            (
+                "ContainerLifecycle",
+                "voiceChangesSpillAndDetach focusReturnAndPageCancellation mountedDrawerFocusFallbackWalk"
+            ),
+            (
+                "SharedPlayhead",
+                "sharedPlayheadRendersRollAndVisibleBodies sharedPlayheadHidesOutOfViewportAndReprojects sharedPlayheadSuspendsFollowForEveryInteraction"
+            ),
+            (
+                "Chrome",
+                "numericFieldWindowShortcutPriority_data numericFieldWindowShortcutPriority bundledFontsResolveInEditorLane otherEventsBandMountsBetweenDrawerAndScrollbar otherEventsProjectionHoverAndWheel drawerTypographyFromMountedSession productionDrawerBlankBarFocus"
+            ),
+            (
+                "Headers",
+                "quickSurfacePublishesAndRendersHeaders trackActivityRenderedMeterParity headerVoiceChangeAltersRetainedRaster hoveringHeadersDoesNotCreateTooltip headerCtrlScopeKeepsPrimaryAndRendersOverlay"
+            ),
+            (
+                "VelocityRaster",
+                "productionVelocityPageMountsAndRenders productionVelocityMountedInk productionVelocityScrollAlignment productionVelocityTransientInk productionVelocityDetentRepaint"
+            ),
+            (
+                "VelocityHitTargets",
+                "productionVelocityCoincidentNodePriority productionVelocityStemGestureCancellation productionVelocityOverlapTargetsVisibleNode"
+            ),
+            (
+                "VelocityEditing",
+                "velocityHintsResumeAfterOutsideRelease productionVelocityPointerEdit productionVelocityNumericInput productionVelocityCancellation productionVelocityPlayheadPerformance productionVelocityContextIsExact"
+            ),
+            (
+                "VelocityPrompt",
+                "productionVelocityPromptTransaction productionVelocityPromptButtonsAndFocus productionVelocityPromptValidationAndDismissal productionVelocityPromptBoundedKeys"
+            ),
             ("VelocitySameFrame", "velocityHandlesTrackFreshGridEveryFrame"),
-            ("VoiceTransactions", "productionVoiceChangesPageMountsAndRenders productionVoiceChangesPointerAndMenuTransactions productionVoiceChangesInsertAndChangeRowPicks productionVoiceChangesMenuHoldAcrossCameraScroll productionVoiceChangesDismissalAndEscape"),
-            ("VoicePicker", "productionVoiceChangesPickerKeyboardAndCancellation productionVoicePickerPointerAudition productionVoiceChangesModalLayerComposition productionVoiceChangesSpacePriority"),
-            ("VoiceInputIsolation", "productionVoiceInputPressIsolatesAutomationAndCursor productionVoiceDragCursorDraftAndBandIsolation productionVoiceJitterAndEscapeKeepArrowAndClearBand productionVoiceCollisionAndAltCursorIsolation productionVoiceChangesCameraTransactions"),
-            ("AutomationHover", "productionAutomationHoverThroughInput productionAutomationEditGuideTracksCursor productionAutomationHoverTransfersBetweenWrittenNodes automationHintsRetainGrabOrigin"),
-            ("AutomationCurves", "productionAutomationOriginPhantomCurveRaster productionAutomationGhostCurvesDrawUnderActive productionAutomationLeadInStepAndSelectionPixels"),
-            ("AutomationPresentation", "automationPresentationCurveTabAndBadgePixels automationPresentationGhostAxisAndResize automationPresentationInactiveInclusionPixels"),
-            ("AutomationTabs", "parameterLabelsFitGutterAtDerivedMinimum_data parameterLabelsFitGutterAtDerivedMinimum productionAutomationPageMountsAndRenders productionAutomationTabSwitchAndGhosts"),
-            ("AutomationTransactions", "productionAutomationDomainRowsThroughInput productionAutomationPromptTransaction productionAutomationBandHalfOpenPhysicalBoundaryDpr1 productionAutomationBandHalfOpenPhysicalBoundaryDpr2"),
-            ("AutomationPointMenu", "productionAutomationRangeSubmenu productionAutomationOutsideRightRetarget productionAutomationPointMenuDeleteAndDismiss productionAutomationSyntheticDefaultMenuRoute"),
-            ("AutomationFocus", "automationModalsRetireWithPage productionAutomationSetValuePromptFocusRoute productionAutomationTempoPromptFocusRoute productionAutomationSpacePriority productionAutomationPanGuardsSharedCommands"),
-            ("AutomationLaneMenu", "productionAutomationMenusAndLaneCommands productionAutomationClearRowClick productionAutomationRange64RowClick productionAutomationCopyRowClick productionAutomationPasteRowClick productionAutomationBandCopyPasteIsLaneScoped"),
-            ("AutomationTempo", "productionAutomationTempoPromptPresentation productionAutomationCenteredPromptOffset productionAutomationTapTempoThroughInput"),
-            ("PagePlayhead", "productionAutomationFollowAndCancellation productionAllPagesPlayheadPerformance productionVoiceChangesPlayheadPerformance"),
-            ("AutomationCamera", "productionAutomationBandGeometry productionAutomationSectionResizeKeepsTabsClickable productionAutomationMiddlePanAndTrackSwitch productionAutomationEmptySwitchPreservesGrid productionAutomationViewStateAcrossDrawerPages productionAutomationWheelZoomPreservesDrawerState productionAutomationPanLifecycleFocusGrabAndInterruptions"),
-            ("AutomationPreview", "productionAutomationDragPreviews productionAutomationPanSelectedRingPixels productionAutomationPencilPreviewAndLabel"),
+            (
+                "VoiceTransactions",
+                "productionVoiceChangesPageMountsAndRenders productionVoiceChangesPointerAndMenuTransactions productionVoiceChangesInsertAndChangeRowPicks productionVoiceChangesMenuHoldAcrossCameraScroll productionVoiceChangesDismissalAndEscape"
+            ),
+            (
+                "VoicePicker",
+                "productionVoiceChangesPickerKeyboardAndCancellation productionVoicePickerPointerAudition productionVoiceChangesModalLayerComposition productionVoiceChangesSpacePriority"
+            ),
+            (
+                "VoiceInputIsolation",
+                "productionVoiceInputPressIsolatesAutomationAndCursor productionVoiceDragCursorDraftAndBandIsolation productionVoiceJitterAndEscapeKeepArrowAndClearBand productionVoiceCollisionAndAltCursorIsolation productionVoiceChangesCameraTransactions"
+            ),
+            (
+                "AutomationHover",
+                "productionAutomationHoverThroughInput productionAutomationEditGuideTracksCursor productionAutomationHoverTransfersBetweenWrittenNodes automationHintsRetainGrabOrigin"
+            ),
+            (
+                "AutomationCurves",
+                "productionAutomationOriginPhantomCurveRaster productionAutomationGhostCurvesDrawUnderActive productionAutomationLeadInStepAndSelectionPixels"
+            ),
+            (
+                "AutomationPresentation",
+                "automationPresentationCurveTabAndBadgePixels automationPresentationGhostAxisAndResize automationPresentationInactiveInclusionPixels"
+            ),
+            (
+                "AutomationTabs",
+                "parameterLabelsFitGutterAtDerivedMinimum_data parameterLabelsFitGutterAtDerivedMinimum productionAutomationPageMountsAndRenders productionAutomationTabSwitchAndGhosts"
+            ),
+            (
+                "AutomationTransactions",
+                "productionAutomationDomainRowsThroughInput productionAutomationPromptTransaction productionAutomationBandHalfOpenPhysicalBoundaryDpr1 productionAutomationBandHalfOpenPhysicalBoundaryDpr2"
+            ),
+            (
+                "AutomationPointMenu",
+                "productionAutomationRangeSubmenu productionAutomationOutsideRightRetarget productionAutomationPointMenuDeleteAndDismiss productionAutomationSyntheticDefaultMenuRoute"
+            ),
+            (
+                "AutomationFocus",
+                "automationModalsRetireWithPage productionAutomationSetValuePromptFocusRoute productionAutomationTempoPromptFocusRoute productionAutomationSpacePriority productionAutomationPanGuardsSharedCommands"
+            ),
+            (
+                "AutomationLaneMenu",
+                "productionAutomationMenusAndLaneCommands productionAutomationClearRowClick productionAutomationRange64RowClick productionAutomationCopyRowClick productionAutomationPasteRowClick productionAutomationBandCopyPasteIsLaneScoped"
+            ),
+            (
+                "AutomationTempo",
+                "productionAutomationTempoPromptPresentation productionAutomationCenteredPromptOffset productionAutomationTapTempoThroughInput"
+            ),
+            (
+                "PagePlayhead",
+                "productionAutomationFollowAndCancellation productionAllPagesPlayheadPerformance productionVoiceChangesPlayheadPerformance"
+            ),
+            (
+                "AutomationCamera",
+                "productionAutomationBandGeometry productionAutomationSectionResizeKeepsTabsClickable productionAutomationMiddlePanAndTrackSwitch productionAutomationEmptySwitchPreservesGrid productionAutomationViewStateAcrossDrawerPages productionAutomationWheelZoomPreservesDrawerState productionAutomationPanLifecycleFocusGrabAndInterruptions"
+            ),
+            (
+                "AutomationPreview",
+                "productionAutomationDragPreviews productionAutomationPanSelectedRingPixels productionAutomationPencilPreviewAndLabel"
+            ),
             ("ReferenceProfiles", "referenceProfileBeforeCapturePencilCursorScale referenceProfileCapture"),
         ]
-        return Dictionary(uniqueKeysWithValues: cases.map { suffix, functions in
-            ("tst_EditorDrawer\(suffix).qml",
-             functions.split(separator: " ").map { "EditorDrawerLane::test_\($0)" })
-        })
+        return Dictionary(
+            uniqueKeysWithValues: cases.map { suffix, functions in
+                (
+                    "tst_EditorDrawer\(suffix).qml",
+                    functions.split(separator: " ").map { "EditorDrawerLane::test_\($0)" }
+                )
+            })
     }()
-
 
     /// Entries use the route101 fixture set from `src/checks/checkcatalog.cpp`
     /// and the same `run_checks.ts` manifest shape as the native checks.
     private static var manifestLine: String {
         let files = fixtureFiles.map { "\"" + $0 + "\"" }.joined(separator: ",")
-        let entry = #"{"name":"\#(entryName)","argv":["{scratch}"],"binary":"checks","windowing":"offscreen","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
-        let displayList = #"{"name":"DisplayListSameFrame","argv":["DisplayListSameFrame","{scratch}"],"binary":"checks","windowing":"offscreen","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
+        let entry =
+            #"{"name":"\#(entryName)","argv":["{scratch}"],"binary":"checks","windowing":"offscreen","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
+        let displayList =
+            #"{"name":"DisplayListSameFrame","argv":["DisplayListSameFrame","{scratch}"],"binary":"checks","windowing":"offscreen","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
         return #"{"checks":[\#(entry),\#(displayList)]}"#
     }
 

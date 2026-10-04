@@ -12,8 +12,10 @@ public final class PitchBendLine: QVariantGettable {
     public var strokeWidth: Double
     public var strokeColor: String
 
-    public init(x0: Double, y0: Double, x1: Double, y1: Double,
-                width: Double, color: String) {
+    public init(
+        x0: Double, y0: Double, x1: Double, y1: Double,
+        width: Double, color: String
+    ) {
         self.x0 = x0
         self.y0 = y0
         self.x1 = x1
@@ -33,8 +35,10 @@ public final class PitchBendVertex: QVariantGettable {
     public var ringColor: String
     public var ringWidth: Double
 
-    public init(x: Double, y: Double, radius: Double, fill: String,
-                ring: String = "transparent", ringWidth: Double = 0) {
+    public init(
+        x: Double, y: Double, radius: Double, fill: String,
+        ring: String = "transparent", ringWidth: Double = 0
+    ) {
         self.x = x - radius
         self.y = y - radius
         self.radius = radius
@@ -144,15 +148,21 @@ public final class PitchBendLane {
         let gridColor = palette.gridLine
         var rules: [SceneRect] = []
         for tick in k.gridTicks {
-            rules.append(SceneRect(x: k.x(at: tick), y: g.canvasY, width: g.hairline,
-                                   height: g.canvasHeight, fillColor: gridColor))
+            rules.append(
+                SceneRect(
+                    x: k.x(at: tick), y: g.canvasY, width: g.hairline,
+                    height: g.canvasHeight, fillColor: gridColor))
         }
         let zero = k.y(at: 0)
         var x = g.canvasX
         while x < g.canvasX + g.canvasWidth {
-            rules.append(SceneRect(x: x, y: zero, width: min(4 * g.hairline,
-                g.canvasX + g.canvasWidth - x), height: g.hairline,
-                fillColor: palette.separator))
+            rules.append(
+                SceneRect(
+                    x: x, y: zero,
+                    width: min(
+                        4 * g.hairline,
+                        g.canvasX + g.canvasWidth - x), height: g.hairline,
+                    fillColor: palette.separator))
             x += 6 * g.hairline
         }
         let ruleMatch: (SceneRect, SceneRect) -> Bool = { $0.matches($1) }
@@ -166,22 +176,26 @@ public final class PitchBendLane {
             let x1 = next.map { k.x(at: $0.tick) } ?? g.canvasX + g.canvasWidth - 1
             let y = k.y(at: point.value)
             let angled = next.map { $0.tick - point.tick == k.fineTicks } ?? false
-            strokes.append(PitchBendLine(
-                x0: x0, y0: y, x1: x1,
-                y1: angled ? k.y(at: next?.value ?? point.value) : y,
-                width: g.curveStroke, color: curveColor))
+            strokes.append(
+                PitchBendLine(
+                    x0: x0, y0: y, x1: x1,
+                    y1: angled ? k.y(at: next?.value ?? point.value) : y,
+                    width: g.curveStroke, color: curveColor))
             if let next, !angled {
-                strokes.append(PitchBendLine(x0: x1, y0: y, x1: x1, y1: k.y(at: next.value),
-                                             width: g.curveStroke, color: curveColor))
+                strokes.append(
+                    PitchBendLine(
+                        x0: x1, y0: y, x1: x1, y1: k.y(at: next.value),
+                        width: g.curveStroke, color: curveColor))
             }
         }
         if let preview = k.linePreview {
             let first = preview.0
             let last = preview.1
-            strokes.append(PitchBendLine(
-                x0: k.x(at: first.tick), y0: k.y(at: first.value),
-                x1: k.x(at: last.tick), y1: k.y(at: last.value),
-                width: g.hairline, color: palette.editCursor))
+            strokes.append(
+                PitchBendLine(
+                    x0: k.x(at: first.tick), y0: k.y(at: first.value),
+                    x1: k.x(at: last.tick), y1: k.y(at: last.value),
+                    width: g.hairline, color: palette.editCursor))
         }
         let lineMatch: (PitchBendLine, PitchBendLine) -> Bool = {
             $0.x0 == $1.x0 && $0.y0 == $1.y0 && $0.x1 == $1.x1 && $0.y1 == $1.y1
@@ -193,15 +207,19 @@ public final class PitchBendLane {
         for point in ordered {
             let selected = k.selectedTick == point.tick
             let endpoint = point.tick == k.startTick || point.tick == k.endTick
-            dots.append(PitchBendVertex(x: k.x(at: point.tick), y: k.y(at: point.value),
-                radius: selected ? g.selectedRingRadius : g.nodePaintRadius,
-                fill: endpoint && !selected ? palette.secondaryText : curveColor,
-                ring: selected ? palette.focusOutline : "transparent",
-                ringWidth: selected ? g.hairline * 1.5 : 0))
+            dots.append(
+                PitchBendVertex(
+                    x: k.x(at: point.tick), y: k.y(at: point.value),
+                    radius: selected ? g.selectedRingRadius : g.nodePaintRadius,
+                    fill: endpoint && !selected ? palette.secondaryText : curveColor,
+                    ring: selected ? palette.focusOutline : "transparent",
+                    ringWidth: selected ? g.hairline * 1.5 : 0))
         }
-        dots.append(PitchBendVertex(x: k.x(at: k.keyboardTick), y: k.y(at: k.liveValue),
-                                     radius: g.nodePaintRadius, fill: "transparent",
-                                     ring: palette.editCursor, ringWidth: g.hairline))
+        dots.append(
+            PitchBendVertex(
+                x: k.x(at: k.keyboardTick), y: k.y(at: k.liveValue),
+                radius: g.nodePaintRadius, fill: "transparent",
+                ring: palette.editCursor, ringWidth: g.hairline))
         let vertexMatch: (PitchBendVertex, PitchBendVertex) -> Bool = {
             $0.x == $1.x && $0.y == $1.y && $0.radius == $1.radius
                 && $0.fillColor == $1.fillColor && $0.ringColor == $1.ringColor
@@ -213,9 +231,12 @@ public final class PitchBendLane {
             upperValueText = "127"
             lowerValueText = "0"
         } else {
-            let semitones = Double(k.liveValue) * Double(bendRange)
+            let semitones =
+                Double(k.liveValue) * Double(bendRange)
                 / Double(k.liveValue > 0 ? 8191 : 8192)
-            liveValueText = k.liveValue == 0 || bendRange == 0 ? "0 st"
+            liveValueText =
+                k.liveValue == 0 || bendRange == 0
+                ? "0 st"
                 : String(format: "%@%.2f st", semitones > 0 ? "+" : "", semitones)
             upperValueText = bendRange == 0 ? "0 st" : "+\(bendRange) st"
             lowerValueText = bendRange == 0 ? "0 st" : "-\(bendRange) st"

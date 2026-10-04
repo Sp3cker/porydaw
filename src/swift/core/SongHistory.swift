@@ -55,7 +55,6 @@ internal struct EventRemoval: Sendable {
     let event: MidiEvent
 }
 
-
 internal struct ChunkInsertion: Sendable {
     let offset: Int
     let chunk: MidiChunk
@@ -118,11 +117,9 @@ internal struct DocumentChangeSet: Sendable {
     var config: ConfigChange?
 
     var isEmpty: Bool {
-        events.isEmpty && chunkInsertions.isEmpty && chunkRemovals.isEmpty &&
-            chunkMoves.isEmpty && chunkEnds.isEmpty &&
-            fileMetadata == nil && tempo == nil && config == nil
+        events.isEmpty && chunkInsertions.isEmpty && chunkRemovals.isEmpty && chunkMoves.isEmpty && chunkEnds.isEmpty
+            && fileMetadata == nil && tempo == nil && config == nil
     }
-
 
     func apply(to state: inout SongState, direction: BankHistoryDirection) {
         if direction == .undo { applyChunkEnds(to: &state, direction: direction) }
@@ -131,26 +128,31 @@ internal struct DocumentChangeSet: Sendable {
         if direction == .undo { applyChunks(to: &state, direction: direction) }
         if direction == .redo { applyChunkEnds(to: &state, direction: direction) }
         if let change = fileMetadata {
-            state.file.division = direction == .redo
+            state.file.division =
+                direction == .redo
                 ? change.afterDivision : change.beforeDivision
-            state.file.wasFormat0 = direction == .redo
+            state.file.wasFormat0 =
+                direction == .redo
                 ? change.afterWasFormat0 : change.beforeWasFormat0
         }
         if let tempo { applyTempo(tempo, to: &state.tempo, direction: direction) }
         if let config { state.config = direction == .redo ? config.after : config.before }
     }
 
-    private func applyChunkEnds(to state: inout SongState,
-                                direction: BankHistoryDirection) {
+    private func applyChunkEnds(
+        to state: inout SongState,
+        direction: BankHistoryDirection
+    ) {
         for change in chunkEnds {
             state.file.chunks[change.chunk].endTick =
                 direction == .redo ? change.after : change.before
         }
     }
 
-
-    private func applyTempo(_ change: TempoChange, to tempo: inout [TempoPoint],
-                            direction: BankHistoryDirection) {
+    private func applyTempo(
+        _ change: TempoChange, to tempo: inout [TempoPoint],
+        direction: BankHistoryDirection
+    ) {
         switch direction {
         case .redo:
             for removal in change.removals.sorted(by: { $0.offset > $1.offset }) {
@@ -292,7 +294,8 @@ public final class SongHistory {
     /// Ends a bank gesture without altering document identity or a document entry.
     public func sealBankMerge() {
         guard transition == nil, index > 0,
-              case var .bank(entry) = entries[index - 1] else { return }
+            case var .bank(entry) = entries[index - 1]
+        else { return }
         entry.mergeSealed = true
         entries[index - 1] = .bank(entry)
     }
@@ -311,7 +314,8 @@ public final class SongHistory {
             target = entries[index]
         }
         guard case let .document(entry) = target, let config = entry.changes.config,
-              config.before.voicegroupArgument != config.after.voicegroupArgument else {
+            config.before.voicegroupArgument != config.after.voicegroupArgument
+        else {
             return nil
         }
         return direction == .undo
@@ -339,8 +343,10 @@ public final class SongHistory {
 
     /// Publishes the confirmed action and releases its transition as one
     /// synchronous state change. No other history operation can observe a gap.
-    public func finishBankTransition(_ token: BankTransitionToken,
-                                     recording action: any BankHistoryAction) {
+    public func finishBankTransition(
+        _ token: BankTransitionToken,
+        recording action: any BankHistoryAction
+    ) {
         assert(transition == token, "Only the transition owner can finish a bank edit.")
         guard transition == token else { return }
         recordConfirmedBankOwned(action)
@@ -352,7 +358,8 @@ public final class SongHistory {
         let mayMerge = index == entries.count
         discardRedo()
         if mayMerge, index > 0, case var .bank(previous) = entries[index - 1],
-           !previous.mergeSealed, let merged = previous.action.merged(with: action) {
+            !previous.mergeSealed, let merged = previous.action.merged(with: action)
+        {
             if merged.isRedundant {
                 entries.removeLast()
                 index -= 1
@@ -365,15 +372,19 @@ public final class SongHistory {
             }
             return
         }
-        entries.append(.bank(BankEntry(action: action, identity: currentIdentity,
-                                       mergeSealed: false)))
+        entries.append(
+            .bank(
+                BankEntry(
+                    action: action, identity: currentIdentity,
+                    mergeSealed: false)))
         index += 1
     }
 
     @discardableResult
     public func undoDocument() -> Bool {
         guard transition == nil, index > 0,
-              case let .document(entry) = entries[index - 1] else { return false }
+            case let .document(entry) = entries[index - 1]
+        else { return false }
         index -= 1
         applyDocument?(entry.changes, .undo, entry.trackRemap?.inverted())
         return true
@@ -382,7 +393,8 @@ public final class SongHistory {
     @discardableResult
     public func redoDocument() -> Bool {
         guard transition == nil, index < entries.count,
-              case let .document(entry) = entries[index] else { return false }
+            case let .document(entry) = entries[index]
+        else { return false }
         index += 1
         applyDocument?(entry.changes, .redo, entry.trackRemap)
         return true
@@ -438,31 +450,42 @@ public final class SongHistory {
         applyDocument = apply
     }
 
-    internal func originChanges(for group: HistoryGroup?,
-                                operation: HistoryOperation) -> DocumentChangeSet? {
+    internal func originChanges(
+        for group: HistoryGroup?,
+        operation: HistoryOperation
+    ) -> DocumentChangeSet? {
         guard let group, index == entries.count, index > 0,
-              case let .document(entry) = entries[index - 1],
-              entry.group == group, entry.operation == operation, !entry.mergeSealed else {
+            case let .document(entry) = entries[index - 1],
+            entry.group == group, entry.operation == operation, !entry.mergeSealed
+        else {
             return nil
         }
         return entry.changes
     }
 
-    internal func noteLengthOrigin(for ids: [NoteID])
-        -> (changes: DocumentChangeSet, group: HistoryGroup, delta: Int64)? {
+    internal func noteLengthOrigin(
+        for ids: [NoteID]
+    )
+        -> (changes: DocumentChangeSet, group: HistoryGroup, delta: Int64)?
+    {
         guard index == entries.count, index > 0,
-              case let .document(entry) = entries[index - 1],
-              !entry.mergeSealed, let group = entry.group,
-              case let .resizeNoteLengths(previousIDs, delta) = entry.operation,
-              previousIDs == ids else { return nil }
+            case let .document(entry) = entries[index - 1],
+            !entry.mergeSealed, let group = entry.group,
+            case let .resizeNoteLengths(previousIDs, delta) = entry.operation,
+            previousIDs == ids
+        else { return nil }
         return (entry.changes, group, delta)
     }
 
-    internal func noteMoveOrigin(for ids: [NoteID], absolutePitches: Bool)
-        -> (changes: DocumentChangeSet, group: HistoryGroup, ticks: Int64, keys: Int)? {
+    internal func noteMoveOrigin(
+        for ids: [NoteID], absolutePitches: Bool
+    )
+        -> (changes: DocumentChangeSet, group: HistoryGroup, ticks: Int64, keys: Int)?
+    {
         guard index == entries.count, index > 0,
-              case let .document(entry) = entries[index - 1],
-              !entry.mergeSealed, let group = entry.group else { return nil }
+            case let .document(entry) = entries[index - 1],
+            !entry.mergeSealed, let group = entry.group
+        else { return nil }
         switch entry.operation {
         case let .nudgeNotes(previousIDs, ticks, keys) where !absolutePitches && previousIDs == ids:
             return (entry.changes, group, ticks, keys)
@@ -474,15 +497,18 @@ public final class SongHistory {
     }
 
     /// Document mutations are synchronous and must not race an owned bank transition.
-    internal func record(changes: DocumentChangeSet, group: HistoryGroup?,
-                         operation: HistoryOperation, returnsToOrigin: Bool,
-                         trackRemap: TrackRemap?) {
+    internal func record(
+        changes: DocumentChangeSet, group: HistoryGroup?,
+        operation: HistoryOperation, returnsToOrigin: Bool,
+        trackRemap: TrackRemap?
+    ) {
         assert(transition == nil, "Cannot record a document edit during a bank transition.")
         guard transition == nil else { return }
         let mayMerge = group != nil && index == entries.count
         if mayMerge, let group, index > 0,
-           case var .document(previous) = entries[index - 1],
-           previous.group == group, previous.operation.matchesGesture(operation), !previous.mergeSealed {
+            case var .document(previous) = entries[index - 1],
+            previous.group == group, previous.operation.matchesGesture(operation), !previous.mergeSealed
+        {
             if operation.discardsOriginEntry && (returnsToOrigin || changes.isEmpty) {
                 entries.removeLast()
                 index -= 1
@@ -497,9 +523,11 @@ public final class SongHistory {
         }
         guard !changes.isEmpty else { return }
         discardRedo()
-        entries.append(.document(DocumentEntry(
-            changes: changes, afterIdentity: mintIdentity(), group: group,
-            operation: operation, trackRemap: trackRemap, mergeSealed: false)))
+        entries.append(
+            .document(
+                DocumentEntry(
+                    changes: changes, afterIdentity: mintIdentity(), group: group,
+                    operation: operation, trackRemap: trackRemap, mergeSealed: false)))
         index += 1
     }
 
@@ -526,7 +554,6 @@ public final class SongHistory {
         return result
     }
 }
-
 
 internal enum HistoryOperation: Hashable {
     case addNotes
@@ -571,13 +598,13 @@ internal enum HistoryOperation: Hashable {
         case .nudgeNotePitches:
             false
         case .addNotes, .deleteNotes, .moveNotes, .moveNotesToPitches, .nudgeNotes,
-             .resizeNotes, .resizeNoteLengths, .setVelocities, .addTrack, .duplicateTrack,
-             .deleteTrack, .moveTrack, .renameTrack, .setChunkEnd, .setConfig,
-             .insertRawEvent, .modifyRawEvent, .deleteRawEvents, .moveRawEvent,
-             .editTempo, .editRawAndTempo, .setLoop, .setTimeSignature,
-             .moveTimeSignature, .deleteTimeSignature, .writeLane, .moveLanePoints,
-             .deleteLanePoints, .applyRangeEdit, .moveRange, .removeTime,
-             .insertBlankTime, .duplicateTime:
+            .resizeNotes, .resizeNoteLengths, .setVelocities, .addTrack, .duplicateTrack,
+            .deleteTrack, .moveTrack, .renameTrack, .setChunkEnd, .setConfig,
+            .insertRawEvent, .modifyRawEvent, .deleteRawEvents, .moveRawEvent,
+            .editTempo, .editRawAndTempo, .setLoop, .setTimeSignature,
+            .moveTimeSignature, .deleteTimeSignature, .writeLane, .moveLanePoints,
+            .deleteLanePoints, .applyRangeEdit, .moveRange, .removeTime,
+            .insertBlankTime, .duplicateTime:
             true
         }
     }
@@ -585,8 +612,8 @@ internal enum HistoryOperation: Hashable {
     func matchesGesture(_ other: HistoryOperation) -> Bool {
         switch (self, other) {
         case let (.resizeNoteLengths(ids, _), .resizeNoteLengths(otherIDs, _)),
-             let (.nudgeNotes(ids, _, _), .nudgeNotes(otherIDs, _, _)),
-             let (.nudgeNotePitches(ids, _), .nudgeNotePitches(otherIDs, _)):
+            let (.nudgeNotes(ids, _, _), .nudgeNotes(otherIDs, _, _)),
+            let (.nudgeNotePitches(ids, _), .nudgeNotePitches(otherIDs, _)):
             return ids == otherIDs
         default:
             return self == other

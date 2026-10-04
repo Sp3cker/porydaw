@@ -59,8 +59,9 @@ internal func withTempProjectCopy(
     _ body: (URL) throws -> Void
 ) throws {
     guard let fixtureRoot = CheckEnvironment.fixtureRoot,
-          let staged = CheckEnvironment.fixturePath(stagedFile),
-          FileManager.default.fileExists(atPath: staged) else {
+        let staged = CheckEnvironment.fixturePath(stagedFile),
+        FileManager.default.fileExists(atPath: staged)
+    else {
         throw TempProjectCopyError.missingStagedProject(stagedFile)
     }
     let copy = FileManager.default.temporaryDirectory.appendingPathComponent(
@@ -79,8 +80,9 @@ internal func withTempProjectCopy(
     _ body: @MainActor (URL) throws -> Void
 ) throws {
     guard let fixtureRoot = CheckEnvironment.fixtureRoot,
-          let staged = CheckEnvironment.fixturePath(stagedFile),
-          FileManager.default.fileExists(atPath: staged) else {
+        let staged = CheckEnvironment.fixturePath(stagedFile),
+        FileManager.default.fileExists(atPath: staged)
+    else {
         throw TempProjectCopyError.missingStagedProject(stagedFile)
     }
     let copy = FileManager.default.temporaryDirectory.appendingPathComponent(

@@ -22,7 +22,8 @@ private func renderDeterminism(_ report: CheckReport) {
         check.expect(false, message: "high resolution fixture imports for determinism")
         return
     }
-    check.expect(SampleDocument.defaultParams(for: source).targetRate == 13379, message: "fresh high-rate default caps at 13379")
+    check.expect(
+        SampleDocument.defaultParams(for: source).targetRate == 13379, message: "fresh high-rate default caps at 13379")
     var low = source
     low.sampleRate = 8000
     low.gbaReady = false
@@ -40,9 +41,11 @@ private func renderDeterminism(_ report: CheckReport) {
     second.setParams(params)
     let firstRender = first.processed
     let secondRender = second.processed
-    check.expect(firstRender.s8 == secondRender.s8 && firstRender.freq == secondRender.freq
-        && firstRender.size == secondRender.size && firstRender.loopStart == secondRender.loopStart
-        && firstRender.pitchFraction == secondRender.pitchFraction, message: "identical source and params render identical bytes and metadata")
+    check.expect(
+        firstRender.s8 == secondRender.s8 && firstRender.freq == secondRender.freq
+            && firstRender.size == secondRender.size && firstRender.loopStart == secondRender.loopStart
+            && firstRender.pitchFraction == secondRender.pitchFraction,
+        message: "identical source and params render identical bytes and metadata")
     var changed = params
     changed.baseKey = 60
     first.setParams(changed)
@@ -83,14 +86,17 @@ struct RiffChunk {
 
 func readRiffChunks(_ bytes: [UInt8]) -> [RiffChunk]? {
     guard bytes.count >= 12, Array(bytes[0..<4]) == Array("RIFF".utf8),
-        Array(bytes[8..<12]) == Array("WAVE".utf8), Int(getU32(bytes, 4)) + 8 == bytes.count else { return nil }
+        Array(bytes[8..<12]) == Array("WAVE".utf8), Int(getU32(bytes, 4)) + 8 == bytes.count
+    else { return nil }
     var offset = 12
     var chunks: [RiffChunk] = []
     while offset + 8 <= bytes.count {
         let size = Int(getU32(bytes, offset + 4))
         guard size <= bytes.count - offset - 8, size + (size & 1) <= bytes.count - offset - 8 else { return nil }
-        chunks.append(RiffChunk(name: String(decoding: bytes[offset..<offset + 4], as: UTF8.self),
-                                start: offset, size: size))
+        chunks.append(
+            RiffChunk(
+                name: String(decoding: bytes[offset..<offset + 4], as: UTF8.self),
+                start: offset, size: size))
         offset += 8 + size + (size & 1)
     }
     return offset == bytes.count ? chunks : nil
@@ -108,16 +114,21 @@ private func renderRiffPadding(_ report: CheckReport) {
     check.expect(sample.size == 7281, message: "profile F produces 7281 odd frames")
     let bytes = Array(SampleWavWriter.bytes(for: sample))
     let chunks = readRiffChunks(bytes)
-    check.expect(chunks?.first?.name == "fmt " && chunks?.first?.start == 12, message: "fmt chunk starts after RIFF header")
+    check.expect(
+        chunks?.first?.name == "fmt " && chunks?.first?.start == 12, message: "fmt chunk starts after RIFF header")
     let data = chunks?.first { $0.name == "data" }
     check.expect(data?.start == 36, message: "data chunk follows 16-byte fmt")
     check.expect(data?.size == 7281, message: "data chunk declares 7281 frames")
-    check.expect(data.map { bytes[$0.start + 8 + $0.size] == 0 } == true, message: "odd data chunk has zero padding byte")
-    check.expect(chunks?.map(\.name) == ["fmt ", "data", "smpl", "agbp", "agbl"], message: "smpl follows padded data chunk")
-    check.expect(chunks?.first { $0.name == "agbp" }.map { $0.start == 36 + 8 + 7281 + 1 + 8 + 36 } == true,
-                 message: "agbp follows 36-byte unlooped smpl")
-    check.expect(chunks?.last.map { $0.name == "agbl" && $0.start == bytes.count - 12 } == true,
-                 message: "agbl follows agbp as final chunk")
+    check.expect(
+        data.map { bytes[$0.start + 8 + $0.size] == 0 } == true, message: "odd data chunk has zero padding byte")
+    check.expect(
+        chunks?.map(\.name) == ["fmt ", "data", "smpl", "agbp", "agbl"], message: "smpl follows padded data chunk")
+    check.expect(
+        chunks?.first { $0.name == "agbp" }.map { $0.start == 36 + 8 + 7281 + 1 + 8 + 36 } == true,
+        message: "agbp follows 36-byte unlooped smpl")
+    check.expect(
+        chunks?.last.map { $0.name == "agbl" && $0.start == bytes.count - 12 } == true,
+        message: "agbl follows agbp as final chunk")
 }
 
 private func renderRetune(_ report: CheckReport) {
@@ -133,7 +144,7 @@ private func renderRetune(_ report: CheckReport) {
     let vectors: [(Double, Int, Double, UInt32)] = [
         (13379, 60, 0, 13700096), (13379, 72, 0, 6850048),
         (13379, 57, 0, 16292252), (13379, 58, 25, 15157369),
-        (3344.75, 60, 0, 3425024), (44100, 69, 50, 26086940), (6689.5, 60, 0, 6850048)
+        (3344.75, 60, 0, 3425024), (44100, 69, 50, 26086940), (6689.5, 60, 0, 6850048),
     ]
     var allGolden = true
     for vector in vectors {
@@ -181,10 +192,12 @@ private func renderCrossfade(_ report: CheckReport) {
     var bakedAgain = SampleDocument(source: source)
     bakedAgain.setParams(params)
     check.expect(fixed.s8 == bakedAgain.processed.s8, message: "crossfade bake is deterministic")
-    check.expect(fixed.seam.valid && fixed.seam.ampLsb < original.seam.ampLsb && fixed.seam.ampLsb <= 3,
-                 message: "crossfade bake tames the seam click")
-    check.expect(fixed.size == original.size && Array(fixed.s8.dropLast(160)) == Array(original.s8.dropLast(160)),
-                 message: "crossfade changes only the final fade window")
+    check.expect(
+        fixed.seam.valid && fixed.seam.ampLsb < original.seam.ampLsb && fixed.seam.ampLsb <= 3,
+        message: "crossfade bake tames the seam click")
+    check.expect(
+        fixed.size == original.size && Array(fixed.s8.dropLast(160)) == Array(original.s8.dropLast(160)),
+        message: "crossfade changes only the final fade window")
     params.loopStart = 2
     params.loopEnd = 700
     var tight = SampleDocument(source: source)
@@ -195,28 +208,32 @@ private func renderCrossfade(_ report: CheckReport) {
 private func renderCompressed(_ report: CheckReport) {
     let check = report.scoped(cppID: "samplecheck/SampleProcessingTest::compressedContainers")
     guard let path = CheckEnvironment.fixturePath("samplesources/tone.flac"),
-        let source = try? SampleImport.decodeFile(path: path) else {
+        let source = try? SampleImport.decodeFile(path: path)
+    else {
         check.expect(false, message: "FLAC source imports for render")
         return
     }
     var document = SampleDocument(source: source)
     let output = document.processed
-    check.expect(output.size > 0 && output.s8.count == output.size && output.freq > 0,
-                 message: "FLAC source renders 8-bit playable output")
+    check.expect(
+        output.size > 0 && output.s8.count == output.size && output.freq > 0,
+        message: "FLAC source renders 8-bit playable output")
 }
 
 private func renderSoundFont(_ report: CheckReport) {
     let check = report.scoped(cppID: "samplecheck/SampleProcessingTest::soundFontExtraction")
     guard let file = try? Sf2Reader.read(soundFontFixture().bytes, sourcePath: "f/test.sf2"),
-        let source = try? Sf2Reader.extractZone(file, index: 0) else {
+        let source = try? Sf2Reader.extractZone(file, index: 0)
+    else {
         report.scoped(cppID: "samplecheck/RenderPipelineSwift::fixture")
             .expect(false, message: "SoundFont zone fixture extracts for render")
         return
     }
     var document = SampleDocument(source: source)
     let sample = document.processed
-    check.expect(sample.looped && sample.size > sample.loopStart && !sample.s8.isEmpty && sample.freq > 0
-        && sample.s8.count == sample.size, message: "SoundFont zone zero renders a looped sample")
+    check.expect(
+        sample.looped && sample.size > sample.loopStart && !sample.s8.isEmpty && sample.freq > 0
+            && sample.s8.count == sample.size, message: "SoundFont zone zero renders a looped sample")
 }
 
 private func renderCorpus(_ report: CheckReport) {

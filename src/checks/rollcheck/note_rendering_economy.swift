@@ -23,7 +23,8 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     guard let noteID = renderingSeed(report, id: id, session: session, grid: grid) else { return }
     defer { session.document.deleteNotes([noteID]) }
     guard let note = session.document.note(noteID),
-          let box = decodedNoteBox(grid, noteID) else {
+        let box = decodedNoteBox(grid, noteID)
+    else {
         report.fail(id, "projection economy fixture has no projected box")
         return
     }
@@ -50,16 +51,17 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     report.expect(
         fills() == fillsBefore && scene.listContentKey != keyBefore
             && frame().display == frameBefore.display + 1,
-                  cppID: id,
+        cppID: id,
         message: "a selection-only refresh resolves the content once with unchanged fills and one new plot frame")
     report.expect(
         session.selectedNotes.contains(noteID)
             && !RollContentProbe(grid).ringRects(noteID).isEmpty,
-                  cppID: id,
-                  message: "a selection-only refresh still republishes the selection ring")
-    report.expect(grid.fetchNoteSummary() != summaryBefore,
-                  cppID: id,
-                  message: "a selection-content change is visible in the pulled note summary")
+        cppID: id,
+        message: "a selection-only refresh still republishes the selection ring")
+    report.expect(
+        grid.fetchNoteSummary() != summaryBefore,
+        cppID: id,
+        message: "a selection-content change is visible in the pulled note summary")
     let keySelected = scene.listContentKey
     let frameSelected = frame()
     let keyboardBefore = scene.displayList(list: 1)
@@ -69,16 +71,17 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     report.expect(
         untouched(since: keySelected)
             && frame().bytes == frameSelected.bytes,
-                  cppID: id,
+        cppID: id,
         message: "a hover-only refresh resolves no new content and leaves the plot frame byte-identical")
     report.expect(
         frame().display == frameSelected.display + 1
             && scene.displayList(list: 1) != keyboardBefore,
-                  cppID: id,
+        cppID: id,
         message: "a hover-only refresh rebuilds only the keyboard frame for the highlight")
-    report.expect(grid.fetchNoteSummary() == summarySelected,
-                  cppID: id,
-                  message: "a hover-only refresh leaves the pulled note summary byte-identical")
+    report.expect(
+        grid.fetchNoteSummary() == summarySelected,
+        cppID: id,
+        message: "a hover-only refresh leaves the pulled note summary byte-identical")
     grid.clearKeyboardHover()
     session.clearSelectedNotes()
     grid.refreshCamera()
@@ -88,22 +91,24 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     let summaryPlain = grid.fetchNoteSummary()
     let startTick = Tick(max(0, Int(note.tick) - 2))
     let endTick = Tick(Int(note.tick) + Int(note.duration) + 2)
-    session.applyTimeSelection(AutomationTimeSelection(
-        range: TimeRange(startTick: startTick, endTick: endTick),
-        scope: .tracks([grid.trackIndex])))
+    session.applyTimeSelection(
+        AutomationTimeSelection(
+            range: TimeRange(startTick: startTick, endTick: endTick),
+            scope: .tracks([grid.trackIndex])))
     grid.refreshCamera()
     report.expect(
         fills() == fillsPlain && scene.listContentKey != keyPlain
             && frame().display == framePlain.display + 1,
-                  cppID: id,
+        cppID: id,
         message: "a highlight-only refresh resolves the content once with unchanged fills and one new plot frame")
-    report.expect(grid.fetchNoteSummary() == summaryPlain,
-                  cppID: id,
-                  message: "a highlight-only refresh leaves the pulled note summary byte-identical")
+    report.expect(
+        grid.fetchNoteSummary() == summaryPlain,
+        cppID: id,
+        message: "a highlight-only refresh leaves the pulled note summary byte-identical")
     report.expect(
         !RollContentProbe(grid).ringRects(noteID).isEmpty,
-                  cppID: id,
-                  message: "a highlight-only refresh still rings the time-covered note")
+        cppID: id,
+        message: "a highlight-only refresh still rings the time-covered note")
     session.clearTimeSelection()
     grid.refreshCamera()
     let keyBeforeScroll = scene.listContentKey
@@ -129,10 +134,12 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     let scrolledSnap = scrolledCamera.snapshot
     let clipX = max(0, scrolledExpected.x)
     let clipY = max(0, scrolledExpected.y)
-    let clipW = min(
-        scrolledExpected.x + scrolledExpected.w, scrolledSnap.viewportWidth) - clipX
-    let clipH = min(
-        scrolledExpected.y + scrolledExpected.h, scrolledSnap.rollHeight) - clipY
+    let clipW =
+        min(
+            scrolledExpected.x + scrolledExpected.w, scrolledSnap.viewportWidth) - clipX
+    let clipH =
+        min(
+            scrolledExpected.y + scrolledExpected.h, scrolledSnap.rollHeight) - clipY
     report.expect(
         scrolledFace.map {
             renderingNear($0.x, clipX) && renderingNear($0.y, clipY)
@@ -149,9 +156,10 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
             && frame().bytes != frameBeforeScroll.bytes,
         cppID: id,
         message: "an in-window camera scroll rebuilds the display frames with fresh list bytes")
-    report.expect(grid.fetchNoteSummary() == summaryBeforeScroll,
-                  cppID: id,
-                  message: "a camera-only refresh leaves the pulled note summary byte-identical")
+    report.expect(
+        grid.fetchNoteSummary() == summaryBeforeScroll,
+        cppID: id,
+        message: "a camera-only refresh leaves the pulled note summary byte-identical")
     _ = session.mutateCamera { _ = $0.setTimeZoom(70) }
     grid.refreshCamera()
     report.expect(
@@ -187,9 +195,10 @@ func checkRollPlotCullBound(_ report: CheckReport, session: DocumentSession) {
         var staged: [NewNote] = []
         staged.reserveCapacity(count)
         for i in 0..<count {
-            staged.append(NewNote(
-                track: grid.trackIndex, tick: Tick(base + i * 48),
-                pitch: UInt8(24 + (i % 80)), duration: Tick(24), velocity: 100))
+            staged.append(
+                NewNote(
+                    track: grid.trackIndex, tick: Tick(base + i * 48),
+                    pitch: UInt8(24 + (i % 80)), duration: Tick(24), velocity: 100))
         }
         guard let added = try? session.document.addNotes(staged) else { return false }
         stagedIDs.append(contentsOf: added)
@@ -200,20 +209,23 @@ func checkRollPlotCullBound(_ report: CheckReport, session: DocumentSession) {
         report.fail(id, "cull fixture could not stage its off-screen notes")
         return
     }
-    func projectedBox(tick: Int, duration: Int, pitch: Int)
+    func projectedBox(
+        tick: Int, duration: Int, pitch: Int
+    )
         -> (x: Double, y: Double, w: Double, h: Double)?
     {
         let camera = session.camera
         guard camera.projection.row(forPitch: pitch) != PitchProjection.hiddenRow else { return nil }
         let row = camera.projection.row(forPitch: pitch)
         let snapshot = camera.snapshot
-        guard let top = camera.projection.rowTop(
+        guard
+            let top = camera.projection.rowTop(
                 row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
                 dpr: grid.devicePixelRatio),
-              let bottom = camera.projection.rowBottom(
+            let bottom = camera.projection.rowBottom(
                 row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
                 dpr: grid.devicePixelRatio),
-              bottom > 0 && top < snapshot.rollHeight
+            bottom > 0 && top < snapshot.rollHeight
         else { return nil }
         let x0 = camera.viewX(tick: Double(tick), dpr: grid.devicePixelRatio)
         let x1 = camera.viewX(tick: Double(tick + duration), dpr: grid.devicePixelRatio)
@@ -233,10 +245,11 @@ func checkRollPlotCullBound(_ report: CheckReport, session: DocumentSession) {
         var expected = Set<UInt64>()
         for track in 0..<session.document.engineTracks.usedTrackCount {
             for note in session.document.notes(in: track) {
-                guard let box = projectedBox(
-                    tick: Int(note.tick), duration: Int(note.duration),
-                    pitch: Int(note.pitch)),
-                      box.x + box.w > 0 && box.x < snapshot.viewportWidth
+                guard
+                    let box = projectedBox(
+                        tick: Int(note.tick), duration: Int(note.duration),
+                        pitch: Int(note.pitch)),
+                    box.x + box.w > 0 && box.x < snapshot.viewportWidth
                 else { continue }
                 expected.insert(note.id.rawValue)
             }
@@ -304,11 +317,15 @@ func checkRulerSweepSingleTrackScope(_ report: CheckReport, session: DocumentSes
         alignSteps += 1
     }
     let document = session.document
-    report.expect(document.canAddTrack, cppID: id, message: "the sweep fixture can provision the intersecting other-track note")
+    report.expect(
+        document.canAddTrack, cppID: id, message: "the sweep fixture can provision the intersecting other-track note")
     guard document.canAddTrack, let other = document.addTrack(voice: 0), other != primary,
-          let overlapIDs = try? document.addNotes([NewNote(
-              track: other, tick: anchor, pitch: 60,
-              duration: Tick(cell * 4), velocity: 90)]), !overlapIDs.isEmpty else {
+        let overlapIDs = try? document.addNotes([
+            NewNote(
+                track: other, tick: anchor, pitch: 60,
+                duration: Tick(cell * 4), velocity: 90)
+        ]), !overlapIDs.isEmpty
+    else {
         return
     }
     defer {
@@ -325,11 +342,13 @@ func checkRulerSweepSingleTrackScope(_ report: CheckReport, session: DocumentSes
         report.fail(id, "a plain ruler sweep published no time selection")
         return
     }
-    report.expect(swept.range == TimeRange(startTick: anchor, endTick: farTick)
-                      && swept.scope == .tracks([primary]),
-                  cppID: id,
-                  message: "a plain sweep keeps the primary-only scope with an intersecting other-track note")
-    report.expect(document.revision == revision,
-                  cppID: id,
-                  message: "a plain sweep publishes its range without a document write")
+    report.expect(
+        swept.range == TimeRange(startTick: anchor, endTick: farTick)
+            && swept.scope == .tracks([primary]),
+        cppID: id,
+        message: "a plain sweep keeps the primary-only scope with an intersecting other-track note")
+    report.expect(
+        document.revision == revision,
+        cppID: id,
+        message: "a plain sweep publishes its range without a document write")
 }

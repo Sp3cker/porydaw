@@ -14,9 +14,10 @@ extension VoiceListController {
     @QtIgnored
     func editOrigin() -> VoiceListEditOrigin? {
         guard let session else { return nil }
-        return VoiceListEditOrigin(session: session,
-                                   sourcePath: session.bankLease.sourcePath,
-                                   sectionLabel: session.bankLease.sectionLabel)
+        return VoiceListEditOrigin(
+            session: session,
+            sourcePath: session.bankLease.sourcePath,
+            sectionLabel: session.bankLease.sectionLabel)
     }
 
     @QtIgnored
@@ -31,8 +32,9 @@ extension VoiceListController {
     @QtIgnored
     public func refresh(from session: DocumentSession) {
         bindSession(session)
-        bindBank(slots: session.bankSlots, dirty: session.bankDirty,
-                 loadName: session.bankLoadName)
+        bindBank(
+            slots: session.bankSlots, dirty: session.bankDirty,
+            loadName: session.bankLoadName)
         let arg = session.document.state.config.voicegroupArgument
         setCurrentVoicegroupArg(arg.isEmpty ? "_dummy" : arg)
         refreshUsedVoices(from: session)
@@ -72,8 +74,10 @@ extension VoiceListController {
 
     /// Publishes a bank view without replacing the 128 row handles.
     @QtIgnored
-    public func bindBank(slots newSlots: [BankSlotView]?, dirty: Bool = false,
-                         loadName: String = "") {
+    public func bindBank(
+        slots newSlots: [BankSlotView]?, dirty: Bool = false,
+        loadName: String = ""
+    ) {
         releaseVoice()
         let wasLoading = isLoading
         setPublished(isLoading, false) { isLoading = $0 }
@@ -112,9 +116,10 @@ extension VoiceListController {
     public func setVoicegroupChoices(_ args: [String]) {
         guard args != knownArgs else { return }
         knownArgs = args
-        argChoices.reset(to: args.map {
-            VoiceListArgChoice(name: VoiceListSemantics.voicegroupDisplayName($0), arg: $0)
-        })
+        argChoices.reset(
+            to: args.map {
+                VoiceListArgChoice(name: VoiceListSemantics.voicegroupDisplayName($0), arg: $0)
+            })
     }
 
     /// Reflects the current voicegroup arg without emitting a change intent.
@@ -130,7 +135,9 @@ extension VoiceListController {
     public func revealTrackVoice(track: Int, session: DocumentSession) {
         guard session.timeline.tracks.indices.contains(track) else { return }
         let first = session.timeline.tracks[track].firstProgram
-        let program = first >= 0 ? first
+        let program =
+            first >= 0
+            ? first
             : session.document.lanePoints(track: track, lane: .voice).first?.value ?? -1
         guard program >= 0 else { return }
         revealSlot(slot: program)
@@ -174,11 +181,14 @@ extension VoiceListController {
     @QtIgnored
     func publishRow(_ value: VoiceListRow, at slot: Int) {
         let row = rows[slot]
-        guard row.title != value.title || row.typeName != value.typeName ||
-                row.adsr != value.adsr ||
-                row.typeIconKey != VoiceListSemantics.iconKey(glyph: value.glyph,
-                                                               altChip: value.altChip) ||
-                row.altChip != value.altChip || row.used != value.used else { return }
+        guard
+            row.title != value.title || row.typeName != value.typeName || row.adsr != value.adsr
+                || row.typeIconKey
+                    != VoiceListSemantics.iconKey(
+                        glyph: value.glyph,
+                        altChip: value.altChip)
+                || row.altChip != value.altChip || row.used != value.used
+        else { return }
         row.apply(value)
         rows[slot] = row
     }
@@ -188,17 +198,21 @@ extension VoiceListController {
         if isLoading {
             // The overlay rewrites the text cells only; used marks survive
             // (native setLoading never touches kUsedRole).
-            publishRow(VoiceListRow(slot: slot,
-                                    title: String(format: "%03d  Loading...", slot),
-                                    used: usedVoices.contains(slot)), at: slot)
+            publishRow(
+                VoiceListRow(
+                    slot: slot,
+                    title: String(format: "%03d  Loading...", slot),
+                    used: usedVoices.contains(slot)), at: slot)
             return
         }
         // Blank slots render like their editor: a None-kind row is a
         // template the user can materialize.
         if slots.indices.contains(slot), slots[slot].kind == BankSlotKind.none {
-            publishRow(VoiceListRow(slot: slot,
-                                    title: String(format: "%03d  [Blank]", slot),
-                                    used: usedVoices.contains(slot)), at: slot)
+            publishRow(
+                VoiceListRow(
+                    slot: slot,
+                    title: String(format: "%03d  [Blank]", slot),
+                    used: usedVoices.contains(slot)), at: slot)
             return
         }
         // Parsed editable voices are authoritative for unsaved edits. Native
@@ -208,36 +222,42 @@ extension VoiceListController {
             let typeByte = VoiceListSemantics.voiceType(forMacro: voice.macro)
             let typeName = VoiceListSemantics.typeDisplayName(typeByte: typeByte, synth: synth)
             let name = VoiceListSemantics.macroHasSymbol(voice.macro) ? voice.symbol : ""
-            publishRow(VoiceListRow(
-                slot: slot,
-                title: VoiceListSemantics.voiceColumnText(slot: slot, symbol: name,
-                                                         typeName: typeName),
-                typeName: typeName,
-                adsr: VoiceListSemantics.adsrText(voice),
-                glyph: VoiceListSemantics.glyph(forTypeByte: typeByte, synth: synth),
-                altChip: VoiceListSemantics.isAltChip(typeByte),
-                used: usedVoices.contains(slot)), at: slot)
+            publishRow(
+                VoiceListRow(
+                    slot: slot,
+                    title: VoiceListSemantics.voiceColumnText(
+                        slot: slot, symbol: name,
+                        typeName: typeName),
+                    typeName: typeName,
+                    adsr: VoiceListSemantics.adsrText(voice),
+                    glyph: VoiceListSemantics.glyph(forTypeByte: typeByte, synth: synth),
+                    altChip: VoiceListSemantics.isAltChip(typeByte),
+                    used: usedVoices.contains(slot)), at: slot)
             return
         }
         if slots.indices.contains(slot), let tone = slots[slot].tone {
             let typeByte = UInt8(tone.type)
             let typeName = VoiceListSemantics.typeDisplayName(
                 typeByte: typeByte, synth: tone.isSynth)
-            let adsr = tone.adsr.map {
-                "\($0.attack) \($0.decay) \($0.sustain) \($0.release)"
-            } ?? ""
-            publishRow(VoiceListRow(
-                slot: slot,
-                title: VoiceListSemantics.voiceColumnText(
-                    slot: slot, symbol: tone.name, typeName: typeName),
-                typeName: typeName,
-                adsr: adsr,
-                glyph: VoiceListSemantics.glyph(forTypeByte: typeByte, synth: tone.isSynth),
-                altChip: VoiceListSemantics.isAltChip(typeByte),
-                used: usedVoices.contains(slot)), at: slot)
+            let adsr =
+                tone.adsr.map {
+                    "\($0.attack) \($0.decay) \($0.sustain) \($0.release)"
+                } ?? ""
+            publishRow(
+                VoiceListRow(
+                    slot: slot,
+                    title: VoiceListSemantics.voiceColumnText(
+                        slot: slot, symbol: tone.name, typeName: typeName),
+                    typeName: typeName,
+                    adsr: adsr,
+                    glyph: VoiceListSemantics.glyph(forTypeByte: typeByte, synth: tone.isSynth),
+                    altChip: VoiceListSemantics.isAltChip(typeByte),
+                    used: usedVoices.contains(slot)), at: slot)
             return
         }
-        publishRow(VoiceListRow(slot: slot, title: String(format: "%03d", slot),
-                                used: usedVoices.contains(slot)), at: slot)
+        publishRow(
+            VoiceListRow(
+                slot: slot, title: String(format: "%03d", slot),
+                used: usedVoices.contains(slot)), at: slot)
     }
 }

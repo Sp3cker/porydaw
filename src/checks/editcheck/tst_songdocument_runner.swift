@@ -19,10 +19,12 @@ internal func coreEditCorpusSongs(_ report: CheckReport) throws -> [CoreEditCorp
     let directory = URL(fileURLWithPath: root).appendingPathComponent("sound/songs/midi")
     let filenames = try FileManager.default.contentsOfDirectory(atPath: directory.path)
         .filter { $0.hasSuffix(".mid") }.sorted()
-    report.expect(!filenames.isEmpty, cppID: "editcheck/EditCheckTest::initTestCase",
-                  message: "edit corpus has playable songs")
-    let configText = try String(contentsOf: directory.appendingPathComponent("midi.cfg"),
-                                encoding: .utf8)
+    report.expect(
+        !filenames.isEmpty, cppID: "editcheck/EditCheckTest::initTestCase",
+        message: "edit corpus has playable songs")
+    let configText = try String(
+        contentsOf: directory.appendingPathComponent("midi.cfg"),
+        encoding: .utf8)
     var songs: [CoreEditCorpusSong] = []
     for filename in filenames {
         let rows = configText.split(separator: "\n").filter { $0.hasPrefix(filename + ":") }
@@ -34,7 +36,8 @@ internal func coreEditCorpusSongs(_ report: CheckReport) throws -> [CoreEditCorp
         // All checked-in corpus rows use this exact flag shape. Reject fixture
         // drift instead of silently interpreting unrelated production flags.
         guard flags.count == 4, flags[0] == "-E", flags[1] == "-R50",
-              flags[2].hasPrefix("-G"), flags[2].count > 2, flags[3] == "-V100" else {
+            flags[2].hasPrefix("-G"), flags[2].count > 2, flags[3] == "-V100"
+        else {
             report.fail("editcheck/EditCheckTest::initTestCase", "fixture flags changed for \(filename): \(flags)")
             return []
         }
@@ -42,8 +45,9 @@ internal func coreEditCorpusSongs(_ report: CheckReport) throws -> [CoreEditCorp
         let loaded = CoreEditCorpusSong(
             label: String(filename.dropLast(4)), midiPath: midiURL.path,
             midiBytes: Array(try Data(contentsOf: midiURL)),
-            config: SongConfig(rawFlags: flags, voicegroupArgument: String(flags[2].dropFirst(2)),
-                               masterVolume: 100, reverb: 50, exactGate: true))
+            config: SongConfig(
+                rawFlags: flags, voicegroupArgument: String(flags[2].dropFirst(2)),
+                masterVolume: 100, reverb: 50, exactGate: true))
         songs.append(loaded)
     }
     return songs
@@ -54,15 +58,15 @@ internal func coreEditCorpusLoadCheck(_ report: CheckReport) {
         for loaded in try coreEditCorpusSongs(report) {
             let file = try MidiFile.decode(loaded.midiBytes)
             let document = SongDocument(file: file, config: loaded.config, source: loaded.source)
-            report.expect(document.rawChunks.count == file.chunks.count,
-                          cppID: "editcheck/EditCheckTest::initTestCase",
-                          message: "staged MIDI parses and loads every track into the document")
+            report.expect(
+                document.rawChunks.count == file.chunks.count,
+                cppID: "editcheck/EditCheckTest::initTestCase",
+                message: "staged MIDI parses and loads every track into the document")
         }
     } catch {
         report.fail("editcheck/EditCheckTest::initTestCase", "staged MIDI cannot load: \(error)")
     }
 }
-
 
 @MainActor
 internal func coreEditDistantBase(_ document: SongDocument) -> Tick {
@@ -72,16 +76,19 @@ internal func coreEditDistantBase(_ document: SongDocument) -> Tick {
 }
 
 @MainActor
-internal func coreEditHistoryCountAtTip(_ document: SongDocument, report: CheckReport,
-                                      cppID: String) throws -> Int {
+internal func coreEditHistoryCountAtTip(
+    _ document: SongDocument, report: CheckReport,
+    cppID: String
+) throws -> Int {
     let restoredState = document.state
     let restoredIdentity = document.history.currentIdentity
     var count = 0
     while document.history.undoDocument() { count += 1 }
     var replayed = 0
     while document.history.redoDocument() { replayed += 1 }
-    report.expect(count == replayed && document.state == restoredState &&
-        document.history.currentIdentity == restoredIdentity, cppID: cppID,
+    report.expect(
+        count == replayed && document.state == restoredState && document.history.currentIdentity == restoredIdentity,
+        cppID: cppID,
         message: "counting public undo entries restores the exact state and identity")
     return count
 }

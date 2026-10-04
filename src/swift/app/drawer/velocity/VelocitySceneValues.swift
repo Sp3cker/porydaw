@@ -45,7 +45,9 @@ enum VelocityScene {
     }
 
     /// The stable identity used to decide whether a context presentation changed.
-    static func contextKey(_ session: DocumentSession?, at tick: Tick, playing: Bool)
+    static func contextKey(
+        _ session: DocumentSession?, at tick: Tick, playing: Bool
+    )
         -> VelocityContextKey
     {
         contextSource(session).key(at: tick, playing: playing)
@@ -53,8 +55,10 @@ enum VelocityScene {
 
     /// The context the ruler presents: the shared playhead's rounded tick while
     /// transport is playing, the edit cursor while stopped.
-    static func effectiveContextTick(_ session: DocumentSession?, playing: Bool,
-                                     contextTick: Tick) -> Tick {
+    static func effectiveContextTick(
+        _ session: DocumentSession?, playing: Bool,
+        contextTick: Tick
+    ) -> Tick {
         guard let session else { return 0 }
         return playing ? contextTick : session.editCursor
     }
@@ -63,8 +67,10 @@ enum VelocityScene {
     /// effective tick; a selection resolves per note, keeps an intrinsic map only
     /// when every selected note resolves to the same PSG voice, and falls back to
     /// the continuous domain when their maps disagree.
-    static func presentation(_ session: DocumentSession?, playing: Bool,
-                             contextTick: Tick) -> VelocityVoiceContext {
+    static func presentation(
+        _ session: DocumentSession?, playing: Bool,
+        contextTick: Tick
+    ) -> VelocityVoiceContext {
         VelocityContextPolicy.presentation(
             selectedNotes: selectedTrackNotes(session),
             effectiveTick: effectiveContextTick(session, playing: playing, contextTick: contextTick),
@@ -72,10 +78,13 @@ enum VelocityScene {
     }
 
     /// The shared grid metrics at one size.
-    static func gridMetrics(baseFontPx: Double, devicePixelRatio: Double, width: Double,
-                            height: Double, timeAxis: TimeAxis) -> GridMetrics {
-        GridMetrics(baseFontPx: baseFontPx, dpr: devicePixelRatio, width: width, height: height,
-                    timeAxis: timeAxis)
+    static func gridMetrics(
+        baseFontPx: Double, devicePixelRatio: Double, width: Double,
+        height: Double, timeAxis: TimeAxis
+    ) -> GridMetrics {
+        GridMetrics(
+            baseFontPx: baseFontPx, dpr: devicePixelRatio, width: width, height: height,
+            timeAxis: timeAxis)
     }
 
     /// The roll's own time axis, built from the same document facts the grid
@@ -84,7 +93,6 @@ enum VelocityScene {
         session.projectionCache.timeAxis
     }
 
-
     /// The value axis: the presented context's map, the active set's markers and
     /// the font-relative ruler geometry. A hovered note takes its own tick's map
     /// while the selection keeps its own.
@@ -92,7 +100,8 @@ enum VelocityScene {
         var activeValues: [UInt8] = []
         var mapped = input.context.map
         if let hovered = input.interaction.hovered,
-           let note = input.notes.first(where: { $0.id == hovered }) {
+            let note = input.notes.first(where: { $0.id == hovered })
+        {
             activeValues.append(input.interaction.preview[note.id] ?? note.velocity)
             mapped = input.source.map(at: note.tick, key: Int(note.pitch))
         } else {
@@ -106,8 +115,10 @@ enum VelocityScene {
         axisGeometry.labelWidth = max(0, input.rulerWidth - input.geometry.pixel)
         axisGeometry.labelSideInset = input.geometry.labelSideInset
         axisGeometry.labelColumnGap = input.geometry.labelColumnGap
-        axisGeometry.labelHeight = NativeFontMetrics(
-            Typography(baseFontPx: Int(input.baseFontPx.rounded())).noteName).extents.height
+        axisGeometry.labelHeight =
+            NativeFontMetrics(
+                Typography(baseFontPx: Int(input.baseFontPx.rounded())).noteName
+            ).extents.height
         axisGeometry.continuousDensityD1 = input.geometry.densityD1
         axisGeometry.continuousDensityD2 = input.geometry.densityD2
         axisGeometry.continuousDensityD3 = input.geometry.densityD3
@@ -119,15 +130,18 @@ enum VelocityScene {
     /// density-thinned labels, or the continuous ladder with its ticks, markers
     /// and active-value labels. The label column's own geometry is part of the
     /// value, exactly as `rebuildQuickAxis` derives it.
-    static func axisRows(_ input: VelocitySceneInput, axis: VelocityAxisModel,
-                         relativeGesture: Bool) -> VelocityAxisRows {
+    static func axisRows(
+        _ input: VelocitySceneInput, axis: VelocityAxisModel,
+        relativeGesture: Bool
+    ) -> VelocityAxisRows {
         let separatorX = max(0, input.rulerWidth - input.geometry.pixel)
         // The ruler spans the whole gutter (track headers plus the keyboard
         // column); the label column keeps its keyboard-column width, anchored
         // to the separator the ticks draw against.
         let labelColumnWidth = fontPx(input.baseFontPx, 13.0 / 3.0) - input.geometry.pixel
-        let labelRight = max(input.geometry.labelSideInset,
-                             separatorX - input.geometry.labelSideInset)
+        let labelRight = max(
+            input.geometry.labelSideInset,
+            separatorX - input.geometry.labelSideInset)
         let labelLeft = max(input.geometry.labelSideInset, labelRight - labelColumnWidth)
         let labelWidth = max(0, labelRight - labelLeft)
         let labelHeight = max(0, axis.geometry.labelHeight)
@@ -140,48 +154,57 @@ enum VelocityScene {
         if axis.mode == .intrinsic && input.interaction.detentsEnabled {
             for graduation in axis.graduations {
                 let width = graduation.active ? 1.5 : input.geometry.pixel
-                rows.graduations.append(SceneRect(
-                    x: separatorX - input.geometry.tickLabelLength, y: graduation.y - width / 2,
-                    width: input.geometry.tickLabelLength, height: width,
-                    fillColor: graduation.active ? selectedColor : labelColor,
-                    primitiveName: "velocityGraduation"))
-                let emphasized = graduation.active
+                rows.graduations.append(
+                    SceneRect(
+                        x: separatorX - input.geometry.tickLabelLength, y: graduation.y - width / 2,
+                        width: input.geometry.tickLabelLength, height: width,
+                        fillColor: graduation.active ? selectedColor : labelColor,
+                        primitiveName: "velocityGraduation"))
+                let emphasized =
+                    graduation.active
                     && (relativeGesture || !graduation.labelVisible)
                 guard (!relativeGesture && graduation.labelVisible) || emphasized else {
                     continue
                 }
-                rows.labels.append(SceneText(
-                    rect: (labelLeft, graduation.y - labelHeight / 2, labelWidth, labelHeight),
-                    text: graduation.text, color: labelColor,
-                    font: emphasized ? markerFont : noteNameFont, horizontal: 0x2))
+                rows.labels.append(
+                    SceneText(
+                        rect: (labelLeft, graduation.y - labelHeight / 2, labelWidth, labelHeight),
+                        text: graduation.text, color: labelColor,
+                        font: emphasized ? markerFont : noteNameFont, horizontal: 0x2))
             }
         } else {
             for tick in axis.ticks {
-                let length = axis.hasLabel(tick.velocity) ? input.geometry.tickLabelLength
-                                                          : input.geometry.tickShortLength
-                rows.ticks.append(SceneRect(
-                    x: separatorX - length, y: tick.y - input.geometry.pixel / 2, width: length,
-                    height: input.geometry.pixel, fillColor: labelColor,
-                    primitiveName: "velocityTick"))
+                let length =
+                    axis.hasLabel(tick.velocity)
+                    ? input.geometry.tickLabelLength
+                    : input.geometry.tickShortLength
+                rows.ticks.append(
+                    SceneRect(
+                        x: separatorX - length, y: tick.y - input.geometry.pixel / 2, width: length,
+                        height: input.geometry.pixel, fillColor: labelColor,
+                        primitiveName: "velocityTick"))
             }
             if !relativeGesture {
                 for label in axis.labels {
-                    rows.labels.append(SceneText(
-                        rect: (labelLeft, label.y - labelHeight / 2, labelWidth, labelHeight),
-                        text: label.text, color: labelColor,
-                        font: noteNameFont, horizontal: 0x2))
+                    rows.labels.append(
+                        SceneText(
+                            rect: (labelLeft, label.y - labelHeight / 2, labelWidth, labelHeight),
+                            text: label.text, color: labelColor,
+                            font: noteNameFont, horizontal: 0x2))
                 }
             }
             for marker in axis.markers {
-                rows.markers.append(SceneRect(
-                    x: separatorX - input.geometry.markerLength, y: marker.y - 0.75,
-                    width: input.geometry.markerLength, height: 1.5, fillColor: selectedColor,
-                    primitiveName: "velocityMarker"))
+                rows.markers.append(
+                    SceneRect(
+                        x: separatorX - input.geometry.markerLength, y: marker.y - 0.75,
+                        width: input.geometry.markerLength, height: 1.5, fillColor: selectedColor,
+                        primitiveName: "velocityMarker"))
                 guard relativeGesture else { continue }
-                rows.labels.append(SceneText(
-                    rect: (labelLeft, marker.y - labelHeight / 2, labelWidth, labelHeight),
-                    text: "\(marker.velocity)", color: labelColor,
-                    font: markerFont, horizontal: 0x2))
+                rows.labels.append(
+                    SceneText(
+                        rect: (labelLeft, marker.y - labelHeight / 2, labelWidth, labelHeight),
+                        text: "\(marker.velocity)", color: labelColor,
+                        font: markerFont, horizontal: 0x2))
             }
         }
         return rows

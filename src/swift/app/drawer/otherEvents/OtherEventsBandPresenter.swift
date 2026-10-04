@@ -63,14 +63,16 @@ public final class OtherEventsBandPresenter {
 
     public init() {}
 
-    public func configure(session: DocumentSession?, palette: GridPalette,
+    public func configure(
+        session: DocumentSession?, palette: GridPalette,
         baseFontPx: Double, appFontLineSpacing: Double
     ) {
         self.session = session
         colors = palette
         self.baseFontPx = baseFontPx
         self.appFontLineSpacing = appFontLineSpacing
-        bandHeight = OtherEventsStrip.bandHeight(baseFontPx: baseFontPx,
+        bandHeight = OtherEventsStrip.bandHeight(
+            baseFontPx: baseFontPx,
             appFontLineSpacing: appFontLineSpacing)
         markerHalfWidth = fontPx(baseFontPx, 1.0 / 3.0)
         markerHalfHeight = fontPx(baseFontPx, 5.0 / 12.0)
@@ -85,7 +87,8 @@ public final class OtherEventsBandPresenter {
         guard let colors else { return }
         self.baseFontPx = baseFontPx
         self.appFontLineSpacing = appFontLineSpacing
-        bandHeight = OtherEventsStrip.bandHeight(baseFontPx: baseFontPx,
+        bandHeight = OtherEventsStrip.bandHeight(
+            baseFontPx: baseFontPx,
             appFontLineSpacing: appFontLineSpacing)
         markerHalfWidth = fontPx(baseFontPx, 1.0 / 3.0)
         markerHalfHeight = fontPx(baseFontPx, 5.0 / 12.0)
@@ -134,7 +137,8 @@ public final class OtherEventsBandPresenter {
 
     public func pointerMoved(x: Double, y: Double) {
         guard let session else { pointerLeft(); return }
-        let lines = OtherEventsStrip.tooltipLines(items: items, x: x,
+        let lines = OtherEventsStrip.tooltipLines(
+            items: items, x: x,
             camera: session.camera, baseFontPx: baseFontPx,
             sampleRate: session.timeline.sampleRate)
         toolTipText = lines.joined(separator: "\n")

@@ -132,8 +132,11 @@ struct RegistrationMatch {
 enum RegistrationText {
     static func match(_ expression: NSRegularExpression?, _ line: String) -> RegistrationMatch? {
         guard let expression,
-              let result = expression.firstMatch(in: line, range: NSRange(location: 0,
-                                                                          length: line.utf16.count))
+            let result = expression.firstMatch(
+                in: line,
+                range: NSRange(
+                    location: 0,
+                    length: line.utf16.count))
         else { return nil }
         return RegistrationMatch(source: line, result: result)
     }
@@ -144,8 +147,9 @@ enum RegistrationText {
     }
 
     static func pattern(_ source: String) -> NSRegularExpression {
-        do { return try NSRegularExpression(pattern: source) }
-        catch { preconditionFailure("Invalid built-in registration pattern \(source): \(error)") }
+        do { return try NSRegularExpression(pattern: source) } catch {
+            preconditionFailure("Invalid built-in registration pattern \(source): \(error)")
+        }
     }
 
     static func dynamic(_ source: String) -> NSRegularExpression? {
@@ -182,9 +186,10 @@ enum RegistrationText {
     }
 
     static func constantNames(_ root: String) -> Set<String> {
-        Set(lines(root, "include/constants/songs.h").compactMap {
-            match(constantDefine, $0)?.group(1)
-        })
+        Set(
+            lines(root, "include/constants/songs.h").compactMap {
+                match(constantDefine, $0)?.group(1)
+            })
     }
 
     static func isMarker(_ name: String) -> Bool {
@@ -253,7 +258,8 @@ struct RegistrationRegions {
         var values: [String: Int] = [:]
         for (index, line) in songsH.enumerated() {
             if let value = RegistrationText.match(RegistrationText.numericDefineWord, line),
-               values[value.group(1)] == nil {
+                values[value.group(1)] == nil
+            {
                 values[value.group(1)] = Int(value.group(2))
             }
             guard let marker = RegistrationText.match(RegistrationText.regionMarker, line)
@@ -261,16 +267,17 @@ struct RegistrationRegions {
             var item = marker.group(1) == "END_SE" ? endSe : endMus
             guard item.line < 0 else { continue }
             item.line = index
-            if let value = Int(marker.group(2)) { item.value = value }
-            else { item.referent = marker.group(2) }
+            if let value = Int(marker.group(2)) { item.value = value } else { item.referent = marker.group(2) }
             if marker.group(1) == "END_SE" { endSe = item } else { endMus = item }
         }
         if !endSe.referent.isEmpty { endSe.value = values[endSe.referent] ?? -1 }
         if !endMus.referent.isEmpty { endMus.value = values[endMus.referent] ?? -1 }
         startMus = values["START_MUS"] ?? -1
-        separateDebugArrays = regioned && debug.contains {
-            RegistrationText.match(RegistrationText.endMusWord, $0) != nil
-        }
+        separateDebugArrays =
+            regioned
+            && debug.contains {
+                RegistrationText.match(RegistrationText.endMusWord, $0) != nil
+            }
     }
 }
 
@@ -279,8 +286,11 @@ public enum SongRegistration {
         statuses(root: root, entries: [(label, constant)])[label] ?? RegistrationStatus()
     }
 
-    public static func statuses(root: String, entries: [(String, String)])
-        -> [String: RegistrationStatus] {
+    public static func statuses(
+        root: String, entries: [(String, String)]
+    )
+        -> [String: RegistrationStatus]
+    {
         let table = RegistrationText.lines(root, "sound/song_table.inc")
         var tableIndices: [String: [Int]] = [:]
         var firstLabel = ""
@@ -328,7 +338,8 @@ public enum SongRegistration {
             var status = RegistrationStatus()
             status.inSongTable = !indices.isEmpty
             if let define = defines[constant] {
-                status.inSongsH = (indices.isEmpty || indices.contains(define))
+                status.inSongsH =
+                    (indices.isEmpty || indices.contains(define))
                     && (!regions.regioned || define <= regions.endMus.value)
             }
             status.ldApplicable = ldApplicable
@@ -344,8 +355,10 @@ public enum SongRegistration {
         return statuses
     }
 
-    public static func plan(root: String, label: String, constant: String,
-                            player: String) -> RegistrationPlan {
+    public static func plan(
+        root: String, label: String, constant: String,
+        player: String
+    ) -> RegistrationPlan {
         let table = SongTableScan(RegistrationText.lines(root, "sound/song_table.inc"), label: label)
         let songsH = RegistrationText.lines(root, "include/constants/songs.h")
         let debug = RegistrationText.lines(root, "src/debug.c")
@@ -358,7 +371,8 @@ public enum SongRegistration {
         var used: Set<Int> = []
         for line in songsH {
             guard let entry = RegistrationText.match(RegistrationText.planDefine, line),
-                  let id = Int(entry.group(3)) else { continue }
+                let id = Int(entry.group(3))
+            else { continue }
             valueColumn = entry.end(2)
             if entry.group(1) == constant && ownValue < 0 { ownValue = id }
             if !RegistrationText.isMarker(entry.group(1)) { used.insert(id) }
@@ -383,7 +397,8 @@ public enum SongRegistration {
                     break
                 }
                 if seRegioned && index >= 1 && index <= seLast + 1
-                    && (regions.startMus < 0 || index < regions.startMus) {
+                    && (regions.startMus < 0 || index < regions.startMus)
+                {
                     free = index
                     freeInSe = true
                     break
@@ -395,7 +410,8 @@ public enum SongRegistration {
             }
             var seRegion = false
             let placeholder = seLast + 1
-            let canReplace = placeholder > 0 && placeholder < table.count
+            let canReplace =
+                placeholder > 0 && placeholder < table.count
                 && (regions.startMus < 0 || placeholder < regions.startMus)
                 && !used.contains(placeholder)
                 && (table.entryLabels[placeholder].contains("dummy")
@@ -430,7 +446,8 @@ public enum SongRegistration {
             }
         }
         let stem = "#define " + constant
-        plan.songsHLine = stem + String(repeating: " ", count: max(1, valueColumn - stem.utf16.count))
+        plan.songsHLine =
+            stem + String(repeating: " ", count: max(1, valueColumn - stem.utf16.count))
             + String(plan.songId)
         let ld = RegistrationText.lines(root, "ld_script.ld")
         let ldSample = ld.last { $0.contains("sound/songs/midi/") }
@@ -443,14 +460,18 @@ public enum SongRegistration {
         var aligned = true
         for line in RegistrationText.lines(root, "charmap.txt") {
             guard let value = RegistrationText.match(RegistrationText.charmap, line),
-                  names.contains(value.group(1)) else { continue }
+                names.contains(value.group(1))
+            else { continue }
             plan.charmapApplicable = true
-            if equalsColumn < 0 { equalsColumn = value.end(2) }
-            else if value.end(2) != equalsColumn { aligned = false }
+            if equalsColumn < 0 { equalsColumn = value.end(2) } else if value.end(2) != equalsColumn { aligned = false }
         }
         if plan.charmapApplicable {
-            plan.charmapLine = constant + String(repeating: " ", count: aligned
-                ? max(1, equalsColumn - constant.utf16.count) : 1) + "= " + RegistrationText.bytes(plan.songId)
+            plan.charmapLine =
+                constant
+                + String(
+                    repeating: " ",
+                    count: aligned
+                        ? max(1, equalsColumn - constant.utf16.count) : 1) + "= " + RegistrationText.bytes(plan.songId)
         }
         plan.debugApplicable = !DebugSoundLists(debug).lists.isEmpty
         return plan
@@ -461,7 +482,8 @@ private func songCatalogPlayerNumber(root: String, name: String) -> Int {
     var result = 0
     for line in RegistrationText.lines(root, "sound/song_table.inc") {
         guard let entry = RegistrationText.match(RegistrationText.equiv, line),
-              entry.group(1) == name else { continue }
+            entry.group(1) == name
+        else { continue }
         result = Int(entry.group(2)) ?? 0
     }
     return result

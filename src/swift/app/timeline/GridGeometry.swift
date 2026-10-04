@@ -65,8 +65,10 @@ struct RollGrid {
     private(set) var selection: GridSelection = .auto
     private var clock: Tick = 0
 
-    init(axis: TimeAxis = TimeAxis(), clockTicks: Tick = 0,
-         metrics: GridMetrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 0, height: 0)) {
+    init(
+        axis: TimeAxis = TimeAxis(), clockTicks: Tick = 0,
+        metrics: GridMetrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 0, height: 0)
+    ) {
         self.axis = axis
         self.clock = clockTicks
         self.metrics = metrics
@@ -76,8 +78,9 @@ struct RollGrid {
 
     private func musicalTicks(_ selection: GridSelection, feel: GridFeel) -> Tick {
         guard case .musical(let denominator) = selection,
-              denominator >= 4, denominator <= Int(UInt32.max),
-              denominator & (denominator - 1) == 0 else { return 0 }
+            denominator >= 4, denominator <= Int(UInt32.max),
+            denominator & (denominator - 1) == 0
+        else { return 0 }
         let numerator = UInt64(axis.ticksPerBeat) * (feel == .straight ? 4 : 8)
         let divisor = UInt64(denominator) * (feel == .straight ? 1 : 3)
         return numerator % divisor == 0 ? Tick(numerator / divisor) : 0
@@ -161,8 +164,10 @@ struct RollGrid {
         for candidate in selections {
             guard case .musical = candidate else { continue }
             let spacing = musicalTicks(candidate, feel: feel)
-            if towardFiner ? (spacing <= previousSpacing && spacing > nearestSpacing)
-                : (spacing >= previousSpacing && spacing < nearestSpacing) {
+            if towardFiner
+                ? (spacing <= previousSpacing && spacing > nearestSpacing)
+                : (spacing >= previousSpacing && spacing < nearestSpacing)
+            {
                 nearest = candidate
                 nearestSpacing = spacing
             }
@@ -175,9 +180,10 @@ struct RollGrid {
         let ladder = feel == .straight ? Self.straightLadder : Self.tripletLadder
         let beat = UInt64(segment.beatTicks)
         let width = Double(beat) * camera.snapshot.pixelsPerTick
-        let step = ladder.firstIndex {
-            width / Double($0) >= metrics.autoGridMinCell
-        } ?? ladder.count - 1
+        let step =
+            ladder.firstIndex {
+                width / Double($0) >= metrics.autoGridMinCell
+            } ?? ladder.count - 1
         let visible = max(UInt64(clockTicks), beat / UInt64(ladder[step]))
         guard snap && step > 0 else { return Tick(visible) }
         let fine = max(1, beat / UInt64(ladder[step - 1]))
@@ -195,12 +201,14 @@ struct RollGrid {
     }
 
     func gridTicksAt(_ tick: Tick, camera: EditorCamera) -> Tick {
-        selection == .auto ? adaptiveTicks(axis.segmentAt(tick), camera: camera, snap: false)
+        selection == .auto
+            ? adaptiveTicks(axis.segmentAt(tick), camera: camera, snap: false)
             : fixedTicks
     }
 
     func snapTicksAt(_ tick: Tick, camera: EditorCamera) -> Tick {
-        selection == .auto ? adaptiveTicks(axis.segmentAt(tick), camera: camera, snap: true)
+        selection == .auto
+            ? adaptiveTicks(axis.segmentAt(tick), camera: camera, snap: true)
             : fixedTicks
     }
 
@@ -286,13 +294,17 @@ struct RollGrid {
         let anchor = absolute ? 0 : span.start
         let limit = min(absolute ? UInt64(TimeDefaults.maxTick) : span.end, UInt64(TimeDefaults.maxTick))
         let start = anchor + (UInt64(tick) - anchor) / stride * stride
-        let next = start > UInt64(TimeDefaults.maxTick) - stride
+        let next =
+            start > UInt64(TimeDefaults.maxTick) - stride
             ? UInt64(TimeDefaults.noTick) : start + stride
         return (Tick(start), Tick(min(next, limit)))
     }
 
-    private func lattice(_ tick: Double, camera: EditorCamera, fine: Bool)
-        -> (anchor: UInt64, stride: UInt64, limit: UInt64, tiesUp: Bool) {
+    private func lattice(
+        _ tick: Double, camera: EditorCamera, fine: Bool
+    )
+        -> (anchor: UInt64, stride: UInt64, limit: UInt64, tiesUp: Bool)
+    {
         if fine || selection == .clock {
             return (0, UInt64(fineGridTicks(camera: camera)), UInt64(TimeDefaults.maxTick), true)
         }
@@ -301,18 +313,32 @@ struct RollGrid {
         return (span.anchor, UInt64(snapTicksAt(position, camera: camera)), span.limit, false)
     }
 
-    private func floor(_ tick: Double, lattice: (anchor: UInt64, stride: UInt64,
-                        limit: UInt64, tiesUp: Bool)) -> Tick {
+    private func floor(
+        _ tick: Double,
+        lattice: (
+            anchor: UInt64, stride: UInt64,
+            limit: UInt64, tiesUp: Bool
+        )
+    ) -> Tick {
         let position = min(max(tick, Double(lattice.anchor)), Double(lattice.limit))
-        return TimeDefaults.tick(from: min(Double(lattice.limit),
-            Double(lattice.anchor) + ((position - Double(lattice.anchor))
-                / Double(lattice.stride)).rounded(.down) * Double(lattice.stride)))
+        return TimeDefaults.tick(
+            from: min(
+                Double(lattice.limit),
+                Double(lattice.anchor)
+                    + ((position - Double(lattice.anchor))
+                    / Double(lattice.stride)).rounded(.down) * Double(lattice.stride)))
     }
 
-    private func ceil(_ tick: Double, lattice: (anchor: UInt64, stride: UInt64,
-                       limit: UInt64, tiesUp: Bool)) -> Tick {
+    private func ceil(
+        _ tick: Double,
+        lattice: (
+            anchor: UInt64, stride: UInt64,
+            limit: UInt64, tiesUp: Bool
+        )
+    ) -> Tick {
         let low = floor(tick, lattice: lattice)
-        return Double(low) >= tick ? low
+        return Double(low) >= tick
+            ? low
             : Tick(min(UInt64(low) + lattice.stride, lattice.limit))
     }
 
@@ -354,8 +380,10 @@ struct RollGrid {
 
     /// Painted sub-grid lines off the beat, walked bar by bar. A painted stride that does not
     /// divide the beat cannot inherit the beat hierarchy, so all its lines paint at level 1.
-    func forEachSubdivision(from begin: Tick, to end: Tick, camera: EditorCamera,
-                            _ visit: (Tick, Int) -> Void) {
+    func forEachSubdivision(
+        from begin: Tick, to end: Tick, camera: EditorCamera,
+        _ visit: (Tick, Int) -> Void
+    ) {
         var start = begin
         while start < end {
             let span = barSpan(at: start)
@@ -426,8 +454,10 @@ struct GridMetrics {
     static let ticksPerBeat = 24
     static let songLengthTicks = 384
 
-    init(baseFontPx: Double, dpr: Double, width _: Double, height _: Double,
-         timeAxis: TimeAxis = TimeAxis()) {
+    init(
+        baseFontPx: Double, dpr: Double, width _: Double, height _: Double,
+        timeAxis: TimeAxis = TimeAxis()
+    ) {
         self.baseFontPx = baseFontPx
         self.dpr = dpr
         self.timeAxis = timeAxis
@@ -452,23 +482,28 @@ struct GridMetrics {
         pixel = physicalPixel(dpr)
     }
 
-
-    func noteRect(camera: EditorCamera, x0: Double, x1: Double, pitch: Int) ->
-        (x: Double, y: Double, w: Double, h: Double) {
+    func noteRect(
+        camera: EditorCamera, x0: Double, x1: Double, pitch: Int
+    ) -> (x: Double, y: Double, w: Double, h: Double) {
         let snapshot = camera.snapshot
         let row = camera.projection.row(forPitch: min(127, max(0, pitch)))
         guard row != PitchProjection.hiddenRow,
-              let top = camera.projection.rowTop(row, keyHeight: snapshot.keyHeight,
-                                                 scrollY: snapshot.scrollY, dpr: dpr),
-              let bottom = camera.projection.rowBottom(row, keyHeight: snapshot.keyHeight,
-                                                       scrollY: snapshot.scrollY, dpr: dpr)
+            let top = camera.projection.rowTop(
+                row, keyHeight: snapshot.keyHeight,
+                scrollY: snapshot.scrollY, dpr: dpr),
+            let bottom = camera.projection.rowBottom(
+                row, keyHeight: snapshot.keyHeight,
+                scrollY: snapshot.scrollY, dpr: dpr)
         else { return (x0, 0, 0, 0) }
-        return (x0, top + pixel, max(noteMinWidth, x1 - x0),
-                max(noteMinHeight * pixel, bottom - top - pixel))
+        return (
+            x0, top + pixel, max(noteMinWidth, x1 - x0),
+            max(noteMinHeight * pixel, bottom - top - pixel)
+        )
     }
 
-    func noteBox(camera: EditorCamera, x0: Double, x1: Double, pitch: Int) ->
-        (x: Double, y: Double, w: Double, h: Double) {
+    func noteBox(
+        camera: EditorCamera, x0: Double, x1: Double, pitch: Int
+    ) -> (x: Double, y: Double, w: Double, h: Double) {
         let r = noteRect(camera: camera, x0: x0, x1: x1, pitch: pitch)
         return (r.x, r.y, r.w, r.h - pixel)
     }
@@ -477,8 +512,10 @@ struct GridMetrics {
         min(edgeGripReach, max(0.0, (rectWidth - moveZoneMinWidth) / 2.0))
     }
 
-    func fittedFrameThickness(rectWidth: Double, rectHeight: Double,
-                              requestedPixels: Int, insetPixels: Int) -> Int {
+    func fittedFrameThickness(
+        rectWidth: Double, rectHeight: Double,
+        requestedPixels: Int, insetPixels: Int
+    ) -> Int {
         let minDim = Int((min(rectWidth, rectHeight) * dpr).rounded())
         return min(requestedPixels, max(0, (minDim - 1) / 2 - insetPixels))
     }

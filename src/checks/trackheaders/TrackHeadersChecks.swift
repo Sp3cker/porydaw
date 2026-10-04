@@ -5,63 +5,64 @@ import PorydawCore
 import QtBridge
 
 @MainActor
-internal func runTrackHeadersChecks(_ report: CheckReport, session: DocumentSession,
-                                   service: ProjectService) {
+internal func runTrackHeadersChecks(
+    _ report: CheckReport, session: DocumentSession,
+    service: ProjectService
+) {
     runTrackActivityChecks(report)
     let fontFixture = TrackHeadersFixture(suite: session, service: service)
     let roles = Typography(baseFontPx: 13)
     let headers = fontFixture.headers
     let roleID = "swiftcore/TrackHeaders::publishedTypographyRoles"
     func matches(_ map: [String: QVariantSettable], _ role: GridFontSpec) -> Bool {
-        map["family"] as? String == role.family &&
-            map["pixelSize"] as? Int == role.pixelSize &&
-            map["weight"] as? Int == role.weight
+        map["family"] as? String == role.family && map["pixelSize"] as? Int == role.pixelSize
+            && map["weight"] as? Int == role.weight
     }
-    report.expect(matches(headers.controlFont, roles.body) &&
-                  matches(headers.normalTitleFont, roles.body) &&
-                  matches(headers.boldTitleFont, roles.bodyBold) &&
-                  matches(headers.subtitleFont, roles.caption),
-                  cppID: roleID,
-                  message: "header controls, regular and selected titles, and subtitles publish body, bold body, and caption roles")
-    report.expect(fontFixture.trackRows.contains {
-        $0.titleBold && matches($0.titleFont, roles.bodyBold) &&
-            matches($0.subtitleFont, roles.caption)
-    }, cppID: roleID,
-    message: "the selected header row paints a bold body title and caption subtitle")
+    report.expect(
+        matches(headers.controlFont, roles.body) && matches(headers.normalTitleFont, roles.body)
+            && matches(headers.boldTitleFont, roles.bodyBold) && matches(headers.subtitleFont, roles.caption),
+        cppID: roleID,
+        message:
+            "header controls, regular and selected titles, and subtitles publish body, bold body, and caption roles")
+    report.expect(
+        fontFixture.trackRows.contains {
+            $0.titleBold && matches($0.titleFont, roles.bodyBold) && matches($0.subtitleFont, roles.caption)
+        }, cppID: roleID,
+        message: "the selected header row paints a bold body title and caption subtitle")
     headers.configureViewport(width: 440, height: 240, fontPx: 26, dpr: 1)
     let resized = Typography(baseFontPx: 26)
-    report.expect(matches(headers.controlFont, resized.body) &&
-                  matches(headers.boldTitleFont, resized.bodyBold) &&
-                  matches(headers.subtitleFont, resized.caption) &&
-                  fontFixture.trackRows.contains {
-                      $0.titleBold && matches($0.titleFont, resized.bodyBold) &&
-                          matches($0.subtitleFont, resized.caption)
-                  },
-                  cppID: roleID,
-                  message: "resizing the header repaints its controls and selected row with the new published roles")
+    report.expect(
+        matches(headers.controlFont, resized.body) && matches(headers.boldTitleFont, resized.bodyBold)
+            && matches(headers.subtitleFont, resized.caption)
+            && fontFixture.trackRows.contains {
+                $0.titleBold && matches($0.titleFont, resized.bodyBold) && matches($0.subtitleFont, resized.caption)
+            },
+        cppID: roleID,
+        message: "resizing the header repaints its controls and selected row with the new published roles")
     headers.configureViewport(width: 228, height: 240, fontPx: 13, dpr: 1)
-    report.expect(matches(headers.controlFont, roles.body) &&
-                  matches(headers.boldTitleFont, roles.bodyBold) &&
-                  matches(headers.subtitleFont, roles.caption),
-                  cppID: roleID,
-                  message: "restoring the captured base restores the header font roles")
+    report.expect(
+        matches(headers.controlFont, roles.body) && matches(headers.boldTitleFont, roles.bodyBold)
+            && matches(headers.subtitleFont, roles.caption),
+        cppID: roleID,
+        message: "restoring the captured base restores the header font roles")
     let geometryID = "swiftcore/TrackHeaders::visibleHeaderColumn"
     for base in [12, 13, 16] {
         let geometry = TrackHeadersGeometry(base: Double(base))
         let contentWidth = geometry.bandWidth - Double(geometry.scrollbarWidth)
         let mute = geometry.muteRect(width: contentWidth)
         let solo = geometry.soloRect(width: contentWidth)
-        let text = geometry.textRects(width: contentWidth,
-                                     metrics: HeaderTextMetrics(title: base, bold: base,
-                                                                subtitle: base))
-        report.expect(mute.x + mute.width <= contentWidth - Double(geometry.spaceOne) &&
-                      solo.x + solo.width <= contentWidth - Double(geometry.spaceOne) &&
-                      mute.width == Double(geometry.buttonExtent) &&
-                      solo.width == Double(geometry.buttonExtent) &&
-                      text.0.x + text.0.width <= mute.x &&
-                      text.1.x + text.1.width <= solo.x,
-                      cppID: geometryID,
-                      message: "at base \(base), both toggle borders and text fit within the header content column")
+        let text = geometry.textRects(
+            width: contentWidth,
+            metrics: HeaderTextMetrics(
+                title: base, bold: base,
+                subtitle: base))
+        report.expect(
+            mute.x + mute.width <= contentWidth - Double(geometry.spaceOne)
+                && solo.x + solo.width <= contentWidth - Double(geometry.spaceOne)
+                && mute.width == Double(geometry.buttonExtent) && solo.width == Double(geometry.buttonExtent)
+                && text.0.x + text.0.width <= mute.x && text.1.x + text.1.width <= solo.x,
+            cppID: geometryID,
+            message: "at base \(base), both toggle borders and text fit within the header content column")
     }
     trackHeaderBudgetStyling(report, suite: session, service: service)
     unattachedModelPublishesSafeZeroGeometry(report, suite: session, service: service)
@@ -80,8 +81,10 @@ internal func runTrackHeadersChecks(_ report: CheckReport, session: DocumentSess
 }
 
 @MainActor
-private func trackHeaderBudgetStyling(_ report: CheckReport, suite: DocumentSession,
-                                      service: ProjectService) {
+private func trackHeaderBudgetStyling(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
     let fixture = TrackHeadersFixture(suite: suite, service: service, trackBudget: 1)
     let session = fixture.session
     let headers = fixture.headers
@@ -99,51 +102,63 @@ private func trackHeaderBudgetStyling(_ report: CheckReport, suite: DocumentSess
         return hypot(hypot(a.lightness - b.lightness, a.a - b.a), a.b - b.b)
     }
     let normal = row(1)
-    report.expect(normal.titleColor != palette.primaryText
-                  && distance(normal.titleColor, palette.windowBackground)
-                     < distance(palette.primaryText, palette.windowBackground),
-                  cppID: id, message: "a track beyond the budget dims its title toward the window surface")
-    report.expect(normal.subtitleColor != palette.secondaryText
-                  && distance(normal.subtitleColor, palette.windowBackground)
-                     < distance(palette.secondaryText, palette.windowBackground),
-                  cppID: id, message: "a track beyond the budget dims its subtitle toward the window surface")
-    report.expect(row(0).titleColor == palette.selectionText,
-                  cppID: id, message: "rows within the budget keep their full ink")
-    report.expect(row(0).subtitleColor == palette.selectionText,
-                  cppID: id, message: "rows within the budget keep their full subtitle ink")
+    report.expect(
+        normal.titleColor != palette.primaryText
+            && distance(normal.titleColor, palette.windowBackground)
+                < distance(palette.primaryText, palette.windowBackground),
+        cppID: id, message: "a track beyond the budget dims its title toward the window surface")
+    report.expect(
+        normal.subtitleColor != palette.secondaryText
+            && distance(normal.subtitleColor, palette.windowBackground)
+                < distance(palette.secondaryText, palette.windowBackground),
+        cppID: id, message: "a track beyond the budget dims its subtitle toward the window surface")
+    report.expect(
+        row(0).titleColor == palette.selectionText,
+        cppID: id, message: "rows within the budget keep their full ink")
+    report.expect(
+        row(0).subtitleColor == palette.selectionText,
+        cppID: id, message: "rows within the budget keep their full subtitle ink")
     let addFixture = TrackHeadersFixture(suite: suite, service: service, trackBudget: 3)
     let baselineFixture = TrackHeadersFixture(suite: suite, service: service)
     let addRow = addFixture.headers.rows[addFixture.headers.rows.count - 1]
     let baselineAdd = baselineFixture.headers.rows[baselineFixture.headers.rows.count - 1]
-    report.expect(addRow.isAddTrack && addRow.titleColor == baselineAdd.titleColor
-                  && addRow.subtitleColor == baselineAdd.subtitleColor,
-                  cppID: id, message: "the add-track row never dims")
-    let forkTitle = PaletteMath.hex(PaletteMath.mixTowardOklab(
-        lab(palette.primaryText), lab(palette.windowBackground), 0.6))
-    report.expect(distance(normal.titleColor, palette.primaryText)
-                  <= distance(forkTitle, palette.primaryText),
-                  cppID: id, message: "over-budget dimming never exceeds the fork mix")
-    let forkSubtitle = PaletteMath.hex(PaletteMath.mixTowardOklab(
-        lab(palette.secondaryText), lab(palette.windowBackground), 0.6))
-    report.expect(distance(normal.subtitleColor, palette.secondaryText)
-                  <= distance(forkSubtitle, palette.secondaryText),
-                  cppID: id, message: "over-budget subtitle dimming never exceeds the fork mix")
+    report.expect(
+        addRow.isAddTrack && addRow.titleColor == baselineAdd.titleColor
+            && addRow.subtitleColor == baselineAdd.subtitleColor,
+        cppID: id, message: "the add-track row never dims")
+    let forkTitle = PaletteMath.hex(
+        PaletteMath.mixTowardOklab(
+            lab(palette.primaryText), lab(palette.windowBackground), 0.6))
+    report.expect(
+        distance(normal.titleColor, palette.primaryText)
+            <= distance(forkTitle, palette.primaryText),
+        cppID: id, message: "over-budget dimming never exceeds the fork mix")
+    let forkSubtitle = PaletteMath.hex(
+        PaletteMath.mixTowardOklab(
+            lab(palette.secondaryText), lab(palette.windowBackground), 0.6))
+    report.expect(
+        distance(normal.subtitleColor, palette.secondaryText)
+            <= distance(forkSubtitle, palette.secondaryText),
+        cppID: id, message: "over-budget subtitle dimming never exceeds the fork mix")
     session.selectedTrack = 1
     headers.refreshFromDocument()
     let primary = row(1)
-    report.expect(primary.titleColor != palette.selectionText
-                  && PaletteMath.contrastRatio(primary.titleColor, palette.selectionRing) >= 4.5,
-                  cppID: id, message: "a selected over-budget row dims on its selection surface")
+    report.expect(
+        primary.titleColor != palette.selectionText
+            && PaletteMath.contrastRatio(primary.titleColor, palette.selectionRing) >= 4.5,
+        cppID: id, message: "a selected over-budget row dims on its selection surface")
     session.selectedTrack = 0
     session.adjustTrackScope(track: 1, action: .toggle)
     headers.refreshFromDocument()
     let scoped = row(1)
     let surface = TrackHeadersGeometry.scopedHeaderSurface(palette: palette)
-    report.expect(scoped.titleColor != palette.windowText
-                  && PaletteMath.contrastRatio(scoped.titleColor, surface) >= 4.5,
-                  cppID: id, message: "an in-scope over-budget row dims over its tinted surface")
-    report.expect(scoped.titleColor == scoped.subtitleColor,
-                  cppID: id, message: "an in-scope row labels both texts with the window ink")
+    report.expect(
+        scoped.titleColor != palette.windowText
+            && PaletteMath.contrastRatio(scoped.titleColor, surface) >= 4.5,
+        cppID: id, message: "an in-scope over-budget row dims over its tinted surface")
+    report.expect(
+        scoped.titleColor == scoped.subtitleColor,
+        cppID: id, message: "an in-scope row labels both texts with the window ink")
 }
 
 @MainActor
@@ -168,39 +183,53 @@ private func commandMixStatePublishesImmediately(
     }
 
     grid.performCommand(command: EditCommand.muteTracks.rawValue)
-    report.expectEqual(expected: Set([0]), actual: session.mutedTracks, cppID: trackHeadersMixPublicationID,
-                       what: "mute command changes session mix state")
-    report.expect(headers.rows[0].muteChecked, cppID: trackHeadersMixPublicationID,
-                  message: "mute command updates header in the same publication")
-    report.expect(headers.rows[1] === unaffected, cppID: trackHeadersMixPublicationID,
-                  message: "mute publication retains the unrelated row")
+    report.expectEqual(
+        expected: Set([0]), actual: session.mutedTracks, cppID: trackHeadersMixPublicationID,
+        what: "mute command changes session mix state")
+    report.expect(
+        headers.rows[0].muteChecked, cppID: trackHeadersMixPublicationID,
+        message: "mute command updates header in the same publication")
+    report.expect(
+        headers.rows[1] === unaffected, cppID: trackHeadersMixPublicationID,
+        message: "mute publication retains the unrelated row")
 
     grid.performCommand(command: EditCommand.soloTracks.rawValue)
-    report.expectEqual(expected: Set([0]), actual: session.soloedTracks, cppID: trackHeadersMixPublicationID,
-                       what: "solo command changes session mix state")
-    report.expect(headers.rows[0].soloChecked, cppID: trackHeadersMixPublicationID,
-                  message: "solo command updates header in the same publication")
-    report.expectEqual(expected: 2, actual: publications.count, cppID: trackHeadersMixPublicationID,
-                       what: "each command publishes once without a playhead poll")
-    report.expect(publications.allSatisfy { $0 == [.mixState] }, cppID: trackHeadersMixPublicationID,
-                  message: "command publications contain only the mix-state domain")
-    report.expectEqual(expected: revision, actual: document.revision, cppID: trackHeadersMixPublicationID,
-                       what: "mix commands do not revise the document")
-    report.expectEqual(expected: history, actual: document.history.currentIdentity, cppID: trackHeadersMixPublicationID,
-                       what: "mix commands create no history")
-    report.expectEqual(expected: dirty, actual: document.isDirty, cppID: trackHeadersMixPublicationID,
-                       what: "mix commands do not dirty the document")
-    report.expectEqual(expected: 0, actual: playbackPublications, cppID: trackHeadersMixPublicationID,
-                       what: "mix commands do not publish a playback timeline")
+    report.expectEqual(
+        expected: Set([0]), actual: session.soloedTracks, cppID: trackHeadersMixPublicationID,
+        what: "solo command changes session mix state")
+    report.expect(
+        headers.rows[0].soloChecked, cppID: trackHeadersMixPublicationID,
+        message: "solo command updates header in the same publication")
+    report.expectEqual(
+        expected: 2, actual: publications.count, cppID: trackHeadersMixPublicationID,
+        what: "each command publishes once without a playhead poll")
+    report.expect(
+        publications.allSatisfy { $0 == [.mixState] }, cppID: trackHeadersMixPublicationID,
+        message: "command publications contain only the mix-state domain")
+    report.expectEqual(
+        expected: revision, actual: document.revision, cppID: trackHeadersMixPublicationID,
+        what: "mix commands do not revise the document")
+    report.expectEqual(
+        expected: history, actual: document.history.currentIdentity, cppID: trackHeadersMixPublicationID,
+        what: "mix commands create no history")
+    report.expectEqual(
+        expected: dirty, actual: document.isDirty, cppID: trackHeadersMixPublicationID,
+        what: "mix commands do not dirty the document")
+    report.expectEqual(
+        expected: 0, actual: playbackPublications, cppID: trackHeadersMixPublicationID,
+        what: "mix commands do not publish a playback timeline")
 }
 
 @MainActor
-private func hostDrawerSoloAndRemap(_ report: CheckReport, suite: DocumentSession,
-                                    service: ProjectService) {
+private func hostDrawerSoloAndRemap(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
     let id = "host/HostAdapterTest::drawerSoloAndTrackRemapReachTheHost"
     let registry = KeybindingRegistry()
-    report.expect(registry.matches(0x53, 0, "roll.solo_tracks"),
-                  cppID: id, message: "the production window Solo command binds the unmodified S key")
+    report.expect(
+        registry.matches(0x53, 0, "roll.solo_tracks"),
+        cppID: id, message: "the production window Solo command binds the unmodified S key")
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
         report.fail(id, "the project-session fixture root is unavailable for the Solo command")
         return
@@ -223,7 +252,8 @@ private func hostDrawerSoloAndRemap(_ report: CheckReport, suite: DocumentSessio
     }
     selected.selectPrimaryTrack(0)
     guard shell.actionEnabled(id: "roll.solo_tracks"),
-          selected.soloedTracks.isEmpty else {
+        selected.soloedTracks.isEmpty
+    else {
         report.fail(id, "the selected primary track is not ready with Solo initially off")
         return
     }
@@ -236,8 +266,9 @@ private func hostDrawerSoloAndRemap(_ report: CheckReport, suite: DocumentSessio
         }
     }
     shell.activate(id: "roll.solo_tracks")
-    report.expect(selected.soloedTracks.contains(0) && mixPublication, cppID: id,
-                  message: "A172 the S-bound Solo action solos the primary track and publishes mix state")
+    report.expect(
+        selected.soloedTracks.contains(0) && mixPublication, cppID: id,
+        message: "A172 the S-bound Solo action solos the primary track and publishes mix state")
 
     let fixture = TrackHeadersFixture(suite: suite, service: service)
     let oldLane = EditorLaneState.Lane(track: 0, controller: 74)
@@ -245,16 +276,20 @@ private func hostDrawerSoloAndRemap(_ report: CheckReport, suite: DocumentSessio
     var state = fixture.session.editorViewState
     state.lanes.emptyLanes.insert(oldLane)
     guard fixture.session.setEditorViewState(state),
-          fixture.session.editorViewState.lanes.emptyLanes.contains(oldLane) else {
+        fixture.session.editorViewState.lanes.emptyLanes.contains(oldLane)
+    else {
         report.fail(id, "the copied track fixture did not seed the controller-74 empty lane")
         return
     }
-    report.expect(fixture.document.moveTrack(0, to: 1), cppID: id,
-                  message: "A173 moving the primary track into the second slot succeeds")
-    report.expect(fixture.session.editorViewState.lanes.emptyLanes.contains(movedLane),
-                  cppID: id,
-                  message: "A174 the moved track retains its controller-74 empty-lane flag at slot one")
-    report.expect(!fixture.session.editorViewState.lanes.emptyLanes.contains(oldLane),
-                  cppID: id,
-                  message: "A175 the former slot no longer carries the controller-74 empty-lane flag")
+    report.expect(
+        fixture.document.moveTrack(0, to: 1), cppID: id,
+        message: "A173 moving the primary track into the second slot succeeds")
+    report.expect(
+        fixture.session.editorViewState.lanes.emptyLanes.contains(movedLane),
+        cppID: id,
+        message: "A174 the moved track retains its controller-74 empty-lane flag at slot one")
+    report.expect(
+        !fixture.session.editorViewState.lanes.emptyLanes.contains(oldLane),
+        cppID: id,
+        message: "A175 the former slot no longer carries the controller-74 empty-lane flag")
 }

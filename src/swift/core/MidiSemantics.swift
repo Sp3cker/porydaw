@@ -110,8 +110,9 @@ public struct VelocityMap: Equatable, Sendable {
         let highest = levelCount - 1
         let level = min(max(requestedLevel, 0), highest)
         if voiceKind == .wave { return Self.waveRanges[level] }
-        return VelocityLevelRange(first: UInt8(level == 0 ? 1 : level * 8 + 1),
-                                  last: UInt8(level == highest ? 127 : (level + 1) * 8))
+        return VelocityLevelRange(
+            first: UInt8(level == 0 ? 1 : level * 8 + 1),
+            last: UInt8(level == highest ? 127 : (level + 1) * 8))
     }
 
     public func level(of storedVelocity: Int) -> Int? {
@@ -164,46 +165,86 @@ public struct VelocityMap: Equatable, Sendable {
 
 public func m4aClassifyCC(_ controller: UInt8) -> M4aCCInfo {
     switch controller {
-    case 0x01: return M4aCCInfo(eventClass: .audibleLane, lane: .modulation,
-                               name: "MOD", display: "Modulation")
-    case 0x07: return M4aCCInfo(eventClass: .audibleLane, lane: .volume,
-                               name: "VOL", display: "Volume")
-    case 0x0A: return M4aCCInfo(eventClass: .audibleLane, lane: .pan,
-                               name: "PAN", display: "Pan")
-    case 0x14: return M4aCCInfo(eventClass: .audibleLane, lane: .bendRange,
-                               name: "BENDR", display: "Bend range")
-    case 0x15: return M4aCCInfo(eventClass: .audibleLane, lane: .lfoSpeed,
-                               name: "LFOS", display: "LFO speed")
-    case 0x16: return M4aCCInfo(eventClass: .audibleLane, lane: .lfoType,
-                               name: "MODT", display: "LFO type")
-    case 0x18: return M4aCCInfo(eventClass: .audibleLane, lane: .fineTune,
-                               name: "TUNE", display: "Fine tune")
-    case 0x1A: return M4aCCInfo(eventClass: .audibleLane, lane: .lfoDelay,
-                               name: "LFODL", display: "LFO delay")
-    case 0x05: return M4aCCInfo(eventClass: .advanced, lane: .modulation,
-                               name: "PORTAMENTO", display: "Portamento")
-    case 0x17: return M4aCCInfo(eventClass: .advanced, lane: .modulation,
-                               name: "PWMC", display: "Pulse-width pattern")
-    case 0x19: return M4aCCInfo(eventClass: .advanced, lane: .modulation,
-                               name: "PWMS", display: "Pulse-width speed")
-    case 0x0C, 0x10: return M4aCCInfo(eventClass: .advanced, lane: .modulation,
-                                     name: "MEMACC", display: "Memory op")
-    case 0x0D: return M4aCCInfo(eventClass: .advanced, lane: .modulation,
-                               name: "MEMACC op", display: "Memory op select")
-    case 0x0E: return M4aCCInfo(eventClass: .advanced, lane: .modulation,
-                               name: "MEMACC p1", display: "Memory op param 1")
-    case 0x0F: return M4aCCInfo(eventClass: .advanced, lane: .modulation,
-                               name: "MEMACC p2", display: "Memory op param 2")
-    case 0x11: return M4aCCInfo(eventClass: .advanced, lane: .modulation,
-                               name: "Label", display: "Loop label")
-    case 0x1D, 0x1F: return M4aCCInfo(eventClass: .advanced, lane: .modulation,
-                                     name: "XCMD", display: "Pseudo-echo")
-    case 0x1E: return M4aCCInfo(eventClass: .advanced, lane: .modulation,
-                               name: "XCMD op", display: "Pseudo-echo select")
-    case 0x21, 0x27: return M4aCCInfo(eventClass: .advanced, lane: .modulation,
-                                     name: "PRIO", display: "Priority")
-    default: return M4aCCInfo(eventClass: .advanced, lane: .modulation,
-                             name: "CC", display: "Controller")
+    case 0x01:
+        return M4aCCInfo(
+            eventClass: .audibleLane, lane: .modulation,
+            name: "MOD", display: "Modulation")
+    case 0x07:
+        return M4aCCInfo(
+            eventClass: .audibleLane, lane: .volume,
+            name: "VOL", display: "Volume")
+    case 0x0A:
+        return M4aCCInfo(
+            eventClass: .audibleLane, lane: .pan,
+            name: "PAN", display: "Pan")
+    case 0x14:
+        return M4aCCInfo(
+            eventClass: .audibleLane, lane: .bendRange,
+            name: "BENDR", display: "Bend range")
+    case 0x15:
+        return M4aCCInfo(
+            eventClass: .audibleLane, lane: .lfoSpeed,
+            name: "LFOS", display: "LFO speed")
+    case 0x16:
+        return M4aCCInfo(
+            eventClass: .audibleLane, lane: .lfoType,
+            name: "MODT", display: "LFO type")
+    case 0x18:
+        return M4aCCInfo(
+            eventClass: .audibleLane, lane: .fineTune,
+            name: "TUNE", display: "Fine tune")
+    case 0x1A:
+        return M4aCCInfo(
+            eventClass: .audibleLane, lane: .lfoDelay,
+            name: "LFODL", display: "LFO delay")
+    case 0x05:
+        return M4aCCInfo(
+            eventClass: .advanced, lane: .modulation,
+            name: "PORTAMENTO", display: "Portamento")
+    case 0x17:
+        return M4aCCInfo(
+            eventClass: .advanced, lane: .modulation,
+            name: "PWMC", display: "Pulse-width pattern")
+    case 0x19:
+        return M4aCCInfo(
+            eventClass: .advanced, lane: .modulation,
+            name: "PWMS", display: "Pulse-width speed")
+    case 0x0C, 0x10:
+        return M4aCCInfo(
+            eventClass: .advanced, lane: .modulation,
+            name: "MEMACC", display: "Memory op")
+    case 0x0D:
+        return M4aCCInfo(
+            eventClass: .advanced, lane: .modulation,
+            name: "MEMACC op", display: "Memory op select")
+    case 0x0E:
+        return M4aCCInfo(
+            eventClass: .advanced, lane: .modulation,
+            name: "MEMACC p1", display: "Memory op param 1")
+    case 0x0F:
+        return M4aCCInfo(
+            eventClass: .advanced, lane: .modulation,
+            name: "MEMACC p2", display: "Memory op param 2")
+    case 0x11:
+        return M4aCCInfo(
+            eventClass: .advanced, lane: .modulation,
+            name: "Label", display: "Loop label")
+    case 0x1D, 0x1F:
+        return M4aCCInfo(
+            eventClass: .advanced, lane: .modulation,
+            name: "XCMD", display: "Pseudo-echo")
+    case 0x1E:
+        return M4aCCInfo(
+            eventClass: .advanced, lane: .modulation,
+            name: "XCMD op", display: "Pseudo-echo select")
+    case 0x21, 0x27:
+        return M4aCCInfo(
+            eventClass: .advanced, lane: .modulation,
+            name: "PRIO", display: "Priority")
+    default:
+        return M4aCCInfo(
+            eventClass: .advanced, lane: .modulation,
+            name: "CC", display: "Controller")
     }
 }
 
@@ -306,8 +347,10 @@ public func mid2agbEffectiveVelocity(_ velocity: Int) -> Int {
     return min(((velocity + 3) / 4) * 4, 127)
 }
 
-public func mid2agbEffectiveDuration(_ durationTicks: Int64, division: UInt32,
-                                     extendedClocks: Bool, exactGate: Bool) -> Int {
+public func mid2agbEffectiveDuration(
+    _ durationTicks: Int64, division: UInt32,
+    extendedClocks: Bool, exactGate: Bool
+) -> Int {
     let clocksPerBeat: Int64 = extendedClocks ? 48 : 24
     var duration = division == 0 ? durationTicks : clocksPerBeat * durationTicks / Int64(division)
     if duration <= 0 { duration = 1 }

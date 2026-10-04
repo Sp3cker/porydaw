@@ -137,7 +137,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     public var onEditorViewStatePersisted: ((EditorViewState) -> Void)?
 
-
     @QtIgnored
     var isRestoringTabs = false
     @QtIgnored
@@ -147,7 +146,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// Close-gate tab awaiting the save-conflict answer, or -1 for File Save.
     @QtIgnored
     var pendingSaveConflictTabId = -1
-
 
     public required init() {
         let palette = GridPalette()
@@ -164,8 +162,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
         eventList = EventListPresenter(palette: palette)
         transportBar = TransportBarPresenter()
         polyphony = PolyphonyPanelPresenter()
-        emptyOtherEventsBand.configure(session: nil, palette: palette,
-                                      baseFontPx: GridCameraPolicy.seedBaseFontPx,
+        emptyOtherEventsBand.configure(
+            session: nil, palette: palette,
+            baseFontPx: GridCameraPolicy.seedBaseFontPx,
             appFontLineSpacing: 0)
         connectPolyphonyJump()
         eventList.onRevealVoiceRequested = { [voiceList] program in
@@ -336,7 +335,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
         return workspace.headerVoicePicker
     }
-
 
     public func rulerMenuPresenter() -> RulerMenuPresenter {
         guard let workspace else {

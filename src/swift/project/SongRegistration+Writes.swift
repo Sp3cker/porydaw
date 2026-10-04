@@ -1,8 +1,10 @@
 import Foundation
 
 extension SongRegistration {
-    public static func register(root: String, label: String, constant: String,
-                                player: String) throws -> Int {
+    public static func register(
+        root: String, label: String, constant: String,
+        player: String
+    ) throws -> Int {
         let plan = plan(root: root, label: label, constant: constant, player: player)
         let tablePath = root + "/sound/song_table.inc"
         var table = try RegistrationLines(path: tablePath)
@@ -42,8 +44,9 @@ extension SongRegistration {
                 ownMatch = match
             }
             if let marker = RegistrationText.match(RegistrationText.marker, text),
-               (plan.repointEndSe && marker.group(2) == "END_SE"
-                || plan.repointEndMus && marker.group(2) == "END_MUS") {
+                (plan.repointEndSe && marker.group(2) == "END_SE"
+                    || plan.repointEndMus && marker.group(2) == "END_MUS")
+            {
                 let follow = Int(marker.group(3)) == nil ? constant : String(plan.songId)
                 if marker.group(3) != follow {
                     songsH.replace(index, marker.group(1) + follow + marker.group(4))
@@ -51,8 +54,9 @@ extension SongRegistration {
                 continue
             }
             guard let entry = RegistrationText.match(RegistrationText.define, text),
-                  !RegistrationText.isMarker(entry.group(2)),
-                  let id = Int(entry.group(3)) else {
+                !RegistrationText.isMarker(entry.group(2)),
+                let id = Int(entry.group(3))
+            else {
                 if firstEndif < 0 && RegistrationText.match(RegistrationText.endif, text) != nil {
                     firstEndif = index
                 }
@@ -61,18 +65,22 @@ extension SongRegistration {
             if firstDefine < 0 { firstDefine = index }
             if id < plan.songId { insertAfter = index }
             if plan.renumberFrom >= 0 && index != own && id >= plan.renumberFrom
-                && id < plan.renumberBelow {
+                && id < plan.renumberBelow
+            {
                 songsH.replace(index, entry.group(1) + String(id + 1) + entry.group(4))
             }
         }
-        let moveOwn = own >= 0 && plan.migrateFromIndex >= 0
+        let moveOwn =
+            own >= 0 && plan.migrateFromIndex >= 0
             && Int(ownMatch?.group(2) ?? "") != plan.songId
         if own >= 0 && !moveOwn, let old = ownMatch {
             if Int(old.group(2)) != plan.songId {
                 songsH.replace(own, old.group(1) + String(plan.songId) + old.group(3))
             }
         } else {
-            var at = insertAfter >= 0 ? insertAfter + 1
+            var at =
+                insertAfter >= 0
+                ? insertAfter + 1
                 : firstDefine >= 0 ? firstDefine : firstEndif >= 0 ? firstEndif : songsH.lines.count
             if moveOwn {
                 songsH.remove(own)
@@ -108,7 +116,8 @@ extension SongRegistration {
                     ownAnyForm = true
                 }
                 guard let entry = RegistrationText.match(RegistrationText.charmap, text),
-                      names.contains(entry.group(1)) else { continue }
+                    names.contains(entry.group(1))
+                else { continue }
                 if own < 0 && entry.group(1) == constant {
                     own = index
                     ownMatch = entry
@@ -117,7 +126,8 @@ extension SongRegistration {
                 let value = RegistrationText.charmapValue(entry)
                 if value < plan.songId { insertAfter = index }
                 if plan.renumberFrom >= 0 && entry.group(1) != constant
-                    && value >= plan.renumberFrom && value < plan.renumberBelow {
+                    && value >= plan.renumberFrom && value < plan.renumberBelow
+                {
                     file.replace(index, entry.prefix(3) + RegistrationText.bytes(value + 1))
                 }
             }

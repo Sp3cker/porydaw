@@ -12,14 +12,15 @@ import PorydawPlayback
 internal func runVoicegroupCreationChecks(_ report: CheckReport, fixtureRoot: String) {
     let projectDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-voicegroup-create")
     let seedRelative = "sound/voicegroups/seed_src.inc"
-    let seedBytes = Data("""
-    .align 2
-    voice_group seed_src
-    \tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 0
-    \tvoice_square_2 60, 0, 1, 3, 2, 11, 4
-    \tvoice_noise 60, 0, 1, 2, 2, 10, 3
+    let seedBytes = Data(
+        """
+        .align 2
+        voice_group seed_src
+        \tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 0
+        \tvoice_square_2 60, 0, 1, 3, 2, 11, 4
+        \tvoice_noise 60, 0, 1, 2, 2, 10, 3
 
-    """.utf8)
+        """.utf8)
     do {
         try seedBytes.write(to: URL(fileURLWithPath: projectDir).appendingPathComponent(seedRelative))
     } catch {
@@ -45,8 +46,9 @@ internal func runVoicegroupCreationChecks(_ report: CheckReport, fixtureRoot: St
         .appendingPathComponent("sound/voicegroups/qtest_copy.inc")
     do {
         try runBlocking {
-            try await service.createVoicegroup(name: "qtest_copy", copyFromFile: seedRelative,
-                                               copySectionLabel: "")
+            try await service.createVoicegroup(
+                name: "qtest_copy", copyFromFile: seedRelative,
+                copySectionLabel: "")
         }
     } catch {
         report.fail("voicegroupsourceediting/A086", "creation failed: \(error)")
@@ -55,17 +57,20 @@ internal func runVoicegroupCreationChecks(_ report: CheckReport, fixtureRoot: St
     var expectedCreated = Data("voice_group qtest_copy\n".utf8)
     expectedCreated += seedBytes.dropFirst("voice_group seed_src\n".utf8.count + ".align 2\n".utf8.count)
     let createdBytes = (try? Data(contentsOf: createdURL)) ?? Data()
-    report.expect(createdBytes == expectedCreated, cppID: "voicegroupsourceediting/A086",
-                  message: "A086: createVoicegroup writes the per-file copy with the source voices")
+    report.expect(
+        createdBytes == expectedCreated, cppID: "voicegroupsourceediting/A086",
+        message: "A086: createVoicegroup writes the per-file copy with the source voices")
     let hubAfterCreate = (try? Data(contentsOf: hubURL)) ?? Data()
     let includeLine = Data(".include \"sound/voicegroups/qtest_copy.inc\"".utf8)
     let includeCount = hubAfterCreate.split(separator: 10).filter {
         $0.contains(includeLine)
     }.count
-    report.expect(includeCount == 1, cppID: "voicegroupsourceediting/A087",
-                  message: "A087: appendIncludeLine adds exactly one hub include for the created group")
+    report.expect(
+        includeCount == 1, cppID: "voicegroupsourceediting/A087",
+        message: "A087: appendIncludeLine adds exactly one hub include for the created group")
     guard let created = creationLoad(root: projectDir, name: "qtest_copy"),
-          let source = creationLoad(root: projectDir, name: "seed_src") else {
+        let source = creationLoad(root: projectDir, name: "seed_src")
+    else {
         report.fail("voicegroupsourceediting/A088", "native loader did not resolve the created group")
         return
     }
@@ -76,25 +81,30 @@ internal func runVoicegroupCreationChecks(_ report: CheckReport, fixtureRoot: St
     let namesMatch = (0..<3).allSatisfy {
         creationVoiceName(created, $0) == creationVoiceName(source, $0)
     }
-    let typesMatch = creationTone(created, 0).type == creationTone(source, 0).type
+    let typesMatch =
+        creationTone(created, 0).type == creationTone(source, 0).type
         && creationTone(created, 0).type != 0
-    report.expect(namesMatch && typesMatch, cppID: "voicegroupsourceediting/A089",
-                  message: "A089: the created slots keep the source voices with their parsed names")
+    report.expect(
+        namesMatch && typesMatch, cppID: "voicegroupsourceediting/A089",
+        message: "A089: the created slots keep the source voices with their parsed names")
     let tonesMatch = (0..<3).allSatisfy {
         creationSameTone(creationTone(created, $0), creationTone(source, $0))
     }
-    report.expect(tonesMatch, cppID: "voicegroupsourceediting/A090",
-                  message: "A090: the created tones equal the source bank's resolved tones")
+    report.expect(
+        tonesMatch, cppID: "voicegroupsourceediting/A090",
+        message: "A090: the created tones equal the source bank's resolved tones")
     do {
         let args = try runBlocking { try await service.voicegroupArgs() }
-        report.expect(args.contains("_qtest_copy"), cppID: "voicegroupsourceediting/A091",
-                      message: "A091: voicegroupArgs publishes the created _qtest_copy arg")
+        report.expect(
+            args.contains("_qtest_copy"), cppID: "voicegroupsourceediting/A091",
+            message: "A091: voicegroupArgs publishes the created _qtest_copy arg")
     } catch {
         report.fail("voicegroupsourceediting/A091", "voicegroupArgs failed: \(error)")
     }
-    report.expect(creationLineCount(hubAfterCreate) == creationLineCount(hubBefore) + 1,
-                  cppID: "voicegroupsourceediting/A092",
-                  message: "A092: the hub gains exactly one line for the created group")
+    report.expect(
+        creationLineCount(hubAfterCreate) == creationLineCount(hubBefore) + 1,
+        cppID: "voicegroupsourceediting/A092",
+        message: "A092: the hub gains exactly one line for the created group")
 
     let strayRelative = "sound/voicegroups/qtest_stray.inc"
     let strayBytes = Data("do not overwrite this voicegroup stray".utf8)
@@ -117,21 +127,26 @@ internal func runVoicegroupCreationChecks(_ report: CheckReport, fixtureRoot: St
     let collisionID = "swiftcore/VoicegroupCreation::collisionRefusesLeavingStray"
     let typedRefusal: Bool
     if case .operationFailed? = refusal { typedRefusal = true } else { typedRefusal = false }
-    report.expect(typedRefusal, cppID: collisionID,
-                  message: "the colliding create returns a typed project command failure")
+    report.expect(
+        typedRefusal, cppID: collisionID,
+        message: "the colliding create returns a typed project command failure")
     let refusalMessage: String
     if case let .operationFailed(message)? = refusal { refusalMessage = message } else { refusalMessage = "" }
-    report.expect(!refusalMessage.isEmpty && refusalMessage.contains("qtest_stray"), cppID: collisionID,
-                  message: "the collision failure names its voicegroup in a nonempty message")
+    report.expect(
+        !refusalMessage.isEmpty && refusalMessage.contains("qtest_stray"), cppID: collisionID,
+        message: "the collision failure names its voicegroup in a nonempty message")
     let preservedStray = (try? Data(contentsOf: strayURL)) ?? Data()
-    report.expect(preservedStray == strayBytes, cppID: collisionID,
-                  message: "the refusal preserves every byte of the independently seeded stray")
+    report.expect(
+        preservedStray == strayBytes, cppID: collisionID,
+        message: "the refusal preserves every byte of the independently seeded stray")
     let hubAfterCollision = (try? Data(contentsOf: hubURL)) ?? Data()
-    report.expect(hubAfterCollision == hubAfterCreate, cppID: collisionID,
-                  message: "the refusal leaves the hub bytes untouched")
+    report.expect(
+        hubAfterCollision == hubAfterCreate, cppID: collisionID,
+        message: "the refusal leaves the hub bytes untouched")
     let argsAfterCollision = (try? runBlocking { try await service.voicegroupArgs() }) ?? []
-    report.expect(argsAfterCollision == argsBeforeCollision, cppID: collisionID,
-                  message: "the refusal leaves the voicegroup catalog unchanged")
+    report.expect(
+        argsAfterCollision == argsBeforeCollision, cppID: collisionID,
+        message: "the refusal leaves the voicegroup catalog unchanged")
 }
 
 private func creationLoad(root: String, name: String) -> UnsafeMutablePointer<LoadedVoiceGroup>? {

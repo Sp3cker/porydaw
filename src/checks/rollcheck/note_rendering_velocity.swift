@@ -3,7 +3,6 @@ import Foundation
 import PorydawCore
 import QtBridge
 
-
 @MainActor
 func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::velocityValueRaster"
@@ -22,30 +21,37 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
         }
         session.setSelectedNotes(priorSelection)
         session.mutateCamera { $0 = oldCamera }
-        report.expect(document.state == initialState
-                          && document.history.currentIdentity == initialIdentity,
-                      cppID: id, message: "velocity-value fixture undo restores the document")
+        report.expect(
+            document.state == initialState
+                && document.history.currentIdentity == initialIdentity,
+            cppID: id, message: "velocity-value fixture undo restores the document")
     }
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 1)
     grid.resetCameraScroll()
     _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
     grid.refreshCamera()
     guard let noteID = renderingSeed(report, id: id, session: session, grid: grid),
-          let note = document.note(noteID) else { return }
+        let note = document.note(noteID)
+    else { return }
     session.mutateCamera { camera in
         _ = camera.setKeyHeight(32)
         _ = camera.setVScroll(max(0, (127.5 - Double(note.pitch)) * 32 - 160))
     }
     grid.refreshCamera()
-    guard let other = ghostSeed(report, id: id, session: session, grid: grid,
-                                track: grid.trackIndex, spanCells: 1,
-                                nearPitch: Int(note.pitch),
-                                excluding: [Int(note.pitch)]),
-          let otherNote = document.note(other.id) else { return }
+    guard
+        let other = ghostSeed(
+            report, id: id, session: session, grid: grid,
+            track: grid.trackIndex, spanCells: 1,
+            nearPitch: Int(note.pitch),
+            excluding: [Int(note.pitch)]),
+        let otherNote = document.note(other.id)
+    else { return }
     session.mutateCamera { camera in
         _ = camera.setTimeZoom(280)
-        _ = camera.setHScroll(max(camera.snapshot.minHScroll,
-                                  camera.contentX(tick: Double(note.tick)) - 160))
+        _ = camera.setHScroll(
+            max(
+                camera.snapshot.minHScroll,
+                camera.contentX(tick: Double(note.tick)) - 160))
     }
     grid.refreshCamera()
     let revisionBeforeDrag = document.revision
@@ -76,8 +82,8 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
         report.expect(
             content.showVelocityValues && dragged?.velocity == preview
                 && dragged?.ghost == false,
-                      cppID: id,
-                      message: "velocity drag publishes the preview value on its note\(rowMessage)")
+            cppID: id,
+            message: "velocity drag publishes the preview value on its note\(rowMessage)")
         report.expect(
             content.showVelocityValues
                 && content.note(other.id)?.velocity == Int(otherNote.velocity)
@@ -89,7 +95,7 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
             message: "velocity values replace note names while shown\(rowMessage)")
         report.expect(
             dragged?.fillArgb == RollContentProbe.argb(expectedFill), cppID: id,
-                      message: "the dragged note's fill follows its preview velocity\(rowMessage)")
+            message: "the dragged note's fill follows its preview velocity\(rowMessage)")
         let draggedValue = noteValueLabeled(grid, id: noteID)?.text
         let otherValue = noteValueLabeled(grid, id: other.id)?.text
         report.expect(
@@ -106,17 +112,20 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
                     expectedFill, grid.palette.noteLabelInk(forFill: expectedFill)) >= 4.5,
             cppID: id,
             message: "the preview value uses AA ink against its live fill\(rowMessage)")
-        report.expect(document.revision == revisionBeforeDrag, cppID: id,
-                      message: "previewing velocity leaves the document unchanged\(rowMessage)")
+        report.expect(
+            document.revision == revisionBeforeDrag, cppID: id,
+            message: "previewing velocity leaves the document unchanged\(rowMessage)")
         if height != 9.0 {
             grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
         } else {
             grid.endPointer(x: x, y: y - grid.dragDistance - 2)
-            report.expect(grid.previewVelocity(noteID) == nil
+            report.expect(
+                grid.previewVelocity(noteID) == nil
                     && !RollContentProbe(grid).showVelocityValues,
                 cppID: id, message: "ending the drag clears velocity values")
-            report.expect(document.note(noteID)?.velocity == UInt8(preview), cppID: id,
-                          message: "release commits the preview velocity")
+            report.expect(
+                document.note(noteID)?.velocity == UInt8(preview), cppID: id,
+                message: "release commits the preview velocity")
         }
     }
     // Width and ghost gates against the real plotted list: the same
@@ -126,8 +135,10 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
         _ = camera.setKeyHeight(32)
         _ = camera.setVScroll(max(0, (127.5 - Double(note.pitch)) * 32 - 160))
         _ = camera.setTimeZoom(280)
-        _ = camera.setHScroll(max(camera.snapshot.minHScroll,
-                                  camera.contentX(tick: Double(note.tick)) - 160))
+        _ = camera.setHScroll(
+            max(
+                camera.snapshot.minHScroll,
+                camera.contentX(tick: Double(note.tick)) - 160))
     }
     grid.refreshCamera()
     func dragPreviewVelocity() -> Int? {
@@ -168,19 +179,24 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
     _ = session.mutateCamera { _ = $0.setTimeZoom(280) }
     grid.refreshCamera()
     _ = session.mutateCamera { camera in
-        _ = camera.setHScroll(max(camera.snapshot.minHScroll,
-                                  camera.contentX(tick: Double(note.tick)) - 160))
+        _ = camera.setHScroll(
+            max(
+                camera.snapshot.minHScroll,
+                camera.contentX(tick: Double(note.tick)) - 160))
     }
     grid.refreshCamera()
     let ghostIdentity = document.history.currentIdentity
     if document.canAddTrack,
-       let other = document.addTrack(voice: 0), other != grid.trackIndex {
+        let other = document.addTrack(voice: 0), other != grid.trackIndex
+    {
         grid.refreshFromSession()
-        if let ghost = ghostSeed(report, id: id, session: session, grid: grid,
-                                 track: other, spanCells: 4,
-                                 nearPitch: Int(note.pitch),
-                                 excluding: [Int(note.pitch)]),
-           dragPreviewVelocity() != nil {
+        if let ghost = ghostSeed(
+            report, id: id, session: session, grid: grid,
+            track: other, spanCells: 4,
+            nearPitch: Int(note.pitch),
+            excluding: [Int(note.pitch)]),
+            dragPreviewVelocity() != nil
+        {
             report.expect(
                 noteValueLabeled(grid, id: noteID) != nil
                     && noteValueLabeled(grid, id: ghost.id) == nil
@@ -192,7 +208,8 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
         report.fail(id, "ghost value fixture could not seed an other-track note")
     }
     while document.history.currentIdentity != ghostIdentity
-              && document.history.canUndo {
+        && document.history.canUndo
+    {
         guard document.history.undoDocument() else { break }
     }
     grid.refreshFromSession()
@@ -203,12 +220,13 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
         guard !occupiedPitches.contains(pitch) else { return false }
         let row = camera.projection.row(forPitch: pitch)
         guard row != PitchProjection.hiddenRow,
-              let top = camera.projection.rowTop(
+            let top = camera.projection.rowTop(
                 row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
                 dpr: grid.devicePixelRatio),
-              let bottom = camera.projection.rowBottom(
+            let bottom = camera.projection.rowBottom(
                 row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
-                dpr: grid.devicePixelRatio) else { return false }
+                dpr: grid.devicePixelRatio)
+        else { return false }
         return top >= 8 && bottom <= snapshot.rollHeight - 8
     }
     guard let freeRow else {
@@ -216,12 +234,14 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
         return
     }
     let row = camera.projection.row(forPitch: freeRow)
-    guard let top = camera.projection.rowTop(
-        row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
-        dpr: grid.devicePixelRatio),
-          let bottom = camera.projection.rowBottom(
+    guard
+        let top = camera.projection.rowTop(
             row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
-            dpr: grid.devicePixelRatio) else {
+            dpr: grid.devicePixelRatio),
+        let bottom = camera.projection.rowBottom(
+            row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY,
+            dpr: grid.devicePixelRatio)
+    else {
         report.fail(id, "draw preview row cannot be projected")
         return
     }
@@ -260,6 +280,6 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
     report.expect(
         grid.drawPreview == nil && !RollContentProbe(grid).drawPreview.active
             && document.revision == revisionBeforeDraw,
-                  cppID: id, message: "cancelling the draw preview edits no note")
+        cppID: id, message: "cancelling the draw preview edits no note")
     grid.setNoteNameMode(enabled: false)
 }

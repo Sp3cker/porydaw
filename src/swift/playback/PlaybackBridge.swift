@@ -29,10 +29,11 @@ public final class PlaybackPublication {
             let storage = UnsafeMutablePointer<PdPlaybackEvent>.allocate(capacity: eventCount)
             for index in 0..<eventCount {
                 let event = timeline.events[index]
-                storage.advanced(by: index).initialize(to: PdPlaybackEvent(
-                    sample: event.sample, tick: event.tick, type: event.type,
-                    track: event.track, data0: event.data0, data1: event.data1,
-                    noteID: event.noteID.rawValue))
+                storage.advanced(by: index).initialize(
+                    to: PdPlaybackEvent(
+                        sample: event.sample, tick: event.tick, type: event.type,
+                        track: event.track, data0: event.data0, data1: event.data1,
+                        noteID: event.noteID.rawValue))
             }
             events = storage
         }
@@ -44,27 +45,29 @@ public final class PlaybackPublication {
             let storage = UnsafeMutablePointer<PdPlaybackTempoPoint>.allocate(capacity: tempoCount)
             for index in 0..<tempoCount {
                 let point = timeline.tempoMap[index]
-                storage.advanced(by: index).initialize(to: PdPlaybackTempoPoint(
-                    tick: point.tick,
-                    microsecondsPerQuarterNote: point.microsecondsPerQuarterNote,
-                    sampleOrigin: point.sampleOrigin))
+                storage.advanced(by: index).initialize(
+                    to: PdPlaybackTempoPoint(
+                        tick: point.tick,
+                        microsecondsPerQuarterNote: point.microsecondsPerQuarterNote,
+                        sampleOrigin: point.sampleOrigin))
             }
             tempos = storage
         }
 
         data = .allocate(capacity: 1)
-        data.initialize(to: PdPlaybackData(
-            events: events.map { UnsafePointer($0) }, eventCount: eventCount,
-            tempoMap: tempos.map { UnsafePointer($0) }, tempoPointCount: tempoCount,
-            sampleRate: timeline.sampleRate, lengthSamples: timeline.lengthSamples,
-            loopStartSample: timeline.loopStartSample, loopEndSample: timeline.loopEndSample,
-            ticksPerBeat: timeline.ticksPerBeat, lengthTicks: timeline.lengthTicks,
-            loopStartTick: timeline.loopStartTick, loopEndTick: timeline.loopEndTick,
-            usedTrackCount: UInt32(timeline.usedTrackCount),
-            droppedTracks: UInt32(timeline.droppedTracks),
-            exactGate: timeline.settings.exactGate,
-            extendedClocks: timeline.settings.extendedClocks,
-            ownerContext: nil))
+        data.initialize(
+            to: PdPlaybackData(
+                events: events.map { UnsafePointer($0) }, eventCount: eventCount,
+                tempoMap: tempos.map { UnsafePointer($0) }, tempoPointCount: tempoCount,
+                sampleRate: timeline.sampleRate, lengthSamples: timeline.lengthSamples,
+                loopStartSample: timeline.loopStartSample, loopEndSample: timeline.loopEndSample,
+                ticksPerBeat: timeline.ticksPerBeat, lengthTicks: timeline.lengthTicks,
+                loopStartTick: timeline.loopStartTick, loopEndTick: timeline.loopEndTick,
+                usedTrackCount: UInt32(timeline.usedTrackCount),
+                droppedTracks: UInt32(timeline.droppedTracks),
+                exactGate: timeline.settings.exactGate,
+                extendedClocks: timeline.settings.extendedClocks,
+                ownerContext: nil))
     }
 
     deinit {
@@ -85,14 +88,16 @@ public final class PlaybackPublication {
 public func pdPlaybackDataRetain(_ data: UnsafePointer<PdPlaybackData>?) {
     guard let context = data?.pointee.ownerContext else { return }
     _ = Unmanaged<PlaybackPublication>.fromOpaque(
-        UnsafeMutableRawPointer(mutating: context)).retain()
+        UnsafeMutableRawPointer(mutating: context)
+    ).retain()
 }
 
 @_cdecl("pd_playback_data_release")
 public func pdPlaybackDataRelease(_ data: UnsafePointer<PdPlaybackData>?) {
     guard let context = data?.pointee.ownerContext else { return }
     Unmanaged<PlaybackPublication>.fromOpaque(
-        UnsafeMutableRawPointer(mutating: context)).release()
+        UnsafeMutableRawPointer(mutating: context)
+    ).release()
 }
 
 @_cdecl("pd_playback_data_load_file")
@@ -104,8 +109,9 @@ public func pdPlaybackDataLoadFile(
     output?.pointee = nil
     clearDiagnostic(errorBuffer, capacity: errorCapacity)
     guard let path, let output else {
-        writeDiagnostic("missing playback file path or output", to: errorBuffer,
-                        capacity: errorCapacity)
+        writeDiagnostic(
+            "missing playback file path or output", to: errorBuffer,
+            capacity: errorCapacity)
         return false
     }
 
@@ -149,30 +155,38 @@ public func pdPlayerPosition(_ handle: UnsafeRawPointer?) -> UInt64 {
 }
 
 @_cdecl("pd_player_seek")
-public func pdPlayerSeek(_ handle: UnsafeMutableRawPointer?, _ position: UInt64,
-                         _ data: UnsafePointer<PdPlaybackData>?) {
+public func pdPlayerSeek(
+    _ handle: UnsafeMutableRawPointer?, _ position: UInt64,
+    _ data: UnsafePointer<PdPlaybackData>?
+) {
     guard let handle, let data else { return }
     handle.assumingMemoryBound(to: Sequencer.self).pointee.seek(position, data: data)
 }
 
 @_cdecl("pd_player_replace")
-public func pdPlayerReplace(_ handle: UnsafeMutableRawPointer?, _ position: UInt64,
-                            _ data: UnsafePointer<PdPlaybackData>?) {
+public func pdPlayerReplace(
+    _ handle: UnsafeMutableRawPointer?, _ position: UInt64,
+    _ data: UnsafePointer<PdPlaybackData>?
+) {
     guard let handle, let data else { return }
     handle.assumingMemoryBound(to: Sequencer.self).pointee
         .replaceTimeline(position, data: data)
 }
 
 @_cdecl("pd_player_chase")
-public func pdPlayerChase(_ engine: UnsafeMutablePointer<M4AEngine>?,
-                          _ data: UnsafePointer<PdPlaybackData>?, _ position: UInt64) {
+public func pdPlayerChase(
+    _ engine: UnsafeMutablePointer<M4AEngine>?,
+    _ data: UnsafePointer<PdPlaybackData>?, _ position: UInt64
+) {
     guard let engine, let data else { return }
     Sequencer.chase(engine: engine, data: data, position: position)
 }
 
 @_cdecl("pd_player_prime")
-public func pdPlayerPrime(_ engine: UnsafeMutablePointer<M4AEngine>?,
-                          _ data: UnsafePointer<PdPlaybackData>?, _ position: UInt64) {
+public func pdPlayerPrime(
+    _ engine: UnsafeMutablePointer<M4AEngine>?,
+    _ data: UnsafePointer<PdPlaybackData>?, _ position: UInt64
+) {
     guard let engine, let data else { return }
     Sequencer.primeVoices(engine: engine, data: data, position: position)
 }
@@ -197,8 +211,10 @@ private func clearDiagnostic(_ output: UnsafeMutablePointer<CChar>?, capacity: I
     output[0] = 0
 }
 
-private func writeDiagnostic(_ text: String, to output: UnsafeMutablePointer<CChar>?,
-                             capacity: Int) {
+private func writeDiagnostic(
+    _ text: String, to output: UnsafeMutablePointer<CChar>?,
+    capacity: Int
+) {
     guard let output, capacity > 0 else { return }
     let bytes = Array(text.utf8)
     let count = min(bytes.count, capacity - 1)

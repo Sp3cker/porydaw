@@ -43,8 +43,10 @@ internal final class SharedBankState {
 
     func accept(_ newer: AppliedBankEdit) {
         guard BankBindingIdentity(newer.lease) == identity,
-              newer.lease.publicationRevision > value.lease.publicationRevision else { return }
-        let changed = newer.lease.bankToken != value.lease.bankToken
+            newer.lease.publicationRevision > value.lease.publicationRevision
+        else { return }
+        let changed =
+            newer.lease.bankToken != value.lease.bankToken
             || newer.slots != value.slots || newer.dirty != value.dirty
             || newer.loadName != value.loadName
         value = newer

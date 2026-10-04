@@ -38,9 +38,10 @@ struct NoteProjection {
                 tracks.append([])
                 continue
             }
-            let paired = Self.pair(events: file.chunks[chunk].events,
-                                   channel: map.tracks[track].channel,
-                                   chunk: chunk, track: track)
+            let paired = Self.pair(
+                events: file.chunks[chunk].events,
+                channel: map.tracks[track].channel,
+                chunk: chunk, track: track)
             total += paired.count
             tracks.append(paired)
         }
@@ -77,9 +78,10 @@ struct NoteProjection {
                 for note in tracks[track] where note.id.isAssigned {
                     index.removeValue(forKey: note.id)
                 }
-                let paired = Self.pair(events: file.chunks[chunk].events,
-                                       channel: map.tracks[track].channel,
-                                       chunk: chunk, track: track)
+                let paired = Self.pair(
+                    events: file.chunks[chunk].events,
+                    channel: map.tracks[track].channel,
+                    chunk: chunk, track: track)
                 tracks[track] = paired
                 for note in paired where note.id.isAssigned {
                     index[note.id] = note
@@ -94,7 +96,7 @@ struct NoteProjection {
     func describes(_ file: MidiFile) -> Bool {
         guard file.chunks.count == prints.count else { return false }
         for chunk in file.chunks.indices
-            where prints[chunk] != ChunkPrint(file.chunks[chunk].events) {
+        where prints[chunk] != ChunkPrint(file.chunks[chunk].events) {
             return false
         }
         return true
@@ -104,9 +106,11 @@ struct NoteProjection {
     static func pair(track: Int, in file: MidiFile) -> [Note] {
         let map = file.engineTracks()
         guard track >= 0, track < map.usedTrackCount,
-              let chunk = map.tracks[track].midiChunk else { return [] }
-        return pair(events: file.chunks[chunk].events, channel: map.tracks[track].channel,
-                    chunk: chunk, track: track)
+            let chunk = map.tracks[track].midiChunk
+        else { return [] }
+        return pair(
+            events: file.chunks[chunk].events, channel: map.tracks[track].channel,
+            chunk: chunk, track: track)
     }
 
     /// `NoteID` index over `tracks` of a state that is not worth a whole-file projection, so
@@ -116,10 +120,12 @@ struct NoteProjection {
         var index: [NoteID: Note] = [:]
         for track in tracks {
             guard track >= 0, track < map.usedTrackCount,
-                  let chunk = map.tracks[track].midiChunk else { continue }
-            for note in pair(events: file.chunks[chunk].events,
-                             channel: map.tracks[track].channel, chunk: chunk, track: track)
-                where note.id.isAssigned {
+                let chunk = map.tracks[track].midiChunk
+            else { continue }
+            for note in pair(
+                events: file.chunks[chunk].events,
+                channel: map.tracks[track].channel, chunk: chunk, track: track)
+            where note.id.isAssigned {
                 index[note.id] = note
             }
         }
@@ -150,11 +156,12 @@ struct NoteProjection {
                     } else if type == 0x9, velocity != 0, status & 0x0F == channel {
                         let pending = nextEnd[Int(pitch)]
                         let endIndex = pending >= 0 ? Int(pending) : nil
-                        result.append(Note(
-                            id: event.noteID ?? NoteID(), track: track, chunk: chunk,
-                            onIndex: index, endIndex: endIndex, tick: event.tick,
-                            duration: endIndex.map { buffer[$0].tick - event.tick } ?? 0,
-                            pitch: pitch, velocity: velocity, channel: channel))
+                        result.append(
+                            Note(
+                                id: event.noteID ?? NoteID(), track: track, chunk: chunk,
+                                onIndex: index, endIndex: endIndex, tick: event.tick,
+                                duration: endIndex.map { buffer[$0].tick - event.tick } ?? 0,
+                                pitch: pitch, velocity: velocity, channel: channel))
                     }
                 }
             }

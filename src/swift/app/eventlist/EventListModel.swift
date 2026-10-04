@@ -30,8 +30,10 @@ public struct EventListRow: Equatable, Sendable {
     public var typeKind: Int { kind.rawValue }
     public var isEndOfTrack: Bool { event == nil && tempo == nil }
 
-    init(index: Int, eventIndex: Int?, tick: Tick, event: MidiEvent?,
-         tempo: TempoPoint? = nil, kind: EventListEventType) {
+    init(
+        index: Int, eventIndex: Int?, tick: Tick, event: MidiEvent?,
+        tempo: TempoPoint? = nil, kind: EventListEventType
+    ) {
         self.index = index
         self.eventIndex = eventIndex
         self.tick = tick
@@ -75,9 +77,11 @@ public struct EventListModel: Equatable, Sendable {
     }
 
     /// Replaces the source chunk and clears focus unless explicitly preserved.
-    public mutating func setSource(_ chunk: MidiChunk?, tempos: [TempoPoint] = [],
-                                   filterMask: Int = 127,
-                                   preservingCurrentRow: Bool = false) {
+    public mutating func setSource(
+        _ chunk: MidiChunk?, tempos: [TempoPoint] = [],
+        filterMask: Int = 127,
+        preservingCurrentRow: Bool = false
+    ) {
         let oldCurrent = currentRow
         self.tempos = tempos
         self.filterMask = filterMask
@@ -145,9 +149,10 @@ public struct EventListModel: Equatable, Sendable {
         // The native model only treats an event row as an exact focused tick;
         // the EOT sentinel is intentionally not a sibling-snap candidate.
         if tick >= 0, rows.indices.contains(currentRow),
-           rows[currentRow].event != nil,
-           result != currentRow,
-           abs(Double(rows[currentRow].tick) - tick) < 0.5 {
+            rows[currentRow].event != nil,
+            result != currentRow,
+            abs(Double(rows[currentRow].tick) - tick) < 0.5
+        {
             result = currentRow
         }
         return result
@@ -224,15 +229,15 @@ public struct EventListModel: Equatable, Sendable {
             if rows[row].tempo != nil { return (0...10).contains(value) }
             switch value {
             case EventListEventType.noteOff.rawValue,
-                 EventListEventType.noteOn.rawValue,
-                 EventListEventType.polyTouch.rawValue,
-                 EventListEventType.cc.rawValue,
-                 EventListEventType.program.rawValue,
-                 EventListEventType.channelTouch.rawValue,
-                 EventListEventType.bend.rawValue,
-                 EventListEventType.sysEx0.rawValue,
-                 EventListEventType.sysEx7.rawValue,
-                 EventListEventType.meta.rawValue:
+                EventListEventType.noteOn.rawValue,
+                EventListEventType.polyTouch.rawValue,
+                EventListEventType.cc.rawValue,
+                EventListEventType.program.rawValue,
+                EventListEventType.channelTouch.rawValue,
+                EventListEventType.bend.rawValue,
+                EventListEventType.sysEx0.rawValue,
+                EventListEventType.sysEx7.rawValue,
+                EventListEventType.meta.rawValue:
                 return true
             default:
                 return false
@@ -253,8 +258,10 @@ public struct EventListModel: Equatable, Sendable {
         }
     }
 
-    private static func makeRows(for chunk: MidiChunk, tempos: [TempoPoint],
-                                 filterMask: Int) -> [EventListRow] {
+    private static func makeRows(
+        for chunk: MidiChunk, tempos: [TempoPoint],
+        filterMask: Int
+    ) -> [EventListRow] {
         var result: [EventListRow] = []
         result.reserveCapacity(chunk.events.count + tempos.count + 1)
         for (index, event) in chunk.events.enumerated() {
@@ -270,8 +277,10 @@ public struct EventListModel: Equatable, Sendable {
             default: bit = 64
             }
             guard event.metaType != 0x51, filterMask & bit != 0 else { continue }
-            result.append(EventListRow(index: result.count, eventIndex: index, tick: event.tick,
-                                       event: event, kind: kind))
+            result.append(
+                EventListRow(
+                    index: result.count, eventIndex: index, tick: event.tick,
+                    event: event, kind: kind))
         }
         if filterMask & 64 != 0, !tempos.isEmpty {
             let orderedTempos = tempos.sorted { $0.tick < $1.tick }
@@ -280,31 +289,39 @@ public struct EventListModel: Equatable, Sendable {
             var nextTempo = 0
             for eventRow in result {
                 while nextTempo < orderedTempos.count
-                    && orderedTempos[nextTempo].tick <= eventRow.tick {
+                    && orderedTempos[nextTempo].tick <= eventRow.tick
+                {
                     let tempo = orderedTempos[nextTempo]
-                    merged.append(EventListRow(index: merged.count, eventIndex: nil,
-                                               tick: tempo.tick, event: nil,
-                                               tempo: tempo, kind: .tempo))
+                    merged.append(
+                        EventListRow(
+                            index: merged.count, eventIndex: nil,
+                            tick: tempo.tick, event: nil,
+                            tempo: tempo, kind: .tempo))
                     nextTempo += 1
                 }
                 merged.append(eventRow)
             }
             while nextTempo < orderedTempos.count {
                 let tempo = orderedTempos[nextTempo]
-                merged.append(EventListRow(index: merged.count, eventIndex: nil,
-                                           tick: tempo.tick, event: nil,
-                                           tempo: tempo, kind: .tempo))
+                merged.append(
+                    EventListRow(
+                        index: merged.count, eventIndex: nil,
+                        tick: tempo.tick, event: nil,
+                        tempo: tempo, kind: .tempo))
                 nextTempo += 1
             }
             result = merged
         }
         for index in result.indices {
             let row = result[index]
-            result[index] = EventListRow(index: index, eventIndex: row.eventIndex, tick: row.tick,
-                                         event: row.event, tempo: row.tempo, kind: row.kind)
+            result[index] = EventListRow(
+                index: index, eventIndex: row.eventIndex, tick: row.tick,
+                event: row.event, tempo: row.tempo, kind: row.kind)
         }
-        result.append(EventListRow(index: result.count, eventIndex: nil,
-                                   tick: chunk.endTick, event: nil, kind: .endOfTrack))
+        result.append(
+            EventListRow(
+                index: result.count, eventIndex: nil,
+                tick: chunk.endTick, event: nil, kind: .endOfTrack))
         return result
     }
 

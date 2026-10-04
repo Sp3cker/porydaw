@@ -22,8 +22,11 @@ public enum SampleRegistrar {
         let incPath = projectRoot + "/sound/direct_sound_data.inc"
         let samplesDir = projectRoot + "/sound/direct_sound_samples"
         if !ProjectFileStore.exists(incPath) {
-            return Probe(pipeline: .unknown, incPath: incPath, samplesDir: samplesDir,
-                refusal: "cannot find sound/direct_sound_data.inc — samples are registered there. Set up pret's sample layout, then import again.")
+            return Probe(
+                pipeline: .unknown, incPath: incPath, samplesDir: samplesDir,
+                refusal:
+                    "cannot find sound/direct_sound_data.inc — samples are registered there. Set up pret's sample layout, then import again."
+            )
         }
         var paths = [projectRoot + "/Makefile", projectRoot + "/makefile"]
         if let files = try? FileManager.default.contentsOfDirectory(atPath: projectRoot) {
@@ -33,11 +36,17 @@ public enum SampleRegistrar {
             return Probe(pipeline: .wav2agb, incPath: incPath, samplesDir: samplesDir, refusal: "")
         }
         if hasPatternRule(paths, ext: "aif", tool: "aif2pcm") {
-            return Probe(pipeline: .legacyAif, incPath: incPath, samplesDir: samplesDir,
-                refusal: "this project predates wav2agb: its samples build from .aif sources via aif2pcm. Port the sample pipeline to wav2agb (pret's current layout), then import again.")
+            return Probe(
+                pipeline: .legacyAif, incPath: incPath, samplesDir: samplesDir,
+                refusal:
+                    "this project predates wav2agb: its samples build from .aif sources via aif2pcm. Port the sample pipeline to wav2agb (pret's current layout), then import again."
+            )
         }
-        return Probe(pipeline: .unknown, incPath: incPath, samplesDir: samplesDir,
-            refusal: "cannot find a wav2agb build rule (%.bin: %.wav) in the project's make files; add pret's audio_rules.mk pattern rule, then import again.")
+        return Probe(
+            pipeline: .unknown, incPath: incPath, samplesDir: samplesDir,
+            refusal:
+                "cannot find a wav2agb build rule (%.bin: %.wav) in the project's make files; add pret's audio_rules.mk pattern rule, then import again."
+        )
     }
 
     private static func hasPatternRule(_ paths: [String], ext: String, tool: String) -> Bool {
@@ -78,19 +87,24 @@ public enum SampleRegistrar {
     public static func register(projectRoot: String, name: String, wav: Data) throws(SampleRegistrationError) {
         let layout = probe(projectRoot: projectRoot)
         guard layout.ok else { throw SampleRegistrationError(message: layout.refusal) }
-        if let refusal = validate(projectRoot: projectRoot, name: name,
-            existingSymbols: VoicegroupSource.directSoundSymbols(projectRoot)) {
+        if let refusal = validate(
+            projectRoot: projectRoot, name: name,
+            existingSymbols: VoicegroupSource.directSoundSymbols(projectRoot))
+        {
             throw SampleRegistrationError(message: refusal)
         }
-        do { try ProjectFileStore.mkpath(layout.samplesDir) }
-        catch { throw SampleRegistrationError(message: "cannot create \(layout.samplesDir).") }
+        do { try ProjectFileStore.mkpath(layout.samplesDir) } catch {
+            throw SampleRegistrationError(message: "cannot create \(layout.samplesDir).")
+        }
         let wavPath = layout.samplesDir + "/" + name + ".wav"
-        do { try ProjectFileStore.writeAtomic(wavPath, data: wav) }
-        catch { throw SampleRegistrationError(message: "cannot write \(wavPath).") }
+        do { try ProjectFileStore.writeAtomic(wavPath, data: wav) } catch {
+            throw SampleRegistrationError(message: "cannot write \(wavPath).")
+        }
 
         let content: Data
-        do { content = try ProjectFileStore.read(layout.incPath) }
-        catch { throw SampleRegistrationError(message: "cannot write \(layout.incPath).") }
+        do { content = try ProjectFileStore.read(layout.incPath) } catch {
+            throw SampleRegistrationError(message: "cannot write \(layout.incPath).")
+        }
         let lines = ProjectFileStore.splitLines(content)
         let eol = lines.crlf ? "\r\n" : "\n"
         var alignIndent = "\t"
@@ -102,8 +116,11 @@ public enum SampleRegistrar {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty, let start = text.range(of: trimmed) else { continue }
             let indent = String(text[..<start.lowerBound])
-            if trimmed.hasPrefix(".align") { alignIndent = indent }
-            else if trimmed.hasPrefix(".incbin") { incbinIndent = indent }
+            if trimmed.hasPrefix(".align") {
+                alignIndent = indent
+            } else if trimmed.hasPrefix(".incbin") {
+                incbinIndent = indent
+            }
         }
         var block = ""
         if !content.isEmpty && !lines.endsWithNewline { block += eol }
@@ -113,7 +130,8 @@ public enum SampleRegistrar {
         block += incbinIndent + ".incbin \"sound/direct_sound_samples/" + name + ".bin\"" + eol
         var updated = content
         updated.append(contentsOf: block.utf8)
-        do { try ProjectFileStore.writeAtomic(layout.incPath, data: updated) }
-        catch { throw SampleRegistrationError(message: "cannot write \(layout.incPath).") }
+        do { try ProjectFileStore.writeAtomic(layout.incPath, data: updated) } catch {
+            throw SampleRegistrationError(message: "cannot write \(layout.incPath).")
+        }
     }
 }

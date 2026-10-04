@@ -15,7 +15,6 @@ final class GridCameraIntegrationCounters {
     var coherentDocumentCallback = false
 }
 
-
 @MainActor
 func runEditorGridCameraChecks(_ report: CheckReport, session: DocumentSession) {
     let priorCamera = session.onCameraChangeDetailed
@@ -59,7 +58,6 @@ func runEditorGridCameraChecks(_ report: CheckReport, session: DocumentSession) 
     checkScratchDoubleDraw(report, session: session, grid: grid)
 }
 
-
 @MainActor
 private func checkHoverChipResize(
     _ report: CheckReport, session: DocumentSession, grid: PianoGrid
@@ -70,8 +68,9 @@ private func checkHoverChipResize(
     let dpr = grid.devicePixelRatio
     defer {
         grid.clearKeyboardHover()
-        grid.configureViewport(width: originalCamera.snapshot.viewportWidth,
-                               height: originalCamera.snapshot.rollHeight, fontPx: font, dpr: dpr)
+        grid.configureViewport(
+            width: originalCamera.snapshot.viewportWidth,
+            height: originalCamera.snapshot.rollHeight, fontPx: font, dpr: dpr)
         session.mutateCamera { $0 = originalCamera }
     }
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
@@ -81,16 +80,19 @@ private func checkHoverChipResize(
     let scroll = session.camera.snapshot.scrollY
     let chipHeight = grid.scene.hoverChipRect["height"] as? Double ?? .nan
     let contentKey = grid.scene.listContentKey
-    report.expect(key >= 0 && grid.scene.hoverChipVisible
-        && gridCameraNear(grid.scene.hoverChipRect["y"] as? Double ?? .nan, 320 - chipHeight),
+    report.expect(
+        key >= 0 && grid.scene.hoverChipVisible
+            && gridCameraNear(grid.scene.hoverChipRect["y"] as? Double ?? .nan, 320 - chipHeight),
         cppID: id, message: "the stationary hover chip begins clamped to the viewport bottom")
     grid.configureViewport(width: 640, height: 315, fontPx: 13, dpr: 2)
-    report.expect(grid.hoverKey == key && session.camera.snapshot.scrollY == scroll
-        && gridCameraNear(grid.scene.hoverChipRect["y"] as? Double ?? .nan, 315 - chipHeight),
+    report.expect(
+        grid.hoverKey == key && session.camera.snapshot.scrollY == scroll
+            && gridCameraNear(grid.scene.hoverChipRect["y"] as? Double ?? .nan, 315 - chipHeight),
         cppID: id, message: "height-only shrink reclamps the stationary hover chip without scrolling")
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    report.expect(grid.hoverKey == key && session.camera.snapshot.scrollY == scroll
-        && gridCameraNear(grid.scene.hoverChipRect["y"] as? Double ?? .nan, 320 - chipHeight),
+    report.expect(
+        grid.hoverKey == key && session.camera.snapshot.scrollY == scroll
+            && gridCameraNear(grid.scene.hoverChipRect["y"] as? Double ?? .nan, 320 - chipHeight),
         cppID: id, message: "height-only growth restores the stationary hover chip bottom clamp")
     report.expect(
         grid.scene.listContentKey == contentKey,
@@ -112,8 +114,9 @@ private func checkViewport(
         cppID: viewportID, message: "viewport dimensions are pushed into the session camera")
     report.expect(
         gridCameraNear(first.minHScroll, expectedMin)
-            && gridCameraNear(first.maxHScroll,
-                    Double(session.timeline.lengthTicks) * first.pixelsPerTick)
+            && gridCameraNear(
+                first.maxHScroll,
+                Double(session.timeline.lengthTicks) * first.pixelsPerTick)
             && gridCameraNear(first.maxVScroll, expectedMaxV),
         cppID: viewportID, message: "camera bounds derive from viewport, document extent, and projection")
     report.expect(
@@ -187,8 +190,9 @@ private func checkViewport(
     }
 
     let originalLength = session.timeline.lengthTicks
-    let farTick = Tick(min(
-        UInt64(TimeDefaults.maxTick - 2), UInt64(originalLength) + 480))
+    let farTick = Tick(
+        min(
+            UInt64(TimeDefaults.maxTick - 2), UInt64(originalLength) + 480))
     let farIDs = try? session.document.addNotes([
         NewNote(track: grid.trackIndex, tick: farTick, pitch: 12, duration: 2, velocity: 100)
     ])

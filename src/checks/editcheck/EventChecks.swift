@@ -82,4 +82,3 @@ internal func bareTrackNameCount(_ chunk: MidiChunk) -> Int {
     }
     return count
 }
-

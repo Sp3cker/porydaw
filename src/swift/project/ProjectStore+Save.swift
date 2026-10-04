@@ -34,7 +34,8 @@ extension ProjectStore {
         var songs = snapshot.songs
         songs[index].cfg = config
         songs[index].hasCfg = true
-        openedSnapshot = ProjectSnapshot(root: snapshot.root, songs: songs,
-                                         players: snapshot.players, trackBudgets: snapshot.trackBudgets)
+        openedSnapshot = ProjectSnapshot(
+            root: snapshot.root, songs: songs,
+            players: snapshot.players, trackBudgets: snapshot.trackBudgets)
     }
 }

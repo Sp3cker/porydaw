@@ -57,9 +57,14 @@ internal func eventListPlayheadFile(_ shape: EventListPlayheadShape) -> MidiFile
         return MidiFile(division: 24, chunks: [MidiChunk(events: [], endTick: 120)])
     }
     if shape == .eotCoincident {
-        return MidiFile(division: 24, chunks: [MidiChunk(events: [
-            .meta(tick: 120, type: 0x06, data: Array("at end".utf8)),
-        ], endTick: 120)])
+        return MidiFile(
+            division: 24,
+            chunks: [
+                MidiChunk(
+                    events: [
+                        .meta(tick: 120, type: 0x06, data: Array("at end".utf8))
+                    ], endTick: 120)
+            ])
     }
     var primary: [MidiEvent] = [
         .meta(tick: 0, type: 0x58, data: [4, 2, 0x18, 8]),
@@ -79,31 +84,38 @@ internal func eventListPlayheadFile(_ shape: EventListPlayheadShape) -> MidiFile
     case .basic, .tempo:
         endTick = 120
         if shape == .tempo {
-            primary.insert(.meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20]),
-                           at: 0)
+            primary.insert(
+                .meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20]),
+                at: 0)
         }
     case .empty, .eotCoincident:
         preconditionFailure("single-chunk fixture returned above")
     case .long:
         endTick = 500
         for tick in 100..<500 {
-            primary.append(.channel(tick: Tick(tick), status: 0xB0, data0: 11,
-                                    data1: UInt8(tick % 127)))
+            primary.append(
+                .channel(
+                    tick: Tick(tick), status: 0xB0, data0: 11,
+                    data1: UInt8(tick % 127)))
         }
     }
 
-    return MidiFile(division: 24, chunks: [
-        MidiChunk(events: primary, endTick: endTick),
-        MidiChunk(events: [
-            .meta(tick: 5, type: 0x06, data: Array("metadata only".utf8)),
-        ], endTick: 120),
-        MidiChunk(events: [
-            .channel(status: 0xC1, data0: 1),
-            .channel(tick: 24, status: 0xB1, data0: 7, data1: 64),
-            .channel(tick: 48, status: 0x91, data0: 67, data1: 90),
-            .channel(tick: 72, status: 0x81, data0: 67),
-        ], endTick: 120),
-    ])
+    return MidiFile(
+        division: 24,
+        chunks: [
+            MidiChunk(events: primary, endTick: endTick),
+            MidiChunk(
+                events: [
+                    .meta(tick: 5, type: 0x06, data: Array("metadata only".utf8))
+                ], endTick: 120),
+            MidiChunk(
+                events: [
+                    .channel(status: 0xC1, data0: 1),
+                    .channel(tick: 24, status: 0xB1, data0: 7, data1: 64),
+                    .channel(tick: 48, status: 0x91, data0: 67, data1: 90),
+                    .channel(tick: 72, status: 0x81, data0: 67),
+                ], endTick: 120),
+        ])
 }
 
 internal func playheadRowOracle(_ rows: [EventListRow], tick: Double) -> Int {
@@ -119,8 +131,10 @@ internal func playheadRowOracle(_ rows: [EventListRow], tick: Double) -> Int {
     return row
 }
 
-@MainActor internal func rowFor(_ presenter: EventListPresenter, tick: Tick,
-                   kind: EventListEventType) -> Int? {
+@MainActor internal func rowFor(
+    _ presenter: EventListPresenter, tick: Tick,
+    kind: EventListEventType
+) -> Int? {
     presenter.model.rows.first { $0.tick == tick && $0.kind == kind }?.index
 }
 
@@ -141,8 +155,10 @@ internal func playheadRowOracle(_ rows: [EventListRow], tick: Double) -> Int {
 }
 
 @MainActor
-internal func runEventListPlayheadChecks(_ report: CheckReport, session suite: DocumentSession,
-                                         service: ProjectService) {
+internal func runEventListPlayheadChecks(
+    _ report: CheckReport, session suite: DocumentSession,
+    service: ProjectService
+) {
     tintLastOfRun(report, suite: suite, service: service)
     focusCommitsCursor(report, suite: suite, service: service)
     focusedSiblingWins(report, suite: suite, service: service)
@@ -156,45 +172,55 @@ internal func runEventListPlayheadChecks(_ report: CheckReport, session suite: D
 }
 
 @MainActor
-private func eventListFixtureProjection(_ report: CheckReport, suite: DocumentSession,
-                                        service: ProjectService) {
+private func eventListFixtureProjection(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
     let id = "eventviews/EventViewsChromeTest::rowMirror"
     for shape in [EventListPlayheadShape.empty, .eotCoincident, .basic, .tempo] {
         let fixture = EventListPlayheadFixture(suite: suite, service: service, shape: shape)
         let presenter = fixture.presenter
         let chunk = fixture.session.document.rawChunks[0]
         let tempos = fixture.session.document.state.tempo
-        report.expectEqual(expected: chunk.events.count + tempos.count + 1,
-                           actual: presenter.rowCount, cppID: id,
-                           what: "the table mirrors the chunk's events plus tempo rows and one EOT")
-        report.expect(presenter.model.rows.last?.isEndOfTrack == true
-            && presenter.model.rows.last?.tick == chunk.endTick,
+        report.expectEqual(
+            expected: chunk.events.count + tempos.count + 1,
+            actual: presenter.rowCount, cppID: id,
+            what: "the table mirrors the chunk's events plus tempo rows and one EOT")
+        report.expect(
+            presenter.model.rows.last?.isEndOfTrack == true
+                && presenter.model.rows.last?.tick == chunk.endTick,
             cppID: id, message: "the sentinel follows the fixture's end tick")
     }
     let tempo = EventListPlayheadFixture(suite: suite, service: service, shape: .tempo)
     let presenter = tempo.presenter
-    report.expect(presenter.model.rows.first?.tempo?.tick == 0,
-                  cppID: "eventviews/EventViewsRemapTest::tempoProjectionRows",
-                  message: "a tick-zero tempo point projects the first table row")
+    report.expect(
+        presenter.model.rows.first?.tempo?.tick == 0,
+        cppID: "eventviews/EventViewsRemapTest::tempoProjectionRows",
+        message: "a tick-zero tempo point projects the first table row")
     presenter.setChunk(index: 1)
-    report.expect(!presenter.model.rows.contains(where: { $0.tempo != nil }),
-                  cppID: "eventviews/EventViewsRemapTest::tempoProjectionRows",
-                  message: "the tempo row leads the conductor chunk and vanishes on a track switch")
+    report.expect(
+        !presenter.model.rows.contains(where: { $0.tempo != nil }),
+        cppID: "eventviews/EventViewsRemapTest::tempoProjectionRows",
+        message: "the tempo row leads the conductor chunk and vanishes on a track switch")
     presenter.setVisible(visible: true)
     presenter.openChunkMenu(x: 0, y: 0)
     presenter.activateMenuAction(actionId: 2)
-    report.expect(presenter.chunkIndex == 2 && presenter.chunk == 2,
-                  cppID: "eventviews/EventViewsRemapTest::metadataChunkTransition",
-                  message: "selecting a chunk through the menu model echoes the chunk")
-    report.expect(presenter.model.rows.contains {
-        $0.kind == .program && $0.tick == 0 && $0.eventIndex != nil
-    }, cppID: "eventviews/EventViewsRemapTest::metadataChunkTransition",
-    message: "the promoted program event resolves to a rendered row")
+    report.expect(
+        presenter.chunkIndex == 2 && presenter.chunk == 2,
+        cppID: "eventviews/EventViewsRemapTest::metadataChunkTransition",
+        message: "selecting a chunk through the menu model echoes the chunk")
+    report.expect(
+        presenter.model.rows.contains {
+            $0.kind == .program && $0.tick == 0 && $0.eventIndex != nil
+        }, cppID: "eventviews/EventViewsRemapTest::metadataChunkTransition",
+        message: "the promoted program event resolves to a rendered row")
 }
 
 @MainActor
-private func eventListTempoShapeAtomic(_ report: CheckReport, suite: DocumentSession,
-                                       service: ProjectService) {
+private func eventListTempoShapeAtomic(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
     let fixture = EventListPlayheadFixture(suite: suite, service: service, shape: .tempo)
     let document = fixture.session.document
     let presenter = fixture.presenter
@@ -203,86 +229,110 @@ private func eventListTempoShapeAtomic(_ report: CheckReport, suite: DocumentSes
     document.insertRawEvent(
         chunk: 0, event: .meta(tick: tick, type: 0x06, data: Array("convert".utf8)))
     let id = "eventviews/EventViewsEditsTest::rawTempoAtomic"
-    report.expect(presenter.model.rows.first?.tempo?.tick == 0, cppID: id,
-                  message: "a tick-zero tempo point projects the first table row")
-    report.expect(presenter.model.rows.contains(where: { $0.tick == tick && $0.event?.isMeta == true }), cppID: id, message: "the Tempo journey re-establishes its own fixture rows")
-    guard let raw = presenter.model.rows.firstIndex(where: {
-        $0.tick == tick && $0.event?.isMeta == true
-    }) else {
+    report.expect(
+        presenter.model.rows.first?.tempo?.tick == 0, cppID: id,
+        message: "a tick-zero tempo point projects the first table row")
+    report.expect(
+        presenter.model.rows.contains(where: { $0.tick == tick && $0.event?.isMeta == true }), cppID: id,
+        message: "the Tempo journey re-establishes its own fixture rows")
+    guard
+        let raw = presenter.model.rows.firstIndex(where: {
+            $0.tick == tick && $0.event?.isMeta == true
+        })
+    else {
         return
     }
     let beforeTempo = document.history.undoIndex
     let converted = presenter.commitCellEdit(row: raw, column: 1, text: "9")
-    report.expect(converted && document.history.undoIndex == beforeTempo + 1,
-                  cppID: id, message: "each conversion is one undo step through the presenter")
-    report.expect(presenter.model.rows.contains(where: { $0.tick == tick && $0.tempo != nil })
-                  && !presenter.model.rows.contains(where: {
-                      $0.tick == tick && $0.event?.isMeta == true
-                  }) && document.rawChunks[0].events.filter({
-                      $0.tick == 0 && $0.isMeta
-                  }) == original, cppID: id,
-                  message: "tempo and raw conversions preserve the tick-zero meta set")
+    report.expect(
+        converted && document.history.undoIndex == beforeTempo + 1,
+        cppID: id, message: "each conversion is one undo step through the presenter")
+    report.expect(
+        presenter.model.rows.contains(where: { $0.tick == tick && $0.tempo != nil })
+            && !presenter.model.rows.contains(where: {
+                $0.tick == tick && $0.event?.isMeta == true
+            })
+            && document.rawChunks[0].events.filter({
+                $0.tick == 0 && $0.isMeta
+            }) == original, cppID: id,
+        message: "tempo and raw conversions preserve the tick-zero meta set")
     let convertedCount = document.history.undoCount
     let conversionUndone = document.history.undoDocument()
-    report.expect(conversionUndone && document.history.undoIndex == beforeTempo
-                  && document.history.undoCount == convertedCount
-                  && rowFor(presenter, tick: tick, kind: .meta) != nil
-                  && !presenter.model.rows.contains(where: { $0.tick == tick && $0.tempo != nil })
-                  && document.rawChunks[0].events.filter({ $0.tick == 0 && $0.isMeta }) == original,
-                  cppID: id, message: "undo restores the raw meta without changing tick-zero metas")
+    report.expect(
+        conversionUndone && document.history.undoIndex == beforeTempo
+            && document.history.undoCount == convertedCount
+            && rowFor(presenter, tick: tick, kind: .meta) != nil
+            && !presenter.model.rows.contains(where: { $0.tick == tick && $0.tempo != nil })
+            && document.rawChunks[0].events.filter({ $0.tick == 0 && $0.isMeta }) == original,
+        cppID: id, message: "undo restores the raw meta without changing tick-zero metas")
     let conversionRedone = document.history.redoDocument()
-    report.expect(conversionRedone && document.history.undoIndex == beforeTempo + 1
-                  && document.history.undoCount == convertedCount
-                  && presenter.model.rows.contains(where: { $0.tick == tick && $0.tempo != nil })
-                  && rowFor(presenter, tick: tick, kind: .meta) == nil
-                  && document.rawChunks[0].events.filter({ $0.tick == 0 && $0.isMeta }) == original,
-                  cppID: id, message: "redo restores the tempo without changing tick-zero metas")
-    report.expect(presenter.model.rows.contains(where: { $0.tick == tick && $0.tempo != nil }), cppID: id, message: "the converted tempo row is available")
-    guard let tempo = presenter.model.rows.firstIndex(where: {
-        $0.tick == tick && $0.tempo != nil
-    }) else {
+    report.expect(
+        conversionRedone && document.history.undoIndex == beforeTempo + 1
+            && document.history.undoCount == convertedCount
+            && presenter.model.rows.contains(where: { $0.tick == tick && $0.tempo != nil })
+            && rowFor(presenter, tick: tick, kind: .meta) == nil
+            && document.rawChunks[0].events.filter({ $0.tick == 0 && $0.isMeta }) == original,
+        cppID: id, message: "redo restores the tempo without changing tick-zero metas")
+    report.expect(
+        presenter.model.rows.contains(where: { $0.tick == tick && $0.tempo != nil }), cppID: id,
+        message: "the converted tempo row is available")
+    guard
+        let tempo = presenter.model.rows.firstIndex(where: {
+            $0.tick == tick && $0.tempo != nil
+        })
+    else {
         return
     }
     let beforeRaw = document.history.undoIndex
     let restored = presenter.commitCellEdit(row: tempo, column: 1, text: "10")
-    report.expect(restored && document.history.undoIndex == beforeRaw + 1,
-                  cppID: id, message: "the reverse conversion is one undo step through the presenter")
-    report.expect(presenter.model.rows.contains(where: {
-        $0.tick == tick && $0.event?.isMeta == true
-    }) && !presenter.model.rows.contains(where: {
-        $0.tick == tick && $0.tempo != nil
-    }) && document.rawChunks[0].events.filter({
-        $0.tick == 0 && $0.isMeta
-    }) == original, cppID: id,
-    message: "the reverse conversion preserves the tick-zero meta set")
+    report.expect(
+        restored && document.history.undoIndex == beforeRaw + 1,
+        cppID: id, message: "the reverse conversion is one undo step through the presenter")
+    report.expect(
+        presenter.model.rows.contains(where: {
+            $0.tick == tick && $0.event?.isMeta == true
+        })
+            && !presenter.model.rows.contains(where: {
+                $0.tick == tick && $0.tempo != nil
+            })
+            && document.rawChunks[0].events.filter({
+                $0.tick == 0 && $0.isMeta
+            }) == original, cppID: id,
+        message: "the reverse conversion preserves the tick-zero meta set")
     let reverseCount = document.history.undoCount
     let reverseUndone = document.history.undoDocument()
-    report.expect(reverseUndone && document.history.undoIndex == beforeRaw
-                  && document.history.undoCount == reverseCount
-                  && presenter.model.rows.contains(where: { $0.tick == tick && $0.tempo != nil })
-                  && rowFor(presenter, tick: tick, kind: .meta) == nil
-                  && document.rawChunks[0].events.filter({ $0.tick == 0 && $0.isMeta }) == original,
-                  cppID: id, message: "undoing the reverse conversion restores the tempo")
+    report.expect(
+        reverseUndone && document.history.undoIndex == beforeRaw
+            && document.history.undoCount == reverseCount
+            && presenter.model.rows.contains(where: { $0.tick == tick && $0.tempo != nil })
+            && rowFor(presenter, tick: tick, kind: .meta) == nil
+            && document.rawChunks[0].events.filter({ $0.tick == 0 && $0.isMeta }) == original,
+        cppID: id, message: "undoing the reverse conversion restores the tempo")
     let reverseRedone = document.history.redoDocument()
-    report.expect(reverseRedone && document.history.undoIndex == beforeRaw + 1
-                  && document.history.undoCount == reverseCount
-                  && rowFor(presenter, tick: tick, kind: .meta) != nil
-                  && !presenter.model.rows.contains(where: { $0.tick == tick && $0.tempo != nil })
-                  && document.rawChunks[0].events.filter({ $0.tick == 0 && $0.isMeta }) == original,
-                  cppID: id, message: "redoing the reverse conversion restores the raw meta")
+    report.expect(
+        reverseRedone && document.history.undoIndex == beforeRaw + 1
+            && document.history.undoCount == reverseCount
+            && rowFor(presenter, tick: tick, kind: .meta) != nil
+            && !presenter.model.rows.contains(where: { $0.tick == tick && $0.tempo != nil })
+            && document.rawChunks[0].events.filter({ $0.tick == 0 && $0.isMeta }) == original,
+        cppID: id, message: "redoing the reverse conversion restores the raw meta")
 }
 
 @MainActor
-private func tintLastOfRun(_ report: CheckReport, suite: DocumentSession,
-                           service: ProjectService) {
+private func tintLastOfRun(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
     let fixture = EventListPlayheadFixture(suite: suite, service: service, shape: .basic)
     // A001: the Swift value fixture is constructed directly, so the native open-rig failure
     // path is represented by the attached source invariant below.
-    report.expect(fixture.session.document.rawChunks.indices.contains(0), cppID: tintLastOfRunID,
-                  message: "A001 basic fixture has a primary chunk")
+    report.expect(
+        fixture.session.document.rawChunks.indices.contains(0), cppID: tintLastOfRunID,
+        message: "A001 basic fixture has a primary chunk")
     // A002: presenter attachment is the Swift equivalent of locating EventWidgets.
-    report.expect(fixture.presenter.attached && fixture.presenter.rowCount > 0,
-                  cppID: tintLastOfRunID, message: "A002 event-list presenter is attached")
+    report.expect(
+        fixture.presenter.attached && fixture.presenter.rowCount > 0,
+        cppID: tintLastOfRunID, message: "A002 event-list presenter is attached")
 
     let rows = fixture.presenter.model.rows
     let cases: [(Double, String)] = [
@@ -294,21 +344,25 @@ private func tintLastOfRun(_ report: CheckReport, suite: DocumentSession,
         let expected = playheadRowOracle(rows, tick: tick)
         fixture.presenter.setPlayheadTick(tick: tick, playing: true)
         // A003: controller playRow follows the independent row oracle.
-        report.expectEqual(expected: expected, actual: fixture.presenter.playRow, cppID: tintLastOfRunID,
-                           what: "A003 \(explanation) at tick \(tick)")
+        report.expectEqual(
+            expected: expected, actual: fixture.presenter.playRow, cppID: tintLastOfRunID,
+            what: "A003 \(explanation) at tick \(tick)")
         // A004: only one complete row has the playhead tint, with the stable bridge color.
-        report.expect(tintedRows(fixture.presenter) == (expected >= 0 ? [expected] : [])
-            && hasExactTintContract(fixture.presenter, expected: expected),
+        report.expect(
+            tintedRows(fixture.presenter) == (expected >= 0 ? [expected] : [])
+                && hasExactTintContract(fixture.presenter, expected: expected),
             cppID: tintLastOfRunID,
             message: "A004 whole-row tint matches the oracle at tick \(tick)")
     }
 
     fixture.presenter.setPlayheadTick(tick: -1, playing: false)
     // A005: a negative transport tick clears the published play row.
-    report.expectEqual(expected: -1, actual: fixture.presenter.playRow, cppID: tintLastOfRunID,
-                       what: "A005 negative tick clears playRow")
+    report.expectEqual(
+        expected: -1, actual: fixture.presenter.playRow, cppID: tintLastOfRunID,
+        what: "A005 negative tick clears playRow")
     // A006: clearing playRow clears every presenter/model tint.
-    report.expect(tintedRows(fixture.presenter).isEmpty
-        && hasExactTintContract(fixture.presenter, expected: -1),
+    report.expect(
+        tintedRows(fixture.presenter).isEmpty
+            && hasExactTintContract(fixture.presenter, expected: -1),
         cppID: tintLastOfRunID, message: "A006 negative tick leaves no tinted row")
 }

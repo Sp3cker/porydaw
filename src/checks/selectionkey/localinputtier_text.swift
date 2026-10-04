@@ -3,22 +3,26 @@ import PorydawAppCommands
 import PorydawCore
 
 @MainActor
-func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: DocumentSession,
-                                            service: ProjectService) {
+func drawerOriginalNumericPromptTransaction(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
     let id = "selectionkey/SelectionLocalInputTierTest::numericPromptOwnsKeys"
     let labelID = "selectionkey/SelectionWindowTierTest::parameterLabelActivationAndSharedCommands"
     let lifetimeID = "selectionkey/SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime"
     // localinputtier_text.cpp: track0 CC10 at48=32 and96=64; insert at144.
-    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
-                                                     pan: [(48, 32), (96, 64)],
-                                                     tailTick: 6000)
+    let fixture = drawerAutomationAutomationFixture(
+        suite: suite, service: service,
+        pan: [(48, 32), (96, 64)],
+        tailTick: 6000)
     fixture.activate(fixture.panLane)
     var insertedNotes: [NoteID] = []
     do {
         let notes = try fixture.document.addNotes([
             NewNote(track: 0, tick: 24, pitch: 60, duration: 24, velocity: 100)
         ])
-        report.expectEqual(expected: 1, actual: notes.count, cppID: id, what: "the original selected fixture note exists")
+        report.expectEqual(
+            expected: 1, actual: notes.count, cppID: id, what: "the original selected fixture note exists")
         insertedNotes = notes
         fixture.session.setSelectedNotes(notes)
     } catch {
@@ -28,60 +32,80 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     let before = fixture.snapshot
     let beforeHistory = fixture.document.history.undoIndex
     let beforeBytes = try? fixture.document.state.file.encoded()
-    report.expect(beforeBytes != nil, cppID: lifetimeID,
-                  message: "the first song serializes before lifetime routing")
+    report.expect(
+        beforeBytes != nil, cppID: lifetimeID,
+        message: "the first song serializes before lifetime routing")
     let state = fixture.document.state
     let selection = fixture.session.selectedNotes
     let page = fixture.page
-    report.expect(page.openInsertionPrompt(tick: 144, value: 64), cppID: id,
-                  message: "the original empty-tick numeric prompt opens")
-    report.expect(!page.promptForExistingNode, cppID: id,
-                  message: "the original tick-144 transaction is explicitly an insertion")
-    report.expectEqual(expected: "0", actual: page.promptDraft, cppID: id,
-                       what: "CC10 insertion starts at its signed center value")
+    report.expect(
+        page.openInsertionPrompt(tick: 144, value: 64), cppID: id,
+        message: "the original empty-tick numeric prompt opens")
+    report.expect(
+        !page.promptForExistingNode, cppID: id,
+        message: "the original tick-144 transaction is explicitly an insertion")
+    report.expectEqual(
+        expected: "0", actual: page.promptDraft, cppID: id,
+        what: "CC10 insertion starts at its signed center value")
     page.updatePromptDraft(draft: "12")
-    report.expectEqual(expected: "12", actual: page.promptDraft, cppID: id,
-                       what: "the production prompt retains the supplied numeric draft")
-    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
-                       what: "draft editing does not mutate the song")
-    report.expectEqual(expected: selection, actual: fixture.session.selectedNotes, cppID: id,
-                       what: "draft editing preserves note selection")
-    report.expectEqual(expected: beforeBytes,
-                       actual: try? fixture.document.state.file.encoded(), cppID: id,
-                       what: "numeric draft leaves every serialized song byte unchanged")
-    report.expect(fixture.document.history.undoIndex == beforeHistory, cppID: id,
-                  message: "numeric draft creates no song history entry")
+    report.expectEqual(
+        expected: "12", actual: page.promptDraft, cppID: id,
+        what: "the production prompt retains the supplied numeric draft")
+    report.expectEqual(
+        expected: before, actual: fixture.snapshot, cppID: id,
+        what: "draft editing does not mutate the song")
+    report.expectEqual(
+        expected: selection, actual: fixture.session.selectedNotes, cppID: id,
+        what: "draft editing preserves note selection")
+    report.expectEqual(
+        expected: beforeBytes,
+        actual: try? fixture.document.state.file.encoded(), cppID: id,
+        what: "numeric draft leaves every serialized song byte unchanged")
+    report.expect(
+        fixture.document.history.undoIndex == beforeHistory, cppID: id,
+        message: "numeric draft creates no song history entry")
     page.cancelPrompt()
     report.expect(!page.promptOpen, cppID: id, message: "cancellation closes the prompt")
-    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
-                       what: "cancellation leaves the original document unchanged")
-    report.expect(fixture.document.state == state, cppID: id,
-                  message: "draft and cancellation preserve the full song contents")
-    report.expectEqual(expected: beforeBytes,
-                       actual: try? fixture.document.state.file.encoded(), cppID: id,
-                       what: "numeric cancellation preserves every serialized song byte")
-    report.expect(fixture.document.history.undoIndex == beforeHistory, cppID: id,
-                  message: "numeric cancellation creates no song history entry")
-    report.expectEqual(expected: selection, actual: fixture.session.selectedNotes, cppID: id,
-                       what: "numeric cancellation preserves selected NoteIDs")
-    report.expectEqual(expected: ["48:32", "96:64"], actual: fixture.values(fixture.panLane),
-                       cppID: id, what: "the cancelled CC10 insertion retains both original fixture nodes")
+    report.expectEqual(
+        expected: before, actual: fixture.snapshot, cppID: id,
+        what: "cancellation leaves the original document unchanged")
+    report.expect(
+        fixture.document.state == state, cppID: id,
+        message: "draft and cancellation preserve the full song contents")
+    report.expectEqual(
+        expected: beforeBytes,
+        actual: try? fixture.document.state.file.encoded(), cppID: id,
+        what: "numeric cancellation preserves every serialized song byte")
+    report.expect(
+        fixture.document.history.undoIndex == beforeHistory, cppID: id,
+        message: "numeric cancellation creates no song history entry")
+    report.expectEqual(
+        expected: selection, actual: fixture.session.selectedNotes, cppID: id,
+        what: "numeric cancellation preserves selected NoteIDs")
+    report.expectEqual(
+        expected: ["48:32", "96:64"], actual: fixture.values(fixture.panLane),
+        cppID: id, what: "the cancelled CC10 insertion retains both original fixture nodes")
 
-    report.expect(page.rows.contains { $0.parameter == fixture.panLane }, cppID: id,
-                  message: "the original CC10 lane is present in the page's row stack")
-    report.expect(insertedNotes.first.flatMap { fixture.document.note($0) } != nil, cppID: id,
-                  message: "the original fixture note resolves by its inserted ID")
+    report.expect(
+        page.rows.contains { $0.parameter == fixture.panLane }, cppID: id,
+        message: "the original CC10 lane is present in the page's row stack")
+    report.expect(
+        insertedNotes.first.flatMap { fixture.document.note($0) } != nil, cppID: id,
+        message: "the original fixture note resolves by its inserted ID")
 
     // windowtier_keyboard.cpp parameterLabelActivationAndSharedCommands opens
     // the volume lane's insertion prompt at tick 5808 value 48 through the
     // same production entry point.
     fixture.activate(fixture.volumeLane)
-    report.expect(page.rows.contains { $0.parameter == fixture.volumeLane }, cppID: labelID,
-                  message: "the original volume lane is present in the page's row stack")
-    report.expect(page.openInsertionPrompt(tick: 5808, value: 48), cppID: labelID,
-                  message: "the original volume-lane insertion prompt opens")
-    report.expectEqual(expected: "48", actual: page.promptDraft, cppID: labelID,
-                       what: "the volume prompt opens with the plotted value as its draft")
+    report.expect(
+        page.rows.contains { $0.parameter == fixture.volumeLane }, cppID: labelID,
+        message: "the original volume lane is present in the page's row stack")
+    report.expect(
+        page.openInsertionPrompt(tick: 5808, value: 48), cppID: labelID,
+        message: "the original volume-lane insertion prompt opens")
+    report.expectEqual(
+        expected: "48", actual: page.promptDraft, cppID: labelID,
+        what: "the volume prompt opens with the plotted value as its draft")
     page.cancelPrompt()
 
     // windowtier_lifetime.cpp tabsDocumentsAndPrimaryTrackLifetime opens the
@@ -89,22 +113,28 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     // routes through cancelSectionInteraction, and a late acceptance writes
     // nothing.
     fixture.activate(fixture.panLane)
-    report.expect(page.openInsertionPrompt(tick: 5760, value: 64), cppID: lifetimeID,
-                  message: "the original pan-lane insertion prompt opens")
+    report.expect(
+        page.openInsertionPrompt(tick: 5760, value: 64), cppID: lifetimeID,
+        message: "the original pan-lane insertion prompt opens")
     page.cancelSectionInteraction()
-    report.expect(!page.promptOpen, cppID: lifetimeID,
-                  message: "the document-switch cancellation closes the prompt")
-    report.expect(!page.acceptPrompt(displayedValue: 96), cppID: lifetimeID,
-                  message: "accepting a closed prompt commits nothing")
-    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: lifetimeID,
-                       what: "the closed prompt's late acceptance leaves the document unchanged")
-    report.expectEqual(expected: beforeBytes,
-                       actual: try? fixture.document.state.file.encoded(),
-                       cppID: lifetimeID,
-                       what: "the cancelled document-switch prompt preserves first-song bytes")
-    let peer = drawerAutomationAutomationFixture(suite: suite, service: service,
-                                                 pan: [(48, 32), (96, 64)],
-                                                 tailTick: 6000)
+    report.expect(
+        !page.promptOpen, cppID: lifetimeID,
+        message: "the document-switch cancellation closes the prompt")
+    report.expect(
+        !page.acceptPrompt(displayedValue: 96), cppID: lifetimeID,
+        message: "accepting a closed prompt commits nothing")
+    report.expectEqual(
+        expected: before, actual: fixture.snapshot, cppID: lifetimeID,
+        what: "the closed prompt's late acceptance leaves the document unchanged")
+    report.expectEqual(
+        expected: beforeBytes,
+        actual: try? fixture.document.state.file.encoded(),
+        cppID: lifetimeID,
+        what: "the cancelled document-switch prompt preserves first-song bytes")
+    let peer = drawerAutomationAutomationFixture(
+        suite: suite, service: service,
+        pan: [(48, 32), (96, 64)],
+        tailTick: 6000)
     peer.activate(peer.panLane)
     let pairB: [NoteID]
     do {
@@ -116,10 +146,12 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
         report.fail(lifetimeID, "second-document note pair creation failed: \(error)")
         return
     }
-    report.expectEqual(expected: 2, actual: pairB.count, cppID: lifetimeID,
-                       what: "the second document holds the reserved tick-960 note pair")
-    report.expect(pairB.allSatisfy { peer.document.note($0) != nil }, cppID: lifetimeID,
-                  message: "the second-document pair resolves by its inserted IDs")
+    report.expectEqual(
+        expected: 2, actual: pairB.count, cppID: lifetimeID,
+        what: "the second document holds the reserved tick-960 note pair")
+    report.expect(
+        pairB.allSatisfy { peer.document.note($0) != nil }, cppID: lifetimeID,
+        message: "the second-document pair resolves by its inserted IDs")
     let pairA: [NoteID]
     do {
         pairA = try fixture.document.addNotes([
@@ -130,52 +162,65 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
         report.fail(lifetimeID, "first-document note pair creation failed: \(error)")
         return
     }
-    report.expectEqual(expected: 2, actual: pairA.count, cppID: lifetimeID,
-                       what: "the first document holds the reserved tick-3840 note pair")
+    report.expectEqual(
+        expected: 2, actual: pairA.count, cppID: lifetimeID,
+        what: "the first document holds the reserved tick-3840 note pair")
     _ = peer.page.activateParameter(index: AutomationCatalog.index(of: .tempo, track: 0) ?? 0)
-    report.expectEqual(expected: AutomationParameter.tempo, actual: peer.page.activeParameter, cppID: lifetimeID,
-                       what: "the second document keeps tempo active")
-    report.expectEqual(expected: fixture.panLane, actual: page.activeParameter, cppID: lifetimeID,
-                       what: "the first document keeps pan active while the second shows tempo")
+    report.expectEqual(
+        expected: AutomationParameter.tempo, actual: peer.page.activeParameter, cppID: lifetimeID,
+        what: "the second document keeps tempo active")
+    report.expectEqual(
+        expected: fixture.panLane, actual: page.activeParameter, cppID: lifetimeID,
+        what: "the first document keeps pan active while the second shows tempo")
     let firstSteady = fixture.snapshot
     let firstSteadyBytes = try? fixture.document.state.file.encoded()
     let peerSteadyBytes = try? peer.document.state.file.encoded()
-    report.expect(firstSteadyBytes != nil && peerSteadyBytes != nil,
-                  cppID: lifetimeID,
-                  message: "both live documents serialize before cross-tab key routing")
+    report.expect(
+        firstSteadyBytes != nil && peerSteadyBytes != nil,
+        cppID: lifetimeID,
+        message: "both live documents serialize before cross-tab key routing")
     peer.document.nudgeNotes(pairB, byTicks: 24, byKeys: 0)
-    report.expect(peer.document.note(pairB[0])?.tick == Tick(984), cppID: lifetimeID,
-                  message: "the second document's pair advances under the Right-arrow nudge")
-    report.expectEqual(expected: firstSteady, actual: fixture.snapshot, cppID: lifetimeID,
-                       what: "the second-document nudge leaves the first document unchanged")
-    report.expectEqual(expected: firstSteadyBytes,
-                       actual: try? fixture.document.state.file.encoded(),
-                       cppID: lifetimeID,
-                       what: "a second-document edit preserves the first song's exact bytes")
+    report.expect(
+        peer.document.note(pairB[0])?.tick == Tick(984), cppID: lifetimeID,
+        message: "the second document's pair advances under the Right-arrow nudge")
+    report.expectEqual(
+        expected: firstSteady, actual: fixture.snapshot, cppID: lifetimeID,
+        what: "the second-document nudge leaves the first document unchanged")
+    report.expectEqual(
+        expected: firstSteadyBytes,
+        actual: try? fixture.document.state.file.encoded(),
+        cppID: lifetimeID,
+        what: "a second-document edit preserves the first song's exact bytes")
     let peerAfterNudgeBytes = try? peer.document.state.file.encoded()
-    report.expect(peerAfterNudgeBytes != nil && peerSteadyBytes != peerAfterNudgeBytes,
-                  cppID: lifetimeID,
-                  message: "the second-document edit changes its own serialized bytes")
+    report.expect(
+        peerAfterNudgeBytes != nil && peerSteadyBytes != peerAfterNudgeBytes,
+        cppID: lifetimeID,
+        message: "the second-document edit changes its own serialized bytes")
     let peerSteady = peer.snapshot
     fixture.document.nudgeNotes(pairA, byTicks: 0, byKeys: 1)
-    report.expect(fixture.document.note(pairA[0])?.pitch == 61, cppID: lifetimeID,
-                  message: "the reselected first document transposes one semitone under Up")
-    report.expectEqual(expected: peerSteady, actual: peer.snapshot, cppID: lifetimeID,
-                       what: "the first-document transpose leaves the second document unchanged")
-    report.expectEqual(expected: peerAfterNudgeBytes,
-                       actual: try? peer.document.state.file.encoded(),
-                       cppID: lifetimeID,
-                       what: "the first-document transpose preserves second-song bytes")
+    report.expect(
+        fixture.document.note(pairA[0])?.pitch == 61, cppID: lifetimeID,
+        message: "the reselected first document transposes one semitone under Up")
+    report.expectEqual(
+        expected: peerSteady, actual: peer.snapshot, cppID: lifetimeID,
+        what: "the first-document transpose leaves the second document unchanged")
+    report.expectEqual(
+        expected: peerAfterNudgeBytes,
+        actual: try? peer.document.state.file.encoded(),
+        cppID: lifetimeID,
+        what: "the first-document transpose preserves second-song bytes")
     var layout = EditorDrawerLayout()
     _ = layout.attachPage(page)
     _ = layout.setSectionVisible(.automation, visible: false, drawerOwnsFocus: false)
-    report.expect(!layout.isVisible(.automation), cppID: lifetimeID,
-                  message: "the production layout hides the automation section")
+    report.expect(
+        !layout.isVisible(.automation), cppID: lifetimeID,
+        message: "the production layout hides the automation section")
     let hiddenTick = fixture.document.note(pairA[0])?.tick ?? Tick(0)
     fixture.session.setSelectedNotes(pairA)
     fixture.document.nudgeNotes(pairA, byTicks: 24, byKeys: 0)
-    report.expect(fixture.document.note(pairA[0])?.tick == hiddenTick + Tick(24), cppID: lifetimeID,
-                  message: "note arrows route while the automation section stays hidden")
+    report.expect(
+        fixture.document.note(pairA[0])?.tick == hiddenTick + Tick(24), cppID: lifetimeID,
+        message: "note arrows route while the automation section stays hidden")
     // windowtier_lifetime.cpp:243 snapshots documentA after the second tab's
     // close and compares its bytes after the reopened tab's routed edits.
     let firstBytesBeforeReopen = try? fixture.document.state.file.encoded()
@@ -183,16 +228,20 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
         report.fail(lifetimeID, "first-document reopen snapshot failed to encode")
         return
     }
-    let second = drawerAutomationAutomationFixture(suite: suite, service: service,
-                                                   pan: [(48, 32), (96, 64)],
-                                                   tailTick: 6000)
-    report.expectEqual(expected: fixture.volumeLane, actual: second.page.activeParameter, cppID: lifetimeID,
-                       what: "a fresh page presents the volume lane")
+    let second = drawerAutomationAutomationFixture(
+        suite: suite, service: service,
+        pan: [(48, 32), (96, 64)],
+        tailTick: 6000)
+    report.expectEqual(
+        expected: fixture.volumeLane, actual: second.page.activeParameter, cppID: lifetimeID,
+        what: "a fresh page presents the volume lane")
     let addedTrack = second.document.addTrack(voice: 0)
-    report.expect(addedTrack == 1, cppID: lifetimeID,
-                  message: "the document offers the second engine track")
-    report.expect(second.document.engineTracks.usedTrackCount > 1, cppID: lifetimeID,
-                  message: "the rich document carries two engine tracks")
+    report.expect(
+        addedTrack == 1, cppID: lifetimeID,
+        message: "the document offers the second engine track")
+    report.expect(
+        second.document.engineTracks.usedTrackCount > 1, cppID: lifetimeID,
+        message: "the rich document carries two engine tracks")
     let pairT1: [NoteID]
     do {
         pairT1 = try second.document.addNotes([
@@ -203,8 +252,9 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
         report.fail(lifetimeID, "track-1 note pair creation failed: \(error)")
         return
     }
-    report.expectEqual(expected: 2, actual: pairT1.count, cppID: lifetimeID,
-                       what: "the reserved track-1 tick-960 note pair inserts")
+    report.expectEqual(
+        expected: 2, actual: pairT1.count, cppID: lifetimeID,
+        what: "the reserved track-1 tick-960 note pair inserts")
     let trackZeroStaging = try? second.document.addNotes([
         NewNote(track: 0, tick: 2000, pitch: 60, duration: 48, velocity: 100),
         NewNote(track: 0, tick: 2096, pitch: 64, duration: 48, velocity: 96),
@@ -217,40 +267,52 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     second.session.setSelectedNotes(trackZeroPair)
     let grid = PianoGrid(session: second.session)
     grid.setTrack(index: 1)
-    report.expect(second.session.selectedTrack == 1, cppID: lifetimeID,
-                  message: "the primary track follows the change")
-    report.expect(second.session.selectedNotes.isEmpty, cppID: lifetimeID,
-                  message: "the primary-track change clears the note selection")
+    report.expect(
+        second.session.selectedTrack == 1, cppID: lifetimeID,
+        message: "the primary track follows the change")
+    report.expect(
+        second.session.selectedNotes.isEmpty, cppID: lifetimeID,
+        message: "the primary-track change clears the note selection")
     let trackOnePan = AutomationParameter.controlChange(track: 1, controller: TimeDefaults.ccPan)
-    report.expectEqual(expected: trackOnePan, actual: second.page.activeParameter, cppID: lifetimeID,
-                       what: "the primary-track change retargets the active parameter")
-    report.expect(second.page.rows.contains { $0.parameter == trackOnePan }, cppID: lifetimeID,
-                  message: "the track-1 pan lane is present in the row stack")
+    report.expectEqual(
+        expected: trackOnePan, actual: second.page.activeParameter, cppID: lifetimeID,
+        what: "the primary-track change retargets the active parameter")
+    report.expect(
+        second.page.rows.contains { $0.parameter == trackOnePan }, cppID: lifetimeID,
+        message: "the track-1 pan lane is present in the row stack")
     let panLane = Lane.controller(TimeDefaults.ccPan)
-    report.expect(!second.document.lanePoints(track: 1, lane: panLane).contains { $0.tick == 5760 },
-                  cppID: lifetimeID,
-                  message: "the track-1 pan lane holds no point at the insertion tick")
+    report.expect(
+        !second.document.lanePoints(track: 1, lane: panLane).contains { $0.tick == 5760 },
+        cppID: lifetimeID,
+        message: "the track-1 pan lane holds no point at the insertion tick")
     let peerBeforeInsert = peer.snapshot
     let trackZeroValues = second.values(second.panLane)
-    report.expect(second.page.openInsertionPrompt(tick: 5760, value: 64), cppID: lifetimeID,
-                  message: "the track-1 pan-lane insertion prompt opens")
-    report.expect(second.page.acceptPrompt(displayedValue: 32), cppID: lifetimeID,
-                  message: "the track-1 prompt accepts the displayed value")
-    report.expect(second.document.lanePoints(track: 1, lane: panLane).contains { $0.tick == 5760 && $0.value == 96 },
-                  cppID: lifetimeID,
-                  message: "the accepted value lands on the track-1 lane through the pan offset")
-    report.expectEqual(expected: trackZeroValues, actual: second.values(second.panLane), cppID: lifetimeID,
-                       what: "the track-1 insertion leaves the track-0 lane untouched")
-    report.expectEqual(expected: peerBeforeInsert, actual: peer.snapshot, cppID: lifetimeID,
-                       what: "the track-1 insertion leaves the second document unchanged")
+    report.expect(
+        second.page.openInsertionPrompt(tick: 5760, value: 64), cppID: lifetimeID,
+        message: "the track-1 pan-lane insertion prompt opens")
+    report.expect(
+        second.page.acceptPrompt(displayedValue: 32), cppID: lifetimeID,
+        message: "the track-1 prompt accepts the displayed value")
+    report.expect(
+        second.document.lanePoints(track: 1, lane: panLane).contains { $0.tick == 5760 && $0.value == 96 },
+        cppID: lifetimeID,
+        message: "the accepted value lands on the track-1 lane through the pan offset")
+    report.expectEqual(
+        expected: trackZeroValues, actual: second.values(second.panLane), cppID: lifetimeID,
+        what: "the track-1 insertion leaves the track-0 lane untouched")
+    report.expectEqual(
+        expected: peerBeforeInsert, actual: peer.snapshot, cppID: lifetimeID,
+        what: "the track-1 insertion leaves the second document unchanged")
     second.session.setSelectedNotes(pairT1)
     second.document.nudgeNotes(pairT1, byTicks: 0, byKeys: 1)
-    report.expect(second.document.note(pairT1[0])?.pitch == 61, cppID: lifetimeID,
-                  message: "the new primary track's selection transposes one semitone under Up")
-    report.expectEqual(expected: firstBytesBeforeReopen,
-                       actual: try? fixture.document.state.file.encoded(),
-                       cppID: lifetimeID,
-                       what: "reopened-tab edits preserve the first song's exact serialized bytes")
+    report.expect(
+        second.document.note(pairT1[0])?.pitch == 61, cppID: lifetimeID,
+        message: "the new primary track's selection transposes one semitone under Up")
+    report.expectEqual(
+        expected: firstBytesBeforeReopen,
+        actual: try? fixture.document.state.file.encoded(),
+        cppID: lifetimeID,
+        what: "reopened-tab edits preserve the first song's exact serialized bytes")
 
     second.session.setSelectedNotes(pairT1)
     let priorChange = second.session.onChange
@@ -260,28 +322,35 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
         priorChange?(change)
     }
     second.session.selectPrimaryTrack(1)
-    report.expectEqual(expected: Set(pairT1), actual: second.session.selectedNotes, cppID: lifetimeID,
-                       what: "selecting the existing primary track preserves selected notes")
-    report.expectEqual(expected: [SessionChangeDomains](), actual: publications, cppID: lifetimeID,
-                       what: "selecting the existing primary track publishes no change")
+    report.expectEqual(
+        expected: Set(pairT1), actual: second.session.selectedNotes, cppID: lifetimeID,
+        what: "selecting the existing primary track preserves selected notes")
+    report.expectEqual(
+        expected: [SessionChangeDomains](), actual: publications, cppID: lifetimeID,
+        what: "selecting the existing primary track publishes no change")
 
     second.session.setSelectedNotes(pairT1)
     publications.removeAll()
     second.session.selectPrimaryTrack(0)
-    report.expect(second.session.selectedNotes.isEmpty, cppID: lifetimeID,
-                  message: "changing the primary track clears selected notes")
-    report.expectEqual(expected: 0, actual: second.session.selectedTrack, cppID: lifetimeID,
-                       what: "changing the primary track selects track zero")
-    report.expectEqual(expected: [SessionChangeDomains.selection], actual: publications, cppID: lifetimeID,
-                       what: "changing the primary track publishes one selection change")
+    report.expect(
+        second.session.selectedNotes.isEmpty, cppID: lifetimeID,
+        message: "changing the primary track clears selected notes")
+    report.expectEqual(
+        expected: 0, actual: second.session.selectedTrack, cppID: lifetimeID,
+        what: "changing the primary track selects track zero")
+    report.expectEqual(
+        expected: [SessionChangeDomains.selection], actual: publications, cppID: lifetimeID,
+        what: "changing the primary track publishes one selection change")
 
     second.session.setSelectedNotes(pairT1)
     publications.removeAll()
     let primaryBeforeOutOfRange = second.session.selectedTrack
     second.session.selectPrimaryTrack(-1)
     second.session.selectPrimaryTrack(second.document.engineTracks.usedTrackCount)
-    report.expect(second.session.selectedNotes == Set(pairT1) && second.session.selectedTrack == primaryBeforeOutOfRange && publications.isEmpty, cppID: lifetimeID,
-                  message: "out-of-range primary-track selects keep the track, notes, and publications")
+    report.expect(
+        second.session.selectedNotes == Set(pairT1) && second.session.selectedTrack == primaryBeforeOutOfRange
+            && publications.isEmpty, cppID: lifetimeID,
+        message: "out-of-range primary-track selects keep the track, notes, and publications")
     second.session.onChange = priorChange
     let tempoID = "drawerpresentation/DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp"
     let ccID = "drawerpresentation/DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit"
@@ -291,177 +360,244 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     let tempoFixture = drawerAutomationAutomationFixture(suite: suite, service: service)
     tempoFixture.activate(.tempo)
     let tempoBaseRevision = tempoFixture.document.revision
-    report.expect(tempoFixture.page.openInsertionPrompt(tick: 24, value: 140), cppID: tempoID,
-                  message: "tempo insertion prompt opens at tick 24")
-    report.expectEqual(expected: "140", actual: tempoFixture.page.promptDraft, cppID: tempoID,
-                       what: "Tempo tick-24 insertion publishes the exact 140 draft")
-    report.expect(!tempoFixture.page.promptForExistingNode, cppID: tempoID,
-                  message: "Tempo tick-24 prompt captures an insertion transaction")
-    report.expect(tempoFixture.page.acceptPrompt(displayedValue: 90), cppID: tempoID,
-                  message: "tempo prompt commits 90 BPM")
-    report.expectEqual(expected: tempoBaseRevision + 1, actual: tempoFixture.document.revision, cppID: tempoID,
-                       what: "A017 one tempo acceptance advances the revision once")
-    report.expect(tempoFixture.tempoValues.contains("24:90"), cppID: tempoID,
-                  message: "A019 committed tempo reads 90 BPM at tick 24")
-    report.expect(tempoFixture.page.openInsertionPrompt(tick: 32, value: 120), cppID: tempoID,
-                  message: "tempo ceiling prompt opens at tick 32")
-    report.expect(tempoFixture.page.acceptPrompt(displayedValue: TimeDefaults.maximumTempoBPM + 1000),
-                  cppID: tempoID, message: "over-maximum tempo acceptance commits")
-    report.expect(tempoFixture.tempoValues.contains("32:\(TimeDefaults.maximumTempoBPM)"), cppID: tempoID,
-                  message: "A024 ceiling acceptance clamps to the maximum BPM")
-    report.expect(tempoFixture.page.openInsertionPrompt(tick: 40, value: 120), cppID: tempoID,
-                  message: "tempo floor prompt opens at tick 40")
-    report.expect(tempoFixture.page.acceptPrompt(displayedValue: TimeDefaults.minimumTempoBPM - 1000),
-                  cppID: tempoID, message: "under-minimum tempo acceptance commits")
-    report.expect(tempoFixture.tempoValues.contains("40:\(TimeDefaults.minimumTempoBPM)"), cppID: tempoID,
-                  message: "A028 floor acceptance clamps to the minimum BPM")
-    report.expectEqual(expected: tempoBaseRevision + 3, actual: tempoFixture.document.revision, cppID: tempoID,
-                       what: "A029 three tempo acceptances advance the revision three times")
+    report.expect(
+        tempoFixture.page.openInsertionPrompt(tick: 24, value: 140), cppID: tempoID,
+        message: "tempo insertion prompt opens at tick 24")
+    report.expectEqual(
+        expected: "140", actual: tempoFixture.page.promptDraft, cppID: tempoID,
+        what: "Tempo tick-24 insertion publishes the exact 140 draft")
+    report.expect(
+        !tempoFixture.page.promptForExistingNode, cppID: tempoID,
+        message: "Tempo tick-24 prompt captures an insertion transaction")
+    report.expect(
+        tempoFixture.page.acceptPrompt(displayedValue: 90), cppID: tempoID,
+        message: "tempo prompt commits 90 BPM")
+    report.expectEqual(
+        expected: tempoBaseRevision + 1, actual: tempoFixture.document.revision, cppID: tempoID,
+        what: "A017 one tempo acceptance advances the revision once")
+    report.expect(
+        tempoFixture.tempoValues.contains("24:90"), cppID: tempoID,
+        message: "A019 committed tempo reads 90 BPM at tick 24")
+    report.expect(
+        tempoFixture.page.openInsertionPrompt(tick: 32, value: 120), cppID: tempoID,
+        message: "tempo ceiling prompt opens at tick 32")
+    report.expect(
+        tempoFixture.page.acceptPrompt(displayedValue: TimeDefaults.maximumTempoBPM + 1000),
+        cppID: tempoID, message: "over-maximum tempo acceptance commits")
+    report.expect(
+        tempoFixture.tempoValues.contains("32:\(TimeDefaults.maximumTempoBPM)"), cppID: tempoID,
+        message: "A024 ceiling acceptance clamps to the maximum BPM")
+    report.expect(
+        tempoFixture.page.openInsertionPrompt(tick: 40, value: 120), cppID: tempoID,
+        message: "tempo floor prompt opens at tick 40")
+    report.expect(
+        tempoFixture.page.acceptPrompt(displayedValue: TimeDefaults.minimumTempoBPM - 1000),
+        cppID: tempoID, message: "under-minimum tempo acceptance commits")
+    report.expect(
+        tempoFixture.tempoValues.contains("40:\(TimeDefaults.minimumTempoBPM)"), cppID: tempoID,
+        message: "A028 floor acceptance clamps to the minimum BPM")
+    report.expectEqual(
+        expected: tempoBaseRevision + 3, actual: tempoFixture.document.revision, cppID: tempoID,
+        what: "A029 three tempo acceptances advance the revision three times")
     let tempoDepthFixture = drawerAutomationAutomationFixture(suite: suite, service: service)
     tempoDepthFixture.activate(.tempo)
     let tempoDepthBase = try? coreEditHistoryCountAtTip(tempoDepthFixture.document, report: report, cppID: tempoID)
-    report.expect(tempoDepthFixture.page.openInsertionPrompt(tick: 24, value: 140), cppID: tempoID,
-                  message: "depth tempo prompt opens at tick 24")
-    report.expect(tempoDepthFixture.page.acceptPrompt(displayedValue: 90), cppID: tempoID,
-                  message: "depth tempo prompt commits 90 BPM")
+    report.expect(
+        tempoDepthFixture.page.openInsertionPrompt(tick: 24, value: 140), cppID: tempoID,
+        message: "depth tempo prompt opens at tick 24")
+    report.expect(
+        tempoDepthFixture.page.acceptPrompt(displayedValue: 90), cppID: tempoID,
+        message: "depth tempo prompt commits 90 BPM")
     if let base = tempoDepthBase,
-       let afterFirst = try? coreEditHistoryCountAtTip(tempoDepthFixture.document, report: report, cppID: tempoID) {
-        report.expectEqual(expected: base + 1, actual: afterFirst, cppID: tempoID,
-                           what: "A018 one tempo acceptance records one history entry")
+        let afterFirst = try? coreEditHistoryCountAtTip(tempoDepthFixture.document, report: report, cppID: tempoID)
+    {
+        report.expectEqual(
+            expected: base + 1, actual: afterFirst, cppID: tempoID,
+            what: "A018 one tempo acceptance records one history entry")
     } else {
         report.fail(tempoID, "tempo history depth unreadable after one acceptance")
     }
-    report.expect(tempoDepthFixture.page.openInsertionPrompt(tick: 32, value: 120), cppID: tempoID,
-                  message: "depth tempo ceiling prompt opens at tick 32")
-    report.expect(tempoDepthFixture.page.acceptPrompt(displayedValue: TimeDefaults.maximumTempoBPM + 1000),
-                  cppID: tempoID, message: "depth over-maximum tempo acceptance commits")
-    report.expect(tempoDepthFixture.page.openInsertionPrompt(tick: 40, value: 120), cppID: tempoID,
-                  message: "depth tempo floor prompt opens at tick 40")
-    report.expect(tempoDepthFixture.page.acceptPrompt(displayedValue: TimeDefaults.minimumTempoBPM - 1000),
-                  cppID: tempoID, message: "depth under-minimum tempo acceptance commits")
+    report.expect(
+        tempoDepthFixture.page.openInsertionPrompt(tick: 32, value: 120), cppID: tempoID,
+        message: "depth tempo ceiling prompt opens at tick 32")
+    report.expect(
+        tempoDepthFixture.page.acceptPrompt(displayedValue: TimeDefaults.maximumTempoBPM + 1000),
+        cppID: tempoID, message: "depth over-maximum tempo acceptance commits")
+    report.expect(
+        tempoDepthFixture.page.openInsertionPrompt(tick: 40, value: 120), cppID: tempoID,
+        message: "depth tempo floor prompt opens at tick 40")
+    report.expect(
+        tempoDepthFixture.page.acceptPrompt(displayedValue: TimeDefaults.minimumTempoBPM - 1000),
+        cppID: tempoID, message: "depth under-minimum tempo acceptance commits")
     if let base = tempoDepthBase,
-       let afterAll = try? coreEditHistoryCountAtTip(tempoDepthFixture.document, report: report, cppID: tempoID) {
-        report.expectEqual(expected: base + 3, actual: afterAll, cppID: tempoID,
-                           what: "A030 three tempo acceptances record three history entries")
+        let afterAll = try? coreEditHistoryCountAtTip(tempoDepthFixture.document, report: report, cppID: tempoID)
+    {
+        report.expectEqual(
+            expected: base + 3, actual: afterAll, cppID: tempoID,
+            what: "A030 three tempo acceptances record three history entries")
     } else {
         report.fail(tempoID, "tempo history depth unreadable after three acceptances")
     }
     let ccFixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     ccFixture.activate(ccFixture.panLane)
-    report.expect(ccFixture.page.rows.contains { $0.parameter == ccFixture.panLane }, cppID: ccID,
-                  message: "A035 CC10 lane present in the insertion fixture row stack")
+    report.expect(
+        ccFixture.page.rows.contains { $0.parameter == ccFixture.panLane }, cppID: ccID,
+        message: "A035 CC10 lane present in the insertion fixture row stack")
     let ccBaseRevision = ccFixture.document.revision
     let beforeCCInsertion = ccFixture.snapshot
     let beforeCCBytes = try? ccFixture.document.state.file.encoded()
     let beforeCCHistory = ccFixture.document.history.undoIndex
     let beforeCCSelection = ccFixture.session.selectedNotes
-    report.expect(beforeCCBytes != nil, cppID: ccID,
-                  message: "tick-96 CC10 fixture serializes before insertion cancellation")
-    report.expect(ccFixture.page.openInsertionPrompt(tick: 96, value: 64), cppID: ccID,
-                  message: "tick-96 CC10 cancellation prompt opens as an insertion")
-    report.expectEqual(expected: "0", actual: ccFixture.page.promptDraft, cppID: ccID,
-                       what: "tick-96 CC10 cancellation prompt displays signed zero")
+    report.expect(
+        beforeCCBytes != nil, cppID: ccID,
+        message: "tick-96 CC10 fixture serializes before insertion cancellation")
+    report.expect(
+        ccFixture.page.openInsertionPrompt(tick: 96, value: 64), cppID: ccID,
+        message: "tick-96 CC10 cancellation prompt opens as an insertion")
+    report.expectEqual(
+        expected: "0", actual: ccFixture.page.promptDraft, cppID: ccID,
+        what: "tick-96 CC10 cancellation prompt displays signed zero")
     ccFixture.page.cancelPrompt()
-    report.expectEqual(expected: beforeCCBytes, actual: try? ccFixture.document.state.file.encoded(),
-                       cppID: ccID, what: "tick-96 CC10 cancellation preserves exact full-song bytes")
-    report.expectEqual(expected: beforeCCHistory, actual: ccFixture.document.history.undoIndex,
-                       cppID: ccID, what: "tick-96 CC10 cancellation preserves exact history depth")
-    report.expectEqual(expected: beforeCCSelection, actual: ccFixture.session.selectedNotes,
-                       cppID: ccID, what: "tick-96 CC10 cancellation preserves selected NoteIDs")
-    report.expectEqual(expected: beforeCCInsertion, actual: ccFixture.snapshot, cppID: ccID,
-                       what: "tick-96 CC10 cancellation keeps the original tick-24 node")
-    report.expect(ccFixture.page.openInsertionPrompt(tick: 96, value: 64), cppID: ccID,
-                  message: "CC insertion prompt opens at empty tick 96")
-    report.expectEqual(expected: "0", actual: ccFixture.page.promptDraft, cppID: ccID,
-                       what: "CC10 tick-96 insertion displays exact signed zero")
-    report.expect(!ccFixture.page.promptForExistingNode, cppID: ccID,
-                  message: "CC10 tick-96 prompt captures an insertion transaction")
-    report.expect(ccFixture.page.acceptPrompt(displayedValue: 0), cppID: ccID,
-                  message: "displayed 0 commits through the center offset")
-    report.expectEqual(expected: ccBaseRevision + 1, actual: ccFixture.document.revision, cppID: ccID,
-                       what: "A042 one CC insertion advances the revision once")
-    report.expectEqual(expected: 2, actual: ccFixture.lanePoints(ccFixture.panLane).count, cppID: ccID,
-                       what: "A044 insertion leaves two lane points")
-    report.expectEqual(expected: 64, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
-                       cppID: ccID, what: "A045 inserted point stores 64")
-    report.expect(ccFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
-                  message: "node prompt opens on the inserted point")
-    report.expect(ccFixture.page.acceptPrompt(displayedValue: -64), cppID: ccID,
-                  message: "displayed -64 commits through the stored offset")
-    report.expectEqual(expected: 0, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
-                       cppID: ccID, what: "A050 displayed -64 stores 0")
-    report.expect(ccFixture.page.openPrompt(tick: 96, value: 0), cppID: ccID,
-                  message: "node prompt reopens on the lowered point")
-    report.expect(ccFixture.page.acceptPrompt(displayedValue: 63), cppID: ccID,
-                  message: "displayed 63 commits through the stored offset")
-    report.expectEqual(expected: 127, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
-                       cppID: ccID, what: "A055 displayed 63 stores 127")
-    report.expectEqual(expected: ccBaseRevision + 3, actual: ccFixture.document.revision, cppID: ccID,
-                       what: "A056 three CC acceptances advance the revision three times")
+    report.expectEqual(
+        expected: beforeCCBytes, actual: try? ccFixture.document.state.file.encoded(),
+        cppID: ccID, what: "tick-96 CC10 cancellation preserves exact full-song bytes")
+    report.expectEqual(
+        expected: beforeCCHistory, actual: ccFixture.document.history.undoIndex,
+        cppID: ccID, what: "tick-96 CC10 cancellation preserves exact history depth")
+    report.expectEqual(
+        expected: beforeCCSelection, actual: ccFixture.session.selectedNotes,
+        cppID: ccID, what: "tick-96 CC10 cancellation preserves selected NoteIDs")
+    report.expectEqual(
+        expected: beforeCCInsertion, actual: ccFixture.snapshot, cppID: ccID,
+        what: "tick-96 CC10 cancellation keeps the original tick-24 node")
+    report.expect(
+        ccFixture.page.openInsertionPrompt(tick: 96, value: 64), cppID: ccID,
+        message: "CC insertion prompt opens at empty tick 96")
+    report.expectEqual(
+        expected: "0", actual: ccFixture.page.promptDraft, cppID: ccID,
+        what: "CC10 tick-96 insertion displays exact signed zero")
+    report.expect(
+        !ccFixture.page.promptForExistingNode, cppID: ccID,
+        message: "CC10 tick-96 prompt captures an insertion transaction")
+    report.expect(
+        ccFixture.page.acceptPrompt(displayedValue: 0), cppID: ccID,
+        message: "displayed 0 commits through the center offset")
+    report.expectEqual(
+        expected: ccBaseRevision + 1, actual: ccFixture.document.revision, cppID: ccID,
+        what: "A042 one CC insertion advances the revision once")
+    report.expectEqual(
+        expected: 2, actual: ccFixture.lanePoints(ccFixture.panLane).count, cppID: ccID,
+        what: "A044 insertion leaves two lane points")
+    report.expectEqual(
+        expected: 64, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+        cppID: ccID, what: "A045 inserted point stores 64")
+    report.expect(
+        ccFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
+        message: "node prompt opens on the inserted point")
+    report.expect(
+        ccFixture.page.acceptPrompt(displayedValue: -64), cppID: ccID,
+        message: "displayed -64 commits through the stored offset")
+    report.expectEqual(
+        expected: 0, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+        cppID: ccID, what: "A050 displayed -64 stores 0")
+    report.expect(
+        ccFixture.page.openPrompt(tick: 96, value: 0), cppID: ccID,
+        message: "node prompt reopens on the lowered point")
+    report.expect(
+        ccFixture.page.acceptPrompt(displayedValue: 63), cppID: ccID,
+        message: "displayed 63 commits through the stored offset")
+    report.expectEqual(
+        expected: 127, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+        cppID: ccID, what: "A055 displayed 63 stores 127")
+    report.expectEqual(
+        expected: ccBaseRevision + 3, actual: ccFixture.document.revision, cppID: ccID,
+        what: "A056 three CC acceptances advance the revision three times")
     let ccDepthFixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     ccDepthFixture.activate(ccDepthFixture.panLane)
     let ccDepthBase = try? coreEditHistoryCountAtTip(ccDepthFixture.document, report: report, cppID: ccID)
-    report.expect(ccDepthFixture.page.openInsertionPrompt(tick: 96, value: 64), cppID: ccID,
-                  message: "depth CC insertion prompt opens at tick 96")
-    report.expect(ccDepthFixture.page.acceptPrompt(displayedValue: 0), cppID: ccID,
-                  message: "depth displayed 0 commits through the center offset")
+    report.expect(
+        ccDepthFixture.page.openInsertionPrompt(tick: 96, value: 64), cppID: ccID,
+        message: "depth CC insertion prompt opens at tick 96")
+    report.expect(
+        ccDepthFixture.page.acceptPrompt(displayedValue: 0), cppID: ccID,
+        message: "depth displayed 0 commits through the center offset")
     if let base = ccDepthBase,
-       let afterFirst = try? coreEditHistoryCountAtTip(ccDepthFixture.document, report: report, cppID: ccID) {
-        report.expectEqual(expected: base + 1, actual: afterFirst, cppID: ccID,
-                           what: "A043 one CC insertion records one history entry")
+        let afterFirst = try? coreEditHistoryCountAtTip(ccDepthFixture.document, report: report, cppID: ccID)
+    {
+        report.expectEqual(
+            expected: base + 1, actual: afterFirst, cppID: ccID,
+            what: "A043 one CC insertion records one history entry")
     } else {
         report.fail(ccID, "CC history depth unreadable after one insertion")
     }
-    report.expect(ccDepthFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
-                  message: "depth node prompt opens on the inserted point")
-    report.expect(ccDepthFixture.page.acceptPrompt(displayedValue: -64), cppID: ccID,
-                  message: "depth displayed -64 commits")
-    report.expect(ccDepthFixture.page.openPrompt(tick: 96, value: 0), cppID: ccID,
-                  message: "depth node prompt reopens on the lowered point")
-    report.expect(ccDepthFixture.page.acceptPrompt(displayedValue: 63), cppID: ccID,
-                  message: "depth displayed 63 commits")
+    report.expect(
+        ccDepthFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
+        message: "depth node prompt opens on the inserted point")
+    report.expect(
+        ccDepthFixture.page.acceptPrompt(displayedValue: -64), cppID: ccID,
+        message: "depth displayed -64 commits")
+    report.expect(
+        ccDepthFixture.page.openPrompt(tick: 96, value: 0), cppID: ccID,
+        message: "depth node prompt reopens on the lowered point")
+    report.expect(
+        ccDepthFixture.page.acceptPrompt(displayedValue: 63), cppID: ccID,
+        message: "depth displayed 63 commits")
     if let base = ccDepthBase,
-       let afterAll = try? coreEditHistoryCountAtTip(ccDepthFixture.document, report: report, cppID: ccID) {
-        report.expectEqual(expected: base + 3, actual: afterAll, cppID: ccID,
-                           what: "A057 three CC acceptances record three history entries")
+        let afterAll = try? coreEditHistoryCountAtTip(ccDepthFixture.document, report: report, cppID: ccID)
+    {
+        report.expectEqual(
+            expected: base + 3, actual: afterAll, cppID: ccID,
+            what: "A057 three CC acceptances record three history entries")
     } else {
         report.fail(ccID, "CC history depth unreadable after three acceptances")
     }
     let escapeFixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     escapeFixture.activate(escapeFixture.panLane)
-    report.expect(escapeFixture.page.rows.contains { $0.parameter == escapeFixture.panLane }, cppID: escapeID,
-                  message: "A063 CC10 lane present in the escape fixture row stack")
+    report.expect(
+        escapeFixture.page.rows.contains { $0.parameter == escapeFixture.panLane }, cppID: escapeID,
+        message: "A063 CC10 lane present in the escape fixture row stack")
     let focusFixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     focusFixture.activate(focusFixture.panLane)
-    report.expect(focusFixture.page.rows.contains { $0.parameter == focusFixture.panLane }, cppID: focusID,
-                  message: "A073 CC10 lane present in the focus fixture row stack")
+    report.expect(
+        focusFixture.page.rows.contains { $0.parameter == focusFixture.panLane }, cppID: focusID,
+        message: "A073 CC10 lane present in the focus fixture row stack")
     let focusDepthBase = try? coreEditHistoryCountAtTip(focusFixture.document, report: report, cppID: focusID)
     let focusBaseRevision = focusFixture.document.revision
-    report.expect(focusFixture.page.openPrompt(tick: 24, value: 64), cppID: focusID,
-                  message: "node prompt opens before the document change")
-    focusFixture.document.writeLane(track: 0, lane: .controller(TimeDefaults.ccPan), from: 48, through: 48,
-                                    points: [LaneWrite(tick: 48, value: 32)])
-    report.expect(!focusFixture.page.promptOpen, cppID: focusID,
-                  message: "document change cancels the pending prompt")
-    report.expectEqual(expected: 64, actual: focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 24 }?.value ?? -1,
-                       cppID: focusID, what: "A081 cancelled prompt keeps the original value 64")
-    report.expectEqual(expected: 32, actual: focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 48 }?.value ?? -1,
-                       cppID: focusID, what: "A083 added point stores 32")
-    report.expectEqual(expected: ["24:64", "48:32"], actual: focusFixture.values(focusFixture.panLane), cppID: focusID,
-                       what: "A084 lane holds the original plus the added point")
-    report.expectEqual(expected: focusBaseRevision + 1, actual: focusFixture.document.revision, cppID: focusID,
-                       what: "A085 document change alone advances the revision once")
+    report.expect(
+        focusFixture.page.openPrompt(tick: 24, value: 64), cppID: focusID,
+        message: "node prompt opens before the document change")
+    focusFixture.document.writeLane(
+        track: 0, lane: .controller(TimeDefaults.ccPan), from: 48, through: 48,
+        points: [LaneWrite(tick: 48, value: 32)])
+    report.expect(
+        !focusFixture.page.promptOpen, cppID: focusID,
+        message: "document change cancels the pending prompt")
+    report.expectEqual(
+        expected: 64, actual: focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 24 }?.value ?? -1,
+        cppID: focusID, what: "A081 cancelled prompt keeps the original value 64")
+    report.expectEqual(
+        expected: 32, actual: focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 48 }?.value ?? -1,
+        cppID: focusID, what: "A083 added point stores 32")
+    report.expectEqual(
+        expected: ["24:64", "48:32"], actual: focusFixture.values(focusFixture.panLane), cppID: focusID,
+        what: "A084 lane holds the original plus the added point")
+    report.expectEqual(
+        expected: focusBaseRevision + 1, actual: focusFixture.document.revision, cppID: focusID,
+        what: "A085 document change alone advances the revision once")
     if let base = focusDepthBase,
-       let afterChange = try? coreEditHistoryCountAtTip(focusFixture.document, report: report, cppID: focusID) {
-        report.expectEqual(expected: base + 1, actual: afterChange, cppID: focusID,
-                           what: "A086 document change records one history entry")
+        let afterChange = try? coreEditHistoryCountAtTip(focusFixture.document, report: report, cppID: focusID)
+    {
+        report.expectEqual(
+            expected: base + 1, actual: afterChange, cppID: focusID,
+            what: "A086 document change records one history entry")
     } else {
         report.fail(focusID, "focus history depth unreadable after the document change")
     }
     let lateFixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     lateFixture.activate(lateFixture.panLane)
-    report.expect(lateFixture.page.rows.contains { $0.parameter == lateFixture.panLane }, cppID: lateID,
-                  message: "A096 CC10 lane present in the cancel fixture row stack")
+    report.expect(
+        lateFixture.page.rows.contains { $0.parameter == lateFixture.panLane }, cppID: lateID,
+        message: "A096 CC10 lane present in the cancel fixture row stack")
 
     windowTierKeyboardOutcomes(report, suite: suite, service: service)
     coreEditingKeyboardOutcomes(report, suite: suite, service: service)
@@ -479,13 +615,16 @@ private func littlerootVelocityCancellation(_ report: CheckReport) {
     do {
         try runBlocking { try await project.open(root: fixtureRoot) }
         let session = try runBlocking {
-            try await DocumentSession.open(service: project, label: "mus_littleroot_test",
-                                           sampleRate: 48_000)
+            try await DocumentSession.open(
+                service: project, label: "mus_littleroot_test",
+                sampleRate: 48_000)
         }
-        guard let track = (0..<session.document.engineTracks.usedTrackCount).first(where: {
-            !session.document.notes(in: $0).isEmpty
-        }), let note = session.document.notes(in: track).first,
-            !session.bankSlots.isEmpty else {
+        guard
+            let track = (0..<session.document.engineTracks.usedTrackCount).first(where: {
+                !session.document.notes(in: $0).isEmpty
+            }), let note = session.document.notes(in: track).first,
+            !session.bankSlots.isEmpty
+        else {
             report.fail(id, "Littleroot selected note and parsed voice slots are required")
             return
         }
@@ -497,24 +636,31 @@ private func littlerootVelocityCancellation(_ report: CheckReport) {
         let historyBefore = session.document.history.undoIndex
         let revisionBefore = session.document.revision
         let selectedBefore = session.selectedNotes
-        report.expect(velocity.openSelectedVelocityPrompt(), cppID: id,
-                      message: "Littleroot selected-note velocity prompt opens through production")
+        report.expect(
+            velocity.openSelectedVelocityPrompt(), cppID: id,
+            message: "Littleroot selected-note velocity prompt opens through production")
         velocity.updatePromptDraft(draft: "12")
-        report.expectEqual(expected: "12", actual: velocity.promptDraft, cppID: id,
-                           what: "Littleroot velocity prompt holds the edited numeric draft")
+        report.expectEqual(
+            expected: "12", actual: velocity.promptDraft, cppID: id,
+            what: "Littleroot velocity prompt holds the edited numeric draft")
         velocity.cancelPrompt()
-        report.expect(!velocity.promptOpen, cppID: id,
-                      message: "Littleroot velocity Escape transaction closes without acceptance")
-        report.expectEqual(expected: bytesBefore,
-                           actual: try session.document.state.file.encoded(),
-                           cppID: id,
-                           what: "Littleroot velocity cancellation preserves exact full-song bytes")
-        report.expectEqual(expected: historyBefore, actual: session.document.history.undoIndex,
-                           cppID: id, what: "Littleroot velocity cancellation retains exact history depth")
-        report.expectEqual(expected: revisionBefore, actual: session.document.revision,
-                           cppID: id, what: "Littleroot velocity cancellation retains document revision")
-        report.expectEqual(expected: selectedBefore, actual: session.selectedNotes,
-                           cppID: id, what: "Littleroot velocity cancellation retains selected note identities")
+        report.expect(
+            !velocity.promptOpen, cppID: id,
+            message: "Littleroot velocity Escape transaction closes without acceptance")
+        report.expectEqual(
+            expected: bytesBefore,
+            actual: try session.document.state.file.encoded(),
+            cppID: id,
+            what: "Littleroot velocity cancellation preserves exact full-song bytes")
+        report.expectEqual(
+            expected: historyBefore, actual: session.document.history.undoIndex,
+            cppID: id, what: "Littleroot velocity cancellation retains exact history depth")
+        report.expectEqual(
+            expected: revisionBefore, actual: session.document.revision,
+            cppID: id, what: "Littleroot velocity cancellation retains document revision")
+        report.expectEqual(
+            expected: selectedBefore, actual: session.selectedNotes,
+            cppID: id, what: "Littleroot velocity cancellation retains selected note identities")
         velocity.detach()
     } catch {
         report.fail(id, "Littleroot velocity cancellation fixture failed: \(error)")

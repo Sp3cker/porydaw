@@ -142,8 +142,9 @@ extension AutomationPage {
         }
         publishDrawingContent()
         let labelPoint: AutomationLanePoint?
-        if case let .node(transaction) = gesture { labelPoint = transaction.grabbed?.current }
-        else {
+        if case let .node(transaction) = gesture {
+            labelPoint = transaction.grabbed?.current
+        } else {
             labelPoint = sweepRelease ?? previewPoints.last
         }
         guard let last = labelPoint, !previewText.isEmpty else {
@@ -167,18 +168,23 @@ extension AutomationPage {
         var labels: [SceneText] = []
         for (index, lane) in projected.enumerated() {
             guard let value = lane.heldValue(at: lane.points.last?.tick ?? 0),
-                  index < ghostLabels.count else { continue }
+                index < ghostLabels.count
+            else { continue }
             let text = ghostLabels[index]
-            let width = min(max(0, plotWidth - 2 * pad),
-                            max(fontPx(baseFontPx, 2),
-                                (captionMetrics?.advance(text) ?? 0).rounded()))
+            let width = min(
+                max(0, plotWidth - 2 * pad),
+                max(
+                    fontPx(baseFontPx, 2),
+                    (captionMetrics?.advance(text) ?? 0).rounded()))
             let projection = makeProjection(
                 facts: facts(parameter: lane.parameter, modifiers: .init(), session: session),
                 camera: session.camera)
             let curveY = projection.y(value, metadata: lane.metadata)
             let y = min(max(0, curveY - height / 2), max(0, plotHeight - height))
-            labels.append(SceneText(rect: (max(0, plotWidth - width - pad), y, width, height),
-                                    text: text, color: palette.primaryText, font: captionFont))
+            labels.append(
+                SceneText(
+                    rect: (max(0, plotWidth - width - pad), y, width, height),
+                    text: text, color: palette.primaryText, font: captionFont))
         }
         syncTexts(ghostNameLabels, labels)
     }
@@ -186,19 +192,23 @@ extension AutomationPage {
     func hoverGhostRect(text: String, x: Double, curveY: Double) -> [String: QVariantSettable] {
         let height = noteNameMetrics?.height ?? fontPx(baseFontPx, 1)
         let pad = fontPx(baseFontPx, 0.5)
-        let width = min(max(0, plotWidth - 2 * pad),
-                        max(fontPx(baseFontPx, 2),
-                            (noteNameMetrics?.advance(text) ?? 0).rounded()))
-        return Self.rect(min(max(0, x - width / 2), max(0, plotWidth - width)),
-                         min(max(0, curveY - height - pad), max(0, plotHeight - height)),
-                         width, height)
+        let width = min(
+            max(0, plotWidth - 2 * pad),
+            max(
+                fontPx(baseFontPx, 2),
+                (noteNameMetrics?.advance(text) ?? 0).rounded()))
+        return Self.rect(
+            min(max(0, x - width / 2), max(0, plotWidth - width)),
+            min(max(0, curveY - height - pad), max(0, plotHeight - height)),
+            width, height)
     }
-
 
     /// A value label's own rectangle: font-sized, at the column the interaction
     /// works in, and clamped into the plot.
-    func labelRect(text: String, tick: Tick, x: Double,
-                           valueY: Double?) -> [String: QVariantSettable] {
+    func labelRect(
+        text: String, tick: Tick, x: Double,
+        valueY: Double?
+    ) -> [String: QVariantSettable] {
         let height = noteNameMetrics?.height ?? fontPx(baseFontPx, 1)
         let width = max(fontPx(baseFontPx, 2), (noteNameMetrics?.advance(text) ?? 0).rounded())
         let gap = fontPx(baseFontPx, 1)
@@ -214,12 +224,13 @@ extension AutomationPage {
     func publishReadoutGeometry() {
         let height = titleMetrics?.height ?? fontPx(baseFontPx, 1)
         let pad = fontPx(baseFontPx, 0.5)
-        let width = min(max(0, plotWidth - 2 * pad),
-                        max(fontPx(baseFontPx, 4), (titleMetrics?.advance(readoutText) ?? 0).rounded()))
-        readoutRect = Self.rect(max(0, plotWidth - width - pad).rounded(), pad.rounded(),
-                                width, height)
+        let width = min(
+            max(0, plotWidth - 2 * pad),
+            max(fontPx(baseFontPx, 4), (titleMetrics?.advance(readoutText) ?? 0).rounded()))
+        readoutRect = Self.rect(
+            max(0, plotWidth - width - pad).rounded(), pad.rounded(),
+            width, height)
     }
-
 
     /// The open prompt's published form: the captured value form or the captured
     /// lane-delete confirmation.
@@ -260,10 +271,11 @@ extension AutomationPage {
         menuRowSnapshots = values
         syncMenuRows(values)
         menuRowCount = values.count
-        let children: [AutomationMenuRowHandle] = menu.flatMap { state in
-            if case .lane = state.target { return rangeMenuRows(facts: state.facts) }
-            return nil
-        } ?? []
+        let children: [AutomationMenuRowHandle] =
+            menu.flatMap { state in
+                if case .lane = state.target { return rangeMenuRows(facts: state.facts) }
+                return nil
+            } ?? []
         menuChildRows.replaceSubrange(0..<menuChildRows.count, with: children)
         menuChildRowCount = children.count
         let open = menu != nil
@@ -296,21 +308,25 @@ extension AutomationPage {
         minimumCellHeight = typography.fontPxF(4.0 / 3.0)
     }
 
-    func setFont(_ storage: inout [String: QVariantSettable],
-                         _ value: [String: QVariantSettable]) {
+    func setFont(
+        _ storage: inout [String: QVariantSettable],
+        _ value: [String: QVariantSettable]
+    ) {
         guard !Self.fontMatches(storage, value) else { return }
         storage = value
     }
 
-    static func fontMatches(_ lhs: [String: QVariantSettable],
-                                    _ rhs: [String: QVariantSettable]) -> Bool {
-        lhs.count == rhs.count && lhs.allSatisfy {
-            String(describing: $1) == String(describing: rhs[$0])
-        }
+    static func fontMatches(
+        _ lhs: [String: QVariantSettable],
+        _ rhs: [String: QVariantSettable]
+    ) -> Bool {
+        lhs.count == rhs.count
+            && lhs.allSatisfy {
+                String(describing: $1) == String(describing: rhs[$0])
+            }
     }
 
     // MARK: Internals: shared metrics
-
 
     /// The roll's own time axis, built from the same document facts the grid
     /// uses, so the automation grid is the roll's grid.
@@ -327,16 +343,21 @@ extension AutomationPage {
             outlineWidth: fontPxF(baseFontPx, 1.0 / 12.0))
     }
 
-    static func rect(_ x: Double, _ y: Double, _ width: Double,
-                             _ height: Double) -> [String: QVariantSettable] {
+    static func rect(
+        _ x: Double, _ y: Double, _ width: Double,
+        _ height: Double
+    ) -> [String: QVariantSettable] {
         ["x": x, "y": y, "width": width, "height": height]
     }
 
-    static func rectMatches(_ lhs: [String: QVariantSettable],
-                                    _ rhs: [String: QVariantSettable]) -> Bool {
+    static func rectMatches(
+        _ lhs: [String: QVariantSettable],
+        _ rhs: [String: QVariantSettable]
+    ) -> Bool {
         for key in ["x", "y", "width", "height"] {
             guard let left = lhs[key] as? Double, let right = rhs[key] as? Double,
-                  left == right else { return false }
+                left == right
+            else { return false }
         }
         return true
     }
@@ -346,7 +367,6 @@ extension AutomationPage {
     }
 
     // MARK: Internals: model synchronisation
-
 
     func syncTexts(_ model: QListModel<SceneText>, _ texts: [SceneText]) {
         model.update {

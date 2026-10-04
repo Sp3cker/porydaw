@@ -26,7 +26,8 @@ final class ProjectContext {
     static func open(projectRoot: String) -> ProjectContext? {
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: projectRoot, isDirectory: &isDirectory),
-              isDirectory.boolValue else { return nil }
+            isDirectory.boolValue
+        else { return nil }
 
         let worker = ContextWorker(projectRoot: projectRoot)
         guard worker.open() else {
@@ -42,8 +43,9 @@ final class ProjectContext {
 
     func loadSamples(direct: [String], wave: [String], keysplit: [String], tables: [String]) -> SampleSetHandle? {
         guard keysplit.count == tables.count,
-              direct.count <= Int(Int32.max), wave.count <= Int(Int32.max),
-              keysplit.count <= Int(Int32.max) else { return nil }
+            direct.count <= Int(Int32.max), wave.count <= Int(Int32.max),
+            keysplit.count <= Int(Int32.max)
+        else { return nil }
         return worker.loadSamples(direct: direct, wave: wave, keysplit: keysplit, tables: tables)
     }
 
@@ -130,10 +132,12 @@ private final class ContextWorker: @unchecked Sendable {
                 withSymbolPointers(wave) { wavePointers, waveCount in
                     withSymbolPointers(keysplit) { keysplitPointers, keysplitCount in
                         withSymbolPointers(tables) { tablePointers, _ in
-                            guard let raw = voicegroup_project_load_samples(
-                                project, directPointers, directCount, wavePointers, waveCount,
-                                keysplitPointers, tablePointers, keysplitCount
-                            ) else { return nil }
+                            guard
+                                let raw = voicegroup_project_load_samples(
+                                    project, directPointers, directCount, wavePointers, waveCount,
+                                    keysplitPointers, tablePointers, keysplitCount
+                                )
+                            else { return nil }
                             return SampleSetHandle(raw: raw)
                         }
                     }

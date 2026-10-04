@@ -26,21 +26,36 @@ func drawerVelocityPressCancelRestores(_ report: CheckReport, session: DocumentS
     let captured = notes.map { document.note($0.id)?.velocity }
     let depth = document.history.undoCount
     _ = page.pointerPress(x: target.x, y: target.y, surface: 1, button: 1, modifiers: 0)
-    report.expect(fixture.session.selectedNoteOrder == [notes[1].id], cppID: drawerVelocityClickSelectionID, message: "pressing another node provisionally selects it")
-    report.expect(page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a provisional press holds a live gesture")
+    report.expect(
+        fixture.session.selectedNoteOrder == [notes[1].id], cppID: drawerVelocityClickSelectionID,
+        message: "pressing another node provisionally selects it")
+    report.expect(
+        page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a provisional press holds a live gesture")
     page.cancelSectionInteraction()
-    report.expect(!page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "cancelling clears the provisional gesture")
-    report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "cancelling restores selection membership and insertion order")
-    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "cancelling writes nothing at all")
-    report.expectEqual(expected: depth, actual: document.history.undoCount, cppID: drawerVelocityCancellationID,
-                       what: "a cancelled gesture leaves the undo depth unchanged")
-    report.expectEqual(expected: [100, 64, 32], actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
-                       cppID: drawerVelocityCancellationID, what: "an escaped drag leaves the timeline projection untouched")
+    report.expect(
+        !page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID,
+        message: "cancelling clears the provisional gesture")
+    report.expect(
+        fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID,
+        message: "cancelling restores selection membership and insertion order")
+    report.expect(
+        DocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID,
+        message: "cancelling writes nothing at all")
+    report.expectEqual(
+        expected: depth, actual: document.history.undoCount, cppID: drawerVelocityCancellationID,
+        what: "a cancelled gesture leaves the undo depth unchanged")
+    report.expectEqual(
+        expected: [100, 64, 32], actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+        cppID: drawerVelocityCancellationID, what: "an escaped drag leaves the timeline projection untouched")
     let released = page.pointerRelease(x: target.x, y: target.y, button: 1)
     report.expect(!released, cppID: drawerVelocityClickSelectionID, message: "a release after cancellation is inert")
-    report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "a late release cannot revive the discarded selection")
+    report.expect(
+        fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID,
+        message: "a late release cannot revive the discarded selection")
     for (index, note) in notes.enumerated() {
-        report.expectEqual(expected: captured[index], actual: document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a cancelled press leaves every velocity captured")
+        report.expectEqual(
+            expected: captured[index], actual: document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID,
+            what: "a cancelled press leaves every velocity captured")
     }
 }
 
@@ -72,18 +87,28 @@ func drawerVelocityBandCancelRestores(_ report: CheckReport, session: DocumentSe
     _ = page.pointerMove(x: 400, y: 120, buttons: 2)
     page.cancelSectionInteraction()
     report.expect(!page.hasGesture, cppID: drawerVelocityCancellationID, message: "cancelling clears the live band")
-    report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "a cancelled band restores selection membership and insertion order")
-    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "cancelling writes nothing at all")
-    report.expectEqual(expected: depth, actual: document.history.undoCount, cppID: drawerVelocityCancellationID,
-                       what: "a cancelled gesture leaves the undo depth unchanged")
-    report.expectEqual(expected: [100, 64, 32], actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
-                       cppID: drawerVelocityCancellationID, what: "an escaped drag leaves the timeline projection untouched")
+    report.expect(
+        fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID,
+        message: "a cancelled band restores selection membership and insertion order")
+    report.expect(
+        DocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID,
+        message: "cancelling writes nothing at all")
+    report.expectEqual(
+        expected: depth, actual: document.history.undoCount, cppID: drawerVelocityCancellationID,
+        what: "a cancelled gesture leaves the undo depth unchanged")
+    report.expectEqual(
+        expected: [100, 64, 32], actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+        cppID: drawerVelocityCancellationID, what: "an escaped drag leaves the timeline projection untouched")
     _ = page.pointerMove(x: 400, y: 120, buttons: 2)
     let released = page.pointerRelease(x: 400, y: 120, button: 2)
     report.expect(!released, cppID: drawerVelocityClickSelectionID, message: "input after cancellation starts no band")
-    report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "input after cancellation cannot replace the restored selection")
+    report.expect(
+        fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID,
+        message: "input after cancellation cannot replace the restored selection")
     for (index, note) in notes.enumerated() {
-        report.expectEqual(expected: captured[index], actual: document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a cancelled band leaves every velocity captured")
+        report.expectEqual(
+            expected: captured[index], actual: document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID,
+            what: "a cancelled band leaves every velocity captured")
     }
 }
 
@@ -110,12 +135,14 @@ func drawerVelocityPrimaryTrackSwitchCancels(_ report: CheckReport, session: Doc
         try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: scratch)
         try runBlocking { try await waveService.open(root: scratch.path) }
         let loaded = try runBlocking { try await waveService.openSong(label: "mus_gym") }
-        let waveDocument = SongDocument(file: drawerVelocityVelocityPageFixture(),
-                                        config: loaded.config, source: loaded.source,
-                                        trackBudget: loaded.trackBudget)
-        waveSession = DocumentSession(document: waveDocument, service: waveService,
-                                      lease: loaded.bank, slots: loaded.bankSlots,
-                                      dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+        let waveDocument = SongDocument(
+            file: drawerVelocityVelocityPageFixture(),
+            config: loaded.config, source: loaded.source,
+            trackBudget: loaded.trackBudget)
+        waveSession = DocumentSession(
+            document: waveDocument, service: waveService,
+            lease: loaded.bank, slots: loaded.bankSlots,
+            dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
     } catch {
         report.fail(drawerVelocityCancellationID, "could not load the staged wave bank fixture: \(error)")
         return
@@ -148,42 +175,70 @@ func drawerVelocityPrimaryTrackSwitchCancels(_ report: CheckReport, session: Doc
     let before = notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) }
     _ = page.pointerPress(x: lead.x, y: lead.y, surface: 1, button: 1, modifiers: 0)
     _ = page.pointerMove(x: lead.x, y: lead.y - 30, buttons: 1)
-    report.expect(page.frozenPreview[notes[0].id] != nil, cppID: drawerVelocityClickSelectionID, message: "a live drag previews the pressed note")
-    report.expect(page.frozenPreview[notes[2].id] != nil, cppID: drawerVelocityClickSelectionID, message: "a live drag previews every selected target")
-    report.expect(page.hasGesture && page.interactionActive, cppID: drawerVelocityClickSelectionID, message: "a live drag reports an active gesture")
-    report.expectEqual(expected: before, actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
-                       cppID: drawerVelocityCancellationID, what: "a drag preview holds the timeline projection at the captured velocities")
+    report.expect(
+        page.frozenPreview[notes[0].id] != nil, cppID: drawerVelocityClickSelectionID,
+        message: "a live drag previews the pressed note")
+    report.expect(
+        page.frozenPreview[notes[2].id] != nil, cppID: drawerVelocityClickSelectionID,
+        message: "a live drag previews every selected target")
+    report.expect(
+        page.hasGesture && page.interactionActive, cppID: drawerVelocityClickSelectionID,
+        message: "a live drag reports an active gesture")
+    report.expectEqual(
+        expected: before, actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+        cppID: drawerVelocityCancellationID,
+        what: "a drag preview holds the timeline projection at the captured velocities")
     fixture.session.adjustTrackScope(track: 1, action: .plain)
     page.refreshFromDocument()
-    report.expectEqual(expected: 6, actual: page.contextSlot, cppID: drawerVelocityCancellationID,
-                       what: "the new primary track presents its program")
-    report.expectEqual(expected: VelocityAxisModel.Mode.intrinsic.rawValue, actual: page.axisMode,
-                       cppID: drawerVelocityCancellationID,
-                       what: "the replacement PSG track presents its intrinsic axis")
-    report.expectEqual(expected: 5, actual: page.axisModel.graduations.count,
-                       cppID: drawerVelocityCancellationID,
-                       what: "the replacement PSG axis presents exactly five graduations")
-    report.expect(!page.hasGesture, cppID: drawerVelocityCancellationID, message: "a primary-track switch ends the live gesture")
-    report.expect(page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "a primary-track switch clears every preview")
-    report.expect(fixture.session.selectedNoteOrder.isEmpty, cppID: drawerVelocityCancellationID, message: "a primary-track replacement clears rather than revives the old selection")
-    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "a primary-track switch writes nothing at all")
-    report.expectEqual(expected: depth, actual: document.history.undoCount, cppID: drawerVelocityCancellationID,
-                       what: "a cancelled gesture leaves the undo depth unchanged")
-    report.expectEqual(expected: before, actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
-                       cppID: drawerVelocityCancellationID, what: "an escaped drag leaves the timeline projection untouched")
+    report.expectEqual(
+        expected: 6, actual: page.contextSlot, cppID: drawerVelocityCancellationID,
+        what: "the new primary track presents its program")
+    report.expectEqual(
+        expected: VelocityAxisModel.Mode.intrinsic.rawValue, actual: page.axisMode,
+        cppID: drawerVelocityCancellationID,
+        what: "the replacement PSG track presents its intrinsic axis")
+    report.expectEqual(
+        expected: 5, actual: page.axisModel.graduations.count,
+        cppID: drawerVelocityCancellationID,
+        what: "the replacement PSG axis presents exactly five graduations")
+    report.expect(
+        !page.hasGesture, cppID: drawerVelocityCancellationID, message: "a primary-track switch ends the live gesture")
+    report.expect(
+        page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID,
+        message: "a primary-track switch clears every preview")
+    report.expect(
+        fixture.session.selectedNoteOrder.isEmpty, cppID: drawerVelocityCancellationID,
+        message: "a primary-track replacement clears rather than revives the old selection")
+    report.expect(
+        DocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID,
+        message: "a primary-track switch writes nothing at all")
+    report.expectEqual(
+        expected: depth, actual: document.history.undoCount, cppID: drawerVelocityCancellationID,
+        what: "a cancelled gesture leaves the undo depth unchanged")
+    report.expectEqual(
+        expected: before, actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+        cppID: drawerVelocityCancellationID, what: "an escaped drag leaves the timeline projection untouched")
     let released = page.pointerRelease(x: lead.x, y: lead.y - 30, button: 1)
     report.expect(!released, cppID: drawerVelocityClickSelectionID, message: "a release after the switch is inert")
-    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "a late release still writes nothing")
+    report.expect(
+        DocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID,
+        message: "a late release still writes nothing")
     for (index, note) in notes.enumerated() {
-        report.expectEqual(expected: captured[index], actual: document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a cancelled drag leaves every velocity captured")
+        report.expectEqual(
+            expected: captured[index], actual: document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID,
+            what: "a cancelled drag leaves every velocity captured")
     }
-    report.expect(page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "a late release previews nothing")
+    report.expect(
+        page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "a late release previews nothing")
 }
 
 @MainActor
-func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: DocumentSession,
-                                         service: ProjectService) {
-    let routes = ["page-switch", "drawer-hide", "pointer-ungrabbed", "focus-loss",
+func drawerVelocityLifecycleCancellation(
+    _ report: CheckReport, session: DocumentSession,
+    service: ProjectService
+) {
+    let routes = [
+        "page-switch", "drawer-hide", "pointer-ungrabbed", "focus-loss",
         "window-deactivated", "hidden", "escape",
     ]
     let preferences = PreferencesStore()
@@ -220,17 +275,20 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
             report.fail(drawerVelocityCancellationID, "\(route): held drag did not preview")
             continue
         }
-        report.expectEqual(expected: Int(note.velocity),
-                           actual: drawerVelocityTimelineVelocity(fixture.session, note.id),
-                           cppID: drawerVelocityCancellationID,
-                           what: "\(route): a held drag preserves the timeline projection")
+        report.expectEqual(
+            expected: Int(note.velocity),
+            actual: drawerVelocityTimelineVelocity(fixture.session, note.id),
+            cppID: drawerVelocityCancellationID,
+            what: "\(route): a held drag preserves the timeline projection")
         switch route {
         case "page-switch":
-            drawer.toggleSection(kind: DrawerSectionKind.automation.rawValue,
-                                 drawerOwnsFocus: true)
+            drawer.toggleSection(
+                kind: DrawerSectionKind.automation.rawValue,
+                drawerOwnsFocus: true)
         case "drawer-hide":
-            drawer.setSectionVisible(kind: DrawerSectionKind.velocity.rawValue,
-                                     visible: false, drawerOwnsFocus: true)
+            drawer.setSectionVisible(
+                kind: DrawerSectionKind.velocity.rawValue,
+                visible: false, drawerOwnsFocus: true)
         case "pointer-ungrabbed":
             drawer.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
         case "focus-loss":
@@ -240,34 +298,41 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
         case "hidden":
             drawer.inputCancelled(reason: GridCancelReason.hidden.rawValue)
         case "escape":
-            report.expect(page.handleEscape(), cppID: drawerVelocityCancellationID,
-                          message: "escape claims the live velocity drag")
+            report.expect(
+                page.handleEscape(), cppID: drawerVelocityCancellationID,
+                message: "escape claims the live velocity drag")
         default:
             break
         }
-        report.expect(!page.hasGesture && !page.interactionActive && page.frozenPreview.isEmpty,
-                      cppID: drawerVelocityCancellationID,
-                      message: "\(route): cancellation clears the active preview")
-        report.expect(fixture.session.selectedNoteOrder == [note.id],
-                      cppID: drawerVelocityCancellationID,
-                      message: "\(route): cancellation preserves the note selection")
+        report.expect(
+            !page.hasGesture && !page.interactionActive && page.frozenPreview.isEmpty,
+            cppID: drawerVelocityCancellationID,
+            message: "\(route): cancellation clears the active preview")
+        report.expect(
+            fixture.session.selectedNoteOrder == [note.id],
+            cppID: drawerVelocityCancellationID,
+            message: "\(route): cancellation preserves the note selection")
         _ = page.pointerMove(x: handle.x, y: handle.y - 30, buttons: 1)
-        report.expect(!page.pointerRelease(x: handle.x, y: handle.y - 30, button: 1),
-                      cppID: drawerVelocityCancellationID,
-                      message: "\(route): held release cannot commit the cancelled gesture")
-        report.expect(DocumentSnapshot(fixture.document) == baseline
-                      && fixture.document.history.undoCount == undoCount
-                      && coreTimeBytes(fixture.document) == bytes,
-                      cppID: drawerVelocityCancellationID,
-                      message: "\(route): document bytes, revision and undo depth remain unchanged")
-        report.expectEqual(expected: Int(note.velocity),
-                           actual: drawerVelocityTimelineVelocity(fixture.session, note.id),
-                           cppID: drawerVelocityCancellationID,
-                           what: "\(route): cancellation leaves the timeline projection untouched")
+        report.expect(
+            !page.pointerRelease(x: handle.x, y: handle.y - 30, button: 1),
+            cppID: drawerVelocityCancellationID,
+            message: "\(route): held release cannot commit the cancelled gesture")
+        report.expect(
+            DocumentSnapshot(fixture.document) == baseline
+                && fixture.document.history.undoCount == undoCount
+                && coreTimeBytes(fixture.document) == bytes,
+            cppID: drawerVelocityCancellationID,
+            message: "\(route): document bytes, revision and undo depth remain unchanged")
+        report.expectEqual(
+            expected: Int(note.velocity),
+            actual: drawerVelocityTimelineVelocity(fixture.session, note.id),
+            cppID: drawerVelocityCancellationID,
+            what: "\(route): cancellation leaves the timeline projection untouched")
     }
     let bankFixture = drawerVelocityVelocityFixture(session: session, service: service)
     guard let note = bankFixture.notes.first,
-          let originalVoice = bankFixture.session.bankSlots.first?.voice else {
+        let originalVoice = bankFixture.session.bankSlots.first?.voice
+    else {
         report.fail(drawerVelocityCancellationID, "bank transition fixture lacks its note or editable voice")
         return
     }
@@ -286,7 +351,8 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
     let workspace = DocumentWorkspace(
         session: bankFixture.session, audio: audio, playhead: playhead,
         playheadGuides: guides, eventList: eventList, palette: GridPalette(),
-        typography: Typography(baseFontPx: 13), callbacks: DocumentWorkspace.Callbacks(
+        typography: Typography(baseFontPx: 13),
+        callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
             revealTrackVoiceRequested: { _ in },
             gridCommandAvailabilityChanged: {}, sessionStateChanged: {},
@@ -297,12 +363,15 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
     }
     workspace.activate()
     let page = workspace.velocityPage
-    page.configureBody(width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1,
-                       baseFontPx: 13, dragDistance: 10)
+    page.configureBody(
+        width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1,
+        baseFontPx: 13, dragDistance: 10)
     bankFixture.session.setSelectedNotes([note.id])
-    guard let handle = page.publishedHandlesSnapshot.first(where: {
-        $0.noteIdText == "\(note.id.rawValue)"
-    }) else {
+    guard
+        let handle = page.publishedHandlesSnapshot.first(where: {
+            $0.noteIdText == "\(note.id.rawValue)"
+        })
+    else {
         report.fail(drawerVelocityCancellationID, "bank transition fixture lacks a drawn handle")
         return
     }
@@ -319,31 +388,37 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
     editedVoice.pan = editedVoice.pan == 15 ? 14 : 15
     do {
         _ = try runBlocking {
-            try await bankFixture.session.applyBankEdit(slot: 0, value: editedVoice,
-                                                        expected: originalVoice)
+            try await bankFixture.session.applyBankEdit(
+                slot: 0, value: editedVoice,
+                expected: originalVoice)
         }
     } catch {
         report.fail(drawerVelocityCancellationID, "bank transition rejected the edit: \(error)")
         return
     }
-    report.expect(bankFixture.session.bankDirty
-                  && bankFixture.session.bankSlots[0].voice == editedVoice,
-                  cppID: drawerVelocityCancellationID,
-                  message: "the genuine bank edit advances bank state")
-    report.expect(!page.hasGesture && !page.interactionActive && page.frozenPreview.isEmpty,
-                  cppID: drawerVelocityCancellationID,
-                  message: "a bank edit cancels the held velocity preview through its workspace")
-    report.expect(bankFixture.session.selectedNoteOrder == [note.id],
-                  cppID: drawerVelocityCancellationID,
-                  message: "a bank edit preserves the held note selection")
-    report.expect(!page.pointerRelease(x: handle.x, y: handle.y - 30, button: 1),
-                  cppID: drawerVelocityCancellationID,
-                  message: "the bank edit makes the late release inert")
-    report.expect(bankFixture.document.revision == baselineRevision
-                  && coreTimeBytes(bankFixture.document) == bytes
-                  && bankFixture.document.note(note.id)?.velocity == velocity,
-                  cppID: drawerVelocityCancellationID,
-                  message: "the bank edit leaves song revision, note velocity and MIDI bytes unchanged")
+    report.expect(
+        bankFixture.session.bankDirty
+            && bankFixture.session.bankSlots[0].voice == editedVoice,
+        cppID: drawerVelocityCancellationID,
+        message: "the genuine bank edit advances bank state")
+    report.expect(
+        !page.hasGesture && !page.interactionActive && page.frozenPreview.isEmpty,
+        cppID: drawerVelocityCancellationID,
+        message: "a bank edit cancels the held velocity preview through its workspace")
+    report.expect(
+        bankFixture.session.selectedNoteOrder == [note.id],
+        cppID: drawerVelocityCancellationID,
+        message: "a bank edit preserves the held note selection")
+    report.expect(
+        !page.pointerRelease(x: handle.x, y: handle.y - 30, button: 1),
+        cppID: drawerVelocityCancellationID,
+        message: "the bank edit makes the late release inert")
+    report.expect(
+        bankFixture.document.revision == baselineRevision
+            && coreTimeBytes(bankFixture.document) == bytes
+            && bankFixture.document.note(note.id)?.velocity == velocity,
+        cppID: drawerVelocityCancellationID,
+        message: "the bank edit leaves song revision, note velocity and MIDI bytes unchanged")
 
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
         report.fail(drawerVelocityCancellationID, "voicegroup switch fixture root is unavailable")
@@ -366,12 +441,14 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
         try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: scratch)
         try runBlocking { try await switchService.open(root: scratch.path) }
         let loaded = try runBlocking { try await switchService.openSong(label: "mus_gym") }
-        let switchDocument = SongDocument(file: drawerVelocityVelocityPageFixture(),
-                                          config: loaded.config, source: loaded.source,
-                                          trackBudget: loaded.trackBudget)
-        switchSession = DocumentSession(document: switchDocument, service: switchService,
-                                        lease: loaded.bank, slots: loaded.bankSlots,
-                                        dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+        let switchDocument = SongDocument(
+            file: drawerVelocityVelocityPageFixture(),
+            config: loaded.config, source: loaded.source,
+            trackBudget: loaded.trackBudget)
+        switchSession = DocumentSession(
+            document: switchDocument, service: switchService,
+            lease: loaded.bank, slots: loaded.bankSlots,
+            dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
     } catch {
         report.fail(drawerVelocityCancellationID, "could not stage the alternate voicegroup: \(error)")
         return
@@ -396,7 +473,8 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
     let switchWorkspace = DocumentWorkspace(
         session: switchFixture.session, audio: switchAudio, playhead: switchPlayhead,
         playheadGuides: switchGuides, eventList: switchEventList, palette: GridPalette(),
-        typography: Typography(baseFontPx: 13), callbacks: DocumentWorkspace.Callbacks(
+        typography: Typography(baseFontPx: 13),
+        callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
             revealTrackVoiceRequested: { _ in },
             gridCommandAvailabilityChanged: {}, sessionStateChanged: {},
@@ -407,23 +485,29 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
     }
     switchWorkspace.activate()
     let switchPage = switchWorkspace.velocityPage
-    switchPage.configureBody(width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1,
-                             baseFontPx: 13, dragDistance: 10)
+    switchPage.configureBody(
+        width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1,
+        baseFontPx: 13, dragDistance: 10)
     switchFixture.session.setSelectedNotes([switchNote.id])
-    guard let switchHandle = switchPage.publishedHandlesSnapshot.first(where: {
-        $0.noteIdText == "\(switchNote.id.rawValue)"
-    }), switchFixture.document.state.config.voicegroupArgument == "_fixture_rich" else {
+    guard
+        let switchHandle = switchPage.publishedHandlesSnapshot.first(where: {
+            $0.noteIdText == "\(switchNote.id.rawValue)"
+        }), switchFixture.document.state.config.voicegroupArgument == "_fixture_rich"
+    else {
         report.fail(drawerVelocityCancellationID, "voicegroup switch needs the original bank and a drawn note")
         return
     }
     let switchRevision = switchFixture.document.revision
     let switchUndoCount = switchFixture.document.history.undoCount
     let switchBytes = coreTimeBytes(switchFixture.document)
-    _ = switchPage.pointerPress(x: switchHandle.x, y: switchHandle.y,
-                                surface: 1, button: 1, modifiers: 0)
+    _ = switchPage.pointerPress(
+        x: switchHandle.x, y: switchHandle.y,
+        surface: 1, button: 1, modifiers: 0)
     _ = switchPage.pointerMove(x: switchHandle.x, y: switchHandle.y - 30, buttons: 1)
-    guard switchPage.hasGesture && switchPage.interactionActive
-        && switchPage.frozenPreview[switchNote.id] != nil else {
+    guard
+        switchPage.hasGesture && switchPage.interactionActive
+            && switchPage.frozenPreview[switchNote.id] != nil
+    else {
         report.fail(drawerVelocityCancellationID, "voicegroup switch drag did not stage a preview")
         return
     }
@@ -433,46 +517,58 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
         report.fail(drawerVelocityCancellationID, "voicegroup switch failed to load its alternate bank: \(error)")
         return
     }
-    report.expect(switchFixture.session.bankLoadName == "fixture_alt",
-                  cppID: drawerVelocityCancellationID,
-                  message: "the dock switch adopts the alternate voicegroup")
-    report.expect(!switchPage.hasGesture && !switchPage.interactionActive,
-                  cppID: drawerVelocityCancellationID,
-                  message: "A114 voicegroup replacement ends the held velocity gesture")
-    report.expect(coreTimeBytes(switchFixture.document) == switchBytes,
-                  cppID: drawerVelocityCancellationID,
-                  message: "A115 voicegroup replacement leaves the MIDI bytes unchanged")
-    report.expect(switchFixture.document.revision == switchRevision + 1,
-                  cppID: drawerVelocityCancellationID,
-                  message: "A116 voicegroup replacement advances revision only for its config edit")
-    report.expect(switchFixture.document.history.undoCount == switchUndoCount + 1,
-                  cppID: drawerVelocityCancellationID,
-                  message: "A117 voicegroup replacement adds only its config undo entry")
-    report.expect(switchPage.frozenPreview.isEmpty,
-                  cppID: drawerVelocityCancellationID,
-                  message: "A118 voicegroup replacement clears the held velocity preview")
-    report.expect(switchFixture.session.selectedNoteOrder == [switchNote.id],
-                  cppID: drawerVelocityCancellationID,
-                  message: "A120 voicegroup replacement preserves the selected note")
-    report.expect(!switchPage.pointerRelease(x: switchHandle.x, y: switchHandle.y - 30, button: 1),
-                  cppID: drawerVelocityCancellationID,
-                  message: "the late release after voicegroup replacement is inert")
-    report.expect(switchFixture.document.notes(in: 0).map(\.velocity) == [100, 64, 32],
-                  cppID: drawerVelocityCancellationID,
-                  message: "voicegroup replacement cannot commit any staged note velocity")
+    report.expect(
+        switchFixture.session.bankLoadName == "fixture_alt",
+        cppID: drawerVelocityCancellationID,
+        message: "the dock switch adopts the alternate voicegroup")
+    report.expect(
+        !switchPage.hasGesture && !switchPage.interactionActive,
+        cppID: drawerVelocityCancellationID,
+        message: "A114 voicegroup replacement ends the held velocity gesture")
+    report.expect(
+        coreTimeBytes(switchFixture.document) == switchBytes,
+        cppID: drawerVelocityCancellationID,
+        message: "A115 voicegroup replacement leaves the MIDI bytes unchanged")
+    report.expect(
+        switchFixture.document.revision == switchRevision + 1,
+        cppID: drawerVelocityCancellationID,
+        message: "A116 voicegroup replacement advances revision only for its config edit")
+    report.expect(
+        switchFixture.document.history.undoCount == switchUndoCount + 1,
+        cppID: drawerVelocityCancellationID,
+        message: "A117 voicegroup replacement adds only its config undo entry")
+    report.expect(
+        switchPage.frozenPreview.isEmpty,
+        cppID: drawerVelocityCancellationID,
+        message: "A118 voicegroup replacement clears the held velocity preview")
+    report.expect(
+        switchFixture.session.selectedNoteOrder == [switchNote.id],
+        cppID: drawerVelocityCancellationID,
+        message: "A120 voicegroup replacement preserves the selected note")
+    report.expect(
+        !switchPage.pointerRelease(x: switchHandle.x, y: switchHandle.y - 30, button: 1),
+        cppID: drawerVelocityCancellationID,
+        message: "the late release after voicegroup replacement is inert")
+    report.expect(
+        switchFixture.document.notes(in: 0).map(\.velocity) == [100, 64, 32],
+        cppID: drawerVelocityCancellationID,
+        message: "voicegroup replacement cannot commit any staged note velocity")
     do {
         let undone = try runBlocking { try await switchFixture.session.undo() }
-        report.expect(undone && switchFixture.document.state.config.voicegroupArgument == "_fixture_rich"
-                      && switchFixture.document.notes(in: 0).map(\.velocity) == [100, 64, 32],
-                      cppID: drawerVelocityCancellationID,
-                      message: "undoing the switch reverts its config without undoing a velocity edit")
+        report.expect(
+            undone && switchFixture.document.state.config.voicegroupArgument == "_fixture_rich"
+                && switchFixture.document.notes(in: 0).map(\.velocity) == [100, 64, 32],
+            cppID: drawerVelocityCancellationID,
+            message: "undoing the switch reverts its config without undoing a velocity edit")
     } catch {
         report.fail(drawerVelocityCancellationID, "could not undo the voicegroup switch: \(error)")
     }
 }
 
 @MainActor
-func drawerVelocityOverlapNodeDragCancelRestores(_ report: CheckReport, session: DocumentSession, service: ProjectService) {
+func drawerVelocityOverlapNodeDragCancelRestores(
+    _ report: CheckReport, session: DocumentSession, service: ProjectService
+) {
     let fixture = drawerVelocityVelocityFixture(session: session, service: service)
     let notes = fixture.notes
     guard notes.count >= 3 else {
@@ -481,18 +577,21 @@ func drawerVelocityOverlapNodeDragCancelRestores(_ report: CheckReport, session:
     }
     let page = fixture.page
     let document = fixture.document
-    guard let overlapIDs = try? document.addNotes([
-        NewNote(track: 0, tick: 12, pitch: 61, duration: 24, velocity: notes[0].velocity)
-    ]), let overlapID = overlapIDs.first else {
+    guard
+        let overlapIDs = try? document.addNotes([
+            NewNote(track: 0, tick: 12, pitch: 61, duration: 24, velocity: notes[0].velocity)
+        ]), let overlapID = overlapIDs.first
+    else {
         report.fail(drawerVelocityCancellationID, "the overlap note was not inserted")
         return
     }
     page.refreshFromDocument()
     guard let overlap = document.note(overlapID),
-          let circles = fixture.handle(overlap),
-          let stem = fixture.handle(notes[0]),
-          abs(circles.y - stem.y) < 0.001,
-          circles.x > stem.x, circles.x < stem.endX else {
+        let circles = fixture.handle(overlap),
+        let stem = fixture.handle(notes[0]),
+        abs(circles.y - stem.y) < 0.001,
+        circles.x > stem.x, circles.x < stem.endX
+    else {
         report.fail(drawerVelocityCancellationID, "the overlap node does not cover the earlier stem")
         return
     }
@@ -508,16 +607,18 @@ func drawerVelocityOverlapNodeDragCancelRestores(_ report: CheckReport, session:
     let beforeUndo = document.history.undoCount
     _ = page.pointerPress(x: circles.x, y: circles.y, surface: 1, button: 1, modifiers: 0)
     _ = page.pointerMove(x: circles.x, y: circles.y - 20, buttons: 1)
-    report.expect(page.interactionActive && fixture.session.selectedNoteOrder == [overlapID],
-                  cppID: drawerVelocityCancellationID,
-                  message: "beginning an overlap-node drag did not target the visible following node")
+    report.expect(
+        page.interactionActive && fixture.session.selectedNoteOrder == [overlapID],
+        cppID: drawerVelocityCancellationID,
+        message: "beginning an overlap-node drag did not target the visible following node")
     _ = page.handleEscape()
     _ = page.pointerRelease(x: circles.x, y: circles.y - 20, button: 1)
-    report.expect(!page.interactionActive && fixture.session.selectedNoteOrder == [notes[0].id]
-                      && coreTimeBytes(document) == beforeBytes && document.revision == beforeRevision
-                      && document.history.undoCount == beforeUndo,
-                  cppID: drawerVelocityCancellationID,
-                  message: "cancelling an overlap-node drag did not restore its pre-press selection")
+    report.expect(
+        !page.interactionActive && fixture.session.selectedNoteOrder == [notes[0].id]
+            && coreTimeBytes(document) == beforeBytes && document.revision == beforeRevision
+            && document.history.undoCount == beforeUndo,
+        cppID: drawerVelocityCancellationID,
+        message: "cancelling an overlap-node drag did not restore its pre-press selection")
 }
 
 @MainActor
@@ -559,29 +660,32 @@ func drawerVelocityStemDragGuardsEdits(_ report: CheckReport, session: DocumentS
     let beforeUndo = document.history.undoCount
     _ = page.pointerPress(x: stemX, y: stem.y, surface: 1, button: 1, modifiers: 0)
     _ = page.pointerMove(x: stemX, y: stem.y - 20, buttons: 1)
-    report.expect(page.interactionActive && fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id],
-                  cppID: drawerVelocityCancellationID,
-                  message: "selected velocity-stem drag did not retain its captured note selection")
+    report.expect(
+        page.interactionActive && fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id],
+        cppID: drawerVelocityCancellationID,
+        message: "selected velocity-stem drag did not retain its captured note selection")
     let grid = PianoGrid(session: fixture.session)
     let automation = AutomationPage()
     automation.attach(session: fixture.session, palette: GridPalette())
     defer { automation.detach() }
     let ruler = RulerMenuPresenter(session: fixture.session, grid: grid, automation: automation)
-    let router = EditorCommandRouter(session: fixture.session, grid: grid, automation: automation,
-                                     rulerMenu: ruler, velocity: page)
+    let router = EditorCommandRouter(
+        session: fixture.session, grid: grid, automation: automation,
+        rulerMenu: ruler, velocity: page)
     router.perform(.nudgeRight)
     router.perform(.delete)
-    report.expect(coreTimeBytes(document) == beforeBytes
-                      && fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id]
-                      && document.revision == beforeRevision && document.history.undoCount == beforeUndo,
-                  cppID: drawerVelocityCancellationID,
-                  message: "an edit key mutated selection or notes during a live velocity gesture")
+    report.expect(
+        coreTimeBytes(document) == beforeBytes
+            && fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id]
+            && document.revision == beforeRevision && document.history.undoCount == beforeUndo,
+        cppID: drawerVelocityCancellationID,
+        message: "an edit key mutated selection or notes during a live velocity gesture")
     _ = page.handleEscape()
     _ = page.pointerRelease(x: stemX, y: stem.y - 20, button: 1)
-    report.expect(!page.interactionActive && fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id]
-                      && coreTimeBytes(document) == beforeBytes && document.revision == beforeRevision
-                      && document.history.undoCount == beforeUndo,
-                  cppID: drawerVelocityCancellationID,
-                  message: "first Escape did not cancel the velocity gesture and restore its selection")
+    report.expect(
+        !page.interactionActive && fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id]
+            && coreTimeBytes(document) == beforeBytes && document.revision == beforeRevision
+            && document.history.undoCount == beforeUndo,
+        cppID: drawerVelocityCancellationID,
+        message: "first Escape did not cancel the velocity gesture and restore its selection")
 }
-

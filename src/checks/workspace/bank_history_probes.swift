@@ -94,28 +94,35 @@ internal func historyTransitionRegressions(_ report: CheckReport) {
         let afterDocument = document.history.currentIdentity
         let count = document.history.undoCount
         let undoSteps = try runBlocking { () async throws -> [Bool] in
-            [try await document.history.undo(), try await document.history.undo(),
-             try await document.history.undo()]
+            [
+                try await document.history.undo(), try await document.history.undo(),
+                try await document.history.undo(),
+            ]
         }
-        report.expect(count == 3 && undoSteps.allSatisfy { $0 }
-                      && document.history.undoIndex == 0
-                      && document.state.config.priority == 0
-                      && beforeBank == afterBank && afterBank != afterDocument
-                      && action.calls == 1,
-                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-                      message: "document and bank undo/redo cross the shared history in order")
+        report.expect(
+            count == 3 && undoSteps.allSatisfy { $0 }
+                && document.history.undoIndex == 0
+                && document.state.config.priority == 0
+                && beforeBank == afterBank && afterBank != afterDocument
+                && action.calls == 1,
+            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+            message: "document and bank undo/redo cross the shared history in order")
         let redoSteps = try runBlocking { () async throws -> [Bool] in
-            [try await document.history.redo(), try await document.history.redo(),
-             try await document.history.redo()]
+            [
+                try await document.history.redo(), try await document.history.redo(),
+                try await document.history.redo(),
+            ]
         }
-        report.expect(redoSteps.allSatisfy { $0 } && document.history.undoIndex == count
-                      && document.state.config.priority == 2
-                      && document.history.currentIdentity == afterDocument && action.calls == 2,
-                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-                      message: "document and bank undo/redo cross the shared history in order")
+        report.expect(
+            redoSteps.allSatisfy { $0 } && document.history.undoIndex == count
+                && document.state.config.priority == 2
+                && document.history.currentIdentity == afterDocument && action.calls == 2,
+            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+            message: "document and bank undo/redo cross the shared history in order")
     } catch {
-        report.fail("voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-                    "interleaved document and bank replay failed: \(error)")
+        report.fail(
+            "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+            "interleaved document and bank replay failed: \(error)")
     }
 
     do {
@@ -141,15 +148,19 @@ internal func historyTransitionRegressions(_ report: CheckReport) {
             acceptedConfig.priority = 2
             document.setConfig(acceptedConfig)
             _ = document.history.undoDocument()
-            return (completed, repeated, document.state.config.priority, action.calls,
-                    document.isDirty)
+            return (
+                completed, repeated, document.state.config.priority, action.calls,
+                document.isDirty
+            )
         }
-        report.expect(result.0 && !result.1 && result.2 == 1 && result.3 == 1 && !result.4,
+        report.expect(
+            result.0 && !result.1 && result.2 == 1 && result.3 == 1 && !result.4,
             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
             message: "pending bank undo gates mutation; the next admitted document edit undoes cleanly")
     } catch {
-        report.fail("voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-                    "delayed bank undo scenario threw: \(error)")
+        report.fail(
+            "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+            "delayed bank undo scenario threw: \(error)")
     }
 
     do {
@@ -172,15 +183,19 @@ internal func historyTransitionRegressions(_ report: CheckReport) {
             let repeated = try await document.history.redo()
             action.resume()
             let completed = try await pending.value
-            return (completed, repeated, document.state.config.priority, action.calls,
-                    document.isDirty)
+            return (
+                completed, repeated, document.state.config.priority, action.calls,
+                document.isDirty
+            )
         }
-        report.expect(result.0 && !result.1 && result.2 == 2 && result.3 == 2 && !result.4,
+        report.expect(
+            result.0 && !result.1 && result.2 == 2 && result.3 == 2 && !result.4,
             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
             message: "pending bank redo cannot admit a newer document edit, replay twice, or dirty")
     } catch {
-        report.fail("voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-                    "delayed bank redo scenario threw: \(error)")
+        report.fail(
+            "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+            "delayed bank redo scenario threw: \(error)")
     }
 
     let staleRedoDocument = historyProbeDocument()
@@ -190,11 +205,12 @@ internal func historyTransitionRegressions(_ report: CheckReport) {
     let staleRedoAction = ControlledHistoryBankAction(redo: .stale)
     staleRedoDocument.history.recordConfirmedBank(staleRedoAction)
     _ = try? runBlocking { try await staleRedoDocument.history.undo() }
-    let staleRedoRemoved = (try? runBlocking {
-        try await staleRedoDocument.history.redo()
-    }) == true
-    report.expect(staleRedoRemoved && !staleRedoDocument.history.canRedo &&
-        staleRedoDocument.state.config.priority == 6,
+    let staleRedoRemoved =
+        (try? runBlocking {
+            try await staleRedoDocument.history.redo()
+        }) == true
+    report.expect(
+        staleRedoRemoved && !staleRedoDocument.history.canRedo && staleRedoDocument.state.config.priority == 6,
         cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
         message: "stale bank redo entry is removed without mutating document state")
 
@@ -204,11 +220,13 @@ internal func historyTransitionRegressions(_ report: CheckReport) {
     staleUndoDocument.setConfig(edited)
     staleUndoDocument.history.recordConfirmedBank(
         ControlledHistoryBankAction(undo: .stale))
-    let staleRemoved = (try? runBlocking {
-        try await staleUndoDocument.history.undo()
-    }) == true
+    let staleRemoved =
+        (try? runBlocking {
+            try await staleUndoDocument.history.undo()
+        }) == true
     _ = staleUndoDocument.history.undoDocument()
-    report.expect(staleRemoved && staleUndoDocument.state.config.priority == 0,
+    report.expect(
+        staleRemoved && staleUndoDocument.state.config.priority == 0,
         cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
         message: "stale bank undo entry is removed so the next undo reaches document history")
 
@@ -220,8 +238,8 @@ internal func historyTransitionRegressions(_ report: CheckReport) {
     hardDocument.history.recordConfirmedBank(hardAction)
     _ = try? runBlocking { try await hardDocument.history.undo() }
     _ = try? runBlocking { try await hardDocument.history.undo() }
-    report.expect(hardAction.calls == 2 && hardDocument.state.config.priority == 4 &&
-        hardDocument.history.canUndo,
+    report.expect(
+        hardAction.calls == 2 && hardDocument.state.config.priority == 4 && hardDocument.history.canUndo,
         cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
         message: "hard bank failure keeps the entry available and does not cross it")
 
@@ -232,14 +250,16 @@ internal func historyTransitionRegressions(_ report: CheckReport) {
     cancelling.history.recordConfirmedBank(MergingHistoryBankAction(before: 10, after: 20))
     cancelling.history.recordConfirmedBank(MergingHistoryBankAction(before: 20, after: 10))
     _ = cancelling.history.undoDocument()
-    report.expect(cancelling.state.config.priority == 0,
+    report.expect(
+        cancelling.state.config.priority == 0,
         cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
         message: "self-cancelling bank merge is removed so undo reaches the preceding document edit")
 }
 
 @MainActor
 private func historyProbeDocument() -> SongDocument {
-    SongDocument(file: MidiFile(chunks: [
-        MidiChunk(events: [.channel(status: 0xC0, data0: 0)]),
-    ]))
+    SongDocument(
+        file: MidiFile(chunks: [
+            MidiChunk(events: [.channel(status: 0xC0, data0: 0)])
+        ]))
 }

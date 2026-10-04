@@ -25,10 +25,10 @@ public struct VoicegroupId: Hashable, Sendable {
     public init?(sourceRelativePath: String, sectionLabel: String) {
         let normalized = ProjectFileStore.cleanPath(sourceRelativePath)
         guard !normalized.isEmpty,
-              normalized != ".",
-              !ProjectFileStore.isAbsolutePath(normalized),
-              normalized != "..",
-              !normalized.hasPrefix("../")
+            normalized != ".",
+            !ProjectFileStore.isAbsolutePath(normalized),
+            normalized != "..",
+            !normalized.hasPrefix("../")
         else { return nil }
         self.sourceRelativePath = normalized
         self.sectionLabel = sectionLabel

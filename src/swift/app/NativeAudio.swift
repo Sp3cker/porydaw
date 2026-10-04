@@ -74,13 +74,17 @@ public final class NativeAudio {
     public var analogFilter: Bool { device.renderer.analogFilter }
     public var polyLostTotal: UInt64 { device.renderer.polyLostTotal }
 
-    public func bind(timeline: PlaybackTimeline, bank: NativeBankLease,
-                     config: SongConfig) throws {
+    public func bind(
+        timeline: PlaybackTimeline, bank: NativeBankLease,
+        config: SongConfig
+    ) throws {
         try bind(timeline: timeline, bank: bank, settings: songSettings(for: config))
     }
 
-    public func bind(timeline: PlaybackTimeline, bank: NativeBankLease,
-                     settings: AudioSettings) throws {
+    public func bind(
+        timeline: PlaybackTimeline, bank: NativeBankLease,
+        settings: AudioSettings
+    ) throws {
         let voices = try Self.borrowVoices(bank)
         device.withRenderingStopped {
             device.renderer.bind(timeline: timeline, voicegroup: voices, settings: settings)
@@ -143,22 +147,28 @@ public final class NativeAudio {
         device.renderer.audition.previewNote(track: track, key: key, velocity: velocity)
     }
 
-    public func previewNoteTimed(track: UInt8, key: UInt8, velocity: UInt8,
-                                 durationSamples: UInt32) {
-        device.renderer.audition.previewNoteTimed(track: track, key: key, velocity: velocity,
-                                                  durationSamples: durationSamples)
+    public func previewNoteTimed(
+        track: UInt8, key: UInt8, velocity: UInt8,
+        durationSamples: UInt32
+    ) {
+        device.renderer.audition.previewNoteTimed(
+            track: track, key: key, velocity: velocity,
+            durationSamples: durationSamples)
     }
 
     public func previewVoice(program: UInt8, key: UInt8, velocity: UInt8) {
         device.renderer.audition.previewVoice(program: program, key: key, velocity: velocity)
     }
 
-    public func auditionSample(samples: [Int8], frequency: UInt32, loopStart: UInt32,
-                               looped: Bool, key: UInt8, adsr: AudioADSR,
-                               toneKey: UInt8 = 60) -> Bool {
-        device.renderer.audition.publishSample(samples: samples, frequency: frequency,
-                                               loopStart: loopStart, looped: looped, key: key,
-                                               adsr: adsr, toneKey: toneKey)
+    public func auditionSample(
+        samples: [Int8], frequency: UInt32, loopStart: UInt32,
+        looped: Bool, key: UInt8, adsr: AudioADSR,
+        toneKey: UInt8 = 60
+    ) -> Bool {
+        device.renderer.audition.publishSample(
+            samples: samples, frequency: frequency,
+            loopStart: loopStart, looped: looped, key: key,
+            adsr: adsr, toneKey: toneKey)
     }
 
     public func auditionWave(wave16: [UInt8], key: UInt8, adsr: AudioADSR) -> Bool {

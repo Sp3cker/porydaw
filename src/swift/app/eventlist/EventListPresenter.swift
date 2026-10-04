@@ -42,8 +42,10 @@ public final class EventListPresenter: QmlUncreatable {
     @QtTracked public var filterMask = 127
     @QtTracked public var filterSummary = "All events"
     @QtTracked public var countText = ""
-    @QtTracked public var headerLabels = ["Tick", "Type", "Ch", "Data 1",
-                                          "Data 2", "Data", "Summary"]
+    @QtTracked public var headerLabels = [
+        "Tick", "Type", "Ch", "Data 1",
+        "Data 2", "Data", "Summary",
+    ]
     @QtIgnored public var columnWidths: [Double] = [] {
         didSet { columnWidthsRevision &+= 1 }
     }
@@ -92,8 +94,10 @@ public final class EventListPresenter: QmlUncreatable {
     private var appearancePalette: GridPalette
     private var typography: Typography
 
-    public init(palette: GridPalette = GridPalette(),
-                typography: Typography = Typography(baseFontPx: 13)) {
+    public init(
+        palette: GridPalette = GridPalette(),
+        typography: Typography = Typography(baseFontPx: 13)
+    ) {
         appearancePalette = palette
         self.typography = typography
         appearance = EventListAppearance.roles(palette: palette, typography: typography)
@@ -171,8 +175,9 @@ public final class EventListPresenter: QmlUncreatable {
 
         var chunkChangedBySelection = false
         if change.domains.contains(.selection), visible,
-           let selectedChunk = mappedChunk(for: session.selectedTrack, in: session.document),
-           selectedChunk != chunkIndex {
+            let selectedChunk = mappedChunk(for: session.selectedTrack, in: session.document),
+            selectedChunk != chunkIndex
+        {
             invalidateRowMenu()
             chunkIndex = selectedChunk
             chunkChangedBySelection = true
@@ -207,11 +212,11 @@ public final class EventListPresenter: QmlUncreatable {
         rebuildFromDocument(preservingCurrentRow: false)
 
         guard followTrack, target >= 0,
-              let track = firstEngineTrack(for: target, in: session.document),
-              session.selectedTrack != track else { return }
+            let track = firstEngineTrack(for: target, in: session.document),
+            session.selectedTrack != track
+        else { return }
         session.selectPrimaryTrack(track)
     }
-
 
     /// Updates transport state, tinting the model row even when follow-scroll
     /// is suppressed by pointer, editing, menu, or mouse-button state.
@@ -224,11 +229,11 @@ public final class EventListPresenter: QmlUncreatable {
         model.setPlayheadTick(tick)
         publishPlayheadTransition(from: oldPlayRow)
         guard oldPlayRow != model.playRow,
-              playing, model.playRow >= 0, followPlayhead, !pointerDown,
-              !editing, !menuOpen, mouseButtons == 0 else { return }
+            playing, model.playRow >= 0, followPlayhead, !pointerDown,
+            !editing, !menuOpen, mouseButtons == 0
+        else { return }
         requestScroll(to: model.playRow)
     }
-
 
     public func setFollowPlayhead(enabled: Bool) {
         followPlayhead = enabled
@@ -250,7 +255,8 @@ public final class EventListPresenter: QmlUncreatable {
     /// The sentinel commits `endTick`, while transport state remains separate.
     public func focusRow(row: Int) {
         guard attached, let session, !session.isClosed,
-              let tick = model.rowTick(row: row) else { return }
+            let tick = model.rowTick(row: row)
+        else { return }
         let oldRow = currentRow
         let oldPlayRow = model.playRow
         model.setCurrentRow(row)
@@ -280,7 +286,6 @@ public final class EventListPresenter: QmlUncreatable {
         clearEditing()
         return true
     }
-
 
     public func rowTick(row: Int) -> Int {
         guard let tick = model.rowTick(row: row) else { return -1 }
@@ -380,7 +385,8 @@ public final class EventListPresenter: QmlUncreatable {
 
     private func remapCurrentChunk(using remap: TrackRemap) {
         guard chunkIndex >= 0 else { return }
-        chunkIndex = remap.chunkMap.indices.contains(chunkIndex)
+        chunkIndex =
+            remap.chunkMap.indices.contains(chunkIndex)
             ? remap.chunkMap[chunkIndex] ?? -1
             : -1
     }
@@ -389,9 +395,10 @@ public final class EventListPresenter: QmlUncreatable {
         guard let selectedTrack else { return nil }
         let map = document.engineTracks
         guard (0..<map.usedTrackCount).contains(selectedTrack),
-              map.tracks.indices.contains(selectedTrack),
-              let chunk = map.tracks[selectedTrack].midiChunk,
-              document.rawChunks.indices.contains(chunk) else {
+            map.tracks.indices.contains(selectedTrack),
+            let chunk = map.tracks[selectedTrack].midiChunk,
+            document.rawChunks.indices.contains(chunk)
+        else {
             return nil
         }
         return chunk
@@ -399,7 +406,8 @@ public final class EventListPresenter: QmlUncreatable {
 
     private func firstEngineTrack(for chunk: Int, in document: SongDocument) -> Int? {
         let map = document.engineTracks
-        for track in 0..<map.usedTrackCount where map.tracks.indices.contains(track) && map.tracks[track].midiChunk == chunk {
+        for track in 0..<map.usedTrackCount
+        where map.tracks.indices.contains(track) && map.tracks[track].midiChunk == chunk {
             return track
         }
         return nil
@@ -424,10 +432,11 @@ public final class EventListPresenter: QmlUncreatable {
             publishRows()
             return
         }
-        model.setSource(chunks[chunkIndex],
-                        tempos: chunkIndex == 0 ? session.document.state.tempo : [],
-                        filterMask: filterMask,
-                        preservingCurrentRow: preservingCurrentRow)
+        model.setSource(
+            chunks[chunkIndex],
+            tempos: chunkIndex == 0 ? session.document.state.tempo : [],
+            filterMask: filterMask,
+            preservingCurrentRow: preservingCurrentRow)
         chunk = chunkIndex
         selectedRows = selectedRows.filter { model.rows.indices.contains($0) }
         model.voiceNames = voiceNames()
@@ -435,9 +444,10 @@ public final class EventListPresenter: QmlUncreatable {
     }
 
     func publishRows() {
-        rows.reset(to: model.rows.map {
-            EventListRowHandle($0, tint: model.rowTint(row: $0.index) ?? "")
-        })
+        rows.reset(
+            to: model.rows.map {
+                EventListRowHandle($0, tint: model.rowTint(row: $0.index) ?? "")
+            })
         rowCount = model.rowCount
         currentRow = model.currentRow
         playRow = model.playRow
@@ -458,8 +468,9 @@ public final class EventListPresenter: QmlUncreatable {
 
     private func refreshRowHandle(at row: Int) {
         guard model.rows.indices.contains(row) else { return }
-        rows[row] = EventListRowHandle(model.rows[row],
-                                       tint: model.rowTint(row: row) ?? "")
+        rows[row] = EventListRowHandle(
+            model.rows[row],
+            tint: model.rowTint(row: row) ?? "")
     }
 
     private func requestScroll(to row: Int) {

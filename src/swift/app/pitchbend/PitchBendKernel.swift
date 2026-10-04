@@ -39,10 +39,12 @@ public struct PitchBendKernel {
     private var gesture: Gesture?
     private var wheelRemainder = 0.0
 
-    public init(lane: Lane, geometry: PitchBendGeometry, startTick: Int, endTick: Int,
-                fineTicks: Int, snap: @escaping (Double, Bool) -> Int,
-                snapUp: @escaping (Double, Bool) -> Int,
-                points: [Int: Int], endValue: Int) {
+    public init(
+        lane: Lane, geometry: PitchBendGeometry, startTick: Int, endTick: Int,
+        fineTicks: Int, snap: @escaping (Double, Bool) -> Int,
+        snapUp: @escaping (Double, Bool) -> Int,
+        points: [Int: Int], endValue: Int
+    ) {
         self.lane = lane
         self.geometry = geometry
         self.startTick = startTick
@@ -60,8 +62,9 @@ public struct PitchBendKernel {
         snapTick = snap
         snapTickUp = snapUp
         self.points = points
-        self.endValue = min(max(endValue, lane == .pitch ? -8192 : 0),
-                            lane == .pitch ? 8191 : 127)
+        self.endValue = min(
+            max(endValue, lane == .pitch ? -8192 : 0),
+            lane == .pitch ? 8191 : 127)
         self.points[endTick] = self.endValue
         keyboardTick = startTick
         liveValue = points[startTick] ?? 0
@@ -105,7 +108,8 @@ public struct PitchBendKernel {
     @discardableResult
     public mutating func removeSelectedVertex() -> Bool {
         guard let selectedTick, selectedTick != startTick, selectedTick != endTick,
-              points.removeValue(forKey: selectedTick) != nil else { return false }
+            points.removeValue(forKey: selectedTick) != nil
+        else { return false }
         self.selectedTick = nil
         liveValue = value(at: keyboardTick)
         return true
@@ -136,7 +140,8 @@ public struct PitchBendKernel {
         }
         let center = geometry.canvasY + ((geometry.canvasHeight - 1) / 2).rounded(.down)
         if abs(clamped - center) <= geometry.zeroDetent { return 0 }
-        let raw = clamped <= center
+        let raw =
+            clamped <= center
             ? Int(((center - clamped) * 8191 / max(1, center - geometry.canvasY)).rounded())
             : -Int(((clamped - center) * 8192 / max(1, bottom - center)).rounded())
         if raw == -8192 || raw == 8191 { return raw }
@@ -156,8 +161,10 @@ public struct PitchBendKernel {
             let dx = x - self.x(at: point.tick)
             let dy = y - self.y(at: point.value)
             let squared = dx * dx + dy * dy
-            if squared <= radius2 && (nearest == nil || squared < distance
-                || (abs(squared - distance) < 0.00001 && point.tick < (nearest?.tick ?? Int.max))) {
+            if squared <= radius2
+                && (nearest == nil || squared < distance
+                    || (abs(squared - distance) < 0.00001 && point.tick < (nearest?.tick ?? Int.max)))
+            {
                 distance = squared
                 nearest = point
             }
@@ -181,8 +188,9 @@ public struct PitchBendKernel {
             }
             lastSnapped = snapTick(Double(low), fine)
         }
-        return min(max(startTick, snapTick(max(0, tick), fine)),
-                   max(startTick, min(last, lastSnapped)))
+        return min(
+            max(startTick, snapTick(max(0, tick), fine)),
+            max(startTick, min(last, lastSnapped)))
     }
 
     public func tick(atX x: Double, fine: Bool = false) -> Int {
@@ -205,8 +213,10 @@ public struct PitchBendKernel {
         }
         selectedTick = nil
         let point = Point(tick: tick(atX: x, fine: line), value: value(atY: y))
-        gesture = .stroke(Stroke(original: points, initialKeyboardTick: keyboardTick,
-                                 anchor: point, previous: point, line: line))
+        gesture = .stroke(
+            Stroke(
+                original: points, initialKeyboardTick: keyboardTick,
+                anchor: point, previous: point, line: line))
         replace(from: point, to: point, fine: line)
         keyboardTick = point.tick
         liveValue = point.value
@@ -228,8 +238,14 @@ public struct PitchBendKernel {
         case .vertex(let drag):
             points = drag.original
             let endpoint = drag.originalTick == startTick || drag.originalTick == endTick
-            var tick = endpoint ? drag.originalTick : min(endTick - 1, max(startTick + 1,
-                tick(atX: x, fine: fine)))
+            var tick =
+                endpoint
+                ? drag.originalTick
+                : min(
+                    endTick - 1,
+                    max(
+                        startTick + 1,
+                        tick(atX: x, fine: fine)))
             if tick != drag.originalTick && points[tick] != nil {
                 let delta = tick > drag.originalTick ? 1 : -1
                 while tick > startTick && tick < endTick && points[tick] != nil { tick += delta }
@@ -283,10 +299,14 @@ public struct PitchBendKernel {
         }
         let nextTick = snapTickUp
         func interpolated(_ tick: Int) -> Int {
-            let fraction = first.tick == last.tick ? 1.0
+            let fraction =
+                first.tick == last.tick
+                ? 1.0
                 : min(1, max(0, Double(tick - first.tick) / Double(last.tick - first.tick)))
-            return min(max(first.value + Int((fraction * Double(last.value - first.value)).rounded()),
-                           minimumValue), maximumValue)
+            return min(
+                max(
+                    first.value + Int((fraction * Double(last.value - first.value)).rounded()),
+                    minimumValue), maximumValue)
         }
         points[low] = interpolated(low)
         if high > low {

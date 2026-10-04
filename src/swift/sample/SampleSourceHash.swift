@@ -14,8 +14,10 @@ public enum SampleSourceHash {
             0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
             0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
         ]
-        var state: InlineArray<8, UInt32> = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-            0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]
+        var state: InlineArray<8, UInt32> = [
+            0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+            0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+        ]
         let length = data.count
         let padded = ((length + 9 + 63) / 64) * 64
         var message = Data(count: padded)
@@ -32,7 +34,8 @@ public enum SampleSourceHash {
                 var words = InlineArray<64, UInt32>(repeating: 0)
                 for i in 0..<16 {
                     let at = offset + i * 4
-                    words[i] = UInt32(bytes[at]) << 24 | UInt32(bytes[at + 1]) << 16
+                    words[i] =
+                        UInt32(bytes[at]) << 24 | UInt32(bytes[at + 1]) << 16
                         | UInt32(bytes[at + 2]) << 8 | UInt32(bytes[at + 3])
                 }
                 for i in 16..<64 {

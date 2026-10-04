@@ -14,8 +14,10 @@ public final class ProjectBankLease: @unchecked Sendable {
     public let publicationOwner: UUID
     public let publicationRevision: UInt64
 
-    init(handle: OpaquePointer, view: LoadedBankView, projectRoot: String,
-         publicationOwner: UUID, publicationRevision: UInt64) {
+    init(
+        handle: OpaquePointer, view: LoadedBankView, projectRoot: String,
+        publicationOwner: UUID, publicationRevision: UInt64
+    ) {
         self.handle = handle
         id = view.id
         loadName = view.loadName
@@ -63,10 +65,11 @@ extension ProjectStore {
         let box = view.id.sourceRelativePath.withCString { source in
             view.id.sectionLabel.withCString { section in
                 view.loadName.withCString { name in
-                    var adopted = PdAdoptedBank(bank: view.bank.raw, retained: retained.toOpaque(),
-                                                releaseRetained: releaseBankRetained,
-                                                sourceRelativePath: source, sectionLabel: section,
-                                                loadName: name)
+                    var adopted = PdAdoptedBank(
+                        bank: view.bank.raw, retained: retained.toOpaque(),
+                        releaseRetained: releaseBankRetained,
+                        sourceRelativePath: source, sectionLabel: section,
+                        loadName: name)
                     return pd_bank_lease_adopt(&adopted)
                 }
             }
@@ -76,9 +79,10 @@ extension ProjectStore {
             throw VoicegroupStoreError.operationFailed("Could not identify the voicegroup source.")
         }
         publicationRevision += 1
-        return ProjectBankLease(handle: box, view: view, projectRoot: projectRoot,
-                                publicationOwner: publicationOwner,
-                                publicationRevision: publicationRevision)
+        return ProjectBankLease(
+            handle: box, view: view, projectRoot: projectRoot,
+            publicationOwner: publicationOwner,
+            publicationRevision: publicationRevision)
     }
 }
 

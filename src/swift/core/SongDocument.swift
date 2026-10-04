@@ -10,10 +10,12 @@ public struct SongConfig: Equatable, Sendable {
     public var extendedClocks: Bool
     public var noCompression: Bool
 
-    public init(rawFlags: [String] = [], voicegroupArgument: String = "_dummy",
-                masterVolume: Int = 127, reverb: Int? = nil, priority: Int = 0,
-                exactGate: Bool = false, extendedClocks: Bool = false,
-                noCompression: Bool = false) {
+    public init(
+        rawFlags: [String] = [], voicegroupArgument: String = "_dummy",
+        masterVolume: Int = 127, reverb: Int? = nil, priority: Int = 0,
+        exactGate: Bool = false, extendedClocks: Bool = false,
+        noCompression: Bool = false
+    ) {
         self.rawFlags = rawFlags
         self.voicegroupArgument = voicegroupArgument
         self.masterVolume = masterVolume
@@ -54,11 +56,13 @@ extension SongState {
     /// falls back to full value comparison.
     func differs(from other: SongState) -> Bool {
         guard file.division == other.file.division, file.wasFormat0 == other.file.wasFormat0,
-              tempo == other.tempo, config == other.config,
-              file.chunks.count == other.file.chunks.count else { return self != other }
+            tempo == other.tempo, config == other.config,
+            file.chunks.count == other.file.chunks.count
+        else { return self != other }
         for index in file.chunks.indices
         where file.chunks[index].endTick != other.file.chunks[index].endTick
-            || ChunkPrint(file.chunks[index].events) != ChunkPrint(other.file.chunks[index].events) {
+            || ChunkPrint(file.chunks[index].events) != ChunkPrint(other.file.chunks[index].events)
+        {
             return self != other
         }
         return false
@@ -72,8 +76,10 @@ public struct TrackRemap: Equatable, Sendable {
     public var newChunkCount: Int
     public var newEngineTrackCount: Int
 
-    public init(chunkMap: [Int?] = [], engineTrackMap: [Int?] = [],
-                newChunkCount: Int = 0, newEngineTrackCount: Int = 0) {
+    public init(
+        chunkMap: [Int?] = [], engineTrackMap: [Int?] = [],
+        newChunkCount: Int = 0, newEngineTrackCount: Int = 0
+    ) {
         self.chunkMap = chunkMap
         self.engineTrackMap = engineTrackMap
         self.newChunkCount = newChunkCount
@@ -89,9 +95,10 @@ public struct TrackRemap: Equatable, Sendable {
         for (old, new) in engineTrackMap.enumerated() {
             if let new, tracks.indices.contains(new) { tracks[new] = old }
         }
-        return TrackRemap(chunkMap: chunks, engineTrackMap: tracks,
-                          newChunkCount: chunkMap.count,
-                          newEngineTrackCount: engineTrackMap.count)
+        return TrackRemap(
+            chunkMap: chunks, engineTrackMap: tracks,
+            newChunkCount: chunkMap.count,
+            newEngineTrackCount: engineTrackMap.count)
     }
 }
 
@@ -112,8 +119,10 @@ public struct SaveSnapshot: Sendable {
     public let revision: UInt64
     public let identity: DocumentIdentity
 
-    public init(bytes: [UInt8], config: SongConfig, flagsNeeded: Bool,
-                destination: SongSource, revision: UInt64, identity: DocumentIdentity) {
+    public init(
+        bytes: [UInt8], config: SongConfig, flagsNeeded: Bool,
+        destination: SongSource, revision: UInt64, identity: DocumentIdentity
+    ) {
         self.bytes = bytes
         self.config = config
         self.flagsNeeded = flagsNeeded
@@ -163,42 +172,57 @@ internal struct DocumentMutation {
     mutating func insert(_ event: MidiEvent, chunk: Int) {
         let oldEnd = state.file.chunks[chunk].endTick
         let offset = state.file.chunks[chunk].insert(event)
-        changes.events.append(.insert(EventInsertion(
-            chunk: chunk, offset: offset, event: event)))
-        recordEnd(chunk: chunk, before: oldEnd,
-                  after: state.file.chunks[chunk].endTick)
+        changes.events.append(
+            .insert(
+                EventInsertion(
+                    chunk: chunk, offset: offset, event: event)))
+        recordEnd(
+            chunk: chunk, before: oldEnd,
+            after: state.file.chunks[chunk].endTick)
     }
 
-    mutating func apply(removing removals: [Int], inserting insertions: [MidiEvent],
-                        chunk: Int) {
+    mutating func apply(
+        removing removals: [Int], inserting insertions: [MidiEvent],
+        chunk: Int
+    ) {
         let oldEnd = state.file.chunks[chunk].endTick
-        let result = state.file.chunks[chunk].apply(removing: removals,
-                                                    inserting: insertions)
+        let result = state.file.chunks[chunk].apply(
+            removing: removals,
+            inserting: insertions)
         for removal in result.removals {
-            changes.events.append(.remove(EventRemoval(
-                chunk: chunk, offset: removal.offset, event: removal.event)))
+            changes.events.append(
+                .remove(
+                    EventRemoval(
+                        chunk: chunk, offset: removal.offset, event: removal.event)))
         }
         for insertion in result.insertions {
-            changes.events.append(.insert(EventInsertion(
-                chunk: chunk, offset: insertion.offset, event: insertion.event)))
+            changes.events.append(
+                .insert(
+                    EventInsertion(
+                        chunk: chunk, offset: insertion.offset, event: insertion.event)))
         }
-        recordEnd(chunk: chunk, before: oldEnd,
-                  after: state.file.chunks[chunk].endTick)
+        recordEnd(
+            chunk: chunk, before: oldEnd,
+            after: state.file.chunks[chunk].endTick)
     }
 
     @discardableResult
     mutating func remove(chunk: Int, offset: Int) -> MidiEvent {
         let event = state.file.chunks[chunk].events.remove(at: offset)
-        changes.events.append(.remove(EventRemoval(
-            chunk: chunk, offset: offset, event: event)))
+        changes.events.append(
+            .remove(
+                EventRemoval(
+                    chunk: chunk, offset: offset, event: event)))
         return event
     }
 
     mutating func replace(chunk: Int, offset: Int, with event: MidiEvent) {
         _ = remove(chunk: chunk, offset: offset)
         state.file.chunks[chunk].events.insert(event, at: offset)
-        changes.events.append(.insert(EventInsertion(
-            chunk: chunk, offset: offset, event: event)))
+        changes.events.append(
+            .insert(
+                EventInsertion(
+                    chunk: chunk, offset: offset, event: event)))
     }
 
     mutating func appendChunk(_ chunk: MidiChunk) {
@@ -258,8 +282,9 @@ internal struct DocumentMutation {
         if let index = changes.chunkEnds.firstIndex(where: { $0.chunk == chunk }) {
             changes.chunkEnds[index].after = after
         } else {
-            changes.chunkEnds.append(ChunkEndChange(
-                chunk: chunk, before: before, after: after))
+            changes.chunkEnds.append(
+                ChunkEndChange(
+                    chunk: chunk, before: before, after: after))
         }
     }
 }
@@ -286,9 +311,11 @@ public final class SongDocument {
     private var nextNoteID: UInt64
     private var savedConfig: SongConfig
 
-    public init(file: MidiFile, config: SongConfig = SongConfig(),
-                source: SongSource = SongSource(),
-                trackBudget: Int = TrackLimits.hardwareCapacity) {
+    public init(
+        file: MidiFile, config: SongConfig = SongConfig(),
+        source: SongSource = SongSource(),
+        trackBudget: Int = TrackLimits.hardwareCapacity
+    ) {
         var adopted = file
         var tempos: [TempoPoint] = []
         if let conductor = adopted.chunks.first {
@@ -296,8 +323,10 @@ public final class SongDocument {
             for event in conductor.events {
                 if case let .meta(type, bytes) = event.payload, type == 0x51, bytes.count == 3 {
                     let value = UInt32(bytes[0]) << 16 | UInt32(bytes[1]) << 8 | UInt32(bytes[2])
-                    tempos.append(TempoPoint(tick: event.tick,
-                                             microsecondsPerQuarterNote: value))
+                    tempos.append(
+                        TempoPoint(
+                            tick: event.tick,
+                            microsecondsPerQuarterNote: value))
                 }
             }
         }
@@ -342,13 +371,16 @@ public final class SongDocument {
     public func lanePoints(track: Int, lane: Lane) -> [LanePoint] {
         guard let mapping = mapping(for: track) else { return [] }
         if case let .controller(controller) = lane,
-           Xcmd.descriptor(forLane: controller) != nil {
-            let traffic = Xcmd.traffic(in: state.file.chunks[mapping.chunk],
-                                       stream: UInt8(truncatingIfNeeded: track))
+            Xcmd.descriptor(forLane: controller) != nil
+        {
+            let traffic = Xcmd.traffic(
+                in: state.file.chunks[mapping.chunk],
+                stream: UInt8(truncatingIfNeeded: track))
             return Xcmd.project(traffic).points.compactMap { point in
                 guard point.lane == controller, point.index <= UInt64(Int.max) else { return nil }
-                return LanePoint(chunk: mapping.chunk, eventIndex: Int(point.index),
-                                 tick: point.tick, value: Int(point.value))
+                return LanePoint(
+                    chunk: mapping.chunk, eventIndex: Int(point.index),
+                    tick: point.tick, value: Int(point.value))
             }
         }
         var result: [LanePoint] = []
@@ -357,7 +389,8 @@ public final class SongDocument {
         for index in events.indices {
             let event = events[index]
             guard case let .channel(status, data0, data1) = event.payload,
-                  status & 0x0F == mapping.channel else { continue }
+                status & 0x0F == mapping.channel
+            else { continue }
             let type = status >> 4
             let value: Int?
             switch lane {
@@ -369,8 +402,10 @@ public final class SongDocument {
                 value = type == 0xC ? Int(data0) : nil
             }
             if let value {
-                result.append(LanePoint(chunk: mapping.chunk, eventIndex: index,
-                                        tick: event.tick, value: value))
+                result.append(
+                    LanePoint(
+                        chunk: mapping.chunk, eventIndex: index,
+                        tick: event.tick, value: value))
             }
         }
         return result
@@ -395,37 +430,45 @@ public final class SongDocument {
         if export.chunks.isEmpty { export.chunks.append(MidiChunk()) }
         for point in state.tempo {
             let value = point.microsecondsPerQuarterNote
-            let event = MidiEvent.meta(tick: point.tick, type: 0x51,
-                                       data: [UInt8((value >> 16) & 0xFF),
-                                              UInt8((value >> 8) & 0xFF), UInt8(value & 0xFF)])
-            let offset = export.chunks[0].events.firstIndex { $0.tick >= point.tick }
+            let event = MidiEvent.meta(
+                tick: point.tick, type: 0x51,
+                data: [
+                    UInt8((value >> 16) & 0xFF),
+                    UInt8((value >> 8) & 0xFF), UInt8(value & 0xFF),
+                ])
+            let offset =
+                export.chunks[0].events.firstIndex { $0.tick >= point.tick }
                 ?? export.chunks[0].events.count
             export.chunks[0].events.insert(event, at: offset)
             export.chunks[0].endTick = max(export.chunks[0].endTick, point.tick)
         }
-        return SaveSnapshot(bytes: try export.encoded(), config: state.config,
-                            flagsNeeded: state.config != savedConfig || !source.hasConfig,
-                            destination: source, revision: revision,
-                            identity: history.currentIdentity)
+        return SaveSnapshot(
+            bytes: try export.encoded(), config: state.config,
+            flagsNeeded: state.config != savedConfig || !source.hasConfig,
+            destination: source, revision: revision,
+            identity: history.currentIdentity)
     }
 
     public func didSave(_ snapshot: SaveSnapshot) {
         guard snapshot.revision == revision,
-              snapshot.identity == history.currentIdentity else { return }
+            snapshot.identity == history.currentIdentity
+        else { return }
         savedConfig = snapshot.config
         history.markSaved(snapshot.identity)
     }
 
-
-    internal func commit(_ mutation: DocumentMutation, group: HistoryGroup?,
-                         operation: HistoryOperation, changed: Bool = true,
-                         returnsToOrigin: Bool = false, trackRemap: TrackRemap? = nil) {
+    internal func commit(
+        _ mutation: DocumentMutation, group: HistoryGroup?,
+        operation: HistoryOperation, changed: Bool = true,
+        returnsToOrigin: Bool = false, trackRemap: TrackRemap? = nil
+    ) {
         guard history.acceptsDocumentMutation, changed, mutation.state.differs(from: state) else {
             return
         }
         state = mutation.state
-        history.record(changes: mutation.changes, group: group, operation: operation,
-                       returnsToOrigin: returnsToOrigin, trackRemap: trackRemap)
+        history.record(
+            changes: mutation.changes, group: group, operation: operation,
+            returnsToOrigin: returnsToOrigin, trackRemap: trackRemap)
         publish(trackRemap: trackRemap)
     }
 
@@ -441,7 +484,8 @@ public final class SongDocument {
     internal func mapping(for track: Int, in file: MidiFile? = nil) -> (chunk: Int, channel: UInt8)? {
         let map = file?.engineTracks() ?? projection.map
         guard track >= 0, track < map.usedTrackCount,
-              let chunk = map.tracks[track].midiChunk else { return nil }
+            let chunk = map.tracks[track].midiChunk
+        else { return nil }
         return (chunk, map.tracks[track].channel)
     }
 
@@ -465,8 +509,10 @@ public final class SongDocument {
         return identifier
     }
 
-    private func applyHistory(_ changes: DocumentChangeSet, direction: BankHistoryDirection,
-                              trackRemap: TrackRemap?) {
+    private func applyHistory(
+        _ changes: DocumentChangeSet, direction: BankHistoryDirection,
+        trackRemap: TrackRemap?
+    ) {
         changes.apply(to: &state, direction: direction)
         // History replays mutate the current arrays in place, so their storage identity can stay
         // stable even though their elements changed. Rebuild instead of using identity repair.
@@ -488,9 +534,11 @@ public final class SongDocument {
             for eventIndex in events.indices {
                 let event = events[eventIndex]
                 if case let .meta(type, bytes) = event.payload, type == 0x58, bytes.count >= 2 {
-                    signatures.append(TimeSignature(chunk: chunkIndex, eventIndex: eventIndex,
-                                                    tick: event.tick, numerator: bytes[0],
-                                                    denominatorPower: bytes[1]))
+                    signatures.append(
+                        TimeSignature(
+                            chunk: chunkIndex, eventIndex: eventIndex,
+                            tick: event.tick, numerator: bytes[0],
+                            denominatorPower: bytes[1]))
                 }
             }
         }

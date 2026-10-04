@@ -17,16 +17,24 @@ extension EditorQmlLane {
     /// DPR 1/2 font 12/16, plus the prompt, picker and automation tabs at DPR 2.
     /// One child process renders every pane whose ledger row names its profile.
     static let referenceProfiles: [ReferenceProfile] = [
-        ReferenceProfile(name: "dpr1-font12", dpr: 1, fontPx: 12,
-                         panes: ["velocity-lane", "editor-drawer", "track-headers"]),
-        ReferenceProfile(name: "dpr1-font16", dpr: 1, fontPx: 16,
-                         panes: ["velocity-lane", "editor-drawer", "track-headers"]),
-        ReferenceProfile(name: "dpr2-font12", dpr: 2, fontPx: 12,
-                         panes: ["velocity-lane", "editor-drawer", "velocity-prompt",
-                                 "voice-picker", "automation-tabs", "track-headers"]),
-        ReferenceProfile(name: "dpr2-font16", dpr: 2, fontPx: 16,
-                         panes: ["velocity-lane", "editor-drawer", "velocity-prompt",
-                                 "voice-picker", "automation-tabs", "track-headers"]),
+        ReferenceProfile(
+            name: "dpr1-font12", dpr: 1, fontPx: 12,
+            panes: ["velocity-lane", "editor-drawer", "track-headers"]),
+        ReferenceProfile(
+            name: "dpr1-font16", dpr: 1, fontPx: 16,
+            panes: ["velocity-lane", "editor-drawer", "track-headers"]),
+        ReferenceProfile(
+            name: "dpr2-font12", dpr: 2, fontPx: 12,
+            panes: [
+                "velocity-lane", "editor-drawer", "velocity-prompt",
+                "voice-picker", "automation-tabs", "track-headers",
+            ]),
+        ReferenceProfile(
+            name: "dpr2-font16", dpr: 2, fontPx: 16,
+            panes: [
+                "velocity-lane", "editor-drawer", "velocity-prompt",
+                "voice-picker", "automation-tabs", "track-headers",
+            ]),
     ]
 
     /// Qt Quick Test selects a case by qualified `TestCase::function` name.
@@ -49,8 +57,10 @@ extension EditorQmlLane {
 
     /// The container phase's own staging key, staged before any QML object exists.
     static let phaseEnvironmentKey = "PORYDAW_EDITOR_QML_PHASE"
-    static func runPhaseChild(scratch: String, suite: String, phase: String,
-                              payload: [String]) -> Int32 {
+    static func runPhaseChild(
+        scratch: String, suite: String, phase: String,
+        payload: [String]
+    ) -> Int32 {
         let childScratch = FileManager.default.temporaryDirectory
             .appendingPathComponent("porydaw-drawer-\(UUID().uuidString)", isDirectory: true)
         do {
@@ -89,11 +99,13 @@ extension EditorQmlLane {
             FileHandle.standardOutput.write(Data(output.utf8))
         }
         guard child.terminationReason != .uncaughtSignal, child.terminationStatus == 0 else {
-            return fail("\(phase) \(suite): child exited \(child.terminationStatus)"
-                + " (signal \(child.terminationReason == .uncaughtSignal))")
+            return fail(
+                "\(phase) \(suite): child exited \(child.terminationStatus)"
+                    + " (signal \(child.terminationReason == .uncaughtSignal))")
         }
         if phase == physicalDpr2PhaseName,
-           !output.contains("PASS   : ::\(physicalDpr2CaseName)()") {
+            !output.contains("PASS   : ::\(physicalDpr2CaseName)()")
+        {
             return fail("\(phase) \(suite): required DPR2 case did not execute and pass")
         }
         return 0
@@ -103,8 +115,9 @@ extension EditorQmlLane {
     /// The QML case checks screen DPR and captured image dimensions.
     @MainActor
     static func runPhysicalDpr2BoundaryChild(scratch: String) -> Int32 {
-        runPhaseChild(scratch: scratch, suite: "tst_EditorDrawerAutomationTransactions.qml",
-                      phase: physicalDpr2PhaseName, payload: [physicalDpr2CaseName])
+        runPhaseChild(
+            scratch: scratch, suite: "tst_EditorDrawerAutomationTransactions.qml",
+            phase: physicalDpr2PhaseName, payload: [physicalDpr2CaseName])
     }
 
     /// One child per required profile, each rendering only the named profile case
@@ -116,8 +129,9 @@ extension EditorQmlLane {
     static func runProfileChildren(scratch: String) -> Int32 {
         let executable = CommandLine.arguments.first ?? entryName
         var failures: [String] = []
-        print("editorqml-drawer: ordinary suite passed; capturing "
-            + "\(referenceProfiles.count) reference profiles")
+        print(
+            "editorqml-drawer: ordinary suite passed; capturing "
+                + "\(referenceProfiles.count) reference profiles")
         try? FileHandle.standardOutput.synchronize()
         for profile in referenceProfiles {
             print("editorqml-drawer: profile child \(profile.name)")
@@ -144,8 +158,9 @@ extension EditorQmlLane {
             FileHandle.standardOutput.write(Data(output.utf8))
             try? FileHandle.standardOutput.synchronize()
             if child.terminationReason == .uncaughtSignal {
-                failures.append("\(profile.name): child died on signal "
-                    + "\(child.terminationStatus)")
+                failures.append(
+                    "\(profile.name): child died on signal "
+                        + "\(child.terminationStatus)")
                 continue
             }
             if child.terminationStatus != 0 {
@@ -153,23 +168,28 @@ extension EditorQmlLane {
                 continue
             }
             for pane in profile.panes {
-                let base = EditorQmlBootstrap.profileArtifactPath(scratch: scratch,
-                                                                  profile: profile.name,
-                                                                  pane: pane)
+                let base = EditorQmlBootstrap.profileArtifactPath(
+                    scratch: scratch,
+                    profile: profile.name,
+                    pane: pane)
                 // The record itself is the evidence: the verified capture prints the
                 // profile, DPR, font and the rendered rectangle it wrote, so a
                 // reviewer reads the facts the pane was captured with instead of
                 // trusting the file name.
-                print("editorqml-drawer: \(profile.name)/\(pane) captured"
-                    + profileEvidence(path: base + ".json"))
-                for path in [base + ".png", base + ".json"] where
+                print(
+                    "editorqml-drawer: \(profile.name)/\(pane) captured"
+                        + profileEvidence(path: base + ".json"))
+                for path in [base + ".png", base + ".json"]
+                where
                     !FileManager.default.fileExists(atPath: path)
                 {
                     failures.append("\(profile.name)/\(pane): missing artifact \(path)")
                 }
-                if let mismatch = profileMetadataMismatch(path: base + ".json",
-                                                          profile: profile.name, pane: pane,
-                                                          staged: EditorQmlBootstrap.stagedProject) {
+                if let mismatch = profileMetadataMismatch(
+                    path: base + ".json",
+                    profile: profile.name, pane: pane,
+                    staged: EditorQmlBootstrap.stagedProject)
+                {
                     failures.append("\(profile.name)/\(pane): \(mismatch)")
                 }
             }
@@ -179,11 +199,12 @@ extension EditorQmlLane {
         }
         // One summary line, so the run's own report names every profile and the
         // panes it verified — the automation ledger's required profiles included.
-        print("editorqml-drawer: reference profiles verified: "
-            + referenceProfiles.map { profile in
-                "\(profile.name)@dpr\(Int(profile.dpr))-font\(profile.fontPx)"
-                    + "[\(profile.panes.joined(separator: ","))]"
-            }.joined(separator: " "))
+        print(
+            "editorqml-drawer: reference profiles verified: "
+                + referenceProfiles.map { profile in
+                    "\(profile.name)@dpr\(Int(profile.dpr))-font\(profile.fontPx)"
+                        + "[\(profile.panes.joined(separator: ","))]"
+                }.joined(separator: " "))
         try? FileHandle.standardOutput.synchronize()
         return 0
     }

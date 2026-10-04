@@ -38,22 +38,27 @@ extension DocumentSession {
         publishChange([.bank, .dirty])
     }
 
-    internal func publishChange(_ domains: SessionChangeDomains,
-                               trackRemap: TrackRemap? = nil) {
+    internal func publishChange(
+        _ domains: SessionChangeDomains,
+        trackRemap: TrackRemap? = nil
+    ) {
         guard !domains.isEmpty else { return }
         if stateChangeDepth > 0 {
             pendingDomains.formUnion(domains)
             if let trackRemap {
-                pendingTrackRemap = pendingTrackRemap.map {
-                    composeTrackRemaps($0, followedBy: trackRemap)
-                } ?? trackRemap
+                pendingTrackRemap =
+                    pendingTrackRemap.map {
+                        composeTrackRemaps($0, followedBy: trackRemap)
+                    } ?? trackRemap
             }
             return
         }
         if domains.contains(.selection) { emitSelectionTransition() }
-        onChange?(SessionChange(revision: document.revision,
-                                trackRemap: trackRemap,
-                                domains: domains))
+        onChange?(
+            SessionChange(
+                revision: document.revision,
+                trackRemap: trackRemap,
+                domains: domains))
     }
 
     internal func flushStateChanges() {
@@ -63,9 +68,11 @@ extension DocumentSession {
         pendingDomains = []
         pendingTrackRemap = nil
         if domains.contains(.selection) { emitSelectionTransition() }
-        onChange?(SessionChange(revision: document.revision,
-                                trackRemap: trackRemap,
-                                domains: domains))
+        onChange?(
+            SessionChange(
+                revision: document.revision,
+                trackRemap: trackRemap,
+                domains: domains))
     }
 
     private func emitSelectionTransition() {
@@ -80,8 +87,10 @@ extension DocumentSession {
 
     /// A batch may contain successive structural document mutations. Compose
     /// their old-to-new mappings instead of publishing an ambiguous last remap.
-    private func composeTrackRemaps(_ first: TrackRemap,
-                                    followedBy second: TrackRemap) -> TrackRemap {
+    private func composeTrackRemaps(
+        _ first: TrackRemap,
+        followedBy second: TrackRemap
+    ) -> TrackRemap {
         let chunks = first.chunkMap.map { intermediate -> Int? in
             guard let intermediate, second.chunkMap.indices.contains(intermediate) else {
                 return nil
@@ -90,14 +99,16 @@ extension DocumentSession {
         }
         let tracks = first.engineTrackMap.map { intermediate -> Int? in
             guard let intermediate,
-                  second.engineTrackMap.indices.contains(intermediate) else {
+                second.engineTrackMap.indices.contains(intermediate)
+            else {
                 return nil
             }
             return second.engineTrackMap[intermediate]
         }
-        return TrackRemap(chunkMap: chunks, engineTrackMap: tracks,
-                          newChunkCount: second.newChunkCount,
-                          newEngineTrackCount: second.newEngineTrackCount)
+        return TrackRemap(
+            chunkMap: chunks, engineTrackMap: tracks,
+            newChunkCount: second.newChunkCount,
+            newEngineTrackCount: second.newEngineTrackCount)
     }
 
     /// Coordinates selection reconciliation before presentation/playback: dead
@@ -125,14 +136,16 @@ extension DocumentSession {
             if let remap = change.trackRemap {
                 // Session playback masks follow engine-track identity through edits
                 // and the inverse remaps history publishes on undo.
-                mutedTracks = Set(mutedTracks.compactMap { track in
-                    remap.engineTrackMap.indices.contains(track)
-                        ? remap.engineTrackMap[track] : nil
-                })
-                soloedTracks = Set(soloedTracks.compactMap { track in
-                    remap.engineTrackMap.indices.contains(track)
-                        ? remap.engineTrackMap[track] : nil
-                })
+                mutedTracks = Set(
+                    mutedTracks.compactMap { track in
+                        remap.engineTrackMap.indices.contains(track)
+                            ? remap.engineTrackMap[track] : nil
+                    })
+                soloedTracks = Set(
+                    soloedTracks.compactMap { track in
+                        remap.engineTrackMap.indices.contains(track)
+                            ? remap.engineTrackMap[track] : nil
+                    })
             }
             if let remap = change.trackRemap {
                 let mappedPrimary = priorPrimary.flatMap { track -> Int? in
@@ -140,16 +153,19 @@ extension DocumentSession {
                     return remap.engineTrackMap[track]
                 }
                 let primaryDeleted = priorPrimary != nil && mappedPrimary == nil
-                let nextPrimary = mappedPrimary ?? priorPrimary.map {
-                    min($0, max(0, document.engineTracks.usedTrackCount - 1))
-                }
+                let nextPrimary =
+                    mappedPrimary
+                    ?? priorPrimary.map {
+                        min($0, max(0, document.engineTracks.usedTrackCount - 1))
+                    }
                 changingPrimaryInternally = true
                 selectedTrack = nextPrimary
                 changingPrimaryInternally = false
-                selectedTracks = Set(priorScope.compactMap { track in
-                    remap.engineTrackMap.indices.contains(track)
-                        ? remap.engineTrackMap[track] : nil
-                })
+                selectedTracks = Set(
+                    priorScope.compactMap { track in
+                        remap.engineTrackMap.indices.contains(track)
+                            ? remap.engineTrackMap[track] : nil
+                    })
                 if let selectedTrack { selectedTracks.insert(selectedTrack) }
                 if var selection = timeSelection {
                     switch selection.scope {
@@ -157,29 +173,33 @@ extension DocumentSession {
                         if primaryDeleted {
                             timeSelection = nil
                         } else {
-                            var mapped = Set(stored.compactMap { track -> Int? in
-                                if remap.engineTrackMap.indices.contains(track) {
-                                    return remap.engineTrackMap[track]
-                                }
-                                return (0..<16).contains(track) ? track : nil
-                            })
+                            var mapped = Set(
+                                stored.compactMap { track -> Int? in
+                                    if remap.engineTrackMap.indices.contains(track) {
+                                        return remap.engineTrackMap[track]
+                                    }
+                                    return (0..<16).contains(track) ? track : nil
+                                })
                             if let selectedTrack { mapped.insert(selectedTrack) }
                             selection.scope = .tracks(mapped)
                             timeSelection = selection
-                            selectedTracks = Set(mapped.filter {
-                                (0..<document.engineTracks.usedTrackCount).contains($0)
-                            })
+                            selectedTracks = Set(
+                                mapped.filter {
+                                    (0..<document.engineTracks.usedTrackCount).contains($0)
+                                })
                         }
                     case .lanes:
-                        selection.lanes = Set(selection.lanes.compactMap { parameter -> AutomationParameter? in
-                            guard let track = parameter.track,
-                                  remap.engineTrackMap.indices.contains(track),
-                                  let destination = remap.engineTrackMap[track] else { return nil }
-                            if case let .controlChange(_, controller) = parameter {
-                                return .controlChange(track: destination, controller: controller)
-                            }
-                            return .pitchBend(track: destination)
-                        })
+                        selection.lanes = Set(
+                            selection.lanes.compactMap { parameter -> AutomationParameter? in
+                                guard let track = parameter.track,
+                                    remap.engineTrackMap.indices.contains(track),
+                                    let destination = remap.engineTrackMap[track]
+                                else { return nil }
+                                if case let .controlChange(_, controller) = parameter {
+                                    return .controlChange(track: destination, controller: controller)
+                                }
+                                return .pitchBend(track: destination)
+                            })
                         timeSelection = selection.lanes.isEmpty && !selection.tempo ? nil : selection
                     }
                 }
@@ -194,7 +214,8 @@ extension DocumentSession {
             onPlayback?(timeline)
             var domains: SessionChangeDomains = [.document, .dirty, .history]
             if selectedNoteOrder != priorNotes || selectedTrack != priorPrimary
-                || selectedTracks != priorScope || timeSelection != priorTimeSelection {
+                || selectedTracks != priorScope || timeSelection != priorTimeSelection
+            {
                 domains.insert(.selection)
             }
             publishChange(domains, trackRemap: change.trackRemap)

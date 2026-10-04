@@ -54,18 +54,23 @@ public struct MidiEvent: Equatable, Sendable {
         self.noteID = noteID
     }
 
-    public static func channel(tick: Tick = 0, status: UInt8, data0: UInt8,
-                               data1: UInt8 = 0, noteID: NoteID? = nil) -> MidiEvent {
-        MidiEvent(tick: tick, payload: .channel(status: status, data0: data0, data1: data1),
-                  noteID: noteID)
+    public static func channel(
+        tick: Tick = 0, status: UInt8, data0: UInt8,
+        data1: UInt8 = 0, noteID: NoteID? = nil
+    ) -> MidiEvent {
+        MidiEvent(
+            tick: tick, payload: .channel(status: status, data0: data0, data1: data1),
+            noteID: noteID)
     }
 
     public static func meta(tick: Tick = 0, type: UInt8, data: [UInt8]) -> MidiEvent {
         MidiEvent(tick: tick, payload: .meta(type: type, data: data))
     }
 
-    public static func systemExclusive(tick: Tick = 0, status: UInt8,
-                                       data: [UInt8]) -> MidiEvent {
+    public static func systemExclusive(
+        tick: Tick = 0, status: UInt8,
+        data: [UInt8]
+    ) -> MidiEvent {
         MidiEvent(tick: tick, payload: .systemExclusive(status: status, data: data))
     }
 
@@ -168,8 +173,11 @@ extension MidiChunk {
     /// each event in caller order through its tick run. The run scan is amortized over its group,
     /// and each placement is one shift - what one `insert(_:)` per event costs.
     @discardableResult
-    internal mutating func apply(removing removalIndices: [Int], inserting insertions: [MidiEvent])
-        -> ApplyResult {
+    internal mutating func apply(
+        removing removalIndices: [Int], inserting insertions: [MidiEvent]
+    )
+        -> ApplyResult
+    {
         var doomed: [Int] = []
         doomed.reserveCapacity(removalIndices.count)
         for index in removalIndices.sorted()
@@ -284,9 +292,12 @@ public struct EngineTrackMap: Equatable, Sendable {
     public var usedTrackCount: Int
     public var droppedTracks: Int
 
-    public init(tracks: [EngineTrack] = Array(repeating: EngineTrack(),
-                                              count: TrackLimits.hardwareCapacity),
-                usedTrackCount: Int = 0, droppedTracks: Int = 0) {
+    public init(
+        tracks: [EngineTrack] = Array(
+            repeating: EngineTrack(),
+            count: TrackLimits.hardwareCapacity),
+        usedTrackCount: Int = 0, droppedTracks: Int = 0
+    ) {
         self.tracks = tracks
         self.usedTrackCount = usedTrackCount
         self.droppedTracks = droppedTracks
@@ -376,15 +387,18 @@ public struct MidiFile: Equatable, Sendable {
             var runningStatus: UInt8?
             for (eventIndex, event) in chunk.events.enumerated() {
                 guard event.tick != TimeDefaults.noTick else {
-                    throw MidiCodecError.invalidEvent(track: trackIndex, event: eventIndex,
-                                                      reason: "reserved tick value")
+                    throw MidiCodecError.invalidEvent(
+                        track: trackIndex, event: eventIndex,
+                        reason: "reserved tick value")
                 }
                 guard event.tick >= previousTick else {
-                    throw MidiCodecError.invalidEvent(track: trackIndex, event: eventIndex,
-                                                      reason: "events are not tick ordered")
+                    throw MidiCodecError.invalidEvent(
+                        track: trackIndex, event: eventIndex,
+                        reason: "events are not tick ordered")
                 }
-                try body.appendVariableLength(event.tick - previousTick, track: trackIndex,
-                                              event: eventIndex)
+                try body.appendVariableLength(
+                    event.tick - previousTick, track: trackIndex,
+                    event: eventIndex)
                 previousTick = event.tick
                 switch event.payload {
                 case let .meta(type, data):
@@ -395,8 +409,9 @@ public struct MidiFile: Equatable, Sendable {
                     runningStatus = nil
                 case let .systemExclusive(status, data):
                     guard status == 0xF0 || status == 0xF7 else {
-                        throw MidiCodecError.invalidEvent(track: trackIndex, event: eventIndex,
-                                                          reason: "invalid SysEx status")
+                        throw MidiCodecError.invalidEvent(
+                            track: trackIndex, event: eventIndex,
+                            reason: "invalid SysEx status")
                     }
                     body.append(status)
                     try body.appendVariableLengthCount(data.count, track: trackIndex, event: eventIndex)
@@ -404,8 +419,9 @@ public struct MidiFile: Equatable, Sendable {
                     runningStatus = nil
                 case let .channel(status, data0, data1):
                     guard status >= 0x80 && status < 0xF0 else {
-                        throw MidiCodecError.invalidEvent(track: trackIndex, event: eventIndex,
-                                                          reason: "invalid channel status")
+                        throw MidiCodecError.invalidEvent(
+                            track: trackIndex, event: eventIndex,
+                            reason: "invalid channel status")
                     }
                     if runningStatus != status || data0 & 0x80 != 0 {
                         body.append(status)
@@ -418,16 +434,19 @@ public struct MidiFile: Equatable, Sendable {
             }
 
             guard chunk.endTick != TimeDefaults.noTick else {
-                throw MidiCodecError.invalidEvent(track: trackIndex, event: chunk.events.count,
-                                                  reason: "reserved end tick value")
+                throw MidiCodecError.invalidEvent(
+                    track: trackIndex, event: chunk.events.count,
+                    reason: "reserved end tick value")
             }
             let endTick = max(chunk.endTick, previousTick)
-            try body.appendVariableLength(endTick - previousTick, track: trackIndex,
-                                          event: chunk.events.count)
+            try body.appendVariableLength(
+                endTick - previousTick, track: trackIndex,
+                event: chunk.events.count)
             body.append(contentsOf: [0xFF, 0x2F, 0x00])
             guard body.count <= Int(UInt32.max) else {
-                throw MidiCodecError.invalidEvent(track: trackIndex, event: chunk.events.count,
-                                                  reason: "track data is too large")
+                throw MidiCodecError.invalidEvent(
+                    track: trackIndex, event: chunk.events.count,
+                    reason: "track data is too large")
             }
             output.append(contentsOf: midiTrackMagic)
             output.appendUInt32(UInt32(body.count))
@@ -453,14 +472,16 @@ public struct MidiFile: Equatable, Sendable {
 
     public static func blankSong() -> MidiFile {
         let oneBar: Tick = Tick(24 * 4)
-        let conductor = MidiChunk(events: [
-            .meta(type: 0x51, data: [0x07, 0xA1, 0x20]),
-            .meta(type: 0x58, data: [0x04, 0x02, 0x18, 0x08]),
-        ], endTick: oneBar)
-        let track = MidiChunk(events: [
-            .channel(status: 0xC0, data0: 0),
-            .channel(status: 0xB0, data0: 7, data1: 100),
-        ], endTick: oneBar)
+        let conductor = MidiChunk(
+            events: [
+                .meta(type: 0x51, data: [0x07, 0xA1, 0x20]),
+                .meta(type: 0x58, data: [0x04, 0x02, 0x18, 0x08]),
+            ], endTick: oneBar)
+        let track = MidiChunk(
+            events: [
+                .channel(status: 0xC0, data0: 0),
+                .channel(status: 0xB0, data0: 7, data1: 100),
+            ], endTick: oneBar)
         return MidiFile(division: 24, chunks: [conductor, track])
     }
 
@@ -490,23 +511,29 @@ public struct MidiFile: Equatable, Sendable {
                 if event.isChannel {
                     prefix = nil
                 } else if case let .meta(type, data) = event.payload,
-                          type == 0x20, let byte = data.first {
+                    type == 0x20, let byte = data.first
+                {
                     prefix = Int(byte & 0x0F)
                 }
 
                 if event.isChannel {
                     channelEvents[Int(event.channel)].append(event)
                 } else if case let .meta(type, data) = event.payload,
-                          type == 0x20, !data.isEmpty {
+                    type == 0x20, !data.isEmpty
+                {
                     continue
                 } else if case let .meta(type, _) = event.payload,
-                          type == 0x03, let prefix, Self.metaIsMarker(event) {
-                    conductorEvents.append(.meta(tick: event.tick, type: 0x20,
-                                                 data: [UInt8(prefix)]))
+                    type == 0x03, let prefix, Self.metaIsMarker(event)
+                {
+                    conductorEvents.append(
+                        .meta(
+                            tick: event.tick, type: 0x20,
+                            data: [UInt8(prefix)]))
                     conductorEvents.append(event)
                 } else if case let .meta(type, _) = event.payload,
-                          (0x01...0x07).contains(type), let prefix,
-                          !Self.metaIsMarker(event) {
+                    (0x01...0x07).contains(type), let prefix,
+                    !Self.metaIsMarker(event)
+                {
                     channelEvents[prefix].append(event)
                 } else {
                     conductorEvents.append(event)

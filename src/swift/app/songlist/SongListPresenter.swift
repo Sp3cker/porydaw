@@ -21,8 +21,10 @@ public final class SongListRow {
     /// The loaded song the panel tracks across rebuilds.
     public var current: Bool
 
-    init(songId: Int, label: String, text: String, warning: Bool,
-         registrationGapText: String, selected: Bool, current: Bool) {
+    init(
+        songId: Int, label: String, text: String, warning: Bool,
+        registrationGapText: String, selected: Bool, current: Bool
+    ) {
         self.songId = songId
         self.label = label
         self.text = text
@@ -166,8 +168,10 @@ public final class SongListPresenter {
 
     /// Restores persisted filters. The category stays pending until songs are
     /// set; one it doesn't have falls back to All.
-    public func restoreFilters(search: String, sort sortIndex: Int,
-                               category categoryPrefix: String) {
+    public func restoreFilters(
+        search: String, sort sortIndex: Int,
+        category categoryPrefix: String
+    ) {
         pendingCategory = categoryPrefix
         if sortIndex >= 0 && sortIndex < 2 {
             self.sortIndex = sortIndex
@@ -178,9 +182,10 @@ public final class SongListPresenter {
 
     public func restoreFromPreferences() {
         let store = PreferencesStore()
-        restoreFilters(search: store.string(key: "songFilterText", fallback: ""),
-                       sort: store.int(key: "songFilterSort", fallback: 0),
-                       category: store.string(key: "songFilterCategory", fallback: ""))
+        restoreFilters(
+            search: store.string(key: "songFilterText", fallback: ""),
+            sort: store.int(key: "songFilterSort", fallback: 0),
+            category: store.string(key: "songFilterCategory", fallback: ""))
     }
 
     /// Focuses the search field and selects its text (surface-side effect).
@@ -246,7 +251,8 @@ public final class SongListPresenter {
     /// the native action's enablement.
     public func requestRegister(songId: Int) {
         guard let song = visible.first(where: { $0.id == songId }),
-              song.registrationIncomplete else { return }
+            song.registrationIncomplete
+        else { return }
         onSongRegisterRequested?(songId)
     }
 
@@ -330,11 +336,12 @@ public final class SongListPresenter {
         }
 
         let previous = pendingCategory.isEmpty ? currentCategoryPrefix() : pendingCategory
-        pendingCategory = "" // one shot: a missing category falls back to All
+        pendingCategory = ""  // one shot: a missing category falls back to All
         var built = [SongListCategory(name: "All (\(songs.count))", prefix: "")]
         for prefix in knownPrefixes {
-            built.append(SongListCategory(
-                name: "\(Self.categoryName(prefix)) (\(counts[prefix] ?? 0))", prefix: prefix))
+            built.append(
+                SongListCategory(
+                    name: "\(Self.categoryName(prefix)) (\(counts[prefix] ?? 0))", prefix: prefix))
         }
         if other > 0 {
             built.append(SongListCategory(name: "Other (\(other))", prefix: Self.otherPrefix))
@@ -363,9 +370,9 @@ public final class SongListPresenter {
             return true
         }
         // Fuzzy fallback: "musrival" finds mus_rival.
-        return words.count == 1 &&
-            (Self.isSubsequence(query, song.label.lowercased()) ||
-             Self.isSubsequence(query, song.constant.lowercased()))
+        return words.count == 1
+            && (Self.isSubsequence(query, song.label.lowercased())
+                || Self.isSubsequence(query, song.constant.lowercased()))
     }
 
     private func rebuildList() {
@@ -388,23 +395,26 @@ public final class SongListPresenter {
             } else if partial {
                 text += "  ⚠ not fully registered"
             }
-            built.append(SongListRow(
-                songId: song.id, label: song.label, text: text,
-                warning: !song.registered || partial,
-                registrationGapText: song.registrationGaps.joined(separator: ", "),
-                selected: false, current: false))
+            built.append(
+                SongListRow(
+                    songId: song.id, label: song.label, text: text,
+                    warning: !song.registered || partial,
+                    registrationGapText: song.registrationGaps.joined(separator: ", "),
+                    selected: false, current: false))
         }
         rows.reset(to: built)
         rowCount = built.count
         totalCount = songs.count
-        countText = shown.count == songs.count
+        countText =
+            shown.count == songs.count
             ? "\(songs.count) songs"
             : "\(shown.count) of \(songs.count) songs"
 
         // Keep the loaded song selected across rebuilds — except mid-search,
         // where the selection must stay clear so Enter takes the first match.
         if currentSongId >= 0 && searchText.trimmingCharacters(in: .whitespaces).isEmpty,
-           shown.contains(where: { $0.id == currentSongId }) {
+            shown.contains(where: { $0.id == currentSongId })
+        {
             selectedSongId = currentSongId
         } else {
             selectedSongId = -1

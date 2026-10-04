@@ -52,11 +52,14 @@ struct AutomationSceneSnapshot {
         let parameterIndex = min(max(activeParameterIndex, 0), AutomationCatalog.count - 1)
         let parameter = AutomationCatalog.parameter(at: parameterIndex, track: track ?? 0) ?? .tempo
         let trackAvailable = track != nil
-        let plotMessage = track == nil && !parameter.isTempo
+        let plotMessage =
+            track == nil && !parameter.isTempo
             ? AutomationPagePolicy.noTrackMessage : ""
         let catalog = AutomationCatalog.parameters(track: track ?? 0)
-        let rows = cache.rows(session: session, track: track, selection: selection,
-                              ready: track != nil).visibleRows
+        let rows = cache.rows(
+            session: session, track: track, selection: selection,
+            ready: track != nil
+        ).visibleRows
         func row(_ parameter: AutomationParameter) -> AutomationRow? {
             rows.first { $0.parameter == parameter }
         }
@@ -71,18 +74,21 @@ struct AutomationSceneSnapshot {
             return AutomationCatalog.title(ghost) + AutomationPagePolicy.ghostSeparator
                 + (count == 1 ? "1 Event" : "\(count) Events")
         }
-        let selectedParameters = track.map { selected in
-            AutomationCatalog.parameters(track: selected).filter {
-                row($0)?.selectionHasEvents ?? false
-            }
-        } ?? []
+        let selectedParameters =
+            track.map { selected in
+                AutomationCatalog.parameters(track: selected).filter {
+                    row($0)?.selectionHasEvents ?? false
+                }
+            } ?? []
 
         let laneProjection: AutomationLaneProjection?
         if plotMessage.isEmpty {
             let snapshot = cache.snapshot(parameter, session: session)
-            let projection = cache.projection(snapshot: snapshot, session: session, camera: camera,
-                bounds: AutomationPlotBounds(width: plotWidth, height: plotHeight,
-                                             devicePixelRatio: devicePixelRatio),
+            let projection = cache.projection(
+                snapshot: snapshot, session: session, camera: camera,
+                bounds: AutomationPlotBounds(
+                    width: plotWidth, height: plotHeight,
+                    devicePixelRatio: devicePixelRatio),
                 geometry: geometry, font: baseFontPx, range: laneRanges[parameter])
             laneProjection = projection.project(
                 snapshot, selection: selection,
@@ -203,16 +209,19 @@ struct AutomationBodySceneConfiguration: Sendable {
         currentDragDistance: Double,
         currentBaseFontPx: Double
     ) -> Self {
-        let nextFont = baseFontPx.isFinite && baseFontPx > 0
+        let nextFont =
+            baseFontPx.isFinite && baseFontPx > 0
             ? baseFontPx : AutomationPagePolicy.seedBaseFontPx
         let nextDpr = devicePixelRatio.isFinite && devicePixelRatio > 0 ? devicePixelRatio : 1
         let nextWidth = max(0, width.isFinite ? width : 0)
         let nextHeight = max(0, height.isFinite ? height : 0)
         let nextOrigin = max(0, gutter.isFinite ? gutter : 0)
-        let nextDrag = dragDistance.isFinite && dragDistance > 0
+        let nextDrag =
+            dragDistance.isFinite && dragDistance > 0
             ? dragDistance : AutomationPagePolicy.dragDistance
         let fontChanged = nextFont != currentBaseFontPx
-        let changed = fontChanged || nextWidth != currentWidth || nextHeight != currentHeight
+        let changed =
+            fontChanged || nextWidth != currentWidth || nextHeight != currentHeight
             || nextDpr != currentDevicePixelRatio || nextOrigin != currentOrigin
             || nextDrag != currentDragDistance
         return Self(

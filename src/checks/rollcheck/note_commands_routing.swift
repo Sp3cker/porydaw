@@ -8,18 +8,23 @@ func checkCommandRouting(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/EditorGridCamera::commandRouting"
     let setupGrid = makeCameraGrid(session: session)
     let snap = max(1, setupGrid.snapTicks)
-    guard let pitch = session.camera.projection.pitch(
-        atY: 160, keyHeight: session.camera.snapshot.keyHeight,
-        scrollY: session.camera.snapshot.scrollY, dpr: setupGrid.devicePixelRatio),
+    guard
+        let pitch = session.camera.projection.pitch(
+            atY: 160, keyHeight: session.camera.snapshot.keyHeight,
+            scrollY: session.camera.snapshot.scrollY, dpr: setupGrid.devicePixelRatio),
         pitch <= 115,
         let added = try? session.document.addNotes([
-            NewNote(track: setupGrid.trackIndex, tick: 24, pitch: UInt8(pitch),
-                    duration: 7, velocity: 80),
-            NewNote(track: setupGrid.trackIndex, tick: 96, pitch: UInt8(pitch),
-                    duration: 13, velocity: 80),
-            NewNote(track: setupGrid.trackIndex, tick: 9, pitch: UInt8(pitch),
-                    duration: 6, velocity: 80)
-        ]), added.count == 3 else {
+            NewNote(
+                track: setupGrid.trackIndex, tick: 24, pitch: UInt8(pitch),
+                duration: 7, velocity: 80),
+            NewNote(
+                track: setupGrid.trackIndex, tick: 96, pitch: UInt8(pitch),
+                duration: 13, velocity: 80),
+            NewNote(
+                track: setupGrid.trackIndex, tick: 9, pitch: UInt8(pitch),
+                duration: 6, velocity: 80),
+        ]), added.count == 3
+    else {
         report.fail(id, "command-routing fixture could not seed notes")
         return
     }

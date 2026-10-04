@@ -58,8 +58,10 @@ extension ProjectStore {
         descriptors.reserveCapacity(songs.count * 3)
         for song in songs {
             for arg in SongCatalog.voicegroupCandidates(cfg: song.cfg) {
-                descriptors.append(BankDescriptor(songLabel: song.label, arg: arg,
-                                                  playable: song.isPlayable))
+                descriptors.append(
+                    BankDescriptor(
+                        songLabel: song.label, arg: arg,
+                        playable: song.isPlayable))
             }
         }
         return descriptors

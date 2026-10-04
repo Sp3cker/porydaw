@@ -16,9 +16,11 @@ public struct EditorCommandRouter {
     private let drawer: EditorDrawerPresenter?
     private let velocity: VelocityPage?
 
-    public init(session: DocumentSession, grid: PianoGrid, automation: AutomationPage,
-                rulerMenu: RulerMenuPresenter, drawer: EditorDrawerPresenter? = nil,
-                velocity: VelocityPage? = nil) {
+    public init(
+        session: DocumentSession, grid: PianoGrid, automation: AutomationPage,
+        rulerMenu: RulerMenuPresenter, drawer: EditorDrawerPresenter? = nil,
+        velocity: VelocityPage? = nil
+    ) {
         self.session = session
         self.grid = grid
         self.automation = automation
@@ -43,7 +45,7 @@ public struct EditorCommandRouter {
 
     public func isAvailable(_ command: EditCommand) -> Bool {
         guard !modalActive,
-              !pointerGestureActive || editCommandPolicy(command).survivesPointerGesture
+            !pointerGestureActive || editCommandPolicy(command).survivesPointerGesture
         else { return false }
         if command == .paste || targetsTimeSelection(command) {
             return automation.selectionCommandAvailable(command: command)
@@ -61,12 +63,14 @@ public struct EditorCommandRouter {
 
     public func route(_ command: EditCommand, autoRepeat: Bool) -> EditKeyDecision {
         guard !modalActive else { return .decline }
-        return EditKeyArbiter.decide(command: command, surface: EditSurfaceState(
-            pointerGestureActive: pointerGestureActive,
-            timeSelectionActive: timeSelectionActive,
-            noteSelectionEmpty: session.selectedNotes.isEmpty,
-            origin: .timeline, autoRepeat: autoRepeat,
-            commandAvailable: isAvailable(command)))
+        return EditKeyArbiter.decide(
+            command: command,
+            surface: EditSurfaceState(
+                pointerGestureActive: pointerGestureActive,
+                timeSelectionActive: timeSelectionActive,
+                noteSelectionEmpty: session.selectedNotes.isEmpty,
+                origin: .timeline, autoRepeat: autoRepeat,
+                commandAvailable: isAvailable(command)))
     }
 
     public func perform(_ command: EditCommand) {
@@ -97,8 +101,9 @@ public struct EditorCommandRouter {
 extension ApplicationSession {
     var commandRouter: EditorCommandRouter? {
         guard let workspace else { return nil }
-        return EditorCommandRouter(session: workspace.session, grid: workspace.grid,
-                                   automation: workspace.automationPage, rulerMenu: workspace.rulerMenu,
-                                   drawer: workspace.drawer, velocity: workspace.velocityPage)
+        return EditorCommandRouter(
+            session: workspace.session, grid: workspace.grid,
+            automation: workspace.automationPage, rulerMenu: workspace.rulerMenu,
+            drawer: workspace.drawer, velocity: workspace.velocityPage)
     }
 }

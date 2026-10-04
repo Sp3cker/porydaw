@@ -129,16 +129,16 @@ import PorydawCore
         var seen = Set<UInt64>()
         var built: [Note] = []
         for rect in decoded.rects
-            where rect.id != 0 && rect.id < UInt64(PD_DL_ID_LOOP_START)
-        {
+        where rect.id != 0 && rect.id < UInt64(PD_DL_ID_LOOP_START) {
             guard seen.insert(rect.id).inserted, let note = byID[rect.id] else { continue }
             let shown = grid.displayedNote(note)
             let velocity = grid.previewVelocity(note.noteId) ?? note.velocity
-            built.append(Note(
-                id: rect.id, tick: shown.tick,
-                duration: max(0, shown.end - shown.tick),
-                pitch: shown.pitch, track: note.track, velocity: velocity,
-                ghost: note.ghost, fillArgb: rect.argb))
+            built.append(
+                Note(
+                    id: rect.id, tick: shown.tick,
+                    duration: max(0, shown.end - shown.tick),
+                    pitch: shown.pitch, track: note.track, velocity: velocity,
+                    ghost: note.ghost, fillArgb: rect.argb))
         }
         notes = built
         // Rows resolve from the live projection and scale, as the removed
@@ -150,9 +150,10 @@ import PorydawCore
         rows.reserveCapacity(projection.visibleRowCount)
         for row in 0..<projection.visibleRowCount {
             guard let pitch = projection.visiblePitch(at: row) else { continue }
-            rows.append(Row(
-                pitch: pitch, accidentalLane: GridScene.isBlackKey(pitch),
-                scaleHighlight: highlight && scale.contains(pitch)))
+            rows.append(
+                Row(
+                    pitch: pitch, accidentalLane: GridScene.isBlackKey(pitch),
+                    scaleHighlight: highlight && scale.contains(pitch)))
         }
         self.rows = rows
         // Segments resolve from the live axis: the implicit opening segment
@@ -214,17 +215,18 @@ import PorydawCore
         data.withUnsafeBytes { raw -> (rects: [PlotRect], labels: [PlotLabel]) in
             var view = PdDlView()
             guard pd_dl_decode(raw.baseAddress, raw.count, &view),
-                  let header = view.header, let rectBase = view.rects,
-                  let labelBase = view.labels, let textBase = view.text
+                let header = view.header, let rectBase = view.rects,
+                let labelBase = view.labels, let textBase = view.text
             else { return ([], []) }
             let rectCount = Int(header.pointee.rectCount)
             var rects: [PlotRect] = []
             rects.reserveCapacity(rectCount)
             for i in 0..<rectCount {
                 let r = rectBase[i]
-                rects.append(PlotRect(
-                    x: r.x, y: r.y, w: r.w, h: r.h, id: r.id, argb: r.argb,
-                    over: r.flags & UInt32(PD_DL_RECT_OVER) != 0))
+                rects.append(
+                    PlotRect(
+                        x: r.x, y: r.y, w: r.w, h: r.h, id: r.id, argb: r.argb,
+                        over: r.flags & UInt32(PD_DL_RECT_OVER) != 0))
             }
             let labelCount = Int(header.pointee.labelCount)
             var labels: [PlotLabel] = []
@@ -239,10 +241,11 @@ import PorydawCore
                 } else {
                     text = ""
                 }
-                labels.append(PlotLabel(
-                    x: l.x, y: l.y, w: l.w, h: l.h, id: l.id, text: text,
-                    argb: l.argb, fontId: l.fontId, pixelSize: l.pixelSize,
-                    clip: l.flags & UInt32(PD_DL_LABEL_CLIP) != 0))
+                labels.append(
+                    PlotLabel(
+                        x: l.x, y: l.y, w: l.w, h: l.h, id: l.id, text: text,
+                        argb: l.argb, fontId: l.fontId, pixelSize: l.pixelSize,
+                        clip: l.flags & UInt32(PD_DL_LABEL_CLIP) != 0))
             }
             return (rects, labels)
         }
@@ -276,7 +279,7 @@ import PorydawCore
 
     func borderRects(_ id: NoteID) -> [PlotRect] {
         guard let ring = slot(.selectionRing),
-              let fill = fillRect(id)?.argb
+            let fill = fillRect(id)?.argb
         else { return [] }
         return plotRects.filter {
             $0.id == id.rawValue && $0.argb != ring && $0.argb != fill

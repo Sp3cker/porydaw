@@ -6,92 +6,129 @@ import PorydawCore
 // Entry order remains in AutomationPageChecks.swift.
 
 @MainActor
-func drawerAutomationXcmdParity(_ report: CheckReport, suite: DocumentSession,
-                        service: ProjectService) {
+func drawerAutomationXcmdParity(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, echo: [(120, 100)])
     let echo = fixture.projection(fixture.echoLane)
-    report.expectEqual(expected: ["120:100"], actual: fixture.laneValues(echo.points.map {
-        AutomationLanePoint(tick: $0.tick, value: $0.value)
-    }), cppID: drawerAutomationProjectionID, what: "an XCMD lane projects through the same lane API")
-    report.expectEqual(expected: 1, actual: echo.eventCount, cppID: drawerAutomationProjectionID,
-                       what: "an XCMD lane counts its written events")
-    report.expectEqual(expected: "Echo volume (xIECV)", actual: AutomationCatalog.title(fixture.echoLane),
-                       cppID: drawerAutomationProjectionID, what: "an XCMD row keeps its descriptor title")
+    report.expectEqual(
+        expected: ["120:100"],
+        actual: fixture.laneValues(
+            echo.points.map {
+                AutomationLanePoint(tick: $0.tick, value: $0.value)
+            }), cppID: drawerAutomationProjectionID, what: "an XCMD lane projects through the same lane API")
+    report.expectEqual(
+        expected: 1, actual: echo.eventCount, cppID: drawerAutomationProjectionID,
+        what: "an XCMD lane counts its written events")
+    report.expectEqual(
+        expected: "Echo volume (xIECV)", actual: AutomationCatalog.title(fixture.echoLane),
+        cppID: drawerAutomationProjectionID, what: "an XCMD row keeps its descriptor title")
     let metadata = AutomationParameterMetadata(parameter: fixture.echoLane)
-    report.expect(metadata.neutral == nil && metadata.defaultValue == nil, cppID: drawerAutomationProjectionID,
-                  message: "an XCMD lane has neither a neutral nor an engine default")
-    report.expect(echo.leadIn == nil, cppID: drawerAutomationProjectionID,
-                  message: "an XCMD lane supplies no lead-in")
-    report.expectEqual(expected: [AutomationScaleLabel.Role.maximum, .minimum], actual: echo.scaleLabels.map(\.role), cppID: drawerAutomationProjectionID,
-                       what: "an XCMD lane labels its extremes with no neutral")
+    report.expect(
+        metadata.neutral == nil && metadata.defaultValue == nil, cppID: drawerAutomationProjectionID,
+        message: "an XCMD lane has neither a neutral nor an engine default")
+    report.expect(
+        echo.leadIn == nil, cppID: drawerAutomationProjectionID,
+        message: "an XCMD lane supplies no lead-in")
+    report.expectEqual(
+        expected: [AutomationScaleLabel.Role.maximum, .minimum], actual: echo.scaleLabels.map(\.role),
+        cppID: drawerAutomationProjectionID,
+        what: "an XCMD lane labels its extremes with no neutral")
     let before = fixture.snapshot
     let edit = AutomationLaneReplacement.heldSpan(
         fixture.facts(fixture.echoLane).freeze(), begin: 120, end: 144,
         points: [AutomationLanePoint(tick: 120, value: 5)])
-    report.expect(AutomationCommit.apply(edit, in: fixture.document), cppID: drawerAutomationProjectionID,
-                  message: "an XCMD lane commits through the same lane write")
-    report.expectEqual(expected: ["120:5", "144:100"], actual: fixture.values(fixture.echoLane), cppID: drawerAutomationProjectionID,
-                       what: "the XCMD lane writes its projected replacement")
-    report.expectEqual(expected: before.revision + 1, actual: fixture.document.revision, cppID: drawerAutomationProjectionID,
-                       what: "one XCMD replacement is one revision")
+    report.expect(
+        AutomationCommit.apply(edit, in: fixture.document), cppID: drawerAutomationProjectionID,
+        message: "an XCMD lane commits through the same lane write")
+    report.expectEqual(
+        expected: ["120:5", "144:100"], actual: fixture.values(fixture.echoLane), cppID: drawerAutomationProjectionID,
+        what: "the XCMD lane writes its projected replacement")
+    report.expectEqual(
+        expected: before.revision + 1, actual: fixture.document.revision, cppID: drawerAutomationProjectionID,
+        what: "one XCMD replacement is one revision")
 }
 
 @MainActor
 func coreTimeXcmdTimeTraffic(_ report: CheckReport) {
-    let document = SongDocument(file: MidiFile(chunks: [MidiChunk(events: [
-        .channel(status: 0xC0, data0: 0),
-        .channel(tick: 10, status: 0xB0, data0: Xcmd.selectorController, data1: 0x08),
-        .channel(tick: 12, status: 0xB0, data0: Xcmd.payloadController, data1: 40),
-        .channel(tick: 30, status: 0xB0, data0: Xcmd.selectorController, data1: 0x2A),
-        .channel(tick: 31, status: 0xB0, data0: Xcmd.payloadController, data1: 99),
-        .channel(tick: 40, status: 0x90, data0: 60, data1: 90),
-        .channel(tick: 44, status: 0x90, data0: 60),
-    ], endTick: 60)]))
-    let scope = TimeScope(lanes: [TimeScope.ScopedLane(
-        track: 0, lane: .controller(Xcmd.echoVolumeLane))])
-    report.expect(document.duplicateTime(TimeRange(startTick: 10, endTick: 20), scope: scope),
-                  cppID: "automation-domain/AutomationDomainTest::xcmdRangeMoves",
-                  message: "XCMD lane duplicate reconciles through epoch planner")
-    report.expectEqual(expected: ["12:40", "22:40"], actual: document.lanePoints(
-        track: 0, lane: .controller(Xcmd.echoVolumeLane)).map(coreTimePointShape),
+    let document = SongDocument(
+        file: MidiFile(chunks: [
+            MidiChunk(
+                events: [
+                    .channel(status: 0xC0, data0: 0),
+                    .channel(tick: 10, status: 0xB0, data0: Xcmd.selectorController, data1: 0x08),
+                    .channel(tick: 12, status: 0xB0, data0: Xcmd.payloadController, data1: 40),
+                    .channel(tick: 30, status: 0xB0, data0: Xcmd.selectorController, data1: 0x2A),
+                    .channel(tick: 31, status: 0xB0, data0: Xcmd.payloadController, data1: 99),
+                    .channel(tick: 40, status: 0x90, data0: 60, data1: 90),
+                    .channel(tick: 44, status: 0x90, data0: 60),
+                ], endTick: 60)
+        ]))
+    let scope = TimeScope(lanes: [
+        TimeScope.ScopedLane(
+            track: 0, lane: .controller(Xcmd.echoVolumeLane))
+    ])
+    report.expect(
+        document.duplicateTime(TimeRange(startTick: 10, endTick: 20), scope: scope),
+        cppID: "automation-domain/AutomationDomainTest::xcmdRangeMoves",
+        message: "XCMD lane duplicate reconciles through epoch planner")
+    report.expectEqual(
+        expected: ["12:40", "22:40"],
+        actual: document.lanePoints(
+            track: 0, lane: .controller(Xcmd.echoVolumeLane)
+        ).map(coreTimePointShape),
         cppID: "automation-domain/AutomationDomainTest::xcmdCanonicalEdits",
         what: "known copied points rebuild canonically")
     let assessment = Xcmd.assess(coreTimeXcmdTraffic(document.rawChunks[0]))
-    report.expect(assessment.blocks.contains { $0.kind == .unknownSelectorEpoch && $0.payloadCount == 1 },
-                  cppID: "automation-domain/AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection",
-                  message: "unselected opaque epoch remains byte-exact")
+    report.expect(
+        assessment.blocks.contains { $0.kind == .unknownSelectorEpoch && $0.payloadCount == 1 },
+        cppID: "automation-domain/AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection",
+        message: "unselected opaque epoch remains byte-exact")
     let beforeCut = coreTimeBytes(document)
     _ = document.removeTime(TimeRange(startTick: 20, endTick: 25), scope: scope)
-    report.expect(!document.lanePoints(track: 0, lane: .controller(Xcmd.echoVolumeLane))
-        .contains { $0.tick == 22 },
+    report.expect(
+        !document.lanePoints(track: 0, lane: .controller(Xcmd.echoVolumeLane))
+            .contains { $0.tick == 22 },
         cppID: "automation-domain/AutomationDomainTest::xcmdRangeRemoveOnly",
         message: "range cut removes copied logical point")
-    report.expect(document.notes(in: 0).count == 1,
-                  cppID: "automation-domain/AutomationDomainTest::xcmdSweepPreservesNotes",
-                  message: "lane-only XCMD sweep preserves notes")
+    report.expect(
+        document.notes(in: 0).count == 1,
+        cppID: "automation-domain/AutomationDomainTest::xcmdSweepPreservesNotes",
+        message: "lane-only XCMD sweep preserves notes")
     _ = document.history.undoDocument()
-    report.expectEqual(expected: beforeCut, actual: coreTimeBytes(document),
-                       cppID: "automation-domain/AutomationDomainTest::xcmdTimeRangeCuts",
-                       what: "XCMD cut is one reversible history entry")
+    report.expectEqual(
+        expected: beforeCut, actual: coreTimeBytes(document),
+        cppID: "automation-domain/AutomationDomainTest::xcmdTimeRangeCuts",
+        what: "XCMD cut is one reversible history entry")
 
-    let expansion = SongDocument(file: MidiFile(chunks: [
-        MidiChunk(events: [.channel(status: 0xC0, data0: 0)], endTick: 20),
-    ]), trackBudget: 2)
-    let xcmdEdit = RangeEdit(minimumEngineTrackCount: 2,
-        addPoints: [RangeEdit.LaneInsertion(track: 1,
-            lane: .controller(Xcmd.echoLengthLane),
-            points: [LaneWrite(tick: 5, value: 64)])])
-    report.expect(expansion.applyRangeEdit(xcmdEdit) &&
-        expansion.lanePoints(track: 1, lane: .controller(Xcmd.echoLengthLane)).count == 1,
+    let expansion = SongDocument(
+        file: MidiFile(chunks: [
+            MidiChunk(events: [.channel(status: 0xC0, data0: 0)], endTick: 20)
+        ]), trackBudget: 2)
+    let xcmdEdit = RangeEdit(
+        minimumEngineTrackCount: 2,
+        addPoints: [
+            RangeEdit.LaneInsertion(
+                track: 1,
+                lane: .controller(Xcmd.echoLengthLane),
+                points: [LaneWrite(tick: 5, value: 64)])
+        ])
+    report.expect(
+        expansion.applyRangeEdit(xcmdEdit)
+            && expansion.lanePoints(track: 1, lane: .controller(Xcmd.echoLengthLane)).count == 1,
         cppID: "automation-domain/AutomationDomainTest::xcmdExpansionPaste",
         message: "track expansion builds descriptor traffic through the canonical planner")
 }
 
 @MainActor
 private struct XcmdDomainFixture {
-    let document = SongDocument(file: MidiFile(division: 24, chunks: [
-        MidiChunk(events: [.channel(status: 0xC0, data0: 0)], endTick: 9216),
-    ]))
+    let document = SongDocument(
+        file: MidiFile(
+            division: 24,
+            chunks: [
+                MidiChunk(events: [.channel(status: 0xC0, data0: 0)], endTick: 9216)
+            ]))
 
     struct Snapshot {
         let bytes: [UInt8]
@@ -100,8 +137,9 @@ private struct XcmdDomainFixture {
     }
 
     var snapshot: Snapshot {
-        Snapshot(bytes: try! document.captureSave().bytes, revision: document.revision,
-                 identity: document.history.currentIdentity)
+        Snapshot(
+            bytes: try! document.captureSave().bytes, revision: document.revision,
+            identity: document.history.currentIdentity)
     }
 
     func oneEdit(_ before: Snapshot) -> Bool {
@@ -109,14 +147,18 @@ private struct XcmdDomainFixture {
     }
 
     func setLane(_ controller: UInt8, _ points: [(Tick, Int)]) {
-        document.writeLane(track: 0, lane: .controller(controller), from: 0,
-                           through: TimeDefaults.noTick,
-                           points: points.map { LaneWrite(tick: $0.0, value: $0.1) })
+        document.writeLane(
+            track: 0, lane: .controller(controller), from: 0,
+            through: TimeDefaults.noTick,
+            points: points.map { LaneWrite(tick: $0.0, value: $0.1) })
     }
 
     func insertCc(_ tick: Tick, _ controller: UInt8, _ value: UInt8) {
-        document.insertRawEvent(chunk: 0, event: .channel(tick: tick, status: 0xB0,
-                                                         data0: controller, data1: value))
+        document.insertRawEvent(
+            chunk: 0,
+            event: .channel(
+                tick: tick, status: 0xB0,
+                data0: controller, data1: value))
     }
 
     func clearXcmd() {
@@ -137,11 +179,11 @@ private struct XcmdDomainFixture {
     func xcmdBytes(at tick: Tick) -> [(UInt8, UInt8)] {
         document.rawChunks[0].events.compactMap { event in
             guard event.tick == tick,
-                  case let .channel(status, controller, value) = event.payload,
-                  status >> 4 == 0xB,
-                  controller == Xcmd.selectorController ||
-                    controller == Xcmd.payloadController ||
-                    controller == Xcmd.alternatePayloadController else { return nil }
+                case let .channel(status, controller, value) = event.payload,
+                status >> 4 == 0xB,
+                controller == Xcmd.selectorController || controller == Xcmd.payloadController
+                    || controller == Xcmd.alternatePayloadController
+            else { return nil }
             return (controller, value)
         }
     }
@@ -149,10 +191,10 @@ private struct XcmdDomainFixture {
     func xcmdBytes() -> [(UInt8, UInt8)] {
         document.rawChunks[0].events.compactMap { event in
             guard case let .channel(status, controller, value) = event.payload,
-                  status >> 4 == 0xB,
-                  controller == Xcmd.selectorController ||
-                    controller == Xcmd.payloadController ||
-                    controller == Xcmd.alternatePayloadController else { return nil }
+                status >> 4 == 0xB,
+                controller == Xcmd.selectorController || controller == Xcmd.payloadController
+                    || controller == Xcmd.alternatePayloadController
+            else { return nil }
             return (controller, value)
         }
     }
@@ -160,11 +202,10 @@ private struct XcmdDomainFixture {
     func ccChain() -> [(Tick, UInt8, UInt8)] {
         document.rawChunks[0].events.compactMap { event in
             guard case let .channel(status, controller, value) = event.payload,
-                  status >> 4 == 0xB,
-                  controller == 7 || controller == 10 ||
-                    controller == Xcmd.selectorController ||
-                    controller == Xcmd.payloadController ||
-                    controller == Xcmd.alternatePayloadController else { return nil }
+                status >> 4 == 0xB,
+                controller == 7 || controller == 10 || controller == Xcmd.selectorController
+                    || controller == Xcmd.payloadController || controller == Xcmd.alternatePayloadController
+            else { return nil }
             return (event.tick, controller, value)
         }
     }
@@ -174,7 +215,8 @@ private struct XcmdDomainFixture {
             let events = document.rawChunks[note.chunk].events
             return [note.onIndex, note.endIndex].compactMap { index in
                 guard let index,
-                      case let .channel(status, key, velocity) = events[index].payload else { return nil }
+                    case let .channel(status, key, velocity) = events[index].payload
+                else { return nil }
                 return (events[index].tick, status & 0xF0, key, velocity)
             }
         }
@@ -194,52 +236,69 @@ func drawerAutomationXcmdLaneEdits(_ report: CheckReport) {
     let before = canonical.snapshot
     canonical.setLane(Xcmd.echoVolumeLane, [(96, 34)])
     canonical.setLane(Xcmd.echoLengthLane, [(96, 17)])
-    report.expectEqual(expected: ["96:34"], actual: canonical.points(Xcmd.echoVolumeLane), cppID: canonicalID,
-                       what: "volume lane projects the canonical point")
-    report.expectEqual(expected: ["96:17"], actual: canonical.points(Xcmd.echoLengthLane), cppID: canonicalID,
-                       what: "length lane projects the canonical point")
+    report.expectEqual(
+        expected: ["96:34"], actual: canonical.points(Xcmd.echoVolumeLane), cppID: canonicalID,
+        what: "volume lane projects the canonical point")
+    report.expectEqual(
+        expected: ["96:17"], actual: canonical.points(Xcmd.echoLengthLane), cppID: canonicalID,
+        what: "length lane projects the canonical point")
     let bytesAt96: [(UInt8, UInt8)] = [
         (Xcmd.selectorController, 0x08), (Xcmd.payloadController, 34),
         (Xcmd.selectorController, 0x09), (Xcmd.payloadController, 17),
     ]
-    report.expect(canonical.xcmdBytes(at: 96).elementsEqual(bytesAt96, by: { $0 == $1 }),
-                  cppID: canonicalID, message: "canonical lanes encode ordered bytes at tick 96")
+    report.expect(
+        canonical.xcmdBytes(at: 96).elementsEqual(bytesAt96, by: { $0 == $1 }),
+        cppID: canonicalID, message: "canonical lanes encode ordered bytes at tick 96")
 
     let moveBefore = canonical.snapshot
     if let volume = canonical.document.lanePoints(track: 0, lane: .controller(Xcmd.echoVolumeLane)).first {
-        canonical.document.moveLanePoints(track: 0, lane: .controller(Xcmd.echoVolumeLane),
-                                          moves: [LanePointMove(point: volume, tick: 192, value: 35)])
-        report.expect(canonical.oneEdit(moveBefore), cppID: canonicalID,
-                      message: "moving the volume point commits one edit")
-        report.expectEqual(expected: ["192:35"], actual: canonical.points(Xcmd.echoVolumeLane), cppID: canonicalID,
-                           what: "moved volume point projects at tick 192")
+        canonical.document.moveLanePoints(
+            track: 0, lane: .controller(Xcmd.echoVolumeLane),
+            moves: [LanePointMove(point: volume, tick: 192, value: 35)])
+        report.expect(
+            canonical.oneEdit(moveBefore), cppID: canonicalID,
+            message: "moving the volume point commits one edit")
+        report.expectEqual(
+            expected: ["192:35"], actual: canonical.points(Xcmd.echoVolumeLane), cppID: canonicalID,
+            what: "moved volume point projects at tick 192")
         let bytesAt192: [(UInt8, UInt8)] = [
             (Xcmd.selectorController, 0x08), (Xcmd.payloadController, 35),
         ]
-        report.expect(canonical.xcmdBytes(at: 192).elementsEqual(bytesAt192, by: { $0 == $1 }),
-                      cppID: canonicalID, message: "moved point encodes ordered bytes at tick 192")
+        report.expect(
+            canonical.xcmdBytes(at: 192).elementsEqual(bytesAt192, by: { $0 == $1 }),
+            cppID: canonicalID, message: "moved point encodes ordered bytes at tick 192")
     } else {
         report.fail(canonicalID, "canonical volume lane has no point identity to move")
     }
-    report.expect(canonical.undoToRoot() && canonical.snapshot.bytes == before.bytes,
-                  cppID: canonicalID, message: "undoing every edit restores pre-edit MIDI bytes")
-    report.expectEqual(expected: [String](), actual: canonical.points(Xcmd.echoVolumeLane), cppID: canonicalID,
-                       what: "undo leaves volume lane empty")
-    report.expectEqual(expected: [String](), actual: canonical.points(Xcmd.echoLengthLane), cppID: canonicalID,
-                       what: "undo leaves length lane empty")
+    report.expect(
+        canonical.undoToRoot() && canonical.snapshot.bytes == before.bytes,
+        cppID: canonicalID, message: "undoing every edit restores pre-edit MIDI bytes")
+    report.expectEqual(
+        expected: [String](), actual: canonical.points(Xcmd.echoVolumeLane), cppID: canonicalID,
+        what: "undo leaves volume lane empty")
+    report.expectEqual(
+        expected: [String](), actual: canonical.points(Xcmd.echoLengthLane), cppID: canonicalID,
+        what: "undo leaves length lane empty")
 
     let sweepID = "automation-domain/AutomationDomainTest::xcmdSweepPreservesNotes"
     let sweep = XcmdDomainFixture()
     let beforeSweep = sweep.snapshot
-    sweep.document.insertRawEvent(chunk: 0, event: .channel(tick: 8772, status: 0x90,
-                                                            data0: 60, data1: 100))
-    sweep.document.insertRawEvent(chunk: 0, event: .channel(tick: 8808, status: 0x80,
-                                                            data0: 60, data1: 0))
+    sweep.document.insertRawEvent(
+        chunk: 0,
+        event: .channel(
+            tick: 8772, status: 0x90,
+            data0: 60, data1: 100))
+    sweep.document.insertRawEvent(
+        chunk: 0,
+        event: .channel(
+            tick: 8808, status: 0x80,
+            data0: 60, data1: 0))
     sweep.setLane(Xcmd.echoVolumeLane, [(8844, 48)])
     let notesBeforeSweep = sweep.notes()
     let expectedNotes: [(Tick, UInt8, UInt8, UInt8)] = [(8772, 0x90, 60, 100), (8808, 0x80, 60, 0)]
-    report.expect(notesBeforeSweep.elementsEqual(expectedNotes, by: { $0 == $1 }),
-                  cppID: sweepID, message: "sweep fixture contains the original note-on and note-off")
+    report.expect(
+        notesBeforeSweep.elementsEqual(expectedNotes, by: { $0 == $1 }),
+        cppID: sweepID, message: "sweep fixture contains the original note-on and note-off")
     let parameter = AutomationParameter.controlChange(track: 0, controller: Xcmd.echoVolumeLane)
     let lane = AutomationLaneSnapshot(parameter: parameter, in: sweep.document, songEndTick: 9216)
     let freeze = AutomationLaneFreeze(
@@ -247,15 +306,20 @@ func drawerAutomationXcmdLaneEdits(_ report: CheckReport) {
         original: lane.displaySeries.map { AutomationLanePoint(tick: $0.tick, value: $0.value) })
     let sweepEdit = AutomationLaneReplacement.heldSpan(
         freeze, begin: 8736, end: 8844,
-        points: [AutomationLanePoint(tick: 8736, value: 32),
-                 AutomationLanePoint(tick: 8844, value: 48)])
+        points: [
+            AutomationLanePoint(tick: 8736, value: 32),
+            AutomationLanePoint(tick: 8844, value: 48),
+        ])
     _ = AutomationCommit.apply(sweepEdit, in: sweep.document)
-    report.expect(sweep.notes().elementsEqual(notesBeforeSweep, by: { $0 == $1 }),
-                  cppID: sweepID, message: "lane sweep preserves the original note events")
-    report.expectEqual(expected: ["8736:32", "8844:48"], actual: sweep.points(Xcmd.echoVolumeLane), cppID: sweepID,
-                       what: "sweep replaces the lane span with both projected points")
-    report.expect(sweep.undoToRoot() && sweep.snapshot.bytes == beforeSweep.bytes,
-                  cppID: sweepID, message: "undoing sweep and fixture edits restores original MIDI bytes")
+    report.expect(
+        sweep.notes().elementsEqual(notesBeforeSweep, by: { $0 == $1 }),
+        cppID: sweepID, message: "lane sweep preserves the original note events")
+    report.expectEqual(
+        expected: ["8736:32", "8844:48"], actual: sweep.points(Xcmd.echoVolumeLane), cppID: sweepID,
+        what: "sweep replaces the lane span with both projected points")
+    report.expect(
+        sweep.undoToRoot() && sweep.snapshot.bytes == beforeSweep.bytes,
+        cppID: sweepID, message: "undoing sweep and fixture edits restores original MIDI bytes")
 
     let occurrencesID = "automation-domain/AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection"
     let occurrences = XcmdDomainFixture()
@@ -270,26 +334,34 @@ func drawerAutomationXcmdLaneEdits(_ report: CheckReport) {
         (Xcmd.selectorController, 0x08), (Xcmd.payloadController, 36),
     ]
     occurrences.setLane(Xcmd.echoVolumeLane, [(96, 34), (192, 35)])
-    report.expectEqual(expected: 2, actual: occurrences.document.lanePoints(track: 0, lane: volumeLane).count,
-                       cppID: occurrencesID, what: "two volume occurrences project")
-    report.expect(occurrences.xcmdBytes(at: 96).elementsEqual(volume34, by: { $0 == $1 }),
-                  cppID: occurrencesID, message: "first occurrence encodes the ordered volume pair")
-    report.expect(occurrences.xcmdBytes(at: 192).elementsEqual(volume35, by: { $0 == $1 }),
-                  cppID: occurrencesID, message: "second occurrence encodes the ordered volume pair")
+    report.expectEqual(
+        expected: 2, actual: occurrences.document.lanePoints(track: 0, lane: volumeLane).count,
+        cppID: occurrencesID, what: "two volume occurrences project")
+    report.expect(
+        occurrences.xcmdBytes(at: 96).elementsEqual(volume34, by: { $0 == $1 }),
+        cppID: occurrencesID, message: "first occurrence encodes the ordered volume pair")
+    report.expect(
+        occurrences.xcmdBytes(at: 192).elementsEqual(volume35, by: { $0 == $1 }),
+        cppID: occurrencesID, message: "second occurrence encodes the ordered volume pair")
     if let front = occurrences.document.lanePoints(track: 0, lane: volumeLane).first {
         occurrences.document.deleteLanePoints(track: 0, lane: volumeLane, points: [front])
-        report.expectEqual(expected: ["192:35"], actual: occurrences.points(Xcmd.echoVolumeLane), cppID: occurrencesID,
-                           what: "deleting the first occurrence preserves the second")
-        report.expect(occurrences.xcmdBytes(at: 96).isEmpty, cppID: occurrencesID,
-                      message: "deleting the first occurrence removes its bytes")
-        report.expect(occurrences.xcmdBytes(at: 192).elementsEqual(volume35, by: { $0 == $1 }),
-                      cppID: occurrencesID, message: "deleting the first occurrence preserves second bytes")
+        report.expectEqual(
+            expected: ["192:35"], actual: occurrences.points(Xcmd.echoVolumeLane), cppID: occurrencesID,
+            what: "deleting the first occurrence preserves the second")
+        report.expect(
+            occurrences.xcmdBytes(at: 96).isEmpty, cppID: occurrencesID,
+            message: "deleting the first occurrence removes its bytes")
+        report.expect(
+            occurrences.xcmdBytes(at: 192).elementsEqual(volume35, by: { $0 == $1 }),
+            cppID: occurrencesID, message: "deleting the first occurrence preserves second bytes")
         if let remaining = occurrences.document.lanePoints(track: 0, lane: volumeLane).first {
             occurrences.document.deleteLanePoints(track: 0, lane: volumeLane, points: [remaining])
-            report.expectEqual(expected: [String](), actual: occurrences.points(Xcmd.echoVolumeLane), cppID: occurrencesID,
-                               what: "deleting both occurrences empties the volume lane")
-            report.expect(occurrences.xcmdBytes().isEmpty, cppID: occurrencesID,
-                          message: "deleting both occurrences empties XCMD traffic")
+            report.expectEqual(
+                expected: [String](), actual: occurrences.points(Xcmd.echoVolumeLane), cppID: occurrencesID,
+                what: "deleting both occurrences empties the volume lane")
+            report.expect(
+                occurrences.xcmdBytes().isEmpty, cppID: occurrencesID,
+                message: "deleting both occurrences empties XCMD traffic")
         } else {
             report.fail(occurrencesID, "remaining volume occurrence has no identity to delete")
         }
@@ -301,14 +373,18 @@ func drawerAutomationXcmdLaneEdits(_ report: CheckReport) {
     if let front = occurrences.document.lanePoints(track: 0, lane: volumeLane).first {
         occurrences.document.moveLanePoints(
             track: 0, lane: volumeLane, moves: [LanePointMove(point: front, tick: 384, value: 36)])
-        report.expectEqual(expected: ["192:35", "384:36"], actual: occurrences.points(Xcmd.echoVolumeLane),
-                           cppID: occurrencesID, what: "moving the first occurrence preserves the second")
-        report.expect(occurrences.xcmdBytes(at: 192).elementsEqual(volume35, by: { $0 == $1 }),
-                      cppID: occurrencesID, message: "unmoved occurrence keeps its bytes at tick 192")
-        report.expect(occurrences.xcmdBytes(at: 384).elementsEqual(volume36, by: { $0 == $1 }),
-                      cppID: occurrencesID, message: "moved occurrence encodes at tick 384")
-        report.expect(occurrences.xcmdBytes(at: 96).isEmpty, cppID: occurrencesID,
-                      message: "moving one logical XCMD occurrence vacates its original protocol group")
+        report.expectEqual(
+            expected: ["192:35", "384:36"], actual: occurrences.points(Xcmd.echoVolumeLane),
+            cppID: occurrencesID, what: "moving the first occurrence preserves the second")
+        report.expect(
+            occurrences.xcmdBytes(at: 192).elementsEqual(volume35, by: { $0 == $1 }),
+            cppID: occurrencesID, message: "unmoved occurrence keeps its bytes at tick 192")
+        report.expect(
+            occurrences.xcmdBytes(at: 384).elementsEqual(volume36, by: { $0 == $1 }),
+            cppID: occurrencesID, message: "moved occurrence encodes at tick 384")
+        report.expect(
+            occurrences.xcmdBytes(at: 96).isEmpty, cppID: occurrencesID,
+            message: "moving one logical XCMD occurrence vacates its original protocol group")
     } else {
         report.fail(occurrencesID, "re-added volume occurrence has no identity to move")
     }
@@ -319,20 +395,24 @@ func drawerAutomationXcmdLaneEdits(_ report: CheckReport) {
     if let volume = occurrences.document.lanePoints(track: 0, lane: volumeLane).first {
         occurrences.document.moveLanePoints(
             track: 0, lane: volumeLane, moves: [LanePointMove(point: volume, tick: 160, value: 36)])
-        report.expectEqual(expected: ["160:36"], actual: occurrences.points(Xcmd.echoVolumeLane), cppID: occurrencesID,
-                           what: "moving volume away from a shared tick projects only the moved volume")
+        report.expectEqual(
+            expected: ["160:36"], actual: occurrences.points(Xcmd.echoVolumeLane), cppID: occurrencesID,
+            what: "moving volume away from a shared tick projects only the moved volume")
         let length17: [(UInt8, UInt8)] = [
             (Xcmd.selectorController, 0x09), (Xcmd.payloadController, 17),
         ]
         let length18: [(UInt8, UInt8)] = [
             (Xcmd.selectorController, 0x09), (Xcmd.payloadController, 18),
         ]
-        report.expect(occurrences.xcmdBytes(at: 96).elementsEqual(length17, by: { $0 == $1 }),
-                      cppID: occurrencesID, message: "the shared tick retains only length bytes")
-        report.expect(occurrences.xcmdBytes(at: 160).elementsEqual(volume36, by: { $0 == $1 }),
-                      cppID: occurrencesID, message: "moved volume encodes at tick 160")
-        report.expect(occurrences.xcmdBytes(at: 192).elementsEqual(length18, by: { $0 == $1 }),
-                      cppID: occurrencesID, message: "other length occurrence retains its bytes")
+        report.expect(
+            occurrences.xcmdBytes(at: 96).elementsEqual(length17, by: { $0 == $1 }),
+            cppID: occurrencesID, message: "the shared tick retains only length bytes")
+        report.expect(
+            occurrences.xcmdBytes(at: 160).elementsEqual(volume36, by: { $0 == $1 }),
+            cppID: occurrencesID, message: "moved volume encodes at tick 160")
+        report.expect(
+            occurrences.xcmdBytes(at: 192).elementsEqual(length18, by: { $0 == $1 }),
+            cppID: occurrencesID, message: "other length occurrence retains its bytes")
     } else {
         report.fail(occurrencesID, "shared-tick volume occurrence has no identity to move")
     }
@@ -344,10 +424,10 @@ func drawerAutomationXcmdLaneEdits(_ report: CheckReport) {
     let opaqueBefore = occurrences.snapshot
     occurrences.setLane(Xcmd.echoVolumeLane, [(1, 30)])
     let opaqueAfter = occurrences.snapshot
-    report.expect(opaqueAfter.bytes == opaqueBefore.bytes &&
-                  opaqueAfter.revision == opaqueBefore.revision &&
-                  opaqueAfter.identity == opaqueBefore.identity,
-                  cppID: occurrencesID, message: "a write inside an opaque epoch changes neither bytes nor history")
+    report.expect(
+        opaqueAfter.bytes == opaqueBefore.bytes && opaqueAfter.revision == opaqueBefore.revision
+            && opaqueAfter.identity == opaqueBefore.identity,
+        cppID: occurrencesID, message: "a write inside an opaque epoch changes neither bytes nor history")
 
     _ = occurrences.undoToRoot()
     occurrences.insertCc(4, Xcmd.selectorController, 0x01)
@@ -357,22 +437,25 @@ func drawerAutomationXcmdLaneEdits(_ report: CheckReport) {
     occurrences.insertCc(9, Xcmd.payloadController, 99)
     let malformedBefore = occurrences.snapshot
     occurrences.setLane(Xcmd.echoVolumeLane, [(400, 30)])
-    report.expect(occurrences.oneEdit(malformedBefore), cppID: occurrencesID,
-                  message: "appending beyond malformed epochs changes revision and identity once")
+    report.expect(
+        occurrences.oneEdit(malformedBefore), cppID: occurrencesID,
+        message: "appending beyond malformed epochs changes revision and identity once")
     let appendedBytes: [(UInt8, UInt8)] = [
         (Xcmd.selectorController, 0x01), (Xcmd.payloadController, 1),
         (Xcmd.payloadController, 2), (Xcmd.selectorController, 0x03),
         (Xcmd.payloadController, 99), (Xcmd.selectorController, 0x08),
         (Xcmd.payloadController, 30),
     ]
-    report.expect(occurrences.xcmdBytes().elementsEqual(appendedBytes, by: { $0 == $1 }),
-                  cppID: occurrencesID, message: "appending preserves both malformed epochs and ordered bytes")
+    report.expect(
+        occurrences.xcmdBytes().elementsEqual(appendedBytes, by: { $0 == $1 }),
+        cppID: occurrencesID, message: "appending preserves both malformed epochs and ordered bytes")
     let rejectedBefore = occurrences.snapshot
-    occurrences.document.writeLane(track: 0, lane: volumeLane, from: 8, through: 8,
-                                   points: [LaneWrite(tick: 8, value: 30)])
+    occurrences.document.writeLane(
+        track: 0, lane: volumeLane, from: 8, through: 8,
+        points: [LaneWrite(tick: 8, value: 30)])
     let rejectedAfter = occurrences.snapshot
-    report.expect(rejectedAfter.bytes == rejectedBefore.bytes &&
-                  rejectedAfter.revision == rejectedBefore.revision &&
-                  rejectedAfter.identity == rejectedBefore.identity,
-                  cppID: occurrencesID, message: "a selector-tick write changes neither bytes nor history")
+    report.expect(
+        rejectedAfter.bytes == rejectedBefore.bytes && rejectedAfter.revision == rejectedBefore.revision
+            && rejectedAfter.identity == rejectedBefore.identity,
+        cppID: occurrencesID, message: "a selector-tick write changes neither bytes nor history")
 }

@@ -48,7 +48,6 @@ internal struct TimeActions {
         endTicks = file.chunks.map(\.endTick)
     }
 
-
     mutating func remove(chunk: Int, index: Int) { values[chunk][index] = .remove }
     mutating func move(chunk: Int, index: Int, to tick: Tick, preserveIdentity: Bool) {
         values[chunk][index] = .move(tick, preserveIdentity: preserveIdentity)
@@ -81,8 +80,9 @@ internal func laneEventKey(chunk: Int, event: MidiEvent) -> LaneEventKey? {
     guard case let .channel(status, data0, _) = event.payload else { return nil }
     let type = status >> 4
     guard type == 0xA || type == 0xB || type == 0xC || type == 0xE else { return nil }
-    return LaneEventKey(chunk: chunk, tick: event.tick, status: status,
-                        data0: type == 0xA || type == 0xB ? data0 : 0)
+    return LaneEventKey(
+        chunk: chunk, tick: event.tick, status: status,
+        data0: type == 0xA || type == 0xB ? data0 : 0)
 }
 
 internal func lane(of event: MidiEvent) -> Lane? {
@@ -101,15 +101,18 @@ internal func makeLaneEvent(lane: Lane, channel: UInt8, tick: Tick, value: Int) 
     switch lane {
     case let .controller(controller):
         let domain = TimeDefaults.laneDomain(for: controller)
-        return .channel(tick: tick, status: 0xB0 | channel, data0: controller,
-                        data1: UInt8(min(max(value, domain.minimum), domain.maximum)))
+        return .channel(
+            tick: tick, status: 0xB0 | channel, data0: controller,
+            data1: UInt8(min(max(value, domain.minimum), domain.maximum)))
     case .pitchBend:
         let raw = min(max(value, -8192), 8191) + 8192
-        return .channel(tick: tick, status: 0xE0 | channel,
-                        data0: UInt8(raw & 0x7F), data1: UInt8((raw >> 7) & 0x7F))
+        return .channel(
+            tick: tick, status: 0xE0 | channel,
+            data0: UInt8(raw & 0x7F), data1: UInt8((raw >> 7) & 0x7F))
     case .voice:
-        return .channel(tick: tick, status: 0xC0 | channel,
-                        data0: UInt8(min(max(value, 0), 127)))
+        return .channel(
+            tick: tick, status: 0xC0 | channel,
+            data0: UInt8(min(max(value, 0), 127)))
     }
 }
 
@@ -119,8 +122,10 @@ internal func isSignature(_ event: MidiEvent) -> Bool {
     return type == 0x58 && data.count >= 2
 }
 
-internal func defaultEvent(for prototype: MidiEvent, kind: TimeEventRef.Kind,
-                          tick: Tick) -> MidiEvent? {
+internal func defaultEvent(
+    for prototype: MidiEvent, kind: TimeEventRef.Kind,
+    tick: Tick
+) -> MidiEvent? {
     if kind == .signature { return .meta(tick: tick, type: 0x58, data: [4, 2, 24, 8]) }
     guard case let .channel(status, data0, _) = prototype.payload else { return nil }
     switch status >> 4 {
@@ -135,9 +140,13 @@ internal func defaultEvent(for prototype: MidiEvent, kind: TimeEventRef.Kind,
 internal func xcmdConsumed(in file: MidiFile) -> [Set<Int>] {
     let map = file.engineTracks()
     return file.chunks.indices.map { chunk in
-        Set(Xcmd.project(Xcmd.traffic(in: file.chunks[chunk],
-                                     stream: streamIndex(for: chunk, map: map))).consumed.compactMap {
-            $0 <= UInt64(Int.max) ? Int($0) : nil
-        })
+        Set(
+            Xcmd.project(
+                Xcmd.traffic(
+                    in: file.chunks[chunk],
+                    stream: streamIndex(for: chunk, map: map))
+            ).consumed.compactMap {
+                $0 <= UInt64(Int.max) ? Int($0) : nil
+            })
     }
 }

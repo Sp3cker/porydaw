@@ -30,8 +30,9 @@ public enum AutomationQtModifier {
     /// value snap, Shift selects the ramp/locking behaviour. Direct checks drive
     /// this mapping with the raw Qt bits QML carries.
     public static func automation(_ flags: Int) -> AutomationModifiers {
-        AutomationModifiers(fine: flags & alt != 0, snapValue: flags & control != 0,
-                            shift: flags & shift != 0)
+        AutomationModifiers(
+            fine: flags & alt != 0, snapValue: flags & control != 0,
+            shift: flags & shift != 0)
     }
 }
 
@@ -103,10 +104,13 @@ public struct AutomationHover: Equatable, Sendable {
         }
         // The background tick is the fine lattice, or the insert cell while
         // the pencil is armed; the readout is the value the lane holds there.
-        let tick = isPencilMode
+        let tick =
+            isPencilMode
             ? projection.cell(atRawTick: projection.rawTick(atX: x)).tickBegin
             : projection.tick(atX: x, fine: true)
-        let held = isPencilMode ? projection.value(atY: y, metadata: facts.metadata)
+        let held =
+            isPencilMode
+            ? projection.value(atY: y, metadata: facts.metadata)
             : lane.heldValue(at: tick)
         return Self(
             parameter: facts.parameter,
@@ -159,13 +163,14 @@ struct AutomationRangeBand {
     let insideSelection: Bool
 }
 
-
 @MainActor
 extension AutomationPage {
     /// The pointer's hover: the node under it, or the background tick with the
     /// value the lane holds there.
-    func updateHover(x: Double, y: Double, facts: AutomationFrozenFacts,
-                     projection: AutomationProjection) {
+    func updateHover(
+        x: Double, y: Double, facts: AutomationFrozenFacts,
+        projection: AutomationProjection
+    ) {
         guard let lane = laneProjection(facts: facts, projection: projection) else { return }
         let next = AutomationHover.resolve(
             x: x,
@@ -179,9 +184,11 @@ extension AutomationPage {
         publishHover()
     }
 
-    func mappedPoint(x: Double, y: Double, facts: AutomationFrozenFacts,
-                             modifiers: AutomationModifiers,
-                             projection: AutomationProjection) -> AutomationLanePoint {
+    func mappedPoint(
+        x: Double, y: Double, facts: AutomationFrozenFacts,
+        modifiers: AutomationModifiers,
+        projection: AutomationProjection
+    ) -> AutomationLanePoint {
         AutomationLanePoint(
             tick: projection.tick(atX: x, fine: modifiers.fine),
             value: facts.metadata.snappedValue(
@@ -189,8 +196,10 @@ extension AutomationPage {
                 plotHeight: plotHeight, neutralSnapRadius: geometry.neutralSnapRadius))
     }
 
-    func phantomHit(lane: AutomationLaneProjection, x: Double,
-                            y: Double) -> AutomationOriginPhantom? {
+    func phantomHit(
+        lane: AutomationLaneProjection, x: Double,
+        y: Double
+    ) -> AutomationOriginPhantom? {
         guard let phantom = lane.originPhantom else { return nil }
         let dy = phantom.point.y - y
         return x * x + dy * dy <= geometry.pointHitRadius * geometry.pointHitRadius
@@ -205,17 +214,21 @@ extension AutomationPage {
 
 }
 
-func source(of identity: AutomationPointIdentity,
-            facts: AutomationFrozenFacts) -> AutomationSourcePoint? {
+func source(
+    of identity: AutomationPointIdentity,
+    facts: AutomationFrozenFacts
+) -> AutomationSourcePoint? {
     if let source = facts.snapshot.sources.first(where: { $0.identity == identity }) {
         return source
     }
     // The projected engine node has no written occurrence: a drag on it is the
     // promotion write the resolver performs for a projected tick-zero node.
     guard identity.occurrence == -1, identity.tick == 0,
-          facts.snapshot.projectedTickZero else { return nil }
-    return AutomationSourcePoint(identity: identity, tick: identity.tick, value: identity.value,
-                                 lanePoint: nil, tempoPoint: nil)
+        facts.snapshot.projectedTickZero
+    else { return nil }
+    return AutomationSourcePoint(
+        identity: identity, tick: identity.tick, value: identity.value,
+        lanePoint: nil, tempoPoint: nil)
 }
 
 func shiftedAutomationSelection(

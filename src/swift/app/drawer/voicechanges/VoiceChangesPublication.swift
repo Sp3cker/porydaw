@@ -384,7 +384,6 @@ extension VoiceChangesPage {
             pickerRows, snapshots: &pickerRowSnapshots, values: values)
     }
 
-
     /// The variant-typed records compare through their published spelling:
     /// `[String: QVariantSettable]` is not `Equatable`, and an equal record must
     /// leave its storage untouched.

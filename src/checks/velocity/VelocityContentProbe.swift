@@ -17,7 +17,7 @@ func velocityDisplayRects(_ data: Data) -> [VelocityDisplayRect]? {
     data.withUnsafeBytes { raw -> [VelocityDisplayRect]? in
         var view = PdDlView()
         guard pd_dl_decode(raw.baseAddress, raw.count, &view),
-              let header = view.header, let rectBase = view.rects
+            let header = view.header, let rectBase = view.rects
         else { return nil }
         let count = Int(header.pointee.rectCount)
         return (0..<count).map { index in
@@ -27,7 +27,6 @@ func velocityDisplayRects(_ data: Data) -> [VelocityDisplayRect]? {
         }
     }
 }
-
 
 @MainActor
 func drawerVelocityContentBlobChecks(
@@ -42,7 +41,7 @@ func drawerVelocityContentBlobChecks(
     let initial1 = page.displayList(list: 1)
     let revision = page.displayRevision
     guard let grid = velocityDisplayRects(initial0),
-          let transient = velocityDisplayRects(initial1)
+        let transient = velocityDisplayRects(initial1)
     else {
         report.fail(
             drawerVelocityProjectionID,

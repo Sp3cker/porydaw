@@ -91,7 +91,7 @@ struct TrackHeadersGeometry {
         renameEditorRight = px(8.0 / 3.0)
         renameEditorHeight = px(5.0 / 3.0)
         reorderIndicatorHeight = px(0.25)
-        separatorWidth = 1 // layout::singlePixel(), independent of DPR.
+        separatorWidth = 1  // layout::singlePixel(), independent of DPR.
         scrollbarWidth = px(0.5)
         scrollbarMinimumThumbHeight = px(2)
         spaceOne = px(0.25)
@@ -102,8 +102,9 @@ struct TrackHeadersGeometry {
     func muteRect(width: Double) -> HeaderRect {
         guard rowHeight > 0 else { return HeaderRect() }
         let gap = max(0, rowHeight - separatorWidth - 2 * buttonExtent) / 3
-        return HeaderRect(x: width - Double(spaceOne + buttonExtent), y: Double(gap),
-                          width: Double(buttonExtent), height: Double(buttonExtent))
+        return HeaderRect(
+            x: width - Double(spaceOne + buttonExtent), y: Double(gap),
+            width: Double(buttonExtent), height: Double(buttonExtent))
     }
     func soloRect(width: Double) -> HeaderRect {
         var result = muteRect(width: width)
@@ -112,9 +113,10 @@ struct TrackHeadersGeometry {
     }
     func renameRect(width: Double) -> HeaderRect {
         guard rowHeight > 0 else { return HeaderRect() }
-        return HeaderRect(x: Double(renameEditorLeft), y: Double(renameEditorTop),
-                          width: max(0, width - Double(renameEditorRight)),
-                          height: Double(renameEditorHeight))
+        return HeaderRect(
+            x: Double(renameEditorLeft), y: Double(renameEditorTop),
+            width: max(0, width - Double(renameEditorRight)),
+            height: Double(renameEditorHeight))
     }
     func textRects(width: Double, metrics: HeaderTextMetrics?) -> (HeaderRect, HeaderRect) {
         guard rowHeight > 0, let metrics else { return (HeaderRect(), HeaderRect()) }
@@ -122,10 +124,12 @@ struct TrackHeadersGeometry {
         let total = primaryHeight + spaceHalf + metrics.subtitle
         let y = (max(0, rowHeight - separatorWidth) - total) / 2
         let textWidth = max(0, Int(width.rounded()) - buttonColumnWidth - textLeft - spaceOne)
-        let title = HeaderRect(x: Double(textLeft), y: Double(y),
-                               width: Double(textWidth), height: Double(primaryHeight))
-        let subtitle = HeaderRect(x: Double(textLeft), y: Double(y + primaryHeight + spaceHalf),
-                                  width: Double(textWidth), height: Double(metrics.subtitle))
+        let title = HeaderRect(
+            x: Double(textLeft), y: Double(y),
+            width: Double(textWidth), height: Double(primaryHeight))
+        let subtitle = HeaderRect(
+            x: Double(textLeft), y: Double(y + primaryHeight + spaceHalf),
+            width: Double(textWidth), height: Double(metrics.subtitle))
         return (title, subtitle)
     }
 
@@ -136,16 +140,18 @@ struct TrackHeadersGeometry {
         // with buttonPressedText, checked-solo and text-selection fills with
         // selectionText. Checked solo uses the selection surface because the
         // accent edge color cannot carry one ink in all three themes.
-        ["buttonBackground": palette.buttonBackground, "buttonText": palette.buttonText,
-         "buttonHoverBackground": palette.buttonHoverBackground, "buttonHoverText": palette.buttonText,
-         "buttonPressedBackground": palette.buttonPressedBackground, "buttonPressedText": palette.buttonPressedText,
-         "buttonOutline": palette.outline, "focusOutline": palette.selectionEdge,
-         "muteCheckedBackground": palette.buttonPressedBackground, "muteCheckedText": palette.buttonPressedText,
-         "soloCheckedBackground": palette.tabSelectedBackground, "soloCheckedText": palette.selectionText,
-         "inputBackground": palette.inputBackground, "inputText": palette.windowText,
-         "inputOutline": palette.outline, "scrollbarHandle": palette.outline,
-         "scrollbarHandleHover": palette.focusOutline, "reorderIndicator": palette.selectionEdge,
-         "selectionBackground": palette.tabSelectedBackground, "selectionText": palette.selectionText]
+        [
+            "buttonBackground": palette.buttonBackground, "buttonText": palette.buttonText,
+            "buttonHoverBackground": palette.buttonHoverBackground, "buttonHoverText": palette.buttonText,
+            "buttonPressedBackground": palette.buttonPressedBackground, "buttonPressedText": palette.buttonPressedText,
+            "buttonOutline": palette.outline, "focusOutline": palette.selectionEdge,
+            "muteCheckedBackground": palette.buttonPressedBackground, "muteCheckedText": palette.buttonPressedText,
+            "soloCheckedBackground": palette.tabSelectedBackground, "soloCheckedText": palette.selectionText,
+            "inputBackground": palette.inputBackground, "inputText": palette.windowText,
+            "inputOutline": palette.outline, "scrollbarHandle": palette.outline,
+            "scrollbarHandleHover": palette.focusOutline, "reorderIndicator": palette.selectionEdge,
+            "selectionBackground": palette.tabSelectedBackground, "selectionText": palette.selectionText,
+        ]
     }
 }
 
@@ -158,8 +164,10 @@ extension TrackHeadersPresenter {
         let nextWidth = max(0, width)
         let nextHeight = max(0, height)
         let nextDpr = max(0.1, dpr)
-        guard rowHeight == 0 || nextWidth != viewportWidth || nextHeight != viewportHeight
-                || nextBase != baseFontPx || nextDpr != devicePixelRatio else { return }
+        guard
+            rowHeight == 0 || nextWidth != viewportWidth || nextHeight != viewportHeight
+                || nextBase != baseFontPx || nextDpr != devicePixelRatio
+        else { return }
         if nextBase != baseFontPx { textMetrics = nil }
         if requestedBase != fontRoles.baseFontPx {
             fontRoles = Typography(baseFontPx: requestedBase)
@@ -197,8 +205,11 @@ extension TrackHeadersPresenter {
         scrollY = min(maximumScrollY, max(0, scrollY))
     }
 
-    func resolvedProgramSpan(track: Int, session: DocumentSession, tick: Tick)
-        -> (program: Int, start: Tick, end: Tick) {
+    func resolvedProgramSpan(
+        track: Int, session: DocumentSession, tick: Tick
+    )
+        -> (program: Int, start: Tick, end: Tick)
+    {
         let first = session.timeline.tracks[track].firstProgram
         var program = first
         var start: Tick = 0
@@ -219,8 +230,11 @@ extension TrackHeadersPresenter {
         resolvedProgramSpan(track: track, session: session, tick: tick).program
     }
 
-    func makeSnapshot(track: Int, session: DocumentSession, program: Int? = nil)
-        -> TrackHeaderSnapshot {
+    func makeSnapshot(
+        track: Int, session: DocumentSession, program: Int? = nil
+    )
+        -> TrackHeaderSnapshot
+    {
         let name = session.document.trackName(track)
         let primary = session.selectedTrack == track
         let rects = geometry.textRects(width: viewportWidth, metrics: textMetrics)
@@ -263,16 +277,23 @@ extension TrackHeadersPresenter {
         }
         row.muteChecked = session.mutedTracks.contains(track)
         row.soloChecked = session.soloedTracks.contains(track)
-        let program = program ?? resolvedProgram(
-            track: track, session: session,
-            tick: playing ? playheadTick : session.editCursor)
-        if program < 0 { row.subtitle = "(no voice set)" }
-        else if session.bankSlots.indices.contains(program),
-                session.bankSlots[program].voice != nil
-                || session.bankSlots[program].tone != nil {
-            row.subtitle = VoiceLanePolicy.label(slot: program,
-                                                 view: session.bankSlots[program])
-        } else { row.subtitle = String(format: "%03d Voice", program) }
+        let program =
+            program
+            ?? resolvedProgram(
+                track: track, session: session,
+                tick: playing ? playheadTick : session.editCursor)
+        if program < 0 {
+            row.subtitle = "(no voice set)"
+        } else if session.bankSlots.indices.contains(program),
+            session.bankSlots[program].voice != nil
+                || session.bankSlots[program].tone != nil
+        {
+            row.subtitle = VoiceLanePolicy.label(
+                slot: program,
+                view: session.bankSlots[program])
+        } else {
+            row.subtitle = String(format: "%03d Voice", program)
+        }
         row.activityActiveColor = PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(track)]
         row.activityDimColor = ThemeColorTables.activityDimColors[PaletteMath.trackIdentityIndex(track)]
         let intensity = activity.intensity(track: track)
@@ -301,8 +322,10 @@ extension TrackHeadersGeometry {
     static let overBudgetTitleInk = ["#554F4C", "#A0A0A0", "#96989C"]
     static let overBudgetSubtitleInk = ["#564F4A", "#A0A0A0", "#95989F"]
 
-    static func dimmedInk(ink: String, backdrop: String, surface: String,
-                          cap: Double) -> String {
+    static func dimmedInk(
+        ink: String, backdrop: String, surface: String,
+        cap: Double
+    ) -> String {
         let from = PaletteMath.channels(ink)
         let to = PaletteMath.channels(backdrop)
         let inkLab = PaletteMath.oklab(r: from.r, g: from.g, b: from.b)

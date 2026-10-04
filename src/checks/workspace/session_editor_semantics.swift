@@ -14,55 +14,66 @@ internal func mouseHintOwnershipChecks(_ report: CheckReport) {
     let first = hints.allocateSourceToken()
     let second = hints.allocateSourceToken()
     hints.claim(sourceToken: first, profile: 15)
-    report.expectEqual(expected: "", actual: hints.text, cppID: id,
-                       what: "inactive windows reject hint claims")
+    report.expectEqual(
+        expected: "", actual: hints.text, cppID: id,
+        what: "inactive windows reject hint claims")
     hints.setWindowActive(active: true)
     hints.claim(sourceToken: first, profile: 15)
     let nodeHint = hints.text
     hints.claim(sourceToken: second, profile: 15)
     hints.clear(sourceToken: first)
-    report.expectEqual(expected: nodeHint, actual: hints.text, cppID: id,
-                       what: "replaced source cannot clear an identical-profile new owner")
+    report.expectEqual(
+        expected: nodeHint, actual: hints.text, cppID: id,
+        what: "replaced source cannot clear an identical-profile new owner")
     hints.claim(sourceToken: first, profile: 0)
-    report.expectEqual(expected: "", actual: hints.text, cppID: id,
-                       what: "empty profile replaces and clears prior visible hint")
+    report.expectEqual(
+        expected: "", actual: hints.text, cppID: id,
+        what: "empty profile replaces and clears prior visible hint")
     hints.clear(sourceToken: second)
     hints.claim(sourceToken: first, profile: 26)
-    report.expect(hints.text != nodeHint, cppID: id,
-                  message: "replacing the node profile changes the presented instructions")
+    report.expect(
+        hints.text != nodeHint, cppID: id,
+        message: "replacing the node profile changes the presented instructions")
     hints.clear(sourceToken: first)
-    report.expectEqual(expected: "", actual: hints.text, cppID: id,
-                       what: "current source lifecycle clear removes hint")
+    report.expectEqual(
+        expected: "", actual: hints.text, cppID: id,
+        what: "current source lifecycle clear removes hint")
     hints.claim(sourceToken: second, profile: 21)
     hints.setWindowActive(active: false)
-    report.expectEqual(expected: "", actual: hints.text, cppID: id,
-                       what: "window deactivation clears an owned hint")
+    report.expectEqual(
+        expected: "", actual: hints.text, cppID: id,
+        what: "window deactivation clears an owned hint")
     hints.setWindowActive(active: true)
-    report.expectEqual(expected: "", actual: hints.text, cppID: id,
-                       what: "reactivation never resurrects cached ownership")
+    report.expectEqual(
+        expected: "", actual: hints.text, cppID: id,
+        what: "reactivation never resurrects cached ownership")
     hints.claim(sourceToken: second, profile: 21)
     hints.claim(sourceToken: first, profile: -1)
-    report.expectEqual(expected: "", actual: hints.text, cppID: id,
-                       what: "unknown profile clears rather than retaining unrelated instructions")
+    report.expectEqual(
+        expected: "", actual: hints.text, cppID: id,
+        what: "unknown profile clears rather than retaining unrelated instructions")
     hints.claim(sourceToken: first, profile: 14)
     let headerHint = hints.text
     hints.claim(sourceToken: second, profile: 10)
     let rollHint = hints.text
     hints.clear(sourceToken: first)
-    report.expect(!headerHint.isEmpty && !rollHint.isEmpty && headerHint != rollHint
-                  && hints.text == rollHint, cppID: id,
-                  message: "hidden header owner cannot clear the surviving roll profile")
+    report.expect(
+        !headerHint.isEmpty && !rollHint.isEmpty && headerHint != rollHint
+            && hints.text == rollHint, cppID: id,
+        message: "hidden header owner cannot clear the surviving roll profile")
     hints.claim(sourceToken: first, profile: 0)
     hints.claim(sourceToken: second, profile: 10)
     hints.clear(sourceToken: first)
-    report.expectEqual(expected: rollHint, actual: hints.text, cppID: id,
-                       what: "released empty scrollbar owner cannot erase the roll release target")
+    report.expectEqual(
+        expected: rollHint, actual: hints.text, cppID: id,
+        what: "released empty scrollbar owner cannot erase the roll release target")
     hints.claim(sourceToken: first, profile: 14)
     hints.clear(sourceToken: first)
     hints.claim(sourceToken: second, profile: 10)
     hints.clear(sourceToken: first)
-    report.expectEqual(expected: rollHint, actual: hints.text, cppID: id,
-                       what: "destroyed tab owner cannot clear the newly claimed sibling hint")
+    report.expectEqual(
+        expected: rollHint, actual: hints.text, cppID: id,
+        what: "destroyed tab owner cannot clear the newly claimed sibling hint")
     mouseHintScopeChecks(report)
 }
 
@@ -83,35 +94,42 @@ internal func mouseHintScopeChecks(_ report: CheckReport) {
     let renameRestored = hints.text == renameHint
     hints.claim(sourceToken: editor, profile: 14)
     let editorHint = hints.text
-    report.expect(!renameHint.isEmpty && menuMuted && renameRestored
-                  && !editorHint.isEmpty && editorHint != renameHint,
-                  cppID: "swiftcore/mouseHintScopeChecks::menuScope",
-                  message: "an open menu keeps the rename hint and dismiss restores the editor hint")
+    report.expect(
+        !renameHint.isEmpty && menuMuted && renameRestored
+            && !editorHint.isEmpty && editorHint != renameHint,
+        cppID: "swiftcore/mouseHintScopeChecks::menuScope",
+        message: "an open menu keeps the rename hint and dismiss restores the editor hint")
 
     hints.claim(sourceToken: popup, profile: 0)
     let covered = hints.text.isEmpty
     hints.clear(sourceToken: popup)
     hints.claim(sourceToken: editor, profile: 14)
-    report.expect(covered && hints.text == editorHint,
-                  cppID: "swiftcore/mouseHintScopeChecks::popupScope",
-                  message: "dismissing a popup restores the covered target hint")
+    report.expect(
+        covered && hints.text == editorHint,
+        cppID: "swiftcore/mouseHintScopeChecks::popupScope",
+        message: "dismissing a popup restores the covered target hint")
 
     presenter.statusText = "Operational message"
-    report.expect(presenter.mouseHints === presenter.session.mouseHintsPresenter()
-                  && hints.text == editorHint && presenter.statusText == "Operational message",
-                  cppID: "swiftcore/mouseHintScopeChecks::statusPresentation",
-                  message: "an operational status update preserves the presenter's current hint")
+    report.expect(
+        presenter.mouseHints === presenter.session.mouseHintsPresenter()
+            && hints.text == editorHint && presenter.statusText == "Operational message",
+        cppID: "swiftcore/mouseHintScopeChecks::statusPresentation",
+        message: "an operational status update preserves the presenter's current hint")
 }
 
 @MainActor
-internal func editorSelectionCommandChecks(_ report: CheckReport, suite: DocumentSession,
-                                          service: ProjectService) {
+internal func editorSelectionCommandChecks(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
     let id = "swiftcore/ApplicationSession::selectionCommandRouting"
-    let document = SongDocument(file: makeMidiFixture(), config: suite.document.state.config,
-                                source: suite.document.source, trackBudget: suite.document.trackBudget)
-    let session = DocumentSession(document: document, service: service,
-                                  lease: suite.bankLease, slots: suite.bankSlots,
-                                  dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
+    let document = SongDocument(
+        file: makeMidiFixture(), config: suite.document.state.config,
+        source: suite.document.source, trackBudget: suite.document.trackBudget)
+    let session = DocumentSession(
+        document: document, service: service,
+        lease: suite.bankLease, slots: suite.bankSlots,
+        dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
     let grid = PianoGrid(session: session)
     let page = AutomationPage()
     page.attach(session: session, palette: GridPalette())
@@ -120,9 +138,10 @@ internal func editorSelectionCommandChecks(_ report: CheckReport, suite: Documen
     let ruler = RulerMenuPresenter(session: session, grid: grid, automation: page)
     let router = EditorCommandRouter(session: session, grid: grid, automation: page, rulerMenu: ruler)
     let lane = AutomationParameter.controlChange(track: 0, controller: TimeDefaults.ccPan)
-    document.writeLane(track: 0, lane: .controller(TimeDefaults.ccPan), from: 0,
-                       through: TimeDefaults.noTick,
-                       points: [LaneWrite(tick: 24, value: 30), LaneWrite(tick: 72, value: 90)])
+    document.writeLane(
+        track: 0, lane: .controller(TimeDefaults.ccPan), from: 0,
+        through: TimeDefaults.noTick,
+        points: [LaneWrite(tick: 24, value: 30), LaneWrite(tick: 72, value: 90)])
     guard let selectedNote = document.notes(in: 0).first else {
         report.fail(id, "fixture has no note to verify range precedence")
         return
@@ -130,52 +149,69 @@ internal func editorSelectionCommandChecks(_ report: CheckReport, suite: Documen
     session.addSelectedNote(selectedNote.id)
     page.selectRange(from: 24, to: 48, lanes: [lane])
     let revision = document.revision
-    report.expect(router.isAvailable(.delete) && router.isAvailable(.copy)
-                  && router.isAvailable(.cut), cppID: id,
-                  message: "automation range owns semantic edit availability")
-    report.expectEqual(expected: EditKeyDecision.execute.rawValue,
-                       actual: router.route(.delete, autoRepeat: true).rawValue,
-                       cppID: id, what: "range Delete retains canonical repeat execution")
-    report.expectEqual(expected: revision, actual: document.revision, cppID: id,
-                       what: "availability and key arbitration never mutate the document")
-    report.expectEqual(expected: EditKeyDecision.consume.rawValue,
-                       actual: router.route(.transposeUp, autoRepeat: false).rawValue,
-                       cppID: id, what: "lane-scoped transpose consumes without falling through to notes")
+    report.expect(
+        router.isAvailable(.delete) && router.isAvailable(.copy)
+            && router.isAvailable(.cut), cppID: id,
+        message: "automation range owns semantic edit availability")
+    report.expectEqual(
+        expected: EditKeyDecision.execute.rawValue,
+        actual: router.route(.delete, autoRepeat: true).rawValue,
+        cppID: id, what: "range Delete retains canonical repeat execution")
+    report.expectEqual(
+        expected: revision, actual: document.revision, cppID: id,
+        what: "availability and key arbitration never mutate the document")
+    report.expectEqual(
+        expected: EditKeyDecision.consume.rawValue,
+        actual: router.route(.transposeUp, autoRepeat: false).rawValue,
+        cppID: id, what: "lane-scoped transpose consumes without falling through to notes")
     router.perform(.transposeUp)
-    report.expectEqual(expected: revision, actual: document.revision, cppID: id,
-                       what: "lane transpose does not mutate notes after the time selection clears note focus")
+    report.expectEqual(
+        expected: revision, actual: document.revision, cppID: id,
+        what: "lane transpose does not mutate notes after the time selection clears note focus")
     router.perform(.delete)
-    report.expectEqual(expected: [Tick(72)], actual: document.lanePoints(
-        track: 0, lane: .controller(TimeDefaults.ccPan)).map(\.tick),
+    report.expectEqual(
+        expected: [Tick(72)],
+        actual: document.lanePoints(
+            track: 0, lane: .controller(TimeDefaults.ccPan)
+        ).map(\.tick),
         cppID: id, what: "range Delete removes only points in the selected interval")
-    report.expect(document.note(selectedNote.id) != nil, cppID: id,
-                  message: "time selection deletion leaves notes outside the selected lane intact")
+    report.expect(
+        document.note(selectedNote.id) != nil, cppID: id,
+        message: "time selection deletion leaves notes outside the selected lane intact")
     let afterDelete = document.revision
     router.perform(.delete)
-    report.expectEqual(expected: afterDelete, actual: document.revision, cppID: id,
-                       what: "empty selected range deletion never falls through to notes")
-    report.expect(document.note(selectedNote.id) != nil, cppID: id,
-                  message: "empty range still owns the operation target")
+    report.expectEqual(
+        expected: afterDelete, actual: document.revision, cppID: id,
+        what: "empty selected range deletion never falls through to notes")
+    report.expect(
+        document.note(selectedNote.id) != nil, cppID: id,
+        message: "empty range still owns the operation target")
     router.perform(.clearTimeSelection)
-    report.expect(page.selection == nil, cppID: id,
-                  message: "canonical clear-selection command clears the automation range")
+    report.expect(
+        page.selection == nil, cppID: id,
+        message: "canonical clear-selection command clears the automation range")
     session.addSelectedNote(selectedNote.id)
-    report.expectEqual(expected: EditKeyDecision.execute.rawValue,
-                       actual: router.route(.delete, autoRepeat: false).rawValue,
-                       cppID: id, what: "reselecting the note makes it the target after range clear")
+    report.expectEqual(
+        expected: EditKeyDecision.execute.rawValue,
+        actual: router.route(.delete, autoRepeat: false).rawValue,
+        cppID: id, what: "reselecting the note makes it the target after range clear")
     router.perform(.delete)
-    report.expect(document.note(selectedNote.id) == nil, cppID: id,
-                  message: "shared note deletion remains reachable after range clear")
+    report.expect(
+        document.note(selectedNote.id) == nil, cppID: id,
+        message: "shared note deletion remains reachable after range clear")
 
     // Track-scoped ranges include notes, not just the plotted automation lane.
-    page.applyTimeSelection(AutomationTimeSelection(
-        range: TimeRange(startTick: 48, endTick: 73), scope: .tracks([0])))
+    page.applyTimeSelection(
+        AutomationTimeSelection(
+            range: TimeRange(startTick: 48, endTick: 73), scope: .tracks([0])))
     router.perform(.delete)
-    report.expect(!document.notes(in: 0).contains(where: { $0.tick == 48 })
-                  && document.lanePoints(track: 0, lane: .controller(TimeDefaults.ccPan)).isEmpty,
-                  cppID: id, message: "track range deletes both its notes and automation points")
-    report.expect(document.notes(in: 0).contains(where: { $0.tick == 96 }), cppID: id,
-                  message: "track range leaves outside notes intact")
+    report.expect(
+        !document.notes(in: 0).contains(where: { $0.tick == 48 })
+            && document.lanePoints(track: 0, lane: .controller(TimeDefaults.ccPan)).isEmpty,
+        cppID: id, message: "track range deletes both its notes and automation points")
+    report.expect(
+        document.notes(in: 0).contains(where: { $0.tick == 96 }), cppID: id,
+        message: "track range leaves outside notes intact")
 
     page.clearTimeSelection()
     guard let remaining = document.notes(in: 0).first else {
@@ -185,12 +221,14 @@ internal func editorSelectionCommandChecks(_ report: CheckReport, suite: Documen
     session.addSelectedNote(remaining.id)
     grid.beginRightPointer(x: 0, y: 0)
     let beforeGestureCommand = document.revision
-    report.expectEqual(expected: EditKeyDecision.consume.rawValue,
-                       actual: router.route(.delete, autoRepeat: false).rawValue,
-                       cppID: id, what: "a live pointer gesture consumes semantic deletion")
+    report.expectEqual(
+        expected: EditKeyDecision.consume.rawValue,
+        actual: router.route(.delete, autoRepeat: false).rawValue,
+        cppID: id, what: "a live pointer gesture consumes semantic deletion")
     router.perform(.delete)
-    report.expectEqual(expected: beforeGestureCommand, actual: document.revision, cppID: id,
-                       what: "direct activation cannot bypass pointer gesture arbitration")
+    report.expectEqual(
+        expected: beforeGestureCommand, actual: document.revision, cppID: id,
+        what: "direct activation cannot bypass pointer gesture arbitration")
     grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
     checkPerTabScaleState(report, suite: suite, service: service)
     checkScaleDeleteUndoLeavesCleanDocument(report, suite: suite, service: service)
@@ -199,14 +237,18 @@ internal func editorSelectionCommandChecks(_ report: CheckReport, suite: Documen
 // Fork tabs_scale.cpp:149-151 stage track selection plus Highlight/Fold writes
 // around deleteTrack(0)/undo; only the dirty flag below is otherwise unread.
 @MainActor
-private func checkScaleDeleteUndoLeavesCleanDocument(_ report: CheckReport, suite: DocumentSession,
-                                                     service: ProjectService) {
+private func checkScaleDeleteUndoLeavesCleanDocument(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
     let id = "swiftcore/ApplicationSession::tabsScale"
-    let document = SongDocument(file: makeMidiFixture(), config: suite.document.state.config,
-                                source: suite.document.source, trackBudget: suite.document.trackBudget)
-    let session = DocumentSession(document: document, service: service,
-                                  lease: suite.bankLease, slots: suite.bankSlots,
-                                  dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
+    let document = SongDocument(
+        file: makeMidiFixture(), config: suite.document.state.config,
+        source: suite.document.source, trackBudget: suite.document.trackBudget)
+    let session = DocumentSession(
+        document: document, service: service,
+        lease: suite.bankLease, slots: suite.bankSlots,
+        dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
     session.setScale(highlight: true)
     session.setScale(fold: true)
     guard let extra = document.addTrack(voice: 0) else {
@@ -224,21 +266,25 @@ private func checkScaleDeleteUndoLeavesCleanDocument(_ report: CheckReport, suit
         report.fail(id, "could not undo the added track for the clean-document read")
         return
     }
-    report.expect(!document.isDirty, cppID: id,
-                  message: "deleting then undoing every track edit leaves the document clean")
+    report.expect(
+        !document.isDirty, cppID: id,
+        message: "deleting then undoing every track edit leaves the document clean")
 }
 
 @MainActor
-private func checkPerTabScaleState(_ report: CheckReport, suite: DocumentSession,
-                                   service: ProjectService) {
+private func checkPerTabScaleState(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
     let id = "swiftcore/ApplicationSession::tabsScale"
     func makeSession() -> DocumentSession {
         let document = SongDocument(
             file: makeMidiFixture(), config: suite.document.state.config,
             source: suite.document.source, trackBudget: suite.document.trackBudget)
-        return DocumentSession(document: document, service: service,
-                               lease: suite.bankLease, slots: suite.bankSlots,
-                               dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
+        return DocumentSession(
+            document: document, service: service,
+            lease: suite.bankLease, slots: suite.bankSlots,
+            dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
     }
     let first = makeSession()
     let second = makeSession()
@@ -246,46 +292,52 @@ private func checkPerTabScaleState(_ report: CheckReport, suite: DocumentSession
         let scale = session.scaleProjection
         return scale.root == 0 && scale.scale == .major && !scale.highlight && !scale.fold
     }
-    report.expect(isDefault(first) && isDefault(second), cppID: id,
-                  message: "a fresh tab defaults to C major with Highlight and Fold off")
+    report.expect(
+        isDefault(first) && isDefault(second), cppID: id,
+        message: "a fresh tab defaults to C major with Highlight and Fold off")
     let firstHistory = first.document.history.currentIdentity
     let secondHistory = second.document.history.currentIdentity
     first.setScale(root: 9)
     first.setScale(type: .dorian)
     first.setScale(highlight: true)
     first.setScale(fold: true)
-    report.expect(isDefault(second) && first.scaleProjection.root == 9
-                  && first.scaleProjection.scale == .dorian && first.scaleProjection.highlight
-                  && first.scaleProjection.fold, cppID: id,
-                  message: "unselected tab retains defaults after scale edits")
+    report.expect(
+        isDefault(second) && first.scaleProjection.root == 9
+            && first.scaleProjection.scale == .dorian && first.scaleProjection.highlight
+            && first.scaleProjection.fold, cppID: id,
+        message: "unselected tab retains defaults after scale edits")
     second.setScale(root: 4)
     second.setScale(type: .naturalMinor)
     second.setScale(highlight: false)
     second.setScale(fold: false)
-    report.expect(first.scaleProjection.root == 9 && first.scaleProjection.fold
-                  && second.scaleProjection.root == 4 && second.scaleProjection.scale == .naturalMinor
-                  && first.document.history.currentIdentity == firstHistory
-                  && second.document.history.currentIdentity == secondHistory,
-                  cppID: id, message: "scale state stays with its tab")
+    report.expect(
+        first.scaleProjection.root == 9 && first.scaleProjection.fold
+            && second.scaleProjection.root == 4 && second.scaleProjection.scale == .naturalMinor
+            && first.document.history.currentIdentity == firstHistory
+            && second.document.history.currentIdentity == secondHistory,
+        cppID: id, message: "scale state stays with its tab")
     guard let additional = first.document.addTrack(voice: 0) else {
         report.fail(id, "could not add a track for tab-scale retention")
         return
     }
     first.selectPrimaryTrack(additional)
     first.selectPrimaryTrack(0)
-    report.expect(first.scaleProjection.root == 9 && first.scaleProjection.scale == .dorian
-                  && first.scaleProjection.highlight && first.scaleProjection.fold,
-                  cppID: id, message: "track selection preserves per-tab scale state")
+    report.expect(
+        first.scaleProjection.root == 9 && first.scaleProjection.scale == .dorian
+            && first.scaleProjection.highlight && first.scaleProjection.fold,
+        cppID: id, message: "track selection preserves per-tab scale state")
     first.document.deleteTrack(additional)
-    report.expect(first.scaleProjection.root == 9 && first.scaleProjection.scale == .dorian
-                  && first.scaleProjection.highlight && first.scaleProjection.fold,
-                  cppID: id, message: "deleting a track preserves the tab's scale state")
+    report.expect(
+        first.scaleProjection.root == 9 && first.scaleProjection.scale == .dorian
+            && first.scaleProjection.highlight && first.scaleProjection.fold,
+        cppID: id, message: "deleting a track preserves the tab's scale state")
     guard first.document.history.undoDocument() else {
         report.fail(id, "could not undo the tab's deleted track")
         return
     }
-    report.expect(first.document.engineTracks.usedTrackCount > additional
-                  && first.scaleProjection.root == 9 && first.scaleProjection.scale == .dorian
-                  && first.scaleProjection.highlight && first.scaleProjection.fold,
-                  cppID: id, message: "undo restores scale state across a deleted track")
+    report.expect(
+        first.document.engineTracks.usedTrackCount > additional
+            && first.scaleProjection.root == 9 && first.scaleProjection.scale == .dorian
+            && first.scaleProjection.highlight && first.scaleProjection.fold,
+        cppID: id, message: "undo restores scale state across a deleted track")
 }

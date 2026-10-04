@@ -21,8 +21,9 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
     }
     app.openProjectAndSong(path: root, label: "mus_session_test")
     guard until({ app.songOpen || !app.lastSaveError.isEmpty }, seconds: 25),
-          app.songOpen, let origin = app.selectedDocument,
-          let original = origin.bankSlots[0].voice else {
+        app.songOpen, let origin = app.selectedDocument,
+        let original = origin.bankSlots[0].voice
+    else {
         report.fail(id, "bank undo publication fixture could not open the first song")
         return
     }
@@ -33,7 +34,8 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
     let historyBefore = origin.document.history.undoCount
     app.openSong(label: "mus_session_test2")
     guard until({ app.songTabs.tabCount == 2 || !app.lastSaveError.isEmpty }, seconds: 25),
-          app.songTabs.tabCount == 2, let peer = app.selectedDocument else {
+        app.songTabs.tabCount == 2, let peer = app.selectedDocument
+    else {
         report.fail(id, "bank undo publication fixture could not open the second song")
         return
     }
@@ -43,9 +45,13 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
     peerEdit.priority = peerEdit.priority == 1 ? 2 : 1
     peer.document.setConfig(peerEdit)
     shell.activate(id: "edit.undo")
-    guard until({ peer.document.history.canUndo && peer.document.history.canRedo
-                  && shell.actionEnabled(id: "edit.undo")
-                  && shell.actionEnabled(id: "edit.redo") }) else {
+    guard
+        until({
+            peer.document.history.canUndo && peer.document.history.canRedo
+                && shell.actionEnabled(id: "edit.undo")
+                && shell.actionEnabled(id: "edit.redo")
+        })
+    else {
         report.fail(id, "selected peer fixture requires both Undo and Redo before the bank edit")
         return
     }
@@ -58,7 +64,8 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
         originChange?(change)
         guard let origin, let shell else { return }
         if change.domains.contains(.history) && !change.domains.contains(.bank)
-            && origin.document.history.bankTransitionInFlight {
+            && origin.document.history.bankTransitionInFlight
+        {
             pendingUndo = shell.actionEnabled(id: "edit.undo")
             pendingRedo = shell.actionEnabled(id: "edit.redo")
         }
@@ -84,16 +91,21 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
         report.fail(id, "bank edit failed: \(error)")
         return
     }
-    report.expect(pendingUndo == false, cppID: id,
-                  message: "background bank edit disables selected tab Undo while pending")
-    report.expect(pendingRedo == false, cppID: id,
-                  message: "background bank edit disables selected tab Redo while pending")
-    report.expect(publishedCount == true, cppID: id,
-                  message: "visible confirmed bank edit has an undo stack entry")
-    report.expect(publishedIndex == true, cppID: id,
-                  message: "visible confirmed bank edit has crossed the undo cursor")
-    report.expect(publishedUndo == true, cppID: id,
-                  message: "selected tab Undo is restored when the bank edit becomes visible")
+    report.expect(
+        pendingUndo == false, cppID: id,
+        message: "background bank edit disables selected tab Undo while pending")
+    report.expect(
+        pendingRedo == false, cppID: id,
+        message: "background bank edit disables selected tab Redo while pending")
+    report.expect(
+        publishedCount == true, cppID: id,
+        message: "visible confirmed bank edit has an undo stack entry")
+    report.expect(
+        publishedIndex == true, cppID: id,
+        message: "visible confirmed bank edit has crossed the undo cursor")
+    report.expect(
+        publishedUndo == true, cppID: id,
+        message: "selected tab Undo is restored when the bank edit becomes visible")
     app.songTabs.selectTab(tabId: originID)
     let undoEnabled = shell.actionEnabled(id: "edit.undo")
     shell.activate(id: "edit.undo")
@@ -101,18 +113,24 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
         origin.document.history.undoIndex == historyBefore
             && origin.bankSlots[0].voice == original
     })
-    report.expect(undoEnabled, cppID: id,
-                  message: "confirmed bank edit enables immediate Undo in its owning tab")
-    report.expect(origin.document.history.undoIndex == historyBefore, cppID: id,
-                  message: "immediate Undo command crosses the confirmed bank history entry")
-    report.expect(origin.bankSlots[0].voice == original, cppID: id,
-                  message: "immediate Undo command restores the owning bank view")
-    report.expect(peer.bankSlots[0].voice == original, cppID: id,
-                  message: "immediate Undo command restores the shared peer bank view")
-    report.expect(origin.document.history.canRedo, cppID: id,
-                  message: "immediate Undo leaves the confirmed bank edit redoable")
-    report.expect(origin.document.history.canUndo, cppID: id,
-                  message: "immediate Undo preserves the preceding document edit")
+    report.expect(
+        undoEnabled, cppID: id,
+        message: "confirmed bank edit enables immediate Undo in its owning tab")
+    report.expect(
+        origin.document.history.undoIndex == historyBefore, cppID: id,
+        message: "immediate Undo command crosses the confirmed bank history entry")
+    report.expect(
+        origin.bankSlots[0].voice == original, cppID: id,
+        message: "immediate Undo command restores the owning bank view")
+    report.expect(
+        peer.bankSlots[0].voice == original, cppID: id,
+        message: "immediate Undo command restores the shared peer bank view")
+    report.expect(
+        origin.document.history.canRedo, cppID: id,
+        message: "immediate Undo leaves the confirmed bank edit redoable")
+    report.expect(
+        origin.document.history.canUndo, cppID: id,
+        message: "immediate Undo preserves the preceding document edit")
     guard let peerID = app.songTabs.allTabs.first(where: { $0.workspace.session === peer })?.tabId else {
         report.fail(id, "peer tab lookup failed for the pending-origin gate")
         return
@@ -132,15 +150,16 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
     let tabsBefore = app.songTabs.tabCount
     app.songTabs.requestClose(tabId: originID)
     let closeRefused = app.songTabs.pendingCloseId == closeBefore && app.songTabs.tabCount == tabsBefore
-    report.expect(origin.document.history.beginBankTransition() == nil
-                  && app.songTabs.pendingBankTabId == originID
-                  && !app.songTabs.closeEnabled(tabId: originID)
-                  && app.songTabs.closeEnabled(tabId: peerID)
-                  && closeRefused
-                  && !shell.actionEnabled(id: "edit.undo")
-                  && !shell.actionEnabled(id: "edit.redo"),
-                  cppID: id,
-                  message: "pending bank transition refuses origin-tab close while the non-origin tab stays close-enabled")
+    report.expect(
+        origin.document.history.beginBankTransition() == nil
+            && app.songTabs.pendingBankTabId == originID
+            && !app.songTabs.closeEnabled(tabId: originID)
+            && app.songTabs.closeEnabled(tabId: peerID)
+            && closeRefused
+            && !shell.actionEnabled(id: "edit.undo")
+            && !shell.actionEnabled(id: "edit.redo"),
+        cppID: id,
+        message: "pending bank transition refuses origin-tab close while the non-origin tab stays close-enabled")
     origin.document.history.endBankTransition(held)
     // Resolutions addressed to another identity leave the pending origin
     // bound: a full bank cycle on the peer session must not clear it.
@@ -164,11 +183,12 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
         origin.document.history.endBankTransition(heldOther)
         return
     }
-    report.expect(origin.document.history.bankTransitionInFlight
-                  && app.songTabs.pendingBankTabId == originID
-                  && !app.songTabs.closeEnabled(tabId: originID),
-                  cppID: id,
-                  message: "another tab's confirmed bank edit leaves the origin's pending transition bound")
+    report.expect(
+        origin.document.history.bankTransitionInFlight
+            && app.songTabs.pendingBankTabId == originID
+            && !app.songTabs.closeEnabled(tabId: originID),
+        cppID: id,
+        message: "another tab's confirmed bank edit leaves the origin's pending transition bound")
     origin.document.history.endBankTransition(heldOther)
     // A hard error addressed to another identity leaves the pending origin
     // bound: the peer's stale-expectation edit fails without touching it.
@@ -193,11 +213,12 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
     } catch {
         // Expected: the other tab's hard failure carries its own identity.
     }
-    report.expect(origin.document.history.bankTransitionInFlight
-                  && app.songTabs.pendingBankTabId == originID
-                  && !app.songTabs.closeEnabled(tabId: originID),
-                  cppID: id,
-                  message: "another tab's failed bank edit leaves the origin's pending transition bound")
+    report.expect(
+        origin.document.history.bankTransitionInFlight
+            && app.songTabs.pendingBankTabId == originID
+            && !app.songTabs.closeEnabled(tabId: originID),
+        cppID: id,
+        message: "another tab's failed bank edit leaves the origin's pending transition bound")
     origin.document.history.endBankTransition(heldHard)
     // The origin's own hard failure releases the coordinator gate: the
     // thrown bank write ends its transition, so no origin stays pending.
@@ -236,9 +257,10 @@ internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: Stri
         report.fail(id, "follow-on origin bank edit failed after the own-error gate: \(error)")
         return
     }
-    report.expect(app.songTabs.pendingBankTabId == -1
-                  && app.songTabs.closeEnabled(tabId: originID)
-                  && origin.bankSlots[0].voice == recovered,
-                  cppID: id,
-                  message: "an origin hard bank failure releases the pending gate and bank actions accept a new edit")
+    report.expect(
+        app.songTabs.pendingBankTabId == -1
+            && app.songTabs.closeEnabled(tabId: originID)
+            && origin.bankSlots[0].voice == recovered,
+        cppID: id,
+        message: "an origin hard bank failure releases the pending gate and bank actions accept a new edit")
 }

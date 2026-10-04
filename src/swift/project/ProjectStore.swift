@@ -26,7 +26,9 @@ public actor ProjectStore {
     }
 
     public func voicegroupCatalog() -> (groups: VgCatalogScan, direct: VgDirectSoundScan) {
-        (VoicegroupSource.catalogScan(projectRoot),
-         VoicegroupSource.directSoundCatalog(projectRoot))
+        (
+            VoicegroupSource.catalogScan(projectRoot),
+            VoicegroupSource.directSoundCatalog(projectRoot)
+        )
     }
 }

@@ -115,8 +115,10 @@ public struct AutomationLaneSnapshot: Equatable, Sendable {
     private var displayed: [AutomationLaneDisplayPoint] = []
 
     @MainActor
-    public init(parameter: AutomationParameter, in document: SongDocument, songEndTick: Tick,
-                lanePoints: [LanePoint]? = nil) {
+    public init(
+        parameter: AutomationParameter, in document: SongDocument, songEndTick: Tick,
+        lanePoints: [LanePoint]? = nil
+    ) {
         self.revision = document.revision
         self.parameter = parameter
         self.metadata = AutomationParameterMetadata(parameter: parameter)
@@ -124,8 +126,10 @@ public struct AutomationLaneSnapshot: Equatable, Sendable {
         switch parameter {
         case .tempo:
             sources = document.state.tempo.enumerated().map { index, point in
-                let bpm = Int(TimeDefaults.tempoBPM(
-                    forMicrosecondsPerQuarterNote: point.microsecondsPerQuarterNote).rounded())
+                let bpm = Int(
+                    TimeDefaults.tempoBPM(
+                        forMicrosecondsPerQuarterNote: point.microsecondsPerQuarterNote
+                    ).rounded())
                 return AutomationSourcePoint(
                     identity: AutomationPointIdentity(
                         revision: document.revision, parameter: parameter, tick: point.tick,
@@ -161,7 +165,8 @@ public struct AutomationLaneSnapshot: Equatable, Sendable {
     /// Volume and Pan instead project a synthetic tick-zero node.
     public var leadInValue: Int? {
         guard !metadata.projectsTickZero, let defaultValue = metadata.defaultValue,
-              !occupyingTickZero else { return nil }
+            !occupyingTickZero
+        else { return nil }
         return defaultValue
     }
 
@@ -186,12 +191,13 @@ public struct AutomationLaneSnapshot: Equatable, Sendable {
         var series: [AutomationLaneDisplayPoint] = []
         if projectedTickZero, let value = metadata.defaultValue {
             let clamped = metadata.clamp(value)
-            series.append(AutomationLaneDisplayPoint(
-                tick: 0, value: clamped,
-                identity: AutomationPointIdentity(
-                    revision: revision, parameter: parameter, tick: 0, occurrence: -1,
-                    value: clamped),
-                projected: true, source: nil))
+            series.append(
+                AutomationLaneDisplayPoint(
+                    tick: 0, value: clamped,
+                    identity: AutomationPointIdentity(
+                        revision: revision, parameter: parameter, tick: 0, occurrence: -1,
+                        value: clamped),
+                    projected: true, source: nil))
         }
         for source in sources {
             let item = AutomationLaneDisplayPoint(
@@ -224,8 +230,10 @@ public struct AutomationTimeSelection: Equatable, Sendable {
     public var lanes: Set<AutomationParameter>
     public var tempo: Bool
 
-    public init(range: TimeRange, scope: Scope = .lanes,
-                lanes: Set<AutomationParameter> = [], tempo: Bool = false) {
+    public init(
+        range: TimeRange, scope: Scope = .lanes,
+        lanes: Set<AutomationParameter> = [], tempo: Bool = false
+    ) {
         self.range = range
         self.scope = scope
         self.lanes = lanes
@@ -357,11 +365,14 @@ public struct AutomationRowStack: Equatable, Sendable {
     }
 
     /// Resolve inclusive endpoints in displayed row order, even without a time selection.
-    public func laneSet(from first: AutomationParameter,
-                        through last: AutomationParameter) -> (tempo: Bool, lanes: [AutomationParameter]) {
+    public func laneSet(
+        from first: AutomationParameter,
+        through last: AutomationParameter
+    ) -> (tempo: Bool, lanes: [AutomationParameter]) {
         let visible = rows.prefix(visibleRowCount)
         guard let firstIndex = visible.firstIndex(where: { $0.parameter == first }),
-              let lastIndex = visible.firstIndex(where: { $0.parameter == last }) else {
+            let lastIndex = visible.firstIndex(where: { $0.parameter == last })
+        else {
             return (false, [])
         }
         let lower = min(firstIndex, lastIndex)
@@ -371,16 +382,17 @@ public struct AutomationRowStack: Equatable, Sendable {
         var tempo = false
         for index in lower...upper {
             let parameter = rows[index].parameter
-            if parameter.isTempo { tempo = true }
-            else { lanes.append(parameter) }
+            if parameter.isTempo { tempo = true } else { lanes.append(parameter) }
         }
         return (tempo, lanes)
     }
 
     /// Hit the physically displayed half-open band, not its snapped tick.
-    public func hitTest(parameter: AutomationParameter, x: Double,
-                        projection: AutomationProjection,
-                        selection: AutomationTimeSelection) -> Bool {
+    public func hitTest(
+        parameter: AutomationParameter, x: Double,
+        projection: AutomationProjection,
+        selection: AutomationTimeSelection
+    ) -> Bool {
         guard selection.isActive, row(for: parameter)?.coversLane == true else { return false }
         return x >= projection.x(selection.range.startTick)
             && x < projection.x(selection.range.endTick)
@@ -394,14 +406,17 @@ public struct AutomationRowStack: Equatable, Sendable {
     }
 
     @MainActor
-    public static func build(document: SongDocument, primaryTrack: Int?,
-                             selection: AutomationTimeSelection?,
-                             ready: Bool, songEndTick: Tick,
-                             snapshot: ((AutomationParameter) -> AutomationLaneSnapshot)? = nil) -> AutomationRowStack {
+    public static func build(
+        document: SongDocument, primaryTrack: Int?,
+        selection: AutomationTimeSelection?,
+        ready: Bool, songEndTick: Tick,
+        snapshot: ((AutomationParameter) -> AutomationLaneSnapshot)? = nil
+    ) -> AutomationRowStack {
         let usedTracks = Set(0..<document.engineTracks.usedTrackCount)
         let range: TimeRange? = selection.map {
-            TimeRange(startTick: min($0.range.startTick, $0.range.endTick),
-                      endTick: max($0.range.startTick, $0.range.endTick))
+            TimeRange(
+                startTick: min($0.range.startTick, $0.range.endTick),
+                endTick: max($0.range.startTick, $0.range.endTick))
         }
         func hasEvents(_ ticks: [Tick]) -> Bool {
             guard let range else { return false }
@@ -410,25 +425,33 @@ public struct AutomationRowStack: Equatable, Sendable {
 
         let tempoTicks = document.state.tempo.map(\.tick)
         let coversTempo = selection?.coversTempo(usedTracks: usedTracks) ?? false
-        var rows: [AutomationRow] = [AutomationRow(
-            parameter: .tempo, eventCount: tempoTicks.count,
-            coversNodes: coversTempo,
-            coversLane: coversTempo,
-            selectionHasEvents: coversTempo && hasEvents(tempoTicks))]
+        var rows: [AutomationRow] = [
+            AutomationRow(
+                parameter: .tempo, eventCount: tempoTicks.count,
+                coversNodes: coversTempo,
+                coversLane: coversTempo,
+                selectionHasEvents: coversTempo && hasEvents(tempoTicks))
+        ]
 
         if let track = primaryTrack, track >= 0, track < TrackLimits.hardwareCapacity {
             for parameter in AutomationCatalog.parameters(track: track) {
                 guard !parameter.isTempo else { continue }
-                let laneSnapshot = snapshot?(parameter) ?? AutomationLaneSnapshot(
-                    parameter: parameter, in: document, songEndTick: songEndTick)
+                let laneSnapshot =
+                    snapshot?(parameter)
+                    ?? AutomationLaneSnapshot(
+                        parameter: parameter, in: document, songEndTick: songEndTick)
                 let ticks = laneSnapshot.sources.map(\.tick)
-                let coversNodes = ready && (selection?.covers(parameter,
-                                                              usedTracks: usedTracks) ?? false)
-                rows.append(AutomationRow(
-                    parameter: parameter, eventCount: ticks.count,
-                    coversNodes: coversNodes,
-                    coversLane: coversNodes && selection?.scope == .lanes,
-                    selectionHasEvents: coversNodes && hasEvents(ticks)))
+                let coversNodes =
+                    ready
+                    && (selection?.covers(
+                        parameter,
+                        usedTracks: usedTracks) ?? false)
+                rows.append(
+                    AutomationRow(
+                        parameter: parameter, eventCount: ticks.count,
+                        coversNodes: coversNodes,
+                        coversLane: coversNodes && selection?.scope == .lanes,
+                        selectionHasEvents: coversNodes && hasEvents(ticks)))
             }
         }
 
@@ -438,8 +461,10 @@ public struct AutomationRowStack: Equatable, Sendable {
 }
 
 /// First element outside a sorted prefix. Equal ticks remain in occurrence order.
-func automationPartitionIndex<Element>(_ values: [Element],
-                                       before: (Element) -> Bool) -> Int {
+func automationPartitionIndex<Element>(
+    _ values: [Element],
+    before: (Element) -> Bool
+) -> Int {
     var low = 0
     var high = values.count
     while low < high {

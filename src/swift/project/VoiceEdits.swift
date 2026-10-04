@@ -37,7 +37,8 @@ extension VoicegroupSource {
     /// - Returns: Generated source bytes and header change, or nil for a conflict.
     public func materializeBlankSlot(slot: Int, voice: VgVoice) -> BlankSlotMaterialization? {
         guard (0..<128).contains(slot), kindAt(slot: slot) == .none,
-              let insertion = blankSlotInsertion(slot: slot, voice: voice) else { return nil }
+            let insertion = blankSlotInsertion(slot: slot, voice: voice)
+        else { return nil }
         let headerBefore = insertion.headerIndex.map { lines[$0].raw } ?? []
         apply(insertion)
         dirty = !matchesPristineSource()
@@ -64,7 +65,8 @@ extension VoicegroupSource {
         for offset in 0..<count {
             let index = slotToLine[first + offset]
             guard index >= 0, lines[index].kind == .editable,
-                  lines[index].raw == materialization.addedLines[offset] else { return false }
+                lines[index].raw == materialization.addedLines[offset]
+            else { return false }
         }
         if let header { lines[header].raw = materialization.headerBefore }
         for offset in (0..<count).reversed() {
@@ -119,13 +121,14 @@ extension VoicegroupSource {
     /// - Returns: False for an uneditable slot or native voice-type mismatch.
     public func applyScalarsToToneData(slot: Int, toneData: UnsafeMutablePointer<ToneData>?) -> Bool {
         guard let voice = voiceAt(slot: slot), let toneData,
-              toneData.pointee.type == vgMacroVoiceType(voice.macro) else { return false }
+            toneData.pointee.type == vgMacroVoiceType(voice.macro)
+        else { return false }
         switch voice.macro {
         case .keysplit, .keysplitAll:
             return true
         case .directSound, .directSoundNoResample, .directSoundAlt,
-             .square1, .square1Alt, .square2, .square2Alt,
-             .progWave, .progWaveAlt, .noise, .noiseAlt:
+            .square1, .square1Alt, .square2, .square2Alt,
+            .progWave, .progWaveAlt, .noise, .noiseAlt:
             break
         }
         toneData.pointee.key = UInt8(truncatingIfNeeded: voice.key)
@@ -151,7 +154,7 @@ extension VoicegroupSource {
         case .noise, .noiseAlt:
             toneData.pointee.wavePointer = UnsafeMutablePointer<UInt32>(bitPattern: voice.period & 0x01)
         case .progWave, .progWaveAlt:
-            break // This pointer owns loaded wave data.
+            break  // This pointer owns loaded wave data.
         case .directSound, .directSoundNoResample, .directSoundAlt, .keysplit, .keysplitAll:
             break
         }
@@ -219,8 +222,7 @@ private extension VoicegroupSource {
         let insertionIndex: Int
         let rewrite: Int?
         if first == nil {
-            insertionIndex = header.map { $0 + 1 } ??
-                min(isMonolithic ? sectionBegin + 1 : 1, lines.count)
+            insertionIndex = header.map { $0 + 1 } ?? min(isMonolithic ? sectionBegin + 1 : 1, lines.count)
             rewrite = header
             if header == nil {
                 for current in 0..<slot {
@@ -238,7 +240,7 @@ private extension VoicegroupSource {
                 additions.append(generatedVoiceLine(slot: current, voice: padding, ending: ending))
             }
         } else {
-            return nil // An existing voice group occupies the entire span between its ends.
+            return nil  // An existing voice group occupies the entire span between its ends.
         }
         additions.append(generatedVoiceLine(slot: slot, voice: voice, ending: ending))
         if let first, slot < first {
@@ -246,8 +248,9 @@ private extension VoicegroupSource {
                 additions.append(generatedVoiceLine(slot: current, voice: padding, ending: ending))
             }
         }
-        return BlankSlotInsertion(index: insertionIndex, headerIndex: rewrite,
-                                  startingSlot: slot, additions: additions)
+        return BlankSlotInsertion(
+            index: insertionIndex, headerIndex: rewrite,
+            startingSlot: slot, additions: additions)
     }
 
     func apply(_ insertion: BlankSlotInsertion) {
@@ -297,8 +300,9 @@ private extension VoicegroupSource {
             } else {
                 values.append(Array(String(voice.period).utf8))
             }
-            values.append(contentsOf: [voice.attack, voice.decay, voice.sustain, voice.release]
-                .map { Array(String($0).utf8) })
+            values.append(
+                contentsOf: [voice.attack, voice.decay, voice.sustain, voice.release]
+                    .map { Array(String($0).utf8) })
         }
         let macroWord = Array(vgMacroName(voice.macro).utf8)
         if trimWhitespace(line.macroText) == macroWord && line.argPieces.count == values.count {

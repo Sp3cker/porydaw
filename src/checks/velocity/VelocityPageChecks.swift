@@ -57,7 +57,7 @@ let drawerVelocityHistoryID = "swiftcore/VelocityPage::undoRedoRefresh"
 
 func drawerVelocityVelocityPageFixture(contextSlot: UInt8 = 0) -> MidiFile {
     let conductor: [MidiEvent] = [
-        .meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20]),
+        .meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20])
     ]
     let notes: [MidiEvent] = [
         .channel(tick: 0, status: 0xC0, data0: contextSlot),
@@ -69,10 +69,12 @@ func drawerVelocityVelocityPageFixture(contextSlot: UInt8 = 0) -> MidiFile {
         .channel(tick: 96, status: 0x90, data0: 72, data1: 32),
         .channel(tick: 120, status: 0x80, data0: 72),
     ]
-    return MidiFile(division: 24, chunks: [
-        MidiChunk(events: conductor, endTick: 144),
-        MidiChunk(events: notes, endTick: 144),
-    ])
+    return MidiFile(
+        division: 24,
+        chunks: [
+            MidiChunk(events: conductor, endTick: 144),
+            MidiChunk(events: notes, endTick: 144),
+        ])
 }
 
 @MainActor
@@ -104,16 +106,20 @@ struct drawerVelocityVelocityFixture {
     let document: SongDocument
     let notes: [Note]
 
-    init(session suite: DocumentSession, service: ProjectService,
-         baseFontPx: Double = 13, contextSlot: UInt8 = 0) {
-        let document = SongDocument(file: drawerVelocityVelocityPageFixture(contextSlot: contextSlot),
-                                    config: suite.document.state.config,
-                                    source: suite.document.source,
-                                    trackBudget: suite.document.trackBudget)
-        let session = DocumentSession(document: document, service: service,
-                                      lease: suite.bankLease, slots: suite.bankSlots,
-                                      dirty: false, loadName: suite.bankLoadName,
-                                      sampleRate: 48_000)
+    init(
+        session suite: DocumentSession, service: ProjectService,
+        baseFontPx: Double = 13, contextSlot: UInt8 = 0
+    ) {
+        let document = SongDocument(
+            file: drawerVelocityVelocityPageFixture(contextSlot: contextSlot),
+            config: suite.document.state.config,
+            source: suite.document.source,
+            trackBudget: suite.document.trackBudget)
+        let session = DocumentSession(
+            document: document, service: service,
+            lease: suite.bankLease, slots: suite.bankSlots,
+            dirty: false, loadName: suite.bankLoadName,
+            sampleRate: 48_000)
         session.selectedTrack = 0
         session.clearSelectedNotes()
         page = VelocityPage(baseFontPx: baseFontPx)
@@ -121,8 +127,9 @@ struct drawerVelocityVelocityFixture {
         self.document = document
         notes = document.notes(in: 0)
         page.attach(session: session, palette: GridPalette())
-        page.configureBody(width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1,
-                           baseFontPx: baseFontPx, dragDistance: 10)
+        page.configureBody(
+            width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1,
+            baseFontPx: baseFontPx, dragDistance: 10)
     }
 
     var handles: [VelocityHandle] { page.publishedHandlesSnapshot }
@@ -132,11 +139,14 @@ struct drawerVelocityVelocityFixture {
     }
 
     /// One press/move/release that starts exactly on the note's drawn node.
-    func drag(_ note: Note, dx: Double = 0, dy: Double = -20, modifiers: Int = 0,
-              release: Bool = true) {
+    func drag(
+        _ note: Note, dx: Double = 0, dy: Double = -20, modifiers: Int = 0,
+        release: Bool = true
+    ) {
         guard let handle = handle(note) else { return }
-        _ = page.pointerPress(x: handle.x, y: handle.y, surface: 1, button: 1,
-                              modifiers: modifiers)
+        _ = page.pointerPress(
+            x: handle.x, y: handle.y, surface: 1, button: 1,
+            modifiers: modifiers)
         _ = page.pointerMove(x: handle.x + dx, y: handle.y + dy, buttons: 1)
         if release { _ = page.pointerRelease(x: handle.x + dx, y: handle.y + dy, button: 1) }
     }
@@ -145,8 +155,10 @@ struct drawerVelocityVelocityFixture {
 // MARK: - Suite entry
 
 @MainActor
-internal func runVelocityPageChecks(_ report: CheckReport, session: DocumentSession,
-                                    service: ProjectService) {
+internal func runVelocityPageChecks(
+    _ report: CheckReport, session: DocumentSession,
+    service: ProjectService
+) {
     drawerVelocityValueAxisLadder(report)
     drawerVelocityPsgIntrinsicRows(report)
     drawerVelocityVoiceContextResolution(report, session: session)
@@ -194,19 +206,20 @@ internal func runVelocityPageChecks(_ report: CheckReport, session: DocumentSess
     drawerVelocityCommandAvailability(report, session: session, service: service)
 }
 
-
 // Camera-only refresh must update both the rendered model and hit geometry;
 // document refresh must discard the raw-note cache after an edit and undo.
 
-
 @MainActor
-func drawerVelocityCommandAvailability(_ report: CheckReport, session: DocumentSession,
-                                 service: ProjectService) {
+func drawerVelocityCommandAvailability(
+    _ report: CheckReport, session: DocumentSession,
+    service: ProjectService
+) {
     let fixture = drawerVelocityVelocityFixture(session: session, service: service)
     let grid = PianoGrid(session: fixture.session)
     let setVelocity = EditCommand.setVelocity.rawValue
-    report.expect(!grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
-                  message: "Set Velocity is unavailable with no selection")
+    report.expect(
+        !grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
+        message: "Set Velocity is unavailable with no selection")
 
     var requested = 0
     var page: VelocityPage?
@@ -219,30 +232,39 @@ func drawerVelocityCommandAvailability(_ report: CheckReport, session: DocumentS
 
     fixture.session.setSelectedNotes([fixture.notes[0].id])
     grid.setEditCursorTick(tick: Int(fixture.session.editCursor))
-    report.expect(grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
-                  message: "Set Velocity becomes available with a selection")
+    report.expect(
+        grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
+        message: "Set Velocity becomes available with a selection")
 
     grid.performCommand(command: setVelocity)
-    report.expectEqual(expected: 1, actual: requested, cppID: drawerVelocityCommandID,
-                       what: "the existing command row asks its owner for the prompt")
-    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
-                  message: "the command commits no value before prompt acceptance")
+    report.expectEqual(
+        expected: 1, actual: requested, cppID: drawerVelocityCommandID,
+        what: "the existing command row asks its owner for the prompt")
+    report.expect(
+        DocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
+        message: "the command commits no value before prompt acceptance")
 
     page = fixture.page
     grid.performCommand(command: setVelocity)
-    report.expectEqual(expected: 2, actual: requested, cppID: drawerVelocityCommandID,
-                       what: "the command routes every execution through the same owner")
-    report.expect(fixture.page.promptOpen, cppID: drawerVelocityCommandID,
-                  message: "the routed command opened the page's captured prompt")
+    report.expectEqual(
+        expected: 2, actual: requested, cppID: drawerVelocityCommandID,
+        what: "the command routes every execution through the same owner")
+    report.expect(
+        fixture.page.promptOpen, cppID: drawerVelocityCommandID,
+        message: "the routed command opened the page's captured prompt")
     fixture.page.cancelPrompt()
-    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
-                  message: "cancelling the routed prompt still commits nothing")
+    report.expect(
+        DocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
+        message: "cancelling the routed prompt still commits nothing")
 
     let row = editCommandTable.first { $0.command == .setVelocity }
-    report.expectEqual(expected: EditNotesOperation.setVelocity.rawValue, actual: 
-                       row?.notesOperation.rawValue ?? -1, cppID: drawerVelocityCommandID,
-                       what: "the command table keeps Set Velocity on the notes arm")
-    report.expectEqual(expected: EditKeyRoute.alwaysConsume.rawValue, actual: row?.keyRoute.rawValue ?? -1,
-                       cppID: drawerVelocityCommandID,
-                       what: "the command table keeps Set Velocity's consume route")
+    report.expectEqual(
+        expected: EditNotesOperation.setVelocity.rawValue,
+        actual:
+            row?.notesOperation.rawValue ?? -1, cppID: drawerVelocityCommandID,
+        what: "the command table keeps Set Velocity on the notes arm")
+    report.expectEqual(
+        expected: EditKeyRoute.alwaysConsume.rawValue, actual: row?.keyRoute.rawValue ?? -1,
+        cppID: drawerVelocityCommandID,
+        what: "the command table keeps Set Velocity's consume route")
 }

@@ -23,8 +23,10 @@ public final class TabsDrawerProbe: QmlInstantiableStatus {
         state.lanes.laneHeights = ["cc:0:74": floor + 3, "cc:1:7": floor + 5]
         state.lanes.laneRanges = ["cc:0:74": 90, "tempo": 100]
         state.lanes.emptyLanes = [.init(track: 0, controller: 74)]
-        state.lanes.hiddenLanes = [.init(track: 1, controller: 7),
-                                   .init(track: 0, controller: 80)]
+        state.lanes.hiddenLanes = [
+            .init(track: 1, controller: 7),
+            .init(track: 0, controller: 80),
+        ]
         EditorViewStateCodec.save(state, store: PreferencesStore())
     }
 
@@ -103,7 +105,8 @@ public final class TabsDrawerProbe: QmlInstantiableStatus {
 
     public func moveSongAside(projectRoot: String, label: String) -> Bool {
         guard !projectRoot.isEmpty, projectRoot == ShellQmlBootstrap().projectRoot,
-              label == "mus_route101" || label == "mus_route102" else { return false }
+            label == "mus_route101" || label == "mus_route102"
+        else { return false }
         let song = URL(fileURLWithPath: songPath(projectRoot: projectRoot, label: label))
         let aside = song.appendingPathExtension("reload-check")
         guard !FileManager.default.fileExists(atPath: aside.path) else { return false }
@@ -117,7 +120,8 @@ public final class TabsDrawerProbe: QmlInstantiableStatus {
 
     public func restoreSong(projectRoot: String, label: String) -> Bool {
         guard !projectRoot.isEmpty, projectRoot == ShellQmlBootstrap().projectRoot,
-              label == "mus_route101" || label == "mus_route102" else { return false }
+            label == "mus_route101" || label == "mus_route102"
+        else { return false }
         let song = URL(fileURLWithPath: songPath(projectRoot: projectRoot, label: label))
         let aside = song.appendingPathExtension("reload-check")
         guard !FileManager.default.fileExists(atPath: song.path) else { return false }

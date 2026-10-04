@@ -233,17 +233,20 @@ extension ApplicationSession {
                         fontPx: Double(typography.baseFontPx), dpr: tab.devicePixelRatio)
                 }
                 session.mutateCamera { camera in
-                    camera.restore(pixelsPerBeat: tab.camera.pixelsPerBeat,
-                                   keyHeight: tab.camera.keyHeight,
-                                   scrollX: tab.camera.scrollX, scrollY: tab.camera.scrollY)
+                    camera.restore(
+                        pixelsPerBeat: tab.camera.pixelsPerBeat,
+                        keyHeight: tab.camera.keyHeight,
+                        scrollX: tab.camera.scrollX, scrollY: tab.camera.scrollY)
                 }
                 workspace.grid.refreshCamera()
             }
             workspace.pitchBend.onAuditionFromTick = { [weak self, weak workspace] tick in
                 guard let self, let workspace, self.workspace === workspace,
-                      let audio = self.audio, audio.songLoaded else { return }
-                self.publishSeek(tick: tick, timeline: workspace.session.timeline,
-                                 startPlayback: true)
+                    let audio = self.audio, audio.songLoaded
+                else { return }
+                self.publishSeek(
+                    tick: tick, timeline: workspace.session.timeline,
+                    startPlayback: true)
                 self.transportBar.refresh()
             }
             workspace.rulerMenu.onCommitCursor = { [weak self, weak workspace] tick in
@@ -280,14 +283,16 @@ extension ApplicationSession {
                 _ = await session.close()
                 return
             }
-            let tabSession = SongTabSession(tabId: tab?.tabId ?? songTabs.reserveTabId(),
-                                            title: label, workspace: workspace, app: self)
+            let tabSession = SongTabSession(
+                tabId: tab?.tabId ?? songTabs.reserveTabId(),
+                title: label, workspace: workspace, app: self)
             if let tab {
                 tabSession.showsEvents = songTabs.tab(id: tab.tabId)?.showsEvents ?? tab.showsEvents
                 guard songTabs.finishReload(tabSession, restoring: tab) else {
-                    let changedWhileLoading = songTabs.tab(id: tab.tabId).map {
-                        !tab.matches($0)
-                    } ?? false
+                    let changedWhileLoading =
+                        songTabs.tab(id: tab.tabId).map {
+                            !tab.matches($0)
+                        } ?? false
                     workspace.teardown()
                     _ = await session.close()
                     if changedWhileLoading {
@@ -353,15 +358,18 @@ extension ApplicationSession {
 
     func persistTabRecipe() {
         guard projectOpen, persistenceConfigured,
-              !isRestoringTabs, !isHostCloseWalk, !isReplacingProject,
-              pendingProjectSwitch == nil else { return }
-        EditorViewStateCodec.saveTabs(songTabs.recipe(projectPath: projectRoot),
-                                      store: preferences)
+            !isRestoringTabs, !isHostCloseWalk, !isReplacingProject,
+            pendingProjectSwitch == nil
+        else { return }
+        EditorViewStateCodec.saveTabs(
+            songTabs.recipe(projectPath: projectRoot),
+            store: preferences)
     }
 
     private func publishEditorViewState(_ state: EditorViewState, from origin: DocumentSession) {
         guard songTabs.allTabs.contains(where: { $0.workspace.session === origin }),
-              editorViewState != state else { return }
+            editorViewState != state
+        else { return }
         editorViewState = state
         for tab in songTabs.allTabs {
             let workspace = tab.workspace

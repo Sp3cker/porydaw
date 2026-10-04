@@ -40,45 +40,52 @@ public struct Typography {
     }
 
     var body: GridFontSpec {
-        GridFontSpec(family: gridBodyFamily, pixelSize: bodyFontPx, weight: 400,
-                     letterSpacing: 0)
+        GridFontSpec(
+            family: gridBodyFamily, pixelSize: bodyFontPx, weight: 400,
+            letterSpacing: 0)
     }
 
     var bodyBold: GridFontSpec {
-        GridFontSpec(family: gridBodyFamily, pixelSize: bodyFontPx, weight: 600,
-                     letterSpacing: 0)
+        GridFontSpec(
+            family: gridBodyFamily, pixelSize: bodyFontPx, weight: 600,
+            letterSpacing: 0)
     }
 
     var bodyMono: GridFontSpec {
-        GridFontSpec(family: gridMonoFamily, pixelSize: bodyFontPx, weight: 400,
-                     letterSpacing: 0)
+        GridFontSpec(
+            family: gridMonoFamily, pixelSize: bodyFontPx, weight: 400,
+            letterSpacing: 0)
     }
 
     var tableMono: GridFontSpec {
-        GridFontSpec(family: gridMonoFamily, pixelSize: bodyFontPx, weight: 400,
-                     letterSpacing: Double(baseFontPx) * (-1.0 / 26.0))
+        GridFontSpec(
+            family: gridMonoFamily, pixelSize: bodyFontPx, weight: 400,
+            letterSpacing: Double(baseFontPx) * (-1.0 / 26.0))
     }
 
     var caption: GridFontSpec {
-        GridFontSpec(family: gridBodyFamily, pixelSize: baseFontPx, weight: 400,
-                     letterSpacing: 0)
+        GridFontSpec(
+            family: gridBodyFamily, pixelSize: baseFontPx, weight: 400,
+            letterSpacing: 0)
     }
 
     var captionMinimum: GridFontSpec {
-        GridFontSpec(family: gridBodyFamily, pixelSize: fontPx(2.0 / 3.0), weight: 400,
-                     letterSpacing: 0)
+        GridFontSpec(
+            family: gridBodyFamily, pixelSize: fontPx(2.0 / 3.0), weight: 400,
+            letterSpacing: 0)
     }
 
     var captionBold: GridFontSpec {
-        GridFontSpec(family: gridBodyFamily, pixelSize: baseFontPx, weight: 600,
-                     letterSpacing: 0)
+        GridFontSpec(
+            family: gridBodyFamily, pixelSize: baseFontPx, weight: 600,
+            letterSpacing: 0)
     }
 
     var noteName: GridFontSpec {
         #if os(macOS)
-        caption
+            caption
         #else
-        captionBold
+            captionBold
         #endif
     }
 
@@ -86,11 +93,13 @@ public struct Typography {
         guard availableHeight > 0 else { return nil }
         let maximum = min(role.pixelSize, caption.pixelSize)
         guard maximum > 0 else { return nil }
-        let bounded = GridFontSpec(family: role.family, pixelSize: maximum,
-                                   weight: role.weight, letterSpacing: role.letterSpacing)
+        let bounded = GridFontSpec(
+            family: role.family, pixelSize: maximum,
+            weight: role.weight, letterSpacing: role.letterSpacing)
         let size = NativeFontMetrics(bounded).fittedSize(rowHeight: availableHeight)
-        let result = GridFontSpec(family: role.family, pixelSize: size,
-                                  weight: role.weight, letterSpacing: role.letterSpacing)
+        let result = GridFontSpec(
+            family: role.family, pixelSize: size,
+            weight: role.weight, letterSpacing: role.letterSpacing)
         return NativeFontMetrics(result).extents.height <= availableHeight ? result : nil
     }
 }

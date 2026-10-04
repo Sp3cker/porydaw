@@ -57,8 +57,9 @@ public struct VoiceOccurrence: Equatable, Sendable {
     }
 
     public init(_ point: LanePoint) {
-        self.init(chunk: point.chunk, eventIndex: point.eventIndex,
-                  tick: point.tick, value: point.value)
+        self.init(
+            chunk: point.chunk, eventIndex: point.eventIndex,
+            tick: point.tick, value: point.value)
     }
 
     /// The bridge-side spelling QML carries. `LanePoint` is not a bridge type,
@@ -96,15 +97,19 @@ public enum VoiceLanePolicy {
 
     /// The occurrence a frozen identity still names, or `nil` when the lane no
     /// longer holds exactly it.
-    public static func occurrence(_ identity: VoiceOccurrence,
-                                  in points: [LanePoint]) -> VoiceOccurrence? {
+    public static func occurrence(
+        _ identity: VoiceOccurrence,
+        in points: [LanePoint]
+    ) -> VoiceOccurrence? {
         points.first { VoiceOccurrence($0) == identity }.map(VoiceOccurrence.init)
     }
 
     /// The nearest marker whose drawn x is inside the font-relative hit radius;
     /// ties keep the later point, exactly as the legacy scan does.
-    public static func marker(at x: Double, points: [LanePoint], displayX: (Tick) -> Double,
-                              hitRadius: Double) -> LanePoint? {
+    public static func marker(
+        at x: Double, points: [LanePoint], displayX: (Tick) -> Double,
+        hitRadius: Double
+    ) -> LanePoint? {
         var best: LanePoint?
         var distance = hitRadius + 1
         for point in points {
@@ -143,10 +148,11 @@ public enum VoiceLanePolicy {
         }
         if name.utf8.count > 47 {
             var bytes = 0
-            name = String(name.unicodeScalars.prefix { scalar in
-                bytes += scalar.utf8.count
-                return bytes <= 47
-            })
+            name = String(
+                name.unicodeScalars.prefix { scalar in
+                    bytes += scalar.utf8.count
+                    return bytes <= 47
+                })
         }
         return name.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -168,7 +174,6 @@ public enum VoiceLanePolicy {
         guard let separator = label.firstIndex(of: " ") else { return label }
         return "\(label[label.startIndex..<separator])  \(label[label.index(after: separator)...])"
     }
-
 
     /// The hover spelling: the label with the legacy arrow prefix.
     public static func hoverLabel(_ label: String) -> String {

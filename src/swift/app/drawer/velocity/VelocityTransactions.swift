@@ -2,8 +2,10 @@ import Foundation
 import PorydawCore
 
 /// `ui::linearRampValue`: the ramp's y at `x`, clamped to the drawn span.
-public func velocityRampValue(at x: Double, x0: Double, y0: Double, x1: Double,
-                              y1: Double) -> Double {
+public func velocityRampValue(
+    at x: Double, x0: Double, y0: Double, x1: Double,
+    y1: Double
+) -> Double {
     let deltaX = x1 - x0
     guard deltaX != 0 else { return y1 }
     let t = min(max((x - x0) / deltaX, 0), 1)
@@ -25,8 +27,10 @@ public struct VelocityFrozenNote: Sendable {
     public var map: VelocityMap
     public var exactOrigin: UInt8
 
-    public init(noteID: NoteID, tick: Tick, duration: Tick, pitch: UInt8, velocity: UInt8,
-                map: VelocityMap, exactOrigin: UInt8) {
+    public init(
+        noteID: NoteID, tick: Tick, duration: Tick, pitch: UInt8, velocity: UInt8,
+        map: VelocityMap, exactOrigin: UInt8
+    ) {
         self.noteID = noteID
         self.tick = tick
         self.duration = duration
@@ -62,7 +66,8 @@ public struct VelocityGestureState: Sendable {
 
     public mutating func append(_ note: VelocityFrozenNote) {
         guard note.noteID.isAssigned, (1...127).contains(Int(note.velocity)),
-              noteIndices[note.noteID] == nil else { return }
+            noteIndices[note.noteID] == nil
+        else { return }
         noteIndices[note.noteID] = notes.count
         notes.append(note)
     }
@@ -85,7 +90,8 @@ public struct VelocityGestureState: Sendable {
         var seen: Set<NoteID> = []
         for update in updates {
             guard noteIndices[update.noteID] != nil,
-                  seen.insert(update.noteID).inserted else { return false }
+                seen.insert(update.noteID).inserted
+            else { return false }
         }
         for update in updates {
             preview[update.noteID] = UInt8(min(max(update.velocity, 1), 127))
@@ -106,16 +112,19 @@ public struct VelocityGestureState: Sendable {
     public var bandPreview: [NoteID] = []
     public var controlPress: Bool = false
 
-    public init?(kind: VelocityGestureKind, revision: UInt64, track: Int,
-                 notes: [VelocityFrozenNote], axis: VelocityAxisModel, detentUnlock: Bool,
-                 activationDistance: Double, pressX: Double, pressY: Double,
-                 controlPress: Bool = false) {
+    public init?(
+        kind: VelocityGestureKind, revision: UInt64, track: Int,
+        notes: [VelocityFrozenNote], axis: VelocityAxisModel, detentUnlock: Bool,
+        activationDistance: Double, pressX: Double, pressY: Double,
+        controlPress: Bool = false
+    ) {
         if (kind == .relative || kind == .ramp) && notes.isEmpty { return nil }
         var indices: [NoteID: Int] = [:]
         indices.reserveCapacity(notes.count)
         for (index, note) in notes.enumerated() {
             guard note.noteID.isAssigned, (1...127).contains(Int(note.velocity)),
-                  indices.updateValue(index, forKey: note.noteID) == nil else { return nil }
+                indices.updateValue(index, forKey: note.noteID) == nil
+            else { return nil }
         }
         self.kind = kind
         self.revision = revision
@@ -141,8 +150,10 @@ public enum VelocityGesturePolicy {
     /// One absolute pointer position to one velocity. The unlock modifier takes
     /// exact MIDI, continuous mode canonicalizes onto the note's own map, and
     /// intrinsic mode takes the representative of the level under the pointer.
-    public static func resolvedVelocity(axis: VelocityAxisModel, noteMap: VelocityMap,
-                                        detentUnlock: Bool, y: Double) -> UInt8 {
+    public static func resolvedVelocity(
+        axis: VelocityAxisModel, noteMap: VelocityMap,
+        detentUnlock: Bool, y: Double
+    ) -> UInt8 {
         if detentUnlock { return clampVelocity(axis.yToVelocity(y)) }
         if axis.mode == .continuous { return noteMap.canonicalize(axis.yToVelocity(y)) }
         return noteMap.representative(axis.yToLevel(y))
@@ -154,7 +165,8 @@ public enum VelocityGesturePolicy {
     public static func applyRelative(_ gesture: inout VelocityGestureState, y: Double) {
         guard !gesture.notes.isEmpty else { return }
         if !gesture.relativeActivated {
-            let intrinsicChange = !gesture.detentUnlock && gesture.axis.mode == .intrinsic
+            let intrinsicChange =
+                !gesture.detentUnlock && gesture.axis.mode == .intrinsic
                 && gesture.axis.yToLevel(y) != gesture.axis.yToLevel(gesture.pressY)
             if abs(y - gesture.pressY) < gesture.activationDistance && !intrinsicChange {
                 return
@@ -167,7 +179,8 @@ public enum VelocityGesturePolicy {
             let delta = gesture.axis.yToVelocity(y) - gesture.axis.yToVelocity(gesture.pressY)
             for note in gesture.notes {
                 let proposal = Int(note.velocity) + delta
-                let velocity = gesture.detentUnlock
+                let velocity =
+                    gesture.detentUnlock
                     ? clampVelocity(proposal)
                     : note.map.canonicalize(proposal)
                 updates.append(NoteVelocity(noteID: note.noteID, velocity: Int(velocity)))
@@ -175,8 +188,10 @@ public enum VelocityGesturePolicy {
         } else {
             let levelDelta = gesture.axis.yToLevel(y) - gesture.axis.yToLevel(gesture.pressY)
             for note in gesture.notes {
-                updates.append(NoteVelocity(noteID: note.noteID,
-                                            velocity: Int(note.map.moveLevels(from: note.exactOrigin, by: levelDelta))))
+                updates.append(
+                    NoteVelocity(
+                        noteID: note.noteID,
+                        velocity: Int(note.map.moveLevels(from: note.exactOrigin, by: levelDelta))))
             }
         }
         gesture.updatePreview(updates)
@@ -185,8 +200,10 @@ public enum VelocityGesturePolicy {
     /// One ramp step: a straight line from the press position to the pointer,
     /// evaluated at each frozen note's own x. Notes outside the swept column
     /// keep their captured velocity.
-    public static func applyRamp(_ gesture: inout VelocityGestureState, x: Double, y: Double,
-                                 hitRadius: Double, xForNote: (VelocityFrozenNote) -> Double) {
+    public static func applyRamp(
+        _ gesture: inout VelocityGestureState, x: Double, y: Double,
+        hitRadius: Double, xForNote: (VelocityFrozenNote) -> Double
+    ) {
         guard !gesture.notes.isEmpty else { return }
         let first = min(gesture.pressX, x) - hitRadius
         let last = max(gesture.pressX, x) + hitRadius
@@ -196,10 +213,12 @@ public enum VelocityGesturePolicy {
             let noteX = xForNote(note)
             var velocity = note.velocity
             if noteX >= first, noteX <= last {
-                let rampedY = velocityRampValue(at: noteX, x0: gesture.pressX, y0: gesture.pressY,
-                                                x1: x, y1: y)
-                velocity = resolvedVelocity(axis: gesture.axis, noteMap: note.map,
-                                            detentUnlock: gesture.detentUnlock, y: rampedY)
+                let rampedY = velocityRampValue(
+                    at: noteX, x0: gesture.pressX, y0: gesture.pressY,
+                    x1: x, y1: y)
+                velocity = resolvedVelocity(
+                    axis: gesture.axis, noteMap: note.map,
+                    detentUnlock: gesture.detentUnlock, y: rampedY)
             }
             updates.append(NoteVelocity(noteID: note.noteID, velocity: Int(velocity)))
         }
@@ -209,10 +228,12 @@ public enum VelocityGesturePolicy {
     /// One paint step: the frozen notes whose x falls in the swept column (or
     /// within the hit radius when the pointer did not move) take the linear
     /// interpolation of the pointer's y at their own x.
-    public static func paint(axis: VelocityAxisModel, detentUnlock: Bool,
-                             candidates: [(note: VelocityFrozenNote, x: Double)],
-                             from: (x: Double, y: Double), to: (x: Double, y: Double),
-                             hitRadius: Double) -> [NoteVelocity] {
+    public static func paint(
+        axis: VelocityAxisModel, detentUnlock: Bool,
+        candidates: [(note: VelocityFrozenNote, x: Double)],
+        from: (x: Double, y: Double), to: (x: Double, y: Double),
+        hitRadius: Double
+    ) -> [NoteVelocity] {
         let deltaX = to.x - from.x
         let lower = min(from.x, to.x) - hitRadius
         let upper = max(from.x, to.x) + hitRadius
@@ -224,11 +245,13 @@ public enum VelocityGesturePolicy {
                 if abs(candidate.x - to.x) > hitRadius { continue }
             } else {
                 if candidate.x < lower || candidate.x > upper { continue }
-                y = velocityRampValue(at: candidate.x, x0: from.x, y0: from.y,
-                                      x1: to.x, y1: to.y)
+                y = velocityRampValue(
+                    at: candidate.x, x0: from.x, y0: from.y,
+                    x1: to.x, y1: to.y)
             }
-            let velocity = resolvedVelocity(axis: axis, noteMap: candidate.note.map,
-                                            detentUnlock: detentUnlock, y: y)
+            let velocity = resolvedVelocity(
+                axis: axis, noteMap: candidate.note.map,
+                detentUnlock: detentUnlock, y: y)
             updates.append(NoteVelocity(noteID: candidate.note.noteID, velocity: Int(velocity)))
         }
         return updates
@@ -238,7 +261,7 @@ public enum VelocityGesturePolicy {
     public static func updates(_ gesture: VelocityGestureState) -> [NoteVelocity] {
         gesture.notes.sorted { $0.noteID.rawValue < $1.noteID.rawValue }.compactMap { note in
             guard let velocity = gesture.preview[note.noteID],
-                  velocity != note.velocity
+                velocity != note.velocity
             else { return nil }
             return NoteVelocity(noteID: note.noteID, velocity: Int(velocity))
         }
@@ -259,8 +282,10 @@ public struct VelocityPromptState: Sendable {
     public var draft: String
     public var error: String
 
-    public init(revision: UInt64, track: Int, noteIDs: [NoteID], beforeValues: [UInt8],
-                initialValue: Int, draft: String, error: String = "") {
+    public init(
+        revision: UInt64, track: Int, noteIDs: [NoteID], beforeValues: [UInt8],
+        initialValue: Int, draft: String, error: String = ""
+    ) {
         self.revision = revision
         self.track = track
         self.noteIDs = noteIDs
@@ -279,8 +304,8 @@ public enum VelocityPromptPolicy {
 
     public static func value(draft: String) -> Int? {
         guard !draft.isEmpty, draft.count <= 3,
-              draft.utf8.allSatisfy({ (48...57).contains($0) }),
-              let value = Int(draft), (minimum...maximum).contains(value)
+            draft.utf8.allSatisfy({ (48...57).contains($0) }),
+            let value = Int(draft), (minimum...maximum).contains(value)
         else { return nil }
         return value
     }

@@ -27,17 +27,20 @@ struct VelocityInteractionSnapshot: Sendable {
     /// The frozen notes by identity, exactly the gesture's own lookup.
     private var frozenIndices: [NoteID: Int] = [:]
 
-    init(frozenNotes: [VelocityFrozenNote] = [], preview: [NoteID: UInt8] = [:],
-         detentUnlock: Bool = false, relativeActivated: Bool = false, hovered: NoteID? = nil,
-         detentsEnabled: Bool = true) {
+    init(
+        frozenNotes: [VelocityFrozenNote] = [], preview: [NoteID: UInt8] = [:],
+        detentUnlock: Bool = false, relativeActivated: Bool = false, hovered: NoteID? = nil,
+        detentsEnabled: Bool = true
+    ) {
         self.frozenNotes = frozenNotes
         self.preview = preview
         self.detentUnlock = detentUnlock
         self.relativeActivated = relativeActivated
         self.hovered = hovered
         self.detentsEnabled = detentsEnabled
-        frozenIndices = Dictionary(uniqueKeysWithValues:
-            frozenNotes.enumerated().map { ($0.element.noteID, $0.offset) })
+        frozenIndices = Dictionary(
+            uniqueKeysWithValues:
+                frozenNotes.enumerated().map { ($0.element.noteID, $0.offset) })
     }
 
     /// One frozen note by identity.
@@ -65,8 +68,9 @@ struct VelocityContextSource: Sendable {
         let changes = voiceChanges
         let slots = self.slots
         return { tick, key in
-            VelocityContextPolicy.resolve(firstProgram: firstProgram, tick: tick,
-                                          voiceChanges: changes, slots: slots, key: key)
+            VelocityContextPolicy.resolve(
+                firstProgram: firstProgram, tick: tick,
+                voiceChanges: changes, slots: slots, key: key)
         }
     }
 
@@ -164,12 +168,14 @@ extension VelocityScene {
         previousHandles: [NoteID: VelocityHandle]
     ) -> VelocityAxisAndHandles {
         let axis = axisModel(input)
-        let projection = VelocityProjection(camera: input.camera, geometry: input.geometry,
-                                            devicePixelRatio: input.devicePixelRatio, axis: axis)
+        let projection = VelocityProjection(
+            camera: input.camera, geometry: input.geometry,
+            devicePixelRatio: input.devicePixelRatio, axis: axis)
         let handles = projectedHandleRows(
             input, axis: axis, projection: projection,
             previousHandles: previousHandles)
-        let relativeGesture = input.interaction.relativeActivated
+        let relativeGesture =
+            input.interaction.relativeActivated
             || input.selectedNotes.count > 1 || input.interaction.hovered != nil
         let rows = axisRows(input, axis: axis, relativeGesture: relativeGesture)
         return VelocityAxisAndHandles(axis: axis, handles: handles, rows: rows)
@@ -184,8 +190,8 @@ extension VelocityScene {
         projectedHandleRows(
             input, axis: axis,
             projection: VelocityProjection(
-            camera: input.camera, geometry: input.geometry,
-            devicePixelRatio: input.devicePixelRatio, axis: axis),
+                camera: input.camera, geometry: input.geometry,
+                devicePixelRatio: input.devicePixelRatio, axis: axis),
             previousHandles: previousHandles)
     }
 
@@ -229,11 +235,12 @@ extension VelocityScene {
             let level = map.level(of: displayed) ?? -1
             let previous = previousHandles[note.id]
             if input.reuseGeometry, let previous,
-               previous.tick == Double(note.tick), previous.endTick == endTick,
+                previous.tick == Double(note.tick), previous.endTick == endTick,
                 previous.y == y, previous.value == displayed, previous.level == level,
-               previous.selected == isSelected, previous.hovered == isHovered,
-               previous.preview == (previewValue != nil),
-               previous.dimmed == (dimUnselected && !isSelected) {
+                previous.selected == isSelected, previous.hovered == isHovered,
+                previous.preview == (previewValue != nil),
+                previous.dimmed == (dimUnselected && !isSelected)
+            {
                 if previous.x != x { previous.x = x }
                 if previous.endX != endX { previous.endX = endX }
                 result.append(previous)
@@ -256,17 +263,22 @@ extension VelocityScene {
             if input.reuseGeometry, let previous, previous.level == level, previous.value == displayed {
                 handle.label = previous.label
             } else {
-                handle.label = axis.mode == .intrinsic && level >= 0
+                handle.label =
+                    axis.mode == .intrinsic && level >= 0
                     ? "Vol \(level + 1)" : "\(displayed)"
             }
             handle.hitRadius = input.geometry.hitRadius
-            handle.stemWidth = (isSelected ? input.geometry.selectedStemDipWidth
-                                           : input.geometry.stemDipWidth) / input.devicePixelRatio
+            handle.stemWidth =
+                (isSelected
+                    ? input.geometry.selectedStemDipWidth
+                    : input.geometry.stemDipWidth) / input.devicePixelRatio
             handle.nodeRadius = input.geometry.nodePaintRadius
-            handle.outlineRadius = input.geometry.nodePaintRadius
+            handle.outlineRadius =
+                input.geometry.nodePaintRadius
                 + input.geometry.nodeOutlineDipWidth / 2
             handle.outlineWidth = input.geometry.nodeOutlineDipWidth / input.devicePixelRatio
-            handle.ringRadius = input.geometry.selectedNodeRingRadius
+            handle.ringRadius =
+                input.geometry.selectedNodeRingRadius
                 + input.geometry.selectedNodeRingDipWidth / 2
             handle.ringWidth = input.geometry.selectedNodeRingDipWidth / input.devicePixelRatio
             handle.fillColor = isSelected || !dimUnselected ? trackColor : input.palette.outline

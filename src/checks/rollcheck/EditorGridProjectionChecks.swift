@@ -22,31 +22,39 @@ func checkScratchDoubleDraw(
     let length = session.timeline.lengthTicks
     let x = 320.0
     let y = 160.0
-    let tick = session.grid.snapTickDown(session.camera.tickAtContentX(x),
-                                         camera: session.camera)
-    guard let key = session.camera.projection.pitch(
-        atY: y, keyHeight: session.camera.snapshot.keyHeight,
-        scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio
-    ) else {
+    let tick = session.grid.snapTickDown(
+        session.camera.tickAtContentX(x),
+        camera: session.camera)
+    guard
+        let key = session.camera.projection.pitch(
+            atY: y, keyHeight: session.camera.snapshot.keyHeight,
+            scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio
+        )
+    else {
         report.fail(id, "the scratch viewport contains no playable row")
         return
     }
-    report.expect(tick >= length, cppID: id,
-                  message: "A102 the double-click scratch cell begins at or beyond the old song end")
+    report.expect(
+        tick >= length, cppID: id,
+        message: "A102 the double-click scratch cell begins at or beyond the old song end")
     let beforeIDs = Set(document.notes(in: grid.trackIndex).map(\.id))
     let history = document.history.undoIndex
     grid.doublePointer(x: x, y: y)
     grid.endPointer(x: x, y: y)
     let drawn = document.notes(in: grid.trackIndex).first { !beforeIDs.contains($0.id) }
-    report.expect(drawn.map { $0.tick == tick && Int($0.pitch) == key } == true,
-                  cppID: id, message: "A103 double-click drawing commits the snapped tick and pitch")
-    report.expect(session.timeline.lengthTicks > length, cppID: id,
-                  message: "A104 the scratch double-click extends the real song timeline")
-    let singleUndo = document.history.undoIndex == history + 1
+    report.expect(
+        drawn.map { $0.tick == tick && Int($0.pitch) == key } == true,
+        cppID: id, message: "A103 double-click drawing commits the snapped tick and pitch")
+    report.expect(
+        session.timeline.lengthTicks > length, cppID: id,
+        message: "A104 the scratch double-click extends the real song timeline")
+    let singleUndo =
+        document.history.undoIndex == history + 1
         && document.history.undoDocument()
-    report.expect(singleUndo && document.history.undoIndex == history
-        && (try? document.state.file.encoded()) == bytes, cppID: id,
-                  message: "A105 one scratch-draw undo restores the exact original MIDI bytes")
+    report.expect(
+        singleUndo && document.history.undoIndex == history
+            && (try? document.state.file.encoded()) == bytes, cppID: id,
+        message: "A105 one scratch-draw undo restores the exact original MIDI bytes")
 }
 
 @MainActor
@@ -116,17 +124,19 @@ func checkProjection(
     }
     let scrollX = (snapshot.scrollX * grid.devicePixelRatio).rounded() / grid.devicePixelRatio
     let scrollY = (snapshot.scrollY * grid.devicePixelRatio).rounded() / grid.devicePixelRatio
-    let projected = knownNote.flatMap { note -> Bool? in
+    let projected =
+        knownNote.flatMap { note -> Bool? in
             guard let box = knownBox else { return nil }
-        let row = session.camera.projection.row(forPitch: Int(note.pitch))
-        let expectedY = session.camera.projection.contentRowTop(
-            row, keyHeight: snapshot.keyHeight, dpr: grid.devicePixelRatio) ?? .nan
+            let row = session.camera.projection.row(forPitch: Int(note.pitch))
+            let expectedY =
+                session.camera.projection.contentRowTop(
+                    row, keyHeight: snapshot.keyHeight, dpr: grid.devicePixelRatio) ?? .nan
             return gridCameraNear(
                 box.x,
                 session.camera.contentTickX(
                     tick: Double(note.tick), dpr: grid.devicePixelRatio) - scrollX, tolerance: pixel)
                 && gridCameraNear(box.y, expectedY - scrollY + pixel, tolerance: pixel)
-    } ?? false
+        } ?? false
     report.expect(
         projected,
         cppID: projectionID, message: "known note rectangle equals the camera projection")
@@ -162,9 +172,10 @@ func checkProjection(
     let expectedTick = Int(originalNote.tick) + snap
     let expectedPitch = Int(originalNote.pitch) + pitchDelta
     let previewRow = session.camera.projection.row(forPitch: expectedPitch)
-    let expectedPreviewY = session.camera.projection.contentRowTop(
-        previewRow, keyHeight: session.camera.snapshot.keyHeight,
-        dpr: grid.devicePixelRatio) ?? .nan
+    let expectedPreviewY =
+        session.camera.projection.contentRowTop(
+            previewRow, keyHeight: session.camera.snapshot.keyHeight,
+            dpr: grid.devicePixelRatio) ?? .nan
     let previewBox = previewNote.flatMap { _ in decodedNoteBox(grid, originalNote.id) }
     report.expect(
         previewNote.map { $0.tick == expectedTick && $0.pitch == expectedPitch } == true
@@ -191,9 +202,10 @@ func checkProjection(
     var drawPitch = PitchProjection.hiddenRow
     var drawTick = 0
     drawCandidate: for candidateY in [250.0, 200.0, 150.0, 100.0, 50.0] {
-        guard let pitch = session.camera.projection.pitch(
-            atY: candidateY, keyHeight: session.camera.snapshot.keyHeight,
-            scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
+        guard
+            let pitch = session.camera.projection.pitch(
+                atY: candidateY, keyHeight: session.camera.snapshot.keyHeight,
+                scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
         else { continue }
         for candidateX in [500.0, 550.0, 450.0, 600.0, 400.0] {
             let tick = Int(session.camera.tickAtContentX(candidateX)) / snap * snap
@@ -233,7 +245,7 @@ func checkProjection(
         session.document.notes(in: grid.trackIndex).compactMap { note -> NoteID? in
             guard let box = viewBox(note), isVisible(box) else { return nil }
             return note.id
-    })
+        })
     grid.beginRightPointer(x: 0, y: 0)
     grid.updateRightPointer(x: 640, y: 320)
     grid.endRightPointer(x: 640, y: 320)
@@ -265,4 +277,3 @@ func checkProjection(
         session.document.revision == cancelRevision,
         cppID: projectionID, message: "press outside projected pitch rows is rejected")
 }
-

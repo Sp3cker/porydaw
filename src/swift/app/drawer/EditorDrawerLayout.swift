@@ -68,7 +68,8 @@ public struct EditorDrawerLayout {
         let floor = max(0, metrics.minimumBody)
         guard let page = sections[kind].page else { return floor }
         let policy = page.bodyPolicy
-        let requested = sections[kind].storedBodyHeight
+        let requested =
+            sections[kind].storedBodyHeight
             ?? policy.preferredBodyHeight(hostHeight, metrics)
         var height = max(floor, requested)
         if let maximum = policy.maximumBodyHeight {
@@ -79,8 +80,10 @@ public struct EditorDrawerLayout {
 
     // MARK: Host and metric facts
 
-    public mutating func configureHost(hostWidth: Int, hostHeight: Int,
-                                       gutterWidth: Int) -> EditorDrawerChangeSet {
+    public mutating func configureHost(
+        hostWidth: Int, hostHeight: Int,
+        gutterWidth: Int
+    ) -> EditorDrawerChangeSet {
         self.hostWidth = hostWidth
         self.hostHeight = hostHeight
         self.gutterWidth = gutterWidth
@@ -143,10 +146,12 @@ public struct EditorDrawerLayout {
     /// visibility or page (leaves the current value untouched), a height `< 1` for
     /// an absent or unset height (the unset marker), and otherwise the raw value.
     /// Restore never records a preference change, so it never writes back.
-    public mutating func restorePreferences(velocityVisible: Int, velocityHeight: Int,
-                                            automationVisible: Int, automationHeight: Int,
-                                            voiceChangesVisible: Int, voiceChangesHeight: Int,
-                                            activePage: Int) -> EditorDrawerChangeSet {
+    public mutating func restorePreferences(
+        velocityVisible: Int, velocityHeight: Int,
+        automationVisible: Int, automationHeight: Int,
+        voiceChangesVisible: Int, voiceChangesHeight: Int,
+        activePage: Int
+    ) -> EditorDrawerChangeSet {
         applyRestoredVisibility(velocityVisible, to: .velocity)
         applyRestoredVisibility(automationVisible, to: .automation)
         applyRestoredVisibility(voiceChangesVisible, to: .voiceChanges)
@@ -161,38 +166,46 @@ public struct EditorDrawerLayout {
 
     /// Flips the section's visibility and makes it the active page. Ignored for a
     /// kind that is not available. A hidden section keeps its stored height.
-    public mutating func toggleSection(_ kind: DrawerSectionKind,
-                                       drawerOwnsFocus: Bool) -> EditorDrawerChangeSet {
+    public mutating func toggleSection(
+        _ kind: DrawerSectionKind,
+        drawerOwnsFocus: Bool
+    ) -> EditorDrawerChangeSet {
         guard isAvailable(kind) else { return .untouched(snapshot) }
         let previousVisibility = visibility
         let previousActive = activePage
         sections[kind].visible.toggle()
         activePage = kind
-        return transition(previousVisibility: previousVisibility, previousActive: previousActive,
-                          preferences: [preferenceRecord(kind)],
-                          activePagePreference: previousActive == kind ? nil : kind,
-                          drawerOwnsFocus: drawerOwnsFocus)
+        return transition(
+            previousVisibility: previousVisibility, previousActive: previousActive,
+            preferences: [preferenceRecord(kind)],
+            activePagePreference: previousActive == kind ? nil : kind,
+            drawerOwnsFocus: drawerOwnsFocus)
     }
 
     /// Sets the section's visibility without touching the active page. Ignored for a
     /// kind that is not available, and a no-op assignment publishes nothing.
-    public mutating func setSectionVisible(_ kind: DrawerSectionKind, visible: Bool,
-                                           drawerOwnsFocus: Bool) -> EditorDrawerChangeSet {
+    public mutating func setSectionVisible(
+        _ kind: DrawerSectionKind, visible: Bool,
+        drawerOwnsFocus: Bool
+    ) -> EditorDrawerChangeSet {
         guard isAvailable(kind), sections[kind].visible != visible else {
             return .untouched(snapshot)
         }
         let previousVisibility = visibility
         let previousActive = activePage
         sections[kind].visible = visible
-        return transition(previousVisibility: previousVisibility, previousActive: previousActive,
-                          preferences: [preferenceRecord(kind)], activePagePreference: nil,
-                          drawerOwnsFocus: drawerOwnsFocus)
+        return transition(
+            previousVisibility: previousVisibility, previousActive: previousActive,
+            preferences: [preferenceRecord(kind)], activePagePreference: nil,
+            drawerOwnsFocus: drawerOwnsFocus)
     }
 
     /// Stores the section's body height; a height `< 1` is the unset marker.
     /// Ignored for a kind that is not available.
-    public mutating func setSectionBodyHeight(_ kind: DrawerSectionKind,
-                                              height: Int) -> EditorDrawerChangeSet {
+    public mutating func setSectionBodyHeight(
+        _ kind: DrawerSectionKind,
+        height: Int
+    ) -> EditorDrawerChangeSet {
         guard isAvailable(kind) else { return .untouched(snapshot) }
         let stored = height < 1 ? nil : height
         guard sections[kind].storedBodyHeight != stored else { return .untouched(snapshot) }
@@ -207,11 +220,12 @@ public struct EditorDrawerLayout {
     /// value for the spill. Ignored unless the kind holds a visible available body.
     public mutating func beginResize(_ kind: DrawerSectionKind) -> EditorDrawerChangeSet {
         guard isAvailable(kind), isVisible(kind) else { return .untouched(snapshot) }
-        resize = ResizeSession(kind: kind,
-                               startHeight: bodyHeight(kind),
-                               originalStoredHeight: sections[kind].storedBodyHeight,
-                               automationStartHeight: bodyHeight(.automation),
-                               automationOriginalStoredHeight: sections[.automation].storedBodyHeight)
+        resize = ResizeSession(
+            kind: kind,
+            startHeight: bodyHeight(kind),
+            originalStoredHeight: sections[kind].storedBodyHeight,
+            automationStartHeight: bodyHeight(.automation),
+            automationOriginalStoredHeight: sections[.automation].storedBodyHeight)
         return .untouched(snapshot)
     }
 
@@ -241,16 +255,19 @@ public struct EditorDrawerLayout {
 
     /// One keyboard resize step through the same resolution path, recording the
     /// resulting preference change. A zero direction is ignored.
-    public mutating func adjustResizeHandle(_ kind: DrawerSectionKind,
-                                            direction: Int) -> EditorDrawerChangeSet {
+    public mutating func adjustResizeHandle(
+        _ kind: DrawerSectionKind,
+        direction: Int
+    ) -> EditorDrawerChangeSet {
         guard direction != 0, isAvailable(kind), isVisible(kind) else {
             return .untouched(snapshot)
         }
-        let session = ResizeSession(kind: kind,
-                                    startHeight: bodyHeight(kind),
-                                    originalStoredHeight: sections[kind].storedBodyHeight,
-                                    automationStartHeight: bodyHeight(.automation),
-                                    automationOriginalStoredHeight: sections[.automation].storedBodyHeight)
+        let session = ResizeSession(
+            kind: kind,
+            startHeight: bodyHeight(kind),
+            originalStoredHeight: sections[kind].storedBodyHeight,
+            automationStartHeight: bodyHeight(.automation),
+            automationOriginalStoredHeight: sections[.automation].storedBodyHeight)
         let step = direction > 0 ? 1 : -1
         let requested = session.startHeight + step * metrics.resizeStep
         store(resolveResize(requested: requested, session: session), session: session)
@@ -272,10 +289,12 @@ public struct EditorDrawerLayout {
 
     // MARK: Resolution
 
-    private mutating func publish(preferences: [EditorDrawerSectionPreference] = [],
-                                  activePagePreference: DrawerSectionKind? = nil,
-                                  focusRequest: EditorDrawerFocusRequest? = nil,
-                                  cancelledSections: [DrawerSectionKind] = []) -> EditorDrawerChangeSet {
+    private mutating func publish(
+        preferences: [EditorDrawerSectionPreference] = [],
+        activePagePreference: DrawerSectionKind? = nil,
+        focusRequest: EditorDrawerFocusRequest? = nil,
+        cancelledSections: [DrawerSectionKind] = []
+    ) -> EditorDrawerChangeSet {
         let next = resolveSnapshot()
         let published: Bool
         if next == snapshot {
@@ -284,30 +303,36 @@ public struct EditorDrawerLayout {
             snapshot = next
             published = true
         }
-        return EditorDrawerChangeSet(published: published, snapshot: snapshot,
-                                     focusRequest: focusRequest,
-                                     sectionPreferences: preferences,
-                                     activePagePreference: activePagePreference,
-                                     cancelledSections: cancelledSections)
+        return EditorDrawerChangeSet(
+            published: published, snapshot: snapshot,
+            focusRequest: focusRequest,
+            sectionPreferences: preferences,
+            activePagePreference: activePagePreference,
+            cancelledSections: cancelledSections)
     }
 
     /// A visibility or active-page transition: cancels the affected pages first,
     /// then publishes the new state and the focus request.
-    private mutating func transition(previousVisibility: KindValues<Bool>,
-                                     previousActive: DrawerSectionKind,
-                                     preferences: [EditorDrawerSectionPreference],
-                                     activePagePreference: DrawerSectionKind?,
-                                     drawerOwnsFocus: Bool) -> EditorDrawerChangeSet {
+    private mutating func transition(
+        previousVisibility: KindValues<Bool>,
+        previousActive: DrawerSectionKind,
+        preferences: [EditorDrawerSectionPreference],
+        activePagePreference: DrawerSectionKind?,
+        drawerOwnsFocus: Bool
+    ) -> EditorDrawerChangeSet {
         let cancelled = cancelTransition(from: previousVisibility, previousActive: previousActive)
         let focus = focusRequest(drawerOwnsFocus: drawerOwnsFocus)
-        return publish(preferences: preferences, activePagePreference: activePagePreference,
-                       focusRequest: focus, cancelledSections: cancelled)
+        return publish(
+            preferences: preferences, activePagePreference: activePagePreference,
+            focusRequest: focus, cancelledSections: cancelled)
     }
 
     /// Each kind hidden by the transition, plus each kind losing the active slot
     /// while it was visible, cancels its attached page synchronously.
-    private func cancelTransition(from previousVisibility: KindValues<Bool>,
-                                  previousActive: DrawerSectionKind) -> [DrawerSectionKind] {
+    private func cancelTransition(
+        from previousVisibility: KindValues<Bool>,
+        previousActive: DrawerSectionKind
+    ) -> [DrawerSectionKind] {
         let activeChanged = previousActive != activePage
         var cancelled: [DrawerSectionKind] = []
         for kind in DrawerSectionKind.stackOrder where previousVisibility[kind] {
@@ -457,21 +482,25 @@ public struct EditorDrawerLayout {
             resolvedHeight = Self.clamp(requested, minimum: minimum, maximum: maximumForResized)
             if requested > maximumForResized {
                 let automationMaximum = max(minimum, availableBodyHeight - resolvedHeight)
-                resolvedAutomation = Self.clamp(session.automationStartHeight
-                                                    + requested - maximumForResized,
-                                                minimum: minimum, maximum: automationMaximum)
+                resolvedAutomation = Self.clamp(
+                    session.automationStartHeight
+                        + requested - maximumForResized,
+                    minimum: minimum, maximum: automationMaximum)
             }
         } else {
-            resolvedHeight = Self.clamp(requested, minimum: minimum,
-                                        maximum: max(minimum, availableBodyHeight))
+            resolvedHeight = Self.clamp(
+                requested, minimum: minimum,
+                maximum: max(minimum, availableBodyHeight))
         }
 
-        var height = resolvedHeight == session.startHeight
+        var height =
+            resolvedHeight == session.startHeight
             ? session.originalStoredHeight : resolvedHeight
         if let current = height, let maximum = sections[session.kind].page?.bodyPolicy.maximumBodyHeight {
             height = max(minimum, min(current, maximum))
         }
-        let automation = resolvedAutomation == session.automationStartHeight
+        let automation =
+            resolvedAutomation == session.automationStartHeight
             ? session.automationOriginalStoredHeight : resolvedAutomation
         return ResizeResolution(height: height, spillAutomation: spill, automationHeight: automation)
     }
@@ -489,7 +518,8 @@ public struct EditorDrawerLayout {
     private func resizePreferences(_ session: ResizeSession) -> [EditorDrawerSectionPreference] {
         var preferences: [EditorDrawerSectionPreference] = []
         if isAvailable(session.kind),
-           sections[session.kind].storedBodyHeight != session.originalStoredHeight {
+            sections[session.kind].storedBodyHeight != session.originalStoredHeight
+        {
             preferences.append(preferenceRecord(session.kind))
         }
         let spill = session.kind == .voiceChanges && isVisible(.automation) && isAvailable(.automation)
@@ -500,8 +530,9 @@ public struct EditorDrawerLayout {
     }
 
     private func preferenceRecord(_ kind: DrawerSectionKind) -> EditorDrawerSectionPreference {
-        EditorDrawerSectionPreference(kind: kind, visible: sections[kind].visible,
-                                      storedBodyHeight: sections[kind].storedBodyHeight)
+        EditorDrawerSectionPreference(
+            kind: kind, visible: sections[kind].visible,
+            storedBodyHeight: sections[kind].storedBodyHeight)
     }
 
     private var visibility: KindValues<Bool> {

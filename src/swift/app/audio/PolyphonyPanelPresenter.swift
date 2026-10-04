@@ -93,12 +93,14 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
     /// Rebind the selected document, without carrying its diagnostic rows to a new song.
     @QtIgnored
     public func setContext(session: DocumentSession?) {
-        trackNames = session.map { document in
-            (0..<Int(MAX_TRACKS)).map { document.document.trackName($0) }
-        } ?? []
-        voiceNames = session?.bankSlots.enumerated().map { index, slot in
-            VoiceLanePolicy.label(slot: index, view: slot)
-        } ?? []
+        trackNames =
+            session.map { document in
+                (0..<Int(MAX_TRACKS)).map { document.document.trackName($0) }
+            } ?? []
+        voiceNames =
+            session?.bankSlots.enumerated().map { index, slot in
+                VoiceLanePolicy.label(slot: index, view: slot)
+            } ?? []
         ticksPerBeat = UInt32(max(1, session?.document.ticksPerBeat ?? 24))
         signatures = session?.document.timeSignatures ?? []
         clear()
@@ -132,13 +134,19 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
         let pcmCount = min(Int(snapshot.maxPcmChannels), Int(MAX_PCM_CHANNELS), snapshot.pcm.count)
         if lastChannelSnapshot.map({ Self.sameChannels($0, snapshot) }) != true {
             pcm.reset(to: makeChannels(snapshot.pcm.prefix(pcmCount), cgb: false, shadow: false))
-            cgb.reset(to: makeChannels(snapshot.cgb.prefix(Int(MAX_CGB_CHANNELS)), cgb: true,
-                                       shadow: false))
+            cgb.reset(
+                to: makeChannels(
+                    snapshot.cgb.prefix(Int(MAX_CGB_CHANNELS)), cgb: true,
+                    shadow: false))
             if snapshot.invert {
-                shadowPcm.reset(to: makeChannels(snapshot.pcm.dropFirst(Int(MAX_PCM_CHANNELS))
-                    .prefix(Int(MAX_PCM_CHANNELS)), cgb: false, shadow: true))
-                shadowCgb.reset(to: makeChannels(snapshot.cgb.dropFirst(Int(MAX_CGB_CHANNELS))
-                    .prefix(Int(MAX_CGB_CHANNELS)), cgb: true, shadow: true))
+                shadowPcm.reset(
+                    to: makeChannels(
+                        snapshot.pcm.dropFirst(Int(MAX_PCM_CHANNELS))
+                            .prefix(Int(MAX_PCM_CHANNELS)), cgb: false, shadow: true))
+                shadowCgb.reset(
+                    to: makeChannels(
+                        snapshot.cgb.dropFirst(Int(MAX_CGB_CHANNELS))
+                            .prefix(Int(MAX_CGB_CHANNELS)), cgb: true, shadow: true))
             } else {
                 shadowPcm.reset(to: [])
                 shadowCgb.reset(to: [])
@@ -156,8 +164,10 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
         }
         let capacity = snapshot.events.count
         if capacity > 0 {
-            let first = max(seenTotal, snapshot.eventTotal > UInt32(capacity)
-                ? snapshot.eventTotal - UInt32(capacity) : 0)
+            let first = max(
+                seenTotal,
+                snapshot.eventTotal > UInt32(capacity)
+                    ? snapshot.eventTotal - UInt32(capacity) : 0)
             if first < snapshot.eventTotal {
                 for index in first..<snapshot.eventTotal {
                     eventRows.insert(makeEvent(snapshot.events[Int(index) % capacity]), at: 0)
@@ -190,10 +200,13 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
             guard drop != 0 || steal != 0 || tail != 0 else { continue }
             let name = i < trackNames.count ? trackNames[i].trimmingCharacters(in: .whitespacesAndNewlines) : ""
             let remaining = now.duration(to: flashUntil[i]).components
-            let alpha = now < flashUntil[i]
+            let alpha =
+                now < flashUntil[i]
                 ? 0.55 * (Double(remaining.seconds) + Double(remaining.attoseconds) / 1e18) : 0
-            current.append(PolyphonyCounterRow(name: name.isEmpty ? "Track \(i + 1)" : name,
-                dropped: Int(drop), cutOff: Int(steal), tailCut: Int(tail), flashAlpha: alpha))
+            current.append(
+                PolyphonyCounterRow(
+                    name: name.isEmpty ? "Track \(i + 1)" : name,
+                    dropped: Int(drop), cutOff: Int(steal), tailCut: Int(tail), flashAlpha: alpha))
         }
         counters.reset(to: current)
         counterCount = current.count
@@ -224,37 +237,47 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
         setPublished(showingShadow, false) { showingShadow = $0 }
     }
 
-    private static func sameChannels(_ old: AudioPolySnapshot,
-                                     _ new: AudioPolySnapshot) -> Bool {
+    private static func sameChannels(
+        _ old: AudioPolySnapshot,
+        _ new: AudioPolySnapshot
+    ) -> Bool {
         guard old.maxPcmChannels == new.maxPcmChannels, old.invert == new.invert else {
             return false
         }
         let pcmCount = min(Int(new.maxPcmChannels), Int(MAX_PCM_CHANNELS))
         guard sameChannelSlice(old.pcm.prefix(pcmCount), new.pcm.prefix(pcmCount)),
-              sameChannelSlice(old.cgb.prefix(Int(MAX_CGB_CHANNELS)),
-                               new.cgb.prefix(Int(MAX_CGB_CHANNELS)))
+            sameChannelSlice(
+                old.cgb.prefix(Int(MAX_CGB_CHANNELS)),
+                new.cgb.prefix(Int(MAX_CGB_CHANNELS)))
         else { return false }
         guard new.invert else { return true }
-        return sameChannelSlice(old.pcm.dropFirst(Int(MAX_PCM_CHANNELS)).prefix(Int(MAX_PCM_CHANNELS)),
-                                new.pcm.dropFirst(Int(MAX_PCM_CHANNELS)).prefix(Int(MAX_PCM_CHANNELS)))
-            && sameChannelSlice(old.cgb.dropFirst(Int(MAX_CGB_CHANNELS)).prefix(Int(MAX_CGB_CHANNELS)),
-                                new.cgb.dropFirst(Int(MAX_CGB_CHANNELS)).prefix(Int(MAX_CGB_CHANNELS)))
+        return sameChannelSlice(
+            old.pcm.dropFirst(Int(MAX_PCM_CHANNELS)).prefix(Int(MAX_PCM_CHANNELS)),
+            new.pcm.dropFirst(Int(MAX_PCM_CHANNELS)).prefix(Int(MAX_PCM_CHANNELS)))
+            && sameChannelSlice(
+                old.cgb.dropFirst(Int(MAX_CGB_CHANNELS)).prefix(Int(MAX_CGB_CHANNELS)),
+                new.cgb.dropFirst(Int(MAX_CGB_CHANNELS)).prefix(Int(MAX_CGB_CHANNELS)))
     }
 
-    private static func sameChannelSlice(_ first: ArraySlice<AudioPolyChannel>,
-                                         _ second: ArraySlice<AudioPolyChannel>) -> Bool {
+    private static func sameChannelSlice(
+        _ first: ArraySlice<AudioPolyChannel>,
+        _ second: ArraySlice<AudioPolyChannel>
+    ) -> Bool {
         guard first.count == second.count else { return false }
         for (old, new) in zip(first, second) {
             if old.on != new.on || old.releasing != new.releasing
-                || old.track != new.track || old.midiKey != new.midiKey {
+                || old.track != new.track || old.midiKey != new.midiKey
+            {
                 return false
             }
         }
         return true
     }
 
-    private func makeChannels(_ channels: ArraySlice<AudioPolyChannel>, cgb isCgb: Bool,
-                              shadow: Bool) -> [PolyphonyChannelRow] {
+    private func makeChannels(
+        _ channels: ArraySlice<AudioPolyChannel>, cgb isCgb: Bool,
+        shadow: Bool
+    ) -> [PolyphonyChannelRow] {
         channels.enumerated().map { index, channel in
             let state = !channel.on ? 0 : shadow ? 3 : channel.releasing ? 2 : 1
             let label: String
@@ -273,16 +296,19 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
         let tick = event.tick == UInt32.max ? -1 : Double(event.tick)
         let pos = tick < 0 ? "live" : formatPosition(event.tick)
         let voiceIndex = Int(event.program)
-        let voice = voiceIndex < voiceNames.count
+        let voice =
+            voiceIndex < voiceNames.count
             ? voiceNames[voiceIndex].trimmingCharacters(in: .whitespacesAndNewlines) : ""
-        let who = "Trk \(Int(event.trackIndex) + 1)  \(Self.keyName(event.midiKey)) (\(voice.isEmpty ? "voice \(voiceIndex)" : voice))"
+        let who =
+            "Trk \(Int(event.trackIndex) + 1)  \(Self.keyName(event.midiKey)) (\(voice.isEmpty ? "voice \(voiceIndex)" : voice))"
         let suffix: String
         switch event.type {
         case 0: suffix = "dropped (no channel available)"
         case 1: suffix = "cut off by Trk \(Int(event.byTrack) + 1)"
         default: suffix = "release tail cut by Trk \(Int(event.byTrack) + 1)"
         }
-        return PolyphonyEventRow(text: "\(pos) | \(who): \(suffix)", kind: Int(event.type),
+        return PolyphonyEventRow(
+            text: "\(pos) | \(who): \(suffix)", kind: Int(event.type),
             tick: tick, track: Int(event.trackIndex), key: Int(event.midiKey))
     }
 

@@ -57,7 +57,10 @@ public final class SampleStudioPresenter: QmlUncreatable {
         sampleName = source.suggestedName
         sourceFrameCount = source.frameCount
         sourceLine = SampleStudioReadouts.sourceLine(source)
-        rateChoices = ["Keep source (\(SampleStudioReadouts.decimal(source.sampleRate, places: source.sampleRate == floor(source.sampleRate) ? 0 : 2)) Hz)"] + Self.rates.map(String.init)
+        rateChoices =
+            [
+                "Keep source (\(SampleStudioReadouts.decimal(source.sampleRate, places: source.sampleRate == floor(source.sampleRate) ? 0 : 2)) Hz)"
+            ] + Self.rates.map(String.init)
         sync()
         refreshName()
     }
@@ -72,7 +75,10 @@ public final class SampleStudioPresenter: QmlUncreatable {
         if let editName {
             let valid = sampleName == editName
             canCommit = valid
-            nameStatus = valid ? "Saves over DirectSoundWaveData_\(editName)'s sample data" : "the sample keeps its registered name (\(editName))."
+            nameStatus =
+                valid
+                ? "Saves over DirectSoundWaveData_\(editName)'s sample data"
+                : "the sample keeps its registered name (\(editName))."
         } else if let error = validateNewName(sampleName) {
             canCommit = false
             nameStatus = error
@@ -94,10 +100,11 @@ public final class SampleStudioPresenter: QmlUncreatable {
     private func update(_ mergeKey: Int, _ change: (inout SampleEditParams) -> Void) {
         var next = params
         change(&next)
-        next.exactPitchOverride = source.exactPitch != 0
-            && next.targetRate == source.sampleRate
-            && next.baseKey == source.baseKey
-            && next.fineTuneCents == sourceCents ? source.exactPitch : 0
+        next.exactPitchOverride =
+            source.exactPitch != 0
+                && next.targetRate == source.sampleRate
+                && next.baseKey == source.baseKey
+                && next.fineTuneCents == sourceCents ? source.exactPitch : 0
         commitParams(next, mergeKey: mergeKey)
     }
 
@@ -184,10 +191,14 @@ public final class SampleStudioPresenter: QmlUncreatable {
         baseKeyText = "\(midiKeyName(p.baseKey)) (\(p.baseKey))"
         fineTuneCents = p.fineTuneCents
         normalizeMode = p.normalizeMode.rawValue
-        rateIndex = p.targetRate == source.sampleRate
+        rateIndex =
+            p.targetRate == source.sampleRate
             ? 0 : Self.rates.firstIndex(where: { Double($0) == p.targetRate }).map { $0 + 1 } ?? -1
-        rateText = rateIndex == 0 ? rateChoices[0]
-            : (p.targetRate.rounded() == p.targetRate ? SampleStudioReadouts.decimal(p.targetRate, places: 0) : String(p.targetRate))
+        rateText =
+            rateIndex == 0
+            ? rateChoices[0]
+            : (p.targetRate.rounded() == p.targetRate
+                ? SampleStudioReadouts.decimal(p.targetRate, places: 0) : String(p.targetRate))
         let result = processed
         gainReadout = SampleStudioReadouts.gain(result, mode: p.normalizeMode)
         outputSummary = SampleStudioReadouts.summary(source: source, output: result)

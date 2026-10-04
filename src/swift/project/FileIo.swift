@@ -44,10 +44,11 @@ private final class FileIoOwner {
     init(projectRoot: String) {
         self.projectRoot = projectRoot
         handler = .allocate(capacity: 1)
-        handler.initialize(to: PdFileIoHandler(
-            context: Unmanaged.passUnretained(self).toOpaque(),
-            readBatch: readBatchCallback,
-            releaseBatch: releaseBatchCallback))
+        handler.initialize(
+            to: PdFileIoHandler(
+                context: Unmanaged.passUnretained(self).toOpaque(),
+                readBatch: readBatchCallback,
+                releaseBatch: releaseBatchCallback))
     }
 
     deinit {
@@ -89,7 +90,7 @@ private final class FileReadBatch: @unchecked Sendable {
     private let paths: [String]
     private let state: Mutex<State>
     private let completed = NSCondition()
-    private var workersRemaining: Int // Protected by completed.
+    private var workersRemaining: Int  // Protected by completed.
 
     init(projectRoot: String, paths: [String], workerCount: Int) {
         self.projectRoot = projectRoot
@@ -160,8 +161,9 @@ private let readBatchCallback: VoicegroupReadBatchFn = {
     requested.reserveCapacity(count)
     for index in 0..<count {
         guard let path = paths[index], path.pointee != 0 else {
-            writeFileIoError("Voicegroup file-read batch contains an empty path.",
-                             into: error, capacity: errorCapacity)
+            writeFileIoError(
+                "Voicegroup file-read batch contains an empty path.",
+                into: error, capacity: errorCapacity)
             return false
         }
         requested.append(String(cString: path))

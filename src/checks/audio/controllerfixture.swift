@@ -21,8 +21,12 @@ internal final class AudioControllerCheckFixture {
         voices = .allocate(capacity: 128)
         samples.initialize(repeating: 0, count: 65)
         for i in 0..<64 {
-            samples[i] = constant ? 100 : square ? (i < 32 ? 100 : -100)
-                : Int8((100 * sin(Double(i) * 2 * .pi / 64)).rounded())
+            samples[i] =
+                constant
+                ? 100
+                : square
+                    ? (i < 32 ? 100 : -100)
+                    : Int8((100 * sin(Double(i) * 2 * .pi / 64)).rounded())
         }
         samples[64] = samples[63]
         wave.initialize(to: WaveData())
@@ -53,8 +57,10 @@ internal final class AudioControllerCheckFixture {
         samples.deinitialize(count: 65)
         samples.deallocate()
     }
-    func timeline(silent: Bool = false, changed: Bool = false, looped: Bool = false,
-                  keys: [UInt8] = [60], velocity: UInt8 = 100, retriggerAt: Tick? = nil) -> PlaybackTimeline {
+    func timeline(
+        silent: Bool = false, changed: Bool = false, looped: Bool = false,
+        keys: [UInt8] = [60], velocity: UInt8 = 100, retriggerAt: Tick? = nil
+    ) -> PlaybackTimeline {
         var events: [MidiEvent] = [.channel(tick: 0, status: 0xC0, data0: 0)]
         if changed { events.append(.channel(tick: 0, status: 0xB0, data0: 0x78, data1: 0)) }
         if !silent {
@@ -72,10 +78,12 @@ internal final class AudioControllerCheckFixture {
             conductor.append(.meta(tick: 24, type: 0x01, data: Array("[".utf8)))
             conductor.append(.meta(tick: 96, type: 0x01, data: Array("]".utf8)))
         }
-        let file = MidiFile(division: 24, chunks: [
-            MidiChunk(events: conductor, endTick: 4800),
-            MidiChunk(events: events, endTick: 4800),
-        ])
+        let file = MidiFile(
+            division: 24,
+            chunks: [
+                MidiChunk(events: conductor, endTick: 4800),
+                MidiChunk(events: events, endTick: 4800),
+            ])
         return PlaybackTimeline.build(file: file, sampleRate: 48_000)
     }
     func render(_ frames: Int, chunk: Int = 512) -> [Float] {

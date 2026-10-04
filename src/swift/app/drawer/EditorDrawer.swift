@@ -10,8 +10,10 @@ public struct EditorDrawerBodyPolicy: Sendable {
     /// Default body height for the pushed host height and metrics.
     public var preferredBodyHeight: @Sendable (Int, EditorDrawerMetrics) -> Int
 
-    public init(maximumBodyHeight: Int? = nil,
-                preferredBodyHeight: @escaping @Sendable (Int, EditorDrawerMetrics) -> Int) {
+    public init(
+        maximumBodyHeight: Int? = nil,
+        preferredBodyHeight: @escaping @Sendable (Int, EditorDrawerMetrics) -> Int
+    ) {
         self.maximumBodyHeight = maximumBodyHeight
         self.preferredBodyHeight = preferredBodyHeight
     }
@@ -105,7 +107,6 @@ public final class EditorDrawerPresenter {
     @QtIgnored public var onSectionVisibilityChanged: ((DrawerSectionKind, Bool) -> Void)?
     @QtIgnored public var onChromeChanged: ((EditorDrawerChromeState) -> Void)?
 
-
     private var layout = EditorDrawerLayout()
     private let unresolvedSection = EditorDrawerSectionState()
 
@@ -124,37 +125,47 @@ public final class EditorDrawerPresenter {
 
     /// The composition's layout-fact push. `fontPx` is the grid's `baseFontPx`; the
     /// application font's line spacing sizes the bar row only.
-    public func configureLayout(hostWidth: Int, hostHeight: Int, gutterWidth: Int,
-                                fontPx: Double, appFontLineSpacing: Double) {
-        publish(layout.configureMetrics(EditorDrawerMetrics.resolve(
-            baseFontPx: fontPx, appFontLineSpacing: appFontLineSpacing)))
-        publish(layout.configureHost(hostWidth: hostWidth, hostHeight: hostHeight,
-                                     gutterWidth: gutterWidth))
+    public func configureLayout(
+        hostWidth: Int, hostHeight: Int, gutterWidth: Int,
+        fontPx: Double, appFontLineSpacing: Double
+    ) {
+        publish(
+            layout.configureMetrics(
+                EditorDrawerMetrics.resolve(
+                    baseFontPx: fontPx, appFontLineSpacing: appFontLineSpacing)))
+        publish(
+            layout.configureHost(
+                hostWidth: hostWidth, hostHeight: hostHeight,
+                gutterWidth: gutterWidth))
     }
 
     @QtIgnored
     public var chromeState: EditorDrawerChromeState {
         var state = EditorDrawerChromeState()
-        state.velocity = .init(visible: layout.isVisible(.velocity),
-                               height: layout.storedBodyHeight(.velocity))
-        state.automation = .init(visible: layout.isVisible(.automation),
-                                 height: layout.storedBodyHeight(.automation))
-        state.voiceChanges = .init(visible: layout.isVisible(.voiceChanges),
-                                   height: layout.storedBodyHeight(.voiceChanges))
+        state.velocity = .init(
+            visible: layout.isVisible(.velocity),
+            height: layout.storedBodyHeight(.velocity))
+        state.automation = .init(
+            visible: layout.isVisible(.automation),
+            height: layout.storedBodyHeight(.automation))
+        state.voiceChanges = .init(
+            visible: layout.isVisible(.voiceChanges),
+            height: layout.storedBodyHeight(.voiceChanges))
         state.activePage = layout.activePage
         return state
     }
 
     @QtIgnored
     public func applyChrome(_ state: EditorDrawerChromeState) {
-        publish(layout.restorePreferences(
-            velocityVisible: state.velocity.visible ? 1 : 0,
-            velocityHeight: state.velocity.height ?? 0,
-            automationVisible: state.automation.visible ? 1 : 0,
-            automationHeight: state.automation.height ?? 0,
-            voiceChangesVisible: state.voiceChanges.visible ? 1 : 0,
-            voiceChangesHeight: state.voiceChanges.height ?? 0,
-            activePage: state.activePage.rawValue))
+        publish(
+            layout.restorePreferences(
+                velocityVisible: state.velocity.visible ? 1 : 0,
+                velocityHeight: state.velocity.height ?? 0,
+                automationVisible: state.automation.visible ? 1 : 0,
+                automationHeight: state.automation.height ?? 0,
+                voiceChangesVisible: state.voiceChanges.visible ? 1 : 0,
+                voiceChangesHeight: state.voiceChanges.height ?? 0,
+                activePage: state.activePage.rawValue))
     }
 
     public func toggleSection(kind: Int, drawerOwnsFocus: Bool) {
@@ -185,8 +196,10 @@ public final class EditorDrawerPresenter {
             publishDetachedChange(state, section: section)
             return
         }
-        publish(layout.setSectionVisible(section, visible: visible,
-                                         drawerOwnsFocus: drawerOwnsFocus))
+        publish(
+            layout.setSectionVisible(
+                section, visible: visible,
+                drawerOwnsFocus: drawerOwnsFocus))
     }
 
     public func setSectionBodyHeight(kind: Int, height: Int) {
@@ -205,8 +218,10 @@ public final class EditorDrawerPresenter {
         publish(layout.setSectionBodyHeight(section, height: height))
     }
 
-    private func publishDetachedChange(_ state: EditorDrawerChromeState,
-                                       section: DrawerSectionKind) {
+    private func publishDetachedChange(
+        _ state: EditorDrawerChromeState,
+        section: DrawerSectionKind
+    ) {
         guard state != chromeState else { return }
         let preference: DrawerChromeSection
         switch section {
@@ -214,8 +229,9 @@ public final class EditorDrawerPresenter {
         case .velocity: preference = state.velocity
         case .voiceChanges: preference = state.voiceChanges
         }
-        drawerSectionPreferenceChanged(kind: section.rawValue, visible: preference.visible,
-                                       height: preference.height ?? 0)
+        drawerSectionPreferenceChanged(
+            kind: section.rawValue, visible: preference.visible,
+            height: preference.height ?? 0)
         onChromeChanged?(state)
     }
 
@@ -290,9 +306,10 @@ public final class EditorDrawerPresenter {
         }
         if change.published { apply(change.snapshot) }
         for preference in change.sectionPreferences {
-            drawerSectionPreferenceChanged(kind: preference.kind.rawValue,
-                                           visible: preference.visible,
-                                           height: preference.storedBodyHeight ?? 0)
+            drawerSectionPreferenceChanged(
+                kind: preference.kind.rawValue,
+                visible: preference.visible,
+                height: preference.storedBodyHeight ?? 0)
         }
         for (kind, visible) in visibilityChanges {
             onSectionVisibilityChanged?(kind, visible)

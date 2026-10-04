@@ -32,7 +32,8 @@ public enum SampleReopen {
                     fromSource: true, provenance: provenance)
             }
         }
-        return Result(sample: try SampleImport.decode(wav, sourcePath: wavPath),
+        return Result(
+            sample: try SampleImport.decode(wav, sourcePath: wavPath),
             restoredParams: nil, fromSource: false, provenance: nil)
     }
 }

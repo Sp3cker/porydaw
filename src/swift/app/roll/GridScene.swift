@@ -180,9 +180,10 @@ public final class GridScene {
         let camera = input.camera
         let snapshot = camera.snapshot
         let row = camera.projection.row(forPitch: input.hoverKey)
-        guard let top = camera.projection.rowTop(
+        guard
+            let top = camera.projection.rowTop(
                 row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY, dpr: m.dpr),
-              let bottom = camera.projection.rowBottom(
+            let bottom = camera.projection.rowBottom(
                 row, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY, dpr: m.dpr)
         else { return }
         let widthKey = KeyboardWidthKey(
@@ -199,16 +200,22 @@ public final class GridScene {
         let name = input.keyboardNames?[input.hoverKey] ?? ""
         let text = name.isEmpty ? GridScene.keyName(input.hoverKey) : name
         hoverChipText = text
-        let width = (keyboardChipWidths?[input.hoverKey]
-                     ?? (name.isEmpty ? t.chipAdvance(pitch: input.hoverKey)
-                         : t.chipAdvance(text))) + m.chipHPadding
+        let width =
+            (keyboardChipWidths?[input.hoverKey]
+                ?? (name.isEmpty
+                    ? t.chipAdvance(pitch: input.hoverKey)
+                    : t.chipAdvance(text)))
+            + m.chipHPadding
         let height = t.chipHeight + m.chipVPadding
-        let y = min(max(0, (top + bottom) / 2 - height / 2),
-                    max(0, snapshot.rollHeight - height))
+        let y = min(
+            max(0, (top + bottom) / 2 - height / 2),
+            max(0, snapshot.rollHeight - height))
         let x = max(0, m.keyboardWidth - m.chipRightInset - width)
-        guard hoverChipRect["x"] as? Double != x || hoverChipRect["y"] as? Double != y
-            || hoverChipRect["width"] as? Double != width
-            || hoverChipRect["height"] as? Double != height else { return }
+        guard
+            hoverChipRect["x"] as? Double != x || hoverChipRect["y"] as? Double != y
+                || hoverChipRect["width"] as? Double != width
+                || hoverChipRect["height"] as? Double != height
+        else { return }
         hoverChipRect = ["x": x, "y": y, "width": width, "height": height]
     }
 

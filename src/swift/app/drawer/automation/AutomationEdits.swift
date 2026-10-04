@@ -19,12 +19,15 @@ public struct AutomationLaneEdit: Equatable, Sendable {
 
 /// `NodeLaneEdit`: canonicalization, held-value lookup and range comparison.
 public enum AutomationLaneReplacement {
-    public static func canonical(_ points: [AutomationLanePoint], begin: Tick, end: Tick,
-                                 minimum: Int, maximum: Int, priorValue: Int?,
-                                 preserveEqualValues: Bool = false) -> [AutomationLanePoint] {
+    public static func canonical(
+        _ points: [AutomationLanePoint], begin: Tick, end: Tick,
+        minimum: Int, maximum: Int, priorValue: Int?,
+        preserveEqualValues: Bool = false
+    ) -> [AutomationLanePoint] {
         let ordered = points.enumerated().sorted(by: {
-            $0.element.tick == $1.element.tick ? $0.offset < $1.offset
-                                               : $0.element.tick < $1.element.tick
+            $0.element.tick == $1.element.tick
+                ? $0.offset < $1.offset
+                : $0.element.tick < $1.element.tick
         }).map(\.element)
         var result: [AutomationLanePoint] = []
         var prior = priorValue
@@ -48,8 +51,10 @@ public enum AutomationLaneReplacement {
 
     /// `heldValue`: the value in effect at `tick`, or at the last point before
     /// it when `inclusive` is false.
-    public static func held(_ points: [AutomationLanePoint], at tick: Tick,
-                            inclusive: Bool) -> Int? {
+    public static func held(
+        _ points: [AutomationLanePoint], at tick: Tick,
+        inclusive: Bool
+    ) -> Int? {
         let index = automationPartitionIndex(points) {
             $0.tick < tick || (inclusive && $0.tick == tick)
         }
@@ -58,37 +63,48 @@ public enum AutomationLaneReplacement {
 
     /// `rangeMatches`: do the original points inside `[begin, end]` already equal
     /// the replacement, tick for tick and value for value?
-    public static func matches(_ original: [AutomationLanePoint], begin: Tick, end: Tick,
-                               replacement: [AutomationLanePoint]) -> Bool {
+    public static func matches(
+        _ original: [AutomationLanePoint], begin: Tick, end: Tick,
+        replacement: [AutomationLanePoint]
+    ) -> Bool {
         original.filter { $0.tick >= begin && $0.tick <= end } == replacement
     }
 
     /// `replacePointRange`: the replacement stands as given.
-    public static func pointRange(_ freeze: AutomationLaneFreeze, begin: Tick, end: Tick,
-                                 points: [AutomationLanePoint]) -> AutomationLaneEdit {
-        AutomationLaneEdit(parameter: freeze.parameter, revision: freeze.revision,
-                           tickBegin: begin, tickEnd: end, points: points,
-                           unchanged: matches(freeze.original, begin: begin, end: end,
-                                              replacement: points))
+    public static func pointRange(
+        _ freeze: AutomationLaneFreeze, begin: Tick, end: Tick,
+        points: [AutomationLanePoint]
+    ) -> AutomationLaneEdit {
+        AutomationLaneEdit(
+            parameter: freeze.parameter, revision: freeze.revision,
+            tickBegin: begin, tickEnd: end, points: points,
+            unchanged: matches(
+                freeze.original, begin: begin, end: end,
+                replacement: points))
     }
 
     /// `replaceHeldSpan`: a lane that keeps its value past the stroke re-anchors
     /// the original held value one grid step after the release, so drawing 25
     /// over a flat 85 lane leaves the tail at 85.
-    public static func heldSpan(_ freeze: AutomationLaneFreeze, begin: Tick, end: Tick,
-                                points: [AutomationLanePoint]) -> AutomationLaneEdit {
+    public static func heldSpan(
+        _ freeze: AutomationLaneFreeze, begin: Tick, end: Tick,
+        points: [AutomationLanePoint]
+    ) -> AutomationLaneEdit {
         var replacement = points
         if end < freeze.songEndTick, let endpoint = held(freeze.original, at: end, inclusive: true) {
             replacement.append(AutomationLanePoint(tick: end, value: endpoint))
         }
-        let canonical = canonical(replacement, begin: begin, end: end,
-                                  minimum: freeze.metadata.minimum,
-                                  maximum: freeze.metadata.maximum,
-                                  priorValue: held(freeze.original, at: begin, inclusive: false))
-        return AutomationLaneEdit(parameter: freeze.parameter, revision: freeze.revision,
-                                  tickBegin: begin, tickEnd: end, points: canonical,
-                                  unchanged: matches(freeze.original, begin: begin, end: end,
-                                                     replacement: canonical))
+        let canonical = canonical(
+            replacement, begin: begin, end: end,
+            minimum: freeze.metadata.minimum,
+            maximum: freeze.metadata.maximum,
+            priorValue: held(freeze.original, at: begin, inclusive: false))
+        return AutomationLaneEdit(
+            parameter: freeze.parameter, revision: freeze.revision,
+            tickBegin: begin, tickEnd: end, points: canonical,
+            unchanged: matches(
+                freeze.original, begin: begin, end: end,
+                replacement: canonical))
     }
 }
 
@@ -170,8 +186,10 @@ public enum AutomationNodeResolver {
         public let snapshot: AutomationLaneSnapshot
         public let ticks: [Tick]
 
-        public init(parameter: AutomationParameter, snapshot: AutomationLaneSnapshot,
-                    ticks: [Tick]) {
+        public init(
+            parameter: AutomationParameter, snapshot: AutomationLaneSnapshot,
+            ticks: [Tick]
+        ) {
             self.parameter = parameter
             self.snapshot = snapshot
             self.ticks = ticks
@@ -183,7 +201,8 @@ public enum AutomationNodeResolver {
         var plan = AutomationDocumentPlan(revision: revision)
         var removals: [AutomationLanePointKey: LanePoint] = [:]
         for request in requests {
-            let moved = request.facts.parameter.isTempo
+            let moved =
+                request.facts.parameter.isTempo
                 ? tempoMoves(request, plan: &plan)
                 : laneMoves(request, plan: &plan, removals: &removals)
             guard moved else { return nil }
@@ -194,8 +213,10 @@ public enum AutomationNodeResolver {
         return plan
     }
 
-    public static func deletions(revision: UInt64,
-                                 _ requests: [LaneDeletes]) -> AutomationDocumentPlan? {
+    public static func deletions(
+        revision: UInt64,
+        _ requests: [LaneDeletes]
+    ) -> AutomationDocumentPlan? {
         var plan = AutomationDocumentPlan(revision: revision)
         var removals: [AutomationLanePointKey: LanePoint] = [:]
         for request in requests {
@@ -233,8 +254,10 @@ public enum AutomationNodeResolver {
             .map(\.element)
     }
 
-    private static func laneMoves(_ request: LaneMoves, plan: inout AutomationDocumentPlan,
-                                  removals: inout [AutomationLanePointKey: LanePoint]) -> Bool {
+    private static func laneMoves(
+        _ request: LaneMoves, plan: inout AutomationDocumentPlan,
+        removals: inout [AutomationLanePointKey: LanePoint]
+    ) -> Bool {
         let facts = request.facts
         guard facts.parameter.lane != nil else { return false }
         let parameter = facts.parameter
@@ -281,8 +304,10 @@ public enum AutomationNodeResolver {
         return true
     }
 
-    private static func tempoMoves(_ request: LaneMoves,
-                                   plan: inout AutomationDocumentPlan) -> Bool {
+    private static func tempoMoves(
+        _ request: LaneMoves,
+        plan: inout AutomationDocumentPlan
+    ) -> Bool {
         let facts = request.facts
         let frozen = facts.snapshot
         var removals: [Tick: TempoPoint] = [:]
@@ -291,10 +316,13 @@ public enum AutomationNodeResolver {
             guard let source = frozen.occurrences(at: move.sourceTick).first?.tempoPoint else {
                 return false
             }
-            let bpm = Int(TimeDefaults.tempoBPM(
-                forMicrosecondsPerQuarterNote: source.microsecondsPerQuarterNote).rounded())
-            var destination = TempoPoint(tick: move.tick,
-                                         microsecondsPerQuarterNote: source.microsecondsPerQuarterNote)
+            let bpm = Int(
+                TimeDefaults.tempoBPM(
+                    forMicrosecondsPerQuarterNote: source.microsecondsPerQuarterNote
+                ).rounded())
+            var destination = TempoPoint(
+                tick: move.tick,
+                microsecondsPerQuarterNote: source.microsecondsPerQuarterNote)
             if move.value != bpm {
                 destination.microsecondsPerQuarterNote =
                     TimeDefaults.microsecondsPerQuarterNote(forBPM: move.value)
@@ -323,37 +351,45 @@ public enum AutomationRangeEditor {
     /// One lane's whole-lane replacement: the lane menu's Paste (replace) and
     /// Clear. It compares against the lane's written points, so a lane holding
     /// only a projected engine node is already empty.
-    public static func replaceLane(_ facts: AutomationFrozenFacts,
-                                   points: [AutomationLanePoint]) -> AutomationLaneEdit {
+    public static func replaceLane(
+        _ facts: AutomationFrozenFacts,
+        points: [AutomationLanePoint]
+    ) -> AutomationLaneEdit {
         let written = AutomationLaneFreeze(
             parameter: facts.parameter, revision: facts.revision, metadata: facts.metadata,
             songEndTick: facts.songEndTick, original: facts.writtenPoints)
         let clamped = AutomationLaneReplacement.canonical(
             points, begin: 0, end: TimeDefaults.noTick, minimum: facts.metadata.minimum,
             maximum: facts.metadata.maximum, priorValue: nil, preserveEqualValues: true)
-        return AutomationLaneReplacement.pointRange(written, begin: 0, end: TimeDefaults.noTick,
-                                                    points: clamped)
+        return AutomationLaneReplacement.pointRange(
+            written, begin: 0, end: TimeDefaults.noTick,
+            points: clamped)
     }
 
     /// Delete every covered occurrence inside the range: points by tick group and
     /// tempo points by tick, as one plan.
-    public static func deletion(range: TimeRange,
-                                lanes: [(parameter: AutomationParameter,
-                                         snapshot: AutomationLaneSnapshot)]) -> AutomationDocumentPlan? {
+    public static func deletion(
+        range: TimeRange,
+        lanes: [(
+            parameter: AutomationParameter,
+            snapshot: AutomationLaneSnapshot
+        )]
+    ) -> AutomationDocumentPlan? {
         guard !range.isEmpty, !lanes.isEmpty,
-              let revision = lanes.first?.snapshot.revision else { return nil }
+            let revision = lanes.first?.snapshot.revision
+        else { return nil }
         var requests: [AutomationNodeResolver.LaneDeletes] = []
         for lane in lanes {
             let ticks = Set(lane.snapshot.sources.map(\.tick)).filter { range.contains($0) }
             guard !ticks.isEmpty else { continue }
-            requests.append(AutomationNodeResolver.LaneDeletes(
-                parameter: lane.parameter, snapshot: lane.snapshot, ticks: ticks.sorted()))
+            requests.append(
+                AutomationNodeResolver.LaneDeletes(
+                    parameter: lane.parameter, snapshot: lane.snapshot, ticks: ticks.sorted()))
         }
         guard !requests.isEmpty else { return nil }
         return AutomationNodeResolver.deletions(revision: revision, requests)
     }
 }
-
 
 // MARK: - Commit policy
 
@@ -369,23 +405,27 @@ public enum AutomationCommit {
         let before = document.revision
         switch edit.parameter {
         case .tempo:
-            document.editTempo(TempoEdit(
-                remove: document.state.tempo.filter {
-                    $0.tick >= edit.tickBegin && $0.tick <= edit.tickEnd
-                },
-                add: edit.points.map {
-                    TempoPoint(tick: $0.tick,
-                               microsecondsPerQuarterNote:
-                                   TimeDefaults.microsecondsPerQuarterNote(forBPM: $0.value))
-                }))
+            document.editTempo(
+                TempoEdit(
+                    remove: document.state.tempo.filter {
+                        $0.tick >= edit.tickBegin && $0.tick <= edit.tickEnd
+                    },
+                    add: edit.points.map {
+                        TempoPoint(
+                            tick: $0.tick,
+                            microsecondsPerQuarterNote:
+                                TimeDefaults.microsecondsPerQuarterNote(forBPM: $0.value))
+                    }))
         case let .controlChange(track, controller):
-            document.writeLane(track: track, lane: .controller(controller),
-                               from: edit.tickBegin, through: edit.tickEnd,
-                               points: edit.points.map { LaneWrite(tick: $0.tick, value: $0.value) })
+            document.writeLane(
+                track: track, lane: .controller(controller),
+                from: edit.tickBegin, through: edit.tickEnd,
+                points: edit.points.map { LaneWrite(tick: $0.tick, value: $0.value) })
         case let .pitchBend(track):
-            document.writeLane(track: track, lane: .pitchBend,
-                               from: edit.tickBegin, through: edit.tickEnd,
-                               points: edit.points.map { LaneWrite(tick: $0.tick, value: $0.value) })
+            document.writeLane(
+                track: track, lane: .pitchBend,
+                from: edit.tickBegin, through: edit.tickEnd,
+                points: edit.points.map { LaneWrite(tick: $0.tick, value: $0.value) })
         }
         return document.revision != before
     }
@@ -402,8 +442,9 @@ public enum AutomationCommit {
                 track: track, lane: lane,
                 points: write.points.map { LaneWrite(tick: $0.tick, value: $0.value) })
         }
-        return document.applyRangeEdit(RangeEdit(
-            removePoints: plan.removePoints, addPoints: insertions,
-            removeTempo: plan.removeTempo, addTempo: plan.addTempo))
+        return document.applyRangeEdit(
+            RangeEdit(
+                removePoints: plan.removePoints, addPoints: insertions,
+                removeTempo: plan.removeTempo, addTempo: plan.addTempo))
     }
 }

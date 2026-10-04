@@ -16,16 +16,19 @@ extension ApplicationSession {
     }
     func openTimeSigPromptImpl(tick: Double) {
         guard let workspace, tick.isFinite, tick >= 0,
-              tick < Double(TimeDefaults.noTick) else { return }
+            tick < Double(TimeDefaults.noTick)
+        else { return }
         workspace.rulerMenu.cancelInsertTimePrompt()
         let session = workspace.session
         let target = TimeDefaults.tick(from: tick)
-        let axis = TimeAxis(map: TimeMap(
-            ticksPerBeat: UInt32(session.document.ticksPerBeat),
-            timeSigs: session.document.timeSignatures.map {
-                TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
-                             denomPow2: $0.denominatorPower)
-            }))
+        let axis = TimeAxis(
+            map: TimeMap(
+                ticksPerBeat: UInt32(session.document.ticksPerBeat),
+                timeSigs: session.document.timeSignatures.map {
+                    TimeSigPoint(
+                        tick: $0.tick, numerator: $0.numerator,
+                        denomPow2: $0.denominatorPower)
+                }))
         let signature = axis.signatureAt(target)
         pendingTimeSignature = PendingTimeSignature(
             session: session, tick: target, revision: session.document.revision,
@@ -56,13 +59,14 @@ extension ApplicationSession {
 
     func acceptTimeSigPromptImpl(numerator: Int, denominatorPow2: Int) {
         guard (1...32).contains(numerator), (0...5).contains(denominatorPow2),
-              let pending = pendingTimeSignature else { return }
+            let pending = pendingTimeSignature
+        else { return }
         pendingTimeSignature = nil
         timeSigPromptOpen = false
         songTabs.publishTimeSigFlags()
         guard workspace?.session === pending.session,
-              pending.session.document.revision == pending.revision,
-              numerator != pending.numerator || denominatorPow2 != pending.denominatorPower
+            pending.session.document.revision == pending.revision,
+            numerator != pending.numerator || denominatorPow2 != pending.denominatorPower
         else { return }
         pending.session.document.setTimeSignature(
             tick: pending.tick, numerator: numerator, denominatorPower: denominatorPow2)
@@ -95,15 +99,17 @@ extension ApplicationSession {
     }
 
     func timeSigChipTickImpl(contentX: Double, pointerY: Double) -> Double {
-        guard let workspace, let tick = workspace.rulerMenu.signatureTick(
-            at: contentX, pointerY: pointerY)
+        guard let workspace,
+            let tick = workspace.rulerMenu.signatureTick(
+                at: contentX, pointerY: pointerY)
         else { return -1 }
         return Double(tick)
     }
 
     func invalidateTimeSigPrompt(session: DocumentSession, revision: UInt64) {
         if let pending = pendingTimeSignature, pending.session === session,
-           pending.revision != revision {
+            pending.revision != revision
+        {
             cancelTimeSigPrompt()
         }
     }

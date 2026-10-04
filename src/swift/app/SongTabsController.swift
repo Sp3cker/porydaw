@@ -58,8 +58,10 @@ public final class SongTabSession {
     /// tab, so it cannot outlive its owner.
     private unowned let app: ApplicationSession
 
-    init(tabId: Int, title: String, workspace: DocumentWorkspace,
-         app: ApplicationSession) {
+    init(
+        tabId: Int, title: String, workspace: DocumentWorkspace,
+        app: ApplicationSession
+    ) {
         self.tabId = tabId
         self.title = title
         self.workspace = workspace
@@ -296,8 +298,9 @@ public final class SongTabsController {
     /// The strip order, not the workspace allocation order, is the persistence order.
     @QtIgnored
     func recipe(projectPath: String) -> WorkspaceTabRecipe {
-        WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: tabs.map(\.title),
-                           selectedSong: selectedPage?.title ?? "")
+        WorkspaceTabRecipe(
+            projectPath: projectPath, orderedSongs: tabs.map(\.title),
+            selectedSong: selectedPage?.title ?? "")
     }
 
     func publishTimeSigFlags() {
@@ -403,7 +406,8 @@ public final class SongTabsController {
     /// closing it would drop the transition's origin from under the commit.
     public func requestClose(tabId: Int) {
         guard pendingCloseBank == nil, let index = tabIndex(of: tabId),
-              savingCloseId != tabId, !tabs[index].bankTransitionPending else { return }
+            savingCloseId != tabId, !tabs[index].bankTransitionPending
+        else { return }
         guard tabs[index].dirty else {
             closeTab(index: index)
             return
@@ -469,7 +473,6 @@ public final class SongTabsController {
             app?.closeAllResolved(closed: false)
         }
     }
-
 
     /// The page acknowledgment: `SongTab.qml` reports the destruction of the
     /// page that bound `tabId`, which is what allows the application to release

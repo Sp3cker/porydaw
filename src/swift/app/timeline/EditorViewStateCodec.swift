@@ -19,8 +19,9 @@ public struct WorkspaceTabRecipe: Equatable, Sendable {
         let playable = Set(available)
         var seen = Set<String>()
         let songs = orderedSongs.filter { playable.contains($0) && seen.insert($0).inserted }
-        return WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: songs,
-                                  selectedSong: songs.contains(selectedSong) ? selectedSong : songs.first ?? "")
+        return WorkspaceTabRecipe(
+            projectPath: projectPath, orderedSongs: songs,
+            selectedSong: songs.contains(selectedSong) ? selectedSong : songs.first ?? "")
     }
 }
 
@@ -310,8 +311,9 @@ public enum EditorViewStateCodec {
 
     private static func integer(_ value: JSONValue?, maximum: Int32) -> Int? {
         guard case let .number(raw) = value, raw.isFinite,
-              raw.rounded(.towardZero) == raw,
-              raw >= 0, raw <= Double(maximum) else { return nil }
+            raw.rounded(.towardZero) == raw,
+            raw >= 0, raw <= Double(maximum)
+        else { return nil }
         return Int(raw)
     }
 
@@ -328,20 +330,23 @@ public enum EditorViewStateCodec {
         if key == "tempo" { return true }
         let parts = key.split(separator: ":", omittingEmptySubsequences: false)
         guard parts.count == 3, parts[0] == "cc",
-              let track = decimal(parts[1]), let controller = decimal(parts[2]) else { return false }
+            let track = decimal(parts[1]), let controller = decimal(parts[2])
+        else { return false }
         return validLane(.init(track: track, controller: controller))
     }
 
     private static func decimal(_ value: Substring) -> Int? {
         guard !value.isEmpty, (value.count == 1 || value.first != "0"),
-              value.allSatisfy({ $0 >= "0" && $0 <= "9" }) else { return nil }
+            value.allSatisfy({ $0 >= "0" && $0 <= "9" })
+        else { return nil }
         return Int(value)
     }
 
     private static func decodeLane(_ value: JSONValue) -> EditorLaneState.Lane? {
         guard case let .object(row) = value,
-              let track = integer(row["track"], maximum: 15),
-              let controller = integer(row["cc"], maximum: 255) else { return nil }
+            let track = integer(row["track"], maximum: 15),
+            let controller = integer(row["cc"], maximum: 255)
+        else { return nil }
         let lane = EditorLaneState.Lane(track: track, controller: controller)
         return validLane(lane) ? lane : nil
     }
@@ -371,12 +376,19 @@ private indirect enum JSONValue: Codable {
 
     init(from decoder: Decoder) throws {
         let scalar = try decoder.singleValueContainer()
-        if scalar.decodeNil() { self = .null }
-        else if let value = try? scalar.decode(Bool.self) { self = .boolean(value) }
-        else if let value = try? scalar.decode(Double.self) { self = .number(value) }
-        else if let value = try? scalar.decode(String.self) { self = .text(value) }
-        else if let value = try? scalar.decode([String: JSONValue].self) { self = .object(value) }
-        else { self = .array(try scalar.decode([JSONValue].self)) }
+        if scalar.decodeNil() {
+            self = .null
+        } else if let value = try? scalar.decode(Bool.self) {
+            self = .boolean(value)
+        } else if let value = try? scalar.decode(Double.self) {
+            self = .number(value)
+        } else if let value = try? scalar.decode(String.self) {
+            self = .text(value)
+        } else if let value = try? scalar.decode([String: JSONValue].self) {
+            self = .object(value)
+        } else {
+            self = .array(try scalar.decode([JSONValue].self))
+        }
     }
 
     func encode(to encoder: Encoder) throws {

@@ -90,8 +90,10 @@ public final class VoicegroupStore {
             if source.dirty {
                 bank = source.loadPreviewedSource(using: context)
             } else {
-                bank = context.load(target: .init(filePath: source.filePath,
-                                                  sectionLabel: source.sectionLabel))
+                bank = context.load(
+                    target: .init(
+                        filePath: source.filePath,
+                        sectionLabel: source.sectionLabel))
                 bank?.graftMintedSynths(source: source)
             }
             guard let bank else { continue }
@@ -112,9 +114,10 @@ public final class VoicegroupStore {
     public func loadBank(voicegroupArg: String) throws -> LoadedBankView {
         let arg = voicegroupArg.isEmpty ? "_dummy" : voicegroupArg
         if let memo = memos[arg], let record = records[memo.id],
-           record.source.filePath == memo.filePath,
-           record.sourceFileTime == memo.sourceFileTime,
-           modificationTime(memo.filePath) == memo.sourceFileTime {
+            record.source.filePath == memo.filePath,
+            record.sourceFileTime == memo.sourceFileTime,
+            modificationTime(memo.filePath) == memo.sourceFileTime
+        {
             return record.published
         }
 
@@ -126,8 +129,10 @@ public final class VoicegroupStore {
         let path = URL(filePath: source.filePath).standardizedFileURL.path
         let prefix = projectRoot.hasSuffix("/") ? projectRoot : projectRoot + "/"
         guard path.hasPrefix(prefix),
-              let id = VoicegroupId(sourceRelativePath: String(path.dropFirst(prefix.count)),
-                                    sectionLabel: source.sectionLabel) else {
+            let id = VoicegroupId(
+                sourceRelativePath: String(path.dropFirst(prefix.count)),
+                sectionLabel: source.sectionLabel)
+        else {
             throw VoicegroupStoreError.operationFailed("Could not identify the voicegroup source.")
         }
         guard let time = modificationTime(path) else {
@@ -159,8 +164,9 @@ public final class VoicegroupStore {
         }
         bank.graftMintedSynths(source: source)
         let view = Self.publish(id: id, source: source, bank: bank)
-        records[id] = BankRecord(id: id, source: source, current: bank,
-                                 sourceFileTime: time, published: view)
+        records[id] = BankRecord(
+            id: id, source: source, current: bank,
+            sourceFileTime: time, published: view)
         memos[arg] = BankMemo(id: id, filePath: path, sourceFileTime: time)
         return view
     }
@@ -181,12 +187,14 @@ public final class VoicegroupStore {
             guard (0..<128).contains(edit.slot) else { return .conflict(.init(voicegroup: input.id)) }
             if let expected = edit.expected {
                 guard source.voiceAt(slot: edit.slot) == expected,
-                      source.setVoice(slot: edit.slot, voice: edit.value) else {
+                    source.setVoice(slot: edit.slot, voice: edit.value)
+                else {
                     return .conflict(.init(voicegroup: input.id))
                 }
             } else {
                 guard source.voiceAt(slot: edit.slot) == nil,
-                      let added = source.materializeBlankSlot(slot: edit.slot, voice: edit.value) else {
+                    let added = source.materializeBlankSlot(slot: edit.slot, voice: edit.value)
+                else {
                     return .conflict(.init(voicegroup: input.id))
                 }
                 materialization = added
@@ -206,8 +214,10 @@ public final class VoicegroupStore {
         record.published = Self.publish(id: record.id, source: source, bank: bank)
         records[input.id] = record
         let token = materialization.map { tokens.mint(id: input.id, materialization: $0) }
-        return .applied(.init(view: record.published, materialization: materialization,
-                              materializationToken: token))
+        return .applied(
+            .init(
+                view: record.published, materialization: materialization,
+                materializationToken: token))
     }
 
     /// Consumes a materialization token, then attempts its narrow-delta undo.
@@ -220,7 +230,8 @@ public final class VoicegroupStore {
         guard let entry = tokens.consume(materializationToken), entry.id == id else {
             return .conflict(.init(voicegroup: id))
         }
-        return try applyVoicegroupEdit(input: .init(id: id, operation: .revert(.init(materialization: entry.materialization))))
+        return try applyVoicegroupEdit(
+            input: .init(id: id, operation: .revert(.init(materialization: entry.materialization))))
     }
 
     /// Writes the source and republishes the bank loaded from its saved bytes.
@@ -243,8 +254,12 @@ public final class VoicegroupStore {
         // Nil is reserved for the supersede race (another edit landed between the
         // save snapshot and didSave); write failures throw above instead.
         guard saved else { return nil }
-        guard let bank = context.load(target: .init(filePath: record.source.filePath,
-                                                    sectionLabel: record.source.sectionLabel)) else {
+        guard
+            let bank = context.load(
+                target: .init(
+                    filePath: record.source.filePath,
+                    sectionLabel: record.source.sectionLabel))
+        else {
             throw VoicegroupStoreError.operationFailed("Saved voicegroup failed to reload.")
         }
         bank.graftMintedSynths(source: record.source)
@@ -282,8 +297,8 @@ public final class VoicegroupStore {
         let path = record.source.filePath
         let time = modificationTime(path)
         let memo = memos[record.source.voicegroupArg]
-        guard time != record.sourceFileTime || memo?.id != id ||
-              memo?.filePath != path || memo?.sourceFileTime != time else { return true }
+        guard time != record.sourceFileTime || memo?.id != id || memo?.filePath != path || memo?.sourceFileTime != time
+        else { return true }
         let reloaded = try loadBank(voicegroupArg: record.source.voicegroupArg)
         return reloaded.id == id
     }
@@ -298,7 +313,8 @@ public final class VoicegroupStore {
         for slot in 0..<128 {
             slots.append(.init(kind: source.kindAt(slot: slot), voice: source.voiceAt(slot: slot)))
         }
-        return LoadedBankView(id: id, bank: bank, loadName: source.loadName,
-                              dirty: source.dirty, slotViews: slots)
+        return LoadedBankView(
+            id: id, bank: bank, loadName: source.loadName,
+            dirty: source.dirty, slotViews: slots)
     }
 }

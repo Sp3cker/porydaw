@@ -88,7 +88,8 @@ func checkIsolation(
     _ = session.mutateCamera { _ = $0.ensureKeyVisible(-1) }
     if let centerPitch = session.camera.projection.pitch(
         atY: current.rollHeight / 2, keyHeight: current.keyHeight,
-        scrollY: current.scrollY, dpr: grid.devicePixelRatio) {
+        scrollY: current.scrollY, dpr: grid.devicePixelRatio)
+    {
         _ = session.mutateCamera { _ = $0.ensureKeyVisible(centerPitch) }
     } else {
         report.fail(
@@ -114,8 +115,9 @@ func checkIsolation(
     counters.playback = 0
     counters.document = 0
     counters.coherentDocumentCallback = false
-    let editTick = Tick(min(
-        UInt64(TimeDefaults.maxTick - 1), UInt64(session.timeline.lengthTicks) + 24))
+    let editTick = Tick(
+        min(
+            UInt64(TimeDefaults.maxTick - 1), UInt64(session.timeline.lengthTicks) + 24))
     let inserted = try? session.document.addNotes([
         NewNote(
             track: grid.trackIndex, tick: editTick, pitch: 60,
@@ -126,6 +128,7 @@ func checkIsolation(
         cppID: isolationID, message: "committed document edit performs no standalone camera publication")
     report.expect(
         counters.playback == 1 && counters.document == 1 && counters.coherentDocumentCallback,
-        cppID: isolationID, message: "one edit publishes one coherent playback and document refresh after reconciliation")
+        cppID: isolationID,
+        message: "one edit publishes one coherent playback and document refresh after reconciliation")
     session.editCursor = cursor
 }

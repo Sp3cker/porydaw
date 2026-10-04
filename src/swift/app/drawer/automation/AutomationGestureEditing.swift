@@ -17,23 +17,29 @@ extension AutomationPage {
         let projection = makeProjection(facts: facts, camera: gestureCamera)
         guard let lane = laneProjection(facts: facts, projection: projection) else { return false }
         if (!isPencilMode || projection.markersVisible()),
-           let hit = lane.hitTest(x: x, y: y, radius: geometry.pointHitRadius),
-           !isPencilMode || projection.cell(atRawTick: projection.rawTick(atX: x)).contains(Double(hit.tick)),
-           let source = source(of: hit.identity, facts: facts) {
+            let hit = lane.hitTest(x: x, y: y, radius: geometry.pointHitRadius),
+            !isPencilMode || projection.cell(atRawTick: projection.rawTick(atX: x)).contains(Double(hit.tick)),
+            let source = source(of: hit.identity, facts: facts)
+        {
             let deleteOnStationary = !modifiers.shift
-            gesture = .node(selectedNodesDrag(facts: facts, hit: hit, press: (x, y),
-                                              deleteOnStationary: deleteOnStationary)
-                ?? AutomationNodeDragTransaction.single(
-                    facts: facts, source: source, press: (x, y),
-                    deleteOnStationary: deleteOnStationary))
+            gesture = .node(
+                selectedNodesDrag(
+                    facts: facts, hit: hit, press: (x, y),
+                    deleteOnStationary: deleteOnStationary)
+                    ?? AutomationNodeDragTransaction.single(
+                        facts: facts, source: source, press: (x, y),
+                        deleteOnStationary: deleteOnStationary))
             publishPreview()
             publishInteractionState()
             return true
         }
         if !isPencilMode, let phantom = phantomHit(lane: lane, x: x, y: y),
-           let source = source(of: phantom.point.identity, facts: facts) {
-            gesture = .phantom(AutomationPhantomDragTransaction(facts: facts, source: source,
-                                                               press: (x, y)))
+            let source = source(of: phantom.point.identity, facts: facts)
+        {
+            gesture = .phantom(
+                AutomationPhantomDragTransaction(
+                    facts: facts, source: source,
+                    press: (x, y)))
             publishPreview()
             publishInteractionState()
             return true
@@ -46,17 +52,21 @@ extension AutomationPage {
                 rawTick: rawTick, logicalX: x, logicalY: y,
                 point: AutomationLanePoint(tick: firstCell.tickBegin, value: continuous),
                 continuousValue: Double(continuous))
-            guard let stroke = AutomationPencilTransaction(
-                facts: facts, firstSample: first,
-                firstCell: firstCell,
-                clockTicks: projection.snapPolicy.clockTicks) else { return false }
+            guard
+                let stroke = AutomationPencilTransaction(
+                    facts: facts, firstSample: first,
+                    firstCell: firstCell,
+                    clockTicks: projection.snapPolicy.clockTicks)
+            else { return false }
             gesture = .pencil(stroke)
         } else {
-            gesture = .sweep(AutomationSweepTransaction(
-                facts: facts, mode: modifiers.shift ? .ramp : .drag,
-                mapped: mappedPoint(x: x, y: y, facts: facts, modifiers: modifiers,
-                                    projection: projection),
-                rawTick: projection.rawTick(atX: x), pressX: x, pressY: y))
+            gesture = .sweep(
+                AutomationSweepTransaction(
+                    facts: facts, mode: modifiers.shift ? .ramp : .drag,
+                    mapped: mappedPoint(
+                        x: x, y: y, facts: facts, modifiers: modifiers,
+                        projection: projection),
+                    rawTick: projection.rawTick(atX: x), pressX: x, pressY: y))
         }
         publishPreview()
         publishInteractionState()
@@ -69,8 +79,9 @@ extension AutomationPage {
     func releasePlot(x: Double, y: Double, modifiers: AutomationModifiers) -> Bool {
         guard let session, let facts = frozen else { return false }
         let projection = makeProjection(facts: facts, camera: gestureCamera)
-        updateGesture(x: x, y: y, active: modifiers, facts: facts,
-                      projection: projection, activateSweep: false)
+        updateGesture(
+            x: x, y: y, active: modifiers, facts: facts,
+            projection: projection, activateSweep: false)
         guard let gesture else { return false }
         self.gesture = nil
         self.frozen = nil
@@ -81,11 +92,15 @@ extension AutomationPage {
             let finish = transaction.finish()
             switch (finish.release, finish.changed) {
             case (.stationaryDelete, _) where transaction.grabbed != nil:
-                committed = commit(AutomationNodeResolver.deletions(
-                    revision: facts.revision,
-                    [AutomationNodeResolver.LaneDeletes(parameter: facts.parameter,
-                                                        snapshot: facts.snapshot,
-                                                        ticks: transaction.deleteTicks)]))
+                committed = commit(
+                    AutomationNodeResolver.deletions(
+                        revision: facts.revision,
+                        [
+                            AutomationNodeResolver.LaneDeletes(
+                                parameter: facts.parameter,
+                                snapshot: facts.snapshot,
+                                ticks: transaction.deleteTicks)
+                        ]))
             case (.move, true):
                 let moves = transaction.moves
                 let requests = transaction.laneFacts.map { lane in
@@ -101,9 +116,10 @@ extension AutomationPage {
             }
         case let .phantom(transaction):
             if let move = transaction.move {
-                committed = commit(AutomationNodeResolver.moves([
-                    AutomationNodeResolver.LaneMoves(facts, [move])
-                ]))
+                committed = commit(
+                    AutomationNodeResolver.moves([
+                        AutomationNodeResolver.LaneMoves(facts, [move])
+                    ]))
             }
         case let .pencil(transaction):
             committed = AutomationCommit.apply(transaction.completion(), in: session.document)
@@ -124,8 +140,9 @@ extension AutomationPage {
             // A release that wrote nothing republishes the hover the pointer now
             // really sits on. Cursor readout changes arrive through the session.
             if let live = frozenFacts(modifiers: modifiers) {
-                updateHover(x: x, y: y, facts: live,
-                            projection: makeProjection(facts: live, camera: liveCamera()))
+                updateHover(
+                    x: x, y: y, facts: live,
+                    projection: makeProjection(facts: live, camera: liveCamera()))
             }
             publishInteractionState()
         }
@@ -134,17 +151,20 @@ extension AutomationPage {
 
     func releaseBand(_ live: AutomationRangeBand, x: Double, y: Double) {
         guard let session, live.revision == session.document.revision,
-              live.parameter == activeParameter else { return }
+            live.parameter == activeParameter
+        else { return }
         let first = min(live.anchorTick, live.currentTick)
         let last = max(live.anchorTick, live.currentTick)
         if live.active {
             if last > first {
-                let stack = AutomationRowStack(rows: rows, visibleRowCount: rows.count,
-                                               activeTickRange: nil)
+                let stack = AutomationRowStack(
+                    rows: rows, visibleRowCount: rows.count,
+                    activeTickRange: nil)
                 let payload = stack.laneSet(from: live.parameter, through: live.parameter)
-                applyTimeSelection(AutomationTimeSelection(
-                    range: TimeRange(startTick: first, endTick: last), scope: .lanes,
-                    lanes: Set(payload.lanes), tempo: payload.tempo))
+                applyTimeSelection(
+                    AutomationTimeSelection(
+                        range: TimeRange(startTick: first, endTick: last), scope: .lanes,
+                        lanes: Set(payload.lanes), tempo: payload.tempo))
             } else {
                 applyTimeSelection(nil)
             }
@@ -190,47 +210,66 @@ extension AutomationPage {
         let projection = makeProjection(facts: facts, camera: liveCamera())
         if selectionContains(x: x, facts: facts, projection: projection) { return }
         if case .tracks = selection.scope, row(facts.parameter)?.coversNodes == true,
-           x >= projection.x(selection.range.startTick),
-           x < projection.x(selection.range.endTick) { return }
+            x >= projection.x(selection.range.startTick),
+            x < projection.x(selection.range.endTick)
+        {
+            return
+        }
         applyTimeSelection(nil)
     }
 
-    func selectionContains(x: Double, facts: AutomationFrozenFacts,
-                           projection: AutomationProjection) -> Bool {
+    func selectionContains(
+        x: Double, facts: AutomationFrozenFacts,
+        projection: AutomationProjection
+    ) -> Bool {
         guard let selection else { return false }
-        let stack = AutomationRowStack(rows: rows, visibleRowCount: rows.count,
-                                       activeTickRange: selection.range)
-        return stack.hitTest(parameter: facts.parameter, x: x,
-                             projection: projection, selection: selection)
+        let stack = AutomationRowStack(
+            rows: rows, visibleRowCount: rows.count,
+            activeTickRange: selection.range)
+        return stack.hitTest(
+            parameter: facts.parameter, x: x,
+            projection: projection, selection: selection)
     }
 
-    func update(sweep transaction: inout AutomationSweepTransaction, x: Double, y: Double,
-                        modifiers: AutomationModifiers, facts: AutomationFrozenFacts,
-                        projection: AutomationProjection, activate: Bool) {
+    func update(
+        sweep transaction: inout AutomationSweepTransaction, x: Double, y: Double,
+        modifiers: AutomationModifiers, facts: AutomationFrozenFacts,
+        projection: AutomationProjection, activate: Bool
+    ) {
         if transaction.mode == .ramp {
-            transaction.updateRamp(mapped: mappedPoint(x: x, y: y, facts: facts,
-                                                       modifiers: modifiers,
-                                                       projection: projection))
+            transaction.updateRamp(
+                mapped: mappedPoint(
+                    x: x, y: y, facts: facts,
+                    modifiers: modifiers,
+                    projection: projection))
             return
         }
-        guard let effective = transaction.dragPosition(
-            x: x, y: y, activate: activate,
-            activationDistance: geometry.nodeDragActivationDistance),
-              transaction.slopExceeded else { return }
+        guard
+            let effective = transaction.dragPosition(
+                x: x, y: y, activate: activate,
+                activationDistance: geometry.nodeDragActivationDistance),
+            transaction.slopExceeded
+        else { return }
         let rawTick = projection.rawTick(atX: effective.x)
-        let first = projection.snapPolicy.snap(min(transaction.previousRawTick, rawTick),
-                                               fine: modifiers.fine, camera: projection.camera)
-        let last = projection.snapPolicy.snap(max(transaction.previousRawTick, rawTick),
-                                              fine: modifiers.fine, camera: projection.camera)
-        transaction.update(mapped: mappedPoint(x: effective.x, y: effective.y, facts: facts,
-                                               modifiers: modifiers, projection: projection),
-                           first: first, last: last, rawTick: rawTick, fine: modifiers.fine,
-                           projection: projection)
+        let first = projection.snapPolicy.snap(
+            min(transaction.previousRawTick, rawTick),
+            fine: modifiers.fine, camera: projection.camera)
+        let last = projection.snapPolicy.snap(
+            max(transaction.previousRawTick, rawTick),
+            fine: modifiers.fine, camera: projection.camera)
+        transaction.update(
+            mapped: mappedPoint(
+                x: effective.x, y: effective.y, facts: facts,
+                modifiers: modifiers, projection: projection),
+            first: first, last: last, rawTick: rawTick, fine: modifiers.fine,
+            projection: projection)
     }
 
-    func update(pencil transaction: inout AutomationPencilTransaction, x: Double, y: Double,
-                        facts: AutomationFrozenFacts, projection: AutomationProjection,
-                        modifiers: AutomationModifiers) {
+    func update(
+        pencil transaction: inout AutomationPencilTransaction, x: Double, y: Double,
+        facts: AutomationFrozenFacts, projection: AutomationProjection,
+        modifiers: AutomationModifiers
+    ) {
         let freehand = modifiers.snapValue
         let locking = modifiers.shift
         let continuous = transaction.sampleValue(
@@ -240,14 +279,17 @@ extension AutomationPage {
             displaySpan: (projection.displayMaximum ?? facts.metadata.maximum) - facts.metadata.minimum)
         let sample = AutomationPencilTransaction.Sample(
             rawTick: projection.rawTick(atX: x), logicalX: x, logicalY: y,
-            point: mappedPoint(x: x, y: y, facts: facts, modifiers: .init(),
-                               projection: projection),
+            point: mappedPoint(
+                x: x, y: y, facts: facts, modifiers: .init(),
+                projection: projection),
             continuousValue: continuous)
         if freehand {
             _ = transaction.applyFreehandSegment(sample)
         } else {
-            _ = transaction.applySnappedSegment(sample, cells: projection.cellsCrossed(
-                from: projection.rawTick(atX: transaction.previousLogicalX), to: sample.rawTick))
+            _ = transaction.applySnappedSegment(
+                sample,
+                cells: projection.cellsCrossed(
+                    from: projection.rawTick(atX: transaction.previousLogicalX), to: sample.rawTick))
         }
     }
 
@@ -265,7 +307,8 @@ extension AutomationPage {
     /// The parameters the explicit selection covers and that still carry events:
     /// the lanes a range command or a shared-delta drag acts on.
     func coveredLanes()
-        -> [(parameter: AutomationParameter, snapshot: AutomationLaneSnapshot)] {
+        -> [(parameter: AutomationParameter, snapshot: AutomationLaneSnapshot)]
+    {
         guard let session else { return [] }
         return rows.compactMap { row in
             guard row.coversNodes, row.selectionHasEvents else { return nil }
@@ -281,12 +324,16 @@ extension AutomationPage {
         }
     }
 
-    func selectedNodesDrag(facts: AutomationFrozenFacts, hit: AutomationProjectedPoint,
-                                   press: (x: Double, y: Double), deleteOnStationary: Bool)
-        -> AutomationNodeDragTransaction? {
+    func selectedNodesDrag(
+        facts: AutomationFrozenFacts, hit: AutomationProjectedPoint,
+        press: (x: Double, y: Double), deleteOnStationary: Bool
+    )
+        -> AutomationNodeDragTransaction?
+    {
         guard let selection, selection.isActive,
-              row(facts.parameter)?.coversNodes == true, selection.range.contains(hit.tick),
-              let source = source(of: hit.identity, facts: facts) else { return nil }
+            row(facts.parameter)?.coversNodes == true, selection.range.contains(hit.tick),
+            let source = source(of: hit.identity, facts: facts)
+        else { return nil }
         return AutomationNodeDragTransaction.selection(
             facts: facts, lanes: coveredLanes(), grabbed: (facts.parameter, source),
             range: selection.range, press: press, deleteOnStationary: deleteOnStationary)
