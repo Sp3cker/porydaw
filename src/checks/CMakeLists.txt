@@ -521,6 +521,7 @@ if(APPLE)
     add_library(roll_qml_lane STATIC
         rollqml/RollQmlTests.swift
         rollqml/RollQmlStaging.swift
+        rollqml/WindowResizeAllocationFixture.swift
         benchmarks/AllocationProbe.swift
         swiftqtml/BridgeProbeCheck.swift
         "${CMAKE_CURRENT_BINARY_DIR}/rollqml/RollQmlPaths.swift"

@@ -3,6 +3,8 @@
 #include "fixturecatalog.hpp"
 #include "fwd.hpp"
 
+#include <QByteArray>
+
 #include <initializer_list>
 
 namespace checks::detail {
@@ -130,6 +132,9 @@ const std::vector<CheckDefinition> &catalog()
         swiftSuite("swiftcore-midiimport", "midiImport");
         swiftSuite("swiftcore-timeedits", "timeEdits");
         swiftSuite("swiftcore-projectsession", "projectSession");
+        const QByteArray allocationScenario = qgetenv("PORYDAW_ALLOCATION_SCENARIO");
+        if (allocationScenario == "note-draw" || allocationScenario == "automation-commit")
+            swiftSuite("swiftcore-allocation-editor", "allocationEditor");
         swiftSuite("swiftcore-bankhistory", "bankHistory");
         swiftSuite("swiftcore-themecolor", "themeColor");
         swiftSuite("swiftcore-displaylist", "displayList");

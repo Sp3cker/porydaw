@@ -65,12 +65,14 @@ public struct Sequencer: ~Copyable {
         }
     }
 
+    /// Render scheduled events with an optional shared interactive owner. Without
+    /// that owner, offline rendering uses the original native ingress and DSP path.
     public mutating func render(
         engine: UnsafeMutablePointer<M4AEngine>,
         timeline: borrowing PlaybackTimeline,
         left: UnsafeMutableBufferPointer<Float>,
         right: UnsafeMutableBufferPointer<Float>,
-        looping: Bool, muteMask: UInt32
+        looping: Bool, muteMask: UInt32, audition: AudioAudition? = nil
     ) {
         precondition(left.count == right.count)
         guard let leftBase = left.baseAddress, let rightBase = right.baseAddress else {
@@ -79,7 +81,7 @@ public struct Sequencer: ~Copyable {
         withSwiftSource(timeline) { source in
             render(
                 engine: engine, source: source, left: leftBase, right: rightBase,
-                frames: left.count, looping: looping, muteMask: muteMask)
+                frames: left.count, looping: looping, muteMask: muteMask, audition: audition)
         }
     }
 
@@ -405,7 +407,7 @@ extension Sequencer {
     private mutating func render<Source: TimelineSource>(
         engine: UnsafeMutablePointer<M4AEngine>, source: Source,
         left: UnsafeMutablePointer<Float>, right: UnsafeMutablePointer<Float>,
-        frames: Int, looping: Bool, muteMask: UInt32
+        frames: Int, looping: Bool, muteMask: UInt32, audition: AudioAudition? = nil
     ) {
         let loop = looping && source.hasLoop
         var done = 0
@@ -415,7 +417,11 @@ extension Sequencer {
                 while pendingIndex < pendingReleaseCount {
                     let pending = pendingReleases[pendingIndex]
                     if pending.sample <= position {
-                        m4a_engine_note_off(engine, Int32(pending.track), pending.key)
+                        if let audition {
+                            audition.voices.noteOff(engine: engine, track: Int32(pending.track), key: pending.key)
+                        } else {
+                            m4a_engine_note_off(engine, Int32(pending.track), pending.key)
+                        }
                         keyedOn[keyIndex(track: pending.track, key: pending.key)] = 0
                         pendingReleaseCount -= 1
                         pendingReleases[pendingIndex] = pendingReleases[pendingReleaseCount]
@@ -438,11 +444,11 @@ extension Sequencer {
                         let stateIndex = keyIndex(track: event.track, key: event.data0 & 0x7F)
                         keyedOn[stateIndex] = 0
                     }
-                    Self.dispatch(engine: engine, event: event, muteMask: muteMask)
+                    Self.dispatch(engine: engine, event: event, muteMask: muteMask, audition: audition)
                 }
 
                 if loop && position >= source.loopEndSample {
-                    wrapNotes(engine: engine, source: source)
+                    wrapNotes(engine: engine, source: source, audition: audition)
                     position = source.loopStartSample
                     cursor = lowerBound(in: source, sample: position)
                     continue
@@ -462,16 +468,21 @@ extension Sequencer {
                 count = Int(min(UInt64(count), next - position))
             }
             if count == 0 { count = 1 }
-            m4a_engine_process(
-                engine, left.advanced(by: done), right.advanced(by: done),
-                Int32(count))
+            if let audition {
+                audition.render(
+                    main: engine, left: left.advanced(by: done), right: right.advanced(by: done), frames: count)
+            } else {
+                m4a_engine_process(
+                    engine, left.advanced(by: done), right.advanced(by: done),
+                    Int32(count))
+            }
             position += UInt64(count)
             done += count
         }
     }
 
     private mutating func wrapNotes<Source: TimelineSource>(
-        engine: UnsafeMutablePointer<M4AEngine>, source: Source
+        engine: UnsafeMutablePointer<M4AEngine>, source: Source, audition: AudioAudition?
     ) {
         for index in 0..<pendingReleaseCount {
             pendingReleases[index].tick = source.loopStartTick &+ (pendingReleases[index].tick &- source.loopEndTick)
@@ -520,7 +531,11 @@ extension Sequencer {
                     }
                 }
 
-                m4a_engine_note_off(engine, Int32(track), UInt8(key))
+                if let audition {
+                    audition.voices.noteOff(engine: engine, track: Int32(track), key: UInt8(key))
+                } else {
+                    m4a_engine_note_off(engine, Int32(track), UInt8(key))
+                }
                 keyedOn[stateIndex] = 0
             }
         }
@@ -528,18 +543,28 @@ extension Sequencer {
 
     private static func dispatch(
         engine: UnsafeMutablePointer<M4AEngine>, event: SequencedEvent,
-        muteMask: UInt32
+        muteMask: UInt32, audition: AudioAudition? = nil
     ) {
         switch event.type {
         case playbackTempoEventType:
             m4a_engine_set_tempo_bpm(engine, Double(Int(event.data1) << 7 | Int(event.data0)))
         case 0x8:
-            m4a_engine_note_off(engine, Int32(event.track), event.data0)
+            if let audition {
+                audition.voices.noteOff(engine: engine, track: Int32(event.track), key: event.data0)
+            } else {
+                m4a_engine_note_off(engine, Int32(event.track), event.data0)
+            }
         case 0x9:
             if (muteMask >> UInt32(event.track)) & 1 == 0 {
                 engine.pointee.polyEventClock = event.tick
                 engine.pointee.auditionNote = false
-                m4a_engine_note_on(engine, Int32(event.track), event.data0, event.data1)
+                if let audition {
+                    audition.voices.start(
+                        engine: engine, track: Int32(event.track), key: event.data0, velocity: event.data1,
+                        source: .sequenced)
+                } else {
+                    m4a_engine_note_on(engine, Int32(event.track), event.data0, event.data1)
+                }
             }
         case 0xB:
             if event.data0 != 0x78 && event.data0 != 0x7B {

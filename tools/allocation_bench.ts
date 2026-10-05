@@ -1,35 +1,42 @@
 // Checks-only, calibrated GUI-thread measurements; never injects into the app.
 import { join, resolve } from "node:path";
 
-const HELP = `usage: deno task bench:allocations [options]
-  --scenario <name>   note-draw|automation-commit|window-resize (required)
-  --mode <mode>       allocations|cpu (default allocations)
-  --warmup <count>    unmeasured operations per phase (default 64, >= 0)
-  --iterations <n>    measured operations per phase (default 1000, > 0)
-  --runs <count>      sequential fresh check processes (default 3, > 0)
-  --output <path>     also write the structured JSON report to this path
-  --help              show this help without building
+const SCENARIOS = {
+  "note-draw": {
+    labels: ["note-draw.stroke", "note-draw.release-commit"],
+    scope: "GUI-thread synchronous Swift/presenter; queued QML/render excluded",
+    task: "checks",
+    filter: "swiftcore-allocation-editor",
+    environment: {},
+  },
+  "automation-commit": {
+    labels: ["automation-commit.release-commit"],
+    scope:
+      "GUI-thread synchronous automation release and SongDocument commit/publication; queued QML/render excluded",
+    task: "checks",
+    filter: "swiftcore-allocation-editor",
+    environment: {},
+  },
+  "window-resize": {
+    labels: [
+      "window-resize.geometry-event-turn",
+      "window-resize.empty-event-turn",
+    ],
+    scope:
+      "GUI-thread real window geometry and one bounded queued Qt turn; render thread and physical window dragging excluded",
+    task: "checks:qml-roll",
+    filter: "swiftroll-window",
+    environment: { PORYDAW_ROLL_QML_SUITE: "tst_AllocationWindowResize.qml" },
+  },
+} satisfies Record<string, {
+  labels: string[];
+  scope: string;
+  task: string;
+  filter: string;
+  environment: Record<string, string>;
+}>;
 
-Darwin only. Builds a private profiling dylib once with clang, then uses the
-normal Debug Deno check runner and fixture staging. No app automation/injection.
-Inherited MallocStackLogging variants are removed. Raw captures and failure
-stdout/stderr are retained in the report before temporary files are removed.
-Allocation-mode CPU is heap-hook-distorted, NOT independent CPU performance.
-Use --mode cpu for independent CPU-only sampling without heap-counter claims;
-both modes still include capture/clock overhead, and are not whole-process or
-render-thread measurements. Window resizing includes one bounded queued GUI
-turn and a separate identical empty-turn control; no control is subtracted.
-
-Adding an arbitrary scenario driver: implement the checks-only AllocationProbe
-and AllocationBenchmarkOptions interface. Keep setup/validation/reset outside
-begin/pause; warm the same operation and discard warmup counters. Use one
-measured segment per operation and scenario-prefixed labels.
-Capture an identical empty control for unavoidable event-loop driver overhead.
-Register its exact phases/scope and check task here explicitly; this runner
-currently supports only the three names above. Run independent CPU mode too.
-Example: deno task bench:allocations --scenario note-draw --mode cpu --runs 3`;
-
-type Scenario = "note-draw" | "automation-commit" | "window-resize";
+type Scenario = keyof typeof SCENARIOS;
 type Mode = "allocations" | "cpu";
 export interface Options {
   scenario: Scenario;
@@ -40,25 +47,27 @@ export interface Options {
   output?: string;
 }
 
-const SCENARIOS: Record<Scenario, { labels: string[]; scope: string }> = {
-  "note-draw": {
-    labels: ["note-draw.stroke", "note-draw.release-commit"],
-    scope: "GUI-thread synchronous Swift/presenter; queued QML/render excluded",
-  },
-  "automation-commit": {
-    labels: ["automation-commit.release-commit"],
-    scope:
-      "GUI-thread synchronous automation release and SongDocument commit/publication; queued QML/render excluded",
-  },
-  "window-resize": {
-    labels: [
-      "window-resize.geometry-event-turn",
-      "window-resize.empty-event-turn",
-    ],
-    scope:
-      "GUI-thread real window geometry and one bounded queued Qt turn; render thread and physical window dragging excluded",
-  },
-};
+const HELP = `usage: deno task bench:allocations [options]
+  --scenario <name>   ${Object.keys(SCENARIOS).join("|")} (required)
+  --mode <mode>       allocations|cpu (default allocations)
+  --warmup <count>    unmeasured operations per phase (default 64, >= 0)
+  --iterations <n>    measured operations per phase (default 1000, > 0)
+  --runs <count>      sequential fresh check processes (default 3, > 0)
+  --output <path>     also write the structured JSON report to this path
+  --help              show this help without building
+
+Darwin, Debug checks only; no app injection. Raw captures and compiler/check
+diagnostics are retained. Inherited MallocStackLogging variants are removed.
+Allocation-mode CPU is heap-hook-distorted, NOT independent CPU performance.
+Use --mode cpu for independent no-hook CPU sampling without heap fields.
+Both modes include capture/clock overhead, not whole-process or render-thread
+measurements. Resize includes one bounded queued GUI turn and a separate
+identical empty-turn control; no control is subtracted.
+Driver registration: docs/plans/right-drag-chords/plan.md (profiling section).`;
+
+function isScenario(value: string): value is Scenario {
+  return Object.hasOwn(SCENARIOS, value);
+}
 
 export function parseOptions(args: string[]): Options | null {
   let scenario: Scenario | undefined;
@@ -95,12 +104,9 @@ export function parseOptions(args: string[]): Options | null {
       throw new Error(`${flag} requires a value`);
     }
     if (flag === "--scenario") {
-      if (
-        value !== "note-draw" && value !== "automation-commit" &&
-        value !== "window-resize"
-      ) {
+      if (!isScenario(value)) {
         throw new Error(
-          "--scenario requires note-draw, automation-commit, or window-resize",
+          `--scenario requires ${Object.keys(SCENARIOS).join(", ")}`,
         );
       }
       scenario = value;
@@ -149,12 +155,24 @@ interface Phase {
   threadid: number;
   capturedsegments: number;
   cpu_ns: number;
-  heap?: Record<HeapCounter, number>;
 }
-interface Capture {
-  phases: Phase[];
-  previouslogger: boolean;
+interface AllocationPhase extends Phase {
+  heap: Record<HeapCounter, number>;
 }
+interface CpuPhase extends Phase {
+  heap?: never;
+}
+export type Capture =
+  | {
+    mode: "allocations";
+    phases: AllocationPhase[];
+    previouslogger: boolean;
+  }
+  | {
+    mode: "cpu";
+    phases: CpuPhase[];
+    previouslogger: false;
+  };
 
 interface Distribution {
   median: number;
@@ -169,11 +187,11 @@ export interface Summary {
   warnings: string[];
   phases: {
     label: string;
-    operations: Distribution;
-    capturedsegments: Distribution;
+    operations: number;
+    capturedsegments: number;
     threadids: number[];
     cpu_ns: MetricSummary;
-    heap?: Record<string, MetricSummary>;
+    heap?: Record<HeapCounter, MetricSummary>;
   }[];
 }
 
@@ -214,7 +232,9 @@ export function parseJsonl(text: string): unknown[] {
 
 export function validateCapture(records: unknown[], options: Options): Capture {
   const expected = SCENARIOS[options.scenario].labels;
-  const phases: Phase[] = [];
+  const capture: Capture = options.mode === "allocations"
+    ? { mode: "allocations", phases: [], previouslogger: false }
+    : { mode: "cpu", phases: [], previouslogger: false };
   let hook: JsonRecord | undefined;
   for (const value of records) {
     const record = object(value, "capture record");
@@ -233,7 +253,7 @@ export function validateCapture(records: unknown[], options: Options): Capture {
         `mismatched phase label ${record.label} for ${options.scenario}`,
       );
     }
-    if (phases.some((phase) => phase.label === record.label)) {
+    if (capture.phases.some((phase) => phase.label === record.label)) {
       throw new Error(`duplicate phase ${record.label}`);
     }
     if (
@@ -267,16 +287,27 @@ export function validateCapture(records: unknown[], options: Options): Capture {
         `${record.label}: operations/segments do not match requested iterations ${options.iterations}`,
       );
     }
-    if (options.mode === "allocations") {
-      phase.heap = Object.fromEntries(
-        HEAP_COUNTERS.map((key) => [key, integer(record, key)]),
-      ) as Record<HeapCounter, number>;
-    } else if (HEAP_COUNTERS.some((key) => key in record)) {
-      throw new Error(
-        `${record.label}: CPU-only capture must not claim heap counters`,
-      );
+    if (capture.mode === "allocations") {
+      capture.phases.push({
+        ...phase,
+        heap: {
+          allocations: integer(record, "allocations"),
+          allocatedbytes: integer(record, "allocatedbytes"),
+          frees: integer(record, "frees"),
+          reallocations: integer(record, "reallocations"),
+          reallocinplace: integer(record, "reallocinplace"),
+          failedallocations: integer(record, "failedallocations"),
+          failedreallocations: integer(record, "failedreallocations"),
+        },
+      });
+    } else {
+      if (HEAP_COUNTERS.some((key) => key in record)) {
+        throw new Error(
+          `${record.label}: CPU-only capture must not claim heap counters`,
+        );
+      }
+      capture.phases.push(phase);
     }
-    phases.push(phase);
   }
   if (!hook) throw new Error("missing hook calibration record");
   if (
@@ -291,18 +322,22 @@ export function validateCapture(records: unknown[], options: Options): Capture {
     );
   }
   for (const label of expected) {
-    if (!phases.some((phase) => phase.label === label)) {
+    if (!capture.phases.some((phase) => phase.label === label)) {
       throw new Error(`missing phase ${label}`);
     }
   }
-  if (new Set(phases.map((phase) => phase.threadid)).size !== 1) {
+  if (new Set(capture.phases.map((phase) => phase.threadid)).size !== 1) {
     throw new Error(
       "phase thread IDs disagree with the single GUI-thread scope",
     );
   }
-  return { phases, previouslogger: hook.previouslogger };
+  if (capture.mode === "allocations") {
+    capture.previouslogger = hook.previouslogger;
+  }
+  return capture;
 }
 
+// Intentionally local statistics keep this standalone runner zero-dependency.
 function distribution(values: number[]): Distribution {
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
@@ -315,58 +350,54 @@ function distribution(values: number[]): Distribution {
   };
 }
 
-export function summarize(captures: unknown[][], options: Options): Summary {
+export function summarize(captures: Capture[], options: Options): Summary {
   if (captures.length !== options.runs) {
     throw new Error(
       `expected ${options.runs} complete captures, got ${captures.length}`,
     );
   }
-  const validated = captures.map((records) =>
-    validateCapture(records, options)
-  );
   return {
-    warnings: validated.some((capture) => capture.previouslogger)
+    warnings: captures.some((capture) => capture.previouslogger)
       ? [
         "A previous malloc logger was chained; its observer effects remain in these instrumented measurements.",
       ]
       : [],
     phases: SCENARIOS[options.scenario].labels.map((label) => {
-      const samples = validated.flatMap((capture) =>
+      const samples = captures.flatMap<Phase>((capture) =>
         capture.phases.filter((phase) => phase.label === label)
       );
-      let heap: Record<string, MetricSummary> | undefined;
-      if (options.mode === "allocations") {
-        heap = {};
-        for (const key of HEAP_COUNTERS) {
-          const values = samples.map((sample) => {
-            if (!sample.heap) {
-              throw new Error(`missing heap capture for ${label}`);
-            }
-            return sample.heap[key];
-          });
-          heap[key] = {
-            total: distribution(values),
-            per_operation: distribution(
-              values.map((value, index) => value / samples[index].operations),
-            ),
-          };
-        }
-      }
-      return {
-        label,
-        operations: distribution(samples.map((sample) => sample.operations)),
-        capturedsegments: distribution(
-          samples.map((sample) => sample.capturedsegments),
+      const metric = (values: number[]): MetricSummary => ({
+        total: distribution(values),
+        per_operation: distribution(
+          values.map((value, index) => value / samples[index].operations),
         ),
+      });
+      const phase = {
+        label,
+        operations: options.iterations,
+        capturedsegments: options.iterations,
         threadids: samples.map((sample) => sample.threadid),
-        cpu_ns: {
-          total: distribution(samples.map((sample) => sample.cpu_ns)),
-          per_operation: distribution(
-            samples.map((sample) => sample.cpu_ns / sample.operations),
-          ),
-        },
-        ...(heap ? { heap } : {}),
+        cpu_ns: metric(samples.map((sample) => sample.cpu_ns)),
       };
+      if (options.mode === "cpu") return phase;
+
+      const allocationSamples = captures.flatMap((capture) =>
+        capture.mode === "allocations"
+          ? capture.phases.filter((sample) => sample.label === label)
+          : []
+      );
+      const heapMetric = (key: HeapCounter): MetricSummary =>
+        metric(allocationSamples.map((sample) => sample.heap[key]));
+      const heap: Record<HeapCounter, MetricSummary> = {
+        allocations: heapMetric("allocations"),
+        allocatedbytes: heapMetric("allocatedbytes"),
+        frees: heapMetric("frees"),
+        reallocations: heapMetric("reallocations"),
+        reallocinplace: heapMetric("reallocinplace"),
+        failedallocations: heapMetric("failedallocations"),
+        failedreallocations: heapMetric("failedreallocations"),
+      };
+      return { ...phase, heap };
     }),
   };
 }
@@ -374,6 +405,9 @@ export function summarize(captures: unknown[][], options: Options): Summary {
 // clearEnv ensures removed keys are not silently re-inherited by Deno.Command.
 function cleanEnvironment(): Record<string, string> {
   const environment = Deno.env.toObject();
+  const driverKeys = Object.values(SCENARIOS).flatMap((scenario) =>
+    Object.keys(scenario.environment)
+  );
   for (const key of Object.keys(environment)) {
     if (
       /^MallocStackLogging/i.test(key) || [
@@ -382,8 +416,7 @@ function cleanEnvironment(): Record<string, string> {
         "PORYDAW_ALLOCATION_SCENARIO",
         "PORYDAW_ALLOCATION_WARMUP",
         "PORYDAW_ALLOCATION_ITERATIONS",
-        "PORYDAW_ROLL_QML_SUITE",
-      ].includes(key)
+      ].includes(key) || driverKeys.includes(key)
     ) delete environment[key];
   }
   return environment;
@@ -423,6 +456,7 @@ interface RunResult {
   process?: CommandResult;
   raw_jsonl?: string;
   records?: unknown[];
+  capture?: Capture;
   error?: string;
 }
 function message(error: unknown): string {
@@ -444,6 +478,7 @@ async function main(): Promise<number> {
     prefix: "porydaw-allocation-bench-",
   });
   const runs: RunResult[] = [];
+  const captures: Capture[] = [];
   let build: CommandResult | undefined;
   let error: string | undefined;
   let summary: Summary | undefined;
@@ -476,14 +511,14 @@ async function main(): Promise<number> {
       const result: RunResult = { run };
       runs.push(result);
       try {
-        const window = options.scenario === "window-resize";
+        const scenario = SCENARIOS[options.scenario];
         result.process = await execute(
           [
             Deno.execPath(),
             "task",
-            window ? "checks:qml-roll" : "checks",
+            scenario.task,
             "--filter",
-            window ? "swiftroll-window" : "swiftcore-projectsession",
+            scenario.filter,
           ],
           root,
           {
@@ -493,9 +528,7 @@ async function main(): Promise<number> {
             PORYDAW_ALLOCATION_SCENARIO: options.scenario,
             PORYDAW_ALLOCATION_WARMUP: String(options.warmup),
             PORYDAW_ALLOCATION_ITERATIONS: String(options.iterations),
-            ...(window
-              ? { PORYDAW_ROLL_QML_SUITE: "tst_AllocationWindowResize.qml" }
-              : {}),
+            ...scenario.environment,
           },
         );
         let captureError: unknown;
@@ -514,13 +547,14 @@ async function main(): Promise<number> {
         }
         if (captureError) throw captureError;
         if (!result.records) throw new Error("missing capture records");
-        validateCapture(result.records, options);
+        result.capture = validateCapture(result.records, options);
+        captures.push(result.capture);
       } catch (failure) {
         result.error = message(failure);
         throw failure;
       }
     }
-    summary = summarize(runs.map((run) => run.records ?? []), options);
+    summary = summarize(captures, options);
   } catch (failure) {
     error = message(failure);
   } finally {

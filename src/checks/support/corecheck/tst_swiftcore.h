@@ -28,6 +28,7 @@ class SwiftCoreTest final : public QObject
     void midiImport();
     void timeEdits();
     void projectSession();
+    void allocationEditor();
     void bankHistory();
     void projectIdentity();
     void songModel();

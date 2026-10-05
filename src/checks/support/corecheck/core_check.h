@@ -57,6 +57,7 @@ enum PdcSuite {
     PDC_SUITE_SAMPLE_PITCH_69 = 49,
     PDC_SUITE_SAMPLE_PITCH_81 = 50,
     PDC_SUITE_SAMPLE_PITCH_93 = 51,
+    PDC_SUITE_ALLOCATION_EDITOR = 52,
 };
 
 typedef void (*PdcCheckReport)(void *context, int failed, const char *cppId, const char *message);

@@ -19,6 +19,9 @@ TestCase {
     property bool requested: false
     property bool fixtureReady: false
     property string openFailure: ""
+    property var allocationFixture: null
+    readonly property int resizeOperation: 0
+    readonly property int emptyOperation: 1
     property var surface: null
     property var plot: null
     property int originalWidth: 960
@@ -27,6 +30,11 @@ TestCase {
     RollQmlBootstrap {
         id: bootstrap
         ApplicationSession { id: session }
+    }
+
+    Component {
+        id: allocationFixtureComponent
+        WindowResizeAllocationFixture {}
     }
 
     Connections {
@@ -63,8 +71,10 @@ TestCase {
         testCase.requested = bootstrap.allocationWindowResizeRequested()
         if (!testCase.requested)
             return
-        if (!bootstrap.prepareWindowAllocationCapture())
-            fail(bootstrap.allocationError)
+        testCase.allocationFixture = allocationFixtureComponent.createObject(testCase)
+        verify(testCase.allocationFixture !== null, "the opt-in recorder fixture is created")
+        if (!testCase.allocationFixture.prepareWindowAllocationCapture())
+            fail(testCase.allocationFixture.allocationError)
         bootstrap.seedDrawerPreferences(false, false, false, 0)
         verify(bootstrap.start("mus_route101"), "the staged route101 project starts opening")
         verify(waitForNative(function() {
@@ -99,23 +109,18 @@ TestCase {
         wait(0)
     }
 
-    function resizeTurn(width, height) {
-        benchmarkWindow.width = width
-        benchmarkWindow.height = height
-        wait(0)
-    }
-
-    function emptyTurn(width, height) {
-        wait(0)
-    }
-
-    function captureTurn(turn, width, height) {
-        bootstrap.beginAllocationCapture()
+    function captureTurn(operation, width, height) {
+        testCase.allocationFixture.beginAllocationCapture()
         try {
-            turn(width, height)
+            if (operation === testCase.resizeOperation) {
+                benchmarkWindow.width = width
+                benchmarkWindow.height = height
+            }
+            // Both concrete paths capture exactly the same bridge and wait.
+            wait(0)
         } finally {
             // Even a QML exception during resize/wait cannot leave capture on.
-            bootstrap.pauseAllocationCapture()
+            testCase.allocationFixture.pauseAllocationCapture()
         }
     }
 
@@ -140,13 +145,14 @@ TestCase {
         }
     }
 
-    function runOperation(turn, resize, index) {
+    function runOperation(operation, index) {
+        var resize = operation === testCase.resizeOperation
         var width = resize && index % 2 === 0 ? 1120 : testCase.originalWidth
         var height = resize && index % 2 === 0 ? 760 : testCase.originalHeight
         var revision = testCase.surface.gridModel.scene.displayRevision
         var plotWidth = testCase.plot.width
         var plotHeight = testCase.plot.height
-        captureTurn(turn, width, height)
+        captureTurn(operation, width, height)
         validateGeometry(width, height, revision, plotWidth, plotHeight, resize)
     }
 
@@ -156,38 +162,43 @@ TestCase {
         wait(0)
     }
 
-    function runPhase(label, resize) {
-        var turn = resize ? testCase.resizeTurn : testCase.emptyTurn
+    function preparePhase() {
         restoreWindow()
-        bootstrap.resetAllocationCapture()
-        for (var warm = 0; warm < bootstrap.allocationWarmup; ++warm)
-            runOperation(turn, resize, warm)
+        testCase.allocationFixture.resetAllocationCapture()
+    }
+
+    function runPhase(label, operation) {
+        preparePhase()
+        for (var warm = 0; warm < testCase.allocationFixture.allocationWarmup; ++warm)
+            runOperation(operation, warm)
         // Warmup's capture bridge is identical but its counters are discarded.
-        restoreWindow()
-        bootstrap.resetAllocationCapture()
+        preparePhase()
         var completed = 0
         try {
-            for (var iteration = 0; iteration < bootstrap.allocationIterations; ++iteration) {
+            for (var iteration = 0; iteration < testCase.allocationFixture.allocationIterations; ++iteration) {
                 // Count a captured operation even when its post-pause predicate
                 // fails, so the partial report remains available for diagnosis.
                 ++completed
-                runOperation(turn, resize, iteration)
+                runOperation(operation, iteration)
             }
         } finally {
-            bootstrap.pauseAllocationCapture()
-            if (completed > 0 && !bootstrap.reportAllocationCapture(label, completed))
-                fail(bootstrap.allocationError)
-            restoreWindow()
+            testCase.allocationFixture.pauseAllocationCapture()
+            try {
+                if (completed > 0 && !testCase.allocationFixture.reportAllocationCapture(label, completed))
+                    fail(testCase.allocationFixture.allocationError)
+            } finally {
+                restoreWindow()
+            }
         }
-        compare(completed, bootstrap.allocationIterations)
+        compare(completed, testCase.allocationFixture.allocationIterations)
     }
 
     function test_windowResizeCapture() {
         if (!testCase.requested)
             skip("opt-in window-resize allocation scenario was not requested")
         verify(testCase.fixtureReady)
-        runPhase("window-resize.geometry-event-turn", true)
-        runPhase("window-resize.empty-event-turn", false)
+        runPhase("window-resize.geometry-event-turn", testCase.resizeOperation)
+        runPhase("window-resize.empty-event-turn", testCase.emptyOperation)
         compare(benchmarkWindow.width, testCase.originalWidth)
         compare(benchmarkWindow.height, testCase.originalHeight)
         verify(bootstrap.allocationCameraViewportMatches(testCase.plot.width, testCase.plot.height))
@@ -196,7 +207,8 @@ TestCase {
     function cleanupTestCase() {
         if (!testCase.requested)
             return
-        bootstrap.pauseAllocationCapture()
+        if (testCase.allocationFixture)
+            testCase.allocationFixture.pauseAllocationCapture()
         if (testCase.fixtureReady)
             restoreWindow()
         bootstrap.pausePlayheadPolling()
@@ -215,5 +227,9 @@ TestCase {
         if (session.songOpen)
             verify(bootstrap.acknowledgeSceneRemoval(), "the production scene removal is acknowledged")
         benchmarkWindow.visible = false
+        if (testCase.allocationFixture) {
+            testCase.allocationFixture.destroy()
+            testCase.allocationFixture = null
+        }
     }
 }

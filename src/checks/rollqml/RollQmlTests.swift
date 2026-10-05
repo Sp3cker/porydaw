@@ -136,6 +136,7 @@ enum RollQmlLane {
         VoiceListController.registerUncreatableQmlElement()
         WavExportPresenter.registerUncreatableQmlElement()
         RollQmlBootstrap.registerQmlElement()
+        WindowResizeAllocationFixture.registerQmlElement()
         PreferencesStore.registerQmlElement()
         BridgeProbe.registerQmlElement()
         // ApplicationSession itself supplies the Swift ruler form bridge.

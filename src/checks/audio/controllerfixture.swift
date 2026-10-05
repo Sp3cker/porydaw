@@ -134,3 +134,115 @@ internal struct AuditionHeldNote: Equatable, Comparable {
         return lhs.velocity < rhs.velocity
     }
 }
+
+/// Compare original-native observations without copying driver storage or comparing pointer identities.
+internal func auditionNativeStatesMatch(
+    _ actual: UnsafeMutablePointer<M4AEngine>, _ expected: UnsafeMutablePointer<M4AEngine>
+) -> Bool {
+    let pcmMatches: Bool = withUnsafePointer(to: &actual.pointee.pcmChannels) { a in
+        withUnsafePointer(to: &expected.pointee.pcmChannels) { e in
+            a.withMemoryRebound(to: M4APCMChannel.self, capacity: Int(TOTAL_PCM_CHANNELS)) { left in
+                e.withMemoryRebound(to: M4APCMChannel.self, capacity: Int(TOTAL_PCM_CHANNELS)) { right in
+                    for index in 0..<Int(TOTAL_PCM_CHANNELS) {
+                        let l = left[index]
+                        let r = right[index]
+                        let identity =
+                            l.status == r.status && l.type == r.type && l.trackIndex == r.trackIndex
+                            && l.midiKey == r.midiKey && l.key == r.key && l.velocity == r.velocity
+                            && l.priority == r.priority
+                        let envelope =
+                            l.envelopeVolume == r.envelopeVolume
+                            && l.envelopeVolumeLeft == r.envelopeVolumeLeft
+                            && l.envelopeVolumeRight == r.envelopeVolumeRight
+                            && l.attack == r.attack && l.decay == r.decay && l.sustain == r.sustain
+                            && l.release == r.release
+                        let output =
+                            l.frequency == r.frequency && l.leftVolume == r.leftVolume && l.rightVolume == r.rightVolume
+                            && l.gateTime == r.gateTime && l.audition == r.audition
+                            && l.pseudoEchoVolume == r.pseudoEchoVolume && l.pseudoEchoLength == r.pseudoEchoLength
+                        if !identity || !envelope || !output { return false }
+                    }
+                    return true
+                }
+            }
+        }
+    }
+    guard pcmMatches else { return false }
+    let cgbMatches: Bool = withUnsafePointer(to: &actual.pointee.cgbChannels) { a in
+        withUnsafePointer(to: &expected.pointee.cgbChannels) { e in
+            a.withMemoryRebound(to: M4ACGBChannel.self, capacity: Int(TOTAL_CGB_CHANNELS)) { left in
+                e.withMemoryRebound(to: M4ACGBChannel.self, capacity: Int(TOTAL_CGB_CHANNELS)) { right in
+                    for index in 0..<Int(TOTAL_CGB_CHANNELS) {
+                        let l = left[index]
+                        let r = right[index]
+                        let identity =
+                            l.status == r.status && l.type == r.type && l.trackIndex == r.trackIndex
+                            && l.midiKey == r.midiKey && l.key == r.key && l.velocity == r.velocity
+                            && l.priority == r.priority
+                        let envelope =
+                            l.envelopeVolume == r.envelopeVolume && l.envelopeGoal == r.envelopeGoal
+                            && l.envelopeCounter == r.envelopeCounter && l.sustainGoal == r.sustainGoal
+                            && l.attack == r.attack && l.decay == r.decay && l.sustain == r.sustain
+                            && l.release == r.release
+                        let output =
+                            l.frequency == r.frequency && l.leftVolume == r.leftVolume && l.rightVolume == r.rightVolume
+                            && l.gateTime == r.gateTime && l.audition == r.audition
+                            && l.pan == r.pan && l.panMask == r.panMask
+                            && l.dutyCycle == r.dutyCycle
+                        // Native process refreshes MO_VOL (0x2) before every advance; its
+                        // consumed/pending value depends on callback partition, not future sound.
+                        // Preserve the other pending writes and the actual volume/envelope above.
+                        let callbackVolumeDirtyBit: UInt8 = 0x2
+                        let pendingWrites =
+                            (l.modify & ~callbackVolumeDirtyBit) == (r.modify & ~callbackVolumeDirtyBit)
+                        let hardware =
+                            l.phase == r.phase && l.phaseInc == r.phaseInc && l.lfsr == r.lfsr
+                            && l.declickSample == r.declickSample
+                            && l.declickSamplesRemaining == r.declickSamplesRemaining
+                        if !identity || !envelope || !output || !hardware || !pendingWrites { return false }
+                    }
+                    return true
+                }
+            }
+        }
+    }
+    guard cgbMatches else { return false }
+    let tracksMatch: Bool = withUnsafePointer(to: &actual.pointee.tracks) { a in
+        withUnsafePointer(to: &expected.pointee.tracks) { e in
+            a.withMemoryRebound(to: M4ATrack.self, capacity: Int(MAX_TRACKS)) { left in
+                e.withMemoryRebound(to: M4ATrack.self, capacity: Int(MAX_TRACKS)) { right in
+                    for index in 0..<Int(MAX_TRACKS) {
+                        let l = left[index]
+                        let r = right[index]
+                        let controls =
+                            l.currentProgram == r.currentProgram && l.priority == r.priority
+                            && l.volume == r.volume && l.rawVolume == r.rawVolume && l.pan == r.pan
+                            && l.bend == r.bend && l.bendRange == r.bendRange && l.flags == r.flags
+                        let glide =
+                            l.portamentoDuration == r.portamentoDuration && l.portamentoPrevKey == r.portamentoPrevKey
+                            && l.portamentoTargetKey == r.portamentoTargetKey
+                            && l.portamentoElapsed == r.portamentoElapsed
+                            && l.portamentoGliding == r.portamentoGliding
+                        let output =
+                            l.keyM == r.keyM && l.pitM == r.pitM && l.modM == r.modM
+                            && l.volML == r.volML && l.volMR == r.volMR
+                        if !controls || !glide || !output { return false }
+                    }
+                    return true
+                }
+            }
+        }
+    }
+    guard tracksMatch, actual.pointee.polyEventTotal == expected.pointee.polyEventTotal else { return false }
+    let dropsMatch: Bool = withUnsafeBytes(of: actual.pointee.polyDropCount) { a in
+        withUnsafeBytes(of: expected.pointee.polyDropCount) { e in a.elementsEqual(e) }
+    }
+    let stealsMatch: Bool = withUnsafeBytes(of: actual.pointee.polyStealCount) { a in
+        withUnsafeBytes(of: expected.pointee.polyStealCount) { e in a.elementsEqual(e) }
+    }
+    let tailsMatch: Bool = withUnsafeBytes(of: actual.pointee.polyTailCutCount) { a in
+        withUnsafeBytes(of: expected.pointee.polyTailCutCount) { e in a.elementsEqual(e) }
+    }
+    return dropsMatch && stealsMatch && tailsMatch
+        && m4a_driver_current_cycle(actual.pointee.driver) == m4a_driver_current_cycle(expected.pointee.driver)
+}

@@ -290,6 +290,11 @@ public func pdcSuiteRun(
         runSamplePitchChecks(report, key: 81)
     case 51:
         runSamplePitchChecks(report, key: 93)
+    case 52:
+        let boxedAllocationEditor = ReportBox(report)
+        MainActor.assumeIsolated {
+            runEditorAllocationMacrobenchmarkSuite(boxedAllocationEditor.report)
+        }
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

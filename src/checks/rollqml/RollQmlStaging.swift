@@ -24,12 +24,6 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     private var headerAuditionEvents: [String] = []
     private var headerAuditionForward: ((UInt8, UInt8, UInt8) -> Void)?
 
-    private var allocationProbe: AllocationProbe?
-    private var allocationPreparationAttempted = false
-    @QtTracked public var allocationWarmup = 0
-    @QtTracked public var allocationIterations = 0
-    @QtTracked public var allocationError = ""
-
     /// The runner's scratch directory, staged before Qt builds any QML object.
     public var projectRoot: String = RollQmlBootstrap.stagedProjectRoot
     @QtTracked public var preferences = PreferencesStore()
@@ -122,54 +116,10 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
         return failure.isEmpty || failure == initialError
     }
 
-    // ---- opt-in GUI-thread allocation capture -------------------------------
+    // ---- suite selection and production camera observation ------------------
 
     public func allocationWindowResizeRequested() -> Bool {
-        AllocationBenchmarkOptions.requestedScenario == "window-resize"
-    }
-
-    /// No ordinary suite calls this: the profiling library is loaded only for
-    /// the explicitly requested scenario, once, before any captured operation.
-    public func prepareWindowAllocationCapture() -> Bool {
-        if allocationPreparationAttempted { return allocationProbe != nil }
-        allocationPreparationAttempted = true
-        do {
-            guard let options = try AllocationBenchmarkOptions.load(for: "window-resize") else {
-                allocationError = "window-resize allocation scenario was not requested"
-                return false
-            }
-            let probe = try AllocationProbe.load()
-            allocationWarmup = options.warmup
-            allocationIterations = options.iterations
-            allocationProbe = probe
-            return true
-        } catch {
-            allocationError = "window-resize allocation capture: \(error)"
-            return false
-        }
-    }
-
-    public func resetAllocationCapture() {
-        allocationProbe?.reset()
-    }
-
-    // No observer property writes or result/string construction at these
-    // boundaries. The suite reports identical empty bridge/wait overhead.
-    public func beginAllocationCapture() {
-        allocationProbe?.begin()
-    }
-
-    public func pauseAllocationCapture() {
-        allocationProbe?.pause()
-    }
-
-    public func reportAllocationCapture(label: String, operations: Int) -> Bool {
-        guard let probe = allocationProbe, operations > 0 else {
-            allocationError = "window-resize allocation report requires a probe and positive operations"
-            return false
-        }
-        probe.report(label: label, operations: UInt64(operations))
-        return true
+        AllocationBenchmarkOptions.requestedScenario == AllocationScenario.windowResize.rawValue
     }
 
     /// Observed only after pause: QML's actual plot geometry must have reached

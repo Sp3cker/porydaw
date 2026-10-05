@@ -33,6 +33,7 @@ public final class AudioAudition {
     private let samples = AudioSampleAudition()
     private let band = AudioBandAudition()
     let timed = TimedAuditions()
+    let voices = AudioAuditionVoices()
 
     public init() {}
 
@@ -87,8 +88,7 @@ public final class AudioAudition {
         if note != appliedNote {
             appliedNote = note
             if heldOccurrence != 0 {
-                m4a_engine_audition_note_off(
-                    main, M4AAuditionID(serial: heldOccurrence, source: UInt8(M4A_AUDITION_HELD)))
+                voices.release(engine: main, source: .held, serial: heldOccurrence)
             }
             heldOccurrence = 0
             let velocity = UInt8(truncatingIfNeeded: note)
@@ -99,14 +99,14 @@ public final class AudioAudition {
                 main.pointee.auditionNote = true
                 heldSerial += 1
                 heldOccurrence = heldSerial
-                m4a_engine_audition_note_on(
-                    main, M4AAuditionID(serial: heldOccurrence, source: UInt8(M4A_AUDITION_HELD)),
-                    track, key, velocity, UInt64.max)
+                voices.start(
+                    engine: main, track: track, key: key, velocity: velocity,
+                    source: .held, serial: heldOccurrence)
             }
         }
         if !deferTimed {
-            timed.apply(main, frames: frames)
-            band.apply(main)
+            timed.apply(main, voices: voices, frames: frames)
+            band.apply(main, voices: voices)
         }
         let voice = voiceCommand.load(ordering: .acquiring)
         if voice != appliedVoice {
@@ -124,6 +124,21 @@ public final class AudioAudition {
         samples.apply(preview)
     }
 
+    /// Render the original engine, releasing band occurrences only after their
+    /// captured number of samples has actually passed through native DSP.
+    ///
+    /// - Parameters:
+    ///   - main: The initialized main engine shared with interactive sequencing.
+    ///   - left: Planar left output storage for at least `frames` samples.
+    ///   - right: Planar right output storage for at least `frames` samples.
+    ///   - frames: Nonnegative output sample count.
+    public func render(
+        main: UnsafeMutablePointer<M4AEngine>, left: UnsafeMutablePointer<Float>,
+        right: UnsafeMutablePointer<Float>, frames: Int
+    ) {
+        voices.render(engine: main, left: left, right: right, frames: frames)
+    }
+
     /// At fade start, discard old countdowns before sequenced notes can reuse keys.
     public func beginCut() { clearMainPreviews() }
 
@@ -132,6 +147,7 @@ public final class AudioAudition {
         timed.clear(dropQueued: true)
         band.discardPending()
         heldOccurrence = 0
+        voices.clear()
     }
 
     /// Audio callback at zero output gain; commands queued during the fade survive.
@@ -143,6 +159,7 @@ public final class AudioAudition {
         m4a_engine_all_sound_off(preview)
         timed.clear(dropQueued: false)
         heldOccurrence = 0
+        voices.clear()
         voiceKey = -1
         samples.reset()
     }
@@ -210,7 +227,7 @@ final class TimedAuditions {
         if dropQueued { read.store(write.load(ordering: .acquiring), ordering: .releasing) }
     }
 
-    func apply(_ engine: UnsafeMutablePointer<M4AEngine>, frames: UInt32) {
+    func apply(_ engine: UnsafeMutablePointer<M4AEngine>, voices: AudioAuditionVoices, frames: UInt32) {
         let end = write.load(ordering: .acquiring)
         var position = read.load(ordering: .relaxed)
         if position != end {
@@ -229,8 +246,7 @@ final class TimedAuditions {
             }
             if command.velocity == 0 {
                 if slot >= 0 {
-                    m4a_engine_audition_note_off(
-                        engine, M4AAuditionID(serial: active[slot].serial, source: UInt8(M4A_AUDITION_TIMED)))
+                    voices.release(engine: engine, source: .timed, serial: active[slot].serial)
                     count -= 1
                     active[slot] = active[count]
                 }
@@ -246,13 +262,12 @@ final class TimedAuditions {
                         slot = index
                     }
                 }
-                m4a_engine_audition_note_off(
-                    engine, M4AAuditionID(serial: active[slot].serial, source: UInt8(M4A_AUDITION_TIMED)))
+                voices.release(engine: engine, source: .timed, serial: active[slot].serial)
             }
             serial += 1
-            m4a_engine_audition_note_on(
-                engine, M4AAuditionID(serial: serial, source: UInt8(M4A_AUDITION_TIMED)),
-                Int32(command.track), command.key, command.velocity, UInt64.max)
+            voices.start(
+                engine: engine, track: Int32(command.track), key: command.key, velocity: command.velocity,
+                source: .timed, serial: serial)
             active[slot] = Active(
                 track: command.track, key: command.key,
                 remaining: Int64(command.duration), serial: serial)
@@ -262,8 +277,7 @@ final class TimedAuditions {
         while index < count {
             active[index].remaining -= Int64(frames)
             if active[index].remaining <= 0 {
-                m4a_engine_audition_note_off(
-                    engine, M4AAuditionID(serial: active[index].serial, source: UInt8(M4A_AUDITION_TIMED)))
+                voices.release(engine: engine, source: .timed, serial: active[index].serial)
                 count -= 1
                 active[index] = active[count]
             } else {

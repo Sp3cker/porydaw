@@ -3,6 +3,7 @@
 #include "core_check.h"
 #include "native_check.h"
 
+#include <QByteArray>
 #include <QDebug>
 #include <QFile>
 #include <QtTest/QTest>
@@ -151,6 +152,16 @@ void SwiftCoreTest::timeEdits()
 void SwiftCoreTest::projectSession()
 {
     pdc_suite_run(PDC_SUITE_PROJECT_SESSION, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::allocationEditor()
+{
+    const QByteArray scenario = qgetenv("PORYDAW_ALLOCATION_SCENARIO");
+    if (scenario.isEmpty() || scenario == "window-resize")
+        QSKIP("Editor allocation profiling requires note-draw or automation-commit opt-in");
+    if (scenario != "note-draw" && scenario != "automation-commit")
+        QFAIL("Unknown PORYDAW_ALLOCATION_SCENARIO for editor allocation profiling");
+    pdc_suite_run(PDC_SUITE_ALLOCATION_EDITOR, reportSwiftCheck, this);
 }
 
 void SwiftCoreTest::bankHistory()

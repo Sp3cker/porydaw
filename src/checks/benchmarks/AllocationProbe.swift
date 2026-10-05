@@ -4,6 +4,12 @@ import Foundation
     import Darwin
 #endif
 
+enum AllocationScenario: String {
+    case noteDraw = "note-draw"
+    case automationCommit = "automation-commit"
+    case windowResize = "window-resize"
+}
+
 struct AllocationBenchmarkOptions {
     let warmup: Int
     let iterations: Int

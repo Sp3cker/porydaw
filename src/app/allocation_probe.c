@@ -240,44 +240,34 @@ PDA_EXPORT void pda_profile_report(const char *label, uint64_t operations)
     bool valid = (PDA_CPU_ONLY || installed) && g_runtime_validated && state && state->segments &&
         state->error == PDA_OK && !atomic_load_explicit(&g_guard_failed, memory_order_relaxed);
     flockfile(pda_output());
-    if (PDA_CPU_ONLY) {
-        fputs("{\"pda\":\"cpu\",\"label\":", pda_output());
-        pda_json_string(label);
-        fprintf(pda_output(), ",\"operations\":%" PRIu64 ",\"threadid\":%" PRIu64
-                ",\"hookinstalled\":false,\"runtimevalidated\":%s,\"valid\":%s,\"reason\":",
-                operations, state ? state->threadid : 0,
-                g_runtime_validated ? "true" : "false", valid ? "true" : "false");
-        pda_json_string(reason);
-        fputs(",\"capturedsegments\":", pda_output());
-        if (valid) fprintf(pda_output(), "%" PRIu64, state->segments);
-        else fputs("null", pda_output());
-        fputs(",\"cpu_ns\":", pda_output());
-        if (valid && state->cpuvalid) fprintf(pda_output(), "%" PRIu64, state->cpu_ns);
-        else fputs("null", pda_output());
-        fprintf(pda_output(), ",\"cpuvalid\":%s,\"cpu_instrumented\":true}\n",
-                valid && state->cpuvalid ? "true" : "false");
-        funlockfile(pda_output());
-        return;
-    }
-    fputs("{\"pda\":\"phase\",\"label\":", pda_output());
+    fprintf(pda_output(), "{\"pda\":\"%s\",\"label\":", PDA_CPU_ONLY ? "cpu" : "phase");
     pda_json_string(label);
     fprintf(pda_output(), ",\"operations\":%" PRIu64 ",\"threadid\":%" PRIu64
-            ",\"hookinstalled\":%s,\"runtimevalidated\":%s,\"previouslogger\":%s,\"valid\":%s,\"reason\":",
-            operations, state ? state->threadid : 0, installed ? "true" : "false",
-            g_runtime_validated ? "true" : "false", g_previous ? "true" : "false", valid ? "true" : "false");
-    pda_json_string(reason);
-    if (valid) {
-        fprintf(pda_output(), ",\"allocations\":%" PRIu64 ",\"allocatedbytes\":%" PRIu64
-                ",\"frees\":%" PRIu64 ",\"reallocations\":%" PRIu64 ",\"reallocinplace\":%" PRIu64
-                ",\"failedallocations\":%" PRIu64 ",\"failedreallocations\":%" PRIu64
-                ",\"capturedsegments\":%" PRIu64,
-                state->allocations, state->allocatedbytes, state->frees, state->reallocations,
-                state->reallocinplace, state->failedallocations, state->failedreallocations, state->segments);
-    } else {
-        fputs(",\"allocations\":null,\"allocatedbytes\":null,\"frees\":null,\"reallocations\":null,"
-              "\"reallocinplace\":null,\"failedallocations\":null,\"failedreallocations\":null,"
-              "\"capturedsegments\":null", pda_output());
+            ",\"hookinstalled\":%s,\"runtimevalidated\":%s",
+            operations, state ? state->threadid : 0,
+            !PDA_CPU_ONLY && installed ? "true" : "false",
+            g_runtime_validated ? "true" : "false");
+    if (!PDA_CPU_ONLY) {
+        fprintf(pda_output(), ",\"previouslogger\":%s", g_previous ? "true" : "false");
     }
+    fprintf(pda_output(), ",\"valid\":%s,\"reason\":", valid ? "true" : "false");
+    pda_json_string(reason);
+    if (!PDA_CPU_ONLY) {
+        if (valid) {
+            fprintf(pda_output(), ",\"allocations\":%" PRIu64 ",\"allocatedbytes\":%" PRIu64
+                    ",\"frees\":%" PRIu64 ",\"reallocations\":%" PRIu64 ",\"reallocinplace\":%" PRIu64
+                    ",\"failedallocations\":%" PRIu64 ",\"failedreallocations\":%" PRIu64,
+                    state->allocations, state->allocatedbytes, state->frees, state->reallocations,
+                    state->reallocinplace, state->failedallocations, state->failedreallocations);
+        } else {
+            fputs(",\"allocations\":null,\"allocatedbytes\":null,\"frees\":null,\"reallocations\":null,"
+                  "\"reallocinplace\":null,\"failedallocations\":null,\"failedreallocations\":null",
+                  pda_output());
+        }
+    }
+    fputs(",\"capturedsegments\":", pda_output());
+    if (valid) fprintf(pda_output(), "%" PRIu64, state->segments);
+    else fputs("null", pda_output());
     fputs(",\"cpu_ns\":", pda_output());
     if (valid && state->cpuvalid) fprintf(pda_output(), "%" PRIu64, state->cpu_ns);
     else fputs("null", pda_output());

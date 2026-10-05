@@ -146,7 +146,7 @@ final class AudioBandAudition {
         publishedSequence.store(batch.sequence, ordering: .releasing)
     }
 
-    func apply(_ engine: UnsafeMutablePointer<M4AEngine>) {
+    func apply(_ engine: UnsafeMutablePointer<M4AEngine>, voices: AudioAuditionVoices) {
         // One acquire captures a finite drain, even if the producer keeps writing.
         let cutoff = publishedSequence.load(ordering: .acquiring)
         while consumerCursor.sequence < cutoff {
@@ -154,10 +154,10 @@ final class AudioBandAudition {
                 preconditionFailure("Published sequence must be reachable from the consumer cursor")
             }
             if batch.commands.count <= batch.commands.inline.count {
-                Self.apply(batch.commands.inline.span, count: batch.commands.count, engine: engine)
+                Self.apply(batch.commands.inline.span, count: batch.commands.count, engine: engine, voices: voices)
             } else {
                 let payload = batch.commands.overflow
-                Self.apply(payload.span, count: batch.commands.count, engine: engine)
+                Self.apply(payload.span, count: batch.commands.count, engine: engine, voices: voices)
             }
             consumerCursor = batch
             acknowledgedSequence.store(batch.sequence, ordering: .releasing)
@@ -166,18 +166,19 @@ final class AudioBandAudition {
 
     private static func apply(
         _ commands: borrowing Span<Command>, count: Int,
-        engine: UnsafeMutablePointer<M4AEngine>
+        engine: UnsafeMutablePointer<M4AEngine>, voices: AudioAuditionVoices
     ) {
         for index in 0..<count {
             switch commands[index] {
             case .start(let serial, let track, let key, let velocity, let durationSamples):
+                guard durationSamples > 0 else { continue }
                 engine.pointee.polyEventClock = UInt32.max
-                m4a_engine_audition_note_on(
-                    engine, M4AAuditionID(serial: serial, source: UInt8(M4A_AUDITION_BAND)),
-                    Int32(track), key, velocity, durationSamples)
+                engine.pointee.auditionNote = true
+                voices.start(
+                    engine: engine, track: Int32(track), key: key, velocity: velocity,
+                    source: .band, serial: serial, durationSamples: durationSamples)
             case .release(let serial):
-                m4a_engine_audition_note_off(
-                    engine, M4AAuditionID(serial: serial, source: UInt8(M4A_AUDITION_BAND)))
+                voices.release(engine: engine, source: .band, serial: serial)
             }
         }
     }

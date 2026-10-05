@@ -19,6 +19,7 @@ func runAudioControllerChecks(_ report: CheckReport) {
         try checkControllerPreviewIsolation(report)
         try checkControllerPitchBendAudio(report)
         try checkControllerBandRenderAndCut(report)
+        try checkControllerBandDebugTransition(report)
         try checkNativeAudioLifetime(report)
     } catch { report.fail("swiftcore/AudioController", "controller initialization failed: \(error)") }
 }
@@ -375,6 +376,25 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
         cppID: "swiftcore/AudioController::wavePreviewIsolation", message: "sampleOff also releases the CGB wave")
 }
 
+private func checkControllerBandDebugTransition(_ report: CheckReport) throws {
+    let id = "swiftcore/AudioController::bandDebugTransition"
+    for cgb in [false, true] {
+        let rig = try AudioControllerCheckFixture(cgb: cgb, silent: true)
+        let audio = rig.renderer
+        audio.setPolyDebugInvert(true)
+        audio.audition.updateBandAudition([
+            BandAuditionNote(noteID: 1, track: 0, key: 60, velocity: 93, durationSamples: UInt64(rig.rate))
+        ])
+        var output = rig.render(rig.rate, chunk: 2048)
+        output.append(contentsOf: rig.render(rig.settle))
+        report.expect(
+            audioControllerCheckPeak(output[...]) > 0 && !rig.sustaining(60),
+            cppID: id,
+            message:
+                "\(cgb ? "CGB" : "PCM") entrance remains audible and expires when invert is enabled in its callback")
+    }
+}
+
 private func checkControllerBandRenderAndCut(_ report: CheckReport) throws {
     let id = "swiftcore/AudioController::bandRenderAndCut"
     let rig = try AudioControllerCheckFixture(silent: true)
@@ -420,10 +440,14 @@ private func checkControllerBandRenderAndCut(_ report: CheckReport) throws {
     let finite = BandAuditionNote(noteID: 1, track: 0, key: 60, velocity: 41, durationSamples: 1025)
     var gated = renderBand([finite], 2048, chunk: 2048)
     report.expect(
-        !rig.sustaining(60) && audioControllerCheckPeak(gated[...]) > 0,
+        !rig.sustaining(60),
         cppID: durationID,
-        message: "a positive short note sounds through the DMA pipeline and gates inside one large callback")
+        message: "a positive short note gates inside one large callback before DMA-delayed output is required")
     gated.append(contentsOf: rig.render(rig.settle))
+    report.expect(
+        audioControllerCheckPeak(gated[...]) > 0,
+        cppID: durationID,
+        message: "the complete short-note observation includes its real DMA-delayed output and normal release tail")
     _ = renderBand([], rig.rate)
     audio.bind(timeline: rig.timeline(silent: true), voicegroup: rig.voices, settings: AudioSettings())
     var reference = renderBand([first], 1025, chunk: 1025)

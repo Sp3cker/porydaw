@@ -3,6 +3,7 @@ add_library(PorydawPlayback STATIC
     PlaybackBridge.swift
     audition/AudioAudition.swift
     audition/AudioBandAudition.swift
+    audition/AudioAuditionVoices.swift
     audition/AudioSampleAudition.swift
 )
 
