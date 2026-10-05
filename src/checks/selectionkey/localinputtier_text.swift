@@ -489,7 +489,7 @@ func drawerOriginalNumericPromptTransaction(
         expected: 2, actual: ccFixture.lanePoints(ccFixture.panLane).count, cppID: ccID,
         what: "A044 insertion leaves two lane points")
     report.expectEqual(
-        expected: 64, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+        expected: 64, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value,
         cppID: ccID, what: "A045 inserted point stores 64")
     report.expect(
         ccFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
@@ -498,7 +498,7 @@ func drawerOriginalNumericPromptTransaction(
         ccFixture.page.acceptPrompt(displayedValue: -64), cppID: ccID,
         message: "displayed -64 commits through the stored offset")
     report.expectEqual(
-        expected: 0, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+        expected: 0, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value,
         cppID: ccID, what: "A050 displayed -64 stores 0")
     report.expect(
         ccFixture.page.openPrompt(tick: 96, value: 0), cppID: ccID,
@@ -507,7 +507,7 @@ func drawerOriginalNumericPromptTransaction(
         ccFixture.page.acceptPrompt(displayedValue: 63), cppID: ccID,
         message: "displayed 63 commits through the stored offset")
     report.expectEqual(
-        expected: 127, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+        expected: 127, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value,
         cppID: ccID, what: "A055 displayed 63 stores 127")
     report.expectEqual(
         expected: ccBaseRevision + 3, actual: ccFixture.document.revision, cppID: ccID,
@@ -573,10 +573,10 @@ func drawerOriginalNumericPromptTransaction(
         !focusFixture.page.promptOpen, cppID: focusID,
         message: "document change cancels the pending prompt")
     report.expectEqual(
-        expected: 64, actual: focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 24 }?.value ?? -1,
+        expected: 64, actual: focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 24 }?.value,
         cppID: focusID, what: "A081 cancelled prompt keeps the original value 64")
     report.expectEqual(
-        expected: 32, actual: focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 48 }?.value ?? -1,
+        expected: 32, actual: focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 48 }?.value,
         cppID: focusID, what: "A083 added point stores 32")
     report.expectEqual(
         expected: ["24:64", "48:32"], actual: focusFixture.values(focusFixture.panLane), cppID: focusID,

@@ -105,8 +105,7 @@ private func crossTpbClipboardPaste(_ report: CheckReport) {
         copiedOptional != nil,
         cppID: "clipcheck/ClipCheckTest::crossTpbNotePaste",
         message: "source note copy yields a clip before TPQN rescaling")
-    guard let ids = addedIDs, let id = ids.first, let note = source.note(id),
-        let copied = copiedOptional
+    guard let copied = copiedOptional
     else {
         report.fail("clipcheck/ClipCheckTest::crossTpbNotePaste", "source note copy failed")
         return

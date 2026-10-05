@@ -42,8 +42,7 @@ private func firstSquareSlot(_ lease: ProjectBankLease) -> Int? {
 private func bankFixture(
     _ body: (URL, ProjectStore, ProjectSong, ProjectBankLease) throws -> Void
 ) throws {
-    guard let fixtureRoot = CheckEnvironment.fixtureRoot,
-        let staged = CheckEnvironment.fixturePath("sound/voicegroups/fixture_rich.inc"),
+    guard let staged = CheckEnvironment.fixturePath("sound/voicegroups/fixture_rich.inc"),
         FileManager.default.fileExists(atPath: staged)
     else {
         throw BankLeasesCheckError.failed("fixture_rich.inc is absent")
@@ -117,8 +116,7 @@ private func serviceBankCase(
 ) {
     let cppID = "vgbankcheck/VoicegroupBankTest::\(name)"
     do {
-        guard let fixtureRoot = CheckEnvironment.fixtureRoot,
-            let staged = CheckEnvironment.fixturePath("sound/voicegroups/fixture_rich.inc"),
+        guard let staged = CheckEnvironment.fixturePath("sound/voicegroups/fixture_rich.inc"),
             FileManager.default.fileExists(atPath: staged)
         else {
             throw BankLeasesCheckError.failed("fixture_rich.inc is absent")

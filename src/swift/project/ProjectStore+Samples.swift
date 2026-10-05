@@ -24,7 +24,7 @@ extension ProjectStore {
             } else {
                 try SampleRegistrar.register(projectRoot: projectRoot, name: request.name, wav: request.wav)
             }
-        } catch let error as SampleRegistrationError {
+        } catch {
             throw VoicegroupStoreError.operationFailed(
                 error.message.isEmpty
                     ? "Could not commit \(request.name)." : error.message)

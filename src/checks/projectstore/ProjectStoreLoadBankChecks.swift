@@ -147,7 +147,7 @@ private func loadBankGraftRow(_ report: CheckReport) {
                     changed.view.dirty && changed.view.slotViews[0].voice == minted
                         && initial.slotViews[0].voice == original && !initial.dirty,
                     report, "minted symbol loads in edited preview while the old publication stays intact")
-                guard let saved = try? store.saveVoicegroup(id: initial.id), saved != nil else {
+                guard (try? store.saveVoicegroup(id: initial.id)) != nil else {
                     loadBankExpect("L09", false, report, "edited bank failed to persist before adopted reload")
                     return
                 }

@@ -29,6 +29,55 @@ if(APPLE)
     porydaw_mark_interface_includes_system(Qt6::Test)
 endif()
 
+# Swift check sources need their own archive for CMake to emit compile rules.
+function(add_porydaw_check_lane name)
+    cmake_parse_arguments(PARSE_ARGV 1 CHECK "" "MODULE_NAME;MODULE_DIRECTORY"
+        "SOURCES;COMPILE_OPTIONS;LINK_LIBRARIES")
+    add_library(${name} STATIC ${CHECK_SOURCES})
+    set_target_properties(${name} PROPERTIES
+        Swift_MODULE_NAME "${CHECK_MODULE_NAME}"
+        Swift_LANGUAGE_VERSION 6
+        AUTOMOC OFF
+        AUTOUIC OFF
+        AUTORCC OFF
+    )
+    if(CHECK_MODULE_DIRECTORY)
+        set_target_properties(${name} PROPERTIES
+            Swift_MODULE_DIRECTORY "${CHECK_MODULE_DIRECTORY}")
+    endif()
+    porydaw_enable_swift_batch_mode(${name})
+    target_compile_options(${name} PRIVATE ${CHECK_COMPILE_OPTIONS})
+    target_link_libraries(${name} PRIVATE ${CHECK_LINK_LIBRARIES})
+endfunction()
+
+# Keep QML hosts as plain build-root executables for run_checks.ts.
+function(add_porydaw_check name)
+    cmake_parse_arguments(PARSE_ARGV 1 CHECK "" "SWIFT_LANE;MODULE_NAME;AUTOMOC"
+        "SOURCES;SWIFT_SOURCES;SWIFT_COMPILE_OPTIONS;SWIFT_LINK_LIBRARIES")
+    add_porydaw_check_lane(${CHECK_SWIFT_LANE}
+        MODULE_NAME "${CHECK_MODULE_NAME}"
+        SOURCES ${CHECK_SWIFT_SOURCES}
+        COMPILE_OPTIONS ${CHECK_SWIFT_COMPILE_OPTIONS}
+        LINK_LIBRARIES ${CHECK_SWIFT_LINK_LIBRARIES}
+    )
+    add_executable(${name} ${CHECK_SOURCES})
+    set_target_properties(${name} PROPERTIES
+        AUTOMOC "${CHECK_AUTOMOC}"
+        AUTOUIC OFF
+        AUTORCC ON
+        LINKER_LANGUAGE CXX
+        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+    )
+    target_link_libraries(${name} PRIVATE
+        ${CHECK_SWIFT_LANE}
+        "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+        PorydawApp
+        Qt6::QuickTest
+    )
+    # run_checks.ts requires mid2agb beside the build-root harnesses.
+    add_dependencies(${name} mid2agb)
+endfunction()
+
 qt_add_executable(porydaw_checks
     checks_main.cpp
     checkregistry.cpp
@@ -48,7 +97,10 @@ target_include_directories(porydaw_checks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 porydaw_enable_project_warnings(porydaw_checks)
 
 if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    add_library(swift_core_check STATIC
+    add_porydaw_check_lane(swift_core_check
+        MODULE_NAME SwiftCoreCheck
+        MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check"
+        SOURCES
         support/corecheck/CoreCheckSupport.swift
         midi/MidiSmfCodecChecks.swift
         midi/MidiSmfCodecCompare.swift
@@ -330,17 +382,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/bank_switching.swift
         workspace/sample_commit.swift
         workspace/session_catalog.swift
-    )
-    set_target_properties(swift_core_check PROPERTIES
-        Swift_MODULE_NAME SwiftCoreCheck
-        Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check"
-        Swift_LANGUAGE_VERSION 6
-        AUTOMOC OFF
-        AUTOUIC OFF
-        AUTORCC OFF
-    )
-    porydaw_enable_swift_batch_mode(swift_core_check)
-    target_compile_options(swift_core_check PRIVATE
+        COMPILE_OPTIONS
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/project/module.modulemap>"
@@ -348,8 +390,8 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
+        LINK_LIBRARIES PorydawCore PorydawPlayback PorydawProject PorydawApp PorydawSample
     )
-    target_link_libraries(swift_core_check PRIVATE PorydawCore PorydawPlayback PorydawProject PorydawApp PorydawSample)
     target_link_libraries(porydaw_checks PRIVATE swift_core_check)
     target_sources(porydaw_checks PRIVATE
         support/corecheck/tst_swiftcore.cpp
@@ -405,13 +447,8 @@ if(WIN32)
         VERBATIM)
 endif()
 
-# ---- Editor drawer Qt Quick Test lane (Swift-hosted, test only) ----
-# The drawer container's QML lane is its own Swift executable, so tools/
-# run_checks.ts drives it like any other harness: the runner reads this lane's
-# manifest and launches it with one entry. Its cases load the production
-# composition by relative URL, so the QML input directory is the source
-# directory, and the Qt import/plugin paths are read from the pinned Qt
-# installation this configure selected — never from the caller's environment.
+# ---- Swift-hosted Qt Quick Test lanes (source-directory inputs) ----
+# Qt import/plugin paths come from this configure's pinned Qt installation.
 if(APPLE)
     # Locate qmake through the Qt package this configure selected, so the query
     # answers for that same Qt (verified against the pinned Qt 6.11).
@@ -438,10 +475,11 @@ if(APPLE)
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
         @ONLY
     )
-    # CMake emits Swift compile rules only for a target that archives or links
-    # its sources, so the lane's Swift module is its own static library and the
-    # executable below links it instead of compiling Swift itself.
-    add_library(editor_qml_lane STATIC
+    add_porydaw_check(editor_qml_tests
+        SWIFT_LANE editor_qml_lane
+        MODULE_NAME EditorQmlCheck
+        AUTOMOC OFF
+        SWIFT_SOURCES
         editorqml/EditorQmlTests.swift
         editorqml/EditorQmlProfileChildren.swift
         editorqml/EditorQmlProfileEvidence.swift
@@ -450,35 +488,15 @@ if(APPLE)
         editorqml/DisplayListProbe.swift
         editorqml/DrawerTestPage.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
-    )
-    set_target_properties(editor_qml_lane PROPERTIES
-        Swift_MODULE_NAME EditorQmlCheck
-        Swift_LANGUAGE_VERSION 6
-        AUTOMOC OFF
-        AUTOUIC OFF
-        AUTORCC OFF
-    )
-    porydaw_enable_swift_batch_mode(editor_qml_lane)
-    # The Swift module-map compile options the core check sets, so this lane
-    # sees the app module's Clang headers through the same contract. QtBridge
-    # and PorydawApp also hand their Swift modules to this compile.
-    target_compile_options(editor_qml_lane PRIVATE
+        SWIFT_COMPILE_OPTIONS
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-    )
-    target_link_libraries(editor_qml_lane PRIVATE QtBridge PorydawApp)
-
-    # A plain executable at the build root: the Deno runner resolves
-    # `<build>/editor_qml_tests` as a file, so no bundle or symlink wrapper.
-    add_executable(editor_qml_tests
+        SWIFT_LINK_LIBRARIES QtBridge PorydawApp
+        SOURCES
         editorqml/EditorQmlPaths.swift.in
-        # Shared waitForNative loop (editorqml/NativeWait.js): the QML lanes run
-        # with -input under the source directories themselves, so Qt Quick Test
-        # resolves each suite's relative "NativeWait.js" import against the
-        # importing file's directory at runtime — no fixture staging or qrc
-        # needed. Listed here so the build tracks the helper every suite imports.
+        # Source-directory inputs resolve NativeWait.js imports without staging.
         editorqml/NativeWait.js
         editorqml/tst_DisplayListSameFrame.qml
         editorqml/tst_EditorDrawerVelocitySameFrame.qml
@@ -494,80 +512,42 @@ if(APPLE)
         editorqml/EditorDrawerVoiceSupport.js
         editorqml/RollNoteFaces.js
     )
-    set_target_properties(editor_qml_tests PROPERTIES
-        AUTOMOC OFF
-        AUTOUIC OFF
-        AUTORCC ON
-        LINKER_LANGUAGE CXX
-        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
-    )
-    target_link_libraries(editor_qml_tests PRIVATE
-        editor_qml_lane
-        "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
-        PorydawApp
-        Qt6::QuickTest
-    )
-    # run_checks.ts refuses to start without mid2agb beside the build root.
-    add_dependencies(editor_qml_tests mid2agb)
-    # The Swift roll window's own QML lane: the same Qt Quick Test host shape
-    # as the drawer lane, mounting the production SwiftRollOverlay composition
-    # against a real ApplicationSession. Its input directory is rollqml/, so
-    # the lane gets its own generated paths file and reuses the editor lane's
-    # generated Qt import/plugin paths.
+    # The roll host mounts SwiftRollOverlay and reuses the editor's Qt paths.
     set(ROLL_QML_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/rollqml")
     configure_file(
         "${ROLL_QML_TEST_DIR}/RollQmlPaths.swift.in"
         "${CMAKE_CURRENT_BINARY_DIR}/rollqml/RollQmlPaths.swift"
         @ONLY
     )
-    add_library(roll_qml_lane STATIC
+    add_porydaw_check(roll_qml_tests
+        SWIFT_LANE roll_qml_lane
+        MODULE_NAME RollQmlCheck
+        AUTOMOC ON
+        SWIFT_SOURCES
         rollqml/RollQmlTests.swift
         rollqml/RollQmlStaging.swift
         swiftqtml/BridgeProbeCheck.swift
         "${CMAKE_CURRENT_BINARY_DIR}/rollqml/RollQmlPaths.swift"
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
-    )
-    set_target_properties(roll_qml_lane PROPERTIES
-        Swift_MODULE_NAME RollQmlCheck
-        Swift_LANGUAGE_VERSION 6
-        AUTOMOC OFF
-        AUTOUIC OFF
-        AUTORCC OFF
-    )
-    porydaw_enable_swift_batch_mode(roll_qml_lane)
-    target_compile_options(roll_qml_lane PRIVATE
+        SWIFT_COMPILE_OPTIONS
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-    )
-    target_link_libraries(roll_qml_lane PRIVATE QtBridge PorydawApp)
-
-    add_executable(roll_qml_tests
+        SWIFT_LINK_LIBRARIES QtBridge PorydawApp
+        SOURCES
         rollqml/RollQmlPaths.swift.in
         rollqml/cursor_probe.cpp
         rollqml/cursor_probe.h
-        # Same shared waitForNative loop the editor lane lists above; rollqml
-        # suites import it as "../editorqml/NativeWait.js", which Qt Quick Test
-        # resolves against the importing file's source directory at runtime.
+        # Roll suites resolve "../editorqml/NativeWait.js" from their sources.
         editorqml/NativeWait.js
     )
-    set_target_properties(roll_qml_tests PROPERTIES
-        AUTOMOC ON
-        AUTOUIC OFF
-        AUTORCC ON
-        LINKER_LANGUAGE CXX
-        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
-    )
-    target_link_libraries(roll_qml_tests PRIVATE
-        roll_qml_lane
-        "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
-        PorydawApp
-        Qt6::QuickTest
-    )
-    add_dependencies(roll_qml_tests mid2agb)
 
-    add_library(shell_qml_lane STATIC
+    add_porydaw_check(shell_qml_tests
+        SWIFT_LANE shell_qml_lane
+        MODULE_NAME ShellQmlCheck
+        AUTOMOC OFF
+        SWIFT_SOURCES
         editorqml/ShellQmlTests.swift
         editorqml/ShellQmlEntries.swift
         editorqml/GridInputClipProbe.swift
@@ -581,22 +561,11 @@ if(APPLE)
         editorqml/ImportWizardProbe.swift
         editorqml/SampleStudioVoiceProbe.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
-    )
-    set_target_properties(shell_qml_lane PROPERTIES
-        Swift_MODULE_NAME ShellQmlCheck
-        Swift_LANGUAGE_VERSION 6
-        AUTOMOC OFF
-        AUTOUIC OFF
-        AUTORCC OFF
-    )
-    porydaw_enable_swift_batch_mode(shell_qml_lane)
-    target_compile_options(shell_qml_lane PRIVATE
+        SWIFT_COMPILE_OPTIONS
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-    )
-    target_link_libraries(shell_qml_lane PRIVATE QtBridge PorydawApp PorydawCore)
-
-    add_executable(shell_qml_tests
+        SWIFT_LINK_LIBRARIES QtBridge PorydawApp PorydawCore
+        SOURCES
         editorqml/EditorQmlPaths.swift.in
         editorqml/NativeWait.js
         editorqml/ShellLaneSupport.qml
@@ -668,18 +637,4 @@ if(APPLE)
         editorqml/tst_ShellVoicegroupPicker.qml
         editorqml/tst_ShellVoicegroupSave.qml
     )
-    set_target_properties(shell_qml_tests PROPERTIES
-        AUTOMOC OFF
-        AUTOUIC OFF
-        AUTORCC ON
-        LINKER_LANGUAGE CXX
-        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
-    )
-    target_link_libraries(shell_qml_tests PRIVATE
-        shell_qml_lane
-        "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
-        PorydawApp
-        Qt6::QuickTest
-    )
-    add_dependencies(shell_qml_tests mid2agb)
 endif()
