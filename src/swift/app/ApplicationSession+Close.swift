@@ -16,10 +16,7 @@ extension ApplicationSession {
         polyphony.setContext(session: nil)
         songTabs.releaseAllDetached()
         audio?.unload()
-        songOpen = false
-        documentDirty = false
-        canUndo = false
-        canRedo = false
+        refreshDocumentState()
         // Keep the project alive until every released document and any in-flight
         // open have retired, then stop its worker. The workspaces themselves are
         // released synchronously above, before any async close.
@@ -46,13 +43,12 @@ extension ApplicationSession {
     func saveTabBeforeClose(_ tab: SongTabSession) {
         guard !saveInProgress else {
             let message = "A save is already in progress."
-            lastSaveError = message
-            operationFailed(message: message)
+            publishLastSaveError(message)
+            publishOperationFailure(message: message)
             songTabs.closeAfterSave(tabId: tab.tabId, saved: false)
             return
         }
-        saveInProgress = true
-        lastSaveError = ""
+        publishSaveState(inProgress: true, error: "")
         // The document and the tab's identity travel; the strip and the session's
         // own flags are reached through a weak self, so a save that finishes after
         // the host is gone releases nothing late.
@@ -64,19 +60,19 @@ extension ApplicationSession {
             } catch is SaveConflictError {
                 // The gate stays up (saved: false keeps the question) while the
                 // conflict prompt takes the Save answer: overwrite, fork or abort.
-                self?.saveInProgress = false
+                self?.publishSaveState(inProgress: false)
                 self?.songTabs.closeAfterSave(tabId: tabId, saved: false)
                 self?.presentSaveConflict(session: session, closeTabId: tabId)
                 return
             } catch {
                 let message = String(describing: error)
-                self?.lastSaveError = message
-                self?.operationFailed(message: message)
-                self?.saveInProgress = false
+                self?.publishLastSaveError(message)
+                self?.publishOperationFailure(message: message)
+                self?.publishSaveState(inProgress: false)
                 self?.songTabs.closeAfterSave(tabId: tabId, saved: false)
                 return
             }
-            self?.saveInProgress = false
+            self?.publishSaveState(inProgress: false)
             self?.songTabs.closeAfterSave(tabId: tabId, saved: true)
         }
     }
@@ -88,13 +84,12 @@ extension ApplicationSession {
     func saveBankBeforeClose(_ target: BankCloseTarget) {
         guard !saveInProgress else {
             let message = "A save is already in progress."
-            lastSaveError = message
-            operationFailed(message: message)
+            publishLastSaveError(message)
+            publishOperationFailure(message: message)
             songTabs.bankCloseAfterSave(saved: false)
             return
         }
-        saveInProgress = true
-        lastSaveError = ""
+        publishSaveState(inProgress: true, error: "")
         let service = catalogService
         let lease = target.lease
         Task { [weak self] in
@@ -105,10 +100,10 @@ extension ApplicationSession {
             } catch {
                 saved = false
                 let message = String(describing: error)
-                self?.lastSaveError = message
-                self?.operationFailed(message: message)
+                self?.publishLastSaveError(message)
+                self?.publishOperationFailure(message: message)
             }
-            self?.saveInProgress = false
+            self?.publishSaveState(inProgress: false)
             self?.songTabs.bankCloseAfterSave(saved: saved)
         }
     }
@@ -225,20 +220,19 @@ extension ApplicationSession {
         }
         let tabId = pendingSaveConflictTabId
         clearSaveConflict()
-        saveInProgress = true
-        lastSaveError = ""
+        publishSaveState(inProgress: true, error: "")
         Task { [weak self] in
             do {
                 try await session.save(forceOverwrite: true)
             } catch {
                 let message = String(describing: error)
-                self?.lastSaveError = message
-                self?.operationFailed(message: message)
-                self?.saveInProgress = false
+                self?.publishLastSaveError(message)
+                self?.publishOperationFailure(message: message)
+                self?.publishSaveState(inProgress: false)
                 return
             }
             await self?.refreshVoicegroupCatalog()
-            self?.saveInProgress = false
+            self?.publishSaveState(inProgress: false)
             if tabId != -1 {
                 self?.songTabs.savingCloseId = tabId
                 self?.songTabs.closeAfterSave(tabId: tabId, saved: true)
@@ -263,34 +257,32 @@ extension ApplicationSession {
         else { return }
         let tabId = pendingSaveConflictTabId
         clearSaveConflict()
-        saveInProgress = true
-        lastSaveError = ""
+        publishSaveState(inProgress: true, error: "")
         Task { [weak self] in
             do {
                 let snapshot = try session.document.captureSave()
                 try await service.forkSongAs(label: label, snapshot: snapshot)
                 guard let self, self.catalogService === service else {
-                    self?.saveInProgress = false
+                    self?.publishSaveState(inProgress: false)
                     return
                 }
                 let songs = try await service.songs()
                 guard self.catalogService === service else {
-                    self.saveInProgress = false
+                    self.publishSaveState(inProgress: false)
                     return
                 }
                 self.songDock.publishSongs(songs)
-                self.refreshSongLabels(songs.map(\.label))
                 self.openSongFromDock(label: label, newTab: true)
-                self.saveInProgress = false
+                self.publishSaveState(inProgress: false)
                 if tabId != -1 {
                     self.songTabs.savingCloseId = tabId
                     self.songTabs.closeAfterSave(tabId: tabId, saved: true)
                 }
             } catch {
                 let message = String(describing: error)
-                self?.lastSaveError = message
-                self?.operationFailed(message: message)
-                self?.saveInProgress = false
+                self?.publishLastSaveError(message)
+                self?.publishOperationFailure(message: message)
+                self?.publishSaveState(inProgress: false)
             }
         }
     }
@@ -323,8 +315,8 @@ extension ApplicationSession {
     private func missingSaveConflictSession() {
         let message = "The conflicted song \(saveConflictSongLabel) is no longer open."
         clearSaveConflict()
-        lastSaveError = message
-        operationFailed(message: message)
+        publishLastSaveError(message)
+        publishOperationFailure(message: message)
     }
 
     private func clearSaveConflict() {

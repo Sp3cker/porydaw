@@ -35,8 +35,8 @@ extension ProjectStore {
 
     public func registerSong(label: String, constant: String, player: String) async throws -> Int {
         guard openedSnapshot?.isOpen == true else { throw ProjectStoreReadError.notOpen }
-        guard SongName(label) != nil else {
-            throw SongRegistrationError.failed("Song label \(label) is not a valid identity.")
+        guard SongName.isSymbol(label: label) else {
+            throw SongRegistrationError.failed("Song label \(label) must match [A-Za-z_][A-Za-z0-9_]*.")
         }
         let id = try SongRegistration.register(
             root: projectRoot, label: label,

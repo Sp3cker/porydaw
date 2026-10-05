@@ -17,9 +17,8 @@ import RollQmlCheck 1.0
 // same file the application's resource engine loads. A directory import keeps
 // one composition root -- the lane never copies, forks or re-declares it.
 import Porydaw.Ui
-import "../editorqml/NativeWait.js" as NativeWait
 
-TestCase {
+RollLaneSupport {
     id: testCase
 
     name: "SwiftRollWindowing"
@@ -35,50 +34,25 @@ TestCase {
     // input.
     visible: true
 
-    property var overlay: null
-    property string openFailure: ""
+    includeStagedLabels: true
     property var voiceRequests: []
 
-    RollQmlBootstrap {
-        id: bootstrap
-
-        ApplicationSession { id: session }
-    }
 
     Connections {
         target: session
 
-        function onOpenFailed(message) { testCase.openFailure = message }
-        function onOperationFailed(message) { testCase.openFailure = message }
         function onChangeTrackVoiceRequested(track) {
             testCase.voiceRequests.push(track)
         }
     }
 
-    // The production overlay reads `appSession` as a context property — the
-    // window installs it with setContextProperty before loading the document.
-    // A property declared on the created instance is the same lookup result.
-    Component {
-        id: overlayComponent
-
-        SwiftRollOverlay {
-            property var appSession: session
-        }
-    }
-
-    // Qt Quick Test waits pump Qt events but not Swift MainActor Tasks. Keep
-    // production session calls intact and service the native event loop while
-    // observing the same state the original checks require.
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
 
     function initTestCase() {
         bootstrap.seedDrawerPreferences(false, true, true, 0)
         verify(bootstrap.start("mus_route101"),
                "the staged route101 project starts opening")
         verify(waitForNative(function() {
-            return session.songOpen || testCase.openFailure.length > 0
+            return session.songOpen || session.lastSaveError.length > 0
         }, 30000), "the staged route101 song opened" + testCase.openDiagnostics())
         verify(waitForNative(function() {
             return session.songDockController().songListPresenter().totalCount > 0
@@ -86,50 +60,6 @@ TestCase {
         testCase.mountOverlay()
     }
 
-    function openDiagnostics() {
-        var details = ["projectRoot=" + bootstrap.projectRoot,
-                       "label=mus_route101",
-                       "projectOpen=" + session.projectOpen,
-                       "songOpen=" + session.songOpen,
-                       "stagedLabels=[" + testCase.stagedLabels() + "]"]
-        if (testCase.openFailure.length > 0)
-            details.push("openFailed=" + testCase.openFailure)
-        if (session.lastSaveError.length > 0)
-            details.push("lastSaveError=" + session.lastSaveError)
-        return " (" + details.join("; ") + ")"
-    }
-
-    function stagedLabels() {
-        var labels = []
-        var count = session.songCount()
-        for (var i = 0; i < count && i < 8; ++i)
-            labels.push(session.songLabel(i))
-        return count > 8 ? labels.join(",") + ",…" : labels.join(",")
-    }
-
-    function mountOverlay() {
-        var item = overlayComponent.createObject(testCase, {
-            "width": testCase.width,
-            "height": testCase.height
-        })
-        verify(item, "the production overlay came up")
-        testCase.overlay = item
-        var surface = null
-        verify(waitForNative(function() {
-            surface = testCase.selectedSurface()
-            return surface !== null
-        }, 5000), "the selected tab's production EditorSurface mounted")
-        var drawer = findChild(surface, "editorDrawer")
-        verify(drawer, "the production drawer is mounted")
-        session.configurePersistence()
-        verify(waitForNative(function() {
-            return surface.visible && surface.width > 0 && surface.height > 0
-        }, 5000), "the mounted surface is drawn")
-    }
-
-    function selectedSurface() {
-        return testCase.overlay ? findChild(testCase.overlay, "swiftRollOverlay") : null
-    }
 
     function init() {
         bootstrap.cancelInput()
@@ -165,19 +95,18 @@ TestCase {
     }
 
     function headerInput() {
-        return findChild(testCase.selectedSurface(), "timelineTrackHeadersInput")
+        return findChild(testCase.surface(), "timelineTrackHeadersInput")
     }
 
     function headerRows() {
-        return findChild(testCase.selectedSurface(), "timelineTrackHeaderRows")
+        return findChild(testCase.surface(), "timelineTrackHeaderRows")
     }
 
     function rollPlot() {
-        return findChild(testCase.selectedSurface(), "timelineQuickRollPlot")
+        return findChild(testCase.surface(), "timelineQuickRollPlot")
     }
 
-    function pixelNear(image, x, y, hex, tolerance) {
-        var expected = Qt.color(hex)
+    function pixelNear(image, x, y, expected, tolerance) {
         return Math.abs(image.red(x, y) - expected.r * 255) <= tolerance
                && Math.abs(image.green(x, y) - expected.g * 255) <= tolerance
                && Math.abs(image.blue(x, y) - expected.b * 255) <= tolerance
@@ -190,7 +119,7 @@ TestCase {
     // background and the first presented frame paints it — no stale erase can
     // flash. The Win32 WM_ERASEBKGND half stays NATIVE.
     function test_windowClearColorBeforeFirstFrame() {
-        var surface = testCase.selectedSurface()
+        var surface = testCase.surface()
         verify(surface, "the production surface is mounted")
         var background = findChild(surface, "swiftRollBackground")
         verify(background && background.visible,
@@ -199,7 +128,7 @@ TestCase {
                && background.height >= surface.height - 1,
                "the roll background covers the surface")
         compare(background.color.toString(),
-                Qt.color(session.palette.rollBackground).toString(),
+                session.palette.rollBackground.toString(),
                 "the background item carries the session palette's roll background")
         var image = grabImage(surface)
         verify(image.width > 0 && image.height > 0,
@@ -217,7 +146,7 @@ TestCase {
     // C++ headerSelectionAndVoicePicker: delegate geometry, pointer input,
     // and the mounted picker journey; presenter coverage is in swiftcore.
     function test_headerSelectionAndVoiceRequest() {
-        var surface = testCase.selectedSurface()
+        var surface = testCase.surface()
         var input = testCase.headerInput()
         var repeater = testCase.headerRows()
         var headers = testCase.headers()
@@ -364,7 +293,7 @@ TestCase {
     // the mounted roll plot reaches the production presenter and changes zoom.
     // The MIDI-only loading-stage gate is not represented by this surface.
     function test_readyRollWheelZoom() {
-        var surface = testCase.selectedSurface()
+        var surface = testCase.surface()
         verify(surface, "the ready roll surface is mounted")
         var input = findChild(surface, "swiftRollInput")
         var grid = session.gridPresenter()
@@ -382,7 +311,7 @@ TestCase {
     }
 
     function test_gridContrastPreviewAndApply() {
-        var surface = testCase.selectedSurface()
+        var surface = testCase.surface()
         var plot = testCase.rollPlot()
         verify(surface && plot, "the roll plot is mounted")
         var palette = session.palette
@@ -391,8 +320,10 @@ TestCase {
         var gridRoles = ["gridLine", "gridLineSub1", "gridLineSub2", "gridLineSub3",
                          "gridLineBeat", "gridLineBeatFine", "gridLineBar", "rowLine"]
         var original = {}
-        for (var i = 0; i < gridRoles.length; ++i)
-            original[gridRoles[i]] = palette[gridRoles[i]]
+        for (var i = 0; i < gridRoles.length; ++i) {
+            const color = palette[gridRoles[i]]
+            original[gridRoles[i]] = Qt.rgba(color.r, color.g, color.b, color.a)
+        }
 
         function grab() {
             wait(0)
@@ -439,7 +370,7 @@ TestCase {
         restore()
     }
     function test_zCameraSurvivesMountedRemapsAndResize() {
-        var surface = testCase.selectedSurface()
+        var surface = testCase.surface()
         var grid = session.gridPresenter()
         var input = findChild(surface, "swiftRollInput")
         var headerInput = testCase.headerInput()

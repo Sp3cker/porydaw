@@ -1,29 +1,33 @@
 // Captured command policy stays in Swift; original shared rows render the menu.
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import Porydaw.Ui
+import PorydawApp as App
 
 pragma ComponentBehavior: Bound
 
 FocusScope {
     id: menuRoot
     objectName: "voiceChangeMenu"
-    required property var model
-    property var pageItem: null
+    required property App.VoiceChangesPage model
+    property VoiceChangesPage pageItem: null
     property bool showing: false
     property int currentRow: 0
     signal closed()
     anchors.fill: parent
     visible: showing
     enabled: showing
-    readonly property real baseFontPx: model ? model.baseFontPx : 13
-    readonly property font bodyFont: menuRoot.pageItem
-        ? Qt.font((menuRoot.pageItem.applicationSession.timeSigHost
-                   || menuRoot.pageItem.applicationSession).typographyFonts.body) : Qt.font({})
-    readonly property var menuColors: menuRoot.pageItem ? menuRoot.pageItem.gridPalette : null
-    readonly property point anchor: pageItem && parent
-        ? pageItem.mapToItem(parent, model ? model.menuX : 0, model ? model.menuY : 0)
-        : Qt.point(model ? model.menuX : 0, model ? model.menuY : 0)
+    readonly property real baseFontPx: menuRoot.model ? menuRoot.model.baseFontPx : 13
+    readonly property App.GridPalette menuColors: menuRoot.pageItem ? menuRoot.pageItem.gridPalette : null
+    readonly property point anchor: {
+        const localX = menuRoot.model ? menuRoot.model.menuX : 0
+        const localY = menuRoot.model ? menuRoot.model.menuY : 0
+        if (menuRoot.pageItem !== null && menuRoot.parent !== null) {
+            const mapped = menuRoot.pageItem.mapToItem(menuRoot.parent, localX, localY)
+            return Qt.point(mapped.x, mapped.y)
+        }
+        return Qt.point(localX, localY)
+    }
     // Focus only once enabled: a disabled item's focus request parks active
     // focus on the window root until the enabled binding catches up.
     onEnabledChanged: {
@@ -33,10 +37,10 @@ FocusScope {
         }
     }
     onShowingChanged: if (!showing) closed()
-    function hoverRow(panel, index) { currentRow = index }
-    function activateRow(panel, index) { return model.activateMenuRow(index) }
-    function moveRow(delta) {
-        currentRow = Math.min(Math.max(currentRow + delta, 0), Math.max(0, panel.rowCount - 1))
+    function hoverRow(panel: Item, index: int): void { menuRoot.currentRow = index }
+    function activateRow(panel: Item, index: int): bool { return menuRoot.model.activateMenuRow(index) }
+    function moveRow(delta: int): void {
+        menuRoot.currentRow = Math.min(Math.max(menuRoot.currentRow + delta, 0), Math.max(0, panel.rowCount - 1))
     }
     Keys.onUpPressed: event => { moveRow(-1); event.accepted = true }
     Keys.onDownPressed: event => { moveRow(1); event.accepted = true }
@@ -46,6 +50,20 @@ FocusScope {
     Keys.onShortcutOverride: event => event.accepted = true
     Keys.onPressed: event => event.accepted = true
     Keys.onReleased: event => event.accepted = true
+
+    MenuAppearance {
+        id: menuAppearance
+        font: menuRoot.model.promptStyle.font
+        background: menuRoot.menuColors ? menuRoot.menuColors.menuBackground : "transparent"
+        outline: menuRoot.menuColors ? menuRoot.menuColors.outline : "transparent"
+        text: menuRoot.menuColors ? menuRoot.menuColors.windowText : "transparent"
+        hoverBackground: menuRoot.menuColors ? menuRoot.menuColors.menuHoverBackground : "transparent"
+        hoverText: menuRoot.menuColors ? menuRoot.menuColors.windowText : "transparent"
+        pressedBackground: menuRoot.menuColors ? menuRoot.menuColors.menuHoverBackground : "transparent"
+        pressedText: menuRoot.menuColors ? menuRoot.menuColors.windowText : "transparent"
+        disabledText: menuRoot.menuColors ? menuRoot.menuColors.disabledText : "transparent"
+        separator: menuRoot.menuColors ? menuRoot.menuColors.separator : "transparent"
+    }
 
     MouseArea {
         objectName: "voiceMenuUnderlay"
@@ -58,7 +76,7 @@ FocusScope {
         objectName: "voiceMenuPanel"
         rowObjectNamePrefix: "voiceMenuRow_"
         host: menuRoot
-        menuModel: menuRoot.model ? menuRoot.model.menuRows : []
+        menuModel: menuRoot.model ? menuRoot.model.menuRows : null
         rootLevel: true
         rowHeight: Math.round(menuRoot.baseFontPx * 1.6)
         menuWidth: Math.min(Math.round(menuRoot.baseFontPx * 14), menuRoot.width)
@@ -72,11 +90,6 @@ FocusScope {
         textX: Math.round(menuRoot.baseFontPx / 2)
         textRight: menuWidth - textX
         highlightedRow: menuRoot.currentRow
-        appearance: menuRoot.menuColors ? ({
-            background: menuRoot.menuColors.menuBackground, outline: menuRoot.menuColors.outline,
-            text: menuRoot.menuColors.windowText, hoverBackground: menuRoot.menuColors.menuHoverBackground,
-            hoverText: menuRoot.menuColors.windowText, disabledText: menuRoot.menuColors.disabledText,
-            separator: menuRoot.menuColors.separator, font: menuRoot.bodyFont
-        }) : null
+        appearance: menuAppearance
     }
 }

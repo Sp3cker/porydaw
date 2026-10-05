@@ -1,30 +1,31 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
+import PorydawApp as App
 
 Item {
     id: root
 
-    required property var headersModel
-    required property var appearance
-    required property font controlFont
-    required property var normalMetrics
-    required property var boldMetrics
-    required property real rowAreaWidth
-    readonly property int rowCount: trackHeaderRows.count
+    final required property App.TrackHeadersPresenter headersModel
+    final required property App.TrackHeadersPresenter appearance
+    final required property font controlFont
+    final required property FontMetrics normalMetrics
+    final required property FontMetrics boldMetrics
+    final required property real rowAreaWidth
+    final readonly property int rowCount: trackHeaderRows.count
 
     width: rowAreaWidth
     height: parent.height
     clip: true
 
-    function itemAt(index) {
+    function itemAt(index: int): Item {
         return trackHeaderRows.itemAt(index)
     }
 
     component TrackHeaderToggle: Item {
         id: toggle
 
-        required property var controlRect
+        required property App.SceneRect controlRect
         required property int track
         required property string label
         required property string accessibleName
@@ -39,31 +40,25 @@ Item {
         width: controlRect.width
         height: controlRect.height
         activeFocusOnTab: true
-        readonly property color stateBackground: pressed
-                                              ? solo ? root.appearance.soloCheckedBackground
-                                                     : root.appearance.buttonPressedBackground
-                                              : checked
-                                                ? solo ? root.appearance.soloCheckedBackground
-                                                       : root.appearance.muteCheckedBackground
-                                                : hovered ? root.appearance.buttonHoverBackground
-                                                          : root.appearance.buttonBackground
-        readonly property color stateText: pressed
-                                        ? solo ? root.appearance.soloCheckedText
-                                               : root.appearance.buttonPressedText
-                                        : checked
-                                          ? solo ? root.appearance.soloCheckedText
-                                                 : root.appearance.muteCheckedText
-                                          : hovered ? root.appearance.buttonHoverText
-                                                    : root.appearance.buttonText
+        readonly property color stateBackground: toggle.pressed
+            ? toggle.solo ? root.appearance.soloCheckedBackground : root.appearance.buttonPressedBackground
+            : toggle.checked
+              ? toggle.solo ? root.appearance.soloCheckedBackground : root.appearance.muteCheckedBackground
+              : toggle.hovered ? root.appearance.buttonHoverBackground : root.appearance.buttonBackground
+        readonly property color stateText: toggle.pressed
+            ? toggle.solo ? root.appearance.soloCheckedText : root.appearance.buttonPressedText
+            : toggle.checked
+              ? toggle.solo ? root.appearance.soloCheckedText : root.appearance.muteCheckedText
+              : toggle.hovered ? root.appearance.buttonHoverText : root.appearance.buttonText
 
-        function activate() {
+        function activate(): void {
             if (solo)
                 root.headersModel.activateSolo(track)
             else
                 root.headersModel.activateMute(track)
         }
 
-        function activateFromKeyboard(event) {
+        function activateFromKeyboard(event: KeyEvent): void {
             activate()
             event.accepted = true
         }
@@ -100,8 +95,8 @@ Item {
     Item {
         id: translatedRows
 
-        y: -root.headersModel.scrollY
         width: parent.width
+        y: -root.headersModel.scrollY
         height: root.headersModel.contentHeight
         z: 2
 
@@ -119,15 +114,16 @@ Item {
                 required property int track
                 required property string title
                 required property string subtitle
-                required property var titleRect
-                required property var subtitleRect
-                required property var selectedTitleOffset
+                required property App.SceneRect titleRect
+                required property App.SceneRect subtitleRect
+                required property real selectedTitleOffsetX
+                required property real selectedTitleOffsetY
                 required property color baseColor
                 required property color overlayColor
                 required property color titleColor
                 required property color subtitleColor
-                required property var titleFont
-                required property var subtitleFont
+                required property font titleFont
+                required property font subtitleFont
                 required property bool titleBold
                 required property bool muteChecked
                 required property bool soloChecked
@@ -148,7 +144,8 @@ Item {
 
                 property bool complete: false
 
-                function publishSelectedTitleOffset() {
+                readonly property real titleWidth: titleRect.width
+                function publishSelectedTitleOffset(): void {
                     if (!complete || isAddTrack || !titleBold)
                         return
                     const label = root.boldMetrics.elidedText(title, Text.ElideRight,
@@ -162,7 +159,7 @@ Item {
 
                 onTitleChanged: publishSelectedTitleOffset()
                 onTitleBoldChanged: publishSelectedTitleOffset()
-                onTitleRectChanged: publishSelectedTitleOffset()
+                onTitleWidthChanged: publishSelectedTitleOffset()
                 onTitleFontChanged: publishSelectedTitleOffset()
                 onTrackChanged: publishSelectedTitleOffset()
                 Component.onCompleted: {
@@ -218,16 +215,14 @@ Item {
                 }
 
                 Text {
-                    x: trackHeaderRow.titleRect.x
-                       + trackHeaderRow.selectedTitleOffset.x
-                    y: trackHeaderRow.titleRect.y
-                       + trackHeaderRow.selectedTitleOffset.y
+                    x: trackHeaderRow.titleRect.x + trackHeaderRow.selectedTitleOffsetX
+                    y: trackHeaderRow.titleRect.y + trackHeaderRow.selectedTitleOffsetY
                     width: trackHeaderRow.titleRect.width
                     height: trackHeaderRow.titleRect.height
                     visible: !trackHeaderRow.isAddTrack
                     clip: contentWidth > width || contentHeight > height
                     color: trackHeaderRow.titleColor
-                    font: Qt.font(trackHeaderRow.titleFont)
+                    font: trackHeaderRow.titleFont
                     text: trackHeaderRow.title
                     textFormat: Text.PlainText
                     renderType: Text.NativeRendering
@@ -245,7 +240,7 @@ Item {
                     visible: !trackHeaderRow.isAddTrack
                     clip: contentWidth > width || contentHeight > height
                     color: trackHeaderRow.subtitleColor
-                    font: Qt.font(trackHeaderRow.subtitleFont)
+                    font: trackHeaderRow.subtitleFont
                     text: trackHeaderRow.subtitle
                     textFormat: Text.PlainText
                     renderType: Text.NativeRendering
@@ -285,11 +280,11 @@ Item {
                     visible: trackHeaderRow.isAddTrack
                     activeFocusOnTab: true
 
-                    function activate() {
+                    function activate(): void {
                         root.headersModel.activateAddTrack()
                     }
 
-                    function activateFromKeyboard(event) {
+                    function activateFromKeyboard(event: KeyEvent): void {
                         activate()
                         event.accepted = true
                     }

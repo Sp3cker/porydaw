@@ -13,8 +13,30 @@ public final class PitchBendPresenter {
     @QtTracked public var lfoSpeed = 22
     @QtTracked public var noteDescription = ""
     @QtTracked public var description = ""
-    public var metrics: [String: QVariantSettable] = [:]
-    public var appearance: [String: QVariantSettable] = [:]
+    public var popupWidth: Double = 0
+    public var popupHeight: Double = 0
+    public var headerHeight: Double = 0
+    public var graphHeight: Double = 0
+    public var outerInset: Double = 0
+    public var titleHeight: Double = 0
+    public var descriptionHeight: Double = 0
+    public var controlsHeight: Double = 0
+    public var fieldWidth: Double = 0
+    public var fieldHeight: Double = 0
+    public var resetWidth: Double = 0
+    public var resetHeight: Double = 0
+    public var axisLabelHeight: Double = 0
+    public var hairline: Double = 0
+    public var scrubThreshold: Double = 0
+    public var windowBackground: QmlColor = .clear
+    public var primaryText: QmlColor = .clear
+    public var secondaryText: QmlColor = .clear
+    public var outline: QmlColor = .clear
+    public var trackColor: QmlColor = .clear
+    public var titleFont: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
+    public var captionFont: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
+    public var monospaceFont: QmlFont = QmlFont(family: gridMonoFamily, pixelSize: 13)
+    @QtTracked public var promptStyle = PromptStyle()
     @QtTracked public var anchorX = 0.0
     @QtTracked public var anchorY = 0.0
     @QtTracked public var anchorWidth = 0.0
@@ -63,31 +85,36 @@ public final class PitchBendPresenter {
             typography = Typography(baseFontPx: nextBase)
         }
         geometry = PitchBendGeometry(fontPx: fontPx, lineSpacing: lineSpacing, dpr: dpr)
-        metrics = geometry.metrics
-        appearance = [
-            "windowBackground": palette.windowBackground,
-            "primaryText": palette.primaryText,
-            "secondaryText": palette.secondaryText,
-            "outline": palette.outline,
-            "trackColor": palette.noteFill(track: note?.track ?? 0, velocity: 127),
-            "titleFont": typography.bodyBold.map,
-            "captionFont": typography.caption.map,
-            "monospaceFont": typography.bodyMono.map,
-            "dragInput": [
-                "background": palette.buttonBackground,
-                "text": palette.buttonText,
-                "outline": palette.outline,
-                "focus": palette.focusOutline,
-                "selection": palette.tabSelectedBackground,
-                "selectionText": palette.selectionText,
-                "font": typography.body.map,
-                "radius": Double(typography.space(.one)),
-                "borderWidth": geometry.hairline,
-                "horizontalPadding": Double(typography.space(.one)),
-                "verticalPadding": Double(typography.space(.half)),
-                "dragThreshold": geometry.scrubThreshold,
-            ] as [String: QVariantSettable],
-        ]
+        publish(\.popupWidth, geometry.popupWidth)
+        publish(\.popupHeight, geometry.popupHeight)
+        publish(\.headerHeight, geometry.headerHeight)
+        publish(\.graphHeight, geometry.graphHeight)
+        publish(\.outerInset, geometry.outerInset)
+        publish(\.titleHeight, geometry.titleHeight)
+        publish(\.descriptionHeight, geometry.descriptionHeight)
+        publish(\.controlsHeight, geometry.controlsHeight)
+        publish(\.fieldWidth, geometry.fieldWidth)
+        publish(\.fieldHeight, geometry.fieldHeight)
+        publish(\.resetWidth, geometry.resetWidth)
+        publish(\.resetHeight, geometry.resetHeight)
+        publish(\.axisLabelHeight, geometry.axisLabelHeight)
+        publish(\.hairline, geometry.hairline)
+        publish(\.scrubThreshold, geometry.scrubThreshold)
+        publish(\.windowBackground, palette.windowBackground)
+        publish(\.primaryText, palette.primaryText)
+        publish(\.secondaryText, palette.secondaryText)
+        publish(\.outline, palette.outline)
+        publish(\.trackColor, PaletteMath.qmlColor(argb: palette.noteFillArgb(track: note?.track ?? 0, velocity: 127)))
+        publish(\.titleFont, typography.bodyBold.qmlFont)
+        publish(\.captionFont, typography.caption.qmlFont)
+        publish(\.monospaceFont, typography.bodyMono.qmlFont)
+        var promptMetrics = PromptAppearance.Layout(base: fontPx)
+        promptMetrics.radius = Double(typography.space(.one))
+        promptMetrics.borderWidth = geometry.hairline
+        promptMetrics.dragThreshold = geometry.scrubThreshold
+        promptStyle.update(
+            metrics: promptMetrics, palette: palette, font: typography.body.qmlFont,
+            surface: .pitchBend)
         currentPitch?.refreshGeometry(geometry: geometry)
         currentMod?.refreshGeometry(geometry: geometry)
     }

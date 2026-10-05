@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 
 // Base of every secondary Porydaw window: a native top-level dialog (platform open
@@ -8,18 +10,18 @@ ThemedWindow {
 
     flags: Qt.Dialog
     modality: Qt.WindowModal
-    color: colors.windowBackground
+    color: dialog.colors.windowBackground
 
-    function present() {
-        show()
-        raise()
-        requestActivate()
+    function present(): void {
+        dialog.show()
+        dialog.raise()
+        dialog.requestActivate()
     }
 
     onVisibleChanged: {
-        if (visible || !transientParent)
+        if (dialog.visible || !dialog.transientParent)
             return
-        const owner = transientParent
+        const owner = dialog.transientParent
         Qt.callLater(() => {
             if (!dialog.visible && owner.visible) {
                 owner.raise()

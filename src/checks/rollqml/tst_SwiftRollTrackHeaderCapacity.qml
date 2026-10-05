@@ -3,9 +3,8 @@ import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
-import "../editorqml/NativeWait.js" as NativeWait
 
-TestCase {
+RollLaneSupport {
     id: testCase
     name: "SwiftRollTrackHeaderCapacity"
     when: windowShown
@@ -13,31 +12,9 @@ TestCase {
     height: 640
     visible: true
 
-    property var overlay: null
-    property string openFailure: ""
+    verifySurface: true
+    surfaceMessage: ""
 
-    RollQmlBootstrap {
-        id: bootstrap
-        ApplicationSession { id: session }
-    }
-    Connections {
-        target: session
-        function onOpenFailed(message) { testCase.openFailure = message }
-        function onOperationFailed(message) { testCase.openFailure = message }
-    }
-    Component {
-        id: overlayComponent
-        SwiftRollOverlay { property var appSession: session }
-    }
-
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-    function surface() {
-        var mounted = findChild(testCase.overlay, "swiftRollOverlay")
-        verify(mounted !== null)
-        return mounted
-    }
     function item(name) {
         var result = null
         tryVerify(function() {
@@ -50,9 +27,9 @@ TestCase {
         bootstrap.seedDrawerPreferences(false, true, true, 0)
         verify(bootstrap.start("se_fanfare_1trk"))
         verify(waitForNative(function() {
-            return session.songOpen || testCase.openFailure.length > 0
-        }, 30000), testCase.openFailure)
-        verify(session.songOpen, testCase.openFailure)
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), session.lastSaveError)
+        verify(session.songOpen, session.lastSaveError)
         verify(waitForNative(function() {
             return session.songDockController().songListPresenter().totalCount > 0
         }, 5000), "the Songs dock catalog is ready before checking scene-removal retention")

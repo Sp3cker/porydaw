@@ -7,31 +7,30 @@ public final class OtherEventsMarkerHandle {
     public var tick: Int = 0
     public var track: Int = -1
     public var x: Double = 0
-    public var color: String = ""
+    public var color: QmlColor = .clear
     public var label: String = ""
 
+    private var current: OtherEventsMarker
+
     public init(_ marker: OtherEventsMarker) {
+        current = marker
         tick = Int(marker.tick)
         track = marker.track
         x = marker.x
         color = marker.color
         label = marker.label
-        refreshSpec()
-    }
-
-    /// Everything the delegate needs in one map: the delegate's model-data
-    /// object exposes stored properties only, so this is a stored role.
-    public var spec: [String: QVariantSettable] = [:]
-
-    @QtIgnored
-    func refreshSpec() {
-        spec = ["x": x, "color": color]
     }
 
     @QtIgnored
-    func matches(_ other: OtherEventsMarkerHandle) -> Bool {
-        tick == other.tick && track == other.track && x == other.x
-            && color == other.color && label == other.label
+    func update(_ marker: OtherEventsMarker) -> Bool {
+        guard current != marker else { return false }
+        current = marker
+        publish(\.tick, Int(marker.tick))
+        publish(\.track, marker.track)
+        publish(\.x, marker.x)
+        publish(\.color, marker.color)
+        publish(\.label, marker.label)
+        return true
     }
 }
 
@@ -50,9 +49,9 @@ public final class OtherEventsBandPresenter {
     public var toolTipText: String = ""
     public var toolTipX: Double = 0
     public var toolTipY: Double = 0
-    public var toolTipBackground: String = ""
-    public var toolTipTextColor: String = ""
-    public var toolTipOutline: String = ""
+    public var toolTipBackground: QmlColor = .clear
+    public var toolTipTextColor: QmlColor = .clear
+    public var toolTipOutline: QmlColor = .clear
 
     private var session: DocumentSession?
     private var colors: GridPalette?
@@ -77,9 +76,9 @@ public final class OtherEventsBandPresenter {
         markerHalfWidth = fontPx(baseFontPx, 1.0 / 3.0)
         markerHalfHeight = fontPx(baseFontPx, 5.0 / 12.0)
         gutterInset = fontPx(baseFontPx, 0.5)
-        toolTipBackground = palette.inputBackground
-        toolTipTextColor = palette.windowText
-        toolTipOutline = palette.outline
+        publish(\.toolTipBackground, palette.inputBackground)
+        publish(\.toolTipTextColor, palette.windowText)
+        publish(\.toolTipOutline, palette.outline)
         refreshDocument()
     }
 
@@ -93,9 +92,9 @@ public final class OtherEventsBandPresenter {
         markerHalfWidth = fontPx(baseFontPx, 1.0 / 3.0)
         markerHalfHeight = fontPx(baseFontPx, 5.0 / 12.0)
         gutterInset = fontPx(baseFontPx, 0.5)
-        toolTipBackground = colors.inputBackground
-        toolTipTextColor = colors.windowText
-        toolTipOutline = colors.outline
+        publish(\.toolTipBackground, colors.inputBackground)
+        publish(\.toolTipTextColor, colors.windowText)
+        publish(\.toolTipOutline, colors.outline)
         refreshCamera()
     }
 
@@ -117,19 +116,7 @@ public final class OtherEventsBandPresenter {
             pixelsPerTick: session.camera.pixelsPerTick, palette: colors)
         if next != publishedMarkers {
             publishedMarkers = next
-            // In-place writes keep existing delegates alive; reset(to:) would
-            // destroy them all on every zoom tick.
-            let fresh = next.map(OtherEventsMarkerHandle.init)
-            let common = min(markers.count, fresh.count)
-            for i in 0..<common where !markers[i].matches(fresh[i]) {
-                markers[i] = fresh[i]
-            }
-            if markers.count > fresh.count {
-                markers.replaceSubrange(fresh.count..<markers.count, with: [])
-            } else if fresh.count > markers.count {
-                markers.replaceSubrange(
-                    markers.count..<markers.count, with: fresh[markers.count...])
-            }
+            syncRetained(markers, next, make: OtherEventsMarkerHandle.init, update: { $0.update($1) })
             markerCount = next.count
             markerRevision += 1
         }

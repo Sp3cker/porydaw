@@ -1,19 +1,7 @@
 import PorydawCore
 import QtBridge
 
-// Pure scene-value computation for the drawer's Velocity section: the page's
-// session reads, the presented context's value axis and ruler rows, the time
-// grid, the PSG level bands and the gesture transient's dashed edges.
-//
-// Ownership: values in, values out. Every entry is pure over its arguments;
-// nothing here retains page or document state.
-
-// MARK: - Scene values
-
-/// The velocity band's static value computation: the page's session reads, the
-/// value axis and its rows, the grid, the PSG bands and the small shared value
-/// helpers. Every entry is pure over its arguments; nothing here retains page
-/// or document state.
+/// Pure value computation for the velocity ruler, grid and interaction overlays.
 @MainActor
 enum VelocityScene {
     /// The primary track's notes.
@@ -115,10 +103,7 @@ enum VelocityScene {
         axisGeometry.labelWidth = max(0, input.rulerWidth - input.geometry.pixel)
         axisGeometry.labelSideInset = input.geometry.labelSideInset
         axisGeometry.labelColumnGap = input.geometry.labelColumnGap
-        axisGeometry.labelHeight =
-            NativeFontMetrics(
-                Typography(baseFontPx: Int(input.baseFontPx.rounded())).noteName
-            ).extents.height
+        axisGeometry.labelHeight = NativeFontMetrics(input.typography.noteName).extents.height
         axisGeometry.continuousDensityD1 = input.geometry.densityD1
         axisGeometry.continuousDensityD2 = input.geometry.densityD2
         axisGeometry.continuousDensityD3 = input.geometry.densityD3
@@ -147,15 +132,14 @@ enum VelocityScene {
         let labelHeight = max(0, axis.geometry.labelHeight)
         let labelColor = input.palette.primaryText
         let selectedColor = input.palette.selectionRing
-        let typography = Typography(baseFontPx: Int(input.baseFontPx.rounded()))
-        let noteNameFont = typography.noteName.map
-        let markerFont = typography.captionBold.map
+        let noteNameFont = input.typography.noteName.qmlFont
+        let markerFont = input.typography.captionBold.qmlFont
         var rows = VelocityAxisRows()
         if axis.mode == .intrinsic && input.interaction.detentsEnabled {
             for graduation in axis.graduations {
                 let width = graduation.active ? 1.5 : input.geometry.pixel
                 rows.graduations.append(
-                    SceneRect(
+                    SceneRectValue(
                         x: separatorX - input.geometry.tickLabelLength, y: graduation.y - width / 2,
                         width: input.geometry.tickLabelLength, height: width,
                         fillColor: graduation.active ? selectedColor : labelColor,
@@ -167,7 +151,7 @@ enum VelocityScene {
                     continue
                 }
                 rows.labels.append(
-                    SceneText(
+                    SceneTextValue(
                         rect: (labelLeft, graduation.y - labelHeight / 2, labelWidth, labelHeight),
                         text: graduation.text, color: labelColor,
                         font: emphasized ? markerFont : noteNameFont, horizontal: 0x2))
@@ -179,7 +163,7 @@ enum VelocityScene {
                     ? input.geometry.tickLabelLength
                     : input.geometry.tickShortLength
                 rows.ticks.append(
-                    SceneRect(
+                    SceneRectValue(
                         x: separatorX - length, y: tick.y - input.geometry.pixel / 2, width: length,
                         height: input.geometry.pixel, fillColor: labelColor,
                         primitiveName: "velocityTick"))
@@ -187,7 +171,7 @@ enum VelocityScene {
             if !relativeGesture {
                 for label in axis.labels {
                     rows.labels.append(
-                        SceneText(
+                        SceneTextValue(
                             rect: (labelLeft, label.y - labelHeight / 2, labelWidth, labelHeight),
                             text: label.text, color: labelColor,
                             font: noteNameFont, horizontal: 0x2))
@@ -195,13 +179,13 @@ enum VelocityScene {
             }
             for marker in axis.markers {
                 rows.markers.append(
-                    SceneRect(
+                    SceneRectValue(
                         x: separatorX - input.geometry.markerLength, y: marker.y - 0.75,
                         width: input.geometry.markerLength, height: 1.5, fillColor: selectedColor,
                         primitiveName: "velocityMarker"))
                 guard relativeGesture else { continue }
                 rows.labels.append(
-                    SceneText(
+                    SceneTextValue(
                         rect: (labelLeft, marker.y - labelHeight / 2, labelWidth, labelHeight),
                         text: "\(marker.velocity)", color: labelColor,
                         font: markerFont, horizontal: 0x2))

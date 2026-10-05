@@ -97,6 +97,16 @@ struct RegistrationLines {
         dirty = true
     }
 
+    /// Replaces a captured value; callers choose whether trailing syntax survives the rewrite.
+    /// The existing line replacement owns CRLF preservation.
+    mutating func replaceValue(
+        _ index: Int, _ match: RegistrationMatch, group: Int, with value: String,
+        preserveSuffix: Bool = true
+    ) {
+        let suffix = preserveSuffix ? (match.source as NSString).substring(from: match.end(group)) : ""
+        replace(index, match.prefix(group) + value + suffix)
+    }
+
     mutating func remove(_ index: Int) {
         lines.remove(at: index)
         dirty = true
@@ -130,7 +140,9 @@ struct RegistrationMatch {
 }
 
 enum RegistrationText {
-    static func match(_ expression: NSRegularExpression?, _ line: String) -> RegistrationMatch? {
+    static func match(
+        _ expression: NSRegularExpression?, _ line: String, constant: String? = nil, nameGroup: Int = 1
+    ) -> RegistrationMatch? {
         guard let expression,
             let result = expression.firstMatch(
                 in: line,
@@ -138,12 +150,25 @@ enum RegistrationText {
                     location: 0,
                     length: line.utf16.count))
         else { return nil }
-        return RegistrationMatch(source: line, result: result)
+        let match = RegistrationMatch(source: line, result: result)
+        guard constant == nil || match.group(nameGroup) == constant else { return nil }
+        return match
     }
 
     static func matches(_ expression: NSRegularExpression, _ line: String) -> [RegistrationMatch] {
         expression.matches(in: line, range: NSRange(location: 0, length: line.utf16.count))
             .map { RegistrationMatch(source: line, result: $0) }
+    }
+
+    static func forEachSong(
+        _ lines: [String], _ visit: (Int, Int, RegistrationMatch) -> Void
+    ) {
+        var entryIndex = 0
+        for (lineIndex, line) in lines.enumerated() {
+            guard let entry = match(song, line) else { continue }
+            visit(entryIndex, lineIndex, entry)
+            entryIndex += 1
+        }
     }
 
     static func pattern(_ source: String) -> NSRegularExpression {
@@ -165,8 +190,13 @@ enum RegistrationText {
         String(format: "%02X %02X", id & 255, (id >> 8) & 255)
     }
 
+    static func midiObjectReference(for label: String) -> String {
+        "sound/songs/midi/\(label).o"
+    }
+
     static let song = pattern(#"^(\s*)song\s+(\w+)\s*,\s*(\w+)\s*,\s*(\w+)"#)
     static let define = pattern(#"^(\s*#define\s+(\w+)\s+)(\d+)\b(.*)$"#)
+    static let prefixDefine = pattern(#"^(\s*#define\s+(\w+)\s+)(\d+)(.*)$"#)
     static let charmap = pattern(#"^(\w+)( *)= *([0-9A-Fa-f]{2}) ([0-9A-Fa-f]{2})\s*$"#)
     static let marker = pattern(#"^(\s*#define\s+(END_SE|END_MUS)\s+)([A-Za-z_]\w*|\d+)(.*)$"#)
     static let numericDefine = pattern(#"^\s*#define\s+(\w+)\s+(\d+)"#)
@@ -183,6 +213,17 @@ enum RegistrationText {
 
     static func charmapValue(_ match: RegistrationMatch) -> Int {
         (Int(match.group(3), radix: 16) ?? 0) | ((Int(match.group(4), radix: 16) ?? 0) << 8)
+    }
+
+    // Numeric-prefix acceptance belongs to the caller; region/removal scans require a word boundary.
+    static func numericValues(_ lines: [String], wordBounded: Bool) -> [String: Int] {
+        var values: [String: Int] = [:]
+        let expression = wordBounded ? numericDefineWord : numericDefine
+        for line in lines {
+            guard let entry = match(expression, line), values[entry.group(1)] == nil else { continue }
+            values[entry.group(1)] = Int(entry.group(2))
+        }
+        return values
     }
 
     static func constantNames(_ root: String) -> Set<String> {
@@ -214,20 +255,19 @@ struct SongTableScan {
     var firstPlayerNum = ""
 
     init(_ lines: [String], label: String) {
-        for (lineIndex, line) in lines.enumerated() {
-            guard let match = RegistrationText.match(RegistrationText.song, line) else { continue }
+        RegistrationText.forEachSong(lines) { entryIndex, lineIndex, match in
             let name = match.group(2)
-            if count == 0 {
+            if entryIndex == 0 {
                 firstLabel = name
                 firstPlayer = match.group(3)
                 firstPlayerNum = match.group(4)
             }
-            if count > 0 && name == firstLabel {
-                freeIndices.append(count)
+            if entryIndex > 0 && name == firstLabel {
+                freeIndices.append(entryIndex)
             } else if name == label {
-                labelIndex = count
+                labelIndex = entryIndex
                 labelLine = lineIndex
-                labelIndices.append(count)
+                labelIndices.append(entryIndex)
                 labelIndent = match.group(1)
             }
             indent = match.group(1)
@@ -235,7 +275,7 @@ struct SongTableScan {
             lastSongLabel = name
             entryLines.append(lineIndex)
             entryLabels.append(name)
-            count += 1
+            count = entryIndex + 1
         }
     }
 }
@@ -255,13 +295,8 @@ struct RegistrationRegions {
     var regioned: Bool { endMus.valid }
 
     init(_ songsH: [String], debug: [String]) {
-        var values: [String: Int] = [:]
+        let values = RegistrationText.numericValues(songsH, wordBounded: true)
         for (index, line) in songsH.enumerated() {
-            if let value = RegistrationText.match(RegistrationText.numericDefineWord, line),
-                values[value.group(1)] == nil
-            {
-                values[value.group(1)] = Int(value.group(2))
-            }
             guard let marker = RegistrationText.match(RegistrationText.regionMarker, line)
             else { continue }
             var item = marker.group(1) == "END_SE" ? endSe : endMus
@@ -294,21 +329,13 @@ public enum SongRegistration {
         let table = RegistrationText.lines(root, "sound/song_table.inc")
         var tableIndices: [String: [Int]] = [:]
         var firstLabel = ""
-        var count = 0
-        for line in table {
-            guard let match = RegistrationText.match(RegistrationText.song, line) else { continue }
+        RegistrationText.forEachSong(table) { entryIndex, _, match in
             let label = match.group(2)
-            if count == 0 { firstLabel = label }
-            if count == 0 || label != firstLabel { tableIndices[label, default: []].append(count) }
-            count += 1
+            if entryIndex == 0 { firstLabel = label }
+            if entryIndex == 0 || label != firstLabel { tableIndices[label, default: []].append(entryIndex) }
         }
         let songsH = RegistrationText.lines(root, "include/constants/songs.h")
-        var defines: [String: Int] = [:]
-        for line in songsH {
-            guard let entry = RegistrationText.match(RegistrationText.numericDefine, line)
-            else { continue }
-            if defines[entry.group(1)] == nil { defines[entry.group(1)] = Int(entry.group(2)) }
-        }
+        let defines = RegistrationText.numericValues(songsH, wordBounded: false)
         let ld = RegistrationText.lines(root, "ld_script.ld")
         let ldApplicable = ld.contains { $0.contains("sound/songs/midi/") }
         var ldLabels: Set<String> = []

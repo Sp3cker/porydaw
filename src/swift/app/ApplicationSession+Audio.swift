@@ -38,7 +38,7 @@ extension ApplicationSession {
         guard !isDisposed, !Task.isCancelled else { return }
         let message = String(describing: error)
         audioReadiness = .failed(message)
-        lastSaveError = message
+        publishLastSaveError(message)
     }
 
     func preparedAudio() async -> NativeAudio? {
@@ -97,9 +97,9 @@ extension ApplicationSession {
                 do {
                     try await session.selectVoicegroup(arg)
                 } catch ProjectServiceError.operationFailed(let message) {
-                    self?.lastSaveError = message
+                    self?.publishLastSaveError(message)
                 } catch {
-                    self?.lastSaveError = String(describing: error)
+                    self?.publishLastSaveError(String(describing: error))
                 }
                 if self?.selectedDocument === session {
                     self?.voiceList.refresh(from: session)
@@ -110,10 +110,10 @@ extension ApplicationSession {
             self?.voiceList.presentNewVoicegroup()
         }
         voiceList.onNewVoicegroupFailed = { [weak self] message in
-            self?.lastSaveError = message
+            self?.publishLastSaveError(message)
         }
         voiceList.onStatusMessage = { [weak self] message in
-            self?.statusMessage(message: message)
+            self?.publishStatusMessage(message: message)
         }
         voiceList.onSaveRequested = { [weak self] in self?.requestSave() }
         voiceList.onPickerSampleInfoRequested = { [weak self] in

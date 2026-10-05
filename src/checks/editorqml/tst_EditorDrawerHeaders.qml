@@ -39,7 +39,7 @@ EditorDrawerTestSupport {
         var row = rows.itemAt(0)
         var region = PixelSupport.regionOf(testCase, image, testCase.surface, row)
         var fill = PixelSupport.channelsOf(testCase, row.baseColor)
-        var outline = PixelSupport.channelsOf(testCase, testCase.surface.headersModel.appearance.buttonOutline)
+        var outline = PixelSupport.channelsOf(testCase, testCase.surface.headersModel.buttonOutline)
         verify(fill.join(",") !== outline.join(","), "the row fill differs from its separator")
         compare(PixelSupport.nearestPixel(testCase, image, region, fill).distance, 0,
                 "the production row fill reaches the rendered image")

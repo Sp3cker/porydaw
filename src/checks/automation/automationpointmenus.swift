@@ -648,21 +648,17 @@ func drawerAutomationSharedPopupArbitration(
         report.fail(id, "the shared-popup fixture cannot create audio: \(error)")
         return
     }
-    let playhead = SharedPlayheadPresenter()
-    let guides = PlayheadGuidesPresenter()
-    let eventList = EventListPresenter()
-    let workspace = DocumentWorkspace(
-        session: fixture.session, audio: audio, playhead: playhead,
-        playheadGuides: guides, eventList: eventList, palette: GridPalette(),
-        typography: Typography(baseFontPx: 13),
+    let presenters = WorkspacePresenterFixture(
+        session: fixture.session, audio: audio,
         callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
             revealTrackVoiceRequested: { _ in },
             gridCommandAvailabilityChanged: {}, sessionStateChanged: {},
             publicationFailed: { _ in }, timeSignaturePromptInvalidated: { _, _ in }))
+    let workspace = presenters.workspace
     defer {
         workspace.teardown()
-        withExtendedLifetime((audio, playhead, guides, eventList)) {}
+        withExtendedLifetime((audio, presenters)) {}
     }
     workspace.activate()
     let page = workspace.automationPage

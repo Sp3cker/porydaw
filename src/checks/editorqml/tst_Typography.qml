@@ -4,18 +4,15 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 import "RollNoteFaces.js" as RollNoteFaces
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "Typography"
     when: windowShown
     width: 960
     height: 640
     visible: true
-
-    property var shell: null
 
     ShellQmlBootstrap { id: bootstrap }
     Component { id: bodyTextComponent; Text { text: "probe" } }
@@ -24,15 +21,16 @@ TestCase {
     Component {
         id: captionObserverComponent
         Text {
-            required property QtObject observedSession
-            font: Qt.font(observedSession.typographyFonts.caption)
+            required property ApplicationSession observedSession
+            font: observedSession.typographyFonts.caption
             leftPadding: observedSession.layoutSpaces.two
             text: "caption"
             Text {
                 objectName: "italicCaptionProbe"
                 y: parent.height
-                font: Qt.font(Object.assign({}, observedSession.typographyFonts.caption,
-                                            { italic: true }))
+                font.family: observedSession.typographyFonts.caption.family
+                font.pixelSize: observedSession.typographyFonts.caption.pixelSize
+                font.italic: true
                 text: "italic caption"
             }
         }
@@ -41,7 +39,7 @@ TestCase {
     FontMetrics { id: boldTitleCheck }
     FontMetrics {
         id: editorBodyMetrics
-        font: shell ? Qt.font(shell.shellPresenter.session.typographyFonts.body) : normalTitleCheck.font
+        font: shell ? shell.shellPresenter.session.typographyFonts.body : normalTitleCheck.font
     }
 
     function initTestCase() {
@@ -49,7 +47,6 @@ TestCase {
         Qt.application.organization = "sp3cker"
         Qt.application.domain = ""
     }
-
 
     function cleanup() {
         if (!shell)
@@ -59,21 +56,7 @@ TestCase {
         wait(0)
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-
-    function openDiagnostics(session) {
-        var labels = []
-        for (var i = 0; i < session.songCount() && i < 8; ++i)
-            labels.push(session.songLabel(i))
-        return " (projectRoot=" + bootstrap.projectRoot
-            + "; projectOpen=" + session.projectOpen
-            + "; songOpen=" + session.songOpen
-            + "; stagedLabels=[" + labels.join(",") + "]"
-            + "; lastSaveError=" + session.lastSaveError
-            + "; status=" + shell.shellPresenter.statusText + ")"
-    }
+    laneBootstrap: bootstrap
 
     function openOneSongShell() {
         shell = shellComponent.createObject(null)
@@ -136,7 +119,7 @@ TestCase {
         verify(tableAtSeed !== null && tableAtSeed.visible,
                "the tracked table text is visible at the seed size")
         var seed = capturedSessionComponent.createObject(testCase)
-        tableAtSeed.font = Qt.font(seed.typographyFonts.tableMono)
+        tableAtSeed.font = seed.typographyFonts.tableMono
         verify(Math.abs(tableAtSeed.font.letterSpacing - (-0.5)) < 1 / 64,
                "the resolved table face tracks by minus half a pixel at base 13")
         var enlarged = capturedSessionComponent.createObject(testCase)
@@ -144,7 +127,7 @@ TestCase {
         var tableAtDouble = bodyTextComponent.createObject(testCase)
         verify(tableAtDouble !== null && tableAtDouble.visible,
                "the tracked table text is visible at the doubled size")
-        tableAtDouble.font = Qt.font(enlarged.typographyFonts.tableMono)
+        tableAtDouble.font = enlarged.typographyFonts.tableMono
         verify(Math.abs(tableAtDouble.font.letterSpacing - (-1)) < 1 / 64,
                "the resolved table face tracks by minus one pixel at base 26")
         var zero = capturedSessionComponent.createObject(testCase)
@@ -247,8 +230,8 @@ TestCase {
                 "the mounted editor grid uses the captured session base rather than the body")
         var headers = findChild(surface, "timelineTrackHeaderRows")
         verify(headers && headers.count > 0, "the original track header delegates are mounted")
-        normalTitleCheck.font = Qt.font(surface.headersModel.normalTitleFont)
-        boldTitleCheck.font = Qt.font(surface.headersModel.boldTitleFont)
+        normalTitleCheck.font = surface.headersModel.normalTitleFont
+        boldTitleCheck.font = surface.headersModel.boldTitleFont
         tryVerify(function() {
             for (var i = 0; i < headers.count; ++i) {
                 var row = headers.itemAt(i)
@@ -258,10 +241,9 @@ TestCase {
                                                       row.titleRect.width)
                 var normal = normalTitleCheck.tightBoundingRect(label)
                 var bold = boldTitleCheck.tightBoundingRect(label)
-                var offset = row.selectedTitleOffset
                 var displayed = {
-                    x: bold.x + bold.width / 2 + offset.x,
-                    y: bold.y + bold.height / 2 + offset.y
+                    x: bold.x + bold.width / 2 + row.selectedTitleOffsetX,
+                    y: bold.y + bold.height / 2 + row.selectedTitleOffsetY
                 }
                 var reference = {
                     x: normal.x + normal.width / 2,
@@ -285,7 +267,7 @@ TestCase {
                 "the title map emits tabular figures")
         var rendered = bodyTextComponent.createObject(shell.contentItem)
         verify(rendered !== null, "a map-rendered probe mounts in the real window")
-        rendered.font = Qt.font(row.titleFont)
+        rendered.font = row.titleFont
         compare(rendered.font.hintingPreference, Font.PreferNoHinting,
                 "the rendered title carries the unhinted preference")
         rendered.destroy()

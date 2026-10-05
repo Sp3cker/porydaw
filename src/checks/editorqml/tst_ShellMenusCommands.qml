@@ -15,7 +15,7 @@ ShellMenusSupport {
         var transport = session.transportBarPresenter()
 
         var closeTab = findChild(shell, "shellAction_file.close_tab")
-        compare(closeTab.enabled, true, "the open tab enables Close Tab")
+        tryCompare(closeTab, "enabled", true, 3000, "the open tab enables Close Tab")
 
         // Drawer toggles follow section visibility. DrawerSectionKind values:
         // 0 automation, 1 velocity, 2 voice changes.
@@ -131,9 +131,9 @@ ShellMenusSupport {
         verify(waitForNative(function() { return editorPage() !== null }, 10000),
                "the editor page mounts")
         var page = editorPage()
-        compare(presenter.actionEnabled("roll.pitch_bend"), false,
+        compare(presenter.action("roll.pitch_bend").enabled, false,
                 "pitch bend needs a note selection")
-        compare(presenter.actionEnabled("edit.set_velocity"), false,
+        compare(presenter.action("edit.set_velocity").enabled, false,
                 "set velocity needs a note selection")
         grid.setTrack(0)
         compare(presenter.routeEditorKey(Qt.Key_G, Qt.NoModifier, false), false,
@@ -142,11 +142,11 @@ ShellMenusSupport {
         verify(waitForNative(function() {
             return JSON.parse(grid.fetchNoteSummary()).some(function(n) { return n.selected })
         }, 5000), "Select All selects notes through the production route")
-        tryVerify(function() { return presenter.actionEnabled("roll.pitch_bend") }, 3000,
+        tryVerify(function() { return presenter.action("roll.pitch_bend").enabled }, 3000,
                   "the selection enables pitch bend")
-        tryVerify(function() { return presenter.actionEnabled("edit.set_velocity") }, 3000,
+        tryVerify(function() { return presenter.action("edit.set_velocity").enabled }, 3000,
                   "the selection enables set velocity")
-        compare(presenter.actionEnabled("edit.loop_from_selection"), false,
+        compare(presenter.action("edit.loop_from_selection").enabled, false,
                 "loop from selection needs a time selection")
         var editor = session.pitchBendPresenter()
         var before = grid.appliedRevisionText
@@ -232,9 +232,9 @@ ShellMenusSupport {
         verify(field !== null, "the text field belongs to the active shell")
         field.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(field, "activeFocus", true, 3000)
-        compare(presenter.actionEnabled("roll.solo_tracks"), true,
+        compare(presenter.action("roll.solo_tracks").enabled, true,
                 "text focus does not disable the explicit window Solo action")
-        compare(soloItem.enabled, true, "the Edit Solo row remains actionable under text focus")
+        tryCompare(soloItem, "enabled", true, 3000, "the Edit Solo row remains actionable under text focus")
         presenter.activate("roll.solo_tracks")
         tryCompare(header, "soloChecked", true, 3000,
                    "explicit Edit Solo activation still reaches the selected track")
@@ -258,15 +258,15 @@ ShellMenusSupport {
         var soloItem = findChild(shell, "shellAction_roll.solo_tracks")
         verify(upItem !== null && downItem !== null && soloItem !== null,
                "the Edit menu owns the event moves and Solo action")
-        compare(presenter.actionEnabled("eventlist.move_up"), false,
+        compare(presenter.action("eventlist.move_up").enabled, false,
                 "the hidden event list disables move up")
-        compare(presenter.actionEnabled("eventlist.move_down"), false,
+        compare(presenter.action("eventlist.move_down").enabled, false,
                 "the hidden event list disables move down")
         compare(upItem.enabled, false, "the hidden list keeps the Move Up menu row disabled")
         compare(downItem.enabled, false, "the hidden list keeps the Move Down menu row disabled")
-        compare(presenter.actionEnabled("roll.solo_tracks"), true,
+        compare(presenter.action("roll.solo_tracks").enabled, true,
                 "hiding the event list keeps the window Solo action enabled")
-        compare(soloItem.enabled, true, "the hidden event list retains the Edit Solo row")
+        tryCompare(soloItem, "enabled", true, 3000, "the hidden event list retains the Edit Solo row")
         presenter.activate("view.event_list")
         var events = session.eventListPresenter()
         tryVerify(function() { return events.visible && events.rowCount > 1 }, 3000,
@@ -286,9 +286,9 @@ ShellMenusSupport {
         var rowCount = events.rowCount
         events.selectRow(moveRow, Qt.NoModifier)
         compare(events.currentRow, moveRow, "the menu targets the selected event row")
-        compare(presenter.actionEnabled("eventlist.move_up"), true,
-                "the selected raw event is eligible for Move Up")
-        compare(presenter.actionEnabled("roll.solo_tracks"), true,
+        tryCompare(presenter.action("eventlist.move_up"), "enabled", true, 3000,
+                   "the selected raw event is eligible for Move Up")
+        compare(presenter.action("roll.solo_tracks").enabled, true,
                 "showing the event list does not steal the window Solo action")
         compare(soloItem.enabled, true, "the shown event list retains the Edit Solo row")
         tryVerify(function() { return upItem.enabled }, 3000,
@@ -314,13 +314,13 @@ ShellMenusSupport {
         compare(events.rowCount, rowCount, "keyboard reorder preserves event count")
         presenter.activate("view.event_list")
         tryVerify(function() { return !events.visible }, 3000, "the event list hides again")
-        compare(presenter.actionEnabled("eventlist.move_up"), false,
+        compare(presenter.action("eventlist.move_up").enabled, false,
                 "hiding the list disables move up again")
-        compare(upItem.enabled, false, "the hidden list revokes the Move Up menu row")
-        compare(downItem.enabled, false, "the hidden list revokes the Move Down menu row")
-        compare(presenter.actionEnabled("roll.solo_tracks"), true,
+        tryCompare(upItem, "enabled", false, 3000, "the hidden list revokes the Move Up menu row")
+        tryCompare(downItem, "enabled", false, 3000, "the hidden list revokes the Move Down menu row")
+        compare(presenter.action("roll.solo_tracks").enabled, true,
                 "closing the event list leaves the window Solo action available")
-        compare(soloItem.enabled, true, "the closed event list retains the Edit Solo row")
+        tryCompare(soloItem, "enabled", true, 3000, "the closed event list retains the Edit Solo row")
     }
 
     function test_closeTabClosesTheCleanTab() {
@@ -328,7 +328,8 @@ ShellMenusSupport {
         openSong()
         var tabs = shell.shellPresenter.session.songTabs
         var closeTab = findChild(shell, "shellAction_file.close_tab")
-        verify(closeTab !== null && closeTab.enabled, "Close Tab targets the clean tab")
+        verify(closeTab !== null, "Close Tab is mounted")
+        tryCompare(closeTab, "enabled", true, 3000, "Close Tab targets the clean tab")
         closeTab.triggered()
         verify(waitForNative(function() { return tabs.tabCount === 0 }, 5000),
                "triggering Close Tab closes the clean tab")

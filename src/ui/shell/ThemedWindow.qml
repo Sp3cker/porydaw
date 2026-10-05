@@ -1,24 +1,16 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Templates as T
+import PorydawApp
 
-// Base of every Porydaw top-level window. The window palette assigns every Qt
-// palette role, in every color group, from the applied theme, so no control,
-// popup, or menu inherits the platform palette: macOS dark mode, Windows
-// high-contrast, and desktop GTK/KDE schemes pick text colors for their own
-// surfaces, not ours. Text contrast is the first visual requirement
-// (docs/adr/0002-text-contrast-first.md).
-//
-// Mapping follows the legacy application palette (themeruntime.cpp
-// applyPaletteGroup). Text roles are assigned per color group so the disabled
-// ink never races the enabled ink during a theme switch.
+// Every top-level window maps every palette group to the applied theme, so
+// controls and popups never inherit platform colors.
 T.ApplicationWindow {
-    required property QtObject colors
+    required final property GridPalette colors
     color: palette.window
 
-    // Every surface role is paired with a text role that keeps 4.5:1 on it:
-    // text/placeholderText on base, windowText on window/dark/midlight,
-    // buttonText on button, highlightedText on highlight and light,
-    // toolTipText on toolTipBase, brightText on dark.
+    // Surface/text pairs preserve contrast in every palette group.
     palette.window: colors.windowBackground
     palette.base: colors.inputBackground
     palette.alternateBase: colors.alternateBackground

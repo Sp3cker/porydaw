@@ -4,17 +4,15 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 import "ShellTabsRenderingSupport.js" as Rendering
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellTabs"
     when: windowShown
     width: 1100
     height: 720
     visible: true
-    property var shell: null
     readonly property var settings: fixtureBootstrap.preferences
     property alias bootstrap: fixtureBootstrap
     property alias fileProbe: fixtureProbe
@@ -27,58 +25,20 @@ TestCase {
     Component { id: fixtureShellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
     FontMetrics {
         id: fixtureBodyMetrics
-        font: shell ? Qt.font(shell.shellPresenter.session.typographyFonts.body)
+        font: shell ? shell.shellPresenter.session.typographyFonts.body
                     : Qt.font({family: "Atkinson Hyperlegible Next"})
     }
     function init() {
         verify(bootstrap.resetPreferences(), "each shell starts with fresh window state")
     }
 
-    function cleanup() {
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            var settled = false
-            for (var step = 0; step < 12 && !settled; ++step) {
-                var gate = waitForNative(function() {
-                    return shell.shellPresenter.closeReady
-                        || shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                        || shell.shellPresenter.session.songTabs.pendingCloseBankTitle.length > 0
-                }, 5000)
-                if (!gate)
-                    break
-                if (shell.shellPresenter.closeReady) {
-                    settled = true
-                    break
-                }
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-                wait(50)
-            }
-            verify(shell.shellPresenter.closeReady,
-                   "teardown waits for scene destruction and grid detach")
-        }
-        fileProbe.children.length = 0
-        shell.destroy()
-        shell = null
-        wait(0)
-    }
+    closeAllSteps: 12
+    closeAllBankGates: true
+    function preDestroyShell() { fileProbe.children.length = 0 }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
+    function session() { return shell.shellPresenter.session }
 
-    function openDiagnostics(session) {
-        var labels = []
-        for (var i = 0; i < session.songCount() && i < 8; ++i)
-            labels.push(session.songLabel(i))
-        return " (projectRoot=" + bootstrap.projectRoot
-            + "; projectOpen=" + session.projectOpen
-            + "; songOpen=" + session.songOpen
-            + "; stagedLabels=[" + labels.join(",") + "]"
-            + "; lastSaveError=" + session.lastSaveError
-            + "; status=" + shell.shellPresenter.statusText + ")"
-    }
+    laneBootstrap: bootstrap
 
     function seedDrawerPrefs() {
         settings.setBool("editorDrawer.velocityVisible", true)
@@ -135,8 +95,7 @@ TestCase {
     }
 
     function tabs() { return shell.shellPresenter.session.songTabs }
-    function session() { return shell.shellPresenter.session }
-    function tabsRoot() { return shell && shell.sceneLoader ? findChild(shell.sceneLoader.item, "shellSongTabs") : null }
+
     function strip() { return findChild(tabsRoot(), "songTabStrip") }
     function pages() { return findChild(tabsRoot(), "songTabPages") }
     function selectButton(tabId) { return findChild(tabsRoot(), "songTabSelect_" + tabId) }
@@ -148,11 +107,7 @@ TestCase {
         var page = pageOf(tabId)
         return page ? findChild(page, "swiftRollOverlay") : null
     }
-    function gridOf(tabId) {
-        var surface = surfaceOf(tabId)
-        return surface ? surface.gridModel : null
-    }
-    function summaryOf(tabId) { return gridOf(tabId).fetchNoteSummary() }
+
     function dialogButton(name) {
         var button = findChild(shell, name)
         if (button)
@@ -179,19 +134,6 @@ TestCase {
             return collected
         for (var i = 0; i < item.children.length; ++i)
             testCase.collectByPrefix(item.children[i], prefix, collected)
-        return collected
-    }
-
-    function collectByName(item, name, found) {
-        var collected = found || []
-        if (!item)
-            return collected
-        if (item.objectName === name)
-            collected.push(item)
-        if (!item.children)
-            return collected
-        for (var i = 0; i < item.children.length; ++i)
-            testCase.collectByName(item.children[i], name, collected)
         return collected
     }
 
@@ -260,7 +202,7 @@ TestCase {
     }
 
     function pointFor(tabId, tick, pitch) { return Rendering.pointFor(testCase, tabId, tick, pitch) }
-    function drawNote(tabId) { return Rendering.drawNote(testCase, tabId) }
+
     function regionOf(image, anchor, control) {
         return Rendering.regionOf(testCase, image, anchor, control)
     }

@@ -4,9 +4,8 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellDrawerParity"
     when: windowShown
@@ -14,7 +13,6 @@ TestCase {
     height: 760
     visible: true
 
-    property var shell: null
     readonly property var settings: bootstrap.preferences
     readonly property string rasterFixtureRoot: bootstrap.projectRoot
     readonly property bool rasterDpr2Child: bootstrap.rasterDpr2Child
@@ -29,51 +27,17 @@ TestCase {
     function devicePixelRatioFor(item) { return item.Screen.devicePixelRatio }
     function accessibleChecked(item) { return item.Accessible.checked }
 
-    function cleanup() {
+    closeAllSteps: 12
+    function preCleanup() {
         if (focusWindow) {
             focusWindow.destroy()
             focusWindow = null
         }
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            var settled = false
-            for (var step = 0; step < 12 && !settled; ++step) {
-                var gate = waitForNative(function() {
-                    return shell.shellPresenter.closeReady
-                        || shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                }, 5000)
-                if (!gate)
-                    break
-                if (shell.shellPresenter.closeReady) {
-                    settled = true
-                    break
-                }
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-                wait(50)
-            }
-            verify(shell.shellPresenter.closeReady,
-                   "teardown waits for scene destruction and grid detach")
-        }
-        shell.destroy()
-        shell = null
-        wait(0)
     }
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-    function openDiagnostics(session) {
-        var labels = []
-        for (var i = 0; i < session.songCount() && i < 8; ++i)
-            labels.push(session.songLabel(i))
-        return " (projectRoot=" + bootstrap.projectRoot
-            + "; projectOpen=" + session.projectOpen
-            + "; songOpen=" + session.songOpen
-            + "; stagedLabels=[" + labels.join(",") + "]"
-            + "; lastSaveError=" + session.lastSaveError
-            + "; status=" + shell.shellPresenter.statusText + ")"
-    }
+    function session() { return shell.shellPresenter.session }
+
+    laneBootstrap: bootstrap
+
     function openDrawerShell(activePage) {
         settings.setBool("editorDrawer.velocityVisible", true)
         settings.setInt("editorDrawer.velocityHeight", 173)
@@ -103,8 +67,7 @@ TestCase {
         }, 5000), "both drawer plots are mounted and drawn")
         waitForRendering(tabsRoot())
     }
-    function session() { return shell.shellPresenter.session }
-    function tabsRoot() { return shell && shell.sceneLoader ? findChild(shell.sceneLoader.item, "shellSongTabs") : null }
+
     function selectedSurface() {
         var tabs = session().songTabs
         var page = findChild(tabsRoot(), "songTab_" + tabs.selectedId)
@@ -139,18 +102,7 @@ TestCase {
         var page = voicePageItem()
         return page ? findChild(page, "voicePlotInput") : null
     }
-    function collectByName(item, name, found) {
-        var collected = found || []
-        if (!item)
-            return collected
-        if (item.objectName === name)
-            collected.push(item)
-        if (!item.children)
-            return collected
-        for (var i = 0; i < item.children.length; ++i)
-            testCase.collectByName(item.children[i], name, collected)
-        return collected
-    }
+
     function gridPointFor(tick, pitch) {
         var grid = gridModel()
         var surface = selectedSurface()

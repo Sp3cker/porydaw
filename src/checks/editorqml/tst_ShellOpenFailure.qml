@@ -3,10 +3,8 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
-import "ShellTabsRenderingSupport.js" as Rendering
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellOpenFailure"
     when: windowShown
@@ -14,66 +12,27 @@ TestCase {
     height: 640
     visible: true
 
-    property var shell: null
-
     ShellQmlBootstrap { id: bootstrap }
     readonly property var settings: bootstrap.preferences
     GatedVisualsProbe { id: probe }
-    SignalSpy { id: openFailedSpy; signalName: "openFailed" }
     SignalSpy { id: criticalSpy; signalName: "criticalRequested" }
 
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
-
 
     function init() {
         verify(bootstrap.resetPreferences(), "each explicit-open scenario starts in an empty store")
     }
 
+    laneBootstrap: bootstrap
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-
-    function waitForShellScene() {
-        verify(waitForNative(function() {
-            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
-        }, 10000), "the presented window mounts its deferred editor scene")
-    }
-
-    function cleanup() {
-        probe.restoreSong(bootstrap.projectRoot, "mus_littleroot_test")
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                    || !shell.shellPresenter.sceneActive
-            }, 5000), "the close-all walk reaches the dirty gate or completes")
-            if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.closeReady
-            }, 5000), "teardown waits for scene destruction and grid detach")
-        }
-        openFailedSpy.target = null
-        criticalSpy.target = null
-        shell.destroy()
-        shell = null
-        wait(0)
-    }
+    function preCleanup() { probe.restoreSong(laneBootstrap.projectRoot, "mus_littleroot_test") }
+    function preDestroyShell() { criticalSpy.target = null }
 
     function surfaceOf(tabId) {
         var pages = shell && shell.sceneLoader ? shell.sceneLoader.item : null
         var page = pages ? findChild(pages, "songTab_" + tabId) : null
         return page ? findChild(page, "swiftRollOverlay") : null
     }
-    function gridOf(tabId) {
-        var surface = surfaceOf(tabId)
-        return surface ? surface.gridModel : null
-    }
-    function summaryOf(tabId) { return gridOf(tabId).fetchNoteSummary() }
-    function drawNote(tabId) { return Rendering.drawNote(testCase, tabId) }
 
     function test_failedOpenPreservesLiveDirtyTabAndSurfacesError() {
         shell = shellComponent.createObject(null)
@@ -104,13 +63,13 @@ TestCase {
 
         verify(probe.moveSongAside(bootstrap.projectRoot, "mus_littleroot_test"),
                "the second song's MIDI source is hidden for the failed open")
-        openFailedSpy.target = session
         criticalSpy.target = shell.shellPresenter
-        openFailedSpy.clear()
         criticalSpy.clear()
         session.openSong("mus_littleroot_test")
-        verify(waitForNative(function() { return openFailedSpy.count === 1 }, 5000),
-               "opening the missing second song reports one failure")
+        verify(waitForNative(function() { return session.lastSaveError.length > 0 }, 5000),
+               "opening the missing second song reports a failure")
+        compare(shell.shellPresenter.statusText, session.lastSaveError,
+                "the failed second-song open publishes its explanation in the shell status")
         verify(waitForNative(function() { return criticalSpy.count === 1 }, 5000),
                "the failed second-song open raises one critical dialog")
         compare(criticalSpy.signalArguments[0][0], "Open Failed",
@@ -183,14 +142,14 @@ TestCase {
                 "the selected second song persists before failure")
         var originalNotes = selectedDocument.fetchNoteSummary()
 
-        openFailedSpy.target = session
         criticalSpy.target = shell.shellPresenter
-        openFailedSpy.clear()
         criticalSpy.clear()
         var missingPath = bootstrap.projectRoot + "/missing-native-project"
         session.openProject(missingPath)
-        verify(waitForNative(function() { return openFailedSpy.count === 1 }, 30000),
-               "opening the missing project reports one failure")
+        verify(waitForNative(function() { return session.lastSaveError.length > 0 }, 30000),
+               "opening the missing project reports a failure")
+        compare(shell.shellPresenter.statusText, session.lastSaveError,
+                "the missing project explanation reaches the shell status")
         verify(waitForNative(function() { return criticalSpy.count === 1 }, 5000),
                "the failed project open raises the production error dialog")
         var dialog = findChild(shell, "shellCriticalDialog")
@@ -264,9 +223,7 @@ TestCase {
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
         var session = shell.shellPresenter.session
-        openFailedSpy.target = session
         criticalSpy.target = shell.shellPresenter
-        openFailedSpy.clear()
         criticalSpy.clear()
         verify(waitForNative(function() { return criticalSpy.count === 1 }, 30000), "A035 startup restore reports the missing saved song as one operation failure")
         compare(criticalSpy.signalArguments[0][0], "Operation Failed", "the missing saved song raises the production operation dialog")
@@ -278,6 +235,8 @@ TestCase {
         compare(session.projectOpen, true, "the reported restore leaves the project open")
         compare(session.songOpen, true, "the reported restore leaves the saved song ready")
         compare(session.lastSaveError, "", "the startup report does not fail the restore result")
-        compare(openFailedSpy.count, 0, "the startup report raises no open failure")
+        compare(criticalSpy.signalArguments.filter(function(args) {
+            return args[0] === "Open Failed"
+        }).length, 0, "the startup report raises no open failure")
     }
 }

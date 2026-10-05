@@ -31,7 +31,9 @@ func rollNoteRects(_ grid: PianoGrid) -> [SceneRect] {
 @MainActor
 private func rollNoteRect(_ note: GridNote, grid: PianoGrid) -> SceneRect? {
     guard let box = decodedNoteBox(grid, note.noteId) else { return nil }
-    return SceneRect(x: box.x, y: box.y, width: box.w, height: box.h, fillColor: "")
+    return SceneRect(
+        x: box.x, y: box.y, width: box.w, height: box.h,
+        fillColor: QmlColor(red: 0, green: 0, blue: 0, alpha: 0))
 }
 
 @MainActor

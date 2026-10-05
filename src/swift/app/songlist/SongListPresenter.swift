@@ -141,6 +141,10 @@ public final class SongListPresenter {
         visible.indices.contains(index) ? visible[index].id : -1
     }
 
+    public func songLabel(at index: Int) -> String {
+        visible.indices.contains(index) ? visible[index].label : ""
+    }
+
     public func categoryName(at index: Int) -> String {
         index >= 0 && index < categories.count ? categories[index].name : ""
     }
@@ -188,6 +192,14 @@ public final class SongListPresenter {
             category: store.string(key: "songFilterCategory", fallback: ""))
     }
 
+    /// Persists the current filters using the shell's existing preference keys.
+    @QtIgnored
+    public func persistFilters(to store: PreferencesStore) {
+        store.setString(key: "songFilterText", value: searchText)
+        store.setInt(key: "songFilterSort", value: sortIndex)
+        store.setString(key: "songFilterCategory", value: categoryPrefix())
+    }
+
     /// Focuses the search field and selects its text (surface-side effect).
     public func focusSearch() {
         searchFocusRequest += 1
@@ -198,13 +210,13 @@ public final class SongListPresenter {
     /// Marks the loaded song: selects it, scrolls it into view, and keeps it
     /// selected across rebuilds. -1 (or a filtered-out id) deselects.
     public func setCurrentSong(songId: Int) {
-        setPublished(currentSongId, songId) { currentSongId = $0 }
+        publish(\.currentSongId, songId)
         if visible.contains(where: { $0.id == songId }) {
-            setPublished(selectedSongId, songId) { selectedSongId = $0 }
-            setPublished(revealSongId, songId) { revealSongId = $0 }
+            publish(\.selectedSongId, songId)
+            publish(\.revealSongId, songId)
             revealRequest += 1
         } else {
-            setPublished(selectedSongId, -1) { selectedSongId = $0 }
+            publish(\.selectedSongId, -1)
         }
         syncRowFlags()
     }

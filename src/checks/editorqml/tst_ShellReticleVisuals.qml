@@ -4,10 +4,9 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "GatedVisualsHelpers.js" as Helpers
-import "NativeWait.js" as NativeWait
 import "RollNoteFaces.js" as RollNoteFaces
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellReticleVisuals"
     when: windowShown
@@ -15,47 +14,15 @@ TestCase {
     height: 640
     visible: true
 
-    property var shell: null
     property var grabbed: null
 
     ShellQmlBootstrap { id: bootstrap }
 
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
 
+    laneBootstrap: bootstrap
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-
-    function cleanup() {
-        grabbed = null
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                    || !shell.shellPresenter.sceneActive
-            }, 5000), "the close-all walk reaches the dirty gate or completes")
-            if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.closeReady
-            }, 5000), "teardown waits for scene destruction and grid detach")
-        }
-        shell.destroy()
-        shell = null
-        wait(0)
-    }
-
-    function selectedSurface() {
-        var pages = shell && shell.sceneLoader ? shell.sceneLoader.item : null
-        if (!pages)
-            return null
-        var tabs = shell.shellPresenter.session.songTabs
-        var page = findChild(pages, "songTab_" + tabs.selectedId)
-        return page ? findChild(page, "swiftRollOverlay") : null
-    }
+    function preCleanup() { grabbed = null }
 
     function noteDelegates(grid, renderer, plot) {
         var items = []
@@ -173,7 +140,7 @@ TestCase {
         var noteProbe = null
         for (var d = 0; d < delegates.length && noteProbe === null; ++d) {
             var nc = delegates[d]
-            var fill = Helpers.channels(String(nc.fillColor))
+            var fill = Helpers.channels(nc.fillColor)
             var nx0 = Math.max(nc.x + 3, reticle.x + 3)
             var ny0 = Math.max(nc.y + 3, reticle.y + 3)
             var nx1 = Math.min(nc.x + nc.width - 3, reticle.x + reticle.w - 3)
@@ -207,7 +174,7 @@ TestCase {
             }
         verify(outside.length === 3, "three untouched flat pixels sit outside the reticle")
 
-        var selectionFill = String(grid.palette.selectionFill)
+        var selectionFill = grid.palette.selectionFill
         mouseMove(plot, sx, sy)
         mousePress(plot, sx, sy, Qt.RightButton)
         mouseMove(plot, fx, fy, -1, Qt.RightButton)
@@ -250,7 +217,7 @@ TestCase {
                 + ", expected " + Helpers.hexOf(expectedNote)
                 + ", actual " + Helpers.hexOf(actualNote))
 
-        var edge = Helpers.channels(String(grid.palette.selectionEdge))
+        var edge = Helpers.channels(grid.palette.selectionEdge)
         var wret = win(reticle.x, reticle.y)
         var left = Math.floor(wret.x * dpr)
         var right = Math.ceil((wret.x + reticle.w) * dpr)

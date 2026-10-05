@@ -1,17 +1,18 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
+import PorydawApp as App
 
 Item {
     id: trackHeaderScrollBar
 
-    required property var headersModel
+    required property App.TrackHeadersPresenter headersModel
     required property bool bandVisible
     required property color scrollbarHandle
     required property color scrollbarHandleHover
     required property real rowAreaWidth
 
-    signal wheelDelivered(var event)
+    signal wheelDelivered(WheelEvent event)
 
     objectName: "timelineTrackHeaderScrollBar"
     x: rowAreaWidth
@@ -22,7 +23,7 @@ Item {
     activeFocusOnTab: scrollable || activeFocus
 
     readonly property real span: Math.max(0, headersModel.maximumScrollY)
-    readonly property bool scrollable: span > 0
+    readonly property bool scrollable: headersModel !== null && span > 0
     readonly property real thumbLength: {
         if (!(height > 0) || !scrollable)
             return 0
@@ -44,23 +45,23 @@ Item {
     onSpanChanged: rebaseDrag()
     onThumbTravelChanged: rebaseDrag()
 
-    function requestScroll(value) {
+    function requestScroll(value: real): void {
         if (scrollable)
             headersModel.scrollY = Math.max(0, Math.min(span, value))
     }
 
-    function requestLine(direction) {
+    function requestLine(direction: int): void {
         requestScroll(headersModel.scrollY
                       + direction * Math.max(0, headersModel.rowHeight))
     }
 
-    function requestPage(direction) {
+    function requestPage(direction: int): void {
         requestScroll(headersModel.scrollY
                       + direction * Math.max(0, headersModel.viewportHeight))
     }
 
-    function rebaseDrag() {
-        if (!thumbMouse || !thumbMouse.pressed || !dragThresholdReached)
+    function rebaseDrag(): void {
+        if (!headersModel || !thumbMouse || !thumbMouse.pressed || !dragThresholdReached)
             return
         dragStartValue = Math.max(0, Math.min(span, headersModel.scrollY))
         dragStartPosition = dragLastPosition

@@ -1,27 +1,19 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+pragma ComponentBehavior: Bound
 
-// Help > About porydaw: the QMessageBox::about body from the old MainWindow
-// (version, description, links and credits), restyled onto GridPalette ink.
-// Width derives from the application font; the window palette owns the popup
-// chrome, and the body text keeps windowText on the dialog surface. Links
-// render in body ink per the ThemedWindow link convention.
-//
-// Sizing follows the settings-dialog convention: fixed font-derived geometry
-// instead of content-driven implicit sizes. The body lays out bottom-up in a
-// ColumnLayout (the SongConfirmDialog pattern in the same Dialog
-// family) and never reads the dialog's available width, so the dialog's
-// implicitHeight no longer feeds back into its own content.
+import QtQuick
+import PorydawStyle
+import QtQuick.Layouts
+import PorydawApp
+
+// Legacy About content uses theme ink and fixed font-derived geometry.
+// The bottom-up body layout avoids dialog implicit-size feedback.
 Dialog {
     id: about
     objectName: "shellAboutDialog"
-    required property QtObject colors
-    required property QtObject applicationSession
+    required property GridPalette colors
+    required property ApplicationSession applicationSession
     required property real baseFontPx
-    // Qt exposes no qVersion() binding, so the numeric Qt version from the
-    // old "Running on Qt" line cannot be rendered; the host application
-    // version feeds the heading when set.
+    // Qt has no qVersion() binding; the application version feeds the heading.
     property string porydawVersion: Qt.application.version
     title: qsTr("About porydaw")
     parent: Overlay.overlay
@@ -29,7 +21,7 @@ Dialog {
     modal: true
     focus: true
     standardButtons: Dialog.Close
-    font: Qt.font(applicationSession.typographyFonts.body)
+    font: about.applicationSession.typographyFonts.body
     width: Math.min(parent.width - 4 * baseFontPx,
                     aboutMetrics.averageCharacterWidth * 68 + 4 * baseFontPx)
     height: Math.min(parent.height - 4 * baseFontPx,

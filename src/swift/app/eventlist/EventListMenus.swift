@@ -38,48 +38,6 @@ enum EventListMenuKind {
     ]
 }
 
-@MainActor
-enum EventListAppearance {
-    static func roles(
-        palette: GridPalette, typography: Typography
-    )
-        -> [String: QVariantSettable]
-    {
-        return [
-            "bodyFont": typography.body.map,
-            "controlFont": typography.body.map,
-            "tableFont": typography.tableMono.map,
-            "headerFont": typography.caption.map,
-            "tableBackground": palette.menuBackground,
-            "tableAlternateBackground": palette.alternateBackground,
-            "tableText": palette.windowText,
-            "tableSecondaryText": palette.secondaryText,
-            "tableSelectedBackground": palette.tabSelectedBackground,
-            "tableSelectedText": palette.selectionText,
-            "disabledText": palette.disabledText,
-            "tableOutline": palette.outline,
-            "playheadTint": EventListModel.playheadTint,
-            "headerBackground": palette.chromeBackground,
-            "headerText": palette.windowText,
-            "headerOutline": palette.outline,
-            "buttonBackground": palette.buttonBackground,
-            "buttonText": palette.buttonText,
-            "buttonHoverBackground": palette.buttonHoverBackground,
-            "buttonPressedBackground": palette.buttonPressedBackground,
-            "buttonPressedText": palette.buttonPressedText,
-            "buttonOutline": palette.outline,
-            "scrollbarHandle": palette.scrollbarHandle,
-            "scrollbarHandleHover": palette.outline,
-            "toolTipBackground": palette.inputBackground,
-            "toolTipText": palette.windowText,
-            "toolTipOutline": palette.outline,
-            "inputBackground": palette.buttonHoverBackground,
-            "inputText": palette.windowText,
-            "inputOutline": palette.outline,
-            "focusOutline": palette.focusOutline,
-        ]
-    }
-}
 
 @MainActor
 extension EventListPresenter {
@@ -172,16 +130,16 @@ extension EventListPresenter {
             })?.shortcutText ?? ""
         menuSeparatorCount = items.filter(\.separator).count
         menuItems.reset(to: items)
-        menuOpen = true
+        setMenuOpen(open: true)
     }
 
     func dispatchDismissMenu() {
-        menuOpen = false
         menuKind = nil
         menuRow = -1
         menuItems.reset(to: [])
         menuShortcutText = ""
         menuSeparatorCount = 0
+        setMenuOpen(open: false)
     }
 
     func invalidateRowMenu() {

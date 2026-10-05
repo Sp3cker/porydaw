@@ -10,21 +10,15 @@ struct GridFontSpec {
     let pixelSize: Int
     let weight: Int
     let letterSpacing: Double
-    let features: [String: QVariantSettable] = ["tnum": 1]
 
-    var map: [String: QVariantSettable] {
-        [
-            "family": family,
-            "pixelSize": pixelSize,
-            "weight": weight,
-            "letterSpacing": letterSpacing,
-            "features": features,
-            "hintingPreference": fontPreferNoHinting,
-        ]
+    private static let qmlFeatures: [String: UInt32] = ["tnum": 1]
+
+    var qmlFont: QmlFont {
+        QmlFont(
+            family: family, pixelSize: pixelSize, weight: weight,
+            letterSpacing: letterSpacing, features: Self.qmlFeatures)
     }
 }
-
-let fontPreferNoHinting = 1
 
 let gridBodyFamily = "Atkinson Hyperlegible Next"
 let gridMonoFamily = "Atkinson Hyperlegible Mono"
@@ -49,7 +43,7 @@ struct GridTypography {
     private let chipWidths: [Double]
     private let noteNameWidths: [Double]
     private let noteValueMetrics: NativeFontMetrics
-    private let fontMaps: [GridFontKind: [String: QVariantSettable]]
+    private let qmlFonts: [GridFontKind: QmlFont]
 
     init(fonts: [GridFontKind: GridFontSpec], rowHeight: Double, pixel: Double = 1) {
         func measure(_ kind: GridFontKind) -> NativeFontMetrics {
@@ -91,14 +85,18 @@ struct GridTypography {
         noteValueMetrics = value
         noteValueOccupiedHeight = value.extents.height
         noteValueVisible = valueFit > 0 && value.extents.height <= (rowHeight - pixel).rounded(.down)
-        chipWidths = (0..<128).map { chip.advance(GridScene.keyName($0)) }
+        chipWidths = GridScene.keyNames.map { chip.advance($0) }
         let noteName = measure(.noteName)
         noteNameOccupiedHeight = noteName.extents.height
-        noteNameWidths = (0..<128).map { noteName.advance(GridScene.keyName($0)) }
-        var maps = fonts.mapValues { $0.map }
-        maps[.keyLabel]!["pixelSize"] = keyLabelFit
-        maps[.noteValue] = valueSpec.map
-        fontMaps = maps
+        noteNameWidths = GridScene.keyNames.map { noteName.advance($0) }
+        var values = fonts.mapValues { $0.qmlFont }
+        guard var keyLabelFont = values[.keyLabel] else {
+            preconditionFailure("GridTypography requires the key-label font")
+        }
+        keyLabelFont.pixelSize = keyLabelFit
+        values[.keyLabel] = keyLabelFont
+        values[.noteValue] = valueSpec.qmlFont
+        qmlFonts = values
     }
 
     static func barLabel(_ bar: Int) -> String { "\(bar)" }
@@ -127,7 +125,12 @@ struct GridTypography {
     func noteNameAdvance(pitch: Int) -> Double { noteNameWidths[pitch] }
     func noteValueAdvance(_ text: String) -> Double { noteValueMetrics.advance(text) }
 
-    func fontMap(_ kind: GridFontKind) -> [String: QVariantSettable] { fontMaps[kind]! }
+    func font(_ kind: GridFontKind) -> QmlFont {
+        guard let value = qmlFonts[kind] else {
+            preconditionFailure("GridTypography requires every grid font")
+        }
+        return value
+    }
 
     static func fonts(metrics _: GridMetrics, typography: Typography) -> [GridFontKind: GridFontSpec] {
         let rulerPx = max(
@@ -160,8 +163,10 @@ struct GridTypography {
 final class NativeFontMetrics {
     let session: OpaquePointer
     let extents: SGFontExtents
+    private let spec: GridFontSpec
 
     init(_ spec: GridFontSpec) {
+        self.spec = spec
         session = spec.family.withCString {
             sgf_create($0, Int32(spec.pixelSize), Int32(spec.weight), spec.letterSpacing)!
         }
@@ -175,6 +180,26 @@ final class NativeFontMetrics {
     }
 
     func fittedSize(rowHeight: Double) -> Int {
-        Int(sgf_fit(session, rowHeight))
+        spec.family.withCString { family in
+            var size = spec.pixelSize
+            while size > 0 {
+                let height: Double
+                if size == spec.pixelSize {
+                    height = extents.height
+                } else {
+                    guard
+                        let fitted = sgf_create(
+                            family, Int32(size), Int32(spec.weight), spec.letterSpacing)
+                    else {
+                        preconditionFailure("Native font measurement requires a metrics session")
+                    }
+                    height = sgf_extents(fitted).height
+                    sgf_destroy(fitted)
+                }
+                if height <= rowHeight { return size }
+                size -= 1
+            }
+            return 1
+        }
     }
 }

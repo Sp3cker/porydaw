@@ -59,13 +59,13 @@ extension VoiceListController {
     @QtIgnored
     public func setLoading(_ loading: Bool) {
         if loading == isLoading && !loading { return }
-        setPublished(isLoading, loading) { isLoading = $0 }
+        publish(\.isLoading, loading)
         if loading {
             releaseVoice()
-            setPublished(selectorText, "Loading...") { selectorText = $0 }
-            setPublished(selectorPlaceholder, "Loading...") { selectorPlaceholder = $0 }
+            publish(\.selectorText, "Loading...")
+            publish(\.selectorPlaceholder, "Loading...")
         } else {
-            setPublished(selectorText, VoiceListSemantics.voicegroupDisplayName(currentArg)) { selectorText = $0 }
+            publish(\.selectorText, VoiceListSemantics.voicegroupDisplayName(currentArg))
         }
         rederiveRows()
         editor.refresh()
@@ -80,17 +80,17 @@ extension VoiceListController {
     ) {
         releaseVoice()
         let wasLoading = isLoading
-        setPublished(isLoading, false) { isLoading = $0 }
+        publish(\.isLoading, false)
         let bound = newSlots != nil
-        setPublished(isBound, bound) { isBound = $0 }
+        publish(\.isBound, bound)
         slots = newSlots ?? []
-        setPublished(bankDirty, dirty) { bankDirty = $0 }
-        setPublished(bankLoadName, loadName) { bankLoadName = $0 }
+        publish(\.bankDirty, dirty)
+        publish(\.bankLoadName, loadName)
         let title = dirty ? "Voicegroup*" : "Voicegroup"
-        setPublished(panelTitle, title) { panelTitle = $0 }
+        publish(\.panelTitle, title)
         if wasLoading {
             let text = VoiceListSemantics.voicegroupDisplayName(currentArg)
-            setPublished(selectorText, text) { selectorText = $0 }
+            publish(\.selectorText, text)
         }
         if newSlots == nil {
             usedVoices = []
@@ -127,7 +127,7 @@ extension VoiceListController {
     public func setCurrentVoicegroupArg(_ arg: String) {
         currentArg = arg
         let text = VoiceListSemantics.voicegroupDisplayName(arg)
-        setPublished(selectorText, text) { selectorText = $0 }
+        publish(\.selectorText, text)
     }
 
     /// Reveals the track's first program or first voice-change value.
@@ -165,10 +165,10 @@ extension VoiceListController {
     @QtIgnored
     func updateSelectorEnabled() {
         let enabled = isBound && !isLoading
-        setPublished(selectorEnabled, enabled) { selectorEnabled = $0 }
+        publish(\.selectorEnabled, enabled)
         if !isLoading {
             let placeholder = isBound ? "dummy" : "No song loaded"
-            setPublished(selectorPlaceholder, placeholder) { selectorPlaceholder = $0 }
+            publish(\.selectorPlaceholder, placeholder)
         }
     }
 

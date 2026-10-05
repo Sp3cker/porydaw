@@ -593,7 +593,7 @@ ShellTabsSupport {
             var plot = findChild(surface, "timelineRendererPlot")
             verify(plot && plot.fetchedRevision > 0,
                 "the plot list publishes frames while the band is held")
-            var ring = Qt.color(grid.palette.selectionRing)
+            var ring = grid.palette.selectionRing
             var image = RollNoteFaces.grab(tabsReloadCase, input)
             var dpr = image.width / input.width
             var px = Math.floor((face.x + face.width / 2) * dpr)

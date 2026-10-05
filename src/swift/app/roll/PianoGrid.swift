@@ -61,9 +61,7 @@ public final class PianoGrid: QmlUncreatable {
     @QtIgnored var rightPointerModifiers = 0
     public private(set) var scrollbarGrabActive = false
     @QtIgnored var onCommandAvailabilityChanged: (() -> Void)?
-    /// The Set Velocity row's dispatch: the document-bound page opens its own
-    /// prompt transaction. `true` means the request was accepted. Swift-only,
-    /// like the shared playhead's policy entries: no QML surface sees it.
+    /// Dispatches Set Velocity to the document-bound page's prompt transaction.
     @QtIgnored public var onSetVelocityRequested: (() -> Bool)?
     @QtIgnored public var onPitchBendRequested: (() -> Bool)?
     @QtIgnored public var onGridMenuOpened: (() -> Void)?
@@ -146,10 +144,7 @@ public final class PianoGrid: QmlUncreatable {
     @QtTracked public var dragDistance = 10.0
     @QtTracked public var drawThreshold = 3.0
     @QtTracked public var hoverKey = -1
-    /// View menu display mode, mirrored from ApplicationSession (which owns
-    /// the app-wide state and pushes it to every tab). Plain Swift state, set
-    /// only through the setter below so each change rebuilds the notes;
-    /// standalone grids (checks, fixtures) default off.
+    /// Mirrored from ApplicationSession; standalone grids default off.
     @QtIgnored public var noteNameMode = false
     @QtIgnored
     var measurementFonts: [GridFontKind: GridFontSpec] = [:]
@@ -173,18 +168,14 @@ public final class PianoGrid: QmlUncreatable {
         return (x0, y0, x1 - x0, y1 - y0)
     }
 
-    /// Creates the roll presenter for `session`.
-    ///
-    /// - Parameter palette: The palette the roll draws with. The application
-    ///   passes the session's one instance so every tab shares it, and a
-    ///   standalone grid — checks, fixtures — keeps a palette of its own.
+    /// Creates the roll presenter with the session's shared palette when supplied.
     public init(
         session: DocumentSession, palette: GridPalette? = nil,
         typography: Typography = Typography(baseFontPx: 13)
     ) {
         self.session = session
         roleTypography = typography
-        scene.hoverChipFont = typography.caption.map
+        scene.hoverChipFont = typography.caption.qmlFont
         // Set before the first bake below: the roll's static layer reads the
         // palette, so a later assignment would leave that layer with defaults.
         self.palette = palette ?? GridPalette()
@@ -195,9 +186,7 @@ public final class PianoGrid: QmlUncreatable {
         keyboardWidth = metrics.keyboardWidth
         trackHeaderWidth = fontPx(base, 17.5)
         resizeCursorExtent = Int(fontPx(base, 2.0))
-        // The existing Set Velocity row asks its owner for the prompt instead of
-        // committing a value; the owner is the document-bound page the
-        // application session installs after this presenter exists.
+        // The document-bound page owns the Set Velocity prompt transaction.
         commands.requestSetVelocity = { [weak self] in
             self?.onSetVelocityRequested?() ?? false
         }
@@ -226,9 +215,7 @@ public final class PianoGrid: QmlUncreatable {
         session.setScale(fold: fold)
     }
 
-    /// Mirrors ApplicationSession's note-name mode on this tab: visible
-    /// selected-track notes gain pitch-name labels. No-op when unchanged;
-    /// otherwise rebuilds the visible notes.
+    /// Mirrors the session's note-name mode and rebuilds visible notes when changed.
     public func setNoteNameMode(enabled: Bool) {
         guard noteNameMode != enabled else { return }
         noteNameMode = enabled
@@ -309,6 +296,11 @@ public final class PianoGrid: QmlUncreatable {
     public func openGridMenu(kind: Int) { openGridMenuImpl(kind: kind) }
 
     public func dismissGridMenu() { dismissGridMenuImpl() }
+
+    public func gridMenuRow(index: Int) -> Optional<GridSubdivisionMenuItem> {
+        guard index >= 0, index < gridMenuRows.count else { return nil }
+        return gridMenuRows[index]
+    }
 
     public func activateGridMenuRow(actionId: Int) {
         activateGridMenuRowImpl(actionId: actionId)

@@ -27,9 +27,11 @@ ShellEventListSupport {
             menu = findChild(page, "quickMenuPanelRoot")
             return menu !== null && menu.rowCount === 7
         }, 3000, "program menu renders all seven fork rows")
-        const show = findChild(page, "eventListMenuRow_2")
-        verify(show && show.active && show.itemData.text === "Show voice in voicegroup",
-               "program row exposes the rendered voice reveal action")
+        let show = null
+        tryVerify(function() {
+            show = findChild(page, "eventListMenuRow_2")
+            return show && show.active && show.itemData.text === "Show voice in voicegroup"
+        }, 3000, "program row exposes the rendered voice reveal action")
         mouseClick(show, show.width / 2, show.height / 2)
         tryCompare(voice, "revealRequest", beforeReveal + 1, 3000,
                    "rendered Show voice requests the mounted voicegroup")

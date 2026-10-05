@@ -89,25 +89,34 @@ extension ApplicationSession {
         }
     }
 
+    func publishLastSaveError(_ message: String) {
+        publish(\.lastSaveError, message)
+        if !message.isEmpty { onStatusMessage?(message) }
+    }
+
+    func publishSaveState(inProgress: Bool, error: String? = nil) {
+        publish(\.saveInProgress, inProgress)
+        if let error { publishLastSaveError(error) }
+        onSaveStateChanged?()
+    }
+
     func requestSaveImpl() {
         guard let session = workspace?.session, !saveInProgress else { return }
-        saveInProgress = true
-        lastSaveError = ""
+        publishSaveState(inProgress: true, error: "")
         Task { [weak self] in
             do {
                 try await session.save()
             } catch is SaveConflictError {
                 // Nothing was written; the prompt takes the answer.
-                self?.saveInProgress = false
+                self?.publishSaveState(inProgress: false)
                 self?.presentSaveConflict(session: session, closeTabId: nil)
                 return
             } catch {
-                self?.lastSaveError = String(describing: error)
-                self?.saveInProgress = false
+                self?.publishSaveState(inProgress: false, error: String(describing: error))
                 return
             }
             await self?.refreshVoicegroupCatalog()
-            self?.saveInProgress = false
+            self?.publishSaveState(inProgress: false)
         }
     }
 
@@ -115,14 +124,15 @@ extension ApplicationSession {
         guard let session = workspace?.session else { return }
         canUndo = false
         canRedo = false
-        lastSaveError = ""
+        publishLastSaveError("")
+        onDocumentStateChanged?(false)
         Task { [weak self] in
             do {
                 _ = try await session.undo()
             } catch {
                 let message = String(describing: error)
-                self?.lastSaveError = message
-                self?.operationFailed(message: message)
+                self?.publishLastSaveError(message)
+                self?.publishOperationFailure(message: message)
                 self?.refreshDocumentState()
             }
         }
@@ -132,14 +142,15 @@ extension ApplicationSession {
         guard let session = workspace?.session else { return }
         canUndo = false
         canRedo = false
-        lastSaveError = ""
+        publishLastSaveError("")
+        onDocumentStateChanged?(false)
         Task { [weak self] in
             do {
                 _ = try await session.redo()
             } catch {
                 let message = String(describing: error)
-                self?.lastSaveError = message
-                self?.operationFailed(message: message)
+                self?.publishLastSaveError(message)
+                self?.publishOperationFailure(message: message)
                 self?.refreshDocumentState()
             }
         }

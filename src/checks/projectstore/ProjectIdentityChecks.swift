@@ -1,3 +1,5 @@
+import Foundation
+import PorydawCore
 import PorydawProject
 
 // V-1: proof.identity.txt A037-A052 pin SongHistory/QUndoStack mergeWith
@@ -11,6 +13,8 @@ import PorydawProject
 
 internal func runProjectIdentitySuite(_ report: CheckReport) {
     songName(report)
+    songLabelGrammar(report)
+    songRegistrationLabels(report)
     voicegroupId(report)
     savedRecipe(report)
 }
@@ -33,6 +37,119 @@ private func songName(_ report: CheckReport) {
     report.expect(
         first.hashValue == same.hashValue, cppID: cppID,
         message: "A008: equal song identities have equal hashes")
+}
+
+private func songLabelGrammar(_ report: CheckReport) {
+    let cppID = "swiftcore/ProjectIdentity::songLabelGrammar"
+    let cases: [(label: String, serviceAccepts: Bool, symbolAccepts: Bool)] = [
+        ("", false, false),
+        ("a", true, true),
+        ("_", true, true),
+        ("intro_09", true, true),
+        ("__0", true, true),
+        ("0intro", false, false),
+        ("Intro", false, true),
+        ("introA", false, true),
+        ("intro-outro", false, false),
+        ("intro.outro", false, false),
+        ("intro/outro", false, false),
+        (" intro", false, false),
+        ("intro ", false, false),
+        ("intro\t", false, false),
+        ("intro\n", false, false),
+        ("intro\noutro", false, false),
+        ("é", false, false),
+        ("aé", false, false),
+        ("a０", false, false),
+        ("a\u{0}", false, false),
+    ]
+    for (label, serviceAccepts, symbolAccepts) in cases {
+        report.expectEqual(
+            expected: serviceAccepts, actual: SongName.isValid(label: label),
+            cppID: cppID, what: "new song label grammar for \(String(reflecting: label))")
+        report.expectEqual(
+            expected: symbolAccepts, actual: SongName.isSymbol(label: label),
+            cppID: cppID, what: "registration symbol grammar for \(String(reflecting: label))")
+        report.expectEqual(
+            expected: !label.isEmpty, actual: SongName(label) != nil,
+            cppID: cppID, what: "identity/deletion gate for \(String(reflecting: label))")
+    }
+}
+
+private func songRegistrationLabels(_ report: CheckReport) {
+    let cppID = "swiftcore/ProjectIdentity::registrationSymbolGate"
+    do {
+        let temp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("identity-registration-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temp) }
+        let root = URL(fileURLWithPath: stageTestProject(in: temp.path, projectName: "project"))
+        do {
+            let store = ProjectStore(projectRoot: root)
+            guard case .success = awaitValue({ try await store.open() }) else {
+                report.fail(cppID, "fixture store did not open")
+                return
+            }
+            let before = try registrationFileSnapshot(root)
+            for label in ["mus-foo", "mus foo"] {
+                let result = awaitValue {
+                    try await store.registerSong(label: label, constant: "", player: "")
+                }
+                if case .failure(let error) = result,
+                    case SongRegistrationError.failed(let message) = error
+                {
+                    report.expectEqual(
+                        expected: "Song label \(label) must match [A-Za-z_][A-Za-z0-9_]*.",
+                        actual: message, cppID: cppID, what: "invalid symbol names its registration rule")
+                } else {
+                    report.fail(cppID, "registration must reject \(String(reflecting: label)) with its domain error")
+                }
+                report.expectEqual(
+                    expected: before, actual: try registrationFileSnapshot(root), cppID: cppID,
+                    what: "rejected \(String(reflecting: label)) touches no project file")
+            }
+            let label = "mus_MyTheme"
+            let destination = root.appendingPathComponent("sound/songs/midi/\(label).mid")
+            try Data(makeMidiFixture().encoded()).write(to: destination)
+            let registered = awaitValue({
+                try await store.registerSong(label: label, constant: "", player: "")
+            })
+            guard case .success(let songId) = registered else {
+                report.fail(cppID, "mixed-case existing MIDI label must register: \(String(describing: registered))")
+                return
+            }
+            let status = SongRegistration.status(
+                root: root.path, label: label, constant: SongCatalog.constantForLabel(label))
+            report.expect(songId >= 0, cppID: cppID, message: "mixed-case registration returns a song ID")
+            report.expectEqual(
+                expected: [String](), actual: status.missingFiles, cppID: cppID,
+                what: "mixed-case label is registered in every applicable build file")
+            let table = try String(contentsOf: root.appendingPathComponent("sound/song_table.inc"), encoding: .utf8)
+            report.expect(
+                table.contains("song mus_MyTheme,"), cppID: cppID,
+                message: "registration preserves the mixed-case assembly symbol")
+        }
+    } catch {
+        report.fail(cppID, "registration symbol fixture failed: \(error)")
+    }
+}
+
+private struct RegistrationFilePin: Equatable {
+    let bytes: Data
+    let modifiedAt: Date?
+}
+
+private func registrationFileSnapshot(_ root: URL) throws -> [String: RegistrationFilePin] {
+    var files: [String: RegistrationFilePin] = [:]
+    for relative in try FileManager.default.subpathsOfDirectory(atPath: root.path) {
+        let file = root.appendingPathComponent(relative)
+        let values = try file.resourceValues(forKeys: [.isRegularFileKey, .contentModificationDateKey])
+        if values.isRegularFile == true {
+            files[relative] = RegistrationFilePin(
+                bytes: try Data(contentsOf: file), modifiedAt: values.contentModificationDate)
+        }
+    }
+    return files
 }
 
 private func voicegroupId(_ report: CheckReport) {

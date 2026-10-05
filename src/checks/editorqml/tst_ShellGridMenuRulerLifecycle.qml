@@ -313,7 +313,7 @@ ShellGridMenuSupport {
         menu = openRulerMenu(range.startX, ruler.height * 0.75)
         tryVerify(function() { return menu.parent.activeFocus }, 3000,
                   "the ruler menu host owns focus before the Undo edit")
-        verify(shell.shellPresenter.actionEnabled("edit.undo"),
+        verify(shell.shellPresenter.action("edit.undo").enabled,
                "Undo remains enabled at window level while the ruler menu is open")
         var undoRevision = grid.appliedRevisionText
         shell.shellPresenter.activate("edit.undo")
@@ -343,7 +343,7 @@ ShellGridMenuSupport {
         compare(menu.rowItem(rulerRowIndex(menu, 13)).itemData.text,
                 "Paste at Edit Cursor", "the ruler Paste row keeps the edit cursor wording")
         compare(menu.rowItem(rulerRowIndex(menu, 1)).itemData.shortcutText,
-                shell.shellPresenter.actionShortcut("edit.insert_time"),
+                shell.shellPresenter.action("edit.insert_time").shortcut,
                 "action-backed ruler rows show their native shortcut hint")
         verify(menu.shortcutRight > menu.textRight,
                "the rendered ruler panel reserves a visible shortcut column")
@@ -357,7 +357,7 @@ ShellGridMenuSupport {
         compare(menu.rowItem(rulerRowIndex(menu, 13)).itemData.text,
                 "Paste at Edit Cursor", "the shared time menu keeps the cursor wording")
         compare(menu.rowItem(rulerRowIndex(menu, 11)).itemData.shortcutText,
-                shell.shellPresenter.actionShortcut("roll.copy"),
+                shell.shellPresenter.action("roll.copy").shortcut,
                 "the time-menu Copy row shows the native shortcut")
         verify(menu.shortcutRight > menu.textRight,
                "the rendered time panel reserves a visible shortcut column")

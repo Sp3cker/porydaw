@@ -204,9 +204,9 @@ EditorDrawerTestSupport {
         }
         var before = gridRaster()
         var background = PixelSupport.channelsOf(testCase, testCase.drawerPalette().rollBackground)
-        var barColor = String(testCase.drawerPalette().gridLineBar)
+        var barColor = testCase.drawerPalette().gridLineBar
         var bar = PixelSupport.channelsOf(testCase, barColor)
-        var alpha = parseInt(barColor.slice(1, 3), 16) / 255
+        var alpha = barColor.a
         var blended = bar.map(function(channel, index) {
             return Math.round(channel * alpha + background[index] * (1 - alpha))
         })

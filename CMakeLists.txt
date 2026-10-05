@@ -186,20 +186,19 @@ add_subdirectory(src/swift/sample)
 add_subdirectory(src/swift/project)
 include(cmake/QtBridge.cmake)
 add_subdirectory(src/swift/app)
+target_sources(PorydawApp PRIVATE src/swift/app/shell/PorydawQmlTypes.swift)
+
+set(porydaw_qmltypes_import_path "${CMAKE_BINARY_DIR}/qmltypes")
 
 
 # ---- porydaw application ----
-qt_add_library(porydaw_app STATIC
+qt_add_library(porydaw_native_host STATIC
     src/app/native_host.h
     src/app/clipboard_host.cpp
     src/app/qml_engine_host.h
     src/app/qml_engine_host.cpp
-    src/app/item_cursor.h
-    src/app/item_cursor.cpp
     src/render/display_list.h
     src/render/display_list.c
-    src/render/display_list_item.h
-    src/render/display_list_item.cpp
     src/ui/songview/quick/swiftroll/native/font_metrics.cpp
     src/ui/songview/quick/swiftroll/native/font_metrics.h
     src/audio/miniaudio_impl.c
@@ -209,6 +208,12 @@ qt_add_library(porydaw_app STATIC
     src/project/banklease.h
     src/project/projectidentity.cpp
     src/project/projectidentity.h
+)
+qt_add_library(porydaw_app STATIC
+    src/app/item_cursor.h
+    src/app/item_cursor.cpp
+    src/render/display_list_item.h
+    src/render/display_list_item.cpp
 )
 
 # Icons stand alone so the Controls style and Porydaw.Ui both import them.
@@ -236,6 +241,7 @@ qt_add_qml_module(porydaw_style
     RESOURCE_PREFIX /qt/qml
     OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/PorydawStyle"
     NO_PLUGIN
+    IMPORT_PATH "${porydaw_qmltypes_import_path}"
     IMPORTS
         QtQuick.Controls.Fusion/auto
     DEPENDENCIES
@@ -259,10 +265,13 @@ qt_add_qml_module(porydaw_app
     RESOURCE_PREFIX /qt/qml
     OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Porydaw/Ui"
     NO_PLUGIN
+    IMPORT_PATH "${porydaw_qmltypes_import_path}"
+    DEPENDENCIES PorydawStyle
     QML_FILES
         src/ui/songview/quick/PianoRollCanvas.qml
         src/ui/songview/quick/PromptCard.qml
         src/ui/songview/quick/PromptButton.qml
+        src/ui/songview/quick/PromptOverlay.qml
         src/ui/songview/quick/VelocityPrompt.qml
         src/ui/songview/quick/VoicePickerPrompt.qml
         src/ui/songview/quick/TimeSignaturePrompt.qml
@@ -280,6 +289,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/TimelineScrollbar.qml
         src/ui/songview/quick/HintProfiles.qml
         src/ui/songview/quick/QuickMenuPanel.qml
+        src/ui/songview/quick/MenuAppearance.qml
         src/ui/songview/quick/MenuPlacement.qml
         src/ui/songview/quick/AutomationTabs.qml
         src/ui/songview/quick/swiftroll/EditorSurface.qml
@@ -303,6 +313,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/docks/SamplePicker.qml
         src/ui/songview/quick/drawer/EditorDrawer.qml
         src/ui/songview/quick/drawer/OtherEventsBand.qml
+        src/ui/songview/quick/drawer/DrawerLanePage.qml
         src/ui/songview/quick/drawer/VelocityPage.qml
         src/ui/songview/quick/drawer/VoiceChangesPage.qml
         src/ui/songview/quick/drawer/VoiceChangeMenu.qml
@@ -327,6 +338,7 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/TransportOutputDial.qml
         src/ui/shell/PolyphonyPanel.qml
         src/ui/shell/PolyphonyChannelGroup.qml
+        src/ui/shell/settings/SettingsFieldRow.qml
         src/ui/shell/settings/SettingsDialog.qml
         src/ui/shell/settings/EngineSettingsPage.qml
         src/ui/shell/settings/SongSettingsPage.qml
@@ -338,6 +350,7 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/midiimport/ImportSoundPage.qml
         src/ui/shell/newsong/NewSongHost.qml
         src/ui/shell/newsong/NewSongWizard.qml
+        src/ui/shell/WizardChrome.qml
         src/ui/shell/samplestudio/SampleStudioHost.qml
         src/ui/shell/samplestudio/SampleStudioDialog.qml
         src/ui/shell/samplestudio/Sf2ZonePickerDialog.qml
@@ -365,48 +378,114 @@ qt_add_resources(porydaw_app "controls_style"
         resources/qtquickcontrols2.conf
 )
 
-target_include_directories(porydaw_app PUBLIC
-    src
-)
-target_include_directories(porydaw_app PRIVATE
-    src/app
-    src/render
-)
-target_include_directories(porydaw_app SYSTEM PUBLIC
-    ${PORYAAAA_DIR}/third_party
-    ${PORYAAAA_DIR}/plugin/porydaw/..
-    ${PORYAAAA_DIR}/plugin/m4a
-    ${PORYAAAA_DIR}/plugin/m4a/..
-    ${PORYAAAA_DIR}/plugin/hw_audio
-    ${PORYAAAA_DIR}/plugin/hw_audio/..
-)
-target_include_directories(porydaw_app SYSTEM PRIVATE
-    external/dr_libs
-    external/stb
-)
-
-porydaw_enable_project_warnings(porydaw_app)
+foreach(native_target IN ITEMS porydaw_app porydaw_native_host)
+    target_include_directories(${native_target} PUBLIC src)
+    target_include_directories(${native_target} PRIVATE src/app src/render)
+    target_include_directories(${native_target} SYSTEM PUBLIC
+        ${PORYAAAA_DIR}/third_party
+        ${PORYAAAA_DIR}/plugin/porydaw/..
+        ${PORYAAAA_DIR}/plugin/m4a
+        ${PORYAAAA_DIR}/plugin/m4a/..
+        ${PORYAAAA_DIR}/plugin/hw_audio
+        ${PORYAAAA_DIR}/plugin/hw_audio/..
+    )
+    target_include_directories(${native_target} SYSTEM PRIVATE external/dr_libs external/stb)
+    porydaw_enable_project_warnings(${native_target})
+endforeach()
 # The project() version is the single source of truth (docs/RELEASING.md);
 # release CI refuses a tag that doesn't match it.
-target_compile_definitions(porydaw_app PUBLIC
-    "$<$<NOT:$<COMPILE_LANGUAGE:Swift>>:PORYDAW_VERSION=\"${PROJECT_VERSION}\">")
-target_link_libraries(porydaw_app PUBLIC Qt6::Gui poryaaaa_engine porydaw_icons porydaw_style)
-target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick QtBridge)
-set_target_properties(porydaw_app PROPERTIES LINKER_LANGUAGE CXX)
+foreach(native_target IN ITEMS porydaw_app porydaw_native_host)
+    target_compile_definitions(${native_target} PUBLIC
+        "$<$<NOT:$<COMPILE_LANGUAGE:Swift>>:PORYDAW_VERSION=\"${PROJECT_VERSION}\">")
+    target_link_libraries(${native_target} PUBLIC Qt6::Gui poryaaaa_engine)
+    target_link_libraries(${native_target} PRIVATE Qt6::Qml Qt6::Quick QtBridge)
+    set_target_properties(${native_target} PROPERTIES LINKER_LANGUAGE CXX)
+    if(APPLE)
+        set_target_properties(${native_target} PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
+    endif()
+    target_precompile_headers(${native_target} PRIVATE
+        "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
+    if(UNIX AND NOT APPLE)
+        find_package(Threads REQUIRED)
+        target_link_libraries(${native_target} PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
+    endif()
+endforeach()
+target_link_libraries(porydaw_app PUBLIC porydaw_native_host porydaw_icons porydaw_style)
+if(WIN32)
+    target_link_libraries(porydaw_native_host PRIVATE dwmapi)
+endif()
+
+# The dumper must not link porydaw_app: that module's QML compilation consumes its output.
+set(porydaw_qmltypes_modulemap "${CMAKE_CURRENT_BINARY_DIR}/qmltypes-interop/module.modulemap")
+file(CONFIGURE OUTPUT "${porydaw_qmltypes_modulemap}"
+    CONTENT "module PorydawQmlTypesQt {\n    header \"@CMAKE_CURRENT_SOURCE_DIR@/src/app/qmltypes_host.h\"\n    export *\n}\n"
+    @ONLY)
+qt_add_executable(porydaw_qmltypes
+    src/swift/qmltypes/main.swift
+    src/app/qmltypes_host.h
+    src/app/qmltypes_host.cpp
+)
+set_target_properties(porydaw_qmltypes PROPERTIES
+    Swift_MODULE_NAME PorydawQmlTypesCommand
+    Swift_LANGUAGE_VERSION 6
+    LINKER_LANGUAGE CXX
+    AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
+)
+porydaw_enable_swift_batch_mode(porydaw_qmltypes)
+target_compile_options(porydaw_qmltypes PRIVATE
+    "$<$<COMPILE_LANGUAGE:Swift>:-parse-as-library>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${porydaw_qmltypes_modulemap}>"
+)
+target_link_libraries(porydaw_qmltypes PRIVATE PorydawApp QtBridge porydaw_native_host)
 if(APPLE)
-    # Keep framework headers ahead of stale non-framework Qt installs such
-    # as /usr/local/include/Qt*. Treating imported frameworks as system
-    # headers lets Clang select the unrelated include tree first.
-    set_target_properties(porydaw_app PROPERTIES
-        NO_SYSTEM_FROM_IMPORTED ON
+    set_target_properties(porydaw_qmltypes PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
+endif()
+if(WIN32)
+    target_sources(porydaw_qmltypes PRIVATE
+        "$ENV{SDKROOT}/usr/lib/swift/windows/x86_64/swiftrt.obj")
+    target_link_directories(porydaw_qmltypes PRIVATE
+        "$ENV{SDKROOT}/usr/lib/swift/windows/x86_64"
+        "$<TARGET_FILE_DIR:PorydawApp>"
+        "$<TARGET_FILE_DIR:PorydawProject>"
+        "$<TARGET_FILE_DIR:PorydawPlayback>"
+        "$<TARGET_FILE_DIR:PorydawCore>"
+        "$<TARGET_FILE_DIR:PorydawSample>"
+        "$<TARGET_FILE_DIR:BinaryParsing>"
     )
 endif()
-target_precompile_headers(porydaw_app PRIVATE
-    "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
-if(UNIX AND NOT APPLE)
-    find_package(Threads REQUIRED)
-    target_link_libraries(porydaw_app PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
-endif()
+porydaw_link_linux_swift_runtime(porydaw_qmltypes
+    PorydawApp QtBridge PorydawAppCommands PorydawAppAudio PorydawAppEventList
+    PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
+set(porydaw_qmltypes_files
+    "${porydaw_qmltypes_import_path}/PorydawApp/qmldir"
+    "${porydaw_qmltypes_import_path}/PorydawApp/PorydawApp.qmltypes"
+)
+add_custom_command(
+    OUTPUT ${porydaw_qmltypes_files}
+    COMMAND "$<TARGET_FILE:porydaw_qmltypes>" "${porydaw_qmltypes_import_path}"
+    DEPENDS porydaw_qmltypes PorydawApp
+    VERBATIM
+)
+add_custom_target(porydaw_qmltypes_generate DEPENDS ${porydaw_qmltypes_files})
+foreach(qml_target IN ITEMS porydaw_app porydaw_style)
+    add_dependencies(${qml_target} porydaw_qmltypes_generate)
+    foreach(lint_suffix IN ITEMS qmllint qmllint_json qmllint_module)
+        if(TARGET ${qml_target}_${lint_suffix})
+            add_dependencies(${qml_target}_${lint_suffix} porydaw_qmltypes_generate)
+        endif()
+    endforeach()
+    get_target_property(qml_target_sources ${qml_target} SOURCES)
+    foreach(qml_source IN LISTS qml_target_sources)
+        if(qml_source MATCHES "(^|/)\\.rcc/qmlcache/.*_qml\\.cpp$")
+            set(qml_type_dependencies ${porydaw_qmltypes_files})
+            if(qml_target STREQUAL "porydaw_app")
+                list(APPEND qml_type_dependencies
+                    "${CMAKE_CURRENT_BINARY_DIR}/PorydawStyle/porydaw_style.qmltypes")
+            endif()
+            add_custom_command(OUTPUT "${qml_source}" APPEND DEPENDS ${qml_type_dependencies})
+        endif()
+    endforeach()
+endforeach()
 
 file(CONFIGURE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/PorydawBuildVersion.swift"
     CONTENT "let porydawBuildVersion = \"@PROJECT_VERSION@\"\n" @ONLY)
@@ -558,10 +637,18 @@ if(WIN32)
     if(NOT porydaw_swift_runtime_dlls)
         message(FATAL_ERROR "Swift Windows runtime DLLs were not found")
     endif()
-    add_custom_command(TARGET porydaw POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-                ${porydaw_swift_runtime_dlls} "$<TARGET_FILE_DIR:porydaw>"
-        COMMAND_EXPAND_LISTS VERBATIM)
+    foreach(swift_host IN ITEMS porydaw porydaw_qmltypes)
+        add_custom_command(TARGET ${swift_host} POST_BUILD
+            COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                    ${porydaw_swift_runtime_dlls} "$<TARGET_FILE_DIR:${swift_host}>"
+            COMMAND_EXPAND_LISTS VERBATIM)
+    endforeach()
+    if(TARGET Qt6::windeployqt AND NOT porydaw_qt_core_type STREQUAL "STATIC_LIBRARY")
+        add_custom_command(TARGET porydaw_qmltypes POST_BUILD
+            COMMAND Qt6::windeployqt --no-translations --no-opengl-sw
+                    "$<TARGET_FILE:porydaw_qmltypes>"
+            VERBATIM)
+    endif()
     # `cmake --install` stages the release folder from runtime files only, not the build tree.
     install(TARGETS porydaw RUNTIME DESTINATION .)
     install(FILES ${shell_qml} ${porydaw_fonts} ${porydaw_swift_runtime_dlls} DESTINATION .)

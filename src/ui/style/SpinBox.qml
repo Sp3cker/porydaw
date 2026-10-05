@@ -1,3 +1,6 @@
+pragma ComponentBehavior: Bound
+pragma ValueTypeBehavior: Addressable, Assertable
+
 import QtQuick
 import QtQuick.Controls.Fusion as Fusion
 import Porydaw.Icons
@@ -13,8 +16,8 @@ Fusion.SpinBox {
         implicitWidth: Math.round(control.font.pixelSize * 1.25)
         implicitHeight: Math.round(control.font.pixelSize * 0.75)
         radius: 2
-        color: control.up.pressed ? Fusion.Fusion.buttonColor(control.palette, false, true, true)
-                                  : "transparent"
+        color: control.up.pressed
+            ? (Fusion.Fusion.buttonColor(control.palette, false, true, true) as color) : "transparent"
 
         AppIcon {
             anchors.fill: parent
@@ -30,8 +33,8 @@ Fusion.SpinBox {
         implicitWidth: Math.round(control.font.pixelSize * 1.25)
         implicitHeight: Math.round(control.font.pixelSize * 0.75)
         radius: 2
-        color: control.down.pressed ? Fusion.Fusion.buttonColor(control.palette, false, true, true)
-                                    : "transparent"
+        color: control.down.pressed
+            ? (Fusion.Fusion.buttonColor(control.palette, false, true, true) as color) : "transparent"
 
         AppIcon {
             anchors.fill: parent

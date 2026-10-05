@@ -1,25 +1,27 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import PorydawApp
 
 Item {
     id: page
     required property ShellPresenter presenter
-    required property QtObject colors
+    required property GridPalette colors
     required property real unit
-    required property var typography
+    required property TypographyFonts typography
 
-    function syncThemeChecks() {
+    function syncThemeChecks(): void {
         vanillaButton.checked = page.presenter.themeMode === "vanilla"
         darkNeutralHighButton.checked = page.presenter.themeMode === "dark-neutral-high"
         immaterialButton.checked = page.presenter.themeMode === "immaterial"
         contrastSlider.value = page.presenter.gridLineContrast
     }
-    Component.onCompleted: syncThemeChecks()
+    Component.onCompleted: page.syncThemeChecks()
     Connections {
         target: page.presenter
-        function onThemeModeChanged() { page.syncThemeChecks() }
-        function onGridLineContrastChanged() { contrastSlider.value = page.presenter.gridLineContrast }
+        function onThemeModeChanged(): void { page.syncThemeChecks() }
+        function onGridLineContrastChanged(): void { contrastSlider.value = page.presenter.gridLineContrast }
     }
 
     Column {
@@ -35,15 +37,15 @@ Item {
                 width: parent.width
                 text: qsTr("Theme:")
                 color: page.colors.windowText
-                font: Qt.font(page.typography.body)
+                font: page.typography.body
             }
             RadioButton {
                 id: vanillaButton
                 objectName: "vanillaModeButton"
                 width: themeRow.width
                 text: qsTr("Vanilla")
-                font: Qt.font(page.typography.body)
-                onClicked: page.presenter.previewThemeMode("vanilla")
+                font: page.typography.body
+                onClicked: page.presenter.previewAppearance("vanilla", page.presenter.gridLineContrast)
                 // Keep visible labels in the themed windowText ink.
                 contentItem: Item {}
                 Text {
@@ -62,8 +64,8 @@ Item {
                 objectName: "darkNeutralHighModeButton"
                 width: themeRow.width
                 text: qsTr("Dark Neutral High")
-                font: Qt.font(page.typography.body)
-                onClicked: page.presenter.previewThemeMode("dark-neutral-high")
+                font: page.typography.body
+                onClicked: page.presenter.previewAppearance("dark-neutral-high", page.presenter.gridLineContrast)
                 contentItem: Item {}
                 Text {
                     objectName: "darkNeutralHighModeLabel"
@@ -81,8 +83,8 @@ Item {
                 objectName: "immaterialModeButton"
                 width: themeRow.width
                 text: qsTr("Immaterial")
-                font: Qt.font(page.typography.body)
-                onClicked: page.presenter.previewThemeMode("immaterial")
+                font: page.typography.body
+                onClicked: page.presenter.previewAppearance("immaterial", page.presenter.gridLineContrast)
                 contentItem: Item {}
                 Text {
                     objectName: "immaterialModeLabel"
@@ -109,7 +111,7 @@ Item {
                 verticalAlignment: Text.AlignVCenter
                 text: qsTr("Grid contrast:")
                 color: page.colors.windowText
-                font: Qt.font(page.typography.body)
+                font: page.typography.body
             }
             Slider {
                 id: contrastSlider
@@ -122,8 +124,8 @@ Item {
                 Accessible.name: qsTr("Grid Line Contrast")
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("50 uses the theme default. Lower values soften grid lines; higher values strengthen them.")
-                font: Qt.font(page.typography.body)
-                onMoved: page.presenter.setGridLineContrast(Math.round(value))
+                font: page.typography.body
+                onMoved: page.presenter.previewAppearance(page.presenter.themeMode, Math.round(value))
             }
         }
     }

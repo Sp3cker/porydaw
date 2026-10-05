@@ -158,7 +158,8 @@ func drawerVoiceOriginalPickerRows(
 ) {
     // [drawerpresentation/fixtures.cpp:44-62,406] Preserve the original notes,
     // channels, end ticks and marker3 at48; project bank labels remain live.
-    let document = SongDocument(
+    let session = makeSyntheticSession(
+        suite: suite, service: service,
         file: MidiFile(
             division: 24,
             chunks: [
@@ -176,12 +177,8 @@ func drawerVoiceOriginalPickerRows(
                         .channel(status: 0x91, data0: 48, data1: 100),
                         .channel(tick: 48, status: 0x81, data0: 48),
                     ], endTick: 384),
-            ]), config: suite.document.state.config, source: suite.document.source,
-        trackBudget: suite.document.trackBudget)
-    let session = DocumentSession(
-        document: document, service: service, lease: suite.bankLease,
-        slots: suite.bankSlots, dirty: false,
-        loadName: suite.bankLoadName, sampleRate: 48_000)
+            ]))
+    let document = session.document
     session.selectedTrack = 0
     let page = VoiceChangesPage(baseFontPx: 13)
     page.attach(session: session, palette: GridPalette())

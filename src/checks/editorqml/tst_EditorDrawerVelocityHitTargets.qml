@@ -204,10 +204,8 @@ EditorDrawerTestSupport {
         var point = overlappingPoint()
         var selectedStem = findChild(projected(firstId).parent, "velocityNodeStem")
         var node = projected(nextId)
-        verify(node.visible && String(node.color).toLowerCase()
-               === String(node.parent.model.fillColor).toLowerCase()
-               && String(selectedStem.color).toLowerCase()
-                  === String(selectedStem.parent.model.stemColor).toLowerCase(),
+        verify(node.visible && Qt.colorEqual(node.color, node.parent.model.fillColor)
+               && Qt.colorEqual(selectedStem.color, selectedStem.parent.model.stemColor),
                "the following node and earlier selected stem render their published ink")
         var width = grid.beatWidth
         mouseWheel(roll, point.x, roll.height / 2, 0, 120, Qt.NoButton, Qt.NoModifier)

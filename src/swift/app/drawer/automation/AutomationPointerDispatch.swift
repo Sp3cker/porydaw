@@ -47,20 +47,15 @@ extension AutomationPage {
                 endPan()
                 return true
             }
-            let delta = x - previousX
-            previousX = x
-            if delta != 0 {
-                // The one camera authority: the shared mutation path clamps and
-                // publishes, and every surface reprojects from it.
-                session?.mutateCamera { $0.setHScroll($0.snapshot.scrollX - delta) }
-            }
+            DrawerPan.moved(x: x, previousX: &previousX, session: session)
             return true
         }
         if var live = band {
             live.currentTick = snapped(tickAtX: x, modifiers: modifiers)
             live.active =
                 live.active
-                || abs(x - live.pressX) + abs(y - live.pressY) >= dragDistance
+                || manhattanExceeds(
+                    press: (live.pressX, live.pressY), x: x, y: y, threshold: dragDistance)
             band = live
             publishBand()
             return true

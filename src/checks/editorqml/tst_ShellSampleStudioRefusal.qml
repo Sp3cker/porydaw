@@ -2,10 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtTest
 import ShellQmlCheck 1.0
-import "../../ui/shell"
-import "NativeWait.js" as NativeWait
+import Porydaw.Ui
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellSampleStudioRefusal"
     when: windowShown
@@ -15,11 +14,8 @@ TestCase {
     ShellQmlBootstrap { id: bootstrap }
     ImportWizardProbe { id: disk }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
-    property var shell: null
-    function waitForNative(predicate, timeout) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeout)
-    }
-    function child(name) { return findChild(shell, name) }
+    laneBootstrap: bootstrap
+
     function test_missingBuildRuleRefusesWithoutPickerOrWrites() {
         verify(bootstrap.resetPreferences())
         shell = shellComponent.createObject(null)

@@ -4,9 +4,8 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "GatedVisualsHelpers.js" as Helpers
-import "NativeWait.js" as NativeWait
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellChromeVisuals"
     when: windowShown
@@ -14,46 +13,12 @@ TestCase {
     height: 640
     visible: true
 
-    property var shell: null
-
     ShellQmlBootstrap { id: bootstrap }
     GatedVisualsProbe { id: probe }
 
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
 
-
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-
-    function cleanup() {
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                    || !shell.shellPresenter.sceneActive
-            }, 5000), "the close-all walk reaches the dirty gate or completes")
-            if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.closeReady
-            }, 5000), "teardown waits for scene destruction and grid detach")
-        }
-        shell.destroy()
-        shell = null
-        wait(0)
-    }
-
-    function selectedSurface() {
-        var pages = shell && shell.sceneLoader ? shell.sceneLoader.item : null
-        if (!pages)
-            return null
-        var tabs = shell.shellPresenter.session.songTabs
-        var page = findChild(pages, "songTab_" + tabs.selectedId)
-        return page ? findChild(page, "swiftRollOverlay") : null
-    }
+    laneBootstrap: bootstrap
 
     function rowCenter(pitch, rowHeight) {
         return (127.0 - pitch + 0.5) * rowHeight
@@ -206,13 +171,14 @@ TestCase {
         var barInk = palette.gridLineBar
         var beatInk = grid.visibleGridTicks === 1 ? palette.gridLineBeatFine
                                                   : palette.gridLineBeat
-        var expectedBarNatural = Helpers.channels(probe.sourceOver(barInk, palette.rollBackground))
+        var expectedBarNatural = Helpers.channels(
+                    probe.sourceOver(barInk.toString(), palette.rollBackground.toString()))
         var expectedBarAccidental = Helpers.channels(
-                    probe.sourceOver(barInk, palette.accidentalLane))
+                    probe.sourceOver(barInk.toString(), palette.accidentalLane.toString()))
         var expectedBeatNatural = Helpers.channels(
-                    probe.sourceOver(beatInk, palette.rollBackground))
+                    probe.sourceOver(beatInk.toString(), palette.rollBackground.toString()))
         var expectedBeatAccidental = Helpers.channels(
-                    probe.sourceOver(beatInk, palette.accidentalLane))
+                    probe.sourceOver(beatInk.toString(), palette.accidentalLane.toString()))
         verify(!Helpers.colorsNear(expectedBarNatural, natural)
                && !Helpers.colorsNear(expectedBarAccidental, accidental),
                "the theme keeps bar lines distinguishable from both row roles")

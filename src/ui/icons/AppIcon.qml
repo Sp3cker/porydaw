@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 
 // One Icons glyph fitted to this box and tinted. Icons are font glyphs, so no

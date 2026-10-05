@@ -14,9 +14,9 @@ internal func runTrackHeadersChecks(
     let roles = Typography(baseFontPx: 13)
     let headers = fontFixture.headers
     let roleID = "swiftcore/TrackHeaders::publishedTypographyRoles"
-    func matches(_ map: [String: QVariantSettable], _ role: GridFontSpec) -> Bool {
-        map["family"] as? String == role.family && map["pixelSize"] as? Int == role.pixelSize
-            && map["weight"] as? Int == role.weight
+    func matches(_ font: QmlFont, _ role: GridFontSpec) -> Bool {
+        font.family == role.family && font.pixelSize == role.pixelSize
+            && font.weight == role.weight
     }
     report.expect(
         matches(headers.controlFont, roles.body) && matches(headers.normalTitleFont, roles.body)
@@ -93,11 +93,11 @@ private func trackHeaderBudgetStyling(
     func row(_ track: Int) -> TrackHeaderRowHandle {
         headers.rows[fixture.rowForTrack(track)!]
     }
-    func lab(_ color: String) -> PaletteMath.Oklab {
+    func lab(_ color: QmlColor) -> PaletteMath.Oklab {
         let rgb = PaletteMath.channels(color)
         return PaletteMath.oklab(r: rgb.r, g: rgb.g, b: rgb.b)
     }
-    func distance(_ first: String, _ second: String) -> Double {
+    func distance(_ first: QmlColor, _ second: QmlColor) -> Double {
         let a = lab(first), b = lab(second)
         return hypot(hypot(a.lightness - b.lightness, a.a - b.a), a.b - b.b)
     }
@@ -131,14 +131,14 @@ private func trackHeaderBudgetStyling(
             lab(palette.primaryText), lab(palette.windowBackground), 0.6))
     report.expect(
         distance(normal.titleColor, palette.primaryText)
-            <= distance(forkTitle, palette.primaryText),
+            <= distance(PaletteMath.qmlColor(forkTitle), palette.primaryText),
         cppID: id, message: "over-budget dimming never exceeds the fork mix")
     let forkSubtitle = PaletteMath.hex(
         PaletteMath.mixTowardOklab(
             lab(palette.secondaryText), lab(palette.windowBackground), 0.6))
     report.expect(
         distance(normal.subtitleColor, palette.secondaryText)
-            <= distance(forkSubtitle, palette.secondaryText),
+            <= distance(PaletteMath.qmlColor(forkSubtitle), palette.secondaryText),
         cppID: id, message: "over-budget subtitle dimming never exceeds the fork mix")
     session.selectedTrack = 1
     headers.refreshFromDocument()
@@ -154,7 +154,7 @@ private func trackHeaderBudgetStyling(
     let surface = TrackHeadersGeometry.scopedHeaderSurface(palette: palette)
     report.expect(
         scoped.titleColor != palette.windowText
-            && PaletteMath.contrastRatio(scoped.titleColor, surface) >= 4.5,
+            && PaletteMath.contrastRatio(PaletteMath.hex(scoped.titleColor), surface) >= 4.5,
         cppID: id, message: "an in-scope over-budget row dims over its tinted surface")
     report.expect(
         scoped.titleColor == scoped.subtitleColor,
@@ -251,7 +251,8 @@ private func hostDrawerSoloAndRemap(
         return
     }
     selected.selectPrimaryTrack(0)
-    guard shell.actionEnabled(id: "roll.solo_tracks"),
+    shell.refreshActionStates()
+    guard shell.action(id: "roll.solo_tracks")?.enabled == true,
         selected.soloedTracks.isEmpty
     else {
         report.fail(id, "the selected primary track is not ready with Solo initially off")

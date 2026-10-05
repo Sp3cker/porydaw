@@ -1,16 +1,7 @@
 import PorydawCore
+import QtBridge
 
-// Scene build vocabulary for the drawer's Velocity section: the frozen
-// interaction snapshot, the context source, the palette and input values one
-// build reads, the axis-and-handles value it produces and the note handle-row
-// construction. The pure scene-value helpers the builds call live in
-// VelocitySceneValues.swift.
-//
-// Ownership: values in, values out. The scene never retains a
-// `DocumentSession`, never reads gesture or hover state except through the
-// `VelocityInteractionSnapshot` its input carries, holds no cache, and never
-// publishes anything: the page owns every model, reuse cache and apply path,
-// and hands the document facts in.
+// Pure build inputs and outputs; the page owns publication and reuse caches.
 
 // MARK: - Interaction snapshot
 
@@ -92,20 +83,19 @@ struct VelocityContextSource: Sendable {
 
 // MARK: - Scene input
 
-/// The page's palette colours as values: the scene draws with these strings and
-/// never reads the palette owner.
+/// Palette colors copied into the scene's value inputs.
 struct VelocityScenePalette: Sendable {
-    var gridLineSub1: String = ""
-    var gridLineSub2: String = ""
-    var gridLineSub3: String = ""
-    var gridLineBar: String = ""
-    var gridLineBeat: String = ""
-    var gridLineBeatFine: String = ""
-    var separator: String = ""
-    var primaryText: String = ""
-    var selectionRing: String = ""
-    var outline: String = ""
-    var noteBorder: String = ""
+    var gridLineSub1: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
+    var gridLineSub2: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
+    var gridLineSub3: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
+    var gridLineBar: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
+    var gridLineBeat: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
+    var gridLineBeatFine: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
+    var separator: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
+    var primaryText: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
+    var selectionRing: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
+    var outline: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
+    var noteBorder: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
 }
 
 /// Everything one static scene build reads: the document facts, the page's
@@ -134,6 +124,7 @@ struct VelocitySceneInput: Sendable {
     var rulerWidth: Double
     var devicePixelRatio: Double
     var baseFontPx: Double
+    var typography: Typography
     /// The page's cached grid metrics; the scene owns no cache of its own.
     var metrics: GridMetrics?
     var grid: RollGrid? = nil
@@ -146,10 +137,10 @@ struct VelocitySceneInput: Sendable {
 
 /// The ruler's drawn rows and labels for one axis and interaction state.
 struct VelocityAxisRows {
-    var ticks: [SceneRect] = []
-    var graduations: [SceneRect] = []
-    var markers: [SceneRect] = []
-    var labels: [SceneText] = []
+    var ticks: [SceneRectValue] = []
+    var graduations: [SceneRectValue] = []
+    var markers: [SceneRectValue] = []
+    var labels: [SceneTextValue] = []
 }
 
 /// The value axis, note handle rows and ruler rows one interaction state produces.
@@ -203,8 +194,8 @@ extension VelocityScene {
     ) -> [VelocityHandle] {
         let selected = input.selectedNoteIDs
         let notes = input.notes
-        let trackColor = PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(input.track)]
-        let stemColor = ThemeColorTables.velocityStemColors[PaletteMath.trackIdentityIndex(input.track)]
+        let trackColor = PaletteMath.trackIdentityColors[PaletteMath.trackIdentityIndex(input.track)]
+        let stemColor = PaletteMath.velocityStemColors[PaletteMath.trackIdentityIndex(input.track)]
         let selectedCount = notes.reduce(0) { $0 + (selected.contains($1.id) ? 1 : 0) }
         let dimUnselected = selectedCount > 1
         let resolve = input.source.resolver()
@@ -241,8 +232,8 @@ extension VelocityScene {
                 previous.preview == (previewValue != nil),
                 previous.dimmed == (dimUnselected && !isSelected)
             {
-                if previous.x != x { previous.x = x }
-                if previous.endX != endX { previous.endX = endX }
+                previous.publish(\.x, x)
+                previous.publish(\.endX, endX)
                 result.append(previous)
                 continue
             }
@@ -281,12 +272,12 @@ extension VelocityScene {
                 input.geometry.selectedNodeRingRadius
                 + input.geometry.selectedNodeRingDipWidth / 2
             handle.ringWidth = input.geometry.selectedNodeRingDipWidth / input.devicePixelRatio
-            handle.fillColor = isSelected || !dimUnselected ? trackColor : input.palette.outline
+            handle.fillColor =
+                isSelected || !dimUnselected ? trackColor : input.palette.outline
             handle.stemColor = isSelected ? input.palette.selectionRing : stemColor
             handle.ringColor = input.palette.selectionRing
             handle.outlineColor = input.palette.noteBorder
             handle.primitiveName = "velocityNode"
-            handle.refreshSpec()
             result.append(handle)
         }
         return result

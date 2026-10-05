@@ -1,106 +1,63 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Dialogs
 import QtQuick.Layouts
 import Porydaw.Ui
+import PorydawApp
 
 // The shell owns chrome and dialogs independently of its deferred workspace.
 Item {
     id: content
-    required property var root
-    readonly property var shell: content.root.shellPresenter
-    readonly property alias sceneLoader: workspace
-    readonly property alias menuBar: shellMenu
-    readonly property alias header: transportBar
-    readonly property alias footer: shellStatus
+    required final property ShellWindow root
+    final readonly property ShellPresenter shell: content.root.shellPresenter
+    final readonly property SongDockController songDock: content.shell.session.songDockController()
+    final readonly property alias sceneLoader: workspace
+    final readonly property alias menuBar: shellMenu
+    final readonly property alias header: transportBar
+    final readonly property alias footer: shellStatus
 
     Component.onCompleted: {
-        shell.session.restoreDisplayModes()
+        content.shell.session.restoreDisplayModes()
         transportBar.presenter.restoreOutputVolume()
         transportBar.presenter.restoreTransportToggles()
-        shell.settingsStore.restoreFromPreferences()
+        content.shell.settingsStore.restoreFromPreferences()
     }
 
-    function loadWorkspace() {
+    function loadWorkspace(): void {
         workspace.setSource(Qt.resolvedUrl("ShellBody.qml"), {
             root: content.root,
-            transportToolExtent: Qt.binding(function() { return transportBar.toolExtent })
+            transportToolExtent: Qt.binding(content.workspaceTransportToolExtent)
         })
+    }
+
+    function workspaceTransportToolExtent(): int {
+        return transportBar.toolExtent
     }
 
     // Text metrics belong to the controls, not the first window frame.
     FontMetrics {
         id: bodyMetrics
-        font: root.font
+        font: content.root.font
     }
     FontMetrics {
         id: captionMetrics
-        font: Qt.font(root.chromeTypography.caption)
+        font: content.root.chromeTypography.caption
     }
 
-    // Session publications update the mounted application controls.
     Connections {
-        target: shell.session
-        function onProjectOpenChanged() {
-            shell.projectOpenChanged()
-            ++root.actionRevision
-        }
-        function onProjectRootChanged() { shell.refreshWindowChrome() }
-        function onSongOpenChanged() {
-            shell.songOpenChanged()
-            ++root.actionRevision
-        }
-        function onSaveInProgressChanged() {
-            shell.saveStateChanged()
-            ++root.actionRevision
-        }
-        function onDocumentDirtyChanged() { shell.refreshWindowChrome() }
-        function onSongDocumentDirtyChanged() { shell.refreshWindowChrome() }
-        function onLastSaveErrorChanged() {
-            if (shell.session.lastSaveError.length > 0)
-                shell.statusText = shell.session.lastSaveError
-        }
-        function onCanUndoChanged() { ++root.actionRevision }
-        function onCanRedoChanged() { ++root.actionRevision }
-        function onGridCommandAvailabilityChanged() { ++root.actionRevision }
-        function onTransportAvailabilityChanged() { ++root.actionRevision }
-        function onNoteNameModeChanged() { ++root.actionRevision }
-        function onOpenFailed(message) { shell.openFailed(message) }
-        function onOperationFailed(message) { shell.operationFailed(message) }
-        function onStatusMessage(message) { shell.statusText = message }
+        target: content.root.drawerSectionSource
+        function onDrawerSectionPreferenceChanged(): void { content.shell.refreshActionStates() }
     }
     Connections {
-        target: shell.session.sampleStudio()
-        function onEditorOpenChanged() { ++root.actionRevision }
-    }
-    Connections {
-        target: shell.session.songTabs
-        function onSelectedTabShowsEventsChanged() { ++root.actionRevision }
-        function onSelectedPageChanged() {
-            shell.refreshWindowChrome()
-            ++root.actionRevision
-        }
-        function onSelectedIdChanged() { ++root.actionRevision }
-        function onTabCountChanged() { ++root.actionRevision }
-    }
-    Connections {
-        target: root.drawerSectionSource
-        function onDrawerSectionPreferenceChanged() { ++root.actionRevision }
-    }
-    Connections {
-        target: shell.session.songOpen ? shell.session.eventListPresenter() : null
-        function onCurrentRowChanged() { ++root.actionRevision }
-    }
-    Connections {
-        target: shell
-        function onPolyphonyVisibleChanged() { ++root.actionRevision }
-        function onEventListGateChanged() { ++root.actionRevision }
-        function onChooseProjectRequested() { ensureProjectPicker().open() }
-        function onAboutRequested() { ensureAboutDialog().open() }
-        function onSettingsRequested(songFirst) { ensureSettingsDialog().showSettings(songFirst) }
-        function onQuitRequested() { root.close() }
-        function onCriticalRequested(title, message) {
-            const dialog = ensureCriticalDialog()
+        target: content.shell
+        function onChooseProjectRequested(): void { content.ensureProjectPicker().open() }
+        function onAboutRequested(): void { content.ensureAboutDialog().open() }
+        function onSettingsRequested(songFirst: bool): void { content.ensureSettingsDialog().showSettings(songFirst) }
+        function onQuitRequested(): void { content.root.close() }
+        function onCriticalRequested(title: string, message: string): void {
+            const dialog = content.ensureCriticalDialog()
             dialog.text = title
             dialog.informativeText = message
             dialog.open()
@@ -110,48 +67,45 @@ Item {
     // Window-scope shortcuts get native Qt ShortcutOverride arbitration; editor
     // strokes stay on the focused tab's raw key path.
     Repeater {
-        model: shell.windowActionIds
+        model: content.shell.windowActionIds
         delegate: Item {
             id: shortcutDelegate
             required property string modelData
+            final readonly property ShellActionState actionState: content.shell.action(modelData)
             width: 0
             height: 0
             Shortcut {
                 objectName: "shellShortcut_" + shortcutDelegate.modelData
-                sequences: shell.actionSequences(shortcutDelegate.modelData)
+                sequences: content.shell.actionSequences(shortcutDelegate.modelData)
                 context: Qt.WindowShortcut
-                enabled: {
-                    root.actionRevision
-                    return shell.actionEnabled(shortcutDelegate.modelData)
-                }
-                onActivated: shell.activate(shortcutDelegate.modelData)
+                enabled: shortcutDelegate.actionState.enabled
+                onActivated: content.shell.activate(shortcutDelegate.modelData)
             }
         }
     }
 
     ShellMenuBar {
         id: shellMenu
-        shell: root.shellPresenter
-        windowRoot: root
-        actionRevision: root.actionRevision
+        shell: content.root.shellPresenter
+        windowRoot: content.root
     }
     // Deferred chrome: dialogs instantiate on first use, so startup never
     // pays for their font/button work; Loaders complete synchronously.
-    function ensureSettingsDialog() {
+    function ensureSettingsDialog(): SettingsDialog {
         settingsDialogLoader.active = true
-        return settingsDialogLoader.item
+        return settingsDialogLoader.item as SettingsDialog
     }
-    function ensureAboutDialog() {
+    function ensureAboutDialog(): AboutDialog {
         aboutDialogLoader.active = true
-        return aboutDialogLoader.item
+        return aboutDialogLoader.item as AboutDialog
     }
-    function ensureProjectPicker() {
+    function ensureProjectPicker(): FolderDialog {
         projectPickerLoader.active = true
-        return projectPickerLoader.item
+        return projectPickerLoader.item as FolderDialog
     }
-    function ensureCriticalDialog() {
+    function ensureCriticalDialog(): MessageDialog {
         criticalDialogLoader.active = true
-        return criticalDialogLoader.item
+        return criticalDialogLoader.item as MessageDialog
     }
     Loader {
         id: settingsDialogLoader
@@ -159,11 +113,11 @@ Item {
         active: false
         sourceComponent: SettingsDialog {
             objectName: "shellSettingsDialog"
-            transientParent: root
-            store: shell.settingsStore
-            presenter: shell
-            colors: root.colors
-            applicationSession: shell.session
+            transientParent: content.root
+            store: content.shell.settingsStore
+            presenter: content.shell
+            colors: content.root.colors
+            applicationSession: content.shell.session
         }
     }
     Loader {
@@ -171,34 +125,34 @@ Item {
         objectName: "shellAboutLoader"
         active: false
         sourceComponent: AboutDialog {
-            colors: root.colors
-            applicationSession: shell.session
-            baseFontPx: shell.session.baseFontPx
+            colors: content.root.colors
+            applicationSession: content.shell.session
+            baseFontPx: content.shell.session.baseFontPx
         }
     }
     MidiImportHost {
-        controller: shell.session.songDockController().midiImportController()
-        hostWindow: root
-        colors: root.colors
-        applicationSession: shell.session
+        controller: content.songDock.midiImportController()
+        hostWindow: content.root
+        colors: content.root.colors
+        applicationSession: content.shell.session
     }
     NewSongHost {
-        controller: shell.session.songDockController().newSongController()
-        hostWindow: root
-        colors: root.colors
-        applicationSession: shell.session
+        controller: content.songDock.newSongController()
+        hostWindow: content.root
+        colors: content.root.colors
+        applicationSession: content.shell.session
     }
     SampleStudioHost {
-        workflow: shell.session.sampleStudio()
-        hostWindow: root
-        applicationSession: shell.session
-        colors: root.colors
+        workflow: content.shell.session.sampleStudio()
+        hostWindow: content.root
+        applicationSession: content.shell.session
+        colors: content.root.colors
     }
     WavExportSurface {
-        presenter: shell.session.wavExportPresenter()
-        colors: root.colors
-        windowRoot: root
-        typography: root.chromeTypography
+        presenter: content.shell.session.wavExportPresenter()
+        colors: content.root.colors
+        windowRoot: content.root
+        typography: content.root.chromeTypography
     }
 
     Loader {
@@ -206,13 +160,13 @@ Item {
         objectName: "shellWorkspaceLoader"
         anchors.fill: parent
         asynchronous: false
-        active: shell.sceneActive
+        active: content.shell.sceneActive
         visible: status === Loader.Ready
         focus: true
         onLoaded: {
-            if (shell.sceneActive) {
-                shell.workspaceReady()
-                ++root.actionRevision
+            if (content.shell.sceneActive) {
+                content.shell.workspaceReady()
+                content.shell.refreshActionStates()
             }
         }
         onStatusChanged: {
@@ -228,7 +182,7 @@ Item {
     Loader {
         id: saveConflictLoader
         objectName: "saveConflictLoader"
-        active: shell.session.saveConflictSongLabel.length > 0
+        active: content.shell.session.saveConflictSongLabel.length > 0
         sourceComponent: Dialog {
             objectName: "saveConflictDialog"
             parent: Overlay.overlay
@@ -241,38 +195,42 @@ Item {
                 saveConflictNameField.text = ""
                 saveConflictNameField.forceActiveFocus()
             }
-            onRejected: shell.session.cancelSaveConflict()
+            onRejected: content.shell.session.cancelSaveConflict()
             onClosed: {
-                if (shell.session.saveConflictSongLabel.length > 0)
-                    shell.session.cancelSaveConflict()
+                if (content.shell.session.saveConflictSongLabel.length > 0)
+                    content.shell.session.cancelSaveConflict()
             }
             contentItem: ColumnLayout {
-                spacing: root.chromeSpacing.four
+                spacing: content.root.chromeSpacing.four
                 Label {
                     objectName: "saveConflictMessage"
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: shell.session.saveConflictDetail
+                    text: content.shell.session.saveConflictDetail
                 }
                 TextField {
                     id: saveConflictNameField
                     objectName: "saveConflictNewName"
                     Layout.fillWidth: true
                     placeholderText: qsTr("mus_new_song")
+                    function applyAcceptedLabel(accepted: string, proposed: string, cursor: int): void {
+                        if (accepted !== proposed) {
+                            saveConflictNameField.text = accepted
+                            saveConflictNameField.cursorPosition = Math.min(cursor, accepted.length)
+                        }
+                        content.shell.session.saveConflictNewSongLabel = accepted
+                    }
                     onTextChanged: {
-                        const previous = shell.session.saveConflictNewSongLabel
+                        const previous = content.shell.session.saveConflictNewSongLabel
                         const proposed = text
                         const cursor = cursorPosition
-                        const accepted = shell.session.acceptSaveConflictLabelEdit(previous, proposed)
-                        if (accepted !== proposed) {
-                            text = accepted
-                            cursorPosition = Math.min(cursor, accepted.length)
-                        }
-                        shell.session.saveConflictNewSongLabel = accepted
+                        saveConflictNameField.applyAcceptedLabel(
+                            content.shell.session.acceptSaveConflictLabelEdit(previous, proposed),
+                            proposed, cursor)
                     }
                     onAccepted: {
                         if (saveConflictForkButton.enabled)
-                            shell.session.resolveSaveConflictFork()
+                            content.shell.session.resolveSaveConflictFork()
                     }
                 }
                 Label {
@@ -281,7 +239,7 @@ Item {
                     wrapMode: Text.WordWrap
                     text: qsTr("A song named %1 already exists.").arg(saveConflictNameField.text)
                     visible: saveConflictNameField.text.length > 0
-                        && shell.session.saveConflictLabelTaken(saveConflictNameField.text)
+                        && content.shell.session.saveConflictLabelTaken(saveConflictNameField.text)
                 }
             }
             footer: DialogButtonBox {
@@ -290,7 +248,7 @@ Item {
                     objectName: "saveConflictOverwrite"
                     text: qsTr("Overwrite")
                     DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
-                    onClicked: shell.session.resolveSaveConflictOverwrite()
+                    onClicked: content.shell.session.resolveSaveConflictOverwrite()
                 }
                 Button {
                     id: saveConflictForkButton
@@ -298,40 +256,39 @@ Item {
                     text: qsTr("Register changes as New Song...")
                     DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
                     enabled: saveConflictNameField.text.length > 0
-                        && shell.session.saveConflictLabelValid(saveConflictNameField.text)
-                        && !shell.session.saveConflictLabelTaken(saveConflictNameField.text)
-                    onClicked: shell.session.resolveSaveConflictFork()
+                        && content.shell.session.saveConflictLabelValid(saveConflictNameField.text)
+                        && !content.shell.session.saveConflictLabelTaken(saveConflictNameField.text)
+                    onClicked: content.shell.session.resolveSaveConflictFork()
                 }
                 Button {
                     objectName: "saveConflictCancel"
                     text: qsTr("Cancel")
                     DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
-                    onClicked: shell.session.cancelSaveConflict()
+                    onClicked: content.shell.session.cancelSaveConflict()
                 }
             }
         }
         onLoaded: {
             if (status === Loader.Ready)
-                item.open()
+                (saveConflictLoader.item as Dialog).open()
         }
     }
     TransportBar {
         id: transportBar
-        width: root.width
-        enabled: shell.sceneActive
-        songAvailable: shell.session.songOpen
-        baseFontPx: root.chromeBaseFontPx
-        presenter: shell.session.transportBarPresenter()
-        shell: root.shellPresenter
-        actionRevision: root.actionRevision
-        colors: root.colors
-        typography: root.chromeTypography
-        layoutSpaces: root.chromeSpacing
+        width: content.root.width
+        enabled: content.shell.sceneActive
+        songAvailable: content.shell.session.songOpen
+        baseFontPx: content.root.chromeBaseFontPx
+        presenter: content.shell.session.transportBarPresenter()
+        shell: content.root.shellPresenter
+        colors: content.root.colors
+        typography: content.root.chromeTypography
+        layoutSpaces: content.root.chromeSpacing
     }
     ShellStatusBar {
         id: shellStatus
         root: content.root
-        shell: root.shellPresenter
+        shell: content.root.shellPresenter
         bodyMetrics: bodyMetrics
         captionMetrics: captionMetrics
     }
@@ -343,7 +300,7 @@ Item {
         sourceComponent: FolderDialog {
             objectName: "shellProjectPicker"
             title: qsTr("Open Project")
-            onAccepted: shell.chooseProject(selectedFolder.toString())
+            onAccepted: content.shell.chooseProject(selectedFolder)
         }
     }
     Loader {

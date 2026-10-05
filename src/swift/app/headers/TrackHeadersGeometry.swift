@@ -10,8 +10,8 @@ struct HeaderRect: Equatable {
     var width: Double = 0
     var height: Double = 0
 
-    var map: [String: QVariantSettable] {
-        ["x": x, "y": y, "width": width, "height": height]
+    var sceneValue: SceneRectValue {
+        SceneRectValue(x: x, y: y, width: width, height: height, fillColor: QmlColor.clear)
     }
     func contains(x: Double, y: Double) -> Bool {
         width > 0 && height > 0 && x >= self.x && x <= self.x + width
@@ -30,12 +30,12 @@ struct TrackHeaderSnapshot: Equatable {
     var titleRect = HeaderRect()
     var subtitleRect = HeaderRect()
     var selectedTitleOffset = HeaderPoint()
-    var titleFont: GridFontSpec
-    var subtitleFont: GridFontSpec
-    var baseColor = "#00000000"
-    var overlayColor = "#00000000"
-    var titleColor = "#00000000"
-    var subtitleColor = "#00000000"
+    var titleFont: QmlFont
+    var subtitleFont: QmlFont
+    var baseColor = QmlColor.clear
+    var overlayColor = QmlColor.clear
+    var titleColor = QmlColor.clear
+    var subtitleColor = QmlColor.clear
     var titleBold = false
     var muteChecked = false
     var soloChecked = false
@@ -45,8 +45,8 @@ struct TrackHeaderSnapshot: Equatable {
     var soloPressed = false
     var addHovered = false
     var addPressed = false
-    var activityDimColor = "#00000000"
-    var activityActiveColor = "#00000000"
+    var activityDimColor = QmlColor.clear
+    var activityActiveColor = QmlColor.clear
     var activityLeftHeight: Double = 0
     var activityRightHeight: Double = 0
 }
@@ -133,30 +133,38 @@ struct TrackHeadersGeometry {
         return (title, subtitle)
     }
 
-    @MainActor
-    static func appearance(palette: GridPalette) -> [String: QVariantSettable] {
-        // Every fill pairs with its legal ink: button fills with buttonText
-        // (hover has no dedicated ink role), pressed and checked-mute fills
-        // with buttonPressedText, checked-solo and text-selection fills with
-        // selectionText. Checked solo uses the selection surface because the
-        // accent edge color cannot carry one ink in all three themes.
-        [
-            "buttonBackground": palette.buttonBackground, "buttonText": palette.buttonText,
-            "buttonHoverBackground": palette.buttonHoverBackground, "buttonHoverText": palette.buttonText,
-            "buttonPressedBackground": palette.buttonPressedBackground, "buttonPressedText": palette.buttonPressedText,
-            "buttonOutline": palette.outline, "focusOutline": palette.selectionEdge,
-            "muteCheckedBackground": palette.buttonPressedBackground, "muteCheckedText": palette.buttonPressedText,
-            "soloCheckedBackground": palette.tabSelectedBackground, "soloCheckedText": palette.selectionText,
-            "inputBackground": palette.inputBackground, "inputText": palette.windowText,
-            "inputOutline": palette.outline, "scrollbarHandle": palette.outline,
-            "scrollbarHandleHover": palette.focusOutline, "reorderIndicator": palette.selectionEdge,
-            "selectionBackground": palette.tabSelectedBackground, "selectionText": palette.selectionText,
-        ]
-    }
 }
 
 @MainActor
 extension TrackHeadersPresenter {
+    func publishAppearance() {
+        let body = fontRoles.body.qmlFont
+        publish(\.controlFont, body)
+        publish(\.normalTitleFont, body)
+        publish(\.boldTitleFont, fontRoles.bodyBold.qmlFont)
+        publish(\.subtitleFont, fontRoles.caption.qmlFont)
+        publish(\.buttonBackground, palette.buttonBackground)
+        publish(\.buttonText, palette.buttonText)
+        publish(\.buttonHoverBackground, palette.buttonHoverBackground)
+        publish(\.buttonHoverText, palette.buttonText)
+        publish(\.buttonPressedBackground, palette.buttonPressedBackground)
+        publish(\.buttonPressedText, palette.buttonPressedText)
+        publish(\.buttonOutline, palette.outline)
+        publish(\.focusOutline, palette.selectionEdge)
+        publish(\.muteCheckedBackground, palette.buttonPressedBackground)
+        publish(\.muteCheckedText, palette.buttonPressedText)
+        publish(\.soloCheckedBackground, palette.tabSelectedBackground)
+        publish(\.soloCheckedText, palette.selectionText)
+        publish(\.inputBackground, palette.inputBackground)
+        publish(\.inputText, palette.windowText)
+        publish(\.inputOutline, palette.outline)
+        publish(\.scrollbarHandle, palette.outline)
+        publish(\.scrollbarHandleHover, palette.focusOutline)
+        publish(\.reorderIndicator, palette.selectionEdge)
+        publish(\.selectionBackground, palette.tabSelectedBackground)
+        publish(\.selectionText, palette.selectionText)
+    }
+
     func configureGeometry(width: Double, height: Double, base: Double, dpr: Double) {
         guard width.isFinite, height.isFinite, base.isFinite, dpr.isFinite else { return }
         let requestedBase = Int(max(1, base).rounded())
@@ -171,15 +179,12 @@ extension TrackHeadersPresenter {
         if nextBase != baseFontPx { textMetrics = nil }
         if requestedBase != fontRoles.baseFontPx {
             fontRoles = Typography(baseFontPx: requestedBase)
+            publishAppearance()
         }
         devicePixelRatio = nextDpr
         viewportWidth = nextWidth
         viewportHeight = nextHeight
         geometry = TrackHeadersGeometry(base: nextBase)
-        controlFont = fontRoles.body.map
-        normalTitleFont = fontRoles.body.map
-        boldTitleFont = fontRoles.bodyBold.map
-        subtitleFont = fontRoles.caption.map
         publishGeometry()
         refreshFromDocument()
     }
@@ -192,10 +197,10 @@ extension TrackHeadersPresenter {
         scrollbarWidth = geometry.scrollbarWidth
         scrollbarMinimumThumbHeight = geometry.scrollbarMinimumThumbHeight
         reorderIndicatorHeight = geometry.reorderIndicatorHeight
-        muteButtonRect = geometry.muteRect(width: viewportWidth).map
-        soloButtonRect = geometry.soloRect(width: viewportWidth).map
-        voiceLineRect = geometry.textRects(width: viewportWidth, metrics: textMetrics).1.map
-        renameEditorRect = geometry.renameRect(width: viewportWidth).map
+        _ = muteButtonRect.update(geometry.muteRect(width: viewportWidth).sceneValue)
+        _ = soloButtonRect.update(geometry.soloRect(width: viewportWidth).sceneValue)
+        _ = voiceLineRect.update(geometry.textRects(width: viewportWidth, metrics: textMetrics).1.sceneValue)
+        _ = renameEditorRect.update(geometry.renameRect(width: viewportWidth).sceneValue)
         updateScrollGeometry()
     }
 
@@ -240,15 +245,16 @@ extension TrackHeadersPresenter {
         let rects = geometry.textRects(width: viewportWidth, metrics: textMetrics)
         var row = TrackHeaderSnapshot(
             track: track, title: "\(track + 1) · \(name.isEmpty ? "Track \(track + 1)" : name)",
-            titleFont: primary ? fontRoles.bodyBold : fontRoles.body,
-            subtitleFont: fontRoles.caption)
+            titleFont: primary ? boldTitleFont : normalTitleFont,
+            subtitleFont: subtitleFont)
         row.titleBold = primary
         row.titleRect = rects.0
         row.subtitleRect = rects.1
         row.baseColor = primary ? palette.selectionRing : palette.windowBackground
         let scoped = !primary && session.selectedTracks.contains(track)
         if scoped {
-            row.overlayColor = "#40\(palette.selectionRing.suffix(6))"
+            row.overlayColor = palette.selectionRing
+            row.overlayColor.alpha = 64.0 / 255
         }
         if primary {
             row.titleColor = palette.selectionText
@@ -294,8 +300,8 @@ extension TrackHeadersPresenter {
         } else {
             row.subtitle = String(format: "%03d Voice", program)
         }
-        row.activityActiveColor = PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(track)]
-        row.activityDimColor = ThemeColorTables.activityDimColors[PaletteMath.trackIdentityIndex(track)]
+        row.activityActiveColor = TrackHeadersGeometry.activityActiveColors[PaletteMath.trackIdentityIndex(track)]
+        row.activityDimColor = TrackHeadersGeometry.activityDimColors[PaletteMath.trackIdentityIndex(track)]
         let intensity = activity.intensity(track: track)
         row.activityLeftHeight = activityHeight(intensity.left)
         row.activityRightHeight = activityHeight(intensity.right)
@@ -317,10 +323,12 @@ extension TrackHeadersGeometry {
     // Over-budget inks per ThemePreset.rawValue, precomputed from the
     // dimmedInk/scopedHeaderSurface math; verified by themeColorTableChecks.
     static let overBudgetSurface = ["#C5CBC8", "#515D5F", "#4D575F"]
-    static let overBudgetPrimaryInk = ["#5B6565", "#455255", "#4B5359"]
-    static let overBudgetScopedInk = ["#505655", "#C6D5D8", "#C5CBCE"]
-    static let overBudgetTitleInk = ["#554F4C", "#A0A0A0", "#96989C"]
-    static let overBudgetSubtitleInk = ["#564F4A", "#A0A0A0", "#95989F"]
+    static let overBudgetPrimaryInk = [0xFF5B6565, 0xFF455255, 0xFF4B5359].map { PaletteMath.qmlColor(argb: $0) }
+    static let overBudgetScopedInk = [0xFF505655, 0xFFC6D5D8, 0xFFC5CBCE].map { PaletteMath.qmlColor(argb: $0) }
+    static let overBudgetTitleInk = [0xFF554F4C, 0xFFA0A0A0, 0xFF96989C].map { PaletteMath.qmlColor(argb: $0) }
+    static let overBudgetSubtitleInk = [0xFF564F4A, 0xFFA0A0A0, 0xFF95989F].map { PaletteMath.qmlColor(argb: $0) }
+    static let activityActiveColors = PaletteMath.trackIdentityColors
+    static let activityDimColors = ThemeColorTables.activityDimColors.map { PaletteMath.qmlColor($0) }
 
     static func dimmedInk(
         ink: String, backdrop: String, surface: String,

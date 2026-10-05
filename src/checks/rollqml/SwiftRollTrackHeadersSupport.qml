@@ -3,13 +3,10 @@ import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
-import "../editorqml/NativeWait.js" as NativeWait
 
-TestCase {
+RollLaneSupport {
     id: testCaseRoot
     readonly property var testCase: testCaseRoot
-    property alias bootstrap: bootstrapObject
-    property alias session: sessionObject
     property alias voiceRequestSpy: voiceRequestSpyObject
     name: "SwiftRollTrackHeaders"
     when: windowShown
@@ -18,41 +15,24 @@ TestCase {
     visible: true
 
     readonly property real tolerance: 0.01
-    property var overlay: null
-    property string openFailure: ""
+    verifySurface: true
+    surfaceMessage: ""
 
-    RollQmlBootstrap {
-        id: bootstrapObject
-        ApplicationSession { id: sessionObject }
-    }
 
-    Connections {
-        target: session
-        function onOpenFailed(message) { testCase.openFailure = message }
-        function onOperationFailed(message) { testCase.openFailure = message }
-    }
     SignalSpy {
         id: voiceRequestSpyObject
         target: session
         signalName: "changeTrackVoiceRequested"
     }
 
-    Component {
-        id: overlayComponent
-        SwiftRollOverlay { property var appSession: session }
-    }
-
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
 
     function initTestCase() {
         bootstrap.seedDrawerPreferences(false, true, true, 0)
         verify(bootstrap.start("mus_route101"))
         verify(waitForNative(function() {
-            return session.songOpen || testCase.openFailure.length > 0
-        }, 30000), testCase.openFailure)
-        verify(session.songOpen, testCase.openFailure)
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), session.lastSaveError)
+        verify(session.songOpen, session.lastSaveError)
         verify(waitForNative(function() {
             return session.songDockController().songListPresenter().totalCount > 0
         }, 5000), "the Songs dock catalog is ready before checking scene-removal retention")
@@ -100,11 +80,6 @@ TestCase {
         }
     }
 
-    function surface() {
-        var mounted = findChild(testCase.overlay, "swiftRollOverlay")
-        verify(mounted !== null)
-        return mounted
-    }
 
     function item(name) {
         var found = null

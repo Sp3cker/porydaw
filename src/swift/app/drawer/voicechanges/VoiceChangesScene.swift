@@ -33,9 +33,7 @@ struct VoiceInteractionSnapshot: Sendable {
 
 // MARK: - Scene vocabulary
 
-/// The readout's published facts and the box the page draws them in. The box
-/// crosses as four values because `[String: QVariantSettable]` is not a Sendable
-/// value and stays on the page side of the boundary.
+/// The readout's published facts and the box the page draws them in.
 struct VoiceReadoutValues: Sendable {
     var slot: Int = -1
     var blank = true
@@ -53,10 +51,10 @@ extension VoiceReadoutValues {
         blank = projection.blank
         symbol = projection.symbol
         text = projection.text
-        x = projection.rect["x"] as? Double ?? 0
-        y = projection.rect["y"] as? Double ?? 0
-        width = projection.rect["width"] as? Double ?? 0
-        height = projection.rect["height"] as? Double ?? 0
+        x = projection.rect.origin.x
+        y = projection.rect.origin.y
+        width = projection.rect.width
+        height = projection.rect.height
     }
 }
 
@@ -227,8 +225,8 @@ enum VoiceChangesScene {
                 pad: input.pad,
                 title: input.gutterTitle,
                 summary: input.trackAvailable ? countSummary(input.points) : nil,
-                titleFont: title?.fontMap ?? [:],
-                captionFont: caption?.fontMap ?? [:],
+                titleFont: title?.font ?? QmlFont(family: gridBodyFamily, pixelSize: 13),
+                captionFont: caption?.font ?? QmlFont(family: gridBodyFamily, pixelSize: 13),
                 titleHeight: title?.height ?? 0,
                 captionHeight: caption?.height ?? 0,
                 titleColor: palette.primaryText,
@@ -258,7 +256,7 @@ enum VoiceChangesScene {
                 stairLimit: input.stairLimit,
                 physicalPixel: physicalPixel(input.devicePixelRatio),
                 labelColor: palette.primaryText,
-                lineColor: PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(input.track)],
+                lineColor: PaletteMath.trackIdentityColors[PaletteMath.trackIdentityIndex(input.track)],
                 selectedIdentity: input.interaction.drag?.identity
                     ?? (input.interaction.selectedIdentity.isEmpty
                         ? nil : input.interaction.selectedIdentity),

@@ -1,65 +1,41 @@
-// The editor drawer container: chrome and section bodies.
-//
-// Swift owns every layout decision (EditorDrawer.swift: metrics, stacking,
-// visibility, the resize including the voice-change spill, the focus requests
-// and the cancel sets). This file renders published values only: it invents no
-// geometry, clamp, default or focus tier, and it never reaches into a page --
-// the item at each kind's contentUrl owns its own focus, input and rendering
-// behind a FocusScope that fills its loader.
-//
-// Lifetime: one body Loader per kind, created from the URL the presenter
-// resolved at attach and left instantiated for as long as the kind stays
-// attached, so hiding a section never destroys its page. A released page
-// arrives here as an empty contentUrl and the loader drops its item; the drawer
-// keeps no reference to a page it no longer hosts, and detaching writes no key.
-//
-// Modal containment: one container-wide layer (`drawerModalLayer`) above every
-// section hosts the modal surfaces of pages that opt in through their optional
-// `modalHost` property, so a page's picker or menu is never clipped by the body
-// loader that hosts its content. The layer draws nothing and takes no input of
-// its own.
+// Swift owns drawer layout, visibility, resizing and focus requests.
+// Persistent body loaders share one unclipped modal layer.
 pragma ComponentBehavior: Bound
 
 import QtQuick
 import Porydaw.Ui
 import Porydaw.Icons
+import PorydawApp as App
 
 FocusScope {
     id: drawerScope
 
     objectName: "editorDrawer"
 
-    required property QtObject applicationSession
-    required property QtObject presenter
-    // Named `drawerPalette`, never `palette`: QQuickItem already declares a
-    // virtual `palette` member of an unrelated type, and shadowing it makes the
-    // engine warn on every instantiation and mis-handle the base property.
-    required property QtObject drawerPalette
-    property var hintService: null
+    required property App.SongTabSession applicationSession
+    required property App.EditorDrawerPresenter presenter
+    required property App.GridPalette drawerPalette
+    property App.MouseHints hintService: null
     readonly property bool hintScopeAllowed: {
-        for (let child of modalLayer.children) {
-            if (child.visible)
+        for (let i = 0; i < modalLayer.children.length; ++i) {
+            if (modalLayer.children[i].visible)
                 return false
         }
         return true
     }
-    readonly property var velocityModel: applicationSession.songOpen
-                                        ? applicationSession.velocityPage() : null
+    readonly property App.VelocityPage velocityModel: applicationSession.songOpen
+                                                    ? applicationSession.velocityPage() : null
 
-    // DrawerSectionKind raw values. Only the container maps a kind to its
-    // stored key names, page name and icon resource; every layout fact stays
-    // in the presenter.
+    // DrawerSectionKind raw values; layout facts stay in the presenter.
     readonly property int automationKind: 0
     readonly property int velocityKind: 1
     readonly property int voiceChangesKind: 2
 
-    // The composition places the container and gives it the surface width; the
-    // height is the presenter's own aggregate, zero while no page is attached.
+    // Composition supplies width; Swift owns the aggregate height.
     height: presenter.height
     clip: true
 
-
-    function keyNameFor(kind) {
+    function keyNameFor(kind: int): string {
         switch (kind) {
         case drawerScope.automationKind: return "automation"
         case drawerScope.velocityKind: return "velocity"
@@ -68,20 +44,24 @@ FocusScope {
         return ""
     }
 
-    function iconFor(kind) {
+    function iconFor(kind: int): var {
         switch (kind) {
         case drawerScope.automationKind: return Icons.automation
         case drawerScope.velocityKind: return Icons.velocity
         case drawerScope.voiceChangesKind: return Icons.flat
         }
-        return ({})
+        return emptyIcon
+    }
+
+    QtObject {
+        id: emptyIcon
+        readonly property string glyph: ""
+        readonly property real fit: 1
     }
 
 
-    // A monotonic request names the kind whose loaded page takes focus, or -1
-    // for the roll. A request whose loader has no item yet is skipped rather
-    // than retried; the next transition publishes a new request.
-    function sectionLoader(kind) {
+    // Requests with no loaded page are skipped until the next transition.
+    function sectionLoader(kind: int): Loader {
         switch (kind) {
         case drawerScope.automationKind: return automationSection.pageLoader
         case drawerScope.velocityKind: return velocitySection.pageLoader
@@ -90,11 +70,8 @@ FocusScope {
         return null
     }
 
-    // The roll input is a sibling with no shared id, so its stable objectName
-    // is the handle the presenter's -1 target resolves through. The search
-    // starts at the top of this item tree so it also crosses the composition
-    // that places this container.
-    function findItemByName(item, name) {
+    // Resolve the roll sibling through its stable objectName.
+    function findItemByName(item: Item, name: string): Item {
         if (!item)
             return null
         if (item.objectName === name)
@@ -108,7 +85,7 @@ FocusScope {
     }
     // True when keyboard focus sits inside the container-wide modal layer:
     // a menu, picker or prompt owns it, not the section chrome.
-    function modalOwnsFocus() {
+    function modalOwnsFocus(): bool {
         const window = drawerScope.Window.window
         let focus = window ? window.activeFocusItem : null
         while (focus) {
@@ -119,7 +96,7 @@ FocusScope {
         return false
     }
 
-    function executeFocusRequest() {
+    function executeFocusRequest(): void {
         // A queued section request predates a modal the user has since opened;
         // the modal keeps keyboard focus until it dismisses itself.
         if (drawerScope.modalOwnsFocus())
@@ -135,8 +112,10 @@ FocusScope {
             return
         }
         var loader = drawerScope.sectionLoader(target)
-        if (loader && loader.item)
-            loader.item.forceActiveFocus(Qt.OtherFocusReason)
+        if (loader && loader.item) {
+            const content = loader.item as Item
+            content.forceActiveFocus(Qt.OtherFocusReason)
+        }
     }
 
     component DrawerSection: Item {
@@ -146,22 +125,16 @@ FocusScope {
         required property string toggleName
         required property string handleName
 
-        // The host covers the drawer: its children carry the published
-        // drawer-local rectangles, so the host itself owns no geometry and
-        // never clips; it exists to group one kind's chrome and body.
+        // Children own drawer-local geometry; this grouping host never clips.
         anchors.fill: parent
 
         readonly property string keyName: drawerScope.keyNameFor(section.kind)
         readonly property var icon: drawerScope.iconFor(section.kind)
-        readonly property var sectionState: drawerScope.presenter.section(section.kind)
-        // Available means a page is attached with a resolved URL: that kind owns
-        // a toggle, however hidden it is, and only an available visible kind
-        // owns a handle or a body. The published `visible` is already effective
-        // (requested and available), and the conjunction here keeps an
-        // unavailable kind control-free even if it still publishes intent.
+        readonly property App.EditorDrawerSectionState sectionState: drawerScope.presenter.section(section.kind)
+        // Only available sections own chrome; shown sections also own a body.
         readonly property bool available: section.sectionState.available
-        readonly property bool shown: section.sectionState.available && section.sectionState.visible
-        readonly property var pageLoader: body
+        readonly property bool shown: section.available && section.sectionState.visible
+        readonly property Loader pageLoader: body
 
         Rectangle {
             id: handle
@@ -176,7 +149,7 @@ FocusScope {
                    ? drawerScope.drawerPalette.selectionRing : drawerScope.drawerPalette.outline
             activeFocusOnTab: true
 
-            function adjust(direction) {
+            function adjust(direction: int): void {
                 drawerScope.presenter.adjustResizeHandle(section.kind, direction)
             }
 
@@ -192,10 +165,7 @@ FocusScope {
             // a focused control never forwards unowned song-edit arrows.
             Keys.onLeftPressed: (event) => event.accepted = true
             Keys.onRightPressed: (event) => event.accepted = true
-            // Claim only the plain Return/Enter activation keys before
-            // window-level shortcuts can take them from this focused control.
-            // A grip has no Return action, and bare Space stays unclaimed so
-            // the transport play/pause shortcut outranks incidental focus.
+            // Return/Enter belong to this grip; bare Space stays with transport.
             Keys.onShortcutOverride: (event) => event.accepted =
                 event.key === Qt.Key_Return || event.key === Qt.Key_Enter
 
@@ -215,9 +185,7 @@ FocusScope {
                 preventStealing: true
                 cursorShape: Qt.SizeVerCursor
 
-                // A drag toward the top grows the body, so the delta is
-                // measured against the scene position the press started at,
-                // never against a rect that moves with the drag.
+                // Measure growth from the press scene position, not the moving body.
                 property real pressY: 0
 
                 onPressed: (mouse) => {
@@ -235,7 +203,10 @@ FocusScope {
                     drawerScope.presenter.endResize(section.kind)
                     mouse.accepted = true
                 }
-                onCanceled: drawerScope.presenter.cancelResize()
+                onCanceled: {
+                    if (drawerScope.presenter)
+                        drawerScope.presenter.cancelResize()
+                }
             }
         }
 
@@ -248,15 +219,15 @@ FocusScope {
             width: section.sectionState.toggleSize
             height: section.sectionState.toggleSize
             visible: section.available
-            color: section.sectionState.visible ? drawerScope.drawerPalette.selectionRing
-                                                 : drawerScope.drawerPalette.windowBackground
+            color: section.shown ? drawerScope.drawerPalette.selectionRing
+                                 : drawerScope.drawerPalette.windowBackground
             activeFocusOnTab: true
 
-            function activate() {
+            function activate(): void {
                 drawerScope.presenter.toggleSection(section.kind, drawerScope.activeFocus)
             }
 
-            function activateFromPointer() {
+            function activateFromPointer(): void {
                 const hadVisibleSection = drawerScope.presenter.automationSection.visible
                                           || drawerScope.presenter.velocitySection.visible
                                           || drawerScope.presenter.voiceChangesSection.visible
@@ -265,8 +236,8 @@ FocusScope {
                                                     && (toggle.activeFocus || hadVisibleSection))
             }
 
-            function activateFromKeyboard(event) {
-                activate()
+            function activateFromKeyboard(event: KeyEvent): void {
+                toggle.activate()
                 event.accepted = true
             }
 
@@ -279,15 +250,15 @@ FocusScope {
             Accessible.role: Accessible.Button
             Accessible.name: section.toggleName
             Accessible.checkable: true
-            Accessible.checked: section.sectionState.visible
+            Accessible.checked: section.shown
             Accessible.focusable: true
             Accessible.onPressAction: toggle.activate()
 
             AppIcon {
                 anchors.fill: parent
                 icon: section.icon
-                color: section.sectionState.visible ? drawerScope.drawerPalette.selectionText
-                                                     : drawerScope.drawerPalette.windowText
+                color: section.shown ? drawerScope.drawerPalette.selectionText
+                                     : drawerScope.drawerPalette.windowText
             }
 
             MouseArea {
@@ -318,9 +289,7 @@ FocusScope {
             focus: true
             clip: true
 
-            // The container's one modal layer reaches the page after it loads,
-            // and only when the page declares the property: a page with no modal
-            // surface simply has none to fill.
+            // Supply the shared modal layer only to pages that declare it.
             onLoaded: {
                 if (body.item && body.item.hasOwnProperty("modalHost"))
                     body.item.modalHost = modalLayer
@@ -332,7 +301,7 @@ FocusScope {
 
             // The URL is resolved once per attach and never re-pointed, so a
             // reload happens only when the presenter publishes another one.
-            function syncSource() {
+            function syncSource(): void {
                 var url = String(section.sectionState.contentUrl)
                 if (url.length === 0) {
                     if (String(body.source).length > 0)
@@ -347,7 +316,7 @@ FocusScope {
             Connections {
                 target: section.sectionState
 
-                function onContentUrlChanged() {
+                function onContentUrlChanged(): void {
                     body.syncSource()
                 }
             }
@@ -418,7 +387,7 @@ FocusScope {
                  && drawerScope.velocityModel.detentsAvailable
         activeFocusOnTab: visible
 
-        function activate() {
+        function activate(): void {
             if (visible && drawerScope.velocityModel)
                 drawerScope.velocityModel.toggleDetents()
         }
@@ -458,13 +427,7 @@ FocusScope {
         }
     }
 
-    // Generic modal containment, one layer for the whole container: a page's
-    // modal surface (a picker, a menu) must not be clipped by the body loader
-    // that hosts the page's content, and it must sit above every section's
-    // bodies and chrome, whichever section it belongs to. The layer is declared
-    // after all of them, spans the container, takes no input and draws nothing
-    // of its own; a page that composes no modal never populates it. Opt-in pages
-    // receive it as their optional `modalHost` property right after loading.
+    // One unclipped modal layer sits above all drawer bodies and chrome.
     Item {
         id: modalLayer
 
@@ -477,7 +440,7 @@ FocusScope {
 
     Connections {
         target: drawerScope.presenter
-        function onFocusRequestChanged() {
+        function onFocusRequestChanged(): void {
             drawerScope.executeFocusRequest()
         }
     }

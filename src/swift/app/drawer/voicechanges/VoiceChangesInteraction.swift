@@ -1,24 +1,13 @@
 import Foundation
 import PorydawCore
 
-// The Voice Changes page's interaction half: pointer, picker, menu, hover and
-// drag dispatch, the frozen occurrence each of them captures, and the published
-// interaction gate the container reads. Same type as the page — an extension in
-// its own file, like `AutomationInteraction.swift` — never a wiring object: the
-// page's own refresh methods read this state directly, and its publication seams
-// stay on the page file.
-//
-// Occurrence identity is the invariant this file carries: every gesture, picker
-// and menu freezes the document revision and the lane occurrence when it opens
-// and revalidates both before it commits, so no motion, filter keystroke or
-// camera scroll can retarget another occurrence.
-//
-// Ownership: an extension of the page, never a separate object. The Qt-facing
-// entry points stay declared on `VoiceChangesPage` — `@QtBridgeable` registers
-// class-body members only — and each one is a one-line forward into a `dispatch*`
-// entry here. No bridge import: this file reads and writes the page's own drag,
-// hover, picker and menu state and publishes through the page's own apply paths,
-// so a bridge-dependent call stays a page method.
+// Voice changes interactions freeze and revalidate revision and occurrence identity.
+// Qt-facing entries stay on VoiceChangesPage; this extension uses the page's own state.
+
+private enum VoiceCursorKind: Int {
+    case arrow = 0
+    case sizeHorizontal = 3
+}
 
 @MainActor
 extension VoiceChangesPage {
@@ -40,9 +29,8 @@ extension VoiceChangesPage {
         return true
     }
 
-    /// Ends every interaction the page owns without committing anything. Called
-    /// synchronously by the container before a hide, a replace or a global
-    /// cancellation publishes.
+    /// Ends every page-owned interaction without committing, before hide, replacement
+    /// or global cancellation publishes.
     func cancelAllInteractions() {
         cancelDrag()
         cancelPan()
@@ -54,9 +42,7 @@ extension VoiceChangesPage {
 
     // MARK: Pointer input
 
-    /// One press. `true` means the page consumed it. A press while a picker or
-    /// menu is open dismisses it and starts nothing: the dismissal never
-    /// retargets the captured occurrence.
+    /// Consumes a press; an open modal only dismisses, without retargeting its capture.
     @discardableResult
     func dispatchPointerPress(
         x: Double, y: Double, surface: Int, button: Int,
@@ -110,9 +96,8 @@ extension VoiceChangesPage {
         }
     }
 
-    /// One move: the frozen drag drafts its preview tick, a pan scrolls the
-    /// shared camera, and otherwise the pointer is hover only. `modifiers` is the
-    /// drag's own: the alt modifier switches the preview to the clock lattice.
+    /// Drafts the frozen drag or pans the shared camera; otherwise resolves hover.
+    /// Alt maps the drag preview to the clock lattice.
     @discardableResult
     func dispatchPointerMove(x: Double, y: Double, buttons: Int, modifiers: Int = 0) -> Bool {
         guard session != nil else { return false }
@@ -128,7 +113,7 @@ extension VoiceChangesPage {
             let changed = tick != live.previewTick
             live.previewTick = tick
             drag = live
-            cursorKind = 3
+            cursorKind = VoiceCursorKind.sizeHorizontal.rawValue
             if changed {
                 projectMarkers(
                     markerEntries(),
@@ -138,11 +123,7 @@ extension VoiceChangesPage {
             return true
         }
         if panRevision != nil {
-            let delta = x - previousX
-            previousX = x
-            if delta != 0, let session {
-                session.mutateCamera { $0.setHScroll($0.snapshot.scrollX - delta) }
-            }
+            DrawerPan.moved(x: x, previousX: &previousX, session: session)
             return true
         }
         updateHover(at: x)
@@ -235,23 +216,8 @@ extension VoiceChangesPage {
         }
     }
 
-    /// Acceptance: one existing lane operation for the captured target — a value
-    /// replacement when the document still holds an occurrence at the captured
-    /// tick, an insertion otherwise — or nothing at all. `true` means a write
-    /// happened.
-    ///
-    /// The only refusal besides a stale capture is production's own:
-    /// `VoicePicker::accept` returns early when no row matches, so a program slot
-    /// the bank holds no parsed voice for is still selectable — the band then
-    /// draws that program's number with its blank truth, exactly as the legacy
-    /// projection does.
-    ///
-    /// A captured marker is replaced only while the document still holds exactly
-    /// that occurrence: the occurrence's own value is the one the picked slot
-    /// replaces, and a lane the document rebuilt under the capture writes
-    /// nothing. The captured *tick* is the insertion target only for a capture
-    /// that had no occurrence at all (the empty-lane arm), which is exactly the
-    /// legacy `addLanePoint(track, lane, tick, voice)` case.
+    /// Like VoicePicker::accept, an unmatched row writes nothing; blank slots remain valid.
+    /// Revalidates the capture, replacing its exact occurrence or inserting at its empty tick.
     @discardableResult
     func dispatchAcceptPicker() -> Bool {
         guard let live = picker, live.program >= 0 else { return false }
@@ -334,7 +300,7 @@ extension VoiceChangesPage {
         guard menu != nil else { return }
         menu = nil
         menuOpen = false
-        VoiceChangesProjection.syncMenuRows(menuRows, [])
+        syncModel(menuRows, [], matches: { $0.matches($1) })
         refreshInteractionPublished()
     }
 
@@ -421,8 +387,8 @@ extension VoiceChangesPage {
         menuOpen = true
         menuX = anchorX
         menuY = anchorY
-        VoiceChangesProjection.syncMenuRows(
-            menuRows, VoiceChangesProjection.menuRows(for: target))
+        syncModel(
+            menuRows, VoiceChangesProjection.menuRows(for: target), matches: { $0.matches($1) })
         refreshInteractionPublished()
     }
 
@@ -441,18 +407,18 @@ extension VoiceChangesPage {
         if let hit {
             let identity = VoiceOccurrence(hit).text
             let lineX = xForTick(hit.tick)
-            let rect = VoiceMarkerHandle.rect(
-                lineX + pad, 0, max(0, plotWidth - lineX),
-                plotHeight)
+            let labelX = lineX + pad
+            let labelWidth = max(0, plotWidth - lineX)
             guard
                 hoverIdentity != identity || hoverVisible || !hoverText.isEmpty
-                    || !VoiceMarkerHandle.rectMatches(hoverLabelRect, rect)
+                    || hoverLabelX != labelX || hoverLabelY != 0
+                    || hoverLabelWidth != labelWidth || hoverLabelHeight != plotHeight
             else { return }
             hoverIdentity = identity
             hoverTick = Double(hit.tick)
             hoverText = ""
             hoverVisible = false
-            hoverLabelRect = rect
+            publishHoverLabel(x: labelX, y: 0, width: labelWidth, height: plotHeight)
             publishMarkerHover()
             return
         }
@@ -468,13 +434,11 @@ extension VoiceChangesPage {
         let lineX = xForTick(tick)
         hoverIdentity = nil
         hoverTick = Double(tick)
-        setPublished(hoverText, label) { hoverText = $0 }
-        setPublishedRect(
-            &hoverLabelRect,
-            VoiceMarkerHandle.rect(
-                lineX + pad, 0, max(0, plotWidth - lineX),
-                plotHeight))
-        setPublished(hoverVisible, true) { hoverVisible = $0 }
+        publish(\.hoverText, label)
+        publishHoverLabel(
+            x: lineX + pad, y: 0, width: max(0, plotWidth - lineX),
+            height: plotHeight)
+        publish(\.hoverVisible, true)
         publishMarkerHover()
     }
 
@@ -486,8 +450,15 @@ extension VoiceChangesPage {
         hoverText = ""
         hoverVisible = false
         hoverTick = 0
-        hoverLabelRect = VoiceMarkerHandle.rect(0, 0, 0, 0)
+        publishHoverLabel(x: 0, y: 0, width: 0, height: 0)
         publishMarkerHover()
+    }
+
+    private func publishHoverLabel(x: Double, y: Double, width: Double, height: Double) {
+        publish(\.hoverLabelX, x)
+        publish(\.hoverLabelY, y)
+        publish(\.hoverLabelWidth, width)
+        publish(\.hoverLabelHeight, height)
     }
 
     // MARK: Internals: gesture teardown
@@ -495,7 +466,7 @@ extension VoiceChangesPage {
     func cancelDrag() {
         guard drag != nil else { return }
         drag = nil
-        cursorKind = 0
+        cursorKind = VoiceCursorKind.arrow.rawValue
         refreshInteractionPublished()
         projectMarkers(markerEntries())
         publishTransient()
@@ -510,7 +481,7 @@ extension VoiceChangesPage {
     /// Re-derives the published interaction gate from the page's own state.
     private func refreshInteractionPublished() {
         let active = drag != nil || panRevision != nil || picker != nil || menu != nil
-        if interactionActive != active { interactionActive = active }
-        setPublished(selectedIdentity, drag?.identity ?? selectedIdentity) { selectedIdentity = $0 }
+        publish(\.interactionActive, active)
+        publish(\.selectedIdentity, drag?.identity ?? selectedIdentity)
     }
 }

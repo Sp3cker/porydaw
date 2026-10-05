@@ -50,11 +50,11 @@ ShellClipboardSupport {
         }
         clickHeader(pair[0].track, Qt.NoModifier)
         sweep()
-        compare(shell.shellPresenter.actionEnabled("roll.copy"), true,
-                "the mounted sweep enables Copy")
+        tryCompare(shell.shellPresenter.action("roll.copy"), "enabled", true, 3000,
+                   "the mounted sweep enables Copy")
         clickHeader(pair[1].track, Qt.NoModifier)
-        compare(shell.shellPresenter.actionEnabled("roll.copy"), false,
-                "plain header click elsewhere clears the mounted time selection")
+        tryCompare(shell.shellPresenter.action("roll.copy"), "enabled", false, 3000,
+                   "plain header click elsewhere clears the mounted time selection")
         clickHeader(pair[0].track, Qt.NoModifier)
         sweep()
         clickHeader(pair[1].track, Qt.ControlModifier)
@@ -127,7 +127,7 @@ ShellClipboardSupport {
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
         verify(waitForNative(function() {
-            return shell.shellPresenter.actionEnabled("roll.paste")
+            return shell.shellPresenter.action("roll.paste").enabled
         }, 5000), "Paste is enabled with a range clip")
         keySequence(StandardKey.Paste)
         verify(waitForNative(function() {
@@ -140,7 +140,7 @@ ShellClipboardSupport {
                 && grid.editCursorTick === cursor + 96
         }, 5000), "real Paste publishes both target tracks and advances by span")
         verify(waitForNative(function() {
-            return shell.shellPresenter.actionEnabled("edit.undo")
+            return shell.shellPresenter.action("edit.undo").enabled
         }, 5000), "Undo is enabled after the expanding paste")
         grid.setTrack(probedTracks)
         verify(waitForNative(function() {
@@ -208,12 +208,12 @@ ShellClipboardSupport {
         mouseMove(roll, endX, y, -1, Qt.RightButton, Qt.ShiftModifier)
         mouseRelease(roll, endX, y, Qt.RightButton, Qt.ShiftModifier)
         var presenter = shell.shellPresenter
-        compare(presenter.actionEnabled("edit.delete_time"), true,
-                "the swept selection enables Delete Time")
-        compare(presenter.actionEnabled("edit.insert_time"), true,
-                "the swept selection enables Insert Time")
-        compare(presenter.actionEnabled("roll.copy"), true,
-                "the swept selection enables Copy instead of the cleared note selection")
+        tryCompare(presenter.action("edit.delete_time"), "enabled", true, 3000,
+                   "the swept selection enables Delete Time")
+        tryCompare(presenter.action("edit.insert_time"), "enabled", true, 3000,
+                   "the swept selection enables Insert Time")
+        tryCompare(presenter.action("roll.copy"), "enabled", true, 3000,
+                   "the swept selection enables Copy instead of the cleared note selection")
         compare(selectedCount(grid), 0, "a swept time selection clears the roll's selected notes")
         verify(session.gridCommandAvailable(0) && session.gridCommandAvailable(2),
                "the swept range owns Copy and Duplicate Time")
@@ -236,7 +236,7 @@ ShellClipboardSupport {
                     return t.track === selected.track && t.notes.length >= 1
                 })
         }, 5000), "Copy over a swept time selection publishes the span clip bytes")
-        compare(presenter.actionEnabled("roll.paste"), true,
+        compare(presenter.action("roll.paste").enabled, true,
                 "the copied time clip enables Paste")
         compare(copied.ticksPerBeat, tpb, "the copied range carries the mounted timebase")
         keyClick(Qt.Key_Delete)
@@ -245,16 +245,16 @@ ShellClipboardSupport {
             return covered.every(function(n) { return noteById(grid, n.id) === null })
                 && current.length === before.length - covered.length
         }, 5000), "Delete over a swept time selection removes only the covered content")
-        compare(presenter.actionEnabled("edit.undo"), true,
+        compare(presenter.action("edit.undo").enabled, true,
                 "the range deletion enables Undo")
-        compare(presenter.actionEnabled("edit.redo"), false,
+        compare(presenter.action("edit.redo").enabled, false,
                 "the range deletion invalidates Redo")
         compare(session.gridCommandAvailable(2), true,
                 "a swept time selection survives its range delete")
         keySequence(StandardKey.Undo)
         verify(waitForNative(function() { return noteFacts(grid) === noteFactsFrom(before) }, 5000),
                "Undo restores the deleted span")
-        compare(presenter.actionEnabled("edit.redo"), true,
+        compare(presenter.action("edit.redo").enabled, true,
                 "undoing range deletion enables Redo")
         keySequence(StandardKey.Cut)
         verify(waitForNative(function() {
@@ -283,9 +283,9 @@ ShellClipboardSupport {
                 && tileOn(grid, cursor, selected.pitch, 24, selected.track, 120) !== null
                 && !session.gridCommandAvailable(2)
         }, 5000), "a range Paste key merges the staged clip and clears the time selection")
-        compare(presenter.actionEnabled("edit.insert_time"), true,
+        compare(presenter.action("edit.insert_time").enabled, true,
                 "Insert Time remains available after Paste consumes the range")
-        compare(presenter.actionEnabled("edit.delete_time"), false,
+        compare(presenter.action("edit.delete_time").enabled, false,
                 "Paste consumes the time range and disables Delete Time")
         verify(copied.span === endTick - startTick && clipProbe.readClipJson() === staged
                    && grid.editCursorTick === cursor + 48
@@ -302,12 +302,12 @@ ShellClipboardSupport {
         var notesBeforeEmpty = grid.fetchNoteSummary()
         var revisionBeforeEmpty = grid.appliedRevisionText
         var cursorBeforeEmpty = grid.editCursorTick
-        var undoBeforeEmpty = shell.shellPresenter.actionEnabled("edit.undo")
+        var undoBeforeEmpty = shell.shellPresenter.action("edit.undo").enabled
         keySequence(StandardKey.Paste)
         compare(grid.fetchNoteSummary(), notesBeforeEmpty, "an empty lane Paste key is a surface no-op")
         compare(grid.appliedRevisionText, revisionBeforeEmpty, "the empty lane paste keeps revision")
         compare(grid.editCursorTick, cursorBeforeEmpty, "the empty lane paste keeps cursor")
-        compare(shell.shellPresenter.actionEnabled("edit.undo"), undoBeforeEmpty,
+        compare(shell.shellPresenter.action("edit.undo").enabled, undoBeforeEmpty,
                 "the empty lane paste adds no Undo entry")
     }
 

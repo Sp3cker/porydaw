@@ -15,6 +15,8 @@ const SUPPORTED_TYPES_AT_407714006dd21107b70db6547ce75e43df0c8a75: Record<
   Float: true,
   String: true,
   Bool: true,
+  QmlColor: true,
+  QmlFont: true,
 };
 
 type Check =

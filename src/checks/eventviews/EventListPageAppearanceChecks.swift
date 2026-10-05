@@ -11,21 +11,20 @@ internal func eventListTypographyParity(_ report: CheckReport) {
     let seed = Typography(baseFontPx: 13)
     let presenter = EventListPresenter(palette: palette, typography: seed)
     func expectRoles(_ typography: Typography) {
-        let roles: [(String, GridFontSpec)] = [
-            ("bodyFont", typography.body), ("controlFont", typography.body),
-            ("tableFont", typography.tableMono), ("headerFont", typography.caption),
+        let roles: [(String, QmlFont, GridFontSpec)] = [
+            ("bodyFont", presenter.fonts.body, typography.body),
+            ("controlFont", presenter.fonts.body, typography.body),
+            ("tableFont", presenter.fonts.tableMono, typography.tableMono),
+            ("headerFont", presenter.fonts.caption, typography.caption),
         ]
-        for (name, spec) in roles {
-            let map = presenter.appearance[name] as? [String: QVariantSettable]
+        for (name, font, spec) in roles {
             report.expect(
-                (map?["family"] as? String) == spec.family
-                    && (map?["pixelSize"] as? Int) == spec.pixelSize
-                    && (map?["weight"] as? Int) == spec.weight
-                    && (map?["letterSpacing"] as? Double) == spec.letterSpacing,
+                font == spec.qmlFont,
                 cppID: pageID, message: "\(name) follows the captured typography role")
         }
     }
     expectRoles(seed)
+    let fonts = presenter.fonts
     let defaults = [70.0, 120.0, 36.0, 56.0, 56.0, 140.0]
     for column in defaults.indices {
         report.expect(
@@ -62,6 +61,18 @@ internal func eventListTypographyParity(_ report: CheckReport) {
     ShellAppearance.apply(to: palette, mode: "dark-neutral-high", contrast: 50)
     presenter.refreshAppearance()
     expectRoles(doubledTypography)
+    report.expect(
+        presenter.fonts === fonts && presenter.colors === palette,
+        cppID: pageID, message: "typography and theme retain the published objects")
+    let publishedWidths = [
+        presenter.tickColumnWidth, presenter.typeColumnWidth, presenter.channelColumnWidth,
+        presenter.data1ColumnWidth, presenter.data2ColumnWidth, presenter.dataColumnWidth,
+    ]
+    for column in defaults.indices {
+        report.expect(
+            publishedWidths[column] == presenter.savedColumnWidth(column: column),
+            cppID: pageID, message: "notifying width \(column) matches the saved native width")
+    }
 }
 
 @MainActor
@@ -104,6 +115,74 @@ internal func eventListChunkLabelParity(
     report.expectEqual(
         expected: "Chunk 2 — Track 2", actual: presenter.chunkLabels[2],
         cppID: pageID, what: "second engine track names its raw chunk")
+
+    guard let handle = presenter.rowHandle(row: 0) else {
+        report.expect(false, cppID: pageID, message: "attached event table publishes its first row")
+        return
+    }
+    for column in 0..<EventListModel.columnCount {
+        let tableHandle = presenter.tableRows.value(row: 0, column: column) as? EventListRowHandle
+        report.expect(
+            tableHandle === handle, cppID: pageID,
+            message: "table column \(column) shares the retained typed row")
+    }
+    report.expect(
+        handle.c0 == presenter.cellDisplay(row: 0, column: 0)
+            && handle.c1 == presenter.cellDisplay(row: 0, column: 1)
+            && handle.c5 == presenter.cellDisplay(row: 0, column: 5)
+            && handle.c6 == presenter.cellDisplay(row: 0, column: 6)
+            && handle.editData == presenter.cellEdit(row: 0, column: 5),
+        cppID: pageID, message: "published cells preserve display and editor formatting")
+    presenter.selectRow(row: 0, modifiers: 0)
+    report.expect(
+        handle.selected && presenter.rowHandle(row: 0) === handle,
+        cppID: pageID, message: "selection publishes in place on the retained row")
+    presenter.selectRow(row: 0, modifiers: 0x04000000)
+    report.expect(
+        !handle.selected && presenter.rowHandle(row: 0) === handle,
+        cppID: pageID, message: "Control toggle clears the notifying row selection")
+    presenter.refresh()
+    report.expect(
+        presenter.rowHandle(row: 0) === handle,
+        cppID: pageID, message: "document refresh reuses its row handle")
+    let projection = EventListModel(
+        chunk: MidiChunk(
+            events: [
+                .channel(tick: 0, status: 0x90, data0: 60, data1: 90),
+                .meta(tick: 12, type: 0x06, data: Array(repeating: UInt8(ascii: "a"), count: 65)),
+                .meta(tick: 24, type: 0x7F, data: Array(repeating: 0x80, count: 65)),
+                .systemExclusive(tick: 36, status: 0xF0, data: Array(repeating: 0x7D, count: 65)),
+            ], endTick: 48),
+        tempos: [TempoPoint(tick: 0, microsecondsPerQuarterNote: 600_000)])
+    let expectedMasks = [35, 31, 43, 43, 35, 1]
+    for source in projection.rows {
+        let row = EventListRowHandle()
+        let values = projection.publishedValues(for: source, selected: false)
+        report.expect(
+            row.update(values) && !row.update(values),
+            cppID: pageID, message: "row \(source.index) equality-gates an unchanged snapshot")
+        let cells = [row.c0, row.c1, row.c2, row.c3, row.c4, row.c5, row.c6]
+        for column in 0..<EventListModel.columnCount {
+            report.expect(
+                cells[column] == projection.cellText(row: source.index, column: column)
+                    && ((row.editableMask & (1 << column)) != 0)
+                        == projection.isCellEditable(row: source.index, column: column),
+                cppID: pageID,
+                message: "row \(source.index) column \(column) preserves text and editability")
+        }
+        report.expectEqual(
+            expected: expectedMasks[source.index], actual: row.editableMask,
+            cppID: pageID, what: "row \(source.index) publishes the native editable-column mask")
+        report.expect(
+            row.editType == projection.cellText(row: source.index, column: 1, editing: true)
+                && row.editData == projection.cellText(row: source.index, column: 5, editing: true)
+                && row.rowKind == projection.rowKind(row: source.index),
+            cppID: pageID, message: "row \(source.index) preserves editor text and kind")
+    }
+    presenter.detach()
+    report.expect(
+        presenter.rowHandle(row: 0) == nil && presenter.rowCount == 0,
+        cppID: pageID, message: "detaching clears the sole table model")
 }
 
 @MainActor
@@ -114,50 +193,47 @@ internal func eventListAppearanceParity(
     let palette = GridPalette()
     let presenter = EventListPresenter()
     presenter.attach(session: suite)
-    func value(_ name: String) -> String? { presenter.appearance[name] as? String }
     report.expectEqual(
-        expected: palette.menuBackground, actual: value("tableBackground") ?? "",
+        expected: palette.menuBackground, actual: presenter.colors.menuBackground,
         cppID: pageID, what: "tableBackground resolves item_background")
     report.expectEqual(
-        expected: palette.alternateBackground,
-        actual: value("tableAlternateBackground") ?? "",
+        expected: palette.alternateBackground, actual: presenter.colors.alternateBackground,
         cppID: pageID, what: "tableAlternateBackground resolves item_alternate_background")
     report.expectEqual(
-        expected: palette.windowText, actual: value("tableText") ?? "",
+        expected: palette.windowText, actual: presenter.colors.windowText,
         cppID: pageID, what: "tableText resolves item_text")
     report.expectEqual(
-        expected: palette.secondaryText, actual: value("tableSecondaryText") ?? "",
+        expected: palette.secondaryText, actual: presenter.colors.secondaryText,
         cppID: pageID, what: "tableSecondaryText resolves secondary_text")
     report.expectEqual(
-        expected: palette.tabSelectedBackground,
-        actual: value("tableSelectedBackground") ?? "",
+        expected: palette.tabSelectedBackground, actual: presenter.colors.tabSelectedBackground,
         cppID: pageID, what: "tableSelectedBackground resolves item_selected_background")
     report.expectEqual(
-        expected: palette.selectionText, actual: value("tableSelectedText") ?? "",
+        expected: palette.selectionText, actual: presenter.colors.selectionText,
         cppID: pageID, what: "tableSelectedText resolves item_selected_text")
     report.expectEqual(
-        expected: palette.outline, actual: value("tableOutline") ?? "",
+        expected: palette.outline, actual: presenter.colors.outline,
         cppID: pageID, what: "tableOutline resolves palette_outline")
     report.expectEqual(
-        expected: palette.chromeBackground, actual: value("headerBackground") ?? "",
+        expected: palette.chromeBackground, actual: presenter.colors.chromeBackground,
         cppID: pageID, what: "headerBackground resolves header_background")
     report.expectEqual(
-        expected: palette.outline, actual: value("headerOutline") ?? "",
+        expected: palette.outline, actual: presenter.colors.outline,
         cppID: pageID, what: "headerOutline resolves header_outline")
     report.expectEqual(
-        expected: "#A49D97", actual: value("scrollbarHandle") ?? "",
+        expected: PaletteMath.qmlColor(argb: 0xFFA49D97), actual: presenter.colors.scrollbarHandle,
         cppID: pageID, what: "scrollbarHandle resolves the dedicated vanilla preset")
     report.expectEqual(
-        expected: palette.outline, actual: value("scrollbarHandleHover") ?? "",
+        expected: palette.outline, actual: presenter.colors.outline,
         cppID: pageID, what: "scrollbarHandleHover resolves scrollbar_handle_hover_background")
     report.expectEqual(
-        expected: palette.inputBackground, actual: value("toolTipBackground") ?? "",
+        expected: palette.inputBackground, actual: presenter.colors.inputBackground,
         cppID: pageID, what: "toolTipBackground resolves tooltip_background")
     report.expectEqual(
-        expected: palette.buttonHoverBackground, actual: value("inputBackground") ?? "",
+        expected: palette.buttonHoverBackground, actual: presenter.colors.buttonHoverBackground,
         cppID: pageID, what: "inputBackground resolves input_background")
     report.expectEqual(
-        expected: palette.windowText, actual: value("inputText") ?? "",
+        expected: palette.windowText, actual: presenter.colors.windowText,
         cppID: pageID, what: "inputText resolves input_text")
 
     let themed = GridPalette()
@@ -166,46 +242,46 @@ internal func eventListAppearanceParity(
     themedPresenter.attach(session: suite)
     report.expectEqual(
         expected: "#424242",
-        actual: (themedPresenter.appearance["tableBackground"] as? String) ?? "",
+        actual: PaletteMath.hex(themedPresenter.colors.menuBackground),
         cppID: pageID, what: "attached presenter spells the session palette's item surface")
     ShellAppearance.apply(to: themed, mode: "vanilla", contrast: 50)
     themedPresenter.refreshAppearance()
     report.expectEqual(
         expected: "#D2D0CA",
-        actual: (themedPresenter.appearance["tableBackground"] as? String) ?? "",
-        cppID: pageID, what: "refreshAppearance rebuilds the map after a theme swap")
+        actual: PaletteMath.hex(themedPresenter.colors.menuBackground),
+        cppID: pageID, what: "refreshAppearance preserves the live theme surface")
     report.expectEqual(
         expected: "#A49D97",
-        actual: (themedPresenter.appearance["scrollbarHandle"] as? String) ?? "",
+        actual: PaletteMath.hex(themedPresenter.colors.scrollbarHandle),
         cppID: pageID, what: "vanilla returns the dedicated scrollbar preset")
     ShellAppearance.apply(to: themed, mode: "dark-neutral-high", contrast: 50)
     themedPresenter.refreshAppearance()
     report.expectEqual(
         expected: "#262626",
-        actual: (themedPresenter.appearance["scrollbarHandle"] as? String) ?? "",
+        actual: PaletteMath.hex(themedPresenter.colors.scrollbarHandle),
         cppID: pageID, what: "dark theme swaps the scrollbar thumb preset")
     report.expectEqual(
         expected: "#5C5C5C",
-        actual: (themedPresenter.appearance["inputBackground"] as? String) ?? "",
+        actual: PaletteMath.hex(themedPresenter.colors.buttonHoverBackground),
         cppID: pageID, what: "dark theme swaps the input surface preset")
 
     for preset in ["vanilla", "dark-neutral-high", "immaterial"] {
         let presetPalette = GridPalette()
         ShellAppearance.apply(to: presetPalette, mode: preset, contrast: 50)
-        let map = EventListPresenter(palette: presetPalette).appearance
-        let pairs: [(String, String)] = [
-            ("tableText", "tableBackground"),
-            ("tableText", "tableAlternateBackground"),
-            ("tableSecondaryText", "tableBackground"),
-            ("tableSelectedText", "tableSelectedBackground"),
-            ("headerText", "headerBackground"),
-            ("buttonText", "buttonBackground"),
-            ("inputText", "inputBackground"),
-            ("toolTipText", "toolTipBackground"),
+        let colors = EventListPresenter(palette: presetPalette).colors
+        let pairs: [(String, String, QmlColor, QmlColor)] = [
+            ("tableText", "tableBackground", colors.windowText, colors.menuBackground),
+            ("tableText", "tableAlternateBackground", colors.windowText, colors.alternateBackground),
+            ("tableSecondaryText", "tableBackground", colors.secondaryText, colors.menuBackground),
+            ("tableSelectedText", "tableSelectedBackground", colors.selectionText, colors.tabSelectedBackground),
+            ("headerText", "headerBackground", colors.windowText, colors.chromeBackground),
+            ("buttonText", "buttonBackground", colors.buttonText, colors.buttonBackground),
+            ("inputText", "inputBackground", colors.windowText, colors.buttonHoverBackground),
+            ("toolTipText", "toolTipBackground", colors.windowText, colors.inputBackground),
         ]
-        for (text, background) in pairs {
-            let ink = map[text] as? String ?? ""
-            let fill = map[background] as? String ?? ""
+        for (text, background, textColor, backgroundColor) in pairs {
+            let ink = PaletteMath.hex(textColor)
+            let fill = PaletteMath.hex(backgroundColor)
             let ratio = PaletteMath.contrastRatio(ink, fill)
             report.expect(
                 ratio >= 4.5, cppID: pageID,

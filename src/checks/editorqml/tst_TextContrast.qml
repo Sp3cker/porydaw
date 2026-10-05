@@ -3,19 +3,14 @@ import QtQuick.Controls
 import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
-import "../../ui/shell"
+import Porydaw.Ui
 import "TextContrastAudit.js" as Audit
 import "NativeWait.js" as NativeWait
 import "RollNoteFaces.js" as RollNoteFaces
 
-// Text legibility is the product's first visual requirement
-// (docs/design/text-contrast.md). Every text item the production shell
-// renders — window chrome, docks, drawer, pages, every popup and menu, and the
-// settings window — is measured against the pixels drawn behind it, in every
-// shipped theme. The offscreen platform supplies Qt's generic light palette,
-// so any control text still inheriting the platform palette instead of the
-// theme fails on the dark themes.
-TestCase {
+// Measure every rendered shell text item against its actual drawn surface
+// in all shipped themes; disabled text keeps the WCAG exemption.
+ShellLaneSupport {
     id: testCase
     name: "TextContrast"
     when: windowShown
@@ -23,7 +18,6 @@ TestCase {
     height: 800
     visible: true
 
-    property var shell: null
     readonly property var settings: bootstrap.preferences
     property var failures: []
     property var seenFailures: []
@@ -42,29 +36,10 @@ TestCase {
         settings.setString("lastProjectDir", "")
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
+    laneBootstrap: bootstrap
 
-    function cleanup() {
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                    || !shell.shellPresenter.sceneActive
-            }, 5000), "closing reaches the dirty gate or completes")
-            if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.closeReady
-            }, 5000), "the scene is released")
-        }
-        shell.destroy()
-        shell = null
-        wait(0)
-    }
+    closeGateMessage: "closing reaches the dirty gate or completes"
+    closeReadyMessage: "the scene is released"
 
     function openShell() {
         shell = shellComponent.createObject(null)
@@ -83,7 +58,7 @@ TestCase {
         shell.shellPresenter.restoreAppearance()
         const palette = shell.shellPresenter.session.palette
         verify(waitForNative(function() {
-            return palette.windowBackground === theme.window
+            return Qt.colorEqual(palette.windowBackground, theme.window)
         }, 3000), theme.mode + " is applied")
         verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, shell, 5000),
                "the shell submits the applied theme before contrast capture")
@@ -93,9 +68,8 @@ TestCase {
         return grabImage(root)
     }
 
-    // One line per distinct theme/item/text/ink/surface; the first state that
-    // showed it names it. Each line is also logged, since QTest truncates long
-    // failure messages.
+    // Record each distinct theme/item/text/ink/surface once and log it
+    // because QTest truncates long failure messages.
     function record(context, result) {
         measured += result.measured
         for (const failure of result.failures) {
@@ -297,7 +271,7 @@ TestCase {
                "keyboard text paints inside the clipped keyboard viewport")
         const grid = surface.gridModel
         verify(grid.rowHeight > 0 && keys.height > 0, "the keyboard has a viewport")
-        const natural = Qt.color(grid.palette.keyboardNatural)
+        const natural = grid.palette.keyboardNatural
         const naturalRgb = [natural.r * 255, natural.g * 255, natural.b * 255]
         for (const edge of ["top", "bottom"]) {
             const rowOffset = edge === "top" ? 0.2 : 0.8

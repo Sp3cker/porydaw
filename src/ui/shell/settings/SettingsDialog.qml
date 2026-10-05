@@ -1,5 +1,7 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import Porydaw.Ui
 import PorydawApp
 
@@ -11,36 +13,35 @@ DialogWindow {
     required property ApplicationSession applicationSession
     readonly property real unit: applicationSession.baseFontPx / 12
     readonly property real engineTabWidth: 64 + 42 * (unit - 1)
+    readonly property rect pageRect: Qt.rect(20 * unit, 31 * unit,
+                                            width - 40 * unit, tabs.height - 20 * unit)
     property int selectedTab: 0
-    width: 560
-    height: 580
+    readonly property string songLabel: store.songLabel
+    width: 560 * unit
+    height: 580 * unit
     minimumWidth: width
     minimumHeight: height
     maximumWidth: width
     maximumHeight: height
     title: qsTr("Settings")
-    font: Qt.font(applicationSession.typographyFonts.body)
+    font: applicationSession.typographyFonts.body
 
-    function showSettings(songFirst) {
-        store.open()
+    function showSettings(songFirst: bool): void {
+        dialog.store.open()
         if (enginePage.item)
-            enginePage.item.reset()
+            (enginePage.item as EngineSettingsPage).reset()
         if (songPage.item)
-            songPage.item.reset()
-        selectedTab = songFirst && store.songAvailable ? 1 : 0
-        present()
+            (songPage.item as SongSettingsPage).reset()
+        dialog.selectedTab = songFirst && dialog.store.songAvailable ? 1 : 0
+        dialog.present()
     }
-    function commit() {
-        if (store.songAvailable)
-            songPage.item.finishVoicegroupEdit()
-        store.apply()
-        presenter.commitThemeMode()
-        presenter.commitGridLineContrast()
+    function commit(): void {
+        if (dialog.store.songAvailable)
+            (songPage.item as SongSettingsPage).finishVoicegroupEdit()
+        dialog.store.apply()
+        dialog.presenter.commitAppearance()
     }
-    onClosing: {
-        presenter.discardThemeMode()
-        presenter.discardGridLineContrast()
-    }
+    onClosing: presenter.discardAppearance()
     Rectangle {
         id: body
         objectName: "settingsBody"
@@ -52,8 +53,8 @@ DialogWindow {
         id: tabs
         objectName: "tabs"
         parent: body
-        x: 11; y: 11
-        width: dialog.width - 22
+        x: 11 * dialog.unit; y: 11 * dialog.unit
+        width: dialog.width - 22 * dialog.unit
         height: dialog.height - 46 - 12 * (dialog.unit - 1)
         Rectangle {
             anchors.fill: parent
@@ -72,7 +73,7 @@ DialogWindow {
                 height: tabBar.height
                 width: dialog.engineTabWidth
                 text: qsTr("Engine")
-                font: Qt.font(dialog.applicationSession.typographyFonts.body)
+                font: dialog.applicationSession.typographyFonts.body
                 palette.active.buttonText: dialog.selectedTab === 0 ? dialog.colors.selectionText : dialog.colors.buttonText
                 palette.inactive.buttonText: dialog.selectedTab === 0 ? dialog.colors.selectionText : dialog.colors.buttonText
                 palette.disabled.buttonText: dialog.colors.disabledText
@@ -88,9 +89,9 @@ DialogWindow {
                 objectName: "settingsSongTab"
                 height: tabBar.height
                 width: tabBar.width - engineTab.width - themeTab.width
-                text: dialog.store.songLabel.length > 0
-                      ? qsTr("Song (%1)").arg(dialog.store.songLabel) : qsTr("Song")
-                font: Qt.font(dialog.applicationSession.typographyFonts.body)
+                text: dialog.songLabel.length > 0
+                      ? qsTr("Song (%1)").arg(dialog.songLabel) : qsTr("Song")
+                font: dialog.applicationSession.typographyFonts.body
                 enabled: dialog.store.songAvailable
                 palette.active.buttonText: dialog.selectedTab === 1 ? dialog.colors.selectionText : dialog.colors.buttonText
                 palette.inactive.buttonText: dialog.selectedTab === 1 ? dialog.colors.selectionText : dialog.colors.buttonText
@@ -108,7 +109,7 @@ DialogWindow {
                 height: tabBar.height
                 width: dialog.engineTabWidth
                 text: qsTr("Theme")
-                font: Qt.font(dialog.applicationSession.typographyFonts.body)
+                font: dialog.applicationSession.typographyFonts.body
                 palette.active.buttonText: dialog.selectedTab === 2 ? dialog.colors.selectionText : dialog.colors.buttonText
                 palette.inactive.buttonText: dialog.selectedTab === 2 ? dialog.colors.selectionText : dialog.colors.buttonText
                 palette.disabled.buttonText: dialog.colors.disabledText
@@ -124,12 +125,11 @@ DialogWindow {
     Loader {
         id: enginePage
         parent: body
-        x: 20; y: 31
-        width: dialog.width - 40
-        height: tabs.height - 20 * dialog.unit
+        x: dialog.pageRect.x; y: dialog.pageRect.y
+        width: dialog.pageRect.width; height: dialog.pageRect.height
         active: dialog.visible
         visible: dialog.selectedTab === 0
-        onLoaded: item.reset()
+        onLoaded: (enginePage.item as EngineSettingsPage).reset()
         sourceComponent: EngineSettingsPage {
             objectName: "settingsEnginePage"
             unit: dialog.unit; store: dialog.store; colors: dialog.colors
@@ -139,12 +139,11 @@ DialogWindow {
     Loader {
         id: songPage
         parent: body
-        x: 20; y: 31
-        width: dialog.width - 40
-        height: tabs.height - 20 * dialog.unit
+        x: dialog.pageRect.x; y: dialog.pageRect.y
+        width: dialog.pageRect.width; height: dialog.pageRect.height
         active: dialog.visible
         visible: dialog.selectedTab === 1
-        onLoaded: item.reset()
+        onLoaded: (songPage.item as SongSettingsPage).reset()
         sourceComponent: SongSettingsPage {
             objectName: "settingsSongPage"
             unit: dialog.unit; store: dialog.store; colors: dialog.colors
@@ -154,9 +153,8 @@ DialogWindow {
     Loader {
         id: themePage
         parent: body
-        x: 20; y: 31
-        width: dialog.width - 40
-        height: tabs.height - 20 * dialog.unit
+        x: dialog.pageRect.x; y: dialog.pageRect.y
+        width: dialog.pageRect.width; height: dialog.pageRect.height
         active: dialog.visible
         visible: dialog.selectedTab === 2
         sourceComponent: ThemeSettingsPage {
@@ -168,7 +166,7 @@ DialogWindow {
     Item {
         objectName: "button-box"
         parent: body
-        x: dialog.width - 11 - (240 - 21 * (dialog.unit - 1))
+        x: dialog.width - 11 * dialog.unit - (240 - 21 * (dialog.unit - 1))
         y: dialog.height - 29 - 12 * (dialog.unit - 1)
         width: 240 - 21 * (dialog.unit - 1)
         height: 18 + 12 * (dialog.unit - 1)
@@ -177,7 +175,7 @@ DialogWindow {
             objectName: "settingsApply"
             x: 0; width: (parent.width - 2 * dialog.unit) / 3
             height: parent.height; text: qsTr("Apply")
-            font: Qt.font(dialog.applicationSession.typographyFonts.body)
+            font: dialog.applicationSession.typographyFonts.body
             enabled: !dialog.store.isApplying
             onClicked: dialog.commit()
         }
@@ -186,7 +184,7 @@ DialogWindow {
             objectName: "settingsCancel"
             x: applyButton.width + dialog.unit
             width: applyButton.width; height: parent.height; text: qsTr("Cancel")
-            font: Qt.font(dialog.applicationSession.typographyFonts.body)
+            font: dialog.applicationSession.typographyFonts.body
             onClicked: dialog.close()
         }
         Button {
@@ -194,7 +192,7 @@ DialogWindow {
             objectName: "settingsOK"
             x: cancelButton.x + cancelButton.width + dialog.unit
             width: applyButton.width; height: parent.height; text: qsTr("OK")
-            font: Qt.font(dialog.applicationSession.typographyFonts.body)
+            font: dialog.applicationSession.typographyFonts.body
             enabled: !dialog.store.isApplying
             onClicked: {
                 dialog.commit()

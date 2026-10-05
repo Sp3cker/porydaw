@@ -1,3 +1,6 @@
+pragma ComponentBehavior: Bound
+pragma ValueTypeBehavior: Addressable, Assertable
+
 import QtQuick
 import QtQuick.Controls.Fusion as Fusion
 
@@ -7,32 +10,34 @@ Fusion.ProgressBar {
     id: control
 
     contentItem: Item {
+        id: fill
         scale: control.mirrored ? -1 : 1
         clip: true
 
         Rectangle {
-            height: parent.height
-            width: (control.indeterminate ? 1.0 : control.position) * parent.width
+            height: fill.height
+            width: (control.indeterminate ? 1.0 : control.position) * fill.width
             radius: 2
-            border.color: Fusion.Fusion.highContrast ? Fusion.Fusion.outline(control.palette)
-                                                         : Qt.darker(Fusion.Fusion.highlight(control.palette), 1.4)
+            border.color: Fusion.Fusion.highContrast
+                ? (Fusion.Fusion.outline(control.palette) as color)
+                : (Qt.darker(Fusion.Fusion.highlight(control.palette), 1.4) as color)
             gradient: Gradient {
                 GradientStop {
                     position: 0
-                    color: Qt.lighter(Fusion.Fusion.highlight(control.palette), 1.2)
+                    color: Qt.lighter(Fusion.Fusion.highlight(control.palette), 1.2) as color
                 }
                 GradientStop {
                     position: 1
-                    color: Fusion.Fusion.highlight(control.palette)
+                    color: Fusion.Fusion.highlight(control.palette) as color
                 }
             }
         }
 
         Rectangle {
-            width: parent.width / 4
-            height: parent.height
+            width: fill.width / 4
+            height: fill.height
             visible: control.indeterminate
-            color: Qt.lighter(Fusion.Fusion.highlight(control.palette), 1.4)
+            color: Qt.lighter(Fusion.Fusion.highlight(control.palette), 1.4) as color
 
             NumberAnimation on x {
                 running: control.indeterminate && control.visible

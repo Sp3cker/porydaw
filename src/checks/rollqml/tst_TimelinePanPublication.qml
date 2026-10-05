@@ -143,7 +143,7 @@ TimelinePanSupport {
                 tryCompare(scene, "hoverChipText", expected, 5000)
                 tryVerify(function() {
                     return chipText.text === expected && chip.visible
-                        && chipText.contentWidth <= chip.width && scene.hoverChipRect.x >= 0
+                        && chipText.contentWidth <= chip.width && scene.hoverChipX >= 0
                 }, 5000, "the complete hover name fits its on-screen chip")
             }
             hover(longPad, longName)

@@ -1,17 +1,8 @@
 import PorydawAppCommands
 import PorydawCore
 
-// Pointer, prompt and gesture machinery for the drawer's Velocity section: the
-// four pointer entries, the local Escape and cancellation seam, the Set Velocity
-// prompt, hover resolution, and the frozen gesture that previews, cancels and
-// commits at most one document transaction per completed interaction.
-//
-// Ownership: an extension of the page, never a separate object. The Qt-facing
-// methods stay declared on `VelocityPage` — `@QtBridgeable` registers class-body
-// members only — and each one is a one-line forward into a `dispatch*` entry
-// here. This file reads and writes the page's own gesture, prompt and hover state
-// and publishes through the page's own apply paths: it holds no session, no cache
-// and no bridge type of its own.
+// VelocityArea pointer and prompt machinery; each completed gesture commits at most once.
+// Qt-facing entries stay on VelocityPage; this extension owns no separate state or bridge.
 
 @MainActor
 extension VelocityPage {
@@ -156,7 +147,7 @@ extension VelocityPage {
         case .ramp:
             updateRampPreview(x: x, y: y)
         case .pendingBand:
-            if abs(x - live.pressX) + abs(y - live.pressY) >= dragDistance {
+            if manhattanExceeds(press: (live.pressX, live.pressY), x: x, y: y, threshold: dragDistance) {
                 live.kind = .band
                 live.bandX = x
                 live.bandY = y
@@ -166,13 +157,12 @@ extension VelocityPage {
         case .band:
             updateBandPreview(x: x, y: y)
         case .pan:
-            let delta = x - live.previousX
+            let previousX = live.previousX
             live.previousX = x
             live.previousY = y
             gesture = live
-            if delta != 0, let session {
-                session.mutateCamera { $0.setHScroll($0.snapshot.scrollX - delta) }
-            }
+            var panX = previousX
+            DrawerPan.moved(x: x, previousX: &panX, session: session)
         }
         return true
     }
@@ -191,10 +181,8 @@ extension VelocityPage {
             return true
         }
         if button == VelocityQtButton.right {
-            // The secondary release resolves the band selection and never
-            // commits: a band replaces the selection (or extends it under the
-            // modifier), and a stationary secondary press toggles the pressed
-            // note or clears an empty selection.
+            // Secondary release only resolves selection: a band replaces or extends it,
+            // while a stationary press toggles a note or clears empty space.
             switch live.kind {
             case .band:
                 var selection = live.controlPress ? selectionBeforePress : []
@@ -202,20 +190,12 @@ extension VelocityPage {
                 finishGesture(commit: false)
                 setSelection(selection)
             case .pendingBand:
-                if live.controlPress {
-                    var selection = session?.selectedNoteOrder ?? []
-                    if let pressed = pressedNote {
-                        if selection.contains(pressed) {
-                            selection.removeAll { $0 == pressed }
-                        } else {
-                            selection.append(pressed)
-                        }
-                    }
+                if live.controlPress || pressedNote == nil {
+                    let selection = stationaryPressSelection(
+                        control: live.controlPress, pressed: pressedNote,
+                        selection: session?.selectedNoteOrder ?? [])
                     finishGesture(commit: false)
                     setSelection(selection)
-                } else if pressedNote == nil {
-                    finishGesture(commit: false)
-                    setSelection([])
                 } else {
                     finishGesture(commit: false)
                 }
@@ -234,21 +214,10 @@ extension VelocityPage {
             finishGesture(commit: live.previousX != live.pressX || live.previousY != live.pressY)
         case .relative:
             if !live.relativeActivated {
-                if live.controlPress {
-                    var selection = selectionBeforePress
-                    if let pressed = pressedNote {
-                        if selection.contains(pressed) {
-                            selection.removeAll { $0 == pressed }
-                        } else {
-                            selection.append(pressed)
-                        }
-                    }
-                    setSelection(selection)
-                } else if let pressed = pressedNote {
-                    setSelection([pressed])
-                } else {
-                    setSelection([])
-                }
+                setSelection(
+                    stationaryPressSelection(
+                        control: live.controlPress, pressed: pressedNote,
+                        selection: selectionBeforePress))
             }
             finishGesture(commit: live.relativeActivated)
         case .pendingBand, .band, .pan:
@@ -281,8 +250,8 @@ extension VelocityPage {
             draft: String(initial))
         promptOpen = true
         promptDraft = String(initial)
-        setPublished(promptError, "") { promptError = $0 }
-        setPublished(promptInitialValue, initial) { promptInitialValue = $0 }
+        publish(\.promptError, "")
+        publish(\.promptInitialValue, initial)
         refreshInteractionPublished()
         publishHandles(projectHandles())
         return true
@@ -293,21 +262,21 @@ extension VelocityPage {
         live.draft = String(text.prefix(4))
         live.error = VelocityPromptPolicy.error(draft: live.draft)
         prompt = live
-        if promptDraft != live.draft { promptDraft = live.draft }
-        setPublished(promptError, live.error) { promptError = $0 }
+        publish(\.promptDraft, live.draft)
+        publish(\.promptError, live.error)
     }
 
     @discardableResult
     func dispatchAcceptPrompt() -> Bool {
         guard let session, let live = prompt else { return false }
         guard let value = VelocityPromptPolicy.value(draft: live.draft) else {
-            setPublished(promptError, VelocityPromptPolicy.error(draft: live.draft)) { promptError = $0 }
+            publish(\.promptError, VelocityPromptPolicy.error(draft: live.draft))
             return false
         }
         prompt = nil
         promptOpen = false
         promptDraft = ""
-        setPublished(promptError, "") { promptError = $0 }
+        publish(\.promptError, "")
         refreshInteractionPublished()
         defer { publishHandles(projectHandles()) }
         guard live.revision == session.document.revision,
@@ -330,7 +299,7 @@ extension VelocityPage {
         prompt = nil
         promptOpen = false
         promptDraft = ""
-        setPublished(promptError, "") { promptError = $0 }
+        publish(\.promptError, "")
         refreshInteractionPublished()
         publishHandles(projectHandles())
     }
@@ -367,7 +336,7 @@ extension VelocityPage {
     /// Re-derives the published interaction gate from the page's own state.
     func refreshInteractionPublished() {
         let active = gesture != nil || prompt != nil
-        if interactionActive != active { interactionActive = active }
+        publish(\.interactionActive, active)
     }
 
     func dispatchSetUseDetents(enabled: Bool) {
@@ -451,6 +420,21 @@ extension VelocityPage {
     private func commitVelocities(_ updates: [NoteVelocity], expectedRevision: UInt64) {
         guard let session, !updates.isEmpty else { return }
         _ = session.document.setVelocities(updates, expectedRevision: expectedRevision)
+    }
+
+    private func stationaryPressSelection(
+        control: Bool, pressed: NoteID?, selection: [NoteID]
+    ) -> [NoteID] {
+        guard control else { return pressed.map { [$0] } ?? [] }
+        var selection = selection
+        if let pressed {
+            if selection.contains(pressed) {
+                selection.removeAll { $0 == pressed }
+            } else {
+                selection.append(pressed)
+            }
+        }
+        return selection
     }
 
     private func setSelection(_ ids: [NoteID]) {

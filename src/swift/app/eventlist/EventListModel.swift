@@ -190,29 +190,24 @@ public struct EventListModel: Equatable, Sendable {
         guard rows.indices.contains(row), (0..<Self.columnCount).contains(column) else {
             return false
         }
-        let item = rows[row]
-        if item.isEndOfTrack { return column == 0 }
-        if item.tempo != nil { return column == 0 || column == 1 || column == 5 }
-        guard let event = item.event else { return false }
-        switch column {
-        case 0, 1:
-            return true
-        case 2:
-            return event.isChannel
-        case 3:
-            return event.isChannel || event.isMeta
-        case 4:
-            switch item.kind {
-            case .noteOff, .noteOn, .polyTouch, .cc, .bend:
-                return true
-            default:
-                return false
-            }
-        case 5:
-            return event.isMeta || event.isSystemExclusive
+        return Self.editableMask(for: rows[row]) & (1 << column) != 0
+    }
+
+    static func editableMask(for item: EventListRow) -> Int {
+        if item.isEndOfTrack { return 1 << 0 }
+        if item.tempo != nil { return (1 << 0) | (1 << 1) | (1 << 5) }
+        guard let event = item.event else { return 0 }
+        var mask = (1 << 0) | (1 << 1)
+        if event.isChannel { mask |= (1 << 2) | (1 << 3) }
+        if event.isMeta { mask |= 1 << 3 }
+        switch item.kind {
+        case .noteOff, .noteOn, .polyTouch, .cc, .bend:
+            mask |= 1 << 4
         default:
-            return false
+            break
         }
+        if event.isMeta || event.isSystemExclusive { mask |= 1 << 5 }
+        return mask
     }
 
     /// Validates the small editing contract needed to hold an in-cell session.

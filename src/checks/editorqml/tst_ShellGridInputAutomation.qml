@@ -10,10 +10,10 @@ ShellGridInputSupport {
         if (!statics || !statics.visible)
             return null
         var frame = RollNoteFaces.grab(testCase, statics)
-        var ink = String(page.gridPalette.selectionEdge).slice(-6).toLowerCase()
-        var rgb = [parseInt(ink.slice(0, 2), 16),
-                   parseInt(ink.slice(2, 4), 16),
-                   parseInt(ink.slice(4, 6), 16)]
+        var ink = page.gridPalette.selectionEdge
+        var rgb = [Math.round(ink.r * 255),
+                   Math.round(ink.g * 255),
+                   Math.round(ink.b * 255)]
         var sample = plot.mapToItem(statics, plot.width / 2, plot.height * 0.65)
         var y = Math.floor(sample.y * frame.height / statics.height)
         var first = -1

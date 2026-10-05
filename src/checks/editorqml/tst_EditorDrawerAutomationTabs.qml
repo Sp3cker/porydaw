@@ -84,14 +84,14 @@ EditorDrawerTestSupport {
         compare(activeTab.Accessible.selected, true, "the active parameter reports itself selected")
         compare(String(activeTab.Accessible.name).length > 0, true,
                 "a tab publishes its accessible name ('" + activeTab.Accessible.name + "')")
-        compare(String(activeTab.background.color).toLowerCase(),
-                testCase.drawerPalette().tabPressedBackground.toLowerCase(),
+        compare(Qt.colorEqual(activeTab.background.color,
+                              testCase.drawerPalette().tabPressedBackground), true,
                 "checked automation tab paints the pressed surface")
-        compare(String(findChild(activeTab, "automationParameterTabText").color).toLowerCase(),
-                testCase.drawerPalette().buttonPressedText.toLowerCase(),
+        compare(Qt.colorEqual(findChild(activeTab, "automationParameterTabText").color,
+                              testCase.drawerPalette().buttonPressedText), true,
                 "checked automation tab label paints pressed-surface ink")
-        compare(String(findChild(activeTab, "automationParameterEventCount").color).toLowerCase(),
-                testCase.drawerPalette().buttonPressedText.toLowerCase(),
+        compare(Qt.colorEqual(findChild(activeTab, "automationParameterEventCount").color,
+                              testCase.drawerPalette().buttonPressedText), true,
                 "checked automation tab count paints pressed-surface ink")
         var tempoTab = AutomationTabsSupport.automationTab(testCase, model.tabCount - 1)
         verify(tempoTab, "the Tempo tab is drawn last")
@@ -106,22 +106,22 @@ EditorDrawerTestSupport {
         tempoTab = AutomationTabsSupport.revealAutomationTab(testCase, model.tabCount - 1)
         mouseMove(AutomationTabsSupport.automationPlotInput(testCase), 4, 4)
         tryCompare(tempoTab, "hovered", false)
-        compare(String(tempoTab.background.color).toLowerCase(),
-                testCase.drawerPalette().automationTabBackground.toLowerCase(),
+        compare(Qt.colorEqual(tempoTab.background.color,
+                              testCase.drawerPalette().automationTabBackground), true,
                 "resting automation tab paints its dedicated surface")
-        compare(String(findChild(tempoTab, "automationParameterTabText").color).toLowerCase(),
-                testCase.drawerPalette().windowText.toLowerCase(),
+        compare(Qt.colorEqual(findChild(tempoTab, "automationParameterTabText").color,
+                              testCase.drawerPalette().windowText), true,
                 "resting automation tab label paints window ink")
-        compare(String(tempoTab.background.border.color).toLowerCase(),
-                testCase.drawerPalette().automationTabOutline.toLowerCase(),
+        compare(Qt.colorEqual(tempoTab.background.border.color,
+                              testCase.drawerPalette().automationTabOutline), true,
                 "resting automation tab uses its dedicated border")
         mouseMove(tempoTab, tempoTab.width / 2, tempoTab.height / 2)
         tryCompare(tempoTab, "hovered", true)
-        compare(String(tempoTab.background.color).toLowerCase(),
-                testCase.drawerPalette().tabHoverBackground.toLowerCase(),
+        compare(Qt.colorEqual(tempoTab.background.color,
+                              testCase.drawerPalette().tabHoverBackground), true,
                 "hovered automation tab paints the contrast-safe hover surface")
-        compare(String(findChild(tempoTab, "automationParameterTabText").color).toLowerCase(),
-                testCase.drawerPalette().windowText.toLowerCase(),
+        compare(Qt.colorEqual(findChild(tempoTab, "automationParameterTabText").color,
+                              testCase.drawerPalette().windowText), true,
                 "hovered automation tab label paints window ink")
         mouseMove(AutomationTabsSupport.automationPlotInput(testCase), 4, 4)
 
@@ -158,9 +158,9 @@ EditorDrawerTestSupport {
         var frame = grabImage(testCase.surface)
         var axis = findChild(page, "automationAxis")
         var background = PixelSupport.channelsOf(testCase, testCase.drawerPalette().rollBackground)
-        var barColor = String(testCase.drawerPalette().gridLineBar)
+        var barColor = testCase.drawerPalette().gridLineBar
         var bar = PixelSupport.channelsOf(testCase, barColor)
-        var alpha = parseInt(barColor.slice(1, 3), 16) / 255
+        var alpha = barColor.a
         var blendedBar = bar.map(function(channel, index) {
             return Math.round(alpha * channel + (1 - alpha) * background[index])
         })
@@ -266,8 +266,8 @@ EditorDrawerTestSupport {
         verify(inclusionBar, "the selector composes the inclusion bar")
         tryCompare(inclusionBar, "visible", true, 2000,
                    "the selected occupied lane stays included after switching to an empty lane")
-        compare(String(inclusionBar.color).toLowerCase(),
-                testCase.drawerPalette().tabPressedBackground.toLowerCase(),
+        compare(Qt.colorEqual(inclusionBar.color,
+                              testCase.drawerPalette().tabPressedBackground), true,
                 "the inclusion bar uses the pressed automation tab color")
         AutomationTabsSupport.clickAutomationTab(testCase, trackTab)
         tryVerify(function() { return bootstrap.automationActiveParameterIndex() === trackTab }, 2000,

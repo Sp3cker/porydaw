@@ -3,9 +3,8 @@ import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
-import "../editorqml/NativeWait.js" as NativeWait
 
-TestCase {
+RollLaneSupport {
     id: testCase
 
     name: "SwiftRollAutomation"
@@ -14,40 +13,15 @@ TestCase {
     height: 640
     visible: true
 
-    property var overlay: null
-    property string openFailure: ""
+    verifySurface: true
 
-    RollQmlBootstrap {
-        id: bootstrap
-
-        ApplicationSession { id: session }
-    }
-
-    Connections {
-        target: session
-
-        function onOpenFailed(message) { testCase.openFailure = message }
-        function onOperationFailed(message) { testCase.openFailure = message }
-    }
-
-    Component {
-        id: overlayComponent
-
-        SwiftRollOverlay {
-            property var appSession: session
-        }
-    }
-
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
 
     function initTestCase() {
         bootstrap.seedDrawerPreferences(false, true, true, 0)
         verify(bootstrap.start("mus_route101"),
                "the staged route101 project starts opening")
         verify(waitForNative(function() {
-            return session.songOpen || testCase.openFailure.length > 0
+            return session.songOpen || session.lastSaveError.length > 0
         }, 30000), "the staged route101 song opened" + testCase.openDiagnostics())
         verify(waitForNative(function() {
             return session.songDockController().songListPresenter().totalCount > 0
@@ -55,41 +29,6 @@ TestCase {
         testCase.mountOverlay()
     }
 
-    function openDiagnostics() {
-        var details = ["projectRoot=" + bootstrap.projectRoot,
-                       "label=mus_route101",
-                       "projectOpen=" + session.projectOpen,
-                       "songOpen=" + session.songOpen]
-        if (testCase.openFailure.length > 0)
-            details.push("openFailed=" + testCase.openFailure)
-        if (session.lastSaveError.length > 0)
-            details.push("lastSaveError=" + session.lastSaveError)
-        return " (" + details.join("; ") + ")"
-    }
-
-    function mountOverlay() {
-        var item = overlayComponent.createObject(testCase, {
-            "width": testCase.width,
-            "height": testCase.height
-        })
-        verify(item, "the production overlay came up")
-        testCase.overlay = item
-        var surface = null
-        verify(waitForNative(function() {
-            surface = testCase.selectedSurface()
-            return surface !== null
-        }, 5000), "the selected tab's production EditorSurface mounted")
-        var drawer = findChild(surface, "editorDrawer")
-        verify(drawer, "the production drawer is mounted")
-        session.configurePersistence()
-        verify(waitForNative(function() {
-            return surface.visible && surface.width > 0 && surface.height > 0
-        }, 5000), "the mounted surface is drawn")
-    }
-
-    function selectedSurface() {
-        return testCase.overlay ? findChild(testCase.overlay, "swiftRollOverlay") : null
-    }
 
     function init() {
         bootstrap.cancelInput()
@@ -119,11 +58,6 @@ TestCase {
 
     // ---- shared lookups ------------------------------------------------------
 
-    function surface() {
-        var s = testCase.selectedSurface()
-        verify(s !== null, "the production EditorSurface is mounted")
-        return s
-    }
 
     function automationPage() {
         var page = findChild(surface(), "automationPage")
@@ -243,11 +177,11 @@ TestCase {
 
         mouseMove(testCase, hoverWindow.x, hoverWindow.y)
         tryCompare(model, "hoverVisible", true, 5000)
-        verify(model.hoverText.length > 0 && model.hoverLabelRect["width"] > 0,
+        verify(model.hoverText.length > 0 && model.hoverLabelRect.width > 0,
                "the hovered automation point publishes visible label geometry")
         mouseMove(testCase, leaveWindow.x, leaveWindow.y)
         tryCompare(model, "hoverVisible", false, 5000)
-        verify(model.hoverText === "" && model.hoverLabelRect["width"] === 0,
+        verify(model.hoverText === "" && model.hoverLabelRect.width === 0,
                "the hover decor clears its projected label on leave")
     }
 

@@ -319,7 +319,7 @@ SwiftRollTrackHeadersSupport {
         compare(h.viewportHeight, band.height)
         verify(rows.count > 0)
         compare(h.contentHeight, rows.count * h.rowHeight)
-        verify(Object.keys(h.appearance).length > 0)
+        verify(band.parent.appearance === h && h.buttonBackground !== undefined)
         var published = band.parent.bandRect
         var publishedOrigin = band.parent.mapToItem(s, published.x, published.y)
         tryVerify(function() {

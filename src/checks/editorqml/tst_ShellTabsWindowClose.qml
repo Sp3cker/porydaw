@@ -5,7 +5,7 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 
 ShellTabsSupport {
-    SignalSpy { id: projectReadySpy; signalName: "projectRootChanged" }
+    SignalSpy { id: projectReadySpy; signalName: "projectOpenChanged" }
     function safeDisconnect(signal, fn) {
         if (signal !== undefined)
             signal.disconnect(fn)

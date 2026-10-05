@@ -7,7 +7,7 @@ import Porydaw.Ui
 
 ShellWindowSupport {
     TabsDrawerProbe { id: projectSwitchFileProbe }
-    SignalSpy { id: projectReadySpy; signalName: "projectRootChanged" }
+    SignalSpy { id: projectReadySpy; signalName: "projectOpenChanged" }
 
     function test_savedWindowFrameRestoresAcrossShellSessions() {
         bootstrap.resetPreferences()
@@ -86,8 +86,8 @@ ShellWindowSupport {
         compare(shell.height, session.baseFontPx * 57, "window height follows fontPx(57)")
         compare(shell.chromeTypography.caption.pixelSize, caption.pixelSize,
                 "shell role map follows captured session")
-        compare(shell.font.pixelSize, body.pixelSize,
-                "window font follows captured body role")
+        tryVerify(function() { return shell.font.pixelSize === body.pixelSize }, 3000,
+                  "window font follows captured body role")
         waitForShellScene()
         const status = findChild(shell, "shellStatusText")
         const title = findChild(shell, "shellPolyphonyTitle")
@@ -187,7 +187,8 @@ ShellWindowSupport {
 
         verify(waitForNative(function() {
             return projectReadySpy.count === 1 && session.projectOpen
-                && session.songCount() > 0 && session.lastSaveError === ""
+                && session.songDockController().songListPresenter().totalCount > 0
+                && session.lastSaveError === ""
         }, 30000), "A092: the requested project becomes ready after its tabs close")
         compare(session.songTabs.tabCount, 0,
                 "A093: the completed project switch has an empty tab set")
@@ -248,7 +249,6 @@ ShellWindowSupport {
         var meter = findChild(shell, "shellPolyMeter")
         verify(meter !== null && !meter.visible, "the status meter is hidden with no song")
         compare(shell.title, "porydaw", "the empty shell names the application")
-        compare(presenter.windowModified, false, "the empty shell is not modified")
 
         session.openProject(bootstrap.projectRoot)
         verify(waitForNative(function() { return session.projectOpen }, 30000),
@@ -267,7 +267,6 @@ ShellWindowSupport {
             return shell.title === "mus_route101 — " + projectName + " — porydaw"
         }, 5000), "the selected song and project appear in the window title; actual="
                  + shell.title)
-        compare(presenter.windowModified, false, "the loaded clean song is not modified")
         verify(waitForNative(function() { return meter.visible }, 5000),
                "the selected loaded song exposes the status meter")
         compare(findChild(meter, "shellPolyPcmCaption").text, "PCM",
@@ -308,13 +307,9 @@ ShellWindowSupport {
         transport.setMasterVolume(86)
         verify(waitForNative(function() { return session.documentDirty }, 5000),
                "changing song master volume dirties the selected document")
-        verify(waitForNative(function() { return presenter.windowModified }, 5000),
-               "the title presenter publishes the dirty state")
         presenter.activate("file.save_song")
         verify(waitForNative(function() { return !session.documentDirty && !session.saveInProgress },
                              30000), "saving the edited song clears the dirty state")
-        verify(waitForNative(function() { return !presenter.windowModified }, 5000),
-               "saving clears the title modified state")
         var firstId = session.songTabs.selectedId
         var firstPage = session.songTabs.selectedPage
         session.openSong("mus_littleroot_test")

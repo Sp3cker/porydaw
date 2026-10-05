@@ -33,7 +33,37 @@ func syncModel<Element: QVariantGettable>(
     }
 }
 
-/// Writes only changed values without triggering observer writeback on reads.
-func setPublished<Value: Equatable>(_ current: Value, _ value: Value, set: (Value) -> Void) {
-    if current != value { set(value) }
+/// Retained rows: existing row objects update in place, new values append, extras drop.
+/// `update` returns whether the row changed; changed rows republish synchronously.
+@MainActor
+func syncRetained<Row: QVariantGettable, Value>(
+    _ model: QListModel<Row>, _ values: some Collection<Value>,
+    make: (Value) -> Row, update: (Row, Value) -> Bool
+) {
+    model.update {
+        var index = 0
+        for value in values {
+            if index < model.count {
+                let row = model[index]
+                if update(row, value) { model[index] = row }
+            } else {
+                model.replaceSubrange(index..<index, with: CollectionOfOne(make(value)))
+            }
+            index += 1
+        }
+        if model.count > index { model.replaceSubrange(index..<model.count, with: []) }
+    }
+}
+
+extension QObjectBuildable where Self: AnyObject {
+    /// Writes a published property only when it changes, naming it once.
+    @MainActor
+    func publish<Value: Equatable>(_ keyPath: ReferenceWritableKeyPath<Self, Value>, _ value: Value) {
+        if self[keyPath: keyPath] != value { self[keyPath: keyPath] = value }
+    }
+}
+
+extension QmlColor {
+    /// Transparent black: the seed for colours not yet published.
+    public static let clear = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
 }

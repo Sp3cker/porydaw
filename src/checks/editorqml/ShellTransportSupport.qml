@@ -1,28 +1,24 @@
 import QtQuick
 import QtTest
 import "GatedVisualsHelpers.js" as Helpers
-import "NativeWait.js" as NativeWait
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 
-TestCase {
+ShellLaneSupport {
     name: "ShellTransport"
     when: windowShown
     width: 1100
     height: 700
     visible: true
 
-    property var shell: null
     property alias bootstrap: bootstrapObject
     property alias shellComponent: shellFactory
     readonly property var settings: bootstrapObject.preferences
     ShellQmlBootstrap { id: bootstrapObject }
     Component { id: shellFactory; ShellWindow { width: 1100; height: 700; visible: true } }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
+    laneBootstrap: bootstrap
 
     function openShell(profileFontPx) {
         settings.setString("lastProjectDir", "")
@@ -52,33 +48,19 @@ TestCase {
         return transport
     }
 
-    function cleanup() {
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                    || !shell.shellPresenter.sceneActive
-            }, 5000), "close-all reaches the dirty-song gate or completes")
-            if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-            verify(waitForNative(function() { return shell.shellPresenter.closeReady }, 5000),
-                   "close completes after discarding the fixture edits")
-        }
-        shell.destroy()
-        shell = null
-        wait(0)
-    }
+    closeGateMessage: "close-all reaches the dirty-song gate or completes"
+    closeReadyMessage: "close completes after discarding the fixture edits"
 
-    function glyphRendersInk(bar, item, expectedHex) {
+    function glyphRendersInk(bar, item, expectedColor) {
         waitForRendering(bar)
         var image = grabImage(bar)
         verify(image.width > 0 && image.height > 0,
                "the transport bar renders a frame for " + item.objectName)
         var dpr = image.width / bar.width
         var origin = item.mapToItem(bar, 0, 0)
-        var expected = Helpers.channels(expectedHex)
+        var expected = [Math.round(expectedColor.r * 255),
+                        Math.round(expectedColor.g * 255),
+                        Math.round(expectedColor.b * 255)]
         var x0 = Math.max(0, Math.floor(origin.x * dpr))
         var y0 = Math.max(0, Math.floor(origin.y * dpr))
         var x1 = Math.min(image.width - 1,

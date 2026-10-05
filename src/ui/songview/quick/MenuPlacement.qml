@@ -1,4 +1,5 @@
 pragma Singleton
+pragma ComponentBehavior: Bound
 import QtQuick
 
 // Item-hosted menus stay inside their host; a submenu opens beside its row,

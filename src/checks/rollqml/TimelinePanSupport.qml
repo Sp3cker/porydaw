@@ -3,14 +3,11 @@ import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
-import "../editorqml/NativeWait.js" as NativeWait
 import "../editorqml/RollNoteFaces.js" as RollNoteFaces
 
-TestCase {
+RollLaneSupport {
     id: testCaseRoot
     readonly property var testCase: testCaseRoot
-    property alias bootstrap: bootstrapObject
-    property alias session: sessionObject
 
     name: "TimelinePan"
     when: windowShown
@@ -18,40 +15,16 @@ TestCase {
     height: 640
     visible: true
 
-    property var overlay: null
-    property string openFailure: ""
+    verifySurface: true
+    reserveRulerHeight: true
 
-    RollQmlBootstrap {
-        id: bootstrapObject
-
-        ApplicationSession { id: sessionObject }
-    }
-
-    Connections {
-        target: session
-
-        function onOpenFailed(message) { testCase.openFailure = message }
-        function onOperationFailed(message) { testCase.openFailure = message }
-    }
-
-    Component {
-        id: overlayComponent
-
-        SwiftRollOverlay {
-            property var appSession: session
-        }
-    }
-
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
 
     function initTestCase() {
         bootstrap.seedDrawerPreferences(false, true, true, 0)
         verify(bootstrap.start("mus_route101"),
                "the staged route101 project starts opening")
         verify(waitForNative(function() {
-            return session.songOpen || testCase.openFailure.length > 0
+            return session.songOpen || session.lastSaveError.length > 0
         }, 30000), "the staged route101 song opened" + testCase.openDiagnostics())
         verify(waitForNative(function() {
             return session.songDockController().songListPresenter().totalCount > 0
@@ -59,45 +32,11 @@ TestCase {
         testCase.mountOverlay()
     }
 
-    function openDiagnostics() {
-        var details = ["projectRoot=" + bootstrap.projectRoot,
-                       "label=mus_route101",
-                       "projectOpen=" + session.projectOpen,
-                       "songOpen=" + session.songOpen]
-        if (testCase.openFailure.length > 0)
-            details.push("openFailed=" + testCase.openFailure)
-        if (session.lastSaveError.length > 0)
-            details.push("lastSaveError=" + session.lastSaveError)
-        return " (" + details.join("; ") + ")"
-    }
 
-    function mountOverlay() {
-        var item = overlayComponent.createObject(testCase, {
-            "width": testCase.width,
-            "height": testCase.height
-        })
-        verify(item, "the production overlay came up")
-        testCase.overlay = item
-        var surface = null
-        verify(waitForNative(function() {
-            surface = testCase.selectedSurface()
-            return surface !== null
-        }, 5000), "the selected tab's production EditorSurface mounted")
-        // Keep the note viewport's fixture height after reserving the ruler.
-        item.height += surface.gridModel.rulerHeight
-        var drawer = findChild(surface, "editorDrawer")
-        verify(drawer, "the production drawer is mounted")
-        session.configurePersistence()
-        verify(waitForNative(function() {
-            return surface.visible && surface.width > 0 && surface.height > 0
-        }, 5000), "the mounted surface is drawn")
+    onOverlayMounted: function(item, mounted, drawer) {
         verify(waitForNative(function() {
             return drawer.height > 0 && testCase.gutterBox().height > 0
         }, 5000), "the mounted drawer has sized the roll viewport")
-    }
-
-    function selectedSurface() {
-        return testCase.overlay ? findChild(testCase.overlay, "swiftRollOverlay") : null
     }
 
     function init() {
@@ -128,23 +67,6 @@ TestCase {
 
     // ---- shared lookups ------------------------------------------------------
 
-    function surface() {
-        var s = testCase.selectedSurface()
-        verify(s !== null, "the production EditorSurface is mounted")
-        return s
-    }
-
-    function grid() {
-        var g = surface().gridModel
-        verify(g !== null, "the grid presenter is published")
-        return g
-    }
-
-    function rollInput() {
-        var input = findChild(surface(), "swiftRollInput")
-        verify(input !== null, "the roll input MouseArea exists")
-        return input
-    }
 
     function gutterBox() {
         var box = findChild(surface(), "timelineQuickRollGutter")

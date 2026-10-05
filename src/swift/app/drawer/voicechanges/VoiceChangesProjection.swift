@@ -16,58 +16,22 @@ public final class VoiceMarkerHandle: QVariantGettable {
     public var slotBlank: Bool = false
     public var symbol: String = ""
     public var label: String = ""
-    public var labelRect: [String: QVariantSettable] = VoiceMarkerHandle.rect(0, 0, 0, 0)
-    public var labelColor: String = ""
+    public var labelX: Double = 0
+    public var labelY: Double = 0
+    public var labelWidth: Double = 0
+    public var labelHeight: Double = 0
+    public var labelColor: QmlColor = .clear
     public var x: Double = 0
     public var lineTop: Double = 0
     public var lineBottom: Double = 0
     public var lineWidth: Double = 0
-    public var lineColor: String = ""
+    public var lineColor: QmlColor = .clear
     public var selected: Bool = false
     public var hovered: Bool = false
     public var preview: Bool = false
     public var offscreen: Bool = false
     public var primitiveName: String = "voiceChangeMarker"
 
-    /// Everything the marker delegate needs in one map: the delegate's
-    /// model-data object exposes stored properties only, so this is a stored
-    /// role — `refreshSpec()` must run after fields are assigned.
-    /// `labelRect` flattens to scalar keys so the map stays one level deep.
-    public var spec: [String: QVariantSettable] = [:]
-
-    @QtIgnored
-    func refreshSpec() {
-        spec = [
-            "x": x, "lineTop": lineTop, "lineBottom": lineBottom,
-            "lineWidth": lineWidth, "lineColor": lineColor,
-            "selected": selected, "hovered": hovered, "offscreen": offscreen,
-            "label": label, "labelColor": labelColor,
-            "labelX": labelRect["x"] ?? 0.0, "labelY": labelRect["y"] ?? 0.0,
-            "labelWidth": labelRect["width"] ?? 0.0,
-            "labelHeight": labelRect["height"] ?? 0.0,
-            "primitiveName": primitiveName,
-        ]
-    }
-
-    static func rect(
-        _ x: Double, _ y: Double, _ w: Double, _ h: Double
-    )
-        -> [String: QVariantSettable]
-    {
-        ["x": x, "y": y, "width": w, "height": h]
-    }
-
-    static func rectMatches(
-        _ lhs: [String: QVariantSettable],
-        _ rhs: [String: QVariantSettable]
-    ) -> Bool {
-        for key in ["x", "y", "width", "height"] {
-            guard let left = lhs[key] as? Double, let right = rhs[key] as? Double,
-                left == right
-            else { return false }
-        }
-        return true
-    }
 
     @QtIgnored
     func matches(_ other: VoiceMarkerHandle) -> Bool {
@@ -79,7 +43,8 @@ public final class VoiceMarkerHandle: QVariantGettable {
             && selected == other.selected && hovered == other.hovered
             && preview == other.preview && offscreen == other.offscreen
             && primitiveName == other.primitiveName
-            && VoiceMarkerHandle.rectMatches(labelRect, other.labelRect)
+            && labelX == other.labelX && labelY == other.labelY
+            && labelWidth == other.labelWidth && labelHeight == other.labelHeight
     }
 }
 
@@ -210,14 +175,13 @@ public final class VoiceMenuRowHandle {
 /// Captions measured through the native font metrics used by the roll.
 @MainActor
 final class VoiceCaption {
-    let fontMap: [String: QVariantSettable]
-    let height: Double
-    private let metrics: NativeFontMetrics
+    let font: QmlFont
+    var height: Double { metrics.height }
+    private let metrics: LaneCaptionMetrics
 
     init(font: GridFontSpec) {
-        fontMap = font.map
-        metrics = NativeFontMetrics(font)
-        height = metrics.extents.height
+        self.font = font.qmlFont
+        metrics = LaneCaptionMetrics(font: font)
     }
 
     func advance(_ text: String) -> Double { metrics.advance(text) }
@@ -255,8 +219,8 @@ struct VoiceMarkerProjectionInput {
     var gap: Double
     var stairLimit: Double
     var physicalPixel: Double
-    var labelColor: String
-    var lineColor: String
+    var labelColor: QmlColor
+    var lineColor: QmlColor
     var selectedIdentity: String?
     var hoverIdentity: String?
     var previewIdentity: String?
@@ -270,12 +234,12 @@ struct VoiceGutterProjectionInput {
     var pad: Double
     var title: String
     var summary: String?
-    var titleFont: [String: QVariantSettable]
-    var captionFont: [String: QVariantSettable]
+    var titleFont: QmlFont
+    var captionFont: QmlFont
     var titleHeight: Double
     var captionHeight: Double
-    var titleColor: String
-    var captionColor: String
+    var titleColor: QmlColor
+    var captionColor: QmlColor
 }
 
 struct VoiceReadoutProjection {
@@ -283,7 +247,7 @@ struct VoiceReadoutProjection {
     var blank: Bool
     var symbol: String
     var text: String
-    var rect: [String: QVariantSettable]
+    var rect: CGRect
 }
 
 /// Pure layout/projection of lane data into published marker, span, picker and
@@ -375,7 +339,7 @@ enum VoiceChangesProjection {
             blank: view?.voice == nil && view?.tone == nil,
             symbol: view?.voice?.symbol ?? "",
             text: label.isEmpty ? "No voice" : label,
-            rect: VoiceMarkerHandle.rect(pad, 0, max(0, plotWidth - 2 * pad), plotHeight))
+            rect: CGRect(x: pad, y: 0, width: max(0, plotWidth - 2 * pad), height: plotHeight))
     }
 
     static func markers(
@@ -403,7 +367,7 @@ enum VoiceChangesProjection {
             let labelWidth: Double
             if let old, old.tick == Double(entry.tick), old.value == entry.value {
                 drawn = old.label
-                labelWidth = old.labelRect["width"] as? Double ?? 0
+                labelWidth = old.labelWidth
             } else {
                 let label = VoiceLanePolicy.label(slot: entry.value, view: view)
                 let source = label.isEmpty ? "No voice" : label
@@ -429,7 +393,7 @@ enum VoiceChangesProjection {
             // cheap state, retaining every unaffected immutable published row.
             if let old, old.tick == Double(entry.tick), old.value == entry.value,
                 old.label == drawn,
-                old.labelRect["y"] as? Double == labelY,
+                old.labelY == labelY,
                 old.selected == (input.selectedIdentity == entry.identity),
                 old.hovered == (input.hoverIdentity == entry.identity),
                 old.preview == (input.previewIdentity == entry.identity)
@@ -444,7 +408,10 @@ enum VoiceChangesProjection {
             handle.slotBlank = view?.voice == nil && view?.tone == nil
             handle.symbol = view?.voice?.symbol ?? ""
             handle.label = drawn
-            handle.labelRect = VoiceMarkerHandle.rect(labelX, labelY, labelWidth, labelHeight)
+            handle.labelX = labelX
+            handle.labelY = labelY
+            handle.labelWidth = labelWidth
+            handle.labelHeight = labelHeight
             handle.labelColor = input.labelColor
             handle.x = labelX - input.pad
             handle.lineTop = input.pad
@@ -455,7 +422,6 @@ enum VoiceChangesProjection {
             handle.hovered = input.hoverIdentity == entry.identity
             handle.preview = input.previewIdentity == entry.identity
             handle.offscreen = offscreen
-            handle.refreshSpec()
             values.append(handle)
         }
         return values
@@ -494,17 +460,6 @@ enum VoiceChangesProjection {
         }
     }
 
-    static func syncTexts(_ model: QListModel<SceneText>, _ values: [SceneText]) {
-        syncModel(model, values, matches: textMatches)
-    }
-
-    static func syncPickerRows(
-        _ model: QListModel<VoicePickerRowHandle>,
-        _ values: [VoicePickerRowHandle]
-    ) {
-        syncModel(model, values, matches: { $0.matches($1) })
-    }
-
     static func publishPickerRows(
         _ model: QListModel<VoicePickerRowHandle>,
         snapshots: inout [VoicePickerRowHandle],
@@ -515,37 +470,10 @@ enum VoiceChangesProjection {
             && zip(snapshots, values).allSatisfy { $0.program == $1.program }
         snapshots = values
         if samePrograms {
-            syncPickerRows(model, values)
+            syncModel(model, values, matches: { $0.matches($1) })
         } else {
             model.reset(to: values)
         }
     }
 
-    static func syncMenuRows(
-        _ model: QListModel<VoiceMenuRowHandle>,
-        _ values: [VoiceMenuRowHandle]
-    ) {
-        syncModel(model, values, matches: { $0.matches($1) })
-    }
-
-    static func textMatches(_ lhs: SceneText, _ rhs: SceneText) -> Bool {
-        lhs.labelText == rhs.labelText && lhs.labelColor == rhs.labelColor
-            && lhs.labelHorizontalAlignment == rhs.labelHorizontalAlignment
-            && lhs.labelVerticalAlignment == rhs.labelVerticalAlignment
-            && VoiceMarkerHandle.rectMatches(lhs.labelRect, rhs.labelRect)
-            && lhs.labelFont.count == rhs.labelFont.count
-            && lhs.labelFont.allSatisfy {
-                String(describing: $1) == String(describing: rhs.labelFont[$0])
-            }
-    }
-
-    static func fontMatches(
-        _ lhs: [String: QVariantSettable],
-        _ rhs: [String: QVariantSettable]
-    ) -> Bool {
-        lhs.count == rhs.count
-            && lhs.allSatisfy {
-                String(describing: $1) == String(describing: rhs[$0])
-            }
-    }
 }

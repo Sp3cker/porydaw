@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Layouts
 import PorydawApp
 
@@ -9,9 +9,11 @@ Item {
     id: picker
     required property VoiceListController controller
     required property VoiceEditorController draft
-    required property var colors
+    required property GridPalette colors
     required property ApplicationSession applicationSession
     readonly property real baseFontPx: applicationSession.baseFontPx
+    final readonly property real hostWindowWidth: Window.width
+    final readonly property real hostWindowHeight: Window.height
     required property bool waveMode
     property string clickedSymbol: ""
     property bool positioning: false
@@ -19,54 +21,31 @@ Item {
         if (!visible)
             popup.close()
     }
-    readonly property var entries: {
-        controller.catalogRevision
-        const filter = search.text.trim().toLowerCase()
-        const sections = waveMode
-                         ? [{ title: qsTr("Waves"), symbols: controller.waveChoices(), split: false }]
-                         : [{ title: qsTr("Keysplits"), symbols: controller.keysplitPickerSymbols(), split: true },
-                            { title: qsTr("Samples"), symbols: controller.sampleSymbols(), split: false },
-                            { title: qsTr("Phonemes"), symbols: controller.phonemeSymbols(), split: false }]
-        const visible = sections.filter(section => section.symbols.length > 0)
-        const rows = []
-        let exact = false
-        for (const section of visible) {
-            const matches = section.symbols.filter(symbol =>
-                !filter || symbol.toLowerCase().includes(filter)
-                || picker.displayName(symbol).toLowerCase().includes(filter))
-            if (matches.length === 0)
-                continue
-            if (visible.length > 1)
-                rows.push({ symbol: "", label: section.title, split: false })
-            for (const symbol of matches) {
-                exact = exact || symbol === search.text.trim()
-                rows.push({ symbol: symbol, label: waveMode ? symbol
-                                                            : picker.displayName(symbol),
-                            split: section.split })
-            }
-        }
-        if (filter && !exact)
-            rows.push({ symbol: search.text.trim(), label: qsTr("Use \"%1\"").arg(search.text.trim()),
-                        split: false, typed: true })
-        return rows
-    }
+    readonly property SamplePickerRow selectedEntry: controller.samplePickerRow(list.currentIndex) as SamplePickerRow
+    onWaveModeChanged: controller.configureSamplePicker(search.text, waveMode)
+    Component.onCompleted: controller.configureSamplePicker(search.text, waveMode)
     signal picked(string symbol)
 
-    function displayName(symbol) {
-        for (const prefix of ["DirectSoundWaveData_", "ProgrammableWaveData_", "voicegroup_"]) {
-            if (symbol.startsWith(prefix) && symbol.length > prefix.length)
-                return symbol.slice(prefix.length)
+    function displayName(symbol: string): string {
+        return picker.controller.sampleDisplayName(symbol)
+    }
+
+    function currentEntry(): SamplePickerRow {
+        return picker.selectedEntry
+    }
+
+    function entryIndex(symbol: string, listedOnly: bool): int {
+        for (let index = 0; index < picker.controller.samplePickerCount; index++) {
+            const entry = picker.controller.samplePickerRow(index) as SamplePickerRow
+            if (entry && entry.symbol && (!symbol || entry.symbol === symbol)
+                    && (!listedOnly || !entry.typed))
+                return index
         }
-        return symbol
+        return -1
     }
 
-    function currentEntry() {
-        const index = list.currentIndex
-        return index >= 0 && index < entries.length ? entries[index] : null
-    }
-
-    function highlight(index) {
-        const entry = entries[index]
+    function highlight(index: int): void {
+        const entry = controller.samplePickerRow(index) as SamplePickerRow
         if (!entry || !entry.symbol)
             return
         list.currentIndex = index
@@ -76,7 +55,7 @@ Item {
         }
     }
 
-    function commit() {
+    function commit(): void {
         const entry = currentEntry()
         if (!entry || !entry.symbol)
             return
@@ -98,13 +77,13 @@ Item {
         id: popup
         objectName: "vgSamplePickerPopup"
         parent: picker
-        font: Qt.font(picker.applicationSession.typographyFonts.body)
+        font: picker.applicationSession.typographyFonts.body
         property real spacingPx: Math.max(1, Math.round(picker.baseFontPx / 3))
         x: 0
         y: trigger.height
         width: Math.min(Math.max(picker.width, picker.baseFontPx * 28.33),
-                        picker.Window.width - leftMargin - rightMargin)
-        height: Math.min(picker.baseFontPx * 35, picker.Window.height - topMargin - bottomMargin)
+                        picker.hostWindowWidth - leftMargin - rightMargin)
+        height: Math.min(picker.baseFontPx * 35, picker.hostWindowHeight - topMargin - bottomMargin)
         // Like the style's ComboBox and Menu popups, stay inside the window.
         margins: spacingPx
         padding: spacingPx
@@ -119,9 +98,10 @@ Item {
             picker.positioning = true
             search.text = ""
             picker.clickedSymbol = ""
-            let current = picker.entries.findIndex(row => row.symbol === picker.draft.symbol)
+            picker.controller.configureSamplePicker(search.text, picker.waveMode)
+            let current = picker.entryIndex(picker.draft.symbol, false)
             if (current < 0)
-                current = picker.entries.findIndex(row => row.symbol.length > 0)
+                current = picker.entryIndex("", false)
             list.currentIndex = current
             if (current >= 0)
                 list.positionViewAtIndex(current, ListView.Center)
@@ -145,8 +125,8 @@ Item {
                 placeholderText: qsTr("Search samples…")
                 onAccepted: picker.commit()
                 Keys.onDownPressed: {
-                    for (let i = list.currentIndex + 1; i < picker.entries.length; i++) {
-                        if (picker.entries[i].symbol) {
+                    for (let i = list.currentIndex + 1; i < picker.controller.samplePickerCount; i++) {
+                        if ((picker.controller.samplePickerRow(i) as SamplePickerRow).symbol) {
                             picker.highlight(i)
                             list.positionViewAtIndex(i, ListView.Contain)
                             break
@@ -155,7 +135,7 @@ Item {
                 }
                 Keys.onUpPressed: {
                     for (let i = list.currentIndex - 1; i >= 0; i--) {
-                        if (picker.entries[i].symbol) {
+                        if ((picker.controller.samplePickerRow(i) as SamplePickerRow).symbol) {
                             picker.highlight(i)
                             list.positionViewAtIndex(i, ListView.Contain)
                             break
@@ -163,14 +143,15 @@ Item {
                     }
                 }
                 onTextChanged: {
+                    picker.controller.configureSamplePicker(text, picker.waveMode)
                     if (!popup.opened || picker.positioning)
                         return
                     picker.clickedSymbol = ""
-                    const first = picker.entries.findIndex(row => row.symbol && !row.typed)
+                    const first = picker.entryIndex("", true)
                     if (first >= 0)
                         picker.highlight(first)
                     else
-                        list.currentIndex = picker.entries.findIndex(row => row.symbol)
+                        list.currentIndex = picker.entryIndex("", false)
                 }
             }
             ListView {
@@ -179,43 +160,44 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
-                model: picker.entries
+                model: picker.controller.samplePickerRows
                 // Delegates draw highlight; a following highlight animates frames while hidden.
                 highlightFollowsCurrentItem: false
                 delegate: ItemDelegate {
                     id: entry
                     required property int index
-                    required property var modelData
+                    required property string symbol
+                    required property string label
+                    required property bool split
+                    required property bool typed
+                    required property bool loops
                     width: list.width
                     height: picker.baseFontPx * 1.83
-                    enabled: !!modelData.symbol
+                    enabled: !!symbol
                     highlighted: list.currentIndex === index
                     contentItem: RowLayout {
                         spacing: popup.spacingPx
                         Label {
                             objectName: "vgSamplePickerRowText"
                             Layout.fillWidth: true
-                            text: entry.modelData.label
-                            font: entry.modelData.typed
-                                  ? Qt.font(Object.assign({},
-                                                          picker.applicationSession.typographyFonts.body,
-                                                          { italic: true }))
-                                  : !entry.modelData.symbol
-                                    ? Qt.font(picker.applicationSession.typographyFonts.bodyBold)
-                                    : entry.font
+                            text: entry.typed ? qsTr("Use \"%1\"").arg(entry.symbol)
+                                  : entry.symbol ? entry.label
+                                  : entry.label === "Keysplits" ? qsTr("Keysplits")
+                                  : entry.label === "Samples" ? qsTr("Samples")
+                                  : entry.label === "Phonemes" ? qsTr("Phonemes") : qsTr("Waves")
+                            font: entry.typed ? picker.applicationSession.typographyFonts.bodyItalic
+                                  : !entry.symbol ? picker.applicationSession.typographyFonts.bodyBold
+                                                  : entry.font
                             elide: Text.ElideRight
                             verticalAlignment: Text.AlignVCenter
-                            color: !entry.modelData.symbol ? picker.colors.secondaryText
+                            color: !entry.symbol ? picker.colors.secondaryText
                                    : entry.highlighted ? picker.colors.selectionText
                                                        : picker.colors.windowText
                         }
                         Label {
                             objectName: "vgSamplePickerLoopBadge"
                             Layout.preferredWidth: implicitWidth
-                            visible: !!entry.modelData.symbol && !entry.modelData.split
-                                     && !entry.modelData.typed
-                                     && (picker.controller.pickerInfoRevision,
-                                         picker.controller.pickerRowLoops(entry.modelData.symbol))
+                            visible: !!entry.symbol && !entry.split && !entry.typed && entry.loops
                             text: "∞"
                             color: entry.highlighted ? picker.colors.selectionText
                                                      : picker.colors.windowText
@@ -225,7 +207,7 @@ Item {
                         }
                     }
                     onClicked: {
-                        const symbol = modelData.symbol
+                        const symbol = entry.symbol
                         if (symbol === picker.clickedSymbol) {
                             picker.commit()
                         } else {
@@ -239,12 +221,10 @@ Item {
                 objectName: "vgSamplePickerDetail"
                 Layout.fillWidth: true
                 color: picker.colors.secondaryText
-                text: {
-                    const entry = picker.currentEntry()
-                    picker.controller.pickerInfoRevision
-                    return entry ? picker.controller.pickerDetail(
-                                       entry.symbol, !!entry.split, !!entry.typed) : ""
-                }
+                text: !picker.selectedEntry ? ""
+                      : picker.selectedEntry.typed ? qsTr("Unlisted symbol")
+                      : picker.selectedEntry.split ? qsTr("Keysplit instrument")
+                      : picker.selectedEntry.detail
             }
         }
         Timer {

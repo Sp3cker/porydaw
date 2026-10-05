@@ -3,10 +3,9 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 import "RollNoteFaces.js" as RollNoteFaces
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellClipboard"
     when: windowShown
@@ -14,7 +13,6 @@ TestCase {
     height: 640
     visible: true
 
-    property var shell: null
     readonly property var settings: bootstrap.preferences
     property alias bootstrap: nativeBootstrap
     property alias clipProbe: nativeClipProbe
@@ -28,30 +26,7 @@ TestCase {
 
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
 
-
-    function cleanup() {
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                    || !shell.shellPresenter.sceneActive
-            }, 5000), "the close-all walk reaches the dirty gate or completes")
-            if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.closeReady
-            }, 5000), "teardown waits for scene destruction and grid detach")
-        }
-        shell.destroy()
-        shell = null
-        wait(0)
-    }
-
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
+    laneBootstrap: bootstrap
 
     function openRoute101() {
         settings.setString("lastProjectDir", "")
@@ -82,8 +57,6 @@ TestCase {
         return findChild(page, "swiftRollOverlay")
     }
 
-    function gridNotes(grid) { return JSON.parse(grid.fetchNoteSummary()) }
-
     function editableNotes(grid) {
         return gridNotes(grid).filter(function(note) {
             return !note.ghost && note.track === grid.trackIndex
@@ -97,14 +70,6 @@ TestCase {
         return notes.map(function(note) {
             return [note.id, note.track, note.tick, note.pitch, note.duration, note.velocity].join(":")
         }).sort().join(";")
-    }
-
-    function noteById(grid, id) {
-        var list = gridNotes(grid)
-        for (var i = 0; i < list.length; ++i)
-            if (list[i].id === id)
-                return list[i]
-        return null
     }
 
     function selectedCount(grid) {

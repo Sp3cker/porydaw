@@ -142,9 +142,9 @@ ShellMenusSupport {
         var editInsert = findChild(shell, "shellAction_edit.insert_time")
         verify(surface && ruler && editInsert, "the selected tab mounts both Edit and ruler actions")
         var grid = surface.gridModel
-        compare(presenter.actionEnabled("edit.insert_time"), true,
+        compare(presenter.action("edit.insert_time").enabled, true,
                 "Insert Time remains available without a selected span")
-        compare(editInsert.enabled, true, "the mounted Edit row offers cursor insertion")
+        tryCompare(editInsert, "enabled", true, 3000, "the mounted Edit row offers cursor insertion")
         var x = ruler.width * 0.28
         mouseClick(ruler, x, ruler.height * 0.75, Qt.RightButton)
         tryVerify(function() { return surface.rulerMenu.isOpen }, 3000,
@@ -163,7 +163,7 @@ ShellMenusSupport {
         compare(panel.rowItem(0).itemData.actionId, 1)
         compare(panel.rowItem(0).itemData.enabled, true,
                 "the cursor ruler Insert Time row is available without a selected span")
-        compare(presenter.actionEnabled("edit.insert_time"), true,
+        compare(presenter.action("edit.insert_time").enabled, true,
                 "the ruler cursor menu preserves Edit Insert Time availability")
         keyClick(Qt.Key_Escape)
         tryCompare(surface.rulerMenu, "isOpen", false)

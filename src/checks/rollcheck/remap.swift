@@ -58,9 +58,7 @@ func runRemapChecks(_ report: CheckReport, session: DocumentSession) {
             "second-owner note fixture could not be seeded: \(error)")
         return
     }
-    let headers = TrackHeadersPresenter()
-    headers.attach(session: session, palette: GridPalette())
-    headers.configureViewport(width: 228, height: 240, fontPx: 13, dpr: 1)
+    let headers = makeRollHeaderFixture(session: session, viewport: (228, 240))
     let probe = RemapProbe(session: session, headers: headers)
     session.onChange = {
         probe.receive($0); previousChange?($0)
@@ -565,9 +563,7 @@ private func checkRawPromotion(_ report: CheckReport, fixture: DocumentSession) 
         lease: fixture.bankLease, slots: fixture.bankSlots,
         dirty: false, loadName: fixture.bankLoadName)
     session.selectedTrack = 0
-    let headers = TrackHeadersPresenter()
-    headers.attach(session: session, palette: GridPalette())
-    headers.configureViewport(width: 228, height: 240, fontPx: 13, dpr: 1)
+    let headers = makeRollHeaderFixture(session: session, viewport: (228, 240))
     let probe = RemapProbe(session: session, headers: headers)
     session.onChange = { probe.receive($0) }
     var cosmetics = EditorViewState()

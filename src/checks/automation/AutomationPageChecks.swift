@@ -144,18 +144,14 @@ struct drawerAutomationAutomationFixture {
         tempo: [(Tick, UInt32)] = [(0, 500_000)], baseFontPx: Double = 13,
         plotted: Bool = true, config: SongConfig? = nil, tailTick: Tick? = 576
     ) {
-        let document = SongDocument(
+        let session = makeSyntheticSession(
+            suite: suite, service: service,
             file: drawerAutomationAutomationMidi(
                 division: division, volume: volume, pan: pan,
                 modulation: modulation, lfo: lfo, echo: echo, tempo: tempo,
                 tailTick: tailTick),
-            config: config ?? suite.document.state.config, source: suite.document.source,
-            trackBudget: suite.document.trackBudget)
-        let session = DocumentSession(
-            document: document, service: service,
-            lease: suite.bankLease, slots: suite.bankSlots,
-            dirty: false, loadName: suite.bankLoadName,
-            sampleRate: 48_000)
+            config: config)
+        let document = session.document
         if !echo.isEmpty {
             // XCMD lanes are selector/payload traffic, not raw controller
             // events: they are written through the document's own lane API.

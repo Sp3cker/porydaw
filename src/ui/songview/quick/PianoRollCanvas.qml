@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Porydaw.Ui
 import PorydawApp
@@ -5,9 +7,9 @@ import PorydawApp
 Item {
     id: root
 
-    required property Item bandSide
-    required property Item plotSide
-    required property PianoGrid gridModel
+    final required property Item bandSide
+    final required property Item plotSide
+    final required property PianoGrid gridModel
 
     DisplayList {
         parent: root.plotSide
@@ -40,10 +42,10 @@ Item {
     Rectangle {
         parent: root.bandSide
         objectName: "timelineQuickPianoHoverChip"
-        x: root.gridModel.scene.hoverChipRect.x
-        y: root.gridModel.scene.hoverChipRect.y
-        width: root.gridModel.scene.hoverChipRect.width
-        height: root.gridModel.scene.hoverChipRect.height
+        x: root.gridModel.scene.hoverChipX
+        y: root.gridModel.scene.hoverChipY
+        width: root.gridModel.scene.hoverChipWidth
+        height: root.gridModel.scene.hoverChipHeight
         visible: root.gridModel.scene.hoverChipVisible
         color: root.gridModel.scene.hoverChipFill
         radius: root.gridModel.scene.hoverChipRadius
@@ -53,14 +55,14 @@ Item {
     Text {
         parent: root.bandSide
         objectName: "timelineQuickPianoHoverChipText"
-        x: root.gridModel.scene.hoverChipRect.x
-        y: root.gridModel.scene.hoverChipRect.y
-        width: root.gridModel.scene.hoverChipRect.width
-        height: root.gridModel.scene.hoverChipRect.height
+        x: root.gridModel.scene.hoverChipX
+        y: root.gridModel.scene.hoverChipY
+        width: root.gridModel.scene.hoverChipWidth
+        height: root.gridModel.scene.hoverChipHeight
         visible: root.gridModel.scene.hoverChipVisible
         text: root.gridModel.scene.hoverChipText
         color: root.gridModel.scene.hoverChipTextColor
-        font: Qt.font(root.gridModel.scene.hoverChipFont)
+        font: root.gridModel.scene.hoverChipFont
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         textFormat: Text.PlainText

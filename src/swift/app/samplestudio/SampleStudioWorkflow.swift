@@ -25,6 +25,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     private var selectedZone = -1
 
     @QtTracked public var editorOpen = false
+    @QtIgnored var onEditorOpenChanged: (() -> Void)?
     @QtTracked public var editorRevision = 0
     @QtTracked public var pickerRequested = false
     @QtTracked public var pickerFolder = ""
@@ -222,7 +223,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                         return
                     }
                 }
-                session.statusMessage(
+                session.publishStatusMessage(
                     message: editing
                         ? "Saved \(name) - the ROM's .bin recompiles on the next build"
                         : "Imported \(name) - DirectSoundWaveData_\(name) is now available to voicegroups")
@@ -245,7 +246,6 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         pendingTask = nil
         committing = false
         player?.close()
-        editorOpen = false
         stereoPromptOpen = false
         pickerRequested = false
         zonePickerOpen = false
@@ -257,17 +257,26 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         editName = nil
         selectedZone = -1
         reopenFromSource = false
-        // The Loader still evaluates bindings while it tears down the dialog.
-        // Yield the main actor so QML can unload the dialog first.
-        Task { @MainActor [weak self] in
-            await Task.yield()
-            guard let self, !self.editorOpen, !self.zonePickerOpen else { return }
-            self.zonePresenter = nil
-            self.presenter = nil
-            self.tools = nil
-            self.wave = nil
-            self.player = nil
-        }
+        setEditorOpen(false)
+    }
+
+    private func setEditorOpen(_ open: Bool) {
+        guard editorOpen != open else { return }
+        editorOpen = open
+        onEditorOpenChanged?()
+    }
+
+    public func editorReleased() {
+        guard !editorOpen else { return }
+        presenter = nil
+        tools = nil
+        wave = nil
+        player = nil
+    }
+
+    public func zonePickerReleased() {
+        guard !zonePickerOpen else { return }
+        zonePresenter = nil
     }
 
     private func decodeSource(promptForPhaseCancellation: Bool = true) {
@@ -318,7 +327,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         self.wave = wave
         self.player = player
         editorRevision += 1
-        editorOpen = true
+        setEditorOpen(true)
     }
 
     private func assign(name: String, slot: Int) async throws {

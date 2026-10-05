@@ -4,10 +4,9 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 import "RollNoteFaces.js" as RollNoteFaces
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellWindow"
     when: windowShown
@@ -15,7 +14,6 @@ TestCase {
     height: 640
     visible: true
 
-    property var shell: null
     property alias bootstrap: _bootstrap
     property alias clipProbe: _clipProbe
     property alias copyActivatedSpy: _copyActivatedSpy
@@ -42,11 +40,11 @@ TestCase {
     Component { id: _intrinsicShellComponent; ShellWindow { visible: true } }
     FontMetrics {
         id: _footerCaptionMetrics
-        font: shell ? Qt.font(shell.chromeTypography.caption) : Application.font
+        font: shell ? shell.chromeTypography.caption : Application.font
     }
     FontMetrics {
         id: _footerBodyMetrics
-        font: shell ? Qt.font(shell.chromeTypography.body) : Application.font
+        font: shell ? shell.chromeTypography.body : Application.font
     }
     Component {
         id: _textProbeComponent
@@ -73,39 +71,13 @@ TestCase {
         }
     }
 
-
-    function cleanup() {
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                    || !shell.shellPresenter.sceneActive
-            }, 5000), "the close-all walk reaches the dirty gate or completes")
-            if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.closeReady
-            }, 5000), "teardown waits for scene destruction and grid detach")
-        }
+    function preDestroyShell() {
         copyActivatedSpy.target = null
         soloActivatedSpy.target = null
         bootstrap.children.length = 0
-        shell.destroy()
-        shell = null
-        wait(0)
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-
-    function waitForShellScene() {
-        verify(waitForNative(function() {
-            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
-        }, 10000), "the presented window mounts its deferred editor scene")
-    }
+    laneBootstrap: bootstrap
 
     function openTwoSongShell(beforeOpen) {
         settings.setBool("editorDrawer.velocityVisible", true)
@@ -145,19 +117,6 @@ TestCase {
         }, 5000, "the selected real tab page is mounted and drawn")
         return firstId
     }
-    function openDiagnostics(session) {
-        var labels = []
-        for (var i = 0; i < session.songCount() && i < 8; ++i)
-            labels.push(session.songLabel(i))
-        return " (projectRoot=" + bootstrap.projectRoot
-            + "; projectOpen=" + session.projectOpen
-            + "; songOpen=" + session.songOpen
-            + "; stagedLabels=[" + labels.join(",") + "]"
-            + "; lastSaveError=" + session.lastSaveError
-            + "; status=" + shell.shellPresenter.statusText + ")"
-    }
-
-    function gridNotes(grid) { return JSON.parse(grid.fetchNoteSummary()) }
 
     function selectedSurface() {
         if (!shell || !shell.sceneLoader || shell.sceneLoader.status !== Loader.Ready)

@@ -161,27 +161,6 @@ public final class VoicegroupSource {
         var endsWithNewline: Bool
     }
 
-    private struct MacroDefinition: Sendable {
-        let macro: VgMacro
-        let prefix: [UInt8]
-    }
-
-    // Ordered exactly as the C loader dispatches overlapping voice prefixes.
-    private static let macros: [MacroDefinition] = [
-        .init(macro: .directSoundNoResample, prefix: Array("voice_directsound_no_resample ".utf8)),
-        .init(macro: .directSoundAlt, prefix: Array("voice_directsound_alt ".utf8)),
-        .init(macro: .directSound, prefix: Array("voice_directsound ".utf8)),
-        .init(macro: .square1Alt, prefix: Array("voice_square_1_alt ".utf8)),
-        .init(macro: .square1, prefix: Array("voice_square_1 ".utf8)),
-        .init(macro: .square2Alt, prefix: Array("voice_square_2_alt ".utf8)),
-        .init(macro: .square2, prefix: Array("voice_square_2 ".utf8)),
-        .init(macro: .progWaveAlt, prefix: Array("voice_programmable_wave_alt".utf8)),
-        .init(macro: .progWave, prefix: Array("voice_programmable_wave".utf8)),
-        .init(macro: .noiseAlt, prefix: Array("voice_noise_alt ".utf8)),
-        .init(macro: .noise, prefix: Array("voice_noise ".utf8)),
-        .init(macro: .keysplitAll, prefix: Array("voice_keysplit_all ".utf8)),
-        .init(macro: .keysplit, prefix: Array("voice_keysplit ".utf8)),
-    ]
     private static let alignPrefix = Array(".align".utf8)
     private static let headerPrefix = Array("voice_group ".utf8)
     private static let cryReversePrefix = Array("cry_reverse ".utf8)
@@ -342,7 +321,7 @@ public final class VoicegroupSource {
                 if let startingSlot = Self.headerStartingSlot(text) { nextSlot = startingSlot }
                 continue
             }
-            let matchedMacro = Self.macros.first(where: { text.starts(with: $0.prefix) })
+            let matchedMacro = VoiceMacroSpec.all.first(where: { text.starts(with: $0.prefix) })
             let readOnly = text.starts(with: Self.cryReversePrefix) || text.starts(with: Self.cryPrefix)
             guard matchedMacro != nil || readOnly else { continue }
             line.slot = nextSlot
@@ -353,7 +332,7 @@ public final class VoicegroupSource {
                 line.macroText = Array(text[..<definition.prefix.count])
                 line.tail = Array(raw[bounds.upperBound...])
                 line.argPieces = Self.split(text[definition.prefix.count...], on: 44)
-                if let voice = Self.decode(definition.macro, pieces: line.argPieces) {
+                if let voice = Self.decode(definition, pieces: line.argPieces) {
                     line.kind = .editable
                     line.voice = voice
                 } else {
@@ -367,10 +346,8 @@ public final class VoicegroupSource {
         return parsed.sectionBegin >= 0 ? parsed : nil
     }
 
-    private static func decode(_ macro: VgMacro, pieces: [[UInt8]]) -> VgVoice? {
-        let expected =
-            macro == .keysplitAll ? 1 : macro == .keysplit ? 2 : (macro == .square1 || macro == .square1Alt ? 8 : 7)
-        guard pieces.count == expected else { return nil }
+    private static func decode(_ spec: VoiceMacroSpec, pieces: [[UInt8]]) -> VgVoice? {
+        guard pieces.count == spec.argumentCount else { return nil }
         let values = pieces.map { piece in
             var start = 0
             var end = piece.count
@@ -379,26 +356,26 @@ public final class VoicegroupSource {
             return Array(piece[start..<end])
         }
         for (index, value) in values.enumerated() {
-            let symbol = macro == .keysplit || macro == .keysplitAll || (vgMacroHasSymbol(macro) && index == 2)
+            let symbol = spec.category == .keysplit || index == spec.symbolField
             guard symbol ? !value.isEmpty : isInteger(value) else { return nil }
         }
-        var voice = VgVoice(macro: macro)
-        if macro == .keysplitAll {
+        var voice = VgVoice(macro: spec.macro)
+        if spec.category == .keysplitAll {
             voice.symbol = String(decoding: values[0], as: UTF8.self)
-        } else if macro == .keysplit {
+        } else if spec.category == .keysplit {
             voice.symbol = String(decoding: values[0], as: UTF8.self)
             voice.keysplitTable = String(decoding: values[1], as: UTF8.self)
         } else {
             voice.key = number(values[0])
             voice.pan = number(values[1])
             var index = 2
-            if vgMacroHasSymbol(macro) {
+            if spec.symbolField != nil {
                 voice.symbol = String(decoding: values[index], as: UTF8.self)
                 index += 1
-            } else if macro == .square1 || macro == .square1Alt {
+            } else if spec.category == .square1 {
                 voice.sweep = number(values[index]); index += 1
                 voice.duty = number(values[index]); index += 1
-            } else if macro == .square2 || macro == .square2Alt {
+            } else if spec.category == .square2 {
                 voice.duty = number(values[index]); index += 1
             } else {
                 voice.period = number(values[index]); index += 1

@@ -3,13 +3,10 @@ import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
-import "../editorqml/NativeWait.js" as NativeWait
 
-TestCase {
+RollLaneSupport {
     id: testCaseRoot
     readonly property var testCase: testCaseRoot
-    property alias bootstrap: bootstrapObject
-    property alias session: sessionObject
     property alias standaloneComponent: standaloneFixture
     name: "TimelineScrollbar"
     when: windowShown
@@ -17,23 +14,8 @@ TestCase {
     height: 640
     visible: true
 
-    property var overlay: null
-    property string openFailure: ""
     property real originalAutomationHeight: 0
 
-    RollQmlBootstrap {
-        id: bootstrapObject
-        ApplicationSession { id: sessionObject }
-    }
-    Connections {
-        target: session
-        function onOpenFailed(message) { testCase.openFailure = message }
-        function onOperationFailed(message) { testCase.openFailure = message }
-    }
-    Component {
-        id: overlayComponent
-        SwiftRollOverlay { property var appSession: session }
-    }
     Component {
         id: standaloneFixture
         Item {
@@ -63,11 +45,6 @@ TestCase {
         }
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-
-    function surface() { return overlay ? findChild(overlay, "swiftRollOverlay") : null }
     function grid() { return surface().gridModel }
     function bar(vertical) {
         return findChild(surface(), vertical ? "timelineRollScrollBar"
@@ -98,8 +75,8 @@ TestCase {
         bootstrap.seedDrawerPreferences(false, true, true, 0)
         verify(bootstrap.start("mus_route101"), "the staged song starts opening")
         verify(waitForNative(function() {
-            return session.songOpen || openFailure.length > 0
-        }, 30000), "the song opened: " + openFailure)
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), "the song opened: " + session.lastSaveError)
         verify(waitForNative(function() {
             return session.songDockController().songListPresenter().totalCount > 0
         }, 5000), "the Songs dock catalog is ready before checking scene-removal retention")

@@ -55,8 +55,7 @@ public final class RulerMenuPresenter {
     public var rows: QListModel<RulerMenuRow> = QListModel()
     @QtTracked public var menuKind = 0  // 1: ruler background; 2: selected time range
     @QtTracked public var insertTimePromptOpen = false
-    public var insertTimePromptAppearance: [String: QVariantSettable] = [:]
-    public var insertTimePromptFont: [String: QVariantSettable] = [:]
+    @QtTracked public var promptStyle = PromptStyle()
     public var insertTimePromptTitle: String = "Insert Time"
     public var insertTimePromptInitialBars: Int = 1
     public var insertTimePromptInitialBeats: Int = 0
@@ -238,6 +237,11 @@ public final class RulerMenuPresenter {
 
     public func targetTick() -> Double { Double(capturedTick) }
 
+    public func menuRow(index: Int) -> Optional<RulerMenuRow> {
+        guard index >= 0, index < rows.count else { return nil }
+        return rows[index]
+    }
+
     /// Returns true only when the guarded edit-time-signature row should open
     /// the existing form, after the menu is already dismissed.
     public func activate(actionId: Int) -> Bool {
@@ -299,20 +303,10 @@ public final class RulerMenuPresenter {
             segment.beatTicks, segment.beatsPerBar
         )
         insertTimePromptMaximumBeats = Int(segment.beatsPerBar - 1)
-        var appearance = PromptAppearance.metrics(base: grid.baseFontPx)
-        insertTimePromptFont = PromptAppearance.font(
-            typography: Typography(baseFontPx: Int(grid.baseFontPx.rounded())))
-        let palette = grid.palette
-        appearance["background"] = palette.chromeBackground
-        appearance["text"] = palette.primaryText
-        appearance["buttonText"] = palette.primaryText
-        appearance["buttonBackground"] = palette.chromeBackground
-        appearance["pressedBackground"] = palette.hoverChipFill
-        appearance["focus"] = palette.editCursor
-        appearance["selection"] = palette.tabSelectedBackground
-        appearance["selectionText"] = palette.selectionText
-        appearance["outline"] = palette.separator
-        insertTimePromptAppearance = appearance
+        let typography = Typography(baseFontPx: Int(grid.baseFontPx.rounded()))
+        promptStyle.update(
+            metrics: PromptAppearance.Layout(base: grid.baseFontPx),
+            palette: grid.palette, font: typography.body.qmlFont, surface: .chrome)
         insertTimePromptOpen = true
     }
 

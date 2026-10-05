@@ -1,6 +1,7 @@
 import Foundation
 import NativeDisplayList
 import PorydawCore
+import QtBridge
 
 @testable import PorydawApp
 
@@ -330,5 +331,9 @@ import PorydawCore
 
     static func argb(_ hex: String) -> UInt32 {
         SceneRectPacking.argb(hex)
+    }
+
+    static func argb(_ color: QmlColor) -> UInt32 {
+        PaletteMath.argb(color)
     }
 }

@@ -54,7 +54,7 @@ extension ProjectService {
     public func forkSongAs(label: String, snapshot: SaveSnapshot) async throws {
         let store = try requireStore()
         let label = SongListPresenter.normalizeSongLabel(text: label)
-        guard Self.isValidSongLabel(label) else {
+        guard SongName.isValid(label: label) else {
             throw ProjectServiceError.operationFailed("Invalid song label: \(label).")
         }
         let midiDir = URL(filePath: projectRoot, directoryHint: .isDirectory)
@@ -84,10 +84,6 @@ extension ProjectService {
                 player: source.player)
             self.snapshot = try await store.snapshot()
         } catch { throw projectFailure(error) }
-    }
-
-    public nonisolated static func isValidSongLabel(_ label: String) -> Bool {
-        SongName(label) != nil && label.range(of: #"^[a-z_][a-z0-9_]*$"#, options: .regularExpression) != nil
     }
 
     public func songRegistrationPlan(label: String) async throws -> SongRegistrationPlan {

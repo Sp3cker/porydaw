@@ -6,148 +6,10 @@ import QtBridge
 @MainActor
 @QtBridgeable
 public final class ShellPresenter: QmlInstantiableStatus {
-    private struct Action {
-        let id: String
-        let command: EditCommand?
-
-        init(_ id: String, _ command: EditCommand? = nil) {
-            self.id = id
-            self.command = command
-        }
-    }
-
-    private static let actions: [Action] = [
-        Action("file.open_project"),
-        Action("file.new_song"),
-        Action("file.import_midi"),
-        Action("songs.find"),
-        Action("file.save_song"),
-        Action("file.register_song"),
-        Action("file.close_tab"),
-        Action("file.export_wav"),
-        Action("file.quit"),
-        Action("edit.undo"),
-        Action("edit.redo"),
-        Action("edit.preferences"),
-        Action("edit.song_settings"),
-        Action("edit.engine_settings"),
-        Action("roll.copy", .copy),
-        Action("roll.cut", .cut),
-        Action("roll.duplicate_time", .duplicate),
-        Action("roll.paste", .paste),
-        Action("roll.delete", .delete),
-        Action("roll.select_all", .selectAll),
-        Action("edit.insert_time", .insertTime),
-        Action("edit.delete_time", .deleteTime),
-        Action("edit.clear_time_selection", .clearTimeSelection),
-        Action("edit.edit_time_signature", .editTimeSignature),
-        Action("edit.remove_time_signature", .removeTimeSignature),
-        Action("edit.set_loop_start", .setLoopStart),
-        Action("edit.set_loop_end", .setLoopEnd),
-        Action("edit.loop_from_selection", .loopFromSelection),
-        Action("edit.remove_loop", .removeLoop),
-        Action("roll.transpose_up", .transposeUp),
-        Action("roll.transpose_down", .transposeDown),
-        Action("roll.transpose_up_octave", .transposeUpOctave),
-        Action("roll.transpose_down_octave", .transposeDownOctave),
-        Action("roll.pitch_bend", .pitchBend),
-        Action("edit.set_velocity", .setVelocity),
-        Action("roll.nudge_left", .nudgeLeft),
-        Action("roll.nudge_right", .nudgeRight),
-        Action("roll.mute_tracks", .muteTracks),
-        Action("roll.solo_tracks", .soloTracks),
-        Action("automation.pencil_mode", .pencilMode),
-        Action("eventlist.move_up", .moveEventUp),
-        Action("eventlist.move_down", .moveEventDown),
-        Action("roll.split", .split),
-        Action("roll.join", .join),
-        Action("roll.lengthen_note", .lengthenNote),
-        Action("roll.shorten_note", .shortenNote),
-        Action("roll.grid_narrow", .gridNarrow),
-        Action("roll.grid_widen", .gridWiden),
-        Action("roll.grid_triplet", .gridTriplet),
-        Action("transport.go_to_start"),
-        Action("transport.play"),
-        Action("transport.play_pause"),
-        Action("transport.pause"),
-        Action("transport.stop"),
-        Action("transport.loop"),
-        Action("transport.follow_playhead"),
-        Action("transport.resonance"),
-        Action("view.event_list"),
-        Action("view.automation_drawer"),
-        Action("view.velocity_drawer"),
-        Action("view.voice_changes_drawer"),
-        Action("view.polyphony_debugger"),
-        Action("view.note_names"),
-        Action("tools.import_sample"),
-        Action("help.about"),
-    ]
-    private static let byId = Dictionary(uniqueKeysWithValues: actions.map { ($0.id, $0) })
-    private static let allActionIds = actions.map(\.id)
-    private static let fileIds = allActionIds.filter {
-        $0.hasPrefix("file.") && $0 != "file.export_wav" && $0 != "file.quit"
-    }
-    private static let fileExportIds = ["file.export_wav"]
-    private static let fileQuitIds = ["file.quit"]
-    private static let editTopIds = ["edit.undo", "edit.redo"]
-    private static let editClipboardIds = [
-        "roll.copy", "roll.cut", "roll.paste", "roll.delete", "roll.select_all", "songs.find",
-    ]
-    private static let timeIds = [
-        "edit.insert_time", "edit.delete_time", "roll.duplicate_time",
-        "edit.clear_time_selection", "edit.edit_time_signature", "edit.remove_time_signature",
-    ]
-    private static let notesIds = [
-        "roll.transpose_up", "roll.transpose_down",
-        "roll.transpose_up_octave", "roll.transpose_down_octave",
-        "roll.pitch_bend", "edit.set_velocity", "roll.duplicate_time", "roll.split", "roll.join",
-    ]
-    private static let moveIds = ["roll.nudge_left", "roll.nudge_right"]
-    private static let tracksIds = ["roll.mute_tracks", "roll.solo_tracks"]
-    private static let automationIds = ["automation.pencil_mode"]
-    private static let eventsIds = ["eventlist.move_up", "eventlist.move_down"]
-    private static let loopIds = [
-        "edit.set_loop_start", "edit.set_loop_end", "edit.loop_from_selection", "edit.remove_loop",
-    ]
-    private static let editTailIds = [
-        "edit.preferences", "edit.song_settings", "edit.engine_settings",
-    ]
-    private static let transportIds = [
-        "transport.go_to_start", "transport.play", "transport.play_pause",
-        "transport.pause", "transport.stop", "transport.loop",
-    ]
-    private static let viewIds =
-        allActionIds.filter { $0.hasPrefix("view.") }
-        + ["transport.follow_playhead"]
-    private static let toolsIds = ["tools.import_sample"]
-    private static let contextHeadIds = ["edit.set_velocity"]
-    private static let contextBodyIds = [
-        "roll.copy", "roll.cut", "roll.duplicate_time", "roll.split", "roll.join", "roll.delete",
-    ]
-    private static let menuLabels = [
-        "file.open_project": "Open Project...",
-        "file.import_midi": "Import MIDI...",
-        "file.export_wav": "Export WAV...",
-        "tools.import_sample": "Import Sample...",
-        "edit.preferences": "Preferences...",
-        "edit.song_settings": "Song Settings...",
-        "edit.engine_settings": "Engine Settings...",
-        "view.voice_changes_drawer": "Voice-change Drawer",
-    ]
-
-    /// Scope inspection is pure Swift; Qt resolves sequence strings only after
-    /// QGuiApplication starts.
-    private static let windowIds: [String] = {
-        let registry = KeybindingRegistry()
-        let ids = Set(registry.ids)
-        return actions.compactMap { action in
-            ids.contains(action.id) && registry.scope(action.id) == .window
-                ? action.id : nil
-        }
-    }()
-
     private let keybindings = KeybindingRegistry()
+    private var actionStates: [String: ShellActionState] = [:]
+    private let clipboard = GridClipboard()
+    private var clipboardObserver: UUID?
     public let regularFontSource: String = BundledFont.regular.source
     public let semiboldFontSource: String = BundledFont.semibold.source
     public let monoFontSource: String = BundledFont.mono.source
@@ -157,31 +19,31 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var session: ApplicationSession
     @QtTracked public var settingsStore: EngineSettingsStore
     @QtTracked public var mouseHints: MouseHints
-    public var actionIds: [String]
-    public var fileActionIds: [String]
-    public var fileExportActionIds: [String]
-    public var fileQuitActionIds: [String]
-    public var editTopActionIds: [String]
-    public var editClipboardActionIds: [String]
-    public var notesActionIds: [String]
-    public var moveActionIds: [String]
-    public var automationActionIds: [String]
-    public var eventsActionIds: [String]
-    public var loopActionIds: [String]
-    public var editTailActionIds: [String]
-    public var timeActionIds: [String]
-    public var tracksActionIds: [String]
-    public var transportActionIds: [String]
-    public var viewActionIds: [String]
-    public var toolsActionIds: [String]
-    public var windowActionIds: [String]
-    public var contextHeadActionIds: [String]
-    public var contextBodyActionIds: [String]
+    public var actionIds: [String] = ShellActionCatalog.allActionIds
+    public var fileActionIds: [String] = ShellActionCatalog.fileIds
+    public var fileExportActionIds: [String] = ShellActionCatalog.fileExportIds
+    public var fileQuitActionIds: [String] = ShellActionCatalog.fileQuitIds
+    public var editTopActionIds: [String] = ShellActionCatalog.editTopIds
+    public var editClipboardActionIds: [String] = ShellActionCatalog.editClipboardIds
+    public var notesActionIds: [String] = ShellActionCatalog.notesIds
+    public var moveActionIds: [String] = ShellActionCatalog.moveIds
+    public var automationActionIds: [String] = ShellActionCatalog.automationIds
+    public var eventsActionIds: [String] = ShellActionCatalog.eventsIds
+    public var loopActionIds: [String] = ShellActionCatalog.loopIds
+    public var editTailActionIds: [String] = ShellActionCatalog.editTailIds
+    public var timeActionIds: [String] = ShellActionCatalog.timeIds
+    public var tracksActionIds: [String] = ShellActionCatalog.tracksIds
+    public var transportActionIds: [String] = ShellActionCatalog.transportIds
+    public var viewActionIds: [String] = ShellActionCatalog.viewIds
+    public var toolsActionIds: [String] = ShellActionCatalog.toolsIds
+    public var windowActionIds: [String] = ShellActionCatalog.windowIds
+    public var contextHeadActionIds: [String] = ShellActionCatalog.contextHeadIds
+    public var contextBodyActionIds: [String] = ShellActionCatalog.contextBodyIds
 
     @QtTracked public var closeReady = false
     @QtTracked public var sceneActive = true
     @QtTracked public var contentRequested = false
-    @QtTracked public var startupBegun = false
+    private var startupBegun = false
     private var hasRestoredChrome = false
     private var hasLoadedContent = false
     private var hasLoadedWorkspace = false
@@ -189,7 +51,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtIgnored var closeSettlementTask: Task<Void, Never>?
     @QtTracked public var themeMode = "vanilla"
     @QtTracked public var gridLineContrast = 50
-    @QtTracked public var dockColumnWidth = 280
+    public var dockColumnMinWidth: Int = 15 * 13
+    public var dockColumnMaxWidth: Int = 37 * 13
+    @QtTracked public var dockColumnWidth = Int((21.5 * 13).rounded())
     @QtTracked public var dockSongsRatio = 0.5
     @QtTracked public var polyphonyVisible = false
     @QtTracked public var windowX = -1
@@ -199,7 +63,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var windowMaximized = false
     @QtTracked public var statusText = "Ready"
     @QtTracked public var windowTitle = "porydaw"
-    @QtTracked public var windowModified = false
     private var closePending = false
     private var closing = false
 
@@ -215,155 +78,72 @@ public final class ShellPresenter: QmlInstantiableStatus {
         session.onVoicegroupCatalogChanged = { [weak settingsStore] in
             settingsStore?.refreshVoicegroups()
         }
-        actionIds = Self.allActionIds
-        fileActionIds = Self.fileIds
-        fileExportActionIds = Self.fileExportIds
-        fileQuitActionIds = Self.fileQuitIds
-        editTopActionIds = Self.editTopIds
-        editClipboardActionIds = Self.editClipboardIds
-        toolsActionIds = Self.toolsIds
-        notesActionIds = Self.notesIds
-        moveActionIds = Self.moveIds
-        automationActionIds = Self.automationIds
-        eventsActionIds = Self.eventsIds
-        loopActionIds = Self.loopIds
-        editTailActionIds = Self.editTailIds
-        timeActionIds = Self.timeIds
-        tracksActionIds = Self.tracksIds
-        transportActionIds = Self.transportIds
-        viewActionIds = Self.viewIds
-        windowActionIds = Self.windowIds
-        contextHeadActionIds = Self.contextHeadIds
-        contextBodyActionIds = Self.contextBodyIds
+        session.onStatusMessage = { [weak self] message in self?.statusText = message }
+        session.onFailure = { [weak self] title, message in
+            self?.presentFailure(title: title, message: message)
+        }
+        session.onSaveStateChanged = { [weak self] in self?.saveStateChanged() }
+        session.onProjectStateChanged = { [weak self] in self?.projectStateChanged() }
+        session.onDocumentStateChanged = { [weak self] songOpenChanged in
+            self?.documentStateChanged(songOpenChanged: songOpenChanged)
+        }
+        session.onCommandAvailabilityChanged = { [weak self] in self?.refreshActionStates() }
+        session.eventListPresenter().onAvailabilityChanged = { [weak self] in self?.refreshActionStates() }
+        session.sampleStudio().onEditorOpenChanged = { [weak self] in self?.refreshActionStates() }
+        session.songDockController().onSongsChanged = { [weak self] in self?.refreshActionStates() }
+        let transport = session.transportBarPresenter()
+        transport.onAvailabilityChanged = { [weak self] in
+            self?.refreshActionStates()
+        }
+        clipboardObserver = clipboard.addChangeObserver { [weak self] in
+            self?.refreshActionStates()
+        }
         pd_startup_trace_mark("presenter-end")
     }
 
-    public func componentComplete() {}
-
-    public func actionLabel(id: String) -> String {
-        guard Self.byId[id] != nil else { return "" }
-        return id == "help.about" ? "About porydaw" : keybindings.label(id)
+    isolated deinit {
+        if let clipboardObserver { clipboard.removeChangeObserver(clipboardObserver) }
     }
 
-    public func menuLabel(id: String) -> String {
-        Self.menuLabels[id] ?? actionLabel(id: id)
+    public func componentComplete() {
+        refreshActionStates()
+    }
+
+    /// Returns the same retained state for every lookup of a known action.
+    public func action(id: String) -> Optional<ShellActionState> {
+        if let state = actionStates[id] { return state }
+        guard ShellActionCatalog.byId[id] != nil else { return nil }
+        let label = id == "help.about" ? "About porydaw" : keybindings.label(id)
+        let state = ShellActionState(
+            enabled: isActionEnabled(id: id, workspaceLoaded: hasLoadedWorkspace),
+            checked: isActionChecked(id: id), checkable: isActionCheckable(id: id), label: label,
+            menuLabel: ShellActionCatalog.menuLabels[id] ?? label,
+            shortcut: keybindings.sequences(id).first?.nativeText ?? "")
+        actionStates[id] = state
+        return state
+    }
+
+    /// Existing availability triggers publish only changed action properties.
+    public func refreshActionStates() {
+        for (id, state) in actionStates {
+            state.update(
+                enabled: isActionEnabled(id: id, workspaceLoaded: hasLoadedWorkspace),
+                checked: isActionChecked(id: id))
+        }
     }
 
     /// Portable Qt sequence text, including every platform StandardKey
     /// alternative, is resolved by Qt only after QGuiApplication exists.
     public func actionSequences(id: String) -> [String] {
-        guard Self.byId[id] != nil, keybindings.ids.contains(id) else { return [] }
+        guard ShellActionCatalog.byId[id] != nil, keybindings.ids.contains(id) else { return [] }
         return keybindings.sequences(id).map(\.portableText)
-    }
-
-    /// The native menu advertises only QAction::shortcut()'s primary sequence.
-    private var lastEventListGate:
-        (
-            attached: Bool, visible: Bool, editing: Bool, menuOpen: Bool,
-            tableRevision: Int
-        )?
-
-    public func actionShortcut(id: String) -> String {
-        keybindings.sequences(id).first?.nativeText ?? ""
-    }
-
-    public func actionEnabled(id: String) -> Bool {
-        guard sceneActive, let action = Self.byId[id] else { return false }
-        if session.wavExportPresenter().active { return false }
-        if id == "view.polyphony_debugger" || id == "edit.preferences"
-            || id == "edit.engine_settings"
-        {
-            return true
-        }
-        if id == "eventlist.move_up" || id == "eventlist.move_down" {
-            guard session.songOpen else {
-                lastEventListGate = nil
-                return false
-            }
-            let events = session.eventListPresenter()
-            let gate = (
-                attached: events.attached, visible: events.visible,
-                editing: events.editing, menuOpen: events.menuOpen,
-                tableRevision: events.tableRevision
-            )
-            if lastEventListGate.map({ $0 == gate }) != true {
-                lastEventListGate = gate
-                eventListGateChanged()
-            }
-            guard gate.attached, gate.visible, !gate.editing, !gate.menuOpen else { return false }
-            return events.model.row(at: events.currentRow)?.eventIndex != nil
-        }
-        if let command = action.command {
-            return session.songOpen && session.gridCommandAvailable(command: command.rawValue)
-        }
-        switch id {
-        case "songs.find": return session.projectOpen && hasLoadedWorkspace
-        case "file.new_song": return session.projectOpen
-        case "file.import_midi": return session.projectOpen
-        case "tools.import_sample": return session.projectOpen && !session.sampleStudio().editorOpen
-        case "file.save_song": return session.songOpen && !session.saveInProgress
-        case "file.register_song":
-            return session.songOpen
-                && session.songDockController().selectedTabRegistrationPending()
-        case "file.close_tab": return session.songTabs.selectedPage != nil
-        case "file.export_wav": return session.wavExportPresenter().exportAvailable
-        case "edit.undo": return session.songOpen && session.canUndo
-        case "edit.redo": return session.songOpen && session.canRedo
-        case "edit.song_settings": return session.songOpen
-        case "transport.follow_playhead", "transport.resonance":
-            return true
-        case "transport.go_to_start", "transport.play_pause":
-            return session.songOpen && session.transportBarPresenter().state != 0
-        case "transport.play":
-            let state = session.transportBarPresenter().state
-            return session.songOpen && state > 0 && state != 3
-        case "transport.pause":
-            return session.songOpen && session.transportBarPresenter().state == 3
-        case "transport.stop":
-            return session.songOpen && session.transportBarPresenter().state > 1
-        case "transport.loop":
-            return session.songOpen && session.transportBarPresenter().state != 0
-        case "view.event_list":
-            return session.songTabs.selectedPage != nil
-        case "view.automation_drawer", "view.velocity_drawer", "view.voice_changes_drawer":
-            return session.songTabs.selectedPage != nil && !session.songTabs.selectedTabShowsEvents
-        default: return true  // open project and quit were always enabled
-        }
-    }
-
-    public func actionCheckable(id: String) -> Bool {
-        switch id {
-        case "view.event_list", "view.automation_drawer", "view.velocity_drawer",
-            "view.voice_changes_drawer", "view.polyphony_debugger",
-            "view.note_names", "transport.loop",
-            "transport.follow_playhead", "transport.resonance":
-            return true
-        default: return false
-        }
-    }
-
-    public func actionChecked(id: String) -> Bool {
-        switch id {
-        case "view.event_list": return session.songTabs.selectedTabShowsEvents
-        case "view.automation_drawer":
-            return session.songTabs.selectedPage?.drawerPresenter().automationSection.visible ?? false
-        case "view.velocity_drawer":
-            return session.songTabs.selectedPage?.drawerPresenter().velocitySection.visible ?? false
-        case "view.voice_changes_drawer":
-            return session.songTabs.selectedPage?.drawerPresenter().voiceChangesSection.visible ?? false
-        case "view.polyphony_debugger": return polyphonyVisible
-        case "view.note_names": return session.noteNameMode
-        case "transport.loop": return session.transportBarPresenter().loopEnabled
-        case "transport.follow_playhead": return session.transportBarPresenter().followPlayhead
-        case "transport.resonance": return session.transportBarPresenter().resonanceSuppression
-        default: return false
-        }
     }
 
     /// An action activation has the same enabled gate as QAction::triggered.
     public func activate(id: String) {
-        guard actionEnabled(id: id) else { return }
-        if let command = Self.byId[id]?.command {
+        guard isActionEnabled(id: id, workspaceLoaded: hasLoadedWorkspace) else { return }
+        defer { refreshActionStates() }
+        if let command = ShellActionCatalog.byId[id]?.command {
             if command == .moveEventUp || command == .moveEventDown {
                 session.performEventListCommand(command: command.rawValue)
             } else {
@@ -438,10 +218,11 @@ public final class ShellPresenter: QmlInstantiableStatus {
         eventList: Bool
     ) -> Bool {
         guard sceneActive, session.songOpen else { return false }
+        defer { refreshActionStates() }
         if !eventList && key == 0x0100_0000 && !autoRepeat && session.handleGridEscape() {
             return true
         }
-        for action in Self.actions {
+        for action in ShellActionCatalog.actions {
             guard let command = action.command,
                 keybindings.scope(action.id) == .editorRouted,
                 keybindings.matches(key, modifiers, action.id)
@@ -465,6 +246,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     public func releaseEditorKey(autoRepeat: Bool) -> Bool {
         guard sceneActive, session.songOpen, !autoRepeat else { return false }
+        defer { refreshActionStates() }
         return session.releaseGridKey(autoRepeat: autoRepeat)
     }
 
@@ -498,6 +280,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         // still reaches the live QML scene (ApplicationSession.hostClosing).
         session.hostClosing()
         sceneActive = false
+        refreshActionStates()
     }
 
     /// Called after Loader invalidates the scene's QML contexts and detaches
@@ -547,6 +330,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     public func workspaceReady() {
         guard sceneActive, !closing else { return }
         hasLoadedWorkspace = true
+        refreshActionStates()
         pd_startup_trace_mark("workspace-ready")
         pd_startup_trace_next_frame("workspace-frame")
     }
@@ -599,54 +383,52 @@ public final class ShellPresenter: QmlInstantiableStatus {
         session.openProject(path: url.path)
     }
 
-    public func refreshWindowChrome() {
+    private func refreshWindowChrome() {
         let project =
             session.projectOpen
             ? URL(fileURLWithPath: session.projectRoot, isDirectory: true).lastPathComponent : ""
         if let selected = session.songTabs.selectedPage {
             windowTitle = "\(selected.title) — \(project) — porydaw"
-            windowModified = selected.workspace.session.document.isDirty
         } else {
             windowTitle = project.isEmpty ? "porydaw" : "\(project) — porydaw"
-            windowModified = false
         }
     }
 
-    public func projectOpenChanged() {
+    private func projectStateChanged() {
         refreshWindowChrome()
+        refreshActionStates()
         if session.projectOpen {
             statusText = "Opened " + session.projectRoot
         }
     }
 
-    public func songOpenChanged() {
-        if session.songOpen { statusText = "Song open" }
+    private func documentStateChanged(songOpenChanged: Bool) {
+        if songOpenChanged && session.songOpen { statusText = "Song open" }
         refreshWindowChrome()
+        refreshActionStates()
     }
 
-    public func saveStateChanged() {
+    private func saveStateChanged() {
         refreshWindowChrome()
+        refreshActionStates()
         guard !session.saveInProgress, !session.lastSaveError.isEmpty else { return }
         criticalRequested(title: "Save Failed", message: session.lastSaveError)
     }
 
-    public func openFailed(message: String) {
+    private func presentFailure(title: String, message: String) {
         guard !message.isEmpty else { return }
         statusText = message
-        criticalRequested(title: "Open Failed", message: message)
-    }
-
-    public func operationFailed(message: String) {
-        guard !message.isEmpty else { return }
-        statusText = message
-        criticalRequested(title: "Operation Failed", message: message)
+        criticalRequested(title: title, message: message)
     }
 
     public func configureSettings(applicationName: String) {
         PreferencesStore.configureShared(applicationName: applicationName)
         session.configurePersistence()
         let store = PreferencesStore()
-        dockColumnWidth = store.int(key: "swiftDock.columnWidth", fallback: 280)
+        publish(\.dockColumnMinWidth, 15 * session.baseFontPx)
+        publish(\.dockColumnMaxWidth, 37 * session.baseFontPx)
+        let defaultDockWidth = Int((21.5 * Double(session.baseFontPx)).rounded())
+        publish(\.dockColumnWidth, store.int(key: "swiftDock.columnWidth", fallback: defaultDockWidth))
         dockSongsRatio = store.double(key: "swiftDock.songsRatio", fallback: 0.5)
         let frame = store.string(key: "windowGeometry", fallback: "").split(
             separator: ",", omittingEmptySubsequences: false
@@ -662,6 +444,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         polyphonyVisible = state.contains("debugger")
         session.polyphony.setVisible(showing: polyphonyVisible)
         session.songDockController().presenter.restoreFromPreferences()
+        refreshActionStates()
     }
 
     public func persistSessionState(
@@ -674,10 +457,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         if maximized { state.append("maximized") }
         if debuggerVisible { state.append("debugger") }
         store.setString(key: "windowState", value: state.joined(separator: ","))
-        let songs = session.songDockController().presenter
-        store.setString(key: "songFilterText", value: songs.searchText)
-        store.setInt(key: "songFilterSort", value: songs.sortIndex)
-        store.setString(key: "songFilterCategory", value: songs.categoryPrefix())
+        session.songDockController().presenter.persistFilters(to: store)
         store.synchronize()
     }
 
@@ -697,44 +477,34 @@ public final class ShellPresenter: QmlInstantiableStatus {
         store.synchronize()
     }
 
-    private var committedThemeMode = "vanilla"
-    private var committedGridLineContrast = 50
+    private struct AppearancePreview {
+        var mode = "vanilla"
+        var contrast = 50
+    }
 
-    public func previewThemeMode(mode: String) {
-        themeMode = ShellAppearance.mode(mode)
+    private var committedAppearance = AppearancePreview()
+
+    public func previewAppearance(mode: String, contrast: Int) {
+        publish(\.themeMode, ShellAppearance.mode(mode))
+        publish(\.gridLineContrast, min(100, max(0, contrast)))
         applyAppearance()
     }
 
-    public func commitThemeMode() {
-        committedThemeMode = themeMode
+    public func commitAppearance() {
+        committedAppearance = AppearancePreview(mode: themeMode, contrast: gridLineContrast)
         let store = PreferencesStore()
-        store.setString(key: "theme.mode", value: themeMode)
+        store.setString(key: "theme.mode", value: committedAppearance.mode)
+        store.setInt(key: "theme.grid-line-contrast", value: committedAppearance.contrast)
         store.synchronize()
     }
 
-    public func discardThemeMode() {
-        previewThemeMode(mode: committedThemeMode)
-        setGridLineContrast(value: committedGridLineContrast)
-    }
-
-    public func setGridLineContrast(value: Int) {
-        gridLineContrast = min(100, max(0, value))
-        applyAppearance()
-    }
-
-    public func commitGridLineContrast() {
-        committedGridLineContrast = gridLineContrast
-        let store = PreferencesStore()
-        store.setInt(key: "theme.grid-line-contrast", value: gridLineContrast)
-        store.synchronize()
-    }
-
-    public func discardGridLineContrast() {
-        setGridLineContrast(value: committedGridLineContrast)
+    public func discardAppearance() {
+        previewAppearance(mode: committedAppearance.mode, contrast: committedAppearance.contrast)
     }
 
     private func applyAppearance() {
         ShellAppearance.apply(to: session.palette, mode: themeMode, contrast: gridLineContrast)
+        session.refreshPromptStyle()
         session.eventListPresenter().refreshAppearance()
         // Shared roles update direct bindings; each open workspace also owns
         // color snapshots and display lists, including those in hidden tabs.
@@ -746,12 +516,11 @@ public final class ShellPresenter: QmlInstantiableStatus {
     public func restoreAppearance() {
         let store = PreferencesStore()
         ShellAppearance.removeLegacyCustomKeys(store: store)
-        themeMode = ShellAppearance.mode(store.string(key: "theme.mode", fallback: ""))
-        gridLineContrast = ShellAppearance.contrast(
+        let mode = ShellAppearance.mode(store.string(key: "theme.mode", fallback: ""))
+        let contrast = ShellAppearance.contrast(
             store.string(key: "theme.grid-line-contrast", fallback: ""))
-        committedThemeMode = themeMode
-        committedGridLineContrast = gridLineContrast
-        applyAppearance()
+        previewAppearance(mode: mode, contrast: contrast)
+        committedAppearance = AppearancePreview(mode: themeMode, contrast: gridLineContrast)
         store.setString(key: "theme.mode", value: themeMode)
         store.setInt(key: "theme.grid-line-contrast", value: gridLineContrast)
         store.synchronize()
@@ -761,6 +530,5 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtSignal public func settingsRequested(songFirst: Bool)
     @QtSignal public func aboutRequested()
     @QtSignal public func quitRequested()
-    @QtSignal public func eventListGateChanged()
     @QtSignal public func criticalRequested(title: String, message: String)
 }

@@ -303,7 +303,10 @@ private func sessionSaveConflictGate(report: CheckReport, fixtureRoot: String) {
         }
         var edited = original
         edited.release = original.release == 7 ? 6 : original.release + 1
-        try runBlocking { try await session.applyBankEdit(slot: 0, value: edited, expected: original) }
+        _ = try runBlocking { try await session.applyBankEdit(slot: 0, value: edited, expected: original) }
+        check.expect(
+            session.bankDirty && session.bankSlots[0].voice == edited,
+            message: "bank-conflict setup applies the edited voice to a dirty bank")
         _ = try session.document.addNotes([NewNote(track: 0, tick: tick + 288, pitch: 79, duration: 24, velocity: 87)])
         guard let bankConflictBytes = overwriteMidi(at: midiPath, marker: 0x7E) else {
             check.fail("bank-conflict staging needs the MIDI file"); return

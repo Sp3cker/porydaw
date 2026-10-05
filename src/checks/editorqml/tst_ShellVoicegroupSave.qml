@@ -32,10 +32,9 @@ ShellVoicegroupSupport {
         settings.changeMasterVolume(changedVolume)
         settings.apply()
         verify(waitForNative(function() {
-            return !settings.isApplying && shell.shellPresenter.windowModified
+            return !settings.isApplying && session.documentDirty
         }, 15000), "mounted song config edit dirties the document: "
-                  + "volume=" + settings.masterVolume + " modified="
-                  + shell.shellPresenter.windowModified + " error=" + session.lastSaveError)
+                  + "volume=" + settings.masterVolume + " error=" + session.lastSaveError)
         compare(settings.masterVolume, changedVolume,
                 "applied song setting retains the edited master volume")
         const draft = voice.editorModel()
@@ -67,7 +66,7 @@ ShellVoicegroupSupport {
         }, 15000), "unified Save completes: " + session.lastSaveError)
         verify(session.lastSaveError === "" && shellSaveStarts === beforeStarts + 1
                && shellSaveFinishes === beforeFinishes + 1 && !voice.bankDirty
-               && !shell.shellPresenter.windowModified,
+               && !session.documentDirty,
                "unified Save completes one clean song-and-bank receipt")
         verify(fileProbe.fileFingerprint(cfgPath) !== initialCfg
                && fileProbe.fileFingerprint(bankPath) !== initialBank
@@ -78,7 +77,7 @@ ShellVoicegroupSupport {
                "undo after Save dirties the saved bank")
         session.requestUndo()
         verify(waitForNative(function() {
-            return shell.shellPresenter.windowModified && draft.release === previousRelease
+            return session.documentDirty && draft.release === previousRelease
         }, 15000), "restoration undo dirties the saved song and restores the bank voice")
         const restoreStarts = shellSaveStarts
         const restoreFinishes = shellSaveFinishes
@@ -89,7 +88,7 @@ ShellVoicegroupSupport {
         }, 15000), "restoration Save completes: " + session.lastSaveError)
         verify(session.lastSaveError === "" && shellSaveStarts === restoreStarts + 1
                && shellSaveFinishes === restoreFinishes + 1 && !voice.bankDirty
-               && !shell.shellPresenter.windowModified,
+               && !session.documentDirty,
                "undo restoration Save completes one clean receipt")
         compare(fileProbe.fileFingerprint(cfgPath), initialCfg,
                 "restoration Save writes the original song flags")
@@ -122,7 +121,7 @@ ShellVoicegroupSupport {
         session.requestUndo()
         verify(waitForNative(function() {
             return voice.selectorText === "fixture_rich"
-                   && !shell.shellPresenter.windowModified && !voice.bankDirty
+                   && !voice.bankDirty && !session.documentDirty
         }, 15000), "undo of missing -G returns the song to its clean saved binding")
         cleanup()
     }
@@ -159,15 +158,14 @@ ShellVoicegroupSupport {
                    "mounted release spin accepts an adjacent value")
         verify(waitForNative(function() { return voice.bankDirty }, 15000),
                "adjacent release edit dirties the bank")
-        compare(shell.shellPresenter.windowModified, false,
-                "adjacent bank edit leaves the document window unmodified")
+        compare(session.songDocumentDirty, false, "adjacent bank edit leaves the song document clean")
         const undoAction = findChild(shell, "shellAction_edit.undo")
         verify(undoAction && undoAction.enabled && release.contentItem.activeFocus,
                "focused release field offers the standard window Undo action")
         keySequence(StandardKey.Undo)
         verify(waitForNative(function() {
             return release.value === initial && !voice.bankDirty
-                   && !session.documentDirty && !shell.shellPresenter.windowModified
+                   && !session.documentDirty
         }, 15000), "one focused standard Undo restores the exact release and clean song and bank")
         compare(fileProbe.fileFingerprint(bankPath), persisted,
                 "focused Undo does not write the previously persisted bank bytes")
@@ -180,29 +178,27 @@ ShellVoicegroupSupport {
         settings.changeMasterVolume(editedVolume)
         settings.apply()
         verify(waitForNative(function() {
-            return !settings.isApplying && shell.shellPresenter.windowModified
-        }, 15000), "song setting application independently marks the document window modified")
+            return !settings.isApplying && session.documentDirty && voice.bankDirty
+        }, 15000), "song setting application completes with a dirty document and bank")
         verify(settings.masterVolume === editedVolume && session.documentDirty && voice.bankDirty,
                "song setting retains its value and dirties the document while the bank remains dirty")
         session.requestUndo()
         verify(waitForNative(function() {
-            return !shell.shellPresenter.windowModified && voice.bankDirty
-        }, 15000), "undo of the song setting clears the window but leaves the separate bank edit dirty")
+            return !session.songDocumentDirty && voice.bankDirty
+        }, 15000), "undo of the song setting restores the song while the bank edit stays dirty")
         release.contentItem.forceActiveFocus()
         for (let value = adjacent; value > 0; --value)
             keyClick(Qt.Key_Down)
         tryCompare(release, "value", 0, 15000,
                    "mounted release spin accepts the lower boundary")
         compare(voice.bankDirty, true, "zero release leaves the bank dirty")
-        compare(shell.shellPresenter.windowModified, false,
-                "zero release leaves the song window unmodified")
+        compare(session.songDocumentDirty, false, "zero release leaves the song document clean")
         for (let value = 0; value < release.to; ++value)
             keyClick(Qt.Key_Up)
         tryCompare(release, "value", 255, 15000,
                    "mounted release spin accepts the upper boundary")
         compare(voice.bankDirty, true, "255 release leaves the bank dirty")
-        compare(shell.shellPresenter.windowModified, false,
-                "255 release leaves the song window unmodified")
+        compare(session.songDocumentDirty, false, "255 release leaves the song document clean")
         compare(fileProbe.fileFingerprint(bankPath), persisted,
                 "release edits never save the bank without Save")
         cleanup()
@@ -265,7 +261,7 @@ ShellVoicegroupSupport {
                "duty LFO mints an edited pulse voice")
         const initialPulse = draft.symbol
         verify(/^DirectSoundSynth_GoldenSun_4D[0-9A-F]{6}$/.test(initialPulse)
-               && !controller.synthCatalogChoices().includes(initialPulse),
+               && !controller.synthChoices.includes(initialPulse),
                "synth activation publishes the param-named symbol")
         const baseDuty = findChild(panel, "vgSynthBaseDutySpin")
         verify(baseDuty !== null && baseDuty.visible, "pulse parameters occupy the editor")
@@ -286,7 +282,7 @@ ShellVoicegroupSupport {
             }, 15000), "synth " + step.field + " commits its cumulative param-named symbol")
         }
         const pulse = draft.symbol
-        verify(controller.synthCatalogChoices().indexOf(pulse) < 0,
+        verify(controller.synthChoices.indexOf(pulse) < 0,
                "uncommitted synth does not masquerade as a saved definition")
         const startsBefore = saveStarts
         const finishesBefore = saveFinishes
@@ -296,7 +292,7 @@ ShellVoicegroupSupport {
         verify(waitForNative(function() { return saveStarts === startsBefore + 1 }, 5000),
                "synth Save starts one real completion receipt")
         verify(waitForNative(function() {
-            return (!controller.bankDirty && controller.synthCatalogChoices().includes(pulse))
+            return (!controller.bankDirty && controller.synthChoices.includes(pulse))
                    || app.lastSaveError.length > 0
         }, 15000), "save persists synth and refreshes catalog: " + app.lastSaveError)
         compare(app.lastSaveError, "")

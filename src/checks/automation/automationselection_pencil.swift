@@ -179,13 +179,17 @@ func drawerAutomationDetailThresholdPrecedence(
     report.expect(markersVisible(), cppID: id, message: "markers are visible at default zoom")
     let zoomAnchor = fixture.x(24)
     _ = fixture.session.mutateCamera {
-        $0.zoomAroundContentX(factor: 0.25, anchorContentX: zoomAnchor)
+        report.expect(
+            $0.zoomAroundContentX(factor: 0.25, anchorContentX: zoomAnchor).zoomChanged,
+            cppID: id, message: "quarter-scale zoom changes the camera")
     }
     report.expect(
         markersVisible(), cppID: id,
         message: "markers stay visible at a quarter of the default zoom")
     _ = fixture.session.mutateCamera {
-        $0.zoomAroundContentX(factor: 0.02, anchorContentX: zoomAnchor)
+        report.expect(
+            $0.zoomAroundContentX(factor: 0.02, anchorContentX: zoomAnchor).zoomChanged,
+            cppID: id, message: "detail-threshold zoom changes the camera")
     }
     report.expect(
         !markersVisible(), cppID: id,
@@ -207,7 +211,9 @@ func drawerAutomationDetailThresholdPrecedence(
         message: "the hidden-marker stroke inserts instead of grabbing the node")
     let zoomBack = fixture.x(120)
     _ = fixture.session.mutateCamera {
-        $0.zoomAroundContentX(factor: 50, anchorContentX: zoomBack)
+        report.expect(
+            $0.zoomAroundContentX(factor: 50, anchorContentX: zoomBack).zoomChanged,
+            cppID: id, message: "zooming back changes the camera")
     }
     report.expect(markersVisible(), cppID: id, message: "markers return above the threshold")
 

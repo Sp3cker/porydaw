@@ -133,7 +133,7 @@ extension ApplicationSession {
                 await loaded.service.close()
                 return
             }
-            self.lastSaveError = ""
+            self.publishLastSaveError("")
             let candidate = ProjectSwitchCandidate(
                 path: path, label: label, restore: restore, service: loaded.service,
                 labels: loaded.labels, song: loaded.song)
@@ -145,8 +145,8 @@ extension ApplicationSession {
     }
 
     func failOpen(_ message: String) {
-        lastSaveError = message
-        openFailed(message: message)
+        publishLastSaveError(message)
+        publishOpenFailure(message: message)
     }
 
     func finishProjectSwitch(_ candidate: ProjectSwitchCandidate) async {
@@ -164,12 +164,11 @@ extension ApplicationSession {
             prefetchedSong = (candidate.service, song)
         }
         projectRoot = candidate.path
-        projectRootChanged()
-        labels = candidate.labels
         songDock.install(service: candidate.service, songs: [])
         voiceList.projectService = candidate.service
         resetVoicegroupCatalog()
         projectOpen = true
+        onProjectStateChanged?()
         if let recipe = candidate.restore {
             let restored = recipe.normalized(available: candidate.labels)
             isRestoringTabs = true
@@ -189,7 +188,7 @@ extension ApplicationSession {
             var reported = Set<String>()
             for song in recipe.orderedSongs
             where !song.isEmpty && !playable.contains(song) && reported.insert(song).inserted {
-                operationFailed(message: "Song \(song) is not a playable song in this project.")
+                publishOperationFailure(message: "Song \(song) is not a playable song in this project.")
             }
         } else if let label = candidate.label {
             isReplacingProject = false
@@ -208,8 +207,7 @@ extension ApplicationSession {
                     self.catalogService === service
                 else { return }
                 if self.songDock.presenter.songListings.isEmpty {
-                    self.songDock.presenter.setSongs(songs)
-                    self.songDock.syncSelection()
+                    self.songDock.publishSongs(songs)
                 }
                 self.songDock.songsLoading = false
                 _ = await self.refreshVoicegroupCatalog()
@@ -217,7 +215,7 @@ extension ApplicationSession {
                 guard let self, !self.isDisposed, self.pendingProjectSwitch == nil,
                     self.catalogService === service
                 else { return }
-                self.operationFailed(message: String(describing: error))
+                self.publishOperationFailure(message: String(describing: error))
                 self.songDock.songsLoading = false
             }
         }

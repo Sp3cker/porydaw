@@ -56,7 +56,8 @@ ShellGridMenuSupport {
             mouseClick(roll, atX, y, Qt.RightButton)
             tryCompare(menu, "visible", true)
             var row = findChild(menu, "shellContextAction_" + actionId)
-            verify(row !== null && row.enabled, "the mounted note menu has enabled " + actionId)
+            verify(row !== null, "the mounted note menu contains " + actionId)
+            tryCompare(row, "enabled", true, 3000, "the mounted note menu has enabled " + actionId)
             mouseClick(row, row.width / 2, row.height / 2)
             tryCompare(menu, "visible", false)
         }
@@ -159,6 +160,7 @@ ShellGridMenuSupport {
         var menu = noteMenu()
         tryCompare(menu, "visible", true)
         var row = menu.itemAt(0)
+        tryCompare(row, "enabled", true, 3000, "the velocity action is ready")
         mouseClick(row, row.width / 2, row.height / 2)
         var model = surface().velocityModel
         tryCompare(model, "promptOpen", true)
@@ -300,6 +302,7 @@ ShellGridMenuSupport {
         mouseClick(roll, target.point.x, target.point.y, Qt.RightButton)
         tryCompare(menu, "visible", true)
         var row = menu.itemAt(0)
+        tryCompare(row, "enabled", true, 3000, "the velocity action is ready")
         mouseClick(row, row.width / 2, row.height / 2)
         var model = surface().velocityModel
         tryCompare(model, "promptOpen", true)

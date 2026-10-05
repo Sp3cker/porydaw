@@ -9,39 +9,45 @@ func pitchBendReadoutPredicates(_ report: CheckReport, session: DocumentSession)
     if let scene = pitchBendCheckScene(report, cppID: readoutID, session: session) {
         defer { scene.presenter.cancelAndClose() }
         let roles = Typography(baseFontPx: 13)
-        func matches(_ key: String, _ expected: [String: QVariantSettable]) -> Bool {
-            guard let map = scene.presenter.appearance[key] as? [String: QVariantSettable] else {
-                return false
-            }
-            return map["family"] as? String == expected["family"] as? String
-                && map["pixelSize"] as? Int == expected["pixelSize"] as? Int
-                && map["weight"] as? Int == expected["weight"] as? Int
-        }
         report.expect(
-            matches("titleFont", roles.bodyBold.map) && matches("captionFont", roles.caption.map)
-                && matches("monospaceFont", roles.bodyMono.map),
+            scene.presenter.titleFont == roles.bodyBold.qmlFont
+                && scene.presenter.captionFont == roles.caption.qmlFont
+                && scene.presenter.monospaceFont == roles.bodyMono.qmlFont,
             cppID: readoutID,
             message: "the popup title, caption, and readout publish bold body, caption, and body mono faces")
-        let drag = scene.presenter.appearance["dragInput"] as? [String: QVariantSettable]
-        let dragFont = drag?["font"] as? [String: QVariantSettable]
         report.expect(
-            dragFont?["family"] as? String == roles.body.family
-                && dragFont?["pixelSize"] as? Int == roles.body.pixelSize
-                && dragFont?["weight"] as? Int == roles.body.weight,
+            scene.presenter.promptStyle.font == roles.body.qmlFont,
             cppID: readoutID,
             message: "pitch drag inputs use the published body font face")
         let resized = Typography(baseFontPx: 26)
+        let promptStyle = scene.presenter.promptStyle
+        let pitch = scene.presenter.pitchGraph()
+        let firstRule = pitch.gridLines.first
+        let firstLine = pitch.curveLines.first
+        let firstVertex = pitch.vertices.first
         scene.presenter.configure(fontPx: 26, lineSpacing: 29, dpr: 2)
-        let resizedDrag = scene.presenter.appearance["dragInput"] as? [String: QVariantSettable]
-        let resizedFont = resizedDrag?["font"] as? [String: QVariantSettable]
         report.expect(
-            matches("titleFont", resized.bodyBold.map) && matches("captionFont", resized.caption.map)
-                && matches("monospaceFont", resized.bodyMono.map)
-                && resizedFont?["family"] as? String == resized.body.family
-                && resizedFont?["pixelSize"] as? Int == resized.body.pixelSize
-                && resizedDrag?["horizontalPadding"] as? Double == Double(resized.space(.one)),
+            scene.presenter.titleFont == resized.bodyBold.qmlFont
+                && scene.presenter.captionFont == resized.caption.qmlFont
+                && scene.presenter.monospaceFont == resized.bodyMono.qmlFont
+                && scene.presenter.promptStyle.font == resized.body.qmlFont
+                && scene.presenter.promptStyle.horizontalPadding == Double(resized.space(.one)),
             cppID: readoutID,
             message: "resizing the pitch popup republishes the title, caption, readout, and input roles")
+        report.expect(
+            scene.presenter.promptStyle === promptStyle
+                && pitch.gridLines.first === firstRule
+                && pitch.curveLines.first === firstLine
+                && pitch.vertices.first === firstVertex
+                && pitch.canvasX == pitch.kernel.geometry.canvasX
+                && pitch.canvasY == pitch.kernel.geometry.canvasY
+                && pitch.canvasWidth == pitch.kernel.geometry.canvasWidth
+                && pitch.canvasHeight == pitch.kernel.geometry.canvasHeight
+                && promptStyle.radius == Double(resized.space(.one))
+                && promptStyle.borderWidth == 0.5
+                && promptStyle.dragThreshold == pitch.kernel.geometry.scrubThreshold,
+            cppID: readoutID,
+            message: "typed popup style and scene rows update in place with the native geometry")
         scene.presenter.configure(fontPx: 13, lineSpacing: 13, dpr: 2)
         report.expectEqual(
             expected: "0 st", actual: scene.presenter.pitchGraph().liveValueText,

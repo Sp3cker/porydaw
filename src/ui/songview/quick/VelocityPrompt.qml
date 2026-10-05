@@ -2,56 +2,26 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Porydaw.Ui
-import PorydawApp
+import PorydawApp as App
 
-Item {
+PromptOverlay {
     id: promptRoot
     objectName: "velocityPrompt"
-    required property VelocityPage model
-    required property var promptPalette
-    required property var focusOrigin
-    property var hintService: null
+    required final property App.VelocityPage model
+    final property App.MouseHints hintService: null
     property bool hintScopeAllowed: true
     readonly property bool opened: model.promptOpen
-    property bool consumingOutsidePress: false
-    visible: opened || consumingOutsidePress
-    enabled: visible
-    function finishOutsidePress() {
-        consumingOutsidePress = false
-    }
-    function restoreFocusIfOwned() {
-        const active = promptRoot.Window.window
-            ? promptRoot.Window.window.activeFocusItem : null
-        let focus = active
-        while (focus && focus !== promptRoot)
-            focus = focus.parent
-        if (!active || focus === promptRoot)
-            focusOrigin.forceActiveFocus(Qt.OtherFocusReason)
-    }
+    overlayOpen: opened
+    cardItem: prompt
+    underlayObjectName: "velocityPromptUnderlay"
+    required focusOrigin
+    dismissOnlyOutsideCard: true
+    consumeDismissPress: true
+    preventUnderlayStealing: true
     z: 100
-    onOpenedChanged: {
-        if (opened) {
-            Qt.callLater(prompt.activateInitialFocus)
-        } else {
-            restoreFocusIfOwned()
-        }
-    }
-    MouseArea {
-        objectName: "velocityPromptUnderlay"
-        anchors.fill: parent
-        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-        preventStealing: true
-        onPressed: mouse => {
-            mouse.accepted = true
-            if (mouse.x < prompt.x || mouse.x >= prompt.x + prompt.width
-                    || mouse.y < prompt.y || mouse.y >= prompt.y + prompt.height) {
-                promptRoot.consumingOutsidePress = true
-                prompt.cancelDisplayed()
-            }
-        }
-        onReleased: Qt.callLater(promptRoot.finishOutsidePress)
-        onCanceled: Qt.callLater(promptRoot.finishOutsidePress)
-    }
+    onInitialFocusRequested: prompt.activateInitialFocus()
+    onOverlayClosed: restoreFocusIfOwned()
+    onDismissRequested: prompt.cancelDisplayed()
 
     PromptCard {
         id: prompt
@@ -61,46 +31,34 @@ Item {
         anchors.centerIn: parent
         width: implicitWidth
         height: implicitHeight
-        appearance: Object.assign({}, promptRoot.model.promptAppearance, {
-            font: Qt.font(promptRoot.model.promptFont),
-            background: promptRoot.promptPalette?.windowBackground ?? "transparent",
-            outline: promptRoot.promptPalette?.outline ?? "transparent",
-            text: promptRoot.promptPalette?.windowText ?? "transparent",
-            focus: promptRoot.promptPalette?.focusOutline ?? "transparent",
-            buttonBackground: promptRoot.promptPalette?.buttonBackground ?? "transparent",
-            buttonText: promptRoot.promptPalette?.buttonText ?? "transparent",
-            pressedBackground: promptRoot.promptPalette?.buttonPressedBackground ?? "transparent",
-            pressedText: promptRoot.promptPalette?.buttonPressedText ?? "transparent",
-            disabledText: promptRoot.promptPalette?.disabledText ?? "transparent"
-        })
+        appearance: promptRoot.model.promptStyle
 
-        readonly property int draft: Number(promptRoot.model.promptDraft)
+        readonly property int draft: +promptRoot.model.promptDraft
 
-        function acceptDisplayed() {
+        function acceptDisplayed(): void {
             const committed = velocityInput.commitDisplayed()
             if (committed !== null)
                 acceptCommitted(committed)
         }
 
-        function acceptCommitted(committed) {
+        function acceptCommitted(committed: int): void {
             if (!promptRoot.opened)
                 return
-            promptRoot.model.updatePromptDraft(String(committed))
+            promptRoot.model.updatePromptDraft("" + committed)
             promptRoot.restoreFocusIfOwned()
             promptRoot.model.acceptPrompt()
         }
 
-        function cancelDisplayed() {
+        function cancelDisplayed(): void {
             if (!promptRoot.opened)
                 return
             promptRoot.restoreFocusIfOwned()
             promptRoot.model.cancelPrompt()
         }
-        function activateInitialFocus() {
+        function activateInitialFocus(): void {
             velocityInput.focusInput(Qt.PopupFocusReason)
             velocityInput.selectAll()
         }
-        Component.onCompleted: if (promptRoot.opened) Qt.callLater(activateInitialFocus)
         Keys.onShortcutOverride: event => event.accepted = event.key !== Qt.Key_Space
 
         Keys.onPressed: (event) => {
@@ -141,7 +99,7 @@ Item {
             inputObjectName: "noteVelocityInput"
             accessibleName: promptRoot.model.promptLabel
             accessibleDescription: promptRoot.model.promptTitle
-            onValueCommitted: committed => promptRoot.model.updatePromptDraft(String(committed))
+            onValueCommitted: committed => promptRoot.model.updatePromptDraft("" + committed)
             onEditingAccepted: (committed) => prompt.acceptCommitted(committed)
             textInput.KeyNavigation.tab: acceptButton
             textInput.KeyNavigation.backtab: cancelButton

@@ -1,171 +1,49 @@
-// The Velocity drawer page: the ruler column, the plot's grid and PSG level
-// bands, the note handles and the gesture transient.
-//
-// Swift owns every value (VelocityPage.swift): the shared camera projection, the
-// axis ladder, the note handles, the hover/selection/preview state, the frozen
-// gesture and the prompt transaction. This file renders published primitives and
-// delivers real pointer, wheel, keyboard and accessibility input to that owner.
-// It holds no velocity, no axis rule, no camera and no clock, and it reads no
-// document: the plot origin and base font come from the same published facts the
-// roll and the container use.
-//
-// Two input surfaces, two coordinate spaces, exactly as the legacy velocity band
-// splits them: `velocityRuler` owns the click-to-set column in ruler-local
-// coordinates, and `velocityPlot` owns editing in plot-local coordinates (the
-// same space the camera projects into).
+// Swift owns velocity projection and editing; QML renders rows and forwards input.
 pragma ComponentBehavior: Bound
 
 import QtQuick
 import Porydaw.Ui
+import PorydawApp as App
 
-FocusScope {
+DrawerLanePage {
     id: page
 
     objectName: "velocityPage"
 
-    required property QtObject applicationSession
-    property var hintService: null
+    property App.MouseHints hintService: null
     property bool hintScopeAllowed: true
 
-    /// The page's Swift owner for the current document, and the neutral empty
-    /// model while there is none: `velocityPage()` fails once no document is
-    /// presented, and the host removes this scene before the session releases the
-    /// page. A guarded binding is therefore what a teardown re-evaluation
-    /// resolves, and it re-reads the owner when the session publishes the next
-    /// document.
-    readonly property var model: page.applicationSession
-                                 && page.applicationSession.songOpen
-                                 ? page.applicationSession.velocityPage()
-                                 : null
-    /// Every read below resolves against this: the installed owner, or the
-    /// neutral empty model while there is none.
-    readonly property var pageModel: page.model !== null && page.model !== undefined
-                                     ? page.model : emptyModel
-
-    readonly property var gridModel: page.applicationSession
-                                     && page.applicationSession.songOpen
-                                     ? page.applicationSession.gridPresenter()
-                                     : null
-    /// The palette this page draws with. The page can be re-evaluated during scene
-    /// teardown, after the session released the grid, so every palette read
-    /// below goes through this guarded expression; the fallback draws nothing.
-    readonly property var gridPalette: page.gridModel ? page.gridModel.palette : fallbackPalette
-
-    QtObject {
-        id: fallbackPalette
-
-        /// Neutral colors for the window between scene removal and the session's
-        /// release; nothing drawn then reaches a frame.
-        readonly property color chromeBackground: "transparent"
-        readonly property color rollBackground: "transparent"
-        readonly property color primaryText: "transparent"
-        readonly property color windowBackground: "transparent"
-        readonly property color windowText: "transparent"
-        readonly property color outline: "transparent"
-        readonly property color focusOutline: "transparent"
-        readonly property color buttonBackground: "transparent"
-        readonly property color buttonText: "transparent"
-        readonly property color buttonPressedBackground: "transparent"
-        readonly property color buttonPressedText: "transparent"
-        readonly property color disabledText: "transparent"
-    }
-    QtObject {
-        id: emptyModel
-
-        readonly property var axisTicks: []
-        readonly property var axisGraduations: []
-        readonly property var axisMarkers: []
-        readonly property var axisLabels: []
-        readonly property var gridLines: []
-        readonly property var psgBands: []
-        readonly property var transientRects: []
-        readonly property var handles: []
-        readonly property bool rampVisible: false
-        readonly property double rampX0: 0
-        readonly property double rampY0: 0
-        readonly property double rampLength: 0
-        readonly property double rampSlopeY: 0
-        readonly property string rampColor: page.gridPalette.primaryText
-        readonly property bool contextUnsupported: false
-        readonly property string contextDiagnostic: ""
-        readonly property bool readoutVisible: false
-        readonly property bool detentsEnabled: true
-        readonly property double baseFontPx: 13
-        readonly property bool promptOpen: false
-        readonly property string promptDraft: ""
-        readonly property string promptError: ""
-        readonly property string promptTitle: ""
-        readonly property string promptLabel: ""
-        readonly property int promptMinimum: 1
-        readonly property int promptMaximum: 127
-
-        readonly property string axisAccessibleDescription: "Velocity"
-        readonly property string readoutText: ""
-
-        function configureBody(width, height, rulerWidth, devicePixelRatio, baseFontPx,
-                               dragDistance) {}
-        function pointerPress(x, y, surface, button, modifiers) { return false }
-        function pointerMove(x, y, buttons) { return false }
-        function pointerRelease(x, y, button) { return false }
-        function pointerLeave() {}
-        function handleEscape() { return false }
-        function toggleDetents() {}
-        function setUseDetents(enabled) {}
-        function updatePromptDraft(text) {}
-        function acceptPrompt() { return false }
-        function cancelPrompt() {}
-        function cancelSectionInteraction() {}
-    }
-    /// The shared plot origin: the gutter the roll draws at and the container
-    /// publishes as `plotOrigin`.
-    readonly property real plotOrigin: page.gridModel
-                                       ? (page.gridModel.trackHeaderWidth || 0)
-                                         + page.gridModel.keyboardWidth : 0
-    readonly property real plotWidth: Math.max(page.width - page.plotOrigin, 0)
+    readonly property App.VelocityPage model: page.applicationSession.songOpen
+                                            ? page.applicationSession.velocityPage() : null
+    readonly property App.VelocityPage pageModel: page.model
+    final readonly property App.GridPalette gridPalette: page.applicationSession.timeSigHost.palette
+    enabled: page.pageModel !== null
     /// The snapped surface scroll the handle container translates by, and the
     /// zoom scale handles place ticks with; both track the scene scroll row.
     property real contentScrollX: 0
     property real contentPixelsPerTick: 0
     readonly property real contentDpr: page.Screen.devicePixelRatio
-    /// This page's own base-font seed, for the window before a document is
-    /// presented.
-    readonly property real seedBaseFontPx: 13
-    /// The application font's line spacing and the grid's base font are the same
-    /// facts the drawer chrome is measured with.
-    readonly property real baseFontPx: page.gridModel
-                                       ? page.gridModel.baseFontPx
-                                       : page.seedBaseFontPx
 
-    function pushBodyFacts() {
+    function pushBodyFacts(): void {
         if (!page.pageModel || page.width <= 0 || page.height <= 0)
             return
         page.pageModel.configureBody(page.width, page.height, page.plotOrigin,
                                  page.Screen.devicePixelRatio, page.baseFontPx,
-                                 Qt.styleHints.startDragDistance)
+                                 Application.styleHints.startDragDistance)
     }
 
-    // Every fact `configureBody` publishes is a dependency: the owner's arrival,
-    // the drawn size, the plot origin and the font the page's own geometry is
-    // measured from. The owner compares and rebuilds only for real changes.
+    // Publish body geometry only when its owner or measured facts change.
     onModelChanged: page.pushBodyFacts()
-    onWidthChanged: page.pushBodyFacts()
-    onHeightChanged: page.pushBodyFacts()
-    onPlotOriginChanged: page.pushBodyFacts()
-    onBaseFontPxChanged: page.pushBodyFacts()
-    Component.onCompleted: page.pushBodyFacts()
+    onBodyFactsChanged: page.pushBodyFacts()
 
-    // The shared clock reaches this page in Swift: `ApplicationSession` fans the
-    // presenter's distinct presentations into the page owner, so no QML surface
-    // reads the presenter or calls a page mutator through a bridge wrapper.
+    // The session fans shared-playhead publications into the Swift page owner.
 
     // A live gesture or an open prompt claims Escape; everything else passes on
     // to the window, so the shared routing keeps owning Escape.
-    Keys.onEscapePressed: (event) => event.accepted = page.pageModel.handleEscape()
+    Keys.onEscapePressed: (event) => event.accepted = page.pageModel ? page.pageModel.handleEscape() : false
     onActiveFocusChanged: {
-        // The prompt is hosted above the drawer, outside this FocusScope.
-        // Moving focus into its field must not cancel the very prompt that
-        // requested focus; section hide/detach still cancels at its owner.
-        if (!activeFocus && !page.pageModel.promptOpen)
+        // Moving focus to the externally hosted prompt must not cancel it.
+        if (!activeFocus && page.pageModel && !page.pageModel.promptOpen)
             page.pageModel.cancelSectionInteraction()
     }
 
@@ -190,17 +68,18 @@ FocusScope {
             objectName: "velocityRulerMarks"
             anchors.fill: parent
             Repeater {
-                model: page.pageModel ? page.pageModel.axisTicks : []
+                model: page.pageModel ? page.pageModel.axisTicks : null
                 delegate: Rectangle {
-                    required property var frame
-                    required property string fillColor
+                    id: tick
+                    required property var model
+                    required property color fillColor
                     required property string primitiveName
-                    objectName: primitiveName
-                    x: frame.x
-                    y: frame.y
-                    width: frame.width
-                    height: frame.height
-                    color: fillColor
+                    objectName: tick.primitiveName
+                    required x
+                    required y
+                    required width
+                    required height
+                    color: tick.fillColor
                 }
             }
         }
@@ -209,17 +88,18 @@ FocusScope {
             objectName: "velocityRulerGraduations"
             anchors.fill: parent
             Repeater {
-                model: page.pageModel ? page.pageModel.axisGraduations : []
+                model: page.pageModel ? page.pageModel.axisGraduations : null
                 delegate: Rectangle {
-                    required property var frame
-                    required property string fillColor
+                    id: graduation
+                    required property var model
+                    required property color fillColor
                     required property string primitiveName
-                    objectName: primitiveName
-                    x: frame.x
-                    y: frame.y
-                    width: frame.width
-                    height: frame.height
-                    color: fillColor
+                    objectName: graduation.primitiveName
+                    required x
+                    required y
+                    required width
+                    required height
+                    color: graduation.fillColor
                 }
             }
         }
@@ -228,38 +108,42 @@ FocusScope {
             objectName: "velocityRulerMarkers"
             anchors.fill: parent
             Repeater {
-                model: page.pageModel ? page.pageModel.axisMarkers : []
+                model: page.pageModel ? page.pageModel.axisMarkers : null
                 delegate: Rectangle {
-                    required property var frame
-                    required property string fillColor
+                    id: axisMarker
+                    required property var model
+                    required property color fillColor
                     required property string primitiveName
-                    objectName: primitiveName
-                    x: frame.x
-                    y: frame.y
-                    width: frame.width
-                    height: frame.height
-                    color: fillColor
+                    objectName: axisMarker.primitiveName
+                    required x
+                    required y
+                    required width
+                    required height
+                    color: axisMarker.fillColor
                 }
             }
         }
 
         Repeater {
-            model: (page.pageModel ? page.pageModel.axisLabels : [])
+            model: page.pageModel ? page.pageModel.axisLabels : null
 
             delegate: Text {
-                required property var labelSpec
+                id: axisLabel
+                required property var model
                 required property string labelText
-                required property var labelFont
+                required property font labelFont
+                required property int horizontal
+                required property int vertical
 
-                x: labelSpec.x
-                y: labelSpec.y
-                width: labelSpec.width
-                height: labelSpec.height
-                text: labelText
-                color: labelSpec.color
-                font: Qt.font(labelFont)
-                horizontalAlignment: labelSpec.horizontal
-                verticalAlignment: labelSpec.vertical
+                required x
+                required y
+                required width
+                required height
+                text: axisLabel.labelText
+                required color
+                font: axisLabel.labelFont
+                horizontalAlignment: axisLabel.horizontal
+                verticalAlignment: axisLabel.vertical
                 textFormat: Text.PlainText
                 renderType: Text.NativeRendering
                 elide: Text.ElideNone
@@ -294,16 +178,20 @@ FocusScope {
             onCanceled: {
                 rulerMoves.flush()
                 rulerHint.settleRelease(rulerHint.point.scenePosition)
-                page.pageModel.cancelSectionInteraction()
+                if (page.pageModel)
+                    page.pageModel.cancelSectionInteraction()
             }
             onExited: {
                 rulerMoves.flush()
-                page.pageModel.pointerLeave()
+                if (page.pageModel)
+                    page.pageModel.pointerLeave()
             }
             MoveCoalescer {
                 id: rulerMoves
-                dispatch: (x, y, buttons, modifiers) =>
-                    page.pageModel.pointerMove(x, y, buttons)
+                function dispatchMove(x: real, y: real, buttons: int, modifiers: int): bool {
+                    return page.pageModel ? page.pageModel.pointerMove(x, y, buttons) : false
+                }
+                dispatch: rulerMoves.dispatchMove
             }
         }
 
@@ -328,17 +216,19 @@ FocusScope {
     Repeater {
         id: scrollCarrier
 
-        model: page.gridModel ? page.gridModel.scene.cameraScroll : []
+        model: page.gridModel ? page.gridModel.scene.cameraScroll : null
         delegate: Item {
-            required property var frame
-            onFrameChanged: applyScrollFrame()
+            id: scrollRow
+            required property var model
+            readonly property real scrollX: scrollRow.model.x
+            readonly property real pixelsPerTick: scrollRow.model.width
+            onScrollXChanged: applyScrollFrame()
+            onPixelsPerTickChanged: applyScrollFrame()
             Component.onCompleted: applyScrollFrame()
-            function applyScrollFrame() {
-                if (frame) {
-                    var dpr = page.Screen.devicePixelRatio
-                    page.contentScrollX = Math.round(frame.x * dpr) / dpr
-                    page.contentPixelsPerTick = frame.width
-                }
+            function applyScrollFrame(): void {
+                const dpr = page.Screen.devicePixelRatio
+                page.contentScrollX = Math.round(scrollRow.scrollX * dpr) / dpr
+                page.contentPixelsPerTick = scrollRow.pixelsPerTick
             }
         }
     }
@@ -368,21 +258,18 @@ FocusScope {
             revision: page.pageModel ? page.pageModel.displayRevision : 0
         }
 
-        // Note stems and nodes. One delegate per handle; a selected handle draws
-        // its ring and its unfilled center exactly as the row model publishes it,
-        // and a single selected note keeps its outline while a multi-selection
-        // dims the unselected rows.
+        // Selected handles keep their ring; multi-selection dims unselected rows.
         Item {
             id: handleContent
 
-            width: parent.width
-            height: parent.height
+            width: plot.width
+            height: plot.height
             // Stable rows translate once here from the surface scroll carrier,
             // same-turn like the roll plot content.
             x: -page.contentScrollX
 
             Repeater {
-                model: (page.pageModel ? page.pageModel.handles : [])
+                model: page.pageModel ? page.pageModel.handles : null
 
                 // Retained handles stay tick-space stable; rows enter and leave
                 // only when the camera escapes the published overscan window.
@@ -390,61 +277,75 @@ FocusScope {
                     id: node
 
                     required property var model
-                    // One packed spec per handle: every child binding reads the
-                    // local map instead of paying a metaCall per property.
-                    readonly property var s: model ? model.spec : ({})
+                    required property real tick
+                    required property real endTick
+                    required property real stemWidth
+                    required property real nodeRadius
+                    required property real outlineRadius
+                    required property real outlineWidth
+                    required property real ringRadius
+                    required property real ringWidth
+                    required property color stemColor
+                    required property color fillColor
+                    required property color ringColor
+                    required property color outlineColor
+                    required property bool selected
+                    required property bool hovered
+                    required property bool dimmed
+                    required property string primitiveName
+                    readonly property real nodeY: node.model.y
                     // Zoom re-evaluates only the root x and the stem end; children sit relative.
-                    x: Math.round(node.s.tick * page.contentPixelsPerTick * page.contentDpr)
+                    x: Math.round(node.tick * page.contentPixelsPerTick * page.contentDpr)
                        / page.contentDpr
                     readonly property real endX: Math.round(
-                        node.s.endTick * page.contentPixelsPerTick * page.contentDpr) / page.contentDpr
+                        node.endTick * page.contentPixelsPerTick * page.contentDpr) / page.contentDpr
 
                     Rectangle {
-                        objectName: node.s.primitiveName + "Stem"
+                        objectName: node.primitiveName + "Stem"
                         x: Math.min(0, node.endX - node.x)
-                        y: node.s.y - node.s.stemWidth / 2
+                        y: node.nodeY - node.stemWidth / 2
                         width: Math.max(1, Math.abs(node.endX - node.x))
-                        height: node.s.stemWidth
-                        color: node.s.stemColor
+                        height: node.stemWidth
+                        color: node.stemColor
                     }
 
                     Rectangle {
-                        objectName: node.s.primitiveName + "Ring"
-                        visible: node.s.selected
-                        x: -node.s.ringRadius
-                        y: node.s.y - node.s.ringRadius
-                        width: 2 * node.s.ringRadius
-                        height: 2 * node.s.ringRadius
-                        radius: node.s.ringRadius
+                        objectName: node.primitiveName + "Ring"
+                        visible: node.selected
+                        x: -node.ringRadius
+                        y: node.nodeY - node.ringRadius
+                        width: 2 * node.ringRadius
+                        height: 2 * node.ringRadius
+                        radius: node.ringRadius
                         color: "transparent"
-                        border.color: node.s.ringColor
-                        border.width: node.s.ringWidth
+                        border.color: node.ringColor
+                        border.width: node.ringWidth
                     }
 
                     Rectangle {
-                        objectName: node.s.primitiveName + "Fill"
-                        x: -node.s.nodeRadius
-                        y: node.s.y - node.s.nodeRadius
-                        width: 2 * node.s.nodeRadius
-                        height: 2 * node.s.nodeRadius
-                        radius: node.s.nodeRadius
-                        color: node.s.fillColor
-                        border.width: node.s.selected || !node.s.dimmed
-                                      ? node.s.outlineWidth : 0
-                        border.color: node.s.outlineColor
+                        objectName: node.primitiveName + "Fill"
+                        x: -node.nodeRadius
+                        y: node.nodeY - node.nodeRadius
+                        width: 2 * node.nodeRadius
+                        height: 2 * node.nodeRadius
+                        radius: node.nodeRadius
+                        color: node.fillColor
+                        border.width: node.selected || !node.dimmed
+                                      ? node.outlineWidth : 0
+                        border.color: node.outlineColor
                     }
 
                     Rectangle {
-                        objectName: node.s.primitiveName + "Hover"
-                        visible: node.s.hovered && !node.s.selected
-                        x: -node.s.outlineRadius
-                        y: node.s.y - node.s.outlineRadius
-                        width: 2 * node.s.outlineRadius
-                        height: 2 * node.s.outlineRadius
-                        radius: node.s.outlineRadius
+                        objectName: node.primitiveName + "Hover"
+                        visible: node.hovered && !node.selected
+                        x: -node.outlineRadius
+                        y: node.nodeY - node.outlineRadius
+                        width: 2 * node.outlineRadius
+                        height: 2 * node.outlineRadius
+                        radius: node.outlineRadius
                         color: "transparent"
-                        border.color: node.s.ringColor
-                        border.width: node.s.ringWidth
+                        border.color: node.ringColor
+                        border.width: node.ringWidth
                     }
                 }
             }
@@ -505,16 +406,20 @@ FocusScope {
             onCanceled: {
                 plotMoves.flush()
                 plotHint.settleRelease(plotHint.point.scenePosition)
-                page.pageModel.cancelSectionInteraction()
+                if (page.pageModel)
+                    page.pageModel.cancelSectionInteraction()
             }
             onExited: {
                 plotMoves.flush()
-                page.pageModel.pointerLeave()
+                if (page.pageModel)
+                    page.pageModel.pointerLeave()
             }
             MoveCoalescer {
                 id: plotMoves
-                dispatch: (x, y, buttons, modifiers) =>
-                    page.pageModel.pointerMove(x, y, buttons)
+                function dispatchMove(x: real, y: real, buttons: int, modifiers: int): bool {
+                    return page.pageModel ? page.pageModel.pointerMove(x, y, buttons) : false
+                }
+                dispatch: plotMoves.dispatchMove
             }
         }
 

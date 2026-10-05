@@ -1,12 +1,15 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import Porydaw.Ui
+import PorydawApp
 
 Item {
     id: dial
-    required property QtObject colors
+    required property GridPalette colors
     required property int baseFontPx
-    required property var hintService
+    required property MouseHints hintService
     property int value: 100
     signal valueCommitted(int percent)
 
@@ -76,34 +79,35 @@ Item {
         property real dragLastY: 0
         property real stepAccumulator: 0
         property point lastPoint: Qt.point(0, 0)
-        onPressed: mouse => {
-            dragLastY = mouse.y
-            stepAccumulator = 0
-            lastPoint = Qt.point(mouse.x, mouse.y)
+        onPressed: function(mouse) {
+            outputInput.dragLastY = mouse.y
+            outputInput.stepAccumulator = 0
+            outputInput.lastPoint = Qt.point(mouse.x, mouse.y)
             dial.forceActiveFocus(Qt.MouseFocusReason)
         }
-        onPositionChanged: mouse => {
-            if (!pressed) return
-            lastPoint = Qt.point(mouse.x, mouse.y)
+        onPositionChanged: function(mouse) {
+            if (!outputInput.pressed) return
+            outputInput.lastPoint = Qt.point(mouse.x, mouse.y)
             const rate = mouse.modifiers & Qt.ShiftModifier ? 0.2 : 0.5
-            stepAccumulator += (mouse.y - dragLastY) * rate
-            dragLastY = mouse.y
-            const steps = Math.trunc(stepAccumulator)
+            outputInput.stepAccumulator += (mouse.y - outputInput.dragLastY) * rate
+            outputInput.dragLastY = mouse.y
+            const steps = Math.trunc(outputInput.stepAccumulator)
             if (steps !== 0) {
-                stepAccumulator -= steps
+                outputInput.stepAccumulator -= steps
                 dial.valueCommitted(Math.max(0, Math.min(100, dial.value + steps)))
             }
         }
-        onReleased: mouse => outputHover.settleRelease(
-            dial.mapToItem(null, mouse.x, mouse.y))
+        onReleased: function(mouse) {
+            outputHover.settleRelease(dial.mapToItem(null, mouse.x, mouse.y))
+        }
         onCanceled: outputHover.settleRelease(
-            dial.mapToItem(null, lastPoint.x, lastPoint.y))
-        onWheel: wheel => {
+            dial.mapToItem(null, outputInput.lastPoint.x, outputInput.lastPoint.y))
+        onWheel: function(wheel) {
             dial.valueCommitted(Math.max(0, Math.min(100,
                 dial.value + Math.trunc(wheel.angleDelta.y / 120) * 10)))
             wheel.accepted = true
         }
     }
-    Keys.onUpPressed: event => { dial.valueCommitted(Math.min(100, dial.value + 1)); event.accepted = true }
-    Keys.onDownPressed: event => { dial.valueCommitted(Math.max(0, dial.value - 1)); event.accepted = true }
+    Keys.onUpPressed: function(event) { dial.valueCommitted(Math.min(100, dial.value + 1)); event.accepted = true }
+    Keys.onDownPressed: function(event) { dial.valueCommitted(Math.max(0, dial.value - 1)); event.accepted = true }
 }

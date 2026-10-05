@@ -42,7 +42,7 @@ func drawerVoiceMarkerProjection(
             marker.lineWidth > 0, cppID: drawerVoiceProjectionID,
             message: "marker \(tick) draws a rule of a real width")
         report.expect(
-            (marker.labelRect["width"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
+            marker.labelWidth > 0, cppID: drawerVoiceProjectionID,
             message: "marker \(tick) publishes a label box with a real width")
         report.expect(
             !marker.offscreen, cppID: drawerVoiceProjectionID,
@@ -75,7 +75,7 @@ func drawerVoiceMarkerProjection(
         page.readoutVisible, cppID: drawerVoiceProjectionID,
         message: "the readout is published for a presented track")
     report.expect(
-        (page.readoutRect["width"] as? Double ?? 0) > 0 && (page.readoutRect["height"] as? Double ?? 0) > 0,
+        page.readoutWidth > 0 && page.readoutHeight > 0,
         cppID: drawerVoiceProjectionID,
         message: "the context readout publishes a usable rect")
     report.expectEqual(
@@ -121,7 +121,7 @@ func drawerVoiceMarkerProjection(
         expected: before, actual: page.publishedMarkers.map(\.label), cppID: drawerVoiceProjectionID,
         what: "a hover repaints no marker label")
     report.expect(
-        (page.hoverLabelRect["width"] as? Double ?? 0) > 0 && (page.hoverLabelRect["height"] as? Double ?? 0) > 0,
+        page.hoverLabelWidth > 0 && page.hoverLabelHeight > 0,
         cppID: drawerVoiceProjectionID,
         message: "the background hover publishes a usable label rect")
 

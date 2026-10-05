@@ -69,6 +69,7 @@ internal func runSongDeletionChecks(_ report: CheckReport, fixtureRoot: String) 
     runDeletionAllocationChecks(report, fixtureRoot: fixtureRoot)
     runDeletionServiceChecks(report, fixtureRoot: fixtureRoot)
     runDeletionBankChecks(report, fixtureRoot: fixtureRoot)
+    runDeletionResourcePins(report, fixtureRoot: fixtureRoot)
 }
 
 private func deletionOperationSucceeded<Value>(_ result: Result<Value, Error>) -> Bool {
@@ -496,4 +497,67 @@ private func runDeletionBankChecks(_ report: CheckReport, fixtureRoot: String) {
             }
         } catch { report.fail(id, "bank reference scenario failed: \(error)") }
     }
+}
+
+@MainActor
+private func runDeletionResourcePins(_ report: CheckReport, fixtureRoot: String) {
+    let id = "swiftcore/SongDeletion::resource-crlf-index-pins"
+    do {
+        let fixture = try deletionFixture(fixtureRoot, name: "resource-pins")
+        let table =
+            "gSongTable::\r\n\tsong mus_zero, MUSIC_PLAYER_BGM, 0\r\n@ retained comment\r\n  song mus_remove, MUSIC_PLAYER_BGM, 0\r\n\tsong mus_other, MUSIC_PLAYER_BGM, 0\r\n song mus_remove, MUSIC_PLAYER_BGM, 0\r\n@ retained tail"
+        let header =
+            "#define MUS_ZERO 0\r\n#define MUS_REMOVE_EXTRA 1\r\n#define MUS_REMOVE 1suffix\r\n#define MUS_REMOVE 3\r\n#define MUS_REMOVE 1\r\n#define MUS_OTHER 2\r\n#define END_MUS MUS_REMOVE // boundary\r\n#define MUS_NONE 0xFFFF"
+        let charmap =
+            "MUS_ZERO = 00 00\r\nMUS_REMOVE_EXTRA = 01 00\r\nMUS_REMOVE = 03 00\r\nMUS_REMOVE = 01 00\r\nMUS_OTHER = 02 00"
+        let linker =
+            "SECTIONS {\r\n\tsound/songs/midi/mus_remove_extra.o(.rodata);\r\n\tsound/songs/midi/mus_remove.o(.rodata);\r\n  sound/songs/midi/mus_remove.o(.rodata);\r\n}"
+        try fixture.write("sound/song_table.inc", table)
+        try fixture.write("include/constants/songs.h", header)
+        try fixture.write("charmap.txt", charmap)
+        try fixture.write("ld_script.ld", linker)
+        let plan = SongRegistration.removalPlan(root: fixture.root, label: "mus_remove", constant: "MUS_REMOVE")
+        report.expectEqual(
+            expected: [3, 4], actual: [plan.tableIndex, plan.tableCount], cppID: id,
+            what: "Deletion resource pin: lookup selects the last duplicate entry index rather than its source line")
+        report.expectEqual(
+            expected: [true, true, true, true],
+            actual: [plan.lastEntry, plan.inSongsH, plan.inLdScript, plan.inCharmap], cppID: id,
+            what: "Deletion resource pin: tail lookup and all three resource matches are present before removal")
+        try SongRegistration.unregister(root: fixture.root, label: "mus_remove", constant: "MUS_REMOVE")
+        report.expectEqual(
+            expected: Data(
+                "gSongTable::\r\n\tsong mus_zero, MUSIC_PLAYER_BGM, 0\r\n@ retained comment\r\n  song mus_remove, MUSIC_PLAYER_BGM, 0\r\n\tsong mus_other, MUSIC_PLAYER_BGM, 0\r\n@ retained tail"
+                    .utf8),
+            actual: try fixture.read("sound/song_table.inc"), cppID: id,
+            what: "Deletion resource pin: only the last duplicate table entry is removed, preserving comments and CRLF")
+        let removedHeader =
+            header.replacingOccurrences(of: "#define MUS_REMOVE 3\r\n", with: "")
+            .replacingOccurrences(of: "END_MUS MUS_REMOVE", with: "END_MUS MUS_OTHER")
+        report.expectEqual(
+            expected: Data(removedHeader.utf8), actual: try fixture.read("include/constants/songs.h"), cppID: id,
+            what:
+                "Deletion resource pin: removal skips numeric suffixes, removes the first word-bounded definition and repoints the marker"
+        )
+        report.expectEqual(
+            expected: Data(charmap.replacingOccurrences(of: "MUS_REMOVE = 03 00\r\n", with: "").utf8),
+            actual: try fixture.read("charmap.txt"), cppID: id,
+            what:
+                "Deletion resource pin: only the first exact charmap constant is removed, retaining the neighbor and duplicate"
+        )
+        report.expectEqual(
+            expected: Data(
+                linker.replacingOccurrences(of: "\tsound/songs/midi/mus_remove.o(.rodata);\r\n", with: "").utf8),
+            actual: try fixture.read("ld_script.ld"), cppID: id,
+            what:
+                "Deletion resource pin: only the first exact linker object line is removed, retaining the prefix neighbor"
+        )
+        let remaining = SongRegistration.removalPlan(root: fixture.root, label: "mus_remove", constant: "MUS_REMOVE")
+        report.expectEqual(
+            expected: [1, 3], actual: [remaining.tableIndex, remaining.tableCount], cppID: id,
+            what: "Deletion resource pin: surviving duplicate keeps ID one without renumbering the other entry")
+        report.expectEqual(
+            expected: false, actual: remaining.lastEntry, cppID: id,
+            what: "Deletion resource pin: surviving duplicate is no longer the final entry")
+    } catch { report.fail(id, "deletion resource pins failed: \(error)") }
 }

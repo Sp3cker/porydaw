@@ -1,24 +1,23 @@
-// Shared canvas-prompt chrome: the bordered dialog rectangle and its padded
-// content column. Owners keep semantics — drafts, focus routing, key sinks —
-// and declare rows as default children; appearance injects the shared theme
-// keys, and minimumWidth optionally floors dialogs whose content runs narrow.
+pragma ComponentBehavior: Bound
+// Shared padded prompt chrome; owners keep drafts, focus routing and key sinks.
 import QtQuick
 import Porydaw.Ui
+import PorydawApp
 
 Item {
     id: card
 
     focus: true
 
-    required property var appearance
+    required final property PromptStyle appearance
 
-    property real minimumWidth: 0
+    final property real minimumWidth: 0
 
     default property alias contentChildren: content.data
 
-    implicitWidth: Math.max(content.implicitWidth + 2 * appearance.dialogPadding,
-                            minimumWidth)
-    implicitHeight: content.implicitHeight + 2 * appearance.dialogPadding
+    implicitWidth: Math.max(content.implicitWidth + 2 * card.appearance.dialogPadding,
+                            card.minimumWidth)
+    implicitHeight: content.implicitHeight + 2 * card.appearance.dialogPadding
 
     Rectangle {
         parent: card

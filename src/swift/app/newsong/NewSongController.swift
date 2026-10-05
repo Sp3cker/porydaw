@@ -78,7 +78,7 @@ public final class NewSongController: QmlUncreatable {
                 self.wizardOpen = true
             } catch {
                 guard !Task.isCancelled, self.service === service else { return }
-                self.session?.operationFailed(message: String(describing: error))
+                self.session?.publishOperationFailure(message: String(describing: error))
             }
             if !Task.isCancelled, self.service === service { self.busy = false }
         }
@@ -117,38 +117,19 @@ public final class NewSongController: QmlUncreatable {
         busy = true
         operation = Task { [weak self] in
             guard let self else { return }
-            do {
-                let id = try await service.importSong(request)
-                guard !Task.isCancelled, self.service === service else { return }
-                let songs = try await service.songs()
-                guard !Task.isCancelled, self.service === service else { return }
-                self.dock?.publishSongs(songs)
-                self.session?.statusMessage(message: "Created and registered \(request.label) (song ID \(id))")
-                if request.createVoicegroup {
-                    _ = await self.session?.refreshVoicegroupCatalog()
-                    guard !Task.isCancelled, self.service === service else { return }
-                    self.session?.openSongFromDock(label: request.label, newTab: true)
-                }
-            } catch {
-                guard !Task.isCancelled, self.service === service else { return }
-                self.session?.operationFailed(message: Self.failureText(error))
-                if let root = self.session?.projectRoot, !root.isEmpty {
-                    do {
-                        try await service.open(root: root)
-                    } catch {
-                        // The refusal is already reported. Keep the prior catalog.
+            await registerImportedSong(
+                request: request, service: service, dock: self.dock, session: self.session,
+                isCurrent: { self.service === service },
+                failurePrelude: { error in
+                    self.session?.publishOperationFailure(message: Self.failureText(error))
+                    if let root = self.session?.projectRoot, !root.isEmpty {
+                        do {
+                            try await service.open(root: root)
+                        } catch {
+                            // The refusal is already reported. Keep the prior catalog.
+                        }
                     }
-                }
-                guard !Task.isCancelled, self.service === service else { return }
-                if let songs = try? await service.songs() {
-                    guard !Task.isCancelled, self.service === service else { return }
-                    self.dock?.publishSongs(songs)
-                }
-                if request.createVoicegroup {
-                    _ = await self.session?.refreshVoicegroupCatalog()
-                    guard !Task.isCancelled, self.service === service else { return }
-                }
-            }
+                })
             if !Task.isCancelled, self.service === service { self.busy = false }
         }
     }

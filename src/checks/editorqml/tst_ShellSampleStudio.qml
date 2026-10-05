@@ -2,10 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtTest
 import ShellQmlCheck 1.0
-import "../../ui/shell"
-import "NativeWait.js" as NativeWait
+import Porydaw.Ui
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellSampleStudio"
     when: windowShown
@@ -15,12 +14,9 @@ TestCase {
     ShellQmlBootstrap { id: bootstrap }
     ImportWizardProbe { id: disk }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
-    property var shell: null
     readonly property string rootPath: bootstrap.projectRoot
-    function waitForNative(predicate, timeout) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeout)
-    }
-    function child(name) { return findChild(shell, name) }
+    laneBootstrap: bootstrap
+
     function openShell() {
         verify(bootstrap.resetPreferences(), "fresh preferences")
         shell = shellComponent.createObject(null)
@@ -188,8 +184,14 @@ TestCase {
             return disk.exists(rootPath + "/sound/direct_sound_samples/hires_tone.wav")
                 && !child("sampleStudioDialog")
         }, 20000), "project receives committed WAV")
+        const controller = presenter.session.voiceListController()
+        controller.configureSamplePicker("", false)
         verify(waitForNative(function() {
-            return presenter.session.voiceListController().sampleSymbols().indexOf("DirectSoundWaveData_hires_tone") !== -1
+            for (let index = 0; index < controller.samplePickerCount; ++index) {
+                if (controller.samplePickerRow(index).symbol === "DirectSoundWaveData_hires_tone")
+                    return true
+            }
+            return false
         }, 15000), "catalog refresh exposes new symbol")
     }
     function test_flacOpensEditor() {

@@ -21,10 +21,9 @@ ShellDrawerParitySupport {
             var frame = RollNoteFaces.grab(testCase, preview)
             var sx = frame.width / preview.width
             var sy = frame.height / preview.height
-            var ink = String(page.gridPalette.selectionEdge).slice(-6)
-            var rgb = [parseInt(ink.slice(0, 2), 16),
-                       parseInt(ink.slice(2, 4), 16),
-                       parseInt(ink.slice(4, 6), 16)]
+            var ink = page.gridPalette.selectionEdge
+            var rgb = [Math.round(ink.r * 255), Math.round(ink.g * 255),
+                       Math.round(ink.b * 255)]
             var radius = Math.ceil(model.baseFontPx * 3 / 4)
             for (var py = Math.max(0, Math.floor((y - radius) * sy));
                  py <= Math.min(frame.height - 1, Math.ceil((y + radius) * sy)); ++py) {
@@ -166,10 +165,9 @@ ShellDrawerParitySupport {
                    "right-band release retires the drag preview")
         wait(0)
         var selectedFrame = RollNoteFaces.grab(testCase, statics)
-        var edgeInk = String(page.gridPalette.selectionEdge).slice(-6).toLowerCase()
-        var edgeRgb = [parseInt(edgeInk.slice(0, 2), 16),
-                       parseInt(edgeInk.slice(2, 4), 16),
-                       parseInt(edgeInk.slice(4, 6), 16)]
+        var edgeInk = page.gridPalette.selectionEdge
+        var edgeRgb = [Math.round(edgeInk.r * 255), Math.round(edgeInk.g * 255),
+                       Math.round(edgeInk.b * 255)]
         var probeY = Math.floor(selectedFrame.height * 0.35)
         var paintedEdges = 0
         for (var px = 0; px < selectedFrame.width; ++px) {

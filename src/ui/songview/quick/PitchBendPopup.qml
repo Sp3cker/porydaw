@@ -1,34 +1,33 @@
-// Opaque note-automation popup chrome; Swift owns both graph lanes and their
-// document transactions. The graph uses the existing scene-model/Quick Shape
-// projection instead of the retired C++ QQuickItem.
+pragma ComponentBehavior: Bound
+// Swift owns both graph lanes and their document transactions.
+// The popup projects the scene models through Quick Shapes.
 import QtQuick
 import QtQuick.Shapes
 import Porydaw.Ui
+import PorydawApp
 
 Rectangle {
     id: root
 
     objectName: "pitchBendPopup"
 
-    required property var bridge
+    required final property PitchBendPresenter bridge
 
-    required property font fallbackFont
+    required final property font fallbackFont
 
-    readonly property var metrics: bridge ? bridge.metrics : null
-    readonly property var appearance: bridge ? bridge.appearance : null
 
-    readonly property real outerInset: metrics ? metrics.outerInset : 0
-    readonly property real headerHeight: metrics ? metrics.headerHeight : 0
-    readonly property real graphHeight: metrics ? metrics.graphHeight : 0
-    readonly property real titleHeight: metrics ? metrics.titleHeight : 0
-    readonly property real descriptionHeight: metrics ? metrics.descriptionHeight : 0
-    readonly property real controlsHeight: metrics ? metrics.controlsHeight : 0
-    readonly property real fieldWidth: metrics ? metrics.fieldWidth : 0
-    readonly property real fieldHeight: metrics ? metrics.fieldHeight : 0
-    readonly property real resetWidth: metrics ? metrics.resetWidth : 0
-    readonly property real resetHeight: metrics ? metrics.resetHeight : 0
-    readonly property real axisLabelHeight: metrics ? metrics.axisLabelHeight : 0
-    readonly property real hairline: metrics ? metrics.hairline : 0
+    readonly property real outerInset: bridge ? bridge.outerInset : 0
+    readonly property real headerHeight: bridge ? bridge.headerHeight : 0
+    readonly property real graphHeight: bridge ? bridge.graphHeight : 0
+    readonly property real titleHeight: bridge ? bridge.titleHeight : 0
+    readonly property real descriptionHeight: bridge ? bridge.descriptionHeight : 0
+    readonly property real controlsHeight: bridge ? bridge.controlsHeight : 0
+    readonly property real fieldWidth: bridge ? bridge.fieldWidth : 0
+    readonly property real fieldHeight: bridge ? bridge.fieldHeight : 0
+    readonly property real resetWidth: bridge ? bridge.resetWidth : 0
+    readonly property real resetHeight: bridge ? bridge.resetHeight : 0
+    readonly property real axisLabelHeight: bridge ? bridge.axisLabelHeight : 0
+    readonly property real hairline: bridge ? bridge.hairline : 0
 
     // Secondary gaps derive from resolved chrome metrics; no raw widget pixel
     // sizes appear in this shell.
@@ -36,26 +35,22 @@ Rectangle {
     readonly property real rowGap: hairline * 2
     readonly property real axisPad: hairline * 4
 
-    readonly property color windowBackgroundColor: appearance ? appearance.windowBackground
-                                                              : "transparent"
-    readonly property color primaryTextColor: appearance ? appearance.primaryText : "transparent"
-    readonly property color secondaryTextColor: appearance ? appearance.secondaryText
-                                                           : "transparent"
-    readonly property color outlineColor: appearance ? appearance.outline : "transparent"
-    readonly property font titleFont: appearance ? Qt.font(appearance.titleFont) : fallbackFont
-    readonly property font captionFont: appearance ? Qt.font(appearance.captionFont) : fallbackFont
-    readonly property font monospaceFont: appearance ? Qt.font(appearance.monospaceFont) : fallbackFont
+    readonly property color windowBackgroundColor: bridge ? bridge.windowBackground : "transparent"
+    readonly property color primaryTextColor: bridge ? bridge.primaryText : "transparent"
+    readonly property color secondaryTextColor: bridge ? bridge.secondaryText : "transparent"
+    final readonly property color outlineColor: bridge ? bridge.outline : "transparent"
+    readonly property font titleFont: bridge ? bridge.titleFont : fallbackFont
+    readonly property font captionFont: bridge ? bridge.captionFont : fallbackFont
+    readonly property font monospaceFont: bridge ? bridge.monospaceFont : fallbackFont
 
-    implicitWidth: metrics ? metrics.popupWidth : 0
-    implicitHeight: metrics ? metrics.popupHeight : 0
+    implicitWidth: bridge ? bridge.popupWidth : 0
+    implicitHeight: bridge ? bridge.popupHeight : 0
 
     color: windowBackgroundColor
     border.width: hairline
     border.color: outlineColor
 
-    // Root-level blank chrome must never hand clicks or wheel gestures to the
-    // roll. Interactive controls appear later and therefore sit above this
-    // shield.
+    // Blank chrome shields the roll from pointer and wheel input.
     MouseArea {
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
@@ -85,7 +80,7 @@ Rectangle {
     Accessible.name: qsTr("Note automation editor")
     Accessible.description: bridge ? bridge.description : ""
 
-    function resetLane(graph) {
+    function resetLane(graph: GraphCanvas): void {
         if (!bridge || !graph)
             return
         if (graph === pitchGraph)
@@ -94,12 +89,12 @@ Rectangle {
             bridge.resetModCurve()
         graph.forceActiveFocus(Qt.OtherFocusReason)
     }
-    function focusInitialGraph() { pitchGraph.forceActiveFocus(Qt.PopupFocusReason) }
+    function focusInitialGraph(): void { pitchGraph.forceActiveFocus(Qt.PopupFocusReason) }
 
     component GraphLaneLabels: Item {
         id: labels
 
-        required property Item graph
+        required property GraphCanvas graph
 
         readonly property rect canvas: graph ? graph.canvasRect : Qt.rect(0, 0, 0, 0)
 
@@ -127,9 +122,7 @@ Rectangle {
 
             x: labels.canvas.x
             y: 0
-            // The lane's Reset button shares this band, vertically centered
-            // like this readout and right-aligned to the canvas edge; stop
-            // the readout one control gap short so it stays fully visible.
+            // Leave one gap before the Reset button in this band.
             width: Math.max(0, labels.canvas.width - root.resetWidth - root.controlGap)
             height: labels.canvas.y
             clip: true
@@ -225,7 +218,7 @@ Rectangle {
     component ResetButton: Item {
         id: resetButton
 
-        required property Item graph
+        required property GraphCanvas graph
         required property string resetDescription
 
         readonly property bool hovered: hoverHandler.hovered
@@ -244,9 +237,12 @@ Rectangle {
 
         Rectangle {
             anchors.fill: parent
-            color: resetButton.pressed ? Qt.alpha(root.outlineColor, 0.35)
-                  : resetButton.hovered ? Qt.alpha(root.outlineColor, 0.18)
-                  : "transparent"
+            color: {
+                if (!resetButton.pressed && !resetButton.hovered)
+                    return "transparent"
+                const outline = root.outlineColor
+                return Qt.rgba(outline.r, outline.g, outline.b, resetButton.pressed ? 0.35 : 0.18)
+            }
         }
 
         Text {
@@ -283,14 +279,13 @@ Rectangle {
 
     component GraphCanvas: Item {
         id: graphCanvas
-        property var lane
-        function inCanvas(x, y) {
+        final property PitchBendLane lane
+        function inCanvas(x: real, y: real): bool {
             return x >= canvasRect.x && x < canvasRect.x + canvasRect.width
                 && y >= canvasRect.y && y < canvasRect.y + canvasRect.height
         }
-        readonly property rect canvasRect: lane
-            ? Qt.rect(lane.canvasRect.x, lane.canvasRect.y,
-                      lane.canvasRect.width, lane.canvasRect.height)
+        final readonly property rect canvasRect: lane
+            ? Qt.rect(lane.canvasX, lane.canvasY, lane.canvasWidth, lane.canvasHeight)
             : Qt.rect(0, 0, 0, 0)
         readonly property string laneTitle: lane ? lane.laneTitle : ""
         readonly property string liveValueText: lane ? lane.liveValueText : ""
@@ -309,26 +304,28 @@ Rectangle {
             clip: true
         }
         Repeater {
-            model: graphCanvas.lane ? graphCanvas.lane.gridLines : []
+            model: graphCanvas.lane ? graphCanvas.lane.gridLines : null
             delegate: Rectangle {
-                required property var frame
-                required property string fillColor
+                required x
+                required y
+                required width
+                required height
+                required property color fillColor
                 required property string primitiveName
                 objectName: primitiveName
-                x: frame.x
-                y: frame.y
-                width: frame.width
-                height: frame.height
                 color: fillColor
             }
         }
         Repeater {
             id: renderedCurveSegments
-            model: graphCanvas.lane ? graphCanvas.lane.curveLines : []
+            model: graphCanvas.lane ? graphCanvas.lane.curveLines : null
             delegate: Shape {
                 id: curveShape
-                required property var model
-                required property string strokeColor
+                required property real x0
+                required property real y0
+                required property real x1
+                required property real y1
+                required property color strokeColor
                 required property real strokeWidth
                 anchors.fill: graphCanvas
                 ShapePath {
@@ -336,27 +333,26 @@ Rectangle {
                     strokeWidth: curveShape.strokeWidth
                     fillColor: "transparent"
                     capStyle: ShapePath.RoundCap
-                    startX: curveShape.model.x0
-                    startY: curveShape.model.y0
+                    startX: curveShape.x0
+                    startY: curveShape.y0
                     PathLine {
-                        x: curveShape.model.x1
-                        y: curveShape.model.y1
+                        x: curveShape.x1
+                        y: curveShape.y1
                     }
                 }
             }
         }
         Repeater {
-            model: graphCanvas.lane ? graphCanvas.lane.vertices : []
+            model: graphCanvas.lane ? graphCanvas.lane.vertices : null
             delegate: Rectangle {
-                required property var model
-                required property string fillColor
-                required property string ringColor
+                required x
+                required y
+                required radius
+                required property color fillColor
+                required property color ringColor
                 required property real ringWidth
-                x: model.x
-                y: model.y
-                width: model.radius * 2
-                height: model.radius * 2
-                radius: width / 2
+                width: radius * 2
+                height: radius * 2
                 color: fillColor
                 border.width: ringWidth
                 border.color: ringColor
@@ -406,7 +402,7 @@ Rectangle {
 
     GraphCanvas {
         id: pitchGraph
-        lane: bridge ? bridge.currentPitch : null
+        lane: root.bridge ? root.bridge.currentPitch : null
         objectName: "pitchBendGraph"
         x: 0
         y: root.headerHeight
@@ -417,7 +413,7 @@ Rectangle {
 
     GraphCanvas {
         id: modGraph
-        lane: bridge ? bridge.currentMod : null
+        lane: root.bridge ? root.bridge.currentMod : null
         objectName: "modWheelGraph"
         x: 0
         y: root.headerHeight + root.graphHeight
@@ -488,7 +484,7 @@ Rectangle {
         verticalAlignment: Text.AlignVCenter
         color: root.secondaryTextColor
         font: root.captionFont
-        text: bridge ? bridge.noteDescription : ""
+        text: root.bridge ? root.bridge.noteDescription : ""
         renderType: Text.NativeRendering
         elide: Text.ElideRight
     }
@@ -513,7 +509,7 @@ Rectangle {
         objectName: "bendRangeSpin"
         inputObjectName: "bendRangeInput"
         accessibleName: qsTr("Pitch-bend range")
-        appearance: bridge.appearance.dragInput
+        appearance: root.bridge.promptStyle
         minimumValue: 0
         maximumValue: 127
         accessibleDescription: qsTr("Pitch-bend range in semitones for this note")
@@ -522,14 +518,14 @@ Rectangle {
            + (root.controlsHeight - height) / 2
         width: root.fieldWidth
         height: root.fieldHeight
-        value: bridge ? bridge.bendRange : 0
+        value: root.bridge ? root.bridge.bendRange : 0
         onValueCommitted: (committed) => {
-            if (bridge)
-                bridge.setBendRange(committed)
+            if (root.bridge)
+                root.bridge.setBendRange(committed)
         }
         Connections {
             target: bendRangeField.textInput.Keys
-            function onShortcutOverride(event) {
+            function onShortcutOverride(event: KeyEvent): void {
                 event.accepted = event.key !== Qt.Key_Space
                     && !event.matches(StandardKey.Undo) && !event.matches(StandardKey.Redo)
             }
@@ -556,7 +552,7 @@ Rectangle {
         objectName: "lfoSpeedSpin"
         inputObjectName: "lfoSpeedInput"
         accessibleName: qsTr("LFO speed")
-        appearance: bridge.appearance.dragInput
+        appearance: root.bridge.promptStyle
         minimumValue: 0
         maximumValue: 127
         accessibleDescription: qsTr("M4A LFO speed for this note")
@@ -564,14 +560,14 @@ Rectangle {
         y: bendRangeField.y
         width: root.fieldWidth
         height: root.fieldHeight
-        value: bridge ? bridge.lfoSpeed : 0
+        value: root.bridge ? root.bridge.lfoSpeed : 0
         onValueCommitted: (committed) => {
-            if (bridge)
-                bridge.setLfoSpeed(committed)
+            if (root.bridge)
+                root.bridge.setLfoSpeed(committed)
         }
         Connections {
             target: lfoSpeedField.textInput.Keys
-            function onShortcutOverride(event) {
+            function onShortcutOverride(event: KeyEvent): void {
                 event.accepted = event.key !== Qt.Key_Space
                     && !event.matches(StandardKey.Undo) && !event.matches(StandardKey.Redo)
             }

@@ -200,15 +200,18 @@ func drawerAutomationPresentationPaintingModel(
     ] {
         let colors = GridPalette()
         ShellAppearance.apply(to: colors, mode: mode, contrast: 50)
+        let expectedNode = PaletteMath.qmlColor(node)
+        let expectedResting = PaletteMath.qmlColor(resting)
+        let expectedOutline = PaletteMath.qmlColor(outline)
         report.expect(
-            colors.automationNodeInk == node, cppID: drawerAutomationPaintingModelID,
+            colors.automationNodeInk == expectedNode, cppID: drawerAutomationPaintingModelID,
             message: "\(mode) automation node ink matches the native preset")
         report.expect(
-            colors.automationTabBackground == resting,
+            colors.automationTabBackground == expectedResting,
             cppID: drawerAutomationPaintingModelID,
             message: "\(mode) resting automation tab matches the native preset")
         report.expect(
-            colors.automationTabOutline == outline,
+            colors.automationTabOutline == expectedOutline,
             cppID: drawerAutomationPaintingModelID,
             message: "\(mode) automation tab border matches the native preset")
         for (pair, text, background) in [
@@ -330,11 +333,11 @@ func drawerAutomationPresentationPaintingModel(
         cppID: drawerAutomationPaintingModelID,
         message: "pinning Tempo publishes its drawn name and exact event count")
     if page.ghostNameLabels.count == 1 {
-        let rect = page.ghostNameLabels[0].labelRect
-        let x = rect["x"] as? Double ?? -1
-        let y = rect["y"] as? Double ?? -1
-        let width = rect["width"] as? Double ?? -1
-        let height = rect["height"] as? Double ?? -1
+        let rect = page.ghostNameLabels[0]
+        let x = rect.x
+        let y = rect.y
+        let width = rect.width
+        let height = rect.height
         report.expect(
             x > page.plotWidth / 2 && x + width <= page.plotWidth,
             cppID: drawerAutomationPaintingModelID,
@@ -345,8 +348,8 @@ func drawerAutomationPresentationPaintingModel(
             message: "the pinned Tempo name follows its own held curve height")
         report.expect(
             (0..<page.valueLabels.count).allSatisfy {
-                let label = page.valueLabels[$0].labelRect
-                return x >= (label["x"] as? Double ?? 0) + (label["width"] as? Double ?? 0)
+                let label = page.valueLabels[$0]
+                return x >= label.x + label.width
             }, cppID: drawerAutomationPaintingModelID,
             message: "the pinned Tempo name remains clear of left scale text")
     }
@@ -359,15 +362,12 @@ func drawerAutomationPresentationPaintingModel(
         cppID: drawerAutomationPaintingModelID,
         message: "hovering the pinned Tempo curve draws its exact name")
     report.expect(
-        abs(
-            (ghostHoverRect["x"] as? Double ?? 0)
-                + (ghostHoverRect["width"] as? Double ?? 0) / 2 - ghostHoverX)
-            <= (ghostHoverRect["width"] as? Double ?? 0),
+        abs(ghostHoverRect.x + ghostHoverRect.width / 2 - ghostHoverX)
+            <= ghostHoverRect.width,
         cppID: drawerAutomationPaintingModelID,
         message: "the pinned Tempo hover follows the pointer's plot column")
     report.expect(
-        (ghostHoverRect["y"] as? Double ?? page.plotHeight)
-            + (ghostHoverRect["height"] as? Double ?? 0) <= ghostHoverY,
+        ghostHoverRect.y + ghostHoverRect.height <= ghostHoverY,
         cppID: drawerAutomationPaintingModelID,
         message: "the pinned Tempo hover sits above its own curve")
     for theme in themePresetRows {
@@ -534,14 +534,14 @@ func drawerAutomationPresentationPaintingModel(
         actual: (0..<page.valueLabels.count).map { page.valueLabels[$0].labelText },
         cppID: drawerAutomationPaintingModelID,
         what: "the value axis labels the centered lane's extremes and neutral")
-    let labelTop = (0..<page.valueLabels.count).map { page.valueLabels[$0].labelRect["y"] as? Double ?? -1 }
+    let labelTop = (0..<page.valueLabels.count).map { page.valueLabels[$0].y }
     report.expect(
         labelTop[0] < labelTop[2] && labelTop[2] < labelTop[1],
         cppID: drawerAutomationPaintingModelID,
         message: "maximum, neutral and minimum stack top to bottom without overlap")
     report.expect(
         (0..<page.valueLabels.count).allSatisfy {
-            (page.valueLabels[$0].labelRect["x"] as? Double ?? page.plotWidth) < page.plotWidth / 4
+            page.valueLabels[$0].x < page.plotWidth / 4
         }, cppID: drawerAutomationPaintingModelID,
         message: "each drawn scale label hugs the left quarter of the plot")
     let ticks = drawnAxis.filter {
@@ -603,9 +603,9 @@ func drawerAutomationPresentationPaintingModel(
             message: "the tempo hover names its value")
         let rect = page.hoverLabelRect
         let inPlot =
-            (rect["x"] as? Double ?? -1) >= 0 && (rect["y"] as? Double ?? -1) >= 0
-            && ((rect["x"] as? Double ?? 0) + (rect["width"] as? Double ?? 0)) <= page.plotWidth + 1
-            && ((rect["y"] as? Double ?? 0) + (rect["height"] as? Double ?? 0)) <= page.plotHeight + 1
+            rect.x >= 0 && rect.y >= 0
+            && rect.x + rect.width <= page.plotWidth + 1
+            && rect.y + rect.height <= page.plotHeight + 1
         report.expect(
             inPlot, cppID: drawerAutomationPaintingModelID,
             message: "the hover label stays inside the plot")

@@ -42,7 +42,8 @@ EditorDrawerTestSupport {
         compare(velocityCard.appearance.verticalPadding, session.layoutSpaces.half)
         compare(velocityCard.appearance.radius, session.layoutSpaces.half)
         compare(velocityCard.appearance.dragThreshold, base)
-        compare(velocityCard.appearance.background, testCase.surface.gridModel.palette.windowBackground,
+        compare(Qt.colorEqual(velocityCard.appearance.background,
+                              testCase.surface.gridModel.palette.windowBackground), true,
                 "the prompt binds the grid's body surface role")
         compare(String(findChild(velocityCard, "velocityPromptTitle").text).length > 0, true,
                 "the prompt draws its title")

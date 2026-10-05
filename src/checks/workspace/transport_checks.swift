@@ -39,6 +39,22 @@ internal func runTransportBarChecks(_ report: CheckReport) {
     report.expectEqual(
         expected: "4:1", actual: TransportBarPresenter.measure(at: 264, timeline: timeline),
         cppID: id, what: "new 3/4 segment advances after three beats")
+
+    var boundaryFile = makeMidiFixture()
+    boundaryFile.chunks[0].events.append(.meta(tick: 25, type: 0x58, data: [3, 3, 24, 8]))
+    boundaryFile.chunks[0].events.append(.meta(tick: 62, type: 0x58, data: [5, 4, 24, 8]))
+    let boundaryTimeline = PlaybackTimeline.build(file: boundaryFile, sampleRate: 48_000)
+    let boundaries: [(tick: Tick, measure: String)] = [
+        (0, "1:1"), (23, "1:1"), (24, "1:2"), (25, "2:1"),
+        (36, "2:1"), (37, "2:2"), (60, "2:3"), (61, "3:1"),
+        (62, "4:1"), (67, "4:1"), (68, "4:2"), (91, "4:5"), (92, "5:1"),
+    ]
+    for boundary in boundaries {
+        report.expectEqual(
+            expected: boundary.measure,
+            actual: TransportBarPresenter.measure(at: boundary.tick, timeline: boundaryTimeline),
+            cppID: id, what: "partial-bar signature changes and beat floors at tick \(boundary.tick)")
+    }
     checkRestoredOutputVolumeAfterAttachment(report)
     checkTransportVolumeIsolation(report, fixtureRoot: CheckEnvironment.fixtureRoot)
     checkTransportTogglePreferences(report)

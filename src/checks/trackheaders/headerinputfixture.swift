@@ -20,8 +20,8 @@ extension TrackHeadersFixture {
             case .add: headers.renameEditorRect
             }
         return (
-            (rect["x"] as? Double ?? 0) + (rect["width"] as? Double ?? 0) / 2,
-            offset + (rect["y"] as? Double ?? 0) + (rect["height"] as? Double ?? 0) / 2
+            rect.x + rect.width / 2,
+            offset + rect.y + rect.height / 2
         )
     }
 

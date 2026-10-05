@@ -3,10 +3,9 @@ import QtQuick.Controls
 import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
-import "../../ui/shell"
-import "NativeWait.js" as NativeWait
+import Porydaw.Ui
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellEventList"
     when: windowShown
@@ -14,7 +13,6 @@ TestCase {
     height: 720
     visible: true
 
-    property var shell: null
     readonly property var settings: bootstrap.preferences
     property var typographyPage: null
     property alias bootstrap: bootstrapObject
@@ -41,36 +39,13 @@ TestCase {
         verify(bootstrap.resetPreferences(), "each shell starts with fresh window state")
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-    function waitForShellScene() {
-        verify(waitForNative(function() {
-            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
-        }, 10000), "the presented window mounts its deferred editor scene")
-    }
+    laneBootstrap: bootstrap
 
-
-    function cleanup() {
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                    || !shell.shellPresenter.sceneActive
-            }, 5000), "closing reaches the dirty gate or completes")
-            if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.closeReady
-            }, 5000), "the scene is released")
-        }
+    closeGateMessage: "closing reaches the dirty gate or completes"
+    closeReadyMessage: "the scene is released"
+    function preDestroyShell() {
         copySpy.target = null
         typographyPage = null
-        shell.destroy()
-        shell = null
-        wait(0)
     }
     function openEventListFixture() {
         settings.setString("lastProjectDir", "")
@@ -98,6 +73,7 @@ TestCase {
                  presenter: session.eventListPresenter() }
     }
     function cellAt(table, row, column) {
+        table.forceLayout()
         table.positionViewAtRow(row, TableView.Contain)
         table.forceLayout()
         tryVerify(function() {

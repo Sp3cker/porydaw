@@ -2,19 +2,7 @@ import Foundation
 import PorydawCore
 import QtBridge
 
-// Publication machinery for the drawer's Voice Changes section: the content
-// rebuild that republishes every static projection, the scene-input assembly
-// each build reads, the marker/span/grid/gutter apply paths that sync the
-// published primitives and item models, the picker-row publication, and the
-// readout, transient and hover-hint publications, plus the metrics and entry
-// caches those paths reuse.
-//
-// Ownership: an extension of the page, never a separate object. Published
-// state and the caches stay declared on `VoiceChangesPage` — `@QtBridgeable`
-// registers class-body members only and stored properties cannot move to an
-// extension — so this file reads and writes the page's own state and publishes
-// through `setPublished` and `syncModel`: it holds no session, no cache and no
-// bridge type of its own.
+// Equality-gated scene, row and modal publication for the retained page owner.
 
 @MainActor
 extension VoiceChangesPage {
@@ -132,7 +120,7 @@ extension VoiceChangesPage {
                         height: Float(plotHeight), argb: color))
             }
         }
-        let colors: [Int: String] = [
+        let colors: [Int: QmlColor] = [
             3: palette.gridLineBar, 4: palette.gridLineBeat,
             5: palette.gridLineSub1, 6: palette.gridLineSub2,
             7: palette.gridLineSub3, 25: palette.gridLineBeatFine,
@@ -195,21 +183,22 @@ extension VoiceChangesPage {
 
     @QtIgnored
     func publishTypography() {
-        let typography = Typography(baseFontPx: Int(baseFontPx.rounded()))
-        let caption = VoiceCaption(font: typography.caption)
-        let title = VoiceCaption(font: typography.captionBold)
-        self.caption = caption
-        self.title = title
-        setPublishedFont(&captionFont, typography.caption.map)
-        setPublishedFont(&titleFont, typography.captionBold.map)
-        setPublishedFont(&noteNameFont, typography.noteName.map)
+        caption = VoiceCaption(font: typography.caption)
+        title = VoiceCaption(font: typography.captionBold)
+        publish(\.captionFont, typography.caption.qmlFont)
+        publish(\.titleFont, typography.captionBold.qmlFont)
+        publish(\.noteNameFont, typography.noteName.qmlFont)
     }
 
     /// Applies the scene's gutter lines: the title, then the change summary the
     /// legacy band publishes while a track is presented.
     @QtIgnored
     func publishGutter(_ values: [SceneText]) {
-        VoiceChangesProjection.syncTexts(gutterTexts, values)
+        syncModel(gutterTexts, values) {
+            $0.current == $1.current
+                && $0.clipX == $1.clipX && $0.clipY == $1.clipY
+                && $0.clipWidth == $1.clipWidth && $0.clipHeight == $1.clipHeight
+        }
     }
 
     /// The marker projection: the scene computes one marker rule and one label
@@ -235,7 +224,6 @@ extension VoiceChangesPage {
             let hovered = marker.identity == hoverIdentity
             if marker.hovered != hovered {
                 marker.hovered = hovered
-                marker.refreshSpec()
                 markers[index] = marker
             }
         }
@@ -245,14 +233,14 @@ extension VoiceChangesPage {
     @QtIgnored
     func publishTransient() {
         guard let live = drag, live.active else {
-            setPublished(previewVisible, false) { previewVisible = $0 }
-            setPublished(previewX, 0) { previewX = $0 }
-            setPublished(previewTick, 0) { previewTick = $0 }
+            publish(\.previewVisible, false)
+            publish(\.previewX, 0)
+            publish(\.previewTick, 0)
             return
         }
-        setPublished(previewVisible, true) { previewVisible = $0 }
-        setPublished(previewX, xForTick(live.previewTick)) { previewX = $0 }
-        setPublished(previewTick, Double(live.previewTick)) { previewTick = $0 }
+        publish(\.previewVisible, true)
+        publish(\.previewX, xForTick(live.previewTick))
+        publish(\.previewTick, Double(live.previewTick))
     }
 
     /// The current legacy lane hint: marker-specific while the pointer hits a
@@ -260,7 +248,7 @@ extension VoiceChangesPage {
     @QtIgnored
     func publishHoverHintProfile(marker: Bool) {
         let profile = marker ? VoiceHintProfile.marker : VoiceHintProfile.horizontalScroll
-        if hoverHintProfile != profile { hoverHintProfile = profile }
+        publish(\.hoverHintProfile, profile)
     }
 
     /// The readout from live page facts: the cursor-only publication path, which
@@ -302,14 +290,15 @@ extension VoiceChangesPage {
     /// right-aligned in the plot. The page always publishes them; the QML draws
     /// them while a track is presented, exactly as the legacy band does.
     private func publishReadout(_ values: VoiceReadoutValues) {
-        setPublished(contextSlot, values.slot) { contextSlot = $0 }
-        setPublished(contextBlank, values.blank) { contextBlank = $0 }
-        setPublished(contextSymbol, values.symbol) { contextSymbol = $0 }
-        setPublished(readoutText, values.text) { readoutText = $0 }
-        setPublished(readoutVisible, trackAvailable) { readoutVisible = $0 }
-        setPublishedRect(
-            &readoutRect,
-            VoiceMarkerHandle.rect(values.x, values.y, values.width, values.height))
+        publish(\.contextSlot, values.slot)
+        publish(\.contextBlank, values.blank)
+        publish(\.contextSymbol, values.symbol)
+        publish(\.readoutText, values.text)
+        publish(\.readoutVisible, trackAvailable)
+        publish(\.readoutX, values.x)
+        publish(\.readoutY, values.y)
+        publish(\.readoutWidth, values.width)
+        publish(\.readoutHeight, values.height)
     }
 
     // MARK: Internals: picker publication
@@ -323,9 +312,9 @@ extension VoiceChangesPage {
         pickerCache.resolve(filter: live.filter)
         pickerCache.releaseIfFilteredOut(audition: onAuditionVoice)
         syncPickerRows(pickerCache.selectedRows(program: live.program))
-        setPublished(pickerFilter, live.filter) { pickerFilter = $0 }
-        setPublished(pickerIndex, pickerCache.indices[live.program] ?? -1) { pickerIndex = $0 }
-        setPublished(pickerHasMatch, live.program >= 0) { pickerHasMatch = $0 }
+        publish(\.pickerFilter, live.filter)
+        publish(\.pickerIndex, pickerCache.indices[live.program] ?? -1)
+        publish(\.pickerHasMatch, live.program >= 0)
     }
 
     /// A bank publication while the picker is open: the captured target still
@@ -340,7 +329,7 @@ extension VoiceChangesPage {
         pickerCache.resolve(filter: live.filter)
         live.program = pickerCache.initialProgram(live.program)
         picker = live
-        setPublished(pickerTitle, live.title) { pickerTitle = $0 }
+        publish(\.pickerTitle, live.title)
         publishPicker()
     }
 
@@ -384,22 +373,5 @@ extension VoiceChangesPage {
             pickerRows, snapshots: &pickerRowSnapshots, values: values)
     }
 
-    /// The variant-typed records compare through their published spelling:
-    /// `[String: QVariantSettable]` is not `Equatable`, and an equal record must
-    /// leave its storage untouched.
-    @QtIgnored
-    func setPublishedRect(
-        _ storage: inout [String: QVariantSettable],
-        _ value: [String: QVariantSettable]
-    ) {
-        if !VoiceMarkerHandle.rectMatches(storage, value) { storage = value }
-    }
-
-    private func setPublishedFont(
-        _ storage: inout [String: QVariantSettable],
-        _ value: [String: QVariantSettable]
-    ) {
-        if !VoiceChangesProjection.fontMatches(storage, value) { storage = value }
-    }
 
 }

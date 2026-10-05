@@ -3,10 +3,9 @@ import QtQuick.Controls
 import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
-import "../../ui/shell"
-import "NativeWait.js" as NativeWait
+import Porydaw.Ui
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "NewSongCommit"
     when: windowShown
@@ -16,14 +15,10 @@ TestCase {
     ShellQmlBootstrap { id: bootstrap }
     ImportWizardProbe { id: probe }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
-    property var shell: null
     property string rootPath: ""
 
-    function waitForNative(predicate, timeout) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeout)
-    }
-    function child(name) { return findChild(shell, name) }
-    function controller() { return shell.shellPresenter.session.songDockController().newSongController() }
+    laneBootstrap: bootstrap
+
     function stage(label) {
         verify(bootstrap.prepareImportCommitFixture("new-song-" + label), "isolated project is copied")
         rootPath = bootstrap.projectRoot
@@ -60,14 +55,7 @@ TestCase {
                 && findChild(wizard, "importVoicegroup") !== null
         }, 3000), "Sound page mounts")
     }
-    function choose(combo, index) {
-        mouseClick(combo, combo.width - combo.height / 2, combo.height / 2)
-        verify(waitForNative(function() { return combo.popup.opened }, 3000), "choices open")
-        const item = combo.popup.contentItem.itemAtIndex(index)
-        verify(item !== null, "choice is mounted")
-        mouseClick(item)
-        verify(waitForNative(function() { return combo.currentIndex === index }, 3000), "choice settles")
-    }
+
     function finish(wizard) {
         mouseClick(findChild(wizard, "newSongWizardFinish"))
         verify(waitForNative(function() {
@@ -228,6 +216,8 @@ TestCase {
         const stray = rootPath + "/sound/songs/midi/" + label + ".mid"
         verify(probe.copyFile(rootPath + "/sound/songs/midi/mus_route101.mid", stray), "stage stray MIDI")
         const strayBefore = probe.fingerprint(stray)
+        const tabsBefore = presenter.session.songTabs.tabCount
+        const saveErrorBefore = presenter.session.lastSaveError
         wizard = openWizard(label)
         next(wizard)
         finish(wizard)
@@ -238,6 +228,13 @@ TestCase {
         const critical = child("shellCriticalDialog")
         compare(critical.text, "Operation Failed", "existing MIDI uses operation failure channel")
         compare(critical.informativeText, "MIDI file already exists: " + stray, "fork existing MIDI refusal")
+        compare(presenter.statusText, "MIDI file already exists: " + stray,
+                "new-song failure unwraps operationFailed instead of showing enum spelling")
+        compare(controller().busy, false, "new-song error recovery clears busy")
+        compare(presenter.session.songTabs.tabCount, tabsBefore, "new-song refusal opens no tab")
+        compare(presenter.statusText, critical.informativeText, "new-song refusal publishes failure status")
+        compare(presenter.session.lastSaveError, saveErrorBefore,
+                "new-song refusal leaves the save error unchanged")
         verify(!wizard.visible, "service refusal closes wizard")
         compare(probe.fingerprint(stray), strayBefore, "stray bytes remain untouched")
         compare(projectFingerprints(), before, "service refusal changes no project bytes")

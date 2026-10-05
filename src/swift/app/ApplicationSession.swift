@@ -27,8 +27,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var timeSigMenuOpen = false
     @QtTracked public var timeSigPromptInitialNumerator = 4
     @QtTracked public var timeSigPromptInitialDenominatorPow2 = 2
-    public var timeSigPromptAppearance: [String: QVariantSettable] = [:]
-    public var timeSigPromptFont: [String: QVariantSettable] = [:]
+    @QtTracked public var promptStyle = PromptStyle()
     @QtTracked public var timeSigPromptMinimumNumerator = 1
     @QtTracked public var timeSigPromptMaximumNumerator = 32
     @QtTracked public var timeSigPromptMinimumDenominatorPow2 = 0
@@ -37,10 +36,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var timeSigPromptLabel = "Numerator (1-32):"
     @QtTracked public var palette: GridPalette
     public private(set) var typography = Typography(baseFontPx: 13)
-    @QtTracked public var typographyFonts = [String: QVariantSettable]()
-    @QtTracked public var layoutSpaces = [String: QVariantSettable]()
-    @QtTracked public var baseFontPx = 0
-    @QtTracked public var bodyFontPx = 0
+    @QtTracked public var typographyFonts: TypographyFonts = TypographyFonts()
+    @QtTracked public var layoutSpaces: LayoutSpaces = LayoutSpaces()
+    @QtTracked public var baseFontPx = 13
+    @QtTracked public var bodyFontPx = 15
     private var hasCapturedTypography = false
     @QtTracked public var noteNameMode = false
     /// The open songs. Constructed with the session and never nil: the surface
@@ -51,11 +50,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     public internal(set) var projectRoot = ""
     @QtIgnored
-    var labels: [String] = []
-    @QtIgnored
     var settingsVoicegroups: [String] = []
     @QtIgnored
     var onVoicegroupCatalogChanged: (() -> Void)?
+    @QtIgnored var onStatusMessage: ((String) -> Void)?
+    @QtIgnored var onFailure: ((String, String) -> Void)?
+    @QtIgnored var onSaveStateChanged: (() -> Void)?
+    @QtIgnored var onProjectStateChanged: (() -> Void)?
+    @QtIgnored var onDocumentStateChanged: ((Bool) -> Void)?
+    @QtIgnored var onCommandAvailabilityChanged: (() -> Void)?
     @QtIgnored
     var catalogService: ProjectService?
     @QtIgnored var catalogRefreshIssued: UInt64 = 0
@@ -150,10 +153,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public required init() {
         let palette = GridPalette()
         self.palette = palette
-        typographyFonts = Self.fontMaps(for: typography)
-        layoutSpaces = Self.spaceMap(for: typography)
-        baseFontPx = typography.baseFontPx
-        bodyFontPx = typography.bodyFontPx
         songTabs = SongTabsController(palette: palette)
         emptyDrawerPresenter = EditorDrawerPresenter()
         emptyOtherEventsBand = OtherEventsBandPresenter()
@@ -178,46 +177,26 @@ public final class ApplicationSession: QmlInstantiableStatus {
         songTabs.attach(app: self)
         transportBar.attach(session: self)
         wavExport.attach(session: self)
-        transportBar.onAvailabilityChanged = { [weak self] in
-            self?.transportAvailabilityChanged()
-        }
         songDock.attach(session: self)
-    }
-
-    private static func fontMaps(for typography: Typography) -> [String: QVariantSettable] {
-        [
-            "body": typography.body.map,
-            "bodyBold": typography.bodyBold.map,
-            "bodyMono": typography.bodyMono.map,
-            "tableMono": typography.tableMono.map,
-            "caption": typography.caption.map,
-            "captionBold": typography.captionBold.map,
-            "noteName": typography.noteName.map,
-        ]
-    }
-
-    private static func spaceMap(for typography: Typography) -> [String: QVariantSettable] {
-        [
-            "zero": typography.space(.zero),
-            "half": typography.space(.half),
-            "one": typography.space(.one),
-            "two": typography.space(.two),
-            "three": typography.space(.three),
-            "four": typography.space(.four),
-            "six": typography.space(.six),
-            "eight": typography.space(.eight),
-        ]
     }
 
     public func configureTypography(baseFontPx: Int) {
         guard !hasCapturedTypography else { return }
         hasCapturedTypography = true
         typography = Typography(baseFontPx: baseFontPx)
-        typographyFonts = Self.fontMaps(for: typography)
-        layoutSpaces = Self.spaceMap(for: typography)
-        self.baseFontPx = typography.baseFontPx
-        bodyFontPx = typography.bodyFontPx
+        typographyFonts.update(typography: typography)
+        layoutSpaces.update(typography: typography)
+        publish(\.baseFontPx, typography.baseFontPx)
+        publish(\.bodyFontPx, typography.bodyFontPx)
+        refreshPromptStyle()
         eventList.configureTypography(typography: typography)
+    }
+
+    @QtIgnored
+    public func refreshPromptStyle() {
+        promptStyle.update(
+            metrics: PromptAppearance.Layout(base: workspace?.grid.baseFontPx ?? Double(baseFontPx)),
+            palette: palette, font: typography.body.qmlFont, surface: .chrome)
     }
 
     public func componentComplete() {}
@@ -291,8 +270,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     @QtIgnored
     public func reportSettingsFailure(_ message: String) {
-        lastSaveError = message
-        operationFailed(message: message)
+        publishLastSaveError(message)
+        publishOperationFailure(message: message)
     }
     public func sampleStudio() -> SampleStudioWorkflow {
         if let sampleStudioWorkflow { return sampleStudioWorkflow }
@@ -307,11 +286,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public func voiceListController() -> VoiceListController { voiceList }
 
     public func isDocumentDirty() -> Bool { documentDirty }
-    public func songCount() -> Int { labels.count }
-
-    public func songLabel(index: Int) -> String {
-        labels.indices.contains(index) ? labels[index] : ""
-    }
 
     public func gridPresenter() -> PianoGrid {
         guard let workspace else { preconditionFailure("Grid requested without an open song") }
@@ -395,9 +369,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     public func songDockController() -> SongDockController { songDock }
 
-    @QtIgnored
-    func refreshSongLabels(_ updated: [String]) { labels = updated }
-
     public func mouseHintsPresenter() -> MouseHints { mouseHints }
 
     public func gridCommandAvailable(command: Int) -> Bool {
@@ -432,12 +403,21 @@ public final class ApplicationSession: QmlInstantiableStatus {
         cancelGridInputImpl(reason: reason)
     }
 
-    @QtSignal public func gridCommandAvailabilityChanged()
-    @QtSignal public func transportAvailabilityChanged()
-    @QtSignal public func projectRootChanged()
-    @QtSignal public func openFailed(message: String)
-    @QtSignal public func operationFailed(message: String)
-    @QtSignal public func statusMessage(message: String)
+    @QtIgnored
+    func publishStatusMessage(message: String) {
+        onStatusMessage?(message)
+    }
+
+    @QtIgnored
+    func publishOpenFailure(message: String) {
+        onFailure?("Open Failed", message)
+    }
+
+    @QtIgnored
+    func publishOperationFailure(message: String) {
+        onFailure?("Operation Failed", message)
+    }
+
     @QtSignal public func allTabsClosed()
 
     @QtSignal public func closeCancelled()
@@ -478,6 +458,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     public func restoreDisplayModes() {
         noteNameMode = preferences.bool(key: "noteNames", fallback: false)
+        onCommandAvailabilityChanged?()
     }
 
     public func openProject(path: String) {
@@ -570,26 +551,28 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// tab has a pending bank transition.
     func refreshDocumentState() {
         let hasSongs = songTabs.tabCount > 0
-        setPublished(songOpen, hasSongs) { songOpen = $0 }
+        let songOpenChanged = songOpen != hasSongs
+        defer { onDocumentStateChanged?(songOpenChanged) }
+        publish(\.songOpen, hasSongs)
         songDock.syncSelection()
         guard let session = workspace?.session else {
-            setPublished(documentDirty, false) { documentDirty = $0 }
-            setPublished(songDocumentDirty, false) { songDocumentDirty = $0 }
-            setPublished(canUndo, false) { canUndo = $0 }
-            setPublished(canRedo, false) { canRedo = $0 }
+            publish(\.documentDirty, false)
+            publish(\.songDocumentDirty, false)
+            publish(\.canUndo, false)
+            publish(\.canRedo, false)
             return
         }
         let songDirty = session.document.isDirty
-        setPublished(songDocumentDirty, songDirty) { songDocumentDirty = $0 }
+        publish(\.songDocumentDirty, songDirty)
         let dirty = songDirty || session.bankDirty
-        setPublished(documentDirty, dirty) { documentDirty = $0 }
+        publish(\.documentDirty, dirty)
         let bankPending = songTabs.tabs.contains {
             $0.workspace.session.document.history.bankTransitionInFlight
         }
         let undoAvailable = !bankPending && session.document.history.canUndo
-        setPublished(canUndo, undoAvailable) { canUndo = $0 }
+        publish(\.canUndo, undoAvailable)
         let redoAvailable = !bankPending && session.document.history.canRedo
-        setPublished(canRedo, redoAvailable) { canRedo = $0 }
+        publish(\.canRedo, redoAvailable)
     }
 
 }

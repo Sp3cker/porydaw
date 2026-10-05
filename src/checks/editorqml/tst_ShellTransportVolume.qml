@@ -125,7 +125,9 @@ ShellTransportSupport {
         const ratio = image.width / bar.width
         const center = dial.mapToItem(bar, dial.width / 2, dial.height / 2)
         const radius = dial.radiusPx - dial.inset * 1.5
-        const ink = Helpers.channels(bar.colors.outline)
+        const ink = [Math.round(bar.colors.outline.r * 255),
+                     Math.round(bar.colors.outline.g * 255),
+                     Math.round(bar.colors.outline.b * 255)]
         function tickInk(degrees) {
             const radians = degrees * Math.PI / 180
             const px = Math.round((center.x + Math.cos(radians) * radius) * ratio)

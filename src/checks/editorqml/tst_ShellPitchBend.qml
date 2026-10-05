@@ -41,6 +41,7 @@ ShellPitchBendSupport {
         tryCompare(app, "canUndo", true)
         const strokeCanUndo = app.canUndo
         const strokeCanRedo = app.canRedo
+        tryCompare(findChild(shell, "shellAction_edit.undo"), "enabled", true, 3000)
         keySequence(StandardKey.Undo)
         verify(waitForNative(function() {
             return grid.appliedRevisionText !== edited
@@ -56,6 +57,7 @@ ShellPitchBendSupport {
                 "undo keeps the same mounted popup")
         verify(opened.graph.activeFocus, "undo keeps the graph focused")
         const undone = grid.appliedRevisionText
+        tryCompare(findChild(shell, "shellAction_edit.redo"), "enabled", true, 3000)
         keySequence(StandardKey.Redo)
         verify(waitForNative(function() {
             return grid.appliedRevisionText !== undone
@@ -82,6 +84,7 @@ ShellPitchBendSupport {
         }, 5000), "the second stroke republishes the document")
         const second = grid.appliedRevisionText
         verify(app.canUndo, "stacked strokes remain undoable")
+        tryCompare(findChild(shell, "shellAction_edit.undo"), "enabled", true, 3000)
         keySequence(StandardKey.Undo)
         verify(waitForNative(function() {
             return grid.appliedRevisionText !== second

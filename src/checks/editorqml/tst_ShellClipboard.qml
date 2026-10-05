@@ -19,7 +19,7 @@ ShellClipboardSupport {
         mouseClick(roll, center.x, center.y, Qt.LeftButton)
         verify(waitForNative(function() {
             return noteById(grid, source.id).selected
-                && shell.shellPresenter.actionEnabled("roll.copy")
+                && shell.shellPresenter.action("roll.copy").enabled
         }, 5000), "pointer selection enables production Copy")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
@@ -49,8 +49,8 @@ ShellClipboardSupport {
         tryCompare(search, "text", "")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
-        compare(shell.shellPresenter.actionEnabled("roll.paste"), false,
-                "song Paste is unavailable after foreign text Copy")
+        tryCompare(shell.shellPresenter.action("roll.paste"), "enabled", false, 3000,
+                   "song Paste is unavailable after foreign text Copy")
     }
 
     function test_noteDeleteAndCutKeys() {
@@ -98,7 +98,7 @@ ShellClipboardSupport {
         var beforeDelete = gridNotes(grid)
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
-        verify(shell.shellPresenter.actionEnabled("roll.delete"), "Delete is enabled")
+        verify(shell.shellPresenter.action("roll.delete").enabled, "Delete is enabled")
         keyClick(Qt.Key_Delete)
         verify(waitForNative(function() {
             var current = gridNotes(grid)
@@ -121,7 +121,7 @@ ShellClipboardSupport {
         verify(waitForNative(function() {
             return selectedCount(grid) === 2
         }, 5000), "real pointer input re-selects both notes")
-        verify(shell.shellPresenter.actionEnabled("roll.cut"), "Cut is enabled")
+        verify(shell.shellPresenter.action("roll.cut").enabled, "Cut is enabled")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
         keySequence(StandardKey.Cut)
@@ -151,7 +151,7 @@ ShellClipboardSupport {
         grid.setEditCursorTick(pasteCursor)
         compare(grid.editCursorTick, pasteCursor, "the paste cursor is staged clear")
         verify(waitForNative(function() {
-            return shell.shellPresenter.actionEnabled("roll.paste")
+            return shell.shellPresenter.action("roll.paste").enabled
         }, 5000), "Paste is enabled with the cut clip")
         keySequence(StandardKey.Paste)
         verify(waitForNative(function() {

@@ -1,4 +1,5 @@
 import Foundation
+import PorydawProject
 import QtBridge
 
 /// Owns the Songs dock's plan/confirmation boundary. A song ID is resolved
@@ -17,6 +18,7 @@ public final class SongDockController: QmlUncreatable {
     @QtTracked public var deletableVoicegroup = ""
     @QtTracked public var busy = false
     @QtTracked public var songsLoading = false
+    @QtIgnored var onSongsChanged: (() -> Void)?
 
     private weak var session: ApplicationSession?
     private var service: ProjectService?
@@ -54,6 +56,7 @@ public final class SongDockController: QmlUncreatable {
         presenter.setSongs(songs)
         songsLoading = true
         syncSelection()
+        onSongsChanged?()
     }
 
     @QtIgnored
@@ -67,6 +70,7 @@ public final class SongDockController: QmlUncreatable {
         presenter.setSongs([])
         songsLoading = false
         clearConfirmation()
+        onSongsChanged?()
     }
 
     @QtIgnored
@@ -78,8 +82,8 @@ public final class SongDockController: QmlUncreatable {
     @QtIgnored
     func publishSongs(_ songs: [SongListing]) {
         presenter.setSongs(songs)
-        session?.refreshSongLabels(songs.map(\.label))
         syncSelection()
+        onSongsChanged?()
     }
     // File-menu ingress: the fork acts on the selected tab regardless of
     // dock filter state, so this resolves through the full snapshot listing.
@@ -114,7 +118,7 @@ public final class SongDockController: QmlUncreatable {
                     let plan = try await service.songDeletionPlan(label: song.label)
                     guard !Task.isCancelled, self.service === service else { return }
                     if plan.tableIndex == 0 {
-                        self.session?.operationFailed(
+                        self.session?.publishOperationFailure(
                             message:
                                 "\(song.label) is the first usable table entry (song ID 0); the engine's fallback. It cannot be deleted."
                         )
@@ -140,7 +144,7 @@ public final class SongDockController: QmlUncreatable {
                 }
             } catch {
                 if !Task.isCancelled, self.service === service {
-                    self.session?.operationFailed(message: String(describing: error))
+                    self.session?.publishOperationFailure(message: String(describing: error))
                 }
             }
             if !Task.isCancelled, self.service === service { self.busy = false }
@@ -148,7 +152,7 @@ public final class SongDockController: QmlUncreatable {
     }
 
     public func validNewSongLabel(label: String) -> Bool {
-        ProjectService.isValidSongLabel(label)
+        SongName.isValid(label: label)
     }
 
     public func cancelConfirmation() { clearConfirmation() }
@@ -167,7 +171,7 @@ public final class SongDockController: QmlUncreatable {
                 || (confirmation == "delete" && deletion != nil)
         else { return }
         if deletion != nil, hasUnsavedSong(label) {
-            session?.operationFailed(message: "Save or close \(label) before deleting its MIDI file.")
+            session?.publishOperationFailure(message: "Save or close \(label) before deleting its MIDI file.")
             return
         }
         clearConfirmation()
@@ -193,7 +197,7 @@ public final class SongDockController: QmlUncreatable {
                 self.syncSelection()
             } catch {
                 if !Task.isCancelled, self.service === service {
-                    self.session?.operationFailed(message: String(describing: error))
+                    self.session?.publishOperationFailure(message: String(describing: error))
                 }
             }
             if !Task.isCancelled, self.service === service { self.busy = false }

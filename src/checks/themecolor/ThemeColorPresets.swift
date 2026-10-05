@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+import QtBridge
 
 // MARK: - Preset values and role contracts (themeCompleteness, lane legibility)
 
@@ -74,6 +75,16 @@ private let themeTranslucentFields: Set<String> = [
     "selectionFill", "keyboardHover", "hoverChipFill",
 ]
 
+extension CheckReport {
+    func expectColorEqual(expected: String, actual: QmlColor, cppID: String, what: String) {
+        expectEqual(expected: expected, actual: PaletteMath.hex(actual), cppID: cppID, what: what)
+    }
+
+    func expectColorEqual(expected: QmlColor, actual: QmlColor, cppID: String, what: String) {
+        expectColorEqual(expected: PaletteMath.hex(expected), actual: actual, cppID: cppID, what: what)
+    }
+}
+
 @MainActor
 func themeAppliedPalette(mode: String, contrast: Int) -> GridPalette {
     let palette = GridPalette()
@@ -86,15 +97,17 @@ func themeAssertComplete(
     _ report: CheckReport, _ palette: GridPalette,
     cppID: String, what: String
 ) {
-    let fields = Mirror(reflecting: palette).children.compactMap { child -> (String, String)? in
-        guard let name = child.label, let value = child.value as? String else { return nil }
+    let fields = Mirror(reflecting: palette).children.compactMap { child -> (String, QmlColor)? in
+        guard let name = child.label, let value = child.value as? QmlColor else { return nil }
         return (name, value)
     }
     report.expect(!fields.isEmpty, cppID: cppID, message: "\(what): palette exposes color fields")
     for (name, value) in fields {
         let channels = themeRefChannels(value)
-        let wellFormed = (value.count == 7 || value.count == 9) && value.hasPrefix("#")
-        report.expect(wellFormed, cppID: cppID, message: "\(what): \(name) is a hex color")
+        let wellFormed = [value.red, value.green, value.blue, value.alpha].allSatisfy {
+            $0.isFinite && (0...1).contains($0)
+        }
+        report.expect(wellFormed, cppID: cppID, message: "\(what): \(name) is a native color with valid channels")
         if name == "scaleHighlight" {
             report.expect(
                 channels.a == 51 && channels.r == 181
@@ -114,109 +127,109 @@ func themePresetValueChecks(_ report: CheckReport) {
         let palette = themeAppliedPalette(mode: row.mode, contrast: 50)
         let tag = "mode=\(row.mode)"
         themeAssertComplete(report, palette, cppID: themeCompletenessID, what: tag)
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.window, actual: palette.windowBackground,
             cppID: themeCompletenessID, what: "\(tag): window")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.text, actual: palette.windowText,
             cppID: themeCompletenessID, what: "\(tag): window text")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.text, actual: palette.primaryText,
             cppID: themeCompletenessID, what: "\(tag): primary text aliases window text")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.text, actual: palette.buttonText,
             cppID: themeCompletenessID, what: "\(tag): button text")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.disabled, actual: palette.disabledText,
             cppID: themeCompletenessID, what: "\(tag): disabled text")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.outline, actual: palette.outline,
             cppID: themeCompletenessID, what: "\(tag): outline")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: palette.outline, actual: palette.focusOutline,
             cppID: themeCompletenessID, what: "\(tag): focus outline aliases outline")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.chrome, actual: palette.chromeBackground,
             cppID: themeCompletenessID, what: "\(tag): chrome")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.separator, actual: palette.separator,
             cppID: themeCompletenessID, what: "\(tag): separator")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.control, actual: palette.buttonBackground,
             cppID: themeCompletenessID, what: "\(tag): button surface")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: "#D92626", actual: palette.polyphonyFlashBackground,
             cppID: themeCompletenessID, what: "\(tag): polyphony flash identity")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: palette.buttonBackground, actual: palette.tabBackground,
             cppID: themeCompletenessID, what: "\(tag): tab and button share the control surface")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.controlHover, actual: palette.buttonHoverBackground,
             cppID: themeCompletenessID, what: "\(tag): button hover surface")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: palette.buttonHoverBackground, actual: palette.tabHoverBackground,
             cppID: themeCompletenessID, what: "\(tag): tab and button share the hover surface")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.controlPressed, actual: palette.buttonPressedBackground,
             cppID: themeCompletenessID, what: "\(tag): button pressed surface")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: palette.buttonPressedBackground, actual: palette.tabPressedBackground,
             cppID: themeCompletenessID, what: "\(tag): tab and button share the pressed surface")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.pressedText, actual: palette.buttonPressedText,
             cppID: themeCompletenessID, what: "\(tag): pressed foreground rule")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: palette.buttonPressedText, actual: palette.selectionText,
             cppID: themeCompletenessID, what: "\(tag): selection text shares the pressed foreground")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.item, actual: palette.menuBackground,
             cppID: themeCompletenessID, what: "\(tag): menu aliases the item surface")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.itemHover, actual: palette.menuHoverBackground,
             cppID: themeCompletenessID, what: "\(tag): menu hover aliases the item hover surface")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.secondary, actual: palette.secondaryText,
             cppID: themeCompletenessID, what: "\(tag): secondary text")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.grid, actual: palette.gridLine,
             cppID: themeCompletenessID, what: "\(tag): pinned grid value")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.roll, actual: palette.rollBackground,
             cppID: themeCompletenessID, what: "\(tag): piano-roll background")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.accidental, actual: palette.accidentalLane,
             cppID: themeCompletenessID, what: "\(tag): accidental lane")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.keyboardSeparator, actual: palette.keyboardSeparator,
             cppID: themeCompletenessID, what: "\(tag): keyboard separator")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: "#1A1A1A", actual: palette.keyboardLabel,
             cppID: themeCompletenessID, what: "\(tag): keyboard label stays fixed")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.selection, actual: palette.tabSelectedBackground,
             cppID: themeCompletenessID, what: "\(tag): selected tab fill")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.selection, actual: palette.selectionRing,
             cppID: themeCompletenessID, what: "\(tag): selection ring")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.selection, actual: palette.keyboardActiveKey,
             cppID: themeCompletenessID, what: "\(tag): active keyboard key")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.accent, actual: palette.selectionEdge,
             cppID: themeCompletenessID, what: "\(tag): selection edge accents")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.text, actual: palette.editCursor,
             cppID: themeCompletenessID, what: "\(tag): edit cursor")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: "#E24242", actual: palette.playhead,
             cppID: themeCompletenessID, what: "\(tag): playhead stays the identity red")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.disabled, actual: palette.noteVelocityZero,
             cppID: themeCompletenessID, what: "\(tag): zero-velocity ink")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.secondary, actual: palette.implicitSignature,
             cppID: themeCompletenessID, what: "\(tag): implicit-signature ink aliases secondary")
-        report.expectEqual(
+        report.expectColorEqual(
             expected: row.secondary, actual: palette.rulerDetailText,
             cppID: themeCompletenessID, what: "\(tag): ruler-detail ink aliases secondary")
 
@@ -229,9 +242,7 @@ func themePresetValueChecks(_ report: CheckReport) {
             themeRefContrast(palette.windowText, palette.buttonHoverBackground) >= 4.5,
             cppID: themeCompletenessID, message: "\(tag): button-hover text floor")
         report.expect(
-            themeRefContrast(
-                palette.buttonPressedText,
-                palette.buttonPressedBackground) >= 4.5,
+            themeRefContrast(palette.buttonPressedText, palette.buttonPressedBackground) >= 4.5,
             cppID: themeCompletenessID, message: "\(tag): button-pressed text floor")
         report.expect(
             themeRefContrast(palette.windowText, palette.menuHoverBackground) >= 4.5,

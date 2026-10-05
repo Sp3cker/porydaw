@@ -6,8 +6,9 @@ import Porydaw.Ui
 import "EditorDrawerLayoutSupport.js" as LayoutSupport
 import "EditorDrawerVoiceSupport.js" as VoiceSupport
 
-TestCase {
+ShellLaneSupport {
     id: testCase
+    laneBootstrap: bootstrap
     property alias bootstrap: drawerBootstrap
     property alias session: drawerSession
     property alias regularFont: drawerRegularFont
@@ -93,10 +94,6 @@ TestCase {
     property real dragSceneY: 0
     property int pageDestructions: 0
 
-    // What the session reported when an open failed, so a stalled open names its
-    // cause instead of only timing out.
-    property string openFailure: ""
-
     Keys.onSpacePressed: (event) => {
         testCase.spacePropagations += 1
         event.accepted = true
@@ -116,15 +113,6 @@ TestCase {
         ApplicationSession { id: drawerSession }
     }
 
-    // The session's own failure reports, recorded so the open assertion can name
-    // what the production path actually said.
-    Connections {
-        target: session
-
-        function onOpenFailed(message) { testCase.openFailure = message }
-        function onOperationFailed(message) { testCase.openFailure = message }
-    }
-
     Component {
         id: surfaceComponent
 
@@ -136,7 +124,7 @@ TestCase {
             session.configureTypography(bootstrap.profileFontPx)
         verify(bootstrap.start("mus_route101"), "the staged route101 project starts opening")
         var waited = 0
-        while (waited < 30000 && !session.songOpen && testCase.openFailure.length === 0) {
+        while (waited < 30000 && !session.songOpen && session.lastSaveError.length === 0) {
             wait(50)
             waited += 50
         }
@@ -158,20 +146,19 @@ TestCase {
                        "projectOpen=" + session.projectOpen,
                        "songOpen=" + session.songOpen,
                        "stagedLabels=[" + testCase.stagedLabels() + "]"]
-        if (testCase.openFailure.length > 0)
-            details.push("openFailed=" + testCase.openFailure)
         if (session.lastSaveError.length > 0)
             details.push("lastSaveError=" + session.lastSaveError)
         return " (" + details.join("; ") + ")"
     }
 
-    // The labels the staged project actually offers, so a label mismatch is part
-    // of the failure instead of something to guess from a timeout.
+    // The Songs dock's visible labels make filter or label mismatches
+    // part of the failure instead of something to guess from a timeout.
     function stagedLabels() {
         var labels = []
-        var count = session.songCount()
+        var songs = session.songDockController().songListPresenter()
+        var count = songs.rowCount
         for (var i = 0; i < count && i < 8; ++i)
-            labels.push(session.songLabel(i))
+            labels.push(songs.songLabel(i))
         return count > 8 ? labels.join(",") + ",…" : labels.join(",")
     }
 

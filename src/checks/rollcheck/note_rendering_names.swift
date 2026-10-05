@@ -61,9 +61,10 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     }
     let fill = grid.palette.noteFill(track: record.track, velocity: record.velocity)
     let expectedInk = PaletteMath.aaContrastInk(
-        fill: fill, light: grid.palette.keyboardNatural, dark: grid.palette.keyboardBlack,
-        fallbackLight: grid.palette.noteLabelAaLight,
-        fallbackDark: grid.palette.noteLabelAaDark)
+        fill: fill, light: PaletteMath.hex(grid.palette.keyboardNatural),
+        dark: PaletteMath.hex(grid.palette.keyboardBlack),
+        fallbackLight: PaletteMath.hex(grid.palette.noteLabelAaLight),
+        fallbackDark: PaletteMath.hex(grid.palette.noteLabelAaDark))
     report.expect(
         record.fillArgb == RollContentProbe.argb(fill)
             && slot(.noteLabelLight) == RollContentProbe.argb(grid.palette.keyboardNatural)

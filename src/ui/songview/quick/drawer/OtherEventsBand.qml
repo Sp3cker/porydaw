@@ -1,23 +1,26 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Shapes
 import Porydaw.Ui
+import PorydawApp as App
 
 Rectangle {
     id: band
     objectName: "timelineOtherEventsBand"
-    required property QtObject presenter
-    required property QtObject colors
-    required property QtObject gridModel
-    required property Item overlayRoot
-    required property real timelineSplitX
-    required property real plotWidth
-    required property font applicationFont
+    required final property App.OtherEventsBandPresenter presenter
+    required final property App.GridPalette colors
+    required final property App.PianoGrid gridModel
+    required final property EditorSurface overlayRoot
+    required final property real timelineSplitX
+    required final property real plotWidth
+    required final property font applicationFont
     height: presenter.bandHeight
     color: colors.chromeBackground
 
     Rectangle {
         anchors.top: parent.top
-        width: parent.width
+        width: band.width
         height: 1
         color: band.colors.separator
     }
@@ -27,7 +30,7 @@ Rectangle {
         objectName: "timelineOtherEventsLabel"
         x: band.presenter.gutterInset
         width: Math.max(0, band.timelineSplitX - x)
-        height: parent.height
+        height: band.height
         verticalAlignment: Text.AlignVCenter
         font: band.applicationFont
         color: band.colors.windowText
@@ -39,10 +42,13 @@ Rectangle {
         id: gutterInput
         objectName: "timelineOtherEventsGutterInput"
         width: band.timelineSplitX
-        height: parent.height
+        height: band.height
         acceptedButtons: Qt.NoButton
         hoverEnabled: true
-        onEntered: band.presenter.pointerLeft()
+        enabled: band.presenter !== null && band.gridModel !== null
+        onEntered: {
+            if (band.presenter) band.presenter.pointerLeft()
+        }
 
         WheelHandler {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -59,35 +65,37 @@ Rectangle {
         id: plot
         x: band.timelineSplitX
         width: band.plotWidth
-        height: parent.height
+        height: band.height
         clip: true
 
         Rectangle {
             objectName: "timelineOtherEventsPreRoll"
-            width: Math.min(parent.width, Math.max(0, -band.overlayRoot.scrollX))
-            height: parent.height
+            width: Math.min(plot.width, Math.max(0, -band.overlayRoot.scrollX))
+            height: plot.height
             color: band.colors.rulerPreRollMask
         }
 
         Item {
             id: markerContent
-            width: parent.width
-            height: parent.height
+            width: plot.width
+            height: plot.height
             x: -band.overlayRoot.scrollX
             Repeater {
                 id: markerRepeater
                 objectName: "timelineOtherEventsMarkers"
                 model: band.presenter.markers
                 delegate: Shape {
+                    id: marker
                     required property var model
-                    readonly property var s: model ? model.spec : ({})
+                    readonly property real markerX: model.x
+                    required property color color
                     objectName: "timelineOtherEventsMarker"
-                    x: s.x - band.presenter.markerHalfWidth
+                    x: marker.markerX - band.presenter.markerHalfWidth
                     y: (band.height - height) / 2
                     width: 2 * band.presenter.markerHalfWidth
                     height: 2 * band.presenter.markerHalfHeight
                     ShapePath {
-                        fillColor: s.color
+                        fillColor: marker.color
                         strokeWidth: 0
                         startX: band.presenter.markerHalfWidth
                         startY: 0
@@ -106,8 +114,13 @@ Rectangle {
             anchors.fill: parent
             acceptedButtons: Qt.NoButton
             hoverEnabled: true
-            onPositionChanged: (mouse) => band.presenter.pointerMoved(mouse.x, mouse.y)
-            onExited: band.presenter.pointerLeft()
+            enabled: band.presenter !== null && band.gridModel !== null
+            onPositionChanged: (mouse) => {
+                if (band.presenter) band.presenter.pointerMoved(mouse.x, mouse.y)
+            }
+            onExited: {
+                if (band.presenter) band.presenter.pointerLeft()
+            }
 
             WheelHandler {
                 acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad

@@ -4,10 +4,9 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "GatedVisualsHelpers.js" as Helpers
-import "NativeWait.js" as NativeWait
 import "RollNoteFaces.js" as RollNoteFaces
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellNoteVisuals"
     when: windowShown
@@ -15,7 +14,6 @@ TestCase {
     height: 640
     visible: true
 
-    property var shell: null
     property var grabbed: null
     property bool unsignedSongPrepared: false
     property int physicalRulerCaptureNumber: 0
@@ -42,9 +40,7 @@ TestCase {
     }
     Component { id: _physicalCaptureReader; Canvas { width: 1; height: 1 } }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
+    laneBootstrap: bootstrap
 
     function cleanup() {
         grabbed = null
@@ -56,18 +52,7 @@ TestCase {
             }
             return
         }
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                    || !shell.shellPresenter.sceneActive
-            }, 5000), "the close-all walk reaches the dirty gate or completes")
-            if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.closeReady
-            }, 5000), "teardown waits for scene destruction and grid detach")
-        }
+        closeActiveShell()
         shell.destroy()
         shell = null
         wait(0)
@@ -76,15 +61,6 @@ TestCase {
                    "the loaded unsigned song is restored after shell teardown")
             unsignedSongPrepared = false
         }
-    }
-
-    function selectedSurface() {
-        var pages = shell && shell.sceneLoader ? shell.sceneLoader.item : null
-        if (!pages)
-            return null
-        var tabs = shell.shellPresenter.session.songTabs
-        var page = findChild(pages, "songTab_" + tabs.selectedId)
-        return page ? findChild(page, "swiftRollOverlay") : null
     }
 
     function grabShell() {

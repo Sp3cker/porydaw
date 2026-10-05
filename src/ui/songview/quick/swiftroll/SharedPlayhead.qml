@@ -1,35 +1,21 @@
-// The shared playhead: one clipped vertical segment over the roll plot column
-// and one over every visible drawer body, all reading the same published
-// position.
-//
-// Swift owns the position (SharedPlayhead.swift: the authoritative audio sample
-// mapped through the session timeline and projected through the session camera).
-// This file renders published values only: it invents no position, no clock, no
-// animation, no timer and no second camera, it owns no page, and it takes no
-// input -- pointer and key traffic passes straight through to the roll and the
-// drawer below it.
-//
-// Every body's clip is the shared plot column: the canonical origin is the
-// roll gutter width, so body/core pixels can never cross the keyboard gutter, a
-// drawer gutter, a resize handle, a hidden or unavailable body, or the chrome
-// bar that sits below the bodies. The roll triangle alone extends its clip
-// left by half its width, matching the native ruler clip. A segment is hidden,
-// never moved, while its projected x is outside the camera viewport.
+// Swift publishes the shared camera projection; this input-transparent surface
+// clips the playhead and guides to the roll and each visible drawer body.
 pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Shapes
 import Porydaw.Ui
+import PorydawApp as App
 
 Item {
     id: root
 
     objectName: "sharedPlayhead"
 
-    required property QtObject presenter
+    required property App.SharedPlayheadPresenter presenter
     required property color playheadColor
     required property bool rollBodyVisible
-    required property QtObject guides
+    required property App.PlayheadGuidesPresenter guides
     required property color hoverGuideColor
     required property color editGuideColor
     // The canonical plot rectangle in surface coordinates: its x is the shared
@@ -38,9 +24,29 @@ Item {
     // The drawer container's surface-local rectangle; each section state below
     // carries that kind's drawer-local body rectangle.
     required property rect drawerRect
-    required property QtObject velocitySection
-    required property QtObject voiceChangesSection
-    required property QtObject automationSection
+    required property App.EditorDrawerSectionState velocitySection
+    required property App.EditorDrawerSectionState voiceChangesSection
+    required property App.EditorDrawerSectionState automationSection
+    readonly property real contentX: presenter.contentX
+    readonly property real glowLeft: presenter.glowLeft
+    readonly property real glowRight: presenter.glowRight
+    readonly property real peakAlpha: presenter.peakAlpha
+    readonly property real triangleHalfWidthPx: presenter.triangleHalfWidthPx
+    readonly property real triangleHeightPx: presenter.triangleHeightPx
+    readonly property bool trianglePointsUp: presenter.trianglePointsUp
+    readonly property rect velocityBodyRect: Qt.rect(plotOrigin, drawerRect.y + velocitySection.bodyY,
+                                                    plotWidth, velocitySection.bodyHeight)
+    readonly property rect voiceChangesBodyRect: Qt.rect(plotOrigin, drawerRect.y + voiceChangesSection.bodyY,
+                                                        plotWidth, voiceChangesSection.bodyHeight)
+    readonly property rect automationBodyRect: Qt.rect(plotOrigin, drawerRect.y + automationSection.bodyY,
+                                                      plotWidth, automationSection.bodyHeight)
+    readonly property bool velocityAvailable: velocitySection !== null && velocitySection.available && velocitySection.visible
+    readonly property bool voiceChangesAvailable: voiceChangesSection !== null && voiceChangesSection.available && voiceChangesSection.visible
+    readonly property bool automationAvailable: automationSection !== null && automationSection.available && automationSection.visible
+
+    function glowColor(alpha: real): color {
+        return Qt.rgba(root.playheadColor.r, root.playheadColor.g, root.playheadColor.b, alpha)
+    }
 
     /// The shared plot origin: where projected x == 0 lands on the surface.
     readonly property real plotOrigin: rollPlotRect.x
@@ -51,13 +57,10 @@ Item {
     // Keep the core centered on one physical pixel as the camera moves through
     // fractional positions; otherwise its apparent width pulses on Windows.
     readonly property real alignedContentX:
-        (Math.round((plotOrigin + presenter.contentX) * devicePixelRatio - 0.5)
+        (Math.round((plotOrigin + contentX) * devicePixelRatio - 0.5)
          + 0.5) / devicePixelRatio - plotOrigin
 
-    // One clipped segment. `available` is the kind's own availability; the roll
-    // segment is always available while a timeline is attached. The roll's
-    // triangle clip is the only deliberate half-width overhang, matching the
-    // native ruler clip while the body remains strict to `clipRect`.
+    // Only the ruler triangle extends beyond the shared plot clip.
     component PlayheadSegment: Item {
         id: segment
 
@@ -66,17 +69,15 @@ Item {
         required property bool rulerSegment
 
         readonly property real triangleOverhang: rulerSegment
-            ? root.presenter.triangleHalfWidthPx : 0
+            ? root.triangleHalfWidthPx : 0
 
         x: clipRect.x - triangleOverhang
         y: clipRect.y
         width: Math.max(clipRect.width + triangleOverhang, 0)
         height: Math.max(clipRect.height, 0)
         clip: true
-        // The item stays mounted while the timeline is attached; only its own
-        // clip decides whether a pixel is drawn, and the presenter's published
-        // visibility already excludes a projection outside the viewport.
-        visible: root.presenter.timelineAttached && root.presenter.visible
+        // Swift visibility excludes projections outside the viewport.
+        visible: root.presenter !== null && root.presenter.timelineAttached && root.presenter.visible
                  && available && clipRect.width > 0 && width > 0 && height > 0
 
         // Body/core pixels retain the original strict segment clip.
@@ -94,144 +95,108 @@ Item {
             // changes alter only its fixed geometry, never the segment layout.
             Item {
                 id: playheadVisual
-                x: root.alignedContentX - root.presenter.glowLeft
+                x: root.alignedContentX - root.glowLeft
                 y: 0
-                width: root.presenter.glowLeft
-                       + root.hairline
-                       + root.presenter.glowRight
+                width: root.glowLeft + root.hairline + root.glowRight
                 height: segment.height
 
                 Rectangle {
                     id: leftGlow
                     x: 0
                     y: 0
-                    width: root.presenter.glowLeft
+                    width: root.glowLeft
                     height: segment.height
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
                         GradientStop {
                             position: 0
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b, 0)
+                            color: root.glowColor(0)
                         }
                         GradientStop {
                             position: 0.125
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha * 0.015625)
+                            color: root.glowColor(root.peakAlpha * 0.015625)
                         }
                         GradientStop {
                             position: 0.25
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha * 0.0625)
+                            color: root.glowColor(root.peakAlpha * 0.0625)
                         }
                         GradientStop {
                             position: 0.375
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha * 0.140625)
+                            color: root.glowColor(root.peakAlpha * 0.140625)
                         }
                         GradientStop {
                             position: 0.5
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha * 0.25)
+                            color: root.glowColor(root.peakAlpha * 0.25)
                         }
                         GradientStop {
                             position: 0.625
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha * 0.390625)
+                            color: root.glowColor(root.peakAlpha * 0.390625)
                         }
                         GradientStop {
                             position: 0.75
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha * 0.5625)
+                            color: root.glowColor(root.peakAlpha * 0.5625)
                         }
                         GradientStop {
                             position: 0.875
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha * 0.765625)
+                            color: root.glowColor(root.peakAlpha * 0.765625)
                         }
                         GradientStop {
                             position: 1
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha)
+                            color: root.glowColor(root.peakAlpha)
                         }
                     }
                 }
 
                 Rectangle {
                     id: rightGlow
-                    x: root.presenter.glowLeft
+                    x: root.glowLeft
                     y: 0
-                    width: root.presenter.glowRight
+                    width: root.glowRight
                     height: segment.height
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
                         GradientStop {
                             position: 0
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha)
+                            color: root.glowColor(root.peakAlpha)
                         }
                         GradientStop {
                             position: 0.125
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha * 0.765625)
+                            color: root.glowColor(root.peakAlpha * 0.765625)
                         }
                         GradientStop {
                             position: 0.25
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha * 0.5625)
+                            color: root.glowColor(root.peakAlpha * 0.5625)
                         }
                         GradientStop {
                             position: 0.375
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha * 0.390625)
+                            color: root.glowColor(root.peakAlpha * 0.390625)
                         }
                         GradientStop {
                             position: 0.5
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha * 0.25)
+                            color: root.glowColor(root.peakAlpha * 0.25)
                         }
                         GradientStop {
                             position: 0.625
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha * 0.140625)
+                            color: root.glowColor(root.peakAlpha * 0.140625)
                         }
                         GradientStop {
                             position: 0.75
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha * 0.0625)
+                            color: root.glowColor(root.peakAlpha * 0.0625)
                         }
                         GradientStop {
                             position: 0.875
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b,
-                                           root.presenter.peakAlpha * 0.015625)
+                            color: root.glowColor(root.peakAlpha * 0.015625)
                         }
                         GradientStop {
                             position: 1
-                            color: Qt.rgba(root.playheadColor.r, root.playheadColor.g,
-                                           root.playheadColor.b, 0)
+                            color: root.glowColor(0)
                         }
                     }
                 }
 
                 Rectangle {
                     objectName: "sharedPlayheadLine"
-                    x: root.presenter.glowLeft - root.hairline / 2
+                    x: root.glowLeft - root.hairline / 2
                     y: 0
                     width: root.hairline
                     height: segment.height
@@ -240,28 +205,26 @@ Item {
             }
         }
 
-        // The roll plot has no separate Swift ruler band. Its ruler marks start
-        // at this segment's top, so this clip keeps the down-pointing triangle
-        // centered at contentX even when its left half is off the plot.
+        // The ruler triangle stays centered while its left half clips.
         Item {
             id: triangleClip
             visible: segment.rulerSegment
             x: 0
             y: 0
             width: Math.max(segment.clipRect.width + segment.triangleOverhang, 0)
-            height: root.presenter.triangleHeightPx
+            height: root.triangleHeightPx
             clip: true
 
             Shape {
                 id: rulerTriangle
                 x: root.alignedContentX
                 y: 0
-                width: 2 * root.presenter.triangleHalfWidthPx
-                height: root.presenter.triangleHeightPx
+                width: 2 * root.triangleHalfWidthPx
+                height: root.triangleHeightPx
 
                 // The current roll geometry points down; retain the published
                 // orientation so a future ruler layout can point it up.
-                rotation: root.presenter.trianglePointsUp ? 180 : 0
+                rotation: root.trianglePointsUp ? 180 : 0
 
                 ShapePath {
                     fillColor: root.playheadColor
@@ -269,12 +232,12 @@ Item {
                     startX: 0
                     startY: 0
                     PathLine {
-                        x: 2 * root.presenter.triangleHalfWidthPx
+                        x: 2 * root.triangleHalfWidthPx
                         y: 0
                     }
                     PathLine {
-                        x: root.presenter.triangleHalfWidthPx
-                        y: root.presenter.triangleHeightPx
+                        x: root.triangleHalfWidthPx
+                        y: root.triangleHeightPx
                     }
                     PathLine {
                         x: 0
@@ -285,14 +248,12 @@ Item {
         }
     }
 
-    // One clipped dashed guide segment. The presenter owns visibility and
-    // projected x; this component only clips it to the band and repeats
-    // one-pixel marks with a one-pixel gap, starting at the band's top.
+    // Repeat logical-pixel dashes from each body's top edge.
     component GuideSegment: Item {
         id: guideSegment
 
         required property rect clipRect
-        required property QtObject guide
+        required property App.PlayheadGuideState guide
         required property color guideColor
         required property bool available
 
@@ -301,15 +262,12 @@ Item {
         width: Math.max(clipRect.width, 0)
         height: Math.max(clipRect.height, 0)
         clip: true
-        visible: root.guides.timelineAttached && guide.visible && available
-                 && width > 0 && height > 0
+        visible: root.guides !== null && guide !== null && root.guides.timelineAttached
+                 && guide.visible && available && width > 0 && height > 0
 
-        // One scene-graph node for the whole dashed run: the stroke's dash
-        // pattern is in stroke-width multiples, so [1, 1] is the native
-        // one-pixel mark / one-pixel gap starting at the band's top. Only this
-        // item's x re-evaluates when the guide moves; the dash geometry is
-        // static per height.
+        // Only x changes with the guide; dash geometry depends on height.
         Shape {
+            id: guideLine
             x: guideSegment.guide.contentX
             y: 0
             width: 1
@@ -339,28 +297,22 @@ Item {
 
     PlayheadSegment {
         objectName: "sharedPlayheadVelocityClip"
-        clipRect: Qt.rect(root.plotOrigin,
-                          root.drawerRect.y + root.velocitySection.bodyY,
-                          root.plotWidth, root.velocitySection.bodyHeight)
-        available: root.velocitySection.available && root.velocitySection.visible
+        clipRect: root.velocityBodyRect
+        available: root.velocityAvailable
         rulerSegment: false
     }
 
     PlayheadSegment {
         objectName: "sharedPlayheadVoiceChangesClip"
-        clipRect: Qt.rect(root.plotOrigin,
-                          root.drawerRect.y + root.voiceChangesSection.bodyY,
-                          root.plotWidth, root.voiceChangesSection.bodyHeight)
-        available: root.voiceChangesSection.available && root.voiceChangesSection.visible
+        clipRect: root.voiceChangesBodyRect
+        available: root.voiceChangesAvailable
         rulerSegment: false
     }
 
     PlayheadSegment {
         objectName: "sharedPlayheadAutomationClip"
-        clipRect: Qt.rect(root.plotOrigin,
-                          root.drawerRect.y + root.automationSection.bodyY,
-                          root.plotWidth, root.automationSection.bodyHeight)
-        available: root.automationSection.available && root.automationSection.visible
+        clipRect: root.automationBodyRect
+        available: root.automationAvailable
         rulerSegment: false
     }
 
@@ -369,77 +321,65 @@ Item {
     GuideSegment {
         objectName: "sharedPlayheadEditRollGuide"
         clipRect: root.rollPlotRect
-        guide: root.guides.edit
+        guide: root.guides?.edit ?? null
         guideColor: root.editGuideColor
         available: root.rollBodyVisible
     }
 
     GuideSegment {
         objectName: "sharedPlayheadEditVelocityGuide"
-        clipRect: Qt.rect(root.plotOrigin,
-                          root.drawerRect.y + root.velocitySection.bodyY,
-                          root.plotWidth, root.velocitySection.bodyHeight)
-        guide: root.guides.edit
+        clipRect: root.velocityBodyRect
+        guide: root.guides?.edit ?? null
         guideColor: root.editGuideColor
-        available: root.velocitySection.available && root.velocitySection.visible
+        available: root.velocityAvailable
     }
 
     GuideSegment {
         objectName: "sharedPlayheadEditVoiceChangesGuide"
-        clipRect: Qt.rect(root.plotOrigin,
-                          root.drawerRect.y + root.voiceChangesSection.bodyY,
-                          root.plotWidth, root.voiceChangesSection.bodyHeight)
-        guide: root.guides.edit
+        clipRect: root.voiceChangesBodyRect
+        guide: root.guides?.edit ?? null
         guideColor: root.editGuideColor
-        available: root.voiceChangesSection.available && root.voiceChangesSection.visible
+        available: root.voiceChangesAvailable
     }
 
     GuideSegment {
         objectName: "sharedPlayheadEditAutomationGuide"
-        clipRect: Qt.rect(root.plotOrigin,
-                          root.drawerRect.y + root.automationSection.bodyY,
-                          root.plotWidth, root.automationSection.bodyHeight)
-        guide: root.guides.edit
+        clipRect: root.automationBodyRect
+        guide: root.guides?.edit ?? null
         guideColor: root.editGuideColor
-        available: root.automationSection.available && root.automationSection.visible
+        available: root.automationAvailable
     }
 
     GuideSegment {
         objectName: "sharedPlayheadHoverRollGuide"
         clipRect: root.rollPlotRect
-        guide: root.guides.hover
+        guide: root.guides?.hover ?? null
         guideColor: root.hoverGuideColor
         available: root.rollBodyVisible
     }
 
     GuideSegment {
         objectName: "sharedPlayheadHoverVelocityGuide"
-        clipRect: Qt.rect(root.plotOrigin,
-                          root.drawerRect.y + root.velocitySection.bodyY,
-                          root.plotWidth, root.velocitySection.bodyHeight)
-        guide: root.guides.hover
+        clipRect: root.velocityBodyRect
+        guide: root.guides?.hover ?? null
         guideColor: root.hoverGuideColor
-        available: root.velocitySection.available && root.velocitySection.visible
+        available: root.velocityAvailable
     }
 
     GuideSegment {
         objectName: "sharedPlayheadHoverVoiceChangesGuide"
-        clipRect: Qt.rect(root.plotOrigin,
-                          root.drawerRect.y + root.voiceChangesSection.bodyY,
-                          root.plotWidth, root.voiceChangesSection.bodyHeight)
-        guide: root.guides.hover
+        clipRect: root.voiceChangesBodyRect
+        guide: root.guides?.hover ?? null
         guideColor: root.hoverGuideColor
-        available: root.voiceChangesSection.available && root.voiceChangesSection.visible
+        available: root.voiceChangesAvailable
     }
 
     GuideSegment {
         objectName: "sharedPlayheadHoverAutomationGuide"
-        clipRect: Qt.rect(root.plotOrigin,
-                          root.drawerRect.y + root.automationSection.bodyY,
-                          root.plotWidth, root.automationSection.bodyHeight)
-        guide: root.guides.hover
+        clipRect: root.automationBodyRect
+        guide: root.guides?.hover ?? null
         guideColor: root.hoverGuideColor
-        available: root.automationSection.available && root.automationSection.visible
+        available: root.automationAvailable
     }
 
 }

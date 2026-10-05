@@ -100,7 +100,7 @@ func drawerLayoutCheckDrawerResizeClampsAndSessions(_ report: CheckReport) {
     let interrupted = drawerLayoutMakeStoredDrawerHarness().harness
     interrupted.apply { $0.beginResize(.voiceChanges) }
     interrupted.apply { $0.applyResize(.voiceChanges, delta: 20) }
-    interrupted.apply { $0.cancelInteractions() }
+    interrupted.cancelInteractions()
     report.expect(
         interrupted.layout.resizeKind == nil && interrupted.layout.storedBodyHeight(.voiceChanges) == 70,
         cppID: drawerLayoutResizeID,

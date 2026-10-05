@@ -3,10 +3,9 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 import "RollNoteFaces.js" as RollNoteFaces
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellPitchBend"
     when: windowShown
@@ -14,7 +13,6 @@ TestCase {
     height: 640
     visible: true
 
-    property var shell: null
     readonly property var settings: bootstrap.preferences
     property string noteProbe: ""
     property alias bootstrap: bootstrapObject
@@ -33,9 +31,7 @@ TestCase {
         verify(bootstrap.resetPreferences(), "each shell starts with fresh window state")
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
+    laneBootstrap: bootstrap
     function surface() {
         if (!shell || !shell.sceneLoader || !shell.sceneLoader.item)
             return null
@@ -43,25 +39,7 @@ TestCase {
         const page = findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId)
         return page ? findChild(page, "swiftRollOverlay") : null
     }
-    function cleanup() {
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            for (let step = 0; step < 20 && !shell.shellPresenter.closeReady; ++step) {
-                if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                    shell.shellPresenter.session.songTabs.confirmDiscard()
-                waitForNative(function() {
-                    return shell.shellPresenter.closeReady
-                        || shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                }, 5000)
-            }
-            verify(shell.shellPresenter.closeReady)
-        }
-        shell.destroy()
-        shell = null
-        wait(0)
-    }
+    discardPollSteps: 20
     function openSong() {
         settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
@@ -188,7 +166,6 @@ TestCase {
         }
         return hits
     }
-
 
     function openPitchEditor() {
         const app = openSong()

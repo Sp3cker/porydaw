@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Porydaw.Ui
 import PorydawApp
@@ -5,14 +7,14 @@ import PorydawApp
 Item {
     id: surface
     required property SampleWaveformModel model
-    required property QtObject colors
+    required property GridPalette colors
     required property real baseFontPx
     property bool dragging: false
 
-    function resizeModel() {
-        model.setViewport(width, height - seam.height)
-        model.setSeamViewport(seam.width, seam.height)
-        model.setBaseFontPx(baseFontPx)
+    function resizeModel(): void {
+        surface.model.setViewport(surface.width, surface.height - seam.height)
+        surface.model.setSeamViewport(seam.width, seam.height)
+        surface.model.setBaseFontPx(surface.baseFontPx)
     }
     onWidthChanged: resizeModel()
     onHeightChanged: resizeModel()

@@ -1,5 +1,6 @@
+pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import Porydaw.Ui
 import PorydawApp
 
@@ -9,34 +10,27 @@ SplitView {
     orientation: Qt.Vertical
     required property SongDockController controller
     required property ApplicationSession applicationSession
-    required property var colors
-    readonly property real baseFontPx: applicationSession.baseFontPx
-    // Normalized fraction of this split's usable height assigned to Songs.
-    // The shell persists it as swiftDock/songsRatio the same way it persists
-    // swiftDock/columnWidth; divider write-back clamps it so both panes keep
-    // their fixed controls and at least one complete list row.
+    required property GridPalette colors
+    readonly property real baseFontPx: dock.applicationSession.baseFontPx
+    // Normalized usable-height fraction persisted as swiftDock/songsRatio.
+    // Divider write-back keeps both panes' controls and one complete list row.
     property real songsRatio: 0.5
 
-    readonly property real clampedRatio: Math.min(0.75, Math.max(0.25, songsRatio))
-    // Default SplitView handle thickness. Both preferred heights are carved
-    // out of the usable height (dock minus handle): preferred sizes that sum
-    // past the available space make the splitter short the first pane by the
-    // handle on every pass, and the write-back below would ratchet the saved
-    // ratio down to its clamp.
+    readonly property real clampedRatio: Math.min(0.75, Math.max(0.25, dock.songsRatio))
+    // Carve the handle out of the usable height so layout cannot ratchet the
+    // persisted ratio down on successive passes.
     readonly property real handleH: 6
     // Fixed chrome plus one complete row in each pane; the SplitView enforces
     // these while dragging so neither pane collapses.
-    readonly property real songsMinHeight: Math.ceil(baseFontPx * 7)
-    readonly property real voiceMinHeight: Math.ceil(baseFontPx * 6.5)
+    readonly property real songsMinHeight: Math.ceil(dock.baseFontPx * 7)
+    readonly property real voiceMinHeight: Math.ceil(dock.baseFontPx * 6.5)
 
-    function noteSongsHeight() {
+    function noteSongsHeight(): void {
         const avail = songsWrap.height + voiceWrap.height
         if (dock.height <= 0 || avail <= 0)
             return
-        // A divider drag resizes both panes inside a constant dock height, so
-        // the heights always account for the whole dock minus the handle. A
-        // mid-layout frame (growth, resize, initial settle) leaves stale pane
-        // heights behind and must never rewrite the restored ratio.
+        // Only divider drags have settled pane heights inside a constant dock;
+        // initial layout and resizing must not rewrite the restored ratio.
         const slack = dock.height - avail
         if (slack < 4 || slack > 8)
             return
@@ -44,20 +38,18 @@ SplitView {
                 || voiceWrap.height <= dock.voiceMinHeight + 0.5)
             return
         const next = Math.min(0.75, Math.max(0.25, songsWrap.height / avail))
-        if (Math.abs(next - songsRatio) > 0.001)
-            songsRatio = next
+        if (Math.abs(next - dock.songsRatio) > 0.001)
+            dock.songsRatio = next
     }
 
-    // Plain wrappers own the split geometry (SplitView never sizes an item
-    // below its content implicit height, so the panels' full content heights
-    // must not leak into the divider math) and clip overflow; the panels keep
-    // their standalone geometry inside and scroll their lists themselves.
+    // Plain clipped wrappers own split geometry without leaking panel implicit
+    // heights; the panels keep standalone geometry and scroll their own lists.
     Item {
         id: songsWrap
         SplitView.fillWidth: true
         SplitView.fillHeight: true
-        SplitView.preferredHeight: dock.height > handleH
-            ? (dock.height - handleH) * dock.clampedRatio : 0
+        SplitView.preferredHeight: dock.height > dock.handleH
+            ? (dock.height - dock.handleH) * dock.clampedRatio : 0
         SplitView.minimumHeight: dock.songsMinHeight
         clip: true
         onHeightChanged: dock.noteSongsHeight()
@@ -75,8 +67,8 @@ SplitView {
         id: voiceWrap
         SplitView.fillWidth: true
         SplitView.fillHeight: true
-        SplitView.preferredHeight: dock.height > handleH
-            ? (dock.height - handleH) * (1 - dock.clampedRatio) : 0
+        SplitView.preferredHeight: dock.height > dock.handleH
+            ? (dock.height - dock.handleH) * (1 - dock.clampedRatio) : 0
         SplitView.minimumHeight: dock.voiceMinHeight
         clip: true
         onHeightChanged: dock.noteSongsHeight()

@@ -1,57 +1,58 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
+import PorydawApp as App
 
 Item {
     id: root
 
-    required property rect bandRect
-    required property bool bandVisible
-    required property var model
-    required property font controlFont
-    required property var hintService
-    required property bool hintScopeAllowed
+    final required property rect bandRect
+    final required property bool bandVisible
+    final required property App.TrackHeadersPresenter model
+    final required property font controlFont
+    final required property App.MouseHints hintService
+    final required property bool hintScopeAllowed
 
-    readonly property var headersModel: model
-    readonly property var appearance: headersModel.appearance
-    readonly property color inputBackground: appearance.inputBackground
-    readonly property color inputText: appearance.inputText
-    readonly property color inputOutline: appearance.inputOutline
-    readonly property color focusOutline: appearance.focusOutline
-    readonly property color scrollbarHandle: appearance.scrollbarHandle
-    readonly property color scrollbarHandleHover: appearance.scrollbarHandleHover
-    readonly property color reorderIndicator: appearance.reorderIndicator
-    readonly property color selectionBackground: appearance.selectionBackground
-    readonly property color selectionText: appearance.selectionText
+    final readonly property App.TrackHeadersPresenter headersModel: model
+    final readonly property App.TrackHeadersPresenter appearance: headersModel
+    final readonly property color inputBackground: appearance.inputBackground
+    final readonly property color inputText: appearance.inputText
+    final readonly property color inputOutline: appearance.inputOutline
+    final readonly property color focusOutline: appearance.focusOutline
+    final readonly property color scrollbarHandle: appearance.scrollbarHandle
+    final readonly property color scrollbarHandleHover: appearance.scrollbarHandleHover
+    final readonly property color reorderIndicator: appearance.reorderIndicator
+    final readonly property color selectionBackground: appearance.selectionBackground
+    final readonly property color selectionText: appearance.selectionText
 
     width: bandRect.width
     height: bandRect.height
 
     FontMetrics {
         id: normalTitleMetrics
-        font: Qt.font(root.headersModel.normalTitleFont)
+        font: root.headersModel.normalTitleFont
         onLineSpacingChanged: Qt.callLater(root.configureTextMetrics)
     }
 
     FontMetrics {
         id: boldTitleMetrics
-        font: Qt.font(root.headersModel.boldTitleFont)
+        font: root.headersModel.boldTitleFont
         onLineSpacingChanged: Qt.callLater(root.configureTextMetrics)
     }
 
     FontMetrics {
         id: subtitleMetrics
-        font: Qt.font(root.headersModel.subtitleFont)
+        font: root.headersModel.subtitleFont
         onLineSpacingChanged: Qt.callLater(root.configureTextMetrics)
     }
 
-    function configureTextMetrics() {
+    function configureTextMetrics(): void {
         root.headersModel.configureTextMetrics(Math.round(normalTitleMetrics.lineSpacing),
                                                Math.round(boldTitleMetrics.lineSpacing),
                                                Math.round(subtitleMetrics.lineSpacing))
     }
 
-    function restoreHeaderFocus() {
+    function restoreHeaderFocus(): void {
         headerInput.forceActiveFocus(Qt.OtherFocusReason)
     }
 
@@ -60,21 +61,21 @@ Item {
         configureTextMetrics()
     }
 
-    function rowIndexForTrack(track) {
+    function rowIndexForTrack(track: int): int {
         if (track < 0)
             return -1
         for (let index = 0; index < trackHeaderRowArea.rowCount; ++index) {
-            const row = trackHeaderRowArea.itemAt(index)
+            const row = root.headersModel.rowAt(index)
             if (row && row.track === track)
                 return index
         }
         return -1
     }
-    function hintProfileAt(x, y) {
+    function hintProfileAt(x: real, y: real): int {
         if (root.headersModel.rowHeight <= 0)
             return HintProfiles.Empty
         const index = Math.floor((y + root.headersModel.scrollY) / root.headersModel.rowHeight)
-        const row = trackHeaderRowArea.itemAt(index)
+        const row = root.headersModel.rowAt(index)
         if (!row || row.isAddTrack)
             return HintProfiles.Empty
         const localY = y + root.headersModel.scrollY - index * root.headersModel.rowHeight
@@ -88,7 +89,7 @@ Item {
         return HintProfiles.TrackScope
     }
 
-    function deliverWheel(event) {
+    function deliverWheel(event: WheelEvent): void {
         const direction = event.inverted ? -1 : 1
         root.headersModel.handleWheel(direction * event.angleDelta.x,
                                       direction * event.angleDelta.y,
@@ -122,8 +123,7 @@ Item {
                 controlFont: root.controlFont
                 normalMetrics: normalTitleMetrics
                 boldMetrics: boldTitleMetrics
-                rowAreaWidth: Math.max(0, trackHeaderViewport.width
-                                       - root.headersModel.scrollbarWidth)
+                rowAreaWidth: Math.max(0, trackHeaderViewport.width - root.headersModel.scrollbarWidth)
             }
 
             MouseArea {
@@ -171,7 +171,8 @@ Item {
                 }
                 MoveCoalescer {
                     id: headerMoves
-                    dispatch: (x, y, buttons, modifiers) => {
+                    dispatch: headerMoves.dispatchMove
+                    function dispatchMove(x: real, y: real, buttons: int, modifiers: int): void {
                         if (buttons !== Qt.NoButton)
                             root.headersModel.updatePointer(x, y, modifiers)
                         else
@@ -210,8 +211,8 @@ Item {
                 objectName: "timelineTrackHeaderReorderMarker"
                 y: Math.min(Math.max(0, root.headersModel.reorderIndicatorY),
                             Math.max(0, trackHeaderRowArea.height - height))
-                width: trackHeaderRowArea.width
                 height: root.headersModel.reorderIndicatorHeight
+                width: trackHeaderRowArea.width
                 visible: root.headersModel.reorderIndicatorVisible && height > 0
                 color: root.reorderIndicator
                 z: 3
@@ -255,13 +256,13 @@ Item {
                 visible: headerBand.visible && rowIndex >= 0
                 property bool finishing: false
 
-                function adoptRenameDraft() {
+                function adoptRenameDraft(): void {
                     renameInput.text = root.headersModel.renameDraft
                     renameInput.forceActiveFocus(Qt.PopupFocusReason)
                     renameInput.selectAll()
                 }
 
-                function finishRename(commit, entered) {
+                function finishRename(commit: bool, entered: bool): void {
                     if (finishing || !visible)
                         return
                     finishing = true
@@ -339,7 +340,7 @@ Item {
                 Connections {
                     target: root.headersModel
 
-                    function onRenameDraftChanged() {
+                    function onRenameDraftChanged(): void {
                         if (renameEditor.visible && renameInput.text !== root.headersModel.renameDraft)
                             renameInput.text = root.headersModel.renameDraft
                     }

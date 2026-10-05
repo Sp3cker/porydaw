@@ -11,7 +11,7 @@ ShellWindowSupport {
         var firstId = openTwoSongShell(function() {
             for (var id of ["view.automation_drawer", "view.velocity_drawer",
                             "view.voice_changes_drawer"]) {
-                verify(!shell.shellPresenter.actionEnabled(id),
+                verify(!shell.shellPresenter.action(id).enabled,
                        "drawer menu actions disable without a workspace: " + id)
             }
         })
@@ -59,8 +59,9 @@ ShellWindowSupport {
         for (var id of ["view.automation_drawer", "view.velocity_drawer",
                         "view.voice_changes_drawer"]) {
             var item = findChild(menu, "shellAction_" + id)
-            verify(item && !item.enabled,
-                   "drawer menu items disable while the event list shows: " + id)
+            verify(item !== null, "drawer menu item is mounted: " + id)
+            tryCompare(item, "enabled", false, 3000,
+                       "drawer menu items disable while the event list shows: " + id)
         }
         menu.close()
         keyClick(Qt.Key_V)
@@ -68,8 +69,9 @@ ShellWindowSupport {
         tabs.setSelectedTabEventsVisible(false)
         menu.open()
         var enabledAutomation = findChild(menu, "shellAction_view.automation_drawer")
-        verify(enabledAutomation && enabledAutomation.enabled,
-               "the Automation View command re-enables after leaving Event List")
+        verify(enabledAutomation !== null, "the Automation View command is mounted")
+        tryCompare(enabledAutomation, "enabled", true, 3000,
+                   "the Automation View command re-enables after leaving Event List")
         var enabledVelocity = findChild(menu, "shellAction_view.velocity_drawer")
         verify(enabledVelocity && enabledVelocity.enabled,
                "the Velocity View command re-enables after leaving Event List")

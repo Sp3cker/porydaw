@@ -1,19 +1,17 @@
-// Shared Accept/Cancel chrome for the canvas prompt family: pressed/focus
-// border states, Return/Enter/Space activation, tap handling, and button
-// accessibility. Owners keep semantics — objectName, tab navigation, and the
-// activated handler — and pass their label plus an optional width floor so
-// paired buttons stay visually aligned with an input or each other.
+pragma ComponentBehavior: Bound
+// Shared prompt button chrome; owners supply labels and activation semantics.
 import QtQuick
 import Porydaw.Ui
+import PorydawApp
 
 Rectangle {
     id: button
 
-    required property var appearance
+    required final property PromptStyle appearance
 
-    property string text: ""
-    property real minimumWidth: 0
-    readonly property real labelWidth: label.implicitWidth
+    final property string text: ""
+    final property real minimumWidth: 0
+    final readonly property real labelWidth: label.implicitWidth
     // VoicePicker buttons historically leave Space/Return/Enter to shortcut
     // dispatch; the prompt family claims them. Callers keep that difference.
     property bool claimsShortcuts: true
@@ -26,15 +24,16 @@ Rectangle {
     Accessible.focusable: enabled
     Accessible.onPressAction: button.activate()
 
-    implicitWidth: Math.max(labelWidth + 2 * appearance.buttonPadding, minimumWidth)
-    implicitHeight: label.implicitHeight + 2 * appearance.buttonPadding
-    color: tap.pressed ? appearance.pressedBackground : appearance.buttonBackground
-    border.width: appearance.borderWidth
-    border.color: activeFocus ? appearance.focus : appearance.outline
-    radius: appearance.radius
+    implicitWidth: Math.max(button.labelWidth + 2 * button.appearance.buttonPadding,
+                            button.minimumWidth)
+    implicitHeight: label.implicitHeight + 2 * button.appearance.buttonPadding
+    color: tap.pressed ? button.appearance.pressedBackground : button.appearance.buttonBackground
+    border.width: button.appearance.borderWidth
+    border.color: button.activeFocus ? button.appearance.focus : button.appearance.outline
+    radius: button.appearance.radius
     opacity: enabled ? 1 : 0.5
 
-    function activate() {
+    function activate(): void {
         if (enabled)
             button.activated()
     }
@@ -43,15 +42,10 @@ Rectangle {
         id: label
 
         anchors.centerIn: parent
-        // Pressed and inactive states must keep a legal ink for their
-        // surface: pressedText on the pressed fill, disabledText inside a
-        // disabled button. Appearances that predate a key fall back to the
-        // normal button ink; a missing appearance draws nothing, never throws.
-        color: (!button.enabled ? button.appearance?.disabledText
-                : tap.pressed ? button.appearance?.pressedText : null)
-               ?? button.appearance?.buttonText ?? "transparent"
-        font: button.appearance.font
         text: button.text
+        color: !button.enabled ? button.appearance.disabledText
+             : tap.pressed ? button.appearance.pressedText : button.appearance.buttonText
+        font: button.appearance.font
         textFormat: Text.PlainText
         renderType: Text.NativeRendering
     }
@@ -68,9 +62,7 @@ Rectangle {
         button.activate()
         event.accepted = true
     }
-    // Claim the activation keys so window shortcuts never steal them from a
-    // focused prompt button; VoicePicker buttons keep their historical
-    // pass-through via claimsShortcuts: false.
+    // VoicePicker keeps pass-through via claimsShortcuts: false.
     Keys.onShortcutOverride: (event) => event.accepted = claimsShortcuts &&
         (event.key === Qt.Key_Space || event.key === Qt.Key_Return
          || event.key === Qt.Key_Enter)

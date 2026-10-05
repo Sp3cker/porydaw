@@ -1,14 +1,9 @@
 import QtBridge
 
-// The Automation page's bridged records: the published selector tab, node,
-// ramp and menu-row handles QML reads. Each carries its own equality so the
-// publication sync paths can leave unchanged storage untouched.
 
 // MARK: - Published records
 
-/// One published selector tab: the parameter's label, whether it is the active
-/// one, whether its curve is pinned as a ghost, whether the shared selection
-/// covers it, and its own event count.
+/// One selector tab's label, active/ghost/selection state, availability and count.
 @MainActor
 @QtBridgeable
 public final class AutomationTabHandle {
@@ -33,6 +28,24 @@ public final class AutomationTabHandle {
     }
 }
 
+struct AutomationNodeValue: Equatable {
+    var x: Double = 0
+    var y: Double = 0
+    var tick: Double = 0
+    var value: Int = 0
+    var radius: Double = 0
+    var ringRadius: Double = 0
+    var outlineWidth: Double = 0
+    var outlineColor: QmlColor = .clear
+    var ringColor: QmlColor = .clear
+    var selected: Bool = false
+    var hovered: Bool = false
+    var projected: Bool = false
+    var phantom: Bool = false
+    var identity: AutomationPointIdentity?
+    var primitiveName: String = "automationNode"
+}
+
 /// One published node: its projected position, its paint radii, its interaction
 /// state and the identity a capture can revalidate.
 @MainActor
@@ -45,8 +58,8 @@ public final class AutomationNodeHandle {
     public var radius: Double = 0
     public var ringRadius: Double = 0
     public var outlineWidth: Double = 0
-    public var outlineColor: String = ""
-    public var ringColor: String = ""
+    public var outlineColor: QmlColor = .clear
+    public var ringColor: QmlColor = .clear
     public var selected: Bool = false
     public var hovered: Bool = false
     /// The synthetic engine-default node rather than a written occurrence.
@@ -58,37 +71,46 @@ public final class AutomationNodeHandle {
 
     public init() {}
 
-    /// Everything a delegate needs, packed into one map: the delegate's
-    /// model-data object exposes stored properties only, so this is a stored
-    /// role — `refreshSpec()` must run after fields are assigned.
-    public var spec: [String: QVariantSettable] = [:]
+    public var outerRadius: Double = 0
+    public var ringWidth: Double = 0
+    public var ringOuterRadius: Double = 0
+    public var hoverOuterRadius: Double = 0
+
+    @QtIgnored var current = AutomationNodeValue()
 
     @QtIgnored
-    func refreshSpec() {
-        spec = [
-            "x": x, "y": y, "tick": tick,
-            "radius": radius, "ringRadius": ringRadius,
-            "outlineWidth": outlineWidth,
-            "outerRadius": radius + outlineWidth,
-            "ringWidth": outlineWidth * 12.0 / 5.0,
-            "ringOuterRadius": ringRadius + outlineWidth * 6.0 / 5.0,
-            "hoverOuterRadius": radius + outlineWidth + 2,
-            "outlineColor": outlineColor,
-            "ringColor": ringColor,
-            "selected": selected, "hovered": hovered, "phantom": phantom,
-            "primitiveName": primitiveName,
-        ]
+    convenience init(_ value: AutomationNodeValue) {
+        self.init()
+        _ = update(value)
     }
 
     @QtIgnored
-    func matches(_ other: AutomationNodeHandle) -> Bool {
-        x == other.x && y == other.y && tick == other.tick && value == other.value
-            && radius == other.radius && ringRadius == other.ringRadius
-            && outlineWidth == other.outlineWidth
-            && outlineColor == other.outlineColor && ringColor == other.ringColor
-            && selected == other.selected && hovered == other.hovered
-            && projected == other.projected && phantom == other.phantom
-            && identity == other.identity && primitiveName == other.primitiveName
+    func update(_ next: AutomationNodeValue) -> Bool {
+        guard current != next else { return false }
+        let identityChanged = current.identity != next.identity
+        current = next
+        publish(\.x, next.x)
+        publish(\.y, next.y)
+        publish(\.tick, next.tick)
+        publish(\.value, next.value)
+        publish(\.radius, next.radius)
+        publish(\.ringRadius, next.ringRadius)
+        publish(\.outlineWidth, next.outlineWidth)
+        publish(\.outlineColor, next.outlineColor)
+        publish(\.ringColor, next.ringColor)
+        publish(\.selected, next.selected)
+        publish(\.hovered, next.hovered)
+        publish(\.projected, next.projected)
+        publish(\.phantom, next.phantom)
+        publish(\.primitiveName, next.primitiveName)
+        publish(\.outerRadius, next.radius + next.outlineWidth)
+        publish(\.ringWidth, next.outlineWidth * 12.0 / 5.0)
+        publish(\.ringOuterRadius, next.ringRadius + next.outlineWidth * 6.0 / 5.0)
+        publish(\.hoverOuterRadius, next.radius + next.outlineWidth + 2)
+        if identityChanged {
+            publish(\.identity, next.identity.map(AutomationPage.identityText) ?? "")
+        }
+        return true
     }
 }
 
@@ -128,5 +150,43 @@ public final class AutomationMenuRowHandle {
             && separator == other.separator && primitiveName == other.primitiveName
             && checkable == other.checkable && checked == other.checked
             && hasSubmenu == other.hasSubmenu && shortcutText == other.shortcutText
+    }
+}
+
+/// One retained hover presentation shared by the plot's rings and labels.
+@MainActor
+@QtBridgeable
+public final class AutomationHoverDisplay {
+    public var visible: Bool = false
+    public var text: String = ""
+    public var hasNode: Bool = false
+    public var nodeTick: Double = 0
+    public var guideX: Double = 0
+    public var ghostY: Double = 0
+    public var hasGhost: Bool = false
+    public var x: Double = 0
+    public var y: Double = 0
+    public var width: Double = 0
+    public var height: Double = 0
+
+    public init() {}
+
+    @QtIgnored
+    func update(
+        visible: Bool, text: String = "", hasNode: Bool = false,
+        nodeTick: Double = 0, guideX: Double = 0, ghostY: Double = 0,
+        hasGhost: Bool = false, rect: (x: Double, y: Double, width: Double, height: Double) = (0, 0, 0, 0)
+    ) {
+        publish(\.visible, visible)
+        publish(\.text, text)
+        publish(\.hasNode, hasNode)
+        publish(\.nodeTick, nodeTick)
+        publish(\.guideX, guideX)
+        publish(\.ghostY, ghostY)
+        publish(\.hasGhost, hasGhost)
+        publish(\.x, rect.x)
+        publish(\.y, rect.y)
+        publish(\.width, rect.width)
+        publish(\.height, rect.height)
     }
 }

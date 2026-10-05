@@ -88,7 +88,7 @@ func selectionAndVoiceRouteThroughHeaders(
         expected: 0, actual: fx.session.selectedTrack, cppID: id,
         what: "Ctrl-click of another track retains the primary")
     report.expect(
-        h.rows[1].overlayColor != "#00000000", cppID: id,
+        h.rows[1].overlayColor != PaletteMath.qmlColor(argb: 0x00000000), cppID: id,
         message: "secondary scope renders the original selection overlay")
     baseline.expectUnchanged(report, fx.document, cppID: id, phase: "header selection and reveals")
 }
@@ -121,15 +121,13 @@ func headerSelectionTargetsResolve(
         message: "the alternate row resolves an engine track")
     let titleRect = trackRows[targetRow].titleRect
     report.expect(
-        (titleRect["width"] as? Double ?? 0) > 0
-            && (titleRect["height"] as? Double ?? 0) > 0,
+        titleRect.width > 0 && titleRect.height > 0,
         cppID: id, message: "title rect is populated")
     // Geometry stays populated after the band scrolls.
     h.scrollY += Double(h.rowHeight)
     let scrolledRect = trackRows[targetRow].titleRect
     report.expect(
-        (scrolledRect["width"] as? Double ?? 0) > 0
-            && (scrolledRect["height"] as? Double ?? 0) > 0,
+        scrolledRect.width > 0 && scrolledRect.height > 0,
         cppID: id, message: "title rect stays populated after scroll")
 }
 

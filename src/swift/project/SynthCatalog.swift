@@ -42,21 +42,11 @@ private enum CatalogLines {
     static let synthMacroPrefix = Array("set_synth_".utf8)
     static let voiceGroup = Array("voice_group".utf8)
     static let voicegroupPrefix = Array("voicegroup".utf8)
-    static let keysplit = Array("voice_keysplit".utf8)
-    static let drumkit = Array("voice_keysplit_all".utf8)
+    static let keysplit = Array(VoiceMacroSpec.forMacro(.keysplit).word.utf8)
+    static let drumkit = Array(VoiceMacroSpec.forMacro(.keysplitAll).word.utf8)
     static let doubleColon = Array("::".utf8)
     static let cries = Array("cries/".utf8)
     static let voiceMacroPrefix = Array("voice_".utf8)
-    static let voiceMacros: [(type: VgMacro, word: [UInt8], spaced: Bool)] = [
-        (.directSoundNoResample, Array("voice_directsound_no_resample".utf8), true),
-        (.directSoundAlt, Array("voice_directsound_alt".utf8), true),
-        (.directSound, Array("voice_directsound".utf8), true),
-        (.square1Alt, Array("voice_square_1_alt".utf8), true), (.square1, Array("voice_square_1".utf8), true),
-        (.square2Alt, Array("voice_square_2_alt".utf8), true), (.square2, Array("voice_square_2".utf8), true),
-        (.progWaveAlt, Array("voice_programmable_wave_alt".utf8), false),
-        (.progWave, Array("voice_programmable_wave".utf8), false),
-        (.noiseAlt, Array("voice_noise_alt".utf8), true), (.noise, Array("voice_noise".utf8), true),
-    ]
 
     static func label(_ line: AsmLine.Bytes) -> String? {
         var cursor = AsmLine(line)
@@ -106,32 +96,27 @@ private enum CatalogLines {
         return overflowed ? 0 : value
     }
 
-    static func voiceMacro(_ text: AsmLine.Bytes) -> (type: VgMacro, arguments: AsmLine.Bytes)? {
+    static func voiceMacro(_ text: AsmLine.Bytes) -> (spec: VoiceMacroSpec, arguments: AsmLine.Bytes)? {
         guard text.count > voiceMacroPrefix.count,
             AsmLine.hasPrefix(text, voiceMacroPrefix)
         else { return nil }
         let kind = text[text.startIndex + voiceMacroPrefix.count]
-        var index = 0
-        while index < voiceMacros.count {
-            let candidate = voiceMacros[index]
-            if candidate.word[voiceMacroPrefix.count] == kind,
-                AsmLine.hasPrefix(text, candidate.word)
+        for candidate in VoiceMacroSpec.all where candidate.adsrFamily >= 0 {
+            if candidate.prefix[voiceMacroPrefix.count] == kind,
+                AsmLine.hasPrefix(text, candidate.prefix)
             {
-                let next = text.startIndex + candidate.word.count
-                if !candidate.spaced || (next < text.endIndex && text[next] == 32) {
-                    return (candidate.type, text[next...])
-                }
+                return (candidate, text[(text.startIndex + candidate.prefix.count)...])
             }
-            index += 1
         }
         return nil
     }
 
     static func voiceFields(
-        _ arguments: AsmLine.Bytes, count expected: Int
+        _ arguments: AsmLine.Bytes, spec: VoiceMacroSpec
     )
         -> (symbol: AsmLine.Bytes, attack: Int, decay: Int, sustain: Int, release: Int)?
     {
+        let expected = spec.argumentCount
         var index = arguments.startIndex
         var symbol = arguments[arguments.startIndex..<arguments.startIndex]
         var envelope = (0, 0, 0, 0)
@@ -141,7 +126,7 @@ private enum CatalogLines {
             if index == arguments.endIndex || arguments[index] == 44 {
                 guard field < expected else { return nil }
                 let value = arguments[start..<index]
-                if field == 2 { symbol = AsmLine.trimmed(value) }
+                if field == spec.symbolField { symbol = AsmLine.trimmed(value) }
                 let slot = field - (expected - 4)
                 if slot >= 0 {
                     guard let number = decimal(value) else { return nil }
@@ -301,20 +286,18 @@ private enum CatalogLines {
                         if cursor.skipSpaces(), let name = cursor.word() { drums.insert(AsmLine.text(name)) }
                     }
                 }
-                guard let (type, arguments) = voiceMacro(AsmLine.content(raw)),
-                    let fields = voiceFields(
-                        arguments,
-                        count: type == .square1 || type == .square1Alt ? 8 : 7)
+                guard let (spec, arguments) = voiceMacro(AsmLine.content(raw)),
+                    let fields = voiceFields(arguments, spec: spec)
                 else { continue }
-                let cgb = vgMacroIsCgb(type)
+                let cgb = spec.adsrFamily > 0
                 let attack = cgb ? fields.attack & 7 : fields.attack & 255
                 let decay = cgb ? fields.decay & 7 : fields.decay & 255
                 let sustain = cgb ? fields.sustain & 15 : fields.sustain & 255
                 let release = cgb ? fields.release & 7 : fields.release & 255
                 guard release != 0, cgb || attack != 0 else { continue }
                 let code = UInt32(attack) << 24 | UInt32(decay) << 16 | UInt32(sustain) << 8 | UInt32(release)
-                families[vgAdsrFamily(type), default: [:]][code, default: 0] += 1
-                if vgMacroHasSymbol(type), !fields.symbol.isEmpty {
+                families[spec.adsrFamily, default: [:]][code, default: 0] += 1
+                if spec.symbolField != nil, !fields.symbol.isEmpty {
                     symbols[AsmLine.text(fields.symbol), default: [:]][code, default: 0] += 1
                 }
             }

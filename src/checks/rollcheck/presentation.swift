@@ -212,8 +212,7 @@ private func checkHeaderRename(_ report: CheckReport, session: DocumentSession) 
     let identity = document.history.currentIdentity
     let selected = session.selectedTrack
     let oldChange = session.onChange
-    let headers = TrackHeadersPresenter()
-    headers.attach(session: session, palette: GridPalette())
+    let headers = makeRollHeaderFixture(session: session)
     session.onChange = { change in
         if change.domains.contains(.document) { headers.documentDidChange(change) }
         oldChange?(change)
@@ -306,8 +305,7 @@ private func checkHeaderKeyboardMuteSolo(_ report: CheckReport, session: Documen
         report.fail(id, "supplied song lacks an available second track for the mixed-scope probe")
         return
     }
-    let headers = TrackHeadersPresenter()
-    headers.attach(session: session, palette: GridPalette())
+    let headers = makeRollHeaderFixture(session: session)
     session.onChange = { change in
         headers.refreshFromDocument()
         previousChange?(change)
@@ -385,8 +383,7 @@ private func checkHeaderReconciliation(_ report: CheckReport, session: DocumentS
         report.fail(unchangedID, "supplied song lacks a second header record")
         return
     }
-    let headers = TrackHeadersPresenter()
-    headers.attach(session: session, palette: GridPalette())
+    let headers = makeRollHeaderFixture(session: session)
     session.onChange = { change in
         if change.domains.contains(.document) { headers.documentDidChange(change) }
         oldChange?(change)
@@ -518,10 +515,10 @@ private func checkPresenterMetrics(_ report: CheckReport, session: DocumentSessi
             && gridCameraNear(grid.cameraMaxVScroll, session.camera.snapshot.maxVScroll),
         cppID: id, message: "metric scale republish tracks the requested font and camera bounds")
     report.expect(
-        grid.scene.hoverChipFont["pixelSize"] as? Int == Typography(baseFontPx: 26).caption.pixelSize,
+        grid.scene.hoverChipFont.pixelSize == Typography(baseFontPx: 26).caption.pixelSize,
         cppID: id, message: "a larger viewport base repaints the roll hover chip with its caption role")
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     report.expect(
-        grid.scene.hoverChipFont["pixelSize"] as? Int == Typography(baseFontPx: 13).caption.pixelSize,
+        grid.scene.hoverChipFont.pixelSize == Typography(baseFontPx: 13).caption.pixelSize,
         cppID: id, message: "restoring the viewport base restores the roll hover chip caption")
 }

@@ -15,6 +15,7 @@ import type { Reporter } from "./checks_reporter.ts";
 import { wallEstimate } from "./checks_walls.ts";
 import { CHECKS_HELP, parseCheckOptions } from "./checks_options.ts";
 import { enclosingFunction } from "./proof_anchor.ts";
+import { run } from "./lib/exec.ts";
 
 type ScratchKind = "existing-directory" | "must-not-exist-path" | "unused";
 type FixtureRootKind = "decomp-project" | "songs-mk-project" | "none";
@@ -112,12 +113,9 @@ async function findApplication(buildRoot: string): Promise<string> {
 async function loadManifest(
   checksBinary: string,
 ): Promise<readonly CheckManifestEntry[]> {
-  const result = await new Deno.Command(checksBinary, {
-    args: ["--manifest"],
+  const result = await run(checksBinary, ["--manifest"], {
     env: { QT_QPA_PLATFORM: "offscreen" },
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
+  });
   if (!result.success) {
     console.error("run_checks: porydaw_checks --manifest failed");
     console.error(decoder.decode(result.stderr));
@@ -581,9 +579,12 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
     reporter.onCheckFail(check.name, result);
     return;
   }
-  if (qtPayload !== undefined && result.output.length > 0) {
-    // Explicit --qt run: the complete raw output (listings, -v1 runs) is
-    // the point of the mode; print it even with the quiet reporter.
+  if (
+    (qtPayload !== undefined || reporterMode === "verbose") &&
+    result.output.length > 0
+  ) {
+    // --qt and --verbose runs print passing checks' raw output too, so
+    // runtime QML warnings stay visible when every assertion passes.
     Deno.stdout.writeSync(encoder.encode(result.output));
   }
   const detail = lastNonemptyLine(result.output);

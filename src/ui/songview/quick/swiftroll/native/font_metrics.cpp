@@ -38,15 +38,3 @@ double sgf_advance(const SGFontMetrics *metrics, const char *text)
 {
     return metrics->metrics.horizontalAdvance(QString::fromUtf8(text));
 }
-
-int sgf_fit(const SGFontMetrics *metrics, double row_height)
-{
-    QFont font = metrics->font;
-    for (int px = font.pixelSize(); px > 0; --px) {
-        font.setPixelSize(px);
-        const QFontMetricsF fitted(font);
-        if (fitted.ascent() + fitted.descent() <= row_height)
-            return px;
-    }
-    return 1;
-}

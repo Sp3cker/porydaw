@@ -7,15 +7,15 @@ extension SongRegistration {
         result.tableIndex = table.labelIndex
         result.tableCount = table.count
         result.lastEntry = table.labelLine >= 0 && table.labelLine == table.lastSongLine
-        let ownDefine = RegistrationText.dynamic(#"^\s*#define\s+\#(constant)\s+\d"#)
         result.inSongsH = RegistrationText.lines(root, "include/constants/songs.h").contains {
-            RegistrationText.match(ownDefine, $0) != nil
+            RegistrationText.match(RegistrationText.numericDefine, $0, constant: constant) != nil
         }
+        let objectReference = RegistrationText.midiObjectReference(for: label)
         result.inLdScript = RegistrationText.lines(root, "ld_script.ld").contains {
-            $0.contains("sound/songs/midi/\(label).o")
+            $0.contains(objectReference)
         }
         result.inCharmap = RegistrationText.lines(root, "charmap.txt").contains {
-            RegistrationText.match(RegistrationText.charmap, $0)?.group(1) == constant
+            RegistrationText.match(RegistrationText.charmap, $0, constant: constant) != nil
         }
         result.inDebugMenu = DebugSoundLists(RegistrationText.lines(root, "src/debug.c"))
             .lists.contains { $0.names.contains(constant) }
@@ -52,12 +52,13 @@ extension SongRegistration {
             var ownValue = -1
             var markerLines: [Int] = []
             var definitions: [(String, Int)] = []
-            let ownDefine = RegistrationText.dynamic(#"^\s*#define\s+\#(constant)\s+(\d+)\b"#)
             for index in file.lines.indices {
                 let text = file.text(index)
-                if own < 0, let match = RegistrationText.match(ownDefine, text) {
+                if own < 0,
+                    let match = RegistrationText.match(RegistrationText.numericDefineWord, text, constant: constant)
+                {
                     own = index
-                    ownValue = Int(match.group(1)) ?? -1
+                    ownValue = Int(match.group(2)) ?? -1
                     continue
                 }
                 if RegistrationText.match(RegistrationText.marker, text) != nil {
@@ -80,11 +81,9 @@ extension SongRegistration {
                     if isNumeric && Int(marker.group(3)) != ownValue { continue }
                     if !isNumeric && marker.group(3) != constant { continue }
                     guard let preceding else { continue }
-                    file.replace(
-                        index,
-                        marker.group(1)
-                            + (isNumeric
-                                ? String(preceding.1) : preceding.0) + marker.group(4))
+                    file.replaceValue(
+                        index, marker, group: 3,
+                        with: isNumeric ? String(preceding.1) : preceding.0)
                 }
                 file.remove(own)
             }
@@ -93,8 +92,9 @@ extension SongRegistration {
 
         let ldPath = root + "/ld_script.ld"
         if var file = try? RegistrationLines(path: ldPath) {
+            let objectReference = RegistrationText.midiObjectReference(for: label)
             if let index = file.lines.indices.first(where: {
-                file.text($0).contains("sound/songs/midi/\(label).o")
+                file.text($0).contains(objectReference)
             }) {
                 file.remove(index)
             }
@@ -103,7 +103,7 @@ extension SongRegistration {
         let charmapPath = root + "/charmap.txt"
         if var file = try? RegistrationLines(path: charmapPath) {
             if let index = file.lines.indices.first(where: {
-                RegistrationText.match(RegistrationText.charmap, file.text($0))?.group(1) == constant
+                RegistrationText.match(RegistrationText.charmap, file.text($0), constant: constant) != nil
             }) {
                 file.remove(index)
             }

@@ -6,18 +6,8 @@ import QtBridge
     import CoreGraphics
 #endif
 
-// Publication machinery for the drawer's Velocity section: the content rebuild
-// that resolves the presented context and republishes every static projection,
-// the scene-input assembly a build reads, and the per-row apply paths that sync
-// the published primitives and item models, plus the readout, the transient
-// gesture rendering and the typography/metrics/handle reuse caches.
-//
-// Ownership: an extension of the page, never a separate object. Published
-// state and the caches stay declared on `VelocityPage` — `@QtBridgeable`
-// registers class-body members only and stored properties cannot move to an
-// extension — so this file reads and writes the page's own state and publishes
-// through `setPublished` and `syncModel`: it holds no session, no cache and no
-// bridge type of its own.
+// Publication for `VelocityPage`: published state stays in the class body because
+// QtBridge registers class-body members only; this extension holds no state.
 
 @MainActor
 extension VelocityPage {
@@ -46,7 +36,7 @@ extension VelocityPage {
         contextDiagnostic = presented.diagnostic
         contextSlot = presented.slot
         contextVoiceName = presented.map.voiceName
-        setPublished(detentsAvailable, presented.status == .resolved && presented.map.isPSG) { detentsAvailable = $0 }
+        publish(\.detentsAvailable, presented.status == .resolved && presented.map.isPSG)
         refreshAxisAndHandles(republishDisplayLists: false)
         publishTransient(updateDrawing: false)
         publishDisplayLists()
@@ -68,9 +58,9 @@ extension VelocityPage {
     /// Applies one build's value axis to the page's published axis values.
     private func rebuildAxis(_ axis: VelocityAxisModel) {
         self.axis = axis
-        setPublished(axisMode, axis.mode.rawValue) { axisMode = $0 }
-        setPublished(axisGraduationsVisible, axis.mode == .intrinsic && detentsEnabled) { axisGraduationsVisible = $0 }
-        setPublished(axisAccessibleDescription, axis.accessibleDescription) { axisAccessibleDescription = $0 }
+        publish(\.axisMode, axis.mode.rawValue)
+        publish(\.axisGraduationsVisible, axis.mode == .intrinsic && detentsEnabled)
+        publish(\.axisAccessibleDescription, axis.accessibleDescription)
     }
 
     // MARK: Scene input
@@ -96,8 +86,8 @@ extension VelocityPage {
         for handle in publishedHandles {
             let x = projection.stableXForTick(handle.tick)
             let endX = projection.stableXForTick(handle.endTick)
-            if handle.x != x { handle.x = x }
-            if handle.endX != endX { handle.endX = endX }
+            handle.publish(\.x, x)
+            handle.publish(\.endX, endX)
         }
         publishTransient(updateDrawing: false)
         // Viewport-space lists: every camera move rebuilds both lists together.
@@ -151,6 +141,7 @@ extension VelocityPage {
             rulerWidth: rulerWidth,
             devicePixelRatio: devicePixelRatio,
             baseFontPx: baseFontPx,
+            typography: typography,
             metrics: session.map { gridMetrics($0) },
             grid: session?.grid,
             palette: scenePalette(),
@@ -205,61 +196,17 @@ extension VelocityPage {
         let count = VelocityScene.trackNotes(session).reduce(0) {
             $0 + (selected.contains($1.id) ? 1 : 0)
         }
-        setPublished(selectedCount, count) { selectedCount = $0 }
+        publish(\.selectedCount, count)
         syncModel(handles, values, matches: { $0.matches($1) })
-    }
-
-    private func syncRects(_ model: QListModel<SceneRect>, _ rects: [SceneRect]) {
-        syncModel(model, rects, matches: { $0.matches($1) })
-    }
-
-    private func syncTexts(_ model: QListModel<SceneText>, _ texts: [SceneText]) {
-        syncModel(model, texts, matches: matchesText)
-    }
-
-    /// `SceneText` publishes no comparison of its own; an equal record leaves
-    /// its row untouched. The font map is compared through its published
-    /// spelling, because its values are variant-typed.
-    private func matchesText(_ lhs: SceneText, _ rhs: SceneText) -> Bool {
-        lhs.labelText == rhs.labelText && lhs.labelColor == rhs.labelColor
-            && lhs.labelBackground == rhs.labelBackground
-            && lhs.labelHorizontalAlignment == rhs.labelHorizontalAlignment
-            && lhs.labelVerticalAlignment == rhs.labelVerticalAlignment
-            && Self.rectMatches(lhs.labelRect, rhs.labelRect)
-            && Self.fontMatches(lhs.labelFont, rhs.labelFont)
-    }
-
-    private static func rectMatches(
-        _ lhs: [String: QVariantSettable],
-        _ rhs: [String: QVariantSettable]
-    ) -> Bool {
-        for key in ["x", "y", "width", "height"] {
-            guard let left = lhs[key] as? Double, let right = rhs[key] as? Double,
-                left == right
-            else { return false }
-        }
-        return true
-    }
-
-    private static func fontMatches(
-        _ lhs: [String: QVariantSettable],
-        _ rhs: [String: QVariantSettable]
-    ) -> Bool {
-        guard lhs.count == rhs.count else { return false }
-        for (key, value) in lhs {
-            guard let other = rhs[key], String(describing: value) == String(describing: other)
-            else { return false }
-        }
-        return true
     }
 
     /// Publishes one build's ruler rows: the ticks, graduations, markers and
     /// labels `VelocityScene` derived for the presented axis.
     private func publishAxis(_ rows: VelocityAxisRows) {
-        syncRects(axisTicks, rows.ticks)
-        syncRects(axisGraduations, rows.graduations)
-        syncRects(axisMarkers, rows.markers)
-        syncTexts(axisLabels, rows.labels)
+        syncRetained(axisTicks, rows.ticks, make: SceneRect.init, update: { $0.update($1) })
+        syncRetained(axisGraduations, rows.graduations, make: SceneRect.init, update: { $0.update($1) })
+        syncRetained(axisMarkers, rows.markers, make: SceneRect.init, update: { $0.update($1) })
+        syncRetained(axisLabels, rows.labels, make: SceneText.init, update: { $0.update($1) })
     }
 
     private func gridMetrics(_ session: DocumentSession) -> GridMetrics {
@@ -335,17 +282,17 @@ extension VelocityPage {
         let height = Float(abs(gesture.bandY - gesture.pressY))
         let fill = DrawerStaticRect(
             tickStart: left, tickEnd: right, y: y, height: height,
-            argb: SceneRectPacking.argb(palette.selectionFill))
+            argb: PaletteMath.argb(palette.selectionFill))
         let frame = DrawerStaticRect(
             tickStart: left, tickEnd: right, y: y, height: height,
-            argb: SceneRectPacking.argb(palette.selectionEdge), flags: 4)
+            argb: PaletteMath.argb(palette.selectionEdge), flags: 4)
         return (fill, frame)
     }
 
     @QtIgnored func publishTransient(updateDrawing: Bool = true) {
-        setPublished(rampVisible, false) { rampVisible = $0 }
-        setPublished(rampLength, 0) { rampLength = $0 }
-        setPublished(rampSlopeY, 0) { rampSlopeY = $0 }
+        publish(\.rampVisible, false)
+        publish(\.rampLength, 0)
+        publish(\.rampSlopeY, 0)
         if let gesture {
             switch gesture.kind {
             case .ramp:
@@ -353,12 +300,12 @@ extension VelocityPage {
                 let dy = gesture.previousY - gesture.pressY
                 // Gestures live in scroll-stable x; the transient draws in
                 // untranslated plot space, so it restores the origin here.
-                setPublished(rampX0, gesture.pressX - projection.scrollOffsetX) { rampX0 = $0 }
-                setPublished(rampY0, gesture.pressY) { rampY0 = $0 }
-                setPublished(rampLength, (dx * dx + dy * dy).squareRoot()) { rampLength = $0 }
-                setPublished(rampSlopeY, dy) { rampSlopeY = $0 }
-                setPublished(rampColor, palette.primaryText) { rampColor = $0 }
-                setPublished(rampVisible, rampLength > 0) { rampVisible = $0 }
+                publish(\.rampX0, gesture.pressX - projection.scrollOffsetX)
+                publish(\.rampY0, gesture.pressY)
+                publish(\.rampLength, (dx * dx + dy * dy).squareRoot())
+                publish(\.rampSlopeY, dy)
+                publish(\.rampColor, palette.primaryText)
+                publish(\.rampVisible, rampLength > 0)
             case .band, .pendingBand:
                 break
             case .relative, .paint, .pan:
@@ -389,11 +336,11 @@ extension VelocityPage {
             x = handle?.x ?? 0
             y = handle?.y ?? 0
         }
-        setPublished(readoutText, text) { readoutText = $0 }
-        setPublished(readoutVisible, visible) { readoutVisible = $0 }
-        setPublished(readoutX, x) { readoutX = $0 }
-        setPublished(readoutY, y) { readoutY = $0 }
-        setPublished(hoveredNoteText, hovered.map(velocityNoteText) ?? "") { hoveredNoteText = $0 }
+        publish(\.readoutText, text)
+        publish(\.readoutVisible, visible)
+        publish(\.readoutX, x)
+        publish(\.readoutY, y)
+        publish(\.hoveredNoteText, hovered.map(velocityNoteText) ?? "")
     }
 
 }

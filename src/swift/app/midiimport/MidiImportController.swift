@@ -142,7 +142,7 @@ public final class MidiImportController: QmlUncreatable {
                 self.wizardOpen = true
             } catch {
                 guard !Task.isCancelled, self.service === service else { return }
-                self.session?.operationFailed(message: String(describing: error))
+                self.session?.publishOperationFailure(message: String(describing: error))
             }
             if !Task.isCancelled, self.service === service { self.busy = false }
         }
@@ -193,30 +193,9 @@ public final class MidiImportController: QmlUncreatable {
             createVoicegroup: plan.createVoicegroup, midi: midi)
         operation = Task { [weak self] in
             guard let self else { return }
-            do {
-                let id = try await service.importSong(request)
-                guard !Task.isCancelled, self.service === service else { return }
-                let songs = try await service.songs()
-                guard !Task.isCancelled, self.service === service else { return }
-                self.dock?.publishSongs(songs)
-                self.session?.statusMessage(message: "Created and registered \(plan.label) (song ID \(id))")
-                if plan.createVoicegroup {
-                    _ = await self.session?.refreshVoicegroupCatalog()
-                    guard !Task.isCancelled, self.service === service else { return }
-                    self.session?.openSongFromDock(label: plan.label, newTab: true)
-                }
-            } catch {
-                guard !Task.isCancelled, self.service === service else { return }
-                self.session?.operationFailed(message: String(describing: error))
-                if let songs = try? await service.songs() {
-                    guard !Task.isCancelled, self.service === service else { return }
-                    self.dock?.publishSongs(songs)
-                }
-                if plan.createVoicegroup {
-                    _ = await self.session?.refreshVoicegroupCatalog()
-                    guard !Task.isCancelled, self.service === service else { return }
-                }
-            }
+            await registerImportedSong(
+                request: request, service: service, dock: self.dock, session: self.session,
+                isCurrent: { self.service === service })
             if !Task.isCancelled, self.service === service { self.busy = false }
         }
     }

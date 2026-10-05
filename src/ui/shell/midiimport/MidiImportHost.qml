@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Dialogs
 import Porydaw.Ui
@@ -7,7 +9,7 @@ Item {
     id: host
     required property MidiImportController controller
     required property Window hostWindow
-    required property QtObject colors
+    required property GridPalette colors
     required property ApplicationSession applicationSession
 
     FileDialog {
@@ -17,7 +19,7 @@ Item {
         nameFilters: [qsTr("MIDI (*.mid)")]
         fileMode: FileDialog.OpenFile
         currentFolder: host.controller.startFolder
-        onAccepted: host.controller.chooseSource(selectedFile.toString())
+        onAccepted: host.controller.chooseSource(picker.selectedFile)
     }
     MessageDialog {
         id: warning
@@ -35,13 +37,13 @@ Item {
     }
     Connections {
         target: host.controller
-        function onSourcePickerRequested() { picker.open() }
-        function onWarningRequested(title, message) {
+        function onSourcePickerRequested(): void { picker.open() }
+        function onWarningRequested(title: string, message: string): void {
             warning.title = title
             warning.text = message
             warning.open()
         }
-        function onWizardOpenChanged() {
+        function onWizardOpenChanged(): void {
             if (host.controller.wizardOpen)
                 wizard.present()
             else

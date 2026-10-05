@@ -1,21 +1,24 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
+import PorydawApp
 
-// One song tab's page: the surface of the workspace the tab owns. A page is
-// destroyed when its tab closes, and the controller keeps the bound workspace
-// alive until every page holding it is gone, so the page acknowledges its own
-// destruction.
+// Each page acknowledges destruction so the controller keeps its workspace
+// alive until every tab holding it has gone.
 FocusScope {
     id: root
 
-    required property QtObject session
-    required property QtObject controller
-    property var shellRouter: null
-    readonly property bool showEvents: session.showsEvents
-    readonly property var surface: pageLoader.item
+    final required property SongTabSession session
+    final required property SongTabsController controller
+    final property ShellPresenter shellRouter: null
+    readonly property bool showEvents: root.session.showsEvents
+    final readonly property EditorSurface surface: pageLoader.item as EditorSurface
     signal contextMenuAt(real x, real y)
 
-    Component.onDestruction: controller.pageReleased(session.tabId)
+    Component.onDestruction: {
+        pageLoader.active = false
+        root.controller.pageReleased(root.session.tabId)
+    }
 
     Loader {
         id: pageLoader

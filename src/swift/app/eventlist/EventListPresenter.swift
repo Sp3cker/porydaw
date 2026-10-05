@@ -13,29 +13,62 @@ public final class EventListRowHandle {
     public var tick: Int = 0
     public var typeKind: Int = EventListEventType.endOfTrack.rawValue
     public var isEndOfTrack: Bool = false
+    public var rowKind: Int = -1
+    public var selected: Bool = false
+    public var editableMask: Int = 0
     public var rowTint: String = ""
+    public var c0: String = ""
+    public var c1: String = ""
+    public var c2: String = ""
+    public var c3: String = ""
+    public var c4: String = ""
+    public var c5: String = ""
+    public var c6: String = ""
+    public var editType: String = ""
+    public var editData: String = ""
+    @QtIgnored var current = EventListPublishedValues()
 
-    init(_ source: EventListRow, tint: String) {
-        row = source.index
-        eventIndex = source.eventIndex ?? -1
-        tick = Int(source.tick)
-        typeKind = source.typeKind
-        isEndOfTrack = source.isEndOfTrack
-        rowTint = tint
+    @QtIgnored
+    func update(_ values: EventListPublishedValues) -> Bool {
+        guard values != current else { return false }
+        current = values
+        publish(\.row, values.row)
+        publish(\.eventIndex, values.eventIndex)
+        publish(\.tick, values.tick)
+        publish(\.typeKind, values.typeKind)
+        publish(\.isEndOfTrack, values.isEndOfTrack)
+        publish(\.rowKind, values.rowKind)
+        publish(\.selected, values.selected)
+        publish(\.rowTint, values.rowTint)
+        publish(\.editableMask, values.editableMask)
+        publish(\.c0, values.c0)
+        publish(\.c1, values.c1)
+        publish(\.c2, values.c2)
+        publish(\.c3, values.c3)
+        publish(\.c4, values.c4)
+        publish(\.c5, values.c5)
+        publish(\.c6, values.c6)
+        publish(\.editType, values.editType)
+        publish(\.editData, values.editData)
+        return true
     }
 }
 
-/// Document-bound event-list publication and playhead interaction policy.
-///
-/// The presenter owns no view, window, or geometry. It exposes stable row
-/// values, keeps edit focus separate from transport tint, and emits a scroll
-/// request only when native follow-playhead suppression permits it.
+/// Publishes retained document rows and playhead state; owns no view, window or
+/// geometry, and scrolls only when native follow-playhead suppression permits.
 @MainActor
 @QtBridgeable
 public final class EventListPresenter: QmlUncreatable {
     private static let defaultWidthSeeds = [70.0, 120.0, 36.0, 56.0, 56.0, 140.0]
-    public var rows: QListModel<EventListRowHandle> = QListModel()
-    @QtTracked public var tableRevision = 0
+    public var tableRows: QTableModel<EventListRowHandle> = QTableModel([]) {
+        QTableColumn("Tick", value: \EventListRowHandle.self)
+        QTableColumn("Type", value: \EventListRowHandle.self)
+        QTableColumn("Ch", value: \EventListRowHandle.self)
+        QTableColumn("Data 1", value: \EventListRowHandle.self)
+        QTableColumn("Data 2", value: \EventListRowHandle.self)
+        QTableColumn("Data", value: \EventListRowHandle.self)
+        QTableColumn("Summary", value: \EventListRowHandle.self)
+    }
     @QtTracked public var visible = false
     @QtTracked public var chunk = -1
     public var chunkLabels: [String] = []
@@ -47,20 +80,26 @@ public final class EventListPresenter: QmlUncreatable {
         "Data 2", "Data", "Summary",
     ]
     @QtIgnored public var columnWidths: [Double] = [] {
-        didSet { columnWidthsRevision &+= 1 }
+        didSet { publishColumnWidths() }
     }
-    @QtTracked public var columnWidthsRevision = 0
+    public var tickColumnWidth: Double = 0
+    public var typeColumnWidth: Double = 0
+    public var channelColumnWidth: Double = 0
+    public var data1ColumnWidth: Double = 0
+    public var data2ColumnWidth: Double = 0
+    public var dataColumnWidth: Double = 0
     @QtIgnored var resizedColumns: Set<Int> = []
     @QtIgnored public var selectedRows: [Int] = [] {
-        didSet { selectionRevision &+= 1 }
+        didSet { publishSelection(previous: oldValue) }
     }
-    @QtTracked public var selectionRevision = 0
     public var menuItems: QListModel<EventListMenuItem> = QListModel()
     @QtTracked public var menuShortcutText = ""
     @QtTracked public var menuSeparatorCount = 0
     @QtTracked public var menuX = 0.0
     @QtTracked public var menuY = 0.0
-    public var appearance: [String: QVariantSettable] = [:]
+    @QtTracked public var colors: GridPalette
+    @QtTracked public var fonts: TypographyFonts
+    public let playheadTint: QmlColor = PaletteMath.qmlColor(EventListModel.playheadTint)
 
     @QtTracked public var attached = false
     @QtTracked public var chunkIndex = -1
@@ -86,31 +125,35 @@ public final class EventListPresenter: QmlUncreatable {
     @QtIgnored public var onScrollToRow: ((Int) -> Void)?
     @QtIgnored public var onRevealVoiceRequested: ((Int) -> Void)?
     @QtIgnored public var onPerformEventListCommand: ((Int) -> Void)?
+    @QtIgnored public var onAvailabilityChanged: (() -> Void)?
 
     @QtIgnored var selectionAnchor = -1
     @QtIgnored var menuKind: EventListMenuKind?
     @QtIgnored var menuRow = -1
     @QtIgnored weak var session: DocumentSession?
-    private var appearancePalette: GridPalette
     private var typography: Typography
+    // TableView pools delegates beyond row removal. Keep their handles valid
+    // and reuse them when the table grows instead of allocating new publishers.
+    private var spareRows: [EventListRowHandle] = []
 
     public init(
         palette: GridPalette = GridPalette(),
         typography: Typography = Typography(baseFontPx: 13)
     ) {
-        appearancePalette = palette
+        colors = palette
+        fonts = TypographyFonts(typography: typography)
         self.typography = typography
-        appearance = EventListAppearance.roles(palette: palette, typography: typography)
+        publishColumnWidths()
     }
 
     public func refreshAppearance() {
-        appearance = EventListAppearance.roles(palette: appearancePalette, typography: typography)
+        fonts.update(typography: typography)
     }
     public func configureTypography(typography: Typography) {
         guard self.typography.baseFontPx != typography.baseFontPx else { return }
         self.typography = typography
         refreshAppearance()
-        columnWidthsRevision &+= 1
+        publishColumnWidths()
     }
 
     /// Installs one document and rebuilds its configured chunk synchronously.
@@ -130,7 +173,10 @@ public final class EventListPresenter: QmlUncreatable {
         session = nil
         attached = false
         model.detach()
-        rows.reset(to: [])
+        for row in 0..<rowCount {
+            if let handle = rowHandle(row: row) { spareRows.append(handle) }
+        }
+        tableRows.removeRows(in: 0..<rowCount)
         chunkIndex = -1
         rowCount = 0
         currentRow = -1
@@ -151,11 +197,11 @@ public final class EventListPresenter: QmlUncreatable {
         lastScrollToRow = -1
         scrollToRowRequested = 0
         onScrollToRow = nil
+        onAvailabilityChanged?()
     }
 
-    /// Rebuilds rows only after a document publication. Cursor, selection,
-    /// dirty, history, bank, and mix-state publications do not rebuild rows
-    /// unless selection changes the mapped chunk.
+    /// Rebuilds on document publication or a mapped-chunk selection change;
+    /// cursor, dirty, history, bank and mix state otherwise retain the rows.
     @QtIgnored
     public func documentDidChange(_ change: SessionChange) {
         if change.domains.contains(.document) || change.trackRemap != nil {
@@ -165,7 +211,7 @@ public final class EventListPresenter: QmlUncreatable {
 
         if change.domains.contains(.bank) {
             model.voiceNames = voiceNames()
-            tableRevision &+= 1
+            publishRowValues()
         }
 
         let documentChanged = change.domains.contains(.document) || change.trackRemap != nil
@@ -248,7 +294,9 @@ public final class EventListPresenter: QmlUncreatable {
     }
 
     public func setMenuOpen(open: Bool) {
+        guard menuOpen != open else { return }
         menuOpen = open
+        onAvailabilityChanged?()
     }
 
     /// Focuses a valid row and commits that row's tick to the document cursor.
@@ -264,6 +312,7 @@ public final class EventListPresenter: QmlUncreatable {
         if currentRow != oldRow { invalidateRowMenu() }
         session.editCursor = tick
         publishPlayheadTransition(from: oldPlayRow)
+        if currentRow != oldRow { onAvailabilityChanged?() }
     }
 
     /// Starts an in-cell edit when the model exposes that cell as editable.
@@ -274,6 +323,7 @@ public final class EventListPresenter: QmlUncreatable {
         editing = true
         editingRow = row
         editingColumn = column
+        onAvailabilityChanged?()
         return true
     }
 
@@ -314,13 +364,18 @@ public final class EventListPresenter: QmlUncreatable {
         let previousRow = currentRow
         dispatchSelectRow(row: row, modifiers: modifiers)
         if selectedRows != previous || currentRow != previousRow { invalidateRowMenu() }
+        if currentRow != previousRow && currentRow < 0 { onAvailabilityChanged?() }
     }
     public func selectAll() {
         let previous = selectedRows
         dispatchSelectAll()
         if selectedRows != previous { invalidateRowMenu() }
     }
-    public func setVisible(visible: Bool) { dispatchSetVisible(visible: visible) }
+    public func setVisible(visible: Bool) {
+        let wasVisible = self.visible
+        dispatchSetVisible(visible: visible)
+        if self.visible != wasVisible { onAvailabilityChanged?() }
+    }
     public func isCellEditable(row: Int, column: Int) -> Bool {
         dispatchIsCellEditable(row: row, column: column)
     }
@@ -342,6 +397,39 @@ public final class EventListPresenter: QmlUncreatable {
     public func savedColumnWidth(column: Int) -> Double {
         resizedColumns.contains(column) && columnWidths.indices.contains(column)
             ? columnWidths[column] : defaultColumnWidth(column: column)
+    }
+
+    public func rowHandle(row: Int) -> Optional<EventListRowHandle> {
+        tableRows.value(row: row, column: 0) as? EventListRowHandle
+    }
+
+    public func menuItem(row: Int) -> Optional<EventListMenuItem> {
+        menuItems.indices.contains(row) ? menuItems[row] : nil
+    }
+
+    func publishColumnWidths() {
+        publish(\.tickColumnWidth, savedColumnWidth(column: 0))
+        publish(\.typeColumnWidth, savedColumnWidth(column: 1))
+        publish(\.channelColumnWidth, savedColumnWidth(column: 2))
+        publish(\.data1ColumnWidth, savedColumnWidth(column: 3))
+        publish(\.data2ColumnWidth, savedColumnWidth(column: 4))
+        publish(\.dataColumnWidth, savedColumnWidth(column: 5))
+    }
+
+    private func publishSelection(previous: [Int]) {
+        for row in previous where !selectedRows.contains(row) {
+            publishSelected(row: row, selected: false)
+        }
+        for row in selectedRows where !previous.contains(row) {
+            publishSelected(row: row, selected: true)
+        }
+    }
+
+    private func publishSelected(row: Int, selected: Bool) {
+        guard let handle = rowHandle(row: row) else { return }
+        var values = handle.current
+        values.selected = selected
+        _ = handle.update(values)
     }
     public func resizeColumn(column: Int, width: Double) {
         dispatchResizeColumn(column: column, width: width)
@@ -378,9 +466,11 @@ public final class EventListPresenter: QmlUncreatable {
     @QtSignal public func scrollToRow(row: Int)
 
     func clearEditing() {
+        let wasEditing = editing
         editing = false
         editingRow = -1
         editingColumn = -1
+        if wasEditing { onAvailabilityChanged?() }
     }
 
     private func remapCurrentChunk(using remap: TrackRemap) {
@@ -444,17 +534,34 @@ public final class EventListPresenter: QmlUncreatable {
     }
 
     func publishRows() {
-        rows.reset(
-            to: model.rows.map {
-                EventListRowHandle($0, tint: model.rowTint(row: $0.index) ?? "")
-            })
+        if rowCount > model.rowCount {
+            for row in model.rowCount..<rowCount {
+                if let handle = rowHandle(row: row) { spareRows.append(handle) }
+            }
+            tableRows.removeRows(in: model.rowCount..<rowCount)
+        }
+        publishRowValues()
+        for row in min(rowCount, model.rowCount)..<model.rowCount {
+            let handle = spareRows.popLast() ?? EventListRowHandle()
+            _ = handle.update(
+                model.publishedValues(for: model.rows[row], selected: selectedRows.contains(row)))
+            tableRows.appendRow(handle)
+        }
         rowCount = model.rowCount
         currentRow = model.currentRow
         playRow = model.playRow
         let shown = max(0, model.rowCount - (model.rowCount > 0 ? 1 : 0))
         let total = model.chunk.events.count + (chunkIndex == 0 ? model.tempos.count : 0)
         countText = shown == total ? "\(total) event(s)" : "\(shown) of \(total) events"
-        tableRevision &+= 1
+        onAvailabilityChanged?()
+    }
+
+    private func publishRowValues() {
+        for row in 0..<min(rowCount, model.rowCount) {
+            guard let handle = rowHandle(row: row) else { continue }
+            _ = handle.update(
+                model.publishedValues(for: model.rows[row], selected: selectedRows.contains(row)))
+        }
     }
 
     private func publishPlayheadTransition(from oldPlayRow: Int) {
@@ -467,10 +574,11 @@ public final class EventListPresenter: QmlUncreatable {
     }
 
     private func refreshRowHandle(at row: Int) {
-        guard model.rows.indices.contains(row) else { return }
-        rows[row] = EventListRowHandle(
-            model.rows[row],
-            tint: model.rowTint(row: row) ?? "")
+        guard model.rows.indices.contains(row), let handle = rowHandle(row: row) else { return }
+        let tint = model.rowTint(row: row) ?? ""
+        var values = handle.current
+        values.rowTint = tint
+        _ = handle.update(values)
     }
 
     private func requestScroll(to row: Int) {

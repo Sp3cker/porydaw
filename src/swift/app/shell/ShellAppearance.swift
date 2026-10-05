@@ -36,11 +36,7 @@ public enum ShellAppearance {
         let sampleSeamEndInk: String
     }
 
-    // Secondary ink is the preset's own secondary walked toward black until it
-    // keeps 4.5:1 on the darkest surface it labels (vanilla chrome #BDB5AF:
-    // #57514C sat 3.87:1, #4D4742 reaches 4.53:1). Dark presets already pass.
-    // Severity inks are the legacy polyphony stolen/dropped inks; vanilla's
-    // #6E4A06/#9C2B2B are walked toward black to 4.5:1 on chrome.
+    // Secondary and severity inks retain AA contrast on their darkest surfaces.
     private static let vanilla = Colors(
         window: "#C9C1BB", text: "#302C29", disabledText: "#8B847E",
         outline: "#8C857F", selection: "#B9E8EE",
@@ -120,79 +116,81 @@ public enum ShellAppearance {
         let chrome = PaletteMath.channels(colors.chrome)
         let gridLab = PaletteMath.oklab(r: gridChannels.r, g: gridChannels.g, b: gridChannels.b)
 
-        palette.windowBackground = colors.window
-        palette.rollBackground = colors.roll
-        palette.accidentalLane = colors.accidental
-        palette.chromeBackground = colors.chrome
-        palette.separator = colors.separator
-        palette.outline = colors.outline
-        palette.focusOutline = colors.outline
-        palette.buttonBackground = colors.control
-        palette.buttonText = colors.text
-        palette.buttonPressedBackground = colors.controlPressed
+        palette.publish(\.windowBackground, PaletteMath.qmlColor(colors.window))
+        palette.publish(\.rollBackground, PaletteMath.qmlColor(colors.roll))
+        palette.publish(\.accidentalLane, PaletteMath.qmlColor(colors.accidental))
+        palette.publish(\.chromeBackground, PaletteMath.qmlColor(colors.chrome))
+        palette.publish(\.separator, PaletteMath.qmlColor(colors.separator))
+        palette.publish(\.outline, PaletteMath.qmlColor(colors.outline))
+        palette.publish(\.focusOutline, PaletteMath.qmlColor(colors.outline))
+        palette.publish(\.buttonBackground, PaletteMath.qmlColor(colors.control))
+        palette.publish(\.buttonText, PaletteMath.qmlColor(colors.text))
+        palette.publish(\.buttonPressedBackground, PaletteMath.qmlColor(colors.controlPressed))
         // Dark presets use the resting button surface as the active foreground
         // (themeresolver.cpp:38-52), not their pale resting text.
-        palette.buttonPressedText = preset == .vanilla ? colors.text : colors.control
+        palette.publish(\.buttonPressedText, PaletteMath.qmlColor(preset == .vanilla ? colors.text : colors.control))
         // Native menu roles use item surfaces; selection and pressed menu text
         // share resolveDarkPreset's active foreground (themeresolver.cpp:44-49).
-        palette.buttonHoverBackground = colors.controlHover
-        palette.menuBackground = colors.item
-        palette.menuHoverBackground = colors.itemHover
-        palette.disabledText = colors.disabledText
-        palette.polyphonyValueBackground = colors.control
-        palette.polyphonyValueText = colors.text
-        palette.selectionText = palette.buttonPressedText
-        palette.tabBackground = colors.control
-        palette.tabHoverBackground = colors.controlHover
-        palette.tabSelectedBackground = colors.selection
-        palette.tabPressedBackground = colors.controlPressed
-        palette.automationNodeInk = colors.automationNodeInk
-        palette.automationTabBackground = colors.automationTabBackground
-        palette.automationTabOutline = colors.automationTabOutline
-        palette.sampleWaveformInk = colors.sampleWaveformInk
-        palette.sampleCropHandle = colors.sampleCropHandle
-        palette.sampleLoopHandle = colors.sampleLoopHandle
-        palette.sampleSeamEndInk = colors.sampleSeamEndInk
-        palette.scrollbarHandle = colors.scrollbar
+        palette.publish(\.buttonHoverBackground, PaletteMath.qmlColor(colors.controlHover))
+        palette.publish(\.menuBackground, PaletteMath.qmlColor(colors.item))
+        palette.publish(\.menuHoverBackground, PaletteMath.qmlColor(colors.itemHover))
+        palette.publish(\.disabledText, PaletteMath.qmlColor(colors.disabledText))
+        palette.publish(\.polyphonyValueBackground, PaletteMath.qmlColor(colors.control))
+        palette.publish(\.polyphonyValueText, PaletteMath.qmlColor(colors.text))
+        palette.publish(\.selectionText, palette.buttonPressedText)
+        palette.publish(\.tabBackground, PaletteMath.qmlColor(colors.control))
+        palette.publish(\.tabHoverBackground, PaletteMath.qmlColor(colors.controlHover))
+        palette.publish(\.tabSelectedBackground, PaletteMath.qmlColor(colors.selection))
+        palette.publish(\.tabPressedBackground, PaletteMath.qmlColor(colors.controlPressed))
+        palette.publish(\.automationNodeInk, PaletteMath.qmlColor(colors.automationNodeInk))
+        palette.publish(\.automationTabBackground, PaletteMath.qmlColor(colors.automationTabBackground))
+        palette.publish(\.automationTabOutline, PaletteMath.qmlColor(colors.automationTabOutline))
+        palette.publish(\.sampleWaveformInk, PaletteMath.qmlColor(colors.sampleWaveformInk))
+        palette.publish(\.sampleCropHandle, PaletteMath.qmlColor(colors.sampleCropHandle))
+        palette.publish(\.sampleLoopHandle, PaletteMath.qmlColor(colors.sampleLoopHandle))
+        palette.publish(\.sampleSeamEndInk, PaletteMath.qmlColor(colors.sampleSeamEndInk))
+        palette.publish(\.scrollbarHandle, PaletteMath.qmlColor(colors.scrollbar))
         // Qt control-palette surfaces: editable fields and tooltips use the
         // preset's input swatch, where text and placeholder ink keep 4.5:1.
-        palette.inputBackground = colors.input
-        palette.alternateBackground = colors.alternate
-        palette.placeholderText = colors.secondary
-        palette.warningText = colors.warning
-        palette.errorText = colors.error
+        palette.publish(\.inputBackground, PaletteMath.qmlColor(colors.input))
+        palette.publish(\.alternateBackground, PaletteMath.qmlColor(colors.alternate))
+        palette.publish(\.placeholderText, PaletteMath.qmlColor(colors.secondary))
+        palette.publish(\.warningText, PaletteMath.qmlColor(colors.warning))
+        palette.publish(\.errorText, PaletteMath.qmlColor(colors.error))
 
-        palette.keyboardNatural = "#F4F4F4"
-        palette.keyboardBlack = "#202224"
-        palette.keyboardSeparator = colors.keyboardSeparator
-        palette.keyboardLabel = colors.keyboardLabel
-        palette.keyboardActiveKey = colors.selection
-        palette.keyboardHover = withAlpha(colors.selection, 80)
-        palette.gridLine = grid
-        palette.gridLineBar = grid
-        palette.gridLineSub1 = relativeAlpha(grid, 125)
-        palette.gridLineSub2 = relativeAlpha(grid, 100)
-        palette.gridLineSub3 = relativeAlpha(grid, 75)
-        palette.gridLineBeat = relativeAlpha(grid, 160)
-        palette.gridLineBeatFine = relativeAlpha(grid, 200)
-        palette.rowLine = relativeAlpha(grid, 50)
-        palette.preRollMask = PaletteMath.hex(
+        palette.publish(\.keyboardNatural, PaletteMath.qmlColor("#F4F4F4"))
+        palette.publish(\.keyboardBlack, PaletteMath.qmlColor("#202224"))
+        palette.publish(\.keyboardSeparator, PaletteMath.qmlColor(colors.keyboardSeparator))
+        palette.publish(\.keyboardLabel, PaletteMath.qmlColor(colors.keyboardLabel))
+        palette.publish(\.keyboardActiveKey, PaletteMath.qmlColor(colors.selection))
+        palette.publish(\.keyboardHover, PaletteMath.qmlColor(withAlpha(colors.selection, 80)))
+        palette.publish(\.gridLine, PaletteMath.qmlColor(grid))
+        palette.publish(\.gridLineBar, PaletteMath.qmlColor(grid))
+        palette.publish(\.gridLineSub1, PaletteMath.qmlColor(relativeAlpha(grid, 125)))
+        palette.publish(\.gridLineSub2, PaletteMath.qmlColor(relativeAlpha(grid, 100)))
+        palette.publish(\.gridLineSub3, PaletteMath.qmlColor(relativeAlpha(grid, 75)))
+        palette.publish(\.gridLineBeat, PaletteMath.qmlColor(relativeAlpha(grid, 160)))
+        palette.publish(\.gridLineBeatFine, PaletteMath.qmlColor(relativeAlpha(grid, 200)))
+        palette.publish(\.rowLine, PaletteMath.qmlColor(relativeAlpha(grid, 50)))
+        let preRollMask = PaletteMath.hex(
             PaletteMath.mixTowardOklab(
                 PaletteMath.oklab(r: roll.r, g: roll.g, b: roll.b), gridLab, 0.15))
-        palette.rulerPreRollMask = PaletteMath.hex(
+        let rulerPreRollMask = PaletteMath.hex(
             PaletteMath.mixTowardOklab(
                 PaletteMath.oklab(r: chrome.r, g: chrome.g, b: chrome.b), gridLab, 0.15))
-        palette.noteVelocityZero = colors.disabledText
-        palette.implicitSignature = colors.secondary
-        palette.rulerDetailText = colors.secondary
-        palette.selectionRing = colors.selection
-        palette.selectionFill = withAlpha(colors.selection, 30)
-        palette.selectionEdge = colors.accent
-        palette.primaryText = colors.text
-        palette.windowText = colors.text
-        palette.secondaryText = colors.secondary
-        palette.editCursor = colors.text
-        palette.playhead = "#E24242"
+        palette.publish(\.preRollMask, PaletteMath.qmlColor(preRollMask))
+        palette.publish(\.rulerPreRollMask, PaletteMath.qmlColor(rulerPreRollMask))
+        palette.publish(\.noteVelocityZero, PaletteMath.qmlColor(colors.disabledText))
+        palette.publish(\.implicitSignature, PaletteMath.qmlColor(colors.secondary))
+        palette.publish(\.rulerDetailText, PaletteMath.qmlColor(colors.secondary))
+        palette.publish(\.selectionRing, PaletteMath.qmlColor(colors.selection))
+        palette.publish(\.selectionFill, PaletteMath.qmlColor(withAlpha(colors.selection, 30)))
+        palette.publish(\.selectionEdge, PaletteMath.qmlColor(colors.accent))
+        palette.publish(\.primaryText, PaletteMath.qmlColor(colors.text))
+        palette.publish(\.windowText, PaletteMath.qmlColor(colors.text))
+        palette.publish(\.secondaryText, PaletteMath.qmlColor(colors.secondary))
+        palette.publish(\.editCursor, PaletteMath.qmlColor(colors.text))
+        palette.publish(\.playhead, PaletteMath.qmlColor("#E24242"))
     }
 
     private static func withAlpha(_ hex: String, _ alpha: Int) -> String {

@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Dialogs
 import Porydaw.Ui
@@ -8,7 +10,7 @@ Item {
     required property SampleStudioWorkflow workflow
     required property Window hostWindow
     required property ApplicationSession applicationSession
-    required property QtObject colors
+    required property GridPalette colors
 
     FileDialog {
         id: picker
@@ -18,14 +20,15 @@ Item {
                       qsTr("All files (*)")]
         fileMode: FileDialog.OpenFile
         currentFolder: host.workflow.pickerFolder
-        onAccepted: host.workflow.chooseSource(selectedFile.toString())
+        onAccepted: host.workflow.chooseSource(selectedFile)
         onRejected: host.workflow.cancelSource()
     }
     MessageDialog {
         id: alert
         objectName: "shellSampleStudioAlert"
         buttons: MessageDialog.Ok
-        parentWindow: studio.item && studio.item.visible ? studio.item : host.hostWindow
+        parentWindow: (studio.item as SampleStudioDialog)?.visible
+                      ? (studio.item as SampleStudioDialog) : host.hostWindow
     }
     MessageDialog {
         id: stereo
@@ -44,37 +47,45 @@ Item {
             workflow: host.workflow
             applicationSession: host.applicationSession
             colors: host.colors
-            editor: host.workflow.editor()
-            tools: host.workflow.loopTools()
-            waveformModel: host.workflow.waveform()
-            audition: host.workflow.audition()
+            editor: host.workflow.editor() as SampleStudioPresenter
+            tools: host.workflow.loopTools() as SampleLoopTools
+            waveformModel: host.workflow.waveform() as SampleWaveformModel
+            audition: host.workflow.audition() as SampleStudioAudition
             transientParent: host.hostWindow
         }
-        onLoaded: item.present()
+        onLoaded: (studio.item as SampleStudioDialog).present()
+        onStatusChanged: {
+            if (status === Loader.Null)
+                host.workflow.editorReleased()
+        }
     }
     Loader {
         id: zones
         active: host.workflow.zonePickerOpen
         sourceComponent: Sf2ZonePickerDialog {
             workflow: host.workflow
-            picker: host.workflow.zonePicker()
+            picker: host.workflow.zonePicker() as Sf2ZonePickerPresenter
             applicationSession: host.applicationSession
             colors: host.colors
             transientParent: host.hostWindow
         }
-        onLoaded: item.present()
+        onLoaded: (zones.item as Sf2ZonePickerDialog).present()
+        onStatusChanged: {
+            if (status === Loader.Null)
+                host.workflow.zonePickerReleased()
+        }
     }
     Connections {
         target: host.workflow
-        function onPickerRequestedChanged() {
+        function onPickerRequestedChanged(): void {
             if (host.workflow.pickerRequested) picker.open()
         }
-        function onAlertRevisionChanged() {
+        function onAlertRevisionChanged(): void {
             alert.title = host.workflow.alertTitle
             alert.text = host.workflow.alertText
             alert.open()
         }
-        function onStereoPromptOpenChanged() {
+        function onStereoPromptOpenChanged(): void {
             if (host.workflow.stereoPromptOpen) stereo.open()
             else stereo.close()
         }

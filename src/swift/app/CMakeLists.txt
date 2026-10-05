@@ -45,6 +45,8 @@ add_library(PorydawApp STATIC
     newsong/NewSongController.swift
     EditorCommandRouter.swift
     typography/Typography.swift
+    theme/TypographyFonts.swift
+    theme/LayoutSpaces.swift
     transport/TransportBarPresenter.swift
     SongTabsController.swift
     SongTabsController+Close.swift
@@ -54,9 +56,11 @@ add_library(PorydawApp STATIC
     eventlist/EventListPresenter.swift
     songlist/SongListPresenter.swift
     songlist/SongDockController.swift
+    songlist/SongIntake.swift
     voicelist/VoiceListSemantics.swift
     voicelist/VoiceListController.swift
     voicelist/VoiceListController+Bank.swift
+    voicelist/SamplePickerRows.swift
     voicelist/VoiceEditorController.swift
     voicelist/VoicegroupCatalog.swift
     MouseHints.swift
@@ -103,6 +107,8 @@ add_library(PorydawApp STATIC
     drawer/PromptAppearance.swift
     drawer/EditorDrawerTypes.swift
     drawer/EditorDrawerLayout.swift
+    drawer/DrawerPan.swift
+    drawer/LaneCaptionMetrics.swift
     drawer/otherEvents/OtherEventsStrip.swift
     drawer/otherEvents/OtherEventsBandPresenter.swift
     drawer/velocity/VelocityContext.swift
@@ -151,6 +157,9 @@ add_library(PorydawApp STATIC
     shell/BundledFont.swift
     shell/PreferencesStore.swift
     shell/ShellPresenter.swift
+    shell/ShellActionCatalog.swift
+    shell/ShellPresenter+ActionPolicy.swift
+    shell/ShellActionState.swift
     shell/ShellAppearance.swift
     shell/EngineSettingsStore.swift
 )

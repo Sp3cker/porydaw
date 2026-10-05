@@ -49,9 +49,9 @@ ShellClipboardSupport {
             return a && b && a.selected && b.selected && selectedCount(grid) === 2
         }, 5000), "real pointer input selects both source notes")
 
-        verify(shell.shellPresenter.actionEnabled("roll.copy"), "Copy is enabled")
-        compare(shell.shellPresenter.actionEnabled("edit.undo"), false, "Undo starts disabled")
-        compare(shell.shellPresenter.actionEnabled("edit.redo"), false, "Redo starts disabled")
+        verify(shell.shellPresenter.action("roll.copy").enabled, "Copy is enabled")
+        compare(shell.shellPresenter.action("edit.undo").enabled, false, "Undo starts disabled")
+        compare(shell.shellPresenter.action("edit.redo").enabled, false, "Redo starts disabled")
 
         // Live-gesture Copy sentinel: seed undecodable native bytes, hold a real
         // press, then issue the real Copy shortcut. Mid-gesture Copy is a no-op.
@@ -63,8 +63,8 @@ ShellClipboardSupport {
         mousePress(roll, pressPoint.x, pressPoint.y, Qt.LeftButton)
         var preGestureSummary = grid.fetchNoteSummary()
         var preGestureRevision = grid.appliedRevisionText
-        compare(shell.shellPresenter.actionEnabled("roll.copy"), false,
-                "Copy is disabled mid-gesture")
+        tryCompare(shell.shellPresenter.action("roll.copy"), "enabled", false, 3000,
+                   "Copy is disabled mid-gesture")
         keySequence(StandardKey.Copy)
         compare(clipProbe.readClipJson(), sentinel, "mid-gesture Copy keeps exact bytes")
         compare(grid.fetchNoteSummary(), preGestureSummary, "mid-gesture Copy keeps notes")
@@ -72,7 +72,7 @@ ShellClipboardSupport {
         mouseRelease(roll, pressPoint.x, pressPoint.y, Qt.LeftButton)
 
         // Positive copy after release.
-        verify(shell.shellPresenter.actionEnabled("roll.copy"), "Copy returns after release")
+        tryCompare(shell.shellPresenter.action("roll.copy"), "enabled", true, 3000, "Copy returns after release")
         verify(clipProbe.clearClipboard(), "the sentinel is cleared")
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
@@ -124,8 +124,8 @@ ShellClipboardSupport {
         var rejectedScrollX = grid.cameraScrollX
         var rejectedScrollY = grid.cameraScrollY
         var rejectedStatus = grid.statusText
-        var rejectedUndo = shell.shellPresenter.actionEnabled("edit.undo")
-        var rejectedRedo = shell.shellPresenter.actionEnabled("edit.redo")
+        var rejectedUndo = shell.shellPresenter.action("edit.undo").enabled
+        var rejectedRedo = shell.shellPresenter.action("edit.redo").enabled
         rejectedCursorSpy.target = grid
         rejectedStatusSpy.target = grid
         rejectedCursorSpy.clear()
@@ -147,9 +147,9 @@ ShellClipboardSupport {
                 "a conflicting note paste emits no cursor movement")
         compare(rejectedStatusSpy.count, 0,
                 "a conflicting note paste emits no status announcement")
-        compare(shell.shellPresenter.actionEnabled("edit.undo"), rejectedUndo,
+        compare(shell.shellPresenter.action("edit.undo").enabled, rejectedUndo,
                 "a conflicting note paste preserves Undo")
-        compare(shell.shellPresenter.actionEnabled("edit.redo"), rejectedRedo,
+        compare(shell.shellPresenter.action("edit.redo").enabled, rejectedRedo,
                 "a conflicting note paste preserves Redo")
         rejectedCursorSpy.target = null
         rejectedStatusSpy.target = null
@@ -167,7 +167,7 @@ ShellClipboardSupport {
         grid.setEditCursorTick(cursor)
         compare(grid.editCursorTick, cursor, "the edit cursor is staged")
         verify(waitForNative(function() {
-            return shell.shellPresenter.actionEnabled("roll.paste")
+            return shell.shellPresenter.action("roll.paste").enabled
         }, 5000), "Paste is enabled with a song clip")
         keySequence(StandardKey.Paste)
         var pasted = null
@@ -184,9 +184,9 @@ ShellClipboardSupport {
                 && grid.editCursorTick === cursor + copiedEnd
         }, 5000), "span-0 paste publishes two selected notes and the cursor")
         verify(waitForNative(function() {
-            return shell.shellPresenter.actionEnabled("edit.undo")
+            return shell.shellPresenter.action("edit.undo").enabled
         }, 5000), "Undo is enabled after paste")
-        compare(shell.shellPresenter.actionEnabled("edit.redo"), false, "Redo stays disabled")
+        compare(shell.shellPresenter.action("edit.redo").enabled, false, "Redo stays disabled")
 
         keySequence(StandardKey.Undo)
         verify(waitForNative(function() {
@@ -195,9 +195,9 @@ ShellClipboardSupport {
                 return false
             return noteById(grid, pasted.id) === null && noteById(grid, secondPasted.id) === null
         }, 5000), "Undo removes both pasted notes")
-        compare(shell.shellPresenter.actionEnabled("edit.undo"), false, "Undo returns disabled")
+        compare(shell.shellPresenter.action("edit.undo").enabled, false, "Undo returns disabled")
         verify(waitForNative(function() {
-            return shell.shellPresenter.actionEnabled("edit.redo")
+            return shell.shellPresenter.action("edit.redo").enabled
         }, 5000), "Redo is enabled after Undo")
         keySequence(StandardKey.Redo)
         verify(waitForNative(function() {
@@ -210,9 +210,9 @@ ShellClipboardSupport {
                 && grid.editCursorTick === cursor + copiedEnd
         }, 5000), "Redo restores both pasted notes and the cursor")
         verify(waitForNative(function() {
-            return shell.shellPresenter.actionEnabled("edit.undo")
+            return shell.shellPresenter.action("edit.undo").enabled
         }, 5000), "Undo returns after Redo")
-        compare(shell.shellPresenter.actionEnabled("edit.redo"), false, "Redo returns disabled")
+        compare(shell.shellPresenter.action("edit.redo").enabled, false, "Redo returns disabled")
 
         var sourceNotesBeforeTrackSwitch = noteFacts(grid, source.track)
         var destinationTrack = source.track === 0 ? 1 : 0
@@ -316,9 +316,9 @@ ShellClipboardSupport {
         var replacementRoll = findChild(replacementSurface, "swiftRollInput")
         verify(replacementRoll !== null, "the replacement roll is mounted")
         verify(waitForNative(function() {
-            return !shell.shellPresenter.actionEnabled("edit.undo")
+            return !shell.shellPresenter.action("edit.undo").enabled
         }, 5000), "Undo resets on the replacement")
-        compare(shell.shellPresenter.actionEnabled("edit.redo"), false, "Redo resets")
+        compare(shell.shellPresenter.action("edit.redo").enabled, false, "Redo resets")
         compare(clipProbe.readClipJson(), copiedPayload, "the clip survives the reload")
 
         var replacementBefore = JSON.parse(replacementGrid.fetchNoteSummary())
@@ -337,8 +337,8 @@ ShellClipboardSupport {
         compare(clipProbe.clipSummary(), "[]", "the production decoder rejects invalid custom MIME")
         var refusedBytes = clipProbe.readClipJson()
         var refusedRevision = replacementGrid.appliedRevisionText
-        var refusedUndo = shell.shellPresenter.actionEnabled("edit.undo")
-        var refusedRedo = shell.shellPresenter.actionEnabled("edit.redo")
+        var refusedUndo = shell.shellPresenter.action("edit.undo").enabled
+        var refusedRedo = shell.shellPresenter.action("edit.redo").enabled
         keySequence(StandardKey.Paste)
         compare(clipProbe.readClipJson(), refusedBytes,
                 "mounted malformed-MIME refusal preserves native clipboard bytes")
@@ -350,9 +350,9 @@ ShellClipboardSupport {
                 "invalid custom MIME cannot advance the cursor")
         compare(session.documentDirty, replacementDirty,
                 "invalid custom MIME cannot change dirty state")
-        compare(shell.shellPresenter.actionEnabled("edit.undo"), refusedUndo,
+        compare(shell.shellPresenter.action("edit.undo").enabled, refusedUndo,
                 "mounted malformed-MIME refusal preserves Undo")
-        compare(shell.shellPresenter.actionEnabled("edit.redo"), refusedRedo,
+        compare(shell.shellPresenter.action("edit.redo").enabled, refusedRedo,
                 "mounted malformed-MIME refusal preserves Redo")
         verify(clipProbe.writeClipJson(copiedPayload),
                "valid copied MIME is restored after malformed refusal")
@@ -360,7 +360,7 @@ ShellClipboardSupport {
                 "restored valid clipboard bytes match the original copy")
         tryCompare(replacementRoll, "activeFocus", true, 3000)
         verify(waitForNative(function() {
-            return shell.shellPresenter.actionEnabled("roll.paste")
+            return shell.shellPresenter.action("roll.paste").enabled
         }, 5000), "Paste is enabled on the replacement")
         keySequence(StandardKey.Paste)
         var replacementPasted = null
@@ -379,7 +379,7 @@ ShellClipboardSupport {
                 && replacementGrid.editCursorTick === replacementCursor + copiedEnd
         }, 5000), "replacement paste publishes two selected notes and the cursor")
         verify(waitForNative(function() {
-            return shell.shellPresenter.actionEnabled("edit.undo")
+            return shell.shellPresenter.action("edit.undo").enabled
         }, 5000), "Undo is enabled after replacement paste")
         var pastedSummary = replacementGrid.fetchNoteSummary()
         var pastedCursor = replacementGrid.editCursorTick

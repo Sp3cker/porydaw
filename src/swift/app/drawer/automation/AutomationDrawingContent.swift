@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import QtBridge
 
 @MainActor
 extension AutomationPage {
@@ -17,15 +18,14 @@ extension AutomationPage {
         }
         let grid = session.grid
         let axis = timeAxis(session)
-        // One integer parse per palette slot per build; every record below
-        // reuses these, and ghost ink is node ink at alpha 128 as integers.
+        // Resolve each typed palette slot once; ghost ink uses alpha 128.
         let separatorArgb = SceneRectPacking.argb(palette.separator)
         let gridSub2Argb = SceneRectPacking.argb(palette.gridLineSub2)
         let curveArgb = SceneRectPacking.argb(palette.automationNodeInk)
         let ghostArgb = (curveArgb & 0x00FF_FFFF) | 0x8000_0000
         let selectionFillArgb = SceneRectPacking.argb(palette.selectionFill)
         let selectionEdgeArgb = SceneRectPacking.argb(palette.selectionEdge)
-        let gridPalette: [Int: String] = [
+        let gridPalette: [Int: QmlColor] = [
             3: palette.gridLineBar, 4: palette.gridLineBeat,
             5: palette.gridLineSub1, 6: palette.gridLineSub2,
             7: palette.gridLineSub3, 25: palette.gridLineBeatFine,
@@ -49,7 +49,7 @@ extension AutomationPage {
                         tickStart: 0, tickEnd: UInt32(max(0, plotWidth)),
                         y: y, height: rule, argb: gridSub2Argb, flags: 3))
             }
-            let tickLength = Typography(baseFontPx: Int(baseFontPx.rounded())).space(.half) * 3
+            let tickLength = typography.space(.half) * 3
             for label in lane.scaleLabels {
                 axisRects.append(
                     DrawerStaticRect(
@@ -107,7 +107,7 @@ extension AutomationPage {
                     dx: -1, width: 1, y: 0, height: Float(plotHeight), argb: edgeColor, flags: 1))
         }
         var previewRuns: [DrawerStaticRect] = []
-        var draftNodes: [AutomationNodeHandle] = []
+        var draftNodes: [AutomationNodeValue] = []
         if let facts = frozen, !previewPoints.isEmpty {
             let previewProjection = makeProjection(facts: facts, camera: gestureCamera)
             let paint = nodePaint
@@ -132,7 +132,7 @@ extension AutomationPage {
                 showMarkers = true
             }
             for point in previewPoints where showMarkers {
-                let node = AutomationNodeHandle()
+                var node = AutomationNodeValue()
                 node.x = phantomPreview ? 0 : previewProjection.x(point.tick)
                 node.y = previewProjection.y(point.value, metadata: facts.metadata)
                 node.tick = Double(point.tick)
@@ -143,7 +143,6 @@ extension AutomationPage {
                 node.outlineColor = ink == curveArgb ? palette.automationNodeInk : palette.selectionEdge
                 node.ringColor = palette.selectionRing
                 node.primitiveName = "automationPreviewNode"
-                node.refreshSpec()
                 draftNodes.append(node)
             }
             if case .phantom(let transaction) = gesture, transaction.drag.exceeded {
@@ -159,13 +158,7 @@ extension AutomationPage {
                         height: 1, argb: ink))
             }
         }
-        let common = min(previewNodes.count, draftNodes.count)
-        for index in 0..<common where !previewNodes[index].matches(draftNodes[index]) {
-            previewNodes[index] = draftNodes[index]
-        }
-        if previewNodes.count != draftNodes.count {
-            previewNodes.replaceSubrange(common..<previewNodes.count, with: draftNodes[common...])
-        }
+        syncRetained(previewNodes, draftNodes, make: AutomationNodeHandle.init, update: { $0.update($1) })
         // Viewport-space lists through the Task 6a builders; record order is
         // the paint order inside each list, matching the legacy layer order.
         let viewport = CGSize(width: plotWidth, height: plotHeight)

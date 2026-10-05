@@ -3,8 +3,9 @@
     // ---- rendered theme ----------------------------------------------------
 
     function channelsOf(testCase, color) {
-        var value = parseInt(String(color).slice(-6), 16)
-        return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff]
+        var value = typeof color === "string" ? Qt.color(color) : color
+        return [Math.round(value.r * 255), Math.round(value.g * 255),
+                Math.round(value.b * 255)]
     }
 
     // 0 = the button's own background, 1 = the pure keyboard-label tint, read

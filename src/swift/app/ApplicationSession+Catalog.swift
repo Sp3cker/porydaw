@@ -28,7 +28,7 @@ extension ApplicationSession {
                 } else {
                     message = String(describing: error)
                 }
-                statusMessage(message: message)
+                publishStatusMessage(message: message)
             }
             return false
         }

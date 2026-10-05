@@ -109,14 +109,14 @@ extension AutomationPage {
         }
         tabSnapshots = values
         if tabCount != values.count { tabCount = values.count }
-        syncTabs(values)
+        syncModel(tabs, values, matches: { $0.matches($1) })
     }
 
     /// Publishes the value labels, ghost names and active node handles.
     func publishContent(_ session: DocumentSession?) {
         guard let session, let lane = projection else {
-            syncTexts(ghostNameLabels, [])
-            syncTexts(valueLabels, [])
+            syncRetained(ghostNameLabels, [SceneTextValue](), make: SceneText.init, update: { $0.update($1) })
+            syncRetained(valueLabels, [SceneTextValue](), make: SceneText.init, update: { $0.update($1) })
             syncNodes([])
             return
         }
@@ -148,20 +148,21 @@ extension AutomationPage {
     /// left edge and curve-true height.
     func publishValueAxis(_ lane: AutomationLaneProjection) {
         let height = captionMetrics?.height ?? fontPx(baseFontPx, 1)
-        let pad = Typography(baseFontPx: Int(baseFontPx.rounded())).space(.one)
-        var labels: [SceneText] = []
+        let pad = typography.space(.one)
+        let font = typography.caption.qmlFont
+        var labels: [SceneTextValue] = []
         for label in lane.scaleLabels {
             let width = max(
                 fontPx(baseFontPx, 2),
                 (captionMetrics?.advance(label.text) ?? 0).rounded())
             let y = min(max(0, label.y - height / 2), max(0, plotHeight - height))
             labels.append(
-                SceneText(
+                SceneTextValue(
                     rect: (Double(pad), y.rounded(), width, height),
                     text: label.text, color: palette.primaryText,
-                    font: captionFont))
+                    font: font))
         }
-        syncTexts(valueLabels, labels)
+        syncRetained(valueLabels, labels, make: SceneText.init, update: { $0.update($1) })
     }
 
     /// The active parameter's nodes and origin phantom, minus those a live draw
@@ -169,13 +170,13 @@ extension AutomationPage {
     func nodeHandles(
         _ lane: AutomationLaneProjection,
         projection: AutomationProjection
-    ) -> [AutomationNodeHandle] {
+    ) -> [AutomationNodeValue] {
         guard projection.markersVisible() else { return [] }
         let paint = nodePaint
         let replaced = previewEdit.flatMap { edit in
             edit.parameter == lane.parameter ? edit.tickBegin...edit.tickEnd : nil
         }
-        var values: [AutomationNodeHandle] = []
+        var values: [AutomationNodeValue] = []
         if let phantom = lane.originPhantom, !(replaced?.contains(phantom.point.tick) ?? false) {
             values.append(
                 nodeHandle(
@@ -208,8 +209,8 @@ extension AutomationPage {
         parameter: AutomationParameter,
         projection: AutomationProjection,
         phantom: Bool
-    ) -> AutomationNodeHandle {
-        let node = AutomationNodeHandle()
+    ) -> AutomationNodeValue {
+        var node = AutomationNodeValue()
         // Plot-relative x rides the row, so a zoom's x and scroll land in one frame.
         node.x = phantom ? 0 : point.x
         node.y = point.y
@@ -226,8 +227,7 @@ extension AutomationPage {
             && hover?.tick == point.tick
         node.projected = point.projected
         node.phantom = phantom
-        node.identity = Self.identityText(point.identity)
-        node.refreshSpec()
+        node.identity = point.identity
         return node
     }
 

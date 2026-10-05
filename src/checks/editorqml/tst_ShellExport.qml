@@ -3,10 +3,9 @@ import QtQuick.Controls
 import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
-import "../../ui/shell"
-import "NativeWait.js" as NativeWait
+import Porydaw.Ui
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellExport"
     when: windowShown
@@ -17,14 +16,11 @@ TestCase {
     ShellQmlBootstrap { id: bootstrap }
     WavFileProbe { id: probe }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
-    property var shell: null
     readonly property var preferences: bootstrap.preferences
     readonly property var rootPath: bootstrap.projectRoot
 
-    function waitForNative(predicate, timeout) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeout)
-    }
-    function child(name) { return findChild(shell, name) }
+    laneBootstrap: bootstrap
+
     function openShell(label) {
         preferences.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
@@ -98,12 +94,12 @@ TestCase {
         const row = child("shellAction_file.export_wav")
         verify(row !== null, "the File menu mounts Export WAV")
         verify(row.text.indexOf("Export WAV...") === 0, "the fork export label leads the row")
-        compare(presenter.actionEnabled("file.export_wav"), false,
+        compare(presenter.action("file.export_wav").enabled, false,
                 "no song disables WAV export")
         presenter.session.openProjectAndSong(rootPath, "mus_route101")
         verify(waitForNative(function() { return presenter.session.songOpen }, 30000),
                "the fixture song opens")
-        compare(presenter.actionEnabled("file.export_wav"), true,
+        compare(presenter.action("file.export_wav").enabled, true,
                 "a loaded song enables WAV export")
         openOptions()
         exportModel().rejectOptions()
@@ -166,7 +162,7 @@ TestCase {
         compare(model.fadeTenths, 600, "fade clamps at 60 seconds")
         for (const action of ["transport.play_pause", "file.save_song",
                               "edit.preferences", "file.quit"])
-            compare(presenter.actionEnabled(action), false,
+            compare(presenter.action(action).enabled, false,
                     "options modality blocks " + action)
         mouseClick(child("wavExportCancel"))
         tryCompare(model, "active", false)
@@ -297,7 +293,7 @@ TestCase {
                 "rendering unsaved edits leaves the staged MIDI bytes untouched")
         compare(presenter.session.songDocumentDirty, true,
                 "export does not save the edited song")
-        compare(presenter.actionEnabled("edit.undo"), true,
+        compare(presenter.action("edit.undo").enabled, true,
                 "export leaves the transpose in document history")
         presenter.activate("edit.undo")
         verify(waitForNative(function() { return !presenter.session.songDocumentDirty }, 5000),
@@ -322,7 +318,7 @@ TestCase {
         compare(child("wavExportProgressBar").value, model.progress,
                 "the progress bar follows the job")
         for (const action of presenter.actionIds)
-            compare(presenter.actionEnabled(action), false,
+            compare(presenter.action(action).enabled, false,
                     "render modality disables " + action)
         keyClick(shell, Qt.Key_Space)
         mouseClick(child("transport.play"))
@@ -335,7 +331,7 @@ TestCase {
         compare(probe.exists(path), false, "cancel removes the incomplete WAV")
         tryCompare(presenter, "statusText", "Export cancelled.", 3000,
                    "cancel reports its status")
-        compare(presenter.actionEnabled("transport.play_pause"), true,
+        compare(presenter.action("transport.play_pause").enabled, true,
                 "commands resume after cancellation")
         openOptions()
         model.setLoopCount(99)
@@ -352,7 +348,7 @@ TestCase {
         compare(presenter.statusText, "Export cancelled.",
                 "Escape reports the same cancellation status")
         compare(probe.exists(second), false, "Escape removes the incomplete WAV")
-        compare(presenter.actionEnabled("transport.play_pause"), true,
+        compare(presenter.action("transport.play_pause").enabled, true,
                 "Escape restores the command gate")
     }
 

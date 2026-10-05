@@ -1,8 +1,9 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
-// Shared scrollbar for timeline Quick surfaces, in either orientation. The
-// owning model stays authoritative: the control reports requested values and
-// renders thumb geometry from its inputs, never touching model state itself.
+import PorydawApp
+// Shared scrollbar: the owning model stays authoritative; this control
+// renders the supplied geometry and reports requested values.
 Item {
     id: scrollbar
 
@@ -19,7 +20,7 @@ Item {
     property bool visibleWhenNotScrollable: false
     property string thumbObjectName: ""
     property string accessibleName: qsTr("Timeline")
-    property var hintService: null
+    property MouseHints hintService: null
     property bool hintScopeAllowed: true
 
     HoverHint {
@@ -62,49 +63,52 @@ Item {
     signal wheelRequested(real pixelX, real pixelY, real angleX, real angleY, bool inverted)
     signal hintReleased(point scenePosition)
 
-    function clampedValue(requested) {
+    function clampedValue(requested: real): real {
         return Math.max(minimum, Math.min(maximum, requested))
     }
 
-    function requestScroll(requested) {
+    function requestScroll(requested: real): void {
         if (!scrollable)
             return
         valueRequested(clampedValue(requested))
     }
-    function cancelGrab() {
+    function cancelGrab(): void {
         if (!thumbMouse.pressed)
             return
         scrollbar.cancelledWhileHeld = true
         thumbMouse.enabled = false
-        Qt.callLater(() => {
-            thumbMouse.enabled = Qt.binding(() => scrollbar.scrollable && scrollbar.thumbTravel > 0)
-        })
+        Qt.callLater(scrollbar.restoreGrabBinding)
     }
 
-    // Settles the hint group from a drag owner's delivered local
-    // coordinates. The policy stays with HoverHint: containment against the
-    // scrollbar footprint decides releaseInside, so an outside release
-    // clears even when Qt froze hover membership during the implicit grab.
-    function settleHintRelease(localX, localY) {
+    function restoreGrabBinding(): void {
+        thumbMouse.enabled = Qt.binding(scrollbar.canGrab)
+    }
+
+    function canGrab(): bool {
+        return scrollbar.scrollable && scrollbar.thumbTravel > 0
+    }
+
+    // Actual release containment overrides frozen hover membership.
+    function settleHintRelease(localX: real, localY: real): void {
         thumbHint.settleRelease(scrollbar.mapToItem(null, localX, localY))
     }
 
-    function rebaseDrag() {
+    function rebaseDrag(): void {
         if (!thumbMouse || !thumbMouse.pressed || !dragThresholdReached)
             return
         dragStartValue = clampedValue(value)
         dragStartPosition = dragLastPosition
     }
 
-    function requestLine(direction) {
+    function requestLine(direction: int): void {
         requestScroll(value + direction * Math.max(0, singleStep))
     }
 
-    function requestPage(direction) {
+    function requestPage(direction: int): void {
         requestScroll(value + direction * Math.max(0, pageStep))
     }
 
-    function handleKey(event) {
+    function handleKey(event: KeyEvent): void {
         const vertical = orientation === Qt.Vertical
         if (event.key === (vertical ? Qt.Key_Up : Qt.Key_Left)) {
             requestLine(-1)
@@ -148,9 +152,8 @@ Item {
     Accessible.onPreviousPageAction: scrollbar.requestPage(-1)
     Accessible.onNextPageAction: scrollbar.requestPage(1)
 
-    // The track click surface sits behind the thumb's MouseArea. A thumb
-    // press therefore cannot fall through into a retained page-click grab if
-    // its native drag is canceled before the physical button release.
+    // The track click sits behind the thumb; canceled thumb drags cannot
+    // fall through into page-click grabs before the physical release.
     MouseArea {
         anchors.fill: parent
         enabled: scrollbar.scrollable
@@ -191,8 +194,8 @@ Item {
         objectName: scrollbar.thumbObjectName
         x: scrollbar.orientation === Qt.Vertical ? 0 : scrollbar.thumbPos
         y: scrollbar.orientation === Qt.Vertical ? scrollbar.thumbPos : 0
-        width: scrollbar.orientation === Qt.Vertical ? parent.width : scrollbar.thumbLength
-        height: scrollbar.orientation === Qt.Vertical ? scrollbar.thumbLength : parent.height
+        width: scrollbar.orientation === Qt.Vertical ? scrollbar.width : scrollbar.thumbLength
+        height: scrollbar.orientation === Qt.Vertical ? scrollbar.thumbLength : scrollbar.height
         visible: (scrollbar.scrollable || scrollbar.visibleWhenNotScrollable)
                  && width > 0 && height > 0
         color: thumbHover.hovered ? scrollbar.handleHoverColor : scrollbar.handleColor
@@ -243,17 +246,13 @@ Item {
                                       / scrollbar.thumbTravel * scrollbar.span)
         }
         onReleased: (mouse) => {
-            // Settle the hint group from the thumb drag's actual mapped
-            // release coordinates: an outside release clears even when Qt
-            // froze hover membership during the implicit grab.
+            // Settle actual release containment, not frozen hover membership.
             scrollbar.settleHintRelease(mouse.x, mouse.y)
             scrollbar.hintReleased(scrollbar.mapToItem(null, mouse.x, mouse.y))
             scrollbar.cancelledWhileHeld = false
         }
-        // canceled() delivers no event: the grab was lost before a release
-        // event existed. The cleanup is still unconditional, settling from
-        // the drag owner's last delivered position so a stale retained
-        // membership cannot survive the cancellation.
+        // Cancellation has no release event; settle from the last delivered
+        // coordinates so retained ownership cannot survive a lost grab.
         onCanceled: {
             scrollbar.cancelledWhileHeld = false
             scrollbar.settleHintRelease(scrollbar.dragLastPoint.x,

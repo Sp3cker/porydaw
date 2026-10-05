@@ -1,48 +1,54 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Porydaw.Ui
 import Porydaw.Icons
 
 Item {
     id: rulerModule
-    required property Item root
-    required property Item rollStack
-    required property Item rollBandContent
-    required property Item gridMenuLoader
-    property alias rulerInput: rulerInput
+    final required property EditorSurface root
+    final required property Item rollStack
+    final required property Item rollBandContent
+    final required property Loader gridMenuLoader
+    final property alias rulerInput: rulerInput
             Item {
                 id: rulerBand
-                parent: rollStack
+                parent: rulerModule.rollStack
                 objectName: "timelineQuickRuler"
                 width: parent.width
-                height: root.gridModel.rulerHeight
+                height: rulerModule.root.gridModel.rulerHeight
                 clip: true
 
                 Rectangle {
+                    id: rulerGutter
                     objectName: "timelineQuickRulerGutterChrome"
-                    width: root.gridModel.keyboardWidth
                     height: parent.height
-                    color: root.gridModel.palette.chromeBackground
+                    width: rulerModule.root.gridModel.keyboardWidth
+                    color: rulerModule.root.gridModel.palette.chromeBackground
                 }
                 Rectangle {
-                    y: root.gridModel.rulerHeight - 0.5
-                    width: root.gridModel.keyboardWidth
-                    height: 1 / root.gridModel.devicePixelRatio
-                    color: root.gridModel.palette.separator
+                    id: rulerSeparator
+                    y: rulerModule.root.gridModel.rulerHeight - 0.5
+                    width: rulerModule.root.gridModel.keyboardWidth
+                    height: 1 / rulerModule.root.gridModel.devicePixelRatio
+                    color: rulerModule.root.gridModel.palette.separator
                 }
 
                 Item {
-                    x: root.gridModel.keyboardWidth
+                    id: rulerPlot
+                    x: rulerModule.root.gridModel.keyboardWidth
                     width: Math.max(parent.width - x, 0)
                     height: parent.height
                     clip: true
 
                     DisplayList {
+                        id: rulerMarks
                         anchors.fill: parent
                         objectName: "timelineQuickRulerMarks"
                         clip: true
-                        source: root.gridModel.scene
+                        source: rulerModule.root.gridModel?.scene ?? null
                         list: 2
-                        revision: root.gridModel.scene.displayRevision
+                        revision: rulerModule.root.gridModel.scene.displayRevision
                     }
                     MouseArea {
                         id: rulerInput
@@ -54,17 +60,17 @@ Item {
                             rulerMoves.flush()
                             if (mouse.button !== Qt.LeftButton)
                                 return
-                            const tick = root.timeSigHost.timeSigChipTick(mouse.x, mouse.y)
+                            const tick = rulerModule.root.timeSigHost.timeSigChipTick(mouse.x, mouse.y)
                             if (tick >= 0)
-                                root.timeSigHost.openTimeSigPrompt(tick)
+                                rulerModule.root.timeSigHost.openTimeSigPrompt(tick)
                         }
                         onPressed: (mouse) => {
                             rulerMoves.flush()
                             if (mouse.button === Qt.LeftButton) {
-                                root.rulerMenu.beginSweep(mouse.x, mouse.y, mouse.modifiers)
+                                rulerModule.root.rulerMenu.beginSweep(mouse.x, mouse.y, mouse.modifiers)
                             } else if (mouse.button === Qt.RightButton) {
-                                root.timeMenuFocus = false
-                                root.timeSigHost.captureTimeSigMenuPress(mouse.x, mouse.y)
+                                rulerModule.root.timeMenuFocus = false
+                                rulerModule.root.timeSigHost.captureTimeSigMenuPress(mouse.x, mouse.y)
                             }
                         }
                         onPositionChanged: (mouse) => {
@@ -75,20 +81,21 @@ Item {
                         onReleased: (mouse) => {
                             rulerMoves.flush()
                             if (mouse.button === Qt.LeftButton) {
-                                root.rulerMenu.endSweep(mouse.x, mouse.y)
+                                rulerModule.root.rulerMenu.endSweep(mouse.x, mouse.y)
                             } else if (mouse.button === Qt.RightButton) {
-                                root.timeSigMenuPosition = mapToItem(root, mouse.x, mouse.y)
-                                root.timeSigHost.openTimeSigMenu()
+                                rulerModule.root.timeSigMenuPosition = mapToItem(rulerModule.root, mouse.x, mouse.y)
+                                rulerModule.root.timeSigHost.openTimeSigMenu()
                             }
                         }
                         onCanceled: {
                             rulerMoves.flush()
-                            root.rulerMenu.cancelSweep()
+                            rulerModule.root.rulerMenu.cancelSweep()
                         }
                         MoveCoalescer {
                             id: rulerMoves
-                            dispatch: (x, y, buttons, modifiers) => {
-                                root.rulerMenu.updateSweep(x, y)
+                            dispatch: rulerMoves.dispatchMove
+                            function dispatchMove(x: real, y: real, buttons: int, modifiers: int): void {
+                                rulerModule.root.rulerMenu.updateSweep(x, y)
                             }
                         }
                     }
@@ -96,18 +103,16 @@ Item {
             }
         Item {
             id: rulerControls
-            parent: rollBandContent
+            parent: rulerModule.rollBandContent
             objectName: "timelineRulerControls"
-            width: root.headersModel.trackHeaderWidth
-                + root.gridModel.keyboardWidth
-            height: root.gridModel.rulerHeight
+            width: rulerModule.root.headersModel.trackHeaderWidth + rulerModule.root.gridModel.keyboardWidth
+            height: rulerModule.root.gridModel.rulerHeight
             clip: true
             readonly property real controlsInset: 8
             readonly property real controlsGap: 4
-            readonly property real controlsStroke:
-                1 / (root.gridModel.devicePixelRatio > 0
-                     ? root.gridModel.devicePixelRatio : 1)
-            readonly property font controlsFont: root.bodyFont
+            readonly property real controlsStroke: 1 / (rulerModule.root.gridModel.devicePixelRatio > 0
+                                                       ? rulerModule.root.gridModel.devicePixelRatio : 1)
+            readonly property font controlsFont: rulerModule.root.bodyFont
             readonly property real gridLabelWidth:
                 Math.min(gridLabel.implicitWidth,
                          Math.max(0, width - controlsInset))
@@ -127,12 +132,12 @@ Item {
                 Keys.onReturnPressed: openMenu()
                 Keys.onEnterPressed: openMenu()
 
-                function openMenu() {
-                    root.gridMenuPosition = mapToItem(root, width / 2, height)
-                    root.gridModel.openGridMenu(menuKind)
+                function openMenu(): void {
+                    rulerModule.root.gridMenuPosition = mapToItem(rulerModule.root, width / 2, height)
+                    rulerModule.root.gridModel.openGridMenu(menuKind)
                     Qt.callLater(function() {
-                        if (gridMenuLoader.item)
-                            gridMenuLoader.item.forceActiveFocus(Qt.PopupFocusReason)
+                        if (rulerModule.gridMenuLoader.item)
+                            (rulerModule.gridMenuLoader.item as Item).forceActiveFocus(Qt.PopupFocusReason)
                     })
                 }
 
@@ -140,22 +145,22 @@ Item {
                     id: gridControlBackground
                     objectName: "gridControlBackground"
                     anchors.fill: parent
-                    color: gridControl.controlPressed
-                        ? root.gridModel.palette.buttonPressedBackground
-                        : root.gridModel.palette.buttonHoverBackground
                     border.width: rulerControls.controlsStroke
-                    border.color: root.gridModel.palette.outline
+                    color: gridControl.controlPressed
+                        ? rulerModule.root.gridModel.palette.buttonPressedBackground
+                        : rulerModule.root.gridModel.palette.buttonHoverBackground
+                    border.color: rulerModule.root.gridModel.palette.outline
                 }
                 Text {
                     id: gridControlLabel
                     objectName: "gridControlLabel"
+                    color: rulerModule.root.gridModel.palette.buttonText
                     anchors.left: parent.left
                     anchors.leftMargin: rulerControls.controlsGap
                     anchors.right: gridControlArrow.left
                     anchors.rightMargin: rulerControls.controlsGap / 2
                     anchors.verticalCenter: parent.verticalCenter
                     clip: true
-                    color: root.gridModel.palette.buttonText
                     font: rulerControls.controlsFont
                     text: gridControl.controlText
                     textFormat: Text.PlainText
@@ -167,13 +172,13 @@ Item {
                 AppIcon {
                     id: gridControlArrow
                     objectName: "gridControlArrow"
+                    color: rulerModule.root.gridModel.palette.buttonText
                     anchors.right: parent.right
                     anchors.rightMargin: rulerControls.controlsGap
                     anchors.verticalCenter: parent.verticalCenter
                     width: rulerControls.controlsFont.pixelSize
                     height: width
                     icon: Icons.comboArrow
-                    color: root.gridModel.palette.buttonText
                 }
                 MouseArea {
                     id: gridArea
@@ -186,11 +191,11 @@ Item {
             Text {
                 id: gridLabel
                 objectName: "timelineRulerGridLabel"
+                color: rulerModule.root.gridModel.palette.primaryText
                 x: rulerControls.controlsInset
                 width: rulerControls.gridLabelWidth
                 anchors.verticalCenter: parent.verticalCenter
                 clip: true
-                color: root.gridModel.palette.primaryText
                 font: rulerControls.controlsFont
                 text: qsTr("Grid")
                 textFormat: Text.PlainText
@@ -207,7 +212,7 @@ Item {
                 width: rulerControls.controlWidth
                 height: Math.min(parent.height,
                     gridLabel.implicitHeight + rulerControls.controlsInset)
-                controlText: root.gridModel.gridDivisionControlText
+                controlText: rulerModule.root.gridModel.gridDivisionControlText
                 menuKind: 1
                 controlToolTip: qsTr("Editing snap grid. Auto follows the zoom one step finer than the drawn grid; a fixed division snaps to that note value; Clock snaps to the mid2agb clock grid.")
             }
@@ -221,28 +226,29 @@ Item {
                 width: rulerControls.controlWidth
                 height: Math.min(parent.height,
                     gridLabel.implicitHeight + rulerControls.controlsInset)
-                controlText: root.gridModel.gridFeelControlText
+                controlText: rulerModule.root.gridModel.gridFeelControlText
                 menuKind: 2
                 controlToolTip: qsTr("Straight or triplet beat subdivisions.")
             }
         }
     RulerToolTip {
+        id: rulerToolTip
         objectName: "timelineRulerToolTip"
-        parent: root
+        parent: rulerModule.root
         z: 4
-        overlayRoot: root
+        overlayRoot: rulerModule.root
         anchorRect: {
             const control = divisionControl.controlHovered ? divisionControl : feelControl
-            const point = control.mapToItem(root, 0, 0)
-            const row = rulerControls.mapToItem(root, 0, 0)
+            const point = control.mapToItem(rulerModule.root, 0, 0)
+            const row = rulerControls.mapToItem(rulerModule.root, 0, 0)
             return Qt.rect(point.x, row.y, control.width, rulerControls.height)
         }
         toolTipText: divisionControl.controlHovered
             ? divisionControl.controlToolTip : feelControl.controlToolTip
         visibleForControl: divisionControl.controlHovered || feelControl.controlHovered
         controlFont: rulerControls.controlsFont
-        backgroundColor: root.gridModel.palette.chromeBackground
-        textColor: root.gridModel.palette.windowText
-        outlineColor: root.gridModel.palette.outline
+        backgroundColor: rulerModule.root.gridModel.palette.chromeBackground
+        textColor: rulerModule.root.gridModel.palette.windowText
+        outlineColor: rulerModule.root.gridModel.palette.outline
     }
 }

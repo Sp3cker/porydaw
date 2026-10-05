@@ -251,29 +251,13 @@ public enum VoiceListSemantics {
         before.macro != after.macro || before.symbol != after.symbol || before.keysplitTable != after.keysplitTable
     }
 
-    /// m4aVoiceTypeName + the browser's synth/keysplit/alt-chip layering
-    /// (typeDisplayName): synth voices keep "Synth (Golden Sun)", keysplits
-    /// keep "Keysplit", alt CGB variants gain " (Alt)".
+    /// Browser decoration: synth and keysplit labels override the core family;
+    /// alternate CGB variants append " (Alt)".
     public static func typeDisplayName(typeByte: UInt8, synth: Bool) -> String {
         if synth { return "Synth (Golden Sun)" }
         if typeByte == voiceKeysplit { return "Keysplit" }
-        let name = voiceTypeName(typeByte)
+        let name = m4aVoiceTypeName(typeByte)
         return isAltChip(typeByte) ? "\(name) (Alt)" : name
-    }
-
-    /// m4aVoiceTypeName: drumkit, fixed-pitch and reverse samples, then the
-    /// CGB mask; keysplit deliberately falls through to "Sample".
-    public static func voiceTypeName(_ type: UInt8) -> String {
-        if type == voiceKeysplitAll { return "Drumkit" }
-        if type == voiceDirectsoundNoResample { return "Sample (fixed pitch)" }
-        if type == voiceDirectsoundAlt { return "Sample (reverse)" }
-        switch type & voiceTypeCgbMask {
-        case voiceSquare1: return "Square 1"
-        case voiceSquare2: return "Square 2"
-        case voiceProgrammableWave: return "Wave"
-        case voiceNoise: return "Noise"
-        default: return "Sample"
-        }
     }
 
     /// voicetypeicons::isAltChip: alt CGB variants (0x09-0x0C) render their

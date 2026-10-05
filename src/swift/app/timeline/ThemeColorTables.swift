@@ -889,24 +889,6 @@ enum ThemeColorTables {
         0xFF3C_5445, 0xFF27_3F31,  // track 14
         0xFF4B_4664, 0xFF39_3452,  // track 15
     ]
-    static let velocityStemColors: [String] = [
-        "#762D2D",
-        "#2D7642",
-        "#582D76",
-        "#766C2D",
-        "#2D6A76",
-        "#762D55",
-        "#40762D",
-        "#2F2D76",
-        "#76462D",
-        "#2D765A",
-        "#702D76",
-        "#67762D",
-        "#2D5276",
-        "#762D3D",
-        "#2D7633",
-        "#482D76",
-    ]
     static let activityDimColors: [String] = [
         "#8F1722",
         "#29904B",

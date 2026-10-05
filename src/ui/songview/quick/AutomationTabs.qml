@@ -1,19 +1,21 @@
 // Original two-column parameter selector, bound directly to the Swift page.
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls as Controls
+import PorydawStyle as Controls
+import QtQuick.Templates as T
 import QtQuick.Layouts
 import Porydaw.Ui
+import PorydawApp as App
 
 Item {
     id: root
-    required property var pageModel
-    required property Item sceneRoot
-    property var hintService: null
-    property bool hintScopeAllowed: true
-    required property var pagePalette
-    readonly property real inset: (sceneRoot.applicationSession.timeSigHost
-                                    || sceneRoot.applicationSession).layoutSpaces.one
+    required final property App.AutomationPage pageModel
+    required final property Item sceneRoot
+    final property App.MouseHints hintService: null
+    final property bool hintScopeAllowed: true
+    required final property App.GridPalette pagePalette
+    final property font defaultFont
+    readonly property real inset: pageModel ? pageModel.selectorInset : 0
     readonly property real stroke: 1
     Flickable {
         id: scroller
@@ -30,21 +32,29 @@ Item {
             columnSpacing: 0
             rowSpacing: 0
             Repeater {
-                model: root.pageModel.tabs
+                model: root.pageModel ? root.pageModel.tabs : null
                 Controls.TabButton {
                     id: tab
                     required property var model
-                    readonly property bool tempoParameter: model.tempo
-                    objectName: "automationParameterTab" + model.index
-                    text: model.label
-                    font: Qt.font(root.pageModel.captionFont)
+                    required property int index
+                    required property string label
+                    required property bool tempo
+                    required property bool active
+                    required property bool available
+                    required property int eventCount
+                    required property bool ghosted
+                    required property bool included
+                    readonly property bool tempoParameter: tempo
+                    objectName: "automationParameterTab" + index
+                    text: label
+                    font: root.pageModel ? root.pageModel.captionFont : root.defaultFont
                     padding: root.inset
                     rightPadding: tempoParameter
-                        ? root.inset + tapControl.width + root.pageModel.pipExtent
+                        ? root.inset + tapControl.width + (root.pageModel ? root.pageModel.pipExtent : 0)
                         : root.inset
                     Layout.fillWidth: true
                     Layout.preferredWidth: tempoParameter ? scroller.width : scroller.width / 2
-                    Layout.minimumHeight: root.pageModel.minimumCellHeight
+                    Layout.minimumHeight: root.pageModel ? root.pageModel.minimumCellHeight : 0
                     Layout.columnSpan: tempoParameter ? 2 : 1
                     Layout.topMargin: root.stroke
                     Layout.bottomMargin: root.stroke
@@ -53,33 +63,36 @@ Item {
                     focusPolicy: Qt.StrongFocus
                     hoverEnabled: true
                     checkable: false
-                    checked: model.active
-                    enabled: model.available
+                    checked: active
+                    enabled: available
                     Accessible.name: tab.text
                     down: pressArea.pressed
-                    function activate() { root.pageModel.activateParameter(model.index) }
-                    function ensureVisible() {
+                    function activate(): void {
+                        if (root.pageModel) root.pageModel.activateParameter(tab.index)
+                    }
+                    function ensureVisible(): void {
                         if (scroller.moving) return
-                        if (y < scroller.contentY) scroller.contentY = y
-                        else if (y + height > scroller.contentY + scroller.height)
-                            scroller.contentY = y + height - scroller.height
+                        if (tab.y < scroller.contentY) scroller.contentY = tab.y
+                        else if (tab.y + tab.height > scroller.contentY + scroller.height)
+                            scroller.contentY = tab.y + tab.height - scroller.height
                     }
                     onCheckedChanged: if (checked) ensureVisible()
                     onActiveFocusChanged: if (activeFocus) ensureVisible()
                     onClicked: activate()
-                    Controls.ContextMenu.onRequested: position => {
+                    T.ContextMenu.onRequested: position => {
                         const p = tab.mapToItem(root.sceneRoot, position.x, position.y)
-                        root.pageModel.openParameterMenu(tab.model.index, p.x, p.y)
+                        if (root.pageModel) root.pageModel.openParameterMenu(tab.index, p.x, p.y)
                     }
                     MouseArea {
                         id: pressArea
-                        objectName: "automationParameterTabPress" + tab.model.index
+                        objectName: "automationParameterTabPress" + tab.index
                         anchors.fill: parent
                         acceptedButtons: Qt.LeftButton
                         onPressed: mouse => {
                             tab.forceActiveFocus()
+                            if (!root.pageModel) return
                             if (mouse.modifiers & Qt.ControlModifier)
-                                root.pageModel.toggleGhostParameter(tab.model.index)
+                                root.pageModel.toggleGhostParameter(tab.index)
                             else tab.activate()
                         }
                     }
@@ -95,9 +108,9 @@ Item {
                         objectName: tab.tempoParameter ? "automationTempoTapButton" : ""
                         visible: tab.tempoParameter
                         width: tapLabel.implicitWidth + 2 * root.inset
-                        height: root.pageModel.minimumCellHeight
+                        height: root.pageModel ? root.pageModel.minimumCellHeight : 0
                         anchors.right: parent.right
-                        anchors.rightMargin: root.inset + root.pageModel.pipExtent
+                        anchors.rightMargin: root.inset + (root.pageModel ? root.pageModel.pipExtent : 0)
                         anchors.verticalCenter: parent.verticalCenter
                         activeFocusOnTab: true
                         Rectangle {
@@ -111,20 +124,24 @@ Item {
                             objectName: "automationTempoTapLabel"
                             anchors.centerIn: parent
                             text: qsTr("Tap")
-                            font: Qt.font(root.pageModel.captionFont)
+                            font: root.pageModel ? root.pageModel.captionFont : root.defaultFont
                             color: tapPress.pressed ? root.pagePalette.selectionText : root.pagePalette.primaryText
                             Accessible.ignored: true
                         }
                         MouseArea {
                             id: tapPress
                             anchors.fill: parent
-                            onPressed: { tapControl.forceActiveFocus(); root.pageModel.tapTempoTap() }
+                            onPressed: {
+                                tapControl.forceActiveFocus()
+                                if (root.pageModel) root.pageModel.tapTempoTap()
+                            }
                         }
                         HoverHandler { id: tapHover }
                         Keys.onPressed: event => {
                             if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
                                 && event.modifiers === Qt.NoModifier && !event.isAutoRepeat) {
-                                root.pageModel.tapTempoTap(); event.accepted = true
+                                if (root.pageModel) root.pageModel.tapTempoTap()
+                                event.accepted = true
                             }
                         }
                         Keys.onShortcutOverride: event => event.accepted =
@@ -133,7 +150,7 @@ Item {
                         Accessible.role: Accessible.Button
                         Accessible.name: qsTr("Tap tempo")
                         Accessible.focusable: true
-                        Accessible.onPressAction: root.pageModel.tapTempoTap()
+                        Accessible.onPressAction: if (root.pageModel) root.pageModel.tapTempoTap()
                     }
                     Keys.priority: Keys.AfterItem
                     Keys.onPressed: event => {
@@ -148,8 +165,8 @@ Item {
                     contentItem: RowLayout {
                         spacing: root.inset
                         Rectangle {
-                            opacity: tab.model.eventCount > 0 ? 1 : 0
-                            Layout.preferredWidth: root.pageModel.pipExtent
+                            opacity: tab.eventCount > 0 ? 1 : 0
+                            Layout.preferredWidth: root.pageModel ? root.pageModel.pipExtent : 0
                             Layout.preferredHeight: width
                             radius: width / 2
                             color: root.pagePalette.automationNodeInk
@@ -160,25 +177,26 @@ Item {
                             textFormat: Text.PlainText
                             font: tab.font
                             fontSizeMode: Text.HorizontalFit
-                            minimumPixelSize: root.pageModel.minimumFont.pixelSize
+                            minimumPixelSize: root.pageModel ? root.pageModel.minimumFont.pixelSize : 0
                             elide: Text.ElideNone
                             Layout.fillWidth: true
                             color: tab.checked ? root.pagePalette.buttonPressedText : root.pagePalette.windowText
                         }
                         Text {
                             objectName: "automationParameterEventCount"
-                            opacity: tab.checked && tab.model.eventCount > 0 ? 1 : 0
-                            text: tab.model.eventCount === 1 ? qsTr("1 event") : qsTr("%1 events").arg(tab.model.eventCount)
+                            opacity: tab.checked && tab.eventCount > 0 ? 1 : 0
+                            text: tab.eventCount === 1 ? qsTr("1 event") : qsTr("%1 events").arg(tab.eventCount)
                             textFormat: Text.PlainText
-                            font: Qt.font(root.pageModel.minimumFont)
+                            font: root.pageModel ? root.pageModel.minimumFont : root.defaultFont
                             color: tab.checked ? root.pagePalette.buttonPressedText : root.pagePalette.windowText
                         }
                         Text {
                             objectName: tab.tempoParameter ? "automationTempoTapDraft" : ""
-                            visible: tab.tempoParameter && root.pageModel.tapTempoTapCount > 0
-                            text: root.pageModel.tapTempoTapCount >= 2 ? qsTr("%1 BPM").arg(root.pageModel.tapTempoDraftBpm) : "..."
+                            visible: tab.tempoParameter && root.pageModel && root.pageModel.tapTempoTapCount > 0
+                            text: root.pageModel && root.pageModel.tapTempoTapCount >= 2
+                                ? qsTr("%1 BPM").arg(root.pageModel.tapTempoDraftBpm) : "..."
                             textFormat: Text.PlainText
-                            font: Qt.font(root.pageModel.minimumFont)
+                            font: root.pageModel ? root.pageModel.minimumFont : root.defaultFont
                             color: tab.checked ? root.pagePalette.buttonPressedText : root.pagePalette.windowText
                         }
                     }
@@ -189,7 +207,7 @@ Item {
                         border.width: root.stroke
                         border.color: root.pagePalette.automationTabOutline
                         Rectangle {
-                            visible: tab.model.ghosted
+                            visible: tab.ghosted
                             anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
                             anchors.margins: root.stroke
                             height: root.stroke
@@ -197,10 +215,10 @@ Item {
                         }
                         Rectangle {
                             objectName: "automationParameterInclusionBar"
-                            visible: tab.model.included && !tab.checked
+                            visible: tab.included && !tab.checked
                             anchors.top: parent.top; anchors.right: parent.right; anchors.bottom: parent.bottom
                             anchors.margins: root.stroke
-                            width: root.pageModel.pipExtent
+                            width: root.pageModel ? root.pageModel.pipExtent : 0
                             color: root.pagePalette.tabPressedBackground
                         }
                         Rectangle {
@@ -213,21 +231,21 @@ Item {
                     }
                     Accessible.selected: tab.checked
                     Accessible.description: (tab.tempoParameter ? qsTr("Song-global tempo parameter") : qsTr("Track automation parameter"))
-                        + (tab.model.included ? qsTr("; included in shared selection") : qsTr("; not in shared selection"))
-                        + (tab.model.ghosted ? qsTr("; shown as ghost nodes") : "")
+                        + (tab.included ? qsTr("; included in shared selection") : qsTr("; not in shared selection"))
+                        + (tab.ghosted ? qsTr("; shown as ghost nodes") : "")
                 }
             }
         }
     }
     Timer {
         id: idle
-        interval: root.pageModel.tapTempoIdleCommitMs
-        onTriggered: root.pageModel.tapTempoIdleElapsed()
+        interval: root.pageModel ? root.pageModel.tapTempoIdleCommitMs : 0
+        onTriggered: if (root.pageModel) root.pageModel.tapTempoIdleElapsed()
     }
     Connections {
         target: root.pageModel
-        function onTapTempoTapCountChanged() {
-            if (root.pageModel.tapTempoTapCount > 0) idle.restart()
+        function onTapTempoTapCountChanged(): void {
+            if (root.pageModel && root.pageModel.tapTempoTapCount > 0) idle.restart()
             else idle.stop()
         }
     }

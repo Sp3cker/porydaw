@@ -3,9 +3,8 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellMenus"
     when: windowShown
@@ -13,7 +12,6 @@ TestCase {
     height: 720
     visible: true
 
-    property var shell: null
     readonly property var settings: bootstrap.preferences
 
     ShellQmlBootstrap { id: bootstrap }
@@ -22,48 +20,11 @@ TestCase {
     property alias soloTextProbe: soloTextProbeComponent
     Component { id: soloTextProbeComponent; TextInput { text: "focused edit" } }
 
-    function closeShell() {
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            var settled = false
-            for (var step = 0; step < 12 && !settled; ++step) {
-                var gate = waitForNative(function() {
-                    return shell.shellPresenter.closeReady
-                        || shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                }, 5000)
-                if (!gate)
-                    break
-                if (shell.shellPresenter.closeReady) {
-                    settled = true
-                    break
-                }
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-                wait(50)
-            }
-            verify(shell.shellPresenter.closeReady,
-                   "teardown waits for scene destruction and grid detach")
-        }
-        shell.destroy()
-        shell = null
-        wait(0)
-    }
+    closeAllSteps: 12
 
-    function cleanup() {
-        closeShell()
-    }
+    laneBootstrap: bootstrap
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-
-    function openDiagnostics(session) {
-        return " (projectOpen=" + session.projectOpen
-            + "; songOpen=" + session.songOpen
-            + "; lastSaveError=" + session.lastSaveError
-            + "; status=" + shell.shellPresenter.statusText + ")"
-    }
+    diagnosticsIncludeLabels: false
 
     function openShell() {
         // Every explicit-open test starts without a stale startup recipe.
@@ -106,9 +67,9 @@ TestCase {
     function checkMenuItem(menu, actionId, label) {
         var item = findChild(menu, "shellAction_" + actionId)
         verify(item !== null, "the menu owns " + actionId)
-        compare(shell.shellPresenter.actionLabel(actionId), label,
+        compare(shell.shellPresenter.action(actionId).label, label,
                 actionId + " keeps the keymap label")
-        verify(item.text.indexOf(shell.shellPresenter.menuLabel(actionId)) === 0,
+        verify(item.text.indexOf(shell.shellPresenter.action(actionId).menuLabel) === 0,
                 actionId + " shows its label, got: " + item.text)
         return item
     }

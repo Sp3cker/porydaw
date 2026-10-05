@@ -36,10 +36,12 @@ extension SongRegistration {
         var insertAfter = -1
         var firstDefine = -1
         var firstEndif = -1
-        let ownDefine = RegistrationText.dynamic(#"^(\s*#define\s+\#(constant)\s+)(\d+)(.*)$"#)
         for index in songsH.lines.indices {
             let text = songsH.text(index)
-            if own < 0, let match = RegistrationText.match(ownDefine, text) {
+            if own < 0,
+                let match = RegistrationText.match(
+                    RegistrationText.prefixDefine, text, constant: constant, nameGroup: 2)
+            {
                 own = index
                 ownMatch = match
             }
@@ -49,7 +51,7 @@ extension SongRegistration {
             {
                 let follow = Int(marker.group(3)) == nil ? constant : String(plan.songId)
                 if marker.group(3) != follow {
-                    songsH.replace(index, marker.group(1) + follow + marker.group(4))
+                    songsH.replaceValue(index, marker, group: 3, with: follow)
                 }
                 continue
             }
@@ -67,15 +69,15 @@ extension SongRegistration {
             if plan.renumberFrom >= 0 && index != own && id >= plan.renumberFrom
                 && id < plan.renumberBelow
             {
-                songsH.replace(index, entry.group(1) + String(id + 1) + entry.group(4))
+                songsH.replaceValue(index, entry, group: 3, with: String(id + 1))
             }
         }
         let moveOwn =
             own >= 0 && plan.migrateFromIndex >= 0
-            && Int(ownMatch?.group(2) ?? "") != plan.songId
+            && Int(ownMatch?.group(3) ?? "") != plan.songId
         if own >= 0 && !moveOwn, let old = ownMatch {
-            if Int(old.group(2)) != plan.songId {
-                songsH.replace(own, old.group(1) + String(plan.songId) + old.group(3))
+            if Int(old.group(3)) != plan.songId {
+                songsH.replaceValue(own, old, group: 3, with: String(plan.songId))
             }
         } else {
             var at =
@@ -93,7 +95,7 @@ extension SongRegistration {
         if plan.ldApplicable {
             let path = root + "/ld_script.ld"
             var file = try RegistrationLines(path: path)
-            let needle = "sound/songs/midi/\(label).o"
+            let needle = RegistrationText.midiObjectReference(for: label)
             let last = file.lines.indices.last { file.text($0).contains("sound/songs/midi/") }
             if !file.lines.indices.contains(where: { file.text($0).contains(needle) }) {
                 file.insert((last ?? -1) + 1, plan.ldLine)
@@ -128,13 +130,15 @@ extension SongRegistration {
                 if plan.renumberFrom >= 0 && entry.group(1) != constant
                     && value >= plan.renumberFrom && value < plan.renumberBelow
                 {
-                    file.replace(index, entry.prefix(3) + RegistrationText.bytes(value + 1))
+                    file.replaceValue(
+                        index, entry, group: 3, with: RegistrationText.bytes(value + 1), preserveSuffix: false)
                 }
             }
             let moveOwn = own >= 0 && plan.migrateFromIndex >= 0
             if own >= 0 && !moveOwn, let old = ownMatch {
                 if RegistrationText.charmapValue(old) != plan.songId {
-                    file.replace(own, old.prefix(3) + RegistrationText.bytes(plan.songId))
+                    file.replaceValue(
+                        own, old, group: 3, with: RegistrationText.bytes(plan.songId), preserveSuffix: false)
                 }
             } else if moveOwn || !ownAnyForm {
                 var at = insertAfter >= 0 ? insertAfter + 1 : firstEntry

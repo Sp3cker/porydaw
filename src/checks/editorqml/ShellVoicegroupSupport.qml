@@ -7,7 +7,7 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "NativeWait.js" as NativeWait
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellVoicegroup"
     when: windowShown
@@ -16,13 +16,14 @@ TestCase {
     visible: true
     property alias bootstrap: voiceBootstrap
     property alias fileProbe: voiceFileProbe
-    property alias app: voiceApp
+    readonly property ApplicationSession app: voiceShell.session
+    property alias shellPresenter: voiceShell
     property alias panel: voicePanel
     property alias fullShellComponent: shellWindowComponent
 
     ShellQmlBootstrap { id: voiceBootstrap }
     TabsDrawerProbe { id: voiceFileProbe }
-    ApplicationSession { id: voiceApp }
+    ShellPresenter { id: voiceShell }
     property int saveStarts: 0
     property int saveFinishes: 0
     Connections {
@@ -57,7 +58,7 @@ TestCase {
     Pane {
         anchors.fill: parent
         padding: 0
-        font: Qt.font(app.typographyFonts.body)
+        font: app.typographyFonts.body
         contentItem: VoicegroupPanel {
             id: voicePanel
             applicationSession: app
@@ -73,9 +74,7 @@ TestCase {
         compare(item.font.weight, expected.weight, name + " uses " + role + " weight")
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
+    laneBootstrap: bootstrap
 
     function createFullShell() {
         bootstrap.preferences.setString("lastProjectDir", "")

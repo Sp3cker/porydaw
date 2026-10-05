@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls
+import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
 import PorydawApp
@@ -11,10 +11,10 @@ ColumnLayout {
     id: editor
     objectName: "voicegroupEditor"
     required property VoiceListController controller
-    required property var colors
+    required property GridPalette colors
     required property ApplicationSession applicationSession
     readonly property real baseFontPx: applicationSession.baseFontPx
-    readonly property var draft: controller.editorModel()
+    readonly property VoiceEditorController draft: controller.editorModel() as VoiceEditorController
     readonly property int spacingPx: Math.max(1, Math.round(baseFontPx * 0.16))
     readonly property int regularHeight: Math.round(baseFontPx * 1.83)
     readonly property int spinHeight: Math.round(baseFontPx * 2.08)
@@ -34,27 +34,30 @@ ColumnLayout {
     readonly property bool hasAdsr: draft.editable && draft.macro !== 11 && draft.macro !== 12
     readonly property bool hasSynth: draft.editable && draft.isSynth
     readonly property bool hasPulse: hasSynth && draft.waveform === 0
-    readonly property int visibleRows: 1 + Number(hasSymbol) + Number(hasSweep)
-                                       + Number(hasDuty) + Number(hasPeriod) + Number(hasAdsr)
-                                       + Number(hasSynth) + Number(hasPulse)
-                                       + Number(draft.editable && draft.notice.length > 0)
-    // QFormLayout's visible rows, half-space gaps, button inset, and outer
-    // top offset. A nested ColumnLayout otherwise expands into the tree's
-    // fill-height slack; this editor must take only its native form height.
+    readonly property int visibleRows: 1 + (hasSymbol ? 1 : 0) + (hasSweep ? 1 : 0)
+                                       + (hasDuty ? 1 : 0) + (hasPeriod ? 1 : 0) + (hasAdsr ? 1 : 0)
+                                       + (hasSynth ? 1 : 0) + (hasPulse ? 1 : 0)
+                                       + (draft.editable && draft.notice.length > 0 ? 1 : 0)
+    // The editor takes only its native form height, not the tree's fill-height slack.
     Layout.minimumHeight: 0
     Layout.fillHeight: false
     Layout.preferredHeight: (draft.editable ? regularHeight
                                            + (draft.notice.length > 0 ? noticeHeight : 0)
                                            : noticeHeight)
-                            + Number(hasSymbol) * regularHeight
-                            + Number(hasSweep) * spinHeight
-                            + Number(hasDuty) * regularHeight
-                            + Number(hasPeriod) * regularHeight
-                            + Number(hasAdsr) * spinHeight
-                            + Number(hasSynth) * regularHeight
-                            + Number(hasPulse) * spinHeight
+                            + (hasSymbol ? regularHeight : 0)
+                            + (hasSweep ? spinHeight : 0)
+                            + (hasDuty ? regularHeight : 0)
+                            + (hasPeriod ? regularHeight : 0)
+                            + (hasAdsr ? spinHeight : 0)
+                            + (hasSynth ? regularHeight : 0)
+                            + (hasPulse ? spinHeight : 0)
                             + buttonHeight + (visibleRows + 1) * spacingPx
     spacing: spacingPx
+
+    component VoiceTypeChoice: QtObject {
+        required property string name
+        required property int macro
+    }
 
     Label {
         objectName: "voicegroupEditorNotice"
@@ -82,22 +85,19 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.minimumHeight: 0
             Layout.preferredHeight: editor.baseFontPx * 1.85
-            model: {
-                const revision = editor.controller.catalogRevision
-                const types = [{ name: qsTr("Sample"), macro: 0 },
-                               { name: qsTr("Sample (no resample)"), macro: 1 },
-                               { name: qsTr("Sample (alt)"), macro: 2 },
-                               { name: qsTr("Drumkit"), macro: 12 },
-                               { name: qsTr("Square 1"), macro: 3 },
-                               { name: qsTr("Square 2"), macro: 5 },
-                               { name: qsTr("Wave"), macro: 7 },
-                               { name: qsTr("Noise"), macro: 9 }]
-                if (editor.controller.canMintSynths
-                        || editor.controller.synthCatalogChoices().length > 0
-                        || editor.draft.isSynth)
-                    types.push({ name: qsTr("Synth (Golden Sun)"), macro: -1 })
-                return types
-            }
+            readonly property list<VoiceTypeChoice> choices: [
+                VoiceTypeChoice { name: qsTr("Sample"); macro: 0 },
+                VoiceTypeChoice { name: qsTr("Sample (no resample)"); macro: 1 },
+                VoiceTypeChoice { name: qsTr("Sample (alt)"); macro: 2 },
+                VoiceTypeChoice { name: qsTr("Drumkit"); macro: 12 },
+                VoiceTypeChoice { name: qsTr("Square 1"); macro: 3 },
+                VoiceTypeChoice { name: qsTr("Square 2"); macro: 5 },
+                VoiceTypeChoice { name: qsTr("Wave"); macro: 7 },
+                VoiceTypeChoice { name: qsTr("Noise"); macro: 9 },
+                VoiceTypeChoice { name: qsTr("Synth (Golden Sun)"); macro: -1 }
+            ]
+            model: editor.controller.canMintSynths || editor.controller.synthChoices.length > 0
+                   || editor.draft.isSynth ? typePicker.choices : typePicker.choices.slice(0, 8)
             textRole: "name"
             valueRole: "macro"
             currentIndex: indexOfValue(editor.draft.isSynth ? -1
@@ -137,11 +137,8 @@ ColumnLayout {
             visible: editor.draft.isSynth
             Layout.fillWidth: true
             Layout.preferredHeight: editor.regularHeight
-            model: {
-                const revision = editor.controller.catalogRevision
-                return editor.controller.synthCatalogChoices()
-            }
-            currentIndex: model.indexOf(editor.draft.symbol)
+            model: editor.controller.synthChoices
+            currentIndex: editor.controller.synthChoices.indexOf(editor.draft.symbol)
             displayText: editor.draft.symbol
             onActivated: editor.draft.changeType(-1, currentText)
         }
@@ -151,10 +148,7 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: editor.baseFontPx * 1.5
             editable: true
-            model: {
-                const revision = editor.controller.catalogRevision
-                return editor.controller.drumkitChoices()
-            }
+            model: editor.controller.drumkitSymbols
             editText: editor.draft.symbol
             onActivated: editor.draft.changeType(editor.draft.macro, currentText)
             onAccepted: editor.draft.changeType(editor.draft.macro, editText)
@@ -206,7 +200,8 @@ ColumnLayout {
         ComboBox {
             objectName: "vgSynthWaveformCombo"
             Layout.fillWidth: true
-            model: [qsTr("Pulse"), qsTr("Saw"), qsTr("Triangle")]
+            readonly property list<string> choices: [qsTr("Pulse"), qsTr("Saw"), qsTr("Triangle")]
+            model: choices
             currentIndex: editor.draft.waveform
             onActivated: index => editor.draft.changeSynth("waveform", index)
         }
@@ -223,23 +218,29 @@ ColumnLayout {
             color: editor.colors.primaryText
         }
         Repeater {
-            model: [{ name: "BaseDuty", field: "baseDuty", detail: qsTr("Base duty cycle") },
-                    { name: "DutyStep", field: "dutyStep", detail: qsTr("Step per frame") },
-                    { name: "ModDepth", field: "modDepth", detail: qsTr("Modulation amount") },
-                    { name: "Phase", field: "phase", detail: qsTr("LFO phase offset") }]
+            model: ListModel {
+                ListElement { name: "BaseDuty"; field: "baseDuty"; detail: qsTr("Base duty cycle") }
+                ListElement { name: "DutyStep"; field: "dutyStep"; detail: qsTr("Step per frame") }
+                ListElement { name: "ModDepth"; field: "modDepth"; detail: qsTr("Modulation amount") }
+                ListElement { name: "Phase"; field: "phase"; detail: qsTr("LFO phase offset") }
+            }
             SpinBox {
-                required property var modelData
-                objectName: "vgSynth" + modelData.name + "Spin"
+                required property string name
+                required property string field
+                required property string detail
+                objectName: "vgSynth" + name + "Spin"
                 Layout.fillWidth: true
                 Layout.minimumWidth: editor.baseFontPx * 3.3
                 Layout.preferredHeight: editor.spinHeight
                 Layout.minimumHeight: 0
                 from: 0
                 to: 255
-                value: editor.draft[modelData.field]
-                ToolTip.text: modelData.detail
+                value: field === "baseDuty" ? editor.draft.baseDuty
+                       : field === "dutyStep" ? editor.draft.dutyStep
+                       : field === "modDepth" ? editor.draft.modDepth : editor.draft.phase
+                ToolTip.text: detail
                 ToolTip.visible: hovered
-                onValueModified: editor.draft.changeSynth(modelData.field, value)
+                onValueModified: editor.draft.changeSynth(field, value)
             }
         }
     }
@@ -277,7 +278,8 @@ ColumnLayout {
         ComboBox {
             objectName: "vgDutyCombo"
             Layout.fillWidth: true
-            model: ["12.5%", "25%", "50%", "75%"]
+            readonly property list<string> choices: ["12.5%", "25%", "50%", "75%"]
+            model: choices
             currentIndex: editor.draft.duty
             onActivated: index => editor.draft.change("duty", index)
         }
@@ -295,7 +297,8 @@ ColumnLayout {
         ComboBox {
             objectName: "vgPeriodCombo"
             Layout.fillWidth: true
-            model: [qsTr("0 (15-bit, hiss)"), qsTr("1 (7-bit, metallic)")]
+            readonly property list<string> choices: [qsTr("0 (15-bit, hiss)"), qsTr("1 (7-bit, metallic)")]
+            model: choices
             currentIndex: editor.draft.period
             onActivated: index => editor.draft.change("period", index)
         }
@@ -311,19 +314,22 @@ ColumnLayout {
             color: editor.colors.primaryText
         }
         Repeater {
-            model: ["attack", "decay", "sustain", "release"]
+            readonly property list<string> fields: ["attack", "decay", "sustain", "release"]
+            model: fields
             SpinBox {
                 required property int index
                 required property string modelData
-                objectName: "vg" + modelData.charAt(0).toUpperCase()
-                            + modelData.slice(1) + "Spin"
+                objectName: "vg" + (index === 0 ? "Attack" : index === 1 ? "Decay"
+                                   : index === 2 ? "Sustain" : "Release") + "Spin"
                 Layout.fillWidth: true
                 Layout.minimumWidth: editor.baseFontPx * 3.3
                 Layout.preferredHeight: editor.baseFontPx * 2.08
                 Layout.minimumHeight: 0
                 from: 0
                 to: editor.isCgb ? (modelData === "sustain" ? 15 : 7) : 255
-                value: editor.draft[modelData]
+                value: modelData === "attack" ? editor.draft.attack
+                       : modelData === "decay" ? editor.draft.decay
+                       : modelData === "sustain" ? editor.draft.sustain : editor.draft.release
                 onValueModified: editor.draft.change(modelData, value)
             }
         }

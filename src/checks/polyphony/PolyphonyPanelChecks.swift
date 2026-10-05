@@ -1,3 +1,5 @@
+import Foundation
+import PorydawCore
 @testable import PorydawApp
 @testable import PorydawAppAudio
 import PorydawPlaybackNative
@@ -48,6 +50,7 @@ func runPolyphonyPanelChecks(_ report: CheckReport) {
     report.expectEqual(
         expected: 3, actual: panel.counters[1].tailCut, cppID: id, what: "tail counter projects unchanged")
     flashFadeLawChecks(report, snapshot: snapshot)
+    positionReadoutBoundaryChecks(report, snapshot: snapshot)
     snapshot.steal[2] += 1
     panel.update(snapshot)
     report.expect(panel.counters[1].flashAlpha > 0.5, cppID: id, message: "counter increase highlights its track")
@@ -152,6 +155,52 @@ func runPolyphonyPanelChecks(_ report: CheckReport) {
             message: "unchecking an open panel disables renderer invert")
     } catch {
         report.fail(invertID, "audio device initialization failed: \(error)")
+    }
+}
+
+@MainActor
+private func positionReadoutBoundaryChecks(_ report: CheckReport, snapshot: AudioPolySnapshot) {
+    let id = "swiftcore/PolyphonyPanel::positionReadoutBoundaries"
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(id, "missing staged project fixtures")
+        return
+    }
+    do {
+        let service = ProjectService()
+        let base = try runBlocking {
+            try await service.open(root: fixtureRoot)
+            return try await DocumentSession.open(
+                service: service, label: "mus_route101", sampleRate: 48_000)
+        }
+        var file = makeMidiFixture()
+        file.chunks[0].events.append(.meta(tick: 25, type: 0x58, data: [3, 3, 24, 8]))
+        file.chunks[0].events.append(.meta(tick: 62, type: 0x58, data: [5, 4, 24, 8]))
+        let session = makeSyntheticSession(suite: base, service: service, file: file)
+        let panel = PolyphonyPanelPresenter()
+        panel.setContext(session: session)
+        panel.setVisible(showing: true)
+        let boundaries: [(tick: Tick, position: String)] = [
+            (0, "1:1.0"), (23, "1:1.23"), (24, "1:2.0"), (25, "2:1.0"),
+            (36, "2:1.11"), (37, "2:2.0"), (60, "2:3.11"), (61, "3:1.0"),
+            (62, "4:1.0"), (67, "4:1.5"), (68, "4:2.0"), (91, "4:5.5"), (92, "5:1.0"),
+        ]
+        var sample = snapshot
+        sample.eventTotal = UInt32(boundaries.count)
+        for (index, boundary) in boundaries.enumerated() {
+            sample.events[index] = M4APolyEvent(
+                type: 0, trackIndex: 0, midiKey: 60, byTrack: 0, program: 0, tick: boundary.tick)
+        }
+        panel.update(sample)
+        report.expectEqual(
+            expected: boundaries.count, actual: panel.events.count,
+            cppID: id, what: "all boundary events publish a position readout")
+        for (index, boundary) in boundaries.reversed().enumerated() {
+            report.expect(
+                panel.events[index].text.hasPrefix(boundary.position + " | "),
+                cppID: id, message: "bar ceilings and fractional beats at tick \(boundary.tick)")
+        }
+    } catch {
+        report.fail(id, "position fixture failed: \(error)")
     }
 }
 

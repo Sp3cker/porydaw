@@ -1,30 +1,43 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
+import PorydawApp as App
 
 FocusScope {
     id: root
     objectName: "automationMenu"
-    required property var model
-    property var hintService: pageItem ? pageItem.hintService : null
-    property var pageItem: null
-    property bool showing: false
+    required final property App.AutomationPage model
+    final property App.MouseHints hintService: null
+    final property Item pageItem: null
+    final property bool showing: false
     property bool childOpen: false
     property int currentRow: -1
     property int childRow: -1
     signal closed()
     anchors.fill: parent
-    visible: showing
-    enabled: showing
-    readonly property real rowHeight: Math.round(model.baseFontPx * 1.6)
-    readonly property point anchor: pageItem && parent
-        ? pageItem.mapToItem(parent, model.menuX, model.menuY) : Qt.point(model.menuX, model.menuY)
-    readonly property var menuColors: root.pageItem ? root.pageItem.gridPalette : null
-    readonly property var appearance: root.menuColors ? ({background: root.menuColors.menuBackground,
-        outline: root.menuColors.outline, text: root.menuColors.windowText,
-        hoverBackground: root.menuColors.menuHoverBackground, hoverText: root.menuColors.windowText,
-        disabledText: root.menuColors.disabledText, separator: root.menuColors.separator,
-        font: Qt.font(model.captionFont)}) : null
+    visible: showing && model !== null
+    enabled: showing && model !== null
+    readonly property real rowHeight: model ? Math.round(model.baseFontPx * 1.6) : 0
+    readonly final property point anchor: {
+        const x = root.model ? root.model.menuX : 0
+        const y = root.model ? root.model.menuY : 0
+        if (!root.pageItem || !root.parent) return Qt.point(x, y)
+        const mapped = root.pageItem.mapToItem(root.parent, x, y)
+        return Qt.point(mapped.x, mapped.y)
+    }
+    final property App.GridPalette menuColors: null
+    readonly final property MenuAppearance appearance: menuAppearance
+    MenuAppearance {
+        id: menuAppearance
+        background: root.menuColors ? root.menuColors.menuBackground : "transparent"
+        outline: root.menuColors ? root.menuColors.outline : "transparent"
+        text: root.menuColors ? root.menuColors.windowText : "transparent"
+        hoverBackground: root.menuColors ? root.menuColors.menuHoverBackground : "transparent"
+        hoverText: root.menuColors ? root.menuColors.windowText : "transparent"
+        disabledText: root.menuColors ? root.menuColors.disabledText : "transparent"
+        separator: root.menuColors ? root.menuColors.separator : "transparent"
+        font: root.model.captionFont
+    }
     onShowingChanged: {
         childOpen = false
         currentRow = -1
@@ -36,37 +49,38 @@ FocusScope {
     }
     // Focus lands in the same pass the menu becomes showable: claiming while
     // still disabled would drop focus to the window root, so every stage re-checks.
-    function claimMenuFocus() {
+    function claimMenuFocus(): void {
         if (root.showing && root.visible && root.enabled)
             root.forceActiveFocus(Qt.PopupFocusReason)
     }
     onVisibleChanged: claimMenuFocus()
     onEnabledChanged: claimMenuFocus()
-    function firstEnabled(level, start, step) {
-        const count = level === panel ? model.menuRowCount : model.menuChildRowCount
+    function firstEnabled(level: QuickMenuPanel, start: int, step: int): int {
+        const count = model ? (level === panel ? model.menuRowCount : model.menuChildRowCount) : 0
         for (let i = start; i >= 0 && i < count; i += step) {
-            const item = level.rowItem(i)
-            if (item && item.model.enabled && !item.model.separator) return i
+            const row = model.menuRow(i, level !== panel)
+            if (row && row.enabled && !row.separator) return i
         }
         return -1
     }
-    function hoverRow(level, index) {
+    function hoverRow(level: QuickMenuPanel, index: int): void {
         if (level === panel) {
             currentRow = index
-            childOpen = !!level.rowItem(index)?.model.hasSubmenu
+            const row = model ? model.menuRow(index, false) : null
+            childOpen = row !== null && row.hasSubmenu
         } else childRow = index
     }
-    function activateRow(level, index) {
-        const item = level.rowItem(index)
-        if (!item || !item.model.enabled || item.model.separator) return false
-        if (item.model.hasSubmenu) {
+    function activateRow(level: QuickMenuPanel, index: int): bool {
+        const row = model ? model.menuRow(index, level !== panel) : null
+        if (!row || !row.enabled || row.separator) return false
+        if (row.hasSubmenu) {
             childOpen = true
             childRow = firstEnabled(submenu, 0, 1)
             return true
         }
-        return model.consumeMenuAction(item.model.actionId)
+        return model.consumeMenuAction(row.actionId)
     }
-    function moveRow(delta) {
+    function moveRow(delta: int): void {
         const level = childOpen ? submenu : panel
         const current = childOpen ? childRow : currentRow
         let next = firstEnabled(level, current + delta, delta)
@@ -75,16 +89,17 @@ FocusScope {
         if (childOpen) childRow = next
         else currentRow = next
     }
-    function currentActionId() {
-        const item = (childOpen ? submenu : panel).rowItem(childOpen ? childRow : currentRow)
-        return item ? item.model.actionId : -1
+    function currentActionId(): int {
+        const row = model ? model.menuRow(childOpen ? childRow : currentRow, childOpen) : null
+        return row ? row.actionId : -1
     }
-    function dismiss() { model.dismissMenu() }
+    function dismiss(): void { if (root.model) root.model.dismissMenu() }
     MouseArea {
         id: underlay
         objectName: "automationMenuUnderlay"
         anchors.fill: parent
         onPressed: mouse => {
+            if (!root.model) return
             const p = root.pageItem ? mapToItem(root.pageItem, mouse.x, mouse.y) : Qt.point(-1, -1)
             root.model.outsideMenuPress(p.x - root.model.plotOrigin, p.y, mouse.button)
         }
@@ -98,19 +113,19 @@ FocusScope {
         id: panel
         objectName: "automationMenuPanel"
         host: root
-        menuModel: root.model.menuRows
+        menuModel: root.model ? root.model.menuRows : null
         appearance: root.appearance
         rootLevel: true
         rowObjectNamePrefix: "automationMenuRow_"
         rowHeight: root.rowHeight
-        checkX: Math.round(root.model.baseFontPx * 0.3)
-        checkWidth: Math.round(root.model.baseFontPx * 1.1)
-        textX: Math.round(root.model.baseFontPx * 1.7)
+        checkX: root.model ? Math.round(root.model.baseFontPx * 0.3) : 0
+        checkWidth: root.model ? Math.round(root.model.baseFontPx * 1.1) : 0
+        textX: root.model ? Math.round(root.model.baseFontPx * 1.7) : 0
         textRight: menuWidth - textX
-        arrowRight: menuWidth - Math.round(root.model.baseFontPx * 0.4)
-        arrowWidth: Math.round(root.model.baseFontPx * 0.8)
-        menuWidth: Math.min(root.width, root.model.baseFontPx * 18)
-        menuHeight: Math.min(root.height, root.model.menuRowCount * rowHeight + 2)
+        arrowRight: menuWidth - (root.model ? Math.round(root.model.baseFontPx * 0.4) : 0)
+        arrowWidth: root.model ? Math.round(root.model.baseFontPx * 0.8) : 0
+        menuWidth: root.model ? Math.min(root.width, root.model.baseFontPx * 18) : 0
+        menuHeight: root.model ? Math.min(root.height, root.model.menuRowCount * rowHeight + 2) : 0
         readonly property point origin: MenuPlacement.clampOrigin(
             root.anchor, menuWidth, menuHeight, root.width, root.height)
         x: origin.x
@@ -127,16 +142,16 @@ FocusScope {
         objectName: "automationMenuSubmenu"
         visible: root.childOpen
         host: root
-        menuModel: root.model.menuChildRows
+        menuModel: root.model ? root.model.menuChildRows : null
         appearance: root.appearance
         rowObjectNamePrefix: "automationMenuChildRow_"
         rowHeight: root.rowHeight
         checkX: panel.checkX
         checkWidth: panel.checkWidth
         textX: panel.textX
-        textRight: menuWidth - Math.round(root.model.baseFontPx * 0.5)
+        textRight: menuWidth - (root.model ? Math.round(root.model.baseFontPx * 0.5) : 0)
         menuWidth: panel.menuWidth
-        menuHeight: Math.min(root.height, root.model.menuChildRowCount * rowHeight + 2)
+        menuHeight: root.model ? Math.min(root.height, root.model.menuChildRowCount * rowHeight + 2) : 0
         readonly property point origin: MenuPlacement.flyoutOrigin(
             panel.x, panel.width, panel.y + root.currentRow * rowHeight,
             width, height, root.width, root.height)

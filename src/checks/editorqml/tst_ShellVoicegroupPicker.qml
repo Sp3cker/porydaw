@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -7,7 +9,87 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 
 ShellVoicegroupSupport {
+    BridgeValueTypeProbe { id: bridgeValues }
+    Rectangle {
+        id: bridgeColorBinding
+        visible: false
+        color: bridgeValues.sampleColor
+    }
+    Text {
+        id: bridgeFontBinding
+        visible: false
+        font: bridgeValues.sampleFont
+    }
     SampleBinProbe { id: sampleHeader }
+
+    function test_bridgeNativeColorAndFontValues(): void {
+        bridgeValues.restoreValues()
+        tryCompare(bridgeFontBinding, "font", bridgeValues.sampleFont)
+        tryCompare(bridgeColorBinding, "color", bridgeValues.sampleColor)
+        const initialMap = bridgeValues.echoMap({
+            color: bridgeValues.sampleColor, font: bridgeValues.sampleFont
+        })
+        const colors = [
+            bridgeValues.sampleColor, bridgeColorBinding.color,
+            bridgeValues.echoColor(bridgeValues.sampleColor), initialMap.color
+        ]
+        for (const value of colors) {
+            fuzzyCompare(value.r, 51 / 255, 0.000001, "native color red")
+            fuzzyCompare(value.g, 102 / 255, 0.000001, "native color green")
+            fuzzyCompare(value.b, 153 / 255, 0.000001, "native color blue")
+            fuzzyCompare(value.a, 204 / 255, 0.000001, "native color alpha")
+        }
+        const fonts = [
+            bridgeValues.sampleFont, bridgeFontBinding.font,
+            bridgeValues.echoFont(bridgeValues.sampleFont), initialMap.font
+        ]
+        for (const value of fonts) {
+            compare(value.family, "Atkinson Hyperlegible Next", "native font family")
+            compare(value.pixelSize, 19, "native font pixel size")
+            compare(value.weight, Font.DemiBold, "native Qt font weight")
+            compare(value.italic, true, "native font italic")
+            compare(value.letterSpacing, 1.5, "absolute pixel letter spacing")
+            compare(value.hintingPreference, Font.PreferNoHinting, "unhinted by default")
+            compare(value.features.tnum, 1, "native OpenType tabular figures")
+        }
+        try {
+            compare(bridgeValues.child, null)
+            compare(bridgeValues.optionalObject(), null)
+            bridgeValues.child = bridgeValues.selfObject()
+            compare(bridgeValues.child, bridgeValues)
+            compare(bridgeValues.child.sampleFont.features.tnum, 1)
+            compare(bridgeValues.optionalObject(), bridgeValues)
+            bridgeValues.child = null
+            compare(bridgeValues.optionalObject(), null)
+            bridgeValues.sampleColor = Qt.rgba(1, 0, 1, 1)
+            bridgeValues.sampleFont = Qt.font({
+                family: "Atkinson Hyperlegible Next", pixelSize: 23, weight: Font.Bold,
+                italic: false, letterSpacing: -0.5,
+                hintingPreference: Font.PreferVerticalHinting
+            })
+            verify(bridgeValues.writesReachedSwift(), "QML property writes convert back to Swift")
+            tryCompare(bridgeColorBinding, "color", Qt.rgba(1, 0, 1, 1))
+            tryCompare(bridgeFontBinding, "font", bridgeValues.sampleFont)
+            const writtenMap = bridgeValues.echoMap({
+                color: bridgeValues.sampleColor, font: bridgeValues.sampleFont
+            })
+            compare(bridgeValues.echoColor(bridgeValues.sampleColor), Qt.rgba(1, 0, 1, 1))
+            compare(writtenMap.color, Qt.rgba(1, 0, 1, 1))
+            for (const value of [
+                bridgeValues.sampleFont, bridgeFontBinding.font,
+                bridgeValues.echoFont(bridgeValues.sampleFont), writtenMap.font
+            ]) {
+                compare(value.family, "Atkinson Hyperlegible Next")
+                compare(value.pixelSize, 23)
+                compare(value.weight, Font.Bold)
+                compare(value.italic, false)
+                compare(value.letterSpacing, -0.5)
+                compare(value.hintingPreference, Font.PreferVerticalHinting)
+            }
+        } finally {
+            bridgeValues.restoreValues()
+        }
+    }
 
     function expectedDetail(symbol, looped) {
         verify(sampleHeader.inspect(bootstrap.projectRoot
@@ -25,6 +107,24 @@ ShellVoicegroupSupport {
         return findChild(list.itemAtIndex(index), "vgSamplePickerLoopBadge")
     }
 
+    function pickerIndex(controller: VoiceListController, predicate: var): int {
+        for (let index = 0; index < controller.samplePickerCount; ++index) {
+            const row = controller.samplePickerRow(index) as SamplePickerRow
+            if (predicate(row))
+                return index
+        }
+        return -1
+    }
+
+    function pickerHasOnlyWaves(controller: VoiceListController): bool {
+        for (let index = 0; index < controller.samplePickerCount; ++index) {
+            const row = controller.samplePickerRow(index) as SamplePickerRow
+            if (row.symbol && !row.symbol.startsWith("ProgrammableWaveData_"))
+                return false
+        }
+        return true
+    }
+
     function test_wDrumkitTypeListsCatalogDrumkits() {
         const controller = app.voiceListController()
         controller.selectSlot(0)
@@ -32,7 +132,7 @@ ShellVoicegroupSupport {
         compare(draft.macro, 0, "slot zero starts as a DirectSound voice")
         const combo = findChild(panel, "vgDrumkitCombo")
         verify(combo !== null, "the voice editor mounts its drumkit selector before the catalog")
-        verify(waitForNative(function() { return controller.drumkitChoices().length === 2 }, 15000),
+        verify(waitForNative(function() { return controller.drumkitSymbols.length === 2 }, 15000),
                "the project catalog publishes the fixture drumkits")
         draft.changeType(12, "")
         verify(waitForNative(function() { return draft.macro === 12 }, 15000),
@@ -78,14 +178,15 @@ ShellVoicegroupSupport {
         const loop = "DirectSoundWaveData_fixture_loop"
         const drum = "DirectSoundWaveData_fixture_drum"
         verify(waitForNative(function() {
-            return controller.pickerDetail(loop, false, false).length > 0
+            const index = pickerIndex(controller, row => row.symbol === loop)
+            return index >= 0 && controller.samplePickerRow(index).detail.length > 0
         }, 15000), "picker reads the committed sample set on open")
         verify(waitForNative(function() {
-            return list.model.some(row => row.symbol === loop)
-                   && list.model.some(row => row.symbol === drum)
+            return pickerIndex(controller, row => row.symbol === loop) >= 0
+                   && pickerIndex(controller, row => row.symbol === drum) >= 0
         }, 15000), "loop and one-shot rows populate from the project catalog")
-        const loopIndex = list.model.findIndex(row => row.symbol === loop)
-        const drumIndex = list.model.findIndex(row => row.symbol === drum)
+        const loopIndex = pickerIndex(controller, row => row.symbol === loop)
+        const drumIndex = pickerIndex(controller, row => row.symbol === drum)
         const loopBadge = pickerBadge(list, loopIndex)
         verify(loopBadge !== null && loopBadge.visible && loopBadge.text === "∞",
                "looped sample carries the infinity badge")
@@ -93,26 +194,26 @@ ShellVoicegroupSupport {
         const drumBadge = pickerBadge(list, drumIndex)
         verify(drumBadge !== null && !drumBadge.visible,
                "one-shot sample does not carry the badge")
-        for (let index = 0; index < list.model.length; index++) {
-            const row = list.model[index]
+        for (let index = 0; index < controller.samplePickerCount; index++) {
+            const row = controller.samplePickerRow(index) as SamplePickerRow
             const badge = pickerBadge(list, index)
             verify(badge !== null, "each picker row owns a badge position")
             compare(badge.visible,
                     !!row.symbol && !row.split && !row.typed
-                    && controller.pickerRowLoops(row.symbol),
+                    && row.loops,
                     "only looped sample row shows badge: " + row.symbol)
         }
         list.currentIndex = loopIndex
         tryCompare(detail, "text", expectedDetail("fixture_loop", true))
         list.currentIndex = drumIndex
         tryCompare(detail, "text", expectedDetail("fixture_drum", false))
-        const splitIndex = list.model.findIndex(row => row.symbol === "fixture_bass")
+        const splitIndex = pickerIndex(controller, row => row.symbol === "fixture_bass")
         verify(splitIndex >= 0, "keysplit row exists")
         list.currentIndex = splitIndex
         compare(detail.text, "Keysplit instrument", "keysplit uses the fork detail")
         const search = findChild(popup, "vgSamplePickerSearch")
         search.text = "unlisted_typography_sample"
-        const typedIndex = list.model.findIndex(row => row.typed)
+        const typedIndex = pickerIndex(controller, row => row.typed)
         verify(typedIndex >= 0, "typed row exists")
         list.currentIndex = typedIndex
         compare(detail.text, "Unlisted symbol", "typed row uses the fork detail")
@@ -146,7 +247,7 @@ ShellVoicegroupSupport {
         let search = findChild(popup, "vgSamplePickerSearch")
         let list = findChild(popup, "vgSamplePickerList")
         search.text = "unlisted_typography_sample"
-        verify(list.model.some(row => row.typed && row.symbol === search.text),
+        verify(pickerIndex(controller, row => row.typed && row.symbol === search.text) >= 0,
                "the picker offers a fallback row for an unlisted symbol")
         search.forceActiveFocus()
         keyClick(Qt.Key_Return)
@@ -171,12 +272,11 @@ ShellVoicegroupSupport {
                "wave picker opens with the selected wave symbol current")
         search = findChild(popup, "vgSamplePickerSearch")
         list = findChild(popup, "vgSamplePickerList")
-        verify(list.model.some(row => row.symbol === "ProgrammableWaveData_fixture_saw")
-               && list.model.every(row => !row.symbol
-                                    || row.symbol.startsWith("ProgrammableWaveData_")),
+        verify(pickerIndex(controller, row => row.symbol === "ProgrammableWaveData_fixture_saw") >= 0
+               && pickerHasOnlyWaves(controller),
                "wave mode lists the catalog's waves with full symbols")
         search.text = "ProgrammableWaveData_fixture_saw"
-        const index = list.model.findIndex(row => row.symbol === search.text)
+        const index = pickerIndex(controller, row => row.symbol === search.text)
         verify(index >= 0 && list.currentIndex === index,
                "filtering a wave auditions as wave")
         search.forceActiveFocus()
@@ -232,13 +332,12 @@ ShellVoicegroupSupport {
                     panel.colors.outline.toString().toLowerCase(),
                     "sample popup outline follows the dock palette")
             if (draft.macro === 7 || draft.macro === 8) {
-                verify(list.model.some(row => row.symbol === "ProgrammableWaveData_fixture_saw")
-                       && list.model.every(row => !row.symbol
-                                           || row.symbol.startsWith("ProgrammableWaveData_")),
+                verify(pickerIndex(controller, row => row.symbol === "ProgrammableWaveData_fixture_saw") >= 0
+                       && pickerHasOnlyWaves(controller),
                        "wave mode filters out samples and keysplits")
             }
             if (symbol === "DirectSoundWaveData_fixture_bass") {
-                const headingIndex = list.model.findIndex(row => !row.symbol)
+                const headingIndex = pickerIndex(controller, row => !row.symbol)
                 verify(headingIndex >= 0, "sample picker preserves grouped section headings")
                 list.positionViewAtIndex(headingIndex, ListView.Contain)
                 tryVerify(function() { return !!list.itemAtIndex(headingIndex) }, 1000,
@@ -247,7 +346,7 @@ ShellVoicegroupSupport {
                             "bodyBold", "sample picker section heading")
             }
             search.text = "unlisted_typography_sample"
-            const typedIndex = list.model.findIndex(row => row.typed)
+            const typedIndex = pickerIndex(controller, row => row.typed)
             verify(typedIndex >= 0, "sample picker offers the typed symbol fallback")
             list.positionViewAtIndex(typedIndex, ListView.Contain)
             tryVerify(function() { return !!list.itemAtIndex(typedIndex) }, 1000,
@@ -256,11 +355,13 @@ ShellVoicegroupSupport {
             compareRole(typedText, "body", "sample picker typed fallback")
             compare(typedText.font.italic, true,
                     "sample picker typed fallback uses the published body's italic variant")
+            compare(app.typographyFonts.body.italic, false,
+                    "the typed fallback leaves the shared body font upright")
             search.text = symbol
             tryVerify(function() {
-                return list.model.some(function(row) { return row.symbol === symbol })
+                return pickerIndex(controller, row => row.symbol === symbol) >= 0
             }, 5000, "search finds " + symbol)
-            const index = list.model.findIndex(function(row) { return row.symbol === symbol })
+            const index = pickerIndex(controller, row => row.symbol === symbol)
             list.positionViewAtIndex(index, ListView.Contain)
             tryVerify(function() { return list.itemAtIndex(index) !== null }, 5000)
             const item = list.itemAtIndex(index)

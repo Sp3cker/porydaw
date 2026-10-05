@@ -77,8 +77,8 @@ private func typographyLayoutCheckRoles(_ report: CheckReport) {
                 cppID: typographyLayoutFaceID,
                 message: "\(name) at base \(base) preserves its family, size, weight and spacing")
             report.expect(
-                spec.map["hintingPreference"] as? Int == fontPreferNoHinting
-                    && spec.features["tnum"] as? Int == 1,
+                spec.qmlFont.hintingPreference == .preferNoHinting
+                    && spec.qmlFont.features["tnum"] == 1,
                 cppID: typographyLayoutFeaturesID,
                 message: "\(name) at base \(base) publishes no hinting and tabular figures")
             report.expect(
@@ -86,11 +86,14 @@ private func typographyLayoutCheckRoles(_ report: CheckReport) {
                 cppID: typographyLayoutFaceID,
                 message: "\(name) at base \(base) resolves to an installed font face")
         }
-        let prompt = PromptAppearance.font(typography: typography)
+        let prompt = PromptStyle()
+        prompt.update(
+            metrics: PromptAppearance.Layout(base: Double(base)), palette: GridPalette(),
+            font: typography.body.qmlFont)
         report.expect(
-            prompt["family"] as? String == typography.body.family
-                && prompt["pixelSize"] as? Int == typography.body.pixelSize
-                && prompt["weight"] as? Int == typography.body.weight,
+            prompt.font.family == typography.body.family
+                && prompt.font.pixelSize == typography.body.pixelSize
+                && prompt.font.weight == typography.body.weight,
             cppID: typographyLayoutFaceID,
             message: "time and insert prompts publish the body role at base \(base)")
         let metrics = GridMetrics(baseFontPx: Double(base), dpr: 1, width: 0, height: 0)
@@ -102,15 +105,15 @@ private func typographyLayoutCheckRoles(_ report: CheckReport) {
                 message: "the \(kind) face at base \(base) resolves to an installed font file")
         }
         let header = TrackHeadersPresenter(typography: typography)
-        for (name, map) in [
-            ("controls", header.controlFont),
-            ("normal title", header.normalTitleFont),
-            ("selected title", header.boldTitleFont),
-            ("subtitle", header.subtitleFont),
-            ("prompt", prompt),
+        for (name, family, weight) in [
+            ("controls", header.controlFont.family, header.controlFont.weight),
+            ("normal title", header.normalTitleFont.family, header.normalTitleFont.weight),
+            ("selected title", header.boldTitleFont.family, header.boldTitleFont.weight),
+            ("subtitle", header.subtitleFont.family, header.subtitleFont.weight),
+            ("prompt", prompt.font.family, prompt.font.weight),
         ] {
             report.expect(
-                bundled(map["family"] as? String ?? "", map["weight"] as? Int ?? -1),
+                bundled(family, weight),
                 cppID: typographyLayoutFaceID,
                 message: "\(name) at base \(base) publishes a bundled font face")
         }
@@ -164,13 +167,15 @@ private func typographyLayoutCheckRoles(_ report: CheckReport) {
 @MainActor
 private func typographyLayoutCheckCapture(_ report: CheckReport) {
     let session = ApplicationSession()
+    let fonts = session.typographyFonts
+    let spaces = session.layoutSpaces
     session.configureTypography(baseFontPx: 26)
     report.expect(
         session.baseFontPx == 26 && session.bodyFontPx == 29,
         cppID: typographyLayoutBaseID,
         message: "the first session capture publishes a 26-pixel base and 29-pixel body")
     report.expect(
-        session.layoutSpaces["two"] as? Int == 13,
+        session.layoutSpaces.two == 13,
         cppID: typographyLayoutScaleID,
         message: "the session publishes Two spacing at the captured 26-pixel base")
     session.configureTypography(baseFontPx: 13)
@@ -179,9 +184,20 @@ private func typographyLayoutCheckCapture(_ report: CheckReport) {
         cppID: typographyLayoutBaseID,
         message: "a later different base cannot replace the first session capture")
     report.expect(
-        session.layoutSpaces["half"] as? Int == 3,
+        session.layoutSpaces.half == 3,
         cppID: typographyLayoutScaleID,
         message: "the first session capture keeps Half spacing after a second call")
+    report.expect(
+        session.typographyFonts === fonts && session.layoutSpaces === spaces,
+        cppID: typographyLayoutBaseID,
+        message: "typography capture updates retained font and spacing objects in place")
+    report.expect(
+        fonts.body.pixelSize == 29 && fonts.caption.pixelSize == 26
+            && fonts.body.hintingPreference == .preferNoHinting
+            && fonts.body.features == ["tnum": 1]
+            && fonts.tableMono.letterSpacing == -1 && spaces.six == 39,
+        cppID: typographyLayoutScaleID,
+        message: "typed font and spacing roles preserve sizes, unhinted tabular figures, and Six spacing")
 }
 
 @MainActor
@@ -356,22 +372,22 @@ private func typographyLayoutCheckFaceContracts(_ report: CheckReport) {
         GridFontKind.keyLabel,
     ] {
         report.expect(
-            unhinted[kind]?.map["hintingPreference"] as? Int == fontPreferNoHinting,
+            unhinted[kind]?.qmlFont.hintingPreference == .preferNoHinting,
             cppID: typographyLayoutFaceID,
-            message: "the published face map pins the unhinted preference")
+            message: "the published face font pins the unhinted preference")
     }
     report.expect(
-        Typography(baseFontPx: 16).noteName.map["hintingPreference"] as? Int == fontPreferNoHinting,
+        Typography(baseFontPx: 16).noteName.qmlFont.hintingPreference == .preferNoHinting,
         cppID: typographyLayoutFaceID,
-        message: "the note-name role map pins the unhinted preference")
+        message: "the note-name role font pins the unhinted preference")
     report.expect(
-        AutomationPage(baseFontPx: 16).captionFont["hintingPreference"] as? Int == fontPreferNoHinting,
+        AutomationPage(baseFontPx: 16).captionFont.hintingPreference == .preferNoHinting,
         cppID: typographyLayoutFaceID,
-        message: "the automation caption map pins the unhinted preference")
+        message: "the automation caption pins the unhinted preference")
     report.expect(
-        VoiceChangesPage(baseFontPx: 16).captionFont["hintingPreference"] as? Int == fontPreferNoHinting,
+        VoiceChangesPage(baseFontPx: 16).captionFont.hintingPreference == .preferNoHinting,
         cppID: typographyLayoutFaceID,
-        message: "the voice caption map pins the unhinted preference")
+        message: "the voice caption pins the unhinted preference")
 }
 
 @MainActor
@@ -385,22 +401,19 @@ private func typographyLayoutCheckTabularFeatures(_ report: CheckReport) {
         return
     }
     report.expect(
-        chip.features["tnum"] as? Int == 1, cppID: typographyLayoutFeaturesID,
+        chip.qmlFont.features["tnum"] == 1, cppID: typographyLayoutFeaturesID,
         message: "the spec enables tabular figures")
-    let emissionMatches: Bool = {
-        guard let emitted = chip.map["features"] else { return false }
-        return String(describing: emitted) == String(describing: chip.features)
-    }()
+    let emissionMatches = chip.qmlFont.features == ["tnum": 1]
     report.expect(
         emissionMatches,
         cppID: typographyLayoutFeaturesID,
-        message: "the QML map emits the tabular feature")
+        message: "the QML font emits the tabular feature")
     let faces = GridTypography.fonts(
         metrics: GridMetrics(baseFontPx: 16, dpr: 1, width: 0, height: 0),
         typography: Typography(baseFontPx: 16))
     for kind in [GridFontKind.ruler, GridFontKind.beat, GridFontKind.bold] {
         report.expect(
-            faces[kind]?.features["tnum"] as? Int == 1, cppID: typographyLayoutFeaturesID,
+            faces[kind]?.qmlFont.features["tnum"] == 1, cppID: typographyLayoutFeaturesID,
             message: "the mono face enables tabular figures")
     }
     let measured = NativeFontMetrics(chip)
@@ -462,4 +475,28 @@ private func typographyLayoutCheckFittedMaximality(_ report: CheckReport) {
         expected:
             1, actual: full.fittedSize(rowHeight: 0), cppID: typographyLayoutFittedID,
         what: "a zero height floors at the minimum size")
+    let fonts: [GridFontKind: GridFontSpec] = [
+        .ruler: fullSpec, .beat: fullSpec, .bold: fullSpec, .sig: fullSpec,
+        .chip: fullSpec, .keyLabel: fullSpec, .noteName: fullSpec, .noteValue: fullSpec,
+    ]
+    for size in [1, 2, 8, 16] {
+        let boundary = NativeFontMetrics(spec(size: size)).extents.height
+        let exact = GridTypography(fonts: fonts, rowHeight: boundary)
+        report.expectEqual(
+            expected: size, actual: exact.font(.keyLabel).pixelSize,
+            cppID: typographyLayoutFittedID,
+            what: "key labels accept the exact measured height of size \(size)")
+        let below = GridTypography(fonts: fonts, rowHeight: boundary.nextDown)
+        report.expectEqual(
+            expected: max(1, size - 1), actual: below.font(.keyLabel).pixelSize,
+            cppID: typographyLayoutFittedID,
+            what: "key labels step down immediately below the height of size \(size)")
+    }
+    for height in [-1.0, 0.0, Double.nan] {
+        let grid = GridTypography(fonts: fonts, rowHeight: height)
+        report.expectEqual(
+            expected: 1, actual: grid.font(.keyLabel).pixelSize,
+            cppID: typographyLayoutFittedID,
+            what: "key labels keep the one-pixel fallback when no size fits")
+    }
 }

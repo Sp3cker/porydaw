@@ -1,0 +1,1308 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b1ce5e6..75596dc 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -59,12 +59,26 @@ ExternalProject_Add(QtBridgeMacros_External
+     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Sources/QtBridgeMacros"
+     CMAKE_ARGS
+         -G Ninja
++        -DCMAKE_MAKE_PROGRAM:FILEPATH=${CMAKE_MAKE_PROGRAM}
++        -DCMAKE_Swift_COMPILER:FILEPATH=${CMAKE_Swift_COMPILER}
++        -DCMAKE_Swift_FLAGS:STRING=${CMAKE_Swift_FLAGS}
++        "-DQTBRIDGE_PATCH_INPUTS_SHA256:STRING=${QTBRIDGE_PATCH_INPUTS_SHA256}"
+         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+         -DBUILD_SHARED_LIBS=YES
+         -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=${QTBRIDGE_MACROS_EP_ROOT}/build/bin
++    BUILD_BYPRODUCTS "${QTBRIDGE_MACROS_EP_ROOT}/build/bin/QtBridgeMacros"
+     USES_TERMINAL_BUILD TRUE
+     INSTALL_COMMAND ""
+ )
++# File dependencies invalidate the stamped host build only on actual inputs.
++ExternalProject_Add_StepDependencies(QtBridgeMacros_External configure
++    "${CMAKE_CURRENT_SOURCE_DIR}/Sources/QtBridgeMacros/CMakeLists.txt"
++    "${CMAKE_CURRENT_SOURCE_DIR}/Package.swift"
++)
++ExternalProject_Add_StepDependencies(QtBridgeMacros_External build
++    "${CMAKE_CURRENT_SOURCE_DIR}/Sources/QtBridgeMacros/Extensions.swift"
++    "${CMAKE_CURRENT_SOURCE_DIR}/Sources/QtBridgeMacros/QtBridgeableMacro.swift"
++)
+ ExternalProject_Get_Property(QtBridgeMacros_External BINARY_DIR)
+ 
+ set(QTBRIDGE_MACROS_BINARY_DIR "${BINARY_DIR}"
+@@ -87,4 +101,3 @@ add_dependencies(QtBridgeMacros QtBridgeMacros_External)
+ 
+ add_subdirectory(Sources/QtBridgeCpp)
+ add_subdirectory(Sources/QtBridge)
+-
+diff --git a/Sources/QtBridge/CMakeLists.txt b/Sources/QtBridge/CMakeLists.txt
+index 9ded4b1..aa8556d 100644
+--- a/Sources/QtBridge/CMakeLists.txt
++++ b/Sources/QtBridge/CMakeLists.txt
+@@ -12,6 +12,8 @@ set(QTBRIDGE_SWIFT_SOURCES
+     QMetaParamsList.swift
+     QmlInstantiable.swift
+     QmlInstantiableStatus.swift
++    QmlColor.swift
++    QmlFont.swift
+     QModelIndex.swift
+     QNamespace.swift
+     QObjectBuildable.swift
+diff --git a/Sources/QtBridge/QAbstractListModel.swift b/Sources/QtBridge/QAbstractListModel.swift
+index 07004bc..4e2d6b5 100644
+--- a/Sources/QtBridge/QAbstractListModel.swift
++++ b/Sources/QtBridge/QAbstractListModel.swift
+@@ -146,7 +146,28 @@ internal final class QAbstractListModel {
+ 
+     public func roleNames() -> [Int32: String] { roles }
+ 
++    private var updateDepth = 0
++    private var pendingDataChange: ClosedRange<Int32>?
++
++    /// Coalesces written rows into one `dataChanged` at the outermost update.
++    /// Nested updates share the same pending row range.
++    internal func update(_ body: () -> Void) {
++        updateDepth += 1
++        body()
++        updateDepth -= 1
++        if updateDepth == 0, let range = pendingDataChange {
++            pendingDataChange = nil
++            emitDataChanged(range.lowerBound, range.upperBound)
++        }
++    }
++
+     internal func emitDataChanged(_ topLeft: Int32, _ bottomRight: Int32, _ roles: [Int32] = []) {
++        if updateDepth > 0, topLeft <= bottomRight {
++            pendingDataChange = pendingDataChange.map {
++                min($0.lowerBound, topLeft)...max($0.upperBound, bottomRight)
++            } ?? topLeft...bottomRight
++            return
++        }
+         if roles.isEmpty {
+             getCppModel().emitDataChanged(topLeft, bottomRight, nil, 0)
+         } else {
+@@ -162,6 +183,15 @@ internal final class QAbstractListModel {
+ 
+     internal func endInsertRows() -> Void { return getCppModel().endInsertRows() }
+ 
++    @discardableResult
++    internal func beginMoveRows(_ sourceParent: QModelIndex, _ sourceFirst: Int32, _ sourceLast: Int32,
++                                _ destinationParent: QModelIndex, _ destinationRow: Int32) -> Bool {
++        return getCppModel().beginMoveRows(sourceParent.cppModel, sourceFirst, sourceLast,
++                                           destinationParent.cppModel, destinationRow)
++    }
++
++    internal func endMoveRows() { getCppModel().endMoveRows() }
++
+     internal func beginRemoveRows(_ parent: QModelIndex, _ first: Int32, _ last: Int32) -> Void {
+         return getCppModel().beginRemoveRows(parent.cppModel, first, last)
+     }
+diff --git a/Sources/QtBridge/QApp.swift b/Sources/QtBridge/QApp.swift
+index 0830a84..788ef51 100644
+--- a/Sources/QtBridge/QApp.swift
++++ b/Sources/QtBridge/QApp.swift
+@@ -130,12 +130,17 @@ internal class QMLApp {
+     /// Each type must conform to ``QmlInstantiable``
+     /// and be annotated with the ``QtBridgeable()`` macro.
+     var instantiableTypes: [QmlInstantiable.Type] { get }
++
++    /// Swift-owned types available for QML property declarations, not construction.
++    /// Each type must conform to `QmlUncreatable` and use `QtBridgeable`.
++    var uncreatableTypes: [QmlUncreatable.Type] { get }
+ }
+ 
+ @MainActor public extension QApp {
+     var bundle: Bundle { .main }
+     var initialProperties: [String: QObjectBuildable] { [:] }
+     var instantiableTypes: [QmlInstantiable.Type] { [] }
++    var uncreatableTypes: [QmlUncreatable.Type] { [] }
+ 
+     /// Starts the application.
+     ///
+@@ -164,6 +169,10 @@ internal class QMLApp {
+             type.registerQmlElement()
+         }
+ 
++        for type in qApp.uncreatableTypes {
++            type.registerUncreatableQmlElement()
++        }
++
+         for (name, property) in qApp.initialProperties {
+             property.addInitialProperty(to: app, name: name)
+         }
+diff --git a/Sources/QtBridge/QListModel.swift b/Sources/QtBridge/QListModel.swift
+index 1705eed..4a20103 100644
+--- a/Sources/QtBridge/QListModel.swift
++++ b/Sources/QtBridge/QListModel.swift
+@@ -109,6 +109,27 @@ public final class QListModel<Element: QVariantGettable>: @MainActor RandomAcces
+         }
+     }
+ 
++    /// Moves an element to its final index; invalid, identical or rejected
++    /// moves leave the list unchanged.
++    public func move(from sourceIndex: Int, to destinationIndex: Int) {
++        guard storage.indices.contains(sourceIndex),
++              storage.indices.contains(destinationIndex),
++              sourceIndex != destinationIndex
++        else { return }
++
++        let sourceRow = Int32(sourceIndex)
++        let destinationChild = Int32(destinationIndex > sourceIndex
++                                     ? destinationIndex + 1
++                                     : destinationIndex)
++        guard model.beginMoveRows(QModelIndex(), sourceRow, sourceRow,
++                                  QModelIndex(), destinationChild)
++        else { return }
++
++        let element = storage.remove(at: sourceIndex)
++        storage.insert(element, at: destinationIndex)
++        model.endMoveRows()
++    }
++
+     /// Inserts, removes or replaces elements within
+     /// the specified range.
+     ///
+@@ -172,6 +193,12 @@ public final class QListModel<Element: QVariantGettable>: @MainActor RandomAcces
+         model.endResetModel()
+     }
+ 
++    /// Coalesces row writes into one `dataChanged` at the outermost update.
++    /// Structural changes retain their own notifications.
++    public func update(_ body: () -> Void) {
++        model.update(body)
++    }
++
+     /// Returns the contents of the list as a Swift array.
+     public var asArray: [Element] { storage }
+ }
+diff --git a/Sources/QtBridge/QMetaObjectBuilder.swift b/Sources/QtBridge/QMetaObjectBuilder.swift
+index 102c863..00ae744 100644
+--- a/Sources/QtBridge/QMetaObjectBuilder.swift
++++ b/Sources/QtBridge/QMetaObjectBuilder.swift
+@@ -14,6 +14,8 @@ import QtBridgeCpp
+ @MainActor
+ public class QMetaObjectBuilder
+ {
++    private static var builders: [ObjectIdentifier: QMetaObjectBuilder] = [:]
++
+     private let className: String
+     private let moduleName: String
+ 
+@@ -66,18 +68,31 @@ public class QMetaObjectBuilder
+     /// This method is used by the bridging system. Don't call
+     /// it directly.
+     static public func create(from type: QObjectBuildable.Type) -> QMetaObjectBuilder {
++        let key = ObjectIdentifier(type)
++        if let builder = builders[key] { return builder }
+         let builder = QMetaObjectBuilder(type: type)
++        // Publish before registering members so self-references and mutually dependent types share one builder.
++        builders[key] = builder
+         type.registerMethodsAndProperties(for: builder)
+         builder.endMetaRegistration()
+         return builder
+     }
+ 
++    /// Returns the Qt-convention pointer metatype for this Swift class.
++    public func metaTypeId() -> Int32 { qmlElementBuilder.metaTypeId() }
++
+     internal func registerQmlElement(from type: QmlInstantiable.Type) {
+         type.registerMetaTypeInterface(for: self)
+         qmlElementBuilder.setMetaObjectFrom(self.builder)
+         qmlElementBuilder.registerQmlElement()
+     }
+ 
++    internal func registerUncreatableQmlElement(from type: QmlUncreatable.Type) {
++        type.registerMetaTypeInterface(for: self)
++        qmlElementBuilder.setMetaObjectFrom(self.builder)
++        qmlElementBuilder.registerUncreatableQmlElement()
++    }
++
+     internal func setMetaObjectTo(objectHolder: QObjectHolder) {
+         builder.setMetaObjectTo(objectHolder.proxy)
+     }
+@@ -174,7 +189,7 @@ public class QMetaObjectBuilder
+         name: String,
+         keyPath: WritableKeyPath<Root, Member>)
+     {
+-        registerProperty(name: name, keyPath: keyPath) { newValue, root in
++        registerProperty(name: name, keyPath: keyPath, valueFromVariant: { Member.value(from: $0) }) { newValue, root in
+             newValue != root[keyPath: keyPath]
+         }
+     }
+@@ -193,12 +208,30 @@ public class QMetaObjectBuilder
+         name: String,
+         keyPath: WritableKeyPath<Root, Member>)
+     {
+-        registerProperty(name: name, keyPath: keyPath, isChanged: { _, _ in true })
++        registerProperty(name: name, keyPath: keyPath, valueFromVariant: { Member.value(from: $0) },
++                         isChanged: { _, _ in true })
++    }
++
++    /// Registers a writable typed Swift object property.
++    public func registerProperty<Root: QObjectBuildable, Member: QObjectBuildable>(
++        name: String, keyPath: WritableKeyPath<Root, Member>)
++    {
++        registerProperty(name: name, keyPath: keyPath, valueFromVariant: { $0.swiftObject() },
++                         isChanged: { _, _ in true })
++    }
++
++    /// Registers a writable typed Swift object property that also accepts null.
++    public func registerProperty<Root: QObjectBuildable, Member: QObjectBuildable>(
++        name: String, keyPath: WritableKeyPath<Root, Member?>)
++    {
++        registerProperty(name: name, keyPath: keyPath, valueFromVariant: { .some(Optional<Member>.value(from: $0)) },
++                         isChanged: { _, _ in true })
+     }
+ 
+-    private func registerProperty<Root: QObjectBuildable, Member: QVariantSettable>(
++    private func registerProperty<Root: QObjectBuildable, Member: QVariantGettable>(
+         name: String,
+         keyPath: WritableKeyPath<Root, Member>,
++        valueFromVariant: @escaping @MainActor (QVariant) -> Member?,
+         isChanged: @escaping (Member, Root) -> Bool)
+     {
+         registerSignal(for: name)
+@@ -217,7 +250,7 @@ public class QMetaObjectBuilder
+             guard var root = root as? Root else {
+                 return false
+             }
+-            let newValue: Member = variant.value()
++            guard let newValue = valueFromVariant(variant) else { return false }
+             if !isChanged(newValue, root) {
+                 return false
+             }
+@@ -402,6 +435,7 @@ public class QMetaObjectBuilder
+ 
+     internal func endMetaRegistration() {
+         builder.endMetaRegistration()
++        qmlElementBuilder.setMetaObjectFrom(builder)
+     }
+ 
+     private func invoke(methodIndex: Int, rootPtr: UnsafeMutableRawPointer?, args: QMetaParamsList) -> QVariant {
+diff --git a/Sources/QtBridge/QMetaParamsList.swift b/Sources/QtBridge/QMetaParamsList.swift
+index 620758f..014a132 100644
+--- a/Sources/QtBridge/QMetaParamsList.swift
++++ b/Sources/QtBridge/QMetaParamsList.swift
+@@ -22,6 +22,8 @@ import QtBridgeCpp
+ /// | `Double` | `double` |
+ /// | `Float` | `float` |
+ /// | `String` | `QString` |
++/// | `QmlColor` | `QColor` |
++/// | `QmlFont` | `QFont` |
+ /// | `[String]` | `QStringList` |
+ /// | `[String: QVariantSettable]` | `QVariantMap` |
+ ///
+@@ -60,6 +62,12 @@ public class QMetaParamsList {
+     fileprivate func getMap(_ index: Int) -> [String: QVariantSettable] {
+         return args.getVariantMap(index).toBridgeMap()
+     }
++    fileprivate func getColor(_ index: Int) -> QmlColor {
++        return QmlColor.value(from: QVariant(value: args.getColorVariant(index)))
++    }
++    fileprivate func getFont(_ index: Int) -> QmlFont {
++        return QmlFont.value(from: QVariant(value: args.getFontVariant(index)))
++    }
+ }
+ 
+ /// A type that can be extracted from a ``QMetaParamsList``.
+@@ -123,3 +131,15 @@ extension Dictionary: QMetaParamsGettable where Key == String, Value == any QVar
+         return params.getMap(index)
+     }
+ }
++
++extension QmlColor: QMetaParamsGettable {
++    public static func get(from params: QMetaParamsList, index: Int) -> QmlColor {
++        return params.getColor(index)
++    }
++}
++
++extension QmlFont: QMetaParamsGettable {
++    public static func get(from params: QMetaParamsList, index: Int) -> QmlFont {
++        return params.getFont(index)
++    }
++}
+diff --git a/Sources/QtBridge/QObjectBuildable.swift b/Sources/QtBridge/QObjectBuildable.swift
+index 3249047..0918867 100644
+--- a/Sources/QtBridge/QObjectBuildable.swift
++++ b/Sources/QtBridge/QObjectBuildable.swift
+@@ -76,5 +76,14 @@ extension QObjectBuildable {
+ 
+ extension QObjectBuildable {
+     public func toVariant() -> QVariant { QVariant(value: self) }
+-    public static func metaType() -> Int32 { return 39 }
++    public static func value(from variant: QVariant) -> Self {
++        // Nonoptional internal conversion; QML property setters use failable extraction.
++        guard let object: Self = variant.swiftObject() else {
++            preconditionFailure("Expected a bridged \(Self.self) object")
++        }
++        return object
++    }
++    public static func metaType() -> Int32 {
++        QMetaObjectBuilder.create(from: Self.self).metaTypeId()
++    }
+ }
+diff --git a/Sources/QtBridge/QVariant.swift b/Sources/QtBridge/QVariant.swift
+index c69ec15..759eed3 100644
+--- a/Sources/QtBridge/QVariant.swift
++++ b/Sources/QtBridge/QVariant.swift
+@@ -1,6 +1,7 @@
+ // Copyright (C) 2025 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
+ 
++import Foundation
+ import QtBridgeCpp
+ 
+ /// A type-erased container used to bridge values between Swift
+@@ -23,6 +24,8 @@ import QtBridgeCpp
+ /// | `Double` | `double` |
+ /// | `Float` | `float` |
+ /// | `String` | `QString` |
++/// | `QmlColor` | `QColor` |
++/// | `QmlFont` | `QFont` |
+ /// | `[String]` | `QStringList` |
+ /// | `[String: QVariantSettable]` | `QVariantMap` |
+ ///
+@@ -77,6 +80,22 @@ public struct QVariant
+     public init(value: String) {
+         self.variant = QtBridgeCpp.QVariant(value)
+     }
++    /// Creates a variant containing a native Qt color.
++    public init(value: QmlColor) {
++        self.variant = QmlValueTypesCpp.variantFromColor(
++            value.red, value.green, value.blue, value.alpha)
++    }
++    /// Creates a variant containing a native Qt font.
++    public init(value: QmlFont) {
++        var features = CppVectorOfFontFeatures()
++        features.reserve(value.features.count)
++        for (tag, featureValue) in value.features {
++            features.push_back(QmlFontFeature(tag.toQString(), featureValue))
++        }
++        self.variant = QmlValueTypesCpp.variantFromFont(
++            value.family.toQString(), Int32(value.pixelSize), Int32(value.weight),
++            value.italic, value.letterSpacing, value.hintingPreference.rawValue, features)
++    }
+     /// Creates a variant containing an array of strings.
+     ///
+     /// - Parameter value: The string array to store.
+@@ -93,7 +112,18 @@ public struct QVariant
+     /// - Parameter value: A Swift type annotated with the
+     /// ``QtBridgeable()`` macro.
+     public init(value: QObjectBuildable) {
+-        self.variant = value.objectHolder.proxy.toVariant()
++        self.variant = value.objectHolder.proxy.toVariant(type(of: value).metaType())
++    }
++
++    /// Creates a variant containing an optional Swift object exposed to QML.
++    /// A missing value is stored as a typed null QObject pointer.
++    public init<Wrapped: QObjectBuildable>(value: Wrapped?) {
++        if let value {
++            self.variant = value.objectHolder.proxy.toVariant(Wrapped.metaType())
++        } else {
++            self.variant = QtBridgeCpp.QVariant.fromMetaType(
++                QMetaType(Wrapped.metaType()), nil)
++        }
+     }
+ 
+     /// Creates a variant from a Swift dictionary.
+@@ -108,6 +138,15 @@ public struct QVariant
+         self.variant = QtBridgeCpp.QVariant(map)
+     }
+ 
++    /// Bridges raw bytes as QVariant(QByteArray), keeping packed payloads
++    /// in one value instead of separately boxed properties.
++    public init(value: Data) {
++        self.variant = value.withUnsafeBytes { buffer in
++            QAbstractListModelCpp.variantFromBytes(
++                buffer.baseAddress, Int32(buffer.count))
++        }
++    }
++
+     internal init(model: QAbstractListModel) {
+         self.variant = model.getCppModel().toVariant()
+     }
+@@ -137,6 +176,11 @@ public struct QVariant
+         return variant.toMap().toBridgeMap()
+     }
+ 
++    internal func swiftObject<T: QObjectBuildable>() -> T? {
++        guard let pointer = QObjectProxy.swiftObjectFromVariant(variant) else { return nil }
++        return Unmanaged<AnyObject>.fromOpaque(pointer).takeUnretainedValue() as? T
++    }
++
+     internal func toSettable() -> QVariantSettable? {
+         let typeId = variant.typeId()
+         if typeId == Bool.metaType() { return Bool.value(from: self) }
+@@ -145,6 +189,8 @@ public struct QVariant
+         if typeId == Double.metaType() { return Double.value(from: self) }
+         if typeId == Float.metaType() { return Float.value(from: self) }
+         if typeId == String.metaType() { return String.value(from: self) }
++        if typeId == QmlColor.metaType() { return QmlColor.value(from: self) }
++        if typeId == QmlFont.metaType() { return QmlFont.value(from: self) }
+         if typeId == [String].metaType() { return [String].value(from: self) }
+         if typeId == [String: QVariantSettable].metaType() {
+             return [String: QVariantSettable].value(from: self)
+@@ -152,7 +198,7 @@ public struct QVariant
+         return nil
+     }
+ 
+-    internal func cppVariant() -> QtBridgeCpp.QVariant {
++    public func cppVariant() -> QtBridgeCpp.QVariant {
+         return variant
+     }
+ }
+@@ -183,6 +229,17 @@ public protocol QVariantSettable : QVariantGettable {
+     static func value(from variant: QVariant) -> Self
+ }
+ 
++extension Optional: QVariantGettable where Wrapped: QObjectBuildable {
++    public func toVariant() -> QVariant { QVariant(value: self) }
++    public static func metaType() -> Int32 { Wrapped.metaType() }
++    @MainActor public static func value(from variant: QVariant) -> Optional<Wrapped> { variant.swiftObject() }
++}
++
++extension Data: QVariantGettable {
++    public func toVariant() -> QVariant { QVariant(value: self) }
++    public static func metaType() -> Int32 { return 12 }
++}
++
+ extension Bool: QVariantSettable {
+     public func toVariant() -> QVariant { QVariant(value: self) }
+     public static func value(from variant: QVariant) -> Bool { variant.toBool() }
+diff --git a/Sources/QtBridge/QmlColor.swift b/Sources/QtBridge/QmlColor.swift
+new file mode 100644
+index 0000000..a0c2876
+--- /dev/null
++++ b/Sources/QtBridge/QmlColor.swift
+@@ -0,0 +1,37 @@
++// Copyright (C) 2025 The Qt Company Ltd.
++// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
++
++import QtBridgeCpp
++
++/// An RGBA value exposed to QML as a native `color`.
++public struct QmlColor: Equatable, Sendable {
++    public var red: Double
++    public var green: Double
++    public var blue: Double
++    public var alpha: Double
++
++    /// Creates a color from normalized channels in the range 0...1.
++    public init(red: Double, green: Double, blue: Double, alpha: Double = 1) {
++        self.red = red
++        self.green = green
++        self.blue = blue
++        self.alpha = alpha
++    }
++
++    /// Creates a color from 8-bit RGBA channels.
++    public init(red8: UInt8, green8: UInt8, blue8: UInt8, alpha8: UInt8 = 255) {
++        self.init(red: Double(red8) / 255, green: Double(green8) / 255,
++                  blue: Double(blue8) / 255, alpha: Double(alpha8) / 255)
++    }
++}
++
++extension QmlColor: QVariantSettable {
++    public func toVariant() -> QVariant { QVariant(value: self) }
++
++    public static func value(from variant: QVariant) -> QmlColor {
++        let color = QmlValueTypesCpp.colorFromVariant(variant.cppVariant())
++        return QmlColor(red: color.red, green: color.green, blue: color.blue, alpha: color.alpha)
++    }
++
++    public static func metaType() -> Int32 { QmlValueTypesCpp.colorMetaType() }
++}
+diff --git a/Sources/QtBridge/QmlFont.swift b/Sources/QtBridge/QmlFont.swift
+new file mode 100644
+index 0000000..06428c7
+--- /dev/null
++++ b/Sources/QtBridge/QmlFont.swift
+@@ -0,0 +1,58 @@
++// Copyright (C) 2025 The Qt Company Ltd.
++// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
++
++import QtBridgeCpp
++
++/// A pixel-sized font exposed to QML as a native `font`.
++public struct QmlFont: Equatable, Sendable {
++    /// Qt's font hinting preference values.
++    public enum HintingPreference: Int32, Sendable {
++        case preferDefaultHinting = 0
++        case preferNoHinting = 1
++        case preferVerticalHinting = 2
++        case preferFullHinting = 3
++    }
++
++    public var family: String
++    public var pixelSize: Int
++    public var weight: Int
++    public var italic: Bool
++    public var letterSpacing: Double
++    public var hintingPreference: HintingPreference
++    /// OpenType feature values; tags other than four ASCII characters are skipped when converting to Qt.
++    public var features: [String: UInt32]
++
++    /// Creates a font with Qt's 1...1000 weight scale and absolute pixel letter spacing.
++    public init(family: String, pixelSize: Int, weight: Int = 400, italic: Bool = false,
++                letterSpacing: Double = 0, hintingPreference: HintingPreference = .preferNoHinting,
++                features: [String: UInt32] = [:]) {
++        self.family = family
++        self.pixelSize = pixelSize
++        self.weight = weight
++        self.italic = italic
++        self.letterSpacing = letterSpacing
++        self.hintingPreference = hintingPreference
++        self.features = features
++    }
++}
++
++extension QmlFont: QVariantSettable {
++    public func toVariant() -> QVariant { QVariant(value: self) }
++
++    public static func value(from variant: QVariant) -> QmlFont {
++        let font = QmlValueTypesCpp.fontFromVariant(variant.cppVariant())
++        let hinting = HintingPreference(rawValue: font.hintingPreference) ?? .preferNoHinting
++        var features: [String: UInt32] = [:]
++        features.reserveCapacity(Int(font.features.size()))
++        for index in 0..<font.features.size() {
++            let feature = font.features[index]
++            features[feature.tag.toSwiftString()] = feature.value
++        }
++        return QmlFont(family: font.family.toSwiftString(), pixelSize: Int(font.pixelSize),
++                       weight: Int(font.weight), italic: font.italic,
++                       letterSpacing: font.letterSpacing, hintingPreference: hinting,
++                       features: features)
++    }
++
++    public static func metaType() -> Int32 { QmlValueTypesCpp.fontMetaType() }
++}
+diff --git a/Sources/QtBridge/QmlInstantiable.swift b/Sources/QtBridge/QmlInstantiable.swift
+index 077729f..06dcaac 100644
+--- a/Sources/QtBridge/QmlInstantiable.swift
++++ b/Sources/QtBridge/QmlInstantiable.swift
+@@ -50,8 +50,18 @@ extension QmlInstantiable {
+ }
+ 
+ extension QmlInstantiable {
+-    package static func registerQmlElement() {
++    public static func registerQmlElement() {
+         metaObjectBuilder.registerInitializer(initFn: self.init)
+         metaObjectBuilder.registerQmlElement(from: Self.self)
+     }
+ }
++
++/// A Swift-owned QML type that can be referenced but not constructed in QML.
++/// Register annotated types in `QApp.uncreatableTypes`.
++public protocol QmlUncreatable: QObjectBuildable {}
++
++extension QmlUncreatable {
++    public static func registerUncreatableQmlElement() {
++        metaObjectBuilder.registerUncreatableQmlElement(from: Self.self)
++    }
++}
+diff --git a/Sources/QtBridgeCpp/abstractlistmodel.cpp b/Sources/QtBridgeCpp/abstractlistmodel.cpp
+index 3c5db0e..57fc6f7 100644
+--- a/Sources/QtBridgeCpp/abstractlistmodel.cpp
++++ b/Sources/QtBridgeCpp/abstractlistmodel.cpp
+@@ -64,6 +64,14 @@ public:
+ 
+     void endInsertRows() { QAbstractListModel::endInsertRows(); }
+ 
++    bool beginMoveRows(const QModelIndex &sourceParent, int sourceFirst, int sourceLast,
++                       const QModelIndex &destinationParent, int destinationRow) {
++        return QAbstractListModel::beginMoveRows(sourceParent, sourceFirst, sourceLast,
++                                                 destinationParent, destinationRow);
++    }
++
++    void endMoveRows() { QAbstractListModel::endMoveRows(); }
++
+     void beginRemoveRows(const QModelIndex &parent, int first, int last) {
+         QAbstractListModel::beginRemoveRows(parent, first, last);
+     }
+@@ -147,6 +155,15 @@ void QAbstractListModelCpp::beginInsertRows(const QModelIndex parent, int first,
+ 
+ void QAbstractListModelCpp::endInsertRows() { m_impl->endInsertRows(); }
+ 
++bool QAbstractListModelCpp::beginMoveRows(const QModelIndex &sourceParent, int sourceFirst,
++                                          int sourceLast, const QModelIndex &destinationParent,
++                                          int destinationRow) {
++    return m_impl->beginMoveRows(sourceParent, sourceFirst, sourceLast, destinationParent,
++                                 destinationRow);
++}
++
++void QAbstractListModelCpp::endMoveRows() { m_impl->endMoveRows(); }
++
+ void QAbstractListModelCpp::beginRemoveRows(const QModelIndex &parent, int first, int last) {
+     m_impl->beginRemoveRows(parent, first, last);
+ }
+diff --git a/Sources/QtBridgeCpp/include/QtBridgeCpp.h b/Sources/QtBridgeCpp/include/QtBridgeCpp.h
+index 3e3f056..7e76168 100644
+--- a/Sources/QtBridgeCpp/include/QtBridgeCpp.h
++++ b/Sources/QtBridgeCpp/include/QtBridgeCpp.h
+@@ -9,6 +9,7 @@
+ #include "callbackbase.h"
+ #include "metaparamslist.h"
+ #include "qappcpp.h"
++#include "qmlvaluetypes.h"
+ #include "qobjectproxy.h"
+ #include "qobjectproxyimpl.h"
+ #include "qtestappcpp.h"
+diff --git a/Sources/QtBridgeCpp/include/abstractlistmodel.h b/Sources/QtBridgeCpp/include/abstractlistmodel.h
+index 173a912..f18fbc0 100644
+--- a/Sources/QtBridgeCpp/include/abstractlistmodel.h
++++ b/Sources/QtBridgeCpp/include/abstractlistmodel.h
+@@ -10,6 +10,7 @@
+ #include <swift/bridging>
+ 
+ #include "callbackbase.h"
++#include <QtCore/qbytearray.h>
+ #include "swiftinterop.h"
+ 
+ class QAbstractListModelCpp
+@@ -42,9 +43,20 @@ public:
+     void beginInsertRows(const QModelIndex parent, int first, int last);
+     void endInsertRows();
+ 
++    bool beginMoveRows(const QModelIndex &sourceParent, int sourceFirst,
++                       int sourceLast, const QModelIndex &destinationParent,
++                       int destinationRow);
++    void endMoveRows();
++
+     void beginRemoveRows(const QModelIndex &parent, int first, int last);
+     void endRemoveRows();
+ 
++    /// Wraps raw bytes in a QVariant(QByteArray) so Swift can hand a packed
++    /// payload across the bridge in one value.
++    static QVariant variantFromBytes(const void *data, int size) {
++        return QVariant(QByteArray(static_cast<const char *>(data), size));
++    }
++
+     void beginResetModel();
+     void endResetModel();
+ 
+diff --git a/Sources/QtBridgeCpp/include/metaparamslist.h b/Sources/QtBridgeCpp/include/metaparamslist.h
+index bb0726a..627ae36 100644
+--- a/Sources/QtBridgeCpp/include/metaparamslist.h
++++ b/Sources/QtBridgeCpp/include/metaparamslist.h
+@@ -32,6 +32,8 @@ public:
+     std::string getString(size_t i) const;
+     QStringList getStringList(size_t i) const;
+     QVariantMap getVariantMap(size_t i) const;
++    QVariant getColorVariant(size_t i) const;
++    QVariant getFontVariant(size_t i) const;
+ 
+ private:
+     template <typename T>
+diff --git a/Sources/QtBridgeCpp/include/qappcpp.h b/Sources/QtBridgeCpp/include/qappcpp.h
+index fb09757..a0f6385 100644
+--- a/Sources/QtBridgeCpp/include/qappcpp.h
++++ b/Sources/QtBridgeCpp/include/qappcpp.h
+@@ -7,6 +7,8 @@
+ #include <QtCore/qurl.h>
+ #include <QtCore/qvariant.h>
+ 
++#include <QtQml/qqmlapplicationengine.h>
++
+ #include <swift/bridging>
+ 
+ #include "qobjectproxy.h"
+@@ -25,6 +27,10 @@ public:
+ 
+     int run(int argc, char **argv);
+ 
++    // The application engine while run() is executing; nullptr before load
++    // and after exec() returns. Valid to call from slots during exec().
++    static QQmlApplicationEngine *engine();
++
+ private:
+     std::vector<QString> m_importPaths;
+     QString m_pluginsPath;
+diff --git a/Sources/QtBridgeCpp/include/qmlvaluetypes.h b/Sources/QtBridgeCpp/include/qmlvaluetypes.h
+new file mode 100644
+index 0000000..fab7510
+--- /dev/null
++++ b/Sources/QtBridgeCpp/include/qmlvaluetypes.h
+@@ -0,0 +1,93 @@
++// Copyright (C) 2025 The Qt Company Ltd.
++// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
++
++#pragma once
++
++#include <QtCore/QVariant>
++#include <QtGui/QColor>
++#include <QtGui/QFont>
++#include <algorithm>
++#include <utility>
++#include <vector>
++
++struct QmlColorComponents
++{
++    double red;
++    double green;
++    double blue;
++    double alpha;
++};
++
++struct QmlFontFeature
++{
++    QmlFontFeature(const QString &tag, quint32 value) : tag(tag), value(value) {}
++    QString tag;
++    quint32 value;
++};
++
++using CppVectorOfFontFeatures = std::vector<QmlFontFeature>;
++
++struct QmlFontComponents
++{
++    QString family;
++    int pixelSize;
++    int weight;
++    bool italic;
++    double letterSpacing;
++    int hintingPreference;
++    CppVectorOfFontFeatures features;
++};
++
++class QmlValueTypesCpp
++{
++public:
++    static int colorMetaType() { return QMetaType::fromType<QColor>().id(); }
++    static int fontMetaType() { return QMetaType::fromType<QFont>().id(); }
++
++    static QVariant variantFromColor(double red, double green, double blue, double alpha)
++    {
++        return QVariant::fromValue(QColor::fromRgbF(red, green, blue, alpha));
++    }
++
++    static QmlColorComponents colorFromVariant(const QVariant &variant)
++    {
++        const QColor color = variant.value<QColor>();
++        return {color.redF(), color.greenF(), color.blueF(), color.alphaF()};
++    }
++
++    static QVariant variantFromFont(const QString &family, int pixelSize, int weight,
++                                    bool italic, double letterSpacing, int hintingPreference,
++                                    const CppVectorOfFontFeatures &features)
++    {
++        QFont font;
++        font.setFamily(family);
++        font.setPixelSize(pixelSize);
++        font.setWeight(static_cast<QFont::Weight>(weight));
++        font.setItalic(italic);
++        // Absolute pixel spacing converts double to Qt's qreal precision at this boundary.
++        font.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
++        font.setHintingPreference(static_cast<QFont::HintingPreference>(hintingPreference));
++        for (const auto &feature : features) {
++            // Skip tags that are not exactly four ASCII characters, or are invalid to Qt.
++            if (feature.tag.size() != 4
++                || std::any_of(feature.tag.cbegin(), feature.tag.cend(),
++                               [](QChar character) { return character.unicode() > 0x7f; }))
++                continue;
++            if (const auto tag = QFont::Tag::fromString(feature.tag))
++                font.setFeature(*tag, feature.value);
++        }
++        return QVariant::fromValue(font);
++    }
++
++    static QmlFontComponents fontFromVariant(const QVariant &variant)
++    {
++        const QFont font = variant.value<QFont>();
++        CppVectorOfFontFeatures features;
++        const auto tags = font.featureTags();
++        features.reserve(tags.size());
++        for (const auto tag : tags)
++            features.emplace_back(QString::fromLatin1(tag.toString()), font.featureValue(tag));
++        return {font.family(), font.pixelSize(), static_cast<int>(font.weight()), font.italic(),
++                font.letterSpacing(), static_cast<int>(font.hintingPreference()), std::move(features)};
++    }
++};
+diff --git a/Sources/QtBridgeCpp/include/qobjectproxy.h b/Sources/QtBridgeCpp/include/qobjectproxy.h
+index cf53e0f..bac52a8 100644
+--- a/Sources/QtBridgeCpp/include/qobjectproxy.h
++++ b/Sources/QtBridgeCpp/include/qobjectproxy.h
+@@ -19,6 +19,8 @@ public:
+ 
+     QObject *toObject() const;
+     QVariant toVariant() const;
++    QVariant toVariant(int typeId) const;
++    static void *swiftObjectFromVariant(const QVariant &variant);
+ 
+     QList<void *> swiftChildren() const;
+ 
+diff --git a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h b/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
+index d55dd45..84f4070 100644
+--- a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
++++ b/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
+@@ -6,6 +6,7 @@
+ #include <QtCore/qobject.h>
+ #include <QtQml/qqmllist.h>
+ #include <QtQml/qqmlparserstatus.h>
++#include <QtQml/qqmlengine.h>
+ 
+ #include "swiftobjectaccesor.h"
+ 
+@@ -15,13 +16,17 @@ class QObjectProxyImpl : public QObject,
+ {
+     Q_OBJECT
+     Q_CLASSINFO("DefaultProperty", "children")
+-    Q_PROPERTY(QQmlListProperty<QObject> children READ children CONSTANT)
++    Q_PROPERTY(QQmlListProperty<QObject> children READ children CONSTANT FINAL)
+     Q_INTERFACES(QQmlParserStatus)
+ 
+ public:
+     QObjectProxyImpl(void *swiftObj)
+     : m_swiftObj(swiftObj)
+-    {}
++    {
++        // Pin Swift-created proxies to CppOwnership so QML cannot collect
++        // them while their Swift owners still publish through them.
++        QQmlEngine::setObjectOwnership(this, QQmlEngine::CppOwnership);
++    }
+ 
+     using DeleterFn = void(*)(void *swiftObj);
+     QObjectProxyImpl(void *swiftObj, DeleterFn deleter)
+diff --git a/Sources/QtBridgeCpp/include/swiftqmlelementbuilder.h b/Sources/QtBridgeCpp/include/swiftqmlelementbuilder.h
+index b87590b..09526d0 100644
+--- a/Sources/QtBridgeCpp/include/swiftqmlelementbuilder.h
++++ b/Sources/QtBridgeCpp/include/swiftqmlelementbuilder.h
+@@ -15,11 +15,13 @@ public:
+     ~SwiftQmlElementBuilder();
+ 
+     void setMetaObjectFrom(SwiftMetaObjectBuilder builder);
++    int metaTypeId();
+ 
+     using CreateFn = void (*)(void *builderPtr, void *addr);
+     void registerCreateFn(void *builderPtr, CreateFn fn);
+ 
+     void registerQmlElement();
++    void registerUncreatableQmlElement();
+ 
+ private:
+     class Impl;
+diff --git a/Sources/QtBridgeCpp/metaparamslist.cpp b/Sources/QtBridgeCpp/metaparamslist.cpp
+index f32935b..10708dd 100644
+--- a/Sources/QtBridgeCpp/metaparamslist.cpp
++++ b/Sources/QtBridgeCpp/metaparamslist.cpp
+@@ -4,6 +4,8 @@
+ #include "metaparamslist.h"
+ 
+ #include <QtCore/qstring.h>
++#include <QtGui/qcolor.h>
++#include <QtGui/qfont.h>
+ 
+ MetaParamsList::MetaParamsList(
+     const QMetaMethod &method, void **paramData)
+@@ -45,3 +47,11 @@ QStringList MetaParamsList::getStringList(size_t i) const {
+ QVariantMap MetaParamsList::getVariantMap(size_t i) const {
+     return getT<QVariantMap>(i);
+ }
++
++QVariant MetaParamsList::getColorVariant(size_t i) const {
++    return QVariant::fromValue(getT<QColor>(i));
++}
++
++QVariant MetaParamsList::getFontVariant(size_t i) const {
++    return QVariant::fromValue(getT<QFont>(i));
++}
+diff --git a/Sources/QtBridgeCpp/qappcpp.cpp b/Sources/QtBridgeCpp/qappcpp.cpp
+index 7e91abd..02e9132 100644
+--- a/Sources/QtBridgeCpp/qappcpp.cpp
++++ b/Sources/QtBridgeCpp/qappcpp.cpp
+@@ -6,6 +6,13 @@
+ #include <QtGui/qguiapplication.h>
+ #include <QtQml/qqmlapplicationengine.h>
+ 
++static QQmlApplicationEngine *s_engine = nullptr;
++
++QQmlApplicationEngine *QAppCpp::engine()
++{
++    return s_engine;
++}
++
+ QAppCpp::QAppCpp()
+ {
+ }
+@@ -44,7 +51,10 @@ int QAppCpp::run(int argc, char **argv)
+         engine.addImportPath(path);
+ 
+     engine.setInitialProperties(m_map);
++    s_engine = &engine;
+     engine.load(m_root);
+ 
+-    return app.exec();
++    const int rc = app.exec();
++    s_engine = nullptr;
++    return rc;
+ }
+diff --git a/Sources/QtBridgeCpp/qobjectproxy.cpp b/Sources/QtBridgeCpp/qobjectproxy.cpp
+index 43b202c..103d701 100644
+--- a/Sources/QtBridgeCpp/qobjectproxy.cpp
++++ b/Sources/QtBridgeCpp/qobjectproxy.cpp
+@@ -5,6 +5,8 @@
+ 
+ #include "qobjectproxyimpl.h"
+ 
++#include <QtQml/QJSEngine>
++
+ // Impl
+ 
+ class QObjectProxy::Impl
+@@ -14,6 +16,8 @@ public:
+         m_ownership(Cpp),
+         m_object(new QObjectProxyImpl(owner))
+     {
++        // ~Impl deletes this object; exclude it from JS garbage collection.
++        QJSEngine::setObjectOwnership(m_object, QJSEngine::CppOwnership);
+     }
+ 
+     Impl(void *owner,
+@@ -55,7 +59,7 @@ private:
+     };
+ 
+     Ownership m_ownership;
+-    QObject * m_object;
++    QPointer<QObject> m_object;
+ };
+ 
+ QObjectProxy::QObjectProxy(void *owner)
+@@ -84,6 +88,18 @@ QVariant QObjectProxy::toVariant() const
+     return QVariant::fromValue(m_impl->object());
+ }
+ 
++QVariant QObjectProxy::toVariant(int typeId) const
++{
++    QObject *object = m_impl->object();
++    return QVariant::fromMetaType(QMetaType(typeId), &object);
++}
++
++void *QObjectProxy::swiftObjectFromVariant(const QVariant &variant)
++{
++    const auto accessor = dynamic_cast<const SwiftObjectAccesor *>(variant.value<QObject *>());
++    return accessor ? accessor->swiftObject() : nullptr;
++}
++
+ QList<void *> QObjectProxy::swiftChildren() const
+ {
+     return m_impl->swiftChildren();
+diff --git a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
+index 6dd803f..74f6354 100644
+--- a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
++++ b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
+@@ -4,6 +4,8 @@
+ #include "swiftmetaobjectbuilder.h"
+ 
+ #include <QtCore/qmetaobject.h>
++#include <QtCore/qpointer.h>
++#include <QtCore/qthread.h>
+ #include <QtCore/private/qmetaobjectbuilder_p.h>
+ 
+ #include "qobjectproxyimpl.h"
+@@ -27,6 +29,49 @@ static QByteArray generateFuncSignature(const std::string &name, const std::vect
+     return QMetaObject::normalizedSignature(sign.c_str());
+ }
+ 
++namespace {
++// Same-thread emissions batch here so one queued post + wakeup flushes a
++// whole event-loop turn in FIFO order; cross-thread keeps the direct path.
++struct PendingEmission {
++    QPointer<QObject> sender;
++    int signalIndex = -1;
++    std::vector<QVariant> args;
++};
++
++// The dispatcher is never deleted: thread-exit destruction can outlive Qt's
++// thread data. `spare` keeps the drained batch's capacity for the next turn.
++struct EmissionFlush {
++    std::vector<PendingEmission> pending;
++    std::vector<PendingEmission> spare;
++    QObject *dispatcher = nullptr;
++};
++
++thread_local EmissionFlush t_emissions;
++
++void flushEmissions()
++{
++    // Swap out first so emissions from slots start a new batch + post,
++    // keeping 'later than now' ordering. Dead senders are skipped.
++    std::vector<PendingEmission> batch;
++    batch.swap(t_emissions.pending);
++    t_emissions.pending.swap(t_emissions.spare);
++    std::vector<void *> argv;
++    for (auto &entry : batch) {
++        QObject *target = entry.sender.data();
++        if (!target)
++            continue;
++        argv.clear();
++        argv.push_back(nullptr); // Signal return value
++        for (auto &arg : entry.args)
++            argv.push_back(arg.data());
++        QMetaObject::activate(target, entry.signalIndex, argv.data());
++    }
++    batch.clear();
++    if (t_emissions.spare.capacity() < batch.capacity())
++        t_emissions.spare.swap(batch);
++}
++} // namespace
++
+ // BuilderImpl
+ 
+ class SwiftMetaObjectBuilder::BuilderImpl : public QDynamicMetaObjectData
+@@ -232,10 +277,11 @@ public:
+         bool hasSignal = it != m_signalNameToId.end();
+ 
+         QMetaPropertyBuilder builder = m_metaObjectBuilder->addProperty(
+-                                           QByteArray::fromStdString(name), metaType.name());
++                                           QByteArray::fromStdString(name), metaType.name(), metaType);
+         builder.setReadable(true);
+         builder.setWritable(isWritable);
+         builder.setConstant(!isWritable && !hasSignal);
++        builder.setFinal(true);
+         if (hasSignal) {
+             builder.setNotifySignal(m_metaObjectBuilder->method(it->second));
+         }
+@@ -307,6 +353,23 @@ public:
+             convertedArgs.push_back(std::move(v));
+         }
+ 
++        if (obj && obj->thread() == QThread::currentThread()) {
++            // Batch; exactly one queued flush is posted per event-loop turn.
++            const bool wasEmpty = t_emissions.pending.empty();
++            if (!t_emissions.dispatcher)
++                t_emissions.dispatcher = new QObject();
++            PendingEmission entry;
++            entry.sender = obj;
++            entry.signalIndex = signalIndex;
++            entry.args = std::move(convertedArgs);
++            t_emissions.pending.push_back(std::move(entry));
++            if (wasEmpty) {
++                QMetaObject::invokeMethod(t_emissions.dispatcher, flushEmissions,
++                                           Qt::QueuedConnection);
++            }
++            return;
++        }
++
+         QMetaObject::invokeMethod(obj, [obj, signalIndex, args = std::move(convertedArgs)]() mutable {
+             std::vector<void*> argv;
+             argv.reserve(args.size() + 1);
+diff --git a/Sources/QtBridgeCpp/swiftqmlelementbuilder.cpp b/Sources/QtBridgeCpp/swiftqmlelementbuilder.cpp
+index cd53797..df0ed6b 100644
+--- a/Sources/QtBridgeCpp/swiftqmlelementbuilder.cpp
++++ b/Sources/QtBridgeCpp/swiftqmlelementbuilder.cpp
+@@ -17,7 +17,9 @@ public:
+     Impl(const char *moduleName,
+          const char *className)
+         : m_moduleName(moduleName),
+-          m_className(className)
++          m_className(className),
++          m_pointerTypeName(m_className + "*"),
++          m_listTypeName("QQmlListProperty<" + m_className + ">")
+     {
+     }
+ 
+@@ -32,18 +34,24 @@ public:
+         m_createFn = createFn;
+     }
+ 
+-    void registerQmlElement()
++    int metaTypeId()
++    {
++        registerMetaTypeInterface();
++        return QMetaType(m_metaTypeInterface).id();
++    }
++
++    void registerQmlElement(bool creatable = true)
+     {
+         registerMetaTypeInterface();
+ 
+         QQmlPrivate::RegisterType rt = {};
+         rt.structVersion = QQmlPrivate::RegisterType::CurrentVersion;
+         rt.typeId = QMetaType(m_metaTypeInterface);
+-        rt.listId = QMetaType::fromType<QQmlListProperty<QObjectProxyImpl>>();
++        rt.listId = QMetaType(m_listMetaTypeInterface);
+         rt.objectSize = sizeof(QObjectProxyImpl);
+-        rt.create = Impl::createFn;
++        rt.create = creatable ? Impl::createFn : nullptr;
+         rt.userdata = this;
+-        rt.noCreationReason = QString();
++        rt.noCreationReason = creatable ? QString() : QStringLiteral("This type is owned by Swift and cannot be created in QML.");
+         rt.createValueType = nullptr;
+         rt.uri = m_moduleName.data();
+         rt.version = QTypeRevision::fromVersion(1, 0);
+@@ -57,7 +65,7 @@ public:
+         rt.extensionObjectCreate = nullptr;
+         rt.extensionMetaObject = nullptr;
+         rt.customParser = nullptr;
+-        rt.revision = QTypeRevision::fromVersion(0, 0);
++        rt.revision = rt.version;
+         rt.finalizerCast = QQmlPrivate::StaticCastSelector<QObjectProxyImpl, QQmlFinalizerHook>::cast();
+         rt.creationMethod = QQmlPrivate::ValueTypeCreationMethod::None;
+         QQmlPrivate::qmlregister(QQmlPrivate::TypeRegistration, &rt);
+@@ -65,33 +73,55 @@ public:
+ 
+     void registerMetaTypeInterface()
+     {
++        if (m_metaTypeInterface)
++            return;
+         auto d = MetaData();
+         d.self = this;
+ 
+-        d.metaTypeInterface = std::make_unique<QtPrivate::QMetaTypeInterface>();
+-        d.metaTypeInterface->alignment = alignof(QObjectProxyImpl);
+-        d.metaTypeInterface->size = sizeof(QObjectProxyImpl);
+-        d.metaTypeInterface->flags = QMetaType::NeedsConstruction
+-                                    | QMetaType::NeedsDestruction
+-                                    | QMetaType::NeedsCopyConstruction
+-                                    | QMetaType::NeedsMoveConstruction
+-                                    | QMetaType::PointerToQObject;
+-        d.metaTypeInterface->name = m_className.data();
+-        d.metaTypeInterface->defaultCtr = Impl::defaultCtrFn;
+-        d.metaTypeInterface->dtor = Impl::dtorFn;
++        // Swift classes share a proxy implementation, but each QML type needs
++        // its own standard QObject pointer and QQmlListProperty metatype name.
++        d.metaTypeInterface = makeMetaTypeInterface<QObjectProxyImpl *>(m_pointerTypeName.data());
++        d.listMetaTypeInterface =
++                makeMetaTypeInterface<QQmlListProperty<QObjectProxyImpl>>(m_listTypeName.data());
+         d.metaTypeInterface->metaObjectFn = Impl::metaObject;
+ 
+         m_metaTypeInterface = d.metaTypeInterface.get();
++        m_listMetaTypeInterface = d.listMetaTypeInterface.get();
+         m_metaData.push_back(std::move(d));
+     }
+ 
+ private:
+     struct MetaData {
+         std::unique_ptr<QtPrivate::QMetaTypeInterface> metaTypeInterface;
++        std::unique_ptr<QtPrivate::QMetaTypeInterface> listMetaTypeInterface;
+         const Impl * self = nullptr;
+     };
+     static std::vector<MetaData> m_metaData;
+ 
++    template<typename T>
++    static std::unique_ptr<QtPrivate::QMetaTypeInterface> makeMetaTypeInterface(const char *name)
++    {
++        const auto &base = QtPrivate::QMetaTypeInterfaceWrapper<T>::metaType;
++        auto iface = std::make_unique<QtPrivate::QMetaTypeInterface>();
++        iface->revision = base.revision;
++        iface->alignment = base.alignment;
++        iface->size = base.size;
++        iface->flags = base.flags;
++        iface->metaObjectFn = base.metaObjectFn;
++        iface->name = name;
++        iface->defaultCtr = base.defaultCtr;
++        iface->copyCtr = base.copyCtr;
++        iface->moveCtr = base.moveCtr;
++        iface->dtor = base.dtor;
++        iface->equals = base.equals;
++        iface->lessThan = base.lessThan;
++        iface->debugStream = base.debugStream;
++        iface->dataStreamOut = base.dataStreamOut;
++        iface->dataStreamIn = base.dataStreamIn;
++        // Keep the fresh typeId and do not register the shared proxy's name.
++        return iface;
++    }
++
+     static const MetaData* findMetaData(const QtPrivate::QMetaTypeInterface *iface)
+     {
+         if (!iface) {
+@@ -115,26 +145,6 @@ private:
+         self->m_createFn(self->m_builderPtr, addr);
+     }
+ 
+-    static void defaultCtrFn(const QtPrivate::QMetaTypeInterface *iface,
+-                             void *addr)
+-    {
+-        if (auto md = findMetaData(iface)) {
+-            if (!md->self || !md->self->m_createFn)
+-                throw std::runtime_error("Invalid MetaData");
+-
+-            md->self->m_createFn(md->self->m_builderPtr, addr);
+-        }
+-    }
+-
+-    static void dtorFn(const QtPrivate::QMetaTypeInterface *,
+-                       void *addr)
+-    {
+-        auto p = static_cast<const QObject*>(addr);
+-        if (!p)
+-            throw std::runtime_error("Invalid QObject pointer");
+-        p->~QObject();
+-    }
+-
+     static const QMetaObject * metaObject(
+                     const QtPrivate::QMetaTypeInterface *iface)
+     {
+@@ -149,10 +159,13 @@ private:
+ 
+     std::string m_moduleName;
+     std::string m_className;
++    const std::string m_pointerTypeName;
++    const std::string m_listTypeName;
+     const QMetaObject * m_metaObject = nullptr;
+     void *m_builderPtr = nullptr;
+     CreateFn m_createFn;
+     const QtPrivate::QMetaTypeInterface * m_metaTypeInterface = nullptr;
++    const QtPrivate::QMetaTypeInterface * m_listMetaTypeInterface = nullptr;
+ };
+ 
+ std::vector<SwiftQmlElementBuilder::Impl::MetaData> SwiftQmlElementBuilder::Impl::m_metaData;
+@@ -173,6 +186,11 @@ void SwiftQmlElementBuilder::setMetaObjectFrom(SwiftMetaObjectBuilder builder)
+     m_impl->setMetaObject(builder.metaObject());
+ }
+ 
++int SwiftQmlElementBuilder::metaTypeId()
++{
++    return m_impl->metaTypeId();
++}
++
+ void SwiftQmlElementBuilder::registerCreateFn(void *builderPtr, CreateFn fn)
+ {
+     m_impl->registerCreateFn(builderPtr, fn);
+@@ -182,3 +200,8 @@ void SwiftQmlElementBuilder::registerQmlElement()
+ {
+     m_impl->registerQmlElement();
+ }
++
++void SwiftQmlElementBuilder::registerUncreatableQmlElement()
++{
++    m_impl->registerQmlElement(false);
++}
+diff --git a/Sources/QtBridgeMacros/CMakeLists.txt b/Sources/QtBridgeMacros/CMakeLists.txt
+index ddedbb5..0cb0131 100644
+--- a/Sources/QtBridgeMacros/CMakeLists.txt
++++ b/Sources/QtBridgeMacros/CMakeLists.txt
+@@ -36,6 +36,14 @@ target_compile_options(QtBridgeMacros PRIVATE
+     -parse-as-library
+ )
+ 
++# Compile the macro when patch inputs change; the configure stamp and
++# Swift compilation arguments retain the same digest for unchanged inputs.
++if(QTBRIDGE_PATCH_INPUTS_SHA256)
++    target_compile_options(QtBridgeMacros PRIVATE
++        "-DQTBRIDGE_PATCH_${QTBRIDGE_PATCH_INPUTS_SHA256}"
++    )
++endif()
++
+ target_link_libraries(QtBridgeMacros PRIVATE
+     SwiftSyntax
+     SwiftSyntaxMacros
+diff --git a/Sources/QtBridgeMacros/Extensions.swift b/Sources/QtBridgeMacros/Extensions.swift
+index acce22e..ddfe931 100644
+--- a/Sources/QtBridgeMacros/Extensions.swift
++++ b/Sources/QtBridgeMacros/Extensions.swift
+@@ -124,7 +124,7 @@ extension TypeSyntax {
+     }
+ 
+     var isSupportedReturnType: Bool {
+-        return isSupportedSettableType || isVoid
++        return isSupportedSettableType || isVoid || self.is(IdentifierTypeSyntax.self)
+     }
+ 
+     var isVoid: Bool {
+@@ -141,7 +141,7 @@ extension TypeSyntax {
+     }
+ 
+     private static let supportedBasicTypes: Set<String> = [
+-        "Int", "UInt", "Double", "Float", "String", "Bool"
++        "Int", "UInt", "Double", "Float", "String", "Bool", "QmlColor", "QmlFont"
+     ]
+ 
+     private var isSupportedBasicType: Bool {

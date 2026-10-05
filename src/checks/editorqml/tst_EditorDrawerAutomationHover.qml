@@ -134,11 +134,9 @@ EditorDrawerTestSupport {
                    "inter-node hover exposes the actual guide")
         tryCompare(ghost, "visible", true, 2000,
                    "inter-node hover exposes the held-value ghost")
-        compare(String(guide.color).toLowerCase(),
-                testCase.drawerPalette().windowText.toLowerCase(),
+        compare(Qt.colorEqual(guide.color, testCase.drawerPalette().windowText), true,
                 "the mounted insertion guide draws with roll-safe palette ink")
-        compare(String(ghost.color).toLowerCase(),
-                testCase.drawerPalette().windowText.toLowerCase(),
+        compare(Qt.colorEqual(ghost.color, testCase.drawerPalette().windowText), true,
                 "the mounted insertion ghost draws with roll-safe palette ink")
         fuzzyCompare(guide.x + guide.width / 2, model.hoverDisplay.guideX, 1,
                      "the mounted insertion guide aligns within one plot pixel")
