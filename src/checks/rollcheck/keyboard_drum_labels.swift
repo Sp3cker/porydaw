@@ -6,6 +6,10 @@ import PorydawCore
 @MainActor
 func checkDrumPadLabels(_ report: CheckReport) {
     let id = "timelinepan/TimelinePanTest::drumGutterLabelsAndHover"
+    report.expect(
+        GridScene.keyNames.count == 128
+            && GridScene.keyNames.enumerated().allSatisfy { midiKeyName($0.offset) == $0.element },
+        cppID: id, message: "the cached MIDI key names cover all 128 pitches without label drift")
     guard let scratch = CheckEnvironment.fixtureRoot else {
         report.fail(id, "missing staged project fixtures")
         return
@@ -41,7 +45,7 @@ func checkDrumPadLabels(_ report: CheckReport) {
         func record(_ pitch: Int) -> String? {
             let current = RollContentProbe(grid)
             guard current.rows.contains(where: { $0.pitch == pitch }) else { return nil }
-            return current.keyboardNames[pitch] ?? GridScene.keyName(pitch)
+            return current.keyboardNames[pitch] ?? midiKeyName(pitch)
         }
         let names = session.bankSlots[11].drumPadNames
         report.expect(
@@ -58,7 +62,7 @@ func checkDrumPadLabels(_ report: CheckReport) {
             long == "fixture_named_pad_long_label_123",
             cppID: id, message: "A038 the full long drum-pad name is a fixed keyboard label")
         report.expect(
-            probe.keyboardNames[39] == nil && record(39) == GridScene.keyName(39),
+            probe.keyboardNames[39] == nil && record(39) == midiKeyName(39),
             cppID: id, message: "A044 an unnamed drum pad displays its pitch name")
         let inset = grid.metrics.keyLabelRightInset
         let advance = grid.typography?.keyLabelAdvance("fixture_named_pad_long_label_123") ?? 0
@@ -105,12 +109,12 @@ func checkDrumPadLabels(_ report: CheckReport) {
         grid.setTrack(index: melodic)
         let expectedMelodic = (0..<projection.visibleRowCount).compactMap {
             projection.visiblePitch(at: $0)
-        }.filter { $0 % 12 == 0 }.map(GridScene.keyName)
+        }.filter { $0 % 12 == 0 }.map(midiKeyName)
         let melodicProbe = RollContentProbe(grid)
         let melodicLabels =
             melodicProbe.keyboardNames.isEmpty
-            ? melodicProbe.rows.map(\.pitch).filter { $0 % 12 == 0 }.map(GridScene.keyName)
-            : melodicProbe.rows.map { melodicProbe.keyboardNames[$0.pitch] ?? GridScene.keyName($0.pitch) }
+            ? melodicProbe.rows.map(\.pitch).filter { $0 % 12 == 0 }.map(midiKeyName)
+            : melodicProbe.rows.map { melodicProbe.keyboardNames[$0.pitch] ?? midiKeyName($0.pitch) }
         report.expect(
             melodicLabels == expectedMelodic, cppID: id,
             message: "A064 a melodic track shows exactly the visible octave-C names")

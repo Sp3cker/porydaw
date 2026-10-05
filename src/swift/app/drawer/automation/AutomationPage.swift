@@ -8,7 +8,7 @@ public enum AutomationPagePolicy {
     /// The base font seed of the grid, which is internal to this module.
     public static let seedBaseFontPx: Double = 13
     /// The pointer travel that turns a press into a drag.
-    public static let dragDistance: Double = 10
+    public static let dragDistance: Double = DrawerPan.dragDistanceSeed
     /// The ghost label's separator between the curve name and its event count.
     public static let ghostSeparator = " · "
     public static let noTrackMessage = "No track selected"
@@ -282,9 +282,9 @@ public final class AutomationPage: EditorDrawerPage {
     /// origin or drag-distance change rebuilds exactly once.
     @QtIgnored var lastBodyOrigin: Double = 0
     @QtIgnored var lastBodyDragDistance: Double = AutomationPagePolicy.dragDistance
-    @QtIgnored var captionMetrics: AutomationCaption?
-    @QtIgnored var titleMetrics: AutomationCaption?
-    @QtIgnored var noteNameMetrics: AutomationCaption?
+    @QtIgnored var captionMetrics: LaneCaptionMetrics?
+    @QtIgnored var titleMetrics: LaneCaptionMetrics?
+    @QtIgnored var noteNameMetrics: LaneCaptionMetrics?
 
     // MARK: Composition input
 
@@ -565,17 +565,8 @@ public final class AutomationPage: EditorDrawerPage {
         dismissCapturedMenu()
     }
 
-    /// One row activation through the captured target, named by the action the
-    /// surface rendered: a list model is not a JavaScript array, so the surface
-    /// hands back the row's own action id instead of a position. A row the
-    /// capture published as unavailable is refused instead of acting as a silent
-    /// no-op, and a capture whose revision no longer holds commits nothing.
-    ///
-    /// `true` means the action was *consumed*: the row existed, was enabled and
-    /// the capture still named the live document. It never reports what the
-    /// action wrote — each row's own transaction decides that, and a consumed row
-    /// may legitimately write nothing (a form it opened, a no-op acceptance, a
-    /// clipboard row, a selection it cleared).
+    /// Consumes an enabled action id only while its captured target is live.
+    /// `true` means consumed, not written; forms, clipboard and no-op actions may write nothing.
     @discardableResult
     public func consumeMenuAction(actionId: Int) -> Bool {
         return consumeCapturedMenuAction(actionId: actionId)

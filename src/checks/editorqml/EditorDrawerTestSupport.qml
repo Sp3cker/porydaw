@@ -6,8 +6,9 @@ import Porydaw.Ui
 import "EditorDrawerLayoutSupport.js" as LayoutSupport
 import "EditorDrawerVoiceSupport.js" as VoiceSupport
 
-TestCase {
+ShellLaneSupport {
     id: testCase
+    laneBootstrap: bootstrap
     property alias bootstrap: drawerBootstrap
     property alias session: drawerSession
     property alias regularFont: drawerRegularFont

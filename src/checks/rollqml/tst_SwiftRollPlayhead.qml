@@ -16,9 +16,8 @@ import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
-import "../editorqml/NativeWait.js" as NativeWait
 
-TestCase {
+RollLaneSupport {
     id: testCase
 
     name: "SwiftRollPlayhead"
@@ -39,25 +38,8 @@ TestCase {
     // kGuideTolerance from the native guides oracle.
     readonly property real guideTolerance: 0.5
 
-    property var overlay: null
+    verifySurface: true
 
-    RollQmlBootstrap {
-        id: bootstrap
-
-        ApplicationSession { id: session }
-    }
-
-    Component {
-        id: overlayComponent
-
-        SwiftRollOverlay {
-            applicationSession: session
-        }
-    }
-
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
 
     function initTestCase() {
         bootstrap.seedDrawerPreferences(true, true, true, 0)
@@ -72,30 +54,9 @@ TestCase {
         testCase.mountOverlay()
     }
 
-    function mountOverlay() {
-        var item = overlayComponent.createObject(testCase, {
-            "width": testCase.width,
-            "height": testCase.height
-        })
-        verify(item, "the production overlay came up")
-        testCase.overlay = item
-        var surface = null
-        verify(waitForNative(function() {
-            surface = testCase.selectedSurface()
-            return surface !== null
-        }, 5000), "the selected tab's production EditorSurface mounted")
-        var drawer = findChild(surface, "editorDrawer")
-        verify(drawer, "the production drawer is mounted")
-        session.configurePersistence()
-        verify(waitForNative(function() {
-            return surface.visible && surface.width > 0 && surface.height > 0
-        }, 5000), "the mounted surface is drawn")
-        testCase.height += findChild(surface, "timelineOtherEventsBand").height
+    onOverlayMounted: function(item, mounted, drawer) {
+        testCase.height += findChild(mounted, "timelineOtherEventsBand").height
         item.height = testCase.height
-    }
-
-    function selectedSurface() {
-        return testCase.overlay ? findChild(testCase.overlay, "swiftRollOverlay") : null
     }
 
     function init() {
@@ -127,17 +88,6 @@ TestCase {
 
     // ---- shared lookups ------------------------------------------------------
 
-    function surface() {
-        var s = testCase.selectedSurface()
-        verify(s !== null, "the production EditorSurface is mounted")
-        return s
-    }
-
-    function grid() {
-        var g = surface().gridModel
-        verify(g !== null, "the grid presenter is published")
-        return g
-    }
 
     function playhead() {
         var p = findChild(surface(), "sharedPlayhead")

@@ -10,7 +10,7 @@ import "RollNoteFaces.js" as RollNoteFaces
 
 // Measure every rendered shell text item against its actual drawn surface
 // in all shipped themes; disabled text keeps the WCAG exemption.
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "TextContrast"
     when: windowShown
@@ -18,7 +18,6 @@ TestCase {
     height: 800
     visible: true
 
-    property var shell: null
     readonly property var settings: bootstrap.preferences
     property var failures: []
     property var seenFailures: []
@@ -37,29 +36,10 @@ TestCase {
         settings.setString("lastProjectDir", "")
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
+    laneBootstrap: bootstrap
 
-    function cleanup() {
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                    || !shell.shellPresenter.sceneActive
-            }, 5000), "closing reaches the dirty gate or completes")
-            if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.closeReady
-            }, 5000), "the scene is released")
-        }
-        shell.destroy()
-        shell = null
-        wait(0)
-    }
+    closeGateMessage: "closing reaches the dirty gate or completes"
+    closeReadyMessage: "the scene is released"
 
     function openShell() {
         shell = shellComponent.createObject(null)

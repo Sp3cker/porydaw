@@ -3,9 +3,8 @@ import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
-import "../editorqml/NativeWait.js" as NativeWait
 
-TestCase {
+RollLaneSupport {
     id: testCase
     name: "SwiftRollTrackHeaderCapacity"
     when: windowShown
@@ -13,25 +12,9 @@ TestCase {
     height: 640
     visible: true
 
-    property var overlay: null
+    verifySurface: true
+    surfaceMessage: ""
 
-    RollQmlBootstrap {
-        id: bootstrap
-        ApplicationSession { id: session }
-    }
-    Component {
-        id: overlayComponent
-        SwiftRollOverlay { applicationSession: session }
-    }
-
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-    function surface() {
-        var mounted = findChild(testCase.overlay, "swiftRollOverlay")
-        verify(mounted !== null)
-        return mounted
-    }
     function item(name) {
         var result = null
         tryVerify(function() {

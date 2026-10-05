@@ -4,9 +4,8 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellImportWizard"
     when: windowShown
@@ -16,13 +15,10 @@ TestCase {
     ShellQmlBootstrap { id: bootstrap }
     ImportWizardProbe { id: probe }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
-    property var shell: null
     readonly property string rootPath: bootstrap.projectRoot
     readonly property string sourcePath: rootPath + "/test_midis/external_import.mid"
-    function waitForNative(predicate, timeout) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeout)
-    }
-    function child(name) { return findChild(shell, name) }
+    laneBootstrap: bootstrap
+
     function openShell() {
         verify(bootstrap.resetPreferences(), "fresh preferences")
         bootstrap.preferences.setString("lastProjectDir", "")

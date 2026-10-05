@@ -263,25 +263,9 @@ public final class TransportBarPresenter: QmlUncreatable {
     }
 
     static func measure(at tick: Tick, timeline: PlaybackTimeline) -> String {
-        let signatures = timeline.timeSignatures
-        var segmentStart: Tick = 0
-        var bars = 1
-        var beatTicks = max(1, Int(timeline.ticksPerBeat))
-        var beatsPerBar = 4
-        for signature in signatures where signature.tick <= tick {
-            if signature.tick > segmentStart {
-                let beats = (Int(signature.tick - segmentStart) + beatTicks - 1) / beatTicks
-                bars += (beats + beatsPerBar - 1) / beatsPerBar
-            }
-            segmentStart = signature.tick
-            beatTicks = max(
-                1,
-                Int(timeline.ticksPerBeat) * 4
-                    >> min(Int(signature.denominatorPowerOfTwo), 31))
-            beatsPerBar = max(1, Int(signature.numerator))
-        }
-        let beats = Int(tick - segmentStart) / beatTicks
-        return "\(bars + beats / beatsPerBar):\(beats % beatsPerBar + 1)"
+        let position = MusicalPosition(
+            tick: tick, signatures: timeline.timeSignatures, ticksPerBeat: timeline.ticksPerBeat)
+        return "\(position.bar):\(position.beat)"
     }
 
     private static func keyEvents(in document: SongDocument) -> [(tick: Tick, label: String)] {

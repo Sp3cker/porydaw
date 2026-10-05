@@ -3,17 +3,15 @@ import QtQuick.Controls
 import QtTest
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 import "TextContrastAudit.js" as Audit
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellPolyphony"
     when: windowShown
     width: 960
     height: 760
     visible: true
-    property var shell: null
     property var referencePane: null
 
     ShellQmlBootstrap { id: bootstrap }
@@ -37,9 +35,7 @@ TestCase {
                "the prior shell's debugger state is cleared")
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
+    laneBootstrap: bootstrap
 
     function createShell() {
         shell = (probe.profileName.length > 0 ? profileShellComponent : shellComponent).createObject(null)
@@ -52,30 +48,15 @@ TestCase {
         return shell.shellPresenter
     }
 
-    function cleanup() {
+    closeGateMessage: "the close gate completes"
+    closeReadyMessage: "the shell retires its editor scene"
+    function preCleanup() {
         if (referencePane) {
             referencePane.destroy()
             referencePane = null
         }
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                    || !shell.shellPresenter.sceneActive
-            }, 5000), "the close gate completes")
-            if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-            verify(waitForNative(function() { return shell.shellPresenter.closeReady }, 5000),
-                   "the shell retires its editor scene")
-        }
-        bootstrap.children.length = 0
-        shell.destroy()
-        shell = null
-        wait(0)
     }
-
+    function preDestroyShell() { bootstrap.children.length = 0 }
 
     function panel() { return findChild(shell, "polyphonyPanel") }
     function dock() { return findChild(shell, "shellPolyphonyDock") }

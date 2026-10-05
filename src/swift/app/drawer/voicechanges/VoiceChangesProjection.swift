@@ -176,13 +176,12 @@ public final class VoiceMenuRowHandle {
 @MainActor
 final class VoiceCaption {
     let font: QmlFont
-    let height: Double
-    private let metrics: NativeFontMetrics
+    var height: Double { metrics.height }
+    private let metrics: LaneCaptionMetrics
 
     init(font: GridFontSpec) {
         self.font = font.qmlFont
-        metrics = NativeFontMetrics(font)
-        height = metrics.extents.height
+        metrics = LaneCaptionMetrics(font: font)
     }
 
     func advance(_ text: String) -> Double { metrics.advance(text) }

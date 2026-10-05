@@ -3,11 +3,10 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 import "RollNoteFaces.js" as RollNoteFaces
 import "GatedVisualsHelpers.js" as Visuals
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellGridMenu"
     when: windowShown
@@ -15,7 +14,6 @@ TestCase {
     height: Math.round(baseMetrics.height * 55)
     visible: true
 
-    property var shell: null
     property alias bootstrap: shellBootstrap
     readonly property var settings: shellBootstrap.preferences
     property alias clipProbe: clipboardProbe
@@ -48,31 +46,18 @@ TestCase {
         }
     }
 
-
     function cleanup() {
         if (!shell)
             return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            for (var step = 0; step < 20 && !shell.shellPresenter.closeReady; ++step) {
-                if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                    shell.shellPresenter.session.songTabs.confirmDiscard()
-                waitForNative(function() {
-                    return shell.shellPresenter.closeReady
-                        || shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                }, 5000)
-            }
-            verify(shell.shellPresenter.closeReady)
-        }
+        closeActiveShell()
         shell.destroy()
         shell = null
         timeSigHost = null
         wait(0)
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(shellBootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
+    discardPollSteps: 20
+    laneBootstrap: shellBootstrap
 
     function openSong() {
         settings.setString("lastProjectDir", "")

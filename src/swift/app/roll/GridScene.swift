@@ -206,7 +206,7 @@ public final class GridScene {
     @QtIgnored var keyboardChipWidths: [Double]?
 
     @QtIgnored
-    func invalidateStatic() {
+    func invalidatePaletteCache() {
         paletteContentCache = nil
     }
 
@@ -267,11 +267,11 @@ public final class GridScene {
         if keyboardWidthKey != widthKey {
             keyboardWidthKey = widthKey
             keyboardChipWidths = input.keyboardNames?.enumerated().map { key, name in
-                t.chipAdvance(name.isEmpty ? GridScene.keyName(key) : name)
+                t.chipAdvance(name.isEmpty ? GridScene.keyNames[key] : name)
             }
         }
         let name = input.keyboardNames?[input.hoverKey] ?? ""
-        let text = name.isEmpty ? GridScene.keyName(input.hoverKey) : name
+        let text = name.isEmpty ? GridScene.keyNames[input.hoverKey] : name
         if hoverChipText != text { hoverChipText = text }
         let width =
             (keyboardChipWidths?[input.hoverKey]
@@ -294,11 +294,5 @@ public final class GridScene {
         [1, 3, 6, 8, 10].contains(key % 12)
     }
 
-    private static let pitchClasses = [
-        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
-    ]
-
-    static func keyName(_ key: Int) -> String {
-        "\(pitchClasses[key % 12])\(key / 12 - 1)"
-    }
+    static let keyNames: [String] = (0..<128).map(midiKeyName)
 }

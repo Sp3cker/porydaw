@@ -226,7 +226,7 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     @QtIgnored var selectionBeforePress: [NoteID] = []
     @QtIgnored var rollPreview: [NoteID: UInt8] = [:]
     @QtIgnored var pressedNote: NoteID?
-    @QtIgnored var dragDistance: Double = 10
+    @QtIgnored var dragDistance: Double = DrawerPan.dragDistanceSeed
     @QtIgnored var contextTick: Tick = 0
     @QtIgnored var playing = false
     @QtIgnored var lastContextKey: VelocityContextKey?

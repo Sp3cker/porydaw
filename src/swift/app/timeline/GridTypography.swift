@@ -85,10 +85,10 @@ struct GridTypography {
         noteValueMetrics = value
         noteValueOccupiedHeight = value.extents.height
         noteValueVisible = valueFit > 0 && value.extents.height <= (rowHeight - pixel).rounded(.down)
-        chipWidths = (0..<128).map { chip.advance(GridScene.keyName($0)) }
+        chipWidths = GridScene.keyNames.map { chip.advance($0) }
         let noteName = measure(.noteName)
         noteNameOccupiedHeight = noteName.extents.height
-        noteNameWidths = (0..<128).map { noteName.advance(GridScene.keyName($0)) }
+        noteNameWidths = GridScene.keyNames.map { noteName.advance($0) }
         var values = fonts.mapValues { $0.qmlFont }
         guard var keyLabelFont = values[.keyLabel] else {
             preconditionFailure("GridTypography requires the key-label font")

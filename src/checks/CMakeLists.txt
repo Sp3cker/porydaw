@@ -479,6 +479,7 @@ if(APPLE)
         editorqml/NativeWait.js
         editorqml/tst_DisplayListSameFrame.qml
         editorqml/tst_EditorDrawerVelocitySameFrame.qml
+        editorqml/ShellLaneSupport.qml
         editorqml/EditorDrawerTestSupport.qml
         editorqml/EditorDrawerLayoutSupport.js
         editorqml/EditorDrawerPixelSupport.js
@@ -595,6 +596,7 @@ if(APPLE)
     add_executable(shell_qml_tests
         editorqml/EditorQmlPaths.swift.in
         editorqml/NativeWait.js
+        editorqml/ShellLaneSupport.qml
         editorqml/ShellWindowSupport.qml
         editorqml/tst_ShellWindowCrossTab.qml
         editorqml/tst_ShellWindowDrawer.qml

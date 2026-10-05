@@ -4,18 +4,15 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 import "RollNoteFaces.js" as RollNoteFaces
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "Typography"
     when: windowShown
     width: 960
     height: 640
     visible: true
-
-    property var shell: null
 
     ShellQmlBootstrap { id: bootstrap }
     Component { id: bodyTextComponent; Text { text: "probe" } }
@@ -51,7 +48,6 @@ TestCase {
         Qt.application.domain = ""
     }
 
-
     function cleanup() {
         if (!shell)
             return
@@ -60,22 +56,7 @@ TestCase {
         wait(0)
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-
-    function openDiagnostics(session) {
-        var labels = []
-        var songs = session.songDockController().songListPresenter()
-        for (var i = 0; i < songs.rowCount && i < 8; ++i)
-            labels.push(songs.songLabel(i))
-        return " (projectRoot=" + bootstrap.projectRoot
-            + "; projectOpen=" + session.projectOpen
-            + "; songOpen=" + session.songOpen
-            + "; stagedLabels=[" + labels.join(",") + "]"
-            + "; lastSaveError=" + session.lastSaveError
-            + "; status=" + shell.shellPresenter.statusText + ")"
-    }
+    laneBootstrap: bootstrap
 
     function openOneSongShell() {
         shell = shellComponent.createObject(null)

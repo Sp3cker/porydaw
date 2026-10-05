@@ -99,7 +99,7 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
     private var trackNames: [String] = []
     private var voiceNames: [String] = []
     private var ticksPerBeat: UInt32 = 24
-    private var signatures: [TimeSignature] = []
+    private var signatures: [PlaybackTimeSignature] = []
     private var lastChannelSnapshot: AudioPolySnapshot?
     @QtIgnored public var onJump: ((UInt32, Int, Int, Double) -> Void)?
 
@@ -124,7 +124,11 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
                 VoiceLanePolicy.label(slot: index, view: slot)
             } ?? []
         ticksPerBeat = UInt32(max(1, session?.document.ticksPerBeat ?? 24))
-        signatures = session?.document.timeSignatures ?? []
+        signatures =
+            session?.document.timeSignatures.map {
+                PlaybackTimeSignature(
+                    tick: $0.tick, numerator: $0.numerator, denominatorPowerOfTwo: $0.denominatorPower)
+            } ?? []
         clear()
     }
 
@@ -310,7 +314,7 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
             let label: String
             if channel.on {
                 let track = Int(channel.track) + 1
-                let key = Self.keyName(channel.midiKey)
+                let key = midiKeyName(Int(channel.midiKey))
                 label = isCgb ? "\(Self.cgbNames[index])\nT\(track) \(key)" : "T\(track)\n\(key)"
             } else {
                 label = isCgb ? "\(Self.cgbNames[index])\n--" : "--"
@@ -327,7 +331,7 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
             voiceIndex < voiceNames.count
             ? voiceNames[voiceIndex].trimmingCharacters(in: .whitespacesAndNewlines) : ""
         let who =
-            "Trk \(Int(event.trackIndex) + 1)  \(Self.keyName(event.midiKey)) (\(voice.isEmpty ? "voice \(voiceIndex)" : voice))"
+            "Trk \(Int(event.trackIndex) + 1)  \(midiKeyName(Int(event.midiKey))) (\(voice.isEmpty ? "voice \(voiceIndex)" : voice))"
         let suffix: String
         switch event.type {
         case 0: suffix = "dropped (no channel available)"
@@ -340,28 +344,9 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
     }
 
     private func formatPosition(_ tick: UInt32) -> String {
-        var start: UInt64 = 0
-        var numerator: UInt64 = 4
-        var denominatorPower = 2
-        var bar: UInt64 = 1
-        for signature in signatures where signature.tick <= tick {
-            let beat = max(UInt64(1), UInt64(ticksPerBeat) * 4 >> denominatorPower)
-            let barLength = numerator * beat
-            bar += (UInt64(signature.tick) - start + barLength - 1) / barLength
-            start = UInt64(signature.tick)
-            numerator = UInt64(max(1, signature.numerator))
-            denominatorPower = Int(signature.denominatorPower)
-        }
-        let beat = max(UInt64(1), UInt64(ticksPerBeat) * 4 >> denominatorPower)
-        let length = numerator * beat
-        let offset = UInt64(tick) - start
-        return "\(bar + offset / length):\(offset % length / beat + 1).\(offset % beat)"
+        let position = MusicalPosition(tick: tick, signatures: signatures, ticksPerBeat: ticksPerBeat)
+        return "\(position.bar):\(position.beat).\(position.fraction)"
     }
 
     private static let cgbNames = ["Sq1", "Sq2", "Wave", "Noise"]
-
-    private static func keyName(_ key: UInt8) -> String {
-        let names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-        return "\(names[Int(key) % 12])\(Int(key) / 12 - 1)"
-    }
 }

@@ -61,11 +61,6 @@ private func beatsPerBarFor(_ numerator: UInt8) -> UInt32 {
     return numerator != 0 ? UInt32(numerator) : 4
 }
 
-private func beatTicksFor(_ ticksPerBeat: UInt32, _ denomPow2: UInt8) -> UInt32 {
-    let shift = min(Int(denomPow2), 31)
-    return max(UInt32(1), UInt32(truncatingIfNeeded: (UInt64(ticksPerBeat) * 4) >> shift))
-}
-
 public struct TimeAxis: Equatable, Sendable {
     let map: TimeMap
     public init(map: TimeMap = TimeMap()) {
@@ -121,7 +116,7 @@ public struct TimeAxis: Equatable, Sendable {
             }
             // Same-tick duplicates overwrite: the last at a tick wins.
             seg.start = ts.tick
-            seg.beatTicks = beatTicksFor(ticksPerBeat, ts.denomPow2)
+            seg.beatTicks = signatureBeatTicks(ticksPerBeat: ticksPerBeat, denominatorPowerOfTwo: ts.denomPow2)
             seg.beatsPerBar = beatsPerBarFor(ts.numerator)
         }
         return seg
@@ -146,7 +141,7 @@ public struct TimeAxis: Equatable, Sendable {
         seg.beatTicks = tpb
         var next = 0
         while next < sigs.count && sigs[next].tick == 0 {  // prologue consumes tick-0 duplicates
-            seg.beatTicks = beatTicksFor(tpb, sigs[next].denomPow2)
+            seg.beatTicks = signatureBeatTicks(ticksPerBeat: tpb, denominatorPowerOfTwo: sigs[next].denomPow2)
             seg.beatsPerBar = beatsPerBarFor(sigs[next].numerator)
             next += 1
         }
@@ -184,11 +179,11 @@ public struct TimeAxis: Equatable, Sendable {
             let barTicks = UInt64(seg.beatTicks) * UInt64(seg.beatsPerBar)
             bar += Int((segTicks + barTicks - 1) / barTicks)
             seg.start = sigs[next].tick
-            seg.beatTicks = beatTicksFor(tpb, sigs[next].denomPow2)
+            seg.beatTicks = signatureBeatTicks(ticksPerBeat: tpb, denominatorPowerOfTwo: sigs[next].denomPow2)
             seg.beatsPerBar = beatsPerBarFor(sigs[next].numerator)
             next += 1
             while next < sigs.count && sigs[next].tick == seg.start {
-                seg.beatTicks = beatTicksFor(tpb, sigs[next].denomPow2)
+                seg.beatTicks = signatureBeatTicks(ticksPerBeat: tpb, denominatorPowerOfTwo: sigs[next].denomPow2)
                 seg.beatsPerBar = beatsPerBarFor(sigs[next].numerator)
                 next += 1
             }

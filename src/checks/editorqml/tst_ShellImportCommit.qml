@@ -4,9 +4,8 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellImportCommit"
     when: windowShown
@@ -14,13 +13,10 @@ TestCase {
     ShellQmlBootstrap { id: bootstrap }
     ImportWizardProbe { id: probe }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
-    property var shell: null
     property string permissionPath: ""
     property string rootPath: bootstrap.projectRoot
-    function waitForNative(predicate, timeout) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeout)
-    }
-    function child(name) { return findChild(shell, name) }
+    laneBootstrap: bootstrap
+
     function stage(label) {
         verify(bootstrap.prepareImportCommitFixture(label), "isolated import project is copied")
         rootPath = bootstrap.projectRoot
@@ -62,15 +58,7 @@ TestCase {
         verify(waitForNative(function() { return child("importWizardTitle").text !== before }, 5000),
                "wizard advances")
     }
-    function choose(combo, index) {
-        mouseClick(combo, combo.width - combo.height / 2, combo.height / 2)
-        verify(waitForNative(function() { return combo.popup.opened }, 3000), "choices open")
-        const item = combo.popup.contentItem.itemAtIndex(index)
-        verify(item !== null, "choice is mounted")
-        mouseClick(item)
-        verify(waitForNative(function() { return combo.currentIndex === index }, 3000),
-               "choice settles")
-    }
+
     function rename(label) {
         const field = child("importSongName")
         field.forceActiveFocus()

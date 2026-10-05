@@ -19,9 +19,8 @@ import RollQmlCheck 1.0
 // same file the application's resource engine loads. A directory import keeps
 // one composition root -- the lane never copies, forks or re-declares it.
 import Porydaw.Ui
-import "../editorqml/NativeWait.js" as NativeWait
 
-TestCase {
+RollLaneSupport {
     id: testCase
 
     name: "SwiftRollWindow"
@@ -37,29 +36,8 @@ TestCase {
     // input.
     visible: true
 
-    property var overlay: null
+    includeStagedLabels: true
 
-    RollQmlBootstrap {
-        id: bootstrap
-
-        ApplicationSession { id: session }
-    }
-
-    // Supply the real application session to the production composition.
-    Component {
-        id: overlayComponent
-
-        SwiftRollOverlay {
-            applicationSession: session
-        }
-    }
-
-    // Qt Quick Test waits pump Qt events but not Swift MainActor Tasks. Keep
-    // production session calls intact and service the native event loop while
-    // observing the same state the original checks require.
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
 
     function initTestCase() {
         bootstrap.seedDrawerPreferences(false, true, true, 0)
@@ -74,58 +52,6 @@ TestCase {
         testCase.mountOverlay()
     }
 
-    function openDiagnostics() {
-        var details = ["projectRoot=" + bootstrap.projectRoot,
-                       "label=mus_route101",
-                       "projectOpen=" + session.projectOpen,
-                       "songOpen=" + session.songOpen,
-                       "stagedLabels=[" + testCase.stagedLabels() + "]"]
-        if (session.lastSaveError.length > 0)
-            details.push("lastSaveError=" + session.lastSaveError)
-        return " (" + details.join("; ") + ")"
-    }
-
-    // The labels the staged project actually offers, so a label mismatch is
-    // part of the failure instead of something to guess from a timeout.
-    function stagedLabels() {
-        var labels = []
-        var songs = session.songDockController().songListPresenter()
-        var count = songs.rowCount
-        for (var i = 0; i < count && i < 8; ++i)
-            labels.push(songs.songLabel(i))
-        return count > 8 ? labels.join(",") + ",…" : labels.join(",")
-    }
-
-    // The one production composition, mounted once the document is presented.
-    // The mounted EditorSurface gets the lane's private preference file and
-    // the same initial drawer layout the native fixture pushed, so no case can
-    // read or write the caller's store.
-    function mountOverlay() {
-        var item = overlayComponent.createObject(testCase, {
-            "width": testCase.width,
-            "height": testCase.height
-        })
-        verify(item, "the production overlay came up")
-        testCase.overlay = item
-        var surface = null
-        verify(waitForNative(function() {
-            surface = testCase.selectedSurface()
-            return surface !== null
-        }, 5000), "the selected tab's production EditorSurface mounted")
-        var drawer = findChild(surface, "editorDrawer")
-        verify(drawer, "the production drawer is mounted")
-        session.configurePersistence()
-        verify(waitForNative(function() {
-            return surface.visible && surface.width > 0 && surface.height > 0
-        }, 5000), "the mounted surface is drawn")
-    }
-
-    // The selected tab's EditorSurface: the overlay's root and the surface both
-    // carry the production objectName, and findChild searches descendants, so
-    // the one match under the overlay is the surface itself.
-    function selectedSurface() {
-        return testCase.overlay ? findChild(testCase.overlay, "swiftRollOverlay") : null
-    }
 
     // Every case starts from the settled composition: whatever the previous
     // case left live — a page gesture, a prompt or a page modal — ends through
@@ -178,7 +104,7 @@ TestCase {
         verify(testCase.overlay !== null, "the production overlay is mounted")
         verify(testCase.overlay.gridModel !== null,
                "the overlay publishes the selected tab's grid")
-        var surface = testCase.selectedSurface()
+        var surface = testCase.surface()
         verify(surface && surface.visible && surface.width > 0 && surface.height > 0,
                "the production EditorSurface is drawn")
         waitForRendering(surface)
@@ -204,7 +130,7 @@ TestCase {
     }
 
     function openTimeSigChip(tick) {
-        var surface = testCase.selectedSurface()
+        var surface = testCase.surface()
         var ruler = findChild(surface, "timelineRulerInput")
         verify(ruler && ruler.width > 0 && ruler.height > 0, "A001: live ruler input exists")
         var x = bootstrap.cameraContentX(tick)
@@ -300,7 +226,7 @@ TestCase {
     function test_timeSignaturePromptMenuEntries(data) {
         var tick = bootstrap.seedTimeSigFixture()
         verify(tick >= 0, "A025: the fixture opened")
-        var surface = testCase.selectedSurface()
+        var surface = testCase.surface()
         var ruler = findChild(surface, "timelineRulerInput")
         verify(ruler, "A025: the mounted ruler input exists")
         var menuTick = tick + (data.onChip ? 0 : bootstrap.timeSigTicksPerBeat())
@@ -335,7 +261,7 @@ TestCase {
         var cursorTick = data.onEvent ? tick : tick + 7
         var before = timeSigSnapshot()
         verify(bootstrap.setTimeSigCursor(cursorTick), "A032: exact edit cursor established")
-        var surface = testCase.selectedSurface()
+        var surface = testCase.surface()
         var ruler = findChild(surface, "timelineRulerInput")
         verify(ruler, "A032: the live ruler interaction exists")
         session.openTimeSigPromptAtCursor()

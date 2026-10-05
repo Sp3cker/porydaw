@@ -3,18 +3,14 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
-import "ShellTabsRenderingSupport.js" as Rendering
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellOpenFailure"
     when: windowShown
     width: 960
     height: 640
     visible: true
-
-    property var shell: null
 
     ShellQmlBootstrap { id: bootstrap }
     readonly property var settings: bootstrap.preferences
@@ -23,55 +19,20 @@ TestCase {
 
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
 
-
     function init() {
         verify(bootstrap.resetPreferences(), "each explicit-open scenario starts in an empty store")
     }
 
+    laneBootstrap: bootstrap
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-
-    function waitForShellScene() {
-        verify(waitForNative(function() {
-            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
-        }, 10000), "the presented window mounts its deferred editor scene")
-    }
-
-    function cleanup() {
-        probe.restoreSong(bootstrap.projectRoot, "mus_littleroot_test")
-        if (!shell)
-            return
-        if (shell.shellPresenter.sceneActive) {
-            shell.close()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.session.songTabs.pendingCloseId >= 0
-                    || !shell.shellPresenter.sceneActive
-            }, 5000), "the close-all walk reaches the dirty gate or completes")
-            if (shell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-                shell.shellPresenter.session.songTabs.confirmDiscard()
-            verify(waitForNative(function() {
-                return shell.shellPresenter.closeReady
-            }, 5000), "teardown waits for scene destruction and grid detach")
-        }
-        criticalSpy.target = null
-        shell.destroy()
-        shell = null
-        wait(0)
-    }
+    function preCleanup() { probe.restoreSong(laneBootstrap.projectRoot, "mus_littleroot_test") }
+    function preDestroyShell() { criticalSpy.target = null }
 
     function surfaceOf(tabId) {
         var pages = shell && shell.sceneLoader ? shell.sceneLoader.item : null
         var page = pages ? findChild(pages, "songTab_" + tabId) : null
         return page ? findChild(page, "swiftRollOverlay") : null
     }
-    function gridOf(tabId) {
-        var surface = surfaceOf(tabId)
-        return surface ? surface.gridModel : null
-    }
-    function summaryOf(tabId) { return gridOf(tabId).fetchNoteSummary() }
-    function drawNote(tabId) { return Rendering.drawNote(testCase, tabId) }
 
     function test_failedOpenPreservesLiveDirtyTabAndSurfacesError() {
         shell = shellComponent.createObject(null)

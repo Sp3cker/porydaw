@@ -199,7 +199,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
     @QtIgnored var picker: VoicePickerState?
     @QtIgnored var menu: VoiceMenuState?
     @QtIgnored var hoverIdentity: String?
-    @QtIgnored var dragDistance: Double = 10
+    @QtIgnored var dragDistance: Double = DrawerPan.dragDistanceSeed
     @QtIgnored var contextTick: Tick = 0
     @QtIgnored var playing = false
     private var lastContextKey: VoiceContextKey?

@@ -489,15 +489,15 @@ public final class VoiceListController: QmlUncreatable {
             onNewVoicegroupFailed?("A voicegroup named \(name) already exists.")
             return
         }
-        guard projectService != nil else {
+        guard let service = projectService else {
             onNewVoicegroupFailed?("The project service is unavailable.")
             return
         }
         newVoicegroupPrompt = false
         let useCopy = newVoicegroupUseCopy
         Task { [weak self] in
-            guard let self, let session = self.session, !session.isClosed,
-                let service = self.projectService
+            guard let self, !Task.isCancelled, !session.isClosed,
+                self.session === session, self.projectService === service
             else { return }
             do {
                 let lease = session.bankLease
@@ -506,14 +506,26 @@ public final class VoiceListController: QmlUncreatable {
                 try await service.createVoicegroup(
                     name: name, copyFromFile: copyFile,
                     copySectionLabel: copyLabel)
+                guard !Task.isCancelled, !session.isClosed,
+                    self.session === session, self.projectService === service
+                else { return }
                 let args = try await service.voicegroupArgs()
+                guard !Task.isCancelled, !session.isClosed,
+                    self.session === session, self.projectService === service
+                else { return }
                 try await session.selectVoicegroup("_" + name)
+                guard !Task.isCancelled, !session.isClosed,
+                    self.session === session, self.projectService === service
+                else { return }
                 self.setVoicegroupChoices(args)
                 self.refresh(from: session)
                 let song = session.document.source.label
                 self.onStatusMessage?(
                     "Created sound/voicegroups/\(name).inc and assigned it to \(song).")
             } catch {
+                guard !Task.isCancelled, !session.isClosed,
+                    self.session === session, self.projectService === service
+                else { return }
                 let message: String
                 if case let ProjectServiceError.operationFailed(text) = error, !text.isEmpty {
                     message = text

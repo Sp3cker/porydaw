@@ -7,7 +7,7 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "NativeWait.js" as NativeWait
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellVoicegroup"
     when: windowShown
@@ -74,9 +74,7 @@ TestCase {
         compare(item.font.weight, expected.weight, name + " uses " + role + " weight")
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
+    laneBootstrap: bootstrap
 
     function createFullShell() {
         bootstrap.preferences.setString("lastProjectDir", "")

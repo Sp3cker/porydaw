@@ -114,7 +114,7 @@ struct RollKeyboardBuilder {
                 else { continue }
                 if bottom <= 0 || top >= height { continue }
                 let name = pitch < (input.keyboardNames?.count ?? 0) ? (input.keyboardNames?[pitch] ?? "") : ""
-                let text = name.isEmpty ? GridScene.keyName(pitch) : name
+                let text = name.isEmpty ? GridScene.keyNames[pitch] : name
                 let natural = typography.keyLabelAdvance(text)
                 let labelWidth =
                     drum

@@ -29,13 +29,6 @@ ShellWindowSupport {
         return session
     }
 
-    function noteById(grid, id) {
-        var list = gridNotes(grid)
-        for (var i = 0; i < list.length; ++i)
-            if (list[i].id === id)
-                return list[i]
-        return null
-    }
     function syncedPlot(surface, grid) {
         var plot = findChild(surface, "timelineRendererPlot")
         verify(waitForNative(function() {
@@ -84,7 +77,6 @@ ShellWindowSupport {
         }, 8000)
         return center
     }
-
 
     function selectedNotes(grid) {
         return gridNotes(grid).filter(function(n) { return n.selected })

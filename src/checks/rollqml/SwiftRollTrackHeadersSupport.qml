@@ -3,13 +3,10 @@ import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
-import "../editorqml/NativeWait.js" as NativeWait
 
-TestCase {
+RollLaneSupport {
     id: testCaseRoot
     readonly property var testCase: testCaseRoot
-    property alias bootstrap: bootstrapObject
-    property alias session: sessionObject
     property alias voiceRequestSpy: voiceRequestSpyObject
     name: "SwiftRollTrackHeaders"
     when: windowShown
@@ -18,12 +15,9 @@ TestCase {
     visible: true
 
     readonly property real tolerance: 0.01
-    property var overlay: null
+    verifySurface: true
+    surfaceMessage: ""
 
-    RollQmlBootstrap {
-        id: bootstrapObject
-        ApplicationSession { id: sessionObject }
-    }
 
     SignalSpy {
         id: voiceRequestSpyObject
@@ -31,14 +25,6 @@ TestCase {
         signalName: "changeTrackVoiceRequested"
     }
 
-    Component {
-        id: overlayComponent
-        SwiftRollOverlay { applicationSession: session }
-    }
-
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
 
     function initTestCase() {
         bootstrap.seedDrawerPreferences(false, true, true, 0)
@@ -94,11 +80,6 @@ TestCase {
         }
     }
 
-    function surface() {
-        var mounted = findChild(testCase.overlay, "swiftRollOverlay")
-        verify(mounted !== null)
-        return mounted
-    }
 
     function item(name) {
         var found = null

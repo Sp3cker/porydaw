@@ -396,7 +396,7 @@ struct RollPlotBuilder {
                             textOffset: 0, textLength: 0, argb: r.ink,
                             flags: flags, fontId: Self.fontNoteName,
                             pixelSize: UInt32(pixelSize)),
-                        text: GridScene.keyName(p.pitch))
+                        text: GridScene.keyNames[p.pitch])
                     usedNameFont = true
                 }
             }

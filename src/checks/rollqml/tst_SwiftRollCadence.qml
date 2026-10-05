@@ -3,9 +3,8 @@ import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
-import "../editorqml/NativeWait.js" as NativeWait
 
-TestCase {
+RollLaneSupport {
     id: testCase
 
     name: "SwiftRollCadence"
@@ -14,13 +13,8 @@ TestCase {
     height: 640
     visible: true
 
-    property var overlay: null
     property var hostWindow: null
 
-    RollQmlBootstrap {
-        id: bootstrap
-        ApplicationSession { id: session }
-    }
 
     SignalSpy {
         id: frameSwaps
@@ -28,14 +22,6 @@ TestCase {
         signalName: "frameSwapped"
     }
 
-    Component {
-        id: overlayComponent
-        SwiftRollOverlay { applicationSession: session }
-    }
-
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
 
     function initTestCase() {
         bootstrap.seedDrawerPreferences(false, true, true, 0)

@@ -4,9 +4,8 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellSongs"
     when: windowShown
@@ -14,7 +13,6 @@ TestCase {
     height: 720
     visible: true
 
-    property var shell: null
     property string originalProjectRoot: ""
     ShellQmlBootstrap { id: bootstrap }
     TabsDrawerProbe { id: fileProbe }
@@ -26,16 +24,7 @@ TestCase {
         verify(bootstrap.resetPreferences(), "each shell starts with fresh window and filter state")
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-    function waitForShellScene() {
-        verify(waitForNative(function() {
-            return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
-        }, 10000), "the presented window mounts its deferred editor scene")
-    }
-
-
+    laneBootstrap: bootstrap
 
     function cleanup() {
         if (!shell) {
@@ -93,7 +82,6 @@ TestCase {
         compare(item.font.pixelSize, expected.pixelSize, name + " uses " + role + " pixelSize")
         compare(item.font.weight, expected.weight, name + " uses " + role + " weight")
     }
-
 
     function menuAction(id) {
         const menu = findChild(shell, "songListContextMenu")

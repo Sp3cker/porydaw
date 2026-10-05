@@ -72,7 +72,7 @@ extension PianoGrid {
     @QtIgnored
     func rebuildScene() {
         let input = sceneInput()
-        scene.invalidateStatic()
+        scene.invalidatePaletteCache()
         staticSceneDirty = false
         scene.rebuildNotes(input)
         scene.rebuildStatic(input)
@@ -85,7 +85,7 @@ extension PianoGrid {
         if typographyChanged { staticSceneDirty = true }
         let input = sceneInput()
         if staticSceneDirty {
-            scene.invalidateStatic()
+            scene.invalidatePaletteCache()
             staticSceneDirty = false
         }
         scene.rebuildNotes(input)
@@ -112,7 +112,7 @@ extension PianoGrid {
         let typographyChanged = updateTypography()
         let input = sceneInput()
         if typographyChanged || staticSceneDirty {
-            scene.invalidateStatic()
+            scene.invalidatePaletteCache()
             staticSceneDirty = false
         }
         scene.rebuildDisplayLists(input)
@@ -133,7 +133,7 @@ extension PianoGrid {
         let typographyChanged = updateTypography()
         let input = sceneInput()
         if typographyChanged || staticSceneDirty {
-            scene.invalidateStatic()
+            scene.invalidatePaletteCache()
             staticSceneDirty = false
         }
         guard !typographyChanged,

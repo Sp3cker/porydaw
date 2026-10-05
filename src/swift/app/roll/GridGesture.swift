@@ -186,7 +186,10 @@ enum GridGesture {
                 ? 0 : snapped - state.gripTick
             return .resize(state)
         case .pendingMenu(let state):
-            guard abs(x - state.pressX) + abs(y - state.pressY) >= state.threshold else {
+            guard
+                manhattanExceeds(
+                    press: (state.pressX, state.pressY), x: x, y: y, threshold: state.threshold)
+            else {
                 return .pendingMenu(state)
             }
             return .band(

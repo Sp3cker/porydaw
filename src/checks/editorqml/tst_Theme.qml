@@ -3,11 +3,10 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 
 // Theme persistence and grid contrast direction through the production shell.
 // Canonical writeback and pinned contrast floors preserve the legacy checks.
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "Theme"
     when: windowShown
@@ -15,13 +14,11 @@ TestCase {
     height: 640
     visible: true
 
-    property var shell: null
     readonly property var settings: bootstrap.preferences
 
     ShellQmlBootstrap { id: bootstrap }
 
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
-
 
     function cleanup() {
         // No songs open in this lane, so no close-all walk is needed.
@@ -32,9 +29,7 @@ TestCase {
         }
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
+    laneBootstrap: bootstrap
 
     function openThemedShell() {
         shell = shellComponent.createObject(null)

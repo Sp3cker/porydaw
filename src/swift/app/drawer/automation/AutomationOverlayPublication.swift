@@ -287,9 +287,9 @@ extension AutomationPage {
 
     func publishTypography() {
         typography = Typography(baseFontPx: Int(baseFontPx.rounded()))
-        captionMetrics = AutomationCaption(font: typography.caption)
-        titleMetrics = AutomationCaption(font: typography.captionBold)
-        noteNameMetrics = AutomationCaption(font: typography.noteName)
+        captionMetrics = LaneCaptionMetrics(font: typography.caption)
+        titleMetrics = LaneCaptionMetrics(font: typography.captionBold)
+        noteNameMetrics = LaneCaptionMetrics(font: typography.noteName)
         publish(\.captionFont, typography.caption.qmlFont)
         publish(\.titleFont, typography.captionBold.qmlFont)
         publish(\.noteNameFont, typography.noteName.qmlFont)
@@ -356,19 +356,4 @@ extension AutomationPage {
         }
     }
 
-}
-
-/// Caption and title metrics for the page's own labels, measured through the same
-/// native font-metrics seam the grid and the sibling pages use.
-@MainActor
-final class AutomationCaption {
-    let height: Double
-    private let metrics: NativeFontMetrics
-
-    init(font: GridFontSpec) {
-        metrics = NativeFontMetrics(font)
-        height = metrics.extents.height
-    }
-
-    func advance(_ text: String) -> Double { metrics.advance(text) }
 }

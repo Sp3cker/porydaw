@@ -3,13 +3,10 @@ import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
-import "../editorqml/NativeWait.js" as NativeWait
 
-TestCase {
+RollLaneSupport {
     id: testCaseRoot
     readonly property var testCase: testCaseRoot
-    property alias bootstrap: bootstrapObject
-    property alias session: sessionObject
     property alias standaloneComponent: standaloneFixture
     name: "TimelineScrollbar"
     when: windowShown
@@ -17,17 +14,8 @@ TestCase {
     height: 640
     visible: true
 
-    property var overlay: null
     property real originalAutomationHeight: 0
 
-    RollQmlBootstrap {
-        id: bootstrapObject
-        ApplicationSession { id: sessionObject }
-    }
-    Component {
-        id: overlayComponent
-        SwiftRollOverlay { applicationSession: session }
-    }
     Component {
         id: standaloneFixture
         Item {
@@ -57,11 +45,6 @@ TestCase {
         }
     }
 
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
-
-    function surface() { return overlay ? findChild(overlay, "swiftRollOverlay") : null }
     function grid() { return surface().gridModel }
     function bar(vertical) {
         return findChild(surface(), vertical ? "timelineRollScrollBar"

@@ -106,6 +106,8 @@ add_library(PorydawApp STATIC
     drawer/PromptAppearance.swift
     drawer/EditorDrawerTypes.swift
     drawer/EditorDrawerLayout.swift
+    drawer/DrawerPan.swift
+    drawer/LaneCaptionMetrics.swift
     drawer/otherEvents/OtherEventsStrip.swift
     drawer/otherEvents/OtherEventsBandPresenter.swift
     drawer/velocity/VelocityContext.swift

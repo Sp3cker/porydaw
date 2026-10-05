@@ -3,9 +3,8 @@ import QtQuick.Controls
 import QtTest
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 
-TestCase {
+ShellLaneSupport {
     id: testCase
     name: "ShellSettings"
     when: windowShown
@@ -15,7 +14,6 @@ TestCase {
 
     ShellQmlBootstrap { id: bootstrap }
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
-    property var shell: null
     readonly property var nativeSettings: bootstrap.preferences
 
     function initTestCase() {
@@ -24,9 +22,7 @@ TestCase {
         nativeSettings.setInt("engine.pcmMixRate", 21024)
         nativeSettings.setBool("engine.analogFilter", true)
     }
-    function waitForNative(predicate, timeoutMs) {
-        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
-    }
+    laneBootstrap: bootstrap
     function cleanup() {
         if (!shell)
             return
