@@ -3,6 +3,29 @@ import PorydawCore
 import PorydawProject
 import PorydawBankLease
 
+/// Runs every `ProjectService` actor on one private serial queue instead of the
+/// shared cooperative pool. Project I/O is blocking file work; on the pool it
+/// starved MainActor and QML construction during startup (warm editor frame
+/// 735ms → 617ms with this executor). Only a handful of services ever exist
+/// (the open project, a replacement opening, a discarded startup read closing),
+/// so one shared queue costs nothing and keeps actor serial semantics unchanged.
+final class ProjectIOSerialExecutor: SerialExecutor, Sendable {
+    private let queue = DispatchQueue(label: "porydaw.project-io", qos: .userInitiated)
+
+    func enqueue(_ job: consuming ExecutorJob) {
+        let unowned = UnownedJob(job)
+        queue.async {
+            unowned.runSynchronously(on: self.asUnownedSerialExecutor())
+        }
+    }
+
+    func asUnownedSerialExecutor() -> UnownedSerialExecutor {
+        UnownedSerialExecutor(ordinary: self)
+    }
+}
+
+private let sharedProjectIOExecutor = ProjectIOSerialExecutor()
+
 // MARK: - Public errors
 
 /// Typed failures for the project store boundary.
@@ -355,6 +378,11 @@ public struct SongDeletionPlan: Equatable, Sendable {
 /// Async Swift front over the project-store actor. The actor owns bank
 /// transitions; document history never blocks on it.
 public actor ProjectService {
+    /// See `ProjectIOSerialExecutor`.
+    public nonisolated var unownedExecutor: UnownedSerialExecutor {
+        sharedProjectIOExecutor.asUnownedSerialExecutor()
+    }
+
     nonisolated let bankViews = ProjectBankViews()
     internal var store: ProjectStore?
     internal var snapshot: ProjectSnapshot?

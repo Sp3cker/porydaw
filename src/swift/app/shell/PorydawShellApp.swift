@@ -44,5 +44,7 @@ struct PorydawShellApp: QApp {
             print("porydaw \(porydawBuildVersion)")
             exit(EXIT_SUCCESS)
         }
+        PreferencesStore.configureShared(applicationName: "porydaw")
+        StartupPrefetch.start(arguments: CommandLine.arguments)
     }
 }

@@ -15,6 +15,11 @@ public struct WorkspaceTabRecipe: Equatable, Sendable {
         self.selectedSong = selectedSong
     }
 
+    /// The tab to open first on restore: the selected song, else the first ordered one.
+    var startupSong: String? {
+        selectedSong.isEmpty ? orderedSongs.first : selectedSong
+    }
+
     public func normalized(available: [String]) -> WorkspaceTabRecipe {
         let playable = Set(available)
         var seen = Set<String>()

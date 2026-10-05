@@ -106,36 +106,35 @@ bool pd_qml_add_import_path(const char *path)
     return true;
 }
 
+// os_signpost names must be string literals, so the stage table expands once per name.
+#define PD_STARTUP_STAGES(X)                                                                   \
+    X("app-init")                                                                              \
+    X("project-read-start")                                                                    \
+    X("project-read-begin")                                                                    \
+    X("project-read-end")                                                                      \
+    X("presenter-begin")                                                                       \
+    X("presenter-end")                                                                         \
+    X("chrome-restored")                                                                       \
+    X("root-created")                                                                          \
+    X("content-ready")                                                                         \
+    X("workspace-ready")                                                                       \
+    X("first-frame")                                                                           \
+    X("chrome-frame")                                                                          \
+    X("workspace-frame")                                                                       \
+    X("editor-ready")                                                                          \
+    X("editor-frame")
+
 // The external launch probe owns the clock, including process creation and dyld.
 void pd_startup_trace_mark(const char *stage)
 {
 #ifdef Q_OS_MACOS
     const auto log = startup_signpost_log();
     if (os_signpost_enabled(log)) {
-        if (std::strcmp(stage, "app-init") == 0)
-            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "app-init");
-        else if (std::strcmp(stage, "presenter-begin") == 0)
-            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "presenter-begin");
-        else if (std::strcmp(stage, "presenter-end") == 0)
-            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "presenter-end");
-        else if (std::strcmp(stage, "chrome-restored") == 0)
-            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "chrome-restored");
-        else if (std::strcmp(stage, "root-created") == 0)
-            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "root-created");
-        else if (std::strcmp(stage, "content-ready") == 0)
-            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "content-ready");
-        else if (std::strcmp(stage, "workspace-ready") == 0)
-            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "workspace-ready");
-        else if (std::strcmp(stage, "first-frame") == 0)
-            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "first-frame");
-        else if (std::strcmp(stage, "chrome-frame") == 0)
-            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "chrome-frame");
-        else if (std::strcmp(stage, "workspace-frame") == 0)
-            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "workspace-frame");
-        else if (std::strcmp(stage, "editor-ready") == 0)
-            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "editor-ready");
-        else if (std::strcmp(stage, "editor-frame") == 0)
-            os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, "editor-frame");
+#define PD_EMIT_STAGE(name)                                                                    \
+    if (std::strcmp(stage, name) == 0)                                                         \
+        os_signpost_event_emit(log, OS_SIGNPOST_ID_EXCLUSIVE, name);
+        PD_STARTUP_STAGES(PD_EMIT_STAGE)
+#undef PD_EMIT_STAGE
     }
 #endif
     if (std::getenv("PORYDAW_STARTUP_TRACE")) {
@@ -143,6 +142,7 @@ void pd_startup_trace_mark(const char *stage)
         std::fflush(stderr);
     }
 }
+#undef PD_STARTUP_STAGES
 
 bool pd_startup_trace_enabled()
 {

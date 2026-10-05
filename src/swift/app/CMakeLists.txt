@@ -38,6 +38,7 @@ add_library(PorydawApp STATIC
     ApplicationSession+Commands.swift
     ApplicationSession+Catalog.swift
     ApplicationSession+Samples.swift
+    StartupSelection.swift
     midiimport/ImportAnalysisSummary.swift
     midiimport/MidiImportWizardState.swift
     midiimport/MidiImportController.swift

@@ -122,7 +122,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     var pendingProjectSwitch: ProjectSwitchCandidate?
     @QtIgnored
-    var prefetchedProject: (path: String, read: Task<ProjectRead, Error>)?
+    var prefetchedProject: StartupPrefetch?
     @QtIgnored
     var prefetchedSong: (service: ProjectService, load: PrefetchedSongLoad)?
     @QtIgnored

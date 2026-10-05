@@ -18,11 +18,11 @@ extension ApplicationSession {
         let song: PrefetchedSongLoad?
     }
 
+    /// Restores a saved recipe unless a deliberate open already won.
     @QtIgnored
-    func restoreStartup() {
-        guard persistenceConfigured, !deliberateOpenRequested, !isDisposed else { return }
-        let recipe = EditorViewStateCodec.loadTabs(store: preferences)
-        guard !recipe.projectPath.isEmpty else { return }
+    func restoreStartup(recipe: WorkspaceTabRecipe) {
+        guard persistenceConfigured, !deliberateOpenRequested, !isDisposed, !recipe.projectPath.isEmpty
+        else { return }
         startProjectSwitch(path: recipe.projectPath, label: nil, restore: recipe)
     }
 
@@ -38,31 +38,13 @@ extension ApplicationSession {
         startProjectSwitch(path: path, label: label, restore: nil)
     }
 
-    /// Starts the saved-project (and named-song) read during QML construction.
-    /// The read never touches MainActor state; adoption still goes through
-    /// restoreStartup/openStartup after chrome is restored.
+    /// Takes the pre-Qt read before the shell can close or request another project.
     @QtIgnored
-    func prefetchStartup(arguments: [String]) {
-        guard prefetchedProject == nil, !isDisposed else { return }
-        let cli = parseStartupArguments(arguments)
-        let recipe = EditorViewStateCodec.loadTabs(store: preferences)
-        let path = cli.project.isEmpty ? recipe.projectPath : cli.project
-        guard !path.isEmpty else { return }
+    func adoptStartupPrefetch() {
+        guard let parked = StartupPrefetch.parked else { return }
+        StartupPrefetch.parked = nil
+        prefetchedProject = parked
         songDock.songsLoading = true
-        let song = startupSongChoice(
-            label: cli.song.isEmpty ? nil : cli.song,
-            selected: recipe.selectedSong, ordered: recipe.orderedSongs)
-        prefetchedProject = (
-            path, Task { @concurrent in try await ProjectRead.load(path: path, song: song) }
-        )
-    }
-
-    /// The one startup song worth opening off-main: the explicit label, else
-    /// the recipe's selected song, else its first ordered song.
-    private func startupSongChoice(label: String?, selected: String, ordered: [String]) -> String? {
-        if let label, !label.isEmpty { return label }
-        if !selected.isEmpty { return selected }
-        return ordered.first
     }
 
     /// Takes the prefetched startup song when it matches this open exactly:
@@ -98,14 +80,12 @@ extension ApplicationSession {
         let priorTask = activeReplacementTask
         prefetchedSong = nil
         let read: Task<ProjectRead, Error>
-        if let prefetched = prefetchedProject, prefetched.path == path {
+        if let prefetched = prefetchedProject, prefetched.selection.path == path {
             prefetchedProject = nil
             read = prefetched.read
         } else {
             discardPrefetchedProject()
-            let song = startupSongChoice(
-                label: label, selected: restore?.selectedSong ?? "",
-                ordered: restore?.orderedSongs ?? [])
+            let song = label ?? restore?.startupSong
             read = Task { @concurrent in try await ProjectRead.load(path: path, song: song) }
         }
         let replacement = Task { [weak self] in
@@ -256,27 +236,4 @@ struct ProjectRead: Sendable {
             throw error
         }
     }
-}
-
-/// Startup CLI selection shared by prefetch and open: `--project` wins;
-/// a lone `--song` uses the saved project, and empty means plain restore.
-func parseStartupArguments(_ arguments: [String]) -> (project: String, song: String) {
-    var project = ""
-    var song = ""
-    var index = 1
-    while index < arguments.count {
-        let argument = arguments[index]
-        if argument == "--project" || argument == "--song" {
-            if index + 1 < arguments.count {
-                index += 1
-                if argument == "--project" { project = arguments[index] } else { song = arguments[index] }
-            }
-        } else if argument.hasPrefix("--project=") {
-            project = String(argument.dropFirst("--project=".count))
-        } else if argument.hasPrefix("--song=") {
-            song = String(argument.dropFirst("--song=".count))
-        }
-        index += 1
-    }
-    return (project, song)
 }

@@ -71,6 +71,8 @@ internal func runWorkspaceStartupChecks(_ report: CheckReport) {
     startupPendingEngineSettings(report)
     startupPreparationFailureRetainsCause(report)
     startupClosingWaitsForPreparation(report)
+    startupPrefetchAdoptedWithoutRereading(report)
+    startupPrefetchClosedBeforeContent(report)
 }
 
 @MainActor
@@ -316,5 +318,105 @@ private func startupPreparationFailureRetainsCause(_ report: CheckReport) {
         }
     } catch {
         report.fail(id, "preparation-failure scenario failed: \(error)")
+    }
+}
+
+/// Stages a project, saves it as the startup recipe, and parks the pre-Qt read
+/// the way `PorydawShellApp.init` does; the body builds its own shell.
+@MainActor
+private func withStagedStartupPrefetch(
+    projectName: String, id: String, report: CheckReport,
+    body: (String, PreferencesStore, WorkspaceTabRecipe) -> Void
+) {
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(id, "missing project fixture root")
+        return
+    }
+    let root = stageTestProject(in: fixtureRoot, projectName: projectName)
+    let store = PreferencesStore()
+    let priorRecipe = EditorViewStateCodec.loadTabs(store: store)
+    let recipe = WorkspaceTabRecipe(
+        projectPath: root, orderedSongs: ["mus_session_test"], selectedSong: "mus_session_test")
+    EditorViewStateCodec.saveTabs(recipe, store: store)
+    defer { EditorViewStateCodec.saveTabs(priorRecipe, store: store) }
+    StartupPrefetch.start(arguments: ["porydaw"])
+    body(root, store, recipe)
+}
+
+@MainActor
+private func startupPrefetchAdoptedWithoutRereading(_ report: CheckReport) {
+    let id = "swiftcore/ApplicationSession::startupPrefetchAdoptedWithoutRereading"
+    withStagedStartupPrefetch(projectName: "swiftcore-startup-prefetch-adopt", id: id, report: report) {
+        root, _, _ in
+        // A repeated bootstrap request must keep the first read.
+        StartupPrefetch.start(arguments: ["porydaw", "--project", root + "/missing"])
+        let shell = ShellPresenter()
+        let session = shell.session
+        defer {
+            session.hostClosing()
+            session.acknowledgeGridDetached()
+        }
+        guard let prefetched = session.prefetchedProject else {
+            report.fail(id, "the shell did not take the early project read")
+            return
+        }
+        do {
+            let loaded = try runBlocking { try await prefetched.read.value }
+            guard loaded.song?.label == "mus_session_test" else {
+                report.fail(id, "the early read did not prepare the saved-selected song")
+                return
+            }
+            // A second project/song read would now lose the selected MIDI file.
+            let midi = URL(fileURLWithPath: root).appendingPathComponent("sound/songs/midi/mus_session_test.mid")
+            try FileManager.default.removeItem(at: midi)
+            shell.configureSettings(applicationName: "porydaw")
+            shell.openStartup()
+            let deadline = Date().addingTimeInterval(25)
+            while !session.songOpen && session.lastSaveError.isEmpty && Date() < deadline {
+                _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+            }
+            report.expect(
+                session.projectOpen && session.songOpen
+                    && session.songTabs.selectedPage?.title == "mus_session_test"
+                    && session.songTabs.selectedPage?.isReady == true
+                    && session.lastSaveError.isEmpty,
+                cppID: id, message: "startup opens the prepared song even after its on-disk MIDI disappears")
+        } catch {
+            report.fail(id, "early project read adoption failed: \(error)")
+        }
+    }
+}
+
+@MainActor
+private func startupPrefetchClosedBeforeContent(_ report: CheckReport) {
+    let id = "swiftcore/ApplicationSession::startupPrefetchClosedBeforeContent"
+    withStagedStartupPrefetch(projectName: "swiftcore-startup-prefetch-close", id: id, report: report) {
+        _, store, recipe in
+        let shell = ShellPresenter()
+        let session = shell.session
+        guard let prefetched = session.prefetchedProject else {
+            report.fail(id, "the shell did not take the early project read")
+            session.hostClosing()
+            session.acknowledgeGridDetached()
+            return
+        }
+        session.hostClosing()
+        session.acknowledgeGridDetached()
+        do {
+            try runBlocking {
+                let loaded = try await prefetched.read.value
+                let deadline = Date().addingTimeInterval(25)
+                while !(await loaded.service.closed) && Date() < deadline { await Task.yield() }
+                let closed = await loaded.service.closed
+                report.expect(
+                    closed && !session.projectOpen && !session.songOpen && session.songTabs.tabCount == 0,
+                    cppID: id, message: "closing before content retires the early read without adopting its project")
+                report.expectEqual(
+                    expected: recipe, actual: EditorViewStateCodec.loadTabs(store: store),
+                    cppID: id, what: "closing an unreadied shell preserves the saved project and song")
+            }
+        } catch {
+            report.fail(id, "early project read close failed: \(error)")
+        }
     }
 }

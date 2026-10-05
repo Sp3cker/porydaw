@@ -71,6 +71,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         pd_startup_trace_window()
         pd_window_cloak_until_first_frame()
         session = ApplicationSession()
+        session.adoptStartupPrefetch()
         mouseHints = session.mouseHintsPresenter()
         let settingsStore = EngineSettingsStore()
         self.settingsStore = settingsStore
@@ -352,27 +353,16 @@ public final class ShellPresenter: QmlInstantiableStatus {
         else { return }
         startupBegun = true
         session.prepareAudio()
-        session.prefetchStartup(arguments: CommandLine.arguments)
         openStartup()
     }
 
+    /// Shells built without a parked read (checks, empty recipe) restore from the
+    /// saved recipe directly; production always parks when a project is selected.
     public func openStartup() {
-        let cli = parseStartupArguments(CommandLine.arguments)
-        if !cli.project.isEmpty {
-            if cli.song.isEmpty {
-                session.openProject(path: cli.project)
-            } else {
-                session.openProjectAndSong(path: cli.project, label: cli.song)
-            }
-        } else if !cli.song.isEmpty {
-            let recipe = EditorViewStateCodec.loadTabs(store: session.preferences)
-            if !recipe.projectPath.isEmpty {
-                session.openProjectAndSong(path: recipe.projectPath, label: cli.song)
-            } else {
-                session.restoreStartup()
-            }
+        if let prefetch = session.prefetchedProject {
+            prefetch.selection.open(with: session)
         } else {
-            session.restoreStartup()
+            session.restoreStartup(recipe: EditorViewStateCodec.loadTabs(store: session.preferences))
         }
     }
 

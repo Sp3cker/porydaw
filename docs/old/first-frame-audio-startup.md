@@ -182,3 +182,27 @@ shown. Native checks passed 37/37, both editor QML lanes passed, the piano-roll 
 passed, and the bridge guard reported zero findings. The shell sweep passed 89/90,
 including `shell-event-list-keyboard-selection`. `shell-clipboard`, which uses the
 system pasteboard, failed once in the sweep and passed when rerun alone.
+
+## Current 2026-10-05: project indexing before Qt construction
+
+`PorydawShellApp.init` configures the production preferences domain and starts the
+project/song read after the help/version exits, before Qt application, engine,
+type registration, or window construction. CLI project/song selection still
+overrides the saved recipe. The existing concurrent task and dedicated Swift
+native-project worker are unchanged.
+
+`StartupSelection` decides once (CLI `--project`/`--song`, else the saved recipe)
+and `StartupPrefetch.parked` holds that decision with its read until the first
+`ShellPresenter` session adopts it as `prefetchedProject`. `openStartup()` opens
+that selection through the ordinary entry points; the project-switch path consumes
+the read when the path matches, and a different project or a close before content
+mounts retires its service. Audio preparation and visible project adoption still
+wait for mounted chrome. `contentReady` no longer schedules a separate prefetch.
+
+`ProjectService` actors run on one private serial queue (`ProjectIOSerialExecutor`)
+so the early read no longer competes with MainActor and QML construction for
+cooperative-pool threads (warm editor frame 735ms → 617ms).
+
+Startup tracing adds `project-read-start` (scheduled), `project-read-begin`
+(off-main execution), and `project-read-end` (read settled, including failure).
+These are not window, editor, or audio readiness markers.
