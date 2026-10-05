@@ -315,7 +315,8 @@ public struct MidiFile: Equatable, Sendable {
         self.wasFormat0 = wasFormat0
     }
 
-    public static func decode(_ bytes: [UInt8]) throws -> MidiFile {
+    /// Parses any BinaryParsing byte source (`[UInt8]`, `ArraySlice<UInt8>`, `Data`) in place, without copying.
+    public static func decode(_ bytes: some ParserSpanProvider) throws -> MidiFile {
         try bytes.withParserSpan { input in
             guard input.count >= 14 else { throw MidiCodecError.notStandardMIDIFile }
             let magic: UInt32

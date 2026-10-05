@@ -391,7 +391,7 @@ public final class DocumentSession {
             }
             return
         }
-        if Array(current) != known && Array(current) != snapshot.bytes {
+        if !current.elementsEqual(known) && !current.elementsEqual(snapshot.bytes) {
             throw SaveConflictError(label: document.source.label)
         }
     }

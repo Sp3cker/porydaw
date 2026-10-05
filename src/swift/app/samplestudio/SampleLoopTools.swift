@@ -55,7 +55,7 @@ public final class SampleLoopTools: QmlUncreatable {
         }
         let first = min(max(0, from), source.buffer.count)
         let last = min(source.buffer.count, first + max(0, length))
-        pitch = SampleDsp.detectPitchYin(Array(source.buffer[first..<last]), rate: source.sampleRate)
+        pitch = SampleDsp.detectPitchYin(source.buffer.span.extracting(first..<last), rate: source.sampleRate)
     }
 
     private func refresh() {

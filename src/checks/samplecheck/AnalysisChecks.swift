@@ -5,11 +5,11 @@ internal func runSamplePitchChecks(_ report: CheckReport, key: Int) {
     let matrix = report.scoped(cppID: "samplecheck/SampleProcessingTest::pitchMatrix")
     for rate in [8000.0, 13379.0, 22050.0, 44100.0] {
         let frequency = 440 * pow(2, Double(key - 69) / 12)
-        let sine = SampleDsp.detectPitchYin(genSine(rate, frequency, 1.5, 0.4), rate: rate)
+        let sine = SampleDsp.detectPitchYin(genSine(rate, frequency, 1.5, 0.4).span, rate: rate)
         matrix.expect(
             sine.pitched && abs(centsOff(sine.f0, frequency)) <= 5,
             message: "sine key \(key) at \(rate) Hz is within five cents")
-        let saw = SampleDsp.detectPitchYin(genSaw(rate, frequency, 1.5, 0.4), rate: rate)
+        let saw = SampleDsp.detectPitchYin(genSaw(rate, frequency, 1.5, 0.4).span, rate: rate)
         matrix.expect(
             saw.pitched && abs(centsOff(saw.f0, frequency)) <= 5,
             message: "saw key \(key) at \(rate) Hz is within five cents")
@@ -25,11 +25,11 @@ internal func runAnalysisChecks(_ report: CheckReport) {
         noise[index] = Float((Double(rng) / 4_294_967_296 - 0.5) * 0.8)
     }
     negative.expect(
-        !SampleDsp.detectPitchYin(noise, rate: 13379).pitched,
+        !SampleDsp.detectPitchYin(noise.span, rate: 13379).pitched,
         message: "white noise reports unpitched")
     let short = Array(genSine(13379, 440, 0.4, 0.4).prefix(4000))
     negative.expect(
-        !SampleDsp.detectPitchYin(short, rate: 13379).pitched,
+        !SampleDsp.detectPitchYin(short.span, rate: 13379).pitched,
         message: "fewer than three frames reports unpitched")
 
     let loop = report.scoped(cppID: "samplecheck/SampleProcessingTest::loopAndCrossfade")
@@ -41,7 +41,7 @@ internal func runAnalysisChecks(_ report: CheckReport) {
         let envelope = 1 - 0.10 * Double(index) / Double(count)
         tone[index] = Float(0.35 * envelope * sin(2 * .pi * 440 * time + 0.5 * sin(2 * .pi * 5 * time)))
     }
-    let pitch = SampleDsp.detectPitchYin(tone, rate: rate)
+    let pitch = SampleDsp.detectPitchYin(tone.span, rate: rate)
     loop.expect(
         pitch.pitched && abs(centsOff(pitch.f0, 440)) < 20,
         message: "vibrato tone detects near 440 Hz")
