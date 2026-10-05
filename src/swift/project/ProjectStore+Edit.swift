@@ -16,7 +16,7 @@ extension ProjectStore {
     ) async throws -> ProjectBankEditOutcome {
         let store = try editingStore()
         let result = try store.applyVoicegroupEdit(input: .init(id: lease.id, operation: operation))
-        return try adoptedEditOutcome(result)
+        return adoptedEditOutcome(result)
     }
 
     /// Consumes a blank-slot token and adopts the reverted in-memory bank.
@@ -30,7 +30,7 @@ extension ProjectStore {
     ) async throws -> ProjectBankEditOutcome {
         let store = try editingStore()
         let result = try store.revertBlankSlot(id: lease.id, materializationToken: materializationToken)
-        return try adoptedEditOutcome(result)
+        return adoptedEditOutcome(result)
     }
 
     /// Adopts a staged preview bank without modifying the stored publication.
@@ -42,7 +42,7 @@ extension ProjectStore {
         guard let handle = store.preview(id: lease.id),
             let current = store.currentPublication(id: lease.id)
         else { return nil }
-        return try adoptBankLease(
+        return adoptBankLease(
             view: LoadedBankView(
                 id: lease.id, bank: handle, loadName: current.loadName,
                 dirty: current.dirty, slotViews: current.slotViews))
@@ -55,10 +55,10 @@ extension ProjectStore {
         return store
     }
 
-    private func adoptedEditOutcome(_ result: VoicegroupEditResult) throws -> ProjectBankEditOutcome {
+    private func adoptedEditOutcome(_ result: VoicegroupEditResult) -> ProjectBankEditOutcome {
         switch result {
         case .applied(let applied):
-            let adopted = try adoptBankLease(view: applied.view)
+            let adopted = adoptBankLease(view: applied.view)
             return .applied(
                 lease: adopted, materialization: applied.materialization,
                 materializationToken: applied.materializationToken)

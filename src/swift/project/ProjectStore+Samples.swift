@@ -35,7 +35,7 @@ extension ProjectStore {
         let views = voicegroupStore?.rebind(context: context) ?? []
         projectContext = context
         pickerSamples = nil
-        return try views.map { try adoptBankLease(view: $0) }
+        return views.map { adoptBankLease(view: $0) }
     }
 
     /// Reads the committed WAV.

@@ -1,6 +1,6 @@
 import Foundation
 import PorydawApp
-import PorydawBankLease
+import PorydawNativeHost
 import QtBridge
 
 #if canImport(Darwin)

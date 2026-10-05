@@ -1,5 +1,4 @@
 import Foundation
-import PorydawBankLease
 import PorydawCore
 import PorydawProject
 

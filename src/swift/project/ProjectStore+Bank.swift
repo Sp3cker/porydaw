@@ -1,10 +1,10 @@
 import Foundation
 import PorydawProjectNative
 
-/// A Swift-owned native lease box and a detached snapshot of its source publication.
-// Only the native box's thread-safe reference count changes after publication; all Swift values are immutable.
+/// A Swift-owned lease over a loaded bank, plus a detached snapshot of its source publication.
+/// Holding the `BankHandle` keeps the bank alive via ARC; all other stored values are immutable.
 public final class ProjectBankLease: @unchecked Sendable {
-    let handle: OpaquePointer
+    let bank: BankHandle
     public let id: VoicegroupId
     public let loadName: String
     public let sourcePath: String
@@ -15,10 +15,10 @@ public final class ProjectBankLease: @unchecked Sendable {
     public let publicationRevision: UInt64
 
     init(
-        handle: OpaquePointer, view: LoadedBankView, projectRoot: String,
+        bank: BankHandle, view: LoadedBankView, projectRoot: String,
         publicationOwner: UUID, publicationRevision: UInt64
     ) {
-        self.handle = handle
+        self.bank = bank
         id = view.id
         loadName = view.loadName
         sourcePath = projectRoot + "/" + view.id.sourceRelativePath
@@ -29,24 +29,22 @@ public final class ProjectBankLease: @unchecked Sendable {
         self.publicationRevision = publicationRevision
     }
 
-    deinit {
-        pd_bank_lease_release(handle)
-    }
-
     /// Returns the underlying bank's address as a diagnostic identity.
-    public var bankToken: UInt { UInt(pd_bank_lease_bank_token(handle)) }
+    public var bankToken: UInt { UInt(bitPattern: bank.raw) }
 
-    /// Borrows the adopted native lease box only for the duration of `body`.
+    /// Borrows the loaded bank pointer only for the duration of `body`.
     /// The pointer must not be stored or escape the call.
-    /// - Parameter body: A synchronous operation on the borrowed box.
+    /// - Parameter body: A synchronous operation on the borrowed bank.
     /// - Returns: The operation's result.
-    public func withNativeBank<T>(_ body: (OpaquePointer) -> T) -> T {
-        withExtendedLifetime(self) { body(handle) }
+    public func withLoadedBank<T>(_ body: (UnsafePointer<LoadedVoiceGroup>) throws -> T) rethrows -> T {
+        try withExtendedLifetime(bank) {
+            try body(UnsafePointer(bank.raw))
+        }
     }
 }
 
 extension ProjectStore {
-    /// Loads a voicegroup by its song argument, publishing a native lease over the memoized bank.
+    /// Loads a voicegroup by its song argument, publishing a lease over the memoized bank.
     /// - Parameter voicegroupArg: The song's `-G` argument; empty selects `_dummy`.
     /// - Returns: A lease with a detached copy of the voicegroup's slot publication.
     /// - Throws: `VoicegroupStoreError` if the project is not open or its bank cannot load.
@@ -54,39 +52,17 @@ extension ProjectStore {
         guard let store = voicegroupStore else {
             throw VoicegroupStoreError.operationFailed("Project is not open.")
         }
-        return try adoptBankLease(view: store.loadBank(voicegroupArg: voicegroupArg))
+        return adoptBankLease(view: try store.loadBank(voicegroupArg: voicegroupArg))
     }
 
-    /// Adopts a loaded bank into C++ shared ownership, retaining its handle
-    /// until the last adopted box is released. Internal so the edit surface
+    /// Adopts a loaded bank into Swift ownership: holding the lease's `BankHandle`
+    /// keeps the bank alive via ARC. Internal so the edit surface
     /// publishes through the same path.
-    func adoptBankLease(view: LoadedBankView) throws -> ProjectBankLease {
-        let retained = Unmanaged.passRetained(view.bank)
-        let box = view.id.sourceRelativePath.withCString { source in
-            view.id.sectionLabel.withCString { section in
-                view.loadName.withCString { name in
-                    var adopted = PdAdoptedBank(
-                        bank: view.bank.raw, retained: retained.toOpaque(),
-                        releaseRetained: releaseBankRetained,
-                        sourceRelativePath: source, sectionLabel: section,
-                        loadName: name)
-                    return pd_bank_lease_adopt(&adopted)
-                }
-            }
-        }
-        guard let box else {
-            retained.release()
-            throw VoicegroupStoreError.operationFailed("Could not identify the voicegroup source.")
-        }
+    func adoptBankLease(view: LoadedBankView) -> ProjectBankLease {
         publicationRevision += 1
         return ProjectBankLease(
-            handle: box, view: view, projectRoot: projectRoot,
+            bank: view.bank, view: view, projectRoot: projectRoot,
             publicationOwner: publicationOwner,
             publicationRevision: publicationRevision)
     }
-}
-
-private func releaseBankRetained(_ retained: UnsafeMutableRawPointer?) {
-    guard let retained else { return }
-    Unmanaged<BankHandle>.fromOpaque(retained).release()
 }

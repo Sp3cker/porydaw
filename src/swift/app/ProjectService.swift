@@ -1,7 +1,7 @@
 import Foundation
 import PorydawCore
 import PorydawProject
-import PorydawBankLease
+import PorydawProjectNative
 
 // MARK: - Public errors
 
@@ -193,14 +193,12 @@ public final class NativeBankLease: Sendable {
     /// - Returns: The operation's result.
     /// - Throws: Any error thrown by `body`.
     public func withVoices<T>(_ body: (UnsafeMutablePointer<ToneData>?) throws -> T) rethrows -> T {
-        let voices = handle.withNativeBank { box -> UnsafeMutablePointer<ToneData>? in
-            let nativeLease = pd_bank_lease_native(box)
-            guard let storage = nativeLease.pointee.__getUnsafe(),
-                let offset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices)
+        let voices = handle.withLoadedBank { bank -> UnsafeMutablePointer<ToneData>? in
+            guard let offset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices)
             else {
                 return nil
             }
-            return UnsafeMutableRawPointer(mutating: storage).advanced(by: offset)
+            return UnsafeMutableRawPointer(mutating: bank).advanced(by: offset)
                 .assumingMemoryBound(to: ToneData.self)
         }
         return try withExtendedLifetime(handle) { try body(voices) }
@@ -426,27 +424,25 @@ private func copyVoice(_ voice: PorydawProject.VgVoice) -> BankVoice {
 }
 
 private func copySlots(_ lease: ProjectBankLease) -> [BankSlotView] {
-    lease.withNativeBank { box in
-        let nativeLease = pd_bank_lease_native(box)
-        let bank = nativeLease.pointee.__getUnsafe()
+    lease.withLoadedBank { bank in
         return lease.slotViews.enumerated().map { index, slot in
             let voice = slot.voice.map(copyVoice)
-            let loaded: ToneData? = bank.flatMap { storage in
+            let loaded: ToneData? = {
                 guard slot.kind != .none, index < 128,
                     let voicesOffset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices)
                 else { return nil }
-                return UnsafeRawPointer(storage).advanced(by: voicesOffset)
+                return UnsafeRawPointer(bank).advanced(by: voicesOffset)
                     .assumingMemoryBound(to: ToneData.self)[index]
-            }
+            }()
             let synth =
                 loaded.map {
                     $0.type & 0xE7 == 0 && $0.wav?.pointee.size == 0 && $0.wav?.pointee.data != nil
                 } ?? false
-            let tone: BankTone? = bank.flatMap { storage in
+            let tone: BankTone? = {
                 guard voice == nil, let loaded,
                     let namesOffset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voiceNames)
                 else { return nil }
-                let names = UnsafeRawPointer(storage).advanced(by: namesOffset)
+                let names = UnsafeRawPointer(bank).advanced(by: namesOffset)
                     .assumingMemoryBound(to: CChar.self)
                 let start = names.advanced(by: index * Int(VG_VOICE_NAME_LEN))
                 let length =
@@ -466,12 +462,11 @@ private func copySlots(_ lease: ProjectBankLease) -> [BankSlotView] {
                         attack: Int32(loaded.attack), decay: Int32(loaded.decay),
                         sustain: Int32(loaded.sustain), release: Int32(loaded.release))
                 return BankTone(name: name, type: Int32(loaded.type), isSynth: synth, adsr: adsr)
-            }
+            }()
             let subvoices = loaded.flatMap(copySubvoiceMacros)
             let drumPadNames: [String]? = loaded.flatMap { tone in
                 guard tone.type == UInt8(VOICE_KEYSPLIT_ALL),
-                    let subgroup = tone.subGroup?.assumingMemoryBound(to: ToneData.self),
-                    let bank
+                    let subgroup = tone.subGroup?.assumingMemoryBound(to: ToneData.self)
                 else { return nil }
                 return (0..<128).map { key in
                     guard let name = voicegroup_subgroup_slot_name(bank, subgroup, Int32(key))

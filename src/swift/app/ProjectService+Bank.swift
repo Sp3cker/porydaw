@@ -1,7 +1,6 @@
 import Foundation
 import PorydawCore
 import PorydawProject
-import PorydawBankLease
 
 extension ProjectService {
 

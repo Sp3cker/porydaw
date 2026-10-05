@@ -164,8 +164,8 @@ add_library(PorydawApp STATIC
     shell/EngineSettingsStore.swift
 )
 
-# Generated like the playback module map: the bank-lease header lives at the
-# repo's src/project, not beside this module map.
+# Generated like the playback module map: the native host headers
+# (native_host.h, qml_engine_host.h) are referenced with CMAKE_SOURCE_DIR paths.
 configure_file(
     module.modulemap.in
     "${CMAKE_CURRENT_BINARY_DIR}/module.modulemap"
