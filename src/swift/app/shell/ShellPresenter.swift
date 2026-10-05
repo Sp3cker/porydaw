@@ -366,7 +366,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
                 session.openProjectAndSong(path: cli.project, label: cli.song)
             }
         } else if !cli.song.isEmpty {
-            let recipe = EditorViewStateCodec.loadTabs(store: session.preferences)
+            let recipe = EditorViewStatePreferences.loadTabs(store: session.preferences)
             if !recipe.projectPath.isEmpty {
                 session.openProjectAndSong(path: recipe.projectPath, label: cli.song)
             } else {

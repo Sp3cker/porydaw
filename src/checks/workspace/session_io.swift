@@ -19,7 +19,7 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
         projectPath: projectDir + "/seeded-project",
         orderedSongs: ["mus_session_test2"],
         selectedSong: "mus_session_test2")
-    EditorViewStateCodec.saveTabs(seed, store: store)
+    EditorViewStatePreferences.saveTabs(seed, store: store)
     let app = ApplicationSession()
     app.configurePersistence()
     defer {
@@ -57,7 +57,7 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
         message: "A007 failed project open names the missing project in its explanation")
     store.synchronize()
     report.expectEqual(
-        expected: seed, actual: EditorViewStateCodec.loadTabs(store: store),
+        expected: seed, actual: EditorViewStatePreferences.loadTabs(store: store),
         cppID: id, what: "A008 failed initial open preserves the seeded complete tab recipe")
 
     app.openProjectAndSong(path: projectDir, label: "mus_session_test")
@@ -84,7 +84,7 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
             projectPath: projectDir,
             orderedSongs: ["mus_session_test"],
             selectedSong: "mus_session_test"),
-        actual: EditorViewStateCodec.loadTabs(store: store), cppID: id,
+        actual: EditorViewStatePreferences.loadTabs(store: store), cppID: id,
         what: "A010 recovery persists the staged root and its selected song")
     let firstID = app.songTabs.selectedId
     // Compare opaque MIDI and bank payloads against bytes and slots captured before the failed open.
@@ -134,7 +134,7 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
         cppID: id, what: "failed replacement retains the complete prior voicegroup catalog")
     store.synchronize()
     report.expectEqual(
-        expected: priorRecipe, actual: EditorViewStateCodec.loadTabs(store: store),
+        expected: priorRecipe, actual: EditorViewStatePreferences.loadTabs(store: store),
         cppID: id, what: "failed replacement preserves the prior root and complete persisted selection")
     app.songTabs.selectTab(tabId: firstID)
     let listings = app.songDockController().songListPresenter().songListings
@@ -445,9 +445,9 @@ private func sessionStartupRestore(report: CheckReport, projectDir: String) {
             "porydaw_missing_song",
         ],
         selectedSong: "mus_session_test")
-    EditorViewStateCodec.saveTabs(seed, store: store)
+    EditorViewStatePreferences.saveTabs(seed, store: store)
     store.synchronize()
-    guard EditorViewStateCodec.loadTabs(store: store) == seed else {
+    guard EditorViewStatePreferences.loadTabs(store: store) == seed else {
         report.fail(id, "could not seed the complete startup tab recipe")
         _ = store.resetPreferences()
         return
@@ -515,7 +515,7 @@ private func sessionStartupRestore(report: CheckReport, projectDir: String) {
                 "porydaw_missing_song",
             ],
             selectedSong: "mus_session_test"),
-        actual: EditorViewStateCodec.loadTabs(store: store), cppID: id,
+        actual: EditorViewStatePreferences.loadTabs(store: store), cppID: id,
         what: "startup preserves all three saved recipe labels after restore")
 }
 @MainActor

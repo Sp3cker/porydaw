@@ -28,23 +28,23 @@ public final class TabsDrawerProbe: QmlInstantiableStatus {
             .init(track: 1, controller: 7),
             .init(track: 0, controller: 80),
         ]
-        EditorViewStateCodec.save(state, store: PreferencesStore())
+        EditorViewStatePreferences.save(state, store: PreferencesStore())
     }
 
     public func savedLaneRange(track: Int, controller: Int) -> Int {
-        EditorViewStateCodec.loadLanes(store: PreferencesStore())
+        EditorViewStatePreferences.loadLanes(store: PreferencesStore())
             .laneRanges["cc:\(track):\(controller)"] ?? -1
     }
 
     public func savedHiddenOrder() -> String {
-        EditorViewStateCodec.loadLanes(store: PreferencesStore()).hiddenLanes.map {
+        EditorViewStatePreferences.loadLanes(store: PreferencesStore()).hiddenLanes.map {
             "\($0.track):\($0.controller)"
         }.joined(separator: ",")
     }
     public func liveLaneCosmetics() -> String {
         guard let session = qmlChildren.compactMap({ $0 as? ShellPresenter }).first?.session,
             let lanes = session.selectedDocument?.editorViewState.lanes,
-            let encoded = EditorViewStateCodec.encodeLanes(lanes)
+            let encoded = EditorViewStatePreferences.encodeLanes(lanes)
         else { return "" }
         return String(decoding: encoded, as: UTF8.self)
     }

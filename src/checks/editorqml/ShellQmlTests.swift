@@ -231,12 +231,12 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     }
     public func seedStartupSong(projectPath: String, song: String) -> Bool {
         let recipe = WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: [song], selectedSong: song)
-        EditorViewStateCodec.saveTabs(recipe, store: preferences)
-        return EditorViewStateCodec.loadTabs(store: preferences).orderedSongs == [song]
+        EditorViewStatePreferences.saveTabs(recipe, store: preferences)
+        return EditorViewStatePreferences.loadTabs(store: preferences).orderedSongs == [song]
     }
 
     public func seedStartupRecipe(projectPath: String, songs: [String], selected: String) {
-        EditorViewStateCodec.saveTabs(
+        EditorViewStatePreferences.saveTabs(
             WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: songs, selectedSong: selected),
             store: preferences)
     }
@@ -254,7 +254,7 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     }
 
     public func savedStartupSongs() -> [String] {
-        EditorViewStateCodec.loadTabs(store: preferences).orderedSongs
+        EditorViewStatePreferences.loadTabs(store: preferences).orderedSongs
     }
 
     /// Widget oracle geometry for the standalone production voicegroup panel.

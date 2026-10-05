@@ -114,7 +114,7 @@ func runCompleteEditorViewStateChecks(
         second.editorViewState == seed, cppID: id,
         message: "A106 background origin holds every member of the complete editor seed")
     report.expect(
-        EditorViewStateCodec.load(store: PreferencesStore()) == seed, cppID: id,
+        EditorViewStatePreferences.load(store: PreferencesStore()) == seed, cppID: id,
         message: "A107 synchronized preferences hold every member of the complete editor seed")
     report.expect(
         second.editorViewState.lanes.hiddenLanes.count == 2, cppID: id,
@@ -241,7 +241,7 @@ func runCompleteEditorViewStateChecks(
         first.editorViewState == expected, cppID: id,
         message: "A135 selected sibling receives the independently expected full remapped editor value")
     report.expect(
-        EditorViewStateCodec.load(store: PreferencesStore()) == expected, cppID: id,
+        EditorViewStatePreferences.load(store: PreferencesStore()) == expected, cppID: id,
         message: "A136 preferences receive the independently expected full remapped editor value")
 
     guard second.document.history.undoDocument() else {
@@ -361,10 +361,10 @@ func runCompleteEditorViewStateChecks(
         first.editorViewState == withEmpty, cppID: id,
         message: "empty lane insertion matches the independently specified complete state")
     report.expect(
-        EditorViewStateCodec.load(store: PreferencesStore()) == second.editorViewState,
+        EditorViewStatePreferences.load(store: PreferencesStore()) == second.editorViewState,
         cppID: id, message: "A160 empty lane insertion stores the live origin complete state")
     report.expect(
-        EditorViewStateCodec.load(store: PreferencesStore()) == withEmpty, cppID: id,
+        EditorViewStatePreferences.load(store: PreferencesStore()) == withEmpty, cppID: id,
         message: "empty lane insertion preferences match the independently specified value")
     report.expect(
         (try? second.document.state.file.encoded()) == original, cppID: id,
@@ -404,7 +404,7 @@ func runCompleteEditorViewStateChecks(
         first.editorViewState == seed, cppID: id,
         message: "view-only removal restores selected sibling complete value")
     report.expect(
-        EditorViewStateCodec.load(store: PreferencesStore()) == seed, cppID: id,
+        EditorViewStatePreferences.load(store: PreferencesStore()) == seed, cppID: id,
         message: "view-only removal restores synchronized complete preferences")
     let beforeA = first.editorViewState
     let beforeB = second.editorViewState
@@ -413,7 +413,7 @@ func runCompleteEditorViewStateChecks(
         return
     }
     let rejectedRevision = second.document.revision
-    let rejectedSettings = EditorViewStateCodec.load(store: PreferencesStore())
+    let rejectedSettings = EditorViewStatePreferences.load(store: PreferencesStore())
     originCount = 0
     siblingCount = 0
     hubCount = 0
@@ -436,7 +436,7 @@ func runCompleteEditorViewStateChecks(
         second.document.revision == rejectedRevision, cppID: id,
         message: "A176 rejected live remap leaves document revision unchanged")
     report.expect(
-        EditorViewStateCodec.load(store: PreferencesStore()) == rejectedSettings, cppID: id,
+        EditorViewStatePreferences.load(store: PreferencesStore()) == rejectedSettings, cppID: id,
         message: "A177 rejected live remap leaves persisted preferences unchanged")
     report.expect(
         originCount == 0, cppID: id,
@@ -484,7 +484,7 @@ func runCompleteEditorViewStateChecks(
         first.editorViewState == isolated, cppID: isolationID,
         message: "A153 selected sibling reads back the fork-literal editor state")
     report.expect(
-        EditorViewStateCodec.load(store: PreferencesStore()) == isolated,
+        EditorViewStatePreferences.load(store: PreferencesStore()) == isolated,
         cppID: isolationID, message: "synchronized preferences retain the literal background state")
     report.expect(
         (try? first.document.state.file.encoded()) == firstBytes, cppID: isolationID,

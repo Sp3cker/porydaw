@@ -283,10 +283,6 @@ public final class SongListPresenter {
 
     // MARK: - New Song name laws (fork newsongwizard identity field)
 
-    public func acceptSongLabelEdit(previous: String, proposed: String) -> String {
-        SongLabelPolicy.acceptEdit(previous: previous, proposed: proposed)
-    }
-
     @QtIgnored public func registeredLabels() -> Set<String> {
         Set(allListings.lazy.filter(\.registered).map(\.label))
     }

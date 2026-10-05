@@ -226,7 +226,7 @@ public final class AutomationPage: EditorDrawerPage {
     /// Projects the complete stored range table without originating another change.
     public func applyLaneRanges(_ lanes: EditorLaneState) {
         let next = lanes.laneRanges.reduce(into: [AutomationParameter: Int]()) { result, entry in
-            if let parameter = EditorViewStateCodec.parameter(for: entry.key) {
+            if let parameter = EditorLaneState.parameter(forRowKey: entry.key) {
                 result[parameter] = entry.value
             }
         }

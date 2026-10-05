@@ -267,7 +267,7 @@ extension ApplicationSession {
                 self.onCommandAvailabilityChanged?()
             }
             workspace.automationPage.onLaneRangeChanged = { [weak session] parameter, range in
-                guard let session, let key = EditorViewStateCodec.rowKey(for: parameter) else {
+                guard let session, let key = EditorLaneState.rowKey(for: parameter) else {
                     return
                 }
                 var next = session.editorViewState
@@ -361,7 +361,7 @@ extension ApplicationSession {
             !isRestoringTabs, !isHostCloseWalk, !isReplacingProject,
             pendingProjectSwitch == nil
         else { return }
-        EditorViewStateCodec.saveTabs(
+        EditorViewStatePreferences.saveTabs(
             songTabs.recipe(projectPath: projectRoot),
             store: preferences)
     }
@@ -381,7 +381,7 @@ extension ApplicationSession {
         }
         onEditorViewStateChanged?(state)
         if persistenceConfigured {
-            EditorViewStateCodec.save(state, store: preferences)
+            EditorViewStatePreferences.save(state, store: preferences)
             onEditorViewStatePersisted?(state)
         }
     }

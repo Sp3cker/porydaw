@@ -449,7 +449,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     // MARK: - Project and song opens
     public func configurePersistence() {
         persistenceConfigured = true
-        editorViewState = EditorViewStateCodec.load(store: preferences)
+        editorViewState = EditorViewStatePreferences.load(store: preferences)
         for tab in songTabs.allTabs {
             tab.workspace.session.applyEditorViewStateProjection(editorViewState)
             tab.workspace.drawer.applyChrome(editorViewState.chrome)

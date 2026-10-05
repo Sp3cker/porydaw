@@ -35,12 +35,12 @@ func runSessionViewStateChecks(
     var restoredChrome = EditorDrawerChromeState()
     restoredChrome.velocity = .init(visible: true, height: 173)
     restoredChrome.activePage = .velocity
-    EditorViewStateCodec.saveChrome(restoredChrome, store: store)
+    EditorViewStatePreferences.saveChrome(restoredChrome, store: store)
     var restoredLanes = EditorLaneState()
     restoredLanes.hiddenLanes = [.init(track: 1, controller: 7)]
-    EditorViewStateCodec.saveLanes(restoredLanes, store: store)
+    EditorViewStatePreferences.saveLanes(restoredLanes, store: store)
     store.synchronize()
-    let legacy = EditorViewStateCodec.loadTabs(store: store)
+    let legacy = EditorViewStatePreferences.loadTabs(store: store)
     report.expectEqual(
         expected: ["mus_session_test"], actual: legacy.orderedSongs,
         cppID: recipeID, what: "a legacy selected-song-only recipe yields one ordered song")
@@ -99,7 +99,7 @@ func runSessionViewStateChecks(
     while restoredShell.session.songTabs.tabCount > 0 && Date() < closeDeadline {
         _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
     }
-    let savedRecipe = EditorViewStateCodec.loadTabs(store: store)
+    let savedRecipe = EditorViewStatePreferences.loadTabs(store: store)
     report.expectEqual(
         expected: root, actual: savedRecipe.projectPath,
         cppID: recipeID, what: "host close saves the live project path")
@@ -112,12 +112,12 @@ func runSessionViewStateChecks(
         cppID: recipeID, message: "host close saves the explicit ordered-song key")
     restoredShell.session.hostClosing()
     restoredShell.session.acknowledgeGridDetached()
-    EditorViewStateCodec.saveTabs(
+    EditorViewStatePreferences.saveTabs(
         WorkspaceTabRecipe(
             projectPath: root,
             orderedSongs: ["missing-song", "mus_session_test", "mus_session_test"],
             selectedSong: "other-song"), store: store)
-    let ordered = EditorViewStateCodec.loadTabs(store: store)
+    let ordered = EditorViewStatePreferences.loadTabs(store: store)
     // fceecd88:src/checks/project/identity.cpp:142-155 deduplicates saved labels.
     report.expectEqual(
         expected: ["missing-song", "mus_session_test"],
@@ -138,7 +138,7 @@ func runSessionViewStateChecks(
     // fceecd88:src/checks/project/identity.cpp:174-182 restores a lone selected label.
     report.expectEqual(
         expected: ["mus_session_test"],
-        actual: EditorViewStateCodec.loadTabs(store: store).orderedSongs,
+        actual: EditorViewStatePreferences.loadTabs(store: store).orderedSongs,
         cppID: recipeID,
         what: "an explicitly empty ordered-song key restores its selected label")
     _ = store.resetPreferences()
@@ -158,8 +158,8 @@ func runSessionViewStateChecks(
     lanes.laneRanges = ["tempo": 90, "cc:1:7": 64]
     lanes.emptyLanes = [.init(track: 0, controller: 1), .init(track: 3, controller: 10)]
     lanes.hiddenLanes = [.init(track: 0, controller: 74), .init(track: 1, controller: 7)]
-    EditorViewStateCodec.saveLanes(lanes, store: store)
-    EditorViewStateCodec.saveChrome(seed, store: store)
+    EditorViewStatePreferences.saveLanes(lanes, store: store)
+    EditorViewStatePreferences.saveChrome(seed, store: store)
     let app = ApplicationSession()
     app.configurePersistence()
     defer {
@@ -185,7 +185,7 @@ func runSessionViewStateChecks(
         what: "a fresh tab carries the shared view state before it is ready")
     report.expect(
         first.drawerPresenter().chromeState == seed
-            && EditorViewStateCodec.loadLanes(store: PreferencesStore()) == lanes,
+            && EditorViewStatePreferences.loadLanes(store: PreferencesStore()) == lanes,
         cppID: id, message: "startup adopts complete persisted drawer and lane state")
     let firstID = first.tabId
     app.openSong(label: "mus_session_test2")
@@ -200,7 +200,7 @@ func runSessionViewStateChecks(
         what: "the shared view state starts identically on two song tabs")
     report.expect(
         second.drawerPresenter().chromeState == seed
-            && EditorViewStateCodec.loadLanes(store: PreferencesStore()) == lanes,
+            && EditorViewStatePreferences.loadLanes(store: PreferencesStore()) == lanes,
         cppID: id, message: "second live tab adopts every shared drawer and lane member")
     let automation = DrawerSectionKind.automation.rawValue
     second.drawerPresenter().toggleSection(kind: automation, drawerOwnsFocus: false)
@@ -216,16 +216,16 @@ func runSessionViewStateChecks(
         actual: first.drawerPresenter().chromeState.activePage,
         cppID: id, what: "Automation becomes active on the sibling drawer")
     report.expectEqual(
-        expected: changed, actual: EditorViewStateCodec.loadChrome(store: store),
+        expected: changed, actual: EditorViewStatePreferences.loadChrome(store: store),
         cppID: id, what: "the shared view state persists once per change")
-    let beforeNoOp = EditorViewStateCodec.loadChrome(store: store)
+    let beforeNoOp = EditorViewStatePreferences.loadChrome(store: store)
     second.drawerPresenter().setSectionVisible(
         kind: automation, visible: true,
         drawerOwnsFocus: false)
     report.expect(
         first.drawerPresenter().chromeState == changed
             && second.drawerPresenter().chromeState == changed
-            && EditorViewStateCodec.loadChrome(store: store) == beforeNoOp,
+            && EditorViewStatePreferences.loadChrome(store: store) == beforeNoOp,
         cppID: id, message: "an unchanged view state writes nothing")
     let velocity = DrawerSectionKind.velocity.rawValue
     second.drawerPresenter().toggleSection(kind: velocity, drawerOwnsFocus: false)
@@ -269,7 +269,7 @@ func runSessionViewStateChecks(
         actual: first.drawerPresenter().chromeState.activePage,
         cppID: id, what: "Voice Changes becomes active on the sibling drawer")
     report.expectEqual(
-        expected: backgroundChange, actual: EditorViewStateCodec.loadChrome(store: store),
+        expected: backgroundChange, actual: EditorViewStatePreferences.loadChrome(store: store),
         cppID: id, what: "background drawer changes persist without selecting that tab")
     let idStored = "workspace/WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose"
     app.songTabs.selectTab(tabId: second.tabId)
@@ -279,7 +279,7 @@ func runSessionViewStateChecks(
     }
     let revision = document.revision
     let history = document.history.currentIdentity
-    let originalLanes = EditorViewStateCodec.loadLanes(store: PreferencesStore())
+    let originalLanes = EditorViewStatePreferences.loadLanes(store: PreferencesStore())
     report.expectEqual(
         expected: lanes, actual: originalLanes, cppID: idStored,
         what: "the live session retains every seeded lane preference after drawer changes")
@@ -292,8 +292,8 @@ func runSessionViewStateChecks(
         cppID: idStored, message: "live editor poison enters the persisted preference domain")
     let poisoned = PreferencesStore()
     report.expect(
-        EditorViewStateCodec.loadChrome(store: poisoned) == backgroundChange
-            && EditorViewStateCodec.loadLanes(store: poisoned) == EditorLaneState(),
+        EditorViewStatePreferences.loadChrome(store: poisoned) == backgroundChange
+            && EditorViewStatePreferences.loadLanes(store: poisoned) == EditorLaneState(),
         cppID: idStored, message: "poisoned live editor reload defaults only lane members")
     report.expect(
         (store.storedObject(key: laneKey) as? Data) == malformed,
@@ -304,8 +304,8 @@ func runSessionViewStateChecks(
     let compact = canonical.map { $0.first == 123 && !$0.contains(10) } ?? false
     report.expect(
         compact
-            && EditorViewStateCodec.loadChrome(store: healed) == second.drawerPresenter().chromeState
-            && EditorViewStateCodec.loadLanes(store: healed) == lanes,
+            && EditorViewStatePreferences.loadChrome(store: healed) == second.drawerPresenter().chromeState
+            && EditorViewStatePreferences.loadLanes(store: healed) == lanes,
         cppID: idStored, message: "real section resize republishes compact lanes with complete chrome")
     let drawer = second.drawerPresenter()
     drawer.setSectionVisible(
@@ -323,15 +323,15 @@ func runSessionViewStateChecks(
     drawer.toggleSection(kind: DrawerSectionKind.velocity.rawValue, drawerOwnsFocus: false)
     drawer.toggleSection(kind: DrawerSectionKind.velocity.rawValue, drawerOwnsFocus: false)
     report.expectEqual(
-        expected: seed, actual: EditorViewStateCodec.loadChrome(store: PreferencesStore()),
+        expected: seed, actual: EditorViewStatePreferences.loadChrome(store: PreferencesStore()),
         cppID: idStored, what: "the full live chrome with all three stored heights persists")
     report.expectEqual(
         expected: seed, actual: first.drawerPresenter().chromeState,
         cppID: idStored, what: "the complete three-section chrome reaches the sibling")
     let completeStore = PreferencesStore()
     report.expect(
-        EditorViewStateCodec.loadChrome(store: completeStore) == seed
-            && EditorViewStateCodec.loadLanes(store: completeStore) == lanes
+        EditorViewStatePreferences.loadChrome(store: completeStore) == seed
+            && EditorViewStatePreferences.loadLanes(store: completeStore) == lanes
             && second.drawerPresenter().chromeState == seed
             && first.drawerPresenter().chromeState == seed,
         cppID: idStored, message: "restoring all drawer sections retains every lane member on both tabs")
@@ -401,16 +401,16 @@ func runSessionViewStateChecks(
         cppID: idStored, what: "the live optional-height change retains all visibility and selects Voice Changes")
     let reopened = PreferencesStore()
     report.expectEqual(
-        expected: bare, actual: EditorViewStateCodec.loadChrome(store: reopened),
+        expected: bare, actual: EditorViewStatePreferences.loadChrome(store: reopened),
         cppID: idStored, what: "the live bare chrome persists with Voice Changes active")
     report.expectEqual(
-        expected: lanes, actual: EditorViewStateCodec.loadLanes(store: reopened),
+        expected: lanes, actual: EditorViewStatePreferences.loadLanes(store: reopened),
         cppID: idStored, what: "the live bare chrome transition retains every stored lane member")
     report.expect(
         first.drawerPresenter().chromeState == bare
             && drawer.chromeState == bare
-            && EditorViewStateCodec.loadChrome(store: reopened) == bare
-            && EditorViewStateCodec.loadLanes(store: reopened) == lanes,
+            && EditorViewStatePreferences.loadChrome(store: reopened) == bare
+            && EditorViewStatePreferences.loadLanes(store: reopened) == lanes,
         cppID: idStored, message: "unset heights preserve the complete retained shared editor state")
     let unchangedRevision = document.revision == revision
     let unchangedHistory = document.history.currentIdentity == history
@@ -436,11 +436,11 @@ func runSessionViewStateChecks(
     let restored = PreferencesStore()
     report.expect(
         returned.tabId != firstID && returned.drawerPresenter().chromeState == bare
-            && EditorViewStateCodec.loadChrome(store: restored) == bare
-            && EditorViewStateCodec.loadLanes(store: restored) == lanes,
+            && EditorViewStatePreferences.loadChrome(store: restored) == bare
+            && EditorViewStatePreferences.loadLanes(store: restored) == lanes,
         cppID: idStored, message: "reopened tab restores the complete drawer and ordered hidden lanes")
     report.expect(
-        EditorViewStateCodec.loadLanes(store: restored).hiddenLanes == lanes.hiddenLanes,
+        EditorViewStatePreferences.loadLanes(store: restored).hiddenLanes == lanes.hiddenLanes,
         cppID: idStored, message: "reopened editor retains the hidden lane ordering")
 }
 
@@ -464,7 +464,7 @@ private func runTabReadinessChecks(
     seed.lanes.laneRanges = ["cc:0:74": 90, "tempo": 100]
     seed.lanes.emptyLanes = [.init(track: 0, controller: 74)]
     seed.lanes.hiddenLanes = [.init(track: 0, controller: 7)]
-    EditorViewStateCodec.save(seed, store: store)
+    EditorViewStatePreferences.save(seed, store: store)
     let app = ApplicationSession()
     app.configurePersistence()
     defer {

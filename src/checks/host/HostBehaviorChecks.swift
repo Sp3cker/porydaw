@@ -891,8 +891,8 @@ private func hostCosmeticOnly(
     var lanes = EditorLaneState()
     lanes.laneHeight = Int(fontPx(fixture.page.baseFontPx, 8))
     lanes.hiddenLanes = [.init(track: 0, controller: 7)]
-    let encoded = EditorViewStateCodec.encodeLanes(lanes)
-    let restored = encoded.map(EditorViewStateCodec.decodeLanes)
+    let encoded = EditorViewStatePreferences.encodeLanes(lanes)
+    let restored = encoded.map(EditorViewStatePreferences.decodeLanes)
     fixture.page.configureBody(
         width: fontPx(fixture.page.baseFontPx, 30),
         height: fontPx(fixture.page.baseFontPx, 9),
