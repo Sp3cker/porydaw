@@ -25,7 +25,7 @@ ShellLaneSupport {
         id: clipboardProbeObject
         TextInput { text: "pitch bend clipboard sentinel" }
     }
-    Component { id: shellObject; ShellWindow { width: 960; height: 640; visible: true } }
+    Component { id: shellObject; ShellWindow { typographyCaptureFont: Qt.font({ pixelSize: 12 }); width: 960; height: 640; visible: true } }
 
     function init() {
         verify(bootstrap.resetPreferences(), "each shell starts with fresh window state")

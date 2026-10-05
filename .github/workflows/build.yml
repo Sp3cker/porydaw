@@ -178,7 +178,7 @@ jobs:
           path: porydaw-windows
 
   # AddressSanitizer sweep of the porydaw_checks catalog with the software Qt Quick
-  # backend; windowing checks and the macOS-only QML lanes are not run here.
+  # backend; windowing checks and the QML lanes are not run here.
   asan-checks:
     runs-on: ubuntu-latest
     steps:

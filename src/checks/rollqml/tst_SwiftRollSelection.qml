@@ -180,7 +180,11 @@ RollLaneSupport {
         var surf = surface()
         publishedNoteCount(g)
         verify(clearSelection(roll, surf, g), "the suite starts with nothing selected")
-        waitForRendering(testCase)
+        var plot = findChild(surf, "timelineRendererPlot")
+        verify(waitForNative(function() {
+            return plot.fetchedRevision === g.scene.displayRevision
+        }, 5000), "the cleared selection reaches the renderer before its reference capture")
+        waitForRendering(plot)
         var target = null
         var band = null
         for (var candidate of gridNotes(g)) {
@@ -204,11 +208,14 @@ RollLaneSupport {
         var held = noteById(g, target.id)
         verify(held && !held.selected,
                "the band ring is provisional while committed selection stays empty")
-        waitForRendering(testCase)
+        verify(waitForNative(function() {
+            return plot.fetchedRevision === g.scene.displayRevision
+        }, 5000), "the held selection band reaches the renderer before its capture")
+        waitForRendering(plot)
         var ringProbe = roll.mapToItem(testCase, item.x + item.width - 3, item.y + 0.25)
         var ringDpr = ringBefore.width / testCase.width
-        var ringX = Math.floor(ringProbe.x * ringDpr)
-        var ringY = Math.floor(ringProbe.y * ringDpr)
+        var ringX = Math.round(ringProbe.x * ringDpr)
+        var ringY = Math.round(ringProbe.y * ringDpr)
         var ringAfter = grabImage(testCase)
         verify(ringAfter.red(ringX, ringY) !== ringBefore.red(ringX, ringY)
                || ringAfter.green(ringX, ringY) !== ringBefore.green(ringX, ringY)
@@ -217,8 +224,8 @@ RollLaneSupport {
         var image = grabImage(testCase)
         var center = roll.mapToItem(testCase, item.x + item.width - 3, item.y + 0.25)
         var dpr = image.width / testCase.width
-        var px = Math.floor(center.x * dpr)
-        var py = Math.floor(center.y * dpr)
+        var px = Math.round(center.x * dpr)
+        var py = Math.round(center.y * dpr)
         var ink = g.palette.selectionRing
         var red = Math.round(ink.r * 255)
         var green = Math.round(ink.g * 255)

@@ -28,7 +28,7 @@ ShellLaneSupport {
     ShellQmlBootstrap { id: _bootstrap }
     GatedVisualsProbe { id: _probe }
 
-    Component { id: _shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
+    Component { id: _shellComponent; ShellWindow { typographyCaptureFont: Qt.font({ pixelSize: 12 }); width: 960; height: 640; visible: true } }
     Component {
         id: _smallFontShellComponent
         ShellWindow {

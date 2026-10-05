@@ -16,7 +16,7 @@ ShellLaneSupport {
 
     ShellQmlBootstrap { id: bootstrap }
 
-    Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
+    Component { id: shellComponent; ShellWindow { typographyCaptureFont: Qt.font({ pixelSize: 12 }); width: 1100; height: 720; visible: true } }
     property alias soloTextProbe: soloTextProbeComponent
     Component { id: soloTextProbeComponent; TextInput { text: "focused edit" } }
 

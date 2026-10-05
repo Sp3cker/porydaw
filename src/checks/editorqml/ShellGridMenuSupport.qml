@@ -31,6 +31,7 @@ ShellLaneSupport {
     Component {
         id: shellComponent
         ShellWindow {
+            typographyCaptureFont: Qt.font({ pixelSize: 12 })
             width: testCase.width
             height: testCase.height
             visible: true

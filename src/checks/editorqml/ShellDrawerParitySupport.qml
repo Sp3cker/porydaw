@@ -19,7 +19,7 @@ ShellLaneSupport {
 
     ShellQmlBootstrap { id: bootstrap }
 
-    Component { id: shellComponent; ShellWindow { width: 1100; height: 760; visible: true } }
+    Component { id: shellComponent; ShellWindow { typographyCaptureFont: Qt.font({ pixelSize: 12 }); width: 1100; height: 760; visible: true } }
     Component { id: drawerFocusWindowFactory; Window { width: testCase.width / 4; height: testCase.height / 4; visible: true } }
     property alias focusWindowComponent: drawerFocusWindowFactory
     property var focusWindow: null

@@ -411,6 +411,11 @@ foreach(native_target IN ITEMS porydaw_app porydaw_native_host)
     endif()
 endforeach()
 target_link_libraries(porydaw_app PUBLIC porydaw_native_host porydaw_icons porydaw_style)
+# Swift modules import native headers through their module maps; retain the
+# archive dependency without inheriting native compilation settings.
+foreach(swift_target IN ITEMS PorydawApp PorydawAppCommands PorydawAppAudio PorydawProject PorydawSample)
+    target_link_libraries(${swift_target} PRIVATE "$<LINK_ONLY:porydaw_native_host>")
+endforeach()
 if(WIN32)
     target_link_libraries(porydaw_native_host PRIVATE dwmapi)
 endif()
@@ -436,7 +441,7 @@ target_compile_options(porydaw_qmltypes PRIVATE
     "$<$<COMPILE_LANGUAGE:Swift>:-parse-as-library>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${porydaw_qmltypes_modulemap}>"
 )
-target_link_libraries(porydaw_qmltypes PRIVATE PorydawApp QtBridge porydaw_native_host)
+target_link_libraries(porydaw_qmltypes PRIVATE PorydawApp QtBridge)
 if(APPLE)
     set_target_properties(porydaw_qmltypes PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
 endif()

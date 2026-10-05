@@ -135,11 +135,11 @@ ShellGridMenuSupport {
         revision = grid.appliedRevisionText
         var frame = findChild(menu, "quickMenuFrame")
         verify(frame !== null)
-        var outsideX = ruler.width * 0.9
+        var outsideX = Math.round(ruler.width * 0.1)
         var outside = ruler.mapToItem(surface(), outsideX, y)
         var frameOrigin = frame.mapToItem(surface(), 0, 0)
-        verify(outside.x < frameOrigin.x || outside.x > frameOrigin.x + frame.width
-               || outside.y < frameOrigin.y || outside.y > frameOrigin.y + frame.height)
+        verify(outside.x < frameOrigin.x - 1 || outside.x > frameOrigin.x + frame.width + 1,
+               "the dismissal press is horizontally outside the menu after pixel rounding")
         mouseClick(ruler, outsideX, y)
         tryVerify(rulerMenuGone, 3000,
                   "an outside press dismisses the ruler menu")

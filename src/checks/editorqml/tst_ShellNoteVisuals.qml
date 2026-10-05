@@ -346,7 +346,8 @@ ShellNoteVisualsSupport {
         verify(small.border < borderRequest,
                "the small note exercises physical border thinning")
         var capture = null
-        verify(plot.grabToImage(function(result) { capture = result }),
+        var captureSize = Qt.size(Math.ceil(plot.width), Math.ceil(plot.height))
+        verify(plot.grabToImage(function(result) { capture = result }, captureSize),
                "the dpr2 plot accepts a physical-pixel capture")
         tryVerify(function() { return capture !== null }, 3000)
         verify(capture.saveToFile(bootstrap.projectRoot + "/notevisuals-dpr2-small-font.png"),
@@ -366,12 +367,12 @@ ShellNoteVisualsSupport {
         reader.loadImage(imageUrl)
         tryVerify(function() { return reader.isImageLoaded(imageUrl) }, 3000)
         var pixels = reader.getContext("2d").createImageData(imageUrl)
-        verify(pixels !== null && Math.abs(pixels.width - plot.width * dpr) <= 1
-               && Math.abs(pixels.height - plot.height * dpr) <= 1,
+        verify(pixels !== null && Math.abs(pixels.width - captureSize.width * dpr) <= 1
+               && Math.abs(pixels.height - captureSize.height * dpr) <= 1,
                "the DPR2 note capture retains physical-sized image data: "
                + (pixels ? pixels.width + "x" + pixels.height : "null")
-               + " expected " + Math.round(plot.width * dpr)
-               + "x" + Math.round(plot.height * dpr))
+               + " expected " + Math.round(captureSize.width * dpr)
+               + "x" + Math.round(captureSize.height * dpr))
         var capturedPixels = {
             red: function(x, y) { return pixels.data[(y * pixels.width + x) * 4] },
             green: function(x, y) { return pixels.data[(y * pixels.width + x) * 4 + 1] },

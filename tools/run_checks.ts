@@ -311,6 +311,7 @@ function executionEnvironment(
     QT_FORCE_STDERR_LOGGING: "1",
     ...environment,
     QT_QPA_PLATFORM: platformFor(check),
+    ...(check.windowing === "offscreen" ? { QT_QPA_PLATFORMTHEME: "" } : {}),
   };
 }
 

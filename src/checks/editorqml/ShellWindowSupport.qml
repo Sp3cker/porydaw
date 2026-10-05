@@ -36,8 +36,8 @@ ShellLaneSupport {
     SignalSpy { id: _drawerOriginPreferenceSpy; signalName: "drawerSectionPreferenceChanged" }
     SignalSpy { id: _drawerSiblingPreferenceSpy; signalName: "drawerSectionPreferenceChanged" }
 
-    Component { id: _shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
-    Component { id: _intrinsicShellComponent; ShellWindow { visible: true } }
+    Component { id: _shellComponent; ShellWindow { typographyCaptureFont: Qt.font({ pixelSize: 12 }); width: 960; height: 640; visible: true } }
+    Component { id: _intrinsicShellComponent; ShellWindow { typographyCaptureFont: Qt.font({ pixelSize: 12 }); visible: true } }
     FontMetrics {
         id: _footerCaptionMetrics
         font: shell ? shell.chromeTypography.caption : Application.font

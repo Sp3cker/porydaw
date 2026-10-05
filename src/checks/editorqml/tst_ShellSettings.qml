@@ -13,7 +13,7 @@ ShellLaneSupport {
     visible: true
 
     ShellQmlBootstrap { id: bootstrap }
-    Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
+    Component { id: shellComponent; ShellWindow { typographyCaptureFont: Qt.font({ pixelSize: 12 }); width: 960; height: 640; visible: true } }
     readonly property var nativeSettings: bootstrap.preferences
 
     Component { id: engineGeometryComponent; EngineSettingsPage {} }

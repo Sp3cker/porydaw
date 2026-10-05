@@ -74,6 +74,9 @@ function(add_porydaw_check name)
         PorydawApp
         Qt6::QuickTest
     )
+    porydaw_link_linux_swift_runtime(${name}
+        ${CHECK_SWIFT_LANE} PorydawApp QtBridge PorydawAppCommands PorydawAppAudio
+        PorydawAppEventList PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
     # run_checks.ts requires mid2agb beside the build-root harnesses.
     add_dependencies(${name} mid2agb)
 endfunction()
@@ -449,7 +452,7 @@ endif()
 
 # ---- Swift-hosted Qt Quick Test lanes (source-directory inputs) ----
 # Qt import/plugin paths come from this configure's pinned Qt installation.
-if(APPLE)
+if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Locate qmake through the Qt package this configure selected, so the query
     # answers for that same Qt (verified against the pinned Qt 6.11).
     set(PORYDAW_QMAKE_EXECUTABLE "")

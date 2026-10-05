@@ -32,7 +32,7 @@ ShellLaneSupport {
     SignalSpy { id: copySpyObject; signalName: "activated" }
     Component {
         id: shellFactory
-        ShellWindow { width: 1100; height: 720; visible: true }
+        ShellWindow { typographyCaptureFont: Qt.font({ pixelSize: 12 }); width: 1100; height: 720; visible: true }
     }
 
     function init() {

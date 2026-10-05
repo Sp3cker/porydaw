@@ -22,7 +22,7 @@ ShellLaneSupport {
     ShellQmlBootstrap { id: fixtureBootstrap }
     TabsDrawerProbe { id: fixtureProbe }
 
-    Component { id: fixtureShellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
+    Component { id: fixtureShellComponent; ShellWindow { typographyCaptureFont: Qt.font({ pixelSize: 12 }); width: 1100; height: 720; visible: true } }
     FontMetrics {
         id: fixtureBodyMetrics
         font: shell ? shell.shellPresenter.session.typographyFonts.body

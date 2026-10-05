@@ -24,7 +24,7 @@ ShellLaneSupport {
     SignalSpy { id: nativeRejectedCursorSpy; signalName: "editCursorTickChanged" }
     SignalSpy { id: nativeRejectedStatusSpy; signalName: "statusTextChanged" }
 
-    Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
+    Component { id: shellComponent; ShellWindow { typographyCaptureFont: Qt.font({ pixelSize: 12 }); width: 960; height: 640; visible: true } }
 
     laneBootstrap: bootstrap
 

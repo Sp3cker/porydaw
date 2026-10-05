@@ -24,7 +24,7 @@ ShellLaneSupport {
     property int measured: 0
 
     ShellQmlBootstrap { id: bootstrap }
-    Component { id: shellComponent; ShellWindow { width: 1280; height: 800; visible: true } }
+    Component { id: shellComponent; ShellWindow { typographyCaptureFont: Qt.font({ pixelSize: 12 }); width: 1280; height: 800; visible: true } }
 
     readonly property var themes: [
         { mode: "vanilla", window: "#C9C1BB" },

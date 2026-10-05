@@ -137,6 +137,8 @@ async function main(): Promise<void> {
   }
   const root = resolve(".");
   const ui = resolve("src/ui");
+  const sourceFiles = await files("src/ui");
+  const existingFiles = new Set(sourceFiles.map((path) => resolve(path)));
   const perFile = new Map<string, FileStats>();
   const messages = new Map<string, number>();
   for (const path of statsPaths.sort()) {
@@ -144,6 +146,7 @@ async function main(): Promise<void> {
     for (const module of stats.modules) {
       for (const file of module.moduleFiles) {
         const absolute = resolve(root, file.filePath);
+        if (!existingFiles.has(absolute)) continue;
         const underUi = relative(ui, absolute);
         if (
           underUi === ".." || underUi.startsWith("../") ||
@@ -188,7 +191,6 @@ async function main(): Promise<void> {
   }
   const banned: string[] = [];
   const revisionSites: string[] = [];
-  const sourceFiles = await files("src/ui");
   for (const path of sourceFiles) {
     if (path.endsWith(".js")) banned.push(`JavaScript file: ${path}`);
     if (!path.endsWith(".qml")) continue;
@@ -289,10 +291,6 @@ async function main(): Promise<void> {
     Deno.exit(1);
   }
   if (update) {
-    const existingFiles = new Set(sourceFiles);
-    for (const path of Object.keys(current.files)) {
-      if (!existingFiles.has(path)) delete current.files[path];
-    }
     await Deno.writeTextFile(BASELINE, JSON.stringify(current, null, 2) + "\n");
     console.log(`Updated ${BASELINE}`);
   }

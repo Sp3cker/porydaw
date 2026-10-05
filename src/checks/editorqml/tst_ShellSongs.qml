@@ -17,7 +17,7 @@ ShellLaneSupport {
     ShellQmlBootstrap { id: bootstrap }
     TabsDrawerProbe { id: fileProbe }
     GatedVisualsProbe { id: rewriteProbe }
-    Component { id: shellComponent; ShellWindow { width: 1100; height: 550; visible: true } }
+    Component { id: shellComponent; ShellWindow { typographyCaptureFont: Qt.font({ pixelSize: 12 }); width: 1100; height: 550; visible: true } }
 
     function init() {
         originalProjectRoot = bootstrap.projectRoot

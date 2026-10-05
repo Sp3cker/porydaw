@@ -95,6 +95,9 @@ ShellMenusSupport {
             bar.presenter.refresh()
             return !clock.text.startsWith("0:00.0 / ")
         }, 5000), "playback advances the real playhead")
+        presenter.activate("transport.pause")
+        tryCompare(transport, "state", 2, 3000,
+                   "the advanced playhead stays paused while its rewind is observed")
         presenter.activate("transport.go_to_start")
         verify(waitForNative(function() {
             bar.presenter.refresh()
