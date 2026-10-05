@@ -121,9 +121,14 @@ async function main(): Promise<void> {
   const config = Deno.args.includes("--release") ? "release" : "debug";
   const directory = `build/${config}/.rcc/qmlcache`;
   const statsPaths: string[] = [];
+  // Qt's all_aotstats target also writes all_aotstats.aotstats, which repeats
+  // every module; only the per-module files are read.
   try {
     for await (const entry of Deno.readDir(directory)) {
-      if (entry.isFile && entry.name.endsWith(".aotstats")) {
+      if (
+        entry.isFile && entry.name.startsWith("module_") &&
+        entry.name.endsWith(".aotstats")
+      ) {
         statsPaths.push(`${directory}/${entry.name}`);
       }
     }
@@ -132,7 +137,7 @@ async function main(): Promise<void> {
   }
   if (!statsPaths.length) {
     throw new Error(
-      `Missing or empty AOT statistics in ${directory}; build the application with AOT statistics enabled`,
+      `Missing or empty AOT statistics in ${directory}; build the all_aotstats target (deno task checks:qml-aot does)`,
     );
   }
   const root = resolve(".");
