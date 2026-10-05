@@ -51,6 +51,8 @@ machine under `~/.cache/porydaw` (`%LOCALAPPDATA%\porydaw\build-cache` on Window
 and shared by every debug/release/asan tree and worktree with the same QtBridge pin,
 patch, and Swift compiler. `PORYDAW_BUILD_CACHE` relocates it (`OFF` keeps the
 plugin inside the build tree); concurrent first builds serialize on a directory lock.
+[docs/BUILDING.md](docs/BUILDING.md) has the pipeline, timings, and the invariants
+behind this and the qmltypes/AOT steps.
 
 ## Contributing
 
