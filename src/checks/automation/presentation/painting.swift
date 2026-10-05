@@ -200,9 +200,9 @@ func drawerAutomationPresentationPaintingModel(
     ] {
         let colors = GridPalette()
         ShellAppearance.apply(to: colors, mode: mode, contrast: 50)
-        let expectedNode = PaletteMath.qmlColor(argb: PaletteMath.argb(node))
-        let expectedResting = PaletteMath.qmlColor(argb: PaletteMath.argb(resting))
-        let expectedOutline = PaletteMath.qmlColor(argb: PaletteMath.argb(outline))
+        let expectedNode = PaletteMath.qmlColor(node)
+        let expectedResting = PaletteMath.qmlColor(resting)
+        let expectedOutline = PaletteMath.qmlColor(outline)
         report.expect(
             colors.automationNodeInk == expectedNode, cppID: drawerAutomationPaintingModelID,
             message: "\(mode) automation node ink matches the native preset")

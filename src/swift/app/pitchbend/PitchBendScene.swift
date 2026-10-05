@@ -2,6 +2,24 @@ import Foundation
 import PorydawCore
 import QtBridge
 
+struct PitchBendLineValue: Equatable {
+    var x0: Double
+    var y0: Double
+    var x1: Double
+    var y1: Double
+    var width: Double
+    var color: QmlColor
+}
+
+struct PitchBendVertexValue: Equatable {
+    var x: Double
+    var y: Double
+    var radius: Double
+    var fill: QmlColor
+    var ring: QmlColor
+    var ringWidth: Double
+}
+
 @MainActor
 @QtBridgeable
 public final class PitchBendLine: QVariantGettable {
@@ -11,17 +29,30 @@ public final class PitchBendLine: QVariantGettable {
     public var y1: Double
     public var strokeWidth: Double
     public var strokeColor: QmlColor
+    @QtIgnored var current: PitchBendLineValue
 
-    public init(
-        x0: Double, y0: Double, x1: Double, y1: Double,
-        width: Double, color: QmlColor
-    ) {
-        self.x0 = x0
-        self.y0 = y0
-        self.x1 = x1
-        self.y1 = y1
-        strokeWidth = width
-        strokeColor = color
+    @QtIgnored
+    init(_ value: PitchBendLineValue) {
+        current = value
+        x0 = value.x0
+        y0 = value.y0
+        x1 = value.x1
+        y1 = value.y1
+        strokeWidth = value.width
+        strokeColor = value.color
+    }
+
+    @QtIgnored
+    func update(_ value: PitchBendLineValue) -> Bool {
+        guard current != value else { return false }
+        current = value
+        publish(\.x0, value.x0)
+        publish(\.y0, value.y0)
+        publish(\.x1, value.x1)
+        publish(\.y1, value.y1)
+        publish(\.strokeWidth, value.width)
+        publish(\.strokeColor, value.color)
+        return true
     }
 }
 
@@ -34,17 +65,30 @@ public final class PitchBendVertex: QVariantGettable {
     public var fillColor: QmlColor
     public var ringColor: QmlColor
     public var ringWidth: Double
+    @QtIgnored var current: PitchBendVertexValue
 
-    public init(
-        x: Double, y: Double, radius: Double, fill: QmlColor,
-        ring: QmlColor = .clear, ringWidth: Double = 0
-    ) {
-        self.x = x - radius
-        self.y = y - radius
-        self.radius = radius
-        fillColor = fill
-        ringColor = ring
-        self.ringWidth = ringWidth
+    @QtIgnored
+    init(_ value: PitchBendVertexValue) {
+        current = value
+        x = value.x
+        y = value.y
+        radius = value.radius
+        fillColor = value.fill
+        ringColor = value.ring
+        ringWidth = value.ringWidth
+    }
+
+    @QtIgnored
+    func update(_ value: PitchBendVertexValue) -> Bool {
+        guard current != value else { return false }
+        current = value
+        publish(\.x, value.x)
+        publish(\.y, value.y)
+        publish(\.radius, value.radius)
+        publish(\.fillColor, value.fill)
+        publish(\.ringColor, value.ring)
+        publish(\.ringWidth, value.ringWidth)
+        return true
     }
 }
 
@@ -75,15 +119,9 @@ public final class PitchBendLane {
     @QtIgnored public var onWheelSteps: ((Int) -> Void)?
     @QtIgnored public var bendRange = 2
     private var gestureStartingPoints: [Int: Int]?
-    private typealias LineValue = (
-        x0: Double, y0: Double, x1: Double, y1: Double, width: Double, color: QmlColor
-    )
-    private typealias VertexValue = (
-        x: Double, y: Double, radius: Double, fill: QmlColor, ring: QmlColor, ringWidth: Double
-    )
     private var ruleValues: [SceneRectValue] = []
-    private var lineValues: [LineValue] = []
-    private var vertexValues: [VertexValue] = []
+    private var lineValues: [PitchBendLineValue] = []
+    private var vertexValues: [PitchBendVertexValue] = []
 
     public init(kernel: PitchBendKernel, palette: GridPalette, track: Int) {
         self.kernel = kernel
@@ -188,14 +226,14 @@ public final class PitchBendLane {
             let y = k.y(at: point.value)
             let angled = next.map { $0.tick - point.tick == k.fineTicks } ?? false
             lineValues.append(
-                (
+                PitchBendLineValue(
                     x0: x0, y0: y, x1: x1,
                     y1: angled ? k.y(at: next?.value ?? point.value) : y,
                     width: g.curveStroke, color: curveColor
                 ))
             if let next, !angled {
                 lineValues.append(
-                    (
+                    PitchBendLineValue(
                         x0: x1, y0: y, x1: x1, y1: k.y(at: next.value),
                         width: g.curveStroke, color: curveColor
                     ))
@@ -203,75 +241,35 @@ public final class PitchBendLane {
         }
         if let preview = k.linePreview {
             lineValues.append(
-                (
+                PitchBendLineValue(
                     x0: k.x(at: preview.0.tick), y0: k.y(at: preview.0.value),
                     x1: k.x(at: preview.1.tick), y1: k.y(at: preview.1.value),
                     width: g.hairline, color: palette.editCursor
                 ))
         }
-        syncRetained(
-            curveLines, lineValues,
-            make: {
-                PitchBendLine(
-                    x0: $0.x0, y0: $0.y0, x1: $0.x1, y1: $0.y1,
-                    width: $0.width, color: $0.color)
-            },
-            update: { row, value in
-                guard
-                    row.x0 != value.x0 || row.y0 != value.y0
-                        || row.x1 != value.x1 || row.y1 != value.y1
-                        || row.strokeWidth != value.width || row.strokeColor != value.color
-                else { return false }
-                row.publish(\.x0, value.x0)
-                row.publish(\.y0, value.y0)
-                row.publish(\.x1, value.x1)
-                row.publish(\.y1, value.y1)
-                row.publish(\.strokeWidth, value.width)
-                row.publish(\.strokeColor, value.color)
-                return true
-            })
+        syncRetained(curveLines, lineValues, make: PitchBendLine.init, update: { $0.update($1) })
         vertexValues.removeAll(keepingCapacity: true)
         for point in ordered {
             let selected = k.selectedTick == point.tick
             let endpoint = point.tick == k.startTick || point.tick == k.endTick
+            let radius = selected ? g.selectedRingRadius : g.nodePaintRadius
             vertexValues.append(
-                (
-                    x: k.x(at: point.tick), y: k.y(at: point.value),
-                    radius: selected ? g.selectedRingRadius : g.nodePaintRadius,
+                PitchBendVertexValue(
+                    x: k.x(at: point.tick) - radius, y: k.y(at: point.value) - radius,
+                    radius: radius,
                     fill: endpoint && !selected ? palette.secondaryText : curveColor,
                     ring: selected ? palette.focusOutline : .clear,
                     ringWidth: selected ? g.hairline * 1.5 : 0
                 ))
         }
         vertexValues.append(
-            (
-                x: k.x(at: k.keyboardTick), y: k.y(at: k.liveValue),
+            PitchBendVertexValue(
+                x: k.x(at: k.keyboardTick) - g.nodePaintRadius,
+                y: k.y(at: k.liveValue) - g.nodePaintRadius,
                 radius: g.nodePaintRadius, fill: .clear,
                 ring: palette.editCursor, ringWidth: g.hairline
             ))
-        syncRetained(
-            vertices, vertexValues,
-            make: {
-                PitchBendVertex(
-                    x: $0.x, y: $0.y, radius: $0.radius, fill: $0.fill,
-                    ring: $0.ring, ringWidth: $0.ringWidth)
-            },
-            update: { row, value in
-                let left = value.x - value.radius
-                let top = value.y - value.radius
-                guard
-                    row.x != left || row.y != top || row.radius != value.radius
-                        || row.fillColor != value.fill || row.ringColor != value.ring
-                        || row.ringWidth != value.ringWidth
-                else { return false }
-                row.publish(\.x, left)
-                row.publish(\.y, top)
-                row.publish(\.radius, value.radius)
-                row.publish(\.fillColor, value.fill)
-                row.publish(\.ringColor, value.ring)
-                row.publish(\.ringWidth, value.ringWidth)
-                return true
-            })
+        syncRetained(vertices, vertexValues, make: PitchBendVertex.init, update: { $0.update($1) })
         if k.lane == .modulation {
             liveValueText = String(k.liveValue)
             upperValueText = "127"

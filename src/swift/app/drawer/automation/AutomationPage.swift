@@ -136,26 +136,22 @@ public final class AutomationPage: EditorDrawerPage {
     public var ghostNameLabels: QListModel<SceneText> = QListModel()
     /// The range press's own band, drawn in plot coordinates.
     public var bandVisible: Bool = false
-    @QtTracked public var bandRect = SceneRect(
-        x: 0, y: 0, width: 0, height: 0, fillColor: PaletteMath.qmlColor(argb: 0))
+    @QtTracked public var bandRect = SceneRect(x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
     /// The hover value label: the node's or the held value's own text.
     public var hoverVisible: Bool = false
     public var hoverText: String = ""
-    @QtTracked public var hoverLabelRect = SceneRect(
-        x: 0, y: 0, width: 0, height: 0, fillColor: PaletteMath.qmlColor(argb: 0))
+    @QtTracked public var hoverLabelRect = SceneRect(x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
     public var hoverTick: Double = 0
     /// Ring, guide and label fields are updated together in the bridge flush.
     @QtTracked public var hoverDisplay = AutomationHoverDisplay()
     /// The frozen gesture's own value readout: one text per move.
     public var previewLabelVisible: Bool = false
     public var previewLabelText: String = ""
-    @QtTracked public var previewLabelRect = SceneRect(
-        x: 0, y: 0, width: 0, height: 0, fillColor: PaletteMath.qmlColor(argb: 0))
+    @QtTracked public var previewLabelRect = SceneRect(x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
     /// The effective context readout: the parameter, its held value and the tick.
     public var readoutVisible: Bool = false
     public var readoutText: String = ""
-    @QtTracked public var readoutRect = SceneRect(
-        x: 0, y: 0, width: 0, height: 0, fillColor: PaletteMath.qmlColor(argb: 0))
+    @QtTracked public var readoutRect = SceneRect(x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
     /// The plot's accessible description: the parameter title and its readout.
     public var accessibleDescription: String = AutomationPagePolicy.accessibleName
     /// `AutomationCursorKind`'s raw value.

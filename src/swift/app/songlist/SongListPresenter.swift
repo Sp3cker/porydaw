@@ -198,13 +198,13 @@ public final class SongListPresenter {
     /// Marks the loaded song: selects it, scrolls it into view, and keeps it
     /// selected across rebuilds. -1 (or a filtered-out id) deselects.
     public func setCurrentSong(songId: Int) {
-        setPublished(currentSongId, songId) { currentSongId = $0 }
+        publish(\.currentSongId, songId)
         if visible.contains(where: { $0.id == songId }) {
-            setPublished(selectedSongId, songId) { selectedSongId = $0 }
-            setPublished(revealSongId, songId) { revealSongId = $0 }
+            publish(\.selectedSongId, songId)
+            publish(\.revealSongId, songId)
             revealRequest += 1
         } else {
-            setPublished(selectedSongId, -1) { selectedSongId = $0 }
+            publish(\.selectedSongId, -1)
         }
         syncRowFlags()
     }

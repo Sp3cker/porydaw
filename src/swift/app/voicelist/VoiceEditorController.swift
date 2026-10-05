@@ -33,41 +33,41 @@ public final class VoiceEditorController: QmlUncreatable {
     @QtIgnored
     public func refresh() {
         guard let owner, owner.isBound, !owner.isLoading else {
-            setPublished(isSynth, false) { isSynth = $0 }
-            setPublished(editable, false) { editable = $0 }
-            setPublished(notice, "") { notice = $0 }
+            publish(\.isSynth, false)
+            publish(\.editable, false)
+            publish(\.notice, "")
             return
         }
         let slot = owner.currentSlot
         guard let draft = owner.voiceDraft(slot) else {
-            setPublished(editable, false) { editable = $0 }
-            setPublished(isSynth, false) { isSynth = $0 }
+            publish(\.editable, false)
+            publish(\.isSynth, false)
             let slotNotice = owner.noticeForSlot(slot)
-            setPublished(notice, slotNotice) { notice = $0 }
+            publish(\.notice, slotNotice)
             return
         }
         let voice = draft.voice
-        setPublished(editable, true) { editable = $0 }
-        setPublished(notice, "") { notice = $0 }
-        setPublished(materializesBlank, draft.materializesBlank) { materializesBlank = $0 }
-        setPublished(macro, Int(voice.macro)) { macro = $0 }
-        setPublished(symbol, voice.symbol) { symbol = $0 }
+        publish(\.editable, true)
+        publish(\.notice, "")
+        publish(\.materializesBlank, draft.materializesBlank)
+        publish(\.macro, Int(voice.macro))
+        publish(\.symbol, voice.symbol)
         let descriptor = owner.synthDescriptor(symbol: voice.symbol)
         let synthesized = descriptor != nil
-        setPublished(isSynth, synthesized) { isSynth = $0 }
+        publish(\.isSynth, synthesized)
         let synth = descriptor ?? VgSynthDesc()
-        setPublished(waveform, synth.waveform) { waveform = $0 }
-        setPublished(baseDuty, synth.baseDuty) { baseDuty = $0 }
-        setPublished(dutyStep, synth.dutyStep) { dutyStep = $0 }
-        setPublished(modDepth, synth.modDepth) { modDepth = $0 }
-        setPublished(phase, synth.phase) { phase = $0 }
-        setPublished(attack, Int(voice.attack)) { attack = $0 }
-        setPublished(decay, Int(voice.decay)) { decay = $0 }
-        setPublished(sustain, Int(voice.sustain)) { sustain = $0 }
-        setPublished(release, Int(voice.release)) { release = $0 }
-        setPublished(sweep, Int(voice.sweep)) { sweep = $0 }
-        setPublished(duty, Int(voice.duty)) { duty = $0 }
-        setPublished(period, Int(voice.period)) { period = $0 }
+        publish(\.waveform, synth.waveform)
+        publish(\.baseDuty, synth.baseDuty)
+        publish(\.dutyStep, synth.dutyStep)
+        publish(\.modDepth, synth.modDepth)
+        publish(\.phase, synth.phase)
+        publish(\.attack, Int(voice.attack))
+        publish(\.decay, Int(voice.decay))
+        publish(\.sustain, Int(voice.sustain))
+        publish(\.release, Int(voice.release))
+        publish(\.sweep, Int(voice.sweep))
+        publish(\.duty, Int(voice.duty))
+        publish(\.period, Int(voice.period))
     }
 
     /// Commits one editor field as a bank history action. Values outside the

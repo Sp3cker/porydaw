@@ -33,9 +33,7 @@ struct VoiceInteractionSnapshot: Sendable {
 
 // MARK: - Scene vocabulary
 
-/// The readout's published facts and the box the page draws them in. The box
-/// crosses as four values because `[String: QVariantSettable]` is not a Sendable
-/// value and stays on the page side of the boundary.
+/// The readout's published facts and the box the page draws them in.
 struct VoiceReadoutValues: Sendable {
     var slot: Int = -1
     var blank = true

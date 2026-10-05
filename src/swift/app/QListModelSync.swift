@@ -33,11 +33,6 @@ func syncModel<Element: QVariantGettable>(
     }
 }
 
-/// Writes only changed values without triggering observer writeback on reads.
-func setPublished<Value: Equatable>(_ current: Value, _ value: Value, set: (Value) -> Void) {
-    if current != value { set(value) }
-}
-
 /// Retained rows: existing row objects update in place, new values append, extras drop.
 /// `update` returns whether the row changed; changed rows republish synchronously.
 @MainActor

@@ -6,7 +6,8 @@ import QtBridge
     import CoreGraphics
 #endif
 
-// Scene publication and reuse caches belong to the retained Velocity page owner.
+// Publication for `VelocityPage`: published state stays in the class body because
+// QtBridge registers class-body members only; this extension holds no state.
 
 @MainActor
 extension VelocityPage {

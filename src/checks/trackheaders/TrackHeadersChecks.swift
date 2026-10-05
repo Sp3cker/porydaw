@@ -131,14 +131,14 @@ private func trackHeaderBudgetStyling(
             lab(palette.primaryText), lab(palette.windowBackground), 0.6))
     report.expect(
         distance(normal.titleColor, palette.primaryText)
-            <= distance(PaletteMath.qmlColor(argb: PaletteMath.argb(forkTitle)), palette.primaryText),
+            <= distance(PaletteMath.qmlColor(forkTitle), palette.primaryText),
         cppID: id, message: "over-budget dimming never exceeds the fork mix")
     let forkSubtitle = PaletteMath.hex(
         PaletteMath.mixTowardOklab(
             lab(palette.secondaryText), lab(palette.windowBackground), 0.6))
     report.expect(
         distance(normal.subtitleColor, palette.secondaryText)
-            <= distance(PaletteMath.qmlColor(argb: PaletteMath.argb(forkSubtitle)), palette.secondaryText),
+            <= distance(PaletteMath.qmlColor(forkSubtitle), palette.secondaryText),
         cppID: id, message: "over-budget subtitle dimming never exceeds the fork mix")
     session.selectedTrack = 1
     headers.refreshFromDocument()

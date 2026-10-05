@@ -232,9 +232,9 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
         shadowPcm.reset(to: [])
         lastChannelSnapshot = nil
         shadowCgb.reset(to: [])
-        setPublished(counterCount, 0) { counterCount = $0 }
-        setPublished(eventCount, 0) { eventCount = $0 }
-        setPublished(showingShadow, false) { showingShadow = $0 }
+        publish(\.counterCount, 0)
+        publish(\.eventCount, 0)
+        publish(\.showingShadow, false)
     }
 
     private static func sameChannels(

@@ -54,8 +54,8 @@ public final class EventListRowHandle {
     }
 }
 
-/// Publishes retained document rows and playhead state, keeping edit focus
-/// separate and scrolling only when native follow-playhead suppression permits.
+/// Publishes retained document rows and playhead state; owns no view, window or
+/// geometry, and scrolls only when native follow-playhead suppression permits.
 @MainActor
 @QtBridgeable
 public final class EventListPresenter: QmlUncreatable {

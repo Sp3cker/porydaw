@@ -14,7 +14,7 @@ extension ApplicationSession {
     @QtIgnored
     func tabsDidChange() {
         let pickerOpen = workspace?.headerVoicePicker.pickerOpen ?? false
-        setPublished(headerVoicePickerOpen, pickerOpen) { headerVoicePickerOpen = $0 }
+        publish(\.headerVoicePickerOpen, pickerOpen)
         polyphony.setContext(session: workspace?.session)
         transportBar.refresh()
         refreshDocumentState()

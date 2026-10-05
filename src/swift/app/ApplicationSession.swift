@@ -185,8 +185,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
         typography = Typography(baseFontPx: baseFontPx)
         typographyFonts.update(typography: typography)
         layoutSpaces.update(typography: typography)
-        setPublished(self.baseFontPx, typography.baseFontPx) { self.baseFontPx = $0 }
-        setPublished(bodyFontPx, typography.bodyFontPx) { bodyFontPx = $0 }
+        publish(\.baseFontPx, typography.baseFontPx)
+        publish(\.bodyFontPx, typography.bodyFontPx)
         refreshPromptStyle()
         eventList.configureTypography(typography: typography)
     }
@@ -548,26 +548,26 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// tab has a pending bank transition.
     func refreshDocumentState() {
         let hasSongs = songTabs.tabCount > 0
-        setPublished(songOpen, hasSongs) { songOpen = $0 }
+        publish(\.songOpen, hasSongs)
         songDock.syncSelection()
         guard let session = workspace?.session else {
-            setPublished(documentDirty, false) { documentDirty = $0 }
-            setPublished(songDocumentDirty, false) { songDocumentDirty = $0 }
-            setPublished(canUndo, false) { canUndo = $0 }
-            setPublished(canRedo, false) { canRedo = $0 }
+            publish(\.documentDirty, false)
+            publish(\.songDocumentDirty, false)
+            publish(\.canUndo, false)
+            publish(\.canRedo, false)
             return
         }
         let songDirty = session.document.isDirty
-        setPublished(songDocumentDirty, songDirty) { songDocumentDirty = $0 }
+        publish(\.songDocumentDirty, songDirty)
         let dirty = songDirty || session.bankDirty
-        setPublished(documentDirty, dirty) { documentDirty = $0 }
+        publish(\.documentDirty, dirty)
         let bankPending = songTabs.tabs.contains {
             $0.workspace.session.document.history.bankTransitionInFlight
         }
         let undoAvailable = !bankPending && session.document.history.canUndo
-        setPublished(canUndo, undoAvailable) { canUndo = $0 }
+        publish(\.canUndo, undoAvailable)
         let redoAvailable = !bankPending && session.document.history.canRedo
-        setPublished(canRedo, redoAvailable) { canRedo = $0 }
+        publish(\.canRedo, redoAvailable)
     }
 
 }
