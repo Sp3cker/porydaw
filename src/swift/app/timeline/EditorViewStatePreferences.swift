@@ -1,4 +1,5 @@
 import Foundation
+import PorydawDocument
 import PorydawProject
 
 /// Application-wide persistence of the editor view state: the drawer chrome,

@@ -1,5 +1,4 @@
 import PorydawCore
-import PorydawDocument
 
 /// One document's viewport presentation: the camera, the roll grid, the scale
 /// and the drawer view state. It owns no document state and edits nothing in

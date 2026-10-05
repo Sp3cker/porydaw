@@ -1,4 +1,8 @@
-# PorydawDocument: Qt-free, C++-interop-free document model.
+# PorydawDocument: Qt-free, C++-interop-free document model (DocumentSession)
+# and its viewport presentation (DocumentViewport, view/). The viewport types
+# live here rather than in PorydawApp for build time: a body edit rebuilds this
+# small module in under a second, while any PorydawApp edit re-emits that
+# whole module (~8s).
 # Invariant: no file in this target may import (transitively or directly)
 # QtBridge, QtBridgeCpp, Qt, or any PorydawApp* module, and this target
 # must never pass -cxx-interoperability-mode. Allowed: Foundation,
@@ -16,7 +20,13 @@ add_library(PorydawDocument STATIC
     service/ProjectService+Samples.swift
     service/ProjectService+Songs.swift
     service/SongLabelPolicy.swift
+    view/DocumentViewport.swift
+    view/EditorDrawerTypes.swift
+    view/EditorViewState.swift
     view/timeline/DocumentProjectionCache.swift
+    view/timeline/EditorCamera.swift
+    view/timeline/GridGeometry.swift
+    view/timeline/ScaleProjection.swift
     view/timeline/TimelineSnapPolicy.swift
     view/timeline/TimeAxis.swift
     view/automation/AutomationParameter.swift
