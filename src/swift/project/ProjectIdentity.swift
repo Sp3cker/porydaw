@@ -1,4 +1,5 @@
-/// A nonempty song label, used as a stable project-relative identity.
+/// Song labels: lowercase grammar for creation, ASCII symbols for registration,
+/// and nonempty identities for existing songs and deletion.
 public struct SongName: Hashable, Sendable {
     /// The song label exactly as supplied.
     public let value: String
@@ -11,14 +12,26 @@ public struct SongName: Hashable, Sendable {
     }
 
     /// Whether a new song label follows the ASCII grammar `[a-z_][a-z0-9_]*`.
-    /// Existing identities retain the nonempty-only compatibility contract.
     public static func isValid(label: String) -> Bool {
-        var bytes = label.utf8.makeIterator()
-        guard let first = bytes.next(), first == 95 || (97...122).contains(first) else { return false }
-        while let byte = bytes.next() {
-            guard byte == 95 || (97...122).contains(byte) || (48...57).contains(byte) else { return false }
+        matchesLabelGrammar(label, allowUppercase: false)
+    }
+
+    /// Whether a registration label follows `[A-Za-z_][A-Za-z0-9_]*`.
+    public static func isSymbol(label: String) -> Bool {
+        matchesLabelGrammar(label, allowUppercase: true)
+    }
+
+    private static func matchesLabelGrammar(_ label: String, allowUppercase: Bool) -> Bool {
+        var first = true
+        for byte in label.utf8 {
+            guard
+                byte == 95 || (97...122).contains(byte)
+                    || (allowUppercase && (65...90).contains(byte))
+                    || (!first && (48...57).contains(byte))
+            else { return false }
+            first = false
         }
-        return true
+        return !first
     }
 }
 
