@@ -6,6 +6,7 @@
     "build:render": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:render",
     "build:checks": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:checks",
     "bench:startup": "deno run --allow-read --allow-run tools/startup_bench.ts",
+    "bench:startup:ab": "deno run --allow-read --allow-run tools/startup_ab.ts",
     "setup": "deno run --allow-read --allow-write --allow-run --allow-env tools/setup.ts",
     "setup:check": "deno check tools/setup.ts && deno test --allow-read --allow-write --allow-run --allow-env tools/setup_test.ts tools/setup_swift_test.ts",
     "checks:bridge": "deno run --allow-read=src,CMakeLists.txt,cmake/QtBridge.cmake,tools --allow-run tools/cli.ts checks:bridge",

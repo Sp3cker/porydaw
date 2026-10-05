@@ -33,13 +33,13 @@ The app is stopped at the selected frame.
 Example:
   deno task bench:startup --until editor-frame --project /path/to/project --song mus_title --check`;
 
-type FrameStage =
+export type FrameStage =
   | "first-frame"
   | "chrome-frame"
   | "workspace-frame"
   | "editor-frame";
 
-interface Options {
+export interface Options {
   runs: number;
   until: FrameStage;
   budgetMs: number;
@@ -49,12 +49,14 @@ interface Options {
   check: boolean;
 }
 
-type Outcome =
-  | { kind: "frame"; ms: number }
+// `stages` holds every PORYDAW_STARTUP_TRACE marker seen before the selected
+// one, in ms since spawn.
+export type Outcome =
+  | { kind: "frame"; ms: number; stages: Record<string, number> }
   | { kind: "failure"; message: string }
   | { kind: "interrupted"; message: string };
 
-function parseOptions(args: string[]): Options {
+export function parseOptions(args: string[]): Options {
   const options: Options = {
     runs: 11,
     until: "first-frame",
@@ -135,7 +137,7 @@ async function stopChild(child: Deno.ChildProcess): Promise<void> {
   }
 }
 
-async function measure(
+export async function measure(
   binary: string,
   root: string,
   options: Options,
@@ -157,7 +159,7 @@ async function measure(
   const reader = child.stderr.getReader();
   const decoder = new TextDecoder();
   const diagnostics: string[] = [];
-  const stages: string[] = [];
+  const stages: Record<string, number> = {};
   let pending = "";
   let reaped = false;
   const result = Promise.withResolvers<Outcome>();
@@ -180,10 +182,15 @@ async function measure(
 
   function line(text: string): void {
     const marker = text.replace(/\r?\n$/, "");
+    if (!marker.startsWith("PORYDAW_STARTUP_TRACE ")) {
+      diagnostics.push(text);
+      return;
+    }
+    const ms = performance.now() - started;
+    stages[marker.slice("PORYDAW_STARTUP_TRACE ".length)] = ms;
     if (marker === `PORYDAW_STARTUP_TRACE ${options.until}`) {
-      const ms = performance.now() - started;
       result.resolve(
-        ms < options.timeoutMs ? { kind: "frame", ms } : {
+        ms < options.timeoutMs ? { kind: "frame", ms, stages } : {
           kind: "failure",
           message: `TIMEOUT: ${options.until} marker arrived after ${
             ms.toFixed(2)
@@ -191,8 +198,6 @@ async function measure(
         },
       );
     }
-    if (marker.startsWith("PORYDAW_STARTUP_TRACE ")) stages.push(marker);
-    else diagnostics.push(text);
   }
 
   const consume = (async () => {
@@ -255,8 +260,9 @@ async function measure(
     const text = diagnostics.join("");
     console.error(text.endsWith("\n") ? text.slice(0, -1) : text);
   }
-  if (outcome.kind !== "frame" && stages.length) {
-    console.error(`run ${run} trace stages: ${stages.join("; ")}`);
+  const seen = Object.keys(stages);
+  if (outcome.kind !== "frame" && seen.length) {
+    console.error(`run ${run} trace stages: ${seen.join("; ")}`);
   }
   return outcome;
 }

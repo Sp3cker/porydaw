@@ -174,7 +174,10 @@ module's compile flags (including via `-D` defines) drops its objects (see
 
 `deno task build:app --release && deno task bench:startup --until editor-frame` measures
 spawn → native frame on the saved-session path. Serial runs of two binaries are not
-comparable (see point 1 above); copy one bundle aside and alternate launches. Known
-reference points (warm, Release, restore path): first-frame ≈ 250 ms,
-workspace-frame ≈ 440 ms, editor-frame ≈ 560 ms. Stage timestamps are printed on
-stderr with `PORYDAW_STARTUP_TRACE=1`.
+comparable (see point 1 above): copy the baseline bundle outside `build/` before
+rebuilding and use `deno task bench:startup:ab --until editor-frame --stages
+old=<baseline exe> new=<exe>`, which alternates launches and prints per-stage
+medians. Known reference points (idle machine, warm, Release, restore path):
+first-frame ≈ 250 ms, workspace-frame ≈ 440 ms, editor-frame ≈ 560 ms; under a
+load average of 8+ the same binary reads ≈ 650 ms. Stage timestamps are printed
+on stderr with `PORYDAW_STARTUP_TRACE=1`.

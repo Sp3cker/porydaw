@@ -132,6 +132,18 @@ requires every launch, including that first run, to stay below `--budget-ms`
 (default 300). Only the benchmark's own processes are terminated. `--help` lists
 run-count, budget, and timeout options.
 
+To compare two builds, never benchmark them one after the other: system load drifts
+more between runs than most startup changes are worth. Keep the baseline bundle
+outside `build/` and alternate launches with `bench:startup:ab`, which also prints
+median time per `PORYDAW_STARTUP_TRACE` stage with `--stages`:
+
+```bash
+cp -R build/release/porydaw.app /tmp/porydaw-baseline.app   # before rebuilding
+deno task bench:startup:ab --until editor-frame --stages \
+  old=/tmp/porydaw-baseline.app/Contents/MacOS/porydaw \
+  new=build/release/porydaw.app/Contents/MacOS/porydaw
+```
+
 The three bundled Atkinson faces ship as plain files beside the shell QML
 (`Contents/Resources` in the macOS bundle, the executable's directory elsewhere).
 `FontLoader` registers them by local path, so Qt uses file-backed registration on
