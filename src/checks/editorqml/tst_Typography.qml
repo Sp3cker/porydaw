@@ -31,11 +31,9 @@ TestCase {
             Text {
                 objectName: "italicCaptionProbe"
                 y: parent.height
-                font: {
-                    const result = observedSession.typographyFonts.caption
-                    result.italic = true
-                    return result
-                }
+                font.family: observedSession.typographyFonts.caption.family
+                font.pixelSize: observedSession.typographyFonts.caption.pixelSize
+                font.italic: true
                 text: "italic caption"
             }
         }

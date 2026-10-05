@@ -4,6 +4,7 @@ import QtBridge
 @QtBridgeable
 public final class TypographyFonts {
     public var body: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
+    public var bodyItalic: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13, italic: true)
     public var bodyBold: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
     public var bodyMono: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
     public var tableMono: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
@@ -17,7 +18,11 @@ public final class TypographyFonts {
 
     @QtIgnored
     public func update(typography: Typography) {
-        publish(\.body, typography.body.qmlFont)
+        let body = typography.body.qmlFont
+        publish(\.body, body)
+        var bodyItalic = body
+        bodyItalic.italic = true
+        publish(\.bodyItalic, bodyItalic)
         publish(\.bodyBold, typography.bodyBold.qmlFont)
         publish(\.bodyMono, typography.bodyMono.qmlFont)
         publish(\.tableMono, typography.tableMono.qmlFont)

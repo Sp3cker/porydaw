@@ -355,6 +355,8 @@ ShellVoicegroupSupport {
             compareRole(typedText, "body", "sample picker typed fallback")
             compare(typedText.font.italic, true,
                     "sample picker typed fallback uses the published body's italic variant")
+            compare(app.typographyFonts.body.italic, false,
+                    "the typed fallback leaves the shared body font upright")
             search.text = symbol
             tryVerify(function() {
                 return pickerIndex(controller, row => row.symbol === symbol) >= 0

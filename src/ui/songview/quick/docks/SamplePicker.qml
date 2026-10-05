@@ -25,11 +25,6 @@ Item {
     onWaveModeChanged: controller.configureSamplePicker(search.text, waveMode)
     Component.onCompleted: controller.configureSamplePicker(search.text, waveMode)
     signal picked(string symbol)
-    readonly property font typedEntryFont: {
-        const result = picker.applicationSession.typographyFonts.body
-        result.italic = true
-        return result
-    }
 
     function displayName(symbol: string): string {
         return picker.controller.sampleDisplayName(symbol)
@@ -190,7 +185,7 @@ Item {
                                   : entry.label === "Keysplits" ? qsTr("Keysplits")
                                   : entry.label === "Samples" ? qsTr("Samples")
                                   : entry.label === "Phonemes" ? qsTr("Phonemes") : qsTr("Waves")
-                            font: entry.typed ? picker.typedEntryFont
+                            font: entry.typed ? picker.applicationSession.typographyFonts.bodyItalic
                                   : !entry.symbol ? picker.applicationSession.typographyFonts.bodyBold
                                                   : entry.font
                             elide: Text.ElideRight

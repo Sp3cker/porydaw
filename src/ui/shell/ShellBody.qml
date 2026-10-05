@@ -80,7 +80,7 @@ Item {
                 objectName: "shellEmptySongMessage"
                 anchors.centerIn: parent
                 visible: !body.shell.session.songOpen
-                text: qsTr("Open a project and song to play with the Swift core.")
+                text: qsTr("Open a project and song to begin.")
                 font: body.root.chromeTypography.body
                 color: body.shell.session.palette.windowText
                 horizontalAlignment: Text.AlignHCenter
