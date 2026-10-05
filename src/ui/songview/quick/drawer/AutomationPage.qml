@@ -6,14 +6,13 @@ import QtQuick
 import Porydaw.Ui
 import PorydawApp as App
 
-FocusScope {
+DrawerLanePage {
     id: page
 
     objectName: "automationPage"
 
     final property App.MouseHints hintService: null
     final property bool hintScopeAllowed: true
-    required final property App.SongTabSession applicationSession
 
     /// The Swift owner for this document, or null when no document is presented.
     readonly final property App.AutomationPage model: page.applicationSession
@@ -21,18 +20,9 @@ FocusScope {
                                  ? page.applicationSession.automationPage() : null
     readonly final property App.AutomationPage pageModel: page.model
 
-    readonly final property App.PianoGrid gridModel: page.applicationSession
-                                     && page.applicationSession.songOpen
-                                     ? page.applicationSession.gridPresenter() : null
     readonly final property App.GridPalette gridPalette: page.applicationSession.grid.palette
 
-    /// The shared plot origin: the gutter the roll draws at and the container
-    /// publishes as `plotOrigin`.
-    readonly property real plotOrigin: page.gridModel
-                                       ? (page.gridModel.trackHeaderWidth || 0)
-                                         + page.gridModel.keyboardWidth : 0
-    readonly property real plotWidth: Math.max(page.width - page.plotOrigin, 0)
-    readonly property real baseFontPx: page.applicationSession.grid.baseFontPx
+    baseFontPx: page.applicationSession.grid.baseFontPx
 
     readonly property int selectorTabCount: page.pageModel ? page.pageModel.tabCount : 0
 
@@ -54,12 +44,8 @@ FocusScope {
         page.pushBodyFacts()
         page.createModals()
     }
-    onWidthChanged: page.geometryChanged()
-    onHeightChanged: page.geometryChanged()
-    onPlotOriginChanged: page.geometryChanged()
-    onBaseFontPxChanged: page.geometryChanged()
+    onBodyFactsChanged: page.geometryChanged()
     Component.onCompleted: {
-        page.pushBodyFacts()
         page.createModals()
     }
     Component.onDestruction: {

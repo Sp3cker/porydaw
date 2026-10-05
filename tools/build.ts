@@ -9,8 +9,8 @@ import {
 } from "./local_build_environment.ts";
 import { poryaaaaConfiguration } from "./poryaaaa_source.ts";
 import { summarizeBuild } from "./build_output.ts";
+import { type ExecResult, run } from "./lib/exec.ts";
 
-const decoder = new TextDecoder();
 const SHOWN_LINES = 20;
 
 async function prepareWindowsEnvironment(): Promise<void> {
@@ -21,10 +21,14 @@ async function prepareWindowsEnvironment(): Promise<void> {
     "Installer",
     "vswhere.exe",
   );
-  const found = await new Deno.Command(vswhere, {
-    args: ["-latest", "-products", "*", "-property", "installationPath"],
-  }).output();
-  const vsRoot = decoder.decode(found.stdout).trim();
+  const found = await run(vswhere, [
+    "-latest",
+    "-products",
+    "*",
+    "-property",
+    "installationPath",
+  ]);
+  const vsRoot = found.text().trim();
   if (!found.success || !vsRoot) {
     throw new Error("Visual Studio C++ tools are required for Windows builds");
   }
@@ -36,14 +40,12 @@ async function prepareWindowsEnvironment(): Promise<void> {
       envScript,
       `@echo off\r\ncall "${devCmd}" -arch=x64 -host_arch=x64 >nul\r\nif errorlevel 1 exit /b 1\r\nset\r\n`,
     );
-    devEnv = await new Deno.Command("cmd.exe", {
-      args: ["/d", "/c", envScript],
-    }).output();
+    devEnv = await run("cmd.exe", ["/d", "/c", envScript]);
   } finally {
     await Deno.remove(envScript);
   }
-  if (!devEnv.success) throw new Error(decoder.decode(devEnv.stderr));
-  for (const line of decoder.decode(devEnv.stdout).split(/\r?\n/)) {
+  if (!devEnv.success) throw new Error(devEnv.text("stderr"));
+  for (const line of devEnv.text().split(/\r?\n/)) {
     const equal = line.indexOf("=");
     if (equal > 0) Deno.env.set(line.slice(0, equal), line.slice(equal + 1));
   }
@@ -128,28 +130,12 @@ async function hasBuildSystem(directory: string): Promise<boolean> {
   return false;
 }
 
-async function command(
-  program: string,
-  args: string[],
-): Promise<{ success: boolean; code: number; output: string }> {
-  const result = await new Deno.Command(program, {
-    args,
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
-  return {
-    success: result.success,
-    code: result.code,
-    output: decoder.decode(result.stdout) + decoder.decode(result.stderr),
-  };
-}
-
 // Returns the configure output, or undefined when the tree is already current.
 async function configure(
   directory: string,
   config: BuildConfig,
   buildChecks: boolean | undefined,
-): Promise<{ success: boolean; code: number; output: string } | undefined> {
+): Promise<ExecResult | undefined> {
   const poryaaaa = await poryaaaaConfiguration(directory);
   const buildType = config === "release" ? "Release" : "Debug";
   const cache = await readCache(directory);
@@ -187,10 +173,7 @@ async function configure(
     args.push("--fresh");
     if (generator) args.push("-G", generator);
   }
-  return await command(
-    "cmake",
-    args,
-  );
+  return await run("cmake", args);
 }
 
 // Swift's incremental driver reuses an object whenever the sources and their
@@ -351,7 +334,7 @@ export async function runBuild(
   await warnLegacyTree();
   const configured = await configure(directory, config, buildChecks);
   if (configured) {
-    outputs.push(configured.output);
+    outputs.push(configured.text() + configured.text("stderr"));
     if (!configured.success) await fail("configure ", configured.code);
   }
   const multi = await usesMultiConfigBuild(directory);
@@ -364,13 +347,13 @@ export async function runBuild(
     ...(targets.length > 0 ? ["--target", ...targets] : []),
   ];
   await reconcileSwiftObjects(directory);
-  let built = await command("cmake", buildArgs);
-  outputs.push(built.output);
+  let built = await run("cmake", buildArgs);
+  outputs.push(built.text() + built.text("stderr"));
   // A reconfigure inside the build rewrites compile commands after the
   // reconcile above, so the objects it left behind can still be stale.
   if (built.success && await reconcileSwiftObjects(directory)) {
-    built = await command("cmake", buildArgs);
-    outputs.push(built.output);
+    built = await run("cmake", buildArgs);
+    outputs.push(built.text() + built.text("stderr"));
   }
   if (!built.success) await fail("", built.code);
 

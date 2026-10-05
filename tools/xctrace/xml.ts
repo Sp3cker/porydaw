@@ -12,6 +12,7 @@
 //   toc run info: target/device/process/environment, summary/start-date/end-date/
 //                 duration/template-name, processes/process, data/table[@schema]
 import { XMLParser } from "fast-xml-parser";
+import { run } from "../lib/exec.ts";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -143,23 +144,16 @@ export function childList(node: unknown, key: string): unknown[] {
 export async function runCapture(cmd: string, args: string[]): Promise<string> {
   let output;
   try {
-    const childProcess = new Deno.Command(cmd, {
-      args,
-      stdin: "null",
-      stdout: "piped",
-      stderr: "piped",
-    }).spawn();
-    output = await childProcess.output();
+    output = await run(cmd, args, { stdin: "null" });
   } catch (error) {
     throw new Error(`${cmd} failed to start: ${firstLine(error)}`);
   }
-  const decoder = new TextDecoder();
   if (!output.success) {
     throw new Error(
       `${cmd} ${args[0] ?? ""} failed: ${
-        firstLine(decoder.decode(output.stderr).trim() || `code ${output.code}`)
+        firstLine(output.text("stderr").trim() || `code ${output.code}`)
       }`,
     );
   }
-  return decoder.decode(output.stdout);
+  return output.text();
 }

@@ -1,5 +1,6 @@
 import { dirname, join } from "node:path";
 import { swiftToolchainArgument } from "./local_build_environment.ts";
+import { run } from "./lib/exec.ts";
 
 export type SwiftCompiler = {
   executable: string;
@@ -103,15 +104,10 @@ export async function selectedSwiftCompiler(
 
 async function runCompiler(compiler: SwiftCompiler, args: string[]) {
   try {
-    const result = await new Deno.Command(compiler.executable, {
-      args: [...compiler.args, ...args],
-      stdout: "piped",
-      stderr: "piped",
-    }).output();
-    const decoder = new TextDecoder();
+    const result = await run(compiler.executable, [...compiler.args, ...args]);
     return {
       success: result.success,
-      output: [decoder.decode(result.stdout), decoder.decode(result.stderr)]
+      output: [result.text(), result.text("stderr")]
         .map((output) => output.trim()).filter(Boolean).join("\n"),
     };
   } catch (error) {

@@ -21,6 +21,7 @@ import {
   parseCheckOptions,
 } from "./checks_options.ts";
 import { QML_AOT_HELP } from "./qml_aot.ts";
+import { run } from "./lib/exec.ts";
 
 type Lane = "checks" | "checks:qml" | "checks:qml-roll" | "checks:shell";
 
@@ -192,22 +193,21 @@ async function runBridge(args: string[], quiet = false): Promise<void> {
   ) {
     usage("checks:bridge", "baseline writes require deno task bridge:baseline");
   }
-  const result = await new Deno.Command("deno", {
-    args: [
+  const result = await run(
+    "deno",
+    [
       "run",
       "--allow-read=src,CMakeLists.txt,cmake/QtBridge.cmake,tools",
       ...(update ? ["--allow-write=tools"] : []),
       "tools/qtbridge_surface.ts",
       ...args,
     ],
-    stdout: quiet ? "piped" : "inherit",
-    stderr: quiet ? "piped" : "inherit",
-  }).output();
+    { inherit: !quiet },
+  );
   if (result.success) return;
   if (quiet) {
-    const decoder = new TextDecoder();
     console.error(
-      (decoder.decode(result.stdout) + decoder.decode(result.stderr)).trimEnd(),
+      (result.text() + result.text("stderr")).trimEnd(),
     );
   }
   Deno.exit(result.code);

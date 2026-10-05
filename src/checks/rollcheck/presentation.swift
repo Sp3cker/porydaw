@@ -212,8 +212,7 @@ private func checkHeaderRename(_ report: CheckReport, session: DocumentSession) 
     let identity = document.history.currentIdentity
     let selected = session.selectedTrack
     let oldChange = session.onChange
-    let headers = TrackHeadersPresenter()
-    headers.attach(session: session, palette: GridPalette())
+    let headers = makeRollHeaderFixture(session: session)
     session.onChange = { change in
         if change.domains.contains(.document) { headers.documentDidChange(change) }
         oldChange?(change)
@@ -306,8 +305,7 @@ private func checkHeaderKeyboardMuteSolo(_ report: CheckReport, session: Documen
         report.fail(id, "supplied song lacks an available second track for the mixed-scope probe")
         return
     }
-    let headers = TrackHeadersPresenter()
-    headers.attach(session: session, palette: GridPalette())
+    let headers = makeRollHeaderFixture(session: session)
     session.onChange = { change in
         headers.refreshFromDocument()
         previousChange?(change)
@@ -385,8 +383,7 @@ private func checkHeaderReconciliation(_ report: CheckReport, session: DocumentS
         report.fail(unchangedID, "supplied song lacks a second header record")
         return
     }
-    let headers = TrackHeadersPresenter()
-    headers.attach(session: session, palette: GridPalette())
+    let headers = makeRollHeaderFixture(session: session)
     session.onChange = { change in
         if change.domains.contains(.document) { headers.documentDidChange(change) }
         oldChange?(change)

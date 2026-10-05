@@ -6,8 +6,8 @@ import {
   selectedSwiftCompiler,
 } from "./swift_toolchain.ts";
 import { installMissingNativeBuildTools } from "./native_build_tool_installers.ts";
+import { run } from "./lib/exec.ts";
 
-const decoder = new TextDecoder();
 const minimumCmake = [3, 24] as const;
 const minimumPython = [3, 10] as const;
 
@@ -125,13 +125,9 @@ async function commandResult(
   args: string[],
 ): Promise<CommandResult> {
   try {
-    const result = await new Deno.Command(executable, {
-      args,
-      stdout: "piped",
-      stderr: "piped",
-    }).output();
-    const stdout = decoder.decode(result.stdout).trim();
-    const stderr = decoder.decode(result.stderr).trim();
+    const result = await run(executable, args);
+    const stdout = result.text().trim();
+    const stderr = result.text("stderr").trim();
     return {
       success: result.success,
       output: [stdout, stderr].filter(Boolean).join("\n"),

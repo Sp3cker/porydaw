@@ -233,7 +233,10 @@ ShellLaneSupport {
         warning.close()
     }
     function test_importExistingMidiRefuses() {
-        stage("existing")
+        const presenter = stage("existing")
+        const session = presenter.session
+        const tabsBefore = session.songTabs.tabCount
+        const saveErrorBefore = session.lastSaveError
         const stray = rootPath + "/sound/songs/midi/mus_stray_import.mid"
         verify(probe.copyFile(rootPath + "/sound/songs/midi/mus_route101.mid", stray),
                "stage existing stray MIDI")
@@ -249,6 +252,17 @@ ShellLaneSupport {
                + "; wizardWarning=" + child("shellImportMidiWarning").text)
         verify(warning.informativeText.indexOf("MIDI file already exists:") >= 0,
                "existing MIDI refusal gives fork warning")
+        compare(warning.text, "Operation Failed", "import refusal uses operation failure channel")
+        compare(warning.informativeText, 'operationFailed("MIDI file already exists: ' + stray + '")',
+                "import preserves the service error's enum spelling")
+        compare(presenter.statusText, warning.informativeText, "import publishes the same failure text")
+        compare(session.lastSaveError, saveErrorBefore, "import refusal leaves the save error unchanged")
+        verify(!child("midiImportWizard").visible, "import service refusal closes wizard")
+        compare(session.songTabs.tabCount, tabsBefore, "import refusal opens no tab")
+        compare(presenter.statusText, 'operationFailed("MIDI file already exists: ' + stray + '")',
+                "import refusal publishes failure status, not success")
+        compare(songRow("mus_stray_import"), null,
+                "import refusal keeps the cached catalog without reopening the project")
         compare(probe.fingerprint(stray), before, "existing MIDI bytes remain untouched")
         compare(probe.fingerprint(cfg), cfgBefore, "existing MIDI refusal leaves config untouched")
         warning.close()
@@ -296,12 +310,19 @@ ShellLaneSupport {
         verify(waitForNative(function() { return session.songDocumentDirty }, 5000),
                "priority edit dirties original tab")
         permissionPath = rootPath + "/include/constants/songs.h"
+        const saveErrorBefore = session.lastSaveError
         verify(probe.setWritable(permissionPath, false), "make registration file read-only")
         start(rootPath + "/test_midis/external_import.mid")
         next(); rename("mus_partial_import"); next(); finish()
         const warning = child("shellCriticalDialog")
         verify(waitForNative(function() { return warning.visible }, 5000),
                "partial registration error appears")
+        compare(warning.text, "Operation Failed", "partial import uses operation failure channel")
+        compare(presenter.statusText, warning.informativeText, "partial import publishes its error")
+        compare(session.lastSaveError, saveErrorBefore, "partial import leaves the save error unchanged")
+        compare(session.songTabs.selectedId, originalTabId, "partial import keeps the active tab")
+        compare(session.songTabs.tabCount, 1, "partial import opens no new tab")
+        verify(!child("midiImportWizard").visible, "partial import closes wizard")
         verify(probe.exists(rootPath + "/sound/songs/midi/mus_partial_import.mid"),
                "partial import retains MIDI")
         verify(waitForNative(function() {

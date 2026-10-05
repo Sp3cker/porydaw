@@ -11,6 +11,7 @@ import PorydawProject
 
 internal func runProjectIdentitySuite(_ report: CheckReport) {
     songName(report)
+    songLabelGrammar(report)
     voicegroupId(report)
     savedRecipe(report)
 }
@@ -33,6 +34,40 @@ private func songName(_ report: CheckReport) {
     report.expect(
         first.hashValue == same.hashValue, cppID: cppID,
         message: "A008: equal song identities have equal hashes")
+}
+
+private func songLabelGrammar(_ report: CheckReport) {
+    let cppID = "swiftcore/ProjectIdentity::songLabelGrammar"
+    let cases: [(label: String, serviceAccepts: Bool)] = [
+        ("", false),
+        ("a", true),
+        ("_", true),
+        ("intro_09", true),
+        ("__0", true),
+        ("0intro", false),
+        ("Intro", false),
+        ("introA", false),
+        ("intro-outro", false),
+        ("intro.outro", false),
+        ("intro/outro", false),
+        (" intro", false),
+        ("intro ", false),
+        ("intro\t", false),
+        ("intro\n", false),
+        ("intro\noutro", false),
+        ("é", false),
+        ("aé", false),
+        ("a０", false),
+        ("a\u{0}", false),
+    ]
+    for (label, serviceAccepts) in cases {
+        report.expectEqual(
+            expected: serviceAccepts, actual: SongName.isValid(label: label),
+            cppID: cppID, what: "new song label grammar for \(String(reflecting: label))")
+        report.expectEqual(
+            expected: !label.isEmpty, actual: SongName(label) != nil,
+            cppID: cppID, what: "store identity gate for \(String(reflecting: label))")
+    }
 }
 
 private func voicegroupId(_ report: CheckReport) {

@@ -95,6 +95,7 @@ internal func boundVoiceList() -> VoiceListController {
 internal func runVoiceListChecks(_ report: CheckReport) {
     voiceListStableRows(report)
     voiceListRowRendering(report)
+    voiceTypeNamePins(report)
     voiceListLoadingOverlay(report)
     voiceListSelector(report)
     voiceListSelectionAndReveal(report)
@@ -103,6 +104,79 @@ internal func runVoiceListChecks(_ report: CheckReport) {
     voiceListNarrowRefresh(report)
     voiceListDraftsAndEditIntents(report)
 }
+
+private func voiceTypeNamePins(_ report: CheckReport) {
+    let cppID = "swiftcore/VoiceTypeNames::baseLaw"
+    let families: [(Int32, UInt8, String, String)] = [
+        (BankVoiceMacro.directSound, 0x00, "Sample", "Sample"),
+        (BankVoiceMacro.directSoundNoResample, 0x08, "Sample (fixed pitch)", "Sample (fixed pitch)"),
+        (BankVoiceMacro.directSoundAlt, 0x10, "Sample (reverse)", "Sample (reverse)"),
+        (BankVoiceMacro.square1, 0x01, "Square 1", "Square 1"),
+        (BankVoiceMacro.square1Alt, 0x09, "Square 1", "Square 1 (Alt)"),
+        (BankVoiceMacro.square2, 0x02, "Square 2", "Square 2"),
+        (BankVoiceMacro.square2Alt, 0x0A, "Square 2", "Square 2 (Alt)"),
+        (BankVoiceMacro.programmableWave, 0x03, "Wave", "Wave"),
+        (BankVoiceMacro.programmableWaveAlt, 0x0B, "Wave", "Wave (Alt)"),
+        (BankVoiceMacro.noise, 0x04, "Noise", "Noise"),
+        (BankVoiceMacro.noiseAlt, 0x0C, "Noise", "Noise (Alt)"),
+        (BankVoiceMacro.keysplit, 0x40, "Sample", "Keysplit"),
+        (BankVoiceMacro.keysplitAll, 0x80, "Drumkit", "Drumkit"),
+    ]
+    for (macro, type, base, browser) in families {
+        report.expectEqual(
+            expected: base, actual: m4aVoiceTypeName(type), cppID: cppID,
+            what: "core type \(type) keeps its base family")
+        report.expectEqual(
+            expected: base, actual: voiceTypeName(macro: macro), cppID: cppID,
+            what: "lane macro \(macro) keeps its undecorated family")
+        report.expectEqual(
+            expected: browser,
+            actual: VoiceListSemantics.typeDisplayName(typeByte: type, synth: false),
+            cppID: cppID, what: "browser type \(type) keeps its surface decoration")
+    }
+    for type: UInt8 in [0x20, 0x30, 0xFF] {
+        report.expectEqual(
+            expected: "Sample", actual: m4aVoiceTypeName(type), cppID: cppID,
+            what: "cry and unknown types retain the sample fallback")
+    }
+    for macro: Int32? in [nil, -1, Int32.max] {
+        report.expectEqual(
+            expected: "", actual: voiceTypeName(macro: macro), cppID: cppID,
+            what: "unpublished macro ordinals have no lane family")
+    }
+    report.expectEqual(
+        expected: "Synth (Golden Sun)",
+        actual: VoiceListSemantics.typeDisplayName(typeByte: 0x40, synth: true),
+        cppID: cppID, what: "synth decoration precedes keysplit decoration")
+    report.expectEqual(
+        expected: "007", actual: VoiceLanePolicy.label(slot: 7, view: BankSlotView()),
+        cppID: cppID, what: "blank slots retain only their lane number")
+    let longName = String(repeating: "é", count: 24)
+    let symbols: [(String, String, String)] = [
+        ("DirectSoundWaveData_piano", "piano", "piano"),
+        ("DirectSoundWavepiano", "piano", "DirectSoundWavepiano"),
+        ("DirectSoundWaveData_", "Sample", "DirectSoundWaveData_"),
+        ("ProgrammableWaveData_pulse", "ProgrammableWaveData_pulse", "pulse"),
+        ("voicegroup_drums", "voicegroup_drums", "drums"),
+        ("  piano  ", "  piano  ", "piano"),
+        ("", "Sample", "Sample"),
+        (longName, longName, String(repeating: "é", count: 23)),
+    ]
+    for (symbol, browser, lane) in symbols {
+        report.expectEqual(
+            expected: "007  \(browser)",
+            actual: VoiceListSemantics.voiceColumnText(slot: 7, symbol: symbol, typeName: "Sample"),
+            cppID: cppID, what: "browser retains its prefix and unbounded-symbol policy")
+        let view = BankSlotView(
+            kind: BankSlotKind.editable,
+            voice: BankVoice(macro: BankVoiceMacro.directSound, symbol: symbol))
+        let shortName = symbol.isEmpty ? lane : "\(lane) (Sample)"
+        report.expectEqual(
+            expected: "007 \(shortName)", actual: VoiceLanePolicy.label(slot: 7, view: view),
+            cppID: cppID, what: "lane retains its prefix, trim and 47-byte scalar-boundary policy")
+    }
+}
+
 /// voiceChanged is the narrow refresh: the owner hands over the changed
 /// slot's new view and only that row re-derives — undo/redo and
 /// owner-applied edits never rebuild the list.

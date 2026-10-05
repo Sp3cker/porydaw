@@ -6,6 +6,7 @@ internal func runVoicegroupValueSuite(_ report: CheckReport) {
     checkVoicegroupAdsr(report)
     checkVoicegroupStructuralChanges(report)
     checkVoicegroupSynths(report)
+    checkVoicegroupMacroParsing(report)
 }
 
 private func checkVoicegroupMacroTables(_ report: CheckReport) {
@@ -205,4 +206,90 @@ private func checkVoicegroupSynths(_ report: CheckReport) {
     report.expectEqual(
         expected: "DirectSoundSynth_GoldenSun_Triangle", actual: vgSynthSymbolName(triangleOther),
         cppID: cppID, what: "V062: triangle naming ignores nondefault pulse parameters")
+}
+
+private func checkVoicegroupMacroParsing(_ report: CheckReport) {
+    let cppID = "swiftproject/VoicegroupValueChecks::macroParsing"
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent("macro-pins-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: root) }
+    let folder = root.appendingPathComponent("sound/voicegroups")
+    let rows: [(String, VgMacro, String, Int)] = [
+        ("voice_directsound_no_resample", .directSoundNoResample, "60, 0, sample, 1, 2, 3, 4", 0),
+        ("voice_directsound_alt", .directSoundAlt, "60, 0, sample, 1, 2, 3, 4", 0),
+        ("voice_directsound", .directSound, "60, 0, sample, 1, 2, 3, 4", 0),
+        ("voice_square_1_alt", .square1Alt, "60, 0, 1, 2, 1, 2, 3, 4", 3),
+        ("voice_square_1", .square1, "60, 0, 1, 2, 1, 2, 3, 4", 3),
+        ("voice_square_2_alt", .square2Alt, "60, 0, 2, 1, 2, 3, 4", 5),
+        ("voice_square_2", .square2, "60, 0, 2, 1, 2, 3, 4", 5),
+        ("voice_programmable_wave_alt", .progWaveAlt, "60, 0, wave, 1, 2, 3, 4", 7),
+        ("voice_programmable_wave", .progWave, "60, 0, wave, 1, 2, 3, 4", 7),
+        ("voice_noise_alt", .noiseAlt, "60, 0, 1, 1, 2, 3, 4", 9),
+        ("voice_noise", .noise, "60, 0, 1, 1, 2, 3, 4", 9),
+        ("voice_keysplit_all", .keysplitAll, "voicegroup_kit", -1),
+        ("voice_keysplit", .keysplit, "voicegroup_split, split_table", -1),
+    ]
+    do {
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let path = folder.appendingPathComponent("pins.inc")
+        func parse(_ line: String) throws -> VoicegroupSource {
+            try Data("voice_group pins\n\t\(line)\n".utf8).write(to: path)
+            let source = VoicegroupSource()
+            var error: String?
+            report.expect(
+                source.open(projectRoot: root.path, voicegroupArg: "_pins", error: &error),
+                cppID: cppID, message: "macro fixture opens: \(error ?? "")")
+            return source
+        }
+        let envelope = VgAdsr(attack: 1, decay: 2, sustain: 3, release: 4)
+        for (word, macro, arguments, family) in rows {
+            let source = try parse("\(word) \(arguments)")
+            report.expectEqual(
+                expected: VgLineKind.editable, actual: source.kindAt(slot: 0),
+                cppID: cppID, what: "\(word) is editable")
+            report.expectEqual(
+                expected: macro, actual: source.voiceAt(slot: 0)?.macro,
+                cppID: cppID, what: "\(word) wins overlapping prefix dispatch")
+            let scan = VoicegroupSource.catalogScan(root.path)
+            report.expectEqual(
+                expected: family < 0 ? nil : envelope, actual: scan.typicalAdsr.byFamily[family],
+                cppID: cppID, what: "\(word) catalog envelope family")
+            if macro == .keysplit {
+                report.expect(
+                    scan.keysplits.contains { $0.symbol == "voicegroup_split" && $0.table == "split_table" },
+                    cppID: cppID, message: "keysplit catalog retains both symbol fields")
+            } else if macro == .keysplitAll {
+                report.expectEqual(
+                    expected: ["voicegroup_kit"], actual: scan.drumkits,
+                    cppID: cppID, what: "keysplit_all catalog wins keysplit prefix")
+            }
+        }
+        let malformed: [(String, VgLineKind, Int?)] = [
+            ("voice_directsound_alt_extra 60, 0, sample, 1, 2, 3, 4", .none, nil),
+            ("voice_directsound\t60, 0, sample, 1, 2, 3, 4", .none, nil),
+            ("voice_directsound 60, 0, sample, 1, 2, 3", .broken, nil),
+            ("voice_directsound 60, 0, sample, 1, 2, 3, 4, 5", .broken, nil),
+            ("voice_directsound bad, 0, sample, 1, 2, 3, 4", .broken, 0),
+            ("voice_directsound 60, 0, , 1, 2, 3, 4", .broken, 0),
+            ("voice_directsound 60, 0, sample, bad, 2, 3, 4", .broken, nil),
+            ("voice_programmable_wave60, 0, wave, 1, 2, 3, 4", .editable, 7),
+            ("voice_programmable_wave_alt60, 0, wave, 1, 2, 3, 4", .editable, 7),
+            ("voice_programmable_wave_alt_extra 60, 0, wave, 1, 2, 3, 4", .broken, 7),
+            ("voice_keysplit_all_extra voicegroup_kit", .none, nil),
+            ("voice_keysplit voicegroup_split", .broken, nil),
+            ("voice_keysplit_all ", .none, nil),
+        ]
+        for (line, kind, family) in malformed {
+            let source = try parse(line)
+            report.expectEqual(
+                expected: kind, actual: source.kindAt(slot: 0), cppID: cppID,
+                what: "\(line): precise parser classification")
+            let scan = VoicegroupSource.catalogScan(root.path)
+            let expected: [Int: VgAdsr] = family.map { [$0: envelope] } ?? [:]
+            report.expectEqual(
+                expected: expected, actual: scan.typicalAdsr.byFamily, cppID: cppID,
+                what: "\(line): tolerant scanner envelope acceptance")
+        }
+    } catch {
+        report.fail(cppID, "macro pin fixture failed: \(error)")
+    }
 }

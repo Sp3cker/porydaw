@@ -2,8 +2,9 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Porydaw.Ui
 import PorydawApp as App
+import ".."
 
-FocusScope {
+PromptOverlay {
     id: root
     objectName: "automationPrompt"
     required final property App.AutomationPage model
@@ -16,8 +17,14 @@ FocusScope {
     readonly final property App.PromptStyle inputAppearance: root.model.promptInputStyle
     signal closed()
     anchors.fill: parent
+    overlayOpen: showing
     visible: showing && model !== null
-    enabled: showing && model !== null
+    enabled: visible
+    cardItem: card
+    underlayObjectName: "automationPromptUnderlay"
+    focusOnCompletion: false
+    onInitialFocusRequested: takeFocus()
+    onDismissRequested: cancelDraft()
     z: 100
     property bool finishing: false
     function takeFocus(): void {
@@ -26,7 +33,7 @@ FocusScope {
         else { field.focusInput(Qt.PopupFocusReason); field.selectAll() }
     }
     onShowingChanged: {
-        if (showing) { finishing = false; Qt.callLater(root.takeFocus) }
+        if (showing) finishing = false
         else closed()
     }
     function acceptDraft(): void {
@@ -39,12 +46,6 @@ FocusScope {
         if (!root.model || root.finishing) return
         root.finishing = true
         root.model.cancelPrompt()
-    }
-    MouseArea {
-        objectName: "automationPromptUnderlay"
-        anchors.fill: parent
-        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-        onPressed: root.cancelDraft()
     }
     MouseArea {
         x: card.x

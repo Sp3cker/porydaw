@@ -63,7 +63,7 @@ extension ProjectService {
     public func importSong(_ request: SongImportRequest) async throws -> Int {
         let store = try requireStore()
         let label = request.label
-        guard Self.isValidSongLabel(label) else {
+        guard SongName.isValid(label: label) else {
             throw ProjectServiceError.operationFailed("Invalid song label: \(label).")
         }
         let midiDir = URL(filePath: projectRoot, directoryHint: .isDirectory)

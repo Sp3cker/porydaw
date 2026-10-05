@@ -1,6 +1,6 @@
 {
-  "rejected": 150,
-  "total": 6486,
+  "rejected": 147,
+  "total": 6461,
   "files": {
     "src/ui/icons/AppIcon.qml": 2,
     "src/ui/icons/Icons.qml": 0,
@@ -35,6 +35,7 @@
     "src/ui/shell/TransportButton.qml": 0,
     "src/ui/shell/TransportOutputDial.qml": 0,
     "src/ui/shell/WavExportSurface.qml": 9,
+    "src/ui/shell/WizardChrome.qml": 0,
     "src/ui/songview/quick/AutomationTabs.qml": 0,
     "src/ui/songview/quick/docks/SamplePicker.qml": 0,
     "src/ui/songview/quick/docks/SongConfirmDialog.qml": 1,
@@ -47,7 +48,7 @@
     "src/ui/songview/quick/drawer/AutomationMenu.qml": 2,
     "src/ui/songview/quick/drawer/AutomationPage.qml": 1,
     "src/ui/songview/quick/drawer/AutomationPlot.qml": 3,
-    "src/ui/songview/quick/drawer/AutomationPrompt.qml": 1,
+    "src/ui/songview/quick/drawer/AutomationPrompt.qml": 0,
     "src/ui/songview/quick/drawer/EditorDrawer.qml": 3,
     "src/ui/songview/quick/drawer/OtherEventsBand.qml": 1,
     "src/ui/songview/quick/drawer/VelocityPage.qml": 6,
@@ -69,6 +70,7 @@
     "src/ui/songview/quick/PitchBendPopup.qml": 1,
     "src/ui/songview/quick/PromptButton.qml": 0,
     "src/ui/songview/quick/PromptCard.qml": 0,
+    "src/ui/songview/quick/PromptOverlay.qml": 4,
     "src/ui/songview/quick/QuickMenuPanel.qml": 13,
     "src/ui/songview/quick/RulerToolTip.qml": 0,
     "src/ui/songview/quick/swiftroll/EditorRollBand.qml": 4,
@@ -85,8 +87,8 @@
     "src/ui/songview/quick/swiftroll/TrackHeaderScrollbar.qml": 1,
     "src/ui/songview/quick/TimelineScrollbar.qml": 3,
     "src/ui/songview/quick/TimeSignaturePrompt.qml": 1,
-    "src/ui/songview/quick/VelocityPrompt.qml": 4,
-    "src/ui/songview/quick/VoicePickerPrompt.qml": 2,
+    "src/ui/songview/quick/VelocityPrompt.qml": 0,
+    "src/ui/songview/quick/VoicePickerPrompt.qml": 0,
     "src/ui/style/CheckBox.qml": 0,
     "src/ui/style/CheckIndicator.qml": 4,
     "src/ui/style/ComboBox.qml": 1,
@@ -95,7 +97,7 @@
     "src/ui/style/ProgressBar.qml": 4,
     "src/ui/style/SpinBox.qml": 2
   },
-  "propertyVarCount": 57,
+  "propertyVarCount": 56,
   "revisionDependencyReads": 0,
   "pragmaAllowlist": [
     "src/ui/icons/Icons.qml",

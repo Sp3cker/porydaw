@@ -7,6 +7,7 @@
 // (SHA-verified per file before rewriting).
 import { parseProof } from "./proof_reader.ts";
 import type { Predicate, Proof, Site } from "./proof_reader.ts";
+import { run } from "./lib/exec.ts";
 
 const CHECKS = "src/checks";
 const HELP = `usage: deno task proof:compact [--apply]
@@ -164,21 +165,13 @@ function selfCheck(path: string, before: Proof, afterText: string): string[] {
 }
 
 async function git(args: string[], root: string): Promise<string> {
-  const process = new Deno.Command("git", {
-    args,
-    cwd: root,
-    stdout: "piped",
-    stderr: "piped",
-  });
-  const { code, stdout, stderr } = await process.output();
-  if (code !== 0) {
+  const result = await run("git", args, { cwd: root });
+  if (result.code !== 0) {
     throw new Error(
-      `git ${args.join(" ")} failed: ${
-        new TextDecoder().decode(stderr).trim()
-      }`,
+      `git ${args.join(" ")} failed: ${result.text("stderr").trim()}`,
     );
   }
-  return new TextDecoder().decode(stdout);
+  return result.text();
 }
 async function sha256Hex(data: Uint8Array): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new Uint8Array(data));
@@ -204,13 +197,11 @@ async function preflight(
   }
   let blob: Uint8Array;
   try {
-    const process = new Deno.Command("git", {
-      args: ["--no-pager", "show", `${proof.revision}:${original}`],
-      cwd: root,
-      stdout: "piped",
-      stderr: "piped",
-    });
-    const { code, stdout } = await process.output();
+    const { code, stdout } = await run(
+      "git",
+      ["--no-pager", "show", `${proof.revision}:${original}`],
+      { cwd: root },
+    );
     if (code !== 0) return "pinned original not recoverable via git show";
     blob = stdout;
   } catch {

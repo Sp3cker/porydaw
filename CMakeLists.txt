@@ -271,6 +271,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/PianoRollCanvas.qml
         src/ui/songview/quick/PromptCard.qml
         src/ui/songview/quick/PromptButton.qml
+        src/ui/songview/quick/PromptOverlay.qml
         src/ui/songview/quick/VelocityPrompt.qml
         src/ui/songview/quick/VoicePickerPrompt.qml
         src/ui/songview/quick/TimeSignaturePrompt.qml
@@ -312,6 +313,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/docks/SamplePicker.qml
         src/ui/songview/quick/drawer/EditorDrawer.qml
         src/ui/songview/quick/drawer/OtherEventsBand.qml
+        src/ui/songview/quick/drawer/DrawerLanePage.qml
         src/ui/songview/quick/drawer/VelocityPage.qml
         src/ui/songview/quick/drawer/VoiceChangesPage.qml
         src/ui/songview/quick/drawer/VoiceChangeMenu.qml
@@ -336,6 +338,7 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/TransportOutputDial.qml
         src/ui/shell/PolyphonyPanel.qml
         src/ui/shell/PolyphonyChannelGroup.qml
+        src/ui/shell/settings/SettingsFieldRow.qml
         src/ui/shell/settings/SettingsDialog.qml
         src/ui/shell/settings/EngineSettingsPage.qml
         src/ui/shell/settings/SongSettingsPage.qml
@@ -347,6 +350,7 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/midiimport/ImportSoundPage.qml
         src/ui/shell/newsong/NewSongHost.qml
         src/ui/shell/newsong/NewSongWizard.qml
+        src/ui/shell/WizardChrome.qml
         src/ui/shell/samplestudio/SampleStudioHost.qml
         src/ui/shell/samplestudio/SampleStudioDialog.qml
         src/ui/shell/samplestudio/Sf2ZonePickerDialog.qml

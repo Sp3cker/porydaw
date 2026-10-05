@@ -1,6 +1,6 @@
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import { run } from "./lib/exec.ts";
 
-const decoder = new TextDecoder();
 const packageRelativePath = join(
   "external",
   "poryaaaa",
@@ -25,17 +25,12 @@ async function exists(path: string): Promise<boolean> {
 }
 
 async function gitOutput(cwd: string, args: string[]): Promise<string> {
-  const result = await new Deno.Command("git", {
-    cwd,
-    args: ["--no-optional-locks", ...args],
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
+  const result = await run("git", ["--no-optional-locks", ...args], { cwd });
   if (!result.success) {
-    const detail = decoder.decode(result.stderr).trim();
+    const detail = result.text("stderr").trim();
     throw new Error(detail || `git ${args.join(" ")} failed`);
   }
-  return decoder.decode(result.stdout).trim();
+  return result.text().trim();
 }
 
 async function recordedSubmoduleCommit(sourceRoot: string): Promise<string> {

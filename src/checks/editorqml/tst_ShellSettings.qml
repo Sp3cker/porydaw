@@ -16,6 +16,61 @@ ShellLaneSupport {
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
     readonly property var nativeSettings: bootstrap.preferences
 
+    Component { id: engineGeometryComponent; EngineSettingsPage {} }
+    Component { id: songGeometryComponent; SongSettingsPage {} }
+
+    function checkPinnedRect(root, name, x, y, width, height) {
+        const child = findChild(root, name)
+        verify(child !== null, name + " is mounted")
+        const point = child.mapToItem(root, 0, 0)
+        compare(point.x, x, name + " pinned x")
+        compare(point.y, y, name + " pinned y")
+        compare(child.width, width, name + " pinned width")
+        compare(child.height, height, name + " pinned height")
+    }
+    function test_fieldRectsAtTwoFontScales_data() {
+        return [{ tag: "font12", unit: 1 }, { tag: "font18", unit: 1.5 }]
+    }
+    function test_fieldRectsAtTwoFontScales(data) {
+        const presenter = createShell()
+        const unit = data.unit
+        const delta = unit - 1
+        const properties = { store: presenter.settingsStore,
+                             colors: presenter.session.grid.palette,
+                             typography: presenter.session.typographyFonts,
+                             unit: unit, width: 520, height: 500 }
+        const engine = engineGeometryComponent.createObject(testCase, properties)
+        const song = songGeometryComponent.createObject(testCase, properties)
+        verify(engine !== null && song !== null, "production settings pages load")
+        try {
+            const engineX = 105 + 84 * delta
+            checkPinnedRect(engine, "engine.polyphony", engineX, 11 * unit,
+                            520 - engineX, 25 + 15 * delta)
+            checkPinnedRect(engine, "pcmMixerCombo", engineX, 42 + 27 * delta,
+                            520 - engineX, 22 + 12 * delta)
+            checkPinnedRect(engine, "engine.mix-rate", engineX, 70 + 39 * delta,
+                            520 - engineX, 22 + 12 * delta)
+            checkPinnedRect(engine, "engine.analog-filter", 0, 98 + 51 * delta,
+                            520, 16 + 12 * delta)
+            checkPinnedRect(engine, "engine.restore-defaults", 0, 120 + 63 * delta,
+                            118 + 99 * delta, 18 + 12 * delta)
+            const songX = 125 + 102 * delta
+            checkPinnedRect(song, "song.voicegroup", songX, 11 * unit,
+                            520 - songX, 22 + 12 * delta)
+            for (const row of [["song.volume", 39, 24], ["song.reverb", 70, 39],
+                               ["song.priority", 101, 54]])
+                checkPinnedRect(song, row[0], songX, row[1] + row[2] * delta,
+                                520 - songX, 25 + 15 * delta)
+            for (const row of [["song.exact-gate", 132, 69],
+                               ["song.extended-clocks", 154, 81],
+                               ["song.no-compression", 176, 93]])
+                checkPinnedRect(song, row[0], 0, row[1] + row[2] * delta,
+                                520, 16 + 12 * delta)
+        } finally {
+            engine.destroy()
+            song.destroy()
+        }
+    }
     function initTestCase() {
         nativeSettings.setString("engine.pcmMixer", "sappy")
         nativeSettings.setInt("engine.maxPcmChannels", 8)

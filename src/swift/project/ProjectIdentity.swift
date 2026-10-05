@@ -9,6 +9,17 @@ public struct SongName: Hashable, Sendable {
         guard !value.isEmpty else { return nil }
         self.value = value
     }
+
+    /// Whether a new song label follows the ASCII grammar `[a-z_][a-z0-9_]*`.
+    /// Existing identities retain the nonempty-only compatibility contract.
+    public static func isValid(label: String) -> Bool {
+        var bytes = label.utf8.makeIterator()
+        guard let first = bytes.next(), first == 95 || (97...122).contains(first) else { return false }
+        while let byte = bytes.next() {
+            guard byte == 95 || (97...122).contains(byte) || (48...57).contains(byte) else { return false }
+        }
+        return true
+    }
 }
 
 /// A voicegroup source path and its optional, unmodified section label.

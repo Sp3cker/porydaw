@@ -147,6 +147,9 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         rollcheck/static/gate.swift
         rollcheck/camera_grid.swift
         support/PageCheckSupport.swift
+        support/DocumentSessionFixture.swift
+        support/WorkspacePresenterFixture.swift
+        rollcheck/rollheaderfixture.swift
         scrollbar/ScrollbarChecks.swift
         rollcheck/pencil.swift
         rollcheck/resize.swift

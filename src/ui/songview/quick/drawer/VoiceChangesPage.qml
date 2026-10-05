@@ -5,32 +5,20 @@ import QtQuick
 import Porydaw.Ui
 import PorydawApp as App
 
-FocusScope {
+DrawerLanePage {
     id: page
 
     objectName: "voiceChangesPage"
 
-    final property App.SongTabSession applicationSession
-    required applicationSession
     property App.MouseHints hintService: null
     property bool hintScopeAllowed: true
 
     readonly property App.VoiceChangesPage model: page.applicationSession.songOpen
                                                 ? page.applicationSession.voiceChangesPage() : null
     readonly property App.VoiceChangesPage pageModel: page.model
-    readonly property App.PianoGrid gridModel: page.applicationSession.songOpen
-                                              ? page.applicationSession.gridPresenter() : null
     final readonly property App.GridPalette gridPalette: page.applicationSession.timeSigHost.palette
     enabled: page.pageModel !== null
 
-    /// The shared plot origin: the gutter the roll draws at and the container
-    /// publishes as `plotOrigin`.
-    readonly property real plotOrigin: page.gridModel
-                                       ? (page.gridModel.trackHeaderWidth || 0)
-                                         + page.gridModel.keyboardWidth : 0
-    readonly property real plotWidth: Math.max(page.width - page.plotOrigin, 0)
-    readonly property real baseFontPx: page.gridModel ? page.gridModel.baseFontPx
-                                                      : page.applicationSession.timeSigHost.baseFontPx
 
     function pushBodyFacts(): void {
         if (!page.pageModel || page.width <= 0 || page.height <= 0)
@@ -44,12 +32,8 @@ FocusScope {
         page.pushBodyFacts()
         page.createModals()
     }
-    onWidthChanged: page.pushBodyFacts()
-    onHeightChanged: page.pushBodyFacts()
-    onPlotOriginChanged: page.pushBodyFacts()
-    onBaseFontPxChanged: page.pushBodyFacts()
+    onBodyFactsChanged: page.pushBodyFacts()
     Component.onCompleted: {
-        page.pushBodyFacts()
         page.createModals()
     }
     Component.onDestruction: page.destroyModals()

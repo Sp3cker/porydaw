@@ -345,21 +345,17 @@ func drawerVelocityLifecycleCancellation(
         report.fail(drawerVelocityCancellationID, "bank transition cannot create audio: \(error)")
         return
     }
-    let playhead = SharedPlayheadPresenter()
-    let guides = PlayheadGuidesPresenter()
-    let eventList = EventListPresenter()
-    let workspace = DocumentWorkspace(
-        session: bankFixture.session, audio: audio, playhead: playhead,
-        playheadGuides: guides, eventList: eventList, palette: GridPalette(),
-        typography: Typography(baseFontPx: 13),
+    let presenters = WorkspacePresenterFixture(
+        session: bankFixture.session, audio: audio,
         callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
             revealTrackVoiceRequested: { _ in },
             gridCommandAvailabilityChanged: {}, sessionStateChanged: {},
             publicationFailed: { _ in }, timeSignaturePromptInvalidated: { _, _ in }))
+    let workspace = presenters.workspace
     defer {
         workspace.teardown()
-        withExtendedLifetime((audio, playhead, guides, eventList)) {}
+        withExtendedLifetime((audio, presenters)) {}
     }
     workspace.activate()
     let page = workspace.velocityPage
@@ -467,21 +463,17 @@ func drawerVelocityLifecycleCancellation(
         report.fail(drawerVelocityCancellationID, "voicegroup switch cannot create audio: \(error)")
         return
     }
-    let switchPlayhead = SharedPlayheadPresenter()
-    let switchGuides = PlayheadGuidesPresenter()
-    let switchEventList = EventListPresenter()
-    let switchWorkspace = DocumentWorkspace(
-        session: switchFixture.session, audio: switchAudio, playhead: switchPlayhead,
-        playheadGuides: switchGuides, eventList: switchEventList, palette: GridPalette(),
-        typography: Typography(baseFontPx: 13),
+    let switchPresenters = WorkspacePresenterFixture(
+        session: switchFixture.session, audio: switchAudio,
         callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
             revealTrackVoiceRequested: { _ in },
             gridCommandAvailabilityChanged: {}, sessionStateChanged: {},
             publicationFailed: { _ in }, timeSignaturePromptInvalidated: { _, _ in }))
+    let switchWorkspace = switchPresenters.workspace
     defer {
         switchWorkspace.teardown()
-        withExtendedLifetime((switchAudio, switchPlayhead, switchGuides, switchEventList)) {}
+        withExtendedLifetime((switchAudio, switchPresenters)) {}
     }
     switchWorkspace.activate()
     let switchPage = switchWorkspace.velocityPage

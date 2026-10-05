@@ -4,10 +4,10 @@ import QtQuick
 import Porydaw.Ui
 import PorydawApp as App
 
-FocusScope {
+PromptOverlay {
     id: pickerRoot
     objectName: "voicePicker"
-    required final property var model
+    required final property QtObject model
     final property Item pageItem: null
     final property App.MouseHints hintService: null
     final readonly property App.HeaderVoicePicker headerModel: model as App.HeaderVoicePicker
@@ -49,25 +49,18 @@ FocusScope {
     property bool showing: false
     signal closed()
     anchors.fill: parent
-    visible: showing
-    enabled: showing
-    onShowingChanged: {
-        if (showing)
-            Qt.callLater(prompt.activateInitialFocus)
-        else {
-            releasePickerAudition()
-            closed()
-        }
+    overlayOpen: showing
+    cardItem: prompt
+    underlayObjectName: "voicePickerUnderlay"
+    onInitialFocusRequested: prompt.activateInitialFocus()
+    onOverlayClosed: {
+        releasePickerAudition()
+        closed()
     }
+    onDismissRequested: cancelPicker()
     Component.onDestruction: releasePickerAudition()
     Keys.onShortcutOverride: event => {
         event.accepted = event.key !== Qt.Key_Space || search.activeFocus
-    }
-    MouseArea {
-        objectName: "voicePickerUnderlay"
-        anchors.fill: parent
-        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-        onPressed: pickerRoot.cancelPicker()
     }
 
     PromptCard {
@@ -101,8 +94,6 @@ FocusScope {
             }
             viewReady = true
         }
-
-        Component.onCompleted: if (pickerRoot.showing) Qt.callLater(activateInitialFocus)
 
         // TextInput and ListView edit first; declined keys stop inside the popup.
         Keys.onPressed: (event) => {

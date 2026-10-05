@@ -475,4 +475,28 @@ private func typographyLayoutCheckFittedMaximality(_ report: CheckReport) {
         expected:
             1, actual: full.fittedSize(rowHeight: 0), cppID: typographyLayoutFittedID,
         what: "a zero height floors at the minimum size")
+    let fonts: [GridFontKind: GridFontSpec] = [
+        .ruler: fullSpec, .beat: fullSpec, .bold: fullSpec, .sig: fullSpec,
+        .chip: fullSpec, .keyLabel: fullSpec, .noteName: fullSpec, .noteValue: fullSpec,
+    ]
+    for size in [1, 2, 8, 16] {
+        let boundary = NativeFontMetrics(spec(size: size)).extents.height
+        let exact = GridTypography(fonts: fonts, rowHeight: boundary)
+        report.expectEqual(
+            expected: size, actual: exact.font(.keyLabel).pixelSize,
+            cppID: typographyLayoutFittedID,
+            what: "key labels accept the exact measured height of size \(size)")
+        let below = GridTypography(fonts: fonts, rowHeight: boundary.nextDown)
+        report.expectEqual(
+            expected: max(1, size - 1), actual: below.font(.keyLabel).pixelSize,
+            cppID: typographyLayoutFittedID,
+            what: "key labels step down immediately below the height of size \(size)")
+    }
+    for height in [-1.0, 0.0, Double.nan] {
+        let grid = GridTypography(fonts: fonts, rowHeight: height)
+        report.expectEqual(
+            expected: 1, actual: grid.font(.keyLabel).pixelSize,
+            cppID: typographyLayoutFittedID,
+            what: "key labels keep the one-pixel fallback when no size fits")
+    }
 }

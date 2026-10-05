@@ -258,23 +258,50 @@ public struct SaveVoicegroupInput: Sendable {
     }
 }
 
+/// Shared macro grammar; each parser retains its own argument-validation policy.
+struct VoiceMacroSpec: Sendable {
+    let macro: VgMacro
+    let word: String
+    let category: VgMacro
+    let symbolField: Int?
+    let argumentCount: Int
+    let adsrFamily: Int
+    let prefix: [UInt8]
+
+    private init(_ macro: VgMacro, _ word: String, _ category: VgMacro, _ symbolField: Int?, _ argumentCount: Int) {
+        self.macro = macro
+        self.word = word
+        self.category = category
+        self.symbolField = symbolField
+        self.argumentCount = argumentCount
+        adsrFamily = category == .keysplit || category == .keysplitAll ? -1 : Int(category.rawValue)
+        prefix = Array((word + (category == .progWave ? "" : " ")).utf8)
+    }
+
+    // C-loader dispatch order; programmable-wave prefixes deliberately need no separator.
+    static let all: [Self] = [
+        .init(.directSoundNoResample, "voice_directsound_no_resample", .directSound, 2, 7),
+        .init(.directSoundAlt, "voice_directsound_alt", .directSound, 2, 7),
+        .init(.directSound, "voice_directsound", .directSound, 2, 7),
+        .init(.square1Alt, "voice_square_1_alt", .square1, nil, 8),
+        .init(.square1, "voice_square_1", .square1, nil, 8),
+        .init(.square2Alt, "voice_square_2_alt", .square2, nil, 7),
+        .init(.square2, "voice_square_2", .square2, nil, 7),
+        .init(.progWaveAlt, "voice_programmable_wave_alt", .progWave, 2, 7),
+        .init(.progWave, "voice_programmable_wave", .progWave, 2, 7),
+        .init(.noiseAlt, "voice_noise_alt", .noise, nil, 7),
+        .init(.noise, "voice_noise", .noise, nil, 7),
+        .init(.keysplitAll, "voice_keysplit_all", .keysplitAll, 0, 1),
+        .init(.keysplit, "voice_keysplit", .keysplit, 0, 2),
+    ]
+    private static let byMacro = all.sorted { $0.macro.rawValue < $1.macro.rawValue }
+
+    static func forMacro(_ macro: VgMacro) -> Self { byMacro[Int(macro.rawValue)] }
+}
+
 /// Returns the assembler macro word for an editable voice family.
 public func vgMacroName(_ macro: VgMacro) -> String {
-    switch macro {
-    case .directSound: "voice_directsound"
-    case .directSoundNoResample: "voice_directsound_no_resample"
-    case .directSoundAlt: "voice_directsound_alt"
-    case .square1: "voice_square_1"
-    case .square1Alt: "voice_square_1_alt"
-    case .square2: "voice_square_2"
-    case .square2Alt: "voice_square_2_alt"
-    case .progWave: "voice_programmable_wave"
-    case .progWaveAlt: "voice_programmable_wave_alt"
-    case .noise: "voice_noise"
-    case .noiseAlt: "voice_noise_alt"
-    case .keysplit: "voice_keysplit"
-    case .keysplitAll: "voice_keysplit_all"
-    }
+    VoiceMacroSpec.forMacro(macro).word
 }
 
 /// Returns the C++ UI label for an editable voice family.
@@ -317,34 +344,18 @@ public func vgMacroVoiceType(_ macro: VgMacro) -> UInt8 {
 
 /// Returns whether the macro carries a sample, wave, or sub-voicegroup symbol.
 public func vgMacroHasSymbol(_ macro: VgMacro) -> Bool {
-    switch macro {
-    case .directSound, .directSoundNoResample, .directSoundAlt,
-        .progWave, .progWaveAlt, .keysplit, .keysplitAll:
-        true
-    case .square1, .square1Alt, .square2, .square2Alt, .noise, .noiseAlt: false
-    }
+    VoiceMacroSpec.forMacro(macro).symbolField != nil
 }
 
 /// Returns whether the macro uses the narrower CGB envelope scale.
 public func vgMacroIsCgb(_ macro: VgMacro) -> Bool {
-    switch macro {
-    case .directSound, .directSoundNoResample, .directSoundAlt, .keysplit, .keysplitAll: false
-    case .square1, .square1Alt, .square2, .square2Alt,
-        .progWave, .progWaveAlt, .noise, .noiseAlt:
-        true
-    }
+    let family = VoiceMacroSpec.forMacro(macro).adsrFamily
+    return family > 0
 }
 
 /// Returns the base macro ordinal for an envelope family, or -1 for no envelope.
 public func vgAdsrFamily(_ macro: VgMacro) -> Int {
-    switch macro {
-    case .directSound, .directSoundNoResample, .directSoundAlt: Int(VgMacro.directSound.rawValue)
-    case .square1, .square1Alt: Int(VgMacro.square1.rawValue)
-    case .square2, .square2Alt: Int(VgMacro.square2.rawValue)
-    case .progWave, .progWaveAlt: Int(VgMacro.progWave.rawValue)
-    case .noise, .noiseAlt: Int(VgMacro.noise.rawValue)
-    case .keysplit, .keysplitAll: -1
-    }
+    VoiceMacroSpec.forMacro(macro).adsrFamily
 }
 
 /// Returns the displayed Golden Sun waveform name.

@@ -8,6 +8,7 @@ import {
   ensureNativeBuildTools,
   inspectNativeBuildTools,
 } from "./native_build_tools.ts";
+import { run } from "./lib/exec.ts";
 
 function equal(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
@@ -114,12 +115,8 @@ Deno.test({
     const root = await Deno.makeTempDir({ prefix: "porydaw-provision-" });
     const previousPath = Deno.env.get("PATH");
     const previousSwift = Deno.env.get("SWIFTC");
-    const pythonLookup = await new Deno.Command("sh", {
-      args: ["-c", "command -v python3"],
-      stdout: "piped",
-      stderr: "piped",
-    }).output();
-    const python = new TextDecoder().decode(pythonLookup.stdout).trim();
+    const pythonLookup = await run("sh", ["-c", "command -v python3"]);
+    const python = pythonLookup.text().trim();
     const installed = join(root, "installed");
     const linked = join(root, "linked");
     const version = join(root, "version");

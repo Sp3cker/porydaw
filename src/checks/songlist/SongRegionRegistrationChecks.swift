@@ -102,6 +102,7 @@ private func stageRegionFixture(_ fixtureRoot: String, name: String, alias: Bool
 internal func runSongRegionRegistrationChecks(_ report: CheckReport, fixtureRoot: String) {
     runNumericRegionChecks(report, fixtureRoot: fixtureRoot)
     runAliasRegionChecks(report, fixtureRoot: fixtureRoot)
+    runRegionResourcePins(report, fixtureRoot: fixtureRoot)
 }
 
 @MainActor
@@ -649,4 +650,78 @@ private func runOverflowRegionChecks(_ report: CheckReport, fixtureRoot: String)
             expected: fixture.linker, actual: try fixture.read("ld_script.ld"), cppID: id,
             what: "SE overflow preserves untouched linker image")
     } catch { report.fail(id, "region overflow scenario failed: \(error)") }
+}
+
+@MainActor
+private func runRegionResourcePins(_ report: CheckReport, fixtureRoot: String) {
+    for alias in [false, true] {
+        let name = alias ? "alias" : "numeric"
+        let id = "swiftcore/SongRegion::resource-crlf-\(name)-pins"
+        do {
+            let fixture = try stageRegionFixture(fixtureRoot, name: "resource-pins-" + name, alias: alias)
+            func image(_ text: String) -> Data {
+                Data(text.dropLast().replacingOccurrences(of: "\n", with: "\r\n").utf8)
+            }
+            let paths = [
+                "sound/song_table.inc", "include/constants/songs.h", "charmap.txt", "ld_script.ld", "src/debug.c",
+            ]
+            let originals = [
+                RegionImages.table, alias ? RegionImages.aliasHeader : RegionImages.numericHeader,
+                RegionImages.charmap, RegionImages.linker, alias ? RegionImages.aliasDebug : RegionImages.numericDebug,
+            ]
+            for (path, text) in zip(paths, originals) {
+                try image(text).write(to: URL(fileURLWithPath: fixture.root + "/" + path))
+            }
+            let label = alias ? "mus_oldcheck" : "mus_valcheck"
+            let constant = alias ? "MUS_OLDCHECK" : "MUS_VALCHECK"
+            let plan = SongRegistration.plan(
+                root: fixture.root, label: label, constant: constant, player: "MUSIC_PLAYER_BGM")
+            report.expectEqual(
+                expected: [7, 7, 7, Int.max],
+                actual: [plan.songId, plan.tableInsertIndex, plan.renumberFrom, plan.renumberBelow], cppID: id,
+                what: "Region resource pin: insertion uses entry index seven and renumbers the following phonemes")
+            report.expectEqual(
+                expected: 7,
+                actual: try SongRegistration.register(
+                    root: fixture.root, label: label, constant: constant, player: "MUSIC_PLAYER_BGM"),
+                cppID: id, what: "Region resource pin: CRLF region insertion returns ID seven")
+            let inserted = [
+                alias ? RegionImages.aliasMusicTable : RegionImages.numericMusicTable,
+                alias ? RegionImages.aliasMusicHeader : RegionImages.numericMusicHeader,
+                alias ? RegionImages.aliasMusicCharmap : RegionImages.numericMusicCharmap,
+                RegionImages.linker, alias ? RegionImages.aliasMusicDebug : RegionImages.numericMusicDebug,
+            ]
+            for (path, text) in zip(paths, inserted) {
+                report.expectEqual(
+                    expected: image(text), actual: try fixture.read(path), cppID: id,
+                    what: "Region resource pin: \(path) preserves CRLF and absent final newline after \(name) insertion"
+                )
+            }
+            try SongRegistration.unregister(root: fixture.root, label: label, constant: constant)
+            let removedHeader =
+                alias
+                ? RegionImages.aliasHeader
+                    .replacingOccurrences(of: "#define PH_ONE              7", with: "#define PH_ONE              8")
+                    .replacingOccurrences(of: "#define PH_TWO              8", with: "#define PH_TWO              9")
+                : RegionImages.numericRemovedHeader
+            let removed = [
+                RegionImages.numericRemovedTable, removedHeader, RegionImages.numericRemovedCharmap,
+                RegionImages.linker, alias ? RegionImages.aliasDebug : RegionImages.numericDebug,
+            ]
+            for (path, text) in zip(paths, removed) {
+                report.expectEqual(
+                    expected: image(text), actual: try fixture.read(path), cppID: id,
+                    what:
+                        "Region resource pin: \(path) preserves fallback slot and shifted phonemes after \(name) removal"
+                )
+            }
+            report.expectEqual(
+                expected: 7,
+                actual: SongRegistration.plan(
+                    root: fixture.root, label: "mus_reuse", constant: "MUS_REUSE", player: "MUSIC_PLAYER_BGM"
+                ).songId,
+                cppID: id, what: "Region resource pin: removal repoints either marker form and leaves ID seven reusable"
+            )
+        } catch { report.fail(id, "region resource pins failed: \(error)") }
+    }
 }

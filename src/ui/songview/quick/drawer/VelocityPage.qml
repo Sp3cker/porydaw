@@ -5,39 +5,24 @@ import QtQuick
 import Porydaw.Ui
 import PorydawApp as App
 
-FocusScope {
+DrawerLanePage {
     id: page
 
     objectName: "velocityPage"
 
-    final property App.SongTabSession applicationSession
-    required applicationSession
     property App.MouseHints hintService: null
     property bool hintScopeAllowed: true
 
     readonly property App.VelocityPage model: page.applicationSession.songOpen
                                             ? page.applicationSession.velocityPage() : null
     readonly property App.VelocityPage pageModel: page.model
-    readonly property App.PianoGrid gridModel: page.applicationSession.songOpen
-                                              ? page.applicationSession.gridPresenter() : null
     final readonly property App.GridPalette gridPalette: page.applicationSession.timeSigHost.palette
     enabled: page.pageModel !== null
-    /// The shared plot origin: the gutter the roll draws at and the container
-    /// publishes as `plotOrigin`.
-    readonly property real plotOrigin: page.gridModel
-                                       ? (page.gridModel.trackHeaderWidth || 0)
-                                         + page.gridModel.keyboardWidth : 0
-    readonly property real plotWidth: Math.max(page.width - page.plotOrigin, 0)
     /// The snapped surface scroll the handle container translates by, and the
     /// zoom scale handles place ticks with; both track the scene scroll row.
     property real contentScrollX: 0
     property real contentPixelsPerTick: 0
     readonly property real contentDpr: page.Screen.devicePixelRatio
-    /// The application font's line spacing and the grid's base font are the same
-    /// facts the drawer chrome is measured with.
-    readonly property real baseFontPx: page.gridModel
-                                       ? page.gridModel.baseFontPx
-                                       : page.applicationSession.timeSigHost.baseFontPx
 
     function pushBodyFacts(): void {
         if (!page.pageModel || page.width <= 0 || page.height <= 0)
@@ -49,11 +34,7 @@ FocusScope {
 
     // Publish body geometry only when its owner or measured facts change.
     onModelChanged: page.pushBodyFacts()
-    onWidthChanged: page.pushBodyFacts()
-    onHeightChanged: page.pushBodyFacts()
-    onPlotOriginChanged: page.pushBodyFacts()
-    onBaseFontPxChanged: page.pushBodyFacts()
-    Component.onCompleted: page.pushBodyFacts()
+    onBodyFactsChanged: page.pushBodyFacts()
 
     // The session fans shared-playhead publications into the Swift page owner.
 

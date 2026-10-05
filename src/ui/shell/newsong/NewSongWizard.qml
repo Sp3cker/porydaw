@@ -24,40 +24,20 @@ DialogWindow {
     font: typography.body
     onClosing: controller.cancel()
 
-    ColumnLayout {
+    WizardChrome {
         anchors.fill: parent
-        spacing: 0
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: header.implicitHeight + wizard.layoutSpaces.three * 2
-            color: wizard.colors.inputBackground
-            ColumnLayout {
-                id: header
-                anchors.fill: parent
-                anchors.margins: wizard.layoutSpaces.three
-                spacing: wizard.layoutSpaces.one
-                Text {
-                    objectName: "newSongWizardTitle"
-                    text: wizard.controller.page === 0 ? qsTr("Song identity") : qsTr("Sound settings")
-                    font: wizard.typography.bodyBold
-                    color: wizard.colors.windowText
-                }
-                Text {
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                    text: wizard.controller.page === 0
-                        ? qsTr("Names the .mid file, the song_table.inc entry, and the songs.h constant.")
-                        : qsTr("The song's voicegroup and mid2agb flags — its entry in midi.cfg (or songs.mk). All of this can be changed later in Song Settings.")
-                    font: wizard.typography.body
-                    color: wizard.colors.windowText
-                }
-            }
-        }
-        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: Math.round(wizard.baseFontPx / 12); color: wizard.colors.outline }
-        StackLayout {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            currentIndex: wizard.controller.page
+        typography: wizard.typography
+        layoutSpaces: wizard.layoutSpaces
+        baseFontPx: wizard.baseFontPx
+        headerBackground: wizard.colors.inputBackground
+        textColor: wizard.colors.windowText
+        outlineColor: wizard.colors.outline
+        currentIndex: wizard.controller.page
+        titleObjectName: "newSongWizardTitle"
+        titleText: wizard.controller.page === 0 ? qsTr("Song identity") : qsTr("Sound settings")
+        subtitleText: wizard.controller.page === 0
+            ? qsTr("Names the .mid file, the song_table.inc entry, and the songs.h constant.")
+            : qsTr("The song's voicegroup and mid2agb flags — its entry in midi.cfg (or songs.mk). All of this can be changed later in Song Settings.")
             ImportIdentityPage {
                 id: identityPage
                 colors: wizard.colors; typography: wizard.typography; layoutSpaces: wizard.layoutSpaces
@@ -88,30 +68,24 @@ DialogWindow {
                 onExtendedClocksEdited: function(value): void { wizard.controller.changeExtendedClocks(value) }
                 onNoCompressionEdited: function(value): void { wizard.controller.changeNoCompression(value) }
             }
-        }
-        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: Math.round(wizard.baseFontPx / 12); color: wizard.colors.outline }
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.margins: wizard.layoutSpaces.three
-            spacing: wizard.layoutSpaces.two
-            Item { Layout.fillWidth: true }
-            Button { objectName: "newSongWizardBack"; text: qsTr("< Back"); visible: wizard.controller.page > 0; onClicked: wizard.controller.back() }
+        footer: [
+            Button { objectName: "newSongWizardBack"; text: qsTr("< Back"); visible: wizard.controller.page > 0; onClicked: wizard.controller.back() },
             Button {
                 objectName: "newSongWizardNext"
                 text: qsTr("Next >")
                 visible: wizard.controller.page === 0
                 enabled: wizard.controller.identityComplete
                 onClicked: wizard.controller.next()
-            }
+            },
             Button {
                 objectName: "newSongWizardFinish"
                 text: qsTr("Finish")
                 visible: wizard.controller.page === 1
                 enabled: wizard.controller.identityComplete && !wizard.controller.busy
                 onClicked: wizard.controller.finish()
-            }
+            },
             Button { objectName: "newSongWizardCancel"; text: qsTr("Cancel"); onClicked: wizard.controller.cancel() }
-        }
+        ]
     }
     Shortcut {
         sequences: ["Return", "Enter"]

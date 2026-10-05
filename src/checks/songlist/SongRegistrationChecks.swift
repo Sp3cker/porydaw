@@ -244,6 +244,7 @@ internal func runSongRegistrationChecks(_ report: CheckReport, fixtureRoot: Stri
     }
     runSongRegistrationBackfillChecks(report, fixtureRoot: fixtureRoot)
     runSongRegistrationAliasChecks(report, fixtureRoot: fixtureRoot)
+    runSongRegistrationResourcePins(report, fixtureRoot: fixtureRoot)
 }
 
 @MainActor
@@ -425,4 +426,58 @@ private func runSongRegistrationAliasChecks(_ report: CheckReport, fixtureRoot: 
             }
         } catch { report.fail(id, "alias scenario failed: \(error)") }
     }
+}
+
+@MainActor
+private func runSongRegistrationResourcePins(_ report: CheckReport, fixtureRoot: String) {
+    let id = "swiftcore/SongRegistration::resource-crlf-index-pins"
+    do {
+        let fixture = try registrationFixture(fixtureRoot, name: "registration-resource-pins")
+        let table =
+            "gSongTable::\r\n\tsong mus_zero, MUSIC_PLAYER_BGM, 0\r\n@ retained comment\r\n\r\n\tsong mus_last, MUSIC_PLAYER_BGM, 0\r\n  song mus_first, MUSIC_PLAYER_BGM, 0"
+        let header =
+            "#define MUS_ZERO 0\r\n#define MUS_FIRST_EXTRA 1\r\n#define MUS_FIRST 1suffix\r\n#define MUS_FIRST 2\r\n#define MUS_NONE 0xFFFF"
+        let charmap =
+            "MUS_ZERO = 00 00\r\nMUS_FIRST_EXTRA = 01 00\r\nMUS_FIRST = 01 00\r\nMUS_FIRST = 02 00"
+        let linker =
+            "SECTIONS {\r\n\tsound/songs/midi/mus_first_extra.o(.rodata);\r\n\tsound/songs/midi/mus_first.o(.rodata);\r\n}"
+        try fixture.write("sound/song_table.inc", table)
+        try fixture.write("include/constants/songs.h", header)
+        try fixture.write("charmap.txt", charmap)
+        try fixture.write("ld_script.ld", linker)
+        let before = SongRegistration.status(root: fixture.root, label: "mus_first", constant: "MUS_FIRST")
+        report.expectEqual(
+            expected: ["songs.h", "charmap.txt"], actual: before.missingFiles, cppID: id,
+            what: "Resource pin: first duplicate numeric definitions determine status, not later valid duplicates")
+        let plan = SongRegistration.plan(
+            root: fixture.root, label: "mus_first", constant: "MUS_FIRST", player: "MUSIC_PLAYER_BGM")
+        report.expectEqual(
+            expected: 2, actual: plan.songId, cppID: id,
+            what: "Resource pin: song ID counts entries rather than comments, blank lines or source-line indices")
+        report.expectEqual(
+            expected: 2,
+            actual: try SongRegistration.register(
+                root: fixture.root, label: "mus_first", constant: "MUS_FIRST", player: "MUSIC_PLAYER_BGM"),
+            cppID: id, what: "Resource pin: repair retains the existing nonzero table index")
+        report.expectEqual(
+            expected: fixture.bytes(table), actual: try fixture.read("sound/song_table.inc"), cppID: id,
+            what: "Resource pin: settled table preserves CRLF, indentation, comments and absent final newline")
+        report.expectEqual(
+            expected: fixture.bytes(header.replacingOccurrences(of: "MUS_FIRST 1suffix", with: "MUS_FIRST 2suffix")),
+            actual: try fixture.read("include/constants/songs.h"), cppID: id,
+            what: "Resource pin: writer repairs only the first exact constant and retains its numeric suffix")
+        report.expectEqual(
+            expected: fixture.bytes(charmap.replacingOccurrences(of: "MUS_FIRST = 01 00", with: "MUS_FIRST = 02 00")),
+            actual: try fixture.read("charmap.txt"), cppID: id,
+            what: "Resource pin: charmap repair changes only the first exact constant without adding a final newline")
+        report.expectEqual(
+            expected: fixture.bytes(linker), actual: try fixture.read("ld_script.ld"), cppID: id,
+            what:
+                "Resource pin: existing exact linker object prevents an append and leaves the prefix neighbor untouched"
+        )
+        report.expectEqual(
+            expected: [String](),
+            actual: SongRegistration.status(root: fixture.root, label: "mus_first", constant: "MUS_FIRST").missingFiles,
+            cppID: id, what: "Resource pin: numeric-prefix status accepts the repaired suffix-bearing definition")
+    } catch { report.fail(id, "registration resource pins failed: \(error)") }
 }

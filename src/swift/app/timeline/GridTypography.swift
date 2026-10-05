@@ -163,8 +163,10 @@ struct GridTypography {
 final class NativeFontMetrics {
     let session: OpaquePointer
     let extents: SGFontExtents
+    private let spec: GridFontSpec
 
     init(_ spec: GridFontSpec) {
+        self.spec = spec
         session = spec.family.withCString {
             sgf_create($0, Int32(spec.pixelSize), Int32(spec.weight), spec.letterSpacing)!
         }
@@ -178,6 +180,26 @@ final class NativeFontMetrics {
     }
 
     func fittedSize(rowHeight: Double) -> Int {
-        Int(sgf_fit(session, rowHeight))
+        spec.family.withCString { family in
+            var size = spec.pixelSize
+            while size > 0 {
+                let height: Double
+                if size == spec.pixelSize {
+                    height = extents.height
+                } else {
+                    guard
+                        let fitted = sgf_create(
+                            family, Int32(size), Int32(spec.weight), spec.letterSpacing)
+                    else {
+                        preconditionFailure("Native font measurement requires a metrics session")
+                    }
+                    height = sgf_extents(fitted).height
+                    sgf_destroy(fitted)
+                }
+                if height <= rowHeight { return size }
+                size -= 1
+            }
+            return 1
+        }
     }
 }

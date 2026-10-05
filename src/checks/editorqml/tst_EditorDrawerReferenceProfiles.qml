@@ -205,6 +205,26 @@ EditorDrawerTestSupport {
                 "the page received the profile's base font")
         compare(VoiceSupport.voiceModel(testCase).baseFontPx, bootstrap.profileFontPx,
                 "the Voice Changes page received the profile's base font too")
+        for (const lane of [[page, "velocityRuler", "velocityPlot"],
+                            [VoiceSupport.voicePageItem(testCase), "voiceGutter", "voicePlot"],
+                            [testCase.pageItem(testCase.automationKind), "automationGutter", "automationPlot"]]) {
+            const lanePage = lane[0]
+            const gutter = findChild(lanePage, lane[1])
+            const plot = findChild(lanePage, lane[2])
+            const origin = testCase.surface.gridModel.trackHeaderWidth
+                         + testCase.surface.gridModel.keyboardWidth
+            verify(gutter !== null && plot !== null, "profile lane rects are mounted")
+            compare(lanePage.baseFontPx, bootstrap.profileFontPx, "profile lane font pin")
+            compare(lanePage.plotOrigin, origin, "profile lane shared origin pin")
+            compare(gutter.x, 0, "profile gutter x pin")
+            compare(gutter.y, 0, "profile gutter y pin")
+            compare(gutter.width, origin, "profile gutter width pin")
+            compare(gutter.height, lanePage.height, "profile gutter height pin")
+            compare(plot.x, origin, "profile plot x pin")
+            compare(plot.y, 0, "profile plot y pin")
+            compare(plot.width, Math.max(lanePage.width - origin, 0), "profile plot width pin")
+            compare(plot.height, lanePage.height, "profile plot height pin")
+        }
 
         var panes = bootstrap.profilePanes
         for (var i = 0; i < panes.length; ++i)

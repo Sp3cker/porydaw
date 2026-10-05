@@ -4,6 +4,7 @@
 import { extname } from "node:path";
 import { buildDirectory } from "./local_build_environment.ts";
 import { selectedSwiftCompiler, swiftDriver } from "./swift_toolchain.ts";
+import { run } from "./lib/exec.ts";
 
 export interface FormatRequest {
   readonly check: boolean;
@@ -16,21 +17,16 @@ export interface FormatRequest {
 
 type LineRanges = [number, number][] | "whole";
 
-const decoder = new TextDecoder();
 const HUNK = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/;
 
 async function git(args: string[]): Promise<string> {
-  const result = await new Deno.Command("git", {
-    args,
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
+  const result = await run("git", args);
   if (!result.success) {
     throw new Error(
-      `git ${args[0]} failed: ${decoder.decode(result.stderr).trim()}`,
+      `git ${args[0]} failed: ${result.text("stderr").trim()}`,
     );
   }
-  return decoder.decode(result.stdout);
+  return result.text();
 }
 
 async function changedSwift(base: string): Promise<Map<string, LineRanges>> {
@@ -93,11 +89,7 @@ async function swiftFormat(
   ];
   let result;
   try {
-    result = await new Deno.Command(swift, {
-      args,
-      stdout: "piped",
-      stderr: "piped",
-    }).output();
+    result = await run(swift, args);
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
       throw new Error(
@@ -107,9 +99,9 @@ async function swiftFormat(
     throw error;
   }
   if (!result.success) {
-    throw new Error(`${path}: ${decoder.decode(result.stderr).trim()}`);
+    throw new Error(`${path}: ${result.text("stderr").trim()}`);
   }
-  return decoder.decode(result.stdout);
+  return result.text();
 }
 
 async function denoFmt(check: boolean, files: string[]): Promise<boolean> {

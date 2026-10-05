@@ -216,6 +216,8 @@ ShellLaneSupport {
         const stray = rootPath + "/sound/songs/midi/" + label + ".mid"
         verify(probe.copyFile(rootPath + "/sound/songs/midi/mus_route101.mid", stray), "stage stray MIDI")
         const strayBefore = probe.fingerprint(stray)
+        const tabsBefore = presenter.session.songTabs.tabCount
+        const saveErrorBefore = presenter.session.lastSaveError
         wizard = openWizard(label)
         next(wizard)
         finish(wizard)
@@ -226,6 +228,13 @@ ShellLaneSupport {
         const critical = child("shellCriticalDialog")
         compare(critical.text, "Operation Failed", "existing MIDI uses operation failure channel")
         compare(critical.informativeText, "MIDI file already exists: " + stray, "fork existing MIDI refusal")
+        compare(presenter.statusText, "MIDI file already exists: " + stray,
+                "new-song failure unwraps operationFailed instead of showing enum spelling")
+        compare(controller().busy, false, "new-song error recovery clears busy")
+        compare(presenter.session.songTabs.tabCount, tabsBefore, "new-song refusal opens no tab")
+        compare(presenter.statusText, critical.informativeText, "new-song refusal publishes failure status")
+        compare(presenter.session.lastSaveError, saveErrorBefore,
+                "new-song refusal leaves the save error unchanged")
         verify(!wizard.visible, "service refusal closes wizard")
         compare(probe.fingerprint(stray), strayBefore, "stray bytes remain untouched")
         compare(projectFingerprints(), before, "service refusal changes no project bytes")

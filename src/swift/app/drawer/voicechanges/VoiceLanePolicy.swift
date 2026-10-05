@@ -27,15 +27,14 @@ public enum VoiceChangesPagePolicy {
 /// `m4aVoiceTypeName`: the declared type name for a bank macro ordinal, or `""`
 /// for an ordinal the voicegroup editor does not publish as one voice.
 public func voiceTypeName(macro: Int32?) -> String {
+    guard let macro else { return "" }
     switch macro {
-    case BankVoiceMacro.directSound, BankVoiceMacro.keysplit: return "Sample"
-    case BankVoiceMacro.directSoundNoResample: return "Sample (fixed pitch)"
-    case BankVoiceMacro.directSoundAlt: return "Sample (reverse)"
-    case BankVoiceMacro.square1, BankVoiceMacro.square1Alt: return "Square 1"
-    case BankVoiceMacro.square2, BankVoiceMacro.square2Alt: return "Square 2"
-    case BankVoiceMacro.programmableWave, BankVoiceMacro.programmableWaveAlt: return "Wave"
-    case BankVoiceMacro.noise, BankVoiceMacro.noiseAlt: return "Noise"
-    case BankVoiceMacro.keysplitAll: return "Drumkit"
+    case BankVoiceMacro.directSound, BankVoiceMacro.directSoundNoResample,
+        BankVoiceMacro.directSoundAlt, BankVoiceMacro.square1, BankVoiceMacro.square1Alt,
+        BankVoiceMacro.square2, BankVoiceMacro.square2Alt, BankVoiceMacro.programmableWave,
+        BankVoiceMacro.programmableWaveAlt, BankVoiceMacro.noise, BankVoiceMacro.noiseAlt,
+        BankVoiceMacro.keysplit, BankVoiceMacro.keysplitAll:
+        return m4aVoiceTypeName(VoiceListSemantics.voiceType(forMacro: macro))
     default: return ""
     }
 }

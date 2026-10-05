@@ -110,16 +110,10 @@ struct drawerVelocityVelocityFixture {
         session suite: DocumentSession, service: ProjectService,
         baseFontPx: Double = 13, contextSlot: UInt8 = 0
     ) {
-        let document = SongDocument(
-            file: drawerVelocityVelocityPageFixture(contextSlot: contextSlot),
-            config: suite.document.state.config,
-            source: suite.document.source,
-            trackBudget: suite.document.trackBudget)
-        let session = DocumentSession(
-            document: document, service: service,
-            lease: suite.bankLease, slots: suite.bankSlots,
-            dirty: false, loadName: suite.bankLoadName,
-            sampleRate: 48_000)
+        let session = makeSyntheticSession(
+            suite: suite, service: service,
+            file: drawerVelocityVelocityPageFixture(contextSlot: contextSlot))
+        let document = session.document
         session.selectedTrack = 0
         session.clearSelectedNotes()
         page = VelocityPage(baseFontPx: baseFontPx)

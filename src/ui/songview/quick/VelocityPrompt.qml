@@ -4,53 +4,24 @@ import QtQuick
 import Porydaw.Ui
 import PorydawApp as App
 
-Item {
+PromptOverlay {
     id: promptRoot
     objectName: "velocityPrompt"
     required final property App.VelocityPage model
-    required final property Item focusOrigin
     final property App.MouseHints hintService: null
     property bool hintScopeAllowed: true
     readonly property bool opened: model.promptOpen
-    property bool consumingOutsidePress: false
-    visible: opened || consumingOutsidePress
-    enabled: visible
-    function finishOutsidePress(): void {
-        consumingOutsidePress = false
-    }
-    function restoreFocusIfOwned(): void {
-        const active = promptRoot.Window.window
-            ? promptRoot.Window.window.activeFocusItem : null
-        let focus = active
-        while (focus && focus !== promptRoot)
-            focus = focus.parent
-        if (!active || focus === promptRoot)
-            focusOrigin.forceActiveFocus(Qt.OtherFocusReason)
-    }
+    overlayOpen: opened
+    cardItem: prompt
+    underlayObjectName: "velocityPromptUnderlay"
+    required focusOrigin
+    dismissOnlyOutsideCard: true
+    consumeDismissPress: true
+    preventUnderlayStealing: true
     z: 100
-    onOpenedChanged: {
-        if (opened) {
-            Qt.callLater(prompt.activateInitialFocus)
-        } else {
-            restoreFocusIfOwned()
-        }
-    }
-    MouseArea {
-        objectName: "velocityPromptUnderlay"
-        anchors.fill: parent
-        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-        preventStealing: true
-        onPressed: mouse => {
-            mouse.accepted = true
-            if (mouse.x < prompt.x || mouse.x >= prompt.x + prompt.width
-                    || mouse.y < prompt.y || mouse.y >= prompt.y + prompt.height) {
-                promptRoot.consumingOutsidePress = true
-                prompt.cancelDisplayed()
-            }
-        }
-        onReleased: Qt.callLater(promptRoot.finishOutsidePress)
-        onCanceled: Qt.callLater(promptRoot.finishOutsidePress)
-    }
+    onInitialFocusRequested: prompt.activateInitialFocus()
+    onOverlayClosed: restoreFocusIfOwned()
+    onDismissRequested: prompt.cancelDisplayed()
 
     PromptCard {
         id: prompt
@@ -88,7 +59,6 @@ Item {
             velocityInput.focusInput(Qt.PopupFocusReason)
             velocityInput.selectAll()
         }
-        Component.onCompleted: if (promptRoot.opened) Qt.callLater(activateInitialFocus)
         Keys.onShortcutOverride: event => event.accepted = event.key !== Qt.Key_Space
 
         Keys.onPressed: (event) => {

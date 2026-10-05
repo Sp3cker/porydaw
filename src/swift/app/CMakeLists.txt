@@ -56,6 +56,7 @@ add_library(PorydawApp STATIC
     eventlist/EventListPresenter.swift
     songlist/SongListPresenter.swift
     songlist/SongDockController.swift
+    songlist/SongIntake.swift
     voicelist/VoiceListSemantics.swift
     voicelist/VoiceListController.swift
     voicelist/VoiceListController+Bank.swift

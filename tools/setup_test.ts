@@ -6,6 +6,7 @@ import {
   qtInstallationDirectory,
 } from "./local_build_environment.ts";
 import { checkSwiftCompiler } from "./swift_toolchain.ts";
+import { run } from "./lib/exec.ts";
 
 function equal(actual: unknown, expected: unknown): void {
   if (actual !== expected) {
@@ -28,13 +29,13 @@ Deno.test("setup help succeeds and invalid Qt versions stop before provisioning"
       [["--qt-version", "6.11.invalid"], 2, "requires a 6.11.<patch> version"],
     ] as const
   ) {
-    const result = await new Deno.Command(Deno.execPath(), {
-      args: ["run", "tools/setup.ts", ...args],
-      stdout: "piped",
-      stderr: "piped",
-    }).output();
+    const result = await run(Deno.execPath(), [
+      "run",
+      "tools/setup.ts",
+      ...args,
+    ]);
     equal(result.code, code);
-    contains(new TextDecoder().decode(result.stderr), message);
+    contains(result.text("stderr"), message);
   }
 });
 

@@ -175,12 +175,7 @@ private func positionReadoutBoundaryChecks(_ report: CheckReport, snapshot: Audi
         var file = makeMidiFixture()
         file.chunks[0].events.append(.meta(tick: 25, type: 0x58, data: [3, 3, 24, 8]))
         file.chunks[0].events.append(.meta(tick: 62, type: 0x58, data: [5, 4, 24, 8]))
-        let document = SongDocument(
-            file: file, config: base.document.state.config,
-            source: base.document.source, trackBudget: base.document.trackBudget)
-        let session = DocumentSession(
-            document: document, service: service, lease: base.bankLease, slots: base.bankSlots,
-            dirty: false, loadName: base.bankLoadName, sampleRate: 48_000)
+        let session = makeSyntheticSession(suite: base, service: service, file: file)
         let panel = PolyphonyPanelPresenter()
         panel.setContext(session: session)
         panel.setVisible(showing: true)

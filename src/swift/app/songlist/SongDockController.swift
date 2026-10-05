@@ -1,4 +1,5 @@
 import Foundation
+import PorydawProject
 import QtBridge
 
 /// Owns the Songs dock's plan/confirmation boundary. A song ID is resolved
@@ -151,7 +152,7 @@ public final class SongDockController: QmlUncreatable {
     }
 
     public func validNewSongLabel(label: String) -> Bool {
-        ProjectService.isValidSongLabel(label)
+        SongName.isValid(label: label)
     }
 
     public func cancelConfirmation() { clearConfirmation() }

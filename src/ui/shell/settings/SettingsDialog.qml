@@ -13,10 +13,12 @@ DialogWindow {
     required property ApplicationSession applicationSession
     readonly property real unit: applicationSession.baseFontPx / 12
     readonly property real engineTabWidth: 64 + 42 * (unit - 1)
+    readonly property rect pageRect: Qt.rect(20 * unit, 31 * unit,
+                                            width - 40 * unit, tabs.height - 20 * unit)
     property int selectedTab: 0
     readonly property string songLabel: store.songLabel
-    width: 560
-    height: 580
+    width: 560 * unit
+    height: 580 * unit
     minimumWidth: width
     minimumHeight: height
     maximumWidth: width
@@ -51,8 +53,8 @@ DialogWindow {
         id: tabs
         objectName: "tabs"
         parent: body
-        x: 11; y: 11
-        width: dialog.width - 22
+        x: 11 * dialog.unit; y: 11 * dialog.unit
+        width: dialog.width - 22 * dialog.unit
         height: dialog.height - 46 - 12 * (dialog.unit - 1)
         Rectangle {
             anchors.fill: parent
@@ -123,9 +125,8 @@ DialogWindow {
     Loader {
         id: enginePage
         parent: body
-        x: 20; y: 31
-        width: dialog.width - 40
-        height: tabs.height - 20 * dialog.unit
+        x: dialog.pageRect.x; y: dialog.pageRect.y
+        width: dialog.pageRect.width; height: dialog.pageRect.height
         active: dialog.visible
         visible: dialog.selectedTab === 0
         onLoaded: (enginePage.item as EngineSettingsPage).reset()
@@ -138,9 +139,8 @@ DialogWindow {
     Loader {
         id: songPage
         parent: body
-        x: 20; y: 31
-        width: dialog.width - 40
-        height: tabs.height - 20 * dialog.unit
+        x: dialog.pageRect.x; y: dialog.pageRect.y
+        width: dialog.pageRect.width; height: dialog.pageRect.height
         active: dialog.visible
         visible: dialog.selectedTab === 1
         onLoaded: (songPage.item as SongSettingsPage).reset()
@@ -153,9 +153,8 @@ DialogWindow {
     Loader {
         id: themePage
         parent: body
-        x: 20; y: 31
-        width: dialog.width - 40
-        height: tabs.height - 20 * dialog.unit
+        x: dialog.pageRect.x; y: dialog.pageRect.y
+        width: dialog.pageRect.width; height: dialog.pageRect.height
         active: dialog.visible
         visible: dialog.selectedTab === 2
         sourceComponent: ThemeSettingsPage {
@@ -167,7 +166,7 @@ DialogWindow {
     Item {
         objectName: "button-box"
         parent: body
-        x: dialog.width - 11 - (240 - 21 * (dialog.unit - 1))
+        x: dialog.width - 11 * dialog.unit - (240 - 21 * (dialog.unit - 1))
         y: dialog.height - 29 - 12 * (dialog.unit - 1)
         width: 240 - 21 * (dialog.unit - 1)
         height: 18 + 12 * (dialog.unit - 1)

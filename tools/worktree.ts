@@ -1,6 +1,6 @@
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import { run } from "./lib/exec.ts";
 
-const decoder = new TextDecoder();
 const taskNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 type CreateRequest = {
@@ -44,32 +44,17 @@ function parseRequest(rawArgs: string[]): CreateRequest {
   return { name, baseBranch };
 }
 
-async function run(
-  cwd: string,
-  executable: string,
-  args: string[],
-  inheritOutput = false,
-): Promise<Deno.CommandOutput> {
-  return await new Deno.Command(executable, {
-    cwd,
-    args,
-    stdin: "null",
-    stdout: inheritOutput ? "inherit" : "piped",
-    stderr: inheritOutput ? "inherit" : "piped",
-  }).output();
-}
-
 async function gitOutput(cwd: string, args: string[]): Promise<string> {
-  const result = await run(cwd, "git", args);
+  const result = await run("git", args, { cwd, stdin: "null" });
   if (!result.success) {
-    const detail = decoder.decode(result.stderr).trim();
+    const detail = result.text("stderr").trim();
     throw new Error(detail || `git ${args.join(" ")} failed`);
   }
-  return decoder.decode(result.stdout).trim();
+  return result.text().trim();
 }
 
 async function gitSucceeds(cwd: string, args: string[]): Promise<boolean> {
-  return (await run(cwd, "git", args)).success;
+  return (await run("git", args, { cwd, stdin: "null" })).success;
 }
 
 async function requireSuccess(
@@ -77,7 +62,11 @@ async function requireSuccess(
   executable: string,
   args: string[],
 ): Promise<void> {
-  const result = await run(cwd, executable, args, true);
+  const result = await run(executable, args, {
+    cwd,
+    stdin: "null",
+    inherit: true,
+  });
   if (!result.success) {
     throw new Error(
       `${executable} ${args.join(" ")} failed with ${result.code}`,
