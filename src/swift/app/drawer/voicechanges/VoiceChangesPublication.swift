@@ -183,21 +183,22 @@ extension VoiceChangesPage {
 
     @QtIgnored
     func publishTypography() {
-        let typography = Typography(baseFontPx: Int(baseFontPx.rounded()))
-        let caption = VoiceCaption(font: typography.caption)
-        let title = VoiceCaption(font: typography.captionBold)
-        self.caption = caption
-        self.title = title
-        setPublished(captionFont, typography.caption.qmlFont) { captionFont = $0 }
-        setPublished(titleFont, typography.captionBold.qmlFont) { titleFont = $0 }
-        setPublished(noteNameFont, typography.noteName.qmlFont) { noteNameFont = $0 }
+        caption = VoiceCaption(font: typography.caption)
+        title = VoiceCaption(font: typography.captionBold)
+        publish(\.captionFont, typography.caption.qmlFont)
+        publish(\.titleFont, typography.captionBold.qmlFont)
+        publish(\.noteNameFont, typography.noteName.qmlFont)
     }
 
     /// Applies the scene's gutter lines: the title, then the change summary the
     /// legacy band publishes while a track is presented.
     @QtIgnored
     func publishGutter(_ values: [SceneText]) {
-        VoiceChangesProjection.syncTexts(gutterTexts, values)
+        syncModel(gutterTexts, values) {
+            $0.current == $1.current
+                && $0.clipX == $1.clipX && $0.clipY == $1.clipY
+                && $0.clipWidth == $1.clipWidth && $0.clipHeight == $1.clipHeight
+        }
     }
 
     /// The marker projection: the scene computes one marker rule and one label
@@ -232,14 +233,14 @@ extension VoiceChangesPage {
     @QtIgnored
     func publishTransient() {
         guard let live = drag, live.active else {
-            setPublished(previewVisible, false) { previewVisible = $0 }
-            setPublished(previewX, 0) { previewX = $0 }
-            setPublished(previewTick, 0) { previewTick = $0 }
+            publish(\.previewVisible, false)
+            publish(\.previewX, 0)
+            publish(\.previewTick, 0)
             return
         }
-        setPublished(previewVisible, true) { previewVisible = $0 }
-        setPublished(previewX, xForTick(live.previewTick)) { previewX = $0 }
-        setPublished(previewTick, Double(live.previewTick)) { previewTick = $0 }
+        publish(\.previewVisible, true)
+        publish(\.previewX, xForTick(live.previewTick))
+        publish(\.previewTick, Double(live.previewTick))
     }
 
     /// The current legacy lane hint: marker-specific while the pointer hits a
@@ -247,7 +248,7 @@ extension VoiceChangesPage {
     @QtIgnored
     func publishHoverHintProfile(marker: Bool) {
         let profile = marker ? VoiceHintProfile.marker : VoiceHintProfile.horizontalScroll
-        if hoverHintProfile != profile { hoverHintProfile = profile }
+        publish(\.hoverHintProfile, profile)
     }
 
     /// The readout from live page facts: the cursor-only publication path, which
@@ -289,15 +290,15 @@ extension VoiceChangesPage {
     /// right-aligned in the plot. The page always publishes them; the QML draws
     /// them while a track is presented, exactly as the legacy band does.
     private func publishReadout(_ values: VoiceReadoutValues) {
-        setPublished(contextSlot, values.slot) { contextSlot = $0 }
-        setPublished(contextBlank, values.blank) { contextBlank = $0 }
-        setPublished(contextSymbol, values.symbol) { contextSymbol = $0 }
-        setPublished(readoutText, values.text) { readoutText = $0 }
-        setPublished(readoutVisible, trackAvailable) { readoutVisible = $0 }
-        setPublished(readoutX, values.x) { readoutX = $0 }
-        setPublished(readoutY, values.y) { readoutY = $0 }
-        setPublished(readoutWidth, values.width) { readoutWidth = $0 }
-        setPublished(readoutHeight, values.height) { readoutHeight = $0 }
+        publish(\.contextSlot, values.slot)
+        publish(\.contextBlank, values.blank)
+        publish(\.contextSymbol, values.symbol)
+        publish(\.readoutText, values.text)
+        publish(\.readoutVisible, trackAvailable)
+        publish(\.readoutX, values.x)
+        publish(\.readoutY, values.y)
+        publish(\.readoutWidth, values.width)
+        publish(\.readoutHeight, values.height)
     }
 
     // MARK: Internals: picker publication
@@ -311,9 +312,9 @@ extension VoiceChangesPage {
         pickerCache.resolve(filter: live.filter)
         pickerCache.releaseIfFilteredOut(audition: onAuditionVoice)
         syncPickerRows(pickerCache.selectedRows(program: live.program))
-        setPublished(pickerFilter, live.filter) { pickerFilter = $0 }
-        setPublished(pickerIndex, pickerCache.indices[live.program] ?? -1) { pickerIndex = $0 }
-        setPublished(pickerHasMatch, live.program >= 0) { pickerHasMatch = $0 }
+        publish(\.pickerFilter, live.filter)
+        publish(\.pickerIndex, pickerCache.indices[live.program] ?? -1)
+        publish(\.pickerHasMatch, live.program >= 0)
     }
 
     /// A bank publication while the picker is open: the captured target still
@@ -328,7 +329,7 @@ extension VoiceChangesPage {
         pickerCache.resolve(filter: live.filter)
         live.program = pickerCache.initialProgram(live.program)
         picker = live
-        setPublished(pickerTitle, live.title) { pickerTitle = $0 }
+        publish(\.pickerTitle, live.title)
         publishPicker()
     }
 

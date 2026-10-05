@@ -190,12 +190,8 @@ extension PianoGrid {
         typography = measured
         typographyKey = key
         let markerRowHeight = measured.boldHeight + 1
-        if rulerMarkerRowHeight != markerRowHeight {
-            rulerMarkerRowHeight = markerRowHeight
-        }
-        if rulerHeight != markerRowHeight + measured.rulerHeight + 1 {
-            rulerHeight = markerRowHeight + measured.rulerHeight + 1
-        }
+        publish(\.rulerMarkerRowHeight, markerRowHeight)
+        publish(\.rulerHeight, markerRowHeight + measured.rulerHeight + 1)
         return true
     }
 
@@ -211,27 +207,27 @@ extension PianoGrid {
     @QtIgnored
     private func publishGeometry() {
         let snapshot = session.camera.snapshot
-        if beatWidth != snapshot.pixelsPerBeat { beatWidth = snapshot.pixelsPerBeat }
-        if rowHeight != snapshot.keyHeight { rowHeight = snapshot.keyHeight }
-        if cameraScrollX != snapshot.scrollX { cameraScrollX = snapshot.scrollX }
-        if scaleFold != session.scaleProjection.fold { scaleFold = session.scaleProjection.fold }
+        publish(\.beatWidth, snapshot.pixelsPerBeat)
+        publish(\.rowHeight, snapshot.keyHeight)
+        publish(\.cameraScrollX, snapshot.scrollX)
+        publish(\.scaleFold, session.scaleProjection.fold)
         let rowCount = session.camera.projection.visibleRowCount
-        if visibleRowCount != rowCount { visibleRowCount = rowCount }
-        if cameraScrollY != snapshot.scrollY { cameraScrollY = snapshot.scrollY }
-        if cameraMaxVScroll != snapshot.maxVScroll { cameraMaxVScroll = snapshot.maxVScroll }
-        if cameraMinHScroll != snapshot.minHScroll { cameraMinHScroll = snapshot.minHScroll }
-        if cameraMaxHScroll != snapshot.maxHScroll { cameraMaxHScroll = snapshot.maxHScroll }
-        if keyboardWidth != metrics.keyboardWidth { keyboardWidth = metrics.keyboardWidth }
+        publish(\.visibleRowCount, rowCount)
+        publish(\.cameraScrollY, snapshot.scrollY)
+        publish(\.cameraMaxVScroll, snapshot.maxVScroll)
+        publish(\.cameraMinHScroll, snapshot.minHScroll)
+        publish(\.cameraMaxHScroll, snapshot.maxHScroll)
+        publish(\.keyboardWidth, metrics.keyboardWidth)
         let headerWidth = fontPx(baseFontPx, 17.5)
-        if trackHeaderWidth != headerWidth { trackHeaderWidth = headerWidth }
+        publish(\.trackHeaderWidth, headerWidth)
         let cursorExtent = Int(fontPx(baseFontPx, 2.0))
-        if resizeCursorExtent != cursorExtent { resizeCursorExtent = cursorExtent }
+        publish(\.resizeCursorExtent, cursorExtent)
         let tpb = Int(max(1, session.document.ticksPerBeat))
-        if ticksPerBeat != tpb { ticksPerBeat = tpb }
+        publish(\.ticksPerBeat, tpb)
         let snap = Int(session.grid.snapTicksAt(session.editCursor, camera: session.camera))
-        if snapTicks != snap { snapTicks = snap }
+        publish(\.snapTicks, snap)
         let gridTicks = Int(session.grid.gridTicksAt(session.editCursor, camera: session.camera))
-        if visibleGridTicks != gridTicks { visibleGridTicks = gridTicks }
+        publish(\.visibleGridTicks, gridTicks)
     }
 
     @QtIgnored

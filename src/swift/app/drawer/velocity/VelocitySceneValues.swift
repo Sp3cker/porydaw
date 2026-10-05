@@ -103,10 +103,7 @@ enum VelocityScene {
         axisGeometry.labelWidth = max(0, input.rulerWidth - input.geometry.pixel)
         axisGeometry.labelSideInset = input.geometry.labelSideInset
         axisGeometry.labelColumnGap = input.geometry.labelColumnGap
-        axisGeometry.labelHeight =
-            NativeFontMetrics(
-                Typography(baseFontPx: Int(input.baseFontPx.rounded())).noteName
-            ).extents.height
+        axisGeometry.labelHeight = NativeFontMetrics(input.typography.noteName).extents.height
         axisGeometry.continuousDensityD1 = input.geometry.densityD1
         axisGeometry.continuousDensityD2 = input.geometry.densityD2
         axisGeometry.continuousDensityD3 = input.geometry.densityD3
@@ -135,9 +132,8 @@ enum VelocityScene {
         let labelHeight = max(0, axis.geometry.labelHeight)
         let labelColor = input.palette.primaryText
         let selectedColor = input.palette.selectionRing
-        let typography = Typography(baseFontPx: Int(input.baseFontPx.rounded()))
-        let noteNameFont = typography.noteName.qmlFont
-        let markerFont = typography.captionBold.qmlFont
+        let noteNameFont = input.typography.noteName.qmlFont
+        let markerFont = input.typography.captionBold.qmlFont
         var rows = VelocityAxisRows()
         if axis.mode == .intrinsic && input.interaction.detentsEnabled {
             for graduation in axis.graduations {

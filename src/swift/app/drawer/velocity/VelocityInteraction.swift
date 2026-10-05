@@ -281,8 +281,8 @@ extension VelocityPage {
             draft: String(initial))
         promptOpen = true
         promptDraft = String(initial)
-        setPublished(promptError, "") { promptError = $0 }
-        setPublished(promptInitialValue, initial) { promptInitialValue = $0 }
+        publish(\.promptError, "")
+        publish(\.promptInitialValue, initial)
         refreshInteractionPublished()
         publishHandles(projectHandles())
         return true
@@ -293,21 +293,21 @@ extension VelocityPage {
         live.draft = String(text.prefix(4))
         live.error = VelocityPromptPolicy.error(draft: live.draft)
         prompt = live
-        if promptDraft != live.draft { promptDraft = live.draft }
-        setPublished(promptError, live.error) { promptError = $0 }
+        publish(\.promptDraft, live.draft)
+        publish(\.promptError, live.error)
     }
 
     @discardableResult
     func dispatchAcceptPrompt() -> Bool {
         guard let session, let live = prompt else { return false }
         guard let value = VelocityPromptPolicy.value(draft: live.draft) else {
-            setPublished(promptError, VelocityPromptPolicy.error(draft: live.draft)) { promptError = $0 }
+            publish(\.promptError, VelocityPromptPolicy.error(draft: live.draft))
             return false
         }
         prompt = nil
         promptOpen = false
         promptDraft = ""
-        setPublished(promptError, "") { promptError = $0 }
+        publish(\.promptError, "")
         refreshInteractionPublished()
         defer { publishHandles(projectHandles()) }
         guard live.revision == session.document.revision,
@@ -330,7 +330,7 @@ extension VelocityPage {
         prompt = nil
         promptOpen = false
         promptDraft = ""
-        setPublished(promptError, "") { promptError = $0 }
+        publish(\.promptError, "")
         refreshInteractionPublished()
         publishHandles(projectHandles())
     }
@@ -367,7 +367,7 @@ extension VelocityPage {
     /// Re-derives the published interaction gate from the page's own state.
     func refreshInteractionPublished() {
         let active = gesture != nil || prompt != nil
-        if interactionActive != active { interactionActive = active }
+        publish(\.interactionActive, active)
     }
 
     func dispatchSetUseDetents(enabled: Bool) {

@@ -334,7 +334,7 @@ extension VoiceChangesPage {
         guard menu != nil else { return }
         menu = nil
         menuOpen = false
-        VoiceChangesProjection.syncMenuRows(menuRows, [])
+        syncModel(menuRows, [], matches: { $0.matches($1) })
         refreshInteractionPublished()
     }
 
@@ -421,8 +421,8 @@ extension VoiceChangesPage {
         menuOpen = true
         menuX = anchorX
         menuY = anchorY
-        VoiceChangesProjection.syncMenuRows(
-            menuRows, VoiceChangesProjection.menuRows(for: target))
+        syncModel(
+            menuRows, VoiceChangesProjection.menuRows(for: target), matches: { $0.matches($1) })
         refreshInteractionPublished()
     }
 
@@ -468,11 +468,11 @@ extension VoiceChangesPage {
         let lineX = xForTick(tick)
         hoverIdentity = nil
         hoverTick = Double(tick)
-        setPublished(hoverText, label) { hoverText = $0 }
+        publish(\.hoverText, label)
         publishHoverLabel(
             x: lineX + pad, y: 0, width: max(0, plotWidth - lineX),
             height: plotHeight)
-        setPublished(hoverVisible, true) { hoverVisible = $0 }
+        publish(\.hoverVisible, true)
         publishMarkerHover()
     }
 
@@ -489,10 +489,10 @@ extension VoiceChangesPage {
     }
 
     private func publishHoverLabel(x: Double, y: Double, width: Double, height: Double) {
-        setPublished(hoverLabelX, x) { hoverLabelX = $0 }
-        setPublished(hoverLabelY, y) { hoverLabelY = $0 }
-        setPublished(hoverLabelWidth, width) { hoverLabelWidth = $0 }
-        setPublished(hoverLabelHeight, height) { hoverLabelHeight = $0 }
+        publish(\.hoverLabelX, x)
+        publish(\.hoverLabelY, y)
+        publish(\.hoverLabelWidth, width)
+        publish(\.hoverLabelHeight, height)
     }
 
     // MARK: Internals: gesture teardown
@@ -515,7 +515,7 @@ extension VoiceChangesPage {
     /// Re-derives the published interaction gate from the page's own state.
     private func refreshInteractionPublished() {
         let active = drag != nil || panRevision != nil || picker != nil || menu != nil
-        if interactionActive != active { interactionActive = active }
-        setPublished(selectedIdentity, drag?.identity ?? selectedIdentity) { selectedIdentity = $0 }
+        publish(\.interactionActive, active)
+        publish(\.selectedIdentity, drag?.identity ?? selectedIdentity)
     }
 }

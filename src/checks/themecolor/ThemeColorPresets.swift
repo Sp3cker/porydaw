@@ -75,6 +75,16 @@ private let themeTranslucentFields: Set<String> = [
     "selectionFill", "keyboardHover", "hoverChipFill",
 ]
 
+extension CheckReport {
+    func expectColorEqual(expected: String, actual: QmlColor, cppID: String, what: String) {
+        expectEqual(expected: expected, actual: PaletteMath.hex(actual), cppID: cppID, what: what)
+    }
+
+    func expectColorEqual(expected: QmlColor, actual: QmlColor, cppID: String, what: String) {
+        expectColorEqual(expected: PaletteMath.hex(expected), actual: actual, cppID: cppID, what: what)
+    }
+}
+
 @MainActor
 func themeAppliedPalette(mode: String, contrast: Int) -> GridPalette {
     let palette = GridPalette()
@@ -93,7 +103,7 @@ func themeAssertComplete(
     }
     report.expect(!fields.isEmpty, cppID: cppID, message: "\(what): palette exposes color fields")
     for (name, value) in fields {
-        let channels = themeRefChannels(PaletteMath.hex(value))
+        let channels = themeRefChannels(value)
         let wellFormed = [value.red, value.green, value.blue, value.alpha].allSatisfy {
             $0.isFinite && (0...1).contains($0)
         }
@@ -117,137 +127,131 @@ func themePresetValueChecks(_ report: CheckReport) {
         let palette = themeAppliedPalette(mode: row.mode, contrast: 50)
         let tag = "mode=\(row.mode)"
         themeAssertComplete(report, palette, cppID: themeCompletenessID, what: tag)
-        report.expectEqual(
-            expected: row.window, actual: PaletteMath.hex(palette.windowBackground),
+        report.expectColorEqual(
+            expected: row.window, actual: palette.windowBackground,
             cppID: themeCompletenessID, what: "\(tag): window")
-        report.expectEqual(
-            expected: row.text, actual: PaletteMath.hex(palette.windowText),
+        report.expectColorEqual(
+            expected: row.text, actual: palette.windowText,
             cppID: themeCompletenessID, what: "\(tag): window text")
-        report.expectEqual(
-            expected: row.text, actual: PaletteMath.hex(palette.primaryText),
+        report.expectColorEqual(
+            expected: row.text, actual: palette.primaryText,
             cppID: themeCompletenessID, what: "\(tag): primary text aliases window text")
-        report.expectEqual(
-            expected: row.text, actual: PaletteMath.hex(palette.buttonText),
+        report.expectColorEqual(
+            expected: row.text, actual: palette.buttonText,
             cppID: themeCompletenessID, what: "\(tag): button text")
-        report.expectEqual(
-            expected: row.disabled, actual: PaletteMath.hex(palette.disabledText),
+        report.expectColorEqual(
+            expected: row.disabled, actual: palette.disabledText,
             cppID: themeCompletenessID, what: "\(tag): disabled text")
-        report.expectEqual(
-            expected: row.outline, actual: PaletteMath.hex(palette.outline),
+        report.expectColorEqual(
+            expected: row.outline, actual: palette.outline,
             cppID: themeCompletenessID, what: "\(tag): outline")
-        report.expectEqual(
-            expected: PaletteMath.hex(palette.outline), actual: PaletteMath.hex(palette.focusOutline),
+        report.expectColorEqual(
+            expected: palette.outline, actual: palette.focusOutline,
             cppID: themeCompletenessID, what: "\(tag): focus outline aliases outline")
-        report.expectEqual(
-            expected: row.chrome, actual: PaletteMath.hex(palette.chromeBackground),
+        report.expectColorEqual(
+            expected: row.chrome, actual: palette.chromeBackground,
             cppID: themeCompletenessID, what: "\(tag): chrome")
-        report.expectEqual(
-            expected: row.separator, actual: PaletteMath.hex(palette.separator),
+        report.expectColorEqual(
+            expected: row.separator, actual: palette.separator,
             cppID: themeCompletenessID, what: "\(tag): separator")
-        report.expectEqual(
-            expected: row.control, actual: PaletteMath.hex(palette.buttonBackground),
+        report.expectColorEqual(
+            expected: row.control, actual: palette.buttonBackground,
             cppID: themeCompletenessID, what: "\(tag): button surface")
-        report.expectEqual(
-            expected: "#D92626", actual: PaletteMath.hex(palette.polyphonyFlashBackground),
+        report.expectColorEqual(
+            expected: "#D92626", actual: palette.polyphonyFlashBackground,
             cppID: themeCompletenessID, what: "\(tag): polyphony flash identity")
-        report.expectEqual(
-            expected: PaletteMath.hex(palette.buttonBackground), actual: PaletteMath.hex(palette.tabBackground),
+        report.expectColorEqual(
+            expected: palette.buttonBackground, actual: palette.tabBackground,
             cppID: themeCompletenessID, what: "\(tag): tab and button share the control surface")
-        report.expectEqual(
-            expected: row.controlHover, actual: PaletteMath.hex(palette.buttonHoverBackground),
+        report.expectColorEqual(
+            expected: row.controlHover, actual: palette.buttonHoverBackground,
             cppID: themeCompletenessID, what: "\(tag): button hover surface")
-        report.expectEqual(
-            expected: PaletteMath.hex(palette.buttonHoverBackground),
-            actual: PaletteMath.hex(palette.tabHoverBackground),
+        report.expectColorEqual(
+            expected: palette.buttonHoverBackground, actual: palette.tabHoverBackground,
             cppID: themeCompletenessID, what: "\(tag): tab and button share the hover surface")
-        report.expectEqual(
-            expected: row.controlPressed, actual: PaletteMath.hex(palette.buttonPressedBackground),
+        report.expectColorEqual(
+            expected: row.controlPressed, actual: palette.buttonPressedBackground,
             cppID: themeCompletenessID, what: "\(tag): button pressed surface")
-        report.expectEqual(
-            expected: PaletteMath.hex(palette.buttonPressedBackground),
-            actual: PaletteMath.hex(palette.tabPressedBackground),
+        report.expectColorEqual(
+            expected: palette.buttonPressedBackground, actual: palette.tabPressedBackground,
             cppID: themeCompletenessID, what: "\(tag): tab and button share the pressed surface")
-        report.expectEqual(
-            expected: row.pressedText, actual: PaletteMath.hex(palette.buttonPressedText),
+        report.expectColorEqual(
+            expected: row.pressedText, actual: palette.buttonPressedText,
             cppID: themeCompletenessID, what: "\(tag): pressed foreground rule")
-        report.expectEqual(
-            expected: PaletteMath.hex(palette.buttonPressedText), actual: PaletteMath.hex(palette.selectionText),
+        report.expectColorEqual(
+            expected: palette.buttonPressedText, actual: palette.selectionText,
             cppID: themeCompletenessID, what: "\(tag): selection text shares the pressed foreground")
-        report.expectEqual(
-            expected: row.item, actual: PaletteMath.hex(palette.menuBackground),
+        report.expectColorEqual(
+            expected: row.item, actual: palette.menuBackground,
             cppID: themeCompletenessID, what: "\(tag): menu aliases the item surface")
-        report.expectEqual(
-            expected: row.itemHover, actual: PaletteMath.hex(palette.menuHoverBackground),
+        report.expectColorEqual(
+            expected: row.itemHover, actual: palette.menuHoverBackground,
             cppID: themeCompletenessID, what: "\(tag): menu hover aliases the item hover surface")
-        report.expectEqual(
-            expected: row.secondary, actual: PaletteMath.hex(palette.secondaryText),
+        report.expectColorEqual(
+            expected: row.secondary, actual: palette.secondaryText,
             cppID: themeCompletenessID, what: "\(tag): secondary text")
-        report.expectEqual(
-            expected: row.grid, actual: PaletteMath.hex(palette.gridLine),
+        report.expectColorEqual(
+            expected: row.grid, actual: palette.gridLine,
             cppID: themeCompletenessID, what: "\(tag): pinned grid value")
-        report.expectEqual(
-            expected: row.roll, actual: PaletteMath.hex(palette.rollBackground),
+        report.expectColorEqual(
+            expected: row.roll, actual: palette.rollBackground,
             cppID: themeCompletenessID, what: "\(tag): piano-roll background")
-        report.expectEqual(
-            expected: row.accidental, actual: PaletteMath.hex(palette.accidentalLane),
+        report.expectColorEqual(
+            expected: row.accidental, actual: palette.accidentalLane,
             cppID: themeCompletenessID, what: "\(tag): accidental lane")
-        report.expectEqual(
-            expected: row.keyboardSeparator, actual: PaletteMath.hex(palette.keyboardSeparator),
+        report.expectColorEqual(
+            expected: row.keyboardSeparator, actual: palette.keyboardSeparator,
             cppID: themeCompletenessID, what: "\(tag): keyboard separator")
-        report.expectEqual(
-            expected: "#1A1A1A", actual: PaletteMath.hex(palette.keyboardLabel),
+        report.expectColorEqual(
+            expected: "#1A1A1A", actual: palette.keyboardLabel,
             cppID: themeCompletenessID, what: "\(tag): keyboard label stays fixed")
-        report.expectEqual(
-            expected: row.selection, actual: PaletteMath.hex(palette.tabSelectedBackground),
+        report.expectColorEqual(
+            expected: row.selection, actual: palette.tabSelectedBackground,
             cppID: themeCompletenessID, what: "\(tag): selected tab fill")
-        report.expectEqual(
-            expected: row.selection, actual: PaletteMath.hex(palette.selectionRing),
+        report.expectColorEqual(
+            expected: row.selection, actual: palette.selectionRing,
             cppID: themeCompletenessID, what: "\(tag): selection ring")
-        report.expectEqual(
-            expected: row.selection, actual: PaletteMath.hex(palette.keyboardActiveKey),
+        report.expectColorEqual(
+            expected: row.selection, actual: palette.keyboardActiveKey,
             cppID: themeCompletenessID, what: "\(tag): active keyboard key")
-        report.expectEqual(
-            expected: row.accent, actual: PaletteMath.hex(palette.selectionEdge),
+        report.expectColorEqual(
+            expected: row.accent, actual: palette.selectionEdge,
             cppID: themeCompletenessID, what: "\(tag): selection edge accents")
-        report.expectEqual(
-            expected: row.text, actual: PaletteMath.hex(palette.editCursor),
+        report.expectColorEqual(
+            expected: row.text, actual: palette.editCursor,
             cppID: themeCompletenessID, what: "\(tag): edit cursor")
-        report.expectEqual(
-            expected: "#E24242", actual: PaletteMath.hex(palette.playhead),
+        report.expectColorEqual(
+            expected: "#E24242", actual: palette.playhead,
             cppID: themeCompletenessID, what: "\(tag): playhead stays the identity red")
-        report.expectEqual(
-            expected: row.disabled, actual: PaletteMath.hex(palette.noteVelocityZero),
+        report.expectColorEqual(
+            expected: row.disabled, actual: palette.noteVelocityZero,
             cppID: themeCompletenessID, what: "\(tag): zero-velocity ink")
-        report.expectEqual(
-            expected: row.secondary, actual: PaletteMath.hex(palette.implicitSignature),
+        report.expectColorEqual(
+            expected: row.secondary, actual: palette.implicitSignature,
             cppID: themeCompletenessID, what: "\(tag): implicit-signature ink aliases secondary")
-        report.expectEqual(
-            expected: row.secondary, actual: PaletteMath.hex(palette.rulerDetailText),
+        report.expectColorEqual(
+            expected: row.secondary, actual: palette.rulerDetailText,
             cppID: themeCompletenessID, what: "\(tag): ruler-detail ink aliases secondary")
 
         // Menu/control contrast floors (verifyMenuAndControlContracts plus the
         // disabled-text floor), judged by the independent reference.
         report.expect(
-            themeRefContrast(PaletteMath.hex(palette.windowText), PaletteMath.hex(palette.chromeBackground)) >= 4.5,
+            themeRefContrast(palette.windowText, palette.chromeBackground) >= 4.5,
             cppID: themeCompletenessID, message: "\(tag): menu-bar text floor")
         report.expect(
-            themeRefContrast(PaletteMath.hex(palette.windowText), PaletteMath.hex(palette.buttonHoverBackground))
-                >= 4.5,
+            themeRefContrast(palette.windowText, palette.buttonHoverBackground) >= 4.5,
             cppID: themeCompletenessID, message: "\(tag): button-hover text floor")
         report.expect(
-            themeRefContrast(
-                PaletteMath.hex(palette.buttonPressedText),
-                PaletteMath.hex(palette.buttonPressedBackground)) >= 4.5,
+            themeRefContrast(palette.buttonPressedText, palette.buttonPressedBackground) >= 4.5,
             cppID: themeCompletenessID, message: "\(tag): button-pressed text floor")
         report.expect(
-            themeRefContrast(PaletteMath.hex(palette.windowText), PaletteMath.hex(palette.menuHoverBackground)) >= 4.5,
+            themeRefContrast(palette.windowText, palette.menuHoverBackground) >= 4.5,
             cppID: themeCompletenessID, message: "\(tag): menu-hover text floor")
         report.expect(
-            themeRefContrast(PaletteMath.hex(palette.buttonText), PaletteMath.hex(palette.buttonHoverBackground))
-                >= 4.5,
+            themeRefContrast(palette.buttonText, palette.buttonHoverBackground) >= 4.5,
             cppID: themeCompletenessID, message: "\(tag): combo text floor")
         report.expect(
-            themeRefContrast(PaletteMath.hex(palette.disabledText), PaletteMath.hex(palette.windowText)) >= 1.3,
+            themeRefContrast(palette.disabledText, palette.windowText) >= 1.3,
             cppID: themeCompletenessID, message: "\(tag): disabled-text floor")
 
         // Lane and waveform legibility rows with a Swift-shell counterpart:
@@ -255,33 +259,29 @@ func themePresetValueChecks(_ report: CheckReport) {
         // text on the piano-roll surface; the selected-tab/active-automation
         // pair resolves to the pressed surfaces.
         report.expect(
-            themeRefContrast(PaletteMath.hex(palette.windowText), PaletteMath.hex(palette.rollBackground)) >= 3.0,
+            themeRefContrast(palette.windowText, palette.rollBackground) >= 3.0,
             cppID: themeLegibilityID, message: "\(tag): edit-preview outline floor")
         report.expect(
-            themeRefContrast(PaletteMath.hex(palette.secondaryText), PaletteMath.hex(palette.rollBackground)) >= 3.0,
+            themeRefContrast(palette.secondaryText, palette.rollBackground) >= 3.0,
             cppID: themeLegibilityID, message: "\(tag): add-lane action floor")
-        let selectedText =
-            row.mode == "vanilla" ? PaletteMath.hex(palette.windowText) : PaletteMath.hex(palette.buttonPressedText)
+        let selectedText = row.mode == "vanilla" ? palette.windowText : palette.buttonPressedText
         report.expect(
-            themeRefContrast(selectedText, PaletteMath.hex(palette.tabPressedBackground)) >= 3.0,
+            themeRefContrast(selectedText, palette.tabPressedBackground) >= 3.0,
             cppID: themeLegibilityID, message: "\(tag): selected-tab floor")
         report.expect(
-            themeRefContrast(PaletteMath.hex(palette.sampleWaveformInk), PaletteMath.hex(palette.menuBackground))
-                >= 3.0,
+            themeRefContrast(palette.sampleWaveformInk, palette.menuBackground) >= 3.0,
             cppID: themeLegibilityID, message: "\(tag): sample waveform ink floor")
         report.expect(
-            themeRefContrast(PaletteMath.hex(palette.sampleCropHandle), PaletteMath.hex(palette.menuBackground)) >= 3.0,
+            themeRefContrast(palette.sampleCropHandle, palette.menuBackground) >= 3.0,
             cppID: themeLegibilityID, message: "\(tag): sample crop grip floor")
         report.expect(
-            themeRefContrast(PaletteMath.hex(palette.sampleLoopHandle), PaletteMath.hex(palette.menuBackground)) >= 3.0,
+            themeRefContrast(palette.sampleLoopHandle, palette.menuBackground) >= 3.0,
             cppID: themeLegibilityID, message: "\(tag): sample loop grip floor")
         report.expect(
-            themeRefContrast(PaletteMath.hex(palette.sampleLoopHandle), PaletteMath.hex(palette.alternateBackground))
-                >= 3.0,
+            themeRefContrast(palette.sampleLoopHandle, palette.alternateBackground) >= 3.0,
             cppID: themeLegibilityID, message: "\(tag): sample seam start floor")
         report.expect(
-            themeRefContrast(PaletteMath.hex(palette.sampleSeamEndInk), PaletteMath.hex(palette.alternateBackground))
-                >= 3.0,
+            themeRefContrast(palette.sampleSeamEndInk, palette.alternateBackground) >= 3.0,
             cppID: themeLegibilityID, message: "\(tag): sample seam end floor")
     }
 }

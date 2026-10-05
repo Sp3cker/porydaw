@@ -116,207 +116,81 @@ public enum ShellAppearance {
         let chrome = PaletteMath.channels(colors.chrome)
         let gridLab = PaletteMath.oklab(r: gridChannels.r, g: gridChannels.g, b: gridChannels.b)
 
-        setPublished(palette.windowBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.window))) { value in
-            palette.windowBackground = value
-        }
-        setPublished(palette.rollBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.roll))) { value in
-            palette.rollBackground = value
-        }
-        setPublished(palette.accidentalLane, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.accidental))) { value in
-            palette.accidentalLane = value
-        }
-        setPublished(palette.chromeBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.chrome))) { value in
-            palette.chromeBackground = value
-        }
-        setPublished(palette.separator, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.separator))) { value in
-            palette.separator = value
-        }
-        setPublished(palette.outline, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.outline))) { value in
-            palette.outline = value
-        }
-        setPublished(palette.focusOutline, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.outline))) { value in
-            palette.focusOutline = value
-        }
-        setPublished(palette.buttonBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.control))) { value in
-            palette.buttonBackground = value
-        }
-        setPublished(palette.buttonText, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.text))) { value in
-            palette.buttonText = value
-        }
-        setPublished(
-            palette.buttonPressedBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.controlPressed))
-        ) { value in palette.buttonPressedBackground = value }
+        palette.publish(\.windowBackground, PaletteMath.qmlColor(colors.window))
+        palette.publish(\.rollBackground, PaletteMath.qmlColor(colors.roll))
+        palette.publish(\.accidentalLane, PaletteMath.qmlColor(colors.accidental))
+        palette.publish(\.chromeBackground, PaletteMath.qmlColor(colors.chrome))
+        palette.publish(\.separator, PaletteMath.qmlColor(colors.separator))
+        palette.publish(\.outline, PaletteMath.qmlColor(colors.outline))
+        palette.publish(\.focusOutline, PaletteMath.qmlColor(colors.outline))
+        palette.publish(\.buttonBackground, PaletteMath.qmlColor(colors.control))
+        palette.publish(\.buttonText, PaletteMath.qmlColor(colors.text))
+        palette.publish(\.buttonPressedBackground, PaletteMath.qmlColor(colors.controlPressed))
         // Dark presets use the resting button surface as the active foreground
         // (themeresolver.cpp:38-52), not their pale resting text.
-        setPublished(
-            palette.buttonPressedText,
-            PaletteMath.qmlColor(argb: PaletteMath.argb(preset == .vanilla ? colors.text : colors.control))
-        ) { value in palette.buttonPressedText = value }
+        palette.publish(\.buttonPressedText, PaletteMath.qmlColor(preset == .vanilla ? colors.text : colors.control))
         // Native menu roles use item surfaces; selection and pressed menu text
         // share resolveDarkPreset's active foreground (themeresolver.cpp:44-49).
-        setPublished(palette.buttonHoverBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.controlHover))) {
-            value in palette.buttonHoverBackground = value
-        }
-        setPublished(palette.menuBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.item))) { value in
-            palette.menuBackground = value
-        }
-        setPublished(palette.menuHoverBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.itemHover))) {
-            value in palette.menuHoverBackground = value
-        }
-        setPublished(palette.disabledText, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.disabledText))) { value in
-            palette.disabledText = value
-        }
-        setPublished(palette.polyphonyValueBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.control))) {
-            value in palette.polyphonyValueBackground = value
-        }
-        setPublished(palette.polyphonyValueText, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.text))) { value in
-            palette.polyphonyValueText = value
-        }
-        setPublished(palette.selectionText, PaletteMath.qmlColor(argb: PaletteMath.argb(palette.buttonPressedText))) {
-            value in palette.selectionText = value
-        }
-        setPublished(palette.tabBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.control))) { value in
-            palette.tabBackground = value
-        }
-        setPublished(palette.tabHoverBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.controlHover))) {
-            value in palette.tabHoverBackground = value
-        }
-        setPublished(palette.tabSelectedBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.selection))) {
-            value in palette.tabSelectedBackground = value
-        }
-        setPublished(palette.tabPressedBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.controlPressed)))
-        { value in palette.tabPressedBackground = value }
-        setPublished(palette.automationNodeInk, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.automationNodeInk)))
-        { value in palette.automationNodeInk = value }
-        setPublished(
-            palette.automationTabBackground,
-            PaletteMath.qmlColor(argb: PaletteMath.argb(colors.automationTabBackground))
-        ) { value in palette.automationTabBackground = value }
-        setPublished(
-            palette.automationTabOutline, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.automationTabOutline))
-        ) { value in palette.automationTabOutline = value }
-        setPublished(palette.sampleWaveformInk, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.sampleWaveformInk)))
-        { value in palette.sampleWaveformInk = value }
-        setPublished(palette.sampleCropHandle, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.sampleCropHandle))) {
-            value in palette.sampleCropHandle = value
-        }
-        setPublished(palette.sampleLoopHandle, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.sampleLoopHandle))) {
-            value in palette.sampleLoopHandle = value
-        }
-        setPublished(palette.sampleSeamEndInk, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.sampleSeamEndInk))) {
-            value in palette.sampleSeamEndInk = value
-        }
-        setPublished(palette.scrollbarHandle, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.scrollbar))) { value in
-            palette.scrollbarHandle = value
-        }
+        palette.publish(\.buttonHoverBackground, PaletteMath.qmlColor(colors.controlHover))
+        palette.publish(\.menuBackground, PaletteMath.qmlColor(colors.item))
+        palette.publish(\.menuHoverBackground, PaletteMath.qmlColor(colors.itemHover))
+        palette.publish(\.disabledText, PaletteMath.qmlColor(colors.disabledText))
+        palette.publish(\.polyphonyValueBackground, PaletteMath.qmlColor(colors.control))
+        palette.publish(\.polyphonyValueText, PaletteMath.qmlColor(colors.text))
+        palette.publish(\.selectionText, palette.buttonPressedText)
+        palette.publish(\.tabBackground, PaletteMath.qmlColor(colors.control))
+        palette.publish(\.tabHoverBackground, PaletteMath.qmlColor(colors.controlHover))
+        palette.publish(\.tabSelectedBackground, PaletteMath.qmlColor(colors.selection))
+        palette.publish(\.tabPressedBackground, PaletteMath.qmlColor(colors.controlPressed))
+        palette.publish(\.automationNodeInk, PaletteMath.qmlColor(colors.automationNodeInk))
+        palette.publish(\.automationTabBackground, PaletteMath.qmlColor(colors.automationTabBackground))
+        palette.publish(\.automationTabOutline, PaletteMath.qmlColor(colors.automationTabOutline))
+        palette.publish(\.sampleWaveformInk, PaletteMath.qmlColor(colors.sampleWaveformInk))
+        palette.publish(\.sampleCropHandle, PaletteMath.qmlColor(colors.sampleCropHandle))
+        palette.publish(\.sampleLoopHandle, PaletteMath.qmlColor(colors.sampleLoopHandle))
+        palette.publish(\.sampleSeamEndInk, PaletteMath.qmlColor(colors.sampleSeamEndInk))
+        palette.publish(\.scrollbarHandle, PaletteMath.qmlColor(colors.scrollbar))
         // Qt control-palette surfaces: editable fields and tooltips use the
         // preset's input swatch, where text and placeholder ink keep 4.5:1.
-        setPublished(palette.inputBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.input))) { value in
-            palette.inputBackground = value
-        }
-        setPublished(palette.alternateBackground, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.alternate))) {
-            value in palette.alternateBackground = value
-        }
-        setPublished(palette.placeholderText, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.secondary))) { value in
-            palette.placeholderText = value
-        }
-        setPublished(palette.warningText, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.warning))) { value in
-            palette.warningText = value
-        }
-        setPublished(palette.errorText, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.error))) { value in
-            palette.errorText = value
-        }
+        palette.publish(\.inputBackground, PaletteMath.qmlColor(colors.input))
+        palette.publish(\.alternateBackground, PaletteMath.qmlColor(colors.alternate))
+        palette.publish(\.placeholderText, PaletteMath.qmlColor(colors.secondary))
+        palette.publish(\.warningText, PaletteMath.qmlColor(colors.warning))
+        palette.publish(\.errorText, PaletteMath.qmlColor(colors.error))
 
-        setPublished(palette.keyboardNatural, PaletteMath.qmlColor(argb: PaletteMath.argb("#F4F4F4"))) { value in
-            palette.keyboardNatural = value
-        }
-        setPublished(palette.keyboardBlack, PaletteMath.qmlColor(argb: PaletteMath.argb("#202224"))) { value in
-            palette.keyboardBlack = value
-        }
-        setPublished(palette.keyboardSeparator, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.keyboardSeparator)))
-        { value in palette.keyboardSeparator = value }
-        setPublished(palette.keyboardLabel, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.keyboardLabel))) {
-            value in palette.keyboardLabel = value
-        }
-        setPublished(palette.keyboardActiveKey, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.selection))) {
-            value in palette.keyboardActiveKey = value
-        }
-        setPublished(
-            palette.keyboardHover, PaletteMath.qmlColor(argb: PaletteMath.argb(withAlpha(colors.selection, 80)))
-        ) { value in palette.keyboardHover = value }
-        setPublished(palette.gridLine, PaletteMath.qmlColor(argb: PaletteMath.argb(grid))) { value in
-            palette.gridLine = value
-        }
-        setPublished(palette.gridLineBar, PaletteMath.qmlColor(argb: PaletteMath.argb(grid))) { value in
-            palette.gridLineBar = value
-        }
-        setPublished(palette.gridLineSub1, PaletteMath.qmlColor(argb: PaletteMath.argb(relativeAlpha(grid, 125)))) {
-            value in palette.gridLineSub1 = value
-        }
-        setPublished(palette.gridLineSub2, PaletteMath.qmlColor(argb: PaletteMath.argb(relativeAlpha(grid, 100)))) {
-            value in palette.gridLineSub2 = value
-        }
-        setPublished(palette.gridLineSub3, PaletteMath.qmlColor(argb: PaletteMath.argb(relativeAlpha(grid, 75)))) {
-            value in palette.gridLineSub3 = value
-        }
-        setPublished(palette.gridLineBeat, PaletteMath.qmlColor(argb: PaletteMath.argb(relativeAlpha(grid, 160)))) {
-            value in palette.gridLineBeat = value
-        }
-        setPublished(palette.gridLineBeatFine, PaletteMath.qmlColor(argb: PaletteMath.argb(relativeAlpha(grid, 200)))) {
-            value in palette.gridLineBeatFine = value
-        }
-        setPublished(palette.rowLine, PaletteMath.qmlColor(argb: PaletteMath.argb(relativeAlpha(grid, 50)))) { value in
-            palette.rowLine = value
-        }
-        setPublished(
-            palette.preRollMask,
-            PaletteMath.qmlColor(
-                argb: PaletteMath.argb(
-                    PaletteMath.hex(
+        palette.publish(\.keyboardNatural, PaletteMath.qmlColor("#F4F4F4"))
+        palette.publish(\.keyboardBlack, PaletteMath.qmlColor("#202224"))
+        palette.publish(\.keyboardSeparator, PaletteMath.qmlColor(colors.keyboardSeparator))
+        palette.publish(\.keyboardLabel, PaletteMath.qmlColor(colors.keyboardLabel))
+        palette.publish(\.keyboardActiveKey, PaletteMath.qmlColor(colors.selection))
+        palette.publish(\.keyboardHover, PaletteMath.qmlColor(withAlpha(colors.selection, 80)))
+        palette.publish(\.gridLine, PaletteMath.qmlColor(grid))
+        palette.publish(\.gridLineBar, PaletteMath.qmlColor(grid))
+        palette.publish(\.gridLineSub1, PaletteMath.qmlColor(relativeAlpha(grid, 125)))
+        palette.publish(\.gridLineSub2, PaletteMath.qmlColor(relativeAlpha(grid, 100)))
+        palette.publish(\.gridLineSub3, PaletteMath.qmlColor(relativeAlpha(grid, 75)))
+        palette.publish(\.gridLineBeat, PaletteMath.qmlColor(relativeAlpha(grid, 160)))
+        palette.publish(\.gridLineBeatFine, PaletteMath.qmlColor(relativeAlpha(grid, 200)))
+        palette.publish(\.rowLine, PaletteMath.qmlColor(relativeAlpha(grid, 50)))
+        let preRollMask = PaletteMath.hex(
             PaletteMath.mixTowardOklab(
-                            PaletteMath.oklab(r: roll.r, g: roll.g, b: roll.b), gridLab, 0.15))))
-        ) { value in palette.preRollMask = value }
-        setPublished(
-            palette.rulerPreRollMask,
-            PaletteMath.qmlColor(
-                argb: PaletteMath.argb(
-                    PaletteMath.hex(
+                PaletteMath.oklab(r: roll.r, g: roll.g, b: roll.b), gridLab, 0.15))
+        let rulerPreRollMask = PaletteMath.hex(
             PaletteMath.mixTowardOklab(
-                            PaletteMath.oklab(r: chrome.r, g: chrome.g, b: chrome.b), gridLab, 0.15))))
-        ) { value in palette.rulerPreRollMask = value }
-        setPublished(palette.noteVelocityZero, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.disabledText))) {
-            value in palette.noteVelocityZero = value
-        }
-        setPublished(palette.implicitSignature, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.secondary))) {
-            value in palette.implicitSignature = value
-        }
-        setPublished(palette.rulerDetailText, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.secondary))) { value in
-            palette.rulerDetailText = value
-        }
-        setPublished(palette.selectionRing, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.selection))) { value in
-            palette.selectionRing = value
-        }
-        setPublished(
-            palette.selectionFill, PaletteMath.qmlColor(argb: PaletteMath.argb(withAlpha(colors.selection, 30)))
-        ) { value in palette.selectionFill = value }
-        setPublished(palette.selectionEdge, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.accent))) { value in
-            palette.selectionEdge = value
-        }
-        setPublished(palette.primaryText, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.text))) { value in
-            palette.primaryText = value
-        }
-        setPublished(palette.windowText, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.text))) { value in
-            palette.windowText = value
-        }
-        setPublished(palette.secondaryText, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.secondary))) { value in
-            palette.secondaryText = value
-        }
-        setPublished(palette.editCursor, PaletteMath.qmlColor(argb: PaletteMath.argb(colors.text))) { value in
-            palette.editCursor = value
-        }
-        setPublished(palette.playhead, PaletteMath.qmlColor(argb: PaletteMath.argb("#E24242"))) { value in
-            palette.playhead = value
-        }
+                PaletteMath.oklab(r: chrome.r, g: chrome.g, b: chrome.b), gridLab, 0.15))
+        palette.publish(\.preRollMask, PaletteMath.qmlColor(preRollMask))
+        palette.publish(\.rulerPreRollMask, PaletteMath.qmlColor(rulerPreRollMask))
+        palette.publish(\.noteVelocityZero, PaletteMath.qmlColor(colors.disabledText))
+        palette.publish(\.implicitSignature, PaletteMath.qmlColor(colors.secondary))
+        palette.publish(\.rulerDetailText, PaletteMath.qmlColor(colors.secondary))
+        palette.publish(\.selectionRing, PaletteMath.qmlColor(colors.selection))
+        palette.publish(\.selectionFill, PaletteMath.qmlColor(withAlpha(colors.selection, 30)))
+        palette.publish(\.selectionEdge, PaletteMath.qmlColor(colors.accent))
+        palette.publish(\.primaryText, PaletteMath.qmlColor(colors.text))
+        palette.publish(\.windowText, PaletteMath.qmlColor(colors.text))
+        palette.publish(\.secondaryText, PaletteMath.qmlColor(colors.secondary))
+        palette.publish(\.editCursor, PaletteMath.qmlColor(colors.text))
+        palette.publish(\.playhead, PaletteMath.qmlColor("#E24242"))
     }
 
     private static func withAlpha(_ hex: String, _ alpha: Int) -> String {

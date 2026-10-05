@@ -20,11 +20,15 @@ public final class SceneRect {
     public var height: Double
     public var fillColor: QmlColor
     public var primitiveName: String
+    @QtIgnored var current: SceneRectValue
 
     public init(
         x: Double, y: Double, width: Double, height: Double,
         fillColor: QmlColor, primitiveName: String = ""
     ) {
+        current = SceneRectValue(
+            x: x, y: y, width: width, height: height,
+            fillColor: fillColor, primitiveName: primitiveName)
         self.x = x
         self.y = y
         self.width = width
@@ -42,36 +46,33 @@ public final class SceneRect {
 
     @QtIgnored
     func update(_ value: SceneRectValue) -> Bool {
-        guard
-            x != value.x || y != value.y || width != value.width || height != value.height
-                || fillColor != value.fillColor || primitiveName != value.primitiveName
-        else { return false }
-        if x != value.x { x = value.x }
-        if y != value.y { y = value.y }
-        if width != value.width { width = value.width }
-        if height != value.height { height = value.height }
-        if fillColor != value.fillColor { fillColor = value.fillColor }
-        if primitiveName != value.primitiveName { primitiveName = value.primitiveName }
+        guard current != value else { return false }
+        current = value
+        publish(\.x, value.x)
+        publish(\.y, value.y)
+        publish(\.width, value.width)
+        publish(\.height, value.height)
+        publish(\.fillColor, value.fillColor)
+        publish(\.primitiveName, value.primitiveName)
         return true
-    }
-
-    @QtIgnored
-    func matches(_ other: SceneRect) -> Bool {
-        x == other.x && y == other.y && width == other.width
-            && height == other.height && fillColor == other.fillColor
-            && primitiveName == other.primitiveName
     }
 }
 
-struct SceneTextValue {
+struct SceneTextValue: Equatable {
     var rect: (x: Double, y: Double, w: Double, h: Double)
     var text: String
     var color: QmlColor
     var font: QmlFont
     var horizontal: Int = 0x1
     var vertical: Int = 0x80
-    var background: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
+    var background: QmlColor = .clear
     var backgroundRect: (x: Double, y: Double, w: Double, h: Double) = (0, 0, 0, 0)
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.rect == rhs.rect && lhs.text == rhs.text && lhs.color == rhs.color
+            && lhs.font == rhs.font && lhs.horizontal == rhs.horizontal && lhs.vertical == rhs.vertical
+            && lhs.background == rhs.background && lhs.backgroundRect == rhs.backgroundRect
+    }
 }
 
 @MainActor
@@ -95,14 +96,19 @@ public final class SceneText {
     public var background: QmlColor
     public var horizontal: Int
     public var vertical: Int
+    @QtIgnored var current: SceneTextValue
 
     public init(
         rect: (x: Double, y: Double, w: Double, h: Double),
         text: String, color: QmlColor, font: QmlFont,
         horizontal: Int = 0x1, vertical: Int = 0x80,
-        background: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0),
+        background: QmlColor = .clear,
         backgroundRect: (x: Double, y: Double, w: Double, h: Double) = (0, 0, 0, 0)
     ) {
+        current = SceneTextValue(
+            rect: rect, text: text, color: color, font: font,
+            horizontal: horizontal, vertical: vertical,
+            background: background, backgroundRect: backgroundRect)
         x = rect.x
         y = rect.y
         width = rect.w
@@ -129,44 +135,23 @@ public final class SceneText {
 
     @QtIgnored
     func update(_ value: SceneTextValue) -> Bool {
-        let geometryChanged =
-            x != value.rect.x || y != value.rect.y
-            || width != value.rect.w || height != value.rect.h
-        let backgroundChanged =
-            backgroundX != value.backgroundRect.x
-            || backgroundY != value.backgroundRect.y || backgroundWidth != value.backgroundRect.w
-            || backgroundHeight != value.backgroundRect.h || background != value.background
-        let contentChanged =
-            labelFont != value.font || labelText != value.text
-            || color != value.color || horizontal != value.horizontal || vertical != value.vertical
-        guard geometryChanged || backgroundChanged || contentChanged else { return false }
-        if x != value.rect.x { x = value.rect.x }
-        if y != value.rect.y { y = value.rect.y }
-        if width != value.rect.w { width = value.rect.w }
-        if height != value.rect.h { height = value.rect.h }
-        if backgroundX != value.backgroundRect.x { backgroundX = value.backgroundRect.x }
-        if backgroundY != value.backgroundRect.y { backgroundY = value.backgroundRect.y }
-        if backgroundWidth != value.backgroundRect.w { backgroundWidth = value.backgroundRect.w }
-        if backgroundHeight != value.backgroundRect.h { backgroundHeight = value.backgroundRect.h }
-        if labelFont != value.font { labelFont = value.font }
-        if labelText != value.text { labelText = value.text }
-        if color != value.color { color = value.color }
-        if background != value.background { background = value.background }
-        if horizontal != value.horizontal { horizontal = value.horizontal }
-        if vertical != value.vertical { vertical = value.vertical }
+        guard current != value else { return false }
+        current = value
+        publish(\.x, value.rect.x)
+        publish(\.y, value.rect.y)
+        publish(\.width, value.rect.w)
+        publish(\.height, value.rect.h)
+        publish(\.backgroundX, value.backgroundRect.x)
+        publish(\.backgroundY, value.backgroundRect.y)
+        publish(\.backgroundWidth, value.backgroundRect.w)
+        publish(\.backgroundHeight, value.backgroundRect.h)
+        publish(\.labelFont, value.font)
+        publish(\.labelText, value.text)
+        publish(\.color, value.color)
+        publish(\.background, value.background)
+        publish(\.horizontal, value.horizontal)
+        publish(\.vertical, value.vertical)
         return true
-    }
-
-    @QtIgnored
-    func matches(_ other: SceneText) -> Bool {
-        x == other.x && y == other.y && width == other.width && height == other.height
-            && clipX == other.clipX && clipY == other.clipY
-            && clipWidth == other.clipWidth && clipHeight == other.clipHeight
-            && backgroundX == other.backgroundX && backgroundY == other.backgroundY
-            && backgroundWidth == other.backgroundWidth && backgroundHeight == other.backgroundHeight
-            && labelFont == other.labelFont && labelText == other.labelText
-            && color == other.color && background == other.background
-            && horizontal == other.horizontal && vertical == other.vertical
     }
 }
 

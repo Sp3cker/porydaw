@@ -65,10 +65,10 @@ public final class VelocityHandle {
     public var outlineWidth: Double = 0
     public var ringRadius: Double = 0
     public var ringWidth: Double = 0
-    public var fillColor: QmlColor = PaletteMath.qmlColor(argb: 0)
-    public var stemColor: QmlColor = PaletteMath.qmlColor(argb: 0)
-    public var ringColor: QmlColor = PaletteMath.qmlColor(argb: 0)
-    public var outlineColor: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var fillColor: QmlColor = .clear
+    public var stemColor: QmlColor = .clear
+    public var ringColor: QmlColor = .clear
+    public var outlineColor: QmlColor = .clear
     public var primitiveName: String = ""
 
     public init() {}
@@ -94,10 +94,7 @@ public final class VelocityHandle {
 
 // MARK: - Page owner
 
-/// The production Velocity page. Every published value derives from the current
-/// document session; every mutation goes through `SongDocument.setVelocities`
-/// with the revision captured when the interaction began, so at most one history
-/// entry is produced per completed gesture or accepted prompt.
+/// Owns velocity publication and revision-guarded document mutations.
 @MainActor
 @QtBridgeable
 public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
@@ -110,10 +107,7 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     /// Production's velocity default body:
     /// `clamp(hostHeight / 6, fontPx(8), fontPx(12))`.
     @QtIgnored public var bodyPolicy: EditorDrawerBodyPolicy
-    /// The container's follow-scroll gate: a pointer gesture, a frozen preview,
-    /// a live prompt or a band selection is an active interaction. Stored, so the
-    /// bridge publishes it and every mutation path refreshes it through
-    /// `refreshInteractionPublished()`; the rule itself lives in one place.
+    /// Active gestures, previews, prompts and band selections gate follow-scroll.
     public var interactionActive: Bool = false
     /// `VelocityArea::useDetents`: the page's own detent preference. Enabled by
     /// default; `setUseDetents(false)` turns every context into the continuous
@@ -153,7 +147,7 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     public var rampY0: Double = 0
     public var rampLength: Double = 0
     public var rampSlopeY: Double = 0
-    public var rampColor: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var rampColor: QmlColor = .clear
     public var promptOpen: Bool = false
     @QtTracked public var promptStyle = PromptStyle()
     public var promptDraft: String = ""
@@ -214,6 +208,7 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
 
     @QtIgnored weak var session: DocumentSession?
     @QtIgnored var palette = GridPalette()
+    @QtIgnored var typography = Typography(baseFontPx: Int(GridCameraPolicy.seedBaseFontPx))
     @QtIgnored var geometry = VelocityNodeGeometry()
     @QtIgnored var axis = VelocityAxisModel()
     @QtIgnored var resolvedContextValue = VelocityVoiceContext(status: .unresolvedVoice)
@@ -325,12 +320,13 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
             nextWidth != plotWidth || nextHeight != plotHeight
             || nextRuler != self.rulerWidth || nextDpr != self.devicePixelRatio
             || nextFont != self.baseFontPx
-        if plotWidth != nextWidth { plotWidth = nextWidth }
-        if plotHeight != nextHeight { plotHeight = nextHeight }
-        if self.rulerWidth != nextRuler { self.rulerWidth = nextRuler }
-        if self.devicePixelRatio != nextDpr { self.devicePixelRatio = nextDpr }
+        publish(\.plotWidth, nextWidth)
+        publish(\.plotHeight, nextHeight)
+        publish(\.rulerWidth, nextRuler)
+        publish(\.devicePixelRatio, nextDpr)
         if self.baseFontPx != nextFont {
             self.baseFontPx = nextFont
+            typography = Typography(baseFontPx: Int(nextFont.rounded()))
             refreshPromptStyle()
         }
         if changed { rebuildContent() }
@@ -338,7 +334,7 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     @QtIgnored
     func refreshPromptStyle(base: Double? = nil) {
         let base = base ?? baseFontPx
-        let typography = Typography(baseFontPx: Int(base.rounded()))
+        let typography = base == baseFontPx ? self.typography : Typography(baseFontPx: Int(base.rounded()))
         promptStyle.update(
             metrics: PromptAppearance.Layout(base: base), palette: palette,
             font: typography.body.qmlFont, surface: .velocity)

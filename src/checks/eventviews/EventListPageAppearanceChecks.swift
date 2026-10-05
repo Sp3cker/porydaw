@@ -157,9 +157,9 @@ internal func eventListChunkLabelParity(
     let expectedMasks = [35, 31, 43, 43, 35, 1]
     for source in projection.rows {
         let row = EventListRowHandle()
+        let values = projection.publishedValues(for: source, selected: false)
         report.expect(
-            row.update(source, model: projection, selected: false)
-                && !row.update(source, model: projection, selected: false),
+            row.update(values) && !row.update(values),
             cppID: pageID, message: "row \(source.index) equality-gates an unchanged snapshot")
         let cells = [row.c0, row.c1, row.c2, row.c3, row.c4, row.c5, row.c6]
         for column in 0..<EventListModel.columnCount {

@@ -10,7 +10,6 @@ struct GridFontSpec {
     let pixelSize: Int
     let weight: Int
     let letterSpacing: Double
-    let features: [String: QVariantSettable] = ["tnum": 1]
 
     private static let qmlFeatures: [String: UInt32] = ["tnum": 1]
 
@@ -19,20 +18,7 @@ struct GridFontSpec {
             family: family, pixelSize: pixelSize, weight: weight,
             letterSpacing: letterSpacing, features: Self.qmlFeatures)
     }
-
-    var map: [String: QVariantSettable] {
-        [
-            "family": family,
-            "pixelSize": pixelSize,
-            "weight": weight,
-            "letterSpacing": letterSpacing,
-            "features": features,
-            "hintingPreference": fontPreferNoHinting,
-        ]
-    }
 }
-
-let fontPreferNoHinting = 1
 
 let gridBodyFamily = "Atkinson Hyperlegible Next"
 let gridMonoFamily = "Atkinson Hyperlegible Mono"

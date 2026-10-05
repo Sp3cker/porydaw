@@ -210,6 +210,10 @@ public enum PaletteMath {
             blue8: UInt8(argb & 255), alpha8: UInt8(argb >> 24))
     }
 
+    public static func qmlColor(_ hex: String) -> QmlColor {
+        qmlColor(argb: argb(hex))
+    }
+
     public static func argb(_ color: QmlColor) -> UInt32 {
         let red = UInt32((color.red * 255).rounded())
         let green = UInt32((color.green * 255).rounded())

@@ -124,6 +124,7 @@ struct VelocitySceneInput: Sendable {
     var rulerWidth: Double
     var devicePixelRatio: Double
     var baseFontPx: Double
+    var typography: Typography
     /// The page's cached grid metrics; the scene owns no cache of its own.
     var metrics: GridMetrics?
     var grid: RollGrid? = nil
@@ -231,8 +232,8 @@ extension VelocityScene {
                 previous.preview == (previewValue != nil),
                 previous.dimmed == (dimUnselected && !isSelected)
             {
-                if previous.x != x { previous.x = x }
-                if previous.endX != endX { previous.endX = endX }
+                previous.publish(\.x, x)
+                previous.publish(\.endX, endX)
                 result.append(previous)
                 continue
             }

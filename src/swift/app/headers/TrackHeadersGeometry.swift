@@ -11,7 +11,7 @@ struct HeaderRect: Equatable {
     var height: Double = 0
 
     var sceneValue: SceneRectValue {
-        SceneRectValue(x: x, y: y, width: width, height: height, fillColor: PaletteMath.qmlColor(argb: 0))
+        SceneRectValue(x: x, y: y, width: width, height: height, fillColor: QmlColor.clear)
     }
     func contains(x: Double, y: Double) -> Bool {
         width > 0 && height > 0 && x >= self.x && x <= self.x + width
@@ -32,10 +32,10 @@ struct TrackHeaderSnapshot: Equatable {
     var selectedTitleOffset = HeaderPoint()
     var titleFont: QmlFont
     var subtitleFont: QmlFont
-    var baseColor = PaletteMath.qmlColor(argb: 0)
-    var overlayColor = PaletteMath.qmlColor(argb: 0)
-    var titleColor = PaletteMath.qmlColor(argb: 0)
-    var subtitleColor = PaletteMath.qmlColor(argb: 0)
+    var baseColor = QmlColor.clear
+    var overlayColor = QmlColor.clear
+    var titleColor = QmlColor.clear
+    var subtitleColor = QmlColor.clear
     var titleBold = false
     var muteChecked = false
     var soloChecked = false
@@ -45,8 +45,8 @@ struct TrackHeaderSnapshot: Equatable {
     var soloPressed = false
     var addHovered = false
     var addPressed = false
-    var activityDimColor = PaletteMath.qmlColor(argb: 0)
-    var activityActiveColor = PaletteMath.qmlColor(argb: 0)
+    var activityDimColor = QmlColor.clear
+    var activityActiveColor = QmlColor.clear
     var activityLeftHeight: Double = 0
     var activityRightHeight: Double = 0
 }
@@ -138,34 +138,31 @@ struct TrackHeadersGeometry {
 @MainActor
 extension TrackHeadersPresenter {
     func publishAppearance() {
-        if buttonBackground != palette.buttonBackground { buttonBackground = palette.buttonBackground }
-        if buttonText != palette.buttonText { buttonText = palette.buttonText }
-        if buttonHoverBackground != palette.buttonHoverBackground {
-            buttonHoverBackground = palette.buttonHoverBackground
-        }
-        if buttonHoverText != palette.buttonText { buttonHoverText = palette.buttonText }
-        if buttonPressedBackground != palette.buttonPressedBackground {
-            buttonPressedBackground = palette.buttonPressedBackground
-        }
-        if buttonPressedText != palette.buttonPressedText { buttonPressedText = palette.buttonPressedText }
-        if buttonOutline != palette.outline { buttonOutline = palette.outline }
-        if focusOutline != palette.selectionEdge { focusOutline = palette.selectionEdge }
-        if muteCheckedBackground != palette.buttonPressedBackground {
-            muteCheckedBackground = palette.buttonPressedBackground
-        }
-        if muteCheckedText != palette.buttonPressedText { muteCheckedText = palette.buttonPressedText }
-        if soloCheckedBackground != palette.tabSelectedBackground {
-            soloCheckedBackground = palette.tabSelectedBackground
-        }
-        if soloCheckedText != palette.selectionText { soloCheckedText = palette.selectionText }
-        if inputBackground != palette.inputBackground { inputBackground = palette.inputBackground }
-        if inputText != palette.windowText { inputText = palette.windowText }
-        if inputOutline != palette.outline { inputOutline = palette.outline }
-        if scrollbarHandle != palette.outline { scrollbarHandle = palette.outline }
-        if scrollbarHandleHover != palette.focusOutline { scrollbarHandleHover = palette.focusOutline }
-        if reorderIndicator != palette.selectionEdge { reorderIndicator = palette.selectionEdge }
-        if selectionBackground != palette.tabSelectedBackground { selectionBackground = palette.tabSelectedBackground }
-        if selectionText != palette.selectionText { selectionText = palette.selectionText }
+        let body = fontRoles.body.qmlFont
+        publish(\.controlFont, body)
+        publish(\.normalTitleFont, body)
+        publish(\.boldTitleFont, fontRoles.bodyBold.qmlFont)
+        publish(\.subtitleFont, fontRoles.caption.qmlFont)
+        publish(\.buttonBackground, palette.buttonBackground)
+        publish(\.buttonText, palette.buttonText)
+        publish(\.buttonHoverBackground, palette.buttonHoverBackground)
+        publish(\.buttonHoverText, palette.buttonText)
+        publish(\.buttonPressedBackground, palette.buttonPressedBackground)
+        publish(\.buttonPressedText, palette.buttonPressedText)
+        publish(\.buttonOutline, palette.outline)
+        publish(\.focusOutline, palette.selectionEdge)
+        publish(\.muteCheckedBackground, palette.buttonPressedBackground)
+        publish(\.muteCheckedText, palette.buttonPressedText)
+        publish(\.soloCheckedBackground, palette.tabSelectedBackground)
+        publish(\.soloCheckedText, palette.selectionText)
+        publish(\.inputBackground, palette.inputBackground)
+        publish(\.inputText, palette.windowText)
+        publish(\.inputOutline, palette.outline)
+        publish(\.scrollbarHandle, palette.outline)
+        publish(\.scrollbarHandleHover, palette.focusOutline)
+        publish(\.reorderIndicator, palette.selectionEdge)
+        publish(\.selectionBackground, palette.tabSelectedBackground)
+        publish(\.selectionText, palette.selectionText)
     }
 
     func configureGeometry(width: Double, height: Double, base: Double, dpr: Double) {
@@ -182,13 +179,7 @@ extension TrackHeadersPresenter {
         if nextBase != baseFontPx { textMetrics = nil }
         if requestedBase != fontRoles.baseFontPx {
             fontRoles = Typography(baseFontPx: requestedBase)
-            let body = fontRoles.body.qmlFont
-            let bold = fontRoles.bodyBold.qmlFont
-            let caption = fontRoles.caption.qmlFont
-            if controlFont != body { controlFont = body }
-            if normalTitleFont != body { normalTitleFont = body }
-            if boldTitleFont != bold { boldTitleFont = bold }
-            if subtitleFont != caption { subtitleFont = caption }
+            publishAppearance()
         }
         devicePixelRatio = nextDpr
         viewportWidth = nextWidth
@@ -337,9 +328,7 @@ extension TrackHeadersGeometry {
     static let overBudgetTitleInk = [0xFF554F4C, 0xFFA0A0A0, 0xFF96989C].map { PaletteMath.qmlColor(argb: $0) }
     static let overBudgetSubtitleInk = [0xFF564F4A, 0xFFA0A0A0, 0xFF95989F].map { PaletteMath.qmlColor(argb: $0) }
     static let activityActiveColors = PaletteMath.trackIdentityColors
-    static let activityDimColors = ThemeColorTables.activityDimColors.map {
-        PaletteMath.qmlColor(argb: PaletteMath.argb($0))
-    }
+    static let activityDimColors = ThemeColorTables.activityDimColors.map { PaletteMath.qmlColor($0) }
 
     static func dimmedInk(
         ink: String, backdrop: String, surface: String,

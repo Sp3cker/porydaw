@@ -28,11 +28,11 @@ public final class PitchBendPresenter {
     public var axisLabelHeight: Double = 0
     public var hairline: Double = 0
     public var scrubThreshold: Double = 0
-    public var windowBackground: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
-    public var primaryText: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
-    public var secondaryText: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
-    public var outline: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
-    public var trackColor: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
+    public var windowBackground: QmlColor = .clear
+    public var primaryText: QmlColor = .clear
+    public var secondaryText: QmlColor = .clear
+    public var outline: QmlColor = .clear
+    public var trackColor: QmlColor = .clear
     public var titleFont: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
     public var captionFont: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
     public var monospaceFont: QmlFont = QmlFont(family: gridMonoFamily, pixelSize: 13)
@@ -85,33 +85,29 @@ public final class PitchBendPresenter {
             typography = Typography(baseFontPx: nextBase)
         }
         geometry = PitchBendGeometry(fontPx: fontPx, lineSpacing: lineSpacing, dpr: dpr)
-        setPublished(popupWidth, geometry.popupWidth) { popupWidth = $0 }
-        setPublished(popupHeight, geometry.popupHeight) { popupHeight = $0 }
-        setPublished(headerHeight, geometry.headerHeight) { headerHeight = $0 }
-        setPublished(graphHeight, geometry.graphHeight) { graphHeight = $0 }
-        setPublished(outerInset, geometry.outerInset) { outerInset = $0 }
-        setPublished(titleHeight, geometry.titleHeight) { titleHeight = $0 }
-        setPublished(descriptionHeight, geometry.descriptionHeight) { descriptionHeight = $0 }
-        setPublished(controlsHeight, geometry.controlsHeight) { controlsHeight = $0 }
-        setPublished(fieldWidth, geometry.fieldWidth) { fieldWidth = $0 }
-        setPublished(fieldHeight, geometry.fieldHeight) { fieldHeight = $0 }
-        setPublished(resetWidth, geometry.resetWidth) { resetWidth = $0 }
-        setPublished(resetHeight, geometry.resetHeight) { resetHeight = $0 }
-        setPublished(axisLabelHeight, geometry.axisLabelHeight) { axisLabelHeight = $0 }
-        setPublished(hairline, geometry.hairline) { hairline = $0 }
-        setPublished(scrubThreshold, geometry.scrubThreshold) { scrubThreshold = $0 }
-        setPublished(windowBackground, palette.windowBackground) { windowBackground = $0 }
-        setPublished(primaryText, palette.primaryText) { primaryText = $0 }
-        setPublished(secondaryText, palette.secondaryText) { secondaryText = $0 }
-        setPublished(outline, palette.outline) { outline = $0 }
-        setPublished(
-            trackColor, PaletteMath.qmlColor(argb: palette.noteFillArgb(track: note?.track ?? 0, velocity: 127))
-        ) {
-            trackColor = $0
-        }
-        setPublished(titleFont, typography.bodyBold.qmlFont) { titleFont = $0 }
-        setPublished(captionFont, typography.caption.qmlFont) { captionFont = $0 }
-        setPublished(monospaceFont, typography.bodyMono.qmlFont) { monospaceFont = $0 }
+        publish(\.popupWidth, geometry.popupWidth)
+        publish(\.popupHeight, geometry.popupHeight)
+        publish(\.headerHeight, geometry.headerHeight)
+        publish(\.graphHeight, geometry.graphHeight)
+        publish(\.outerInset, geometry.outerInset)
+        publish(\.titleHeight, geometry.titleHeight)
+        publish(\.descriptionHeight, geometry.descriptionHeight)
+        publish(\.controlsHeight, geometry.controlsHeight)
+        publish(\.fieldWidth, geometry.fieldWidth)
+        publish(\.fieldHeight, geometry.fieldHeight)
+        publish(\.resetWidth, geometry.resetWidth)
+        publish(\.resetHeight, geometry.resetHeight)
+        publish(\.axisLabelHeight, geometry.axisLabelHeight)
+        publish(\.hairline, geometry.hairline)
+        publish(\.scrubThreshold, geometry.scrubThreshold)
+        publish(\.windowBackground, palette.windowBackground)
+        publish(\.primaryText, palette.primaryText)
+        publish(\.secondaryText, palette.secondaryText)
+        publish(\.outline, palette.outline)
+        publish(\.trackColor, PaletteMath.qmlColor(argb: palette.noteFillArgb(track: note?.track ?? 0, velocity: 127)))
+        publish(\.titleFont, typography.bodyBold.qmlFont)
+        publish(\.captionFont, typography.caption.qmlFont)
+        publish(\.monospaceFont, typography.bodyMono.qmlFont)
         var promptMetrics = PromptAppearance.Layout(base: fontPx)
         promptMetrics.radius = Double(typography.space(.one))
         promptMetrics.borderWidth = geometry.hairline

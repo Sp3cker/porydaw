@@ -37,7 +37,7 @@ public final class PitchBendVertex: QVariantGettable {
 
     public init(
         x: Double, y: Double, radius: Double, fill: QmlColor,
-        ring: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0), ringWidth: Double = 0
+        ring: QmlColor = .clear, ringWidth: Double = 0
     ) {
         self.x = x - radius
         self.y = y - radius
@@ -63,9 +63,9 @@ public final class PitchBendLane {
     @QtTracked public var upperValueText = ""
     @QtTracked public var lowerValueText = ""
     @QtTracked public var endLabel = "Note off"
-    public var curveColor: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
-    public var plotBackground: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
-    public var focusColor: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
+    public var curveColor: QmlColor = .clear
+    public var plotBackground: QmlColor = .clear
+    public var focusColor: QmlColor = .clear
     @QtTracked public var laneTitle = ""
     @QtTracked public var bipolar = false
     public var gridLines: QListModel<SceneRect> = QListModel()
@@ -75,6 +75,15 @@ public final class PitchBendLane {
     @QtIgnored public var onWheelSteps: ((Int) -> Void)?
     @QtIgnored public var bendRange = 2
     private var gestureStartingPoints: [Int: Int]?
+    private typealias LineValue = (
+        x0: Double, y0: Double, x1: Double, y1: Double, width: Double, color: QmlColor
+    )
+    private typealias VertexValue = (
+        x: Double, y: Double, radius: Double, fill: QmlColor, ring: QmlColor, ringWidth: Double
+    )
+    private var ruleValues: [SceneRectValue] = []
+    private var lineValues: [LineValue] = []
+    private var vertexValues: [VertexValue] = []
 
     public init(kernel: PitchBendKernel, palette: GridPalette, track: Int) {
         self.kernel = kernel
@@ -144,83 +153,125 @@ public final class PitchBendLane {
     public func rebuild() {
         let k = kernel
         let g = k.geometry
-        setPublished(canvasX, g.canvasX) { canvasX = $0 }
-        setPublished(canvasY, g.canvasY) { canvasY = $0 }
-        setPublished(canvasWidth, g.canvasWidth) { canvasWidth = $0 }
-        setPublished(canvasHeight, g.canvasHeight) { canvasHeight = $0 }
-        setPublished(curveColor, identityColor) { curveColor = $0 }
-        setPublished(plotBackground, palette.rollBackground) { plotBackground = $0 }
-        setPublished(focusColor, palette.focusOutline) { focusColor = $0 }
-        var ruleCount = 0
+        publish(\.canvasX, g.canvasX)
+        publish(\.canvasY, g.canvasY)
+        publish(\.canvasWidth, g.canvasWidth)
+        publish(\.canvasHeight, g.canvasHeight)
+        publish(\.curveColor, identityColor)
+        publish(\.plotBackground, palette.rollBackground)
+        publish(\.focusColor, palette.focusOutline)
+        ruleValues.removeAll(keepingCapacity: true)
         for tick in k.gridTicks {
-            publishRule(
-                at: ruleCount, x: k.x(at: tick), y: g.canvasY,
-                width: g.hairline, height: g.canvasHeight, color: palette.gridLine)
-            ruleCount += 1
+            ruleValues.append(
+                SceneRectValue(
+                    x: k.x(at: tick), y: g.canvasY,
+                    width: g.hairline, height: g.canvasHeight, fillColor: palette.gridLine))
         }
         let zero = k.y(at: 0)
         var x = g.canvasX
         while x < g.canvasX + g.canvasWidth {
-            publishRule(
-                at: ruleCount, x: x, y: zero,
-                width: min(4 * g.hairline, g.canvasX + g.canvasWidth - x),
-                height: g.hairline, color: palette.separator)
-            ruleCount += 1
+            ruleValues.append(
+                SceneRectValue(
+                    x: x, y: zero,
+                    width: min(4 * g.hairline, g.canvasX + g.canvasWidth - x),
+                    height: g.hairline, fillColor: palette.separator))
             x += 6 * g.hairline
         }
-        if ruleCount < gridLines.count {
-            gridLines.replaceSubrange(ruleCount..<gridLines.count, with: [])
-        }
+        syncRetained(gridLines, ruleValues, make: SceneRect.init, update: { $0.update($1) })
 
         let ordered = k.orderedPoints
-        var lineCount = 0
+        lineValues.removeAll(keepingCapacity: true)
         for (index, point) in ordered.enumerated() {
             let next = index + 1 < ordered.count ? ordered[index + 1] : nil
             let x0 = k.x(at: point.tick)
             let x1 = next.map { k.x(at: $0.tick) } ?? g.canvasX + g.canvasWidth - 1
             let y = k.y(at: point.value)
             let angled = next.map { $0.tick - point.tick == k.fineTicks } ?? false
-            publishLine(
-                at: lineCount, x0: x0, y0: y, x1: x1,
-                y1: angled ? k.y(at: next?.value ?? point.value) : y,
-                width: g.curveStroke, color: curveColor)
-            lineCount += 1
+            lineValues.append(
+                (
+                    x0: x0, y0: y, x1: x1,
+                    y1: angled ? k.y(at: next?.value ?? point.value) : y,
+                    width: g.curveStroke, color: curveColor
+                ))
             if let next, !angled {
-                publishLine(
-                    at: lineCount, x0: x1, y0: y, x1: x1, y1: k.y(at: next.value),
-                    width: g.curveStroke, color: curveColor)
-                lineCount += 1
+                lineValues.append(
+                    (
+                        x0: x1, y0: y, x1: x1, y1: k.y(at: next.value),
+                        width: g.curveStroke, color: curveColor
+                    ))
             }
         }
         if let preview = k.linePreview {
-            publishLine(
-                at: lineCount, x0: k.x(at: preview.0.tick), y0: k.y(at: preview.0.value),
-                x1: k.x(at: preview.1.tick), y1: k.y(at: preview.1.value),
-                width: g.hairline, color: palette.editCursor)
-            lineCount += 1
+            lineValues.append(
+                (
+                    x0: k.x(at: preview.0.tick), y0: k.y(at: preview.0.value),
+                    x1: k.x(at: preview.1.tick), y1: k.y(at: preview.1.value),
+                    width: g.hairline, color: palette.editCursor
+                ))
         }
-        if lineCount < curveLines.count {
-            curveLines.replaceSubrange(lineCount..<curveLines.count, with: [])
-        }
-        let transparent = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
-        for (index, point) in ordered.enumerated() {
+        syncRetained(
+            curveLines, lineValues,
+            make: {
+                PitchBendLine(
+                    x0: $0.x0, y0: $0.y0, x1: $0.x1, y1: $0.y1,
+                    width: $0.width, color: $0.color)
+            },
+            update: { row, value in
+                guard
+                    row.x0 != value.x0 || row.y0 != value.y0
+                        || row.x1 != value.x1 || row.y1 != value.y1
+                        || row.strokeWidth != value.width || row.strokeColor != value.color
+                else { return false }
+                row.publish(\.x0, value.x0)
+                row.publish(\.y0, value.y0)
+                row.publish(\.x1, value.x1)
+                row.publish(\.y1, value.y1)
+                row.publish(\.strokeWidth, value.width)
+                row.publish(\.strokeColor, value.color)
+                return true
+            })
+        vertexValues.removeAll(keepingCapacity: true)
+        for point in ordered {
             let selected = k.selectedTick == point.tick
             let endpoint = point.tick == k.startTick || point.tick == k.endTick
-            publishVertex(
-                at: index, x: k.x(at: point.tick), y: k.y(at: point.value),
-                radius: selected ? g.selectedRingRadius : g.nodePaintRadius,
-                fill: endpoint && !selected ? palette.secondaryText : curveColor,
-                ring: selected ? palette.focusOutline : transparent,
-                ringWidth: selected ? g.hairline * 1.5 : 0)
+            vertexValues.append(
+                (
+                    x: k.x(at: point.tick), y: k.y(at: point.value),
+                    radius: selected ? g.selectedRingRadius : g.nodePaintRadius,
+                    fill: endpoint && !selected ? palette.secondaryText : curveColor,
+                    ring: selected ? palette.focusOutline : .clear,
+                    ringWidth: selected ? g.hairline * 1.5 : 0
+                ))
         }
-        publishVertex(
-            at: ordered.count, x: k.x(at: k.keyboardTick), y: k.y(at: k.liveValue),
-            radius: g.nodePaintRadius, fill: transparent,
-            ring: palette.editCursor, ringWidth: g.hairline)
-        let vertexCount = ordered.count + 1
-        if vertexCount < vertices.count {
-            vertices.replaceSubrange(vertexCount..<vertices.count, with: [])
-        }
+        vertexValues.append(
+            (
+                x: k.x(at: k.keyboardTick), y: k.y(at: k.liveValue),
+                radius: g.nodePaintRadius, fill: .clear,
+                ring: palette.editCursor, ringWidth: g.hairline
+            ))
+        syncRetained(
+            vertices, vertexValues,
+            make: {
+                PitchBendVertex(
+                    x: $0.x, y: $0.y, radius: $0.radius, fill: $0.fill,
+                    ring: $0.ring, ringWidth: $0.ringWidth)
+            },
+            update: { row, value in
+                let left = value.x - value.radius
+                let top = value.y - value.radius
+                guard
+                    row.x != left || row.y != top || row.radius != value.radius
+                        || row.fillColor != value.fill || row.ringColor != value.ring
+                        || row.ringWidth != value.ringWidth
+                else { return false }
+                row.publish(\.x, left)
+                row.publish(\.y, top)
+                row.publish(\.radius, value.radius)
+                row.publish(\.fillColor, value.fill)
+                row.publish(\.ringColor, value.ring)
+                row.publish(\.ringWidth, value.ringWidth)
+                return true
+            })
         if k.lane == .modulation {
             liveValueText = String(k.liveValue)
             upperValueText = "127"
@@ -236,65 +287,5 @@ public final class PitchBendLane {
             upperValueText = bendRange == 0 ? "0 st" : "+\(bendRange) st"
             lowerValueText = bendRange == 0 ? "0 st" : "-\(bendRange) st"
         }
-    }
-
-    private func publishRule(
-        at index: Int, x: Double, y: Double, width: Double, height: Double, color: QmlColor
-    ) {
-        let value = SceneRectValue(x: x, y: y, width: width, height: height, fillColor: color)
-        guard index < gridLines.count else {
-            gridLines.append(SceneRect(value))
-            return
-        }
-        let row = gridLines[index]
-        if row.update(value) { gridLines[index] = row }
-    }
-
-    private func publishLine(
-        at index: Int, x0: Double, y0: Double, x1: Double, y1: Double,
-        width: Double, color: QmlColor
-    ) {
-        guard index < curveLines.count else {
-            curveLines.append(PitchBendLine(x0: x0, y0: y0, x1: x1, y1: y1, width: width, color: color))
-            return
-        }
-        let row = curveLines[index]
-        guard
-            row.x0 != x0 || row.y0 != y0 || row.x1 != x1 || row.y1 != y1
-                || row.strokeWidth != width || row.strokeColor != color
-        else { return }
-        setPublished(row.x0, x0) { row.x0 = $0 }
-        setPublished(row.y0, y0) { row.y0 = $0 }
-        setPublished(row.x1, x1) { row.x1 = $0 }
-        setPublished(row.y1, y1) { row.y1 = $0 }
-        setPublished(row.strokeWidth, width) { row.strokeWidth = $0 }
-        setPublished(row.strokeColor, color) { row.strokeColor = $0 }
-        curveLines[index] = row
-    }
-
-    private func publishVertex(
-        at index: Int, x: Double, y: Double, radius: Double, fill: QmlColor,
-        ring: QmlColor, ringWidth: Double
-    ) {
-        guard index < vertices.count else {
-            vertices.append(
-                PitchBendVertex(
-                    x: x, y: y, radius: radius, fill: fill, ring: ring, ringWidth: ringWidth))
-            return
-        }
-        let row = vertices[index]
-        let left = x - radius
-        let top = y - radius
-        guard
-            row.x != left || row.y != top || row.radius != radius || row.fillColor != fill
-                || row.ringColor != ring || row.ringWidth != ringWidth
-        else { return }
-        setPublished(row.x, left) { row.x = $0 }
-        setPublished(row.y, top) { row.y = $0 }
-        setPublished(row.radius, radius) { row.radius = $0 }
-        setPublished(row.fillColor, fill) { row.fillColor = $0 }
-        setPublished(row.ringColor, ring) { row.ringColor = $0 }
-        setPublished(row.ringWidth, ringWidth) { row.ringWidth = $0 }
-        vertices[index] = row
     }
 }

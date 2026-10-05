@@ -188,6 +188,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
 
     @QtIgnored weak var session: DocumentSession?
     @QtIgnored var palette = GridPalette()
+    @QtIgnored var typography: Typography
     @QtIgnored var caption: VoiceCaption?
     @QtIgnored var title: VoiceCaption?
     @QtIgnored var published: [VoiceMarkerHandle] = []
@@ -222,6 +223,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
         let maximum = Int((Double(minimum) * VoiceChangesPagePolicy.maximumBodyRows).rounded())
         bodyPolicy = EditorDrawerBodyPolicy(maximumBodyHeight: maximum) { _, _ in minimum }
         self.baseFontPx = base
+        typography = Typography(baseFontPx: Int(base.rounded()))
         refreshPromptStyle()
         publishTypography()
     }
@@ -285,12 +287,13 @@ public final class VoiceChangesPage: EditorDrawerPage {
         let changed =
             nextWidth != plotWidth || nextHeight != plotHeight
             || nextGutter != plotOrigin || nextDpr != self.devicePixelRatio || fontChanged
-        plotWidth = nextWidth
-        plotHeight = nextHeight
-        plotOrigin = nextGutter
-        self.devicePixelRatio = nextDpr
+        publish(\.plotWidth, nextWidth)
+        publish(\.plotHeight, nextHeight)
+        publish(\.plotOrigin, nextGutter)
+        publish(\.devicePixelRatio, nextDpr)
         if fontChanged {
             self.baseFontPx = nextFont
+            typography = Typography(baseFontPx: Int(nextFont.rounded()))
             refreshPromptStyle()
             publishTypography()
         }
@@ -299,7 +302,6 @@ public final class VoiceChangesPage: EditorDrawerPage {
 
     @QtIgnored
     func refreshPromptStyle() {
-        let typography = Typography(baseFontPx: Int(baseFontPx.rounded()))
         promptStyle.update(
             metrics: PromptAppearance.Layout(base: baseFontPx), palette: palette,
             font: typography.body.qmlFont, surface: .window)

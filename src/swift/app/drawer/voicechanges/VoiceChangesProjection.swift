@@ -20,12 +20,12 @@ public final class VoiceMarkerHandle: QVariantGettable {
     public var labelY: Double = 0
     public var labelWidth: Double = 0
     public var labelHeight: Double = 0
-    public var labelColor: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
+    public var labelColor: QmlColor = .clear
     public var x: Double = 0
     public var lineTop: Double = 0
     public var lineBottom: Double = 0
     public var lineWidth: Double = 0
-    public var lineColor: QmlColor = QmlColor(red: 0, green: 0, blue: 0, alpha: 0)
+    public var lineColor: QmlColor = .clear
     public var selected: Bool = false
     public var hovered: Bool = false
     public var preview: Bool = false
@@ -461,17 +461,6 @@ enum VoiceChangesProjection {
         }
     }
 
-    static func syncTexts(_ model: QListModel<SceneText>, _ values: [SceneText]) {
-        syncModel(model, values, matches: textMatches)
-    }
-
-    static func syncPickerRows(
-        _ model: QListModel<VoicePickerRowHandle>,
-        _ values: [VoicePickerRowHandle]
-    ) {
-        syncModel(model, values, matches: { $0.matches($1) })
-    }
-
     static func publishPickerRows(
         _ model: QListModel<VoicePickerRowHandle>,
         snapshots: inout [VoicePickerRowHandle],
@@ -482,21 +471,10 @@ enum VoiceChangesProjection {
             && zip(snapshots, values).allSatisfy { $0.program == $1.program }
         snapshots = values
         if samePrograms {
-            syncPickerRows(model, values)
+            syncModel(model, values, matches: { $0.matches($1) })
         } else {
             model.reset(to: values)
         }
-    }
-
-    static func syncMenuRows(
-        _ model: QListModel<VoiceMenuRowHandle>,
-        _ values: [VoiceMenuRowHandle]
-    ) {
-        syncModel(model, values, matches: { $0.matches($1) })
-    }
-
-    static func textMatches(_ lhs: SceneText, _ rhs: SceneText) -> Bool {
-        lhs.matches(rhs)
     }
 
 }

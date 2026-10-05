@@ -281,6 +281,7 @@ public final class AutomationPage: EditorDrawerPage {
     }
 
     @QtIgnored var palette = GridPalette()
+    @QtIgnored var typography = Typography(baseFontPx: Int(AutomationPagePolicy.seedBaseFontPx))
     /// The body facts the last `configureBody` really applied, so a selector
     /// origin or drag-distance change rebuilds exactly once.
     @QtIgnored var lastBodyOrigin: Double = 0

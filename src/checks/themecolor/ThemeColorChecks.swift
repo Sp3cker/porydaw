@@ -31,6 +31,10 @@ func themeRefChannels(_ hex: String) -> (r: Int, g: Int, b: Int, a: Int) {
     return (Int((value >> 16) & 0xFF), Int((value >> 8) & 0xFF), Int(value & 0xFF), 255)
 }
 
+func themeRefChannels(_ color: QmlColor) -> (r: Int, g: Int, b: Int, a: Int) {
+    PaletteMath.channels(color)
+}
+
 private func themeRefSrgbToLinear(_ channel: Double) -> Double {
     channel <= 0.04045 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
 }
@@ -60,10 +64,25 @@ private func themeRefLuminance(_ hex: String) -> Double {
     return themeRefLuminance(r: c.r, g: c.g, b: c.b)
 }
 
+private func themeRefLuminance(_ color: QmlColor) -> Double {
+    let c = themeRefChannels(color)
+    return themeRefLuminance(r: c.r, g: c.g, b: c.b)
+}
+
 func themeRefContrast(_ first: String, _ second: String) -> Double {
     let lighter = max(themeRefLuminance(first), themeRefLuminance(second))
     let darker = min(themeRefLuminance(first), themeRefLuminance(second))
     return (lighter + 0.05) / (darker + 0.05)
+}
+
+func themeRefContrast(_ first: QmlColor, _ second: QmlColor) -> Double {
+    let lighter = max(themeRefLuminance(first), themeRefLuminance(second))
+    let darker = min(themeRefLuminance(first), themeRefLuminance(second))
+    return (lighter + 0.05) / (darker + 0.05)
+}
+
+func themeRefContrast(_ first: QmlColor, _ second: String) -> Double {
+    themeRefContrast(PaletteMath.hex(first), second)
 }
 
 // MARK: - Suite entry
@@ -186,6 +205,14 @@ private func themeCompositeHex(_ foreground: String, over background: String) ->
     return String(format: "#%02X%02X%02X", mix(fg.r, bg.r), mix(fg.g, bg.g), mix(fg.b, bg.b))
 }
 
+private func themeCompositeHex(_ foreground: QmlColor, over background: QmlColor) -> String {
+    themeCompositeHex(PaletteMath.hex(foreground), over: PaletteMath.hex(background))
+}
+
+private func themeCompositeHex(_ foreground: String, over background: QmlColor) -> String {
+    themeCompositeHex(foreground, over: PaletteMath.hex(background))
+}
+
 /// Every legal text ink keeps 4.5:1 on each surface it may label, in all three
 /// presets (docs/adr/0002-text-contrast-first.md). One declarative pair table;
 /// each pair's measured ratio rides in the message so failures are diagnosable.
@@ -299,12 +326,11 @@ private func themeTextContrastChecks(_ report: CheckReport) {
         let palette = themeAppliedPalette(mode: row.mode, contrast: 50)
         let tag = "mode=\(row.mode)"
         for pair in pairs {
-            let ink = PaletteMath.hex(palette[keyPath: pair.ink])
+            let ink = palette[keyPath: pair.ink]
             let surface: String
             let surfaceLabel: String
             if pair.surfaceName == "hoverChipFill" {
-                surface = themeCompositeHex(
-                    PaletteMath.hex(palette[keyPath: pair.surface]), over: PaletteMath.hex(palette.rollBackground))
+                surface = themeCompositeHex(palette[keyPath: pair.surface], over: palette.rollBackground)
                 surfaceLabel = "hoverChipFill over rollBackground"
             } else {
                 surface = PaletteMath.hex(palette[keyPath: pair.surface])
@@ -373,15 +399,14 @@ private func polyphonyFlashContrastChecks(_ report: CheckReport) {
     let id = "swiftcore/PolyphonyPanel::flashContrast"
     for row in themePresetRows {
         let palette = themeAppliedPalette(mode: row.mode, contrast: 50)
-        let flashSurface = themeCompositeHex("#8CD92626", over: PaletteMath.hex(palette.buttonBackground))
-        let flashRatio = themeRefContrast(PaletteMath.hex(palette.windowText), flashSurface)
+        let flashSurface = themeCompositeHex("#8CD92626", over: palette.buttonBackground)
+        let flashRatio = themeRefContrast(palette.windowText, flashSurface)
         report.expect(
             flashRatio >= 4.5, cppID: id,
             message:
                 "mode=\(row.mode): windowText on polyphonyFlashBackground@0.55 over buttonBackground contrast \(String(format: "%.2f", flashRatio)) (floor 4.5)"
         )
-        let restingRatio = themeRefContrast(
-            PaletteMath.hex(palette.windowText), PaletteMath.hex(palette.buttonBackground))
+        let restingRatio = themeRefContrast(palette.windowText, palette.buttonBackground)
         report.expect(
             restingRatio >= 4.5, cppID: id,
             message:
@@ -400,7 +425,7 @@ private func themeGridContrastChecks(_ report: CheckReport) {
         let base = themeAppliedPalette(mode: row.mode, contrast: 50)
         let tag = "mode=\(row.mode)"
         report.expectEqual(
-            expected: PaletteMath.qmlColor(argb: PaletteMath.argb(row.grid)), actual: base.gridLine,
+            expected: PaletteMath.qmlColor(row.grid), actual: base.gridLine,
             cppID: themeGridContrastID, what: "\(tag): default contrast is the identity")
         for contrast in [0, 50, 100] {
             let adjusted = themeAppliedPalette(mode: row.mode, contrast: contrast)
@@ -410,9 +435,9 @@ private func themeGridContrastChecks(_ report: CheckReport) {
         }
         let softened = themeAppliedPalette(mode: row.mode, contrast: 0)
         let strengthened = themeAppliedPalette(mode: row.mode, contrast: 100)
-        let baseGrid = PaletteMath.hex(base.gridLine)
-        let softenedGrid = PaletteMath.hex(softened.gridLine)
-        let strengthenedGrid = PaletteMath.hex(strengthened.gridLine)
+        let baseGrid = base.gridLine
+        let softenedGrid = softened.gridLine
+        let strengthenedGrid = strengthened.gridLine
         report.expect(
             themeRefContrast(softenedGrid, row.roll)
                 < themeRefContrast(baseGrid, row.roll),
@@ -489,22 +514,22 @@ private let themeDialogID = "themelayout/DeferredThemeLayoutTest::dialogCommitAn
 private func themeCommitPreviewRevertChecks(_ report: CheckReport) {
     let committed = themeAppliedPalette(mode: "dark-neutral-high", contrast: 80)
     report.expectEqual(
-        expected: PaletteMath.qmlColor(argb: PaletteMath.argb("#373737")), actual: committed.windowBackground,
+        expected: PaletteMath.qmlColor("#373737"), actual: committed.windowBackground,
         cppID: themeDialogID, what: "commit applies the dark window surface")
     report.expect(
-        themeRefChannels(PaletteMath.hex(committed.gridLine)).a
+        themeRefChannels(committed.gridLine).a
             > themeRefChannels("#54030303").a,
         cppID: themeDialogID, message: "commit applies contrast 80 to the grid")
     report.expectEqual(
-        expected: PaletteMath.qmlColor(argb: PaletteMath.argb("#424242")), actual: committed.chromeBackground,
+        expected: PaletteMath.qmlColor("#424242"), actual: committed.chromeBackground,
         cppID: themeDialogID, what: "dark preview shows the dark chrome")
     let immaterial = themeAppliedPalette(mode: "immaterial", contrast: 50)
     report.expectEqual(
-        expected: PaletteMath.qmlColor(argb: PaletteMath.argb("#363941")), actual: immaterial.chromeBackground,
+        expected: PaletteMath.qmlColor("#363941"), actual: immaterial.chromeBackground,
         cppID: themeDialogID, what: "immaterial preview shows the immaterial chrome")
     let reverted = themeAppliedPalette(mode: "dark-neutral-high", contrast: 80)
     report.expectEqual(
-        expected: PaletteMath.qmlColor(argb: PaletteMath.argb("#037384")), actual: reverted.selectionEdge,
+        expected: PaletteMath.qmlColor("#037384"), actual: reverted.selectionEdge,
         cppID: themeDialogID, what: "revert restores the committed link accent")
     report.expectEqual(
         expected: committed.gridLine, actual: reverted.gridLine,
@@ -517,11 +542,11 @@ private func noteLabelContrastChecks(_ report: CheckReport) {
     for row in themePresetRows {
         let palette = themeAppliedPalette(mode: row.mode, contrast: 50)
         let tag = "mode=\(row.mode)"
-        report.expectEqual(
-            expected: row.disabled, actual: PaletteMath.hex(palette.noteVelocityZero),
+        report.expectColorEqual(
+            expected: row.disabled, actual: palette.noteVelocityZero,
             cppID: id, what: "\(tag): velocity-zero fill equals the preset disabledText role")
         report.expect(
-            themeRefChannels(PaletteMath.hex(palette.noteVelocityZero)).a == 255, cppID: id,
+            themeRefChannels(palette.noteVelocityZero).a == 255, cppID: id,
             message: "\(tag): velocity-zero fill is opaque")
         var identityFloor = Double.infinity
         var preservesKeyboardInk = true
@@ -639,7 +664,7 @@ private func themeColorTableChecks(_ report: CheckReport) {
         report.expect(
             palette.theme == ThemePreset(mode: row.mode), cppID: themeTableID,
             message: "\(tag): the applied palette carries its theme preset")
-        let zeroChannels = PaletteMath.channels(PaletteMath.hex(palette.noteVelocityZero))
+        let zeroChannels = PaletteMath.channels(palette.noteVelocityZero)
         let zeroLab = PaletteMath.oklab(r: zeroChannels.r, g: zeroChannels.g, b: zeroChannels.b)
         var noteMismatches = 0
         var noteExample = ""
@@ -672,8 +697,7 @@ private func themeColorTableChecks(_ report: CheckReport) {
         for track in 0..<16 {
             let identity = PaletteMath.trackIdentityOklab(track)
             for accidentalRow: Bool in [false, true] {
-                let backdrop = PaletteMath.channels(
-                    accidentalRow ? PaletteMath.hex(palette.accidentalLane) : PaletteMath.hex(palette.rollBackground))
+                let backdrop = PaletteMath.channels(accidentalRow ? palette.accidentalLane : palette.rollBackground)
                 let background = PaletteMath.oklab(r: backdrop.r, g: backdrop.g, b: backdrop.b)
                 let weight = 60.0 / 255.0
                 let offset = min(

@@ -46,16 +46,14 @@ public final class TransportBarPresenter: QmlUncreatable {
 
     public func refreshPromptStyle(inset: Double) {
         guard let session else { return }
-        setPublished(promptStyle.font, session.typographyFonts.body) { promptStyle.font = $0 }
-        setPublished(promptStyle.background, session.palette.buttonBackground) { promptStyle.background = $0 }
-        setPublished(promptStyle.text, session.palette.buttonText) { promptStyle.text = $0 }
-        setPublished(promptStyle.outline, session.palette.outline) { promptStyle.outline = $0 }
-        setPublished(promptStyle.focus, session.palette.focusOutline) { promptStyle.focus = $0 }
-        setPublished(promptStyle.radius, inset / 2) { promptStyle.radius = $0 }
-        setPublished(promptStyle.horizontalPadding, inset) { promptStyle.horizontalPadding = $0 }
-        setPublished(promptStyle.dragThreshold, inset) { promptStyle.dragThreshold = $0 }
-        setPublished(promptStyle.selection, session.palette.focusOutline) { promptStyle.selection = $0 }
-        setPublished(promptStyle.selectionText, session.palette.buttonText) { promptStyle.selectionText = $0 }
+        var metrics = PromptAppearance.Layout(base: Double(session.baseFontPx))
+        metrics.radius = inset / 2
+        metrics.horizontalPadding = inset
+        metrics.verticalPadding = 0
+        metrics.dragThreshold = inset
+        promptStyle.update(
+            metrics: metrics, palette: session.palette, font: session.typographyFonts.body,
+            surface: .transport)
     }
 
     @QtIgnored
@@ -73,75 +71,75 @@ public final class TransportBarPresenter: QmlUncreatable {
             }
         }
         let scale = session?.selectedDocument?.scaleProjection ?? ScaleProjection()
-        setPublished(scaleRoot, scale.root) { scaleRoot = $0 }
-        setPublished(scaleType, scale.scale.rawValue) { scaleType = $0 }
-        setPublished(scaleHighlight, scale.highlight) { scaleHighlight = $0 }
-        setPublished(scaleFold, scale.fold) { scaleFold = $0 }
+        publish(\.scaleRoot, scale.root)
+        publish(\.scaleType, scale.scale.rawValue)
+        publish(\.scaleHighlight, scale.highlight)
+        publish(\.scaleFold, scale.fold)
         guard let session, session.songOpen, let document = session.selectedDocument,
             let audio = session.transportAudio, audio.songLoaded
         else {
-            setPublished(state, 0) { state = $0 }
-            setPublished(timeText, "0:00.0 / 0:00.0") { timeText = $0 }
-            setPublished(measureText, "1:1") { measureText = $0 }
-            setPublished(loopBounds, "") { loopBounds = $0 }
-            setPublished(keySignature, "C") { keySignature = $0 }
-            setPublished(polyMeterVisible, false) { polyMeterVisible = $0 }
-            setPublished(pcmText, "") { pcmText = $0 }
-            setPublished(cgbText, "") { cgbText = $0 }
-            setPublished(lostText, "") { lostText = $0 }
-            setPublished(lostVisible, false) { lostVisible = $0 }
+            publish(\.state, 0)
+            publish(\.timeText, "0:00.0 / 0:00.0")
+            publish(\.measureText, "1:1")
+            publish(\.loopBounds, "")
+            publish(\.keySignature, "C")
+            publish(\.polyMeterVisible, false)
+            publish(\.pcmText, "")
+            publish(\.cgbText, "")
+            publish(\.lostText, "")
+            publish(\.lostVisible, false)
             // Scale remains available on a document even when audio failed to bind.
-            setPublished(masterVolume, 127) { masterVolume = $0 }
+            publish(\.masterVolume, 127)
             if let audio = self.session?.transportAudio {
-                setPublished(loopEnabled, audio.loopEnabled) { loopEnabled = $0 }
-                setPublished(resonanceSuppression, audio.resonanceSuppression) { resonanceSuppression = $0 }
+                publish(\.loopEnabled, audio.loopEnabled)
+                publish(\.resonanceSuppression, audio.resonanceSuppression)
             }
             return
         }
         let transportState = Int(audio.transport) + 1
-        setPublished(state, transportState) { state = $0 }
-        setPublished(polyMeterVisible, true) { polyMeterVisible = $0 }
+        publish(\.state, transportState)
+        publish(\.polyMeterVisible, true)
         let pcm = "\(audio.activePcmChannels)/\(audio.maxPcmChannels)"
-        setPublished(pcmText, pcm) { pcmText = $0 }
+        publish(\.pcmText, pcm)
         let cgb = "\(audio.activeCgbChannels)/4"
-        setPublished(cgbText, cgb) { cgbText = $0 }
+        publish(\.cgbText, cgb)
         let lost = audio.polyLostTotal
         let hasLost = lost > 0
-        setPublished(lostVisible, hasLost) { lostVisible = $0 }
+        publish(\.lostVisible, hasLost)
         let lostLabel = hasLost ? "\(lost)" : ""
-        setPublished(lostText, lostLabel) { lostText = $0 }
+        publish(\.lostText, lostLabel)
         let timeline = document.timeline
         let sample = audio.playheadSamples
         let time =
             Self.clock(sample: sample, sampleRate: audio.sampleRate) + " / "
             + Self.clock(sample: timeline.lengthSamples, sampleRate: audio.sampleRate)
-        setPublished(timeText, time) { timeText = $0 }
+        publish(\.timeText, time)
         let tick = TimeDefaults.tick(from: timeline.tick(for: sample))
         let measure = Self.measure(at: tick, timeline: timeline)
-        setPublished(measureText, measure) { measureText = $0 }
+        publish(\.measureText, measure)
         let bounds =
             timeline.hasLoop
             ? "\(Self.measure(at: timeline.loopStartTick, timeline: timeline)) – "
                 + Self.measure(at: timeline.loopEndTick, timeline: timeline)
             : ""
-        setPublished(loopBounds, bounds) { loopBounds = $0 }
+        publish(\.loopBounds, bounds)
         let volume = document.document.state.config.masterVolume
-        setPublished(masterVolume, volume) { masterVolume = $0 }
-        setPublished(loopEnabled, audio.loopEnabled) { loopEnabled = $0 }
-        setPublished(resonanceSuppression, audio.resonanceSuppression) { resonanceSuppression = $0 }
+        publish(\.masterVolume, volume)
+        publish(\.loopEnabled, audio.loopEnabled)
+        publish(\.resonanceSuppression, audio.resonanceSuppression)
         let tempoPoint = document.document.state.tempo.last { $0.tick <= tick }
         let micros =
             tempoPoint?.microsecondsPerQuarterNote
             ?? TimeDefaults.defaultTempoMicrosecondsPerQuarterNote
         let bpm = Int((Double(TimeDefaults.microsecondsPerMinute) / Double(max(1, micros))).rounded())
-        setPublished(tempo, bpm) { tempo = $0 }
+        publish(\.tempo, bpm)
         if keyDocument !== document.document || keyRevision != document.document.revision {
             keyEvents = Self.keyEvents(in: document.document)
             keyDocument = document.document
             keyRevision = document.document.revision
         }
         let key = keyEvents.last { $0.tick <= tick }?.label ?? "C"
-        setPublished(keySignature, key) { keySignature = $0 }
+        publish(\.keySignature, key)
     }
 
     public func setScaleRoot(root: Int) {

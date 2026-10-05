@@ -7,10 +7,13 @@ public final class OtherEventsMarkerHandle {
     public var tick: Int = 0
     public var track: Int = -1
     public var x: Double = 0
-    public var color: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var color: QmlColor = .clear
     public var label: String = ""
 
+    private var current: OtherEventsMarker
+
     public init(_ marker: OtherEventsMarker) {
+        current = marker
         tick = Int(marker.tick)
         track = marker.track
         x = marker.x
@@ -20,16 +23,13 @@ public final class OtherEventsMarkerHandle {
 
     @QtIgnored
     func update(_ marker: OtherEventsMarker) -> Bool {
-        let tick = Int(marker.tick)
-        guard
-            self.tick != tick || track != marker.track || x != marker.x
-                || color != marker.color || label != marker.label
-        else { return false }
-        setPublished(self.tick, tick) { self.tick = $0 }
-        setPublished(track, marker.track) { track = $0 }
-        setPublished(x, marker.x) { x = $0 }
-        setPublished(color, marker.color) { color = $0 }
-        setPublished(label, marker.label) { label = $0 }
+        guard current != marker else { return false }
+        current = marker
+        publish(\.tick, Int(marker.tick))
+        publish(\.track, marker.track)
+        publish(\.x, marker.x)
+        publish(\.color, marker.color)
+        publish(\.label, marker.label)
         return true
     }
 }
@@ -49,9 +49,9 @@ public final class OtherEventsBandPresenter {
     public var toolTipText: String = ""
     public var toolTipX: Double = 0
     public var toolTipY: Double = 0
-    public var toolTipBackground: QmlColor = PaletteMath.qmlColor(argb: 0)
-    public var toolTipTextColor: QmlColor = PaletteMath.qmlColor(argb: 0)
-    public var toolTipOutline: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var toolTipBackground: QmlColor = .clear
+    public var toolTipTextColor: QmlColor = .clear
+    public var toolTipOutline: QmlColor = .clear
 
     private var session: DocumentSession?
     private var colors: GridPalette?
@@ -76,9 +76,9 @@ public final class OtherEventsBandPresenter {
         markerHalfWidth = fontPx(baseFontPx, 1.0 / 3.0)
         markerHalfHeight = fontPx(baseFontPx, 5.0 / 12.0)
         gutterInset = fontPx(baseFontPx, 0.5)
-        setPublished(toolTipBackground, palette.inputBackground) { toolTipBackground = $0 }
-        setPublished(toolTipTextColor, palette.windowText) { toolTipTextColor = $0 }
-        setPublished(toolTipOutline, palette.outline) { toolTipOutline = $0 }
+        publish(\.toolTipBackground, palette.inputBackground)
+        publish(\.toolTipTextColor, palette.windowText)
+        publish(\.toolTipOutline, palette.outline)
         refreshDocument()
     }
 
@@ -92,9 +92,9 @@ public final class OtherEventsBandPresenter {
         markerHalfWidth = fontPx(baseFontPx, 1.0 / 3.0)
         markerHalfHeight = fontPx(baseFontPx, 5.0 / 12.0)
         gutterInset = fontPx(baseFontPx, 0.5)
-        setPublished(toolTipBackground, colors.inputBackground) { toolTipBackground = $0 }
-        setPublished(toolTipTextColor, colors.windowText) { toolTipTextColor = $0 }
-        setPublished(toolTipOutline, colors.outline) { toolTipOutline = $0 }
+        publish(\.toolTipBackground, colors.inputBackground)
+        publish(\.toolTipTextColor, colors.windowText)
+        publish(\.toolTipOutline, colors.outline)
         refreshCamera()
     }
 
@@ -116,22 +116,7 @@ public final class OtherEventsBandPresenter {
             pixelsPerTick: session.camera.pixelsPerTick, palette: colors)
         if next != publishedMarkers {
             publishedMarkers = next
-            markers.update {
-                let common = min(markers.count, next.count)
-                for index in 0..<common {
-                    let row = markers[index]
-                    if row.update(next[index]) { markers[index] = row }
-                }
-                if markers.count > next.count {
-                    markers.replaceSubrange(next.count..<markers.count, with: [])
-                } else {
-                    for index in common..<next.count {
-                        markers.replaceSubrange(
-                            markers.count..<markers.count,
-                            with: CollectionOfOne(OtherEventsMarkerHandle(next[index])))
-                    }
-                }
-            }
+            syncRetained(markers, next, make: OtherEventsMarkerHandle.init, update: { $0.update($1) })
             markerCount = next.count
             markerRevision += 1
         }

@@ -49,7 +49,7 @@ extension AutomationPage {
                         tickStart: 0, tickEnd: UInt32(max(0, plotWidth)),
                         y: y, height: rule, argb: gridSub2Argb, flags: 3))
             }
-            let tickLength = Typography(baseFontPx: Int(baseFontPx.rounded())).space(.half) * 3
+            let tickLength = typography.space(.half) * 3
             for label in lane.scaleLabels {
                 axisRects.append(
                     DrawerStaticRect(
@@ -158,7 +158,7 @@ extension AutomationPage {
                         height: 1, argb: ink))
             }
         }
-        syncNodeRows(previewNodes, draftNodes)
+        syncRetained(previewNodes, draftNodes, make: AutomationNodeHandle.init, update: { $0.update($1) })
         // Viewport-space lists through the Task 6a builders; record order is
         // the paint order inside each list, matching the legacy layer order.
         let viewport = CGSize(width: plotWidth, height: plotHeight)

@@ -77,8 +77,8 @@ private func typographyLayoutCheckRoles(_ report: CheckReport) {
                 cppID: typographyLayoutFaceID,
                 message: "\(name) at base \(base) preserves its family, size, weight and spacing")
             report.expect(
-                spec.map["hintingPreference"] as? Int == fontPreferNoHinting
-                    && spec.features["tnum"] as? Int == 1,
+                spec.qmlFont.hintingPreference == .preferNoHinting
+                    && spec.qmlFont.features["tnum"] == 1,
                 cppID: typographyLayoutFeaturesID,
                 message: "\(name) at base \(base) publishes no hinting and tabular figures")
             report.expect(
@@ -372,14 +372,14 @@ private func typographyLayoutCheckFaceContracts(_ report: CheckReport) {
         GridFontKind.keyLabel,
     ] {
         report.expect(
-            unhinted[kind]?.map["hintingPreference"] as? Int == fontPreferNoHinting,
+            unhinted[kind]?.qmlFont.hintingPreference == .preferNoHinting,
             cppID: typographyLayoutFaceID,
-            message: "the published face map pins the unhinted preference")
+            message: "the published face font pins the unhinted preference")
     }
     report.expect(
-        Typography(baseFontPx: 16).noteName.map["hintingPreference"] as? Int == fontPreferNoHinting,
+        Typography(baseFontPx: 16).noteName.qmlFont.hintingPreference == .preferNoHinting,
         cppID: typographyLayoutFaceID,
-        message: "the note-name role map pins the unhinted preference")
+        message: "the note-name role font pins the unhinted preference")
     report.expect(
         AutomationPage(baseFontPx: 16).captionFont.hintingPreference == .preferNoHinting,
         cppID: typographyLayoutFaceID,
@@ -401,22 +401,19 @@ private func typographyLayoutCheckTabularFeatures(_ report: CheckReport) {
         return
     }
     report.expect(
-        chip.features["tnum"] as? Int == 1, cppID: typographyLayoutFeaturesID,
+        chip.qmlFont.features["tnum"] == 1, cppID: typographyLayoutFeaturesID,
         message: "the spec enables tabular figures")
-    let emissionMatches: Bool = {
-        guard let emitted = chip.map["features"] else { return false }
-        return String(describing: emitted) == String(describing: chip.features)
-    }()
+    let emissionMatches = chip.qmlFont.features == ["tnum": 1]
     report.expect(
         emissionMatches,
         cppID: typographyLayoutFeaturesID,
-        message: "the QML map emits the tabular feature")
+        message: "the QML font emits the tabular feature")
     let faces = GridTypography.fonts(
         metrics: GridMetrics(baseFontPx: 16, dpr: 1, width: 0, height: 0),
         typography: Typography(baseFontPx: 16))
     for kind in [GridFontKind.ruler, GridFontKind.beat, GridFontKind.bold] {
         report.expect(
-            faces[kind]?.features["tnum"] as? Int == 1, cppID: typographyLayoutFeaturesID,
+            faces[kind]?.qmlFont.features["tnum"] == 1, cppID: typographyLayoutFeaturesID,
             message: "the mono face enables tabular figures")
     }
     let measured = NativeFontMetrics(chip)

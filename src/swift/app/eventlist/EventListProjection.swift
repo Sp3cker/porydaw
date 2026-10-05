@@ -3,7 +3,13 @@ import PorydawCore
 
 /// Display, editor and flag values published together for one event-list row.
 public struct EventListPublishedValues: Equatable, Sendable {
-    public var rowKind: Int = 0
+    public var row: Int = -1
+    public var eventIndex: Int = -1
+    public var tick: Int = 0
+    public var typeKind: Int = EventListEventType.endOfTrack.rawValue
+    public var isEndOfTrack: Bool = false
+    public var selected: Bool = false
+    public var rowKind: Int = -1
     public var rowTint: String = ""
     public var editableMask: Int = 0
     public var c0: String = ""
@@ -15,14 +21,23 @@ public struct EventListPublishedValues: Equatable, Sendable {
     public var c6: String = ""
     public var editType: String = ""
     public var editData: String = ""
+
+    public init() {}
 }
 
 /// The seven visible table values are derived from the same row snapshot used
 /// for selection, editing, and the playhead. No QML copy owns MIDI data.
 extension EventListModel {
     /// Projects display, edit and flag values from one retained row snapshot.
-    public func publishedValues(for item: EventListRow) -> EventListPublishedValues {
+    public func publishedValues(for item: EventListRow, selected: Bool) -> EventListPublishedValues {
         var values = EventListPublishedValues()
+        values.row = item.index
+        values.eventIndex = item.eventIndex ?? -1
+        values.tick = Int(item.tick)
+        values.typeKind = item.typeKind
+        values.isEndOfTrack = item.isEndOfTrack
+        values.selected = selected
+        values.rowKind = 0
         values.c0 = String(item.tick)
         values.rowTint = item.index == playRow ? Self.playheadTint : ""
         values.editableMask = Self.editableMask(for: item)

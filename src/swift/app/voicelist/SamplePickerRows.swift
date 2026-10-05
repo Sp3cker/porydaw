@@ -10,24 +10,22 @@ public final class SamplePickerRow {
     public var typed: Bool = false
     public var loops: Bool = false
     public var detail: String = ""
+    @QtIgnored var current = SamplePickerEntry()
     @QtIgnored
     func apply(_ value: SamplePickerEntry) -> Bool {
-        let changed =
-            symbol != value.symbol || label != value.label
-            || split != value.split || typed != value.typed
-            || loops != value.loops || detail != value.detail
-        guard changed else { return false }
-        setPublished(symbol, value.symbol) { symbol = $0 }
-        setPublished(label, value.label) { label = $0 }
-        setPublished(split, value.split) { split = $0 }
-        setPublished(typed, value.typed) { typed = $0 }
-        setPublished(loops, value.loops) { loops = $0 }
-        setPublished(detail, value.detail) { detail = $0 }
+        guard current != value else { return false }
+        current = value
+        publish(\.symbol, value.symbol)
+        publish(\.label, value.label)
+        publish(\.split, value.split)
+        publish(\.typed, value.typed)
+        publish(\.loops, value.loops)
+        publish(\.detail, value.detail)
         return true
     }
 }
 
-struct SamplePickerEntry {
+struct SamplePickerEntry: Equatable {
     var symbol = ""
     var label = ""
     var split = false
@@ -88,22 +86,14 @@ extension VoiceListController {
                 SamplePickerEntry(
                     symbol: query, label: "Use \"\(query)\"", typed: true, detail: "Unlisted symbol"))
         }
-        samplePickerRows.update {
-            for (index, value) in entries.enumerated() {
-                if index < samplePickerRows.count {
-                    let row = samplePickerRows[index]
-                    if row.apply(value) { samplePickerRows[index] = row }
-                } else {
-                    let row = SamplePickerRow()
-                    _ = row.apply(value)
-                    samplePickerRows.append(row)
-                }
-            }
-            if samplePickerRows.count > entries.count {
-                samplePickerRows.removeSubrange(entries.count..<samplePickerRows.count)
-            }
-        }
-        setPublished(samplePickerCount, entries.count) { samplePickerCount = $0 }
+        syncRetained(
+            samplePickerRows, entries,
+            make: {
+                let row = SamplePickerRow()
+                _ = row.apply($0)
+                return row
+            }, update: { $0.apply($1) })
+        publish(\.samplePickerCount, entries.count)
     }
 
     static func sampleDisplayName(_ symbol: String) -> String {

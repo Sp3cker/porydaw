@@ -82,13 +82,10 @@ extension GridScene {
         // The carrier's width hands drawer delegates the same-turn zoom scale.
         let value = SceneRectValue(
             x: snapshot.scrollX, y: snapshot.scrollY, width: snapshot.pixelsPerTick, height: 0,
-            fillColor: QmlColor(red: 0, green: 0, blue: 0, alpha: 0))
-        if cameraScroll.count == 0 {
-            cameraScroll.append(SceneRect(value))
-        } else {
-            let row = cameraScroll[0]
-            if row.update(value) { cameraScroll[0] = row }
-        }
+            fillColor: .clear)
+        syncRetained(
+            cameraScroll, CollectionOfOne(value),
+            make: SceneRect.init, update: { $0.update($1) })
         rebuildHover(input)
     }
 }

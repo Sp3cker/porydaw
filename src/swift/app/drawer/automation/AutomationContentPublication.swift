@@ -109,14 +109,14 @@ extension AutomationPage {
         }
         tabSnapshots = values
         if tabCount != values.count { tabCount = values.count }
-        syncTabs(values)
+        syncModel(tabs, values, matches: { $0.matches($1) })
     }
 
     /// Publishes the value labels, ghost names and active node handles.
     func publishContent(_ session: DocumentSession?) {
         guard let session, let lane = projection else {
-            syncTexts(ghostNameLabels, [])
-            syncTexts(valueLabels, [])
+            syncRetained(ghostNameLabels, [SceneTextValue](), make: SceneText.init, update: { $0.update($1) })
+            syncRetained(valueLabels, [SceneTextValue](), make: SceneText.init, update: { $0.update($1) })
             syncNodes([])
             return
         }
@@ -148,8 +148,8 @@ extension AutomationPage {
     /// left edge and curve-true height.
     func publishValueAxis(_ lane: AutomationLaneProjection) {
         let height = captionMetrics?.height ?? fontPx(baseFontPx, 1)
-        let pad = Typography(baseFontPx: Int(baseFontPx.rounded())).space(.one)
-        let font = Typography(baseFontPx: Int(baseFontPx.rounded())).caption.qmlFont
+        let pad = typography.space(.one)
+        let font = typography.caption.qmlFont
         var labels: [SceneTextValue] = []
         for label in lane.scaleLabels {
             let width = max(
@@ -162,7 +162,7 @@ extension AutomationPage {
                     text: label.text, color: palette.primaryText,
                     font: font))
         }
-        syncTexts(valueLabels, labels)
+        syncRetained(valueLabels, labels, make: SceneText.init, update: { $0.update($1) })
     }
 
     /// The active parameter's nodes and origin phantom, minus those a live draw

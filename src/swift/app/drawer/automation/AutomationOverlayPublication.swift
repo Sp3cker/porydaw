@@ -42,7 +42,9 @@ extension AutomationPage {
         for (index, node) in nodeSnapshots.enumerated() {
             let hovered = hoveredTick == node.tick
             if node.hovered != hovered {
-                node.hovered = hovered
+                var value = node.current
+                value.hovered = hovered
+                _ = node.update(value)
                 nodes[index] = node
             }
         }
@@ -149,7 +151,7 @@ extension AutomationPage {
         let height = captionMetrics?.height ?? fontPx(baseFontPx, 1)
         let pad = fontPx(baseFontPx, 0.5)
         let projected = ghostProjections(session)
-        let font = Typography(baseFontPx: Int(baseFontPx.rounded())).caption.qmlFont
+        let font = typography.caption.qmlFont
         var labels: [SceneTextValue] = []
         for (index, lane) in projected.enumerated() {
             guard let value = lane.heldValue(at: lane.points.last?.tick ?? 0),
@@ -171,7 +173,7 @@ extension AutomationPage {
                     rect: (max(0, plotWidth - width - pad), y, width, height),
                     text: text, color: palette.primaryText, font: font))
         }
-        syncTexts(ghostNameLabels, labels)
+        syncRetained(ghostNameLabels, labels, make: SceneText.init, update: { $0.update($1) })
     }
 
     func hoverGhostRect(
@@ -260,7 +262,7 @@ extension AutomationPage {
     func publishMenuRows() {
         let values = menu?.rows ?? []
         menuRowSnapshots = values
-        syncMenuRows(values)
+        syncModel(menuRows, values, matches: { $0.matches($1) })
         menuRowCount = values.count
         let children: [AutomationMenuRowHandle] =
             menu.flatMap { state in
@@ -284,15 +286,15 @@ extension AutomationPage {
     }
 
     func publishTypography() {
-        let typography = Typography(baseFontPx: Int(baseFontPx.rounded()))
+        typography = Typography(baseFontPx: Int(baseFontPx.rounded()))
         captionMetrics = AutomationCaption(font: typography.caption)
         titleMetrics = AutomationCaption(font: typography.captionBold)
         noteNameMetrics = AutomationCaption(font: typography.noteName)
-        setPublished(captionFont, typography.caption.qmlFont) { captionFont = $0 }
-        setPublished(titleFont, typography.captionBold.qmlFont) { titleFont = $0 }
-        setPublished(noteNameFont, typography.noteName.qmlFont) { noteNameFont = $0 }
-        setPublished(minimumFont, typography.captionMinimum.qmlFont) { minimumFont = $0 }
-        setPublished(selectorInset, Double(typography.space(.one))) { selectorInset = $0 }
+        publish(\.captionFont, typography.caption.qmlFont)
+        publish(\.titleFont, typography.captionBold.qmlFont)
+        publish(\.noteNameFont, typography.noteName.qmlFont)
+        publish(\.minimumFont, typography.captionMinimum.qmlFont)
+        publish(\.selectorInset, Double(typography.space(.one)))
         refreshPromptStyles()
         promptInputWidth = typography.fontPx(16)
         pipExtent = Double(typography.fontPx(0.5))
@@ -300,7 +302,6 @@ extension AutomationPage {
     }
 
     func refreshPromptStyles() {
-        let typography = Typography(baseFontPx: Int(baseFontPx.rounded()))
         let metrics = PromptAppearance.Layout(base: baseFontPx)
         promptStyle.update(
             metrics: metrics, palette: palette, font: typography.body.qmlFont,
@@ -331,10 +332,10 @@ extension AutomationPage {
         _ rect: SceneRect,
         _ value: (x: Double, y: Double, width: Double, height: Double)
     ) {
-        setPublished(rect.x, value.x) { rect.x = $0 }
-        setPublished(rect.y, value.y) { rect.y = $0 }
-        setPublished(rect.width, value.width) { rect.width = $0 }
-        setPublished(rect.height, value.height) { rect.height = $0 }
+        _ = rect.update(
+            SceneRectValue(
+                x: value.x, y: value.y, width: value.width, height: value.height,
+                fillColor: rect.fillColor, primitiveName: rect.primitiveName))
     }
 
     static func identityText(_ identity: AutomationPointIdentity) -> String {
@@ -343,36 +344,8 @@ extension AutomationPage {
 
     // MARK: Internals: model synchronisation
 
-    func syncTexts(_ model: QListModel<SceneText>, _ texts: [SceneTextValue]) {
-        model.update {
-            let common = min(model.count, texts.count)
-            for index in 0..<common {
-                let row = model[index]
-                if row.update(texts[index]) { model[index] = row }
-            }
-            if model.count > texts.count {
-                model.replaceSubrange(texts.count..<model.count, with: [])
-            } else {
-                for index in common..<texts.count {
-                    model.replaceSubrange(
-                        model.count..<model.count, with: CollectionOfOne(SceneText(texts[index])))
-                }
-            }
-        }
-    }
-
-    func syncTabs(_ values: [AutomationTabHandle]) {
-        let common = min(tabs.count, values.count)
-        for index in 0..<common where !tabs[index].matches(values[index]) {
-            tabs[index] = values[index]
-        }
-        if tabs.count != values.count {
-            tabs.replaceSubrange(common..<tabs.count, with: values[common...])
-        }
-    }
-
     func syncNodes(_ values: [AutomationNodeValue]) {
-        syncNodeRows(nodes, values)
+        syncRetained(nodes, values, make: AutomationNodeHandle.init, update: { $0.update($1) })
         if nodeCount != values.count { nodeCount = values.count }
         if nodeSnapshots.count > values.count {
             nodeSnapshots.removeSubrange(values.count..<nodeSnapshots.count)
@@ -380,34 +353,6 @@ extension AutomationPage {
             for index in nodeSnapshots.count..<values.count {
                 nodeSnapshots.append(nodes[index])
             }
-        }
-    }
-
-    func syncNodeRows(_ model: QListModel<AutomationNodeHandle>, _ values: [AutomationNodeValue]) {
-        model.update {
-            let common = min(model.count, values.count)
-            for index in 0..<common {
-                let row = model[index]
-                if row.update(values[index]) { model[index] = row }
-            }
-            if model.count > values.count {
-                model.replaceSubrange(values.count..<model.count, with: [])
-            } else {
-                for index in common..<values.count {
-                    model.replaceSubrange(
-                        model.count..<model.count, with: CollectionOfOne(AutomationNodeHandle(values[index])))
-                }
-            }
-        }
-    }
-
-    func syncMenuRows(_ values: [AutomationMenuRowHandle]) {
-        let common = min(menuRows.count, values.count)
-        for index in 0..<common where !menuRows[index].matches(values[index]) {
-            menuRows[index] = values[index]
-        }
-        if menuRows.count != values.count {
-            menuRows.replaceSubrange(common..<menuRows.count, with: values[common...])
         }
     }
 

@@ -3,9 +3,7 @@ import QtBridge
 
 // MARK: - Published records
 
-/// One published selector tab: the parameter's label, whether it is the active
-/// one, whether its curve is pinned as a ghost, whether the shared selection
-/// covers it, and its own event count.
+/// One selector tab's label, active/ghost/selection state, availability and count.
 @MainActor
 @QtBridgeable
 public final class AutomationTabHandle {
@@ -30,7 +28,7 @@ public final class AutomationTabHandle {
     }
 }
 
-struct AutomationNodeValue {
+struct AutomationNodeValue: Equatable {
     var x: Double = 0
     var y: Double = 0
     var tick: Double = 0
@@ -38,8 +36,8 @@ struct AutomationNodeValue {
     var radius: Double = 0
     var ringRadius: Double = 0
     var outlineWidth: Double = 0
-    var outlineColor: QmlColor = PaletteMath.qmlColor(argb: 0)
-    var ringColor: QmlColor = PaletteMath.qmlColor(argb: 0)
+    var outlineColor: QmlColor = .clear
+    var ringColor: QmlColor = .clear
     var selected: Bool = false
     var hovered: Bool = false
     var projected: Bool = false
@@ -60,8 +58,8 @@ public final class AutomationNodeHandle {
     public var radius: Double = 0
     public var ringRadius: Double = 0
     public var outlineWidth: Double = 0
-    public var outlineColor: QmlColor = PaletteMath.qmlColor(argb: 0)
-    public var ringColor: QmlColor = PaletteMath.qmlColor(argb: 0)
+    public var outlineColor: QmlColor = .clear
+    public var ringColor: QmlColor = .clear
     public var selected: Bool = false
     public var hovered: Bool = false
     /// The synthetic engine-default node rather than a written occurrence.
@@ -78,7 +76,7 @@ public final class AutomationNodeHandle {
     public var ringOuterRadius: Double = 0
     public var hoverOuterRadius: Double = 0
 
-    private var pointIdentity: AutomationPointIdentity?
+    @QtIgnored var current = AutomationNodeValue()
 
     @QtIgnored
     convenience init(_ value: AutomationNodeValue) {
@@ -88,37 +86,29 @@ public final class AutomationNodeHandle {
 
     @QtIgnored
     func update(_ next: AutomationNodeValue) -> Bool {
-        guard
-            x != next.x || y != next.y || tick != next.tick || value != next.value
-                || radius != next.radius || ringRadius != next.ringRadius
-                || outlineWidth != next.outlineWidth || outlineColor != next.outlineColor
-                || ringColor != next.ringColor || selected != next.selected || hovered != next.hovered
-                || projected != next.projected || phantom != next.phantom
-                || pointIdentity != next.identity || primitiveName != next.primitiveName
-        else { return false }
-        setPublished(x, next.x) { x = $0 }
-        setPublished(y, next.y) { y = $0 }
-        setPublished(tick, next.tick) { tick = $0 }
-        setPublished(value, next.value) { value = $0 }
-        setPublished(radius, next.radius) { radius = $0 }
-        setPublished(ringRadius, next.ringRadius) { ringRadius = $0 }
-        setPublished(outlineWidth, next.outlineWidth) { outlineWidth = $0 }
-        setPublished(outlineColor, next.outlineColor) { outlineColor = $0 }
-        setPublished(ringColor, next.ringColor) { ringColor = $0 }
-        setPublished(selected, next.selected) { selected = $0 }
-        setPublished(hovered, next.hovered) { hovered = $0 }
-        setPublished(projected, next.projected) { projected = $0 }
-        setPublished(phantom, next.phantom) { phantom = $0 }
-        setPublished(primitiveName, next.primitiveName) { primitiveName = $0 }
-        setPublished(outerRadius, next.radius + next.outlineWidth) { outerRadius = $0 }
-        setPublished(ringWidth, next.outlineWidth * 12.0 / 5.0) { ringWidth = $0 }
-        setPublished(ringOuterRadius, next.ringRadius + next.outlineWidth * 6.0 / 5.0) {
-            ringOuterRadius = $0
-        }
-        setPublished(hoverOuterRadius, next.radius + next.outlineWidth + 2) { hoverOuterRadius = $0 }
-        if pointIdentity != next.identity {
-            pointIdentity = next.identity
-            identity = next.identity.map(AutomationPage.identityText) ?? ""
+        guard current != next else { return false }
+        let identityChanged = current.identity != next.identity
+        current = next
+        publish(\.x, next.x)
+        publish(\.y, next.y)
+        publish(\.tick, next.tick)
+        publish(\.value, next.value)
+        publish(\.radius, next.radius)
+        publish(\.ringRadius, next.ringRadius)
+        publish(\.outlineWidth, next.outlineWidth)
+        publish(\.outlineColor, next.outlineColor)
+        publish(\.ringColor, next.ringColor)
+        publish(\.selected, next.selected)
+        publish(\.hovered, next.hovered)
+        publish(\.projected, next.projected)
+        publish(\.phantom, next.phantom)
+        publish(\.primitiveName, next.primitiveName)
+        publish(\.outerRadius, next.radius + next.outlineWidth)
+        publish(\.ringWidth, next.outlineWidth * 12.0 / 5.0)
+        publish(\.ringOuterRadius, next.ringRadius + next.outlineWidth * 6.0 / 5.0)
+        publish(\.hoverOuterRadius, next.radius + next.outlineWidth + 2)
+        if identityChanged {
+            publish(\.identity, next.identity.map(AutomationPage.identityText) ?? "")
         }
         return true
     }
@@ -187,16 +177,16 @@ public final class AutomationHoverDisplay {
         nodeTick: Double = 0, guideX: Double = 0, ghostY: Double = 0,
         hasGhost: Bool = false, rect: (x: Double, y: Double, width: Double, height: Double) = (0, 0, 0, 0)
     ) {
-        setPublished(self.visible, visible) { self.visible = $0 }
-        setPublished(self.text, text) { self.text = $0 }
-        setPublished(self.hasNode, hasNode) { self.hasNode = $0 }
-        setPublished(self.nodeTick, nodeTick) { self.nodeTick = $0 }
-        setPublished(self.guideX, guideX) { self.guideX = $0 }
-        setPublished(self.ghostY, ghostY) { self.ghostY = $0 }
-        setPublished(self.hasGhost, hasGhost) { self.hasGhost = $0 }
-        setPublished(x, rect.x) { x = $0 }
-        setPublished(y, rect.y) { y = $0 }
-        setPublished(width, rect.width) { width = $0 }
-        setPublished(height, rect.height) { height = $0 }
+        publish(\.visible, visible)
+        publish(\.text, text)
+        publish(\.hasNode, hasNode)
+        publish(\.nodeTick, nodeTick)
+        publish(\.guideX, guideX)
+        publish(\.ghostY, ghostY)
+        publish(\.hasGhost, hasGhost)
+        publish(\.x, rect.x)
+        publish(\.y, rect.y)
+        publish(\.width, rect.width)
+        publish(\.height, rect.height)
     }
 }
