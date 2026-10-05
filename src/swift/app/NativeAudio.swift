@@ -1,13 +1,14 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import PorydawPlayback
+import PorydawProject
 import PorydawPlaybackNative
 import PorydawAudioDeviceNative
 import PorydawAppAudio
 
 public enum NativeAudioError: Error, Equatable, Sendable {
     case initializationFailed(String)
-    case bindFailed
     case publishFailed
 }
 
@@ -16,7 +17,7 @@ public enum NativeAudioError: Error, Equatable, Sendable {
 @MainActor
 public final class NativeAudio {
     private let device: AudioDevice
-    private var bankLease: NativeBankLease?
+    private var bankLease: ProjectBankLease?
     private var engineSettings = AudioSettings()
 
     public init() async throws {
@@ -75,19 +76,18 @@ public final class NativeAudio {
     public var polyLostTotal: UInt64 { device.renderer.polyLostTotal }
 
     public func bind(
-        timeline: PlaybackTimeline, bank: NativeBankLease,
+        timeline: PlaybackTimeline, bank: ProjectBankLease,
         config: SongConfig
-    ) throws {
-        try bind(timeline: timeline, bank: bank, settings: songSettings(for: config))
+    ) {
+        bind(timeline: timeline, bank: bank, settings: songSettings(for: config))
     }
 
     public func bind(
-        timeline: PlaybackTimeline, bank: NativeBankLease,
+        timeline: PlaybackTimeline, bank: ProjectBankLease,
         settings: AudioSettings
-    ) throws {
-        let voices = try Self.borrowVoices(bank)
+    ) {
         device.withRenderingStopped {
-            device.renderer.bind(timeline: timeline, voicegroup: voices, settings: settings)
+            device.renderer.bind(timeline: timeline, voicegroup: bank.engineVoices, settings: settings)
             bankLease = bank
         }
     }
@@ -117,10 +117,9 @@ public final class NativeAudio {
         if let config, songLoaded { updateSettings(config: config) }
     }
 
-    public func updateVoicegroup(_ bank: NativeBankLease) throws {
-        let voices = try Self.borrowVoices(bank)
+    public func updateVoicegroup(_ bank: ProjectBankLease) {
         device.withRenderingStopped {
-            device.renderer.updateVoicegroup(voices)
+            device.renderer.updateVoicegroup(bank.engineVoices)
             bankLease = bank
         }
     }
@@ -179,15 +178,5 @@ public final class NativeAudio {
 
     public func songSettings(for config: SongConfig) -> AudioSettings {
         engineSettings.applyingSong(config)
-    }
-
-    /// Borrow the lease's pinned external allocation through its typed native API.
-    /// Derive the stored-field address from the compiler, not a copied Swift tuple
-    /// or an assumed C layout. The engine only reads this mutable library borrow.
-    private static func borrowVoices(_ bank: NativeBankLease) throws -> UnsafeMutablePointer<ToneData>? {
-        guard MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices) != nil else {
-            throw NativeAudioError.bindFailed
-        }
-        return bank.withVoices { $0 }
     }
 }

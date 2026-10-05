@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 // Existing scenarios paired with automationcanvaslayout.cpp.
 // Entry order remains in AutomationPageChecks.swift.
@@ -74,10 +75,10 @@ func drawerAutomationHitGeometry(
     // The half-open cell rule: a tick on a boundary belongs to the cell starting
     // there, and the song's end never starts another cell.
     let projection = AutomationProjection(
-        camera: fixture.session.camera,
+        camera: fixture.viewport.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: fixture.page.geometry,
-        snapPolicy: AutomationProjectionCache().snapPolicy(session: fixture.session, font: 13, dpr: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(viewport: fixture.viewport, font: 13, dpr: 1),
         songEndTick: fixture.songEndTick)
     let cell = projection.cell(atRawTick: 48)
     report.expect(
@@ -127,7 +128,7 @@ func drawerAutomationMiddlePanIsolation(
     let page = fixture.page
     let before = fixture.snapshot
     let cursorBefore = fixture.session.editCursor
-    let scrollBefore = fixture.session.camera.snapshot.scrollX
+    let scrollBefore = fixture.viewport.camera.snapshot.scrollX
     report.expect(
         page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle),
         cppID: id, message: "a middle press starts the pan")
@@ -146,7 +147,7 @@ func drawerAutomationMiddlePanIsolation(
         message: "a middle pan never previews the pan lane as a range")
     _ = page.pointerMove(x: 52, y: 60, buttons: AutomationQtButton.middle)
     report.expectEqual(
-        expected: scrollBefore + 48, actual: fixture.session.camera.snapshot.scrollX, cppID: id,
+        expected: scrollBefore + 48, actual: fixture.viewport.camera.snapshot.scrollX, cppID: id,
         what: "the pan scrolls the shared camera by the travel")
     report.expectEqual(
         expected: before, actual: fixture.snapshot, cppID: id,
@@ -229,8 +230,8 @@ func drawerAutomationViewStatePreservation(
     let page = fixture.page
     let bendRange = AutomationParameter.controlChange(
         track: 0, controller: TimeDefaults.ccBendRange)
-    let grid = fixture.session.grid
-    let camera = fixture.session.camera
+    let grid = fixture.viewport.grid
+    let camera = fixture.viewport.camera
     let gridAt48 = grid.gridTicksAt(48, camera: camera)
     let snapAt48 = grid.snapTicksAt(48, camera: camera)
     let snapped30 = grid.snapTick(30, camera: camera)
@@ -249,37 +250,37 @@ func drawerAutomationViewStatePreservation(
         page.activateParameter(index: emptyLane), cppID: drawerAutomationLayoutID,
         message: "the empty BendRange lane is activated before grid comparison")
     report.expectEqual(
-        expected: gridAt48, actual: grid.gridTicksAt(48, camera: fixture.session.camera),
+        expected: gridAt48, actual: grid.gridTicksAt(48, camera: fixture.viewport.camera),
         cppID: drawerAutomationLayoutID,
         what: "empty BendRange activation preserves gridTicksAt tick 48")
     report.expectEqual(
-        expected: snapAt48, actual: grid.snapTicksAt(48, camera: fixture.session.camera),
+        expected: snapAt48, actual: grid.snapTicksAt(48, camera: fixture.viewport.camera),
         cppID: drawerAutomationLayoutID,
         what: "empty BendRange activation preserves snapTicksAt tick 48")
     report.expectEqual(
-        expected: snapped30, actual: grid.snapTick(30, camera: fixture.session.camera),
+        expected: snapped30, actual: grid.snapTick(30, camera: fixture.viewport.camera),
         cppID: drawerAutomationLayoutID,
         what: "empty BendRange activation preserves the snap at tick 30")
     report.expectEqual(
-        expected: spacing, actual: grid.snapTicksAt(snapped30, camera: fixture.session.camera),
+        expected: spacing, actual: grid.snapTicksAt(snapped30, camera: fixture.viewport.camera),
         cppID: drawerAutomationLayoutID,
         what: "empty BendRange activation preserves snapped-tick spacing")
     report.expectEqual(
         expected: snapped30,
         actual: grid.snapTick(
             Double(snapped30) + 0.1 * Double(spacing),
-            camera: fixture.session.camera), cppID: drawerAutomationLayoutID,
+            camera: fixture.viewport.camera), cppID: drawerAutomationLayoutID,
         what: "empty BendRange activation keeps the 0.1-spacing snap")
     report.expectEqual(
         expected: snapped30,
         actual: grid.snapTick(
             Double(snapped30) + 0.4 * Double(spacing),
-            camera: fixture.session.camera), cppID: drawerAutomationLayoutID,
+            camera: fixture.viewport.camera), cppID: drawerAutomationLayoutID,
         what: "empty BendRange activation keeps the 0.4-spacing snap")
     report.expect(
         grid.snapTick(
             Double(snapped30) + 1.1 * Double(spacing),
-            camera: fixture.session.camera) != snapped30,
+            camera: fixture.viewport.camera) != snapped30,
         cppID: drawerAutomationLayoutID,
         message: "empty BendRange activation moves the 1.1-spacing snap")
     report.expect(
@@ -292,7 +293,7 @@ func drawerAutomationViewStatePreservation(
     let before = fixture.snapshot
     let cursorBefore = fixture.session.editCursor
     page.detach()
-    page.attach(session: fixture.session, palette: GridPalette())
+    page.attach(viewport: fixture.viewport, palette: GridPalette())
     report.expectEqual(
         expected: fixture.volumeLane, actual: page.activeParameter, cppID: id,
         what: "the active parameter survives a page switch")

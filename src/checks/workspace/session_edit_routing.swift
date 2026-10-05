@@ -3,6 +3,7 @@ import Foundation
 import PorydawAppCommands
 import PorydawCore
 import PorydawCoreCheckNative
+@testable import PorydawDocument
 
 @MainActor
 internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
@@ -86,12 +87,13 @@ internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
             "real routing song needs two populated tracks and encodable bytes")
         return
     }
-    let grid = PianoGrid(session: session)
+    let viewport = DocumentViewport(session: session)
+    let grid = PianoGrid(viewport: viewport)
     let page = AutomationPage()
-    page.attach(session: session, palette: GridPalette())
+    page.attach(viewport: viewport, palette: GridPalette())
     defer { page.detach() }
     session.onChange = { [weak page] _ in page?.refreshFromDocument() }
-    let ruler = RulerMenuPresenter(session: session, grid: grid, automation: page)
+    let ruler = RulerMenuPresenter(viewport: viewport, grid: grid, automation: page)
     let router = EditorCommandRouter(session: session, grid: grid, automation: page, rulerMenu: ruler)
     let savedClipboard = drawerAutomationPorydawSelectionClipboardState()
     defer { savedClipboard.restore() }
@@ -243,7 +245,7 @@ internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
 
     session.editCursor = span
     ruler.captureRulerPress(
-        contentX: session.camera.contentX(tick: 0),
+        contentX: viewport.camera.contentX(tick: 0),
         pointerY: grid.rulerHeight * 0.75)
     ruler.openRulerAtRelease()
     report.expect(
@@ -282,7 +284,7 @@ internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
         cppID: rulerID, message: "one undo leaves the inactive song bytes identical")
 
     ruler.captureRulerPress(
-        contentX: session.camera.contentX(tick: 0),
+        contentX: viewport.camera.contentX(tick: 0),
         pointerY: grid.rulerHeight * 0.75)
     ruler.openRulerAtRelease()
     _ = ruler.activate(actionId: 1)
@@ -295,7 +297,7 @@ internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
             && (try? document.state.file.encoded()) == original,
         cppID: insertID, message: "zero-span prompt acceptance changes neither bytes nor history")
     ruler.captureRulerPress(
-        contentX: session.camera.contentX(tick: 0),
+        contentX: viewport.camera.contentX(tick: 0),
         pointerY: grid.rulerHeight * 0.75)
     ruler.openRulerAtRelease()
     _ = ruler.activate(actionId: 1)
@@ -306,11 +308,11 @@ internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {
         cppID: insertID, message: "cancelling the standalone prompt preserves the song")
     let snapRaw = Double(note.tick)
     ruler.captureRulerPress(
-        contentX: session.camera.contentX(tick: snapRaw),
+        contentX: viewport.camera.contentX(tick: snapRaw),
         pointerY: grid.rulerHeight * 0.75)
     ruler.openRulerAtRelease()
     report.expect(
-        ruler.isOpen && session.editCursor == session.grid.snapTick(snapRaw, camera: session.camera),
+        ruler.isOpen && session.editCursor == viewport.grid.snapTick(snapRaw, camera: viewport.camera),
         cppID: rulerID, message: "the ruler press commits the snapped production cursor")
 
     page.applyTimeSelection(AutomationTimeSelection(range: range, scope: .tracks([firstTrack])))

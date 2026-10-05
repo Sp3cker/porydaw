@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 // Existing scenarios paired with automationpointmenus.cpp.
 // Entry order remains in AutomationPageChecks.swift.
@@ -649,7 +650,7 @@ func drawerAutomationSharedPopupArbitration(
         return
     }
     let presenters = WorkspacePresenterFixture(
-        session: fixture.session, audio: audio,
+        viewport: fixture.viewport, audio: audio,
         callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
             revealTrackVoiceRequested: { _ in },

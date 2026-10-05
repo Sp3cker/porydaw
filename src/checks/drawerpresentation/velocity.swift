@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 @MainActor
 func drawerVelocityValueAxisLadder(_ report: CheckReport) {
@@ -277,11 +278,12 @@ func drawerVelocityKeysplitPerNoteMapping(
     let splitSession = DocumentSession(
         document: document, service: fixtureService,
         lease: loaded.split.bank, slots: loaded.split.bankSlots,
-        dirty: loaded.split.bankDirty, loadName: loaded.split.bankLoadName,
+        dirty: loaded.split.bank.dirty, loadName: loaded.split.bank.loadName,
         sampleRate: 48_000)
     splitSession.selectedTrack = 0
     let page = VelocityPage(baseFontPx: 13)
-    page.attach(session: splitSession, palette: GridPalette())
+    let splitViewport = DocumentViewport(session: splitSession)
+    page.attach(viewport: splitViewport, palette: GridPalette())
     page.configureBody(
         width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1,
         baseFontPx: 13, dragDistance: 10)
@@ -346,6 +348,7 @@ func drawerVelocityKeysplitPerNoteMapping(
             && document.note(notes[1].id)?.velocity == notes[1].velocity,
         cppID: drawerVelocityKeysplitID, message: "one undo restores both captured values")
     page.detach()
+    withExtendedLifetime(splitViewport) {}
 
     let invalidDocument = SongDocument(
         file: drawerVelocityVelocityPageFixture(),
@@ -355,11 +358,12 @@ func drawerVelocityKeysplitPerNoteMapping(
     let invalidSession = DocumentSession(
         document: invalidDocument, service: fixtureService,
         lease: loaded.unsupported.bank, slots: loaded.unsupported.bankSlots,
-        dirty: loaded.unsupported.bankDirty,
-        loadName: loaded.unsupported.bankLoadName,
+        dirty: loaded.unsupported.bank.dirty,
+        loadName: loaded.unsupported.bank.loadName,
         sampleRate: 48_000)
     invalidSession.selectedTrack = 0
-    page.attach(session: invalidSession, palette: GridPalette())
+    let invalidViewport = DocumentViewport(session: invalidSession)
+    page.attach(viewport: invalidViewport, palette: GridPalette())
     report.expect(
         page.contextUnsupported, cppID: drawerVelocityKeysplitID,
         message: "the invalid bank context advertises that velocity editing is unavailable")
@@ -377,4 +381,5 @@ func drawerVelocityKeysplitPerNoteMapping(
         cppID: drawerVelocityKeysplitID,
         message: "dragging an unsupported velocity context cannot change notes or history")
     page.detach()
+    withExtendedLifetime(invalidViewport) {}
 }

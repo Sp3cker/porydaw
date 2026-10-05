@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppAudio
 import PorydawCore
+import PorydawDocument
 
 private enum ExportCheckError: Error {
     case failed(String)
@@ -136,11 +137,9 @@ internal func runExportChecks(_ report: CheckReport) {
             cppID: "exportcheck/MidiExportTest::durationCalculationMatchesRenderParity",
             message: "S004: production totals equal independent expected frame count")
         let path = fixture.scratch.appendingPathComponent("parity.wav")
-        let result = try fixture.song.bank.withVoices { voices in
-            try WavExport.render(
-                to: path.path, timeline: fixture.timeline, voices: voices,
-                settings: fixture.settings, options: exportOptions, progress: { _ in true })
-        }
+        let result = try WavExport.render(
+            to: path.path, timeline: fixture.timeline, voices: fixture.song.bank.engineVoices,
+            settings: fixture.settings, options: exportOptions, progress: { _ in true })
         try exportRequire(result == .completed, "duration render was cancelled")
         let bytes = try Data(contentsOf: path)
         report.expect(
@@ -154,15 +153,13 @@ internal func runExportChecks(_ report: CheckReport) {
         let path = fixture.scratch.appendingPathComponent("export.wav")
         var previous = -1.0
         var monotonic = true
-        let result = try fixture.song.bank.withVoices { voices in
-            try WavExport.render(
-                to: path.path, timeline: fixture.timeline, voices: voices,
-                settings: fixture.settings, options: exportOptions
-            ) { fraction in
-                monotonic = monotonic && fraction > previous
-                previous = fraction
-                return true
-            }
+        let result = try WavExport.render(
+            to: path.path, timeline: fixture.timeline, voices: fixture.song.bank.engineVoices,
+            settings: fixture.settings, options: exportOptions
+        ) { fraction in
+            monotonic = monotonic && fraction > previous
+            previous = fraction
+            return true
         }
         report.expect(
             result == .completed,
@@ -217,11 +214,9 @@ internal func runExportChecks(_ report: CheckReport) {
         options.fadeoutSeconds = 0
         let totals = WavExportTotals(timeline: fixture.timeline, options: options)
         let path = fixture.scratch.appendingPathComponent("zero-fade.wav")
-        let result = try fixture.song.bank.withVoices { voices in
-            try WavExport.render(
-                to: path.path, timeline: fixture.timeline, voices: voices,
-                settings: fixture.settings, options: options, progress: { _ in true })
-        }
+        let result = try WavExport.render(
+            to: path.path, timeline: fixture.timeline, voices: fixture.song.bank.engineVoices,
+            settings: fixture.settings, options: options, progress: { _ in true })
         let bytes = try Data(contentsOf: path)
         let peak =
             stride(from: 44, to: bytes.count - 1, by: 2)
@@ -236,11 +231,9 @@ internal func runExportChecks(_ report: CheckReport) {
     exportCase("resonanceSuppressionChangesPcmWithoutChangingFrames", labels: stagedLabels, report) { fixture in
         let baselinePath = fixture.scratch.appendingPathComponent("baseline.wav")
         let suppressedPath = fixture.scratch.appendingPathComponent("suppressed.wav")
-        let baseline = try fixture.song.bank.withVoices { voices in
-            try WavExport.render(
-                to: baselinePath.path, timeline: fixture.timeline, voices: voices,
-                settings: fixture.settings, options: exportOptions, progress: { _ in true })
-        }
+        let baseline = try WavExport.render(
+            to: baselinePath.path, timeline: fixture.timeline, voices: fixture.song.bank.engineVoices,
+            settings: fixture.settings, options: exportOptions, progress: { _ in true })
         report.expect(
             baseline == .completed,
             cppID: "exportcheck/MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames",
@@ -252,11 +245,9 @@ internal func runExportChecks(_ report: CheckReport) {
             message: "S017: baseline WAV reads back with a complete header")
         var suppressedOptions = exportOptions
         suppressedOptions.resonanceSuppression = true
-        let suppressed = try fixture.song.bank.withVoices { voices in
-            try WavExport.render(
-                to: suppressedPath.path, timeline: fixture.timeline, voices: voices,
-                settings: fixture.settings, options: suppressedOptions, progress: { _ in true })
-        }
+        let suppressed = try WavExport.render(
+            to: suppressedPath.path, timeline: fixture.timeline, voices: fixture.song.bank.engineVoices,
+            settings: fixture.settings, options: suppressedOptions, progress: { _ in true })
         report.expect(
             suppressed == .completed,
             cppID: "exportcheck/MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames",
@@ -284,14 +275,12 @@ internal func runExportChecks(_ report: CheckReport) {
     exportCase("cancelledExportRemovesPartialFile", labels: stagedLabels, report) { fixture in
         let path = fixture.scratch.appendingPathComponent("cancelled.wav")
         var firstFraction = -1.0
-        let result = try fixture.song.bank.withVoices { voices in
-            try WavExport.render(
-                to: path.path, timeline: fixture.timeline, voices: voices,
-                settings: fixture.settings, options: exportOptions
-            ) { fraction in
-                firstFraction = fraction
-                return false
-            }
+        let result = try WavExport.render(
+            to: path.path, timeline: fixture.timeline, voices: fixture.song.bank.engineVoices,
+            settings: fixture.settings, options: exportOptions
+        ) { fraction in
+            firstFraction = fraction
+            return false
         }
         report.expect(
             firstFraction == 0 && result == .cancelled,
@@ -365,11 +354,9 @@ internal func runExportChecks(_ report: CheckReport) {
             cppID: "\(id)::rounding", message: "one and a quarter seconds round to 40000 frames at 32000 Hz")
         let missing = fixture.scratch.appendingPathComponent("missing/output.wav")
         do {
-            _ = try fixture.song.bank.withVoices { voices in
-                try WavExport.render(
-                    to: missing.path, timeline: fixture.timeline, voices: voices,
-                    settings: fixture.settings, options: exportOptions, progress: { _ in true })
-            }
+            _ = try WavExport.render(
+                to: missing.path, timeline: fixture.timeline, voices: fixture.song.bank.engineVoices,
+                settings: fixture.settings, options: exportOptions, progress: { _ in true })
             report.expect(false, cppID: "\(id)::openFailure", message: "missing directory must refuse export")
         } catch let error as WavExportError {
             report.expect(

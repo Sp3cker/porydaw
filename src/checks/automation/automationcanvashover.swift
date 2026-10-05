@@ -2,6 +2,7 @@ import Foundation
 @testable import PorydawApp
 @testable import PorydawAppCommands
 import PorydawCore
+@testable import PorydawDocument
 
 let drawerAutomationHoverModelID = "swiftcore/AutomationPage::hoverModel"
 
@@ -430,10 +431,10 @@ func drawerAutomationHoverResidual(
     fixture.activate(fixture.panLane)
     let facts = fixture.facts(fixture.panLane)
     let projection = AutomationProjection(
-        camera: fixture.session.camera,
+        camera: fixture.viewport.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: page.geometry,
-        snapPolicy: AutomationProjectionCache().snapPolicy(session: fixture.session, font: 13, dpr: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(viewport: fixture.viewport, font: 13, dpr: 1),
         songEndTick: fixture.songEndTick)
     var ramp = AutomationSweepTransaction(
         facts: facts, mode: .ramp,

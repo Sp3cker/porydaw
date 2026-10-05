@@ -2,6 +2,7 @@ import Foundation
 import PorydawCore
 @testable import PorydawApp
 import PorydawAppEventList
+@testable import PorydawDocument
 
 private let remapNotifyOrderID = "eventviews/EventViewsRemapTest::notifyOrder"
 private let bucketSumID = "eventviews/ViewBucketsGridTest::bucketSum"

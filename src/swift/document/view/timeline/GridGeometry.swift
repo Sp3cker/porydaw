@@ -1,26 +1,26 @@
 import Foundation
 import PorydawCore
 
-func fontPx(_ base: Double, _ multiplier: Double) -> Double {
+public func fontPx(_ base: Double, _ multiplier: Double) -> Double {
     multiplier == 0.0 ? 0.0 : max(1.0, (base * multiplier).rounded())
 }
 
-func fontPxF(_ base: Double, _ multiplier: Double) -> Double {
+public func fontPxF(_ base: Double, _ multiplier: Double) -> Double {
     base * multiplier
 }
 
-func physicalPixel(_ dpr: Double) -> Double {
+public func physicalPixel(_ dpr: Double) -> Double {
     dpr > 0.0 ? 1.0 / dpr : 1.0
 }
 
-func gridLineThickness(baseFontPx: Double, devicePixelRatio: Double) -> Double {
+public func gridLineThickness(baseFontPx: Double, devicePixelRatio: Double) -> Double {
     fontPx(baseFontPx, 1.0 / 6.0) * physicalPixel(devicePixelRatio)
 }
 
-enum GridCameraPolicy {
-    static let seedBaseFontPx = 13.0
+public enum GridCameraPolicy {
+    public static let seedBaseFontPx = 13.0
 
-    static func limits(baseFontPx b: Double) -> EditorCamera.Limits {
+    public static func limits(baseFontPx b: Double) -> EditorCamera.Limits {
         EditorCamera.Limits(
             defaultPixelsPerBeat: fontPx(b, 8.0 / 3.0),
             minPixelsPerBeat: fontPx(b, 1.0 / 3.0),
@@ -33,17 +33,17 @@ enum GridCameraPolicy {
     }
 }
 
-enum GridFeel: Equatable {
+public enum GridFeel: Equatable, Sendable {
     case straight
     case triplet
 }
 
-enum GridSelection: Equatable {
+public enum GridSelection: Equatable, Sendable {
     case auto
     case musical(Int)
     case clock
 
-    func toMenuId() -> Int {
+    public func toMenuId() -> Int {
         switch self {
         case .auto: -1
         case .musical(let denominator): denominator
@@ -51,21 +51,21 @@ enum GridSelection: Equatable {
         }
     }
 
-    static func fromMenuId(_ id: Int) -> GridSelection {
+    public static func fromMenuId(_ id: Int) -> GridSelection {
         id < 0 ? .auto : id == 0 ? .clock : .musical(id)
     }
 }
 
-struct RollGrid {
+public struct RollGrid: Sendable {
     private static let straightLadder = [32, 16, 8, 4, 2, 1]
     private static let tripletLadder = [48, 24, 12, 6, 3, 1]
-    var axis: TimeAxis
-    var metrics: GridMetrics
-    private(set) var feel: GridFeel = .straight
-    private(set) var selection: GridSelection = .auto
+    public var axis: TimeAxis
+    public var metrics: GridMetrics
+    public private(set) var feel: GridFeel = .straight
+    public private(set) var selection: GridSelection = .auto
     private var clock: Tick = 0
 
-    init(
+    public init(
         axis: TimeAxis = TimeAxis(), clockTicks: Tick = 0,
         metrics: GridMetrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 0, height: 0)
     ) {
@@ -74,7 +74,7 @@ struct RollGrid {
         self.metrics = metrics
     }
 
-    var clockTicks: Tick { max(1, clock) }
+    public var clockTicks: Tick { max(1, clock) }
 
     private func musicalTicks(_ selection: GridSelection, feel: GridFeel) -> Tick {
         guard case .musical(let denominator) = selection,
@@ -86,7 +86,7 @@ struct RollGrid {
         return numerator % divisor == 0 ? Tick(numerator / divisor) : 0
     }
 
-    var selections: [GridSelection] {
+    public var selections: [GridSelection] {
         var ladder: [GridSelection] = [.auto]
         var denominator = 4
         while denominator <= Int(UInt32.max) {
@@ -119,17 +119,17 @@ struct RollGrid {
     }
 
     @discardableResult
-    mutating func setSelection(_ candidate: GridSelection) -> Bool {
+    public mutating func setSelection(_ candidate: GridSelection) -> Bool {
         setState(candidate, feel: feel)
     }
 
     @discardableResult
-    mutating func setFeel(_ newFeel: GridFeel) -> Bool {
+    public mutating func setFeel(_ newFeel: GridFeel) -> Bool {
         setState(selection, feel: newFeel)
     }
 
     @discardableResult
-    mutating func setTicksPerClock(_ ticks: Tick) -> Bool {
+    public mutating func setTicksPerClock(_ ticks: Tick) -> Bool {
         let changed = clock != ticks
         clock = ticks
         let recanonicalized = setState(selection, feel: feel)
@@ -137,21 +137,21 @@ struct RollGrid {
     }
 
     @discardableResult
-    mutating func narrow() -> Bool {
+    public mutating func narrow() -> Bool {
         let ladder = selections
         guard let index = ladder.firstIndex(of: selection) else { return setSelection(selection) }
         return index + 1 < ladder.count && setSelection(ladder[index + 1])
     }
 
     @discardableResult
-    mutating func widen() -> Bool {
+    public mutating func widen() -> Bool {
         let ladder = selections
         guard let index = ladder.firstIndex(of: selection) else { return setSelection(selection) }
         return index > 0 && setSelection(ladder[index - 1])
     }
 
     @discardableResult
-    mutating func toggleFeel() -> Bool {
+    public mutating func toggleFeel() -> Bool {
         let previousFeel = feel
         let previousSelection = selection
         let previousSpacing = musicalTicks(previousSelection, feel: previousFeel)
@@ -200,19 +200,19 @@ struct RollGrid {
         }
     }
 
-    func gridTicksAt(_ tick: Tick, camera: EditorCamera) -> Tick {
+    public func gridTicksAt(_ tick: Tick, camera: EditorCamera) -> Tick {
         selection == .auto
             ? adaptiveTicks(axis.segmentAt(tick), camera: camera, snap: false)
             : fixedTicks
     }
 
-    func snapTicksAt(_ tick: Tick, camera: EditorCamera) -> Tick {
+    public func snapTicksAt(_ tick: Tick, camera: EditorCamera) -> Tick {
         selection == .auto
             ? adaptiveTicks(axis.segmentAt(tick), camera: camera, snap: true)
             : fixedTicks
     }
 
-    func fineGridTicks(camera: EditorCamera) -> Tick {
+    public func fineGridTicks(camera: EditorCamera) -> Tick {
         clock == 0 ? gridTicksAt(0, camera: camera) : clockTicks
     }
 
@@ -270,7 +270,7 @@ struct RollGrid {
 
     /// Ink of a bar/beat line, nil for a beat too dense to paint (auto hides beats below
     /// detail zoom, fixed grids once they touch); fixed grids demote beats they cannot snap to.
-    func beatLineWeight(_ tick: Tick, isBar: Bool, camera: EditorCamera) -> BeatLineWeight? {
+    public func beatLineWeight(_ tick: Tick, isBar: Bool, camera: EditorCamera) -> BeatLineWeight? {
         if isBar { return .bar }
         let minimum = selection == .auto ? metrics.detailMinPxPerBeat : metrics.gridLineStroke
         guard Double(axis.segmentAt(tick).beatTicks) * camera.snapshot.pixelsPerTick >= minimum
@@ -283,7 +283,7 @@ struct RollGrid {
     }
 
     /// The painted cell around `tick`; without painted sub-grid lines, the beat (auto: bar).
-    func visibleGridCellContaining(_ tick: Tick, camera: EditorCamera) -> (start: Tick, end: Tick) {
+    public func visibleGridCellContaining(_ tick: Tick, camera: EditorCamera) -> (start: Tick, end: Tick) {
         let span = barSpan(at: tick)
         let segment = span.segment
         let painted = paintedStride(segment, camera: camera)
@@ -342,15 +342,15 @@ struct RollGrid {
             : Tick(min(UInt64(low) + lattice.stride, lattice.limit))
     }
 
-    func snapTickDown(_ tick: Double, camera: EditorCamera, fine: Bool = false) -> Tick {
+    public func snapTickDown(_ tick: Double, camera: EditorCamera, fine: Bool = false) -> Tick {
         floor(max(0, tick), lattice: lattice(tick, camera: camera, fine: fine))
     }
 
-    func snapTickUp(_ tick: Double, camera: EditorCamera, fine: Bool = false) -> Tick {
+    public func snapTickUp(_ tick: Double, camera: EditorCamera, fine: Bool = false) -> Tick {
         ceil(max(0, tick), lattice: lattice(tick, camera: camera, fine: fine))
     }
 
-    func snapTick(_ tick: Double, camera: EditorCamera, fine: Bool = false) -> Tick {
+    public func snapTick(_ tick: Double, camera: EditorCamera, fine: Bool = false) -> Tick {
         let lattice = lattice(tick, camera: camera, fine: fine)
         let low = floor(max(0, tick), lattice: lattice)
         let high = ceil(max(0, tick), lattice: lattice)
@@ -359,14 +359,14 @@ struct RollGrid {
         return (lattice.tiesUp ? below < above : below <= above) ? low : high
     }
 
-    func nextSubdivisionTickAfter(_ tick: Tick, camera: EditorCamera) -> Tick {
+    public func nextSubdivisionTickAfter(_ tick: Tick, camera: EditorCamera) -> Tick {
         let stride = UInt64(gridTicksAt(tick, camera: camera))
         let lattice = snapLattice(at: tick)
         let next = lattice.anchor + ((UInt64(tick) - lattice.anchor) / stride + 1) * stride
         return Tick(min(next, lattice.limit))
     }
 
-    func nextSnapTickAfter(_ tick: Tick, camera: EditorCamera, fine: Bool = false) -> Tick {
+    public func nextSnapTickAfter(_ tick: Tick, camera: EditorCamera, fine: Bool = false) -> Tick {
         if fine || selection == .clock {
             let stride = UInt64(fineGridTicks(camera: camera))
             let next = (UInt64(tick) / stride + 1) * stride
@@ -380,7 +380,7 @@ struct RollGrid {
 
     /// Painted sub-grid lines off the beat, walked bar by bar. A painted stride that does not
     /// divide the beat cannot inherit the beat hierarchy, so all its lines paint at level 1.
-    func forEachSubdivision(
+    public func forEachSubdivision(
         from begin: Tick, to end: Tick, camera: EditorCamera,
         _ visit: (Tick, Int) -> Void
     ) {
@@ -417,44 +417,44 @@ struct RollGrid {
     }
 }
 
-enum BeatLineWeight: Equatable {
+public enum BeatLineWeight: Equatable, Sendable {
     case bar
     case beat
     case beatFine
     case offGrid
 }
 
-struct GridMetrics {
-    var baseFontPx: Double = 13
-    var dpr: Double = 1
-    var timeAxis = TimeAxis()
+public struct GridMetrics: Sendable {
+    public var baseFontPx: Double = 13
+    public var dpr: Double = 1
+    public var timeAxis = TimeAxis()
 
-    var keyboardWidth: Double = 56
-    var noteMinWidth: Double = 2
+    public var keyboardWidth: Double = 56
+    public var noteMinWidth: Double = 2
     var noteMinHeight: Double = 2
-    var edgeGripReach: Double = 3.25
+    public var edgeGripReach: Double = 3.25
     var moveZoneMinWidth: Double = 6.5
     var selectionRingDip: Double = 1.625
-    var chipHPadding: Double = 9
-    var chipVPadding: Double = 2
-    var chipRightInset: Double = 2
-    var chipRadius: Double = 3
-    var keyLabelRightInset: Double = 3
-    var drawThreshold: Double = 3
+    public var chipHPadding: Double = 9
+    public var chipVPadding: Double = 2
+    public var chipRightInset: Double = 2
+    public var chipRadius: Double = 3
+    public var keyLabelRightInset: Double = 3
+    public var drawThreshold: Double = 3
 
     var detailMinPxPerBeat: Double = 11
-    let gridLineStroke: Double
+    public let gridLineStroke: Double
     var autoGridMinCell: Double = 17
 
-    var rulerBeatLabelZoomFactor: Double = 3.0
-    var spaceHalf: Double = 2
-    var spaceTwo: Double = 7
-    var pixel: Double = 1
+    public var rulerBeatLabelZoomFactor: Double = 3.0
+    public var spaceHalf: Double = 2
+    public var spaceTwo: Double = 7
+    public var pixel: Double = 1
 
-    static let ticksPerBeat = 24
-    static let songLengthTicks = 384
+    public static let ticksPerBeat = 24
+    public static let songLengthTicks = 384
 
-    init(
+    public init(
         baseFontPx: Double, dpr: Double, width _: Double, height _: Double,
         timeAxis: TimeAxis = TimeAxis()
     ) {
@@ -482,7 +482,7 @@ struct GridMetrics {
         pixel = physicalPixel(dpr)
     }
 
-    func noteRect(
+    public func noteRect(
         camera: EditorCamera, x0: Double, x1: Double, pitch: Int
     ) -> (x: Double, y: Double, w: Double, h: Double) {
         let snapshot = camera.snapshot
@@ -501,18 +501,18 @@ struct GridMetrics {
         )
     }
 
-    func noteBox(
+    public func noteBox(
         camera: EditorCamera, x0: Double, x1: Double, pitch: Int
     ) -> (x: Double, y: Double, w: Double, h: Double) {
         let r = noteRect(camera: camera, x0: x0, x1: x1, pitch: pitch)
         return (r.x, r.y, r.w, r.h - pixel)
     }
 
-    func edgeGripInnerReach(rectWidth: Double) -> Double {
+    public func edgeGripInnerReach(rectWidth: Double) -> Double {
         min(edgeGripReach, max(0.0, (rectWidth - moveZoneMinWidth) / 2.0))
     }
 
-    func fittedFrameThickness(
+    public func fittedFrameThickness(
         rectWidth: Double, rectHeight: Double,
         requestedPixels: Int, insetPixels: Int
     ) -> Int {
@@ -520,6 +520,6 @@ struct GridMetrics {
         return min(requestedPixels, max(0, (minDim - 1) / 2 - insetPixels))
     }
 
-    var noteBorderPixels: Int { max(1, Int(dpr.rounded())) }
-    var selectionRingPixels: Int { max(1, Int((selectionRingDip * dpr).rounded())) }
+    public var noteBorderPixels: Int { max(1, Int(dpr.rounded())) }
+    public var selectionRingPixels: Int { max(1, Int((selectionRingDip * dpr).rounded())) }
 }

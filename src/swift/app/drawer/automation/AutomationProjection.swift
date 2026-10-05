@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 
 // The pure Automation projection domain: the font-relative interaction
 // geometry, the grid/clock snapping lattice, and the per-event projection

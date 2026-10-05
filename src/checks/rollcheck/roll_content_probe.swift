@@ -4,6 +4,7 @@ import PorydawCore
 import QtBridge
 
 @testable import PorydawApp
+@testable import PorydawDocument
 
 /// Plot geometry decodes from displayList(0); note entries join decoded fills with grid domain state.
 @MainActor struct RollContentProbe {
@@ -144,8 +145,8 @@ import QtBridge
         notes = built
         // Rows resolve from the live projection and scale, as the removed
         // rows section did at pack time.
-        let projection = grid.session.camera.projection
-        let scale = grid.session.scaleProjection
+        let projection = grid.viewport.camera.projection
+        let scale = grid.viewport.scale
         let highlight = scale.highlight
         var rows: [Row] = []
         rows.reserveCapacity(projection.visibleRowCount)

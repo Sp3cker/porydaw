@@ -34,7 +34,7 @@ public enum DrawerSectionKind: Int, CaseIterable, Sendable {
     }
 
     /// Position of this kind's toggle in `toggleOrder`. Page attachment never moves it.
-    var toggleSlot: Int {
+    public var toggleSlot: Int {
         switch self {
         case .voiceChanges: 0
         case .automation: 1

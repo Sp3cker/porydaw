@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 
 // Voice changes interactions freeze and revalidate revision and occurrence identity.
 // Qt-facing entries stay on VoiceChangesPage; this extension uses the page's own state.
@@ -123,7 +124,7 @@ extension VoiceChangesPage {
             return true
         }
         if panRevision != nil {
-            DrawerPan.moved(x: x, previousX: &previousX, session: session)
+            DrawerPan.moved(x: x, previousX: &previousX, viewport: viewport)
             return true
         }
         updateHover(at: x)

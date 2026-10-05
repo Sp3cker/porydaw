@@ -2,6 +2,7 @@ import Foundation
 @testable import PorydawApp
 @testable import PorydawAppCommands
 import PorydawCore
+@testable import PorydawDocument
 
 // Existing scenarios paired with automationcanvasediting.cpp.
 // Entry order remains in AutomationPageChecks.swift.
@@ -158,19 +159,19 @@ func drawerAutomationCancellationAndNoOps(
     report.expectEqual(
         expected: emptyBefore, actual: empty.snapshot, cppID: drawerAutomationCancelID,
         what: "the parked press leaves the document alone")
-    let policy = AutomationProjectionCache().snapPolicy(session: empty.session, font: 13, dpr: 1)
+    let policy = AutomationProjectionCache().snapPolicy(viewport: empty.viewport, font: 13, dpr: 1)
     let snapped = policy.snap(
         min(
-            max(0, empty.session.camera.tickAtContentX(pressX)),
+            max(0, empty.viewport.camera.tickAtContentX(pressX)),
             Double(empty.songEndTick)),
-        fine: false, camera: empty.session.camera)
+        fine: false, camera: empty.viewport.camera)
     report.expectEqual(
         expected: snapped, actual: empty.session.editCursor, cppID: drawerAutomationCancelID,
         what: "the press parks the edit cursor at the snapped tick")
 
     let voiceID = "automation/AutomationEditingTest::voicePressIsolated"
     let voice = VoiceChangesPage(baseFontPx: 13)
-    voice.attach(session: empty.session, palette: GridPalette())
+    voice.attach(viewport: empty.viewport, palette: GridPalette())
     voice.configureBody(
         width: 480, height: 120, gutter: 0, devicePixelRatio: 1,
         baseFontPx: 13, dragDistance: 10)
@@ -276,7 +277,7 @@ func drawerAutomationContextAndPublicationDiagnostics(
 
     // A camera-only publication reprojects the curve, which is a content build.
     let buildsBeforeCamera = fixture.page.contentBuildCount
-    _ = fixture.session.mutateCamera { _ = $0.setTimeZoom(90) }
+    _ = fixture.viewport.mutateCamera { _ = $0.setTimeZoom(90) }
     report.expectEqual(
         expected: buildsBeforeCamera + 1, actual: fixture.page.contentBuildCount, cppID: drawerAutomationContextID,
         what: "a camera change reprojects the curve once")
@@ -369,7 +370,7 @@ func drawerAutomationContextAndPublicationDiagnostics(
         fixture.page.projection == nil && fixture.page.rows.isEmpty
             && fixture.page.selection == nil,
         cppID: drawerAutomationContextID, message: "detaching drops every published value")
-    fixture.page.attach(session: fixture.session, palette: GridPalette())
+    fixture.page.attach(viewport: fixture.viewport, palette: GridPalette())
     fixture.activate(fixture.volumeLane)
     fixture.page.applyTimeSelection(
         AutomationTimeSelection(
@@ -544,7 +545,7 @@ func drawerAutomationInflightDragInvalidation(
     pencil.activate(pencil.panLane)
     pencil.page.isPencilMode = true
     let pencilProjection = pencil.page.makeProjection(
-        facts: pencil.facts(pencil.panLane), camera: pencil.session.camera)
+        facts: pencil.facts(pencil.panLane), camera: pencil.viewport.camera)
     let endX = pencil.x(168)
     let endCell = pencilProjection.cell(atRawTick: pencilProjection.rawTick(atX: endX))
     _ = pencil.page.pointerPress(
@@ -578,7 +579,7 @@ func drawerAutomationInflightDragInvalidation(
         message: "switching to pencil retains the captured node drag")
     _ = node.page.pointerMove(x: targetX, y: node.y(node.panLane, 96), buttons: 1)
     let nodeFacts = node.facts(node.panLane)
-    let nodeProjection = node.page.makeProjection(facts: nodeFacts, camera: node.session.camera)
+    let nodeProjection = node.page.makeProjection(facts: nodeFacts, camera: node.viewport.camera)
     let mappedTarget = node.page.mappedPoint(
         x: startX + targetX - activationX, y: node.y(node.panLane, 96), facts: nodeFacts,
         modifiers: .init(), projection: nodeProjection)

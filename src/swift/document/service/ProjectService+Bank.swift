@@ -1,7 +1,6 @@
 import Foundation
 import PorydawCore
 import PorydawProject
-import PorydawBankLease
 
 extension ProjectService {
 
@@ -162,8 +161,7 @@ extension ProjectService {
                 source: SongSource(
                     label: song.label, midiPath: midiPath,
                     hasConfig: song.hasCfg),
-                midiBytes: Array(bytes), bank: published.lease, bankSlots: published.slots,
-                bankDirty: published.dirty, bankLoadName: published.loadName)
+                midiBytes: Array(bytes), bank: published.lease, bankSlots: published.slots)
         } catch {
             let failure = projectFailure(error)
             guard case let .operationFailed(message) = failure else { throw failure }
@@ -174,7 +172,7 @@ extension ProjectService {
     /// Ordered save: optional bank stage, then MIDI bytes, then flags. A
     /// failed stage throws and later stages never run; nothing here marks the
     /// document clean — the caller confirms via SongDocument.didSave.
-    public func save(_ snapshot: SaveSnapshot, bank: NativeBankLease?) async throws -> SaveReceipt {
+    public func save(_ snapshot: SaveSnapshot, bank: ProjectBankLease?) async throws -> SaveReceipt {
         let store = try requireStore()
         do {
             var refreshed: AppliedBankEdit?
@@ -205,7 +203,7 @@ extension ProjectService {
         }
     }
 
-    public func saveBank(lease: NativeBankLease) async throws -> AppliedBankEdit {
+    public func saveBank(lease: ProjectBankLease) async throws -> AppliedBankEdit {
         let store = try requireStore()
         do {
             return try await saveBankStage(lease, in: store)
@@ -215,15 +213,15 @@ extension ProjectService {
     }
 
     private func saveBankStage(
-        _ bank: NativeBankLease,
+        _ bank: ProjectBankLease,
         in store: ProjectStore
     ) async throws -> AppliedBankEdit {
         guard bank.publicationOwner == store.publicationOwner else {
             throw ProjectServiceError.serviceClosed
         }
-        guard let saved = try await store.saveVoicegroup(lease: bank.handle) else {
+        guard let saved = try await store.saveVoicegroup(lease: bank) else {
             throw ProjectServiceError.operationFailed(
-                "Could not save voicegroup \(bank.sourcePath) [\(bank.sectionLabel)].")
+                "Could not save voicegroup \(bank.id.sourceRelativePath) [\(bank.sectionLabel)].")
         }
         let savedView = appliedBank(saved, token: nil)
         await publish(savedView, from: store)
@@ -234,7 +232,7 @@ extension ProjectService {
     /// requires the slot to still be blank (materialization); a set expected
     /// value requires an exact match. Mismatches throw bankConflict.
     public func bankApply(
-        lease: NativeBankLease, slot: Int,
+        lease: ProjectBankLease, slot: Int,
         value: BankVoice, expected: BankVoice?,
         publishResult: Bool = true
     ) async throws -> AppliedBankEdit {
@@ -246,7 +244,7 @@ extension ProjectService {
             let converted = try projectVoice(value)
             let old = try expected.map(projectVoice)
             let result = try await store.applyVoicegroupEdit(
-                lease: lease.handle,
+                lease: lease,
                 operation: .set(SetVoicegroupSlot(slot: slot, value: converted, expected: old)))
             let applied = try bankEditResult(result)
             if publishResult { await publish(applied, from: store) }
@@ -259,7 +257,7 @@ extension ProjectService {
     /// Reverts a blank-slot materialization via its single-shot token. Spent
     /// or unknown tokens throw bankConflict; the source bytes stay untouched.
     public func bankRevert(
-        lease: NativeBankLease, token: UInt64,
+        lease: ProjectBankLease, token: UInt64,
         publishResult: Bool = true
     ) async throws -> AppliedBankEdit {
         let store = try requireStore()
@@ -268,7 +266,7 @@ extension ProjectService {
         }
         do {
             let applied = try bankEditResult(
-                await store.revertBlankSlot(lease: lease.handle, materializationToken: token))
+                await store.revertBlankSlot(lease: lease, materializationToken: token))
             if publishResult { await publish(applied, from: store) }
             return applied
         } catch {

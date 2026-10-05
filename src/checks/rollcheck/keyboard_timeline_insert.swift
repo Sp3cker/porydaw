@@ -2,11 +2,13 @@ import Foundation
 @testable import PorydawApp
 @testable import PorydawAppCommands
 import PorydawCore
+@testable import PorydawDocument
 
 @MainActor
-func checkTimelineInsertBlankTimeTracks(_ report: CheckReport, session: DocumentSession) {
+func checkTimelineInsertBlankTimeTracks(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::timelineInsertBlankTimeTracks"
-    withKeyboardSeed(report, session: session, id: id) { grid, seed in
+    withKeyboardSeed(report, viewport: viewport, id: id) { grid, seed in
         let start = seed.tick + 2 * seed.snap
         let end = start + seed.snap
         session.document.nudgeNotes([seed.id], byTicks: Int64(2 * seed.snap), byKeys: -10)
@@ -50,7 +52,7 @@ func checkTimelineInsertBlankTimeTracks(_ report: CheckReport, session: Document
         guard let otherID, let otherBefore else { return }
         let baseline = session.document.state
         let page = AutomationPage()
-        page.attach(session: session, palette: grid.palette)
+        page.attach(viewport: viewport, palette: grid.palette)
         defer { page.detach() }
         let originalTimeSelection = session.timeSelection
         let originalCursor = session.editCursor
@@ -99,9 +101,10 @@ func checkTimelineInsertBlankTimeTracks(_ report: CheckReport, session: Document
 }
 
 @MainActor
-func checkTimelineInsertRejectedScope(_ report: CheckReport, session: DocumentSession) {
+func checkTimelineInsertRejectedScope(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::timelineInsertRejectedScope"
-    withKeyboardSeed(report, session: session, id: id) { _, seed in
+    withKeyboardSeed(report, viewport: viewport, id: id) { _, seed in
         guard session.document.canAddTrack,
             let emptyTrack = session.document.addTrack(voice: 0),
             emptyTrack != seed.track,
@@ -185,9 +188,10 @@ func checkTimelineInsertRejectedScope(_ report: CheckReport, session: DocumentSe
 }
 
 @MainActor
-func checkTimelineInsertBlankTimeLanes(_ report: CheckReport, session: DocumentSession) {
+func checkTimelineInsertBlankTimeLanes(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::timelineInsertBlankTimeLanes"
-    withKeyboardSeed(report, session: session, id: id) { grid, seed in
+    withKeyboardSeed(report, viewport: viewport, id: id) { grid, seed in
         let start = seed.tick + 2 * seed.snap
         let end = start + seed.snap
         let pointTick = start + seed.snap / 2
@@ -212,7 +216,7 @@ func checkTimelineInsertBlankTimeLanes(_ report: CheckReport, session: DocumentS
         let baseline = session.document.state
         let history = session.document.history.currentIdentity
         let page = AutomationPage()
-        page.attach(session: session, palette: grid.palette)
+        page.attach(viewport: viewport, palette: grid.palette)
         defer { page.detach() }
         let originalTimeSelection = session.timeSelection
         let originalCursor = session.editCursor

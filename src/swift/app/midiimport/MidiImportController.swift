@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import PorydawProject
 import QtBridge
 
@@ -119,7 +120,7 @@ public final class MidiImportController: QmlUncreatable {
         else { return }
         let source: MidiFile
         do {
-            source = try MidiFile.decode(Array(Data(contentsOf: url)))
+            source = try MidiFile.decode(Data(contentsOf: url))
         } catch {
             let message = error is CocoaError ? "Cannot open MIDI file: \(url.path)" : String(describing: error)
             publishWarning(title: "Import MIDI", message: message)

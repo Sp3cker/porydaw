@@ -2,6 +2,7 @@ import Foundation
 @testable import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+@testable import PorydawDocument
 @MainActor
 internal func bankUndoPublicationChecks(_ report: CheckReport, fixtureRoot: String) {
     let id = "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates"

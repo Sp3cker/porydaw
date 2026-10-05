@@ -1,18 +1,19 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCoreCheckNative
+@testable import PorydawDocument
 
 @MainActor
 func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
-    let codec = "workspace/EditorViewStateCodec::laneBlob"
-    let defaults = EditorViewStateCodec.decodeLanes(Data())
+    let codec = "workspace/EditorViewStatePreferences::laneBlob"
+    let defaults = EditorViewStatePreferences.decodeLanes(Data())
     report.expectEqual(
         expected: EditorLaneState(), actual: defaults, cppID: codec,
         what: "empty lane blob defaults without touching drawer chrome")
     for malformed in ["not JSON", "[]", "null", "\"text\""] {
         report.expectEqual(
             expected: EditorLaneState(),
-            actual: EditorViewStateCodec.decodeLanes(Data(malformed.utf8)),
+            actual: EditorViewStatePreferences.decodeLanes(Data(malformed.utf8)),
             cppID: codec, what: "non-object or invalid JSON defaults lane fields")
     }
 
@@ -26,7 +27,7 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
          "hiddenLanes":[{"track":1,"cc":7},{"track":0,"cc":74},{"track":1,"cc":7}],
          "unheardOf":true}
         """
-    let decoded = EditorViewStateCodec.decodeLanes(Data(source.utf8))
+    let decoded = EditorViewStatePreferences.decodeLanes(Data(source.utf8))
     report.expectEqual(
         expected: minimum, actual: decoded.laneHeight, cppID: codec,
         what: "stored lane height clamps to font-derived floor")
@@ -39,11 +40,11 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
         cppID: codec, what: "valid ranges survive and out-of-range values drop")
     report.expectEqual(
         expected: 0,
-        actual: EditorViewStateCodec.decodeLanes(Data("{\"laneHeight\":0}".utf8)).laneHeight,
+        actual: EditorViewStatePreferences.decodeLanes(Data("{\"laneHeight\":0}".utf8)).laneHeight,
         cppID: codec, what: "zero lane height keeps the layout default")
     report.expectEqual(
         expected: maximum,
-        actual: EditorViewStateCodec.decodeLanes(Data("{\"laneHeight\":99999999}".utf8))
+        actual: EditorViewStatePreferences.decodeLanes(Data("{\"laneHeight\":99999999}".utf8))
             .laneHeight, cppID: codec,
         what: "large lane height clamps to font-derived ceiling")
     report.expectEqual(
@@ -54,9 +55,9 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
         expected: [.init(track: 1, controller: 7), .init(track: 0, controller: 74)],
         actual: decoded.hiddenLanes, cppID: codec,
         what: "hidden-lane order survives without duplicates")
-    if let encoded = EditorViewStateCodec.encodeLanes(decoded) {
+    if let encoded = EditorViewStatePreferences.encodeLanes(decoded) {
         report.expectEqual(
-            expected: decoded, actual: EditorViewStateCodec.decodeLanes(encoded), cppID: codec,
+            expected: decoded, actual: EditorViewStatePreferences.decodeLanes(encoded), cppID: codec,
             what: "canonical lane blob round-trips every supported member")
     } else {
         report.fail(codec, "valid lane state must encode")
@@ -74,44 +75,44 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
         cppID: order, what: "missing selection chooses first restored song")
 
     let restored = recipe.normalized(available: ["A", "B"])
-    EditorViewStateCodec.saveTabs(restored, store: store)
+    EditorViewStatePreferences.saveTabs(restored, store: store)
     report.expectEqual(
-        expected: restored, actual: EditorViewStateCodec.loadTabs(store: store),
+        expected: restored, actual: EditorViewStatePreferences.loadTabs(store: store),
         cppID: order, what: "application preferences retain tab order and selection")
-    EditorViewStateCodec.saveLanes(decoded, store: store)
+    EditorViewStatePreferences.saveLanes(decoded, store: store)
     report.expectEqual(
-        expected: decoded, actual: EditorViewStateCodec.loadLanes(store: store),
+        expected: decoded, actual: EditorViewStatePreferences.loadLanes(store: store),
         cppID: codec, what: "application preferences retain one lane blob")
     let stagedLanes = CheckEnvironment.fixturePath("settings.plist").flatMap {
         stagedPlist($0)["editorDrawer.automationLanes"] as? Data
     }
     report.expectEqual(
         expected: decoded,
-        actual: stagedLanes.map(EditorViewStateCodec.decodeLanes) ?? EditorLaneState(),
+        actual: stagedLanes.map(EditorViewStatePreferences.decodeLanes) ?? EditorLaneState(),
         cppID: codec,
         what: "the staged scratch domain persists the exact lane blob independently of the model")
 
-    let chrome = "workspace/EditorViewStateCodec::chrome"
+    let chrome = "workspace/EditorViewStatePreferences::chrome"
     var seededChrome = EditorDrawerChromeState()
     seededChrome.velocity = DrawerChromeSection(visible: true, height: 173)
     seededChrome.automation = DrawerChromeSection(visible: false, height: 197)
     seededChrome.voiceChanges.height = 201
     seededChrome.activePage = .velocity
-    EditorViewStateCodec.saveChrome(seededChrome, store: store)
+    EditorViewStatePreferences.saveChrome(seededChrome, store: store)
     report.expectEqual(
         expected: seededChrome,
-        actual: EditorViewStateCodec.loadChrome(store: store),
+        actual: EditorViewStatePreferences.loadChrome(store: store),
         cppID: chrome, what: "the combined chrome and lane state round-trips through preferences")
     report.expectEqual(
-        expected: decoded, actual: EditorViewStateCodec.loadLanes(store: store),
+        expected: decoded, actual: EditorViewStatePreferences.loadLanes(store: store),
         cppID: chrome, what: "saving chrome leaves the lane members unchanged")
     report.expectEqual(
         expected: DrawerSectionKind.velocity,
-        actual: EditorViewStateCodec.loadChrome(store: store).activePage,
+        actual: EditorViewStatePreferences.loadChrome(store: store).activePage,
         cppID: chrome, what: "the active page string round-trips")
     store.remove(key: "editorDrawer.velocityVisible")
     store.setString(key: "editorDrawer.automationHeight", value: "wrong")
-    let partialChrome = EditorViewStateCodec.loadChrome(store: store)
+    let partialChrome = EditorViewStatePreferences.loadChrome(store: store)
     report.expectEqual(
         expected: false, actual: partialChrome.velocity.visible, cppID: chrome,
         what: "missing drawer members default without losing the lane members")
@@ -119,10 +120,10 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
         expected: nil as Int?, actual: partialChrome.automation.height, cppID: chrome,
         what: "a wrong-typed height defaults to the layout default")
     report.expectEqual(
-        expected: decoded, actual: EditorViewStateCodec.loadLanes(store: store),
+        expected: decoded, actual: EditorViewStatePreferences.loadLanes(store: store),
         cppID: chrome, what: "the lane members survive missing chrome fields")
-    EditorViewStateCodec.saveChrome(seededChrome, store: store)
-    let stored = "workspace/EditorViewStateCodec::persistedState"
+    EditorViewStatePreferences.saveChrome(seededChrome, store: store)
+    let stored = "workspace/EditorViewStatePreferences::persistedState"
     guard let plistPath = CheckEnvironment.fixturePath("settings.plist") else {
         report.fail(stored, "missing staged settings plist")
         return
@@ -140,10 +141,10 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
     fullChrome.voiceChanges = .init(visible: true, height: 97)
     for page in [DrawerSectionKind.velocity, .voiceChanges, .automation] {
         fullChrome.activePage = page
-        EditorViewStateCodec.saveChrome(fullChrome, store: store)
-        EditorViewStateCodec.saveLanes(full, store: store)
+        EditorViewStatePreferences.saveChrome(fullChrome, store: store)
+        EditorViewStatePreferences.saveLanes(full, store: store)
         let fresh = PreferencesStore()
-        let reloadedChrome = EditorViewStateCodec.loadChrome(store: fresh)
+        let reloadedChrome = EditorViewStatePreferences.loadChrome(store: fresh)
         report.expectEqual(
             expected: fullChrome.velocity.visible, actual: reloadedChrome.velocity.visible,
             cppID: stored, what: "stored Velocity visibility restores for \(page.name)")
@@ -165,7 +166,7 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
         report.expectEqual(
             expected: page, actual: reloadedChrome.activePage,
             cppID: stored, what: "the stored active page restores as \(page.name)")
-        let reloadedLanes = EditorViewStateCodec.loadLanes(store: fresh)
+        let reloadedLanes = EditorViewStatePreferences.loadLanes(store: fresh)
         report.expectEqual(
             expected: full.laneHeight, actual: reloadedLanes.laneHeight,
             cppID: stored, what: "the stored lane height restores for \(page.name)")
@@ -186,9 +187,9 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
     fullChrome.automation.height = nil
     fullChrome.voiceChanges.height = nil
     fullChrome.activePage = .voiceChanges
-    EditorViewStateCodec.saveChrome(fullChrome, store: store)
+    EditorViewStatePreferences.saveChrome(fullChrome, store: store)
     let bareStore = PreferencesStore()
-    let bareChrome = EditorViewStateCodec.loadChrome(store: bareStore)
+    let bareChrome = EditorViewStatePreferences.loadChrome(store: bareStore)
     report.expectEqual(
         expected: fullChrome, actual: bareChrome, cppID: stored,
         what: "all unset heights and the voice page restore from saved preferences")
@@ -202,10 +203,10 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
         expected: nil, actual: bareChrome.voiceChanges.height, cppID: stored,
         what: "the optional Voice Changes height restores unset")
     report.expectEqual(
-        expected: full, actual: EditorViewStateCodec.loadLanes(store: bareStore),
+        expected: full, actual: EditorViewStatePreferences.loadLanes(store: bareStore),
         cppID: stored, what: "optional drawer heights leave every stored lane member intact")
 
-    EditorViewStateCodec.saveChrome(seededChrome, store: store)
+    EditorViewStatePreferences.saveChrome(seededChrome, store: store)
     enum LanePoison {
         case bytes(Data)
         case text(String)
@@ -227,7 +228,7 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
         ),
     ]
     for (name, poison, expected) in poisonCases {
-        EditorViewStateCodec.saveLanes(full, store: store)
+        EditorViewStatePreferences.saveLanes(full, store: store)
         switch poison {
         case .bytes(let value):
             store.setStoredObject(value, key: laneKey)
@@ -244,11 +245,11 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
         report.expect(staged, cppID: stored, message: "the staged \(name) lane poison reaches disk")
         let fresh = PreferencesStore()
         fresh.synchronize()
-        let reloadedChrome = EditorViewStateCodec.loadChrome(store: fresh)
+        let reloadedChrome = EditorViewStatePreferences.loadChrome(store: fresh)
         report.expectEqual(
             expected: seededChrome, actual: reloadedChrome,
             cppID: stored, what: "stored chrome survives \(name) lane data")
-        let loaded = EditorViewStateCodec.loadLanes(store: fresh)
+        let loaded = EditorViewStatePreferences.loadLanes(store: fresh)
         report.expectEqual(
             expected: expected, actual: loaded,
             cppID: stored, what: "stored \(name) defaults or clamps only lane members")
@@ -263,7 +264,7 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
             unchanged, cppID: stored,
             message: "reading stored \(name) does not rewrite poisoned lane data")
     }
-    EditorViewStateCodec.saveLanes(full, store: store)
+    EditorViewStatePreferences.saveLanes(full, store: store)
 
     let reset = "swiftcore/PreferencesStore::reset"
     store.setString(key: "windowState", value: "debugger")
@@ -288,10 +289,10 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
     let clearedStore = PreferencesStore()
     report.expectEqual(
         expected: EditorDrawerChromeState(),
-        actual: EditorViewStateCodec.loadChrome(store: clearedStore),
+        actual: EditorViewStatePreferences.loadChrome(store: clearedStore),
         cppID: stored, what: "an empty preference domain restores default drawer chrome")
     report.expectEqual(
-        expected: EditorLaneState(), actual: EditorViewStateCodec.loadLanes(store: clearedStore),
+        expected: EditorLaneState(), actual: EditorViewStatePreferences.loadLanes(store: clearedStore),
         cppID: stored, what: "an empty preference domain restores default lane preferences")
 }
 

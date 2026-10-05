@@ -1,17 +1,19 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 import PorydawAppCommands
 
 @MainActor
-func checkRulerMenuRetirement(_ report: CheckReport, session: DocumentSession) {
+func checkRulerMenuRetirement(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::rulerMenuLiveRetirement"
     let palette = GridPalette()
-    let grid = PianoGrid(session: session, palette: palette)
+    let grid = PianoGrid(viewport: viewport, palette: palette)
     let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: palette)
+    automation.attach(viewport: viewport, palette: palette)
     defer { automation.detach() }
-    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let menu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
     let oldChange = session.onChange
     session.onChange = { change in
         menu.sessionDidChange(change)
@@ -40,7 +42,7 @@ func checkRulerMenuRetirement(_ report: CheckReport, session: DocumentSession) {
     guard seed?.first != nil else { return }
     session.document.setLoop(end: false, tick: nil)
     session.document.setLoop(end: true, tick: nil)
-    let at = session.camera.contentX(tick: 48)
+    let at = viewport.camera.contentX(tick: 48)
     report.expect(
         [Tick(48), 72, 96].allSatisfy {
             Tick(grid.snapTickDown(Double($0))) == $0
@@ -109,13 +111,14 @@ func checkRulerMenuRetirement(_ report: CheckReport, session: DocumentSession) {
 }
 
 @MainActor
-func checkRulerDeferredTiming(_ report: CheckReport, session: DocumentSession) {
+func checkRulerDeferredTiming(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::timelineRulerScope"
     let palette = GridPalette()
-    let grid = PianoGrid(session: session, palette: palette)
+    let grid = PianoGrid(viewport: viewport, palette: palette)
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 1)
     let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: palette)
+    automation.attach(viewport: viewport, palette: palette)
     let priorTrack = session.selectedTrack
     if priorTrack == nil { session.selectPrimaryTrack(0) }
     let priorCursor = session.editCursor
@@ -125,9 +128,9 @@ func checkRulerDeferredTiming(_ report: CheckReport, session: DocumentSession) {
         session.editCursor = priorCursor
         session.selectedTrack = priorTrack
     }
-    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
-    let start = session.camera.contentX(tick: 24)
-    let end = session.camera.contentX(tick: 72)
+    let menu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
+    let start = viewport.camera.contentX(tick: 24)
+    let end = viewport.camera.contentX(tick: 72)
     let cursor = session.editCursor
     menu.captureRulerPress(contentX: end, pointerY: 0)
     report.expect(

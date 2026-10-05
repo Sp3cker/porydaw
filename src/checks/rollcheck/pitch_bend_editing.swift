@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 import QtBridge
 
 @MainActor
@@ -8,6 +9,7 @@ func pitchBendParityPredicates(_ report: CheckReport, suite: DocumentSession) {
     let id = "swiftcore/PitchBendEditingTest::dynamicSignatureSnap"
     let service = ProjectService()
     let session = pitchBendSyntheticSession(suite, service: service)
+    let viewport = DocumentViewport(session: session)
     defer { withExtendedLifetime(service) {} }
     guard
         let notes = try? session.document.addNotes([
@@ -20,8 +22,8 @@ func pitchBendParityPredicates(_ report: CheckReport, suite: DocumentSession) {
     session.document.setTimeSignature(tick: 480, numerator: 8, denominatorPower: 3)
     session.selectPrimaryTrack(0)
     session.setSelectedNotes([note])
-    let grid = PianoGrid(session: session)
-    let presenter = PitchBendPresenter(session: session, grid: grid, palette: grid.palette)
+    let grid = PianoGrid(viewport: viewport)
+    let presenter = PitchBendPresenter(viewport: viewport, grid: grid, palette: grid.palette)
     guard presenter.openSelected() else {
         report.fail(id, "a note across a signature seam opens its editor")
         return
@@ -37,12 +39,12 @@ func pitchBendParityPredicates(_ report: CheckReport, suite: DocumentSession) {
     report.expect(
         !interior.isEmpty
             && interior.allSatisfy {
-                session.grid.snapTick(Double($0.tick), camera: session.camera) == $0.tick
+                viewport.grid.snapTick(Double($0.tick), camera: viewport.camera) == $0.tick
             }, cppID: id, message: "every committed point sits on the dynamic snap lattice")
     report.expect(
         interior.contains { $0.tick < 480 } && interior.contains { $0.tick >= 480 },
         cppID: id, message: "committed points straddle the signature seam")
-    session.grid.setSelection(.musical(4))
+    viewport.grid.setSelection(.musical(4))
     presenter.resetPitchCurve()
     pitchBendStroke(graph, x0f: 0.12, y0f: 0.75, x1f: 0.88, y1f: 0.30)
     let resnapped = session.document.lanePoints(track: 0, lane: .pitchBend)
@@ -50,12 +52,12 @@ func pitchBendParityPredicates(_ report: CheckReport, suite: DocumentSession) {
     report.expect(
         !resnapped.isEmpty
             && resnapped.allSatisfy {
-                session.grid.snapTick(Double($0.tick), camera: session.camera) == $0.tick
+                viewport.grid.snapTick(Double($0.tick), camera: viewport.camera) == $0.tick
             }, cppID: id, message: "every committed point sits on the dynamic snap lattice after a grid change")
-    session.grid.setSelection(.auto)
-    let beforeZoomStride = session.grid.snapTicksAt(288, camera: session.camera)
-    _ = session.mutateCamera { _ = $0.setTimeZoom(140) }
-    let afterZoomStride = session.grid.snapTicksAt(288, camera: session.camera)
+    viewport.grid.setSelection(.auto)
+    let beforeZoomStride = viewport.grid.snapTicksAt(288, camera: viewport.camera)
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(140) }
+    let afterZoomStride = viewport.grid.snapTicksAt(288, camera: viewport.camera)
     presenter.resetPitchCurve()
     pitchBendStroke(graph, x0f: 0.14, y0f: 0.70, x1f: 0.86, y1f: 0.35)
     let zoomed = session.document.lanePoints(track: 0, lane: .pitchBend)
@@ -63,14 +65,14 @@ func pitchBendParityPredicates(_ report: CheckReport, suite: DocumentSession) {
     report.expect(
         !zoomed.isEmpty
             && zoomed.allSatisfy {
-                session.grid.snapTick(Double($0.tick), camera: session.camera) == $0.tick
+                viewport.grid.snapTick(Double($0.tick), camera: viewport.camera) == $0.tick
             }, cppID: id, message: "every committed point sits on the live snap lattice after a zoom change")
     let zoomTicks = Set(zoomed.map(\.tick))
     var zoomCoverage = !zoomed.isEmpty
     if let firstPoint = zoomed.first?.tick, let lastPoint = zoomed.last?.tick {
         var tick = firstPoint
         while tick < lastPoint {
-            let next = session.grid.snapTickUp(Double(tick) + 0.5, camera: session.camera)
+            let next = viewport.grid.snapTickUp(Double(tick) + 0.5, camera: viewport.camera)
             if next <= tick { zoomCoverage = false; break }
             zoomCoverage = zoomCoverage && zoomTicks.contains(next)
             tick = next
@@ -115,8 +117,9 @@ func pitchBendGridRulePredicates(_ report: CheckReport, suite: DocumentSession) 
     let id = "swiftcore/PitchBendEditingTest::sharedGridSnap"
     let service = ProjectService()
     let session = pitchBendSyntheticSession(suite, service: service)
+    let viewport = DocumentViewport(session: session)
     defer { withExtendedLifetime(service) {} }
-    session.grid.setSelection(.musical(4))
+    viewport.grid.setSelection(.musical(4))
     guard
         let notes = try? session.document.addNotes([
             NewNote(track: 0, tick: 290, pitch: 61, duration: 200, velocity: 100)
@@ -127,14 +130,14 @@ func pitchBendGridRulePredicates(_ report: CheckReport, suite: DocumentSession) 
     }
     session.selectPrimaryTrack(0)
     session.setSelectedNotes([note])
-    let grid = PianoGrid(session: session)
-    let presenter = PitchBendPresenter(session: session, grid: grid, palette: grid.palette)
+    let grid = PianoGrid(viewport: viewport)
+    let presenter = PitchBendPresenter(viewport: viewport, grid: grid, palette: grid.palette)
     guard presenter.openSelected() else {
         report.fail(id, "an off-grid note opens its editor")
         return
     }
     defer { presenter.cancelAndClose() }
-    let step = Int(session.grid.snapTicksAt(290, camera: session.camera))
+    let step = Int(viewport.grid.snapTicksAt(290, camera: viewport.camera))
     let expected = Array(stride(from: (290 / step + 1) * step, to: 490, by: step))
     report.expect(
         expected.count > 1, cppID: id,
@@ -146,9 +149,10 @@ func pitchBendGridRulePredicates(_ report: CheckReport, suite: DocumentSession) 
 }
 
 @MainActor
-func pitchBendControllerPredicates(_ report: CheckReport, session: DocumentSession) {
+func pitchBendControllerPredicates(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PitchBendControllerTest::wheelAndControllerWrites"
-    guard let scene = pitchBendCheckScene(report, cppID: id, session: session) else { return }
+    guard let scene = pitchBendCheckScene(report, cppID: id, viewport: viewport) else { return }
     defer { scene.presenter.cancelAndClose() }
     let presenter = scene.presenter
     let document = session.document
@@ -179,9 +183,10 @@ func pitchBendControllerPredicates(_ report: CheckReport, session: DocumentSessi
 }
 
 @MainActor
-func pitchBendResetPredicates(_ report: CheckReport, session: DocumentSession) {
+func pitchBendResetPredicates(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let modID = "swiftcore/PitchBendEditingTest::modWheelStrokeAndReset"
-    guard let scene = pitchBendCheckScene(report, cppID: modID, session: session) else { return }
+    guard let scene = pitchBendCheckScene(report, cppID: modID, viewport: viewport) else { return }
     defer { scene.presenter.cancelAndClose() }
     let presenter = scene.presenter
     let document = session.document
@@ -276,9 +281,10 @@ func pitchBendResetPredicates(_ report: CheckReport, session: DocumentSession) {
 }
 
 @MainActor
-func pitchBendFineRampPredicates(_ report: CheckReport, session: DocumentSession) {
+func pitchBendFineRampPredicates(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PitchBendEditingTest::fineGridRamp"
-    guard let scene = pitchBendCheckScene(report, cppID: id, session: session) else { return }
+    guard let scene = pitchBendCheckScene(report, cppID: id, viewport: viewport) else { return }
     defer { scene.presenter.cancelAndClose() }
     let document = session.document
     let before = coreTimeBytes(document)
@@ -291,7 +297,7 @@ func pitchBendFineRampPredicates(_ report: CheckReport, session: DocumentSession
     report.expect(
         document.history.undoIndex == index + 1 && interior.count >= 3,
         cppID: id, message: "an Alt drag commits a fine-grid ramp")
-    let fine = session.grid.fineGridTicks(camera: session.camera)
+    let fine = viewport.grid.fineGridTicks(camera: viewport.camera)
     report.expect(
         zip(interior, interior.dropFirst()).allSatisfy {
             $1.tick > $0.tick && $1.tick - $0.tick <= fine
@@ -307,11 +313,12 @@ func pitchBendFineRampPredicates(_ report: CheckReport, session: DocumentSession
     let activeID = "swiftcore/PitchBendControllerTest::activeBendRangeDescription"
     let service = ProjectService()
     let synthetic = pitchBendSyntheticSession(session, service: service)
+    let syntheticViewport = DocumentViewport(session: synthetic)
     defer { withExtendedLifetime(service) {} }
     guard
         let active = pitchBendCheckScene(
             report, cppID: activeID,
-            session: synthetic)
+            viewport: syntheticViewport)
     else { return }
     defer { active.presenter.cancelAndClose() }
     active.presenter.cancelAndClose()
@@ -328,9 +335,10 @@ func pitchBendFineRampPredicates(_ report: CheckReport, session: DocumentSession
 }
 
 @MainActor
-func pitchBendSetterPredicates(_ report: CheckReport, session: DocumentSession) {
+func pitchBendSetterPredicates(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PitchBendControllerTest::directControllerSetters"
-    guard let scene = pitchBendCheckScene(report, cppID: id, session: session) else { return }
+    guard let scene = pitchBendCheckScene(report, cppID: id, viewport: viewport) else { return }
     defer { scene.presenter.cancelAndClose() }
     let presenter = scene.presenter
     let document = session.document

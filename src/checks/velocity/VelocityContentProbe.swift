@@ -1,6 +1,7 @@
 import Foundation
 import NativeDisplayList
 import PorydawCore
+@testable import PorydawDocument
 
 @testable import PorydawApp
 @MainActor
@@ -53,7 +54,7 @@ func drawerVelocityContentBlobChecks(
         !grid.isEmpty && grid.contains { $0.argb == barArgb } && transient.isEmpty,
         cppID: drawerVelocityProjectionID,
         message: "velocity list 0 decodes viewport grid rects with the fixture's bar color")
-    fixture.session.mutateCamera { camera in
+    fixture.viewport.mutateCamera { camera in
         _ = camera.setHScroll(17)
     }
     page.refreshCamera()
@@ -65,7 +66,7 @@ func drawerVelocityContentBlobChecks(
         message: "nonzero scroll-only movement rebuilds the velocity grid list with one revision")
     let scrolledRevision = page.displayRevision
     let scrolledBytes = page.displayList(list: 0)
-    fixture.session.mutateCamera { camera in
+    fixture.viewport.mutateCamera { camera in
         camera.setTimeZoom(camera.snapshot.pixelsPerBeat * 2)
     }
     page.refreshCamera()

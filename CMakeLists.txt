@@ -184,6 +184,7 @@ add_subdirectory(src/swift/core)
 add_subdirectory(src/swift/playback)
 add_subdirectory(src/swift/sample)
 add_subdirectory(src/swift/project)
+add_subdirectory(src/swift/document)
 include(cmake/QtBridge.cmake)
 add_subdirectory(src/swift/app)
 target_sources(PorydawApp PRIVATE src/swift/app/shell/PorydawQmlTypes.swift)
@@ -204,10 +205,6 @@ qt_add_library(porydaw_native_host STATIC
     src/audio/miniaudio_impl.c
     src/audio/sample_codec.h
     src/audio/sample_codec.c
-    src/project/banklease.cpp
-    src/project/banklease.h
-    src/project/projectidentity.cpp
-    src/project/projectidentity.h
 )
 qt_add_library(porydaw_app STATIC
     src/app/item_cursor.h
@@ -413,7 +410,7 @@ endforeach()
 target_link_libraries(porydaw_app PUBLIC porydaw_native_host porydaw_icons porydaw_style)
 # Swift modules import native headers through their module maps; retain the
 # archive dependency without inheriting native compilation settings.
-foreach(swift_target IN ITEMS PorydawApp PorydawAppCommands PorydawAppAudio PorydawProject PorydawSample)
+foreach(swift_target IN ITEMS PorydawApp PorydawAppCommands PorydawAppAudio PorydawSample)
     target_link_libraries(${swift_target} PRIVATE "$<LINK_ONLY:porydaw_native_host>")
 endforeach()
 if(WIN32)

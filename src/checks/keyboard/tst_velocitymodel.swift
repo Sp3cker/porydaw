@@ -1,5 +1,6 @@
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 private let velocityResolutionID = "velocity-model/VelocityModelTest::resolvesVoiceKinds"
 private let velocityLevelsID = "velocity-model/VelocityModelTest::levelsCanonicalizeAndMove"

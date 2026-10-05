@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 // Existing scenarios paired with tst_automationdomain.cpp.
 // Entry order remains in AutomationPageChecks.swift.
@@ -291,7 +292,7 @@ func drawerAutomationLaneProjection(
     report.expect(
         projectedVolume.points[0].x > 0, cppID: drawerAutomationProjectionID,
         message: "the camera's lead pad keeps tick zero inside the plot")
-    _ = unwritten.session.mutateCamera { $0.setHScroll(200) }
+    _ = unwritten.viewport.mutateCamera { $0.setHScroll(200) }
     let scrolledProjection = unwritten.projection(unwritten.volumeLane)
     report.expect(
         scrolledProjection.points[0].x < 0, cppID: drawerAutomationProjectionID,
@@ -333,21 +334,21 @@ func drawerAutomationLaneProjection(
 
     // Camera edges: every x comes from the shared camera, and a zoom rescales it.
     report.expectEqual(
-        expected: fixture.session.camera.contentX(tick: 96), actual: volume.points[1].x,
+        expected: fixture.viewport.camera.contentX(tick: 96), actual: volume.points[1].x,
         cppID: drawerAutomationProjectionID,
         what: "every x is the shared camera's projection")
     let beforeZoom = fixture.projection(fixture.volumeLane).points[1].x
-    _ = fixture.session.mutateCamera { _ = $0.setTimeZoom(90) }
+    _ = fixture.viewport.mutateCamera { _ = $0.setTimeZoom(90) }
     let afterZoom = fixture.projection(fixture.volumeLane).points[1].x
     report.expect(
         afterZoom > beforeZoom * 2, cppID: drawerAutomationProjectionID,
         message: "a time zoom rescales the projected x")
-    _ = fixture.session.mutateCamera { $0.setHScroll(0) }
+    _ = fixture.viewport.mutateCamera { $0.setHScroll(0) }
     let atZeroScroll = fixture.projection(.tempo).points[0].x
     report.expectEqual(
-        expected: fixture.session.camera.contentX(tick: 0), actual: atZeroScroll, cppID: drawerAutomationProjectionID,
+        expected: fixture.viewport.camera.contentX(tick: 0), actual: atZeroScroll, cppID: drawerAutomationProjectionID,
         what: "a scroll offsets the projection by the same amount")
-    _ = fixture.session.mutateCamera { $0.setHScroll(70) }
+    _ = fixture.viewport.mutateCamera { $0.setHScroll(70) }
     let preRoll = fixture.projection(.tempo)
     report.expect(
         preRoll.points[0].x < 0, cppID: drawerAutomationProjectionID,
@@ -355,9 +356,9 @@ func drawerAutomationLaneProjection(
     report.expectEqual(
         expected: Tick(0), actual: preRoll.originPhantom?.point.tick ?? 99, cppID: drawerAutomationProjectionID,
         what: "the off-plot point becomes the lane's origin phantom")
-    _ = fixture.session.mutateCamera { $0.setHScroll(-1000) }
+    _ = fixture.viewport.mutateCamera { $0.setHScroll(-1000) }
     report.expectEqual(
-        expected: fixture.session.camera.minHScroll, actual: fixture.session.camera.snapshot.scrollX,
+        expected: fixture.viewport.camera.minHScroll, actual: fixture.viewport.camera.snapshot.scrollX,
         cppID: drawerAutomationProjectionID,
         what: "the camera clamps its scroll to the negative pre-roll bound")
 }

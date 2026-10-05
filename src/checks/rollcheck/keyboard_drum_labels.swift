@@ -2,6 +2,7 @@ import Foundation
 @testable import PorydawApp
 @testable import PorydawAppCommands
 import PorydawCore
+@testable import PorydawDocument
 
 @MainActor
 func checkDrumPadLabels(_ report: CheckReport) {
@@ -22,6 +23,7 @@ func checkDrumPadLabels(_ report: CheckReport) {
             return try await DocumentSession.open(
                 service: service, label: "mus_route101", sampleRate: 48_000)
         }
+        let viewport = DocumentViewport(session: session)
         guard session.bankSlots.indices.contains(11),
             let melodic = session.document.addTrack(voice: 0),
             let track = session.document.addTrack(voice: 11)
@@ -30,15 +32,15 @@ func checkDrumPadLabels(_ report: CheckReport) {
             return
         }
         session.selectPrimaryTrack(track)
-        let grid = PianoGrid(session: session)
+        let grid = PianoGrid(viewport: viewport)
         grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 1)
-        session.mutateCamera { camera in
+        viewport.mutateCamera { camera in
             _ = camera.setVScroll(
                 Double(camera.projection.row(forPitch: 37)) * camera.snapshot.keyHeight
                     - camera.snapshot.rollHeight / 2)
         }
         grid.refreshFromSession()
-        let camera = session.camera
+        let camera = viewport.camera
         let rowHeight = camera.snapshot.keyHeight
         let projection = camera.projection
         let probe = RollContentProbe(grid)
@@ -141,7 +143,7 @@ func checkDrumPadLabels(_ report: CheckReport) {
             return record(37)
         }
         let playhead = SharedPlayheadPresenter()
-        playhead.attach(session: session, audio: nil, grid: grid, drawer: nil)
+        playhead.attach(viewport: viewport, audio: nil, grid: grid, drawer: nil)
         playhead.setFollowEnabled(false)
         defer { playhead.detach() }
         report.expect(

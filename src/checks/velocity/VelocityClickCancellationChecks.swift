@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 @MainActor
 func drawerVelocityPressCancelRestores(_ report: CheckReport, session: DocumentSession, service: ProjectService) {
     let fixture = drawerVelocityVelocityFixture(session: session, service: service)
@@ -142,7 +143,7 @@ func drawerVelocityPrimaryTrackSwitchCancels(_ report: CheckReport, session: Doc
         waveSession = DocumentSession(
             document: waveDocument, service: waveService,
             lease: loaded.bank, slots: loaded.bankSlots,
-            dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+            dirty: loaded.bank.dirty, loadName: loaded.bank.loadName)
     } catch {
         report.fail(drawerVelocityCancellationID, "could not load the staged wave bank fixture: \(error)")
         return
@@ -260,7 +261,7 @@ func drawerVelocityLifecycleCancellation(
         let page = fixture.page
         let drawer = EditorDrawerPresenter()
         drawer.attachSection(page)
-        drawer.applyChrome(EditorViewStateCodec.loadChrome(store: preferences))
+        drawer.applyChrome(EditorViewStatePreferences.loadChrome(store: preferences))
         if route == "page-switch" {
             drawer.attachSection(AutomationPage(baseFontPx: 13))
         }
@@ -346,7 +347,7 @@ func drawerVelocityLifecycleCancellation(
         return
     }
     let presenters = WorkspacePresenterFixture(
-        session: bankFixture.session, audio: audio,
+        viewport: bankFixture.viewport, audio: audio,
         callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
             revealTrackVoiceRequested: { _ in },
@@ -444,7 +445,7 @@ func drawerVelocityLifecycleCancellation(
         switchSession = DocumentSession(
             document: switchDocument, service: switchService,
             lease: loaded.bank, slots: loaded.bankSlots,
-            dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+            dirty: loaded.bank.dirty, loadName: loaded.bank.loadName)
     } catch {
         report.fail(drawerVelocityCancellationID, "could not stage the alternate voicegroup: \(error)")
         return
@@ -464,7 +465,7 @@ func drawerVelocityLifecycleCancellation(
         return
     }
     let switchPresenters = WorkspacePresenterFixture(
-        session: switchFixture.session, audio: switchAudio,
+        viewport: switchFixture.viewport, audio: switchAudio,
         callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
             revealTrackVoiceRequested: { _ in },
@@ -656,11 +657,11 @@ func drawerVelocityStemDragGuardsEdits(_ report: CheckReport, session: DocumentS
         page.interactionActive && fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id],
         cppID: drawerVelocityCancellationID,
         message: "selected velocity-stem drag did not retain its captured note selection")
-    let grid = PianoGrid(session: fixture.session)
+    let grid = PianoGrid(viewport: fixture.viewport)
     let automation = AutomationPage()
-    automation.attach(session: fixture.session, palette: GridPalette())
+    automation.attach(viewport: fixture.viewport, palette: GridPalette())
     defer { automation.detach() }
-    let ruler = RulerMenuPresenter(session: fixture.session, grid: grid, automation: automation)
+    let ruler = RulerMenuPresenter(viewport: fixture.viewport, grid: grid, automation: automation)
     let router = EditorCommandRouter(
         session: fixture.session, grid: grid, automation: automation,
         rulerMenu: ruler, velocity: page)

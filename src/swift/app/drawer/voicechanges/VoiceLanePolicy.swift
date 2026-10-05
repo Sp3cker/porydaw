@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 
 /// The page's published constants. The base font seed mirrors the grid's
 /// `GridCameraPolicy.seedBaseFontPx`, which is internal to this module.

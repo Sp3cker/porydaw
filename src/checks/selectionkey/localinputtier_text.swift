@@ -1,6 +1,7 @@
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 
 @MainActor
 func drawerOriginalNumericPromptTransaction(
@@ -265,7 +266,7 @@ func drawerOriginalNumericPromptTransaction(
     }
     second.activate(second.panLane)
     second.session.setSelectedNotes(trackZeroPair)
-    let grid = PianoGrid(session: second.session)
+    let grid = PianoGrid(viewport: second.viewport)
     grid.setTrack(index: 1)
     report.expect(
         second.session.selectedTrack == 1, cppID: lifetimeID,
@@ -630,8 +631,9 @@ private func littlerootVelocityCancellation(_ report: CheckReport) {
         }
         session.selectedTrack = track
         session.setSelectedNotes([note.id])
+        let viewport = DocumentViewport(session: session)
         let velocity = VelocityPage()
-        velocity.attach(session: session, palette: GridPalette())
+        velocity.attach(viewport: viewport, palette: GridPalette())
         let bytesBefore = try session.document.state.file.encoded()
         let historyBefore = session.document.history.undoIndex
         let revisionBefore = session.document.revision
@@ -661,7 +663,7 @@ private func littlerootVelocityCancellation(_ report: CheckReport) {
         report.expectEqual(
             expected: selectedBefore, actual: session.selectedNotes,
             cppID: id, what: "Littleroot velocity cancellation retains selected note identities")
-        velocity.detach()
+        withExtendedLifetime(viewport) { velocity.detach() }
     } catch {
         report.fail(id, "Littleroot velocity cancellation fixture failed: \(error)")
     }

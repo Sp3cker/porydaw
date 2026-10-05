@@ -1,4 +1,5 @@
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 /// Pure value computation for the velocity ruler, grid and interaction overlays.

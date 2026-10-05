@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 import PorydawAppCommands
 
 // The original resize seed requests a free cell near tick 88. The synthetic
@@ -8,19 +9,19 @@ import PorydawAppCommands
 let rulerSeedTick: Tick = 88 - (88 % 6)
 
 @MainActor
-func runRulerLoopMenuChecks(_ report: CheckReport, session: DocumentSession) {
-    checkRulerLoopSetAndUndo(report, session: session)
-    checkRulerLoopBuildTotality(report, session: session)
-    checkRulerSignatureRemoval(report, session: session)
-    checkRulerInsertTime(report, session: session)
-    checkRenderedRulerMenuCommands(report, session: session)
-    checkRulerInsertTimePrompt(report, session: session)
-    checkRulerMenuRetirement(report, session: session)
-    checkRulerSweepScopeTapAndChip(report, session: session)
-    checkRulerSelectedKeyboardScope(report, session: session)
-    checkRulerSeekEmission(report, session: session)
-    checkRulerDeferredTiming(report, session: session)
-    checkGridLoopCommandArms(report, session: session)
+func runRulerLoopMenuChecks(_ report: CheckReport, viewport: DocumentViewport) {
+    checkRulerLoopSetAndUndo(report, viewport: viewport)
+    checkRulerLoopBuildTotality(report, session: viewport.session)
+    checkRulerSignatureRemoval(report, viewport: viewport)
+    checkRulerInsertTime(report, viewport: viewport)
+    checkRenderedRulerMenuCommands(report, viewport: viewport)
+    checkRulerInsertTimePrompt(report, viewport: viewport)
+    checkRulerMenuRetirement(report, viewport: viewport)
+    checkRulerSweepScopeTapAndChip(report, viewport: viewport)
+    checkRulerSelectedKeyboardScope(report, viewport: viewport)
+    checkRulerSeekEmission(report, viewport: viewport)
+    checkRulerDeferredTiming(report, viewport: viewport)
+    checkGridLoopCommandArms(report, viewport: viewport)
 }
 
 @MainActor
@@ -49,15 +50,16 @@ func rulerMenuDocument(_ session: DocumentSession) -> SongDocument {
 }
 
 @MainActor
-private func checkRulerSelectedKeyboardScope(_ report: CheckReport, session: DocumentSession) {
+private func checkRulerSelectedKeyboardScope(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::timelineRulerScope"
-    withKeyboardSeed(report, session: session, id: id) { grid, seed in
+    withKeyboardSeed(report, viewport: viewport, id: id) { grid, seed in
         let document = session.document
         let postSeedBytes = coreTimeBytes(document)
         let postSeedIdentity = document.history.currentIdentity
         let palette = GridPalette()
         let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-        automation.attach(session: session, palette: palette)
+        automation.attach(viewport: viewport, palette: palette)
         defer { automation.detach(); session.clearTimeSelection() }
         session.setSelectedNotes([seed.id])
         grid.performCommand(command: EditCommand.transposeDownOctave.rawValue)
@@ -82,12 +84,12 @@ private func checkRulerSelectedKeyboardScope(_ report: CheckReport, session: Doc
                 expectedScope.insert(track)
             }
         }
-        let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+        let menu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
         menu.beginSweep(
-            contentX: session.camera.contentX(tick: Double(firstTick)),
+            contentX: viewport.camera.contentX(tick: Double(firstTick)),
             pointerY: 0, modifiers: 0x0400_0000)
-        menu.updateSweep(contentX: session.camera.contentX(tick: Double(lastTick)))
-        menu.endSweep(contentX: session.camera.contentX(tick: Double(lastTick)))
+        menu.updateSweep(contentX: viewport.camera.contentX(tick: Double(lastTick)))
+        menu.endSweep(contentX: viewport.camera.contentX(tick: Double(lastTick)))
         report.expect(
             automation.selection?.range == TimeRange(startTick: firstTick, endTick: lastTick)
                 && automation.selection?.scope == .tracks(expectedScope)

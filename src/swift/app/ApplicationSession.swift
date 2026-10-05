@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import PorydawProject
 import QtBridge
 import PorydawAppAudio
@@ -162,7 +163,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         transportBar = TransportBarPresenter()
         polyphony = PolyphonyPanelPresenter()
         emptyOtherEventsBand.configure(
-            session: nil, palette: palette,
+            viewport: nil, palette: palette,
             baseFontPx: GridCameraPolicy.seedBaseFontPx,
             appFontLineSpacing: 0)
         connectPolyphonyJump()
@@ -448,9 +449,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
     // MARK: - Project and song opens
     public func configurePersistence() {
         persistenceConfigured = true
-        editorViewState = EditorViewStateCodec.load(store: preferences)
+        editorViewState = EditorViewStatePreferences.load(store: preferences)
         for tab in songTabs.allTabs {
-            tab.workspace.session.applyEditorViewStateProjection(editorViewState)
+            tab.workspace.viewport.applyEditorViewStateProjection(editorViewState)
             tab.workspace.drawer.applyChrome(editorViewState.chrome)
             tab.workspace.automationPage.applyLaneRanges(editorViewState.lanes)
         }

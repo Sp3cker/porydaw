@@ -1,12 +1,13 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 import QtBridge
 
 @MainActor
-func pitchBendReadoutPredicates(_ report: CheckReport, session: DocumentSession) {
+func pitchBendReadoutPredicates(_ report: CheckReport, viewport: DocumentViewport) {
     let readoutID = "swiftcore/PitchBendEditingTest::liveValueReadout"
-    if let scene = pitchBendCheckScene(report, cppID: readoutID, session: session) {
+    if let scene = pitchBendCheckScene(report, cppID: readoutID, viewport: viewport) {
         defer { scene.presenter.cancelAndClose() }
         let roles = Typography(baseFontPx: 13)
         report.expect(
@@ -78,7 +79,8 @@ func pitchBendReadoutPredicates(_ report: CheckReport, session: DocumentSession)
 }
 
 @MainActor
-func pitchBendDocumentPredicates(_ report: CheckReport, session: DocumentSession) {
+func pitchBendDocumentPredicates(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let undoPreservationID = "swiftcore/PitchBendEditingTest::bendrFixtureUndoPreservation"
     let shiftLineID = "swiftcore/PitchBendEditingTest::shiftDragDrawsLinearRamp"
     let freehandID = "swiftcore/PitchBendEditingTest::freehandStrokePushesSingleUndoCommand"
@@ -90,7 +92,7 @@ func pitchBendDocumentPredicates(_ report: CheckReport, session: DocumentSession
 
     let document = session.document
 
-    if let scene = pitchBendCheckScene(report, cppID: undoPreservationID, session: session) {
+    if let scene = pitchBendCheckScene(report, cppID: undoPreservationID, viewport: viewport) {
         defer { scene.presenter.cancelAndClose() }
         let before = coreTimeBytes(document)
         let index = document.history.undoIndex
@@ -123,7 +125,7 @@ func pitchBendDocumentPredicates(_ report: CheckReport, session: DocumentSession
             message: "the note span survives its lane undo")
     }
 
-    if let scene = pitchBendCheckScene(report, cppID: shiftLineID, session: session) {
+    if let scene = pitchBendCheckScene(report, cppID: shiftLineID, viewport: viewport) {
         defer { scene.presenter.cancelAndClose() }
         let graph = scene.presenter.pitchGraph()
         report.expect(
@@ -159,7 +161,7 @@ func pitchBendDocumentPredicates(_ report: CheckReport, session: DocumentSession
             message: "undoing the Shift line restores the serialized song")
     }
 
-    if let scene = pitchBendCheckScene(report, cppID: freehandID, session: session) {
+    if let scene = pitchBendCheckScene(report, cppID: freehandID, viewport: viewport) {
         defer { scene.presenter.cancelAndClose() }
         let graph = scene.presenter.pitchGraph()
         let index = document.history.undoIndex
@@ -176,7 +178,7 @@ func pitchBendDocumentPredicates(_ report: CheckReport, session: DocumentSession
             message: "the freehand stroke's history entry undoes")
     }
 
-    if let scene = pitchBendCheckScene(report, cppID: undoShortcutID, session: session) {
+    if let scene = pitchBendCheckScene(report, cppID: undoShortcutID, viewport: viewport) {
         defer { scene.presenter.cancelAndClose() }
         let graph = scene.presenter.pitchGraph()
         let before = coreTimeBytes(document)
@@ -195,7 +197,7 @@ func pitchBendDocumentPredicates(_ report: CheckReport, session: DocumentSession
             message: "the editor survives undoing its curve")
     }
 
-    if let scene = pitchBendCheckScene(report, cppID: navigationID, session: session) {
+    if let scene = pitchBendCheckScene(report, cppID: navigationID, viewport: viewport) {
         defer { scene.presenter.cancelAndClose() }
         let before = coreTimeBytes(document)
         let index = document.history.undoIndex
@@ -221,7 +223,7 @@ func pitchBendDocumentPredicates(_ report: CheckReport, session: DocumentSession
             message: "navigation keys keep the editor open")
     }
 
-    if let scene = pitchBendCheckScene(report, cppID: stackedID, session: session) {
+    if let scene = pitchBendCheckScene(report, cppID: stackedID, viewport: viewport) {
         defer { scene.presenter.cancelAndClose() }
         let graph = scene.presenter.pitchGraph()
         let baseline = coreTimeBytes(document)
@@ -262,8 +264,9 @@ func pitchBendDocumentPredicates(_ report: CheckReport, session: DocumentSession
     let canonicalID = "swiftcore/PitchBendEditingTest::canonicalCurveCommit"
     let canonicalService = ProjectService()
     let canonicalSession = pitchBendSyntheticSession(session, service: canonicalService)
+    let canonicalViewport = DocumentViewport(session: canonicalSession)
     defer { withExtendedLifetime(canonicalService) {} }
-    if let scene = pitchBendCheckScene(report, cppID: canonicalID, session: canonicalSession) {
+    if let scene = pitchBendCheckScene(report, cppID: canonicalID, viewport: canonicalViewport) {
         defer { scene.presenter.cancelAndClose() }
         let graph = scene.presenter.pitchGraph()
         let start = Int(scene.note.tick)
@@ -307,7 +310,7 @@ func pitchBendDocumentPredicates(_ report: CheckReport, session: DocumentSession
             message: "the committed curve drops coarse plateaus but keeps fine neighbors and endpoints")
     }
 
-    if let scene = pitchBendCheckScene(report, cppID: confinementID, session: session) {
+    if let scene = pitchBendCheckScene(report, cppID: confinementID, viewport: viewport) {
         defer { scene.presenter.cancelAndClose() }
         let graph = scene.presenter.pitchGraph()
         var endValue = 0
@@ -344,7 +347,7 @@ func pitchBendDocumentPredicates(_ report: CheckReport, session: DocumentSession
             message: "the confined stroke's history entry undoes")
     }
 
-    if let scene = pitchBendCheckScene(report, cppID: smfID, session: session) {
+    if let scene = pitchBendCheckScene(report, cppID: smfID, viewport: viewport) {
         defer { scene.presenter.cancelAndClose() }
         let graph = scene.presenter.pitchGraph()
         pitchBendDrawCurve(graph)

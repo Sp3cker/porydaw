@@ -39,7 +39,7 @@ ShellTabsSupport {
                "the replaced song's label no longer resolves to an open tab")
     }
 
-    function test_qReloadPreservesViewAndClearsHistory() {
+    function test_qReloadOpensFreshAndClearsHistory() {
         function semanticNotes(gridModel) {
             return JSON.stringify(JSON.parse(gridModel.fetchNoteSummary()).map(function(note) {
                 return [note.tick, note.duration, note.pitch, note.track,
@@ -50,6 +50,11 @@ ShellTabsSupport {
         var id = openShell(["mus_route101"])[0]
         fileProbe.children.push(shell.shellPresenter)
         var grid = gridOf(id)
+        var fresh = {
+            beat: grid.beatWidth, height: grid.rowHeight, x: grid.cameraScrollX,
+            y: grid.cameraScrollY, track: grid.trackIndex, cursor: grid.editCursorTick,
+            division: grid.gridSelectionMenuId, triplet: grid.tripletGrid
+        }
         var beforeNotes = summaryOf(id)
         drawNote(id)
         session().requestUndo()
@@ -57,9 +62,6 @@ ShellTabsSupport {
             return summaryOf(id) === beforeNotes
         }, 5000), "undo restores the song before its reload")
         verify(session().canRedo, "the old document has redo history before reload")
-        var defaultBeat = grid.beatWidth
-        var defaultHeight = grid.rowHeight
-        var defaultY = grid.cameraScrollY
         grid.handleWheel(0, 120, 0, 0, 0, 0, false, 100, 20)
         grid.setTrack(1)
         verify(grid.trackIndex === 1 && grid.renderedNoteCount > 0,
@@ -79,10 +81,14 @@ ShellTabsSupport {
         }
         tabs().setSelectedTabEventsVisible(true)
         prior.events = tabs().selectedTabShowsEvents
-        verify(prior.beat !== defaultBeat, "reload seeds a non-default pixels-per-beat zoom")
-        verify(prior.height !== defaultHeight, "reload seeds a non-default keyboard row height")
-        verify(prior.x !== grid.cameraMinHScroll, "reload seeds a non-default horizontal scroll")
-        verify(prior.y !== defaultY, "reload seeds a non-default vertical camera")
+        verify(prior.beat !== fresh.beat, "reload seeds a non-default pixels-per-beat zoom")
+        verify(prior.height !== fresh.height, "reload seeds a non-default keyboard row height")
+        verify(prior.x !== fresh.x, "reload seeds a non-default horizontal scroll")
+        verify(prior.y !== fresh.y, "reload seeds a non-default vertical camera")
+        verify(prior.track !== fresh.track, "reload seeds a non-default selected track")
+        verify(prior.cursor !== fresh.cursor, "reload seeds a non-default edit cursor")
+        verify(prior.division !== fresh.division, "reload seeds a non-default grid division")
+        verify(prior.triplet !== fresh.triplet, "reload seeds a non-default grid feel")
         compare(prior.track, 1, "reload seeds the alternate used track")
         compare(prior.division, 16, "reload seeds the musical-16 grid division")
         verify(prior.triplet, "reload seeds triplet grid feel")
@@ -159,19 +165,19 @@ ShellTabsSupport {
         compare(tabs().tabCount, 1, "reloading does not add a tab")
         compare(tabs().selectedPage.title, "mus_route101",
                 "reloading retains the selected song label")
-        fuzzyCompare(landed.beatWidth, prior.beat, 0.01,
-                     "reload retains the seeded pixels per beat")
-        fuzzyCompare(landed.rowHeight, prior.height, 0.01,
-                     "reload retains the seeded key height")
-        fuzzyCompare(landed.cameraScrollX, prior.x, 0.01,
-                     "reload retains the seeded horizontal scroll")
-        fuzzyCompare(landed.cameraScrollY, prior.y, 0.01,
-                     "reload retains the seeded vertical scroll")
-        compare(landed.trackIndex, prior.track, "reload retains the selected track")
-        compare(landed.editCursorTick, prior.cursor, "reload retains the edit cursor")
-        compare(landed.gridSelectionMenuId, prior.division,
-                "reload retains the selected grid division identity")
-        compare(landed.tripletGrid, prior.triplet, "reload retains triplet grid feel")
+        fuzzyCompare(landed.beatWidth, fresh.beat, 0.01,
+                     "reload opens with the fresh pixels per beat")
+        fuzzyCompare(landed.rowHeight, fresh.height, 0.01,
+                     "reload opens with the fresh key height")
+        fuzzyCompare(landed.cameraScrollX, fresh.x, 0.01,
+                     "reload opens with the fresh horizontal scroll")
+        fuzzyCompare(landed.cameraScrollY, fresh.y, 0.01,
+                     "reload opens with the fresh vertical scroll")
+        compare(landed.trackIndex, fresh.track, "reload opens with the fresh selected track")
+        compare(landed.editCursorTick, fresh.cursor, "reload opens with the fresh edit cursor")
+        compare(landed.gridSelectionMenuId, fresh.division,
+                "reload opens with the fresh grid division identity")
+        compare(landed.tripletGrid, fresh.triplet, "reload opens with the fresh grid feel")
         compare(tabs().selectedTabShowsEvents, prior.events,
                 "reload retains event list visibility")
         verify(seededCosmetics.laneHeight > 0
@@ -309,6 +315,10 @@ ShellTabsSupport {
         var id = openShell(["mus_route101"])[0]
         var page = tabs().selectedPage
         var grid = gridOf(id)
+        var fresh = {
+            x: grid.cameraScrollX, cursor: grid.editCursorTick,
+            division: grid.gridSelectionMenuId, triplet: grid.tripletGrid
+        }
         var song = fileProbe.songPath(bootstrap.projectRoot, "mus_route101")
         var originalBytes = fileProbe.fileFingerprint(song)
         var originalNotes = summaryOf(id)
@@ -363,10 +373,12 @@ ShellTabsSupport {
         compare(tabs().tabCount, 1, "ready publication leaves a single mounted page")
         var landed = tabs().selectedPage
         compare(landed.tabId, id, "complete reload keeps the original strip identity")
-        compare(gridOf(id).cameraScrollX, prior.x, "complete reload retains the camera")
-        compare(gridOf(id).editCursorTick, prior.cursor, "complete reload retains the cursor")
-        compare(gridOf(id).gridSelectionMenuId, prior.division, "complete reload retains grid division")
-        compare(gridOf(id).tripletGrid, prior.triplet, "complete reload retains grid feel")
+        fuzzyCompare(gridOf(id).cameraScrollX, fresh.x, 0.01,
+                     "complete reload opens with the fresh camera")
+        compare(gridOf(id).editCursorTick, fresh.cursor, "complete reload opens with the fresh cursor")
+        compare(gridOf(id).gridSelectionMenuId, fresh.division,
+                "complete reload opens with the fresh grid division")
+        compare(gridOf(id).tripletGrid, fresh.triplet, "complete reload opens with the fresh grid feel")
         compare(tabs().selectedTabShowsEvents, prior.events, "complete reload retains Event List visibility")
         compare(fileProbe.savedHiddenOrder(), "1:7,0:80",
                 "complete reload retains the seeded hidden-lane identities")
@@ -409,6 +421,10 @@ ShellTabsSupport {
         var ids = openShell(["mus_route101", "mus_route102"])
         clickSelectTab(ids[0])
         var firstGrid = gridOf(ids[0])
+        var fresh = {
+            track: firstGrid.trackIndex, cursor: firstGrid.editCursorTick,
+            division: firstGrid.gridSelectionMenuId, feel: firstGrid.tripletGrid
+        }
         firstGrid.setTrack(1)
         firstGrid.setEditCursorTick(96)
         firstGrid.openGridMenu(1)
@@ -433,12 +449,13 @@ ShellTabsSupport {
         verify(waitForNative(function() {
             return gridOf(ids[0]) !== firstGrid && gridOf(ids[0]).renderedNoteCount > 0
         }, 30000), "the selected tab replaces its document while the sibling stays open")
-        var restored = gridOf(ids[0])
-        compare(restored.trackIndex, first.track, "reload restores the first tab's selected owner")
-        compare(restored.editCursorTick, first.cursor, "reload restores the first tab's cursor")
-        compare(restored.gridSelectionMenuId, first.division, "reload restores the first tab's grid identity")
-        compare(restored.tripletGrid, first.feel, "reload restores the first tab's grid feel")
-        compare(tabs().selectedTabShowsEvents, first.events, "reload restores the first tab's Event List")
+        var reopened = gridOf(ids[0])
+        compare(reopened.trackIndex, fresh.track, "reload opens the first tab with a fresh selected owner")
+        compare(reopened.editCursorTick, fresh.cursor, "reload opens the first tab with a fresh cursor")
+        compare(reopened.gridSelectionMenuId, fresh.division,
+                "reload opens the first tab with a fresh grid identity")
+        compare(reopened.tripletGrid, fresh.feel, "reload opens the first tab with a fresh grid feel")
+        compare(tabs().selectedTabShowsEvents, first.events, "reload retains the first tab's Event List")
         clickSelectTab(ids[1])
         compare(gridOf(ids[1]), secondGrid, "reload retains the sibling's live presenter")
         compare(secondGrid.trackIndex, second.track, "sibling track remains independent")

@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import PorydawCoreCheckNative
+@testable import PorydawDocument
 
 @testable import PorydawApp
 
@@ -35,7 +36,7 @@ internal func sessionCatalogOutageRetainsLastValid(report: CheckReport, fixtureR
     let revision = app.voiceList.catalogRevision
     let argument = session.document.state.config.voicegroupArgument
     let loadName = session.bankLoadName
-    let sourcePath = session.bankLease.sourcePath
+    let sourcePath = session.bankLease.id.sourceRelativePath
     let voiceLoadName = app.voiceList.bankLoadName
     let service = ProjectService()
     do {
@@ -95,7 +96,7 @@ internal func sessionCatalogOutageRetainsLastValid(report: CheckReport, fixtureR
         cppID: id, message: "catalog outage keeps the last valid voicegroup choices")
     report.expect(
         session.document.state.config.voicegroupArgument == argument
-            && session.bankLoadName == loadName && session.bankLease.sourcePath == sourcePath
+            && session.bankLoadName == loadName && session.bankLease.id.sourceRelativePath == sourcePath
             && app.voiceList.bankLoadName == voiceLoadName, cppID: id,
         message: "catalog outage keeps the song voicegroup binding")
     report.expect(

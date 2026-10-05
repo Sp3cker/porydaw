@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 
 // Shared frozen-input vocabulary for Automation interactions: modifier policy,
 // pointer mechanics, revision-bound facts, and the canonical lane freeze passed

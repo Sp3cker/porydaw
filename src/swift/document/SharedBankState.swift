@@ -1,14 +1,15 @@
 import Foundation
+import PorydawProject
 import Synchronization
 
-internal struct BankBindingIdentity: Hashable {
+public struct BankBindingIdentity: Hashable, Sendable {
     let owner: UUID
     let sourcePath: String
     let sectionLabel: String
 
-    init(_ lease: NativeBankLease) {
+    public init(_ lease: ProjectBankLease) {
         owner = lease.publicationOwner
-        sourcePath = lease.sourcePath
+        sourcePath = lease.id.sourceRelativePath
         sectionLabel = lease.sectionLabel
     }
 }
@@ -46,7 +47,7 @@ internal final class SharedBankState {
             newer.lease.publicationRevision > value.lease.publicationRevision
         else { return }
         let changed =
-            newer.lease.bankToken != value.lease.bankToken
+            !newer.lease.sharesBank(with: value.lease)
             || newer.slots != value.slots || newer.dirty != value.dirty
             || newer.loadName != value.loadName
         value = newer
@@ -59,7 +60,7 @@ internal final class SharedBankState {
     }
 }
 
-internal final class ProjectBankViews: Sendable {
+public final class ProjectBankViews: Sendable {
     private let owner = Mutex<UUID?>(nil)
     @MainActor private var statesOwner: UUID?
     @MainActor private var states: [BankBindingIdentity: SharedBankState] = [:]
@@ -109,10 +110,11 @@ internal final class ProjectBankViews: Sendable {
     }
 
     @MainActor
-    func dirtyBanks() -> [AppliedBankEdit] {
+    public func dirtyBanks() -> [AppliedBankEdit] {
         _ = currentOwner()
         return states.values.map(\.value).filter(\.dirty).sorted {
-            ($0.lease.sourcePath, $0.lease.sectionLabel) < ($1.lease.sourcePath, $1.lease.sectionLabel)
+            ($0.lease.id.sourceRelativePath, $0.lease.sectionLabel)
+                < ($1.lease.id.sourceRelativePath, $1.lease.sectionLabel)
         }
     }
 }

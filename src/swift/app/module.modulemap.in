@@ -1,5 +1,4 @@
-module PorydawBankLease {
-    header "@CMAKE_SOURCE_DIR@/src/project/banklease.h"
+module PorydawNativeHost {
     header "@CMAKE_SOURCE_DIR@/src/app/native_host.h"
     header "@CMAKE_SOURCE_DIR@/src/app/qml_engine_host.h"
     export *

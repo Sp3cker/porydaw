@@ -2,16 +2,18 @@ import Foundation
 @testable import PorydawApp
 @testable import PorydawAppCommands
 import PorydawCore
+@testable import PorydawDocument
 
 @MainActor
-func checkCommandRouting(_ report: CheckReport, session: DocumentSession) {
+func checkCommandRouting(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/EditorGridCamera::commandRouting"
-    let setupGrid = makeCameraGrid(session: session)
+    let setupGrid = makeCameraGrid(viewport: viewport)
     let snap = max(1, setupGrid.snapTicks)
     guard
-        let pitch = session.camera.projection.pitch(
-            atY: 160, keyHeight: session.camera.snapshot.keyHeight,
-            scrollY: session.camera.snapshot.scrollY, dpr: setupGrid.devicePixelRatio),
+        let pitch = viewport.camera.projection.pitch(
+            atY: 160, keyHeight: viewport.camera.snapshot.keyHeight,
+            scrollY: viewport.camera.snapshot.scrollY, dpr: setupGrid.devicePixelRatio),
         pitch <= 115,
         let added = try? session.document.addNotes([
             NewNote(
@@ -32,7 +34,7 @@ func checkCommandRouting(_ report: CheckReport, session: DocumentSession) {
         session.document.deleteNotes(
             added.filter { session.document.note($0) != nil })
     }
-    let grid = makeCameraGrid(session: session)
+    let grid = makeCameraGrid(viewport: viewport)
     let a = added[0], b = added[1], c = added[2]
     session.setSelectedNotes([a])
     grid.performCommand(command: EditCommand.nudgeRight.rawValue)

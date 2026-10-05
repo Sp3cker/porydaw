@@ -56,6 +56,17 @@ public struct SelectionTransition: Equatable, Sendable {
     public let trackTime: TrackTimeSelection
 }
 
+/// Presentation repair the owning viewport performs inside the current
+/// state-change batch, before any change publication fans out.
+public enum ViewportRepair: Sendable {
+    /// Drawer lane state follows an engine-track remap.
+    case trackRemap(TrackRemap)
+    /// Folded scale rows may be stale: the primary track or its notes changed.
+    case scaleFold
+    /// The camera time domain and the grid axis/clock follow the rebuilt timeline.
+    case timeDomain
+}
+
 /// The song's MIDI file changed on disk since this session last loaded or
 /// saved it. The caller prompts before overwriting; nothing was written.
 public struct SaveConflictError: Error, Sendable {
@@ -66,7 +77,7 @@ public struct SaveConflictError: Error, Sendable {
 // MARK: - Document session
 
 /// One document plus its confirmed bank history,
-/// session-only selection/track-scope/camera/mute-solo, the current bank
+/// session-only selection/track-scope/mute-solo, the current bank
 /// lease, and the published playback projection.
 ///
 /// Every timeline projection goes through the canonical state factory, for the
@@ -77,10 +88,10 @@ public struct SaveConflictError: Error, Sendable {
 @MainActor
 public final class DocumentSession {
     public private(set) var document: SongDocument
-    internal private(set) lazy var projectionCache = DocumentProjectionCache(session: self)
+    public private(set) lazy var projectionCache = DocumentProjectionCache(session: self)
     /// Current projection, always rebuilt via the state factory.
     public internal(set) var timeline: PlaybackTimeline
-    public var bankLease: NativeBankLease { sharedBank.value.lease }
+    public var bankLease: ProjectBankLease { sharedBank.value.lease }
     public var bankSlots: [BankSlotView] { sharedBank.value.slots }
     public var bankDirty: Bool { sharedBank.value.dirty }
     public var bankLoadName: String { sharedBank.value.loadName }
@@ -88,7 +99,6 @@ public final class DocumentSession {
     /// On-disk MIDI identity at the last load or save. Nil predates tracking
     /// (direct init); the first save then adopts the disk without prompting.
     public private(set) var lastKnownMidiBytes: [UInt8]?
-    public private(set) var editorViewState = EditorViewState()
 
     /// Selection order is authoritative; membership is its cached lookup index.
     /// Both are session-only and never dirty the document or enter history.
@@ -96,7 +106,7 @@ public final class DocumentSession {
     public internal(set) var selectedNotes: Set<NoteID> = []
     public internal(set) var selectedTracks: Set<Int> = []
     public internal(set) var timeSelection: AutomationTimeSelection?
-    public enum TrackScopeAction { case plain, toggle, range }
+    public enum TrackScopeAction: Sendable { case plain, toggle, range }
     internal var changingPrimaryInternally = false
     public var selectedTrack: Int? {
         didSet {
@@ -107,20 +117,17 @@ public final class DocumentSession {
                     clearSelectedNotes()
                     clearTimeSelection()
                 }
-                if scaleProjection.fold { refreshScaleProjection() }
+                onViewportRepair?(.scaleFold)
                 publishChange([.selection])
             }
         }
     }
-    public private(set) var scaleProjection = ScaleProjection()
     public var editCursor: Tick = 0 {
         didSet {
             if editCursor != oldValue { publishChange([.cursor]) }
         }
     }
-    public internal(set) var camera: EditorCamera
-    var grid: RollGrid
-    var gridClockTicks: Tick {
+    public var gridClockTicks: Tick {
         TimelineSnapPolicy.clockTicks(
             division: document.ticksPerBeat,
             extendedClocks: document.state.config.extendedClocks)
@@ -139,30 +146,13 @@ public final class DocumentSession {
     /// Session-state callback. Document changes invoke it after selection
     /// reconciliation, timeline rebuild, and playback publication.
     public var onChange: ((SessionChange) -> Void)?
-    /// A changed origin publishes once; sibling projections do not publish.
-    public var onEditorViewStateChanged: ((EditorViewState) -> Void)?
+    /// Presentation repair hook, installed by the document's viewport. The
+    /// session calls it at fixed points inside a state-change batch, so every
+    /// change consumer reads an already-repaired viewport.
+    public var onViewportRepair: ((ViewportRepair) -> Void)?
 
     public var onPlayback: ((PlaybackTimeline) -> Void)?
     internal var selectionTransitionObservers: [UUID: (SelectionTransition) -> Void] = [:]
-    /// Presentation-only camera publication. The document workspace is the sole subscriber.
-    public var onCameraChange: ((EditorCamera.Snapshot) -> Void)?
-    /// Camera publication with the field-level delta used by the workspace
-    /// to choose projection-only drawer updates.
-    public var onCameraChangeDetailed: ((EditorCamera.Snapshot, EditorCamera.Change) -> Void)?
-
-    /// Sets presentation-only editor state without document history.
-    /// Returns true only for a changed value and publishes its origin once.
-    @discardableResult
-    public func setEditorViewState(_ state: EditorViewState) -> Bool {
-        guard editorViewState != state else { return false }
-        editorViewState = state
-        onEditorViewStateChanged?(state)
-        return true
-    }
-
-    internal func applyEditorViewStateProjection(_ state: EditorViewState) {
-        editorViewState = state
-    }
 
     public func addSelectionTransitionObserver(_ observer: @escaping (SelectionTransition) -> Void) -> UUID {
         let token = UUID()
@@ -181,7 +171,7 @@ public final class DocumentSession {
     internal var pendingBankNotification = false
     /// A queued bank write owns the session's bank/history lifecycle, but not
     /// ordinary document mutation admission.
-    internal var bankPersistenceInFlight = false
+    public internal(set) var bankPersistenceInFlight = false
     /// Nested synchronous state changes accumulate one final publication.
     internal var stateChangeDepth = 0
     internal var pendingDomains: SessionChangeDomains = []
@@ -190,7 +180,7 @@ public final class DocumentSession {
 
     public init(
         document: SongDocument, service: ProjectService,
-        lease: NativeBankLease, slots: [BankSlotView], dirty: Bool,
+        lease: ProjectBankLease, slots: [BankSlotView], dirty: Bool,
         loadName: String, sampleRate: Double = 48_000
     ) {
         self.document = document
@@ -199,28 +189,7 @@ public final class DocumentSession {
             for: AppliedBankEdit(
                 lease: lease, slots: slots, dirty: dirty, loadName: loadName,
                 materializationToken: nil))
-        let timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
-        self.timeline = timeline
-        let limits = GridCameraPolicy.limits(baseFontPx: GridCameraPolicy.seedBaseFontPx)
-        self.camera = EditorCamera(
-            ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
-            lengthTicks: UInt64(timeline.lengthTicks),
-            viewportWidth: 0,
-            rollHeight: 0,
-            limits: limits)
-        grid = RollGrid(
-            axis: TimeAxis(
-                map: TimeMap(
-                    ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
-                    lengthTicks: timeline.lengthTicks,
-                    timeSigs: document.timeSignatures.map {
-                        TimeSigPoint(
-                            tick: $0.tick, numerator: $0.numerator,
-                            denomPow2: $0.denominatorPower)
-                    })),
-            clockTicks: TimelineSnapPolicy.clockTicks(
-                division: document.ticksPerBeat,
-                extendedClocks: document.state.config.extendedClocks))
+        timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
         document.onChange = { [weak self] change in
             self?.handleDocumentChange(change)
         }
@@ -240,74 +209,10 @@ public final class DocumentSession {
         return try body()
     }
 
-    /// Applies one presentation-only camera mutation and publishes exactly once
-    /// when either the numeric snapshot or pitch projection changes.
-    @discardableResult
-    public func mutateCamera(_ body: (inout EditorCamera) -> Void) -> Bool {
-        let oldSnapshot = camera.snapshot
-        let oldProjection = camera.projection
-        body(&camera)
-        let newSnapshot = camera.snapshot
-        let projectionChanged = camera.projection != oldProjection
-        guard newSnapshot != oldSnapshot || projectionChanged else {
-            return false
-        }
-        let change = EditorCamera.Change.between(
-            oldSnapshot, newSnapshot, projectionChanged: projectionChanged)
-        onCameraChange?(newSnapshot)
-        onCameraChangeDetailed?(newSnapshot, change)
-        return true
-    }
-
-    /// Changes one tab's display state without changing MIDI or song history.
-    public func setScale(root: Int) {
-        var next = scaleProjection
-        next.setRoot(root)
-        applyScale(next)
-    }
-
-    public func setScale(type: ScaleID) {
-        var next = scaleProjection
-        next.setScale(type)
-        applyScale(next)
-    }
-
-    public func setScale(highlight: Bool) {
-        var next = scaleProjection
-        next.highlight = highlight
-        applyScale(next)
-    }
-
-    public func setScale(fold: Bool) {
-        var next = scaleProjection
-        next.fold = fold
-        applyScale(next)
-    }
-
-    private func applyScale(_ next: ScaleProjection) {
-        guard next != scaleProjection else { return }
-        let foldChanged = next.fold != scaleProjection.fold
-        scaleProjection = next
-        if foldChanged { refreshScaleProjection() }
+    /// Publishes a viewport scale change through the session's change fan-out;
+    /// the scale itself lives on the document's viewport.
+    public func noteScaleChanged() {
         publishChange([.scale])
-    }
-
-    internal func refreshScaleProjection() {
-        let notes = selectedTrack.map { document.notes(in: $0) } ?? []
-        let rows = scaleProjection.projection(notes: notes)
-        guard rows != camera.projection else { return }
-        let before = camera.snapshot
-        let centeredPitch = camera.projection.pitch(
-            atY: before.rollHeight / 2, keyHeight: before.keyHeight,
-            scrollY: before.scrollY, dpr: 1)
-        mutateCamera {
-            $0.updateProjection(rows)
-            if let centeredPitch, let nearest = rows.nearestVisiblePitch(to: centeredPitch) {
-                _ = $0.setVScroll(
-                    Double(rows.row(forPitch: nearest)) * before.keyHeight
-                        - before.rollHeight / 2)
-            }
-        }
     }
 
     /// Composes a session from an already-opened song and its decoded MIDI,
@@ -322,8 +227,8 @@ public final class DocumentSession {
             source: loaded.source, trackBudget: loaded.trackBudget)
         let session = DocumentSession(
             document: document, service: service, lease: loaded.bank,
-            slots: loaded.bankSlots, dirty: loaded.bankDirty,
-            loadName: loaded.bankLoadName, sampleRate: sampleRate)
+            slots: loaded.bankSlots, dirty: loaded.bank.dirty,
+            loadName: loaded.bank.loadName, sampleRate: sampleRate)
         session.lastKnownMidiBytes = loaded.midiBytes
         return session
     }
@@ -391,7 +296,7 @@ public final class DocumentSession {
             }
             return
         }
-        if Array(current) != known && Array(current) != snapshot.bytes {
+        if !current.elementsEqual(known) && !current.elementsEqual(snapshot.bytes) {
             throw SaveConflictError(label: document.source.label)
         }
     }
@@ -542,11 +447,9 @@ public final class DocumentSession {
     public func close() async -> Bool {
         guard !bankPersistenceInFlight, !document.history.bankTransitionInFlight else { return false }
         onChange = nil
-        onEditorViewStateChanged = nil
+        onViewportRepair = nil
         selectionTransitionObservers.removeAll()
         onPlayback = nil
-        onCameraChange = nil
-        onCameraChangeDetailed = nil
         document.onChange = nil
         isClosed = true
         sharedBank.detach(self)

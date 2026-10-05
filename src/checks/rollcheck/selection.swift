@@ -2,19 +2,20 @@ import Foundation
 @testable import PorydawApp
 @testable import PorydawAppCommands
 import PorydawCore
+@testable import PorydawDocument
 import QtBridge
 
 @MainActor
-func runSelectionChecks(_ report: CheckReport, session: DocumentSession, fixtureRoot: String) {
-    checkSelectionBandSweep(report, session: session)
-    checkSelectionNonScaleMove(report, session: session)
-    checkSelectionBandAudition(report, session: session)
-    checkKeyboardAuditionTrackSwitch(report, session: session)
-    checkTransposeAudition(report, session: session)
+func runSelectionChecks(_ report: CheckReport, viewport: DocumentViewport, fixtureRoot: String) {
+    checkSelectionBandSweep(report, viewport: viewport)
+    checkSelectionNonScaleMove(report, viewport: viewport)
+    checkSelectionBandAudition(report, viewport: viewport)
+    checkKeyboardAuditionTrackSwitch(report, viewport: viewport)
+    checkTransposeAudition(report, viewport: viewport)
     checkMountedTransposeAudition(report, fixtureRoot: fixtureRoot)
-    checkGroupedVelocityDrag(report, session: session)
-    checkThresholdDrawCell(report, session: session)
-    checkOrderedSelection(report, session: session)
+    checkGroupedVelocityDrag(report, viewport: viewport)
+    checkThresholdDrawCell(report, viewport: viewport)
+    checkOrderedSelection(report, viewport: viewport)
 }
 
 @MainActor
@@ -40,7 +41,7 @@ private func rollNoteRect(_ note: GridNote, grid: PianoGrid) -> SceneRect? {
 /// First fully visible row and its viewport y-center, projected by the
 /// production camera (keyboard-adjacent journeys need a row without a note).
 func visibleRow(_ grid: PianoGrid, height: Double = 320) -> (pitch: Int, y: Double)? {
-    let camera = grid.session.camera
+    let camera = grid.viewport.camera
     let snapshot = camera.snapshot
     for pitch in 24...115 {
         let row = camera.projection.row(forPitch: pitch)
@@ -64,8 +65,9 @@ func velocityPairSeed(
 )
     -> (ids: [NoteID], rects: [SceneRect])?
 {
+    let viewport = grid.viewport
     let tick = 240
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         _ = camera.setHScroll(
             max(
                 camera.snapshot.minHScroll, camera.contentX(tick: Double(tick)) - 100))
@@ -75,9 +77,9 @@ func velocityPairSeed(
     var pitches: [Int] = []
     for y in [160.0, 200.0, 120.0, 240.0, 80.0] {
         guard
-            let candidate = session.camera.projection.pitch(
-                atY: y, keyHeight: session.camera.snapshot.keyHeight,
-                scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
+            let candidate = viewport.camera.projection.pitch(
+                atY: y, keyHeight: viewport.camera.snapshot.keyHeight,
+                scrollY: viewport.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
         else { continue }
         let clash = session.document.notes(in: grid.trackIndex).contains {
             Int($0.pitch) == candidate && Int($0.tick) < tick + 2 * duration

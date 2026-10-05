@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 @MainActor
 func runIdentityChecks(_ report: CheckReport, session: DocumentSession) {
@@ -120,7 +121,8 @@ private func checkOrdinaryProjection(_ report: CheckReport, fixture: DocumentSes
         lease: fixture.bankLease, slots: fixture.bankSlots,
         dirty: false, loadName: fixture.bankLoadName)
     session.selectedTrack = 2
-    let grid = PianoGrid(session: session)
+    let viewport = DocumentViewport(session: session)
+    let grid = PianoGrid(viewport: viewport)
     grid.configureViewport(width: 800, height: 480, fontPx: 13, dpr: 1)
     grid.setTrack(index: 2)
     let notes = document.notes(in: 2)
@@ -161,6 +163,7 @@ private func checkRetainedCosmetics(_ report: CheckReport, fixture: DocumentSess
         dirty: false, loadName: fixture.bankLoadName)
     let track = 1
     session.selectedTrack = track
+    let viewport = DocumentViewport(session: session)
     var cosmetics = EditorViewState()
     cosmetics.lanes.laneHeight = 64
     cosmetics.lanes.laneHeights = ["cc:\(track):7": 96]
@@ -169,9 +172,9 @@ private func checkRetainedCosmetics(_ report: CheckReport, fixture: DocumentSess
     let originalState = session.document.state
     let originalRevision = session.document.revision
     let originalIndex = session.document.history.undoIndex
-    session.setEditorViewState(cosmetics)
+    viewport.setEditorViewState(cosmetics)
     report.expect(
-        session.editorViewState == cosmetics
+        viewport.editorViewState == cosmetics
             && session.document.state == originalState
             && session.document.revision == originalRevision
             && session.document.history.undoIndex == originalIndex,
@@ -181,14 +184,14 @@ private func checkRetainedCosmetics(_ report: CheckReport, fixture: DocumentSess
         report.fail(id, "retained-view fixture lacks an alternate engine owner")
         return
     }
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     grid.configureViewport(width: 800, height: 480, fontPx: 13, dpr: 1)
-    let savedCamera = session.camera.snapshot
+    let savedCamera = viewport.camera.snapshot
     let savedTrack = session.selectedTrack
     let savedCursor = session.editCursor
-    let savedGrid = session.grid
+    let savedGrid = viewport.grid
     defer {
-        session.mutateCamera {
+        viewport.mutateCamera {
             $0.restore(
                 pixelsPerBeat: savedCamera.pixelsPerBeat,
                 keyHeight: savedCamera.keyHeight,
@@ -201,7 +204,7 @@ private func checkRetainedCosmetics(_ report: CheckReport, fixture: DocumentSess
         grid.openGridMenu(kind: 2)
         grid.activateGridMenuRow(actionId: savedGrid.feel == .triplet ? 1 : 0)
     }
-    session.mutateCamera {
+    viewport.mutateCamera {
         $0.restore(pixelsPerBeat: 64, keyHeight: 16, scrollX: 1, scrollY: 1)
     }
     grid.setTrack(index: track == 0 ? 1 : 0)
@@ -211,14 +214,14 @@ private func checkRetainedCosmetics(_ report: CheckReport, fixture: DocumentSess
     grid.openGridMenu(kind: 2)
     grid.activateGridMenuRow(actionId: 1)
     report.expect(
-        session.editorViewState == cosmetics && grid.beatWidth == 64
+        viewport.editorViewState == cosmetics && grid.beatWidth == 64
             && grid.rowHeight == 16 && grid.trackIndex != track
             && grid.editCursorTick == 96 && grid.gridSelectionMenuId == 16
             && grid.tripletGrid && session.document.state == originalState
             && session.document.revision == originalRevision,
         cppID: id,
         message: "perturbed live camera owner cursor and grid leave complete lane cosmetics and MIDI unchanged")
-    session.mutateCamera {
+    viewport.mutateCamera {
         $0.restore(
             pixelsPerBeat: savedCamera.pixelsPerBeat,
             keyHeight: savedCamera.keyHeight,
@@ -231,14 +234,14 @@ private func checkRetainedCosmetics(_ report: CheckReport, fixture: DocumentSess
     grid.openGridMenu(kind: 2)
     grid.activateGridMenuRow(actionId: savedGrid.feel == .triplet ? 1 : 0)
     report.expect(
-        session.editorViewState == cosmetics
-            && session.camera.snapshot.pixelsPerBeat == savedCamera.pixelsPerBeat
-            && session.camera.snapshot.keyHeight == savedCamera.keyHeight
-            && session.camera.snapshot.scrollX == savedCamera.scrollX
-            && session.camera.snapshot.scrollY == savedCamera.scrollY
+        viewport.editorViewState == cosmetics
+            && viewport.camera.snapshot.pixelsPerBeat == savedCamera.pixelsPerBeat
+            && viewport.camera.snapshot.keyHeight == savedCamera.keyHeight
+            && viewport.camera.snapshot.scrollX == savedCamera.scrollX
+            && viewport.camera.snapshot.scrollY == savedCamera.scrollY
             && session.selectedTrack == savedTrack && session.editCursor == savedCursor
-            && session.grid.selection == savedGrid.selection
-            && session.grid.feel == savedGrid.feel
+            && viewport.grid.selection == savedGrid.selection
+            && viewport.grid.feel == savedGrid.feel
             && session.document.state == originalState
             && session.document.history.undoIndex == originalIndex,
         cppID: id,
@@ -271,7 +274,8 @@ private func checkSharedEndPitchMove(_ report: CheckReport, fixture: DocumentSes
             lease: fixture.bankLease, slots: fixture.bankSlots,
             dirty: false, loadName: fixture.bankLoadName)
         session.selectedTrack = 0
-        let grid = makeCameraGrid(session: session, zoom: 140)
+        let viewport = DocumentViewport(session: session)
+        let grid = makeCameraGrid(viewport: viewport, zoom: 140)
         let notes = document.notes(in: 0)
         guard notes.count == 3, let rect = selectionRect(notes[1].id, grid: grid) else {
             report.fail(id, "shared-end MIDI pitch-move fixture is not projected")
@@ -280,7 +284,7 @@ private func checkSharedEndPitchMove(_ report: CheckReport, fixture: DocumentSes
         let before = try document.captureSave().bytes
         let x = rect.x + rect.width / 2
         let y = rect.y + rect.height / 2
-        let destinationY = y - session.camera.snapshot.keyHeight
+        let destinationY = y - viewport.camera.snapshot.keyHeight
         grid.beginPointer(x: x, y: y, modifiers: 0)
         grid.updatePointer(x: x, y: destinationY)
         grid.endPointer(x: x, y: destinationY)

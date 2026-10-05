@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 // Existing scenarios paired with automationactions.cpp.
 // Entry order remains in AutomationPageChecks.swift.
@@ -115,10 +116,10 @@ func drawerAutomationProjectionValueBounds(
         secondIsControlChange, cppID: id,
         message: "the second published row is a ControlChange")
     let projection = AutomationProjection(
-        camera: fixture.session.camera,
+        camera: fixture.viewport.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: fixture.page.geometry,
-        snapPolicy: AutomationProjectionCache().snapPolicy(session: fixture.session, font: 13, dpr: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(viewport: fixture.viewport, font: 13, dpr: 1),
         songEndTick: fixture.songEndTick)
     let yMin = projection.y(0, metadata: metadata)
     let yMax = projection.y(127, metadata: metadata)
@@ -149,15 +150,15 @@ func drawerAutomationProjectionInsertionAndPencilClick(
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [])
     fixture.activate(fixture.panLane)
     let projection = AutomationProjection(
-        camera: fixture.session.camera,
+        camera: fixture.viewport.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: fixture.page.geometry,
         snapPolicy: AutomationProjectionCache().snapPolicy(
-            session: fixture.session, font: fixture.page.baseFontPx, dpr: 1),
+            viewport: fixture.viewport, font: fixture.page.baseFontPx, dpr: 1),
         songEndTick: fixture.songEndTick)
     let cell = projection.cell(atRawTick: 24.0)
     let intermediateTick = Double(cell.tickBegin) + 0.4 * Double(projection.snapPolicy.clockTicks)
-    let x = fixture.session.camera.contentX(tick: intermediateTick)
+    let x = fixture.viewport.camera.contentX(tick: intermediateTick)
     let rawTick = projection.rawTick(atX: x)
     let mappedCell = projection.cell(atRawTick: rawTick)
     let caretTick = projection.tick(atX: x, fine: true)
@@ -219,7 +220,7 @@ func drawerAutomationProjectionInsertionAndPencilClick(
     biased.activate(biased.panLane)
     biased.page.isPencilMode = true
     let biasedRawTick = Double(cell.tickBegin) + 0.75 * Double(cell.tickEnd - cell.tickBegin)
-    let biasedX = biased.session.camera.contentX(tick: biasedRawTick)
+    let biasedX = biased.viewport.camera.contentX(tick: biasedRawTick)
     report.expect(
         projection.tick(atX: biasedX, fine: false) != cell.tickBegin,
         cppID: clickID, message: "a late-cell click differs from the nearest grid tick")

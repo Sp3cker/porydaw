@@ -1,5 +1,6 @@
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 @MainActor
 func runOtherEventsBandChecks(_ report: CheckReport) {
@@ -119,7 +120,7 @@ func runOtherEventsBandChecks(_ report: CheckReport) {
         cppID: "swiftcore/OtherEventsBand::tooltip",
         message: "more than twelve hovered events yield twelve lines followed by an ellipsis")
     let presenter = OtherEventsBandPresenter()
-    presenter.configure(session: nil, palette: palette, baseFontPx: 13, appFontLineSpacing: 17)
+    presenter.configure(viewport: nil, palette: palette, baseFontPx: 13, appFontLineSpacing: 17)
     report.expect(
         presenter.labelCount == 0 && !presenter.toolTipVisible,
         cppID: "swiftcore/OtherEventsBand::lifecycle",

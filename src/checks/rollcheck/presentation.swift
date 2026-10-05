@@ -2,16 +2,18 @@ import Foundation
 @testable import PorydawApp
 @testable import PorydawAppCommands
 import PorydawCore
+@testable import PorydawDocument
 @testable import PorydawAppAudio
 import PorydawPlaybackNative
 
 @MainActor
-func runPresentationChecks(_ report: CheckReport, session: DocumentSession) {
-    checkHeaderPanFollow(report, session: session)
+func runPresentationChecks(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
+    checkHeaderPanFollow(report, viewport: viewport)
     checkHeaderRename(report, session: session)
-    checkHeaderKeyboardMuteSolo(report, session: session)
+    checkHeaderKeyboardMuteSolo(report, viewport: viewport)
     checkHeaderReconciliation(report, session: session)
-    checkPresenterMetrics(report, session: session)
+    checkPresenterMetrics(report, viewport: viewport)
     checkMountedPolyphonyReveal(report)
 }
 
@@ -34,6 +36,7 @@ private func checkMountedPolyphonyReveal(_ report: CheckReport) {
         _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
     }
     guard app.songOpen, let session = app.selectedDocument,
+        let viewport = app.workspace?.viewport,
         let other = session.document.addTrack(voice: 0),
         let planted = try? session.document.addNotes([
             NewNote(track: 0, tick: 12_000, pitch: 60, duration: 6, velocity: 80),
@@ -52,7 +55,7 @@ private func checkMountedPolyphonyReveal(_ report: CheckReport) {
     let identity = document.history.currentIdentity
     session.selectPrimaryTrack(other)
     session.setSelectedNotes([planted[2]])
-    let initialScroll = session.camera.snapshot.scrollX
+    let initialScroll = viewport.camera.snapshot.scrollX
     var snapshot = AudioPolySnapshot(
         maxPcmChannels: 0, invert: false,
         pcm: Array(
@@ -95,11 +98,11 @@ private func checkMountedPolyphonyReveal(_ report: CheckReport) {
         session.selectedNoteOrder.count == 1
             && session.selectedNoteOrder.first == planted[1], cppID: id,
         message: "A020 the positioned event selects exactly its last earlier same-key note")
-    let revealed = session.camera.snapshot
+    let revealed = viewport.camera.snapshot
     report.expect(
         revealed.scrollX > initialScroll
-            && session.camera.contentX(tick: 12_027) >= 0
-            && session.camera.contentX(tick: 12_027) <= revealed.viewportWidth,
+            && viewport.camera.contentX(tick: 12_027) >= 0
+            && viewport.camera.contentX(tick: 12_027) <= revealed.viewportWidth,
         cppID: id,
         message: "the active positioned event tick is revealed within the roll viewport")
     report.expect(
@@ -116,7 +119,7 @@ private func checkMountedPolyphonyReveal(_ report: CheckReport) {
         cppID: id, message: "A024 a matched event preserves exact exported MIDI bytes")
     session.selectPrimaryTrack(other)
     session.setSelectedNotes([planted[1]])
-    let beforeMiss = session.camera.snapshot
+    let beforeMiss = viewport.camera.snapshot
     let cursorBeforeMiss = session.editCursor
     app.polyphony.activateEvent(index: 1, devicePixelRatio: 1)
     report.expect(
@@ -126,7 +129,7 @@ private func checkMountedPolyphonyReveal(_ report: CheckReport) {
         session.selectedTrack == 0, cppID: id,
         message: "A022 an unused key selects its losing track despite no note match")
     report.expect(
-        session.camera.snapshot == beforeMiss && session.editCursor == cursorBeforeMiss,
+        viewport.camera.snapshot == beforeMiss && session.editCursor == cursorBeforeMiss,
         cppID: id, message: "an unused-key miss leaves the viewport and cursor untouched")
     let afterMiss = try? document.captureSave()
     report.expect(
@@ -139,14 +142,14 @@ private func checkMountedPolyphonyReveal(_ report: CheckReport) {
         cppID: id, message: "the unused-key event preserves exact exported MIDI bytes")
     session.selectPrimaryTrack(other)
     session.setSelectedNotes([planted[1]])
-    let beforeExpiryMiss = session.camera.snapshot
+    let beforeExpiryMiss = viewport.camera.snapshot
     let cursorBeforeExpiryMiss = session.editCursor
     app.polyphony.activateEvent(index: 0, devicePixelRatio: 1)
     report.expect(
         session.selectedTrack == 0 && session.selectedNoteOrder == [planted[1]],
         cppID: id, message: "an expired same-key note does not replace the selection")
     report.expect(
-        session.camera.snapshot == beforeExpiryMiss
+        viewport.camera.snapshot == beforeExpiryMiss
             && session.editCursor == cursorBeforeExpiryMiss, cppID: id,
         message: "an expired same-key event leaves the viewport and cursor untouched")
     let afterExpiryMiss = try? document.captureSave()
@@ -158,46 +161,47 @@ private func checkMountedPolyphonyReveal(_ report: CheckReport) {
 }
 
 @MainActor
-private func checkHeaderPanFollow(_ report: CheckReport, session: DocumentSession) {
+private func checkHeaderPanFollow(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRollTest::headerPanFollow"
     let before = session.document.state
     let identity = session.document.history.currentIdentity
-    let oldCamera = session.camera.snapshot
-    let grid = PianoGrid(session: session)
-    session.mutateCamera {
+    let oldCamera = viewport.camera.snapshot
+    let grid = PianoGrid(viewport: viewport)
+    viewport.mutateCamera {
         $0.updateViewport(width: 640, rollHeight: 320)
         _ = $0.setHScroll(0)
     }
-    let home = session.camera.snapshot.scrollX
-    let farTick = session.camera.tickAtContentX(640 * 2)
+    let home = viewport.camera.snapshot.scrollX
+    let farTick = viewport.camera.tickAtContentX(640 * 2)
     grid.beginPan(x: 320, y: 160)
     let blocked = SharedPlayheadPolicy.followTarget(
-        tick: farTick, camera: session.camera, playing: true, followEnabled: true,
+        tick: farTick, camera: viewport.camera, playing: true, followEnabled: true,
         interactions: SharedPlayheadInteractions(gridActive: grid.interactionActive))
     report.expect(
         grid.interactionActive && blocked == nil
-            && session.camera.snapshot.scrollX == home, cppID: id,
+            && viewport.camera.snapshot.scrollX == home, cppID: id,
         message: "live roll pan suspends follow without moving the camera")
     grid.endPan()
     let resumed = SharedPlayheadPolicy.followTarget(
-        tick: farTick, camera: session.camera, playing: true, followEnabled: true,
+        tick: farTick, camera: viewport.camera, playing: true, followEnabled: true,
         interactions: SharedPlayheadInteractions(gridActive: grid.interactionActive))
     report.expect(
         !grid.interactionActive && resumed != nil, cppID: id,
         message: "follow becomes eligible once the pan ends")
     if let resumed {
-        _ = session.mutateCamera { _ = $0.setHScroll(resumed) }
+        _ = viewport.mutateCamera { _ = $0.setHScroll(resumed) }
         report.expect(
-            session.camera.snapshot.scrollX != home, cppID: id,
+            viewport.camera.snapshot.scrollX != home, cppID: id,
             message: "resumed follow scrolls the shared roll camera")
     }
-    session.mutateCamera {
+    viewport.mutateCamera {
         $0.updateViewport(width: oldCamera.viewportWidth, rollHeight: oldCamera.rollHeight)
         _ = $0.setHScroll(oldCamera.scrollX)
         _ = $0.setVScroll(oldCamera.scrollY)
     }
     report.expectEqual(
-        expected: oldCamera, actual: session.camera.snapshot, cppID: id,
+        expected: oldCamera, actual: viewport.camera.snapshot, cppID: id,
         what: "pan probe restores the incoming camera viewport and scroll")
     report.expect(
         session.document.state == before && session.document.history.currentIdentity == identity,
@@ -273,7 +277,8 @@ private func checkHeaderRename(_ report: CheckReport, session: DocumentSession) 
 }
 
 @MainActor
-private func checkHeaderKeyboardMuteSolo(_ report: CheckReport, session: DocumentSession) {
+private func checkHeaderKeyboardMuteSolo(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRollTest::headerKeyboardMuteSolo"
     let document = session.document
     let before = document.state
@@ -316,7 +321,7 @@ private func checkHeaderKeyboardMuteSolo(_ report: CheckReport, session: Documen
     let noEdit = document.state
     let noEditIdentity = document.history.currentIdentity
     let rebuilds = headers.rowRebuildCount
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     report.expect(
         session.mutedTracks.isEmpty && session.soloedTracks.isEmpty,
         cppID: id, message: "keyboard mute and solo begin with clear scopes")
@@ -460,10 +465,11 @@ private func checkHeaderReconciliation(_ report: CheckReport, session: DocumentS
 }
 
 @MainActor
-private func checkPresenterMetrics(_ report: CheckReport, session: DocumentSession) {
+private func checkPresenterMetrics(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/EditorGridCamera::presenterMetrics"
-    let grid = makeCameraGrid(session: session)
-    let snapshot = session.camera.snapshot
+    let grid = makeCameraGrid(viewport: viewport)
+    let snapshot = viewport.camera.snapshot
     report.expect(
         gridCameraNear(grid.baseFontPx, 13) && gridCameraNear(grid.devicePixelRatio, 2)
             && grid.rowHeight > 0 && grid.beatWidth > 0 && grid.keyboardWidth > 0,
@@ -512,7 +518,7 @@ private func checkPresenterMetrics(_ report: CheckReport, session: DocumentSessi
     grid.configureViewport(width: 640, height: 320, fontPx: 26, dpr: 2)
     report.expect(
         gridCameraNear(grid.baseFontPx, 26)
-            && gridCameraNear(grid.cameraMaxVScroll, session.camera.snapshot.maxVScroll),
+            && gridCameraNear(grid.cameraMaxVScroll, viewport.camera.snapshot.maxVScroll),
         cppID: id, message: "metric scale republish tracks the requested font and camera bounds")
     report.expect(
         grid.scene.hoverChipFont.pixelSize == Typography(baseFontPx: 26).caption.pixelSize,

@@ -3,6 +3,7 @@ import PorydawApp
 import PorydawAppCommands
 import PorydawCore
 import PorydawCoreCheckNative
+import PorydawDocument
 import PorydawPlayback
 
 // MARK: - Session Time Routing
@@ -45,13 +46,14 @@ internal func runTimeRoutingChecks(
         document: document, service: service,
         lease: suite.bankLease, slots: suite.bankSlots,
         dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
-    let grid = PianoGrid(session: session)
+    let viewport = DocumentViewport(session: session)
+    let grid = PianoGrid(viewport: viewport)
     let page = AutomationPage()
-    page.attach(session: session, palette: GridPalette())
+    page.attach(viewport: viewport, palette: GridPalette())
     defer { page.detach() }
     session.onChange = { [weak page] _ in page?.refreshFromDocument() }
     session.selectedTrack = 0
-    let ruler = RulerMenuPresenter(session: session, grid: grid, automation: page)
+    let ruler = RulerMenuPresenter(viewport: viewport, grid: grid, automation: page)
     let router = EditorCommandRouter(session: session, grid: grid, automation: page, rulerMenu: ruler)
     guard let source = document.notes(in: 0).first(where: { $0.tick == 0 }),
         let inside = document.notes(in: 0).first(where: { $0.tick == 24 }),

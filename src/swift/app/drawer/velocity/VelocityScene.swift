@@ -1,4 +1,5 @@
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 // Pure build inputs and outputs; the page owns publication and reuse caches.

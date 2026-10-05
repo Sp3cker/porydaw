@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+import PorydawDocument
 import PorydawPlayback
 import PorydawProject
 
@@ -228,12 +229,8 @@ internal func sessionSavePersistence(
         let song2 = try runBlocking {
             try await service.openSong(label: "mus_session_test2")
         }
-        report.expect(
-            song1.bank.bankToken != 0,
-            cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
-            message: "opened song has non-zero bank token")
         report.expectEqual(
-            expected: song1.bank.bankToken, actual: song2.bank.bankToken,
+            expected: true, actual: song1.bank.sharesBank(with: song2.bank),
             cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
             what: "songs sharing the same voicegroup reuse the native bank lease")
     } catch {
@@ -393,7 +390,7 @@ private func sessionSaveReceipts(report: CheckReport, fixtureRoot: String) {
             return
         }
         let bank = session.bankLease
-        let bankPath = bank.sourcePath
+        let bankPath = bank.id.sourceRelativePath
         let bankSection = bank.sectionLabel
         _ = try session.document.addNotes([
             NewNote(track: 0, tick: 288, pitch: 74, duration: 24, velocity: 90)
@@ -450,7 +447,7 @@ private func sessionSaveReceipts(report: CheckReport, fixtureRoot: String) {
             recipe.bank != nil && recipe.bank?.dirty == false, cppID: id,
             message: "A067 bank-recipe save returns a clean refreshed bank view")
         report.expect(
-            recipe.bank?.lease.sourcePath == bankPath && recipe.bank?.lease.sectionLabel == bankSection,
+            recipe.bank?.lease.id.sourceRelativePath == bankPath && recipe.bank?.lease.sectionLabel == bankSection,
             cppID: id, message: "A069 refreshed bank keeps the captured source and section identity")
         report.expect(
             recipe.flagsWritten, cppID: id,
@@ -485,7 +482,7 @@ private func sessionSaveJourney(report: CheckReport, fixtureRoot: String) {
             try await service.open(root: root)
             return try await DocumentSession.open(service: service, label: "mus_session_test")
         }
-        let bankPath = root + "/" + session.bankLease.sourcePath
+        let bankPath = root + "/" + session.bankLease.id.sourceRelativePath
         guard let midiBefore = bytes(at: midiPath), let bankBefore = bytes(at: bankPath),
             let original = session.bankSlots[0].voice
         else {
@@ -623,7 +620,7 @@ private func sessionSynthUndoTail(report: CheckReport, fixtureRoot: String) {
             return try await DocumentSession.open(service: service, label: "mus_session_test")
         }
         try runBlocking { try await session.selectVoicegroup("_fixture_rich") }
-        let bankPath = root + "/" + session.bankLease.sourcePath
+        let bankPath = root + "/" + session.bankLease.id.sourceRelativePath
         guard let original = session.bankSlots[0].voice, let originalBytes = bytes(at: bankPath) else {
             report.fail(id, "synth journey fixture is missing the DirectSound voice")
             return
@@ -637,12 +634,11 @@ private func sessionSynthUndoTail(report: CheckReport, fixtureRoot: String) {
         edited.symbol = symbol
         let pulseVoice = edited
         _ = try runBlocking { try await session.applyBankEdit(slot: 0, value: pulseVoice, expected: original) }
-        let tone = session.bankLease.withVoices { voices -> (UInt32?, [UInt8]?) in
-            guard let wave = voices?.pointee.wav?.pointee,
-                let data = wave.data
-            else { return (nil, nil) }
+        func slotZeroTone() -> (UInt32?, [UInt8]?) {
+            guard let wave = session.bankLease[0].wav?.pointee, let data = wave.data else { return (nil, nil) }
             return (wave.size, (1...5).map { UInt8(bitPattern: data[$0]) })
         }
+        let tone = slotZeroTone()
         report.expect(
             session.bankSlots[0].voice?.symbol == symbol,
             cppID: id, message: "the synth edit stages the minted bank symbol")
@@ -673,12 +669,7 @@ private func sessionSynthUndoTail(report: CheckReport, fixtureRoot: String) {
         report.expect(
             session.bankSlots[0].voice?.symbol == symbol,
             cppID: id, message: "the pulse wave edit restores its synth symbol")
-        let pulseTone = session.bankLease.withVoices { voices -> (UInt32?, [UInt8]?) in
-            guard let wave = voices?.pointee.wav?.pointee,
-                let data = wave.data
-            else { return (nil, nil) }
-            return (wave.size, (1...5).map { UInt8(bitPattern: data[$0]) })
-        }
+        let pulseTone = slotZeroTone()
         report.expect(
             pulseTone.0 == 0, cppID: id,
             message: "the restored pulse wav has zero source size")

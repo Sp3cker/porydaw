@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 // Owns voice-change projection, input and modal transactions for the current document.
@@ -186,7 +187,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
     public private(set) var presentedContextEndTick: Tick = TimeDefaults.noTick
     private var presentedContextStartTick: Tick = 0
 
-    @QtIgnored weak var session: DocumentSession?
+    @QtIgnored weak var viewport: DocumentViewport?
+    @QtIgnored var session: DocumentSession? { viewport?.session }
     @QtIgnored var palette = GridPalette()
     @QtIgnored var typography: Typography
     @QtIgnored var caption: VoiceCaption?
@@ -231,15 +233,15 @@ public final class VoiceChangesPage: EditorDrawerPage {
     /// Installs the document and palette owners. Called before the container
     /// attaches the page, so no publication can precede the session it reads.
     @QtIgnored
-    public func attach(session: DocumentSession, palette: GridPalette) {
+    public func attach(viewport: DocumentViewport, palette: GridPalette) {
         cancelSectionInteraction()
-        self.session = session
+        self.viewport = viewport
         entriesRevision = nil
         entriesTrack = nil
-        pickerCache.refresh(slots: session.bankSlots)
+        pickerCache.refresh(slots: viewport.session.bankSlots)
         self.palette = palette
         refreshPromptStyle()
-        contextTick = session.editCursor
+        contextTick = viewport.session.editCursor
         presentedContextEndTick = TimeDefaults.noTick
         presentedContextStartTick = 0
         rebuildContent()
@@ -250,7 +252,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
     @QtIgnored
     public func detach() {
         cancelSectionInteraction()
-        session = nil
+        viewport = nil
         presentedContextEndTick = TimeDefaults.noTick
         presentedContextStartTick = 0
         let scene = VoiceChangesSceneSnapshot.detached

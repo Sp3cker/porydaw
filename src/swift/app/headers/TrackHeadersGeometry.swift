@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 /// QRectF-compatible row-local box. Application hairlines remain one logical

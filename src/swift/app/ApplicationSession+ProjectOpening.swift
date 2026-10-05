@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import PorydawProject
 import QtBridge
 import PorydawAppAudio
@@ -21,7 +22,7 @@ extension ApplicationSession {
     @QtIgnored
     func restoreStartup() {
         guard persistenceConfigured, !deliberateOpenRequested, !isDisposed else { return }
-        let recipe = EditorViewStateCodec.loadTabs(store: preferences)
+        let recipe = EditorViewStatePreferences.loadTabs(store: preferences)
         guard !recipe.projectPath.isEmpty else { return }
         startProjectSwitch(path: recipe.projectPath, label: nil, restore: recipe)
     }
@@ -45,7 +46,7 @@ extension ApplicationSession {
     func prefetchStartup(arguments: [String]) {
         guard prefetchedProject == nil, !isDisposed else { return }
         let cli = parseStartupArguments(arguments)
-        let recipe = EditorViewStateCodec.loadTabs(store: preferences)
+        let recipe = EditorViewStatePreferences.loadTabs(store: preferences)
         let path = cli.project.isEmpty ? recipe.projectPath : cli.project
         guard !path.isEmpty else { return }
         songDock.songsLoading = true
@@ -121,7 +122,7 @@ extension ApplicationSession {
                     return
                 }
                 if restore != nil, self.persistenceConfigured {
-                    EditorViewStateCodec.saveTabs(
+                    EditorViewStatePreferences.saveTabs(
                         WorkspaceTabRecipe(projectPath: path, orderedSongs: [], selectedSong: ""),
                         store: self.preferences)
                 }

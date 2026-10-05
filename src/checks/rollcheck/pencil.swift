@@ -1,18 +1,19 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 @MainActor
-func runPencilChecks(_ report: CheckReport, session: DocumentSession) {
-    checkPencilFractionalPlacement(report, session: session)
-    checkPencilPlacement(report, session: session)
-    checkVelocityClickLatch(report, session: session)
-    checkVelocityDragLatch(report, session: session)
-    checkPencilGutterSelection(report, session: session)
-    checkPencilAbuttingNotes(report, session: session)
-    checkVelocityDoubleClickDelete(report, session: session)
-    checkPointerDrawCancellation(report, session: session)
-    checkDrawLatchAndCancel(report, session: session)
+func runPencilChecks(_ report: CheckReport, viewport: DocumentViewport) {
+    checkPencilFractionalPlacement(report, viewport: viewport)
+    checkPencilPlacement(report, viewport: viewport)
+    checkVelocityClickLatch(report, viewport: viewport)
+    checkVelocityDragLatch(report, viewport: viewport)
+    checkPencilGutterSelection(report, viewport: viewport)
+    checkPencilAbuttingNotes(report, viewport: viewport)
+    checkVelocityDoubleClickDelete(report, viewport: viewport)
+    checkPointerDrawCancellation(report, viewport: viewport)
+    checkDrawLatchAndCancel(report, viewport: viewport)
 }
 
 struct PencilCell {
@@ -25,10 +26,11 @@ struct PencilCell {
 
 @MainActor
 func pencilFreeCell(
-    session: DocumentSession, grid: PianoGrid, firstProbe: Int = 40,
+    viewport: DocumentViewport, grid: PianoGrid, firstProbe: Int = 40,
     fractional: Bool = false
 ) -> PencilCell? {
-    let camera = session.camera
+    let session = viewport.session
+    let camera = viewport.camera
     let snapshot = camera.snapshot
     let step = max(1, grid.snapTicks)
     let occupiedNotes = (0..<session.document.engineTracks.usedTrackCount)
@@ -108,17 +110,18 @@ private func pencilRestore(
 }
 
 @MainActor
-private func checkPencilFractionalPlacement(_ report: CheckReport, session: DocumentSession) {
+private func checkPencilFractionalPlacement(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::pencilFractionalPlacement"
-    let grid = makeCameraGrid(session: session, zoom: 31.375)
-    _ = session.mutateCamera { _ = $0.setHScroll(0.625) }
+    let grid = makeCameraGrid(viewport: viewport, zoom: 31.375)
+    _ = viewport.mutateCamera { _ = $0.setHScroll(0.625) }
     grid.refreshCamera()
-    let snapshot = session.camera.snapshot
+    let snapshot = viewport.camera.snapshot
     report.expect(
         abs(snapshot.pixelsPerBeat - 31.375) <= 1e-12
             && abs(snapshot.scrollX - 0.625) <= 1e-12,
         cppID: id, message: "fractional edit camera applies exactly")
-    let fractionalCell = pencilFreeCell(session: session, grid: grid, fractional: true)
+    let fractionalCell = pencilFreeCell(viewport: viewport, grid: grid, fractional: true)
     report.expect(
         fractionalCell != nil, cppID: id,
         message: "no empty fractional displayed cell for edit regression")
@@ -153,10 +156,11 @@ private func checkPencilFractionalPlacement(_ report: CheckReport, session: Docu
 }
 
 @MainActor
-private func checkPencilPlacement(_ report: CheckReport, session: DocumentSession) {
+private func checkPencilPlacement(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::pencilPlacement"
-    let grid = makeCameraGrid(session: session)
-    let freeCell = pencilFreeCell(session: session, grid: grid)
+    let grid = makeCameraGrid(viewport: viewport)
+    let freeCell = pencilFreeCell(viewport: viewport, grid: grid)
     report.expect(freeCell != nil, cppID: id, message: "no free grid cell to draw in")
     guard let cell = freeCell else { return }
     guard let baseline = try? session.document.captureSave() else {
@@ -176,10 +180,11 @@ private func checkPencilPlacement(_ report: CheckReport, session: DocumentSessio
 }
 
 @MainActor
-private func checkVelocityClickLatch(_ report: CheckReport, session: DocumentSession) {
+private func checkVelocityClickLatch(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::velocityClickLatch"
-    let grid = makeCameraGrid(session: session)
-    guard let cell = pencilFreeCell(session: session, grid: grid),
+    let grid = makeCameraGrid(viewport: viewport)
+    guard let cell = pencilFreeCell(viewport: viewport, grid: grid),
         let baseline = try? session.document.captureSave(),
         let ids = try? session.document.addNotes([
             NewNote(
@@ -193,7 +198,7 @@ private func checkVelocityClickLatch(_ report: CheckReport, session: DocumentSes
     grid.refreshFromSession()
     grid.beginPointer(x: cell.x, y: cell.y, modifiers: 0)
     grid.endPointer(x: cell.x, y: cell.y)
-    guard let destination = pencilFreeCell(session: session, grid: grid) else {
+    guard let destination = pencilFreeCell(viewport: viewport, grid: grid) else {
         report.fail(id, "no free grid cell to draw in")
         pencilRestore(report, id: id, session: session, baseline: baseline)
         return
@@ -219,10 +224,11 @@ private func checkVelocityClickLatch(_ report: CheckReport, session: DocumentSes
 }
 
 @MainActor
-private func checkVelocityDragLatch(_ report: CheckReport, session: DocumentSession) {
+private func checkVelocityDragLatch(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::velocityDragCommit"
-    let grid = makeCameraGrid(session: session)
-    guard let cell = pencilFreeCell(session: session, grid: grid),
+    let grid = makeCameraGrid(viewport: viewport)
+    guard let cell = pencilFreeCell(viewport: viewport, grid: grid),
         let baseline = try? session.document.captureSave(),
         let ids = try? session.document.addNotes([
             NewNote(
@@ -259,7 +265,7 @@ private func checkVelocityDragLatch(_ report: CheckReport, session: DocumentSess
             && session.document.history.undoCount == beforeDrag.count + 1
             && coreTimeBytes(session.document) != beforeDrag.bytes,
         cppID: id, message: "a committed velocity drag changes one note in one edit")
-    guard let destination = pencilFreeCell(session: session, grid: grid) else {
+    guard let destination = pencilFreeCell(viewport: viewport, grid: grid) else {
         report.fail(id, "no free grid cell to draw with the committed velocity")
         pencilRestore(report, id: id, session: session, baseline: baseline)
         return
@@ -275,10 +281,11 @@ private func checkVelocityDragLatch(_ report: CheckReport, session: DocumentSess
 }
 
 @MainActor
-private func checkPencilGutterSelection(_ report: CheckReport, session: DocumentSession) {
+private func checkPencilGutterSelection(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::pencilGutterSelection"
-    let grid = makeCameraGrid(session: session)
-    guard let cell = pencilFreeCell(session: session, grid: grid),
+    let grid = makeCameraGrid(viewport: viewport)
+    guard let cell = pencilFreeCell(viewport: viewport, grid: grid),
         let baseline = try? session.document.captureSave(),
         let ids = try? session.document.addNotes([
             NewNote(
@@ -329,10 +336,11 @@ private func checkPencilGutterSelection(_ report: CheckReport, session: Document
 }
 
 @MainActor
-private func checkPencilAbuttingNotes(_ report: CheckReport, session: DocumentSession) {
+private func checkPencilAbuttingNotes(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::pencilAbuttingRaster"
-    let grid = makeCameraGrid(session: session)
-    let freeCell = pencilFreeCell(session: session, grid: grid)
+    let grid = makeCameraGrid(viewport: viewport)
+    let freeCell = pencilFreeCell(viewport: viewport, grid: grid)
     report.expect(freeCell != nil, cppID: id, message: "no free grid cell to draw in")
     guard let cell = freeCell else { return }
     guard let baseline = try? session.document.captureSave() else {
@@ -376,10 +384,11 @@ private func checkPencilAbuttingNotes(_ report: CheckReport, session: DocumentSe
 }
 
 @MainActor
-private func checkVelocityDoubleClickDelete(_ report: CheckReport, session: DocumentSession) {
+private func checkVelocityDoubleClickDelete(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::velocityDoubleClickDelete"
-    let grid = makeCameraGrid(session: session)
-    guard let a = pencilFreeCell(session: session, grid: grid, firstProbe: 40),
+    let grid = makeCameraGrid(viewport: viewport)
+    guard let a = pencilFreeCell(viewport: viewport, grid: grid, firstProbe: 40),
         let baseline = try? session.document.captureSave(),
         let first = try? session.document.addNotes([
             NewNote(
@@ -391,7 +400,7 @@ private func checkVelocityDoubleClickDelete(_ report: CheckReport, session: Docu
         return
     }
     grid.refreshFromSession()
-    guard let b = pencilFreeCell(session: session, grid: grid, firstProbe: 64),
+    guard let b = pencilFreeCell(viewport: viewport, grid: grid, firstProbe: 64),
         let second = try? session.document.addNotes([
             NewNote(
                 track: grid.trackIndex, tick: Tick(b.tick), pitch: UInt8(b.pitch),
@@ -402,7 +411,7 @@ private func checkVelocityDoubleClickDelete(_ report: CheckReport, session: Docu
         pencilRestore(report, id: id, session: session, baseline: baseline)
         return
     }
-    let freeCell = pencilFreeCell(session: session, grid: grid)
+    let freeCell = pencilFreeCell(viewport: viewport, grid: grid)
     report.expect(
         freeCell != nil, cppID: id,
         message: "no free grid cell for the double-click delete")
@@ -428,10 +437,11 @@ private func checkVelocityDoubleClickDelete(_ report: CheckReport, session: Docu
 }
 
 @MainActor
-private func checkPointerDrawCancellation(_ report: CheckReport, session: DocumentSession) {
+private func checkPointerDrawCancellation(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::quickLifecycle"
-    let grid = makeCameraGrid(session: session)
-    let freeCell = pencilFreeCell(session: session, grid: grid)
+    let grid = makeCameraGrid(viewport: viewport)
+    let freeCell = pencilFreeCell(viewport: viewport, grid: grid)
     report.expect(
         freeCell != nil, cppID: id,
         message: "no free grid cell for the Quick lifecycle scenarios")
@@ -458,20 +468,21 @@ private func checkPointerDrawCancellation(_ report: CheckReport, session: Docume
 }
 
 @MainActor
-private func checkDrawLatchAndCancel(_ report: CheckReport, session: DocumentSession) {
+private func checkDrawLatchAndCancel(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/EditorGridCamera::drawLatchAndCancel"
-    let grid = makeCameraGrid(session: session)
+    let grid = makeCameraGrid(viewport: viewport)
     let snap = max(1, grid.snapTicks)
     func emptyCell() -> (x: Double, y: Double, tick: Int, pitch: Int)? {
         for candidateY in [250.0, 200.0, 150.0, 100.0, 50.0] {
             guard
-                let pitch = session.camera.projection.pitch(
-                    atY: candidateY, keyHeight: session.camera.snapshot.keyHeight,
-                    scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
+                let pitch = viewport.camera.projection.pitch(
+                    atY: candidateY, keyHeight: viewport.camera.snapshot.keyHeight,
+                    scrollY: viewport.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
             else { continue }
             for candidateX in [500.0, 550.0, 450.0, 600.0, 400.0] {
-                let tick = Int(session.camera.tickAtContentX(candidateX)) / snap * snap
-                let x = session.camera.viewX(
+                let tick = Int(viewport.camera.tickAtContentX(candidateX)) / snap * snap
+                let x = viewport.camera.viewX(
                     tick: Double(tick), dpr: grid.devicePixelRatio)
                 let occupied = rollNoteRects(grid).contains { rect in
                     rect.x < x + 20 && rect.x + rect.width > x
@@ -527,7 +538,7 @@ private func checkDrawLatchAndCancel(_ report: CheckReport, session: DocumentSes
     }
     let pressX = targetRect.x + targetRect.width / 2
     let pressY = targetRect.y + targetRect.height / 2
-    let dragX = Double(snap) * session.camera.snapshot.pixelsPerTick
+    let dragX = Double(snap) * viewport.camera.snapshot.pixelsPerTick
     for reason in [
         GridCancelReason.pointerUngrabbed, .focusLost,
         .windowDeactivated, .hidden,

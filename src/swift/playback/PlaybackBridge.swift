@@ -117,7 +117,7 @@ public func pdPlaybackDataLoadFile(
 
     do {
         let bytes = try Data(contentsOf: URL(fileURLWithPath: String(cString: path)))
-        let file = try MidiFile.decode(Array(bytes))
+        let file = try MidiFile.decode(bytes)
         let timeline = PlaybackTimeline.build(file: file, sampleRate: sampleRate)
         output.pointee = PlaybackPublication.create(from: timeline)
         return true

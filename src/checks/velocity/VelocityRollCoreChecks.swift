@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 let drawerVelocityRollCoreFixtureID = "swiftcore/VelocityRollCore::fixtureFacts"
@@ -18,11 +19,11 @@ private func drawerVelocityRollCoreNoteCenter(_ grid: PianoGrid, _ id: NoteID) -
 }
 
 @MainActor
-private func drawerVelocityRollCoreRollGrid(_ session: DocumentSession) -> PianoGrid {
-    let grid = PianoGrid(session: session)
+private func drawerVelocityRollCoreRollGrid(_ viewport: DocumentViewport) -> PianoGrid {
+    let grid = PianoGrid(viewport: viewport)
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(35) }
     grid.refreshFromSession()
     return grid
 }
@@ -56,7 +57,7 @@ func drawerVelocityRollCoreFixtureFacts(_ report: CheckReport, session: Document
     report.expect(
         notes.allSatisfy { fixture.handle($0) != nil }, cppID: drawerVelocityRollCoreFixtureID,
         message: "every fixture note resolves to a published handle on the live extent")
-    let grid = drawerVelocityRollCoreRollGrid(fixture.session)
+    let grid = drawerVelocityRollCoreRollGrid(fixture.viewport)
     report.expect(
         drawerVelocityRollCoreNoteCenter(grid, notes[0].id) != nil,
         cppID: drawerVelocityRollCoreFixtureID,
@@ -390,7 +391,7 @@ func drawerVelocityRollCoreRollCommit(_ report: CheckReport, session: DocumentSe
         report.fail(drawerVelocityRollCoreRollID, "the synthetic fixture published fewer than three notes")
         return
     }
-    let grid = drawerVelocityRollCoreRollGrid(fixture.session)
+    let grid = drawerVelocityRollCoreRollGrid(fixture.viewport)
     guard let center = drawerVelocityRollCoreNoteCenter(grid, notes[0].id) else {
         report.fail(drawerVelocityRollCoreRollID, "the pressed note was not projected")
         return
@@ -509,7 +510,7 @@ func drawerVelocityRollCoreRollEscape(_ report: CheckReport, session: DocumentSe
         report.fail(drawerVelocityRollCoreRollID, "the synthetic fixture published fewer than three notes")
         return
     }
-    let grid = drawerVelocityRollCoreRollGrid(fixture.session)
+    let grid = drawerVelocityRollCoreRollGrid(fixture.viewport)
     guard let center = drawerVelocityRollCoreNoteCenter(grid, notes[0].id) else {
         report.fail(drawerVelocityRollCoreRollID, "the pressed note was not projected")
         return
@@ -584,7 +585,7 @@ func drawerVelocityRollCoreRollControllerCancel(
         report.fail(drawerVelocityRollCoreRollID, "the synthetic fixture published fewer than three notes")
         return
     }
-    let grid = drawerVelocityRollCoreRollGrid(fixture.session)
+    let grid = drawerVelocityRollCoreRollGrid(fixture.viewport)
     guard let center = drawerVelocityRollCoreNoteCenter(grid, notes[0].id) else {
         report.fail(drawerVelocityRollCoreRollID, "the pressed note was not projected")
         return
@@ -656,7 +657,7 @@ func drawerVelocityRollCoreRollStationaryNoop(_ report: CheckReport, session: Do
         report.fail(drawerVelocityRollCoreRollID, "the synthetic fixture published fewer than three notes")
         return
     }
-    let grid = drawerVelocityRollCoreRollGrid(fixture.session)
+    let grid = drawerVelocityRollCoreRollGrid(fixture.viewport)
     guard let center = drawerVelocityRollCoreNoteCenter(grid, notes[0].id) else {
         report.fail(drawerVelocityRollCoreRollID, "the pressed note was not projected")
         return
@@ -698,7 +699,7 @@ func drawerVelocityRollCoreOctaveShortcut(_ report: CheckReport, session: Docume
     report.expect(
         document.note(notes[0].id) != nil && document.note(notes[1].id) != nil && document.note(notes[2].id) != nil,
         cppID: drawerVelocityRollCoreOctaveID, message: "every fixture note resolves before the shortcut")
-    let grid = drawerVelocityRollCoreRollGrid(fixture.session)
+    let grid = drawerVelocityRollCoreRollGrid(fixture.viewport)
     fixture.session.setSelectedNotes([notes[0].id, notes[1].id])
     let baseline = DocumentSnapshot(document)
     let baselineBytes = coreTimeBytes(document)

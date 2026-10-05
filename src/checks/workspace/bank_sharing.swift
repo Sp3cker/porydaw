@@ -2,6 +2,7 @@ import Foundation
 @testable import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+@testable import PorydawDocument
 import PorydawPlayback
 
 // MARK: - Bank Sharing Scenarios
@@ -95,7 +96,7 @@ internal func bankBindingIdentityIsolation(report: CheckReport, fixtureRoot: Str
         let sectionOne = try runBlocking { try await service.loadBank(voicegroupArg: "_shared_one") }
         let sectionTwo = try runBlocking { try await service.loadBank(voicegroupArg: "_shared_two") }
         report.expect(
-            sectionOne.lease.sourcePath == sectionTwo.lease.sourcePath
+            sectionOne.lease.id.sourceRelativePath == sectionTwo.lease.id.sourceRelativePath
                 && sectionOne.lease.sectionLabel != sectionTwo.lease.sectionLabel,
             cppID: id, message: "fixture sections share a source but not binding identity")
         guard var sectionEdit = sectionOne.slots.first?.voice,
@@ -436,8 +437,8 @@ internal func mountedEditReachesPeerTabAudio(report: CheckReport, fixtureRoot: S
         message: "mounted voicegroup edit reaches the peer tab's audio "
             + "as Sq1 then Noise native channels (\(squareChannel) -> \(noiseChannel))")
     let releaseID = "vgsavecheck/VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline"
-    guard let oldRelease = peer.bankSlots[0].voice?.release,
-        let nativeBefore = peer.bankLease.withVoices({ $0?.pointee.release })
+    let nativeBefore = peer.bankLease[0].release
+    guard let oldRelease = peer.bankSlots[0].voice?.release
     else {
         report.fail(releaseID, "selected peer has no native release envelope")
         return
@@ -456,8 +457,8 @@ internal func mountedEditReachesPeerTabAudio(report: CheckReport, fixtureRoot: S
         return
     }
     report.expect(
-        peer.bankLease.withVoices({ $0?.pointee.release }) == UInt8(nextRelease)
-            && first.bankLease.withVoices({ $0?.pointee.release }) == UInt8(nextRelease)
+        peer.bankLease[0].release == UInt8(nextRelease)
+            && first.bankLease[0].release == UInt8(nextRelease)
             && nativeBefore != UInt8(nextRelease),
         cppID: releaseID,
         message: "release edits and undo reach the audio-bound voicegroup bytes")
@@ -473,8 +474,8 @@ internal func mountedEditReachesPeerTabAudio(report: CheckReport, fixtureRoot: S
         return
     }
     report.expect(
-        peer.bankLease.withVoices({ $0?.pointee.release }) == nativeBefore
-            && first.bankLease.withVoices({ $0?.pointee.release }) == nativeBefore,
+        peer.bankLease[0].release == nativeBefore
+            && first.bankLease[0].release == nativeBefore,
         cppID: releaseID,
         message: "release edits and undo reach the audio-bound voicegroup bytes")
 }

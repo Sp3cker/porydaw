@@ -19,9 +19,34 @@ file(SHA256 "${QTBRIDGE_PATCH_DIR}/PatchQtBridge.cmake" QTBRIDGE_PATCH_SCRIPT_SH
 # Key both the host macro and its Swift consumers to these patch inputs.
 string(SHA256 QTBRIDGE_PATCH_INPUTS_SHA256
     "${QTBRIDGE_PATCH_SHA256}:${QTBRIDGE_PATCH_SCRIPT_SHA256}")
+set(QTBRIDGE_GIT_TAG 407714006dd21107b70db6547ce75e43df0c8a75)
+
+# The macro plugin is a host tool compiled from swift-syntax: ~3 minutes and a
+# network clone per build tree, on the critical path of every Swift target. Its
+# only inputs are the pinned QtBridge revision and patch, the Swift compiler,
+# and the configuration-independent Swift flags, so one build per input set is
+# shared by every debug/release/asan tree and worktree on this machine. Set
+# PORYDAW_BUILD_CACHE (environment or cache variable) to relocate the cache;
+# OFF keeps the plugin inside the build tree.
+if(DEFINED ENV{PORYDAW_BUILD_CACHE})
+    set(porydaw_build_cache_default "$ENV{PORYDAW_BUILD_CACHE}")
+elseif(WIN32)
+    set(porydaw_build_cache_default "$ENV{LOCALAPPDATA}/porydaw/build-cache")
+else()
+    set(porydaw_build_cache_default "$ENV{HOME}/.cache/porydaw")
+endif()
+set(PORYDAW_BUILD_CACHE "${porydaw_build_cache_default}" CACHE PATH
+    "Machine-wide cache for host build tools shared across build trees (OFF disables)")
+if(PORYDAW_BUILD_CACHE)
+    string(SHA256 qtbridge_macros_key
+        "${QTBRIDGE_GIT_TAG}:${QTBRIDGE_PATCH_INPUTS_SHA256}:${CMAKE_Swift_COMPILER}:${CMAKE_Swift_COMPILER_VERSION}:${CMAKE_Swift_FLAGS}")
+    string(SUBSTRING "${qtbridge_macros_key}" 0 16 qtbridge_macros_key)
+    set(QTBRIDGE_MACROS_CACHE_DIR "${PORYDAW_BUILD_CACHE}/qtbridge-macros/${qtbridge_macros_key}")
+endif()
+
 FetchContent_Declare(QtBridge
     GIT_REPOSITORY https://github.com/qt/qtbridge-swift.git
-    GIT_TAG 407714006dd21107b70db6547ce75e43df0c8a75
+    GIT_TAG ${QTBRIDGE_GIT_TAG}
     PATCH_COMMAND "${CMAKE_COMMAND}"
         "-DPATCH=${QTBRIDGE_PATCH_DIR}/qtbridge.patch"
         "-DPATCH_INPUTS_SHA256=${QTBRIDGE_PATCH_SHA256}:${QTBRIDGE_PATCH_SCRIPT_SHA256}"

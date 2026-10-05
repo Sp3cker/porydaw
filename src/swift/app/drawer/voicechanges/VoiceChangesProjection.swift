@@ -1,6 +1,7 @@
 import Foundation
 import NativeGridTypography
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 /// One drawn voice-change marker: its occurrence identity, projected label and

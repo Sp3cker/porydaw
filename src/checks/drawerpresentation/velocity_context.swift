@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 @MainActor
 func drawerVelocityVoiceContextResolution(_ report: CheckReport, session: DocumentSession) {
@@ -114,17 +115,17 @@ func drawerVelocityProjectionRefresh(
     let oldX = before.x
     let oldY = before.y
     let oldValue = before.value
-    fixture.session.mutateCamera { camera in
+    fixture.viewport.mutateCamera { camera in
         camera.setTimeZoom(camera.snapshot.pixelsPerBeat * 2)
     }
     page.refreshCamera()
     let moved = fixture.handle(note)!
-    let stableX = fixture.session.camera.contentTickX(tick: Double(note.tick), dpr: page.devicePixelRatio)
-    let viewX = fixture.session.camera.viewX(tick: Double(note.tick), dpr: page.devicePixelRatio)
+    let stableX = fixture.viewport.camera.contentTickX(tick: Double(note.tick), dpr: page.devicePixelRatio)
+    let viewX = fixture.viewport.camera.viewX(tick: Double(note.tick), dpr: page.devicePixelRatio)
     // The shared camera scroll, snapped exactly like the plot content the
     // handle container translates by.
     let snappedScroll =
-        (fixture.session.camera.snapshot.scrollX * page.devicePixelRatio).rounded()
+        (fixture.viewport.camera.snapshot.scrollX * page.devicePixelRatio).rounded()
         / page.devicePixelRatio
     report.expect(
         moved.x == stableX && moved.x != oldX && moved.x - snappedScroll == viewX
@@ -459,7 +460,8 @@ func drawerVelocityPlayheadDiagnostics(
             sampleRate: 48_000)
         voiceSession.selectedTrack = 0
         let voicePage = VelocityPage()
-        voicePage.attach(session: voiceSession, palette: GridPalette())
+        let voiceViewport = DocumentViewport(session: voiceSession)
+        voicePage.attach(viewport: voiceViewport, palette: GridPalette())
         voicePage.configureBody(
             width: page.plotWidth, height: page.plotHeight,
             rulerWidth: page.rulerWidth, devicePixelRatio: page.devicePixelRatio,
@@ -530,6 +532,7 @@ func drawerVelocityPlayheadDiagnostics(
             break
         }
         voicePage.detach()
+        withExtendedLifetime(voiceViewport) {}
     }
     report.expectEqual(
         expected: handleCount, actual: fixture.handles.count, cppID: drawerVelocityDiagnosticsID,
@@ -597,7 +600,7 @@ func drawerVelocityPlayheadDiagnostics(
         zip(stableLabels, page.axisLabels.asArray).allSatisfy { $0 === $1 },
         cppID: drawerVelocityDiagnosticsID,
         message: "song refresh keeps unchanged velocity text rows in place")
-    fixture.session.mutateCamera { camera in
+    fixture.viewport.mutateCamera { camera in
         camera.setHScroll(camera.snapshot.scrollX + 12)
     }
     page.refreshCamera()

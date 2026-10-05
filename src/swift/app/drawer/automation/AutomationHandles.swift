@@ -1,3 +1,4 @@
+import PorydawDocument
 import QtBridge
 
 

@@ -117,11 +117,8 @@ extension DocumentSession {
     /// and the presenter is notified.
     internal func handleDocumentChange(_ change: DocumentChange) {
         withStateChanges {
-            if let map = change.trackRemap?.engineTrackMap {
-                var next = editorViewState
-                if next.remapEngineTracks(map) {
-                    setEditorViewState(next)
-                }
+            if let remap = change.trackRemap {
+                onViewportRepair?(.trackRemap(remap))
             }
             let priorScope = selectedTracks
             let priorPrimary = selectedTrack
@@ -204,13 +201,9 @@ extension DocumentSession {
                     }
                 }
             }
-            if scaleProjection.fold { refreshScaleProjection() }
+            onViewportRepair?(.scaleFold)
             timeline = PlaybackTimeline.build(state: document.state, sampleRate: timeline.sampleRate)
-            camera.updateTimeDomain(
-                ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
-                lengthTicks: UInt64(timeline.lengthTicks))
-            grid.axis = projectionCache.timeAxis
-            grid.setTicksPerClock(gridClockTicks)
+            onViewportRepair?(.timeDomain)
             onPlayback?(timeline)
             var domains: SessionChangeDomains = [.document, .dirty, .history]
             if selectedNoteOrder != priorNotes || selectedTrack != priorPrimary

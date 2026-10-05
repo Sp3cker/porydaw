@@ -2,13 +2,15 @@ import Foundation
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 
 // Keep the no-fold legacy probes and exercise Fold against a live session,
 // its selected-track projection, and the production grid command path.
 @MainActor
-func runScaleEditingChecks(_ report: CheckReport, session: DocumentSession) {
+func runScaleEditingChecks(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let document = session.document
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     let track = grid.trackIndex
     let clock = TimelineSnapPolicy.clockTicks(
         division: document.ticksPerBeat,
@@ -99,9 +101,9 @@ func runScaleEditingChecks(_ report: CheckReport, session: DocumentSession) {
     if let noteID = try? document.addNotes([
         NewNote(track: track, tick: tBase, pitch: 127, duration: duration, velocity: 100)
     ]).first {
-        session.setScale(root: 0)
-        session.setScale(type: .major)
-        session.setScale(fold: true)
+        viewport.setScale(root: 0)
+        viewport.setScale(type: .major)
+        viewport.setScale(fold: true)
         session.setSelectedNotes([noteID])
         let beforeCommand = document.history.currentIdentity
         grid.performCommand(command: EditCommand.transposeUp.rawValue)
@@ -111,7 +113,7 @@ func runScaleEditingChecks(_ report: CheckReport, session: DocumentSession) {
         report.expect(
             document.note(noteID)?.pitch == 127, cppID: boundaryID,
             message: "folded out-of-range Up keeps the top scale pitch in place")
-        session.setScale(fold: false)
+        viewport.setScale(fold: false)
         guard restoreDocument() else {
             report.fail(boundaryID, "folded boundary probe could not restore the entry document")
             return
@@ -120,19 +122,20 @@ func runScaleEditingChecks(_ report: CheckReport, session: DocumentSession) {
         report.fail(boundaryID, "could not insert the folded top-pitch fixture note")
     }
     runFoldScaleIntegrationChecks(
-        report, session: session, grid: grid,
+        report, viewport: viewport, grid: grid,
         base: tBase, duration: duration)
 }
 
 @MainActor
 private func runFoldScaleIntegrationChecks(
-    _ report: CheckReport, session: DocumentSession, grid: PianoGrid,
+    _ report: CheckReport, viewport: DocumentViewport, grid: PianoGrid,
     base: Tick, duration: Tick
 ) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::scaleFoldSessionIntegration"
     let document = session.document
     let track = grid.trackIndex
-    let original = session.scaleProjection
+    let original = viewport.scale
     let originalTrack = session.selectedTrack
     let originalSelection = session.selectedNoteOrder
     let identity = document.history.currentIdentity
@@ -144,10 +147,10 @@ private func runFoldScaleIntegrationChecks(
                 break
             }
         }
-        session.setScale(fold: original.fold)
-        session.setScale(highlight: original.highlight)
-        session.setScale(type: original.scale)
-        session.setScale(root: original.root)
+        viewport.setScale(fold: original.fold)
+        viewport.setScale(highlight: original.highlight)
+        viewport.setScale(type: original.scale)
+        viewport.setScale(root: original.root)
         if let originalTrack { session.selectPrimaryTrack(originalTrack) }
         session.setSelectedNotes(originalSelection)
         report.expect(
@@ -155,21 +158,21 @@ private func runFoldScaleIntegrationChecks(
             cppID: id, message: "scale editing leaves the fixture MIDI unchanged")
     }
 
-    session.setScale(root: 0)
-    session.setScale(type: .major)
-    let pitch60InC = session.scaleProjection.contains(60)
-    let pitch61InC = session.scaleProjection.contains(61)
-    session.setScale(root: 1)
-    let pitch61InCSharp = session.scaleProjection.contains(61)
-    session.setScale(root: 0)
-    session.setScale(highlight: true)
+    viewport.setScale(root: 0)
+    viewport.setScale(type: .major)
+    let pitch60InC = viewport.scale.contains(60)
+    let pitch61InC = viewport.scale.contains(61)
+    viewport.setScale(root: 1)
+    let pitch61InCSharp = viewport.scale.contains(61)
+    viewport.setScale(root: 0)
+    viewport.setScale(highlight: true)
     report.expect(
         pitch60InC && !pitch61InC && pitch61InCSharp
-            && session.scaleProjection.highlight
+            && viewport.scale.highlight
             && document.history.currentIdentity == identity,
         cppID: id, message: "root and Highlight change the live tab without editing MIDI")
-    session.setScale(fold: true)
-    session.setScale(fold: false)
+    viewport.setScale(fold: true)
+    viewport.setScale(fold: false)
     if document.engineTracks.usedTrackCount > 1 {
         let other = track == 0 ? 1 : 0
         session.selectPrimaryTrack(other)
@@ -221,9 +224,9 @@ private func runFoldScaleIntegrationChecks(
         report.fail(id, "could not add another track's note")
         return
     }
-    session.setScale(fold: true)
+    viewport.setScale(fold: true)
     let occupied = Set(document.notes(in: track).map(\.pitch))
-    let projection = session.camera.projection
+    let projection = viewport.camera.projection
     report.expect(
         projection.visibleRowCount == occupied.count
             && (0..<128).allSatisfy { key in
@@ -234,41 +237,41 @@ private func runFoldScaleIntegrationChecks(
         projection.row(forPitch: foreignPitch) == PitchProjection.hiddenRow,
         cppID: id, message: "Fold excludes another track's C-sharp octave")
     report.expect(
-        session.camera.snapshot.scrollY >= 0
-            && session.camera.snapshot.scrollY <= session.camera.snapshot.maxVScroll,
+        viewport.camera.snapshot.scrollY >= 0
+            && viewport.camera.snapshot.scrollY <= viewport.camera.snapshot.maxVScroll,
         cppID: id, message: "Fold reclamps the live vertical scrollbar range")
-    let beforeRoot = session.camera
+    let beforeRoot = viewport.camera
     let beforeRootIdentity = document.history.currentIdentity
-    session.setScale(root: 11)
+    viewport.setScale(root: 11)
     report.expect(
-        session.camera.projection == beforeRoot.projection
-            && session.camera.snapshot.scrollY == beforeRoot.snapshot.scrollY
+        viewport.camera.projection == beforeRoot.projection
+            && viewport.camera.snapshot.scrollY == beforeRoot.snapshot.scrollY
             && document.history.currentIdentity == beforeRootIdentity,
         cppID: id, message: "changing Fold root keeps occupied rows, scroll, and history")
-    session.setScale(root: 0)
-    session.setScale(type: .naturalMinor)
+    viewport.setScale(root: 0)
+    viewport.setScale(type: .naturalMinor)
     report.expect(
-        !session.scaleProjection.contains(64)
-            && session.camera.projection == beforeRoot.projection,
+        !viewport.scale.contains(64)
+            && viewport.camera.projection == beforeRoot.projection,
         cppID: id, message: "scale type changes classification without changing Fold rows")
-    session.setScale(type: .major)
-    let priorHighlight = session.scaleProjection.highlight
+    viewport.setScale(type: .major)
+    let priorHighlight = viewport.scale.highlight
     session.selectPrimaryTrack(alternate)
     let otherPitches = Set(document.notes(in: alternate).map(\.pitch))
     report.expect(
-        session.camera.projection.visibleRowCount == otherPitches.count
+        viewport.camera.projection.visibleRowCount == otherPitches.count
             && (0..<128).allSatisfy { key in
-                (session.camera.projection.row(forPitch: key)
+                (viewport.camera.projection.row(forPitch: key)
                     != PitchProjection.hiddenRow) == otherPitches.contains(UInt8(key))
             }, cppID: id, message: "Fold follows the selected track, not all song tracks")
     report.expect(
-        session.scaleProjection.fold && session.scaleProjection.highlight == priorHighlight,
+        viewport.scale.fold && viewport.scale.highlight == priorHighlight,
         cppID: id, message: "track selection keeps per-tab Fold and Highlight settings")
     session.selectPrimaryTrack(track)
-    session.setScale(highlight: false)
+    viewport.setScale(highlight: false)
     session.selectPrimaryTrack(alternate)
     report.expect(
-        session.scaleProjection.fold && !session.scaleProjection.highlight,
+        viewport.scale.fold && !viewport.scale.highlight,
         cppID: id, message: "selected-track change preserves Fold and leaves Highlight off")
     session.selectPrimaryTrack(track)
     session.setSelectedNotes(ids)
@@ -279,7 +282,7 @@ private func runFoldScaleIntegrationChecks(
             && document.note(ids[2])?.pitch == 62,
         cppID: id, message: "folded Up maps exceptions to distinct degrees and repeated C to D")
     report.expect(
-        session.camera.projection.row(forPitch: 64) != PitchProjection.hiddenRow,
+        viewport.camera.projection.row(forPitch: 64) != PitchProjection.hiddenRow,
         cppID: id, message: "Fold updates occupancy after editing notes")
     guard document.history.undoDocument() else {
         report.fail(id, "could not undo the folded degree nudge")
@@ -309,16 +312,17 @@ private func runFoldScaleIntegrationChecks(
         return
     }
     checkFoldPointerAndLifecycle(
-        report, session: session, grid: grid,
+        report, viewport: viewport, grid: grid,
         track: track, base: base, duration: duration,
         exception: ids[1])
 }
 
 @MainActor
 private func checkFoldPointerAndLifecycle(
-    _ report: CheckReport, session: DocumentSession, grid: PianoGrid,
+    _ report: CheckReport, viewport: DocumentViewport, grid: PianoGrid,
     track: Int, base: Tick, duration: Tick, exception: NoteID
 ) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::scaleFoldSessionIntegration"
     let document = session.document
     let occupied = Set(document.notes(in: track).map(\.pitch))
@@ -335,17 +339,17 @@ private func checkFoldPointerAndLifecycle(
         report.fail(id, "could not add an unoccupied off-scale note")
         return
     }
-    let rowCount = session.camera.projection.visibleRowCount
+    let rowCount = viewport.camera.projection.visibleRowCount
     report.expect(
-        session.scaleProjection.fold
-            && session.camera.projection.row(forPitch: pitch) != PitchProjection.hiddenRow,
+        viewport.scale.fold
+            && viewport.camera.projection.row(forPitch: pitch) != PitchProjection.hiddenRow,
         cppID: id, message: "fold-on edits expose the newly occupied pitch")
     report.expect(
         rowCount == occupied.count + 1, cppID: id,
         message: "fold occupancy appears after add")
     document.deleteNotes([added])
     report.expect(
-        session.camera.projection.visibleRowCount == occupied.count,
+        viewport.camera.projection.visibleRowCount == occupied.count,
         cppID: id, message: "fold layout shrinks after delete")
     guard document.history.undoDocument() else {
         report.fail(id, "could not undo the folded note deletion")
@@ -356,7 +360,7 @@ private func checkFoldPointerAndLifecycle(
         return
     }
     report.expect(
-        session.camera.projection.visibleRowCount == rowCount, cppID: id,
+        viewport.camera.projection.visibleRowCount == rowCount, cppID: id,
         message: "fold layout restores after redo")
     guard document.history.undoDocument() else {
         report.fail(id, "could not restore the folded occupancy fixture")
@@ -371,15 +375,15 @@ private func checkFoldPointerAndLifecycle(
     grid.configureViewport(width: 800, height: 400, fontPx: 13, dpr: 1)
     guard let exceptionNote = document.note(exception),
         let box = decodedNoteBox(grid, exception),
-        let rowTop = session.camera.projection.rowTop(
-            session.camera.projection.row(forPitch: Int(exceptionNote.pitch)),
-            keyHeight: session.camera.snapshot.keyHeight,
-            scrollY: session.camera.snapshot.scrollY, dpr: 1)
+        let rowTop = viewport.camera.projection.rowTop(
+            viewport.camera.projection.row(forPitch: Int(exceptionNote.pitch)),
+            keyHeight: viewport.camera.snapshot.keyHeight,
+            scrollY: viewport.camera.snapshot.scrollY, dpr: 1)
     else {
         report.fail(id, "could not project the off-scale exception row")
         return
     }
-    let y = rowTop + session.camera.snapshot.keyHeight / 2
+    let y = rowTop + viewport.camera.snapshot.keyHeight / 2
     let before = document.history.currentIdentity
     let emptyX = box.x + box.w + grid.dragDistance * 2
     grid.beginPointer(x: emptyX, y: y, modifiers: 0)
@@ -416,7 +420,7 @@ private func checkFoldPointerAndLifecycle(
     let x = box.x + box.w / 2
     let delta = max(
         grid.dragDistance * 2,
-        Double(duration * 12) * session.camera.snapshot.pixelsPerTick)
+        Double(duration * 12) * viewport.camera.snapshot.pixelsPerTick)
     grid.beginPointer(x: x, y: box.y + box.h / 2, modifiers: 0)
     grid.updatePointer(x: x + delta, y: box.y + box.h / 2)
     grid.endPointer(x: x + delta, y: box.y + box.h / 2)
@@ -467,11 +471,11 @@ private func checkFoldPointerAndLifecycle(
     }
     guard let dragSource = document.note(exception),
         let dragBox = decodedNoteBox(grid, exception),
-        session.camera.projection.row(forPitch: dragDstPitch) != PitchProjection.hiddenRow,
-        let dragDstTop = session.camera.projection.rowTop(
-            session.camera.projection.row(forPitch: dragDstPitch),
-            keyHeight: session.camera.snapshot.keyHeight,
-            scrollY: session.camera.snapshot.scrollY, dpr: 1)
+        viewport.camera.projection.row(forPitch: dragDstPitch) != PitchProjection.hiddenRow,
+        let dragDstTop = viewport.camera.projection.rowTop(
+            viewport.camera.projection.row(forPitch: dragDstPitch),
+            keyHeight: viewport.camera.snapshot.keyHeight,
+            scrollY: viewport.camera.snapshot.scrollY, dpr: 1)
     else {
         report.fail(id, "could not stage the fold pointer-drag rows")
         return
@@ -479,7 +483,7 @@ private func checkFoldPointerAndLifecycle(
     session.setSelectedNotes([exception])
     let dragSrcX = dragBox.x + dragBox.w / 2
     let dragSrcY = dragBox.y + dragBox.h / 2
-    let dragDstY = dragDstTop + session.camera.snapshot.keyHeight / 2
+    let dragDstY = dragDstTop + viewport.camera.snapshot.keyHeight / 2
     let preDragIdentity = document.history.currentIdentity
     let preDragIndex = document.history.undoIndex
     let preDragCount = document.history.undoCount

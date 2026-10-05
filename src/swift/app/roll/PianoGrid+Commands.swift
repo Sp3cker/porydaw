@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 import PorydawAppCommands
 
@@ -19,25 +20,25 @@ extension PianoGrid {
         case .pencilMode:
             pencilMode.toggle()
         case .gridNarrow:
-            guard session.grid.narrow() else { return }
+            guard viewport.grid.narrow() else { return }
             refreshGridMenuPresentation()
             refreshFromSession()
         case .gridWiden:
-            guard session.grid.widen() else { return }
+            guard viewport.grid.widen() else { return }
             refreshGridMenuPresentation()
             refreshFromSession()
         case .gridTriplet:
-            guard session.grid.toggleFeel() else { return }
+            guard viewport.grid.toggleFeel() else { return }
             refreshGridMenuPresentation()
             refreshFromSession()
         default:
             let position = TimeDefaults.tick(from: Double(editCursorTick))
-            let grid = session.grid.snapTicksAt(position, camera: session.camera)
+            let grid = viewport.grid.snapTicksAt(position, camera: viewport.camera)
             let didEdit = commands.execute(
                 command, snapTicks: grid,
                 editCursor: position,
                 nextSubdivision: { tick in
-                    session.grid.nextSubdivisionTickAfter(tick, camera: session.camera)
+                    viewport.grid.nextSubdivisionTickAfter(tick, camera: viewport.camera)
                 })
             guard didEdit else { return }
             switch command {
@@ -56,7 +57,7 @@ extension PianoGrid {
                     found = true
                 }
                 if found {
-                    session.mutateCamera { camera in
+                    viewport.mutateCamera { camera in
                         _ = camera.ensureKeyVisible(edgePitch)
                     }
                     if let firstID = session.selectedNoteOrder.first(where: {
@@ -81,7 +82,7 @@ extension PianoGrid {
                 }
                 if first != UInt64.max {
                     let preferEnd = command == .nudgeRight
-                    session.mutateCamera { camera in
+                    viewport.mutateCamera { camera in
                         _ = camera.ensureRangeVisible(
                             startTick: first, endTick: last,
                             preferEnd: preferEnd, dpr: devicePixelRatio)
@@ -108,14 +109,14 @@ extension PianoGrid {
     func activateGridMenuRowImpl(actionId: Int) {
         let kind = gridMenuKind
         guard
-            (kind == 1 && session.grid.selections.contains { $0.toMenuId() == actionId })
+            (kind == 1 && viewport.grid.selections.contains { $0.toMenuId() == actionId })
                 || (kind == 2 && (0...1).contains(actionId))
         else { return }
         dismissGridMenu()
         let changed =
             kind == 1
-            ? session.grid.setSelection(GridSelection.fromMenuId(actionId))
-            : session.grid.setFeel(actionId == 1 ? .triplet : .straight)
+            ? viewport.grid.setSelection(GridSelection.fromMenuId(actionId))
+            : viewport.grid.setFeel(actionId == 1 ? .triplet : .straight)
         guard changed else { return }
         refreshGridMenuPresentation()
         refreshFromSession()
@@ -130,14 +131,14 @@ extension PianoGrid {
     }
 
     func refreshGridMenuPresentation() {
-        let selection = session.grid.selection
+        let selection = viewport.grid.selection
         gridSelectionMenuId = selection.toMenuId()
         gridDivisionControlText = gridDivisionText(selection)
-        tripletGrid = session.grid.feel == .triplet
+        tripletGrid = viewport.grid.feel == .triplet
         gridFeelControlText = tripletGrid ? "Triplet" : "Straight"
         if gridMenuKind == 1 {
             gridMenuRows.reset(
-                to: session.grid.selections.map { item in
+                to: viewport.grid.selections.map { item in
                     let text = gridDivisionText(item)
                     return GridSubdivisionMenuItem(
                         actionId: item.toMenuId(), text: text,

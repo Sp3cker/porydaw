@@ -1,4 +1,5 @@
 import Foundation
+import PorydawDocument
 import QtBridge
 
 /// The two guide kinds rendered over the shared timeline plot.
@@ -29,7 +30,7 @@ public final class PlayheadGuideState {
     }
 }
 
-/// Presents the hover and edit guides through the document session's camera.
+/// Presents the hover and edit guides through the document viewport's camera.
 /// QML receives only plot-local coordinates and draws the clipped segments;
 /// pointer ownership, song-start clamping, arbitration and projection remain in
 /// Swift.
@@ -43,7 +44,7 @@ public final class PlayheadGuidesPresenter {
     /// Distinct guide publications, retained for deterministic presenter checks.
     public private(set) var presentationCount: UInt64 = 0
 
-    private weak var session: DocumentSession?
+    private weak var viewport: DocumentViewport?
     private var hoverOwner: Int?
     private var hoverTick: Double?
     private var published: Presentation?
@@ -64,8 +65,8 @@ public final class PlayheadGuidesPresenter {
     /// The workspace remains the session's sole `onChange` subscriber and calls
     /// `sessionDidChange(_:)` for cursor-domain publications.
     @QtIgnored
-    public func attach(session: DocumentSession) {
-        self.session = session
+    public func attach(viewport: DocumentViewport) {
+        self.viewport = viewport
         hoverOwner = nil
         hoverTick = nil
         published = nil
@@ -76,7 +77,7 @@ public final class PlayheadGuidesPresenter {
     /// Detaches synchronously and hides both guides before the document retires.
     @QtIgnored
     public func detach() {
-        session = nil
+        viewport = nil
         hoverOwner = nil
         hoverTick = nil
         apply()
@@ -95,14 +96,14 @@ public final class PlayheadGuidesPresenter {
     /// Reprojects both retained guide ticks through the current camera.
     @QtIgnored
     public func refreshProjection() {
-        guard session != nil else { return }
+        guard viewport != nil else { return }
         apply()
     }
 
     /// Refreshes the edit guide from the session's current edit cursor.
     @QtIgnored
     public func refreshEditCursor() {
-        guard session != nil else { return }
+        guard viewport != nil else { return }
         apply()
     }
 
@@ -113,11 +114,11 @@ public final class PlayheadGuidesPresenter {
     @QtIgnored
     public func updateHover(owner: Int, contentX: Double) {
         guard owner != PlayheadGuideHoverOwner.none.rawValue else { return }
-        guard let session, contentX.isFinite else {
+        guard let viewport, contentX.isFinite else {
             clearHover(owner: owner)
             return
         }
-        let tick = session.camera.tickAtContentX(contentX)
+        let tick = viewport.camera.tickAtContentX(contentX)
         guard tick.isFinite, tick >= 0 else {
             clearHover(owner: owner)
             return
@@ -139,15 +140,15 @@ public final class PlayheadGuidesPresenter {
     // MARK: - Presentation
 
     private func projectedX(tick: Double) -> Double {
-        guard let session else { return 0 }
-        return session.camera.contentX(tick: tick)
+        guard let viewport else { return 0 }
+        return viewport.camera.contentX(tick: tick)
     }
 
     private func isVisible(tick: Double, contentX: Double) -> Bool {
         guard timelineAttached, tick.isFinite, tick >= 0, contentX.isFinite,
-            let session
+            let viewport
         else { return false }
-        let width = session.camera.snapshot.viewportWidth
+        let width = viewport.camera.snapshot.viewportWidth
         return contentX >= 0 && contentX < width
     }
 
@@ -158,11 +159,11 @@ public final class PlayheadGuidesPresenter {
         let hoverTick = self.hoverTick
         let hoverX = hoverTick.map(projectedX) ?? 0
         let hoverVisible = hoverTick.map { isVisible(tick: $0, contentX: hoverX) } ?? false
-        let editTick = session.map { Double($0.editCursor) } ?? 0
+        let editTick = viewport.map { Double($0.session.editCursor) } ?? 0
         let editX = projectedX(tick: editTick)
         let editVisible = isVisible(tick: editTick, contentX: editX) && !hoverVisible
         let next = Presentation(
-            timelineAttached: session != nil && timelineAttached,
+            timelineAttached: viewport != nil && timelineAttached,
             hoverContentX: hoverX, hoverVisible: hoverVisible,
             editContentX: editX, editVisible: editVisible)
         guard next != published else { return false }

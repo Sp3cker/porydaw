@@ -2,6 +2,7 @@ import Foundation
 @testable import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+@testable import PorydawDocument
 import QtBridge
 
 @MainActor
@@ -168,7 +169,7 @@ private func commandMixStatePublishesImmediately(
     let fixture = TrackHeadersFixture(suite: suite, service: service)
     let session = fixture.session
     let headers = fixture.headers
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: DocumentViewport(session: session))
     let document = fixture.document
     let revision = document.revision
     let history = document.history.currentIdentity
@@ -274,10 +275,11 @@ private func hostDrawerSoloAndRemap(
     let fixture = TrackHeadersFixture(suite: suite, service: service)
     let oldLane = EditorLaneState.Lane(track: 0, controller: 74)
     let movedLane = EditorLaneState.Lane(track: 1, controller: 74)
-    var state = fixture.session.editorViewState
+    let viewport = DocumentViewport(session: fixture.session)
+    var state = viewport.editorViewState
     state.lanes.emptyLanes.insert(oldLane)
-    guard fixture.session.setEditorViewState(state),
-        fixture.session.editorViewState.lanes.emptyLanes.contains(oldLane)
+    guard viewport.setEditorViewState(state),
+        viewport.editorViewState.lanes.emptyLanes.contains(oldLane)
     else {
         report.fail(id, "the copied track fixture did not seed the controller-74 empty lane")
         return
@@ -286,11 +288,11 @@ private func hostDrawerSoloAndRemap(
         fixture.document.moveTrack(0, to: 1), cppID: id,
         message: "A173 moving the primary track into the second slot succeeds")
     report.expect(
-        fixture.session.editorViewState.lanes.emptyLanes.contains(movedLane),
+        viewport.editorViewState.lanes.emptyLanes.contains(movedLane),
         cppID: id,
         message: "A174 the moved track retains its controller-74 empty-lane flag at slot one")
     report.expect(
-        !fixture.session.editorViewState.lanes.emptyLanes.contains(oldLane),
+        !viewport.editorViewState.lanes.emptyLanes.contains(oldLane),
         cppID: id,
         message: "A175 the former slot no longer carries the controller-74 empty-lane flag")
 }

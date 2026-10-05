@@ -1,4 +1,5 @@
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 @MainActor
@@ -53,7 +54,8 @@ public final class OtherEventsBandPresenter {
     public var toolTipTextColor: QmlColor = .clear
     public var toolTipOutline: QmlColor = .clear
 
-    private var session: DocumentSession?
+    private var viewport: DocumentViewport?
+    private var session: DocumentSession? { viewport?.session }
     private var colors: GridPalette?
     private var items: [OtherEventsStripItem] = []
     private var baseFontPx: Double = GridCameraPolicy.seedBaseFontPx
@@ -63,10 +65,10 @@ public final class OtherEventsBandPresenter {
     public init() {}
 
     public func configure(
-        session: DocumentSession?, palette: GridPalette,
+        viewport: DocumentViewport?, palette: GridPalette,
         baseFontPx: Double, appFontLineSpacing: Double
     ) {
-        self.session = session
+        self.viewport = viewport
         colors = palette
         self.baseFontPx = baseFontPx
         self.appFontLineSpacing = appFontLineSpacing
@@ -106,14 +108,14 @@ public final class OtherEventsBandPresenter {
     }
 
     public func refreshCamera() {
-        guard let session, let colors else {
+        guard let viewport, let colors else {
             markerCount = 0
             markers.reset(to: [])
             return
         }
         let next = OtherEventsStrip.markers(
             items: items,
-            pixelsPerTick: session.camera.pixelsPerTick, palette: colors)
+            pixelsPerTick: viewport.camera.pixelsPerTick, palette: colors)
         if next != publishedMarkers {
             publishedMarkers = next
             syncRetained(markers, next, make: OtherEventsMarkerHandle.init, update: { $0.update($1) })
@@ -123,10 +125,11 @@ public final class OtherEventsBandPresenter {
     }
 
     public func pointerMoved(x: Double, y: Double) {
-        guard let session else { pointerLeft(); return }
+        guard let viewport else { pointerLeft(); return }
+        let session = viewport.session
         let lines = OtherEventsStrip.tooltipLines(
             items: items, x: x,
-            camera: session.camera, baseFontPx: baseFontPx,
+            camera: viewport.camera, baseFontPx: baseFontPx,
             sampleRate: session.timeline.sampleRate)
         toolTipText = lines.joined(separator: "\n")
         toolTipVisible = !lines.isEmpty

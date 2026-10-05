@@ -47,9 +47,9 @@ private func loadBankProjectRows(_ report: CheckReport) {
             }
             loadBankExpect(
                 "L01",
-                first.bankToken != 0 && first.loadName == "fixture_rich" && first.slotViews.count == 128
+                first.loadName == "fixture_rich" && first.slotViews.count == 128
                     && first.slotViews[0].kind == .editable && first.slotViews[0].voice != nil && !first.dirty
-                    && first.sourcePath
+                    && root.path + "/" + first.id.sourceRelativePath
                         == root.appendingPathComponent(
                             "sound/voicegroups/fixture_rich.inc"
                         ).path,
@@ -57,11 +57,11 @@ private func loadBankProjectRows(_ report: CheckReport) {
             let secondLoad = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
             if case .success(let second) = secondLoad {
                 loadBankExpect(
-                    "L02", second.bankToken == first.bankToken, report,
+                    "L02", second.sharesBank(with: first), report,
                     "unchanged bank reuses the native bank identity")
                 loadBankExpect(
                     "L07",
-                    first.bankToken == second.bankToken && first.slotViews.count == 128 && second.slotViews.count == 128
+                    first.sharesBank(with: second) && first.slotViews.count == 128 && second.slotViews.count == 128
                         && first.slotViews[0].voice == second.slotViews[0].voice && first.id == second.id
                         && !first.dirty,
                     report, "first lease remains readable while both leases are held")
@@ -79,7 +79,7 @@ private func loadBankProjectRows(_ report: CheckReport) {
                 if case .success(let a) = gymLease, case .success(let b) = oldaleLease {
                     loadBankExpect(
                         "L03",
-                        gymArg == "_fixture_rich" && oldaleArg == gymArg && a.bankToken == b.bankToken && a.id == b.id,
+                        gymArg == "_fixture_rich" && oldaleArg == gymArg && a.sharesBank(with: b) && a.id == b.id,
                         report,
                         "songs sharing the voicegroup argument share its canonical bank")
                 } else {
@@ -97,7 +97,7 @@ private func loadBankProjectRows(_ report: CheckReport) {
                 loadBankExpect(
                     "L04",
                     message == "No voicegroup file declares voicegroup_not_declared."
-                        && current.bankToken == first.bankToken, report,
+                        && current.sharesBank(with: first), report,
                     "unknown argument reports the source-domain diagnostic without poisoning later loads")
             } else {
                 loadBankExpect("L04", false, report, "unknown argument or recovery did not behave as expected")
@@ -157,8 +157,7 @@ private func loadBankGraftRow(_ report: CheckReport) {
                 if case .success = adoptedOpen, case .success(let adopted) = adoptedLoad {
                     loadBankExpect(
                         "L09",
-                        adopted.slotViews[0].voice?.symbol == "DirectSoundSynth_GoldenSun_80000000"
-                            && adopted.bankToken != 0,
+                        adopted.slotViews[0].voice?.symbol == "DirectSoundSynth_GoldenSun_80000000",
                         report, "adopted lease publishes the persisted minted edit's voice content")
                 } else {
                     loadBankExpect("L09", false, report, "adopted lease failed to load the minted edit")

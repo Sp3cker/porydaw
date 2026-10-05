@@ -1,4 +1,5 @@
 import PorydawApp
+import PorydawDocument
 
 // Existing scenarios paired with drawer.cpp.
 // Entry order remains in EditorDrawerChecks.swift.

@@ -2,6 +2,7 @@ import Foundation
 @testable import PorydawApp
 @testable import PorydawAppCommands
 import PorydawCore
+@testable import PorydawDocument
 import QtBridge
 
 @MainActor
@@ -47,10 +48,11 @@ private func establishVelocityLatch(
 }
 
 @MainActor
-func checkGroupedVelocityDrag(_ report: CheckReport, session: DocumentSession) {
+func checkGroupedVelocityDrag(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::selectionModifierVelocity"
     let initialSelection = session.selectedNoteOrder
-    let grid = makeCameraGrid(session: session)
+    let grid = makeCameraGrid(viewport: viewport)
     guard let baseline = try? session.document.captureSave() else {
         report.fail(id, "could not capture the pre-drag MIDI bytes")
         return
@@ -202,7 +204,7 @@ func checkGroupedVelocityDrag(_ report: CheckReport, session: DocumentSession) {
 private func selectionFreeCell(
     session: DocumentSession, grid: PianoGrid, span: Int
 ) -> (tick: Int, pitch: Int, y: Double)? {
-    let camera = session.camera
+    let camera = grid.viewport.camera
     let snapshot = camera.snapshot
     for pitch in stride(from: 115, through: 24, by: -1) {
         let row = camera.projection.row(forPitch: pitch)
@@ -228,19 +230,20 @@ private func selectionFreeCell(
 }
 
 @MainActor
-func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSession) {
+func checkThresholdDrawCell(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::selectionMinimumDrawDistance"
     let initialSelection = session.selectedNoteOrder
-    let oldCamera = session.camera
-    let grid = makeCameraGrid(session: session)
-    _ = session.mutateCamera { _ = $0.setTimeZoom(140) }
-    let oldGridSelection = session.grid.selection
+    let oldCamera = viewport.camera
+    let grid = makeCameraGrid(viewport: viewport)
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(140) }
+    let oldGridSelection = viewport.grid.selection
     grid.openGridMenu(kind: 1)
     grid.activateGridMenuRow(actionId: 8)
     defer {
         grid.openGridMenu(kind: 1)
         grid.activateGridMenuRow(actionId: oldGridSelection.toMenuId())
-        session.mutateCamera { $0 = oldCamera }
+        viewport.mutateCamera { $0 = oldCamera }
     }
     grid.refreshCamera()
     guard let baseline = try? session.document.captureSave() else {
@@ -273,13 +276,13 @@ func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSession) {
         return
     }
     let pressX =
-        session.camera.viewX(
+        viewport.camera.viewX(
             tick: Double(cell.tick),
             dpr: grid.devicePixelRatio) + 2
     let dragX = pressX + 8
     guard pressX >= 4,
-        dragX <= session.camera.snapshot.viewportWidth - 4,
-        session.camera.tickAtContentX(dragX) < Double(cell.tick + snap)
+        dragX <= viewport.camera.snapshot.viewportWidth - 4,
+        viewport.camera.tickAtContentX(dragX) < Double(cell.tick + snap)
     else {
         report.fail(id, "the threshold drag escapes its snap cell at this zoom")
         return
@@ -315,8 +318,8 @@ func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSession) {
     report.expect(
         session.editCursor
             == Tick(
-                session.grid.snapTick(
-                    session.camera.tickAtContentX(pressX), camera: session.camera))
+                viewport.grid.snapTick(
+                    viewport.camera.tickAtContentX(pressX), camera: viewport.camera))
             && auditions.last.map { $0.pitch == cell.pitch && $0.velocity == 0 } == true,
         cppID: id, message: "within-slop release parks the nearest snapped edit cursor and stops audition")
     session.applyTimeSelection(
@@ -383,13 +386,14 @@ func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSession) {
 }
 
 @MainActor
-func checkOrderedSelection(_ report: CheckReport, session: DocumentSession) {
+func checkOrderedSelection(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/EditorGridCamera::orderedSelection"
-    let setupGrid = makeCameraGrid(session: session)
+    let setupGrid = makeCameraGrid(viewport: viewport)
     guard
-        let pitch = session.camera.projection.pitch(
-            atY: 160, keyHeight: session.camera.snapshot.keyHeight,
-            scrollY: session.camera.snapshot.scrollY, dpr: setupGrid.devicePixelRatio),
+        let pitch = viewport.camera.projection.pitch(
+            atY: 160, keyHeight: viewport.camera.snapshot.keyHeight,
+            scrollY: viewport.camera.snapshot.scrollY, dpr: setupGrid.devicePixelRatio),
         let added = try? session.document.addNotes([
             NewNote(
                 track: setupGrid.trackIndex, tick: 24, pitch: UInt8(pitch),
@@ -406,7 +410,7 @@ func checkOrderedSelection(_ report: CheckReport, session: DocumentSession) {
         return
     }
     defer { session.document.deleteNotes(added) }
-    let grid = makeCameraGrid(session: session)
+    let grid = makeCameraGrid(viewport: viewport)
     let a = added[0], b = added[1], c = added[2]
     guard let aRect = selectionRect(a, grid: grid),
         let bRect = selectionRect(b, grid: grid)

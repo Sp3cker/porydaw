@@ -2,7 +2,8 @@ import Foundation
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
-import PorydawBankLease
+import PorydawDocument
+import PorydawNativeHost
 
 // Existing scenarios paired with automationclipboard.cpp.
 // Entry order remains in AutomationPageChecks.swift.

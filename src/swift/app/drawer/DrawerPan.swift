@@ -1,12 +1,14 @@
+import PorydawDocument
+
 enum DrawerPan {
     static let dragDistanceSeed: Double = 10
 
     @MainActor
-    static func moved(x: Double, previousX: inout Double, session: DocumentSession?) {
+    static func moved(x: Double, previousX: inout Double, viewport: DocumentViewport?) {
         let delta = x - previousX
         previousX = x
         if delta != 0 {
-            session?.mutateCamera { $0.scrollByPx(-delta) }
+            viewport?.mutateCamera { $0.scrollByPx(-delta) }
         }
     }
 }

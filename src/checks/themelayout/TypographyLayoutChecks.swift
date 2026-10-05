@@ -1,4 +1,5 @@
 @testable import PorydawApp
+@testable import PorydawDocument
 
 let typographyLayoutScaleID = "swiftcore/TypographyLayout::scaleTables"
 let typographyLayoutBaseID = "swiftcore/TypographyLayout::basePropagation"

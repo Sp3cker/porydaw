@@ -31,7 +31,8 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                     "cannot open fixture banks: \(String(describing: loaded)), \(String(describing: other))")
                 return
             }
-            let before = try Data(contentsOf: URL(filePath: first.sourcePath))
+            let before = try Data(
+                contentsOf: URL(filePath: root.appendingPathComponent(first.id.sourceRelativePath).path))
             var nextVoice = original
             nextVoice.key = original.key == 60 ? 61 : 60
             let changed = nextVoice
@@ -52,14 +53,15 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                     "cannot save edited bank: \(String(describing: savedResult))")
                 return
             }
-            let after = try Data(contentsOf: URL(filePath: first.sourcePath))
+            let after = try Data(
+                contentsOf: URL(filePath: root.appendingPathComponent(first.id.sourceRelativePath).path))
             let freshStore = ProjectStore(projectRoot: root)
             let freshOpen = awaitValue { try await freshStore.open() }
             let freshLoad = awaitValue { try await freshStore.loadBank(voicegroupArg: "_fixture_rich") }
             if case .success = freshOpen, case .success(let fresh) = freshLoad {
                 saveExpect(
                     "S01",
-                    edited.dirty && !saved.dirty && saved.id == edited.id && saved.bankToken != edited.bankToken
+                    edited.dirty && !saved.dirty && saved.id == edited.id && !saved.sharesBank(with: edited)
                         && saved.slotViews[0].voice?.key == changed.key && fresh.slotViews[0].voice == changed
                         && sameSaveSlots(saved.slotViews, fresh.slotViews) && before != after, report,
                     "edited bytes persist and the clean reloaded bank retains the changed slot")
@@ -71,7 +73,7 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
             let memo = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
             if case .success(let memoized) = memo {
                 saveExpect(
-                    "S02", memoized.bankToken == saved.bankToken && sameSaveSlots(memoized.slotViews, saved.slotViews),
+                    "S02", memoized.sharesBank(with: saved) && sameSaveSlots(memoized.slotViews, saved.slotViews),
                     report,
                     "post-save load reuses the saved publication")
             } else {
@@ -81,7 +83,7 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
             if case .success(let retained) = otherAgain {
                 saveExpect(
                     "S05",
-                    second.id != saved.id && retained.bankToken == second.bankToken
+                    second.id != saved.id && retained.sharesBank(with: second)
                         && sameSaveSlots(retained.slotViews, second.slotViews), report,
                     "saving one bank retains the other bank and all its slots")
             } else {
@@ -156,7 +158,8 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                 saveExpect("S04", false, report, "cannot edit writable fixture: \(String(describing: edit))")
                 return
             }
-            let restoreWrites = try WriteFailureFixture.blockAtomicWrites(to: first.sourcePath)
+            let restoreWrites = try WriteFailureFixture.blockAtomicWrites(
+                to: root.appendingPathComponent(first.id.sourceRelativePath).path)
             let failed = awaitValue { try await store.saveVoicegroup(lease: edited) }
             let stillLoaded = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
             restoreWrites()
@@ -168,7 +171,7 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
             {
                 saveExpect(
                     "S04",
-                    message.hasPrefix("Cannot write ") && dirty.dirty && dirty.bankToken == edited.bankToken
+                    message.hasPrefix("Cannot write ") && dirty.dirty && dirty.sharesBank(with: edited)
                         && saved.slotViews[0].voice == changed && !saved.dirty, report,
                     "write failure preserves dirty bank; restored file permits save")
             } else {
@@ -190,19 +193,21 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                 saveExpect("S06", false, report, "cannot open clean fixture: \(String(describing: loaded))")
                 return
             }
-            let before = try Data(contentsOf: URL(filePath: clean.sourcePath))
+            let before = try Data(
+                contentsOf: URL(filePath: root.appendingPathComponent(clean.id.sourceRelativePath).path))
             let result = awaitValue { try await store.saveVoicegroup(lease: clean) }
             guard case .success(let saved?) = result else {
                 saveExpect("S06", false, report, "clean save failed: \(String(describing: result))")
                 return
             }
-            let after = try Data(contentsOf: URL(filePath: clean.sourcePath))
+            let after = try Data(
+                contentsOf: URL(filePath: root.appendingPathComponent(clean.id.sourceRelativePath).path))
             let memo = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
             if case .success(let memoized) = memo {
                 saveExpect(
                     "S06",
                     !clean.dirty && !saved.dirty && before == after && sameSaveSlots(saved.slotViews, clean.slotViews)
-                        && memoized.bankToken == saved.bankToken, report,
+                        && memoized.sharesBank(with: saved), report,
                     "clean save preserves disk bytes and memoizes its clean publication")
             } else {
                 saveExpect("S06", false, report, "clean memo load failed: \(String(describing: memo))")
@@ -279,7 +284,8 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                 return
             }
             let originalSynthBytes = try Data(contentsOf: synthFile)
-            let originalBankBytes = try Data(contentsOf: URL(filePath: lease.sourcePath))
+            let originalBankBytes = try Data(
+                contentsOf: URL(filePath: root.appendingPathComponent(lease.id.sourceRelativePath).path))
             saveExpect(
                 "S07", symbol == same && originalSynthBytes == stagedDefinition,
                 report, "mint deduplicates in memory and writes no file before save")
@@ -296,7 +302,8 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                     "minted voice cannot preview: \(String(describing: edit))")
                 return
             }
-            let unsavedBankBytes = try Data(contentsOf: URL(filePath: lease.sourcePath))
+            let unsavedBankBytes = try Data(
+                contentsOf: URL(filePath: root.appendingPathComponent(lease.id.sourceRelativePath).path))
             let unsavedSynthBytes = try Data(contentsOf: synthFile)
             report.expect(
                 edited.dirty
@@ -358,7 +365,8 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                 updated.direct.synths.find(symbol) == descriptor,
                 cppID: "vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
                 message: "refreshed project catalog contains the saved synth symbol")
-            let savedBankBytes = try Data(contentsOf: URL(filePath: lease.sourcePath))
+            let savedBankBytes = try Data(
+                contentsOf: URL(filePath: root.appendingPathComponent(lease.id.sourceRelativePath).path))
             if case .success(let clean?) = saved {
                 var sawVoice = changed
                 sawVoice.symbol = "VgSaveCheckSaw"
@@ -373,7 +381,8 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                             lease: sawBank, operation: .set(.init(slot: 0, value: changed, expected: selectedSaw)))
                     }
                     if case .success(.applied(let pulseBank, _, _)) = pulseEdit {
-                        let unchangedBankBytes = try Data(contentsOf: URL(filePath: lease.sourcePath))
+                        let unchangedBankBytes = try Data(
+                            contentsOf: URL(filePath: root.appendingPathComponent(lease.id.sourceRelativePath).path))
                         report.expect(
                             sawBank.slotViews[0].voice?.symbol == "VgSaveCheckSaw"
                                 && pulseBank.slotViews[0].voice?.symbol == symbol
@@ -471,7 +480,7 @@ private func saveSynthDefinitionFailureKeepsDirtyRecord(_ report: CheckReport) {
                 current != nil, cppID: cppID,
                 message: "the bank reloads after the failed synth save")
             report.expect(
-                current?.bankToken == edited.bankToken, cppID: cppID,
+                current?.sharesBank(with: edited) == true, cppID: cppID,
                 message: "the reloaded bank keeps the edited bank token")
             report.expect(
                 current?.dirty == true, cppID: cppID,

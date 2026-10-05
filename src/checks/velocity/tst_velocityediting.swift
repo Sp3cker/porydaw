@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 // Existing scenarios paired with tst_velocityediting.cpp.
 // Entry order remains in VelocityPageChecks.swift.
@@ -246,12 +247,12 @@ func drawerVelocityGestureTransactions(
     fixture.session.clearSelectedNotes()
     page.refreshFromDocument()
     let panBaseline = DocumentSnapshot(document)
-    let panScroll = fixture.session.camera.snapshot.scrollX
+    let panScroll = fixture.viewport.camera.snapshot.scrollX
     _ = page.pointerPress(x: 200, y: 40, surface: 1, button: 4, modifiers: 0)
     _ = page.pointerMove(x: 170, y: 40, buttons: 4)
     _ = page.pointerMove(x: 150, y: 40, buttons: 4)
     report.expect(
-        fixture.session.camera.snapshot.scrollX > panScroll, cppID: drawerVelocityTransactionID,
+        fixture.viewport.camera.snapshot.scrollX > panScroll, cppID: drawerVelocityTransactionID,
         message: "a middle drag pans the shared camera")
     report.expect(
         page.interactionActive, cppID: drawerVelocityTransactionID,
@@ -352,7 +353,7 @@ private func drawerVelocityContinuousPaintAxis(_ report: CheckReport) {
         paintSession = DocumentSession(
             document: paintDocument, service: paintService,
             lease: loaded.bank, slots: loaded.bankSlots,
-            dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+            dirty: loaded.bank.dirty, loadName: loaded.bank.loadName)
     } catch {
         report.fail(drawerVelocityTransactionID, "could not load the direct-sound fixture: \(error)")
         return

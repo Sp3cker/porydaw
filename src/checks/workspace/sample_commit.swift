@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 import PorydawSample
 import PorydawProject
 
@@ -54,14 +55,12 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
         check.expect(
             first.bankSlots[0].voice == assigned && peer.bankSlots[0].voice == assigned,
             message: "new sample assignment reaches both sessions")
-        let initialAudio = first.bankLease.withVoices { voices -> [Int8]? in
-            guard let wave = voices?[0].wav, let data = wave.pointee.data else { return nil }
+        func slotZeroAudio(_ session: DocumentSession) -> [Int8]? {
+            guard let wave = session.bankLease[0].wav, let data = wave.pointee.data else { return nil }
             return (0..<64).map { data[$0] }
         }
-        let peerAudio = peer.bankLease.withVoices { voices -> [Int8]? in
-            guard let wave = voices?[0].wav, let data = wave.pointee.data else { return nil }
-            return (0..<64).map { data[$0] }
-        }
+        let initialAudio = slotZeroAudio(first)
+        let peerAudio = slotZeroAudio(peer)
         check.expect(
             initialAudio == rendered.s8 && peerAudio == rendered.s8,
             message: "new registered sample plays rendered bytes in both sessions")
@@ -91,14 +90,8 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
         check.expect(
             first.document.history.undoCount == editCount && peer.document.history.undoCount == peerEditCount,
             message: "sample update adds no bank history command")
-        let refreshed = first.bankLease.withVoices { voices -> [Int8]? in
-            guard let wave = voices?[0].wav, let data = wave.pointee.data else { return nil }
-            return (0..<64).map { data[$0] }
-        }
-        let peerRefreshed = peer.bankLease.withVoices { voices -> [Int8]? in
-            guard let wave = voices?[0].wav, let data = wave.pointee.data else { return nil }
-            return (0..<64).map { data[$0] }
-        }
+        let refreshed = slotZeroAudio(first)
+        let peerRefreshed = slotZeroAudio(peer)
         check.expect(
             refreshed == rendered.s8 && peerRefreshed == rendered.s8,
             message: "both live bank leases play updated bytes")

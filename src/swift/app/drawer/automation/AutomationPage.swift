@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 import PorydawAppCommands
 
@@ -210,7 +211,8 @@ public final class AutomationPage: EditorDrawerPage {
     /// The playing tick the last presentation carried.
     @QtIgnored public internal(set) var presentedTick: Tick = 0
 
-    @QtIgnored weak var session: DocumentSession?
+    @QtIgnored weak var viewport: DocumentViewport?
+    @QtIgnored var session: DocumentSession? { viewport?.session }
     @QtIgnored var selectionTransitionToken: UUID?
     @QtIgnored var gesture: AutomationGesture?
     @QtIgnored var frozen: AutomationFrozenFacts?
@@ -225,7 +227,7 @@ public final class AutomationPage: EditorDrawerPage {
     /// Projects the complete stored range table without originating another change.
     public func applyLaneRanges(_ lanes: EditorLaneState) {
         let next = lanes.laneRanges.reduce(into: [AutomationParameter: Int]()) { result, entry in
-            if let parameter = EditorViewStateCodec.parameter(for: entry.key) {
+            if let parameter = EditorLaneState.parameter(forRowKey: entry.key) {
                 result[parameter] = entry.value
             }
         }

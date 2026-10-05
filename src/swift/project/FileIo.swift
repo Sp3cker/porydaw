@@ -9,7 +9,7 @@ struct FileBlob: Sendable {
     let found: Bool
 }
 
-/// Owns the callback record passed to the native loader. Keep this value alive until
+/// Owns the file-read state for the native loader. Keep this value alive until
 /// after `voicegroup_project_free`: the native context retains `fileIo.user`.
 struct ProjectFileReader {
     private let owner: FileIoOwner
@@ -20,9 +20,9 @@ struct ProjectFileReader {
 
     var fileIo: VoicegroupFileIo {
         VoicegroupFileIo(
-            user: UnsafeMutableRawPointer(owner.handler),
-            readBatch: pd_fileio_read_batch,
-            releaseBatch: pd_fileio_release_batch)
+            user: Unmanaged.passUnretained(owner).toOpaque(),
+            readBatch: readBatchCallback,
+            releaseBatch: releaseBatchCallback)
     }
 
     /// Performs only independent file reads on at most four Foundation threads.
@@ -39,21 +39,9 @@ struct ProjectFileReader {
 
 private final class FileIoOwner {
     let projectRoot: String
-    let handler: UnsafeMutablePointer<PdFileIoHandler>
 
     init(projectRoot: String) {
         self.projectRoot = projectRoot
-        handler = .allocate(capacity: 1)
-        handler.initialize(
-            to: PdFileIoHandler(
-                context: Unmanaged.passUnretained(self).toOpaque(),
-                readBatch: readBatchCallback,
-                releaseBatch: releaseBatchCallback))
-    }
-
-    deinit {
-        handler.deinitialize(count: 1)
-        handler.deallocate()
     }
 
     func readBatch(paths: [String]) -> [FileBlob] {

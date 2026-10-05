@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import PorydawProject
 import QtBridge
 import PorydawAppAudio
@@ -53,9 +54,9 @@ extension ApplicationSession {
 
     /// Reload keeps the original row selectable until its replacement opens.
     @QtIgnored
-    func reloadApproved(label: String, restoring tab: ReloadedTab) {
-        songTabs.tab(id: tab.tabId)?.isReady = false
-        startOpen(label: label, at: nil, restoring: tab)
+    func reloadApproved(label: String, replacing pending: PendingReload) {
+        songTabs.tab(id: pending.tabId)?.isReady = false
+        startOpen(label: label, at: nil, replacing: pending)
     }
 
     /// Hidden tabs also refresh the window's global bank Undo/Redo gate;
@@ -146,28 +147,29 @@ extension ApplicationSession {
     /// in the order they were asked for, and never while the host is closing. The
     /// session is held weakly until the open actually starts, for the same reason
     /// a queued project switch is.
-    func startOpen(label: String, at index: Int?, restoring tab: ReloadedTab? = nil) {
+    func startOpen(label: String, at index: Int?, replacing pending: PendingReload? = nil) {
         let priorTask = activeReplacementTask
         activeReplacementTask = Task { [weak self] in
             _ = await priorTask?.value
-            await self?.openTab(label: label, at: index, restoring: tab)
+            await self?.openTab(label: label, at: index, replacing: pending)
         }
     }
 
     /// Builds one workspace and installs it only after its document is ready.
-    /// A pending reload keeps the original selectable tab until that swap.
-    func openTab(label: String, at index: Int?, restoring tab: ReloadedTab? = nil) async {
+    /// A pending reload keeps the original selectable tab until that swap; the
+    /// new document opens fresh, exactly like a new tab, in the same row.
+    func openTab(label: String, at index: Int?, replacing pending: PendingReload? = nil) async {
         guard let service = catalogService else {
-            if let tab { songTabs.failReload(restoring: tab) }
+            if let pending { songTabs.failReload(pending) }
             failOpen("Open a project before opening a song.")
             return
         }
         guard let audio = await preparedAudio() else {
             if isDisposed || Task.isCancelled {
-                if let tab { songTabs.cancelReload(tabId: tab.tabId) }
+                if let pending { songTabs.cancelReload(tabId: pending.tabId) }
                 return
             }
-            if let tab { songTabs.failReload(restoring: tab) }
+            if let pending { songTabs.failReload(pending) }
             guard case .failed(let message) = audioReadiness else {
                 preconditionFailure("Audio preparation completed without an owner or failure.")
             }
@@ -175,7 +177,7 @@ extension ApplicationSession {
             return
         }
         guard !isDisposed, !Task.isCancelled else {
-            if let tab { songTabs.cancelReload(tabId: tab.tabId) }
+            if let pending { songTabs.cancelReload(tabId: pending.tabId) }
             return
         }
         publishLastSaveError("")
@@ -189,55 +191,17 @@ extension ApplicationSession {
                 session = try await DocumentSession.open(
                     service: service, label: label, sampleRate: audio.sampleRate)
             }
-            if let tab {
-                let usedTracks = 0..<session.document.engineTracks.usedTrackCount
-                session.selectedTrack = tab.selectedTrack.flatMap {
-                    usedTracks.contains($0) ? $0 : nil
-                }
-                session.editCursor = tab.editCursor
-                session.grid = tab.grid
-                session.grid.axis = session.projectionCache.timeAxis
-                session.grid.setTicksPerClock(session.gridClockTicks)
-                session.setScale(root: tab.scale.root)
-                session.setScale(type: tab.scale.scale)
-                session.setScale(highlight: tab.scale.highlight)
-                session.setScale(fold: tab.scale.fold)
-                session.selectedTracks = Set(tab.selectedTracks.filter { usedTracks.contains($0) })
-                session.mutedTracks = Set(tab.mutedTracks.filter { usedTracks.contains($0) })
-                session.soloedTracks = Set(tab.soloedTracks.filter { usedTracks.contains($0) })
-                if tab.timeSelection == nil {
-                    let validNotes = Set(usedTracks.flatMap { session.document.notes(in: $0).map(\.id) })
-                    session.setSelectedNotes(tab.selectedNoteOrder.filter { validNotes.contains($0) })
-                }
-            }
-            session.applyEditorViewStateProjection(editorViewState)
+            let viewport = DocumentViewport(session: session)
+            viewport.applyEditorViewStateProjection(editorViewState)
             let workspace = DocumentWorkspace(
-                session: session, audio: audio, playhead: playhead,
+                viewport: viewport, audio: audio, playhead: playhead,
                 playheadGuides: playheadGuides, eventList: eventList, palette: palette,
                 typography: typography, callbacks: makeCallbacks(for: session))
-            session.onEditorViewStateChanged = { [weak self, weak session] state in
-                guard let self, let session else { return }
-                self.publishEditorViewState(state, from: session)
+            viewport.onEditorViewStateChanged = { [weak self, weak viewport] state in
+                guard let self, let viewport else { return }
+                self.publishEditorViewState(state, from: viewport)
             }
-            workspace.drawer.applyChrome(session.editorViewState.chrome)
-            if let tab {
-                // The first viewport normally homes the roll to the song's
-                // pitches. Complete that one-time initialization before
-                // restoring the outgoing camera, so mounting QML cannot
-                // overwrite the retained vertical scroll.
-                if tab.camera.rollHeight > 0 {
-                    workspace.grid.configureViewport(
-                        width: tab.camera.viewportWidth, height: tab.camera.rollHeight,
-                        fontPx: Double(typography.baseFontPx), dpr: tab.devicePixelRatio)
-                }
-                session.mutateCamera { camera in
-                    camera.restore(
-                        pixelsPerBeat: tab.camera.pixelsPerBeat,
-                        keyHeight: tab.camera.keyHeight,
-                        scrollX: tab.camera.scrollX, scrollY: tab.camera.scrollY)
-                }
-                workspace.grid.refreshCamera()
-            }
+            workspace.drawer.applyChrome(viewport.editorViewState.chrome)
             workspace.pitchBend.onAuditionFromTick = { [weak self, weak workspace] tick in
                 guard let self, let workspace, self.workspace === workspace,
                     let audio = self.audio, audio.songLoaded
@@ -265,32 +229,34 @@ extension ApplicationSession {
                 guard let self, let workspace, self.workspace === workspace else { return }
                 self.onCommandAvailabilityChanged?()
             }
-            workspace.automationPage.onLaneRangeChanged = { [weak session] parameter, range in
-                guard let session, let key = EditorViewStateCodec.rowKey(for: parameter) else {
+            workspace.automationPage.onLaneRangeChanged = { [weak viewport] parameter, range in
+                guard let viewport, let key = EditorLaneState.rowKey(for: parameter) else {
                     return
                 }
-                var next = session.editorViewState
+                var next = viewport.editorViewState
                 next.lanes.laneRanges[key] = range
-                session.setEditorViewState(next)
+                viewport.setEditorViewState(next)
             }
-            workspace.automationPage.applyLaneRanges(session.editorViewState.lanes)
+            workspace.automationPage.applyLaneRanges(viewport.editorViewState.lanes)
             workspace.automationPage.refreshCamera()
             guard !isDisposed, !Task.isCancelled else {
                 // The host is closing: nothing adopts this document.
-                if let tab { songTabs.cancelReload(tabId: tab.tabId) }
+                if let pending { songTabs.cancelReload(tabId: pending.tabId) }
                 workspace.teardown()
                 _ = await session.close()
                 return
             }
             let tabSession = SongTabSession(
-                tabId: tab?.tabId ?? songTabs.reserveTabId(),
+                tabId: pending?.tabId ?? songTabs.reserveTabId(),
                 title: label, workspace: workspace, app: self)
-            if let tab {
-                tabSession.showsEvents = songTabs.tab(id: tab.tabId)?.showsEvents ?? tab.showsEvents
-                guard songTabs.finishReload(tabSession, restoring: tab) else {
+            if let pending {
+                if let live = songTabs.tab(id: pending.tabId) {
+                    tabSession.showsEvents = live.showsEvents
+                }
+                guard songTabs.finishReload(tabSession, replacing: pending) else {
                     let changedWhileLoading =
-                        songTabs.tab(id: tab.tabId).map {
-                            !tab.matches($0)
+                        songTabs.tab(id: pending.tabId).map {
+                            !pending.matches($0)
                         } ?? false
                     workspace.teardown()
                     _ = await session.close()
@@ -304,9 +270,9 @@ extension ApplicationSession {
             }
         } catch {
             if Task.isCancelled {
-                if let tab { songTabs.cancelReload(tabId: tab.tabId) }
+                if let pending { songTabs.cancelReload(tabId: pending.tabId) }
             } else {
-                if let tab { songTabs.failReload(restoring: tab) }
+                if let pending { songTabs.failReload(pending) }
                 failOpen(String(describing: error))
             }
         }
@@ -360,27 +326,27 @@ extension ApplicationSession {
             !isRestoringTabs, !isHostCloseWalk, !isReplacingProject,
             pendingProjectSwitch == nil
         else { return }
-        EditorViewStateCodec.saveTabs(
+        EditorViewStatePreferences.saveTabs(
             songTabs.recipe(projectPath: projectRoot),
             store: preferences)
     }
 
-    private func publishEditorViewState(_ state: EditorViewState, from origin: DocumentSession) {
-        guard songTabs.allTabs.contains(where: { $0.workspace.session === origin }),
+    private func publishEditorViewState(_ state: EditorViewState, from origin: DocumentViewport) {
+        guard songTabs.allTabs.contains(where: { $0.workspace.viewport === origin }),
             editorViewState != state
         else { return }
         editorViewState = state
         for tab in songTabs.allTabs {
             let workspace = tab.workspace
-            if workspace.session !== origin {
-                workspace.session.applyEditorViewStateProjection(state)
+            if workspace.viewport !== origin {
+                workspace.viewport.applyEditorViewStateProjection(state)
             }
             workspace.drawer.applyChrome(state.chrome)
             workspace.automationPage.applyLaneRanges(state.lanes)
         }
         onEditorViewStateChanged?(state)
         if persistenceConfigured {
-            EditorViewStateCodec.save(state, store: preferences)
+            EditorViewStatePreferences.save(state, store: preferences)
             onEditorViewStatePersisted?(state)
         }
     }

@@ -1,4 +1,5 @@
 import PorydawCore
+import PorydawDocument
 
 // Automation scene-state vocabulary: the document-derived snapshot one static
 // build produces, the gesture preview draft, the effective-context values, the
@@ -33,10 +34,9 @@ struct AutomationSceneSnapshot {
 
     @MainActor
     static func build(
-        session: DocumentSession,
+        viewport: DocumentViewport,
         cache: AutomationProjectionCache,
         selectedTrack: Int?,
-        camera: EditorCamera,
         activeParameterIndex: Int,
         ghostPins: Set<AutomationParameter>,
         selection: AutomationTimeSelection?,
@@ -47,6 +47,7 @@ struct AutomationSceneSnapshot {
         geometry: AutomationPlotGeometry,
         laneRanges: [AutomationParameter: Int] = [:]
     ) -> Self {
+        let session = viewport.session
         let document = session.document
         let track = selectedTrack.flatMap { $0 >= 0 ? $0 : nil }
         let parameterIndex = min(max(activeParameterIndex, 0), AutomationCatalog.count - 1)
@@ -85,7 +86,7 @@ struct AutomationSceneSnapshot {
         if plotMessage.isEmpty {
             let snapshot = cache.snapshot(parameter, session: session)
             let projection = cache.projection(
-                snapshot: snapshot, session: session, camera: camera,
+                snapshot: snapshot, viewport: viewport, camera: viewport.camera,
                 bounds: AutomationPlotBounds(
                     width: plotWidth, height: plotHeight,
                     devicePixelRatio: devicePixelRatio),

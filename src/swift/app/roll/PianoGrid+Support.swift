@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 import PorydawAppCommands
 
@@ -65,7 +66,7 @@ extension PianoGrid {
             let valid = min(max(0, session.selectedTrack ?? trackIndex), count - 1)
             session.selectedTrack = valid
             if trackIndex != valid { trackIndex = valid }
-            let snap = session.grid.snapTicksAt(session.editCursor, camera: session.camera)
+            let snap = viewport.grid.snapTicksAt(session.editCursor, camera: viewport.camera)
             var projected: [GridNote] = []
             var noteCount = 0
             for track in 0..<count { noteCount += session.document.notes(in: track).count }
@@ -96,13 +97,13 @@ extension PianoGrid {
 
     @QtIgnored
     public func snapTickDown(_ tick: Double) -> Int {
-        Int(session.grid.snapTickDown(tick, camera: session.camera))
+        Int(viewport.grid.snapTickDown(tick, camera: viewport.camera))
     }
 
     @QtIgnored
     public func gridCell(at tick: Int) -> (start: Int, duration: Int) {
-        let cell = session.grid.visibleGridCellContaining(
-            Tick(max(0, tick)), camera: session.camera)
+        let cell = viewport.grid.visibleGridCellContaining(
+            Tick(max(0, tick)), camera: viewport.camera)
         return (Int(cell.start), Int(cell.end - cell.start))
     }
 

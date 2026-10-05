@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 
 // Direct coverage for the Velocity page. The pure layers (voice context, the
 // value axis, the frozen gesture, the prompt transaction) are driven with
@@ -102,6 +103,7 @@ final class drawerVelocityPublicationCounter {
 @MainActor
 struct drawerVelocityVelocityFixture {
     let session: DocumentSession
+    let viewport: DocumentViewport
     let page: VelocityPage
     let document: SongDocument
     let notes: [Note]
@@ -118,9 +120,10 @@ struct drawerVelocityVelocityFixture {
         session.clearSelectedNotes()
         page = VelocityPage(baseFontPx: baseFontPx)
         self.session = session
+        viewport = DocumentViewport(session: session)
         self.document = document
         notes = document.notes(in: 0)
-        page.attach(session: session, palette: GridPalette())
+        page.attach(viewport: viewport, palette: GridPalette())
         page.configureBody(
             width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1,
             baseFontPx: baseFontPx, dragDistance: 10)
@@ -210,7 +213,7 @@ func drawerVelocityCommandAvailability(
     service: ProjectService
 ) {
     let fixture = drawerVelocityVelocityFixture(session: session, service: service)
-    let grid = PianoGrid(session: fixture.session)
+    let grid = PianoGrid(viewport: fixture.viewport)
     let setVelocity = EditCommand.setVelocity.rawValue
     report.expect(
         !grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,

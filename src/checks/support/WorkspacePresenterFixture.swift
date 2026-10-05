@@ -1,4 +1,5 @@
 import PorydawApp
+import PorydawDocument
 
 @MainActor
 struct WorkspacePresenterFixture {
@@ -8,14 +9,14 @@ struct WorkspacePresenterFixture {
     let workspace: DocumentWorkspace
 
     init(
-        session: DocumentSession, audio: NativeAudio,
+        viewport: DocumentViewport, audio: NativeAudio,
         callbacks: DocumentWorkspace.Callbacks
     ) {
         playhead = SharedPlayheadPresenter()
         guides = PlayheadGuidesPresenter()
         eventList = EventListPresenter()
         workspace = DocumentWorkspace(
-            session: session, audio: audio, playhead: playhead,
+            viewport: viewport, audio: audio, playhead: playhead,
             playheadGuides: guides, eventList: eventList, palette: GridPalette(),
             typography: Typography(baseFontPx: 13), callbacks: callbacks)
     }

@@ -1,7 +1,8 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+import PorydawDocument
 import PorydawPlayback
 
 // MARK: - Session I/O Scenarios
@@ -18,7 +19,7 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
         projectPath: projectDir + "/seeded-project",
         orderedSongs: ["mus_session_test2"],
         selectedSong: "mus_session_test2")
-    EditorViewStateCodec.saveTabs(seed, store: store)
+    EditorViewStatePreferences.saveTabs(seed, store: store)
     let app = ApplicationSession()
     app.configurePersistence()
     defer {
@@ -56,7 +57,7 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
         message: "A007 failed project open names the missing project in its explanation")
     store.synchronize()
     report.expectEqual(
-        expected: seed, actual: EditorViewStateCodec.loadTabs(store: store),
+        expected: seed, actual: EditorViewStatePreferences.loadTabs(store: store),
         cppID: id, what: "A008 failed initial open preserves the seeded complete tab recipe")
 
     app.openProjectAndSong(path: projectDir, label: "mus_session_test")
@@ -83,7 +84,7 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
             projectPath: projectDir,
             orderedSongs: ["mus_session_test"],
             selectedSong: "mus_session_test"),
-        actual: EditorViewStateCodec.loadTabs(store: store), cppID: id,
+        actual: EditorViewStatePreferences.loadTabs(store: store), cppID: id,
         what: "A010 recovery persists the staged root and its selected song")
     let firstID = app.songTabs.selectedId
     // Compare opaque MIDI and bank payloads against bytes and slots captured before the failed open.
@@ -133,7 +134,7 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
         cppID: id, what: "failed replacement retains the complete prior voicegroup catalog")
     store.synchronize()
     report.expectEqual(
-        expected: priorRecipe, actual: EditorViewStateCodec.loadTabs(store: store),
+        expected: priorRecipe, actual: EditorViewStatePreferences.loadTabs(store: store),
         cppID: id, what: "failed replacement preserves the prior root and complete persisted selection")
     app.songTabs.selectTab(tabId: firstID)
     let listings = app.songDockController().songListPresenter().songListings
@@ -210,11 +211,12 @@ private func sessionReloadAtomicBinding(report: CheckReport, projectDir: String)
         return
     }
     app.songTabs.selectTab(tabId: first.tabId)
+    let freshTrack = original.selectedTrack
     original.setSelectedNotes([note.id])
     original.selectedTrack = 0
     let selectedNotes = original.selectedNoteOrder
     let oldSlots = original.bankSlots
-    let oldBankSource = original.bankLease.sourcePath
+    let oldBankSource = original.bankLease.id.sourceRelativePath
     let midiURL = URL(fileURLWithPath: original.document.source.midiPath)
     do {
         var file = try MidiFile.decode(Array(Data(contentsOf: midiURL)))
@@ -241,7 +243,7 @@ private func sessionReloadAtomicBinding(report: CheckReport, projectDir: String)
             && original.document.source.label == "mus_session_test"
             && (try? original.document.state.file.encoded()) == oldMidi
             && original.bankLoadName == "test_vg"
-            && original.bankSlots == oldSlots && original.bankLease.sourcePath == oldBankSource
+            && original.bankSlots == oldSlots && original.bankLease.id.sourceRelativePath == oldBankSource
             && original.selectedTrack == 0 && original.selectedNoteOrder == selectedNotes,
         cppID: id,
         message: "A077 pending reload keeps the original MIDI bank and note selection selectable")
@@ -259,7 +261,7 @@ private func sessionReloadAtomicBinding(report: CheckReport, projectDir: String)
             if page.isReady || app.selectedDocument !== original
                 || (try? original.document.state.file.encoded()) != oldMidi
                 || original.bankLoadName != "test_vg" || original.bankSlots != oldSlots
-                || original.bankLease.sourcePath != oldBankSource
+                || original.bankLease.id.sourceRelativePath != oldBankSource
                 || original.selectedTrack != 0 || original.selectedNoteOrder != selectedNotes
             {
                 partialPublication = true
@@ -290,11 +292,11 @@ private func sessionReloadAtomicBinding(report: CheckReport, projectDir: String)
         changedMidi && replacement !== original
             && replacement.document.source.label == "mus_session_test"
             && replacement.bankLoadName == "test_vg"
-            && replacement.bankLease.sourcePath == "sound/voicegroups/test_vg.inc"
+            && replacement.bankLease.id.sourceRelativePath == "sound/voicegroups/test_vg.inc"
             && replacement.bankSlots.first?.voice?.release == 4
-            && replacement.selectedTrack == 0 && replacement.selectedNoteOrder == selectedNotes,
+            && replacement.selectedTrack == freshTrack && replacement.selectedNoteOrder.isEmpty,
         cppID: id,
-        message: "A079 replacement publishes changed MIDI with complete test_vg bank and selection")
+        message: "A079 replacement publishes changed MIDI with complete test_vg bank and a fresh selection")
     report.expect(
         readyPublications == 1 && landed.isReady && landed !== first
             && landed.tabId == first.tabId && app.songTabs.tabCount == 2
@@ -304,7 +306,7 @@ private func sessionReloadAtomicBinding(report: CheckReport, projectDir: String)
 }
 
 @MainActor
-private func sessionReloadRetainsViewState(report: CheckReport, projectDir: String) {
+private func sessionReloadOpensFresh(report: CheckReport, projectDir: String) {
     let id = "mainwindowrouting/MainWindowRoutingLifecycleTest::readyReloadPreservesTransients"
     let parent = URL(fileURLWithPath: projectDir).deletingLastPathComponent().path
     let root = stageTestProject(in: parent, projectName: "swiftcore-reload-view-state")
@@ -352,8 +354,13 @@ private func sessionReloadRetainsViewState(report: CheckReport, projectDir: Stri
         return
     }
     app.songTabs.selectTab(tabId: page.tabId)
-    let opened = document.camera.snapshot
-    document.mutateCamera {
+    let viewport = page.workspace.viewport
+    let opened = viewport.camera.snapshot
+    let freshTrack = document.selectedTrack
+    let freshCursor = document.editCursor
+    let freshDivision = page.gridPresenter().gridSelectionMenuId
+    let freshTriplet = page.gridPresenter().tripletGrid
+    viewport.mutateCamera {
         _ = $0.setTimeZoom(opened.pixelsPerBeat * 2)
         _ = $0.setKeyHeight(opened.keyHeight * 1.5)
         _ = $0.setHScroll($0.maxHScroll / 2)
@@ -367,7 +374,7 @@ private func sessionReloadRetainsViewState(report: CheckReport, projectDir: Stri
     grid.openGridMenu(kind: 2)
     grid.activateGridMenuRow(actionId: 1)
     app.songTabs.setSelectedTabEventsVisible(visible: true)
-    let seededCamera = document.camera.snapshot
+    let seededCamera = viewport.camera.snapshot
     let seededDivision = grid.gridSelectionMenuId
     let seededTriplet = grid.tripletGrid
     let seeded =
@@ -393,7 +400,7 @@ private func sessionReloadRetainsViewState(report: CheckReport, projectDir: Stri
         if app.songTabs.selectedPage === page {
             if !page.isReady {
                 sawPending = true
-                if document.camera.snapshot != seededCamera || document.selectedTrack != 1
+                if viewport.camera.snapshot != seededCamera || document.selectedTrack != 1
                     || document.editCursor != 48 || grid.gridSelectionMenuId != seededDivision
                     || grid.tripletGrid != seededTriplet || !page.showsEvents
                     || !app.songTabs.selectedTabShowsEvents
@@ -414,19 +421,22 @@ private func sessionReloadRetainsViewState(report: CheckReport, projectDir: Stri
         report.fail(id, "view-state reload did not publish a replacement: \(app.lastSaveError)")
         return
     }
-    let landedCamera = replacement.camera.snapshot
+    // Reload opens the song fresh in the same row: only the Event List mode
+    // comes from the live tab; camera, track, cursor and grid start over.
+    let landedCamera = landed.workspace.viewport.camera.snapshot
     let landedGrid = landed.gridPresenter()
     report.expect(
         landed.tabId == page.tabId && landed !== page && replacement !== document
-            && landedCamera.pixelsPerBeat == seededCamera.pixelsPerBeat
-            && landedCamera.keyHeight == seededCamera.keyHeight
-            && landedCamera.scrollX == seededCamera.scrollX
-            && landedCamera.scrollY == seededCamera.scrollY
-            && replacement.selectedTrack == 1 && replacement.editCursor == 48
-            && landedGrid.gridSelectionMenuId == 16 && landedGrid.tripletGrid
+            && landedCamera.pixelsPerBeat == opened.pixelsPerBeat
+            && landedCamera.keyHeight == opened.keyHeight
+            && landedCamera.scrollX == opened.scrollX
+            && landedCamera.scrollY == opened.scrollY
+            && replacement.selectedTrack == freshTrack && replacement.editCursor == freshCursor
+            && landedGrid.gridSelectionMenuId == freshDivision
+            && landedGrid.tripletGrid == freshTriplet
             && landed.showsEvents && app.songTabs.selectedTabShowsEvents,
         cppID: id,
-        message: "A025 the ready replacement carries every seeded view member")
+        message: "A025 the ready replacement opens fresh and keeps only the live Event List mode")
 }
 
 @MainActor
@@ -444,9 +454,9 @@ private func sessionStartupRestore(report: CheckReport, projectDir: String) {
             "porydaw_missing_song",
         ],
         selectedSong: "mus_session_test")
-    EditorViewStateCodec.saveTabs(seed, store: store)
+    EditorViewStatePreferences.saveTabs(seed, store: store)
     store.synchronize()
-    guard EditorViewStateCodec.loadTabs(store: store) == seed else {
+    guard EditorViewStatePreferences.loadTabs(store: store) == seed else {
         report.fail(id, "could not seed the complete startup tab recipe")
         _ = store.resetPreferences()
         return
@@ -514,7 +524,7 @@ private func sessionStartupRestore(report: CheckReport, projectDir: String) {
                 "porydaw_missing_song",
             ],
             selectedSong: "mus_session_test"),
-        actual: EditorViewStateCodec.loadTabs(store: store), cppID: id,
+        actual: EditorViewStatePreferences.loadTabs(store: store), cppID: id,
         what: "startup preserves all three saved recipe labels after restore")
 }
 @MainActor
@@ -585,7 +595,7 @@ internal func sessionOpenAndRecovery(
     sessionStartupRestore(report: report, projectDir: projectDir)
     sessionCatalogRefreshReplace(report: report, projectDir: projectDir)
     sessionReloadAtomicBinding(report: report, projectDir: projectDir)
-    sessionReloadRetainsViewState(report: report, projectDir: projectDir)
+    sessionReloadOpensFresh(report: report, projectDir: projectDir)
     // 1. Service open and error recovery
     let service = ProjectService()
     let songTablePath = projectDir + "/sound/song_table.inc"
@@ -650,8 +660,8 @@ internal func sessionOpenAndRecovery(
                 && before.1.constant == after.1.constant && before.1.player == after.1.player
                 && before.1.trackBudget == after.1.trackBudget && before.1.hasMid == after.1.hasMid
                 && before.1.hasCfg == after.1.hasCfg && before.1.registered == after.1.registered
-                && before.1.config == after.1.config && before.1.bankLoadName == after.1.bankLoadName
-                && before.1.bankDirty == after.1.bankDirty && before.1.midiBytes == after.1.midiBytes
+                && before.1.config == after.1.config && before.1.bank.loadName == after.1.bank.loadName
+                && before.1.bank.dirty == after.1.bank.dirty && before.1.midiBytes == after.1.midiBytes
                 && before.1.bankSlots == after.1.bankSlots,
             cppID: failedOpenID,
             message: "failed replacement still opens the original song with identical complete metadata")
@@ -763,7 +773,7 @@ internal func sessionFailureStages(
             }
             let document = live.document
             let midiPath = document.source.midiPath
-            let bankPath = root + "/" + live.bankLease.sourcePath
+            let bankPath = root + "/" + live.bankLease.id.sourceRelativePath
             guard let midiBefore = bytes(at: midiPath), let bankBefore = bytes(at: bankPath),
                 var voice = live.bankSlots.first?.voice
             else {
@@ -784,7 +794,7 @@ internal func sessionFailureStages(
             let stagedFile = document.state.file
             let stagedConfig = document.state.config
             let stagedSlots = live.bankSlots
-            let stagedLease = live.bankLease.bankToken
+            let stagedLease = live.bankLease
             let history = document.history
             let undoCount = history.undoCount
             let undoIndex = history.undoIndex
@@ -903,7 +913,7 @@ internal func sessionFailureStages(
                 expected: stagedSlots, actual: live.bankSlots,
                 cppID: scenario.id, what: "failed stage retains staged bank voices")
             report.expectEqual(
-                expected: stagedLease, actual: live.bankLease.bankToken,
+                expected: true, actual: live.bankLease.sharesBank(with: stagedLease),
                 cppID: scenario.id, what: "failed stage retains the bank lease")
             report.expectEqual(
                 expected: undoCount, actual: history.undoCount,
@@ -927,8 +937,8 @@ internal func sessionFailureStages(
                 expected: midiBefore, actual: Data(recovered.midiBytes),
                 cppID: scenario.id, what: "restored source opens original MIDI bytes")
             report.expectEqual(
-                expected: live.bankLease.sourcePath,
-                actual: recovered.bank.sourcePath, cppID: scenario.id,
+                expected: live.bankLease.id.sourceRelativePath,
+                actual: recovered.bank.id.sourceRelativePath, cppID: scenario.id,
                 what: "restored source opens the original bank")
             try runBlocking { try await live.save() }
             report.expectEqual(
@@ -971,7 +981,7 @@ internal func sessionFailureStages(
             try await service.openSong(label: "mus_session_test")
         }
         report.expectEqual(
-            expected: "sound/voicegroups/test_vg.inc", actual: normalized.bank.sourcePath,
+            expected: "sound/voicegroups/test_vg.inc", actual: normalized.bank.id.sourceRelativePath,
             cppID: "project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
             what: "native service publishes a project-relative normalized bank identity")
         report.expectEqual(

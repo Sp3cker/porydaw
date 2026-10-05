@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCoreCheckNative
+import PorydawDocument
 import PorydawProject
 
 @MainActor
@@ -23,7 +24,7 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
         let originalArg = session.document.state.config.voicegroupArgument
         let original = session.bankSlots
         let originalLease = session.bankLease
-        let homeBankPath = root + "/" + originalLease.sourcePath
+        let homeBankPath = root + "/" + originalLease.id.sourceRelativePath
         guard let homeBytes = bytes(at: homeBankPath),
             var edited = original[0].voice
         else {
@@ -71,7 +72,7 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
             cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
             message: "undo replays the carried edit onto the home bank")
         report.expect(
-            session.bankLease.withVoices({ $0?.pointee.release }) == UInt8(edited.release),
+            session.bankLease[0].release == UInt8(edited.release),
             cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
             message: "the returned home engine voice carries the unsaved release edit")
         report.expect(
@@ -98,7 +99,7 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
             expected: Optional(homeBytes), actual: bytes(at: homeBankPath),
             cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
             what: "redoing B still does not write dirty A")
-        let beforeFailed = session.bankLease.bankToken
+        let beforeFailed = session.bankLease
         let indexBeforeFailed = session.document.history.undoIndex
         let missingArg = "_not_a_voicegroup"
         let failure: String
@@ -109,7 +110,7 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
         report.expect(
             failure.contains(missingArg)
                 && session.document.state.config.voicegroupArgument == missingArg
-                && session.bankLease.bankToken == beforeFailed
+                && session.bankLease.sharesBank(with: beforeFailed)
                 && session.bankSlots[0].voice?.macro == BankVoiceMacro.square2,
             cppID: "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
             message:
@@ -123,7 +124,7 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
         try runBlocking { _ = try await session.undo() }
         report.expect(
             session.document.state.config.voicegroupArgument == "_fixture_alt"
-                && session.bankLease.bankToken == beforeFailed
+                && session.bankLease.sharesBank(with: beforeFailed)
                 && session.document.history.undoIndex == indexBeforeFailed,
             cppID: "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
             message: "undoing the missing -G returns to the last valid argument and bank")
@@ -135,7 +136,7 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
         report.expect(
             redoFailure.contains(missingArg)
                 && session.document.state.config.voicegroupArgument == missingArg
-                && session.bankLease.bankToken == beforeFailed,
+                && session.bankLease.sharesBank(with: beforeFailed),
             cppID: "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
             message: "redoing the missing -G reports failure and retains the previous loaded bank")
         try runBlocking { _ = try await session.undo() }
@@ -145,11 +146,11 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
             cppID: "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
             message: "undo after the failed redo restores the previous cfg while retaining its dirty selector history")
         try runBlocking { _ = try await session.undo() }
-        let beforeSave = session.bankLease.bankToken
+        let beforeSave = session.bankLease
         try runBlocking { try await session.save() }
         report.expect(
             !session.bankDirty && !session.document.isDirty
-                && session.bankLease.bankToken != beforeSave,
+                && !session.bankLease.sharesBank(with: beforeSave),
             cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
             message: "save of song and edited home bank refreshes the clean lease")
         let savedBank = bytes(at: homeBankPath)
@@ -183,7 +184,7 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
             cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
             message: "clean round trip binds the home voicegroup load name")
         report.expect(
-            session.bankLease.sourcePath == originalLease.sourcePath
+            session.bankLease.id.sourceRelativePath == originalLease.id.sourceRelativePath
                 && session.bankLease.sectionLabel == originalLease.sectionLabel,
             cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
             message: "clean round trip rebinds the saved home source and section")
@@ -234,7 +235,7 @@ private func blankTokenRebasesAcrossSourceReplacement(
         let catalog = try runBlocking { try await service.voicegroupCatalog() }
         let homeArg = session.document.state.config.voicegroupArgument
         let homeLease = session.bankLease
-        let path = root + "/" + homeLease.sourcePath
+        let path = root + "/" + homeLease.id.sourceRelativePath
         let other = catalog.groupArgs.first { $0 != homeArg }
         report.expect(
             catalog.groupArgs.count >= 2 && other != nil,
@@ -256,10 +257,10 @@ private func blankTokenRebasesAcrossSourceReplacement(
         report.expect(
             materialized.materializationToken != nil && session.bankDirty && session.bankSlots[blank].voice == original,
             cppID: id, message: "blank slot did not materialize under a reversible token")
-        let beforeSave = session.bankLease.bankToken
+        let beforeSave = session.bankLease
         try runBlocking { try await session.save() }
         report.expect(
-            session.bankLease.bankToken != beforeSave && bytes(at: path) != homeBytes,
+            !session.bankLease.sharesBank(with: beforeSave) && bytes(at: path) != homeBytes,
             cppID: id, message: "saving the materialized blank did not persist its source")
         report.expect(
             !session.bankDirty && !session.document.isDirty && session.bankSlots[blank].voice == original,
@@ -285,16 +286,17 @@ private func blankTokenRebasesAcrossSourceReplacement(
         report.expect(
             bytes(at: path) == refreshed, cppID: id,
             message: "external writer did not save the unrelated source edit")
-        let savedToken = session.bankLease.bankToken
+        let savedLease = session.bankLease
         try runBlocking { try await session.selectVoicegroup(other) }
         let switched =
             session.document.state.config.voicegroupArgument == other
-            && session.bankLease.sourcePath != homeLease.sourcePath
+            && session.bankLease.id.sourceRelativePath != homeLease.id.sourceRelativePath
         let rebound = try runBlocking { try await session.undo() }
         report.expect(
             switched && rebound && session.document.state.config.voicegroupArgument == homeArg
-                && session.bankLease.sourcePath == homeLease.sourcePath
-                && session.bankLease.sectionLabel == homeLease.sectionLabel && session.bankLease.bankToken != savedToken
+                && session.bankLease.id.sourceRelativePath == homeLease.id.sourceRelativePath
+                && session.bankLease.sectionLabel == homeLease.sectionLabel
+                && !session.bankLease.sharesBank(with: savedLease)
                 && !session.bankDirty,
             cppID: id, message: "external source refresh did not rebind cleanly")
         report.expect(
@@ -324,10 +326,10 @@ private func blankTokenRebasesAcrossSourceReplacement(
         report.expect(
             session.bankSlots[0].voice?.release == original.release && session.bankDirty,
             cppID: id, message: "restoring unrelated slot did not settle")
-        let beforeCleanupSave = session.bankLease.bankToken
+        let beforeCleanupSave = session.bankLease
         try runBlocking { try await session.save() }
         report.expect(
-            session.bankLease.bankToken != beforeCleanupSave && bytes(at: path) != refreshed,
+            !session.bankLease.sharesBank(with: beforeCleanupSave) && bytes(at: path) != refreshed,
             cppID: id, message: "saving the restored source did not persist cleanup")
         report.expect(
             !session.bankDirty && !session.document.isDirty,

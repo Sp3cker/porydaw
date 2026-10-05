@@ -2,32 +2,34 @@ import Foundation
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 
 @MainActor
-func runKeyboardParityChecks(_ report: CheckReport, session: DocumentSession) {
-    checkBandKeyCancelReasons(report, session: session)
-    checkBandKeyAutoRepeat(report, session: session)
-    checkBandKeyDeleteEligibility(report, session: session)
+func runKeyboardParityChecks(_ report: CheckReport, viewport: DocumentViewport) {
+    checkBandKeyCancelReasons(report, viewport: viewport)
+    checkBandKeyAutoRepeat(report, viewport: viewport)
+    checkBandKeyDeleteEligibility(report, viewport: viewport)
 }
 
 @MainActor
 private func withBandKeyFixture(
-    _ report: CheckReport, session: DocumentSession, id: String,
+    _ report: CheckReport, viewport: DocumentViewport, id: String,
     _ body: (PianoGrid, NoteID) -> Void
 ) {
+    let session = viewport.session
     let document = session.document
     let before = document.state
     let identity = document.history.currentIdentity
     let originalSelection = session.selectedNoteOrder
     let originalTrack = session.selectedTrack
-    let originalCamera = session.camera.snapshot
+    let originalCamera = viewport.camera.snapshot
     defer {
         while document.history.currentIdentity != identity && document.history.canUndo {
             guard document.history.undoDocument() else { break }
         }
         session.selectedTrack = originalTrack
         session.setSelectedNotes(originalSelection)
-        _ = session.mutateCamera {
+        _ = viewport.mutateCamera {
             $0.updateViewport(
                 width: originalCamera.viewportWidth,
                 rollHeight: originalCamera.rollHeight)
@@ -38,7 +40,7 @@ private func withBandKeyFixture(
         }
         report.expect(
             document.state == before && document.history.currentIdentity == identity
-                && session.camera.snapshot == originalCamera,
+                && viewport.camera.snapshot == originalCamera,
             cppID: id, message: "band key fixture restores document, history, and camera")
     }
     guard
@@ -50,18 +52,19 @@ private func withBandKeyFixture(
         return
     }
     session.selectedTrack = track
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(35) }
     grid.refreshCamera()
     body(grid, noteID)
 }
 
 @MainActor
-private func checkBandKeyDeleteEligibility(_ report: CheckReport, session: DocumentSession) {
+private func checkBandKeyDeleteEligibility(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::bandKeyDeleteEligibility"
-    withBandKeyFixture(report, session: session, id: id) { grid, noteID in
+    withBandKeyFixture(report, viewport: viewport, id: id) { grid, noteID in
         let document = session.document
         session.clearSelectedNotes()
         let emptyState = document.state
@@ -98,9 +101,10 @@ private func checkBandKeyDeleteEligibility(_ report: CheckReport, session: Docum
 }
 
 @MainActor
-private func checkBandKeyAutoRepeat(_ report: CheckReport, session: DocumentSession) {
+private func checkBandKeyAutoRepeat(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::bandKeyAutoRepeat"
-    withBandKeyFixture(report, session: session, id: id) { grid, _ in
+    withBandKeyFixture(report, viewport: viewport, id: id) { grid, _ in
         let initialPencilMode = grid.pencilMode
         let eligible = grid.commandAvailable(command: EditCommand.pencilMode.rawValue)
         let repeatSurface = EditSurfaceState(
@@ -125,9 +129,10 @@ private func checkBandKeyAutoRepeat(_ report: CheckReport, session: DocumentSess
 }
 
 @MainActor
-private func checkBandKeyCancelReasons(_ report: CheckReport, session: DocumentSession) {
+private func checkBandKeyCancelReasons(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::bandKeyCancelReasons"
-    withBandKeyFixture(report, session: session, id: id) { grid, _ in
+    withBandKeyFixture(report, viewport: viewport, id: id) { grid, _ in
         guard let found = visibleRow(grid) else {
             report.fail(id, "no visible grid row available for cancellation")
             return

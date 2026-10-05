@@ -1,5 +1,6 @@
 import NativeGridTypography
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 
@@ -16,14 +17,14 @@ extension AutomationPage {
 
     /// The range press's own band, in plot coordinates.
     func publishBand() {
-        guard let session, let band, band.active else {
+        guard let viewport, let band, band.active else {
             if bandVisible { bandVisible = false }
             updateRect(bandRect, (0, 0, 0, 0))
             return
         }
         let projection = makeProjection(
-            facts: facts(parameter: band.parameter, modifiers: .init(), session: session),
-            camera: session.camera)
+            facts: facts(parameter: band.parameter, modifiers: .init(), viewport: viewport),
+            camera: viewport.camera)
         let limit = max(0, plotWidth)
         let x0 = min(max(0, projection.x(min(band.anchorTick, band.currentTick))), limit)
         let x1 = min(max(0, projection.x(max(band.anchorTick, band.currentTick))), limit)
@@ -48,7 +49,7 @@ extension AutomationPage {
                 nodes[index] = node
             }
         }
-        guard let session, let hover else {
+        guard let viewport, let hover else {
             let wasVisible = hoverVisible
             hoverVisible = false
             if wasVisible {
@@ -62,8 +63,8 @@ extension AutomationPage {
         if !hover.hasPoint && !ghostParameters.isEmpty {
             let tracks = usedTracks()
             for parameter in ghostParameters {
-                let facts = facts(parameter: parameter, modifiers: .init(), session: session)
-                let cameraProjection = makeProjection(facts: facts, camera: session.camera)
+                let facts = facts(parameter: parameter, modifiers: .init(), viewport: viewport)
+                let cameraProjection = makeProjection(facts: facts, camera: viewport.camera)
                 let lane = cameraProjection.project(
                     facts.snapshot, selection: selection, usedTracks: tracks)
                 guard let value = lane.heldValue(at: hover.tick) else { continue }
@@ -79,8 +80,8 @@ extension AutomationPage {
                 return
             }
         }
-        let facts = facts(parameter: hover.parameter, modifiers: .init(), session: session)
-        let projection = makeProjection(facts: facts, camera: session.camera)
+        let facts = facts(parameter: hover.parameter, modifiers: .init(), viewport: viewport)
+        let projection = makeProjection(facts: facts, camera: viewport.camera)
         let metadata = facts.metadata
         hoverVisible = true
         hoverText = hover.text
@@ -147,10 +148,10 @@ extension AutomationPage {
                 valueY: projection.y(last.value, metadata: facts.metadata)))
     }
 
-    func publishGhostNames(_ session: DocumentSession) {
+    func publishGhostNames(_ viewport: DocumentViewport) {
         let height = captionMetrics?.height ?? fontPx(baseFontPx, 1)
         let pad = fontPx(baseFontPx, 0.5)
-        let projected = ghostProjections(session)
+        let projected = ghostProjections(viewport)
         let font = typography.caption.qmlFont
         var labels: [SceneTextValue] = []
         for (index, lane) in projected.enumerated() {
@@ -164,8 +165,8 @@ extension AutomationPage {
                     fontPx(baseFontPx, 2),
                     (captionMetrics?.advance(text) ?? 0).rounded()))
             let projection = makeProjection(
-                facts: facts(parameter: lane.parameter, modifiers: .init(), session: session),
-                camera: session.camera)
+                facts: facts(parameter: lane.parameter, modifiers: .init(), viewport: viewport),
+                camera: viewport.camera)
             let curveY = projection.y(value, metadata: lane.metadata)
             let y = min(max(0, curveY - height / 2), max(0, plotHeight - height))
             labels.append(

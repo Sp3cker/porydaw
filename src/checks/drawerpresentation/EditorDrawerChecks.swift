@@ -1,4 +1,5 @@
 @testable import PorydawApp
+@testable import PorydawDocument
 import QtBridge
 
 let drawerLayoutMetricsID = "swiftcore/EditorDrawer::metricsAndKinds"

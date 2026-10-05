@@ -2,6 +2,7 @@ import Foundation
 @testable import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+@testable import PorydawDocument
 import PorydawPlayback
 
 // MARK: - Bank Save Scenarios
@@ -11,7 +12,7 @@ internal func bankQueuedSave(report: CheckReport, session: DocumentSession, proj
     let queuedSaveID = "vgsavecheck/VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit"
     do {
         try runBlocking {
-            let bankPath = projectDir + "/" + session.bankLease.sourcePath
+            let bankPath = projectDir + "/" + session.bankLease.id.sourceRelativePath
             let bankBytesBefore = bytes(at: bankPath)
             guard var savedVoice = session.bankSlots.first?.voice,
                 let baseTick = session.document.state.file.chunks.map(\.endTick).max()
@@ -28,7 +29,7 @@ internal func bankQueuedSave(report: CheckReport, session: DocumentSession, proj
                 cppID: queuedSaveID,
                 message: "queued release edit dirties only the bank before any song note")
             report.expect(
-                session.bankLease.withVoices({ $0?.pointee.release })
+                session.bankLease[0].release
                     == UInt8(savedVoice.release),
                 cppID: queuedSaveID,
                 message: "queued release edit reaches the exact engine release byte")
@@ -139,7 +140,7 @@ internal func bankQueuedSave(report: CheckReport, session: DocumentSession, proj
                 cppID: queuedSaveID,
                 message: "undo past the bank release edit leaves both document and bank dirty")
             report.expect(
-                session.bankLease.withVoices({ $0?.pointee.release })
+                session.bankLease[0].release
                     == UInt8(originalRelease) && bytes(at: bankPath) == savedBankBytes,
                 cppID: queuedSaveID,
                 message: "bank undo restores the original engine release without writing disk")
@@ -163,7 +164,7 @@ internal func bankCatalogOutage(
     report: CheckReport, session: DocumentSession,
     service: ProjectService, projectDir: String
 ) {
-    let retainedToken = session.bankLease.bankToken
+    let retainedLease = session.bankLease
     let retainedSlots = session.bankSlots
     let retainedDirty = session.bankDirty
     let soundPath = projectDir + "/sound"
@@ -191,7 +192,7 @@ internal func bankCatalogOutage(
             "could not hide fixture sound directory: \(error)")
     }
     report.expectEqual(
-        expected: retainedToken, actual: session.bankLease.bankToken,
+        expected: true, actual: session.bankLease.sharesBank(with: retainedLease),
         cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
         what: "catalog outage retains the last valid bank lease")
     report.expectEqual(
@@ -218,7 +219,7 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
         roundtripSession = try runBlocking {
             try await DocumentSession.open(service: roundtripService, label: "mus_session_test")
         }
-        let roundtripBankPath = roundtripDir + "/" + roundtripSession.bankLease.sourcePath
+        let roundtripBankPath = roundtripDir + "/" + roundtripSession.bankLease.id.sourceRelativePath
         let originalBytes = bytes(at: roundtripBankPath)
         let original = roundtripSession.bankSlots[0].voice!
         let originalSlots = roundtripSession.bankSlots
@@ -238,13 +239,13 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
             roundtripSession.bankDirty && !roundtripSession.document.isDirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
             message: "release and key edit dirties only the bank before round-trip Save")
-        let preSaveToken = roundtripSession.bankLease.bankToken
+        let preSaveLease = roundtripSession.bankLease
         try runBlocking {
             try await roundtripSession.save()
         }
         let editedBytes = bytes(at: roundtripBankPath)
         report.expect(
-            roundtripSession.bankLease.bankToken != preSaveToken,
+            !roundtripSession.bankLease.sharesBank(with: preSaveLease),
             cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
             message: "successful bank save publishes a refreshed native bank")
         report.expectEqual(
@@ -266,7 +267,7 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
         }
         report.expect(
             reopened.bankSlots[0].voice?.release == edited.release
-                && reopened.bankLease.withVoices({ $0?.pointee.release })
+                && reopened.bankLease[0].release
                     == UInt8(edited.release),
             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
             message: "freshly reopened bank carries the exact saved release in its view and engine")
@@ -352,7 +353,7 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
             let namesUnwritableBank: Bool
             if case let .operationFailed(message)? = refusal {
                 namesUnwritableBank = message.contains(
-                    URL(fileURLWithPath: roundtripSession.bankLease.sourcePath).lastPathComponent)
+                    URL(fileURLWithPath: roundtripSession.bankLease.id.sourceRelativePath).lastPathComponent)
             } else {
                 namesUnwritableBank = false
             }
@@ -423,7 +424,7 @@ internal func orphanBankCloseAccounting(report: CheckReport, fixtureRoot: String
         }
         let home = BankBindingIdentity(session.bankLease)
         let one = BankBindingIdentity(sectionOne.lease)
-        let homePath = root + "/" + session.bankLease.sourcePath
+        let homePath = root + "/" + session.bankLease.id.sourceRelativePath
         let closed = try runBlocking { await session.close() }
         report.expect(closed, cppID: id, message: "the last session bound to the home bank detaches")
 

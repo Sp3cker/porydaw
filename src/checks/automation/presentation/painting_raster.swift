@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 @MainActor
 func drawerAutomationRasterScrolledPhantom(
@@ -23,7 +24,7 @@ func drawerAutomationRasterScrolledPhantom(
         fixture.activate(parameter)
         let radius = max(1, (fixture.page.baseFontPx * 7 / 12).rounded())
         let scroll = fixture.x(144) + 2 * radius
-        _ = fixture.session.mutateCamera { $0.setHScroll(scroll) }
+        _ = fixture.viewport.mutateCamera { $0.setHScroll(scroll) }
         let page = fixture.page
         let sourceY = fixture.y(parameter, nodeValue)
         let targetY = fixture.y(parameter, cursorValue)

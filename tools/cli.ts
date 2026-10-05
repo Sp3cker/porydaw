@@ -143,7 +143,9 @@ interface CheckLane {
 const LANES: Record<Lane, CheckLane> = {
   "checks": {
     binary: "porydaw_checks",
-    // The application binary is only needed by the production-startup rows.
+    // The application binary is only needed by the production-startup rows;
+    // the AOT gate below needs Qt's aggregated per-module statistics, which
+    // no default target produces.
     buildTargets: (options) => {
       const productionStartupSelected = options.filters.length === 0
         ? !options.exclusions.includes("production-startup")
@@ -155,6 +157,7 @@ const LANES: Record<Lane, CheckLane> = {
         ...(productionStartupSelected ? ["porydaw"] : []),
         "porydaw_checks",
         "mid2agb",
+        "all_aotstats",
       ];
     },
   },
@@ -236,17 +239,10 @@ async function runQmlAot(args: string[], build = true): Promise<void> {
     );
   }
   if (build) {
-    const status = await new Deno.Command("deno", {
-      args: [
-        "task",
-        "build:app",
-        ...(args.includes("--release") ? ["--release"] : []),
-      ],
-      stdout: "inherit",
-      stderr: "inherit",
-      stdin: "null",
-    }).output();
-    if (!status.success) Deno.exit(status.code);
+    await runBuild(
+      ["porydaw", "all_aotstats"],
+      args.includes("--release") ? "release" : "debug",
+    );
   }
   const status = await new Deno.Command("deno", {
     args: [

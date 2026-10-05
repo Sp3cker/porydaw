@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import PorydawAppCommands
 
 /// Owns one document's editor presenters and all document-scoped publication wiring.
@@ -45,7 +46,10 @@ public final class DocumentWorkspace {
         }
     }
 
-    public let session: DocumentSession
+    /// The document's presentation: camera, roll grid, scale and drawer view
+    /// state. Created with the session, before any presenter reads it.
+    public let viewport: DocumentViewport
+    public var session: DocumentSession { viewport.session }
     public let grid: PianoGrid
     public let pitchBend: PitchBendPresenter
     public let trackHeaders: TrackHeadersPresenter
@@ -74,13 +78,14 @@ public final class DocumentWorkspace {
     private var isTornDown = false
 
     public init(
-        session: DocumentSession, audio: NativeAudio,
+        viewport: DocumentViewport, audio: NativeAudio,
         playhead: SharedPlayheadPresenter,
         playheadGuides: PlayheadGuidesPresenter,
         eventList: EventListPresenter, palette: GridPalette,
         typography: Typography, callbacks: Callbacks
     ) {
-        self.session = session
+        self.viewport = viewport
+        let session = viewport.session
         appliedSongConfig = session.document.state.config
         self.audio = audio
         self.playhead = playhead
@@ -92,15 +97,15 @@ public final class DocumentWorkspace {
         // presents that instance: the window's single theme push then reaches
         // every page of every tab, hidden ones included, and the strip reads the
         // same object.
-        let grid = PianoGrid(session: session, palette: palette, typography: typography)
+        let grid = PianoGrid(viewport: viewport, palette: palette, typography: typography)
         self.grid = grid
         let otherEventsBand = OtherEventsBandPresenter()
         otherEventsBand.configure(
-            session: session, palette: grid.palette,
+            viewport: viewport, palette: grid.palette,
             baseFontPx: Double(typography.baseFontPx), appFontLineSpacing: 0)
         self.otherEventsBand = otherEventsBand
         let pitchBend = PitchBendPresenter(
-            session: session, grid: grid, palette: grid.palette, typography: typography)
+            viewport: viewport, grid: grid, palette: grid.palette, typography: typography)
         self.pitchBend = pitchBend
         grid.onPitchBendRequested = { [weak pitchBend] in
             pitchBend?.openSelected() ?? false
@@ -119,15 +124,15 @@ public final class DocumentWorkspace {
             audio?.previewVoice(program: program, key: key, velocity: velocity)
         }
         let velocityPage = VelocityPage(baseFontPx: Double(typography.baseFontPx))
-        velocityPage.attach(session: session, palette: grid.palette)
+        velocityPage.attach(viewport: viewport, palette: grid.palette)
         self.velocityPage = velocityPage
         let voiceChangesPage = VoiceChangesPage(baseFontPx: Double(typography.baseFontPx))
-        voiceChangesPage.attach(session: session, palette: grid.palette)
+        voiceChangesPage.attach(viewport: viewport, palette: grid.palette)
         self.voiceChangesPage = voiceChangesPage
         let automationPage = AutomationPage(baseFontPx: Double(typography.baseFontPx))
-        automationPage.attach(session: session, palette: grid.palette)
+        automationPage.attach(viewport: viewport, palette: grid.palette)
         self.automationPage = automationPage
-        let rulerMenu = RulerMenuPresenter(session: session, grid: grid, automation: automationPage)
+        let rulerMenu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automationPage)
         self.rulerMenu = rulerMenu
         grid.onGridMenuOpened = { [weak automationPage, weak rulerMenu] in
             if rulerMenu?.isOpen == true { rulerMenu?.close() }
@@ -144,11 +149,11 @@ public final class DocumentWorkspace {
             guard visible else { return }
             self?.drawerSectionBecameVisible(kind)
         }
-        drawer.onChromeChanged = { [weak session] state in
-            guard let session else { return }
-            var next = session.editorViewState
+        drawer.onChromeChanged = { [weak viewport] state in
+            guard let viewport else { return }
+            var next = viewport.editorViewState
             next.chrome = state
-            session.setEditorViewState(next)
+            viewport.setEditorViewState(next)
         }
 
         headers.onTrackSelected = { [weak grid] track in
@@ -183,7 +188,7 @@ public final class DocumentWorkspace {
             grid?.lastVelocity = Int(velocity)
         }
 
-        session.onCameraChangeDetailed = { [weak self] _, change in
+        viewport.onCameraChangeDetailed = { [weak self] _, change in
             self?.cameraDidChange(change)
         }
         session.onChange = { [weak self] change in
@@ -198,19 +203,12 @@ public final class DocumentWorkspace {
     public func activate() {
         guard !isActive, !isTornDown else { return }
         isActive = true
-        do {
-            try audio.bind(
-                timeline: session.timeline, bank: session.bankLease,
-                config: session.document.state.config)
-            audio.setMuteMask(Self.trackMask(session.mutedTracks))
-            audio.setSoloMask(Self.trackMask(session.soloedTracks))
-            appliedSongConfig = session.document.state.config
-        } catch {
-            // The renderer refused this document's voices. The document stays
-            // editable without a transport, exactly as it does when a playback
-            // publication fails, and the failure is reported once here.
-            callbacks.publicationFailed(String(describing: error))
-        }
+        audio.bind(
+            timeline: session.timeline, bank: session.bankLease,
+            config: session.document.state.config)
+        audio.setMuteMask(Self.trackMask(session.mutedTracks))
+        audio.setSoloMask(Self.trackMask(session.soloedTracks))
+        appliedSongConfig = session.document.state.config
         // The engine is bound before the publication is reinstalled, so no
         // timeline of this document can be published onto another document's
         // voices. `deactivate()` cleared the closure this restores.
@@ -240,7 +238,7 @@ public final class DocumentWorkspace {
         for kind in [DrawerSectionKind.velocity, .voiceChanges, .automation] {
             flushDeferredCamera(kind)
         }
-        playheadGuides.attach(session: session)
+        playheadGuides.attach(viewport: viewport)
         let engineTracks = session.document.engineTracks
         let initialChunk: Int
         if let track = session.selectedTrack,
@@ -254,7 +252,7 @@ public final class DocumentWorkspace {
             initialChunk = 0
         }
         eventList.attach(session: session, chunkIndex: initialChunk)
-        playhead.attach(session: session, audio: audio, grid: grid, drawer: drawer)
+        playhead.attach(viewport: viewport, audio: audio, grid: grid, drawer: drawer)
         lastPolledPlaying = nil
         playhead.startPolling()
     }
@@ -269,7 +267,7 @@ public final class DocumentWorkspace {
         voiceChangesPage.refreshPromptStyle()
         automationPage.refreshPromptStyles()
         voiceChangesPage.rebuildContent()
-        automationPage.publishContent(session)
+        automationPage.publishContent(viewport)
         automationPage.publishDrawingContent()
     }
 
@@ -295,11 +293,10 @@ public final class DocumentWorkspace {
     /// scene has already released. Idempotent with `teardown`, which clears
     /// the same closures.
     public func suspendCallbacks() {
-        session.onCameraChange = nil
-        session.onCameraChangeDetailed = nil
+        viewport.onCameraChangeDetailed = nil
         session.onChange = nil
         session.onPlayback = nil
-        session.onEditorViewStateChanged = nil
+        viewport.onEditorViewStateChanged = nil
         drawer.onChromeChanged = nil
         automationPage.onLaneRangeChanged = nil
     }
@@ -351,11 +348,10 @@ public final class DocumentWorkspace {
         session.onChange = nil
         session.onPlayback = nil
         drawer.onSectionVisibilityChanged = nil
-        session.onEditorViewStateChanged = nil
+        viewport.onEditorViewStateChanged = nil
         drawer.onChromeChanged = nil
         automationPage.onLaneRangeChanged = nil
-        session.onCameraChange = nil
-        session.onCameraChangeDetailed = nil
+        viewport.onCameraChangeDetailed = nil
         voiceChangesPage.detach()
         headerVoicePicker.cancelPicker()
         headerVoicePicker.onOpenChanged = nil
@@ -463,11 +459,7 @@ public final class DocumentWorkspace {
         }
 
         if isActive && change.domains.contains(.bank) {
-            do {
-                try audio.updateVoicegroup(session.bankLease)
-            } catch {
-                callbacks.publicationFailed(String(describing: error))
-            }
+            audio.updateVoicegroup(session.bankLease)
         }
         if change.domains.contains(.bank) {
             velocityPage.cancelSectionInteraction()

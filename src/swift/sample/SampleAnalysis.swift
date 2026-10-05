@@ -34,8 +34,7 @@ extension SampleDsp {
     }
 
     /// Detect a stable fundamental from overlapping 4096-frame YIN windows.
-    public static func detectPitchYin(_ x: [Float], rate: Double) -> PitchResult {
-        let samples = x.span
+    public static func detectPitchYin(_ samples: borrowing Span<Float>, rate: Double) -> PitchResult {
         let frame = 4096
         let half = frame / 2
         guard rate.isFinite, rate > 0, rate < 4_000_000, samples.count >= frame else { return PitchResult() }

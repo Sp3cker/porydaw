@@ -1,5 +1,4 @@
 import Foundation
-import PorydawBankLease
 import PorydawCore
 import PorydawProject
 
@@ -53,7 +52,7 @@ extension ProjectService {
     /// stays byte-identical whatever changed it externally.
     public func forkSongAs(label: String, snapshot: SaveSnapshot) async throws {
         let store = try requireStore()
-        let label = SongListPresenter.normalizeSongLabel(text: label)
+        let label = SongLabelPolicy.normalize(label)
         guard SongName.isValid(label: label) else {
             throw ProjectServiceError.operationFailed("Invalid song label: \(label).")
         }

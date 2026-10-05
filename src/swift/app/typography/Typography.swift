@@ -1,4 +1,5 @@
 import Foundation
+import PorydawDocument
 
 enum LayoutSpace: CaseIterable {
     case zero, half, one, two, three, four, six, eight
@@ -32,11 +33,11 @@ public struct Typography {
     }
 
     func fontPx(_ multiplier: Double) -> Int {
-        Int(PorydawApp.fontPx(Double(baseFontPx), multiplier))
+        Int(PorydawDocument.fontPx(Double(baseFontPx), multiplier))
     }
 
     func fontPxF(_ multiplier: Double) -> Double {
-        PorydawApp.fontPxF(Double(baseFontPx), multiplier)
+        PorydawDocument.fontPxF(Double(baseFontPx), multiplier)
     }
 
     var body: GridFontSpec {

@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 // Existing scenarios paired with automationselection.cpp.
 // Entry order remains in AutomationPageChecks.swift.
@@ -253,7 +254,7 @@ private func hostTempoRangeAndBandRows(
     let gutter = Int(fontPx(font, 8))
     let drawer = EditorDrawerPresenter()
     let voice = VoiceChangesPage(baseFontPx: font)
-    voice.attach(session: fixture.session, palette: GridPalette())
+    voice.attach(viewport: fixture.viewport, palette: GridPalette())
     drawer.attachSection(page)
     drawer.attachSection(voice)
     drawer.configureLayout(

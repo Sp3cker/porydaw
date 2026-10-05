@@ -1,7 +1,7 @@
 import Foundation
 import PorydawCore
 import PorydawProject
-import PorydawBankLease
+import PorydawProjectNative
 
 // MARK: - Public errors
 
@@ -163,50 +163,6 @@ public struct BankSlotView: Equatable, Sendable {
     }
 }
 
-// MARK: - Owned bank lease
-
-/// Retains one actor-owned bank lease. Applied edits mint a fresh lease;
-/// the superseded wrapper keeps its own bank alive, so old views stay valid.
-public final class NativeBankLease: Sendable {
-    let handle: ProjectBankLease
-    /// Voicegroup identity, copied from the published view for save requests.
-    public let sourcePath: String
-    public let sectionLabel: String
-    internal let publicationOwner: UUID
-    /// Monotonically increasing revision of this published project bank view.
-    public let publicationRevision: UInt64
-
-    fileprivate init(handle: ProjectBankLease) {
-        self.handle = handle
-        sourcePath = handle.id.sourceRelativePath
-        sectionLabel = handle.sectionLabel
-        publicationOwner = handle.publicationOwner
-        publicationRevision = handle.publicationRevision
-    }
-
-    /// Identity of the underlying native bank, for reuse/validity checks.
-    public var bankToken: UInt { handle.bankToken }
-
-    /// Borrows the native voice array while this lease keeps its bank alive.
-    /// The pointer must not be retained beyond the lease's lifetime.
-    /// - Parameter body: A synchronous operation on the borrowed voices.
-    /// - Returns: The operation's result.
-    /// - Throws: Any error thrown by `body`.
-    public func withVoices<T>(_ body: (UnsafeMutablePointer<ToneData>?) throws -> T) rethrows -> T {
-        let voices = handle.withNativeBank { box -> UnsafeMutablePointer<ToneData>? in
-            let nativeLease = pd_bank_lease_native(box)
-            guard let storage = nativeLease.pointee.__getUnsafe(),
-                let offset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices)
-            else {
-                return nil
-            }
-            return UnsafeMutableRawPointer(mutating: storage).advanced(by: offset)
-                .assumingMemoryBound(to: ToneData.self)
-        }
-        return try withExtendedLifetime(handle) { try body(voices) }
-    }
-}
-
 // MARK: - Operation results
 
 /// One playable song's listing metadata.
@@ -267,15 +223,13 @@ public struct LoadedSong: Sendable {
     public var config: SongConfig
     public var source: SongSource
     public var midiBytes: [UInt8]
-    public var bank: NativeBankLease
+    public var bank: ProjectBankLease
     public var bankSlots: [BankSlotView]
-    public var bankDirty: Bool
-    public var bankLoadName: String
 }
 
 /// A confirmed bank transition: the replacement lease plus its copied view.
 public struct AppliedBankEdit: Sendable {
-    public var lease: NativeBankLease
+    public var lease: ProjectBankLease
     public var slots: [BankSlotView]
     public var dirty: Bool
     public var loadName: String
@@ -355,7 +309,7 @@ public struct SongDeletionPlan: Equatable, Sendable {
 /// Async Swift front over the project-store actor. The actor owns bank
 /// transitions; document history never blocks on it.
 public actor ProjectService {
-    nonisolated let bankViews = ProjectBankViews()
+    public nonisolated let bankViews = ProjectBankViews()
     internal var store: ProjectStore?
     internal var snapshot: ProjectSnapshot?
     internal var projectRoot = ""
@@ -426,108 +380,34 @@ private func copyVoice(_ voice: PorydawProject.VgVoice) -> BankVoice {
 }
 
 private func copySlots(_ lease: ProjectBankLease) -> [BankSlotView] {
-    lease.withNativeBank { box in
-        let nativeLease = pd_bank_lease_native(box)
-        let bank = nativeLease.pointee.__getUnsafe()
-        return lease.slotViews.enumerated().map { index, slot in
-            let voice = slot.voice.map(copyVoice)
-            let loaded: ToneData? = bank.flatMap { storage in
-                guard slot.kind != .none, index < 128,
-                    let voicesOffset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices)
-                else { return nil }
-                return UnsafeRawPointer(storage).advanced(by: voicesOffset)
-                    .assumingMemoryBound(to: ToneData.self)[index]
-            }
-            let synth =
-                loaded.map {
-                    $0.type & 0xE7 == 0 && $0.wav?.pointee.size == 0 && $0.wav?.pointee.data != nil
-                } ?? false
-            let tone: BankTone? = bank.flatMap { storage in
-                guard voice == nil, let loaded,
-                    let namesOffset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voiceNames)
-                else { return nil }
-                let names = UnsafeRawPointer(storage).advanced(by: namesOffset)
-                    .assumingMemoryBound(to: CChar.self)
-                let start = names.advanced(by: index * Int(VG_VOICE_NAME_LEN))
-                let length =
-                    (0..<Int(VG_VOICE_NAME_LEN)).first(where: {
-                        start[$0] == 0
-                    }) ?? Int(VG_VOICE_NAME_LEN)
-                let bytes = UnsafeRawPointer(start).assumingMemoryBound(to: UInt8.self)
-                let name = String(
-                    decoding: UnsafeBufferPointer(start: bytes, count: length),
-                    as: UTF8.self
-                ).trimmingCharacters(in: .whitespacesAndNewlines)
-                let adsr =
-                    loaded.type == UInt8(VOICE_KEYSPLIT)
-                        || loaded.type == UInt8(VOICE_KEYSPLIT_ALL)
-                    ? nil
-                    : BankToneAdsr(
-                        attack: Int32(loaded.attack), decay: Int32(loaded.decay),
-                        sustain: Int32(loaded.sustain), release: Int32(loaded.release))
-                return BankTone(name: name, type: Int32(loaded.type), isSynth: synth, adsr: adsr)
-            }
-            let subvoices = loaded.flatMap(copySubvoiceMacros)
-            let drumPadNames: [String]? = loaded.flatMap { tone in
-                guard tone.type == UInt8(VOICE_KEYSPLIT_ALL),
-                    let subgroup = tone.subGroup?.assumingMemoryBound(to: ToneData.self),
-                    let bank
-                else { return nil }
-                return (0..<128).map { key in
-                    guard let name = voicegroup_subgroup_slot_name(bank, subgroup, Int32(key))
-                    else { return "" }
-                    let bounded = UnsafeBufferPointer(
-                        start: UnsafeRawPointer(name).assumingMemoryBound(to: UInt8.self),
-                        count: Int(VG_VOICE_NAME_LEN))
-                    let length = bounded.firstIndex(of: 0) ?? bounded.count
-                    return String(decoding: bounded.prefix(length), as: UTF8.self)
-                }
-            }
-            return BankSlotView(
-                kind: slot.kind.rawValue, voice: voice, tone: tone,
-                subvoiceMacros: subvoices, drumPadNames: drumPadNames,
-                isSynth: synth)
-        }
-    }
-}
-
-/// Resolve split facts while the borrowed native bank is pinned.
-/// Published slots retain only the copied ordinals, never native pointers.
-private func copySubvoiceMacros(_ tone: ToneData) -> [Int32]? {
-    let split = tone.type & UInt8(VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL)
-    guard split != 0 else { return nil }
-    guard let group = tone.subGroup?.assumingMemoryBound(to: ToneData.self),
-        tone.type & UInt8(VOICE_KEYSPLIT) == 0 || tone.keySplitTable != nil
-    else {
-        return Array(repeating: -1, count: 128)
-    }
-    return (0..<128).map { key in
-        let index: Int
-        if tone.type & UInt8(VOICE_KEYSPLIT_ALL) != 0 {
-            index = key
-        } else if let table = tone.keySplitTable {
-            index = Int(table[key])
-        } else {
-            return -1
-        }
-        guard index < Int(VOICEGROUP_SIZE) else { return -1 }
-        let type = group[index].type
-        guard type & UInt8(VOICE_KEYSPLIT | VOICE_KEYSPLIT_ALL) == 0 else { return -1 }
-        switch type & UInt8(VOICE_TYPE_CGB_MASK) {
-        case UInt8(VOICE_SQUARE_1): return BankVoiceMacro.square1
-        case UInt8(VOICE_SQUARE_2): return BankVoiceMacro.square2
-        case UInt8(VOICE_PROGRAMMABLE_WAVE): return BankVoiceMacro.programmableWave
-        case UInt8(VOICE_NOISE): return BankVoiceMacro.noise
-        default:
-            return type == UInt8(VOICE_DIRECTSOUND) || type == UInt8(VOICE_DIRECTSOUND_NO_RESAMPLE)
-                || type == UInt8(VOICE_DIRECTSOUND_ALT) ? BankVoiceMacro.directSound : -1
-        }
+    lease.slotViews.enumerated().map { index, slot in
+        let voice = slot.voice.map(copyVoice)
+        let loaded: ToneData? = if slot.kind != .none, index < 128 { lease[index] } else { nil }
+        let synth = loaded?.isMintedSynthDescriptor ?? false
+        let tone: BankTone? = {
+            guard voice == nil, let loaded else { return nil }
+            let name = lease.voiceName(at: index).trimmingCharacters(in: .whitespacesAndNewlines)
+            let adsr =
+                loaded.type == UInt8(VOICE_KEYSPLIT)
+                    || loaded.type == UInt8(VOICE_KEYSPLIT_ALL)
+                ? nil
+                : BankToneAdsr(
+                    attack: Int32(loaded.attack), decay: Int32(loaded.decay),
+                    sustain: Int32(loaded.sustain), release: Int32(loaded.release))
+            return BankTone(name: name, type: Int32(loaded.type), isSynth: synth, adsr: adsr)
+        }()
+        let subvoices: [Int32]? = loaded == nil ? nil : lease.subvoiceMacros(at: index)
+        let drumPadNames: [String]? = loaded == nil ? nil : lease.drumPadNames(at: index)
+        return BankSlotView(
+            kind: slot.kind.rawValue, voice: voice, tone: tone,
+            subvoiceMacros: subvoices, drumPadNames: drumPadNames,
+            isSynth: synth)
     }
 }
 
 internal func appliedBank(_ lease: ProjectBankLease, token: UInt64?) -> AppliedBankEdit {
     AppliedBankEdit(
-        lease: NativeBankLease(handle: lease), slots: copySlots(lease),
+        lease: lease, slots: copySlots(lease),
         dirty: lease.dirty, loadName: lease.loadName,
         materializationToken: token == 0 ? nil : token)
 }

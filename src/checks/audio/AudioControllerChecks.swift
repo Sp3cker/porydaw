@@ -2,8 +2,10 @@ import Foundation
 import PorydawApp
 import PorydawAppAudio
 import PorydawCore
+import PorydawDocument
 import PorydawPlayback
 import PorydawPlaybackNative
+import PorydawProject
 
 @MainActor
 func runAudioControllerChecks(_ report: CheckReport) {
@@ -37,7 +39,7 @@ private func checkNativeAudioLifetime(_ report: CheckReport) throws {
         let service = ProjectService()
         var facade: NativeAudio?
         weak var releasedFacade: NativeAudio?
-        weak var releasedBank: NativeBankLease?
+        weak var releasedBank: ProjectBankLease?
         do {
             let song = try runBlocking {
                 try await service.open(root: projectRoot)
@@ -47,7 +49,7 @@ private func checkNativeAudioLifetime(_ report: CheckReport) throws {
                 let owner = try runBlocking { try await NativeAudio() }
                 let midi = try MidiFile.decode(song.midiBytes)
                 let timeline = PlaybackTimeline.build(file: midi, sampleRate: owner.sampleRate)
-                try owner.bind(timeline: timeline, bank: song.bank, config: song.config)
+                owner.bind(timeline: timeline, bank: song.bank, config: song.config)
                 owner.play()
                 if !detachedRelease {
                     report.expect(

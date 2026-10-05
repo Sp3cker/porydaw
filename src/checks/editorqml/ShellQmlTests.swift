@@ -1,7 +1,8 @@
 import Foundation
 import PorydawAppCommands
-import PorydawBankLease
 import PorydawCore
+@testable import PorydawDocument
+import PorydawNativeHost
 import PorydawPlaybackNative
 import QtBridge
 import QtBridgeCpp
@@ -230,12 +231,12 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     }
     public func seedStartupSong(projectPath: String, song: String) -> Bool {
         let recipe = WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: [song], selectedSong: song)
-        EditorViewStateCodec.saveTabs(recipe, store: preferences)
-        return EditorViewStateCodec.loadTabs(store: preferences).orderedSongs == [song]
+        EditorViewStatePreferences.saveTabs(recipe, store: preferences)
+        return EditorViewStatePreferences.loadTabs(store: preferences).orderedSongs == [song]
     }
 
     public func seedStartupRecipe(projectPath: String, songs: [String], selected: String) {
-        EditorViewStateCodec.saveTabs(
+        EditorViewStatePreferences.saveTabs(
             WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: songs, selectedSong: selected),
             store: preferences)
     }
@@ -253,7 +254,7 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     }
 
     public func savedStartupSongs() -> [String] {
-        EditorViewStateCodec.loadTabs(store: preferences).orderedSongs
+        EditorViewStatePreferences.loadTabs(store: preferences).orderedSongs
     }
 
     /// Widget oracle geometry for the standalone production voicegroup panel.
@@ -589,10 +590,11 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     }
 
     public func polyphonyRevealState() -> String {
-        guard let session = polyphonySession?.selectedDocument,
-            let saved = try? session.document.captureSave()
+        guard let viewport = polyphonySession?.workspace?.viewport,
+            let saved = try? viewport.session.document.captureSave()
         else { return "" }
-        let camera = session.camera
+        let session = viewport.session
+        let camera = viewport.camera
         let selected = session.selectedNoteOrder.map { String($0.rawValue) }.joined(separator: ",")
         return """
             {"track":\(session.selectedTrack ?? -1),"selected":[\(selected)],

@@ -403,7 +403,7 @@ private func saveCoreFailedSaveRedirty(_ report: CheckReport) {
                 report.fail(cppID, "could not edit bank before save failure")
                 return
             }
-            let sourcePath = edited.sourcePath
+            let sourcePath = root.appendingPathComponent(edited.id.sourceRelativePath).path
             let restoreWrites = try WriteFailureFixture.blockAtomicWrites(to: sourcePath)
             defer { restoreWrites() }
             guard case .failure? = awaitValue({ try await store.saveVoicegroup(lease: edited) }),
@@ -457,7 +457,7 @@ private func saveCoreFailedRebind(_ report: CheckReport) {
                         case .success(let retained)? = restored
                     else { return false }
                     return String(describing: error).contains("_porydaw_missing_voicegroup")
-                        && retained.bankToken == home.bankToken
+                        && retained.sharesBank(with: home)
                         && retained.slotViews.count == home.slotViews.count
                         && zip(retained.slotViews, home.slotViews).allSatisfy {
                             $0.kind == $1.kind && $0.voice == $1.voice

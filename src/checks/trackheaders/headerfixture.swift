@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 let trackHeadersUnattachedID = "swiftcore/TrackHeaders::unattachedModelPublishesSafeZeroGeometry"
 let trackHeadersReorderID = "swiftcore/TrackHeaders::reorderSlotsResolveInsertionTargetsAndUndoRestores"

@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+import PorydawDocument
 import PorydawProjectNative
 import PorydawPlayback
 
@@ -13,7 +14,7 @@ internal func bankPreviewFailure(report: CheckReport, session: DocumentSession, 
     // replacing the visible bank or modifying its source file.
     let previewSlots = session.bankSlots
     let previewDirty = session.bankDirty
-    let previewSourcePath = projectDir + "/" + session.bankLease.sourcePath
+    let previewSourcePath = projectDir + "/" + session.bankLease.id.sourceRelativePath
     let previewSourceBytes = bytes(at: previewSourcePath)
     let previewPath = FileManager.default.temporaryDirectory.appendingPathComponent(
         "porydaw-vgpreview-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true
@@ -85,7 +86,7 @@ internal func bankBlankMaterialization(
             cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
             what: "blank materialization publishes the requested voice and preserves other slots")
         report.expect(
-            session.bankLease.withVoices({ $0?.advanced(by: 3).pointee.type })
+            session.bankLease[3].type
                 == UInt8(VOICE_SQUARE_1),
             cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
             message: "materialized blank slot has square-one engine type")
@@ -112,7 +113,7 @@ internal func bankBlankMaterialization(
             cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
             what: "redo rematerializes the voice without changing other slots")
         report.expect(
-            session.bankLease.withVoices({ $0?.advanced(by: 3).pointee.type })
+            session.bankLease[3].type
                 == UInt8(VOICE_SQUARE_1),
             cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
             message: "redo restores the blank slot square-one engine type")
@@ -187,11 +188,11 @@ internal func bankSaveMergeBoundaryParity(report: CheckReport, fixtureRoot: Stri
         firstEdit.pan = original.pan == 20 ? 21 : 20
         let editedLease = try runBlocking {
             try await session.applyBankEdit(slot: 0, value: firstEdit, expected: original)
-        }.lease.bankToken
+        }.lease
         try runBlocking { try await session.save() }
-        let cleanLease = session.bankLease.bankToken
+        let cleanLease = session.bankLease
         report.expect(
-            !session.bankDirty && cleanLease != editedLease,
+            !session.bankDirty && !cleanLease.sharesBank(with: editedLease),
             cppID: id, message: "save receipt publishes a fresh clean bank lease")
         var secondEdit = firstEdit
         secondEdit.pan = firstEdit.pan == 25 ? 26 : 25
@@ -317,7 +318,7 @@ internal func bankMissingBasisAndApplied(report: CheckReport, fixtureRoot: Strin
             report.fail(id, "fresh fixture slot zero must hold the literal original square voice")
             return
         }
-        let originalPath = session.bankLease.sourcePath
+        let originalPath = session.bankLease.id.sourceRelativePath
         let originalSection = session.bankLease.sectionLabel
         let slotsBefore = session.bankSlots
         let loadNameBefore = session.bankLoadName
@@ -348,7 +349,7 @@ internal func bankMissingBasisAndApplied(report: CheckReport, fixtureRoot: Strin
         report.expect(
             session.bankSlots == slotsBefore && session.bankDirty == dirtyBefore
                 && session.bankLoadName == loadNameBefore
-                && session.bankLease.sourcePath == originalPath
+                && session.bankLease.id.sourceRelativePath == originalPath
                 && session.bankLease.sectionLabel == originalSection
                 && session.bankLease === leaseBefore
                 && session.bankLease.publicationRevision == revisionBefore,
@@ -369,7 +370,7 @@ internal func bankMissingBasisAndApplied(report: CheckReport, fixtureRoot: Strin
             return
         }
         report.expect(
-            applied.lease.sourcePath == originalPath
+            applied.lease.id.sourceRelativePath == originalPath
                 && applied.lease.sectionLabel == originalSection,
             cppID: id, message: "A053: applied view retains the bank identity captured at initial load")
         report.expect(
@@ -378,7 +379,7 @@ internal func bankMissingBasisAndApplied(report: CheckReport, fixtureRoot: Strin
         report.expect(
             session.bankSlots == applied.slots && session.bankDirty == applied.dirty
                 && session.bankLoadName == applied.loadName
-                && session.bankLease.sourcePath == applied.lease.sourcePath
+                && session.bankLease.id.sourceRelativePath == applied.lease.id.sourceRelativePath
                 && session.bankLease.sectionLabel == applied.lease.sectionLabel
                 && session.bankLease === applied.lease
                 && session.bankLease.publicationRevision == applied.lease.publicationRevision
@@ -607,7 +608,7 @@ internal func releaseBoundaryEngineParity(_ report: CheckReport, fixtureRoot: St
                 try await session.applyBankEdit(slot: 0, value: edited, expected: expected)
             }
             report.expect(
-                session.bankLease.withVoices({ $0?.pointee.release }) == UInt8(value),
+                session.bankLease[0].release == UInt8(value),
                 cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[\(name)]",
                 message: "release \(name) converges to the exact engine byte")
             previous = edited

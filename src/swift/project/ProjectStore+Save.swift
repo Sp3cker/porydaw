@@ -12,7 +12,7 @@ extension ProjectStore {
         }
         let savedSymbols = try savePendingSynths(for: lease.id)
         guard let reloaded = try store.saveVoicegroup(id: lease.id) else { return nil }
-        let saved = try adoptBankLease(view: reloaded)
+        let saved = adoptBankLease(view: reloaded)
         didSaveSynths(savedSymbols)
         return saved
     }

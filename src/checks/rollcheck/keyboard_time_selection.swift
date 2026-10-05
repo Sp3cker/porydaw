@@ -2,11 +2,13 @@ import Foundation
 @testable import PorydawApp
 @testable import PorydawAppCommands
 import PorydawCore
+@testable import PorydawDocument
 
 @MainActor
-func checkTimeSelectionHighlights(_ report: CheckReport, session: DocumentSession) {
+func checkTimeSelectionHighlights(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardTimeSelectionShortcuts"
-    withKeyboardSeed(report, session: session, id: id) { grid, seed in
+    withKeyboardSeed(report, viewport: viewport, id: id) { grid, seed in
         guard session.document.canAddTrack, let other = session.document.addTrack(voice: 0),
             other != seed.track
         else {
@@ -16,8 +18,8 @@ func checkTimeSelectionHighlights(_ report: CheckReport, session: DocumentSessio
         report.expect(
             session.document.engineTracks.usedTrackCount > other,
             cppID: id, message: "a distinct second track exists for time-scoped highlights")
-        let snapshot = session.camera.snapshot
-        let projection = session.camera.projection
+        let snapshot = viewport.camera.snapshot
+        let projection = viewport.camera.projection
         guard
             let ghostPitch = (24...115).first(where: { pitch in
                 let row = projection.row(forPitch: pitch)
@@ -51,14 +53,14 @@ func checkTimeSelectionHighlights(_ report: CheckReport, session: DocumentSessio
         let metrics = GridMetrics(
             baseFontPx: grid.baseFontPx, dpr: grid.devicePixelRatio,
             width: snapshot.viewportWidth, height: snapshot.rollHeight)
-        let x0 = session.camera.contentTickX(tick: Double(seed.tick), dpr: grid.devicePixelRatio)
-        let x1 = session.camera.contentTickX(
+        let x0 = viewport.camera.contentTickX(tick: Double(seed.tick), dpr: grid.devicePixelRatio)
+        let x1 = viewport.camera.contentTickX(
             tick: Double(seed.tick + seed.duration),
             dpr: grid.devicePixelRatio)
         let plainBox = metrics.noteBox(
-            camera: session.camera, x0: x0, x1: x1, pitch: seed.pitch)
+            camera: viewport.camera, x0: x0, x1: x1, pitch: seed.pitch)
         let ghostBox = metrics.noteBox(
-            camera: session.camera, x0: x0, x1: x1, pitch: ghostPitch)
+            camera: viewport.camera, x0: x0, x1: x1, pitch: ghostPitch)
         guard plainBox.w > 0, plainBox.h > 0, ghostBox.w > 0, ghostBox.h > 0 else {
             report.fail(id, "time-scoped fixtures have no projected boxes")
             return
@@ -91,7 +93,7 @@ func checkTimeSelectionHighlights(_ report: CheckReport, session: DocumentSessio
             cppID: id, message: "the covered selected track publishes its range band and edges")
         let bandEnd = seed.tick + seed.duration
         let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-        automation.attach(session: session, palette: grid.palette)
+        automation.attach(viewport: viewport, palette: grid.palette)
         defer { automation.detach() }
         report.expect(
             automation.consumeSelectionCommand(command: .transposeUp)

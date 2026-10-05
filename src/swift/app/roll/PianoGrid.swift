@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 import PorydawAppCommands
 
@@ -33,7 +34,9 @@ public enum QtScrollPhase: Int {
 @QtBridgeable
 public final class PianoGrid: QmlUncreatable {
     @QtIgnored
-    let session: DocumentSession
+    let viewport: DocumentViewport
+    @QtIgnored
+    var session: DocumentSession { viewport.session }
     @QtIgnored
     var roleTypography: Typography
     @QtIgnored
@@ -170,16 +173,16 @@ public final class PianoGrid: QmlUncreatable {
 
     /// Creates the roll presenter with the session's shared palette when supplied.
     public init(
-        session: DocumentSession, palette: GridPalette? = nil,
+        viewport: DocumentViewport, palette: GridPalette? = nil,
         typography: Typography = Typography(baseFontPx: 13)
     ) {
-        self.session = session
+        self.viewport = viewport
         roleTypography = typography
         scene.hoverChipFont = typography.caption.qmlFont
         // Set before the first bake below: the roll's static layer reads the
         // palette, so a later assignment would leave that layer with defaults.
         self.palette = palette ?? GridPalette()
-        commands = NoteCommands(session: session)
+        commands = NoteCommands(viewport: viewport)
         let base = Double(typography.baseFontPx)
         baseFontPx = base
         metrics = GridMetrics(baseFontPx: base, dpr: 1, width: 0, height: 0)
@@ -212,7 +215,7 @@ public final class PianoGrid: QmlUncreatable {
         refreshFromSession()
     }
     public func setScaleFold(fold: Bool) {
-        session.setScale(fold: fold)
+        viewport.setScale(fold: fold)
     }
 
     /// Mirrors the session's note-name mode and rebuilds visible notes when changed.

@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 // Pencil-stroke scenarios paired with gestures.cpp.
 // Entry order remains in AutomationPageChecks.swift.
@@ -385,11 +386,11 @@ func drawerAutomationPencilStrokeModifiers(
         parameter: AutomationParameter
     ) -> AutomationProjection {
         AutomationProjection(
-            camera: fixture.session.camera,
+            camera: fixture.viewport.camera,
             bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
             geometry: fixture.page.geometry,
             snapPolicy: AutomationProjectionCache().snapPolicy(
-                session: fixture.session, font: fixture.page.baseFontPx, dpr: 1),
+                viewport: fixture.viewport, font: fixture.page.baseFontPx, dpr: 1),
             songEndTick: fixture.songEndTick,
             displayMaximum: AutomationProjection.displayMaximum(
                 snapshot: fixture.laneSnapshot(parameter), range: fixture.page.laneRanges[parameter]))

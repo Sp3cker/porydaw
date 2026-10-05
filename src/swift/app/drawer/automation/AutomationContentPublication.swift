@@ -1,4 +1,5 @@
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 // Automation content publication: the page's session reads and projection
@@ -22,33 +23,33 @@ extension AutomationPage {
     }
 
     func frozenFacts(modifiers: AutomationModifiers) -> AutomationFrozenFacts? {
-        guard let session else { return nil }
-        return facts(parameter: activeParameter, modifiers: modifiers, session: session)
+        guard let viewport else { return nil }
+        return facts(parameter: activeParameter, modifiers: modifiers, viewport: viewport)
     }
 
     func facts(
         parameter: AutomationParameter, modifiers: AutomationModifiers,
-        session: DocumentSession
+        viewport: DocumentViewport
     ) -> AutomationFrozenFacts {
-        let snapshot = projectionFacts.snapshot(parameter, session: session)
+        let snapshot = projectionFacts.snapshot(parameter, session: viewport.session)
         return AutomationFrozenFacts(
             parameter: parameter, snapshot: snapshot,
-            camera: session.camera.snapshot, selection: selection,
+            camera: viewport.camera.snapshot, selection: selection,
             modifiers: modifiers,
-            songEndTick: session.timeline.lengthTicks)
+            songEndTick: viewport.session.timeline.lengthTicks)
     }
 
     /// The projection a live gesture maps through: the camera it froze at press.
     var gestureCamera: EditorCamera { frozenCamera ?? liveCamera() }
 
     func liveCamera() -> EditorCamera {
-        guard let session else {
+        guard let viewport else {
             return EditorCamera(
                 ticksPerBeat: 24, lengthTicks: nil, viewportWidth: 0, rollHeight: 0,
                 limits: GridCameraPolicy.limits(
                     baseFontPx: GridCameraPolicy.seedBaseFontPx))
         }
-        return session.camera
+        return viewport.camera
     }
 
     func makeProjection(
@@ -58,9 +59,9 @@ extension AutomationPage {
         let bounds = AutomationPlotBounds(
             width: plotWidth, height: plotHeight,
             devicePixelRatio: devicePixelRatio)
-        if let session {
+        if let viewport {
             return projectionFacts.projection(
-                snapshot: facts.snapshot, session: session,
+                snapshot: facts.snapshot, viewport: viewport,
                 camera: camera, bounds: bounds, geometry: geometry, font: baseFontPx,
                 range: laneRanges[facts.parameter])
         }
@@ -87,8 +88,8 @@ extension AutomationPage {
     }
 
     func xForTick(_ tick: Tick) -> Double {
-        guard let session else { return 0 }
-        return session.camera.viewX(tick: Double(tick), dpr: devicePixelRatio)
+        guard let viewport else { return 0 }
+        return viewport.camera.viewX(tick: Double(tick), dpr: devicePixelRatio)
     }
     // MARK: Internals: publication
 
@@ -113,18 +114,18 @@ extension AutomationPage {
     }
 
     /// Publishes the value labels, ghost names and active node handles.
-    func publishContent(_ session: DocumentSession?) {
-        guard let session, let lane = projection else {
+    func publishContent(_ viewport: DocumentViewport?) {
+        guard let viewport, let lane = projection else {
             syncRetained(ghostNameLabels, [SceneTextValue](), make: SceneText.init, update: { $0.update($1) })
             syncRetained(valueLabels, [SceneTextValue](), make: SceneText.init, update: { $0.update($1) })
             syncNodes([])
             return
         }
         let projection = makeProjection(
-            facts: facts(parameter: lane.parameter, modifiers: .init(), session: session),
-            camera: session.camera)
+            facts: facts(parameter: lane.parameter, modifiers: .init(), viewport: viewport),
+            camera: viewport.camera)
         publishValueAxis(lane)
-        publishGhostNames(session)
+        publishGhostNames(viewport)
         syncNodes(nodeHandles(lane, projection: projection))
     }
 
@@ -132,14 +133,14 @@ extension AutomationPage {
     /// without rebuilding the value axis or document-derived selector state.
     @QtIgnored
     public func refreshHorizontalProjection() {
-        guard let session, projection != nil else { return }
-        let facts = facts(parameter: activeParameter, modifiers: .init(), session: session)
-        let cameraProjection = makeProjection(facts: facts, camera: session.camera)
+        guard let viewport, projection != nil else { return }
+        let facts = facts(parameter: activeParameter, modifiers: .init(), viewport: viewport)
+        let cameraProjection = makeProjection(facts: facts, camera: viewport.camera)
         guard let lane = laneProjection(facts: facts, projection: cameraProjection) else {
             return
         }
         projection = lane
-        publishGhostNames(session)
+        publishGhostNames(viewport)
         syncNodes(nodeHandles(lane, projection: cameraProjection))
         publishOverlays()
     }
@@ -197,10 +198,10 @@ extension AutomationPage {
 
     /// Republishes only the active node handles, for a live draw's coverage change.
     func syncActiveNodes() {
-        guard let session, let lane = projection else { return }
+        guard let viewport, let lane = projection else { return }
         let cameraProjection = makeProjection(
-            facts: facts(parameter: lane.parameter, modifiers: .init(), session: session),
-            camera: session.camera)
+            facts: facts(parameter: lane.parameter, modifiers: .init(), viewport: viewport),
+            camera: viewport.camera)
         syncNodes(nodeHandles(lane, projection: cameraProjection))
     }
 
@@ -231,10 +232,10 @@ extension AutomationPage {
         return node
     }
 
-    func ghostProjections(_ session: DocumentSession) -> [AutomationLaneProjection] {
+    func ghostProjections(_ viewport: DocumentViewport) -> [AutomationLaneProjection] {
         ghostParameters.compactMap { ghost in
-            let facts = facts(parameter: ghost, modifiers: .init(), session: session)
-            return makeProjection(facts: facts, camera: session.camera)
+            let facts = facts(parameter: ghost, modifiers: .init(), viewport: viewport)
+            return makeProjection(facts: facts, camera: viewport.camera)
                 .project(facts.snapshot, selection: selection, usedTracks: usedTracks())
         }
     }

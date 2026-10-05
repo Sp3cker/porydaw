@@ -1,13 +1,15 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 import QtBridge
 
 @MainActor
 func checkIsolation(
-    _ report: CheckReport, session: DocumentSession, grid: PianoGrid,
+    _ report: CheckReport, viewport: DocumentViewport, grid: PianoGrid,
     counters: GridCameraIntegrationCounters
 ) {
+    let session = viewport.session
     let revision = session.document.revision
     let dirty = session.document.isDirty
     let canUndo = session.document.history.canUndo
@@ -18,17 +20,17 @@ func checkIsolation(
     counters.document = 0
     counters.cursor = 0
 
-    _ = session.mutateCamera { _ = $0.setTimeZoom(140) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(140) }
     grid.handleWheel(
         angleDeltaX: 0, angleDeltaY: -10, pixelDeltaX: 0, pixelDeltaY: 0,
         modifiers: 0x0200_0000, phase: QtScrollPhase.update.rawValue,
         overGutter: false, anchorX: 200, anchorY: 100)
     grid.resetCameraScroll()
     var before = counters.camera
-    _ = session.mutateCamera {
+    _ = viewport.mutateCamera {
         _ = $0.ensureTickVisible(UInt64(session.timeline.lengthTicks), dpr: grid.devicePixelRatio)
     }
-    let tickReveal = session.camera.snapshot
+    let tickReveal = viewport.camera.snapshot
     let expectedTickReveal = min(
         tickReveal.maxHScroll,
         Double(session.timeline.lengthTicks) * tickReveal.pixelsPerTick
@@ -40,12 +42,12 @@ func checkIsolation(
 
     grid.resetCameraScroll()
     before = counters.camera
-    _ = session.mutateCamera {
+    _ = viewport.mutateCamera {
         _ = $0.ensureRangeVisible(
             startTick: 0, endTick: UInt64(session.timeline.lengthTicks),
             preferEnd: true, dpr: grid.devicePixelRatio)
     }
-    let endReveal = session.camera.snapshot
+    let endReveal = viewport.camera.snapshot
     report.expect(
         counters.camera == before + 1
             && gridCameraNear(
@@ -54,43 +56,43 @@ func checkIsolation(
                     + 1 / grid.devicePixelRatio),
         cppID: isolationID, message: "preferEnd true aligns an oversized range to the right edge")
 
-    grid.setCameraHScroll(value: session.camera.snapshot.maxHScroll)
+    grid.setCameraHScroll(value: viewport.camera.snapshot.maxHScroll)
     before = counters.camera
-    _ = session.mutateCamera {
+    _ = viewport.mutateCamera {
         _ = $0.ensureRangeVisible(
             startTick: 0, endTick: UInt64(session.timeline.lengthTicks),
             preferEnd: false, dpr: grid.devicePixelRatio)
     }
-    let startReveal = session.camera.snapshot
+    let startReveal = viewport.camera.snapshot
     report.expect(
         counters.camera == before + 1 && gridCameraNear(startReveal.scrollX, 0),
         cppID: isolationID, message: "preferEnd false aligns an oversized range to its start")
 
     grid.setCameraVScroll(value: 0)
     before = counters.camera
-    _ = session.mutateCamera { _ = $0.ensureKeyVisible(0) }
-    let keyReveal = session.camera.snapshot
+    _ = viewport.mutateCamera { _ = $0.ensureKeyVisible(0) }
+    let keyReveal = viewport.camera.snapshot
     report.expect(
         counters.camera == before + 1
             && gridCameraNear(keyReveal.scrollY, keyReveal.maxVScroll),
         cppID: isolationID, message: "ensureKeyVisible aligns the bottom pitch at the viewport edge")
     report.expect(
-        gridCameraNear(grid.cameraScrollX, session.camera.snapshot.scrollX)
-            && gridCameraNear(grid.cameraScrollY, session.camera.snapshot.scrollY),
+        gridCameraNear(grid.cameraScrollX, viewport.camera.snapshot.scrollX)
+            && gridCameraNear(grid.cameraScrollY, viewport.camera.snapshot.scrollY),
         cppID: isolationID, message: "presenter scroll values track the revealed session camera")
 
     before = counters.camera
-    let current = session.camera.snapshot
+    let current = viewport.camera.snapshot
     grid.setCameraHScroll(value: current.scrollX)
     grid.setCameraVScroll(value: current.scrollY)
     grid.setCameraHScroll(value: .nan)
     grid.setCameraVScroll(value: .infinity)
-    _ = session.mutateCamera { _ = $0.ensureKeyVisible(-1) }
-    if let centerPitch = session.camera.projection.pitch(
+    _ = viewport.mutateCamera { _ = $0.ensureKeyVisible(-1) }
+    if let centerPitch = viewport.camera.projection.pitch(
         atY: current.rollHeight / 2, keyHeight: current.keyHeight,
         scrollY: current.scrollY, dpr: grid.devicePixelRatio)
     {
-        _ = session.mutateCamera { _ = $0.ensureKeyVisible(centerPitch) }
+        _ = viewport.mutateCamera { _ = $0.ensureKeyVisible(centerPitch) }
     } else {
         report.fail(
             isolationID, "viewport centre row did not resolve to a visible projected pitch")
@@ -99,10 +101,10 @@ func checkIsolation(
         counters.camera == before,
         cppID: isolationID, message: "redundant, non-finite, hidden, and already-visible navigation is silent")
 
-    let published = session.camera.snapshot
+    let published = viewport.camera.snapshot
     session.editCursor = cursor == 0 ? 24 : 0
     report.expect(
-        session.camera.snapshot == published && grid.editCursorTick == Int(cursor),
+        viewport.camera.snapshot == published && grid.editCursorTick == Int(cursor),
         cppID: isolationID, message: "direct edit-cursor change neither moves camera nor republishes presenter cursor")
     report.expect(
         counters.document == 0 && counters.playback == 0 && counters.cursor == 1

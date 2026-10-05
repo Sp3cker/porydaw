@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 
 // Pointer interaction state machine for the piano grid. Each kind carries
 // only the state that kind actually uses; transitions happen in updated(x:y:).

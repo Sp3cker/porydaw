@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 // Existing scenarios paired with voice.cpp.
 // Entry order remains in VoiceChangesPageChecks.swift.
@@ -181,7 +182,8 @@ func drawerVoiceOriginalPickerRows(
     let document = session.document
     session.selectedTrack = 0
     let page = VoiceChangesPage(baseFontPx: 13)
-    page.attach(session: session, palette: GridPalette())
+    let viewport = DocumentViewport(session: session)
+    page.attach(viewport: viewport, palette: GridPalette())
     page.configureBody(
         width: 400, height: 160, gutter: 56, devicePixelRatio: 1,
         baseFontPx: 13, dragDistance: 10)
@@ -191,7 +193,7 @@ func drawerVoiceOriginalPickerRows(
         }
     }
     func open(_ tick: Tick) {
-        _ = page.pointerDoubleClick(x: session.camera.viewX(tick: Double(tick), dpr: 1), y: 10)
+        _ = page.pointerDoubleClick(x: viewport.camera.viewX(tick: Double(tick), dpr: 1), y: 10)
     }
     func expect(_ condition: @autoclosure () -> Bool, _ line: Int) {
         report.expect(
@@ -283,6 +285,7 @@ func drawerVoiceOriginalPickerRows(
         cppID: "voice-picker/navigation-boundaries",
         message: "Down from the first row selects the following program")
     page.cancelPicker()
+    withExtendedLifetime(viewport) {}
 }
 
 @MainActor
@@ -554,7 +557,7 @@ func drawerVoicePickerReattachment(
         !page.hasPicker && !page.pickerOpen && fixture.snapshot == before,
         cppID: drawerVoiceCancellationID,
         message: "a detached page cancels its open picker without writing")
-    page.attach(session: fixture.session, palette: GridPalette())
+    page.attach(viewport: fixture.viewport, palette: GridPalette())
     _ = page.pointerDoubleClick(x: fixture.markerX(96), y: 10)
     page.setPickerFilter(text: String(format: "%03d", programs[2]))
     page.selectPickerRow(index: 0)

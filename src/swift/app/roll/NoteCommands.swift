@@ -1,10 +1,12 @@
 import Foundation
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 
 @MainActor
 final class NoteCommands {
-    private let session: DocumentSession
+    private let viewport: DocumentViewport
+    private var session: DocumentSession { viewport.session }
     private let clipboard = GridClipboard()
 
     /// The Set Velocity command's dispatch: the document-bound page owns the
@@ -14,8 +16,8 @@ final class NoteCommands {
     var requestSetVelocity: (() -> Bool)?
     var requestPitchBend: (() -> Bool)?
 
-    init(session: DocumentSession) {
-        self.session = session
+    init(viewport: DocumentViewport) {
+        self.viewport = viewport
     }
 
     func isAvailable(_ command: EditCommand) -> Bool {
@@ -167,8 +169,8 @@ final class NoteCommands {
     private func transpose(_ semitones: Int) {
         let notes = selectedNotes()
         guard !notes.isEmpty else { return }
-        if session.scaleProjection.fold && abs(semitones) == 1 {
-            guard let pitches = session.scaleProjection.destinations(for: notes, steps: semitones)
+        if viewport.scale.fold && abs(semitones) == 1 {
+            guard let pitches = viewport.scale.destinations(for: notes, steps: semitones)
             else { return }
             _ = session.document.nudgeNotes(notes.map(\.id), toPitches: pitches)
         } else {

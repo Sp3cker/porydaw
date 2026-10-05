@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 @MainActor
 func drawerVoiceMarkerProjection(
@@ -27,7 +28,7 @@ func drawerVoiceMarkerProjection(
         let marker = page.publishedMarkers[index]
         let expectedProgram = programs[index]
         report.expectEqual(
-            expected: fixture.session.camera.contentTickX(tick: Double(tick), dpr: 1),
+            expected: fixture.viewport.camera.contentTickX(tick: Double(tick), dpr: 1),
             actual: marker.x, cppID: drawerVoiceProjectionID,
             what: "marker \(tick) draws at the shared camera's projection")
         report.expect(
@@ -92,7 +93,7 @@ func drawerVoiceMarkerProjection(
         page.dragPreviewTick != nil
             && Tick(projectedDraft.tick) == page.dragPreviewTick
             && projectedDraft.x
-                == fixture.session.camera.contentTickX(
+                == fixture.viewport.camera.contentTickX(
                     tick: projectedDraft.tick, dpr: 1)
             && fixture.snapshot == dragBaseline,
         cppID: drawerVoiceProjectionID,
@@ -579,7 +580,7 @@ func drawerVoiceOccurrenceIdentity(
     report.expectEqual(
         expected: VoiceOccurrence(points[1]), actual: frozen, cppID: drawerVoiceIdentityID,
         what: "the press freezes the marker's own occurrence")
-    fixture.session.mutateCamera { $0.setHScroll($0.snapshot.scrollX + 40) }
+    fixture.viewport.mutateCamera { $0.setHScroll($0.snapshot.scrollX + 40) }
     report.expectEqual(
         expected: before, actual: page.markerIdentities, cppID: drawerVoiceIdentityID,
         what: "a camera scroll changes no marker identity")
@@ -627,7 +628,7 @@ func drawerVoiceOccurrenceIdentity(
     duplicates.page.refreshFromDocument()
     let duplicatePage = duplicates.page
     let automation = AutomationPage(baseFontPx: 13)
-    automation.attach(session: duplicates.session, palette: GridPalette())
+    automation.attach(viewport: duplicates.viewport, palette: GridPalette())
     automation.configureBody(
         width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
         baseFontPx: 13, dragDistance: 10)

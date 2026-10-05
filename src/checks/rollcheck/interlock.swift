@@ -1,22 +1,24 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 import QtBridge
 
 @MainActor
-func runInterlockChecks(_ report: CheckReport, session: DocumentSession) {
-    checkGestureInterlock(report, session: session)
+func runInterlockChecks(_ report: CheckReport, viewport: DocumentViewport) {
+    checkGestureInterlock(report, viewport: viewport)
 }
 
 @MainActor
-private func checkGestureInterlock(_ report: CheckReport, session: DocumentSession) {
+private func checkGestureInterlock(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRollTest::gestureInterlock"
     let initialSelection = session.selectedNoteOrder
-    let setup = PianoGrid(session: session)
+    let setup = PianoGrid(viewport: viewport)
     setup.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     setup.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
-    let camera = session.camera
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(35) }
+    let camera = viewport.camera
     let aTick = setup.snapTickDown(camera.tickAtContentX(40))
     let duration = setup.gridCell(at: aTick).duration
     let bTick =
@@ -56,7 +58,7 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
         _ = session.document.history.undoDocument()
         session.setSelectedNotes(initialSelection)
     }
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     guard let a = selectionRect(seeded[0], grid: grid),
         let b = selectionRect(seeded[1], grid: grid),
@@ -95,7 +97,7 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
     }
     session.clearTimeSelection()
     let playhead = SharedPlayheadPresenter()
-    playhead.attach(session: session, audio: nil, grid: grid, drawer: nil)
+    playhead.attach(viewport: viewport, audio: nil, grid: grid, drawer: nil)
     playhead.setFollowEnabled(false)
     playhead.observe(sample: session.timeline.sample(for: Tick(bTick)), transport: 0)
     let playbackTick = playhead.tick
@@ -164,7 +166,7 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
             message: "A008 parked PendingDraw release retains A and B")
         report.expect(
             session.editCursor
-                == session.grid.snapTick(
+                == viewport.grid.snapTick(
                     camera.tickAtContentX(freeX), camera: camera)
                 && grid.editCursorTick == Int(session.editCursor),
             cppID: id, message: "A008 PendingDraw parks the cursor after the right band ends")

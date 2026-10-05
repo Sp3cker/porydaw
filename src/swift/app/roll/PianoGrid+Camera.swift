@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 import PorydawAppCommands
 
@@ -19,14 +20,14 @@ extension PianoGrid {
             baseFontPx: newFont, dpr: max(0.1, dpr),
             width: max(0, width), height: max(0, height),
             timeAxis: metrics.timeAxis)
-        session.grid.metrics = metrics
+        viewport.grid.metrics = metrics
         baseFontPx = metrics.baseFontPx
         drawThreshold = metrics.drawThreshold
         devicePixelRatio = metrics.dpr
 
         let oldLimits = GridCameraPolicy.limits(baseFontPx: oldFont)
         let newLimits = GridCameraPolicy.limits(baseFontPx: newFont)
-        session.mutateCamera { camera in
+        viewport.mutateCamera { camera in
             let priorScale = camera.snapshot
             let scaledPixelsPerBeat =
                 priorScale.pixelsPerBeat
@@ -58,18 +59,18 @@ extension PianoGrid {
     }
 
     func resetCameraScrollImpl() {
-        session.mutateCamera { camera in
+        viewport.mutateCamera { camera in
             _ = camera.setHScroll(camera.snapshot.minHScroll)
             _ = camera.setVScroll(defaultVerticalScroll(camera: camera))
         }
     }
 
     func setCameraHScrollImpl(value: Double) {
-        session.mutateCamera { _ = $0.setHScroll(value) }
+        viewport.mutateCamera { _ = $0.setHScroll(value) }
     }
 
     func setCameraVScrollImpl(value: Double) {
-        session.mutateCamera { _ = $0.setVScroll(value) }
+        viewport.mutateCamera { _ = $0.setVScroll(value) }
     }
 
     func scrollHorizontalByWheelImpl(
@@ -80,7 +81,7 @@ extension PianoGrid {
         let delta = TimelineScrollbar.wheelDips(
             horizontal: true, pixelX: pixelX, pixelY: pixelY,
             angleX: angleX, angleY: angleY, wheelScrollLines: wheelScrollLines)
-        session.mutateCamera { _ = $0.scrollByPx(delta) }
+        viewport.mutateCamera { _ = $0.scrollByPx(delta) }
     }
 
     func scrollVerticalByWheelImpl(
@@ -91,7 +92,7 @@ extension PianoGrid {
         let delta = TimelineScrollbar.wheelDips(
             horizontal: false, pixelX: pixelX, pixelY: pixelY,
             angleX: angleX, angleY: angleY, wheelScrollLines: wheelScrollLines)
-        session.mutateCamera { _ = $0.scrollRollBy(delta) }
+        viewport.mutateCamera { _ = $0.scrollRollBy(delta) }
     }
 
     func handleWheelImpl(
@@ -110,18 +111,18 @@ extension PianoGrid {
         let weightedDy = dy * (isPixel ? 5 : 1)
         if modifiers & QtFact.controlModifier != 0 {
             guard phase != .momentum else { return }
-            session.mutateCamera {
+            viewport.mutateCamera {
                 _ = $0.zoomKeyHeight(factor: exp2(weightedDy / 1200), anchorY: anchorY)
             }
         } else if modifiers & QtFact.shiftModifier != 0 {
-            session.mutateCamera { _ = $0.scrollByPx(-d) }
+            viewport.mutateCamera { _ = $0.scrollByPx(-d) }
         } else if dy == 0, dx != 0 {
-            session.mutateCamera { _ = $0.scrollByPx(-dx) }
+            viewport.mutateCamera { _ = $0.scrollByPx(-dx) }
         } else if overGutter {
-            session.mutateCamera { _ = $0.scrollRollBy(-dy / 2) }
+            viewport.mutateCamera { _ = $0.scrollRollBy(-dy / 2) }
         } else {
             guard phase != .momentum else { return }
-            session.mutateCamera {
+            viewport.mutateCamera {
                 _ = $0.zoomAroundContentX(
                     factor: pow(1.0015, weightedDy), anchorContentX: anchorX)
             }

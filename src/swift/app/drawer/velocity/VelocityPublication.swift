@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 #if canImport(CoreGraphics)
@@ -77,7 +78,7 @@ extension VelocityPage {
     /// their overscan window, then republishes handles without rebuilding axes.
     @QtIgnored
     public func refreshCamera() {
-        guard session != nil else { return }
+        guard viewport != nil else { return }
         let window = handleWindowForCamera()
         if window != publishedHandleWindow {
             publishHandles(projectHandles(window: window), window: window)
@@ -107,7 +108,7 @@ extension VelocityPage {
 
     /// Keep the current overscan until the visible ticks escape it.
     private func handleWindowForCamera() -> ClosedRange<Double>? {
-        guard let camera = session?.camera else { return nil }
+        guard let camera = viewport?.camera else { return nil }
         let width = plotWidth > 0 ? plotWidth : camera.snapshot.viewportWidth
         let start = projection.scrollOffsetX / camera.pixelsPerTick
         let end = start + width / camera.pixelsPerTick
@@ -126,7 +127,7 @@ extension VelocityPage {
     func sceneInput(reuseGeometry: Bool, window: ClosedRange<Double>? = nil) -> VelocitySceneInput {
         let session = self.session
         return VelocitySceneInput(
-            camera: session?.camera,
+            camera: viewport?.camera,
             handleTickWindow: window ?? handleWindowForCamera(),
             context: resolvedContextValue,
             notes: VelocityScene.trackNotes(session),
@@ -143,7 +144,7 @@ extension VelocityPage {
             baseFontPx: baseFontPx,
             typography: typography,
             metrics: session.map { gridMetrics($0) },
-            grid: session?.grid,
+            grid: viewport?.grid,
             palette: scenePalette(),
             reuseGeometry: reuseGeometry)
     }
@@ -179,7 +180,7 @@ extension VelocityPage {
     /// camera at the page's DPR against the published value axis.
     @QtIgnored var projection: VelocityProjection {
         VelocityProjection(
-            camera: session?.camera, geometry: geometry,
+            camera: viewport?.camera, geometry: geometry,
             devicePixelRatio: devicePixelRatio, axis: axis)
     }
 
@@ -224,7 +225,7 @@ extension VelocityPage {
     }
 
     @QtIgnored func publishDisplayLists(rebuildBands: Bool = true) {
-        guard session != nil else { return }
+        guard viewport != nil else { return }
         let input = sceneInput(reuseGeometry: true)
         guard let metrics = input.metrics, let grid = input.grid,
             let camera = input.camera
@@ -272,7 +273,7 @@ extension VelocityPage {
         -> (fill: DrawerStaticRect, frame: DrawerStaticRect)?
     {
         guard let gesture, gesture.kind == .band || gesture.kind == .pendingBand,
-            let camera = session?.camera
+            let camera = viewport?.camera
         else { return nil }
         let minX = min(gesture.pressX, gesture.bandX)
         let maxX = max(gesture.pressX, gesture.bandX)

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 
 // Resolved automation edit vocabulary and the single document commit policy.
 // Every mutation route revalidates its frozen revision through AutomationCommit.

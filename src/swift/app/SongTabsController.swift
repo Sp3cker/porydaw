@@ -1,4 +1,6 @@
 import PorydawCore
+import PorydawDocument
+import PorydawProject
 import QtBridge
 
 /// One open song's QML-facing facade: the `applicationSession` a page binds.
@@ -133,7 +135,7 @@ public final class SongTabSession {
 
 internal struct BankCloseTarget {
     let identity: BankBindingIdentity
-    let lease: NativeBankLease
+    let lease: ProjectBankLease
     let title: String
 
     init(_ bank: AppliedBankEdit) {
@@ -143,28 +145,16 @@ internal struct BankCloseTarget {
     }
 }
 
-/// Presentation-only state retained by an in-place reload or replacement.
-/// Document data and history come from the newly opened song.
+/// The tab an in-place reload or replacement will swap out, with the guard
+/// that cancels the swap when that tab changed while the new document loaded.
+/// The new document opens fresh; nothing else carries over.
 @MainActor
-internal struct ReloadedTab {
+internal struct PendingReload {
     let tabId: Int
     let documentRevision: UInt64
     let bankSlots: [BankSlotView]
     let bankDirty: Bool
     let bankLoadName: String
-    let camera: EditorCamera.Snapshot
-    let selectedTrack: Int?
-    let selectedTracks: Set<Int>
-    let selectedNoteOrder: [NoteID]
-    let timeSelection: AutomationTimeSelection?
-    let mutedTracks: Set<Int>
-    let soloedTracks: Set<Int>
-    let scale: ScaleProjection
-    let editCursor: UInt32
-    let baseFontPx: Double
-    let devicePixelRatio: Double
-    let grid: RollGrid
-    let showsEvents: Bool
 
     init(_ tab: SongTabSession) {
         tabId = tab.tabId
@@ -172,19 +162,6 @@ internal struct ReloadedTab {
         bankSlots = tab.workspace.session.bankSlots
         bankDirty = tab.workspace.session.bankDirty
         bankLoadName = tab.workspace.session.bankLoadName
-        camera = tab.workspace.session.camera.snapshot
-        selectedTrack = tab.workspace.session.selectedTrack
-        selectedTracks = tab.workspace.session.selectedTracks
-        selectedNoteOrder = tab.workspace.session.selectedNoteOrder
-        timeSelection = tab.workspace.session.timeSelection
-        mutedTracks = tab.workspace.session.mutedTracks
-        soloedTracks = tab.workspace.session.soloedTracks
-        scale = tab.workspace.session.scaleProjection
-        editCursor = tab.workspace.session.editCursor
-        baseFontPx = tab.workspace.grid.baseFontPx
-        devicePixelRatio = tab.workspace.grid.devicePixelRatio
-        grid = tab.workspace.session.grid
-        showsEvents = tab.showsEvents
     }
 
     func matches(_ tab: SongTabSession) -> Bool {

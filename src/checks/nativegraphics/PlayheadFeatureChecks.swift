@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 private let playheadGuidesID = "swiftcore/PlayheadFeature::guidesResizeScrollAndOwnership"
 private let playheadFollowID = "swiftcore/PlayheadFeature::followScroll"
@@ -64,12 +65,13 @@ private func playheadFeatureSession(
 
 @MainActor
 private func configurePlayheadCamera(
-    _ session: DocumentSession, width: Double,
+    _ viewport: DocumentViewport, width: Double,
     height: Double, pixelsPerBeat: Double? = nil
 ) {
+    let session = viewport.session
     let ticksPerBeat = UInt32(max(1, session.document.ticksPerBeat))
     let lengthTicks = UInt64(session.timeline.lengthTicks)
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         camera.updateViewport(width: width, rollHeight: height)
         camera.updateTimeDomain(ticksPerBeat: ticksPerBeat, lengthTicks: lengthTicks)
         if let pixelsPerBeat {
@@ -84,14 +86,15 @@ private func checkPlayheadGuides(
     service: ProjectService
 ) {
     let session = playheadFeatureSession(suite, service: service)
-    configurePlayheadCamera(session, width: 320, height: 240)
+    let viewport = DocumentViewport(session: session)
+    configurePlayheadCamera(viewport, width: 320, height: 240)
 
     let guides = PlayheadGuidesPresenter()
-    guides.attach(session: session)
+    guides.attach(viewport: viewport)
     session.onChange = { [weak guides] change in
         guides?.sessionDidChange(change)
     }
-    session.onCameraChange = { [weak guides] _ in
+    viewport.onCameraChangeDetailed = { [weak guides] _, _ in
         guides?.refreshProjection()
     }
 
@@ -103,7 +106,7 @@ private func checkPlayheadGuides(
 
     let editTick = 48.0
     session.editCursor = Tick(editTick)
-    let editX = session.camera.contentX(tick: editTick)
+    let editX = viewport.camera.contentX(tick: editTick)
     report.expect(
         guides.edit.visible, cppID: playheadCppID(playheadGuidesID, "A013"),
         message: "a nonnegative session edit cursor makes the edit guide visible")
@@ -118,7 +121,7 @@ private func checkPlayheadGuides(
     let automation = PlayheadGuideHoverOwner.automation.rawValue
     let voiceChanges = PlayheadGuideHoverOwner.voiceChanges.rawValue
     let automationTick = 72.0
-    let automationX = session.camera.contentX(tick: automationTick)
+    let automationX = viewport.camera.contentX(tick: automationTick)
     guides.updateHover(owner: automation, contentX: automationX)
     report.expect(
         guides.hover.visible && !guides.edit.visible,
@@ -131,7 +134,7 @@ private func checkPlayheadGuides(
     report.expect(
         playheadNear(
             guides.hover.contentX,
-            session.camera.contentX(tick: automationTick), tolerance: 1.0),
+            viewport.camera.contentX(tick: automationTick), tolerance: 1.0),
         cppID: playheadCppID(playheadGuidesID, "A020"),
         message: "hover content remains plot-local after publication")
     report.expect(
@@ -140,7 +143,7 @@ private func checkPlayheadGuides(
         message: "the retained edit projection remains coherent while hover owns visibility")
 
     let voiceTick = 96.0
-    let voiceX = session.camera.contentX(tick: voiceTick)
+    let voiceX = viewport.camera.contentX(tick: voiceTick)
     guides.updateHover(owner: voiceChanges, contentX: voiceX)
     guides.clearHover(owner: automation)
     report.expect(
@@ -173,7 +176,7 @@ private func checkPlayheadGuides(
         cppID: playheadCppID(playheadGuidesID, "A011"),
         message: "an invalid hover does not suppress the edit guide")
 
-    let viewportWidth = session.camera.snapshot.viewportWidth
+    let viewportWidth = viewport.camera.snapshot.viewportWidth
     guides.updateHover(owner: automation, contentX: viewportWidth + 1.0)
     report.expect(
         !guides.hover.visible && guides.hover.contentX >= viewportWidth,
@@ -183,8 +186,8 @@ private func checkPlayheadGuides(
     guides.updateHover(owner: automation, contentX: automationX)
     let editBeforeScroll = guides.edit.contentX
     let hoverBeforeScroll = guides.hover.contentX
-    let priorScroll = session.camera.snapshot.scrollX
-    let scrollChanged = session.mutateCamera { camera in
+    let priorScroll = viewport.camera.snapshot.scrollX
+    let scrollChanged = viewport.mutateCamera { camera in
         _ = camera.setHScroll(priorScroll + 24.0)
     }
     guides.refreshProjection()
@@ -196,14 +199,14 @@ private func checkPlayheadGuides(
     report.expect(
         playheadNear(
             guides.edit.contentX,
-            session.camera.contentX(tick: editTick), tolerance: 1.0)
+            viewport.camera.contentX(tick: editTick), tolerance: 1.0)
             && playheadNear(
                 guides.hover.contentX,
-                session.camera.contentX(tick: automationTick), tolerance: 1.0),
+                viewport.camera.contentX(tick: automationTick), tolerance: 1.0),
         cppID: playheadCppID(playheadGuidesID, "A031"),
         message: "scrolled guides remain aligned with the current camera")
 
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         camera.updateViewport(
             width: viewportWidth / 2.0,
             rollHeight: camera.snapshot.rollHeight)
@@ -212,10 +215,10 @@ private func checkPlayheadGuides(
     report.expect(
         playheadNear(
             guides.edit.contentX,
-            session.camera.contentX(tick: editTick), tolerance: 1.0)
+            viewport.camera.contentX(tick: editTick), tolerance: 1.0)
             && playheadNear(
                 guides.hover.contentX,
-                session.camera.contentX(tick: automationTick), tolerance: 1.0),
+                viewport.camera.contentX(tick: automationTick), tolerance: 1.0),
         cppID: playheadCppID(playheadGuidesID, "A028"),
         message: "resizing the camera keeps guide contentX projections coherent")
 
@@ -232,20 +235,21 @@ private func checkPlayheadFollow(
     service: ProjectService
 ) {
     let session = playheadFeatureSession(suite, service: service)
-    configurePlayheadCamera(session, width: 320, height: 240, pixelsPerBeat: 512.0)
-    session.mutateCamera { camera in
+    let viewport = DocumentViewport(session: session)
+    configurePlayheadCamera(viewport, width: 320, height: 240, pixelsPerBeat: 512.0)
+    viewport.mutateCamera { camera in
         _ = camera.setHScroll(0)
     }
 
     let presenter = SharedPlayheadPresenter()
-    presenter.attach(session: session, audio: nil, grid: nil, drawer: nil)
+    presenter.attach(viewport: viewport, audio: nil, grid: nil, drawer: nil)
     presenter.setFollowEnabled(true)
 
     let endTick = Tick(session.timeline.lengthTicks)
     report.expect(
         endTick > 1, cppID: playheadCppID(playheadFollowID, "A033"),
         message: "the follow fixture has a nontrivial timeline")
-    let snapshot = session.camera.snapshot
+    let snapshot = viewport.camera.snapshot
     let candidate = max(0.0, snapshot.viewportWidth * 4.0 / snapshot.pixelsPerTick + 1.0)
     let farTick = endTick > 1 ? min(endTick - 1, Tick(candidate)) : 0
     report.expect(
@@ -255,24 +259,24 @@ private func checkPlayheadFollow(
     let sample = session.timeline.sample(for: farTick)
     _ = presenter.observe(sample: sample, transport: 2)
     report.expect(
-        session.camera.snapshot.scrollX > 0,
+        viewport.camera.snapshot.scrollX > 0,
         cppID: playheadCppID(playheadFollowID, "A036"),
         message: "playing a far tick follows the playhead horizontally")
 
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         _ = camera.setHScroll(0)
     }
     presenter.setFollowEnabled(false)
     _ = presenter.observe(sample: sample, transport: 2)
     report.expect(
-        playheadNear(session.camera.snapshot.scrollX, 0),
+        playheadNear(viewport.camera.snapshot.scrollX, 0),
         cppID: playheadCppID(playheadFollowID, "A037"),
         message: "disabling follow leaves the camera parked")
 
     presenter.setFollowEnabled(true)
     _ = presenter.observe(sample: sample, transport: 2)
     report.expect(
-        session.camera.snapshot.scrollX > 0,
+        viewport.camera.snapshot.scrollX > 0,
         cppID: playheadCppID(playheadFollowID, "A038"),
         message: "re-enabling follow moves the parked camera to the playhead")
 }
@@ -283,10 +287,11 @@ private func checkPlayheadAppearance(
     service: ProjectService
 ) {
     let session = playheadFeatureSession(suite, service: service)
-    let grid = PianoGrid(session: session)
+    let viewport = DocumentViewport(session: session)
+    let grid = PianoGrid(viewport: viewport)
     grid.configureViewport(width: 320, height: 240, fontPx: 13, dpr: 1)
     let presenter = SharedPlayheadPresenter()
-    presenter.attach(session: session, audio: nil, grid: grid, drawer: nil)
+    presenter.attach(viewport: viewport, audio: nil, grid: grid, drawer: nil)
     let sample = session.timeline.sample(for: 48)
 
     _ = presenter.observe(sample: sample, transport: 0)
@@ -394,22 +399,23 @@ private func checkPlayheadMiddlePan(
     service: ProjectService
 ) {
     let session = playheadFeatureSession(suite, service: service)
-    let grid = PianoGrid(session: session)
+    let viewport = DocumentViewport(session: session)
+    let grid = PianoGrid(viewport: viewport)
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 1)
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         _ = camera.setTimeZoom(512.0)
         _ = camera.setHScroll(120.0)
         _ = camera.setVScroll(200.0)
     }
 
-    let before = session.camera.snapshot
+    let before = viewport.camera.snapshot
     grid.beginPan(x: 100, y: 100)
     report.expect(
         grid.interactionActive && grid.cursorKind == 4,
         cppID: playheadCppID(playheadPanID, "begin"),
         message: "middle-pan begins with an active interaction and closed-hand cursor")
     grid.updatePan(x: 112, y: 80)
-    let after = session.camera.snapshot
+    let after = viewport.camera.snapshot
     report.expect(
         playheadNear(after.scrollX, before.scrollX - 12.0)
             && playheadNear(after.scrollY, before.scrollY + 20.0),
@@ -421,11 +427,11 @@ private func checkPlayheadMiddlePan(
         message: "the gesture retains ownership while the pointer is down")
 
     let presenter = SharedPlayheadPresenter()
-    presenter.attach(session: session, audio: nil, grid: grid, drawer: nil)
+    presenter.attach(viewport: viewport, audio: nil, grid: grid, drawer: nil)
     presenter.setFollowEnabled(true)
-    let followBefore = session.camera.snapshot
+    let followBefore = viewport.camera.snapshot
     _ = presenter.observe(sample: session.timeline.sample(for: 120), transport: 2)
-    let followDuring = session.camera.snapshot
+    let followDuring = viewport.camera.snapshot
     report.expect(
         grid.interactionActive
             && playheadNear(followDuring.scrollX, followBefore.scrollX)

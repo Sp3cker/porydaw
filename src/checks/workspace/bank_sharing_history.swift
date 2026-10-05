@@ -2,6 +2,7 @@ import Foundation
 @testable import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+@testable import PorydawDocument
 import PorydawPlayback
 
 @MainActor
@@ -27,7 +28,7 @@ internal func bankSharedHistoryAndLifecycle(report: CheckReport, fixtureRoot: St
         firstEdit.release = firstEdit.release == 255 ? 254 : firstEdit.release + 1
         var peerEdit = secondOriginal
         peerEdit.release = peerEdit.release == 255 ? 254 : peerEdit.release + 1
-        let firstBankPath = root + "/" + first.bankLease.sourcePath
+        let firstBankPath = root + "/" + first.bankLease.id.sourceRelativePath
         let originalBytes = bytes(at: firstBankPath)
         _ = try runBlocking {
             try await first.applyBankEdit(slot: 0, value: firstEdit, expected: firstOriginal)
@@ -273,7 +274,7 @@ internal func bankReleaseBoundsAndSharedBank(
             try await service.openSong(label: "mus_session_test2")
         }
         report.expectEqual(
-            expected: session.bankLease.bankToken, actual: switched.bank.bankToken,
+            expected: true, actual: session.bankLease.sharesBank(with: switched.bank),
             cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
             what: "opening another song reuses the unsaved shared-bank record")
         report.expectEqual(
@@ -281,7 +282,7 @@ internal func bankReleaseBoundsAndSharedBank(
             cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
             what: "another song publishes the unsaved shared-bank edit")
         report.expectEqual(
-            expected: true, actual: switched.bankDirty,
+            expected: true, actual: switched.bank.dirty,
             cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
             what: "another song preserves shared-bank dirty state")
     } catch {
@@ -343,7 +344,7 @@ internal func bankCoordinatorGate(report: CheckReport, fixtureRoot: String) {
             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
             what: "coordinator publishes only the applied transition")
         report.expectEqual(
-            expected: result.0.lease.bankToken, actual: coordinatorSession.bankLease.bankToken,
+            expected: true, actual: result.0.lease.sharesBank(with: coordinatorSession.bankLease),
             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
             what: "coordinator adopts the applied transition lease")
         report.expect(

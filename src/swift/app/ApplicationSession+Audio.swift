@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import PorydawProject
 import QtBridge
 import PorydawAppAudio
@@ -62,7 +63,8 @@ extension ApplicationSession {
 
     func connectPolyphonyJump() {
         polyphony.onJump = { [weak self] tick, track, key, dpr in
-            guard let session = self?.workspace?.session else { return }
+            guard let viewport = self?.workspace?.viewport else { return }
+            let session = viewport.session
             let previousNotes = session.selectedNoteOrder
             session.selectPrimaryTrack(track)
             guard
@@ -75,9 +77,9 @@ extension ApplicationSession {
                 return
             }
             session.setSelectedNotes([note.id])
-            _ = session.mutateCamera { $0.ensureKeyVisible(key) }
+            _ = viewport.mutateCamera { $0.ensureKeyVisible(key) }
             session.editCursor = tick
-            _ = session.mutateCamera { $0.ensureTickVisible(UInt64(tick), dpr: dpr) }
+            _ = viewport.mutateCamera { $0.ensureTickVisible(UInt64(tick), dpr: dpr) }
         }
     }
 
@@ -214,7 +216,7 @@ extension ApplicationSession {
         guard let workspace else { return }
         let session = workspace.session
         session.editCursor = 0
-        _ = session.mutateCamera { $0.setHScroll($0.snapshot.minHScroll) }
+        _ = workspace.viewport.mutateCamera { $0.setHScroll($0.snapshot.minHScroll) }
         if let audio, audio.songLoaded,
             audio.transport != AudioTransportState.stopped.rawValue
         {
