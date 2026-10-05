@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import PorydawProject
+import PorydawPlayback
 import QtBridge
 import PorydawAppAudio
 import PorydawAppCommands

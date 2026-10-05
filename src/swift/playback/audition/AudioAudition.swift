@@ -27,10 +27,11 @@ public final class AudioAudition {
     private var voiceGeneration: UInt8 = 0
     private var appliedNote: UInt32 = 0
     private var appliedVoice: UInt64 = 0
-    private var heldTrack: Int32 = -1
-    private var heldKey: Int32 = -1
+    private var heldSerial: UInt64 = 0
+    private var heldOccurrence: UInt64 = 0
     private var voiceKey: Int32 = -1
     private let samples = AudioSampleAudition()
+    private let band = AudioBandAudition()
     let timed = TimedAuditions()
 
     public init() {}
@@ -40,6 +41,11 @@ public final class AudioAudition {
         noteCommand.store(
             UInt32(noteGeneration) << 24 | UInt32(track & 15) << 16 | UInt32(key & 127) << 8 | UInt32(velocity),
             ordering: .releasing)
+    }
+
+    /// Publish identity-based entrances and departures from the single UI producer.
+    public func updateBandAudition(_ notes: [BandAuditionNote]) {
+        band.update(notes)
     }
 
     public func previewVoice(program: UInt8, key: UInt8, velocity: UInt8) {
@@ -80,21 +86,28 @@ public final class AudioAudition {
         let note = noteCommand.load(ordering: .acquiring)
         if note != appliedNote {
             appliedNote = note
-            if heldKey >= 0 { m4a_engine_note_off(main, heldTrack, UInt8(heldKey)) }
-            heldTrack = -1
-            heldKey = -1
+            if heldOccurrence != 0 {
+                m4a_engine_audition_note_off(
+                    main, M4AAuditionID(serial: heldOccurrence, source: UInt8(M4A_AUDITION_HELD)))
+            }
+            heldOccurrence = 0
             let velocity = UInt8(truncatingIfNeeded: note)
             if velocity > 0 {
                 let track = Int32((note >> 16) & 15)
                 let key = UInt8((note >> 8) & 127)
                 main.pointee.polyEventClock = UInt32.max
                 main.pointee.auditionNote = true
-                m4a_engine_note_on(main, track, key, velocity)
-                heldTrack = track
-                heldKey = Int32(key)
+                heldSerial += 1
+                heldOccurrence = heldSerial
+                m4a_engine_audition_note_on(
+                    main, M4AAuditionID(serial: heldOccurrence, source: UInt8(M4A_AUDITION_HELD)),
+                    track, key, velocity, UInt64.max)
             }
         }
-        if !deferTimed { timed.apply(main, frames: frames) }
+        if !deferTimed {
+            timed.apply(main, frames: frames)
+            band.apply(main)
+        }
         let voice = voiceCommand.load(ordering: .acquiring)
         if voice != appliedVoice {
             appliedVoice = voice
@@ -117,8 +130,8 @@ public final class AudioAudition {
     /// Caller already released main-engine voices (seek/timeline replacement).
     public func clearMainPreviews() {
         timed.clear(dropQueued: true)
-        heldTrack = -1
-        heldKey = -1
+        band.discardPending()
+        heldOccurrence = 0
     }
 
     /// Audio callback at zero output gain; commands queued during the fade survive.
@@ -129,8 +142,7 @@ public final class AudioAudition {
         m4a_engine_all_sound_off(main)
         m4a_engine_all_sound_off(preview)
         timed.clear(dropQueued: false)
-        heldTrack = -1
-        heldKey = -1
+        heldOccurrence = 0
         voiceKey = -1
         samples.reset()
     }
@@ -162,12 +174,14 @@ final class TimedAuditions {
         var track: UInt8 = 0
         var key: UInt8 = 0
         var remaining: Int64 = 0
+        var serial: UInt64 = 0
     }
     private let ring = UnsafeMutablePointer<Command>.allocate(capacity: 64)
     private let active = UnsafeMutablePointer<Active>.allocate(capacity: 24)
     let write = Atomic<UInt32>(0)
     let read = Atomic<UInt32>(0)
     private(set) var count = 0
+    private var serial: UInt64 = 0
 
     init() {
         ring.initialize(repeating: Command(), count: 64)
@@ -215,7 +229,8 @@ final class TimedAuditions {
             }
             if command.velocity == 0 {
                 if slot >= 0 {
-                    m4a_engine_note_off(engine, Int32(command.track), command.key)
+                    m4a_engine_audition_note_off(
+                        engine, M4AAuditionID(serial: active[slot].serial, source: UInt8(M4A_AUDITION_TIMED)))
                     count -= 1
                     active[slot] = active[count]
                 }
@@ -231,19 +246,24 @@ final class TimedAuditions {
                         slot = index
                     }
                 }
-                m4a_engine_note_off(engine, Int32(active[slot].track), active[slot].key)
+                m4a_engine_audition_note_off(
+                    engine, M4AAuditionID(serial: active[slot].serial, source: UInt8(M4A_AUDITION_TIMED)))
             }
-            m4a_engine_note_on(engine, Int32(command.track), command.key, command.velocity)
+            serial += 1
+            m4a_engine_audition_note_on(
+                engine, M4AAuditionID(serial: serial, source: UInt8(M4A_AUDITION_TIMED)),
+                Int32(command.track), command.key, command.velocity, UInt64.max)
             active[slot] = Active(
                 track: command.track, key: command.key,
-                remaining: Int64(command.duration))
+                remaining: Int64(command.duration), serial: serial)
         }
         read.store(position, ordering: .releasing)
         var index = 0
         while index < count {
             active[index].remaining -= Int64(frames)
             if active[index].remaining <= 0 {
-                m4a_engine_note_off(engine, Int32(active[index].track), active[index].key)
+                m4a_engine_audition_note_off(
+                    engine, M4AAuditionID(serial: active[index].serial, source: UInt8(M4A_AUDITION_TIMED)))
                 count -= 1
                 active[index] = active[count]
             } else {

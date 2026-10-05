@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+import PorydawAppAudio
 import QtBridge
 
 @MainActor
@@ -179,6 +180,19 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
 
     clearSelection()
     do {
+        guard let rig = AuditionCheckEngines(capacity: 15, sampleRate: session.timeline.sampleRate),
+            let noteB = session.document.note(seeded[1])
+        else {
+            report.fail(id, "real interlock band engine or seeded B could not be initialized")
+            return
+        }
+        let previousBandAudition = grid.onBandAudition
+        grid.onBandAudition = { rig.audition.updateBandAudition($0) }
+        defer {
+            rig.audition.updateBandAudition([])
+            rig.apply()
+            grid.onBandAudition = previousBandAudition
+        }
         let before = snapshot()
         grid.beginRightPointer(x: 1, y: 0)
         grid.updateRightPointer(x: grid.dragDistance + 2, y: 0)
@@ -187,19 +201,18 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
         report.expect(
             session.selectedNoteOrder == [seeded[1]], cppID: id,
             message: "A010 deferred Ctrl click selects exactly B")
-        var bAuditioned = false
-        grid.onAudition = { _, key, velocity in
-            if key == Int(session.document.note(seeded[1])?.pitch ?? 0), velocity > 0 {
-                bAuditioned = true
-            }
-        }
+        let expectedB = AuditionHeldNote(73, track: noteB.track, key: noteB.pitch)
         grid.updateRightPointer(x: bx + 1, y: by + 1, modifiers: 0x0400_0000)
-        grid.onAudition = nil
+        rig.apply()
         report.expect(
-            bAuditioned, cppID: id,
-            message: "A011 live right Band auditions B above zero velocity")
+            rig.records().contains(expectedB), cppID: id,
+            message: "A011 live right Band holds B at its exact track, key and velocity in native")
         grid.updateRightPointer(x: beyondAX, y: ay + 4, modifiers: 0x0400_0000)
         grid.endRightPointer(x: beyondAX, y: ay + 4, modifiers: 0x0400_0000)
+        rig.apply()
+        report.expect(
+            rig.records().isEmpty, cppID: id,
+            message: "deferred Ctrl interlock Band end releases every native occurrence")
         report.expect(
             containsAB(), cppID: id,
             message: "A012 deferred Ctrl click retains Band token through release")

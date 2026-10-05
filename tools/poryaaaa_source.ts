@@ -68,6 +68,7 @@ async function validateDependencyCheckout(
   repository: string,
   expectedCommit: string,
   description: string,
+  allowTrackedChanges = false,
 ): Promise<void> {
   const actualCommit = await gitOutput(repository, ["rev-parse", "HEAD"]);
   if (actualCommit !== expectedCommit) {
@@ -80,42 +81,76 @@ async function validateDependencyCheckout(
     "--porcelain=v1",
     "--untracked-files=all",
   ]);
-  if (status) {
-    throw new Error(`${description} poryaaaa checkout is dirty:\n${status}`);
+  const disallowedChanges = allowTrackedChanges
+    ? status.split("\n").filter((line) => line.startsWith("?? ")).join("\n")
+    : status;
+  if (disallowedChanges) {
+    throw new Error(
+      `${description} poryaaaa checkout is dirty:\n${disallowedChanges}`,
+    );
   }
 }
 
 async function resolvePoryaaaaPackage(sourceRoot: string): Promise<string> {
   const mainRoot = await Deno.realPath(await mainWorktreeRoot(sourceRoot));
+  const worktreeRoot = await Deno.realPath(sourceRoot);
+  let dependencyRoot = mainRoot;
+  if (worktreeRoot !== mainRoot) {
+    const localRepository = join(worktreeRoot, "external", "poryaaaa");
+    const localCheckout = await Deno.lstat(localRepository).catch((error) => {
+      if (error instanceof Deno.errors.NotFound) return undefined;
+      throw error;
+    });
+    if (localCheckout !== undefined) {
+      if (
+        !localCheckout.isDirectory ||
+        await Deno.realPath(localRepository) !== localRepository
+      ) {
+        dependencyRoot = worktreeRoot;
+      } else {
+        // A real empty directory is an uninitialized gitlink, not a checkout.
+        for await (const _entry of Deno.readDir(localRepository)) {
+          dependencyRoot = worktreeRoot;
+          break;
+        }
+      }
+    }
+  }
+  const local = dependencyRoot !== mainRoot;
+  const description = local ? "worktree-local" : "canonical";
+  const repository = join(dependencyRoot, "external", "poryaaaa");
+  const packageDirectory = join(dependencyRoot, packageRelativePath);
   try {
-    const expectedCommit = await recordedSubmoduleCommit(mainRoot);
-    const canonicalRepository = join(mainRoot, "external", "poryaaaa");
-    const canonicalPackage = join(mainRoot, packageRelativePath);
-    if (!(await exists(join(canonicalPackage, packageSentinel)))) {
-      throw new Error(`package sentinel is missing in ${canonicalPackage}`);
+    const expectedCommit = await recordedSubmoduleCommit(dependencyRoot);
+    if (!(await exists(join(packageDirectory, packageSentinel)))) {
+      throw new Error(`package sentinel is missing in ${packageDirectory}`);
     }
-    if (await Deno.realPath(canonicalPackage) !== canonicalPackage) {
-      throw new Error(`canonical package must not use a symlink target`);
+    if (
+      await Deno.realPath(repository) !== repository ||
+      await Deno.realPath(packageDirectory) !== packageDirectory
+    ) {
+      throw new Error(`${description} package must not use a symlink target`);
     }
-    const repositoryRoot = await gitOutput(canonicalRepository, [
+    const repositoryRoot = await gitOutput(repository, [
       "rev-parse",
       "--show-toplevel",
     ]);
-    if (resolve(repositoryRoot) !== canonicalRepository) {
-      throw new Error(`${canonicalRepository} is not a dependency checkout`);
+    if (resolve(repositoryRoot) !== repository) {
+      throw new Error(`${repository} is not a dependency checkout`);
     }
     await validateDependencyCheckout(
-      canonicalRepository,
+      repository,
       expectedCommit,
-      "canonical",
+      description,
+      local,
     );
-    return canonicalPackage;
+    return packageDirectory;
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Canonical poryaaaa sync required in main checkout ${mainRoot}: ${detail}`,
-      { cause: error },
-    );
+    const context = local
+      ? `Invalid worktree-local poryaaaa checkout ${repository}`
+      : `Canonical poryaaaa sync required in main checkout ${mainRoot}`;
+    throw new Error(`${context}: ${detail}`, { cause: error });
   }
 }
 

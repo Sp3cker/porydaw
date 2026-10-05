@@ -2,6 +2,8 @@ import Foundation
 @testable import PorydawApp
 @testable import PorydawAppCommands
 import PorydawCore
+import PorydawAppAudio
+import PorydawPlaybackNative
 import QtBridge
 
 @MainActor
@@ -23,15 +25,34 @@ func checkSelectionBandAudition(_ report: CheckReport, session: DocumentSession)
         report.fail(id, "could not seed the two band-audition notes")
         return
     }
-    var auditions: [(track: Int, pitch: Int, velocity: Int)] = []
-    grid.onAudition = { auditions.append(($0, $1, $2)) }
-    defer { grid.onAudition = nil }
+    guard let rig = AuditionCheckEngines(capacity: 15, sampleRate: session.timeline.sampleRate) else {
+        report.fail(id, "real band engine could not be initialized")
+        return
+    }
     guard let first = session.document.note(seed.ids[0]),
         let second = session.document.note(seed.ids[1])
     else {
         report.fail(id, "band-audition seed notes disappeared")
         return
     }
+    let tempoSeam = first.tick + first.duration / 2
+    session.document.editTempo(
+        TempoEdit(
+            remove: session.document.state.tempo,
+            add: [
+                TempoPoint(tick: 0, microsecondsPerQuarterNote: 500_000),
+                TempoPoint(tick: tempoSeam, microsecondsPerQuarterNote: 250_000),
+            ]))
+    let timeline = session.timeline
+    let durationFrames = timeline.sample(for: first.tick + first.duration) - timeline.sample(for: first.tick)
+    guard durationFrames > 1 && durationFrames <= UInt64(Int.max) else {
+        report.fail(id, "seeded musical span has no usable rendered-frame boundary")
+        return
+    }
+    report.expect(
+        tempoSeam > first.tick && tempoSeam < first.tick + first.duration
+            && timeline.tempoMap.contains { $0.tick == tempoSeam && $0.microsecondsPerQuarterNote == 250_000 },
+        cppID: id, message: "band duration fixture crosses an authoritative session tempo change")
     let p0 = Int(first.pitch)
     let p1 = Int(second.pitch)
     let pitchRange = (min(p0, p1) + 1)..<max(p0, p1)
@@ -60,6 +81,16 @@ func checkSelectionBandAudition(_ report: CheckReport, session: DocumentSession)
         report.fail(id, "raw note-on did not publish a visible zero-duration band note")
         return
     }
+    var auditionedZero = false
+    grid.onBandAudition = { notes in
+        auditionedZero = auditionedZero || notes.contains { $0.noteID == zero.id.rawValue }
+        rig.audition.updateBandAudition(notes)
+    }
+    defer {
+        grid.inputCancelled(reason: GridCancelReason.hidden.rawValue)
+        rig.apply()
+        grid.onBandAudition = nil
+    }
     let revision = session.document.revision
     let history = session.document.history.currentIdentity
     session.clearSelectedNotes()
@@ -78,27 +109,67 @@ func checkSelectionBandAudition(_ report: CheckReport, session: DocumentSession)
         report.fail(id, "band-audition notes sit too close to the plot origin to shrink past")
         return
     }
+    let firstVoice = AuditionHeldNote(first.velocity, track: first.track, key: first.pitch)
+    let secondVoice = AuditionHeldNote(second.velocity, track: second.track, key: second.pitch)
+    func moveBand(x: Double, y: Double) {
+        grid.updateRightPointer(x: x, y: y)
+        rig.apply()
+    }
+    func beginBand() {
+        grid.beginRightPointer(x: 1, y: 0)
+        moveBand(x: endX, y: endY)
+    }
     grid.beginRightPointer(x: 1, y: 0)
-    grid.updateRightPointer(x: ax, y: ay)
+    moveBand(x: ax, y: ay)
     report.expect(
-        auditions.contains { $0.pitch == p0 && $0.velocity == 93 }, cppID: id,
-        message: "covering a note starts its band audition at the document velocity")
-    grid.updateRightPointer(x: shrinkX, y: 4)
+        first.velocity == 93 && rig.records().contains(firstVoice), cppID: id,
+        message: "production geometry covers a note and its exact document velocity reaches native")
     report.expect(
-        auditions.contains { $0.pitch == p0 && $0.velocity == 0 }, cppID: id,
-        message: "shrinking the band past a note releases its audition immediately")
-    grid.updateRightPointer(x: endX, y: endY)
+        rig.pump(rig.main, frames: min(4096, Int(durationFrames) - 1)) > 0,
+        cppID: id, message: "production right-pointer band sounds through the real engine")
+    let heldBefore = rig.records()
+    moveBand(x: ax, y: ay)
+    report.expect(
+        rig.records() == heldBefore
+            && rig.pcm(rig.main).allSatisfy { $0.status & 0x40 != 0 || $0.status & 0x80 == 0 },
+        cppID: id, message: "unchanged production pointer coverage does not reattack")
+    moveBand(x: shrinkX, y: 4)
+    report.expect(
+        !rig.records().contains { $0.track == first.track && $0.key == first.pitch },
+        cppID: id, message: "shrinking production geometry releases the departed native occurrence immediately")
+    moveBand(x: endX, y: endY)
+    let covered = rig.records()
+    report.expect(
+        covered.contains(firstVoice) && covered.contains(secondVoice)
+            && rig.pcm(rig.main).contains {
+                $0.status & 0x80 != 0 && $0.status & 0x40 == 0 && $0.midiKey == first.pitch
+            },
+        cppID: id, message: "re-covering production geometry starts a fresh occurrence at its exact velocity")
+    _ = rig.pump(rig.main, frames: Int(durationFrames) - 1)
+    report.expect(
+        rig.records().contains(firstVoice), cppID: id,
+        message: "reentered document note stays held through the tempo-integrated penultimate frame")
+    moveBand(x: endX, y: endY)
+    _ = rig.pump(rig.main, frames: 1)
+    report.expect(
+        !rig.records().contains(firstVoice), cppID: id,
+        message: "document tick endpoints gate native at the exact last sample despite unchanged coverage")
+    moveBand(x: endX, y: endY)
+    report.expect(
+        !rig.records().contains(firstVoice), cppID: id,
+        message: "unchanged production geometry cannot resurrect a musically expired note")
     grid.endRightPointer(x: endX, y: endY)
+    rig.apply()
+    report.expect(rig.records().isEmpty, cppID: id, message: "production drag end releases every native occurrence")
+    let expected: [AuditionHeldNote] = session.selectedNoteOrder.compactMap { session.document.note($0) }
+        .filter { $0.duration > 0 }
+        .map { AuditionHeldNote($0.velocity, track: $0.track, key: $0.pitch) }.sorted()
     report.expect(
-        auditions.filter { $0.pitch == p0 && $0.velocity > 0 }.count >= 2, cppID: id,
-        message: "re-covering a note re-auditions it")
+        expected.count <= Int(MAX_PCM_CHANNELS) && covered == expected, cppID: id,
+        message: "every eligible swept document identity reaches native with its own exact velocity")
     report.expect(
-        auditions.contains { $0.pitch == p1 && $0.velocity == 0 }, cppID: id,
-        message: "the drag end releases every auditioned key")
-    report.expect(
-        session.selectedNotes.contains(zero.id)
-            && !auditions.contains { $0.pitch == zeroPitch && $0.velocity > 0 },
-        cppID: id, message: "a swept zero-duration note is never auditioned")
+        session.selectedNotes.contains(zero.id) && !auditionedZero,
+        cppID: id, message: "a swept zero-duration note is selected but never auditioned")
     report.expect(
         session.selectedNotes.isSuperset(of: Set(seed.ids)), cppID: id,
         message: "band release selects every swept note identity")
@@ -106,6 +177,37 @@ func checkSelectionBandAudition(_ report: CheckReport, session: DocumentSession)
         session.document.revision == revision
             && session.document.history.currentIdentity == history, cppID: id,
         message: "band audition changes no document revision or undo entry")
+    for reason in [GridCancelReason.focusLost, .pointerUngrabbed, .hidden] {
+        beginBand()
+        report.expect(
+            rig.records().contains(firstVoice),
+            cppID: id, message: "cancellation fixture starts a real native band for reason \(reason.rawValue)")
+        grid.inputCancelled(reason: reason.rawValue)
+        rig.apply()
+        report.expect(
+            rig.records().isEmpty && !grid.interactionActive,
+            cppID: id, message: "production cancellation \(reason.rawValue) releases all native band occurrences")
+    }
+    beginBand()
+    grid.beginPointer(x: ax, y: ay, modifiers: 0)
+    grid.updatePointer(x: endX + grid.dragDistance + 4, y: endY)
+    rig.apply()
+    report.expect(
+        rig.records().isEmpty, cppID: id,
+        message: "combined-button demotion releases the actual sounding band")
+    grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
+    rig.apply()
+    beginBand()
+    report.expect(!rig.records().isEmpty, cppID: id, message: "detach fixture holds a real native band")
+    grid.detach()
+    rig.apply()
+    report.expect(
+        rig.records().isEmpty && !grid.interactionActive, cppID: id,
+        message: "production detach ends every native band occurrence")
+    report.expect(
+        session.document.revision == revision
+            && session.document.history.currentIdentity == history, cppID: id,
+        message: "cancellation, demotion and detach change no document revision or undo entry")
     do {
         let after = try session.document.captureSave()
         report.expect(

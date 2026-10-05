@@ -18,6 +18,7 @@ func runAudioControllerChecks(_ report: CheckReport) {
         try checkControllerSettingsAndBank(report)
         try checkControllerPreviewIsolation(report)
         try checkControllerPitchBendAudio(report)
+        try checkControllerBandRenderAndCut(report)
         try checkNativeAudioLifetime(report)
     } catch { report.fail("swiftcore/AudioController", "controller initialization failed: \(error)") }
 }
@@ -372,4 +373,91 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
     report.expect(
         audioControllerCheckPeak(waveReleased.suffix(4096)) <= 1 / 32768,
         cppID: "swiftcore/AudioController::wavePreviewIsolation", message: "sampleOff also releases the CGB wave")
+}
+
+private func checkControllerBandRenderAndCut(_ report: CheckReport) throws {
+    let id = "swiftcore/AudioController::bandRenderAndCut"
+    let rig = try AudioControllerCheckFixture(silent: true)
+    let audio = rig.renderer
+    let first = BandAuditionNote(noteID: 1, track: 0, key: 60, velocity: 41, durationSamples: 480_000)
+    let duplicate = BandAuditionNote(noteID: 2, track: 0, key: 60, velocity: 93, durationSamples: 480_000)
+    let third = BandAuditionNote(noteID: 3, track: 0, key: 67, velocity: 113, durationSamples: 480_000)
+    func renderBand(_ notes: [BandAuditionNote], _ frames: Int, chunk: Int = 512) -> [Float] {
+        audio.audition.updateBandAudition(notes)
+        return rig.render(frames, chunk: chunk)
+    }
+    let chord = renderBand([first, duplicate, third], rig.rate)
+    let held = audio.polySnapshot().pcm.filter { $0.on && !$0.releasing }
+    report.expect(
+        held.count == 3 && held.filter { $0.track == 0 && $0.midiKey == 60 }.count == 2
+            && held.contains { $0.track == 0 && $0.midiKey == 67 }
+            && audioControllerCheckPeak(chord.suffix(4096)) > 0.01,
+        cppID: id, message: "production render callback holds and sounds the band including both duplicate identities")
+    _ = renderBand([first], rig.rate)
+    report.expect(
+        audio.polySnapshot().pcm.filter { $0.on && !$0.releasing }.count == 1 && rig.sustaining(60),
+        cppID: id, message: "rendering second-duplicate departure leaves the first native voice")
+    let released = renderBand([], rig.rate * 2)
+    report.expect(
+        !rig.sustaining(60) && audioControllerCheckPeak(released.suffix(4096)) <= 1 / 32768,
+        cppID: id, message: "final band release drains actual production output to silence")
+
+    // Reuse the same cold-bound instrument for each real synthesis measurement.
+    var peaks: [Float] = []
+    for velocity: UInt8 in [41, 113] {
+        audio.bind(timeline: rig.timeline(silent: true), voicegroup: rig.voices, settings: AudioSettings())
+        let note = BandAuditionNote(noteID: 1, track: 0, key: 60, velocity: velocity, durationSamples: 480_000)
+        peaks.append(audioControllerCheckPeak(renderBand([note], rig.rate).suffix(4096)))
+        _ = renderBand([], rig.rate)
+    }
+    audio.bind(timeline: rig.timeline(silent: true), voicegroup: rig.voices, settings: AudioSettings())
+    report.expect(
+        peaks[0] > 0 && peaks[1] > peaks[0] * 2,
+        cppID: id, message: "note velocity meaningfully reaches the production PCM mixer")
+
+    let durationID = "swiftcore/AudioController::bandDurationWithinCallback"
+    // Compare the full stereo signal and release tail, not its pre-DMA prefix.
+    let finite = BandAuditionNote(noteID: 1, track: 0, key: 60, velocity: 41, durationSamples: 1025)
+    var gated = renderBand([finite], 2048, chunk: 2048)
+    report.expect(
+        !rig.sustaining(60) && audioControllerCheckPeak(gated[...]) > 0,
+        cppID: durationID,
+        message: "a positive short note sounds through the DMA pipeline and gates inside one large callback")
+    gated.append(contentsOf: rig.render(rig.settle))
+    _ = renderBand([], rig.rate)
+    audio.bind(timeline: rig.timeline(silent: true), voicegroup: rig.voices, settings: AudioSettings())
+    var reference = renderBand([first], 1025, chunk: 1025)
+    reference.append(contentsOf: renderBand([], 1023, chunk: 1023))
+    reference.append(contentsOf: rig.render(rig.settle))
+    report.expect(
+        gated.count == reference.count
+            && zip(gated, reference).allSatisfy { abs($0.0 - $0.1) <= 1 / 32768 },
+        cppID: durationID,
+        message: "in-callback duration gate matches release at exactly frame 1025, including the normal envelope")
+    audio.bind(timeline: rig.timeline(silent: true), voicegroup: rig.voices, settings: AudioSettings())
+
+    audio.play()
+    _ = rig.render(rig.ramp + rig.settle)
+    _ = renderBand([first], 512)
+    report.expect(rig.sustaining(60), cppID: id, message: "real band is sounding before transport cut")
+    audio.pause()
+    _ = rig.render(1)
+    audio.audition.updateBandAudition([first, third])
+    _ = rig.render(rig.ramp - 1, chunk: 1)
+    report.expect(
+        !rig.sustaining(60) && !rig.sustaining(67), cppID: id,
+        message: "sample-accurate pause cut removes old band and defers post-cut entrance")
+    _ = rig.render(rig.settle + rig.ramp + 512)
+    report.expect(
+        !rig.sustaining(60) && rig.sustaining(67),
+        cppID: id, message: "queued entrance sounds after cut without resurrecting retained old membership")
+    _ = renderBand([], rig.rate)
+    audio.bind(timeline: rig.timeline(silent: true), voicegroup: rig.voices, settings: AudioSettings())
+    _ = renderBand([duplicate], 512)
+    report.expect(rig.sustaining(60), cppID: id, message: "fresh band starts after cold bind/reset")
+    audio.unload()
+    let unloaded = rig.render(rig.rate)
+    report.expect(
+        !rig.sustaining(60) && audioControllerCheckPeak(unloaded.suffix(4096)) <= 1 / 32768,
+        cppID: id, message: "production unload clears band lifetime and actual output")
 }

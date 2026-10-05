@@ -1,6 +1,9 @@
 add_library(PorydawPlayback STATIC
     Sequencer.swift
     PlaybackBridge.swift
+    audition/AudioAudition.swift
+    audition/AudioBandAudition.swift
+    audition/AudioSampleAudition.swift
 )
 
 # The native module map is generated: the poryaaaa package lives at the
@@ -33,6 +36,10 @@ target_include_directories(PorydawPlayback INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawPlayback,Swift_MODULE_DIRECTORY>>"
 )
 porydaw_enable_swift_batch_mode(PorydawPlayback)
+if(PORYDAW_BUILD_CHECKS)
+    target_compile_options(PorydawPlayback PRIVATE
+        "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>")
+endif()
 
 target_link_libraries(PorydawPlayback
     PUBLIC PorydawCore

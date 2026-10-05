@@ -2,7 +2,7 @@ import Foundation
 @testable import PorydawApp
 @testable import PorydawAppAudio
 import PorydawCore
-import PorydawPlayback
+@testable import PorydawPlayback
 import PorydawPlaybackNative
 
 func checkControllerCuts(_ report: CheckReport) throws {

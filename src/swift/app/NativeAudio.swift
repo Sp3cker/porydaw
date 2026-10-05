@@ -147,6 +147,11 @@ public final class NativeAudio {
         device.renderer.audition.previewNote(track: track, key: key, velocity: velocity)
     }
 
+    /// Update the covered document-note identities without retriggering held members.
+    public func updateBandAudition(_ notes: [BandAuditionNote]) {
+        device.renderer.audition.updateBandAudition(notes)
+    }
+
     public func previewNoteTimed(
         track: UInt8, key: UInt8, velocity: UInt8,
         durationSamples: UInt32

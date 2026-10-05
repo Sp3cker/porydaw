@@ -169,6 +169,9 @@ public final class DocumentWorkspace {
             else { return }
             audio.previewNote(track: UInt8(track), key: UInt8(key), velocity: UInt8(velocity))
         }
+        grid.onBandAudition = { [weak audio] notes in
+            audio?.updateBandAudition(notes)
+        }
         voiceChangesPage.onAuditionVoice = { [weak audio] program, key, velocity in
             audio?.previewVoice(program: program, key: key, velocity: velocity)
         }

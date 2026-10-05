@@ -115,3 +115,22 @@ internal func audioControllerCheckStep(_ samples: [Float], from: Int, to: Int) -
     }
     return step
 }
+
+/// Exact consumer-visible voice records, retaining duplicate pitches.
+internal struct AuditionHeldNote: Equatable, Comparable {
+    let track: Int
+    let key: UInt8
+    let velocity: UInt8
+
+    init(_ velocity: UInt8, track: Int = 0, key: UInt8 = 60) {
+        self.track = track
+        self.key = key
+        self.velocity = velocity
+    }
+
+    static func < (lhs: Self, rhs: Self) -> Bool {
+        if lhs.track != rhs.track { return lhs.track < rhs.track }
+        if lhs.key != rhs.key { return lhs.key < rhs.key }
+        return lhs.velocity < rhs.velocity
+    }
+}
