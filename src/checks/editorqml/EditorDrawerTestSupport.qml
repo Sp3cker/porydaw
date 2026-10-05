@@ -165,13 +165,14 @@ TestCase {
         return " (" + details.join("; ") + ")"
     }
 
-    // The labels the staged project actually offers, so a label mismatch is part
-    // of the failure instead of something to guess from a timeout.
+    // The Songs dock's visible labels make filter or label mismatches
+    // part of the failure instead of something to guess from a timeout.
     function stagedLabels() {
         var labels = []
-        var count = session.songCount()
+        var songs = session.songDockController().songListPresenter()
+        var count = songs.rowCount
         for (var i = 0; i < count && i < 8; ++i)
-            labels.push(session.songLabel(i))
+            labels.push(songs.songLabel(i))
         return count > 8 ? labels.join(",") + ",…" : labels.join(",")
     }
 

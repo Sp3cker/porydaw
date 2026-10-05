@@ -99,9 +99,10 @@ TestCase {
 
     function stagedLabels() {
         var labels = []
-        var count = session.songCount()
+        var songs = session.songDockController().songListPresenter()
+        var count = songs.rowCount
         for (var i = 0; i < count && i < 8; ++i)
-            labels.push(session.songLabel(i))
+            labels.push(songs.songLabel(i))
         return count > 8 ? labels.join(",") + ",…" : labels.join(",")
     }
 

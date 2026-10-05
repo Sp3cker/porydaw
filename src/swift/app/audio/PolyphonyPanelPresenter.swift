@@ -16,6 +16,14 @@ public final class PolyphonyChannelRow {
     }
 }
 
+struct PolyphonyCounterValue: Equatable {
+    var name: String
+    var dropped: Int
+    var cutOff: Int
+    var tailCut: Int
+    var flashAlpha: Double
+}
+
 @MainActor
 @QtBridgeable
 public final class PolyphonyCounterRow {
@@ -25,12 +33,27 @@ public final class PolyphonyCounterRow {
     public var tailCut: Int
     public var flashAlpha: Double
 
-    init(name: String, dropped: Int, cutOff: Int, tailCut: Int, flashAlpha: Double) {
-        self.name = name
-        self.dropped = dropped
-        self.cutOff = cutOff
-        self.tailCut = tailCut
-        self.flashAlpha = flashAlpha
+    @QtIgnored var current: PolyphonyCounterValue
+
+    init(_ value: PolyphonyCounterValue) {
+        current = value
+        name = value.name
+        dropped = value.dropped
+        cutOff = value.cutOff
+        tailCut = value.tailCut
+        flashAlpha = value.flashAlpha
+    }
+
+    @QtIgnored
+    func update(_ next: PolyphonyCounterValue) -> Bool {
+        guard next != current else { return false }
+        current = next
+        publish(\.name, next.name)
+        publish(\.dropped, next.dropped)
+        publish(\.cutOff, next.cutOff)
+        publish(\.tailCut, next.tailCut)
+        publish(\.flashAlpha, next.flashAlpha)
+        return true
     }
 }
 
@@ -71,7 +94,6 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
     private weak var audio: NativeAudio?
     private var visible = false
     private var seenTotal: UInt32 = 0
-    private var eventRows: [PolyphonyEventRow] = []
     private var previousCounters: [(UInt32, UInt32, UInt32)] = []
     private var flashUntil: [ContinuousClock.Instant] = []
     private var trackNames: [String] = []
@@ -133,34 +155,37 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
         showingShadow = snapshot.invert
         let pcmCount = min(Int(snapshot.maxPcmChannels), Int(MAX_PCM_CHANNELS), snapshot.pcm.count)
         if lastChannelSnapshot.map({ Self.sameChannels($0, snapshot) }) != true {
-            pcm.reset(to: makeChannels(snapshot.pcm.prefix(pcmCount), cgb: false, shadow: false))
-            cgb.reset(
-                to: makeChannels(
-                    snapshot.cgb.prefix(Int(MAX_CGB_CHANNELS)), cgb: true,
-                    shadow: false))
-            if snapshot.invert {
-                shadowPcm.reset(
-                    to: makeChannels(
+            syncModel(
+                pcm, makeChannels(snapshot.pcm.prefix(pcmCount), cgb: false, shadow: false),
+                matches: { $0.label == $1.label && $0.state == $1.state })
+            syncModel(
+                cgb, makeChannels(snapshot.cgb.prefix(Int(MAX_CGB_CHANNELS)), cgb: true, shadow: false),
+                matches: { $0.label == $1.label && $0.state == $1.state })
+            syncModel(
+                shadowPcm,
+                snapshot.invert
+                    ? makeChannels(
                         snapshot.pcm.dropFirst(Int(MAX_PCM_CHANNELS))
-                            .prefix(Int(MAX_PCM_CHANNELS)), cgb: false, shadow: true))
-                shadowCgb.reset(
-                    to: makeChannels(
+                            .prefix(Int(MAX_PCM_CHANNELS)), cgb: false, shadow: true) : [],
+                matches: { $0.label == $1.label && $0.state == $1.state })
+            syncModel(
+                shadowCgb,
+                snapshot.invert
+                    ? makeChannels(
                         snapshot.cgb.dropFirst(Int(MAX_CGB_CHANNELS))
-                            .prefix(Int(MAX_CGB_CHANNELS)), cgb: true, shadow: true))
-            } else {
-                shadowPcm.reset(to: [])
-                shadowCgb.reset(to: [])
-            }
+                            .prefix(Int(MAX_CGB_CHANNELS)), cgb: true, shadow: true) : [],
+                matches: { $0.label == $1.label && $0.state == $1.state })
             lastChannelSnapshot = snapshot
         }
 
         if snapshot.eventTotal < seenTotal {
             seenTotal = 0
-            eventRows.removeAll()
             previousCounters.removeAll()
             flashUntil.removeAll()
-            events.reset(to: [])
-            eventCount = 0
+            events.update {
+                events.replaceSubrange(0..<events.count, with: [])
+            }
+            publish(\.eventCount, 0)
         }
         let capacity = snapshot.events.count
         if capacity > 0 {
@@ -169,17 +194,20 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
                 snapshot.eventTotal > UInt32(capacity)
                     ? snapshot.eventTotal - UInt32(capacity) : 0)
             if first < snapshot.eventTotal {
-                for index in first..<snapshot.eventTotal {
-                    eventRows.insert(makeEvent(snapshot.events[Int(index) % capacity]), at: 0)
+                events.update {
+                    for index in first..<snapshot.eventTotal {
+                        events.insert(makeEvent(snapshot.events[Int(index) % capacity]), at: 0)
+                    }
+                    if events.count > 500 {
+                        events.replaceSubrange(500..<events.count, with: [])
+                    }
                 }
-                if eventRows.count > 500 { eventRows.removeLast(eventRows.count - 500) }
-                events.reset(to: eventRows)
-                eventCount = eventRows.count
+                publish(\.eventCount, events.count)
             }
         }
         seenTotal = snapshot.eventTotal
 
-        var current: [PolyphonyCounterRow] = []
+        var current: [PolyphonyCounterValue] = []
         let count = min(snapshot.drop.count, snapshot.steal.count, snapshot.tailCut.count)
         if previousCounters.count != count {
             previousCounters = Array(repeating: (0, 0, 0), count: count)
@@ -204,17 +232,17 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
                 now < flashUntil[i]
                 ? 0.55 * (Double(remaining.seconds) + Double(remaining.attoseconds) / 1e18) : 0
             current.append(
-                PolyphonyCounterRow(
+                PolyphonyCounterValue(
                     name: name.isEmpty ? "Track \(i + 1)" : name,
                     dropped: Int(drop), cutOff: Int(steal), tailCut: Int(tail), flashAlpha: alpha))
         }
-        counters.reset(to: current)
-        counterCount = current.count
+        syncRetained(counters, current, make: PolyphonyCounterRow.init, update: { $0.update($1) })
+        publish(\.counterCount, current.count)
     }
 
     public func activateEvent(index: Int, devicePixelRatio: Double) {
-        guard eventRows.indices.contains(index) else { return }
-        let row = eventRows[index]
+        guard index >= 0, index < events.count else { return }
+        let row = events[index]
         guard row.tick >= 0 else { return }
         onJump?(UInt32(row.tick), row.track, row.key, devicePixelRatio)
     }
@@ -222,7 +250,6 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
     @QtIgnored
     public func clear() {
         seenTotal = 0
-        eventRows.removeAll()
         previousCounters.removeAll()
         flashUntil.removeAll()
         events.reset(to: [])

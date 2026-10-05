@@ -45,7 +45,7 @@ Item {
                 width: themeRow.width
                 text: qsTr("Vanilla")
                 font: page.typography.body
-                onClicked: page.presenter.previewThemeMode("vanilla")
+                onClicked: page.presenter.previewAppearance("vanilla", page.presenter.gridLineContrast)
                 // Keep visible labels in the themed windowText ink.
                 contentItem: Item {}
                 Text {
@@ -65,7 +65,7 @@ Item {
                 width: themeRow.width
                 text: qsTr("Dark Neutral High")
                 font: page.typography.body
-                onClicked: page.presenter.previewThemeMode("dark-neutral-high")
+                onClicked: page.presenter.previewAppearance("dark-neutral-high", page.presenter.gridLineContrast)
                 contentItem: Item {}
                 Text {
                     objectName: "darkNeutralHighModeLabel"
@@ -84,7 +84,7 @@ Item {
                 width: themeRow.width
                 text: qsTr("Immaterial")
                 font: page.typography.body
-                onClicked: page.presenter.previewThemeMode("immaterial")
+                onClicked: page.presenter.previewAppearance("immaterial", page.presenter.gridLineContrast)
                 contentItem: Item {}
                 Text {
                     objectName: "immaterialModeLabel"
@@ -125,7 +125,7 @@ Item {
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("50 uses the theme default. Lower values soften grid lines; higher values strengthen them.")
                 font: page.typography.body
-                onMoved: page.presenter.setGridLineContrast(Math.round(value))
+                onMoved: page.presenter.previewAppearance(page.presenter.themeMode, Math.round(value))
             }
         }
     }

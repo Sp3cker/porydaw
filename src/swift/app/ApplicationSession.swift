@@ -50,8 +50,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     public internal(set) var projectRoot = ""
     @QtIgnored
-    var labels: [String] = []
-    @QtIgnored
     var settingsVoicegroups: [String] = []
     @QtIgnored
     var onVoicegroupCatalogChanged: (() -> Void)?
@@ -285,11 +283,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public func voiceListController() -> VoiceListController { voiceList }
 
     public func isDocumentDirty() -> Bool { documentDirty }
-    public func songCount() -> Int { labels.count }
-
-    public func songLabel(index: Int) -> String {
-        labels.indices.contains(index) ? labels[index] : ""
-    }
 
     public func gridPresenter() -> PianoGrid {
         guard let workspace else { preconditionFailure("Grid requested without an open song") }
@@ -372,9 +365,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public func eventListPresenter() -> EventListPresenter { eventList }
 
     public func songDockController() -> SongDockController { songDock }
-
-    @QtIgnored
-    func refreshSongLabels(_ updated: [String]) { labels = updated }
 
     public func mouseHintsPresenter() -> MouseHints { mouseHints }
 

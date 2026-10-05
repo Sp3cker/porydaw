@@ -154,6 +154,8 @@ add_library(PorydawApp STATIC
     shell/BundledFont.swift
     shell/PreferencesStore.swift
     shell/ShellPresenter.swift
+    shell/ShellActionCatalog.swift
+    shell/ShellPresenter+ActionPolicy.swift
     shell/ShellActionState.swift
     shell/ShellAppearance.swift
     shell/EngineSettingsStore.swift

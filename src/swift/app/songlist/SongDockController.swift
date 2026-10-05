@@ -81,7 +81,6 @@ public final class SongDockController: QmlUncreatable {
     @QtIgnored
     func publishSongs(_ songs: [SongListing]) {
         presenter.setSongs(songs)
-        session?.refreshSongLabels(songs.map(\.label))
         syncSelection()
         songsChanged()
     }

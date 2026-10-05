@@ -141,6 +141,10 @@ public final class SongListPresenter {
         visible.indices.contains(index) ? visible[index].id : -1
     }
 
+    public func songLabel(at index: Int) -> String {
+        visible.indices.contains(index) ? visible[index].label : ""
+    }
+
     public func categoryName(at index: Int) -> String {
         index >= 0 && index < categories.count ? categories[index].name : ""
     }
@@ -186,6 +190,14 @@ public final class SongListPresenter {
             search: store.string(key: "songFilterText", fallback: ""),
             sort: store.int(key: "songFilterSort", fallback: 0),
             category: store.string(key: "songFilterCategory", fallback: ""))
+    }
+
+    /// Persists the current filters using the shell's existing preference keys.
+    @QtIgnored
+    public func persistFilters(to store: PreferencesStore) {
+        store.setString(key: "songFilterText", value: searchText)
+        store.setInt(key: "songFilterSort", value: sortIndex)
+        store.setString(key: "songFilterCategory", value: categoryPrefix())
     }
 
     /// Focuses the search field and selects its text (surface-side effect).

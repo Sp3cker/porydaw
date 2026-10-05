@@ -187,7 +187,8 @@ ShellWindowSupport {
 
         verify(waitForNative(function() {
             return projectReadySpy.count === 1 && session.projectOpen
-                && session.songCount() > 0 && session.lastSaveError === ""
+                && session.songDockController().songListPresenter().totalCount > 0
+                && session.lastSaveError === ""
         }, 30000), "A092: the requested project becomes ready after its tabs close")
         compare(session.songTabs.tabCount, 0,
                 "A093: the completed project switch has an empty tab set")

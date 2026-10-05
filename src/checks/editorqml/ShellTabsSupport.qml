@@ -70,8 +70,9 @@ TestCase {
 
     function openDiagnostics(session) {
         var labels = []
-        for (var i = 0; i < session.songCount() && i < 8; ++i)
-            labels.push(session.songLabel(i))
+        var songs = session.songDockController().songListPresenter()
+        for (var i = 0; i < songs.rowCount && i < 8; ++i)
+            labels.push(songs.songLabel(i))
         return " (projectRoot=" + bootstrap.projectRoot
             + "; projectOpen=" + session.projectOpen
             + "; songOpen=" + session.songOpen

@@ -44,9 +44,9 @@ Item {
         SongsDockColumn {
             id: dockColumn
             SplitView.fillHeight: true
-            SplitView.minimumWidth: 200
-            SplitView.maximumWidth: 480
-            SplitView.preferredWidth: Math.max(200, Math.min(480, body.shell.dockColumnWidth))
+            SplitView.minimumWidth: body.shell.dockColumnMinWidth
+            SplitView.maximumWidth: body.shell.dockColumnMaxWidth
+            SplitView.preferredWidth: Math.max(body.shell.dockColumnMinWidth, Math.min(body.shell.dockColumnMaxWidth, body.shell.dockColumnWidth))
             controller: body.songDock
             applicationSession: body.shell.session
             songsRatio: body.shell.dockSongsRatio
@@ -56,7 +56,7 @@ Item {
                     body.shell.setDockSongsRatio(songsRatio)
             }
             onWidthChanged: {
-                if (body.dockSettingsReady && width >= 200 && width <= 480 && width !== body.shell.dockColumnWidth)
+                if (body.dockSettingsReady && width >= body.shell.dockColumnMinWidth && width <= body.shell.dockColumnMaxWidth && width !== body.shell.dockColumnWidth)
                     body.shell.setDockColumnWidth(Math.round(width))
             }
         }

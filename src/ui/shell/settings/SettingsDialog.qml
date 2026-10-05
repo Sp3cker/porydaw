@@ -37,13 +37,9 @@ DialogWindow {
         if (dialog.store.songAvailable)
             (songPage.item as SongSettingsPage).finishVoicegroupEdit()
         dialog.store.apply()
-        dialog.presenter.commitThemeMode()
-        dialog.presenter.commitGridLineContrast()
+        dialog.presenter.commitAppearance()
     }
-    onClosing: {
-        presenter.discardThemeMode()
-        presenter.discardGridLineContrast()
-    }
+    onClosing: presenter.discardAppearance()
     Rectangle {
         id: body
         objectName: "settingsBody"

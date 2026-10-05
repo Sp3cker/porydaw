@@ -279,7 +279,6 @@ extension ApplicationSession {
                     return
                 }
                 self.songDock.publishSongs(songs)
-                self.refreshSongLabels(songs.map(\.label))
                 self.openSongFromDock(label: label, newTab: true)
                 self.saveInProgress = false
                 if tabId != -1 {

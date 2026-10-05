@@ -165,7 +165,6 @@ extension ApplicationSession {
         }
         projectRoot = candidate.path
         projectRootChanged()
-        labels = candidate.labels
         songDock.install(service: candidate.service, songs: [])
         voiceList.projectService = candidate.service
         resetVoicegroupCatalog()
