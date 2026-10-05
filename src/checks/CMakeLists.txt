@@ -279,6 +279,8 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         host/HostBehaviorChecks.swift
         trackheaders/TrackHeadersChecks.swift
         trackheaders/TrackHeadersInputChecks.swift
+        benchmarks/AllocationProbe.swift
+        benchmarks/EditorAllocationMacrobenchmarks.swift
         workspace/SessionChecks.swift
         projectstore/ProjectIdentityChecks.swift
         projectstore/SongModelChecks.swift
@@ -519,6 +521,7 @@ if(APPLE)
     add_library(roll_qml_lane STATIC
         rollqml/RollQmlTests.swift
         rollqml/RollQmlStaging.swift
+        benchmarks/AllocationProbe.swift
         swiftqtml/BridgeProbeCheck.swift
         "${CMAKE_CURRENT_BINARY_DIR}/rollqml/RollQmlPaths.swift"
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"

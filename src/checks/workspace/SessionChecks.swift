@@ -50,6 +50,9 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     }
     let service = opened.service
     let session = opened.session
+    if runEditorAllocationMacrobenchmarkIfRequested(report, session: session, service: service) {
+        return
+    }
 
     sessionPlaybackProjectionAndStatePublication(report: report, session: session)
 

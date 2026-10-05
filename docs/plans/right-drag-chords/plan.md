@@ -17,7 +17,7 @@ Preserve selection, MIDI bytes, revision/history, combined-button gestures, nati
 
 ## Isolation
 
-Worktree: `.worktrees/right-drag-chords`, branch `feature/right-drag-chords`, base `c33a17a5f6bd5ac6f557d58fc95d1956a0ad7d42`. Its independent `external/poryaaaa` clone starts at `c504afebe5c56cf9393e6ae632b9cef632480ab6`. Main and its canonical dependency remain untouched; no commits requested.
+Worktree: `.worktrees/right-drag-chords`, branch `feature/right-drag-chords`, base `c33a17a5f6bd5ac6f557d58fc95d1956a0ad7d42`. Its independent `external/poryaaaa` clone starts at `c504afebe5c56cf9393e6ae632b9cef632480ab6`. Main and its canonical dependency remain untouched.
 
 The resolver selects one validated root. Empty linked-worktree gitlinks fall back to the strict canonical source; populated local checkouts require matching local gitlink HEAD and allow tracked development changes. Invalid present local paths never fall back. Cache matching uses the chosen source.
 
@@ -96,3 +96,54 @@ Separate no-malloc-hook thread-CPU measurements, three runs per version with com
 - After removing all temporary check sources, env gates and CMake entries: `deno task checks --filter swiftcore-playback --filter swiftcore-projectsession --filter samplecheck-editor --verbose`: 8/53 passed, 45 skipped. Production `PORYDAW_ROLL_QML_SUITE=tst_SwiftRollSelection.qml deno task checks:qml-roll --filter swiftroll-window`: 1/1 passed. Bridge guard: zero baselined findings; explicit changed-Swift format check and app build passed.
 - Independent standards/spec reviews passed. A proposed overflow-capacity retention was withdrawn after ownership/COW adjudication. `deno task lsp:swift` still indexed 0/0 targets; configured compilation and actual checks establish this change, not empty LSP references.
 - `open -n build/debug/porydaw.app` launched PID 41573; PID-specific capture showed the loaded production piano roll, note geometry and automation curve. The production QML lane exercised pointer behavior; the launch/capture alone does not prove audible playback.
+
+## Reusable allocation macrobenchmarks
+
+The audition win landed first: Porydaw `5f87933f`, native engine `c35c61b`, both pushed on `feature/right-drag-chords`. The reusable tooling changes check targets only; normal application startup does not load or compile the recorder.
+
+```sh
+deno task bench:allocations --scenario note-draw --output /tmp/note-draw-allocations.json
+deno task bench:allocations --scenario automation-commit --output /tmp/automation-allocations.json
+deno task bench:allocations --scenario window-resize --output /tmp/resize-allocations.json
+deno task bench:allocations --scenario note-draw --mode cpu --output /tmp/note-draw-cpu.json
+deno task bench:allocations --help
+deno task bench:allocations:check
+```
+
+Defaults are 64 warmups, 1,000 measured operations and three independent process samples; override with `--warmup`, `--iterations` and `--runs`. Repeat each scenario with `--mode cpu` for an independent no-malloc-hook CPU comparison. JSON retains raw capture records, compiler/check diagnostics, calibrated validity, per-operation and total medians/ranges. Compare identical scenario, build configuration, fixture and parameters before/after; allocation-mode CPU is hook-distorted and must not substitute for independent CPU runs.
+
+| Scenario / phase | Captured work | Predicate outside capture |
+| --- | --- | --- |
+| `note-draw.stroke` | Real piano-grid press, move and release | Exact tick/pitch/duration/velocity, one revision/history transition, cleared preview, exact MIDI/history restoration through undo |
+| `note-draw.release-commit` | Independently prepared draw, release and synchronous commit only | Same committed-note and restoration predicates |
+| `automation-commit.release-commit` | Existing pan-node drag prepared outside capture; release and synchronous document/publication work | Exact changed lane/playback values, one revision/history transition, cleared gesture/preview, exact undo restoration |
+| `window-resize.geometry-event-turn` | Real native `ApplicationWindow` alternates 960×640 and 1120×760 around the production roll, plus one bounded Qt event turn | Native/content/overlay/plot geometry, matching document camera, advanced production display revision |
+| `window-resize.empty-event-turn` | Identical capture bridge and event turn without geometry changes | Geometry/camera still match; reported separately, never blindly subtracted |
+
+The two note phases overlap conceptually but execute independent loops: do not sum them. Native editor scenarios cover synchronous GUI-thread Swift/presenter work, excluding OS input dispatch and queued QML/rendering. Resize includes GUI-thread bridge/event-turn overhead, not render-thread/GPU work, frame completion, physical window dragging or all-process allocations. Its fixture establishes asynchronous song-catalog readiness before capture and uses production tab/page destruction acknowledgments during teardown.
+
+`src/app/allocation_probe.c` is compiled into a private checks-only dylib. `AllocationProbe.swift` loads it explicitly and leaves it loaded for process lifetime so the installed callback cannot dangle. The allocation mode uses the macOS libmalloc logger ABI with runtime transient malloc/free and realloc calibration; unknown events, replaced/unavailable hooks, nested capture, overflow, missing records, mismatched operation/segment counts or failed scenario checks fail closed, never becoming zero. The recorder counts requested bytes, allocation/free events and reallocations, not rounded/live memory or RSS. CPU mode installs no heap hook and reports current-thread CPU time with common capture endpoint overhead.
+
+To add a macrobenchmark, first name its thread, exact production boundary and observer exclusions. Reuse `AllocationBenchmarkOptions` and `AllocationProbe` in a checks-only driver: prepare fixture/coordinates outside capture, warm the same operation, reset, bracket each actual production operation, pause before predicates/output/restoration, then report the exact operation count and stable phase label. Add the scenario's explicit driver selector and complete label set to `tools/allocation_bench.ts`; add parser/report tests only for consumer-visible corruption or aggregation errors. Verify the actual production state transition and ordinary opt-out lane before interpreting counts.
+
+Counts locate costly phases, not allocation call sites. Stack attribution is a separate diagnostic run: retaining/collecting backtraces changes allocation and CPU behavior. Do not compare its timing with calibrated count or no-hook CPU runs, and do not treat surviving-object backtraces as proof about transient allocation/free pairs.
+
+### Exercised baseline
+
+All three scenarios passed in allocation and independent CPU modes with `--warmup 64 --iterations 1000 --runs 3`: eighteen fresh measured processes, in addition to six successful four-operation smoke runs. Below are medians of each process's phase total divided by its operation count, not distributions of individual operations. Debug, current GUI-thread scopes; requested bytes are cumulative, not retained memory.
+
+| Phase | Allocations/op | Requested bytes/op | Frees/op | Independent CPU µs/op |
+| --- | ---: | ---: | ---: | ---: |
+| Note stroke | 9,019.001 | 372,386.912 | 9,017.001 | 426.23 |
+| Note release/commit | 4,681 | 198,120 | 4,679 | 231.41 |
+| Automation release/commit | 3,437.002 | 308,613.560 | 3,409.002 | 482.68 |
+| Resize + bounded event turn | 44,556.210 | 8,112,145.756 | 42,607.197 | 6,927.27 |
+| Empty event turn | 1.023 | 1,532.984 | 15.472 | 2.41 |
+
+The resize control also captures pending GUI-thread event/deallocation work; its frees are not paired only with that segment's allocations. Preserve it as a separate result. Independent CPU ranges were 425.05–435.18 µs/stroke, 230.89–233.20 µs/note release, 475.80–491.99 µs/automation release, 6,916.11–7,003.44 µs/resize turn and 2.34–2.70 µs/empty turn. JSON preserves every allocation/byte/free range and raw phase record. These are a reusable baseline, not new optimization or statistical performance claims.
+
+- `deno task bench:allocations:check`: seven parser/report consumer-contract tests passed; both TypeScript files typechecked. Profiling dylib compiled with `-std=c11 -O2 -Wall -Wextra -Werror` in both modes.
+- Normal `deno task checks --filter swiftcore-projectsession --filter swiftcore-playback-audition --verbose`: 2/53 passed, 51 skipped. Production `tst_SwiftRollSelection.qml` / `swiftroll-window`: 1/1 passed. New resize fixture without allocation environment: 1/1 passed in its ordinary opt-out path, without loading the recorder.
+- The first resize capture passed geometry/capture but failed teardown's catalog-retention predicate. Restored the existing fixture's catalog-readiness/persistence prerequisites and production page-release acknowledgment; amended allocation/CPU smoke and all warmed resize runs passed. No failed predicate was removed or hidden.
+- Bridge guard: zero baselined findings. Explicit changed-Swift format check passed. Swift LSP index still reports 0/0 targets; actual compilation and state predicates, not empty references, establish correctness.
+- Independent recorder/runner and scenario/spec gates: Approved, no critical or important findings. Kept the fixed per-process output binding, standard cwd-relative output paths and intentionally symmetric empty-turn signature; no extra abstraction or observer work was added for advisory polish.
