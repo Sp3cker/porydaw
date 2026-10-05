@@ -181,7 +181,7 @@ internal func runVoiceChangesPageChecks(
         session = DocumentSession(
             document: document, service: service,
             lease: loaded.bank, slots: loaded.bankSlots,
-            dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+            dirty: loaded.bank.dirty, loadName: loaded.bank.loadName)
     } catch {
         report.fail(drawerVoiceProjectionID, "could not load the rich bank fixture: \(error)")
         return

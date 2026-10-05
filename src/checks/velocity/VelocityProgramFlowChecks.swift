@@ -39,7 +39,7 @@ func drawerVelocityProgramFlowChecks(_ report: CheckReport, session: DocumentSes
         waveSession = DocumentSession(
             document: waveDocument, service: waveService,
             lease: loaded.bank, slots: loaded.bankSlots,
-            dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+            dirty: loaded.bank.dirty, loadName: loaded.bank.loadName)
     } catch {
         report.fail(drawerVelocityLateUnlockID, "could not load the staged wave bank fixture: \(error)")
         return

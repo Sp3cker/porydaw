@@ -80,7 +80,7 @@ public final class DocumentSession {
     public private(set) lazy var projectionCache = DocumentProjectionCache(session: self)
     /// Current projection, always rebuilt via the state factory.
     public internal(set) var timeline: PlaybackTimeline
-    public var bankLease: NativeBankLease { sharedBank.value.lease }
+    public var bankLease: ProjectBankLease { sharedBank.value.lease }
     public var bankSlots: [BankSlotView] { sharedBank.value.slots }
     public var bankDirty: Bool { sharedBank.value.dirty }
     public var bankLoadName: String { sharedBank.value.loadName }
@@ -190,7 +190,7 @@ public final class DocumentSession {
 
     public init(
         document: SongDocument, service: ProjectService,
-        lease: NativeBankLease, slots: [BankSlotView], dirty: Bool,
+        lease: ProjectBankLease, slots: [BankSlotView], dirty: Bool,
         loadName: String, sampleRate: Double = 48_000
     ) {
         self.document = document
@@ -322,8 +322,8 @@ public final class DocumentSession {
             source: loaded.source, trackBudget: loaded.trackBudget)
         let session = DocumentSession(
             document: document, service: service, lease: loaded.bank,
-            slots: loaded.bankSlots, dirty: loaded.bankDirty,
-            loadName: loaded.bankLoadName, sampleRate: sampleRate)
+            slots: loaded.bankSlots, dirty: loaded.bank.dirty,
+            loadName: loaded.bank.loadName, sampleRate: sampleRate)
         session.lastKnownMidiBytes = loaded.midiBytes
         return session
     }

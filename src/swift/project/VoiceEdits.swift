@@ -112,54 +112,6 @@ extension VoicegroupSource {
         dirty = false
         return true
     }
-
-    /// Packs scalar edits into an already-loaded voice of the same native type.
-    /// The caller must reload instead if `vgVoiceStructuralChange` is true.
-    /// - Parameters:
-    ///   - slot: The edited voice slot.
-    ///   - toneData: Mutable native tone from the current bank.
-    /// - Returns: False for an uneditable slot or native voice-type mismatch.
-    public func applyScalarsToToneData(slot: Int, toneData: UnsafeMutablePointer<ToneData>?) -> Bool {
-        guard let voice = voiceAt(slot: slot), let toneData,
-            toneData.pointee.type == vgMacroVoiceType(voice.macro)
-        else { return false }
-        switch voice.macro {
-        case .keysplit, .keysplitAll:
-            return true
-        case .directSound, .directSoundNoResample, .directSoundAlt,
-            .square1, .square1Alt, .square2, .square2Alt,
-            .progWave, .progWaveAlt, .noise, .noiseAlt:
-            break
-        }
-        toneData.pointee.key = UInt8(truncatingIfNeeded: voice.key)
-        if !vgMacroIsCgb(voice.macro) {
-            toneData.pointee.panSweep = voice.pan == 0 ? 0 : 0x80 | UInt8(truncatingIfNeeded: voice.pan)
-            toneData.pointee.attack = UInt8(truncatingIfNeeded: voice.attack)
-            toneData.pointee.decay = UInt8(truncatingIfNeeded: voice.decay)
-            toneData.pointee.sustain = UInt8(truncatingIfNeeded: voice.sustain)
-            toneData.pointee.release = UInt8(truncatingIfNeeded: voice.release)
-            return true
-        }
-        toneData.pointee.attack = UInt8(truncatingIfNeeded: voice.attack & 0x07)
-        toneData.pointee.decay = UInt8(truncatingIfNeeded: voice.decay & 0x07)
-        toneData.pointee.sustain = UInt8(truncatingIfNeeded: voice.sustain & 0x0F)
-        toneData.pointee.release = UInt8(truncatingIfNeeded: voice.release & 0x07)
-        switch voice.macro {
-        case .square1, .square1Alt:
-            toneData.pointee.panSweep = UInt8(truncatingIfNeeded: voice.sweep)
-            toneData.pointee.wavePointer = UnsafeMutablePointer<UInt32>(bitPattern: voice.duty & 0x03)
-        case .square2, .square2Alt:
-            toneData.pointee.panSweep = 0
-            toneData.pointee.wavePointer = UnsafeMutablePointer<UInt32>(bitPattern: voice.duty & 0x03)
-        case .noise, .noiseAlt:
-            toneData.pointee.wavePointer = UnsafeMutablePointer<UInt32>(bitPattern: voice.period & 0x01)
-        case .progWave, .progWaveAlt:
-            break  // This pointer owns loaded wave data.
-        case .directSound, .directSoundNoResample, .directSoundAlt, .keysplit, .keysplitAll:
-            break
-        }
-        return true
-    }
 }
 
 private extension VoicegroupSource {

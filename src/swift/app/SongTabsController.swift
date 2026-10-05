@@ -1,5 +1,6 @@
 import PorydawCore
 import PorydawDocument
+import PorydawProject
 import QtBridge
 
 /// One open song's QML-facing facade: the `applicationSession` a page binds.
@@ -134,7 +135,7 @@ public final class SongTabSession {
 
 internal struct BankCloseTarget {
     let identity: BankBindingIdentity
-    let lease: NativeBankLease
+    let lease: ProjectBankLease
     let title: String
 
     init(_ bank: AppliedBankEdit) {

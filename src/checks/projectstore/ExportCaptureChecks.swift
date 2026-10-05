@@ -39,7 +39,7 @@ private func captureJourney(_ label: String, report: CheckReport) throws {
     let songConfig = session.document.state.config
     let settings = AudioSettings().applyingSong(songConfig)
     let midiPath = root + "/sound/songs/midi/\(label).mid"
-    let bankPath = root + "/" + session.bankLease.sourcePath
+    let bankPath = root + "/" + session.bankLease.id.sourceRelativePath
     let midiBefore = try Data(contentsOf: URL(filePath: midiPath))
     let bankBefore = try Data(contentsOf: URL(filePath: bankPath))
 

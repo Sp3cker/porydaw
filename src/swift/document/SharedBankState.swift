@@ -1,4 +1,5 @@
 import Foundation
+import PorydawProject
 import Synchronization
 
 public struct BankBindingIdentity: Hashable, Sendable {
@@ -6,9 +7,9 @@ public struct BankBindingIdentity: Hashable, Sendable {
     let sourcePath: String
     let sectionLabel: String
 
-    public init(_ lease: NativeBankLease) {
+    public init(_ lease: ProjectBankLease) {
         owner = lease.publicationOwner
-        sourcePath = lease.sourcePath
+        sourcePath = lease.id.sourceRelativePath
         sectionLabel = lease.sectionLabel
     }
 }
@@ -46,7 +47,7 @@ internal final class SharedBankState {
             newer.lease.publicationRevision > value.lease.publicationRevision
         else { return }
         let changed =
-            newer.lease.bankToken != value.lease.bankToken
+            !newer.lease.sharesBank(with: value.lease)
             || newer.slots != value.slots || newer.dirty != value.dirty
             || newer.loadName != value.loadName
         value = newer
@@ -112,7 +113,8 @@ public final class ProjectBankViews: Sendable {
     public func dirtyBanks() -> [AppliedBankEdit] {
         _ = currentOwner()
         return states.values.map(\.value).filter(\.dirty).sorted {
-            ($0.lease.sourcePath, $0.lease.sectionLabel) < ($1.lease.sourcePath, $1.lease.sectionLabel)
+            ($0.lease.id.sourceRelativePath, $0.lease.sectionLabel)
+                < ($1.lease.id.sourceRelativePath, $1.lease.sectionLabel)
         }
     }
 }

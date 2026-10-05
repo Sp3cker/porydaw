@@ -4,6 +4,7 @@ import PorydawCore
 import PorydawDocument
 import PorydawPlayback
 import PorydawPlaybackNative
+import PorydawProject
 
 extension AudioSettings {
     public func applyingSong(_ config: SongConfig) -> AudioSettings {
@@ -16,7 +17,7 @@ extension AudioSettings {
 
 public struct WavExportCapture: Sendable {
     public let state: SongState
-    public let lease: NativeBankLease
+    public let lease: ProjectBankLease
     public let settings: AudioSettings
     public let options: WavExportOptions
     public let label: String
@@ -47,23 +48,19 @@ public enum WavExportJob {
             state: capture.state, sampleRate: Double(capture.options.sampleRate))
         let totals = WavExportTotals(timeline: timeline, options: capture.options)
         do {
-            let result = try capture.lease.withVoices { voices in
-                try WavExport.render(
-                    to: path, timeline: timeline, voices: voices,
-                    settings: capture.settings, options: capture.options,
-                    progress: { fraction in
-                        continuation?.yield(fraction)
-                        return !Task.isCancelled
-                    })
-            }
+            let result = try WavExport.render(
+                to: path, timeline: timeline, voices: capture.lease.engineVoices,
+                settings: capture.settings, options: capture.options,
+                progress: { fraction in
+                    continuation?.yield(fraction)
+                    return !Task.isCancelled
+                })
             switch result {
             case .completed: return .completed(totalFrames: totals.totalFrames)
             case .cancelled: return .cancelled
             }
-        } catch let error as WavExportError {
-            return .failed(message: error.message)
         } catch {
-            return .failed(message: String(describing: error))
+            return .failed(message: error.message)
         }
     }
 }

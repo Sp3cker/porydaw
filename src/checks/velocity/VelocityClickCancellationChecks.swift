@@ -143,7 +143,7 @@ func drawerVelocityPrimaryTrackSwitchCancels(_ report: CheckReport, session: Doc
         waveSession = DocumentSession(
             document: waveDocument, service: waveService,
             lease: loaded.bank, slots: loaded.bankSlots,
-            dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+            dirty: loaded.bank.dirty, loadName: loaded.bank.loadName)
     } catch {
         report.fail(drawerVelocityCancellationID, "could not load the staged wave bank fixture: \(error)")
         return
@@ -445,7 +445,7 @@ func drawerVelocityLifecycleCancellation(
         switchSession = DocumentSession(
             document: switchDocument, service: switchService,
             lease: loaded.bank, slots: loaded.bankSlots,
-            dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+            dirty: loaded.bank.dirty, loadName: loaded.bank.loadName)
     } catch {
         report.fail(drawerVelocityCancellationID, "could not stage the alternate voicegroup: \(error)")
         return

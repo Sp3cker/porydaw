@@ -17,7 +17,7 @@ extension VoiceListController {
         guard let session else { return nil }
         return VoiceListEditOrigin(
             session: session,
-            sourcePath: session.bankLease.sourcePath,
+            sourcePath: session.bankLease.id.sourceRelativePath,
             sectionLabel: session.bankLease.sectionLabel)
     }
 
@@ -25,7 +25,7 @@ extension VoiceListController {
     func isCurrentEditOrigin(_ origin: VoiceListEditOrigin) -> Bool {
         guard let session else { return false }
         return session === origin.session && !session.isClosed
-            && session.bankLease.sourcePath == origin.sourcePath
+            && session.bankLease.id.sourceRelativePath == origin.sourcePath
             && session.bankLease.sectionLabel == origin.sectionLabel
     }
 

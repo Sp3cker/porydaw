@@ -509,7 +509,7 @@ private func runTabReadinessChecks(
         first.isReady && first.songOpen, cppID: id,
         message: "A047 a fresh tab is published only after document and bank load")
     report.expect(
-        !document.timeline.events.isEmpty && document.bankLease.sourcePath != "",
+        !document.timeline.events.isEmpty && document.bankLease.id.sourceRelativePath != "",
         cppID: id, message: "A048 first visible tab has a populated playback timeline and bank lease")
     report.expect(
         document.editorViewState == seed, cppID: id,

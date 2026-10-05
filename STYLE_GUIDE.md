@@ -133,7 +133,7 @@ would otherwise forbid.
   Do not let a superseded async result land; a stale capture writes nothing.
 - Replace shared or borrowed resources with a borrow-safe swap: build the new
   object, repoint every borrow, then retire the old owner — an applied bank
-  edit mints a fresh `NativeBankLease` while the superseded lease keeps its
+  edit mints a fresh `ProjectBankLease` while the superseded lease keeps its
   bank alive for views that still hold it.
 - Pair every acquired handle (file, device, lease, worker) with an
   unconditional release path that runs on early return, failure, and

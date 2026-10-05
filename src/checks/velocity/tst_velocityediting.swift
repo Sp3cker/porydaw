@@ -353,7 +353,7 @@ private func drawerVelocityContinuousPaintAxis(_ report: CheckReport) {
         paintSession = DocumentSession(
             document: paintDocument, service: paintService,
             lease: loaded.bank, slots: loaded.bankSlots,
-            dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+            dirty: loaded.bank.dirty, loadName: loaded.bank.loadName)
     } catch {
         report.fail(drawerVelocityTransactionID, "could not load the direct-sound fixture: \(error)")
         return

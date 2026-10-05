@@ -166,7 +166,6 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         what: "slot 3 is initially blank")
 
     let oldLease = session.bankLease
-    let oldToken = oldLease.bankToken
     var bankPublications: [SessionChange] = []
     session.onChange = { bankPublications.append($0) }
 
@@ -193,11 +192,11 @@ internal func runBankHistorySuite(_ report: CheckReport) {
             cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
             what: "scalar edit changes the requested voice and preserves every other slot")
         report.expect(
-            result.lease.bankToken != oldToken,
+            !result.lease.sharesBank(with: oldLease),
             cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
             message: "applied bank edit mints a fresh lease")
         report.expectEqual(
-            expected: oldToken, actual: oldLease.bankToken,
+            expected: true, actual: oldLease.sharesBank(with: oldLease),
             cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
             what: "superseded lease retains its bank token and stays valid")
         let completedBankPublications = bankPublications.filter { $0.domains.contains(.bank) }
@@ -257,7 +256,7 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         let expectedUnifiedFile = session.document.state.file
         let expectedUnifiedSlots = session.bankSlots
         let unifiedMidiPath = session.document.source.midiPath
-        let unifiedBankPath = projectDir + "/" + session.bankLease.sourcePath
+        let unifiedBankPath = projectDir + "/" + session.bankLease.id.sourceRelativePath
         let midiBeforeUnifiedSave = bytes(at: unifiedMidiPath)
         let bankBeforeUnifiedSave = bytes(at: unifiedBankPath)
         bankPublications.removeAll(keepingCapacity: true)

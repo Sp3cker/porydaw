@@ -586,7 +586,7 @@ private func loaderBench(_ root: URL, _ report: CheckReport) {
             report.fail(cppID, "bench bank did not load"); return
         }
         report.expect(
-            a.bankToken == b.bankToken, cppID: cppID,
+            a.sharesBank(with: b), cppID: cppID,
             message: "a warm reload reuses the loaded bank identity")
     }
 }

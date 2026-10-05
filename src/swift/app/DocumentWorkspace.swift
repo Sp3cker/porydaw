@@ -199,19 +199,12 @@ public final class DocumentWorkspace {
     public func activate() {
         guard !isActive, !isTornDown else { return }
         isActive = true
-        do {
-            try audio.bind(
-                timeline: session.timeline, bank: session.bankLease,
-                config: session.document.state.config)
-            audio.setMuteMask(Self.trackMask(session.mutedTracks))
-            audio.setSoloMask(Self.trackMask(session.soloedTracks))
-            appliedSongConfig = session.document.state.config
-        } catch {
-            // The renderer refused this document's voices. The document stays
-            // editable without a transport, exactly as it does when a playback
-            // publication fails, and the failure is reported once here.
-            callbacks.publicationFailed(String(describing: error))
-        }
+        audio.bind(
+            timeline: session.timeline, bank: session.bankLease,
+            config: session.document.state.config)
+        audio.setMuteMask(Self.trackMask(session.mutedTracks))
+        audio.setSoloMask(Self.trackMask(session.soloedTracks))
+        appliedSongConfig = session.document.state.config
         // The engine is bound before the publication is reinstalled, so no
         // timeline of this document can be published onto another document's
         // voices. `deactivate()` cleared the closure this restores.
@@ -464,11 +457,7 @@ public final class DocumentWorkspace {
         }
 
         if isActive && change.domains.contains(.bank) {
-            do {
-                try audio.updateVoicegroup(session.bankLease)
-            } catch {
-                callbacks.publicationFailed(String(describing: error))
-            }
+            audio.updateVoicegroup(session.bankLease)
         }
         if change.domains.contains(.bank) {
             velocityPage.cancelSectionInteraction()

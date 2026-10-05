@@ -58,7 +58,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
             }
             editExpect(
                 "E01",
-                edited.bankToken != first.bankToken && edited.dirty && edited.slotViews[0].voice?.key == changed.key
+                !edited.sharesBank(with: first) && edited.dirty && edited.slotViews[0].voice?.key == changed.key
                     && first.slotViews[0].voice == original && !first.dirty && scalarToken == nil,
                 report, "scalar edit replaces the bank and leaves the original lease unchanged")
 
@@ -69,7 +69,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
             {
                 editExpect(
                     "E02",
-                    id == edited.id && current.bankToken == edited.bankToken && current.slotViews[0].voice == changed,
+                    id == edited.id && current.sharesBank(with: edited) && current.slotViews[0].voice == changed,
                     report,
                     "stale expected voice conflicts without changing the published bank")
             } else {
@@ -99,7 +99,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
             }
             editExpect(
                 "E03",
-                materialized.bankToken != edited.bankToken && materialized.dirty
+                !materialized.sharesBank(with: edited) && materialized.dirty
                     && materialized.slotViews[blank].kind == .editable
                     && materialized.slotViews[blank].voice == blankVoice && edited.slotViews[blank].kind == .none,
                 report,
@@ -116,7 +116,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
             }
             editExpect(
                 "E04",
-                restored.bankToken != materialized.bankToken && restored.slotViews[blank].kind == .none
+                !restored.sharesBank(with: materialized) && restored.slotViews[blank].kind == .none
                     && restored.slotViews[blank].voice == nil && materialized.slotViews[blank].voice == blankVoice
                     && revertedToken == nil,
                 report, "revert republishes the empty slot without minting a token")
@@ -151,7 +151,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
             if case .success(let preview?) = previewed {
                 editExpect(
                     "E08",
-                    preview.id == restored.id && preview.bankToken != 0 && preview.slotViews[blank].kind == .none,
+                    preview.id == restored.id && preview.slotViews[blank].kind == .none,
                     report,
                     "preview returns an adopted bank with the requested source identity")
             } else {
@@ -182,7 +182,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
                         editExpect(
                             "E09",
                             message == "Voicegroup is not loaded: \(otherLease.id.sourceRelativePath)"
-                                && current.bankToken == restored.bankToken && current.slotViews[0].voice == changed,
+                                && current.sharesBank(with: restored) && current.slotViews[0].voice == changed,
                             report,
                             "foreign lease into an unloaded store throws without changing the original bank")
                     } else {
@@ -226,7 +226,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
                         editExpect("E10", false, report, "blank-slot insertion minted no token or failed to save")
                         return
                     }
-                    let sourcePath = URL(filePath: saved.sourcePath)
+                    let sourcePath = URL(filePath: rebaseRoot.appendingPathComponent(saved.id.sourceRelativePath).path)
                     let refreshedBytes = try Data(contentsOf: sourcePath)
                     let replaced = awaitValue {
                         try await rebaseStore.loadBank(voicegroupArg: "_fixture_rich")
@@ -245,8 +245,8 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
                     let diskAfterRevert = try Data(contentsOf: sourcePath)
                     editExpect(
                         "E10",
-                        fresh.bankToken != base.bankToken && fresh.slotViews[0].voice == externalValue && !saved.dirty
-                            && rebuilt.bankToken != saved.bankToken && !rebuilt.dirty
+                        !fresh.sharesBank(with: base) && fresh.slotViews[0].voice == externalValue && !saved.dirty
+                            && !rebuilt.sharesBank(with: saved) && !rebuilt.dirty
                             && rebuilt.slotViews[blankSlot].voice == blankValue
                             && restored.slotViews[0].voice == replacedValue
                             && restored.slotViews[blankSlot].voice == nil && restored.dirty
@@ -354,7 +354,7 @@ private func checkBlankTokenConflicts(_ report: CheckReport) {
                     editExpect("E10", false, report, "conflict fixture failed to save a tokenized blank")
                     return
                 }
-                let sourcePath = URL(filePath: saved.sourcePath)
+                let sourcePath = URL(filePath: root.appendingPathComponent(saved.id.sourceRelativePath).path)
                 let savedBytes = try Data(contentsOf: sourcePath)
                 let externalBytes: Data
                 switch edit {
@@ -400,8 +400,8 @@ private func checkBlankTokenConflicts(_ report: CheckReport) {
                 let preserved: Bool
                 if case .success(.conflict(let id)) = reverted, case .success(let current) = after {
                     preserved =
-                        id == saved.id && !rebuilt.dirty && rebuilt.bankToken != saved.bankToken && !current.dirty
-                        && current.bankToken == rebuilt.bankToken && diskAfterRevert == externalBytes
+                        id == saved.id && !rebuilt.dirty && !rebuilt.sharesBank(with: saved) && !current.dirty
+                        && current.sharesBank(with: rebuilt) && diskAfterRevert == externalBytes
                 } else {
                     preserved = false
                 }

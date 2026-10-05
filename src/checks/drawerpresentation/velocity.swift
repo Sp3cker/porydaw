@@ -278,7 +278,7 @@ func drawerVelocityKeysplitPerNoteMapping(
     let splitSession = DocumentSession(
         document: document, service: fixtureService,
         lease: loaded.split.bank, slots: loaded.split.bankSlots,
-        dirty: loaded.split.bankDirty, loadName: loaded.split.bankLoadName,
+        dirty: loaded.split.bank.dirty, loadName: loaded.split.bank.loadName,
         sampleRate: 48_000)
     splitSession.selectedTrack = 0
     let page = VelocityPage(baseFontPx: 13)
@@ -356,8 +356,8 @@ func drawerVelocityKeysplitPerNoteMapping(
     let invalidSession = DocumentSession(
         document: invalidDocument, service: fixtureService,
         lease: loaded.unsupported.bank, slots: loaded.unsupported.bankSlots,
-        dirty: loaded.unsupported.bankDirty,
-        loadName: loaded.unsupported.bankLoadName,
+        dirty: loaded.unsupported.bank.dirty,
+        loadName: loaded.unsupported.bank.loadName,
         sampleRate: 48_000)
     invalidSession.selectedTrack = 0
     page.attach(session: invalidSession, palette: GridPalette())

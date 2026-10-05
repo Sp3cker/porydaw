@@ -379,7 +379,7 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     list.refresh(from: session)
 
     let selectorID = "vgsavecheck/VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit"
-    let originalToken = session.bankLease.bankToken
+    let originalBankLease = session.bankLease
     list.setVoicegroupChoices(catalogArgs)
     var selectionError: Error?
     list.onVoicegroupChangeRequested = { arg in
@@ -412,7 +412,8 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         expected: "other", actual: session.bankLoadName, cppID: selectorID,
         what: "the selected -G loads the alternate bank")
     report.expect(
-        session.bankLease.bankToken != originalToken && session.bankSlots[0].voice?.macro == BankVoiceMacro.square2,
+        !session.bankLease.sharesBank(with: originalBankLease)
+            && session.bankSlots[0].voice?.macro == BankVoiceMacro.square2,
         cppID: selectorID,
         message: "the alternate bank owns a fresh lease and different voice")
     do {
@@ -454,7 +455,7 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         cppID: selectorID,
         message: "failed voicegroup selector records the edited song cfg as one dirty undo step")
     report.expect(
-        session.bankLease.bankToken == originalToken
+        session.bankLease.sharesBank(with: originalBankLease)
             && session.bankSlots[0].voice == original,
         cppID: selectorID,
         message: "failed voicegroup selector retains the previous bank lease and voice")
@@ -468,7 +469,7 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     report.expect(
         session.document.state.config.voicegroupArgument == "_test_vg"
             && list.selectorText == "test_vg"
-            && session.bankLease.bankToken == originalToken
+            && session.bankLease.sharesBank(with: originalBankLease)
             && !session.document.isDirty,
         cppID: selectorID,
         message: "undo of failed voicegroup selector restores the clean home binding")
@@ -664,7 +665,7 @@ internal func runVoiceListNewVoicegroupChecks(_ report: CheckReport, fixtureRoot
     report.expect(
         session.document.state.config.voicegroupArgument == "_vgsave_created"
             && FileManager.default.fileExists(atPath: createdPath)
-            && session.bankLease.sourcePath.hasSuffix("vgsave_created.inc"), cppID: flowID,
+            && session.bankLease.id.sourceRelativePath.hasSuffix("vgsave_created.inc"), cppID: flowID,
         message: "A034: accept creates the per-file group and binds _vgsave_created")
     report.expect(
         session.document.isDirty, cppID: flowID,
@@ -685,7 +686,7 @@ internal func runVoiceListNewVoicegroupChecks(_ report: CheckReport, fixtureRoot
         message: "A036: one undo restores the home -G binding")
     report.expect(
         session.bankLoadName == homeLoad
-            && session.bankLease.sourcePath.hasSuffix("test_vg.inc"), cppID: flowID,
+            && session.bankLease.id.sourceRelativePath.hasSuffix("test_vg.inc"), cppID: flowID,
         message: "A037: undo restores the home bank lease")
     let hub =
         (try? String(

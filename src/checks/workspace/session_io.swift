@@ -215,7 +215,7 @@ private func sessionReloadAtomicBinding(report: CheckReport, projectDir: String)
     original.selectedTrack = 0
     let selectedNotes = original.selectedNoteOrder
     let oldSlots = original.bankSlots
-    let oldBankSource = original.bankLease.sourcePath
+    let oldBankSource = original.bankLease.id.sourceRelativePath
     let midiURL = URL(fileURLWithPath: original.document.source.midiPath)
     do {
         var file = try MidiFile.decode(Array(Data(contentsOf: midiURL)))
@@ -242,7 +242,7 @@ private func sessionReloadAtomicBinding(report: CheckReport, projectDir: String)
             && original.document.source.label == "mus_session_test"
             && (try? original.document.state.file.encoded()) == oldMidi
             && original.bankLoadName == "test_vg"
-            && original.bankSlots == oldSlots && original.bankLease.sourcePath == oldBankSource
+            && original.bankSlots == oldSlots && original.bankLease.id.sourceRelativePath == oldBankSource
             && original.selectedTrack == 0 && original.selectedNoteOrder == selectedNotes,
         cppID: id,
         message: "A077 pending reload keeps the original MIDI bank and note selection selectable")
@@ -260,7 +260,7 @@ private func sessionReloadAtomicBinding(report: CheckReport, projectDir: String)
             if page.isReady || app.selectedDocument !== original
                 || (try? original.document.state.file.encoded()) != oldMidi
                 || original.bankLoadName != "test_vg" || original.bankSlots != oldSlots
-                || original.bankLease.sourcePath != oldBankSource
+                || original.bankLease.id.sourceRelativePath != oldBankSource
                 || original.selectedTrack != 0 || original.selectedNoteOrder != selectedNotes
             {
                 partialPublication = true
@@ -291,7 +291,7 @@ private func sessionReloadAtomicBinding(report: CheckReport, projectDir: String)
         changedMidi && replacement !== original
             && replacement.document.source.label == "mus_session_test"
             && replacement.bankLoadName == "test_vg"
-            && replacement.bankLease.sourcePath == "sound/voicegroups/test_vg.inc"
+            && replacement.bankLease.id.sourceRelativePath == "sound/voicegroups/test_vg.inc"
             && replacement.bankSlots.first?.voice?.release == 4
             && replacement.selectedTrack == 0 && replacement.selectedNoteOrder == selectedNotes,
         cppID: id,
@@ -651,8 +651,8 @@ internal func sessionOpenAndRecovery(
                 && before.1.constant == after.1.constant && before.1.player == after.1.player
                 && before.1.trackBudget == after.1.trackBudget && before.1.hasMid == after.1.hasMid
                 && before.1.hasCfg == after.1.hasCfg && before.1.registered == after.1.registered
-                && before.1.config == after.1.config && before.1.bankLoadName == after.1.bankLoadName
-                && before.1.bankDirty == after.1.bankDirty && before.1.midiBytes == after.1.midiBytes
+                && before.1.config == after.1.config && before.1.bank.loadName == after.1.bank.loadName
+                && before.1.bank.dirty == after.1.bank.dirty && before.1.midiBytes == after.1.midiBytes
                 && before.1.bankSlots == after.1.bankSlots,
             cppID: failedOpenID,
             message: "failed replacement still opens the original song with identical complete metadata")
@@ -764,7 +764,7 @@ internal func sessionFailureStages(
             }
             let document = live.document
             let midiPath = document.source.midiPath
-            let bankPath = root + "/" + live.bankLease.sourcePath
+            let bankPath = root + "/" + live.bankLease.id.sourceRelativePath
             guard let midiBefore = bytes(at: midiPath), let bankBefore = bytes(at: bankPath),
                 var voice = live.bankSlots.first?.voice
             else {
@@ -785,7 +785,7 @@ internal func sessionFailureStages(
             let stagedFile = document.state.file
             let stagedConfig = document.state.config
             let stagedSlots = live.bankSlots
-            let stagedLease = live.bankLease.bankToken
+            let stagedLease = live.bankLease
             let history = document.history
             let undoCount = history.undoCount
             let undoIndex = history.undoIndex
@@ -904,7 +904,7 @@ internal func sessionFailureStages(
                 expected: stagedSlots, actual: live.bankSlots,
                 cppID: scenario.id, what: "failed stage retains staged bank voices")
             report.expectEqual(
-                expected: stagedLease, actual: live.bankLease.bankToken,
+                expected: true, actual: live.bankLease.sharesBank(with: stagedLease),
                 cppID: scenario.id, what: "failed stage retains the bank lease")
             report.expectEqual(
                 expected: undoCount, actual: history.undoCount,
@@ -928,8 +928,8 @@ internal func sessionFailureStages(
                 expected: midiBefore, actual: Data(recovered.midiBytes),
                 cppID: scenario.id, what: "restored source opens original MIDI bytes")
             report.expectEqual(
-                expected: live.bankLease.sourcePath,
-                actual: recovered.bank.sourcePath, cppID: scenario.id,
+                expected: live.bankLease.id.sourceRelativePath,
+                actual: recovered.bank.id.sourceRelativePath, cppID: scenario.id,
                 what: "restored source opens the original bank")
             try runBlocking { try await live.save() }
             report.expectEqual(
@@ -972,7 +972,7 @@ internal func sessionFailureStages(
             try await service.openSong(label: "mus_session_test")
         }
         report.expectEqual(
-            expected: "sound/voicegroups/test_vg.inc", actual: normalized.bank.sourcePath,
+            expected: "sound/voicegroups/test_vg.inc", actual: normalized.bank.id.sourceRelativePath,
             cppID: "project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
             what: "native service publishes a project-relative normalized bank identity")
         report.expectEqual(

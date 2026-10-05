@@ -449,7 +449,7 @@ public final class VoiceListController: QmlUncreatable {
     /// already open: no dialog, no writes, no failure message.
     public func presentNewVoicegroup() {
         guard !newVoicegroupPrompt, !isLoading, let session, !session.isClosed else { return }
-        let source = session.bankLease.sourcePath
+        let source = session.bankLease.id.sourceRelativePath
         if source.isEmpty {
             newVoicegroupCopyLabel = ""
             newVoicegroupUseCopy = false
@@ -502,7 +502,7 @@ public final class VoiceListController: QmlUncreatable {
             else { return }
             do {
                 let lease = session.bankLease
-                let copyFile = useCopy ? lease.sourcePath : ""
+                let copyFile = useCopy ? lease.id.sourceRelativePath : ""
                 let copyLabel = useCopy ? lease.sectionLabel : ""
                 try await service.createVoicegroup(
                     name: name, copyFromFile: copyFile,
