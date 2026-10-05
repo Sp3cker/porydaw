@@ -25,6 +25,9 @@ duplicate gestures. -->
 Dragging a note across keys auditions its displayed pitch. Moving within the same
 key does not restart the sound; releasing or cancelling the drag stops it.
 
+Changing a note's key preserves its timing and the timing of untouched notes,
+including imported notes that share a MIDI note-off on the original key.
+
 On the same track, moving or pasting a group is refused if same-pitch notes
 partially overlap, contain one another, or share a start but have different ends,
 including moves that converge two notes onto exactly identical spans. Inserting
@@ -38,8 +41,12 @@ notes by this overlap rule.
 
 ## Resizing notes
 
-<!-- TODO: Grab an edge to lengthen/shorten; the effective (quantized)
-length shown inline — what the GBA will actually play. -->
+Drag the left edge to change a note's start while keeping its end fixed; pulling
+it earlier increases its duration. Drag the right edge to change its end.
+Moving the note body preserves its duration instead.
+
+Imported notes can share a MIDI note-off. Resizing one may trim an overlapping
+unselected note, but does not change the lengths of later, non-overlapping notes.
 
 When you extend the right edges of several selected notes, each earlier note
 stops at the next selected note's start on the same track and pitch. The last

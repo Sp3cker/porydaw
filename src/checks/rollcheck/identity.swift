@@ -7,6 +7,7 @@ func runIdentityChecks(_ report: CheckReport, session: DocumentSession) {
     checkDuplicateNoteIdentity(report, session: session)
     checkOrdinaryProjection(report, fixture: session)
     checkRetainedCosmetics(report, fixture: session)
+    checkSharedEndPitchMove(report, fixture: session)
 }
 
 @MainActor
@@ -244,4 +245,95 @@ private func checkRetainedCosmetics(_ report: CheckReport, fixture: DocumentSess
         message:
             "restoring captured live runtime state preserves all camera grid owner cursor and cosmetic values without MIDI edits"
     )
+}
+
+@MainActor
+private func checkSharedEndPitchMove(_ report: CheckReport, fixture: DocumentSession) {
+    let id = "swiftcore/PianoRoll::sharedEndPitchMove"
+    let source = MidiFile(
+        division: 24,
+        chunks: [
+            MidiChunk(
+                events: [
+                    .channel(tick: 24, status: 0x90, data0: 69, data1: 100),
+                    .channel(tick: 48, status: 0x90, data0: 69, data1: 90),
+                    .channel(tick: 72, status: 0x80, data0: 69),
+                    .channel(tick: 96, status: 0x90, data0: 69, data1: 80),
+                    .channel(tick: 120, status: 0x80, data0: 69),
+                ], endTick: 144)
+        ])
+    do {
+        let document = SongDocument(
+            file: try MidiFile.decode(source.encoded()),
+            config: fixture.document.state.config, source: fixture.document.source)
+        let session = DocumentSession(
+            document: document, service: fixture.service,
+            lease: fixture.bankLease, slots: fixture.bankSlots,
+            dirty: false, loadName: fixture.bankLoadName)
+        session.selectedTrack = 0
+        let grid = makeCameraGrid(session: session, zoom: 140)
+        let notes = document.notes(in: 0)
+        guard notes.count == 3, let rect = selectionRect(notes[1].id, grid: grid) else {
+            report.fail(id, "shared-end MIDI pitch-move fixture is not projected")
+            return
+        }
+        let before = try document.captureSave().bytes
+        let x = rect.x + rect.width / 2
+        let y = rect.y + rect.height / 2
+        let destinationY = y - session.camera.snapshot.keyHeight
+        grid.beginPointer(x: x, y: y, modifiers: 0)
+        grid.updatePointer(x: x, y: destinationY)
+        grid.endPointer(x: x, y: destinationY)
+        report.expect(
+            document.note(notes[1].id).map {
+                $0.tick == 48 && $0.duration == 24 && $0.pitch == 70
+            } == true, cppID: id, message: "body drag changes pitch without changing the moved interval")
+        report.expect(
+            [notes[0], notes[2]].allSatisfy { original in
+                document.note(original.id).map {
+                    $0.tick == original.tick && $0.duration == original.duration
+                        && $0.pitch == original.pitch && $0.velocity == original.velocity
+                } == true
+            }, cppID: id, message: "pitch move preserves the shared-end sibling and following note")
+        let edited = try document.captureSave().bytes
+        let reopened = SongDocument(file: try MidiFile.decode(edited))
+        report.expectEqual(
+            expected: [Tick(48), 24, 24], actual: reopened.notes(in: 0).map(\.duration),
+            cppID: id, what: "saved MIDI preserves unmoved note lengths after a pitch drag")
+        let undone = document.history.undoDocument()
+        let undoBytes = try document.captureSave().bytes
+        report.expect(
+            undone && undoBytes == before, cppID: id,
+            message: "Undo restores the imported shared note-off")
+        let redone = document.history.redoDocument()
+        let redoBytes = try document.captureSave().bytes
+        report.expect(
+            redone && redoBytes == edited, cppID: id,
+            message: "Redo restores the pitch move without changing other note intervals")
+        let collision = SongDocument(file: try MidiFile.decode(source.encoded()))
+        let collisionNotes = collision.notes(in: 0)
+        guard
+            let moving = try collision.addNotes([
+                NewNote(track: 0, tick: 36, pitch: 68, duration: 12, velocity: 75)
+            ]).first
+        else {
+            report.fail(id, "destination overlap fixture could not create its moving note")
+            return
+        }
+        collision.moveNotes([moving], byTicks: 0, byKeys: 1)
+        report.expect(
+            collision.note(collisionNotes[0].id).map { $0.tick == 24 && $0.endTick == 36 } == true,
+            cppID: id, message: "moving into an occupied pitch trims only the overlapping predecessor")
+        report.expect(
+            collision.note(collisionNotes[1].id).map { $0.tick == 48 && $0.endTick == 72 } == true
+                && collision.note(collisionNotes[2].id).map { $0.tick == 96 && $0.endTick == 120 } == true,
+            cppID: id, message: "notes at and after the moved note's end keep their original intervals")
+        let collisionReopened = SongDocument(
+            file: try MidiFile.decode(collision.captureSave().bytes))
+        report.expectEqual(
+            expected: [Tick(12), 12, 24, 24], actual: collisionReopened.notes(in: 0).map(\.duration),
+            cppID: id, what: "destination collision preserves shared endings when saved and reopened")
+    } catch {
+        report.fail(id, "shared-end pitch move failed: \(error)")
+    }
 }

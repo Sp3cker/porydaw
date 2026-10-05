@@ -65,10 +65,14 @@ extension SongDocument {
         guard participantsAreCompatible(spans, allowExactDuplicates: true) else {
             throw NoteEditError.conflictingEditedNotes
         }
-        applyEditedWins(spans: spans, editedIDs: Set(), to: &mutation)
         var insertedIDs: [NoteID] = []
         insertedIDs.reserveCapacity(notes.count)
+        var removals = Array(repeating: [Int](), count: mutation.state.file.chunks.count)
         var insertions = Array(repeating: [MidiEvent](), count: mutation.state.file.chunks.count)
+        var replacedEnds: Set<NoteID> = []
+        collectEditedWins(
+            spans: spans, editedIDs: Set(), source: mutation.state,
+            removals: &removals, insertions: &insertions, replacedEnds: &replacedEnds)
         for note in notes {
             guard let mapping = mapping(for: note.track, in: mutation.state.file) else {
                 throw NoteEditError.invalidTrack(note.track)
@@ -85,8 +89,9 @@ extension SongDocument {
                     tick: note.tick + duration, status: 0x90 | mapping.channel,
                     data0: note.pitch, data1: 0))
         }
-        for chunk in insertions.indices where !insertions[chunk].isEmpty {
-            mutation.apply(removing: [], inserting: insertions[chunk], chunk: chunk)
+        retainSharedEnds(source: mutation.state, replacedEnds: replacedEnds, removals: &removals)
+        for chunk in insertions.indices where !removals[chunk].isEmpty || !insertions[chunk].isEmpty {
+            mutation.apply(removing: removals[chunk], inserting: insertions[chunk], chunk: chunk)
         }
         commit(mutation, group: nil, operation: .addNotes)
         return insertedIDs
@@ -296,24 +301,18 @@ extension SongDocument {
         if active.isEmpty, group == nil { return true }
         guard participantsAreCompatible(spans, allowExactDuplicates: false) else { return false }
         var mutation = DocumentMutation(base)
-        let activeIDs = active.map { ids[$0] }
-        applyEditedWins(
-            spans: spans, editedIDs: Set(ids),
-            to: &mutation, reference: base)
-        let editedTracks = Set(relocations.map { $0.original.track })
-        var removals = Array(repeating: [Int](), count: mutation.state.file.chunks.count)
-        var insertions = Array(repeating: [MidiEvent](), count: mutation.state.file.chunks.count)
-        if let selectedInCandidate = resolve(
-            activeIDs, in: mutation.state,
-            tracks: editedTracks)
-        {
-            collectRemovals(selectedInCandidate, into: &removals)
-        } else if !activeIDs.isEmpty {
-            return false
-        }
+        var removals = Array(repeating: [Int](), count: base.file.chunks.count)
+        var insertions = Array(repeating: [MidiEvent](), count: base.file.chunks.count)
+        var replacedEnds: Set<NoteID> = []
+        collectEditedWins(
+            spans: spans, editedIDs: Set(ids), source: base,
+            removals: &removals, insertions: &insertions, replacedEnds: &replacedEnds)
         for index in active {
             let relocation = relocations[index]
             let note = relocation.original
+            removals[note.chunk].append(note.onIndex)
+            if let endIndex = note.endIndex { removals[note.chunk].append(endIndex) }
+            replacedEnds.insert(note.id)
             var on = base.file.chunks[note.chunk].events[note.onIndex]
             on.tick = relocation.tick
             if case let .channel(status, _, velocity) = on.payload {
@@ -339,6 +338,7 @@ extension SongDocument {
                 insertions[note.chunk].append(end)
             }
         }
+        retainSharedEnds(source: base, replacedEnds: replacedEnds, removals: &removals)
         for chunk in removals.indices {
             guard !removals[chunk].isEmpty || !insertions[chunk].isEmpty else { continue }
             mutation.apply(
@@ -386,18 +386,15 @@ extension SongDocument {
         }
     }
 
-    private func applyEditedWins(
-        spans: [PlannedNote], editedIDs: Set<NoteID>,
-        to mutation: inout DocumentMutation,
-        reference: SongState? = nil
+    private func collectEditedWins(
+        spans: [PlannedNote], editedIDs: Set<NoteID>, source: SongState,
+        removals: inout [[Int]], insertions: inout [[MidiEvent]],
+        replacedEnds: inout Set<NoteID>
     ) {
         guard !spans.isEmpty else { return }
-        let source = reference ?? mutation.state
         let orderedSpans = spans.sorted {
             ($0.track, $0.pitch, $0.tick) < ($1.track, $1.pitch, $1.tick)
         }
-        var removals = Array(repeating: [Int](), count: source.file.chunks.count)
-        var insertions = Array(repeating: [MidiEvent](), count: source.file.chunks.count)
         let sortedTracks = orderedSpans.map(\.track).sorted()
         var affectedTracks: [Int] = []
         affectedTracks.reserveCapacity(sortedTracks.count)
@@ -432,6 +429,7 @@ extension SongDocument {
                         break
                     }
                 }
+                if covered || trimEnd { replacedEnds.insert(stationary.id) }
                 if covered {
                     removals[stationary.chunk].append(stationary.onIndex)
                     if let endIndex = stationary.endIndex {
@@ -453,11 +451,17 @@ extension SongDocument {
                 }
             }
         }
-        for chunk in removals.indices {
-            guard !removals[chunk].isEmpty || !insertions[chunk].isEmpty else { continue }
-            mutation.apply(
-                removing: removals[chunk], inserting: insertions[chunk],
-                chunk: chunk)
+    }
+
+    private func retainSharedEnds(
+        source: SongState, replacedEnds: Set<NoteID>, removals: inout [[Int]]
+    ) {
+        for notes in projection(for: source).tracks {
+            guard let chunk = notes.first?.chunk, !removals[chunk].isEmpty else { continue }
+            removals[chunk].removeAll { index in
+                source.file.chunks[chunk].events[index].isNoteEnd
+                    && notes.contains { $0.endIndex == index && !replacedEnds.contains($0.id) }
+            }
         }
     }
 }

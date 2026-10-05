@@ -25,6 +25,7 @@ func runResizeChecks(_ report: CheckReport, session: DocumentSession) {
     checkResizeAbutting(report, session: session)
     checkResizeHoverCursor(report, session: session)
     checkEdgeResize(report, session: session)
+    checkResizeSharedEnd(report, fixture: session)
 }
 
 private struct ResizeCell {
@@ -622,4 +623,77 @@ private func checkEdgeResize(_ report: CheckReport, session: DocumentSession) {
                 Int($0.tick) == 240 && Int($0.duration) == 12 - snap
             } == true,
         cppID: id, message: "boundary-right drag resizes the right note's start only")
+}
+
+@MainActor
+private func checkResizeSharedEnd(_ report: CheckReport, fixture: DocumentSession) {
+    let id = "swiftcore/PianoRoll::resizeSharedEnd"
+    let source = MidiFile(
+        division: 24,
+        chunks: [
+            MidiChunk(
+                events: [
+                    .channel(tick: 24, status: 0x90, data0: 69, data1: 100),
+                    .channel(tick: 48, status: 0x90, data0: 69, data1: 90),
+                    .channel(tick: 72, status: 0x80, data0: 69),
+                    .channel(tick: 96, status: 0x90, data0: 69, data1: 80),
+                    .channel(tick: 120, status: 0x80, data0: 69),
+                    .channel(tick: 144, status: 0x90, data0: 69, data1: 70),
+                    .channel(tick: 168, status: 0x80, data0: 69),
+                ], endTick: 192)
+        ])
+    do {
+        let document = SongDocument(
+            file: try MidiFile.decode(source.encoded()),
+            config: fixture.document.state.config, source: fixture.document.source)
+        let session = DocumentSession(
+            document: document, service: fixture.service,
+            lease: fixture.bankLease, slots: fixture.bankSlots,
+            dirty: false, loadName: fixture.bankLoadName)
+        session.selectedTrack = 0
+        let grid = makeCameraGrid(session: session, zoom: 140)
+        let notes = document.notes(in: 0)
+        guard notes.count == 4, let rect = selectionRect(notes[1].id, grid: grid) else {
+            report.fail(id, "shared-end MIDI fixture is not projected")
+            return
+        }
+        let before = try document.captureSave().bytes
+        let x = rect.x + 1
+        let y = rect.y + rect.height / 2
+        let pull = x - 12 * session.camera.snapshot.pixelsPerTick
+        grid.beginPointer(x: x, y: y, modifiers: 0)
+        grid.updatePointer(x: pull, y: y)
+        grid.endPointer(x: pull, y: y)
+        report.expect(
+            document.note(notes[1].id).map { $0.tick == 36 && $0.endTick == 72 } == true,
+            cppID: id, message: "leading resize moves the grabbed start without moving its end")
+        report.expect(
+            document.note(notes[0].id).map { $0.tick == 24 && $0.endTick == 36 } == true,
+            cppID: id, message: "the overlapping predecessor ends at the resized start")
+        report.expect(
+            notes.dropFirst(2).allSatisfy { original in
+                document.note(original.id).map {
+                    $0.tick == original.tick && $0.duration == original.duration
+                        && $0.pitch == original.pitch && $0.velocity == original.velocity
+                } == true
+            }, cppID: id, message: "later same-pitch notes retain their starts and durations")
+        let edited = try document.captureSave().bytes
+        let reopened = SongDocument(file: try MidiFile.decode(edited))
+        report.expectEqual(
+            expected: [Tick(12), 36, 24, 24],
+            actual: reopened.notes(in: 0).map(\.duration),
+            cppID: id, what: "saved MIDI preserves the resized and unaffected note lengths")
+        let undone = document.history.undoDocument()
+        let undoBytes = try document.captureSave().bytes
+        report.expect(
+            undone && undoBytes == before,
+            cppID: id, message: "Undo restores the original shared-end MIDI")
+        let redone = document.history.redoDocument()
+        let redoBytes = try document.captureSave().bytes
+        report.expect(
+            redone && redoBytes == edited,
+            cppID: id, message: "Redo restores the corrected MIDI edit")
+    } catch {
+        report.fail(id, "shared-end MIDI resize failed: \(error)")
+    }
 }
