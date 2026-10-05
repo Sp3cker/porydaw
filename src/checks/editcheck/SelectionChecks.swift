@@ -2,6 +2,7 @@
 import Foundation
 import PorydawAppCommands
 import PorydawCore
+@testable import PorydawDocument
 
 @MainActor
 func runClipboardSelectionChecks(

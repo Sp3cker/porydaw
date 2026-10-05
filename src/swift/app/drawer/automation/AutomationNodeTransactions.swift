@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 
 // Node-drag, projected-origin, and captured value-prompt transactions. They
 // resolve frozen interaction state only; document mutation remains in AutomationCommit.

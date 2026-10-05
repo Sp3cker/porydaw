@@ -1,4 +1,5 @@
 import Foundation
+import PorydawDocument
 
 @MainActor
 extension ApplicationSession {

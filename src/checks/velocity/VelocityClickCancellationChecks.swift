@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 @MainActor
 func drawerVelocityPressCancelRestores(_ report: CheckReport, session: DocumentSession, service: ProjectService) {
     let fixture = drawerVelocityVelocityFixture(session: session, service: service)

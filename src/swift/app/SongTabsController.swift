@@ -1,4 +1,5 @@
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 /// One open song's QML-facing facade: the `applicationSession` a page binds.

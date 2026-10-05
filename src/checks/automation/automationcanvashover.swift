@@ -2,6 +2,7 @@ import Foundation
 @testable import PorydawApp
 @testable import PorydawAppCommands
 import PorydawCore
+@testable import PorydawDocument
 
 let drawerAutomationHoverModelID = "swiftcore/AutomationPage::hoverModel"
 

@@ -1,6 +1,7 @@
 import Foundation
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 
 @MainActor
 final class NoteCommands {

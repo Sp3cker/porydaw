@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 
 // Coordinate mapping and identity facts for automation input.
 

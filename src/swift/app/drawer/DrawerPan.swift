@@ -1,3 +1,5 @@
+import PorydawDocument
+
 enum DrawerPan {
     static let dragDistanceSeed: Double = 10
 

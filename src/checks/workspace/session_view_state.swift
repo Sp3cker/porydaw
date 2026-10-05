@@ -3,6 +3,7 @@ import Foundation
 @testable import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+@testable import PorydawDocument
 
 private func sameSessionPreference(_ lhs: Any?, _ rhs: Any?) -> Bool {
     guard let lhs, let rhs else { return lhs == nil && rhs == nil }

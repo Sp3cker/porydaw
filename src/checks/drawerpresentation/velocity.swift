@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 @MainActor
 func drawerVelocityValueAxisLadder(_ report: CheckReport) {

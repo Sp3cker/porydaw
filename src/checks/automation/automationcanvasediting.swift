@@ -2,6 +2,7 @@ import Foundation
 @testable import PorydawApp
 @testable import PorydawAppCommands
 import PorydawCore
+@testable import PorydawDocument
 
 // Existing scenarios paired with automationcanvasediting.cpp.
 // Entry order remains in AutomationPageChecks.swift.

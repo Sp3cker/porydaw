@@ -1,5 +1,6 @@
 import NativeGridTypography
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 

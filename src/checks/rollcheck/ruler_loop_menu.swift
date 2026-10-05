@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 import PorydawAppCommands
 
 // The original resize seed requests a free cell near tick 88. The synthetic

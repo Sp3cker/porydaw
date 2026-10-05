@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 
 let drawerVelocityPaintID = "swiftcore/VelocityPaintDetent::paintCommitsOnce"
 let drawerVelocityRampID = "swiftcore/VelocityPaintDetent::rampCommitsOnce"

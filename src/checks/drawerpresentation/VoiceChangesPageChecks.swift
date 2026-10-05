@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 // Direct coverage for the Voice Changes page. The pure layer (labels, context
 // resolution, hit testing and occurrence identity) is driven with synthetic

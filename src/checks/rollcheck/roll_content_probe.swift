@@ -4,6 +4,7 @@ import PorydawCore
 import QtBridge
 
 @testable import PorydawApp
+@testable import PorydawDocument
 
 /// Plot geometry decodes from displayList(0); note entries join decoded fills with grid domain state.
 @MainActor struct RollContentProbe {

@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 let drawerVelocityRollMirrorID = "swiftcore/VelocityRollCore::rollDragMovesDrawerNodes"
 

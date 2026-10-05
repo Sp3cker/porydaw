@@ -1,6 +1,7 @@
 import Foundation
 import NativeDisplayList
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 #if canImport(CoreGraphics)

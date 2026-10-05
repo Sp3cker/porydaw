@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 /// Clamp before QtTracked publishes a write; its generated didSet cannot be customized.

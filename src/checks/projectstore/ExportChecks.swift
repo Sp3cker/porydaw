@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppAudio
 import PorydawCore
+import PorydawDocument
 
 private enum ExportCheckError: Error {
     case failed(String)

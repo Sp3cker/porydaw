@@ -3,6 +3,7 @@ import PorydawApp
 import PorydawAppAudio
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 import QtBridge
 import QtBridgeCpp
 

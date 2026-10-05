@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppEventList
 import PorydawCore
+import PorydawDocument
 
 private let tintLastOfRunID = "eventviews/EventViewsPlayheadTest::tintLastOfRun"
 internal let focusCommitsCursorID = "eventviews/EventViewsPlayheadTest::focusCommitsCursor"

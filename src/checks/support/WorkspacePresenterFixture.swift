@@ -1,4 +1,5 @@
 import PorydawApp
+import PorydawDocument
 
 @MainActor
 struct WorkspacePresenterFixture {

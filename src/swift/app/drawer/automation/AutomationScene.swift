@@ -1,4 +1,5 @@
 import PorydawCore
+import PorydawDocument
 
 // Automation scene-state vocabulary: the document-derived snapshot one static
 // build produces, the gesture preview draft, the effective-context values, the

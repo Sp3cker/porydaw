@@ -1,4 +1,5 @@
 import PorydawCore
+import PorydawDocument
 
 // The velocity band's plot-relative projection. The page's own hit tests and
 // the scene's handle and band rows read the same x/y maths from this one value,

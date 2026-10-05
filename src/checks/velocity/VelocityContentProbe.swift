@@ -1,6 +1,7 @@
 import Foundation
 import NativeDisplayList
 import PorydawCore
+@testable import PorydawDocument
 
 @testable import PorydawApp
 @MainActor

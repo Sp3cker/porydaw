@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 
 // Velocity maps resolve from the published bank's owned per-key native facts.
 // A split without a note key is keyless; absent or invalid child facts never

@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 // Sweep-transaction scenarios paired with gestures.cpp.
 // Entry order remains in AutomationPageChecks.swift.

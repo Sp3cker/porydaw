@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+import PorydawDocument
 
 // Interaction and edit-intent checks; shared fixture lives in VoiceListChecks.swift.
 

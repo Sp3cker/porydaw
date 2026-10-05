@@ -1,4 +1,5 @@
 import PorydawApp
+import PorydawDocument
 
 @MainActor
 func runGateChecks(_ report: CheckReport, session: DocumentSession) {

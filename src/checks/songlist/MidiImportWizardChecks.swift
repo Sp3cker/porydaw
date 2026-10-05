@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 import PorydawProject
 
 @MainActor
@@ -15,7 +16,7 @@ internal func runMidiImportWizardChecks(_ report: CheckReport, fixtureRoot: Stri
     ] {
         report.expectEqual(
             expected: expected,
-            actual: SongListPresenter.acceptSongLabelEdit(previous: previous, proposed: proposed),
+            actual: SongLabelPolicy.acceptEdit(previous: previous, proposed: proposed),
             cppID: id, what: "whole edit \(String(reflecting: proposed)) from \(String(reflecting: previous))")
     }
 

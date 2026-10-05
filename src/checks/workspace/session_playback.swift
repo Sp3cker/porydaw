@@ -3,6 +3,7 @@ import Foundation
 import PorydawAppAudio
 import PorydawCore
 import PorydawCoreCheckNative
+@testable import PorydawDocument
 import PorydawPlayback
 import PorydawPlaybackNative
 

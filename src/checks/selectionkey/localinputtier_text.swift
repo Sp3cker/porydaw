@@ -1,6 +1,7 @@
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 
 @MainActor
 func drawerOriginalNumericPromptTransaction(

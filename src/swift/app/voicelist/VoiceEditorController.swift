@@ -1,4 +1,5 @@
 import Foundation
+import PorydawDocument
 import PorydawProject
 import QtBridge
 

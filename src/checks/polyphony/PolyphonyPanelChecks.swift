@@ -2,6 +2,7 @@ import Foundation
 import PorydawCore
 @testable import PorydawApp
 @testable import PorydawAppAudio
+@testable import PorydawDocument
 import PorydawPlaybackNative
 
 @MainActor

@@ -1,4 +1,5 @@
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 // Automation content publication: the page's session reads and projection

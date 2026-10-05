@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 let drawerVelocityClickSelectionID = "swiftcore/VelocityClickSelection::clickSelection"
 let drawerVelocityHitPriorityID = "swiftcore/VelocityHitPriority::hitPriority"

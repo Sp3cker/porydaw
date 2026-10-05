@@ -1,5 +1,6 @@
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 @MainActor
 func makeSyntheticSession(

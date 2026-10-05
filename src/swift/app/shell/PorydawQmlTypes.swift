@@ -1,3 +1,4 @@
+import PorydawDocument
 import QtBridge
 
 /// The QtBridge types registered by both the application and its build-time tooling.

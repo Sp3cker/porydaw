@@ -2,17 +2,6 @@ set(SWIFT_GRID_DIR "${CMAKE_SOURCE_DIR}/src/ui/songview/quick/swiftroll")
 set(SWIFT_GRID_NATIVE_DIR "${SWIFT_GRID_DIR}/native")
 
 add_library(PorydawApp STATIC
-    ProjectService.swift
-    ProjectService+Songs.swift
-    ProjectService+Bank.swift
-    ProjectService+Picker.swift
-    ProjectService+Samples.swift
-    ProjectService+Import.swift
-    SharedBankState.swift
-    ServiceBankHistory.swift
-    DocumentSession.swift
-    DocumentSession+Selection.swift
-    DocumentSession+Internals.swift
     DocumentWorkspace.swift
     NativeAudio.swift
     export/WavExportJob.swift
@@ -57,12 +46,10 @@ add_library(PorydawApp STATIC
     songlist/SongListPresenter.swift
     songlist/SongDockController.swift
     songlist/SongIntake.swift
-    voicelist/VoiceListSemantics.swift
     voicelist/VoiceListController.swift
     voicelist/VoiceListController+Bank.swift
     voicelist/SamplePickerRows.swift
     voicelist/VoiceEditorController.swift
-    voicelist/VoicegroupCatalog.swift
     MouseHints.swift
     QListModelSync.swift
     QmlEngineAccess.swift
@@ -88,24 +75,17 @@ add_library(PorydawApp STATIC
     pitchbend/PitchBendKernel.swift
     pitchbend/PitchBendScene.swift
     pitchbend/PitchBendPresenter.swift
-    timeline/EditorCamera.swift
-    timeline/ScaleProjection.swift
-    timeline/EditorViewStateCodec.swift
+    timeline/EditorViewStatePreferences.swift
     timeline/TimelineScrollbar.swift
-    timeline/DocumentProjectionCache.swift
     timeline/PlayheadGuides.swift
     timeline/SharedPlayhead.swift
-    timeline/TimeAxis.swift
     timeline/DisplayListWriter.swift
-    timeline/GridGeometry.swift
     timeline/GridPalette.swift
     timeline/ThemeColorTables.swift
     timeline/GridTypography.swift
     timeline/RulerMenuPresenter.swift
-    timeline/TimelineSnapPolicy.swift
     drawer/EditorDrawer.swift
     drawer/PromptAppearance.swift
-    drawer/EditorDrawerTypes.swift
     drawer/EditorDrawerLayout.swift
     drawer/DrawerPan.swift
     drawer/LaneCaptionMetrics.swift
@@ -127,7 +107,6 @@ add_library(PorydawApp STATIC
     drawer/voicechanges/VoiceChangesInteraction.swift
     drawer/voicechanges/VoiceChangesPublication.swift
     drawer/voicechanges/VoiceChangesPage.swift
-    drawer/automation/AutomationParameter.swift
     drawer/automation/AutomationLaneProjection.swift
     drawer/automation/AutomationProjection.swift
     drawer/automation/AutomationProjectionCache.swift
@@ -231,7 +210,7 @@ target_compile_options(PorydawApp PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
 )
 
-target_link_libraries(PorydawApp PUBLIC PorydawCore PorydawPlayback PorydawProject PorydawSample QtBridge Qt6::Gui)
+target_link_libraries(PorydawApp PUBLIC PorydawCore PorydawDocument PorydawPlayback PorydawProject PorydawSample QtBridge Qt6::Gui)
 
 add_dependencies(PorydawApp QtBridgeMacros)
 

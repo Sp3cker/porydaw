@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 let drawerVelocityRollCoreFixtureID = "swiftcore/VelocityRollCore::fixtureFacts"

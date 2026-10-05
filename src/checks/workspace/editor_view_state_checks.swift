@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCoreCheckNative
+@testable import PorydawDocument
 
 @MainActor
 func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {

@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 // Existing scenarios paired with voice.cpp.
 // Entry order remains in VoiceChangesPageChecks.swift.

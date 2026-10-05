@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 import PorydawNativeHost
 
 // Existing scenarios paired with automationclipboard.cpp.

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import PorydawProject
 import QtBridge
 import PorydawAppAudio
@@ -202,7 +203,7 @@ extension ApplicationSession {
                 session.setScale(type: tab.scale.scale)
                 session.setScale(highlight: tab.scale.highlight)
                 session.setScale(fold: tab.scale.fold)
-                session.selectedTracks = Set(tab.selectedTracks.filter { usedTracks.contains($0) })
+                session.restoreTrackScope(tab.selectedTracks)
                 session.mutedTracks = Set(tab.mutedTracks.filter { usedTracks.contains($0) })
                 session.soloedTracks = Set(tab.soloedTracks.filter { usedTracks.contains($0) })
                 if tab.timeSelection == nil {

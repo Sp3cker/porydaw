@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppAudio
 import PorydawCore
+import PorydawDocument
 import PorydawPlaybackNative
 
 private enum CaptureCheckError: Error {

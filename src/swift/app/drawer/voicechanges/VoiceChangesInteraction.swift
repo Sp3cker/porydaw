@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 
 // Voice changes interactions freeze and revalidate revision and occurrence identity.
 // Qt-facing entries stay on VoiceChangesPage; this extension uses the page's own state.

@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 
 @MainActor
 func drawerVelocityProgramFlowChecks(_ report: CheckReport, session: DocumentSession, service: ProjectService) {

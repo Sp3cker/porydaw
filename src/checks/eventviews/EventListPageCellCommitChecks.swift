@@ -2,6 +2,7 @@ import Foundation
 @testable import PorydawApp
 import QtBridge
 import PorydawCore
+@testable import PorydawDocument
 import PorydawAppEventList
 import PorydawAppCommands
 

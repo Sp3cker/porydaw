@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 
 @MainActor
 func runKeyboardParityChecks(_ report: CheckReport, session: DocumentSession) {

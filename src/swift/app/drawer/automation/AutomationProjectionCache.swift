@@ -1,4 +1,5 @@
 import PorydawCore
+import PorydawDocument
 
 /// Page-owned domain facts, independent of camera and paint. Frozen gestures
 /// retain value snapshots when the live revision advances.

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 // Owns velocity projection, input and prompt transactions for the current document.

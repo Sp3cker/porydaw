@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 
 // Direct coverage for the Velocity page. The pure layers (voice context, the
 // value axis, the frozen gesture, the prompt transaction) are driven with

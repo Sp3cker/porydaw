@@ -1,5 +1,6 @@
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 
 // VelocityArea pointer and prompt machinery; each completed gesture commits at most once.
 // Qt-facing entries stay on VelocityPage; this extension owns no separate state or bridge.

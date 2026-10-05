@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 import QtBridge
 
 func pitchBendFixtureSnap(_ tick: Double, fine: Bool) -> Int {

@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+import PorydawDocument
 import PorydawPlayback
 
 internal func operationFailureMessage(_ error: Error) -> String? {

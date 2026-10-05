@@ -3,7 +3,7 @@ import PorydawCore
 /// Session-scoped, document-only projections. Bank and presentation state are
 /// deliberately absent: their changes need not advance the document revision.
 @MainActor
-final class DocumentProjectionCache {
+public final class DocumentProjectionCache {
     private struct LaneKey: Hashable {
         let track: Int
         let lane: Lane
@@ -20,7 +20,7 @@ final class DocumentProjectionCache {
         self.session = session
     }
 
-    func notes(in track: Int) -> [Note] {
+    public func notes(in track: Int) -> [Note] {
         invalidateIfNeeded()
         if let notes = trackNotes[track] { return notes }
         let notes = session.document.notes(in: track)
@@ -28,7 +28,7 @@ final class DocumentProjectionCache {
         return notes
     }
 
-    func note(_ id: NoteID, in track: Int) -> Note? {
+    public func note(_ id: NoteID, in track: Int) -> Note? {
         let notes = notes(in: track)
         if noteIndices[track] == nil {
             var indices: [NoteID: Int] = [:]
@@ -42,7 +42,7 @@ final class DocumentProjectionCache {
         return notes[index]
     }
 
-    func lanePoints(track: Int, lane: Lane) -> [LanePoint] {
+    public func lanePoints(track: Int, lane: Lane) -> [LanePoint] {
         invalidateIfNeeded()
         let key = LaneKey(track: track, lane: lane)
         if let points = lanes[key] { return points }
@@ -51,7 +51,7 @@ final class DocumentProjectionCache {
         return points
     }
 
-    var timeAxis: TimeAxis {
+    public var timeAxis: TimeAxis {
         invalidateIfNeeded()
         if let axis = cachedTimeAxis { return axis }
         let timeline = session.timeline

@@ -1,12 +1,12 @@
 import Foundation
 import Synchronization
 
-internal struct BankBindingIdentity: Hashable {
+public struct BankBindingIdentity: Hashable, Sendable {
     let owner: UUID
     let sourcePath: String
     let sectionLabel: String
 
-    init(_ lease: NativeBankLease) {
+    public init(_ lease: NativeBankLease) {
         owner = lease.publicationOwner
         sourcePath = lease.sourcePath
         sectionLabel = lease.sectionLabel
@@ -59,7 +59,7 @@ internal final class SharedBankState {
     }
 }
 
-internal final class ProjectBankViews: Sendable {
+public final class ProjectBankViews: Sendable {
     private let owner = Mutex<UUID?>(nil)
     @MainActor private var statesOwner: UUID?
     @MainActor private var states: [BankBindingIdentity: SharedBankState] = [:]
@@ -109,7 +109,7 @@ internal final class ProjectBankViews: Sendable {
     }
 
     @MainActor
-    func dirtyBanks() -> [AppliedBankEdit] {
+    public func dirtyBanks() -> [AppliedBankEdit] {
         _ = currentOwner()
         return states.values.map(\.value).filter(\.dirty).sorted {
             ($0.lease.sourcePath, $0.lease.sectionLabel) < ($1.lease.sourcePath, $1.lease.sectionLabel)

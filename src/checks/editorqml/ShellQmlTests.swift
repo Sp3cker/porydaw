@@ -1,6 +1,7 @@
 import Foundation
 import PorydawAppCommands
 import PorydawCore
+@testable import PorydawDocument
 import PorydawNativeHost
 import PorydawPlaybackNative
 import QtBridge

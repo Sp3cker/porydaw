@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 // Pencil-stroke scenarios paired with gestures.cpp.
 // Entry order remains in AutomationPageChecks.swift.

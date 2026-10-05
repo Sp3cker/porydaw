@@ -1,6 +1,7 @@
 import Foundation
 import NativeDisplayList
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 // Band-1 keyboard display list: hover and edge records emit as ordinary

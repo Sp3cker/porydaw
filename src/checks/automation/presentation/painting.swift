@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 // Existing scenarios paired with painting.cpp.
 // Entry order remains in AutomationPageChecks.swift.

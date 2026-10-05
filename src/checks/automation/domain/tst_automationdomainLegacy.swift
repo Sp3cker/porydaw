@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 // Exact legacy tempo/CC row fixtures for the resolver and commit boundary.
 @MainActor

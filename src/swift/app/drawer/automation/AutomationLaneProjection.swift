@@ -1,24 +1,13 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 
 // The pure Automation lane domain: projected points and curve segments, the
-// frozen lane snapshot, the explicit time selection, the projected lane, the
+// frozen lane snapshot, the projected lane, the
 // display row stack, and the shared partition index. Its only document reads
 // are `SongDocument.lanePoints(track:lane:)` and `SongDocument.state.tempo`.
 
 // MARK: - Projected values
-
-/// A stored lane value with its tick: the document-independent pair the
-/// transactions and the projected curve both carry.
-public struct AutomationLanePoint: Equatable, Sendable {
-    public var tick: Tick
-    public var value: Int
-
-    public init(tick: Tick, value: Int) {
-        self.tick = tick
-        self.value = value
-    }
-}
 
 /// The stable identity of one projected point: the document revision it was read
 /// at, its parameter, its tick, the document occurrence handle that survives
@@ -211,59 +200,6 @@ public struct AutomationLaneSnapshot: Equatable, Sendable {
         }
         return series
     }
-}
-
-// MARK: - Selection
-
-/// The explicit time selection the page publishes for its parameters, with the
-/// production coverage rules of `EditorSelectionModel::TimeSelection`.
-public struct AutomationTimeSelection: Equatable, Sendable {
-    public enum Scope: Equatable, Sendable {
-        /// A scope derived from the shared track selection.
-        case tracks(Set<Int>)
-        /// An explicit lane list plus the song-global Tempo flag.
-        case lanes
-    }
-
-    public var range: TimeRange
-    public var scope: Scope
-    public var lanes: Set<AutomationParameter>
-    public var tempo: Bool
-
-    public init(
-        range: TimeRange, scope: Scope = .lanes,
-        lanes: Set<AutomationParameter> = [], tempo: Bool = false
-    ) {
-        self.range = range
-        self.scope = scope
-        self.lanes = lanes
-        self.tempo = tempo
-    }
-
-    /// `endTick > startTick`: a zero-width selection is no selection.
-    public var isActive: Bool { range.endTick > range.startTick }
-
-    public func covers(_ parameter: AutomationParameter, usedTracks: Set<Int>) -> Bool {
-        guard isActive else { return false }
-        switch scope {
-        case .lanes: return parameter.isTempo ? tempo : lanes.contains(parameter)
-        case let .tracks(trackScope):
-            if parameter.isTempo { return coversTempo(usedTracks: usedTracks) }
-            guard let track = parameter.track else { return false }
-            return trackScope.contains(track) && usedTracks.contains(track)
-        }
-    }
-
-    public func coversTempo(usedTracks: Set<Int>) -> Bool {
-        guard isActive else { return false }
-        switch scope {
-        case .lanes: return tempo
-        case let .tracks(trackScope):
-            return !usedTracks.isEmpty && trackScope.intersection(usedTracks) == usedTracks
-        }
-    }
-
-    public func contains(_ tick: Tick) -> Bool { range.contains(tick) }
 }
 
 // MARK: - Lane projection

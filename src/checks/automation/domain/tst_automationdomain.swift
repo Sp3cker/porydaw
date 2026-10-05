@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 // Existing scenarios paired with tst_automationdomain.cpp.
 // Entry order remains in AutomationPageChecks.swift.

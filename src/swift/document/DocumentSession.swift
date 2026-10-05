@@ -77,7 +77,7 @@ public struct SaveConflictError: Error, Sendable {
 @MainActor
 public final class DocumentSession {
     public private(set) var document: SongDocument
-    internal private(set) lazy var projectionCache = DocumentProjectionCache(session: self)
+    public private(set) lazy var projectionCache = DocumentProjectionCache(session: self)
     /// Current projection, always rebuilt via the state factory.
     public internal(set) var timeline: PlaybackTimeline
     public var bankLease: NativeBankLease { sharedBank.value.lease }
@@ -96,7 +96,7 @@ public final class DocumentSession {
     public internal(set) var selectedNotes: Set<NoteID> = []
     public internal(set) var selectedTracks: Set<Int> = []
     public internal(set) var timeSelection: AutomationTimeSelection?
-    public enum TrackScopeAction { case plain, toggle, range }
+    public enum TrackScopeAction: Sendable { case plain, toggle, range }
     internal var changingPrimaryInternally = false
     public var selectedTrack: Int? {
         didSet {
@@ -119,8 +119,8 @@ public final class DocumentSession {
         }
     }
     public internal(set) var camera: EditorCamera
-    var grid: RollGrid
-    var gridClockTicks: Tick {
+    public var grid: RollGrid
+    public var gridClockTicks: Tick {
         TimelineSnapPolicy.clockTicks(
             division: document.ticksPerBeat,
             extendedClocks: document.state.config.extendedClocks)
@@ -160,7 +160,7 @@ public final class DocumentSession {
         return true
     }
 
-    internal func applyEditorViewStateProjection(_ state: EditorViewState) {
+    public func applyEditorViewStateProjection(_ state: EditorViewState) {
         editorViewState = state
     }
 
@@ -181,7 +181,7 @@ public final class DocumentSession {
     internal var pendingBankNotification = false
     /// A queued bank write owns the session's bank/history lifecycle, but not
     /// ordinary document mutation admission.
-    internal var bankPersistenceInFlight = false
+    public internal(set) var bankPersistenceInFlight = false
     /// Nested synchronous state changes accumulate one final publication.
     internal var stateChangeDepth = 0
     internal var pendingDomains: SessionChangeDomains = []

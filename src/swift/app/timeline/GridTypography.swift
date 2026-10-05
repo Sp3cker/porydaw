@@ -1,4 +1,5 @@
 import NativeGridTypography
+import PorydawDocument
 import QtBridge
 
 enum GridFontKind {

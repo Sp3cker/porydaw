@@ -1,3 +1,4 @@
+import PorydawDocument
 // Resolves the weak owners at each publication, preserving the controller's async lifetime.
 @MainActor
 func registerImportedSong(

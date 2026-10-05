@@ -1,4 +1,5 @@
 import Foundation
+import PorydawDocument
 import QtBridge
 
 /// The two guide kinds rendered over the shared timeline plot.

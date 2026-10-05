@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import PorydawDocument
 
 // Keep the no-fold legacy probes and exercise Fold against a live session,
 // its selected-track projection, and the production grid command path.

@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 import QtBridge
 
 /// Shared 640x320 @2x viewport, scroll reset, and time zoom used by rollcheck

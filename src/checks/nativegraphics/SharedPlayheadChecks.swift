@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 // Direct coverage for the shared playhead. The pure policy layer is checked with
 // synthetic timelines and cameras; the presenter is checked against the real

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 
 // Order is shared with the production hit-target contract.
 enum HeaderHitTarget: Int { case none, body, voice, mute, solo, addTrack }

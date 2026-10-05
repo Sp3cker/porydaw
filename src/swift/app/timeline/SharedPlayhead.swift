@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 // The shared playhead: one playback-position presentation for the whole editor

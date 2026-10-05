@@ -49,11 +49,11 @@ public struct GridSegment: Equatable, Sendable {
 
 /// The signature governing a tick, normalized; mirrors
 /// `TimeAxis::ResolvedTimeSignature`.
-struct ResolvedTimeSignature: Equatable {
+public struct ResolvedTimeSignature: Equatable, Sendable {
     var tick: Tick = 0
-    var numerator: Int = 4
-    var denomPow2: Int = 2  // RAW exponent, not clamped
-    var implicit: Bool = true
+    public var numerator: Int = 4
+    public var denomPow2: Int = 2  // RAW exponent, not clamped
+    public var implicit: Bool = true
 }
 
 /// Normalized signature fields shared by the segment and signature lookups.
@@ -69,8 +69,8 @@ public struct TimeAxis: Equatable, Sendable {
 
     var ticksPerBeat: UInt32 { max(1, map.ticksPerBeat) }  // fallback axis is 24
     var lengthTicks: Tick { map.lengthTicks }  // 0 unbound
-    var loopStartTick: Tick { map.loopStartTick }  // kNoTick when absent
-    var loopEndTick: Tick { map.loopEndTick }  // kNoTick when absent
+    public var loopStartTick: Tick { map.loopStartTick }  // kNoTick when absent
+    public var loopEndTick: Tick { map.loopEndTick }  // kNoTick when absent
 
     /// Actual 0x58 events only, in order; empty on the fallback axis.
     var explicitTimeSignatures: [TimeSigPoint] { map.timeSigs }
@@ -82,7 +82,7 @@ public struct TimeAxis: Equatable, Sendable {
 
     /// Segment starts: the implicit opening at 0 plus one per explicit
     /// signature, same-tick duplicates merged.
-    var signatureStarts: [Tick] {
+    public var signatureStarts: [Tick] {
         var starts = [Tick(0)]
         for point in explicitTimeSignatures where point.tick != starts.last {
             starts.append(point.tick)
@@ -90,7 +90,7 @@ public struct TimeAxis: Equatable, Sendable {
         return starts
     }
 
-    func signatureAt(_ tick: Tick) -> ResolvedTimeSignature {
+    public func signatureAt(_ tick: Tick) -> ResolvedTimeSignature {
         var resolved = ResolvedTimeSignature()  // implicit opening 4/4 at tick 0
         for ts in map.timeSigs {  // tick-sorted
             if ts.tick > tick {
@@ -124,7 +124,7 @@ public struct TimeAxis: Equatable, Sendable {
 
     /// Bar/beat lines over [tickBegin, tickEnd): 1-based, bars counted
     /// across signature changes including partial measures.
-    func forEachGridLine(
+    public func forEachGridLine(
         from tickBegin: Tick, to tickEnd: Tick,
         _ visitor: (Tick, _ isBar: Bool, _ bar: Int, _ beat: Int) -> Void
     ) {

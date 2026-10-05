@@ -1,6 +1,7 @@
 import Foundation
 import NativeDisplayList
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 // Band-0 plot display list: rects clipped, labels unclipped origin with

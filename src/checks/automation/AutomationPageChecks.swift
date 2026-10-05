@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 import PorydawNativeHost
 
 // Direct coverage for the pure Swift Automation domain and its page owner. The

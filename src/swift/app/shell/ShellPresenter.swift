@@ -1,5 +1,6 @@
 import Foundation
 import PorydawAppCommands
+import PorydawDocument
 import PorydawNativeHost
 import QtBridge
 

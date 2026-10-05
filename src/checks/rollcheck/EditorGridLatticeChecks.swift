@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 import QtBridge
 private let latticeID = "rollcheck/PianoRollStaticTest::tickRangeWalksFractionalLattice"
 private let contentWindowID = "swiftcore/EditorGridCamera::contentWindowBoundaryReversal"

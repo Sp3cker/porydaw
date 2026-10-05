@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCoreCheckNative
+import PorydawDocument
 import PorydawProject
 
 @MainActor

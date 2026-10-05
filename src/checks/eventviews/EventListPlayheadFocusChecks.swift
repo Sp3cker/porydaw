@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppEventList
 import PorydawCore
+import PorydawDocument
 
 @MainActor
 internal func focusCommitsCursor(

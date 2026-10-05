@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 @MainActor
 func drawerVelocityVoiceContextResolution(_ report: CheckReport, session: DocumentSession) {

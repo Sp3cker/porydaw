@@ -1,6 +1,7 @@
 import Foundation
 import NativeDisplayList
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 // List-2 ruler display list mirroring RulerScene::append. Chrome always emits;

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 
 // Pencil and sweep transaction state. These types freeze gesture input and
 // resolve previews into lane edits; document mutation remains in AutomationCommit.

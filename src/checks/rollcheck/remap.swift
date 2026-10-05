@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 @MainActor
 func runRemapChecks(_ report: CheckReport, session: DocumentSession) {

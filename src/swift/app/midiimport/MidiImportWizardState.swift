@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import PorydawProject
 
 public struct ImportControllerRowValue: Equatable, Sendable {
@@ -122,7 +123,7 @@ public struct MidiImportWizardState: Equatable, Sendable {
     }
 
     @discardableResult public mutating func editLabel(_ proposed: String) -> String {
-        label = SongListPresenter.acceptSongLabelEdit(previous: label, proposed: proposed)
+        label = SongLabelPolicy.acceptEdit(previous: label, proposed: proposed)
         if !constantEdited { constant = SongCatalog.constantForLabel(label) }
         return label
     }

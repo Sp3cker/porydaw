@@ -3,6 +3,7 @@ import Foundation
 import PorydawAppCommands
 import PorydawCore
 import PorydawCoreCheckNative
+@testable import PorydawDocument
 
 @MainActor
 internal func runEditRoutingChecks(report: CheckReport, fixtureRoot: String) {

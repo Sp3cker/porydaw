@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 // Equality-gated scene, row and modal publication for the retained page owner.

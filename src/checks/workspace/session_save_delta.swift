@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 import PorydawProject
 
 // Open the vanilla fixture, edit one velocity, and prove the saved event streams

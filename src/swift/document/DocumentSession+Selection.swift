@@ -127,6 +127,12 @@ extension DocumentSession {
         }
     }
 
+    /// Restores a retained track scope, keeping only tracks the song uses.
+    public func restoreTrackScope(_ tracks: some Sequence<Int>) {
+        let usedTracks = 0..<document.engineTracks.usedTrackCount
+        selectedTracks = Set(tracks.filter { usedTracks.contains($0) })
+    }
+
     public func addSelectedNote(_ id: NoteID) {
         guard id.isAssigned, !selectedNotes.contains(id) else { return }
         withStateChanges {

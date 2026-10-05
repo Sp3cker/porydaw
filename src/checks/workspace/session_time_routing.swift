@@ -3,6 +3,7 @@ import PorydawApp
 import PorydawAppCommands
 import PorydawCore
 import PorydawCoreCheckNative
+import PorydawDocument
 import PorydawPlayback
 
 // MARK: - Session Time Routing

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import PorydawAppCommands
 
 /// Owns one document's editor presenters and all document-scoped publication wiring.

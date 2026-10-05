@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawDocument
 import QtBridge
 
 @MainActor

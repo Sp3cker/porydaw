@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 /// The shell's transport chrome reads the same engine and document as the editor.

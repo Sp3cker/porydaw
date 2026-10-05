@@ -1,4 +1,5 @@
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 @MainActor

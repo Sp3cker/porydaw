@@ -353,7 +353,7 @@ public struct SongDeletionPlan: Equatable, Sendable {
 /// Async Swift front over the project-store actor. The actor owns bank
 /// transitions; document history never blocks on it.
 public actor ProjectService {
-    nonisolated let bankViews = ProjectBankViews()
+    public nonisolated let bankViews = ProjectBankViews()
     internal var store: ProjectStore?
     internal var snapshot: ProjectSnapshot?
     internal var projectRoot = ""

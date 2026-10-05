@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 import QtBridge
 
 private let projectionID = "swiftcore/EditorGridCamera::projectionAndHitTesting"

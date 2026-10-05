@@ -1,6 +1,7 @@
 import Foundation
 import NativeGridTypography
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 // The Voice Changes scene: the static content computation the page sequences on

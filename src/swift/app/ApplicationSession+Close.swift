@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import PorydawProject
 import QtBridge
 import PorydawAppAudio
@@ -200,7 +201,7 @@ extension ApplicationSession {
 
     /// The fork name field follows the New Song label law per keystroke.
     func acceptSaveConflictLabelEditImpl(previous: String, proposed: String) -> String {
-        SongListPresenter.acceptSongLabelEdit(previous: previous, proposed: proposed)
+        SongLabelPolicy.acceptEdit(previous: previous, proposed: proposed)
     }
 
     func saveConflictLabelValidImpl(label: String) -> Bool {
@@ -251,7 +252,7 @@ extension ApplicationSession {
             missingSaveConflictSession()
             return
         }
-        let label = SongListPresenter.normalizeSongLabel(text: saveConflictNewSongLabel)
+        let label = SongLabelPolicy.normalize(saveConflictNewSongLabel)
         guard saveConflictLabelValid(label: label),
             !saveConflictLabelTaken(label: label)
         else { return }

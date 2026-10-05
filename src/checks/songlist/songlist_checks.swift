@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+import PorydawDocument
 import PorydawPlayback
 
 // SongListPresenter checks mirroring the retired SongListPanel widget

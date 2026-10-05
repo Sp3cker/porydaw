@@ -1,4 +1,5 @@
 import Foundation
+import PorydawDocument
 
 /// The legacy popup's font-relative chrome and graph-local editing canvas, in DIPs.
 public struct PitchBendGeometry {

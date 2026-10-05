@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawDocument
 
 private let playheadGuidesID = "swiftcore/PlayheadFeature::guidesResizeScrollAndOwnership"
 private let playheadFollowID = "swiftcore/PlayheadFeature::followScroll"

@@ -131,6 +131,18 @@ public enum AutomationCatalog {
 
 // MARK: - Parameter metadata
 
+/// A stored lane value with its tick: the document-independent pair the
+/// transactions and the projected curve both carry.
+public struct AutomationLanePoint: Equatable, Sendable {
+    public var tick: Tick
+    public var value: Int
+
+    public init(tick: Tick, value: Int) {
+        self.tick = tick
+        self.value = value
+    }
+}
+
 /// Held-value (step) is the production curve for every catalog parameter; the
 /// linear ramp is the interpolation a ramp sweep writes, and the segment kind a
 /// projection builds from it.

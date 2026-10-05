@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawCore
+@testable import PorydawDocument
 
 private let cameraTransformID = "swiftcore/EditorCamera::transformsAndBounds"
 private let cameraZoomID = "swiftcore/EditorCamera::anchoredZoomAndRestore"

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 // Owns voice-change projection, input and modal transactions for the current document.

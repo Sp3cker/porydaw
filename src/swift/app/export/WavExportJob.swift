@@ -1,6 +1,7 @@
 import Foundation
 import PorydawAppAudio
 import PorydawCore
+import PorydawDocument
 import PorydawPlayback
 import PorydawPlaybackNative
 
