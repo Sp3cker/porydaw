@@ -292,10 +292,19 @@ private struct PorydawQmlTypesCommand {
         let qmltypes = try walk.render(exports: exports)
         let module = directory.appendingPathComponent("PorydawApp", isDirectory: true)
         try FileManager.default.createDirectory(at: module, withIntermediateDirectories: true)
-        try qmltypes.write(to: module.appendingPathComponent("PorydawApp.qmltypes"), atomically: true, encoding: .utf8)
+        try writeIfChanged(qmltypes, to: module.appendingPathComponent("PorydawApp.qmltypes"))
         // QColor/QFont value types (QmlColor/QmlFont properties) are declared by QtQuick.
-        try "module PorydawApp\ntypeinfo PorydawApp.qmltypes\ndepends QtQuick\n".write(
-            to: module.appendingPathComponent("qmldir"), atomically: true, encoding: .utf8)
+        try writeIfChanged(
+            "module PorydawApp\ntypeinfo PorydawApp.qmltypes\ndepends QtQuick\n",
+            to: module.appendingPathComponent("qmldir"))
+    }
+
+    /// Leaves an identical file untouched so the restat build edge stops here
+    /// instead of recompiling every QML cache unit after unrelated Swift edits.
+    private static func writeIfChanged(_ contents: String, to url: URL) throws {
+        let data = Data(contents.utf8)
+        if (try? Data(contentsOf: url)) == data { return }
+        try data.write(to: url, options: .atomic)
     }
 
     @MainActor
