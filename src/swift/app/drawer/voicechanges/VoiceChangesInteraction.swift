@@ -124,7 +124,7 @@ extension VoiceChangesPage {
             return true
         }
         if panRevision != nil {
-            DrawerPan.moved(x: x, previousX: &previousX, session: session)
+            DrawerPan.moved(x: x, previousX: &previousX, viewport: viewport)
             return true
         }
         updateHover(at: x)

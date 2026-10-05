@@ -5,23 +5,24 @@ import PorydawCore
 import QtBridge
 
 @MainActor
-func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
+func checkProjectionEconomy(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::selectedNoteFrameRaster"
-    let oldCamera = session.camera
+    let oldCamera = viewport.camera
     let priorSelection = session.selectedNoteOrder
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     defer {
         session.clearTimeSelection()
         grid.clearKeyboardHover()
         session.clearSelectedNotes()
         session.setSelectedNotes(priorSelection)
-        session.mutateCamera { $0 = oldCamera }
+        viewport.mutateCamera { $0 = oldCamera }
     }
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(35) }
     grid.refreshCamera()
-    guard let noteID = renderingSeed(report, id: id, session: session, grid: grid) else { return }
+    guard let noteID = renderingSeed(report, id: id, viewport: viewport, grid: grid) else { return }
     defer { session.document.deleteNotes([noteID]) }
     guard let note = session.document.note(noteID),
         let box = decodedNoteBox(grid, noteID)
@@ -116,14 +117,14 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
     let frameBeforeScroll = frame()
     let fillsBeforeScroll = fills()
     let summaryBeforeScroll = grid.fetchNoteSummary()
-    let scrolledX = session.camera.snapshot.scrollX
-    session.mutateCamera { _ = $0.scrollByPx(10) }
-    guard session.camera.snapshot.scrollX != scrolledX else {
+    let scrolledX = viewport.camera.snapshot.scrollX
+    viewport.mutateCamera { _ = $0.scrollByPx(10) }
+    guard viewport.camera.snapshot.scrollX != scrolledX else {
         report.fail(id, "projection economy fixture could not scroll the camera")
         return
     }
     grid.refreshCamera()
-    let scrolledCamera = session.camera
+    let scrolledCamera = viewport.camera
     let scrolledX0 = scrolledCamera.viewX(
         tick: Double(note.tick), dpr: grid.devicePixelRatio)
     let scrolledX1 = scrolledCamera.viewX(
@@ -161,14 +162,14 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
         grid.fetchNoteSummary() == summaryBeforeScroll,
         cppID: id,
         message: "a camera-only refresh leaves the pulled note summary byte-identical")
-    _ = session.mutateCamera { _ = $0.setTimeZoom(70) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(70) }
     grid.refreshCamera()
     report.expect(
         untouched(since: keyBeforeScroll)
             && frame().display != frameBeforeScroll.display,
         cppID: id,
         message: "a camera zoom leaves the content key untouched while the plot frame moves")
-    session.mutateCamera { _ = $0.setKeyHeight(20) }
+    viewport.mutateCamera { _ = $0.setKeyHeight(20) }
     grid.refreshCamera()
     report.expect(
         untouched(since: keyBeforeScroll)
@@ -180,16 +181,17 @@ func checkProjectionEconomy(_ report: CheckReport, session: DocumentSession) {
 /// The plot frame culls off-screen notes in O(visible): thousands of far
 /// notes decode to no fill rects, and doubling them changes nothing.
 @MainActor
-func checkRollPlotCullBound(_ report: CheckReport, session: DocumentSession) {
+func checkRollPlotCullBound(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::plotCullBound"
-    let oldCamera = session.camera
-    let grid = PianoGrid(session: session)
-    defer { session.mutateCamera { $0 = oldCamera } }
+    let oldCamera = viewport.camera
+    let grid = PianoGrid(viewport: viewport)
+    defer { viewport.mutateCamera { $0 = oldCamera } }
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 1)
     grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(35) }
     grid.refreshCamera()
-    guard let visibleID = renderingSeed(report, id: id, session: session, grid: grid) else { return }
+    guard let visibleID = renderingSeed(report, id: id, viewport: viewport, grid: grid) else { return }
     var stagedIDs: [NoteID] = [visibleID]
     defer { session.document.deleteNotes(stagedIDs) }
     func stageOffscreen(count: Int, base: Int) -> Bool {
@@ -215,7 +217,7 @@ func checkRollPlotCullBound(_ report: CheckReport, session: DocumentSession) {
     )
         -> (x: Double, y: Double, w: Double, h: Double)?
     {
-        let camera = session.camera
+        let camera = viewport.camera
         guard camera.projection.row(forPitch: pitch) != PitchProjection.hiddenRow else { return nil }
         let row = camera.projection.row(forPitch: pitch)
         let snapshot = camera.snapshot
@@ -242,7 +244,7 @@ func checkRollPlotCullBound(_ report: CheckReport, session: DocumentSession) {
             plotted.insert(rect.id)
             if seen.insert(rect.id).inserted { fills += 1 }
         }
-        let snapshot = session.camera.snapshot
+        let snapshot = viewport.camera.snapshot
         var expected = Set<UInt64>()
         for track in 0..<session.document.engineTracks.usedTrackCount {
             for note in session.document.notes(in: track) {
@@ -285,26 +287,27 @@ func checkRollPlotCullBound(_ report: CheckReport, session: DocumentSession) {
 }
 
 @MainActor
-func checkRulerSweepSingleTrackScope(_ report: CheckReport, session: DocumentSession) {
+func checkRulerSweepSingleTrackScope(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::timelineRulerScope"
-    let oldCamera = session.camera
+    let oldCamera = viewport.camera
     let priorSelection = session.selectedNoteOrder
     let priorTrack = session.selectedTrack
     let palette = GridPalette()
-    let grid = PianoGrid(session: session, palette: palette)
+    let grid = PianoGrid(viewport: viewport, palette: palette)
     let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: palette)
+    automation.attach(viewport: viewport, palette: palette)
     defer {
         automation.clearTimeSelection()
         automation.detach()
         session.clearSelectedNotes()
         session.setSelectedNotes(priorSelection)
         session.selectedTrack = priorTrack
-        session.mutateCamera { $0 = oldCamera }
+        viewport.mutateCamera { $0 = oldCamera }
     }
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(35) }
     grid.refreshCamera()
     if session.selectedTrack == nil { session.selectPrimaryTrack(0) }
     grid.refreshFromSession()
@@ -335,10 +338,10 @@ func checkRulerSweepSingleTrackScope(_ report: CheckReport, session: DocumentSes
     }
     let revision = document.revision
     automation.clearTimeSelection()
-    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let menu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
     defer { menu.cancelSweep(); menu.close() }
-    menu.beginSweep(contentX: session.camera.contentX(tick: Double(anchor)), pointerY: 0)
-    menu.updateSweep(contentX: session.camera.contentX(tick: Double(farTick)))
+    menu.beginSweep(contentX: viewport.camera.contentX(tick: Double(anchor)), pointerY: 0)
+    menu.updateSweep(contentX: viewport.camera.contentX(tick: Double(farTick)))
     guard let swept = automation.selection, swept.isActive else {
         report.fail(id, "a plain ruler sweep published no time selection")
         return

@@ -270,7 +270,7 @@ public final class SharedPlayheadPresenter {
     /// out the sleep: `Task.sleep` throws as soon as the task is cancelled.
     private static let pollInterval: Duration = .milliseconds(16)
 
-    private weak var session: DocumentSession?
+    private weak var viewport: DocumentViewport?
     private weak var audio: NativeAudio?
     private weak var grid: PianoGrid?
     private weak var drawer: EditorDrawerPresenter?
@@ -288,11 +288,11 @@ public final class SharedPlayheadPresenter {
     /// after every owner is in place.
     @QtIgnored
     public func attach(
-        session: DocumentSession, audio: NativeAudio?, grid: PianoGrid?,
+        viewport: DocumentViewport, audio: NativeAudio?, grid: PianoGrid?,
         drawer: EditorDrawerPresenter?
     ) {
         lifecycleToken &+= 1
-        self.session = session
+        self.viewport = viewport
         self.audio = audio
         self.grid = grid
         self.drawer = drawer
@@ -310,7 +310,7 @@ public final class SharedPlayheadPresenter {
         stopPolling()
         onPresentation = nil
         onPoll = nil
-        session = nil
+        viewport = nil
         audio = nil
         grid = nil
         drawer = nil
@@ -322,7 +322,7 @@ public final class SharedPlayheadPresenter {
     /// while a task exists is refused, so the presenter never runs two.
     @QtIgnored
     public func startPolling() {
-        guard pollTask == nil, session != nil else { return }
+        guard pollTask == nil, viewport != nil else { return }
         let token = lifecycleToken
         pollTask = Task { [weak self] in
             var previous = ContinuousClock.now
@@ -366,12 +366,12 @@ public final class SharedPlayheadPresenter {
     /// a camera publication keeps the same tick and may change visibility.
     @QtIgnored
     public func refreshProjection() {
-        guard let session, let retained else { return }
-        let tick = session.timeline.tick(for: retained.sample)
+        guard let viewport, let retained else { return }
+        let tick = viewport.session.timeline.tick(for: retained.sample)
         apply(
             SharedPlayheadPolicy.presentation(
                 tick: tick, transport: retained.transport, timelineAttached: true,
-                camera: session.camera, baseFontPx: currentBaseFontPx))
+                camera: viewport.camera, baseFontPx: currentBaseFontPx))
     }
 
     /// Presents one injected observation for the current generation. This is the
@@ -387,26 +387,26 @@ public final class SharedPlayheadPresenter {
 
     /// Accepts one observation for the generation that produced it: the sole
     /// mapping is `PlaybackTimeline.tick(for:)`, follow may move the camera once
-    /// through the document session, and only a changed presentation publishes.
+    /// through the document viewport, and only a changed presentation publishes.
     /// Returns `false` for a stale token or with no document attached.
     @discardableResult
     @QtIgnored
     public func observe(_ observation: SharedPlayheadObservation, token: UInt64) -> Bool {
-        guard token == lifecycleToken, let session else { return false }
+        guard token == lifecycleToken, let viewport else { return false }
         retained = observation
-        let tick = session.timeline.tick(for: observation.sample)
+        let tick = viewport.session.timeline.tick(for: observation.sample)
         if let target = SharedPlayheadPolicy.followTarget(
-            tick: tick, camera: session.camera, playing: observation.playing,
+            tick: tick, camera: viewport.camera, playing: observation.playing,
             followEnabled: followEnabled, interactions: interactions)
         {
             // The camera's own clamping and its callback publish; the
             // presentation below reads the camera this mutation produced.
-            _ = session.mutateCamera { $0.setHScroll(target) }
+            _ = viewport.mutateCamera { $0.setHScroll(target) }
         }
         return apply(
             SharedPlayheadPolicy.presentation(
                 tick: tick, transport: observation.transport, timelineAttached: true,
-                camera: session.camera, baseFontPx: currentBaseFontPx))
+                camera: viewport.camera, baseFontPx: currentBaseFontPx))
     }
 
     /// Enables or disables follow. Default enabled; no QML command exists.

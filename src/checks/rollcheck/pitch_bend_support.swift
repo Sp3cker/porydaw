@@ -14,8 +14,9 @@ struct PitchBendCheckScene {
 @MainActor
 func pitchBendCheckScene(
     _ report: CheckReport, cppID: String,
-    session: DocumentSession
+    viewport: DocumentViewport
 ) -> PitchBendCheckScene? {
+    let session = viewport.session
     var host: (note: Note, track: Int)?
     for track in 0..<session.document.engineTracks.usedTrackCount {
         if let candidate = session.document.notes(in: track)
@@ -32,8 +33,8 @@ func pitchBendCheckScene(
     }
     session.selectPrimaryTrack(host.track)
     session.setSelectedNotes([host.note.id])
-    let grid = PianoGrid(session: session)
-    let presenter = PitchBendPresenter(session: session, grid: grid, palette: grid.palette)
+    let grid = PianoGrid(viewport: viewport)
+    let presenter = PitchBendPresenter(viewport: viewport, grid: grid, palette: grid.palette)
     presenter.configure(fontPx: grid.baseFontPx, lineSpacing: grid.baseFontPx, dpr: 2)
     let opened = presenter.openSelected()
     report.expect(
@@ -52,12 +53,12 @@ func pitchBendCheckScene(
 }
 
 @MainActor
-func pitchBendSharedGridPredicates(_ report: CheckReport, session: DocumentSession) {
+func pitchBendSharedGridPredicates(_ report: CheckReport, viewport: DocumentViewport) {
     let gridID = "swiftcore/PitchBendEditingTest::sharedGridSnap"
-    let previous = session.grid.selection
-    session.grid.setSelection(.clock)
-    defer { session.grid.setSelection(previous) }
-    guard let scene = pitchBendCheckScene(report, cppID: gridID, session: session) else { return }
+    let previous = viewport.grid.selection
+    viewport.grid.setSelection(.clock)
+    defer { viewport.grid.setSelection(previous) }
+    guard let scene = pitchBendCheckScene(report, cppID: gridID, viewport: viewport) else { return }
     defer { scene.presenter.cancelAndClose() }
     var kernel = scene.presenter.pitchGraph().kernel
     let interiorTick = Int(scene.note.tick) + 1

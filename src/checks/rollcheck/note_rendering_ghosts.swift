@@ -5,7 +5,8 @@ import PorydawCore
 import QtBridge
 
 @MainActor
-func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
+func checkGhostNotes(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::ghostNoteRaster"
     let document = session.document
     let initialState = document.state
@@ -14,7 +15,7 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
         report.fail(id, "ghost fixture cannot encode the original song")
         return
     }
-    let oldCamera = session.camera
+    let oldCamera = viewport.camera
     let priorSelection = session.selectedNoteOrder
     let priorTrack = session.selectedTrack
     defer {
@@ -27,7 +28,7 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
         }
         session.selectedTrack = priorTrack
         session.setSelectedNotes(priorSelection)
-        session.mutateCamera { $0 = oldCamera }
+        viewport.mutateCamera { $0 = oldCamera }
         report.expect(
             document.state == initialState
                 && document.history.currentIdentity == initialIdentity,
@@ -36,10 +37,10 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
             (try? document.state.file.encoded()) == originalBytes,
             cppID: id, message: "A018 undoing the ghost fixture restores original song bytes")
     }
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(35) }
     grid.refreshCamera()
     let primary = grid.trackIndex
     guard document.canAddTrack, let other = document.addTrack(voice: 0),
@@ -54,12 +55,12 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
     grid.refreshFromSession()
     guard
         let ghost = ghostSeed(
-            report, id: id, session: session, grid: grid,
+            report, id: id, viewport: viewport, grid: grid,
             track: other, spanCells: 8)
     else { return }
     guard
         let plain = ghostSeed(
-            report, id: id, session: session, grid: grid,
+            report, id: id, viewport: viewport, grid: grid,
             track: primary, spanCells: 1, nearPitch: ghost.pitch,
             nearTick: ghost.tick, excluding: [ghost.pitch])
     else { return }
@@ -183,14 +184,14 @@ func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
         session.document.note(ghost.id) != nil
             && session.document.state == stateBefore,
         cppID: id, message: "double-tapping a ghost deletes nothing")
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         _ = camera.setKeyHeight(32)
         _ = camera.setVScroll(max(0, (127.5 - Double(plain.pitch)) * 32 - 160))
     }
     grid.refreshCamera()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(280) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(280) }
     grid.refreshCamera()
-    _ = session.mutateCamera { camera in
+    _ = viewport.mutateCamera { camera in
         _ = camera.setHScroll(
             max(
                 camera.snapshot.minHScroll,

@@ -16,10 +16,10 @@ func drawerAutomationSweepSteppingAndRampFinish(
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     let facts = fixture.facts(fixture.panLane)
     let projection = AutomationProjection(
-        camera: fixture.session.camera,
+        camera: fixture.viewport.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: fixture.page.geometry,
-        snapPolicy: AutomationProjectionCache().snapPolicy(session: fixture.session, font: 13, dpr: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(viewport: fixture.viewport, font: 13, dpr: 1),
         songEndTick: fixture.songEndTick)
     report.expectEqual(
         expected: Tick(1), actual: projection.snapPolicy.clockTicks, cppID: drawerAutomationSweepStepsID,
@@ -138,10 +138,10 @@ func drawerAutomationSweepFinishRestoresTrailingHeldValue(
         pan: [(0, 85)], config: SongConfig(), tailTick: 960)
     let facts = fixture.facts(fixture.panLane)
     let projection = AutomationProjection(
-        camera: fixture.session.camera,
+        camera: fixture.viewport.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: fixture.page.geometry,
-        snapPolicy: AutomationProjectionCache().snapPolicy(session: fixture.session, font: 13, dpr: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(viewport: fixture.viewport, font: 13, dpr: 1),
         songEndTick: fixture.songEndTick)
     report.expectEqual(
         expected: Tick(24), actual: projection.snapPolicy.clockTicks, cppID: drawerAutomationSweepTailID,
@@ -223,10 +223,10 @@ func drawerAutomationSweepFinishRestoresTrailingHeldValue(
         suite: suite, service: service, pan: [(0, 85)],
         tailTick: 384)
     let endProjection = AutomationProjection(
-        camera: endFixture.session.camera,
+        camera: endFixture.viewport.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: endFixture.page.geometry,
-        snapPolicy: AutomationProjectionCache().snapPolicy(session: endFixture.session, font: 13, dpr: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(viewport: endFixture.viewport, font: 13, dpr: 1),
         songEndTick: endFixture.songEndTick)
     var endSweep = AutomationSweepTransaction(
         facts: endFixture.facts(endFixture.panLane), mode: .drag,
@@ -248,10 +248,10 @@ func drawerAutomationSweepFinishRestoresTrailingHeldValue(
         modulation: [(0, 85)], config: SongConfig(), tailTick: 960)
     let committedFacts = committed.facts(committed.modulationLane)
     let committedProjection = AutomationProjection(
-        camera: committed.session.camera,
+        camera: committed.viewport.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: committed.page.geometry,
-        snapPolicy: AutomationProjectionCache().snapPolicy(session: committed.session, font: 13, dpr: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(viewport: committed.viewport, font: 13, dpr: 1),
         songEndTick: committed.songEndTick)
     var live = AutomationSweepTransaction(
         facts: committedFacts, mode: .drag,
@@ -320,7 +320,7 @@ func drawerAutomationShiftRampEndpoints(
         pan: [(0, 20), (96, 100), (288, 64)])
     fixture.activate(fixture.panLane)
     let facts = fixture.facts(fixture.panLane)
-    let reverse = fixture.page.makeProjection(facts: facts, camera: fixture.session.camera)
+    let reverse = fixture.page.makeProjection(facts: facts, camera: fixture.viewport.camera)
     let metadata = AutomationParameterMetadata(parameter: fixture.panLane)
     let pressX = fixture.x(48)
     let pressY = fixture.y(fixture.panLane, 80)

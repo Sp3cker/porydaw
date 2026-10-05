@@ -21,13 +21,12 @@ extension AutomationPage {
     /// Rebuilds and applies the document-derived scene values before publishing
     /// primitives, preserving the page's lifecycle and publication order.
     func rebuildContent(selectionOnly: Bool = false) {
-        let session = self.session
+        let viewport = self.viewport
         let snapshot =
-            session.map {
+            viewport.map { viewport in
                 AutomationSceneSnapshot.build(
-                    session: $0, cache: projectionFacts,
-                    selectedTrack: $0.selectedTrack,
-                    camera: $0.camera,
+                    viewport: viewport, cache: projectionFacts,
+                    selectedTrack: viewport.session.selectedTrack,
                     activeParameterIndex: activeParameterIndex,
                     ghostPins: ghostPins,
                     selection: selection,
@@ -68,7 +67,7 @@ extension AutomationPage {
         projection = snapshot.projection
         scaleLabels = snapshot.scaleLabels
         publishTabs(snapshot.catalog)
-        publishContent(session)
+        publishContent(viewport)
         contentBuildCount &+= 1
         if selectionOnly { selectionBuildCount &+= 1 }
         publishOverlays()

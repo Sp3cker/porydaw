@@ -91,7 +91,7 @@ func drawerAutomationDrawingContentChecks(
         message: "automation lists carry grid lines, sticky axis chrome and anchored curve")
     let axisBytes = page.displayList(list: 0)
     let staticsBytes = page.displayList(list: 1)
-    fixture.session.mutateCamera { _ = $0.setHScroll(17) }
+    fixture.viewport.mutateCamera { _ = $0.setHScroll(17) }
     page.refreshCamera()
     report.expect(
         page.displayRevision == revision + 1 && page.displayList(list: 0) != axisBytes
@@ -100,7 +100,7 @@ func drawerAutomationDrawingContentChecks(
         message: "automation scroll rebuilds viewport lists and bumps revision")
     let scrolledRevision = page.displayRevision
     let scrolledAxis = page.displayList(list: 0)
-    fixture.session.mutateCamera { $0.setTimeZoom($0.snapshot.pixelsPerBeat * 2) }
+    fixture.viewport.mutateCamera { $0.setTimeZoom($0.snapshot.pixelsPerBeat * 2) }
     page.refreshCamera()
     report.expect(
         page.displayRevision == scrolledRevision + 1 && page.displayList(list: 0) != scrolledAxis,
@@ -141,11 +141,11 @@ func drawerAutomationDrawingContentChecks(
     let armAxis = page.displayList(list: 0)
     let armStatics = page.displayList(list: 1)
     let armRevision = page.displayRevision
-    let armCamera = fixture.session.camera.snapshot
+    let armCamera = fixture.viewport.camera.snapshot
     let armTarget =
         armCamera.scrollX + 24 <= armCamera.maxHScroll
         ? armCamera.scrollX + 24 : armCamera.scrollX - 24
-    fixture.session.mutateCamera { _ = $0.setHScroll(armTarget) }
+    fixture.viewport.mutateCamera { _ = $0.setHScroll(armTarget) }
     page.refreshHorizontalProjection()
     report.expect(
         page.displayRevision == armRevision + 1 && page.displayList(list: 0) != armAxis

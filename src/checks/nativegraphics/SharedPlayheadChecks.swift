@@ -158,13 +158,13 @@ private func pumpSharedPlayheadRunLoop(_ seconds: TimeInterval) {
 
 @MainActor
 func runSharedPlayheadChecks(
-    _ report: CheckReport, session: DocumentSession,
+    _ report: CheckReport, viewport: DocumentViewport,
     service: ProjectService
 ) {
     checkPureMapping(report)
     checkPureVisibilityFollowAndWrap(report)
-    checkPresenterAgainstSession(report, session: session, service: service)
-    checkCompoundCommandPublication(report, session: session, service: service)
+    checkPresenterAgainstSession(report, viewport: viewport, service: service)
+    checkCompoundCommandPublication(report, session: viewport.session, service: service)
 }
 
 @MainActor
@@ -172,11 +172,12 @@ private func checkCompoundCommandPublication(
     _ report: CheckReport, session suite: DocumentSession, service: ProjectService
 ) {
     let session = sharedPlayheadReplacementSession(suite, service: service)
-    let grid = PianoGrid(session: session)
+    let viewport = DocumentViewport(session: session)
+    let grid = PianoGrid(viewport: viewport)
     let automation = AutomationPage()
-    automation.attach(session: session, palette: GridPalette())
+    automation.attach(viewport: viewport, palette: GridPalette())
     defer { automation.detach() }
-    let ruler = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let ruler = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
     let commands = EditorCommandRouter(
         session: session, grid: grid, automation: automation,
         rulerMenu: ruler)
@@ -283,51 +284,53 @@ private func checkCompoundCommandPublication(
 
 @MainActor
 private func checkPresenterAgainstSession(
-    _ report: CheckReport, session: DocumentSession,
+    _ report: CheckReport, viewport: DocumentViewport,
     service: ProjectService
 ) {
-    let grid = PianoGrid(session: session)
+    let session = viewport.session
+    let grid = PianoGrid(viewport: viewport)
     let drawer = EditorDrawerPresenter()
     let page = SharedPlayheadStubPage()
     let presenter = SharedPlayheadPresenter()
 
-    let priorCamera = session.onCameraChangeDetailed
+    let priorCamera = viewport.onCameraChangeDetailed
     let priorPlayback = session.onPlayback
     let priorChange = session.onChange
     defer {
-        session.onCameraChangeDetailed = priorCamera
+        viewport.onCameraChangeDetailed = priorCamera
         session.onPlayback = priorPlayback
         session.onChange = priorChange
         presenter.detach()
     }
     // The production wiring reduced to its playback owner: a camera publication
     // refreshes the grid and reprojects the retained authoritative tick.
-    session.onCameraChangeDetailed = { [weak grid, weak presenter] _, change in
+    viewport.onCameraChangeDetailed = { [weak grid, weak presenter] _, change in
         grid?.refreshCameraPresentation(change)
         presenter?.refreshProjection()
     }
 
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    presenter.attach(session: session, audio: nil, grid: grid, drawer: drawer)
+    presenter.attach(viewport: viewport, audio: nil, grid: grid, drawer: drawer)
     presenter.setFollowEnabled(false)
 
-    checkPublicationAndReprojection(report, session: session, presenter: presenter)
+    checkPublicationAndReprojection(report, viewport: viewport, presenter: presenter)
     checkAggregateSuspension(
-        report, session: session, grid: grid, drawer: drawer,
+        report, viewport: viewport, grid: grid, drawer: drawer,
         page: page, presenter: presenter)
-    checkStaticContentInvariant(report, session: session, grid: grid, presenter: presenter)
+    checkStaticContentInvariant(report, viewport: viewport, grid: grid, presenter: presenter)
     checkReplacementAndPolling(
-        report, session: session, service: service, grid: grid,
+        report, viewport: viewport, service: service, grid: grid,
         drawer: drawer, presenter: presenter)
 }
 
 @MainActor
 private func checkAggregateSuspension(
-    _ report: CheckReport, session: DocumentSession,
+    _ report: CheckReport, viewport: DocumentViewport,
     grid: PianoGrid, drawer: EditorDrawerPresenter,
     page: SharedPlayheadStubPage,
     presenter: SharedPlayheadPresenter
 ) {
+    let session = viewport.session
     presenter.setFollowEnabled(true)
     let playing = SharedPlayheadPolicy.playingTransport
     let farSample = session.timeline.sample(for: 2_000)
@@ -335,22 +338,22 @@ private func checkAggregateSuspension(
         grid.interactionActive == false && drawer.interactionActive == false,
         cppID: aggregateID, message: "idle owners report no interaction")
 
-    _ = session.mutateCamera { _ = $0.setHScroll(0) }
-    let parked = session.camera.snapshot
+    _ = viewport.mutateCamera { _ = $0.setHScroll(0) }
+    let parked = viewport.camera.snapshot
     _ = presenter.observe(sample: farSample, transport: playing)
-    let following = session.camera.snapshot
+    let following = viewport.camera.snapshot
     report.expect(
         following.scrollX != parked.scrollX, cppID: aggregateID,
         message: "an idle aggregate lets follow scroll the camera")
 
-    _ = session.mutateCamera { _ = $0.setHScroll(parked.scrollX) }
+    _ = viewport.mutateCamera { _ = $0.setHScroll(parked.scrollX) }
     grid.beginPointer(x: 200, y: 40, modifiers: 0)
     report.expect(
         grid.interactionActive, cppID: aggregateID,
         message: "a live roll gesture reports interaction")
     _ = presenter.observe(sample: farSample, transport: playing)
     report.expect(
-        session.camera.snapshot == parked, cppID: aggregateID,
+        viewport.camera.snapshot == parked, cppID: aggregateID,
         message: "a live roll gesture suspends follow")
     grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
     report.expect(
@@ -358,7 +361,7 @@ private func checkAggregateSuspension(
         message: "cancelling the gesture clears the grid's interaction")
     _ = presenter.observe(sample: farSample, transport: playing)
     report.expect(
-        session.camera.snapshot == following, cppID: aggregateID,
+        viewport.camera.snapshot == following, cppID: aggregateID,
         message: "ending the gesture lets the next observation follow")
 
     drawer.attachSection(page)
@@ -369,10 +372,10 @@ private func checkAggregateSuspension(
     report.expect(
         drawer.interactionActive, cppID: aggregateID,
         message: "a live drawer resize reports interaction")
-    _ = session.mutateCamera { _ = $0.setHScroll(parked.scrollX) }
+    _ = viewport.mutateCamera { _ = $0.setHScroll(parked.scrollX) }
     _ = presenter.observe(sample: farSample, transport: playing)
     report.expect(
-        session.camera.snapshot == parked, cppID: aggregateID,
+        viewport.camera.snapshot == parked, cppID: aggregateID,
         message: "a drawer resize suspends follow")
     drawer.endResize(kind: DrawerSectionKind.velocity.rawValue)
     report.expect(
@@ -383,17 +386,17 @@ private func checkAggregateSuspension(
     report.expect(
         drawer.interactionActive, cppID: aggregateID,
         message: "an attached page's interaction joins the aggregate")
-    _ = session.mutateCamera { _ = $0.setHScroll(parked.scrollX) }
+    _ = viewport.mutateCamera { _ = $0.setHScroll(parked.scrollX) }
     _ = presenter.observe(sample: farSample, transport: playing)
     report.expect(
-        session.camera.snapshot == parked, cppID: aggregateID,
+        viewport.camera.snapshot == parked, cppID: aggregateID,
         message: "a page interaction suspends follow")
 
     presenter.setExplicitSuspension(true)
     page.setInteractionActive(false)
     _ = presenter.observe(sample: farSample, transport: playing)
     report.expect(
-        session.camera.snapshot == parked, cppID: aggregateID,
+        viewport.camera.snapshot == parked, cppID: aggregateID,
         message: "an explicit suspension suspends follow with no owner gesture")
 
     presenter.setExplicitSuspension(false)
@@ -403,7 +406,7 @@ private func checkAggregateSuspension(
         message: "detach cancels the page's interaction synchronously")
     _ = presenter.observe(sample: farSample, transport: playing)
     report.expect(
-        session.camera.snapshot == following, cppID: aggregateID,
+        viewport.camera.snapshot == following, cppID: aggregateID,
         message: "clearing every suspension restores the same follow target")
 }
 
@@ -411,12 +414,13 @@ private func checkAggregateSuspension(
 /// grid, the document, the history, the camera and the edit cursor untouched.
 @MainActor
 private func checkStaticContentInvariant(
-    _ report: CheckReport, session: DocumentSession,
+    _ report: CheckReport, viewport: DocumentViewport,
     grid: PianoGrid, presenter: SharedPlayheadPresenter
 ) {
+    let session = viewport.session
     presenter.setFollowEnabled(false)
-    _ = session.mutateCamera { _ = $0.setHScroll(0) }
-    let camera = session.camera.snapshot
+    _ = viewport.mutateCamera { _ = $0.setHScroll(0) }
+    let camera = viewport.camera.snapshot
     let content = gridContentSnapshot(grid)
     let revision = session.document.revision
     let dirty = session.document.isDirty
@@ -438,7 +442,7 @@ private func checkStaticContentInvariant(
         gridContentSnapshot(grid) == content, cppID: staticContentID,
         message: "playhead-only updates rebuild no grid scene content")
     report.expect(
-        session.camera.snapshot == camera, cppID: staticContentID,
+        viewport.camera.snapshot == camera, cppID: staticContentID,
         message: "playhead-only updates move no camera")
     report.expect(
         session.document.revision == revision && session.document.isDirty == dirty,
@@ -459,7 +463,7 @@ private func checkStaticContentInvariant(
 /// attached document, cancelled with the attached presentation.
 @MainActor
 private func checkReplacementAndPolling(
-    _ report: CheckReport, session: DocumentSession,
+    _ report: CheckReport, viewport: DocumentViewport,
     service: ProjectService, grid: PianoGrid,
     drawer: EditorDrawerPresenter,
     presenter: SharedPlayheadPresenter
@@ -468,12 +472,14 @@ private func checkReplacementAndPolling(
     // tempo map resolves 60 (48 ticks at 1000 samples/tick up to the boundary at
     // tick 48, then 12 at 500) to 54000 samples. The retired document maps that
     // same sample elsewhere, so the published tick can only match one of them.
+    let session = viewport.session
     let replacement = sharedPlayheadReplacementSession(session, service: service)
+    let replacementViewport = DocumentViewport(session: replacement)
     let sample = replacement.timeline.sample(for: 60)
     let retiredTick = session.timeline.tick(for: sample)
     let beforeToken = presenter.lifecycleToken
 
-    presenter.attach(session: replacement, audio: nil, grid: grid, drawer: drawer)
+    presenter.attach(viewport: replacementViewport, audio: nil, grid: grid, drawer: drawer)
     presenter.setFollowEnabled(false)
     let replacementToken = presenter.lifecycleToken
     report.expect(
@@ -507,7 +513,7 @@ private func checkReplacementAndPolling(
         presenter.observe(sample: sample, transport: 0) == false, cppID: lifecycleID,
         message: "with no document attached nothing publishes")
 
-    presenter.attach(session: session, audio: nil, grid: grid, drawer: drawer)
+    presenter.attach(viewport: viewport, audio: nil, grid: grid, drawer: drawer)
     presenter.startPolling()
     report.expect(
         presenter.isPolling, cppID: pollingID,

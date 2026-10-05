@@ -6,7 +6,8 @@ import PorydawAppCommands
 
 @MainActor
 private struct RulerCheckFixture {
-    let session: DocumentSession
+    let viewport: DocumentViewport
+    var session: DocumentSession { viewport.session }
     let grid: PianoGrid
     let automation: AutomationPage
     let menu: RulerMenuPresenter
@@ -19,13 +20,14 @@ private struct RulerCheckFixture {
 }
 
 @MainActor
-func checkRulerSweepScopeTapAndChip(_ report: CheckReport, session: DocumentSession) {
+func checkRulerSweepScopeTapAndChip(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let palette = GridPalette()
-    let grid = PianoGrid(session: session, palette: palette)
+    let grid = PianoGrid(viewport: viewport, palette: palette)
     let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: palette)
+    automation.attach(viewport: viewport, palette: palette)
     defer { automation.detach() }
-    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let menu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
     let previousTrack = session.selectedTrack
     if previousTrack == nil { session.selectPrimaryTrack(0) }
     defer { session.selectedTrack = previousTrack }
@@ -44,10 +46,10 @@ func checkRulerSweepScopeTapAndChip(_ report: CheckReport, session: DocumentSess
         alignSteps += 1
     }
     let fixture = RulerCheckFixture(
-        session: session, grid: grid, automation: automation, menu: menu,
+        viewport: viewport, grid: grid, automation: automation, menu: menu,
         primary: session.selectedTrack ?? 0, cell: cell, anchor: anchor, farTick: farTick,
-        atAnchor: session.camera.contentX(tick: Double(anchor)),
-        atFar: session.camera.contentX(tick: Double(farTick)))
+        atAnchor: viewport.camera.contentX(tick: Double(anchor)),
+        atFar: viewport.camera.contentX(tick: Double(farTick)))
     guard let endTick = checkRulerSweepScope(report, fixture: fixture) else { return }
     guard checkRulerTapAndCancel(report, fixture: fixture, endTick: endTick) else { return }
     checkRulerPressPolicy(report, fixture: fixture, endTick: endTick)
@@ -127,7 +129,8 @@ private func checkRulerTapAndCancel(
     _ report: CheckReport, fixture: RulerCheckFixture, endTick: Tick
 ) -> Bool {
     let id = "swiftcore/PianoRoll::timelineRulerScope"
-    let session = fixture.session
+    let viewport = fixture.viewport
+    let session = viewport.session
     let menu = fixture.menu
     let automation = fixture.automation
     var outside = endTick + Tick(fixture.cell)
@@ -147,7 +150,7 @@ private func checkRulerTapAndCancel(
         priorTapChange?(change)
     }
     session.editCursor = fixture.anchor
-    let atOutside = session.camera.contentX(tick: Double(outside))
+    let atOutside = viewport.camera.contentX(tick: Double(outside))
     menu.beginSweep(contentX: atOutside, pointerY: 0)
     menu.endSweep(contentX: atOutside)
     session.onChange = priorTapChange
@@ -188,7 +191,8 @@ private func checkRulerPressPolicy(
     _ report: CheckReport, fixture: RulerCheckFixture, endTick: Tick
 ) {
     let id = "swiftcore/PianoRoll::rulerLoopMenuInsertTimeAndStaleNoOp"
-    let session = fixture.session
+    let viewport = fixture.viewport
+    let session = viewport.session
     let menu = fixture.menu
     let automation = fixture.automation
     automation.applyTimeSelection(
@@ -196,7 +200,7 @@ private func checkRulerPressPolicy(
             range: TimeRange(startTick: fixture.anchor, endTick: endTick),
             scope: .tracks([fixture.primary])))
     session.editCursor = fixture.anchor
-    openRulerMenu(menu, at: session.camera.contentX(tick: Double(endTick - 1)))
+    openRulerMenu(menu, at: viewport.camera.contentX(tick: Double(endTick - 1)))
     report.expect(
         menu.isOpen && menu.menuKind == 1
             && automation.selection?.range.startTick == fixture.anchor
@@ -217,7 +221,7 @@ private func checkRulerPressPolicy(
         endPublications.append(change.domains)
         priorEndChange?(change)
     }
-    openRulerMenu(menu, at: session.camera.contentX(tick: Double(endTick) + 0.5))
+    openRulerMenu(menu, at: viewport.camera.contentX(tick: Double(endTick) + 0.5))
     session.onChange = priorEndChange
     report.expect(
         menu.isOpen && menu.menuKind == 1,
@@ -244,20 +248,21 @@ private func checkRulerChip(
     _ report: CheckReport, fixture: RulerCheckFixture, endTick: Tick
 ) {
     let id = "swiftcore/PianoRoll::rulerLoopMenuEnablementSelectionContext"
-    let session = fixture.session
+    let viewport = fixture.viewport
+    let session = viewport.session
     let menu = fixture.menu
     let chipOff = endTick + 1
     let preSigBytes = coreTimeBytes(session.document)
     session.document.setTimeSignature(tick: chipOff, numerator: 7, denominatorPower: 2)
     fixture.automation.clearTimeSelection()
-    openRulerMenu(menu, at: session.camera.contentX(tick: Double(chipOff)))
+    openRulerMenu(menu, at: viewport.camera.contentX(tick: Double(chipOff)))
     report.expect(
         session.editCursor == chipOff && menu.isOpen && menu.menuKind == 1,
         cppID: id,
         message: "A059: an off-grid chip press commits the chip's exact event tick")
     let tickRowY = fixture.grid.rulerMarkerRowHeight
     menu.captureRulerPress(
-        contentX: session.camera.contentX(tick: Double(chipOff)),
+        contentX: viewport.camera.contentX(tick: Double(chipOff)),
         pointerY: tickRowY)
     menu.openRulerAtRelease()
     report.expect(
@@ -273,7 +278,7 @@ private func checkRulerChip(
 
     session.document.setTimeSignature(tick: endTick, numerator: 5, denominatorPower: 2)
     session.editCursor = fixture.anchor
-    openRulerMenu(menu, at: session.camera.contentX(tick: Double(endTick)))
+    openRulerMenu(menu, at: viewport.camera.contentX(tick: Double(endTick)))
     report.expect(
         session.editCursor == endTick && menu.isOpen && menu.menuKind == 1
             && (0..<menu.rows.count).contains(where: {
@@ -282,7 +287,7 @@ private func checkRulerChip(
         cppID: id,
         message: "A039: a snap-aligned chip press commits the chip tick and enables Remove Time Signature")
     menu.captureRulerPress(
-        contentX: session.camera.contentX(tick: Double(endTick)),
+        contentX: viewport.camera.contentX(tick: Double(endTick)),
         pointerY: fixture.grid.rulerMarkerRowHeight / 2)
     menu.openRulerAtRelease()
     report.expect(

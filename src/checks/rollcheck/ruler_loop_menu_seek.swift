@@ -5,14 +5,15 @@ import PorydawDocument
 import PorydawAppCommands
 
 @MainActor
-func checkRulerSeekEmission(_ report: CheckReport, session: DocumentSession) {
+func checkRulerSeekEmission(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::rulerSeekEmission"
     let palette = GridPalette()
-    let grid = PianoGrid(session: session, palette: palette)
+    let grid = PianoGrid(viewport: viewport, palette: palette)
     let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: palette)
+    automation.attach(viewport: viewport, palette: palette)
     defer { automation.detach() }
-    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let menu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
     let previousTrack = session.selectedTrack
     if previousTrack == nil { session.selectPrimaryTrack(0) }
     defer { session.selectedTrack = previousTrack }
@@ -25,8 +26,8 @@ func checkRulerSeekEmission(_ report: CheckReport, session: DocumentSession) {
     let cell = max(1, grid.snapTicks)
     let anchor = Tick(grid.snapTickDown(Double(72)))
     let farTick = anchor + Tick(cell * 4)
-    let atAnchor = session.camera.contentX(tick: Double(anchor))
-    let atFar = session.camera.contentX(tick: Double(farTick))
+    let atAnchor = viewport.camera.contentX(tick: Double(anchor))
+    let atFar = viewport.camera.contentX(tick: Double(farTick))
     var outside = farTick + Tick(cell)
     var steps = 0
     while Tick(grid.snapTickDown(Double(outside))) != outside && steps < 1024 {
@@ -34,14 +35,14 @@ func checkRulerSeekEmission(_ report: CheckReport, session: DocumentSession) {
         steps += 1
     }
     let playhead = SharedPlayheadPresenter()
-    playhead.attach(session: session, audio: nil, grid: grid, drawer: nil)
+    playhead.attach(viewport: viewport, audio: nil, grid: grid, drawer: nil)
     playhead.setFollowEnabled(false)
     playhead.observe(sample: session.timeline.sample(for: anchor), transport: 0)
     let playbackTick = playhead.tick
     defer { playhead.detach() }
     session.editCursor = anchor
-    menu.beginSweep(contentX: session.camera.contentX(tick: Double(outside)), pointerY: 0)
-    menu.endSweep(contentX: session.camera.contentX(tick: Double(outside)))
+    menu.beginSweep(contentX: viewport.camera.contentX(tick: Double(outside)), pointerY: 0)
+    menu.endSweep(contentX: viewport.camera.contentX(tick: Double(outside)))
     playhead.refreshProjection()
     report.expect(
         session.editCursor == outside && playhead.tick == playbackTick, cppID: id,
@@ -52,7 +53,7 @@ func checkRulerSeekEmission(_ report: CheckReport, session: DocumentSession) {
         AutomationTimeSelection(
             range: TimeRange(startTick: start, endTick: end), scope: .tracks([primary])))
     session.editCursor = anchor
-    openRulerMenu(menu, at: session.camera.contentX(tick: Double(end) + 0.5))
+    openRulerMenu(menu, at: viewport.camera.contentX(tick: Double(end) + 0.5))
     playhead.refreshProjection()
     report.expect(
         session.editCursor == end && playhead.tick == playbackTick, cppID: id,
@@ -60,7 +61,7 @@ func checkRulerSeekEmission(_ report: CheckReport, session: DocumentSession) {
     let chipOff = end + 1
     session.document.setTimeSignature(tick: chipOff, numerator: 7, denominatorPower: 2)
     automation.clearTimeSelection()
-    openRulerMenu(menu, at: session.camera.contentX(tick: Double(chipOff)))
+    openRulerMenu(menu, at: viewport.camera.contentX(tick: Double(chipOff)))
     playhead.refreshProjection()
     report.expect(
         session.editCursor == chipOff && playhead.tick == playbackTick, cppID: id,
@@ -70,7 +71,7 @@ func checkRulerSeekEmission(_ report: CheckReport, session: DocumentSession) {
     automation.applyTimeSelection(
         AutomationTimeSelection(
             range: TimeRange(startTick: start, endTick: end), scope: .tracks([primary])))
-    openRulerMenu(menu, at: session.camera.contentX(tick: Double(end - 1)))
+    openRulerMenu(menu, at: viewport.camera.contentX(tick: Double(end - 1)))
     menu.beginSweep(contentX: atAnchor, pointerY: 0)
     menu.updateSweep(contentX: atFar)
     menu.endSweep(contentX: atFar)
@@ -78,7 +79,7 @@ func checkRulerSeekEmission(_ report: CheckReport, session: DocumentSession) {
     automation.applyTimeSelection(
         AutomationTimeSelection(
             range: TimeRange(startTick: start, endTick: end), scope: .tracks([primary])))
-    menu.openTimeSelection(contentX: session.camera.contentX(tick: Double((start + end) / 2)))
+    menu.openTimeSelection(contentX: viewport.camera.contentX(tick: Double((start + end) / 2)))
     automation.clearTimeSelection()
     _ = menu.activate(actionId: 6)
     playhead.refreshProjection()
@@ -97,9 +98,10 @@ func checkRulerSeekEmission(_ report: CheckReport, session: DocumentSession) {
 }
 
 @MainActor
-func checkGridLoopCommandArms(_ report: CheckReport, session: DocumentSession) {
+func checkGridLoopCommandArms(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::gridLoopCommandArms"
-    let grid = PianoGrid(session: session, palette: GridPalette())
+    let grid = PianoGrid(viewport: viewport, palette: GridPalette())
     let originalStart = session.timeline.loopStartTick
     let originalEnd = session.timeline.loopEndTick
     let previousCursor = session.editCursor

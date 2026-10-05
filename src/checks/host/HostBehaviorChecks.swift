@@ -11,9 +11,11 @@ internal func runHostBehaviorChecks(
     service: ProjectService, fixtureRoot: String
 ) {
     let route = hostNoteDiscovery(report, fixtureRoot: fixtureRoot, suite: session, service: service)
-    hostVelocityMarker(report, route: route)
+    // The route session's one viewport, shared by both pages that read it.
+    let routeViewport = route.map { DocumentViewport(session: $0) }
+    hostVelocityMarker(report, route: routeViewport)
     hostSeededTrackDiscovery(report, route: route)
-    hostSteadyVoiceContext(report, route: route)
+    hostSteadyVoiceContext(report, route: routeViewport)
     hostTwoTabActiveSelection(report)
     hostVelocityGestureContracts(report, session: session, service: service)
     hostDocumentMutationUndoRedo(report, session: session, service: service)
@@ -146,9 +148,9 @@ private func hostTwoTabActiveSelection(_ report: CheckReport) {
 }
 
 @MainActor
-private func hostVelocityMarker(_ report: CheckReport, route: DocumentSession?) {
+private func hostVelocityMarker(_ report: CheckReport, route viewport: DocumentViewport?) {
     let id = "swiftcore/HostBehaviorChecks::velocityMarker"
-    guard let route,
+    guard let route = viewport?.session, let viewport,
         let track = (0..<route.document.engineTracks.usedTrackCount).first(where: {
             !route.document.notes(in: $0).isEmpty
         }), let note = route.document.notes(in: track).first
@@ -159,7 +161,7 @@ private func hostVelocityMarker(_ report: CheckReport, route: DocumentSession?) 
     route.selectedTrack = track
     route.setSelectedNotes([note.id])
     let page = VelocityPage(baseFontPx: GridCameraPolicy.seedBaseFontPx)
-    page.attach(session: route, palette: GridPalette())
+    page.attach(viewport: viewport, palette: GridPalette())
     let font = GridCameraPolicy.seedBaseFontPx
     page.configureBody(
         width: fontPx(font, 30), height: fontPx(font, 9),
@@ -612,10 +614,11 @@ private func hostLifecycleTermination(
             y: handle.y - outgoing.page.dragDistance * 2, buttons: 1)
         let held = outgoing.page.hasGesture && !outgoing.page.frozenPreview.isEmpty
         outgoing.page.detach()
-        if replacing {
-            outgoing.page.attach(
-                session: hostTwoNoteSession(suite: session, service: service),
-                palette: GridPalette())
+        let replacement: DocumentViewport? =
+            replacing
+            ? DocumentViewport(session: hostTwoNoteSession(suite: session, service: service)) : nil
+        if let replacement {
+            outgoing.page.attach(viewport: replacement, palette: GridPalette())
         }
         let released = outgoing.page.pointerRelease(
             x: handle.x,
@@ -627,6 +630,7 @@ private func hostLifecycleTermination(
             && DocumentSnapshot(outgoing.document) == snapshot
             && outgoing.document.history.undoCount == depth
             && (try? outgoing.document.state.file.encoded()) == originalBytes
+        withExtendedLifetime(replacement) {}
         report.expect(
             outgoing.session.selectedNotes.isEmpty, cppID: id,
             message: "song teardown clears the outgoing note selection")
@@ -696,8 +700,9 @@ private func hostVelocityAxisVoice(_ report: CheckReport, session: DocumentSessi
     played.selectedTrack = 0
     played.clearSelectedNotes()
     played.editCursor = 0
+    let viewport = DocumentViewport(session: played)
     let page = VelocityPage(baseFontPx: GridCameraPolicy.seedBaseFontPx)
-    page.attach(session: played, palette: GridPalette())
+    page.attach(viewport: viewport, palette: GridPalette())
     let font = GridCameraPolicy.seedBaseFontPx
     page.configureBody(
         width: fontPx(font, 30), height: fontPx(font, 9),
@@ -720,6 +725,7 @@ private func hostVelocityAxisVoice(_ report: CheckReport, session: DocumentSessi
     report.expect(
         page.axisModel.map.voiceName == "Square 1", cppID: id,
         message: "A168: the non-following sample at tick twenty-six restores Square 1")
+    withExtendedLifetime(viewport) {}
 }
 
 @MainActor
@@ -853,19 +859,20 @@ private func hostCameraEndpoints(
     let id = "swiftcore/HostBehaviorChecks::cameraEndpoints"
     let fixture = drawerVelocityVelocityFixture(session: session, service: service)
     let session = fixture.session
+    let viewport = fixture.viewport
     let font = GridCameraPolicy.seedBaseFontPx
     let zoom = 1.75 * fontPx(font, 8.0 / 3.0)
-    _ = session.mutateCamera { camera in
+    _ = viewport.mutateCamera { camera in
         _ = camera.setTimeZoom(zoom)
         _ = camera.setHScroll(96)
     }
-    let camera = session.camera.snapshot
+    let camera = viewport.camera.snapshot
     report.expect(
         camera.scrollX == 96 && camera.pixelsPerBeat == zoom, cppID: id,
         message: "scroll 96 and the zoom law publish through the camera")
     report.expect(
-        session.grid.gridTicksAt(12, camera: session.camera) > 0
-            && session.grid.snapTicksAt(12, camera: session.camera) > 0,
+        viewport.grid.gridTicksAt(12, camera: viewport.camera) > 0
+            && viewport.grid.snapTicksAt(12, camera: viewport.camera) > 0,
         cppID: id, message: "grid and snap ticks stay positive")
     session.editCursor = 0
     fixture.page.refreshEditCursor()
@@ -906,7 +913,7 @@ private func hostCosmeticOnly(
         cppID: id, message: "editor view-state round-trips without advancing revision or history")
     let x = fixture.page.plotWidth / 2
     let y = fixture.page.plotHeight / 2
-    let cameraBefore = fixture.session.camera.snapshot
+    let cameraBefore = fixture.viewport.camera.snapshot
     let pressed = fixture.page.pointerPress(x: x, y: y, surface: 1, button: 4)
     let panning = fixture.page.isPanning
     let moved = fixture.page.pointerMove(x: x - fixture.page.baseFontPx, y: y, buttons: 4)
@@ -915,7 +922,7 @@ private func hostCosmeticOnly(
         pressed && panning && moved && released && !fixture.page.isPanning,
         cppID: id, message: "middle-button pan completes its gesture lifecycle")
     report.expect(
-        fixture.session.camera.snapshot.scrollX != cameraBefore.scrollX,
+        fixture.viewport.camera.snapshot.scrollX != cameraBefore.scrollX,
         cppID: id, message: "middle-button pan moves the shared camera")
     report.expect(
         DocumentSnapshot(fixture.document) == before
@@ -955,14 +962,14 @@ private func hostSeededTrackDiscovery(_ report: CheckReport, route: DocumentSess
 }
 
 @MainActor
-private func hostSteadyVoiceContext(_ report: CheckReport, route: DocumentSession?) {
+private func hostSteadyVoiceContext(_ report: CheckReport, route viewport: DocumentViewport?) {
     let id = "swiftcore/HostBehaviorChecks::seededContext"
-    guard let route else {
+    guard let route = viewport?.session, let viewport else {
         report.fail(id, "the route101 host session did not open for the steadiness search")
         return
     }
     let page = VelocityPage(baseFontPx: GridCameraPolicy.seedBaseFontPx)
-    page.attach(session: route, palette: GridPalette())
+    page.attach(viewport: viewport, palette: GridPalette())
     let font = GridCameraPolicy.seedBaseFontPx
     page.configureBody(
         width: fontPx(font, 30), height: fontPx(font, 9),

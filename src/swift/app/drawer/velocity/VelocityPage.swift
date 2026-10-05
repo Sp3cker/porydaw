@@ -207,7 +207,8 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     /// change, published for the lane's span-aware cases.
     @QtIgnored public var presentedContextEndTick: Tick { resolvedContextValue.endTick ?? TimeDefaults.noTick }
 
-    @QtIgnored weak var session: DocumentSession?
+    @QtIgnored weak var viewport: DocumentViewport?
+    @QtIgnored var session: DocumentSession? { viewport?.session }
     @QtIgnored var palette = GridPalette()
     @QtIgnored var typography = Typography(baseFontPx: Int(GridCameraPolicy.seedBaseFontPx))
     @QtIgnored var geometry = VelocityNodeGeometry()
@@ -269,13 +270,13 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     /// Installs the document and palette owners. Called before the container
     /// attaches the page, so no publication can precede the session it reads.
     @QtIgnored
-    public func attach(session: DocumentSession, palette: GridPalette) {
+    public func attach(viewport: DocumentViewport, palette: GridPalette) {
         metricsCache = nil
         handleGeometryKey = nil
         publishedHandleWindow = nil
-        self.session = session
+        self.viewport = viewport
         self.palette = palette
-        contextTick = session.editCursor
+        contextTick = viewport.session.editCursor
         refreshFromDocument()
     }
 
@@ -286,7 +287,7 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
         cancelSectionInteraction()
         // The outgoing selection dies with the page, so no survivor inherits it.
         session?.setSelectedNotes([])
-        session = nil
+        viewport = nil
         hovered = nil
         metricsCache = nil
         rollPreview = [:]

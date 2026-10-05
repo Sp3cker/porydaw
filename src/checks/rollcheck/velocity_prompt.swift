@@ -239,7 +239,7 @@ private func checkVelocityPromptAcceptUndoLatch(
         expectedRevision: fixture.document.revision)
     fixture.session.setSelectedNotes([noteID])
     fixture.page.refreshFromDocument()
-    let grid = makeCameraGrid(session: fixture.session)
+    let grid = makeCameraGrid(viewport: fixture.viewport)
     var acceptedValues: [UInt8] = []
     fixture.page.onVelocityAccepted = {
         acceptedValues.append($0)
@@ -275,7 +275,7 @@ private func checkVelocityPromptAcceptUndoLatch(
             && fixture.document.history.undoIndex == undoIndex && fixture.document.history.undoCount == undoCount + 1,
         cppID: id, message: "A012: one undo restores the original 73-velocity song bytes")
     fixture.page.refreshFromDocument()
-    guard let acceptedCell = pencilFreeCell(session: fixture.session, grid: grid) else {
+    guard let acceptedCell = pencilFreeCell(viewport: fixture.viewport, grid: grid) else {
         report.fail(id, "no free grid cell for the accepted-velocity draw")
         return
     }
@@ -299,7 +299,7 @@ private func checkVelocityPromptAcceptUndoLatch(
             && fixture.document.history.undoCount == afterDrawCount && acceptedValues == [95, 73],
         cppID: id, message: "A018: accepting unchanged 73 relatches without a document edit")
     grid.refreshFromSession()
-    guard let relatchedCell = pencilFreeCell(session: fixture.session, grid: grid) else {
+    guard let relatchedCell = pencilFreeCell(viewport: fixture.viewport, grid: grid) else {
         report.fail(id, "no free grid cell for the unchanged-acceptance draw")
         return
     }

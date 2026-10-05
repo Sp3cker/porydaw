@@ -4,7 +4,8 @@ import PorydawCore
 @testable import PorydawDocument
 
 @MainActor
-func runRemapChecks(_ report: CheckReport, session: DocumentSession) {
+func runRemapChecks(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let document = session.document
     let originalState = document.state
     let originalIdentity = document.history.currentIdentity
@@ -13,7 +14,7 @@ func runRemapChecks(_ report: CheckReport, session: DocumentSession) {
     let originalNotes = session.selectedNoteOrder
     let originalMute = session.mutedTracks
     let originalSolo = session.soloedTracks
-    let originalCosmetics = session.editorViewState
+    let originalCosmetics = viewport.editorViewState
     let originalTimeSelection = session.timeSelection
     let previousChange = session.onChange
     defer {
@@ -29,7 +30,7 @@ func runRemapChecks(_ report: CheckReport, session: DocumentSession) {
         session.setSelectedNotes(originalNotes)
         session.mutedTracks = originalMute
         session.soloedTracks = originalSolo
-        session.setEditorViewState(originalCosmetics)
+        viewport.setEditorViewState(originalCosmetics)
         if let originalTimeSelection {
             session.applyTimeSelection(originalTimeSelection)
         } else {
@@ -60,7 +61,7 @@ func runRemapChecks(_ report: CheckReport, session: DocumentSession) {
         return
     }
     let headers = makeRollHeaderFixture(session: session, viewport: (228, 240))
-    let probe = RemapProbe(session: session, headers: headers)
+    let probe = RemapProbe(viewport: viewport, headers: headers)
     session.onChange = {
         probe.receive($0); previousChange?($0)
     }
@@ -99,14 +100,15 @@ private func expectRetained(
     selection: AutomationTimeSelection? = nil
 ) {
     report.expect(
-        probe.session.editorViewState == cosmetics
+        probe.viewport.editorViewState == cosmetics
             && probe.session.timeSelection == selection,
         cppID: id, message: message)
 }
 
 @MainActor
 private final class RemapProbe {
-    let session: DocumentSession
+    let viewport: DocumentViewport
+    var session: DocumentSession { viewport.session }
     let headers: TrackHeadersPresenter
     private(set) var documentChanges:
         [(
@@ -116,8 +118,8 @@ private final class RemapProbe {
             timelineTrackZeroName: String
         )] = []
 
-    init(session: DocumentSession, headers: TrackHeadersPresenter) {
-        self.session = session
+    init(viewport: DocumentViewport, headers: TrackHeadersPresenter) {
+        self.viewport = viewport
         self.headers = headers
     }
 
@@ -127,7 +129,7 @@ private final class RemapProbe {
             (
                 change.trackRemap != nil, session.selectedTrack,
                 session.selectedTracks, session.mutedTracks, session.soloedTracks,
-                session.selectedNotes, session.timeSelection, session.editorViewState,
+                session.selectedNotes, session.timeSelection, viewport.editorViewState,
                 session.timeline.tracks[0].name
             ))
         headers.documentDidChange(change)
@@ -166,7 +168,8 @@ private final class RemapProbe {
 @MainActor
 private func checkRemapMove(_ report: CheckReport, probe: RemapProbe) {
     let id = "swiftcore/PianoRollTest::trackRemapMove"
-    let session = probe.session
+    let viewport = probe.viewport
+    let session = viewport.session
     let document = session.document
     let before = document.state
     let identity = document.history.currentIdentity
@@ -180,7 +183,7 @@ private func checkRemapMove(_ report: CheckReport, probe: RemapProbe) {
     session.adjustTrackScope(track: 0, action: .toggle)
     session.mutedTracks = [0]
     session.soloedTracks = [1]
-    session.setEditorViewState(remapCosmetics(0, 1))
+    viewport.setEditorViewState(remapCosmetics(0, 1))
     session.applyTimeSelection(remapSelection(0, 1))
     report.expect(document.moveTrack(0, to: 1), cppID: id, message: "move accepts the source track")
     let moved = document.state
@@ -224,7 +227,8 @@ private func checkRemapMove(_ report: CheckReport, probe: RemapProbe) {
 @MainActor
 private func checkRemapInsert(_ report: CheckReport, probe: RemapProbe) {
     let id = "swiftcore/PianoRollTest::trackRemapInsert"
-    let session = probe.session
+    let viewport = probe.viewport
+    let session = viewport.session
     let document = session.document
     let before = document.state
     let identity = document.history.currentIdentity
@@ -232,7 +236,7 @@ private func checkRemapInsert(_ report: CheckReport, probe: RemapProbe) {
     session.adjustTrackScope(track: 0, action: .toggle)
     session.mutedTracks = [0]
     session.soloedTracks = [1]
-    session.setEditorViewState(remapCosmetics(0, 1))
+    viewport.setEditorViewState(remapCosmetics(0, 1))
     session.clearTimeSelection()
     guard let inserted = document.addTrack(voice: 0) else {
         report.fail(id, "insertion rejected with an available track slot")
@@ -281,7 +285,8 @@ private func checkRemapInsert(_ report: CheckReport, probe: RemapProbe) {
 @MainActor
 private func checkRemapDuplicate(_ report: CheckReport, probe: RemapProbe) {
     let id = "swiftcore/PianoRollTest::trackRemapDuplicate"
-    let session = probe.session
+    let viewport = probe.viewport
+    let session = viewport.session
     let document = session.document
     let before = document.state
     let identity = document.history.currentIdentity
@@ -289,7 +294,7 @@ private func checkRemapDuplicate(_ report: CheckReport, probe: RemapProbe) {
     session.adjustTrackScope(track: 0, action: .toggle)
     session.mutedTracks = [0]
     session.soloedTracks = [1]
-    session.setEditorViewState(remapCosmetics(0, 1))
+    viewport.setEditorViewState(remapCosmetics(0, 1))
     session.clearTimeSelection()
     guard let duplicate = document.duplicateTrack(0) else {
         report.fail(id, "duplicate rejected with an available track slot")
@@ -341,7 +346,8 @@ private func checkRemapDuplicate(_ report: CheckReport, probe: RemapProbe) {
 @MainActor
 private func checkRemapDelete(_ report: CheckReport, probe: RemapProbe) {
     let id = "swiftcore/PianoRollTest::trackRemapDelete"
-    let session = probe.session
+    let viewport = probe.viewport
+    let session = viewport.session
     let document = session.document
     let before = document.state
     let identity = document.history.currentIdentity
@@ -356,7 +362,7 @@ private func checkRemapDelete(_ report: CheckReport, probe: RemapProbe) {
     let activeTime = AutomationTimeSelection(
         range: TimeRange(startTick: 24, endTick: 48), scope: .lanes,
         lanes: [.controlChange(track: 1, controller: 74)])
-    session.setEditorViewState(deletedCosmetics)
+    viewport.setEditorViewState(deletedCosmetics)
     guard let removedNote = document.notes(in: 1).first else {
         report.fail(id, "deletion fixture needs a note owned by track 1")
         return
@@ -366,7 +372,7 @@ private func checkRemapDelete(_ report: CheckReport, probe: RemapProbe) {
     guard session.selectedNotes == [removedNote.id], session.timeSelection == nil,
         session.selectedTrack == 0, session.selectedTracks == [0, 1],
         session.mutedTracks == [0, 1], session.soloedTracks == [1],
-        session.editorViewState == deletedCosmetics
+        viewport.editorViewState == deletedCosmetics
     else {
         report.fail(id, "deletion fixture did not stage the fork's note-only owner state")
         return
@@ -397,11 +403,11 @@ private func checkRemapDelete(_ report: CheckReport, probe: RemapProbe) {
         selectedNoteBeforeDelete && session.selectedTrack == 0
             && session.selectedNotes.isEmpty && session.timeSelection == nil
             && session.mutedTracks == [0] && session.soloedTracks.isEmpty
-            && session.editorViewState == EditorViewState(),
+            && viewport.editorViewState == EditorViewState(),
         cppID: id, message: "delete clears the selected removed-owner note controls and complete owner cosmetics")
     report.expect(
         document.note(removedNote.id) == nil && session.selectedNotes.isEmpty
-            && session.editorViewState == EditorViewState(),
+            && viewport.editorViewState == EditorViewState(),
         cppID: id, message: "deleting an owner removes its note selected-note reference and CC74 lane cosmetics")
     report.expect(
         document.history.currentIdentity != identity, cppID: id,
@@ -428,14 +434,14 @@ private func checkRemapDelete(_ report: CheckReport, probe: RemapProbe) {
     report.expect(
         selectedNoteBeforeDelete && session.selectedNotes.isEmpty
             && session.timeSelection == nil && session.mutedTracks == [0]
-            && session.soloedTracks.isEmpty && session.editorViewState == EditorViewState(),
+            && session.soloedTracks.isEmpty && viewport.editorViewState == EditorViewState(),
         cppID: id, message: "delete undo does not revive removed-owner note selection controls or cosmetics")
     report.expect(
         document.state == before && document.history.currentIdentity == identity
-            && session.selectedNotes.isEmpty && session.editorViewState == EditorViewState(),
+            && session.selectedNotes.isEmpty && viewport.editorViewState == EditorViewState(),
         cppID: id, message: "one undo restores the document without reviving dropped lane cosmetics")
     session.applyTimeSelection(activeTime)
-    session.setEditorViewState(deletedCosmetics)
+    viewport.setEditorViewState(deletedCosmetics)
     report.expect(document.history.redoDocument(), cppID: id, message: "delete redo succeeds")
     probe.expectPublication(
         report, cppID: id, phase: "delete redo", remapped: true,
@@ -446,18 +452,18 @@ private func checkRemapDelete(_ report: CheckReport, probe: RemapProbe) {
         cosmetics: EditorViewState())
     report.expectEqual(expected: deleted, actual: document.state, cppID: id, what: "redo removes the owner again")
     _ = document.history.undoDocument()
-    session.setEditorViewState(deletedCosmetics)
+    viewport.setEditorViewState(deletedCosmetics)
     session.applyTimeSelection(activeTime)
     let activeTimeBeforeDelete = session.timeSelection == activeTime
     document.deleteTrack(1)
     report.expect(
         activeTimeBeforeDelete && session.timeSelection == nil
-            && session.editorViewState == EditorViewState(),
+            && viewport.editorViewState == EditorViewState(),
         cppID: id, message: "deleting an actively selected CC74 lane drops its time selection and cosmetics")
     _ = document.history.undoDocument()
     report.expect(
         activeTimeBeforeDelete && session.timeSelection == nil
-            && session.editorViewState == EditorViewState() && document.state == before,
+            && viewport.editorViewState == EditorViewState() && document.state == before,
         cppID: id,
         message: "undoing active-time deletion restores the MIDI owner without reviving removed-lane selection")
     probe.clear()
@@ -466,7 +472,8 @@ private func checkRemapDelete(_ report: CheckReport, probe: RemapProbe) {
 @MainActor
 private func checkRemapMetadata(_ report: CheckReport, probe: RemapProbe) {
     let id = "swiftcore/PianoRollTest::trackRemapMetadata"
-    let session = probe.session
+    let viewport = probe.viewport
+    let session = viewport.session
     let document = session.document
     let before = document.state
     let identity = document.history.currentIdentity
@@ -474,7 +481,7 @@ private func checkRemapMetadata(_ report: CheckReport, probe: RemapProbe) {
     session.adjustTrackScope(track: 0, action: .toggle)
     session.mutedTracks = [0]
     session.soloedTracks = [1]
-    session.setEditorViewState(remapCosmetics(0, 1))
+    viewport.setEditorViewState(remapCosmetics(0, 1))
     session.clearTimeSelection()
     let rebuilds = probe.headers.rowRebuildCount
     let originalTimelineName = session.timeline.tracks[0].name
@@ -563,16 +570,17 @@ private func checkRawPromotion(_ report: CheckReport, fixture: DocumentSession) 
         document: document, service: fixture.service,
         lease: fixture.bankLease, slots: fixture.bankSlots,
         dirty: false, loadName: fixture.bankLoadName)
+    let viewport = DocumentViewport(session: session)
     session.selectedTrack = 0
     let headers = makeRollHeaderFixture(session: session, viewport: (228, 240))
-    let probe = RemapProbe(session: session, headers: headers)
+    let probe = RemapProbe(viewport: viewport, headers: headers)
     session.onChange = { probe.receive($0) }
     var cosmetics = EditorViewState()
     cosmetics.lanes.laneHeight = 64
     cosmetics.lanes.laneHeights = ["tempo": 94, "cc:0:7": 67]
     cosmetics.lanes.laneRanges = ["tempo": 116, "cc:0:7": 102]
     cosmetics.lanes.emptyLanes = [.init(track: 0, controller: 7)]
-    session.setEditorViewState(cosmetics)
+    viewport.setEditorViewState(cosmetics)
     session.soloedTracks = [0]
     session.applyTimeSelection(
         AutomationTimeSelection(
@@ -614,7 +622,7 @@ private func checkRawPromotion(_ report: CheckReport, fixture: DocumentSession) 
     promotedCosmetics.lanes.laneRanges = ["tempo": 116, "cc:1:7": 102]
     promotedCosmetics.lanes.emptyLanes = [.init(track: 1, controller: 7)]
     report.expect(
-        session.editorViewState == promotedCosmetics
+        viewport.editorViewState == promotedCosmetics
             && session.timeSelection
                 == AutomationTimeSelection(
                     range: TimeRange(startTick: 24, endTick: 48), scope: .tracks([1]))
@@ -640,7 +648,7 @@ private func checkRawPromotion(_ report: CheckReport, fixture: DocumentSession) 
             && document.history.currentIdentity == originalIdentity
             && document.history.undoIndex == 0 && document.history.undoCount == 1
             && document.revision == originalRevision + 2
-            && session.editorViewState == cosmetics && session.timeSelection == nil,
+            && viewport.editorViewState == cosmetics && session.timeSelection == nil,
         cppID: id, message: "raw undo restores original bytes and owner cosmetics without reviving cleared time")
     probe.clear()
     report.expect(
@@ -658,7 +666,7 @@ private func checkRawPromotion(_ report: CheckReport, fixture: DocumentSession) 
             && (try? document.state.file.encoded()) == expectedPromotedBytes
             && document.revision == originalRevision + 3
             && document.history.undoIndex == 1 && document.history.undoCount == 1
-            && session.editorViewState == promotedCosmetics && session.timeSelection == nil,
+            && viewport.editorViewState == promotedCosmetics && session.timeSelection == nil,
         cppID: id, message: "raw redo restores edited bytes and owner cosmetics without transient selection")
     guard let index = document.rawChunks[0].events.firstIndex(where: \.isChannel) else {
         report.fail(id, "promoted conductor has no raw channel event")
@@ -678,7 +686,7 @@ private func checkRawPromotion(_ report: CheckReport, fixture: DocumentSession) 
         report, cppID: id, phase: "raw demotion", remapped: true,
         selected: 0, scope: [0], muted: [], soloed: [0])
     report.expect(
-        session.editorViewState == cosmetics
+        viewport.editorViewState == cosmetics
             && document.engineTracks.usedTrackCount == 1,
         cppID: id, message: "raw modification to metadata demotes and restores the original owner cosmetics")
     _ = document.history.undoDocument()
@@ -688,13 +696,14 @@ private func checkRawPromotion(_ report: CheckReport, fixture: DocumentSession) 
         report, cppID: id, phase: "raw deletion", remapped: true,
         selected: 0, scope: [0], muted: [], soloed: [0])
     report.expect(
-        session.editorViewState == cosmetics
+        viewport.editorViewState == cosmetics
             && document.engineTracks.usedTrackCount == 1,
         cppID: id, message: "raw deletion demotes the conductor and restores owner-zero cosmetics")
 }
 
 @MainActor
-func checkTrackOwnerRemap(_ report: CheckReport, session: DocumentSession) {
+func checkTrackOwnerRemap(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/EditorGridCamera::trackOwnerRemap"
     guard session.document.canAddTrack else {
         report.fail(id, "fixture document cannot add a track")
@@ -720,7 +729,7 @@ func checkTrackOwnerRemap(_ report: CheckReport, session: DocumentSession) {
         session.mutedTracks == [0] && session.soloedTracks == [0]
             && session.selectedTrack == 0,
         cppID: id, message: "inserted track inherits no mute, solo, or selection owner state")
-    let switchGrid = PianoGrid(session: session)
+    let switchGrid = PianoGrid(viewport: viewport)
     switchGrid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     switchGrid.setTrack(index: added)
     let switchedTotal = (0..<session.document.engineTracks.usedTrackCount).reduce(0) {

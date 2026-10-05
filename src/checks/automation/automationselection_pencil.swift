@@ -170,16 +170,16 @@ func drawerAutomationDetailThresholdPrecedence(
     fixture.page.isPencilMode = true
     func markersVisible() -> Bool {
         AutomationProjection(
-            camera: fixture.session.camera,
+            camera: fixture.viewport.camera,
             bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
             geometry: fixture.page.geometry,
-            snapPolicy: AutomationProjectionCache().snapPolicy(session: fixture.session, font: 13, dpr: 1),
+            snapPolicy: AutomationProjectionCache().snapPolicy(viewport: fixture.viewport, font: 13, dpr: 1),
             songEndTick: fixture.songEndTick
         ).markersVisible()
     }
     report.expect(markersVisible(), cppID: id, message: "markers are visible at default zoom")
     let zoomAnchor = fixture.x(24)
-    _ = fixture.session.mutateCamera {
+    _ = fixture.viewport.mutateCamera {
         report.expect(
             $0.zoomAroundContentX(factor: 0.25, anchorContentX: zoomAnchor).zoomChanged,
             cppID: id, message: "quarter-scale zoom changes the camera")
@@ -187,7 +187,7 @@ func drawerAutomationDetailThresholdPrecedence(
     report.expect(
         markersVisible(), cppID: id,
         message: "markers stay visible at a quarter of the default zoom")
-    _ = fixture.session.mutateCamera {
+    _ = fixture.viewport.mutateCamera {
         report.expect(
             $0.zoomAroundContentX(factor: 0.02, anchorContentX: zoomAnchor).zoomChanged,
             cppID: id, message: "detail-threshold zoom changes the camera")
@@ -211,7 +211,7 @@ func drawerAutomationDetailThresholdPrecedence(
         cppID: id,
         message: "the hidden-marker stroke inserts instead of grabbing the node")
     let zoomBack = fixture.x(120)
-    _ = fixture.session.mutateCamera {
+    _ = fixture.viewport.mutateCamera {
         report.expect(
             $0.zoomAroundContentX(factor: 50, anchorContentX: zoomBack).zoomChanged,
             cppID: id, message: "zooming back changes the camera")

@@ -42,7 +42,8 @@ public final class PitchBendPresenter {
     @QtTracked public var anchorY = 0.0
     @QtTracked public var anchorWidth = 0.0
     @QtTracked public var anchorHeight = 0.0
-    private let session: DocumentSession
+    private let viewport: DocumentViewport
+    private var session: DocumentSession { viewport.session }
     private let grid: PianoGrid
     private let palette: GridPalette
     private var typography: Typography
@@ -57,10 +58,10 @@ public final class PitchBendPresenter {
     @QtIgnored public var onSoloTracksRequested: (() -> Void)?
 
     public init(
-        session: DocumentSession, grid: PianoGrid, palette: GridPalette,
+        viewport: DocumentViewport, grid: PianoGrid, palette: GridPalette,
         typography: Typography = Typography(baseFontPx: 13)
     ) {
-        self.session = session
+        self.viewport = viewport
         self.grid = grid
         self.palette = palette
         self.typography = typography
@@ -134,13 +135,13 @@ public final class PitchBendPresenter {
         cancelAndClose()
         self.note = note
         noteEnd = end
-        let x0 = session.camera.viewX(tick: Double(note.tick), dpr: grid.devicePixelRatio)
-        let x1 = session.camera.viewX(tick: Double(end), dpr: grid.devicePixelRatio)
-        let row = session.camera.projection.row(forPitch: Int(note.pitch))
+        let x0 = viewport.camera.viewX(tick: Double(note.tick), dpr: grid.devicePixelRatio)
+        let x1 = viewport.camera.viewX(tick: Double(end), dpr: grid.devicePixelRatio)
+        let row = viewport.camera.projection.row(forPitch: Int(note.pitch))
         anchorX = x0
         anchorWidth = max(grid.baseFontPx / 6, x1 - x0)
-        anchorY = Double(row) * session.camera.snapshot.keyHeight - session.camera.snapshot.scrollY
-        anchorHeight = session.camera.snapshot.keyHeight
+        anchorY = Double(row) * viewport.camera.snapshot.keyHeight - viewport.camera.snapshot.scrollY
+        anchorHeight = viewport.camera.snapshot.keyHeight
         (bendRange, endRange) = controllerValues(0x14, fallback: 2)
         (lfoSpeed, endSpeed) = controllerValues(0x15, fallback: 22)
         let pitch = PitchBendLane(
@@ -315,22 +316,22 @@ public final class PitchBendPresenter {
         }
         points[Int(note.tick)] = entering
         points[noteEnd] = ending
-        let session = self.session
+        let viewport = self.viewport
         return PitchBendKernel(
             lane: graphLane, geometry: geometry,
             startTick: Int(note.tick), endTick: noteEnd,
-            fineTicks: Int(session.grid.fineGridTicks(camera: session.camera)),
-            snap: { [unowned session] tick, fine in
+            fineTicks: Int(viewport.grid.fineGridTicks(camera: viewport.camera)),
+            snap: { [unowned viewport] tick, fine in
                 Int(
-                    session.grid.snapTick(
-                        tick, camera: session.camera,
+                    viewport.grid.snapTick(
+                        tick, camera: viewport.camera,
                         fine: fine))
             },
-            snapUp: { [unowned session] tick, fine in
+            snapUp: { [unowned viewport] tick, fine in
                 Int(
-                    session.grid.snapTickUp(
+                    viewport.grid.snapTickUp(
                         tick + 0.5,
-                        camera: session.camera, fine: fine))
+                        camera: viewport.camera, fine: fine))
             },
             points: points, endValue: ending)
     }

@@ -347,7 +347,7 @@ func drawerVelocityLifecycleCancellation(
         return
     }
     let presenters = WorkspacePresenterFixture(
-        session: bankFixture.session, audio: audio,
+        viewport: bankFixture.viewport, audio: audio,
         callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
             revealTrackVoiceRequested: { _ in },
@@ -465,7 +465,7 @@ func drawerVelocityLifecycleCancellation(
         return
     }
     let switchPresenters = WorkspacePresenterFixture(
-        session: switchFixture.session, audio: switchAudio,
+        viewport: switchFixture.viewport, audio: switchAudio,
         callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
             revealTrackVoiceRequested: { _ in },
@@ -657,11 +657,11 @@ func drawerVelocityStemDragGuardsEdits(_ report: CheckReport, session: DocumentS
         page.interactionActive && fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id],
         cppID: drawerVelocityCancellationID,
         message: "selected velocity-stem drag did not retain its captured note selection")
-    let grid = PianoGrid(session: fixture.session)
+    let grid = PianoGrid(viewport: fixture.viewport)
     let automation = AutomationPage()
-    automation.attach(session: fixture.session, palette: GridPalette())
+    automation.attach(viewport: fixture.viewport, palette: GridPalette())
     defer { automation.detach() }
-    let ruler = RulerMenuPresenter(session: fixture.session, grid: grid, automation: automation)
+    let ruler = RulerMenuPresenter(viewport: fixture.viewport, grid: grid, automation: automation)
     let router = EditorCommandRouter(
         session: fixture.session, grid: grid, automation: automation,
         rulerMenu: ruler, velocity: page)

@@ -8,7 +8,7 @@ extension AutomationPage {
     /// Rebuilds the three viewport-space display lists together: axis grid
     /// plus sticky chrome, ghost/curve/selection statics, preview draft.
     func publishDrawingContent() {
-        guard let session else {
+        guard let viewport else {
             previewNodes.replaceSubrange(0..<previewNodes.count, with: [])
             let empty = retainedEmptyDisplayList()
             let fresh = [empty, empty, empty]
@@ -17,7 +17,8 @@ extension AutomationPage {
             displayRevision &+= 1
             return
         }
-        let grid = session.grid
+        let session = viewport.session
+        let grid = viewport.grid
         let axis = timeAxis(session)
         // Resolve each typed palette slot once; ghost ink uses alpha 128.
         let separatorArgb = SceneRectPacking.argb(palette.separator)
@@ -64,12 +65,12 @@ extension AutomationPage {
         var runs: [DrawerStaticRect] = []
         var curveEdges: [DrawerAnchoredRect] = []
         if let lane = projection {
-            let projectionFacts = facts(parameter: activeParameter, modifiers: .init(), session: session)
-            let curveProjection = makeProjection(facts: projectionFacts, camera: session.camera)
-            for ghost in ghostProjections(session) where !ghost.points.isEmpty {
+            let projectionFacts = facts(parameter: activeParameter, modifiers: .init(), viewport: viewport)
+            let curveProjection = makeProjection(facts: projectionFacts, camera: viewport.camera)
+            for ghost in ghostProjections(viewport) where !ghost.points.isEmpty {
                 let ghostProjection = makeProjection(
-                    facts: facts(parameter: ghost.parameter, modifiers: .init(), session: session),
-                    camera: session.camera)
+                    facts: facts(parameter: ghost.parameter, modifiers: .init(), viewport: viewport),
+                    camera: viewport.camera)
                 appendDrawingCurve(
                     ghost.segments, metadata: ghost.metadata, projection: ghostProjection,
                     argb: ghostArgb, runs: &ghostRuns, edges: &ghostEdges)
@@ -162,38 +163,38 @@ extension AutomationPage {
         syncRetained(previewNodes, draftNodes, make: AutomationNodeHandle.init, update: { $0.update($1) })
         // Viewport-space lists through the Task 6a builders; record order is
         // the paint order inside each list, matching the legacy layer order.
-        let viewport = CGSize(width: plotWidth, height: plotHeight)
-        let camera = session.camera
+        let viewportSize = CGSize(width: plotWidth, height: plotHeight)
+        let camera = viewport.camera
         let dpr = devicePixelRatio
         DrawerStaticsContent.buildGrid(
             into: &axisListWriter, axis: axis, grid: grid, camera: camera,
-            viewport: viewport, paletteColors: gridPalette)
+            viewport: viewportSize, paletteColors: gridPalette)
         DrawerStaticsContent.buildTickRects(
             into: &axisListWriter, rects: axisRects, camera: camera, dpr: dpr,
-            viewport: viewport)
+            viewport: viewportSize)
         let axisData = axisListWriter.finish()
         DrawerStaticsContent.buildTickRects(
             into: &staticsListWriter, rects: ghostRuns, camera: camera, dpr: dpr,
-            viewport: viewport)
+            viewport: viewportSize)
         DrawerStaticsContent.buildAnchored(
             into: &staticsListWriter, rects: ghostEdges, camera: camera, dpr: dpr,
-            viewport: viewport)
+            viewport: viewportSize)
         DrawerStaticsContent.buildTickRects(
             into: &staticsListWriter, rects: runs, camera: camera, dpr: dpr,
-            viewport: viewport)
+            viewport: viewportSize)
         DrawerStaticsContent.buildAnchored(
             into: &staticsListWriter, rects: curveEdges, camera: camera, dpr: dpr,
-            viewport: viewport)
+            viewport: viewportSize)
         DrawerStaticsContent.buildTickRects(
             into: &staticsListWriter, rects: selectionFill, camera: camera, dpr: dpr,
-            viewport: viewport)
+            viewport: viewportSize)
         DrawerStaticsContent.buildAnchored(
             into: &staticsListWriter, rects: selectionEdges, camera: camera, dpr: dpr,
-            viewport: viewport)
+            viewport: viewportSize)
         let staticsData = staticsListWriter.finish()
         DrawerStaticsContent.buildTickRects(
             into: &previewListWriter, rects: previewRuns, camera: camera, dpr: dpr,
-            viewport: viewport)
+            viewport: viewportSize)
         let previewData = previewListWriter.finish()
         let fresh = [axisData, staticsData, previewData]
         guard fresh != displayLists else { return }

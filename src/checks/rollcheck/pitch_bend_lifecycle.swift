@@ -9,8 +9,9 @@ func pitchBendVertexPredicates(_ report: CheckReport, suite: DocumentSession) {
     let id = "swiftcore/PitchBendEditingTest::vertexLifecycle"
     let service = ProjectService()
     let session = pitchBendSyntheticSession(suite, service: service)
+    let viewport = DocumentViewport(session: session)
     defer { withExtendedLifetime(service) {} }
-    guard let scene = pitchBendCheckScene(report, cppID: id, session: session) else { return }
+    guard let scene = pitchBendCheckScene(report, cppID: id, viewport: viewport) else { return }
     let presenter = scene.presenter
     defer { presenter.cancelAndClose() }
     let graph = presenter.pitchGraph()
@@ -110,6 +111,7 @@ func pitchBendOwnerLifetimePredicates(_ report: CheckReport, suite: DocumentSess
     var file = makeMidiFixture()
     file.chunks[1].events = [.channel(tick: 0, status: 0xC0, data0: 0)]
     let session = pitchBendSyntheticSession(suite, service: service, file: file)
+    let viewport = DocumentViewport(session: session)
     defer { withExtendedLifetime(service) {} }
     let document = session.document
     guard
@@ -140,7 +142,7 @@ func pitchBendOwnerLifetimePredicates(_ report: CheckReport, suite: DocumentSess
         message: "the impostor shares the anchor note's editing span")
     let before = coreTimeBytes(document)
     let index = document.history.undoIndex
-    guard let scene = pitchBendCheckScene(report, cppID: id, session: session) else { return }
+    guard let scene = pitchBendCheckScene(report, cppID: id, viewport: viewport) else { return }
     pitchBendObserveDocument(session, presenter: scene.presenter)
     report.expect(
         scene.note.id == original.id, cppID: id,
@@ -193,8 +195,9 @@ func pitchBendExternalPreviewPredicates(_ report: CheckReport, suite: DocumentSe
     let id = "swiftcore/PitchBendEditingTest::externalEditPreservesLivePreview"
     let service = ProjectService()
     let session = pitchBendSyntheticSession(suite, service: service)
+    let viewport = DocumentViewport(session: session)
     defer { withExtendedLifetime(service) {} }
-    guard let scene = pitchBendCheckScene(report, cppID: id, session: session) else { return }
+    guard let scene = pitchBendCheckScene(report, cppID: id, viewport: viewport) else { return }
     let presenter = scene.presenter
     defer { presenter.cancelAndClose() }
     pitchBendObserveDocument(session, presenter: presenter)
@@ -273,6 +276,7 @@ func pitchBendUnterminatedPredicates(_ report: CheckReport, suite: DocumentSessi
     file.chunks[1].events.append(.channel(tick: 168, status: 0x90, data0: 70, data1: 90))
     let service = ProjectService()
     let session = pitchBendSyntheticSession(suite, service: service, file: file)
+    let viewport = DocumentViewport(session: session)
     defer { withExtendedLifetime(service) {} }
     let document = session.document
     guard let note = document.notes(in: 0).first(where: { $0.tick == 168 && $0.pitch == 70 }) else {
@@ -287,8 +291,8 @@ func pitchBendUnterminatedPredicates(_ report: CheckReport, suite: DocumentSessi
         message: "the unterminated note has no editable span endpoint")
     session.selectPrimaryTrack(0)
     session.setSelectedNotes([note.id])
-    let grid = PianoGrid(session: session)
-    let presenter = PitchBendPresenter(session: session, grid: grid, palette: grid.palette)
+    let grid = PianoGrid(viewport: viewport)
+    let presenter = PitchBendPresenter(viewport: viewport, grid: grid, palette: grid.palette)
     pitchBendObserveDocument(session, presenter: presenter)
     let before = coreTimeBytes(document)
     report.expect(

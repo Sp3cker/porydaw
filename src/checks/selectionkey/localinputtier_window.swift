@@ -28,8 +28,8 @@ func windowTierKeyboardOutcomes(
         report.fail(id, "the reserved tick-2400 pair could not be staged")
         return
     }
-    let grid = PianoGrid(session: session)
-    let ruler = RulerMenuPresenter(session: session, grid: grid, automation: page)
+    let grid = PianoGrid(viewport: fixture.viewport)
+    let ruler = RulerMenuPresenter(viewport: fixture.viewport, grid: grid, automation: page)
     let router = EditorCommandRouter(session: session, grid: grid, automation: page, rulerMenu: ruler)
     let selection = AutomationTimeSelection(
         range: TimeRange(startTick: 5760, endTick: 5784), scope: .lanes,
@@ -275,8 +275,8 @@ func coreEditingKeyboardOutcomes(
     let document = fixture.document
     let session = fixture.session
     let page = fixture.page
-    let grid = PianoGrid(session: session)
-    let ruler = RulerMenuPresenter(session: session, grid: grid, automation: page)
+    let grid = PianoGrid(viewport: fixture.viewport)
+    let ruler = RulerMenuPresenter(viewport: fixture.viewport, grid: grid, automation: page)
     let router = EditorCommandRouter(session: session, grid: grid, automation: page, rulerMenu: ruler)
     let existing = document.notes(in: 0).map(\.id)
     guard !existing.isEmpty else {

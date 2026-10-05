@@ -10,7 +10,8 @@ import PorydawPlaybackNative
 // MARK: - Playback Projection and State Publication
 
 @MainActor
-internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, session: DocumentSession) {
+internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     // 3. Architecture Amendment: State-to-Playback factory verification
     // Verify initial timeline matches canonical state factory projection
     let initialExpectedTimeline = PlaybackTimeline.build(state: session.document.state, sampleRate: 48_000)
@@ -230,7 +231,7 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
         cppID: statePublicationID,
         message: "nested throwing batch publishes completed state exactly once")
 
-    session.mutateCamera { _ = $0.setHScroll(12.5) }
+    viewport.mutateCamera { _ = $0.setHScroll(12.5) }
     report.expect(
         session.document.revision == preRevision
             && session.document.isDirty == preDirty

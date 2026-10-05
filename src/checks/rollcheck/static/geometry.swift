@@ -4,18 +4,19 @@ import PorydawCore
 @testable import PorydawDocument
 
 @MainActor
-func runGeometryChecks(_ report: CheckReport, session: DocumentSession) {
-    checkFallbackAndSignatureBind(report, session: session)
+func runGeometryChecks(_ report: CheckReport, viewport: DocumentViewport) {
+    checkFallbackAndSignatureBind(report, viewport: viewport)
     checkCeilingGridWalk(report)
     checkDefaultBindKeepsGeometry(report)
     checkTicksPerBeatKeepsGeometry(report)
-    checkScaleProjectionInvariants(report, session: session)
-    checkLiveFoldProjection(report, session: session)
-    checkScaleHighlightRasterDocumentGuards(report, session: session)
+    checkScaleProjectionInvariants(report, viewport: viewport)
+    checkLiveFoldProjection(report, viewport: viewport)
+    checkScaleHighlightRasterDocumentGuards(report, viewport: viewport)
 }
 
 @MainActor
-private func checkFallbackAndSignatureBind(_ report: CheckReport, session: DocumentSession) {
+private func checkFallbackAndSignatureBind(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let fallbackID = "rollcheck/PianoRollStaticTest::fallbackGrid"
     let bindID = "rollcheck/PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars"
     let camera = geometryCamera()
@@ -32,7 +33,7 @@ private func checkFallbackAndSignatureBind(_ report: CheckReport, session: Docum
         camera.snapshot.pixelsPerBeat == (13 * 8.0 / 3.0).rounded(),
         cppID: fallbackID,
         message: "A004 fallback grid retains the seed-font default beat zoom")
-    let axis = session.grid.axis
+    let axis = viewport.grid.axis
     var lines: [(tick: Tick, bar: Bool, barNumber: Int, beatNumber: Int)] = []
     axis.forEachGridLine(from: 0, to: 384) { tick, bar, barNumber, beatNumber in
         lines.append((tick, bar, barNumber, beatNumber))
@@ -74,10 +75,10 @@ private func checkFallbackAndSignatureBind(_ report: CheckReport, session: Docum
         opening.beatsPerBar == 4, cppID: fallbackID,
         message: "A017 fallback segment has four beats per bar")
 
-    let before = (1...8).map { session.camera.contentX(tick: Double($0 * 24)) }
+    let before = (1...8).map { viewport.camera.contentX(tick: Double($0 * 24)) }
     session.document.setTimeSignature(tick: 0, numerator: 3, denominatorPower: 2)
     defer { _ = session.document.history.undoDocument() }
-    let bound = session.grid.axis.segmentAt(0)
+    let bound = viewport.grid.axis.segmentAt(0)
     report.expect(
         bound.start == 0, cppID: bindID,
         message: "A044 bound 3/4 segment starts at tick zero")
@@ -90,16 +91,16 @@ private func checkFallbackAndSignatureBind(_ report: CheckReport, session: Docum
     report.expect(
         bound.beatsPerBar == 3, cppID: bindID,
         message: "A047 bound 3/4 segment has three beats per bar")
-    let boundWidth = session.camera.snapshot.viewportWidth
+    let boundWidth = viewport.camera.snapshot.viewportWidth
     let boundLead = min(max((boundWidth * 0.10).rounded(), 48), 256)
     report.expect(
-        bound.beatsPerBar == 3 && session.camera.leadPad > 0
-            && session.camera.snapshot.minHScroll == -boundLead,
+        bound.beatsPerBar == 3 && viewport.camera.leadPad > 0
+            && viewport.camera.snapshot.minHScroll == -boundLead,
         cppID: bindID,
         message: "A049 the bound three-four camera retains a positive viewport lead pad")
     report.expect(
         (1...8).allSatisfy {
-            abs(session.camera.contentX(tick: Double($0 * 24)) - before[$0 - 1]) <= 1e-6
+            abs(viewport.camera.contentX(tick: Double($0 * 24)) - before[$0 - 1]) <= 1e-6
         }, cppID: bindID, message: "A050 binding 3/4 preserves beat content positions")
 }
 
@@ -179,7 +180,8 @@ private func checkTicksPerBeatKeepsGeometry(_ report: CheckReport) {
 }
 
 @MainActor
-private func checkScaleProjectionInvariants(_ report: CheckReport, session: DocumentSession) {
+private func checkScaleProjectionInvariants(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRollTest::scaleProjectionInvariants"
     let chromatic = PitchProjection()
     report.expect(
@@ -188,18 +190,18 @@ private func checkScaleProjectionInvariants(_ report: CheckReport, session: Docu
     report.expect(
         (0..<128).allSatisfy { chromatic.row(forPitch: $0) != PitchProjection.hiddenRow },
         cppID: id, message: "A002 Off hides no pitch")
-    let originalScale = session.scaleProjection
-    session.setScale(fold: false)
-    session.setScale(root: 2)
-    session.setScale(type: .dorian)
+    let originalScale = viewport.scale
+    viewport.setScale(fold: false)
+    viewport.setScale(root: 2)
+    viewport.setScale(type: .dorian)
     report.expect(
-        session.camera.projection.visibleRowCount == 128
+        viewport.camera.projection.visibleRowCount == 128
             && (0..<128).allSatisfy {
-                session.camera.projection.row(forPitch: $0) != PitchProjection.hiddenRow
+                viewport.camera.projection.row(forPitch: $0) != PitchProjection.hiddenRow
             }, cppID: id, message: "A003 Off remains chromatic after root and type change")
-    session.setScale(type: originalScale.scale)
-    session.setScale(root: originalScale.root)
-    session.setScale(fold: originalScale.fold)
+    viewport.setScale(type: originalScale.scale)
+    viewport.setScale(root: originalScale.root)
+    viewport.setScale(fold: originalScale.fold)
     let track = session.selectedTrack ?? 0
     let notes = session.document.notes(in: track)
     let occupied = Set(notes.map(\.pitch))
@@ -291,8 +293,9 @@ private func checkScaleProjectionInvariants(_ report: CheckReport, session: Docu
 
 @MainActor
 private func checkScaleHighlightRasterDocumentGuards(
-    _ report: CheckReport, session: DocumentSession
+    _ report: CheckReport, viewport: DocumentViewport
 ) {
+    let session = viewport.session
     let id = "swiftcore/PianoRollTest::scaleHighlightRaster"
     let track = session.selectedTrack ?? 0
     let pitches = Set(session.document.notes(in: track).map(\.pitch))
@@ -300,11 +303,11 @@ private func checkScaleHighlightRasterDocumentGuards(
         report.fail(id, "A031-A032 no unused pitch for highlight probe")
         return
     }
-    let previous = session.scaleProjection.highlight
+    let previous = viewport.scale.highlight
     let history = session.document.history.currentIdentity
     let bytes = try? session.document.state.file.encoded()
-    session.setScale(highlight: !previous)
-    session.setScale(highlight: previous)
+    viewport.setScale(highlight: !previous)
+    viewport.setScale(highlight: previous)
     report.expect(
         session.document.history.currentIdentity == history
             && bytes != nil && (try? session.document.state.file.encoded()) == bytes,
@@ -327,15 +330,16 @@ private func checkScaleHighlightRasterDocumentGuards(
 }
 
 @MainActor
-private func checkLiveFoldProjection(_ report: CheckReport, session: DocumentSession) {
+private func checkLiveFoldProjection(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRollTest::scaleProjectionInvariants"
     let document = session.document
     let track = session.selectedTrack ?? 0
-    let oldFold = session.scaleProjection.fold
+    let oldFold = viewport.scale.fold
     let before = document.history.currentIdentity
     let occupied = Set(document.notes(in: track).map(\.pitch))
-    session.setScale(fold: true)
-    let projection = session.camera.projection
+    viewport.setScale(fold: true)
+    let projection = viewport.camera.projection
     report.expect(
         projection.visibleRowCount == occupied.count, cppID: id,
         message: "production fold row count equals selected-track occupancy")
@@ -356,10 +360,10 @@ private func checkLiveFoldProjection(_ report: CheckReport, session: DocumentSes
         ]).first
     else {
         report.fail(id, "could not add the live folded off-scale note")
-        session.setScale(fold: oldFold)
+        viewport.setScale(fold: oldFold)
         return
     }
-    let live = session.camera.projection
+    let live = viewport.camera.projection
     report.expect(
         document.note(added) != nil
             && live.row(forPitch: base) != PitchProjection.hiddenRow, cppID: id,
@@ -375,7 +379,7 @@ private func checkLiveFoldProjection(_ report: CheckReport, session: DocumentSes
     if !document.history.undoDocument() {
         report.fail(id, "could not undo the live folded note")
     }
-    session.setScale(fold: oldFold)
+    viewport.setScale(fold: oldFold)
     report.expect(
         document.history.currentIdentity == before, cppID: id,
         message: "production fold insertion restores document history")

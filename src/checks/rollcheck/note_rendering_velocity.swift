@@ -5,14 +5,15 @@ import PorydawCore
 import QtBridge
 
 @MainActor
-func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
+func checkVelocityValues(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::velocityValueRaster"
-    let oldCamera = session.camera
+    let oldCamera = viewport.camera
     let document = session.document
     let initialState = document.state
     let initialIdentity = document.history.currentIdentity
     let priorSelection = session.selectedNoteOrder
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     defer {
         if grid.interactionActive {
             grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
@@ -21,7 +22,7 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
             guard document.history.undoDocument() else { break }
         }
         session.setSelectedNotes(priorSelection)
-        session.mutateCamera { $0 = oldCamera }
+        viewport.mutateCamera { $0 = oldCamera }
         report.expect(
             document.state == initialState
                 && document.history.currentIdentity == initialIdentity,
@@ -29,25 +30,25 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
     }
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 1)
     grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(35) }
     grid.refreshCamera()
-    guard let noteID = renderingSeed(report, id: id, session: session, grid: grid),
+    guard let noteID = renderingSeed(report, id: id, viewport: viewport, grid: grid),
         let note = document.note(noteID)
     else { return }
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         _ = camera.setKeyHeight(32)
         _ = camera.setVScroll(max(0, (127.5 - Double(note.pitch)) * 32 - 160))
     }
     grid.refreshCamera()
     guard
         let other = ghostSeed(
-            report, id: id, session: session, grid: grid,
+            report, id: id, viewport: viewport, grid: grid,
             track: grid.trackIndex, spanCells: 1,
             nearPitch: Int(note.pitch),
             excluding: [Int(note.pitch)]),
         let otherNote = document.note(other.id)
     else { return }
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         _ = camera.setTimeZoom(280)
         _ = camera.setHScroll(
             max(
@@ -59,7 +60,7 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
     grid.setNoteNameMode(enabled: true)
     for height in [32.0, 8.6, 9.0] {
         let rowMessage = height == 32.0 ? "" : " at row \(height)"
-        session.mutateCamera { camera in
+        viewport.mutateCamera { camera in
             _ = camera.setKeyHeight(height)
             _ = camera.setVScroll(max(0, (127.5 - Double(note.pitch)) * height - 160))
         }
@@ -132,7 +133,7 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
     // Width and ghost gates against the real plotted list: the same
     // control-drag earns no value label when the note is too narrow, and a
     // ghost note never earns one while the dragged note keeps its own.
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         _ = camera.setKeyHeight(32)
         _ = camera.setVScroll(max(0, (127.5 - Double(note.pitch)) * 32 - 160))
         _ = camera.setTimeZoom(280)
@@ -157,9 +158,9 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
         noteValueLabeled(grid, id: noteID) != nil, cppID: id,
         message: "a wide note shows its velocity value during a drag")
     grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
-    _ = session.mutateCamera { _ = $0.setTimeZoom(4) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(4) }
     grid.refreshCamera()
-    _ = session.mutateCamera { camera in
+    _ = viewport.mutateCamera { camera in
         _ = camera.setHScroll(camera.snapshot.minHScroll)
     }
     grid.refreshCamera()
@@ -177,9 +178,9 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
             noteValueLabeled(grid, id: noteID) == nil, cppID: id,
             message: "a culled narrow note plots no velocity value")
     }
-    _ = session.mutateCamera { _ = $0.setTimeZoom(280) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(280) }
     grid.refreshCamera()
-    _ = session.mutateCamera { camera in
+    _ = viewport.mutateCamera { camera in
         _ = camera.setHScroll(
             max(
                 camera.snapshot.minHScroll,
@@ -192,7 +193,7 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
     {
         grid.refreshFromSession()
         if let ghost = ghostSeed(
-            report, id: id, session: session, grid: grid,
+            report, id: id, viewport: viewport, grid: grid,
             track: other, spanCells: 4,
             nearPitch: Int(note.pitch),
             excluding: [Int(note.pitch)]),
@@ -214,7 +215,7 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
         guard document.history.undoDocument() else { break }
     }
     grid.refreshFromSession()
-    let camera = session.camera
+    let camera = viewport.camera
     let snapshot = camera.snapshot
     let occupiedPitches = Set(document.notes(in: grid.trackIndex).map { Int($0.pitch) })
     let freeRow = (24...115).first { pitch in
@@ -262,7 +263,7 @@ func checkVelocityValues(_ report: CheckReport, session: DocumentSession) {
             && drawn.drawPreview.duration == preview.duration
             && drawn.drawPreview.pitch == preview.pitch,
         cppID: id, message: "the draw preview carries the last velocity while the modifier is held")
-    let drawCamera = session.camera
+    let drawCamera = viewport.camera
     let previewX0 = drawCamera.viewX(tick: Double(preview.tick), dpr: grid.devicePixelRatio)
     let previewX1 = drawCamera.viewX(
         tick: Double(preview.tick + preview.duration), dpr: grid.devicePixelRatio)

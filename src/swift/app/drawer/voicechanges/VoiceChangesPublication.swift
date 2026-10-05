@@ -29,24 +29,24 @@ extension VoiceChangesPage {
     /// lattice. The rules themselves live in `VoiceChangesScene`.
     @QtIgnored
     func xForTick(_ tick: Tick) -> Double {
-        guard let session else { return 0 }
+        guard let viewport else { return 0 }
         return VoiceChangesScene.xForTick(
-            tick, camera: session.camera,
+            tick, camera: viewport.camera,
             devicePixelRatio: devicePixelRatio)
     }
 
     @QtIgnored
     func snapTick(at x: Double, fine: Bool = false) -> Tick {
-        guard let session else { return 0 }
-        let raw = max(0, session.camera.tickAtContentX(max(0, x)))
-        return session.grid.snapTick(raw, camera: session.camera, fine: fine)
+        guard let viewport else { return 0 }
+        let raw = max(0, viewport.camera.tickAtContentX(max(0, x)))
+        return viewport.grid.snapTick(raw, camera: viewport.camera, fine: fine)
     }
 
     @QtIgnored
     func markerHit(at x: Double) -> LanePoint? {
-        guard let session else { return nil }
+        guard let viewport else { return nil }
         return VoiceChangesScene.markerHit(
-            at: x, points: lanePoints(), camera: session.camera,
+            at: x, points: lanePoints(), camera: viewport.camera,
             devicePixelRatio: devicePixelRatio,
             hitRadius: fontPx(baseFontPx, VoiceChangesPagePolicy.markerHitRadiusFactor))
     }
@@ -73,18 +73,18 @@ extension VoiceChangesPage {
     /// held spans, the grid and the markers.
     @QtIgnored
     func rebuildContent() {
-        guard let session, plotHeight > 0 || plotWidth > 0 else { return }
+        guard let session, let viewport, plotHeight > 0 || plotWidth > 0 else { return }
         contentBuildCount &+= 1
         let entries = markerEntries()
         let snapshot = VoiceChangesSceneSnapshot.build(
-            sceneInput(session, entries: entries), palette: palette, title: title,
+            sceneInput(session, viewport: viewport, entries: entries), palette: palette, title: title,
             caption: caption)
         trackAvailable = snapshot.trackAvailable
         publishGutter(snapshot.gutterTexts)
         projectMarkers(snapshot.entries)
         publishReadout(snapshot.readout)
         publishTransient()
-        publishDisplayLists(entries: entries, session: session)
+        publishDisplayLists(entries: entries, session: session, viewport: viewport)
     }
 
     /// Valid empty list for out-of-range fetches before the first publish.
@@ -97,7 +97,9 @@ extension VoiceChangesPage {
         return empty
     }
 
-    private func publishDisplayLists(entries: [VoiceProjectionEntry], session: DocumentSession) {
+    private func publishDisplayLists(
+        entries: [VoiceProjectionEntry], session: DocumentSession, viewport: DocumentViewport
+    ) {
         var rects: [DrawerStaticRect] = []
         if let track = currentTrack(session), plotHeight > 0 {
             let color = SceneRectPacking.argb(
@@ -126,17 +128,17 @@ extension VoiceChangesPage {
             5: palette.gridLineSub1, 6: palette.gridLineSub2,
             7: palette.gridLineSub3, 25: palette.gridLineBeatFine,
         ]
-        let viewport = CGSize(width: plotWidth, height: plotHeight)
-        let camera = session.camera
+        let viewportSize = CGSize(width: plotWidth, height: plotHeight)
+        let camera = viewport.camera
         // Release the previous buffer before the retained writer reuses its
         // own: otherwise finish()'s shared output copies on write each frame.
         var writer = listWriter
         DrawerStaticsContent.buildGrid(
-            into: &writer, axis: session.projectionCache.timeAxis, grid: session.grid,
-            camera: camera, viewport: viewport, paletteColors: colors)
+            into: &writer, axis: session.projectionCache.timeAxis, grid: viewport.grid,
+            camera: camera, viewport: viewportSize, paletteColors: colors)
         DrawerStaticsContent.buildTickRects(
             into: &writer, rects: rects,
-            camera: camera, dpr: devicePixelRatio, viewport: viewport)
+            camera: camera, dpr: devicePixelRatio, viewport: viewportSize)
         let list0 = writer.finish()
         listWriter = writer
         let next = [list0]
@@ -150,6 +152,7 @@ extension VoiceChangesPage {
     /// caller already projected.
     private func sceneInput(
         _ session: DocumentSession,
+        viewport: DocumentViewport,
         entries: [VoiceProjectionEntry]
     ) -> VoiceChangesSceneInput {
         let track = currentTrack(session)
@@ -170,7 +173,7 @@ extension VoiceChangesPage {
             pad: pad,
             gap: max(fontPx(baseFontPx, VoiceChangesPagePolicy.hoverPaintPaddingFactor), pad),
             stairLimit: fontPx(baseFontPx, VoiceChangesPagePolicy.spaceFourFactor),
-            camera: session.camera,
+            camera: viewport.camera,
             interaction: interactionSnapshot())
     }
 
@@ -208,13 +211,13 @@ extension VoiceChangesPage {
     @QtIgnored
     func projectMarkers(_ entries: [VoiceProjectionEntry], reuseGeometry: Bool = false) {
         if !reuseGeometry { markerLookup.removeAll(keepingCapacity: true) }
-        guard let session else {
+        guard let session, let viewport else {
             publishMarkers([])
             return
         }
         publishMarkers(
             VoiceChangesScene.markers(
-                sceneInput(session, entries: entries), palette: palette, caption: caption,
+                sceneInput(session, viewport: viewport, entries: entries), palette: palette, caption: caption,
                 reusing: markerLookup))
     }
 

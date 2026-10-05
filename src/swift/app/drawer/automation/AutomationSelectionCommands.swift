@@ -33,12 +33,12 @@ extension AutomationPage {
     @QtIgnored
     @discardableResult
     public func consumeSelectionCommand(command: EditCommand) -> Bool {
-        guard let session, !pointerGestureActive, !menuOpen, !promptOpen else { return false }
+        guard let session, let viewport, !pointerGestureActive, !menuOpen, !promptOpen else { return false }
         if command == .paste {
             let cursor =
                 selectionSnapPolicy()?.snap(
                     Double(session.editCursor), fine: false,
-                    camera: session.camera) ?? session.editCursor
+                    camera: viewport.camera) ?? session.editCursor
             _ = pasteClipboard(at: cursor)
             return true
         }
@@ -91,8 +91,8 @@ extension AutomationPage {
     }
 
     func selectionSnapPolicy() -> AutomationSnapPolicy? {
-        guard let session else { return nil }
-        var grid = session.grid
+        guard let session, let viewport else { return nil }
+        var grid = viewport.grid
         grid.metrics = GridMetrics(
             baseFontPx: baseFontPx, dpr: devicePixelRatio,
             width: 0, height: 0, timeAxis: grid.axis)
@@ -100,18 +100,18 @@ extension AutomationPage {
     }
 
     func selectionSnapDuration() -> Tick {
-        guard let session, let snap = selectionSnapPolicy() else { return 1 }
+        guard let session, let viewport, let snap = selectionSnapPolicy() else { return 1 }
         let tick = session.editCursor
         return max(
             1,
             snap.next(
                 after: tick, fine: false, limit: TimeDefaults.maxTick,
-                camera: session.camera) - tick)
+                camera: viewport.camera) - tick)
     }
 
     /// One native read, one atomic semantic paste, and one final state publication.
     func pasteClipboard(at cursor: Tick) -> Tick? {
-        guard let session, let track = activeTrack(), let decoded = clipboard.read() else { return nil }
+        guard let session, let viewport, let track = activeTrack(), let decoded = clipboard.read() else { return nil }
         let clip = ClipboardCodec.rescale(
             decoded.clip, sourceTicksPerBeat: decoded.ticksPerBeat,
             destinationTicksPerBeat: UInt32(session.document.ticksPerBeat))
@@ -125,7 +125,7 @@ extension AutomationPage {
             session.editCursor = result.nextCursor
             if clip.span == 0 { session.setSelectedNotes(result.insertedNoteIDs) } else { clearTimeSelection() }
             refreshFromDocument()
-            _ = session.mutateCamera { _ = $0.ensureTickVisible(UInt64(cursor), dpr: devicePixelRatio) }
+            _ = viewport.mutateCamera { _ = $0.ensureTickVisible(UInt64(cursor), dpr: devicePixelRatio) }
             return result.nextCursor
         }
     }
@@ -160,14 +160,14 @@ extension AutomationPage {
     }
 
     private func nudgeSelection(_ direction: Int) {
-        guard let session, var selection, let scope = resolvedSelectionScope(),
+        guard let session, let viewport, var selection, let scope = resolvedSelectionScope(),
             let snap = selectionSnapPolicy()
         else { return }
         let start = selection.range.startTick
         let destination =
             direction > 0
-            ? snap.next(after: start, fine: false, limit: TimeDefaults.maxTick, camera: session.camera)
-            : snap.snapDown(Double(start) - 1, fine: false, camera: session.camera)
+            ? snap.next(after: start, fine: false, limit: TimeDefaults.maxTick, camera: viewport.camera)
+            : snap.snapDown(Double(start) - 1, fine: false, camera: viewport.camera)
         let delta = Int64(destination) - Int64(start)
         let end = Int64(selection.range.endTick) + delta
         guard delta != 0, end <= Int64(TimeDefaults.maxTick) else { return }
@@ -186,7 +186,7 @@ extension AutomationPage {
     }
 
     private func transposeSelection(_ semitones: Int) {
-        guard let session, let selection, let scope = resolvedSelectionScope() else { return }
+        guard let session, let viewport, let selection, let scope = resolvedSelectionScope() else { return }
         let notes = ClipboardSemantics.gather(
             selection.range, scope: scope,
             from: session.document
@@ -198,14 +198,14 @@ extension AutomationPage {
             let edge = notes.reduce(Int(notes[0].pitch)) {
                 semitones > 0 ? max($0, Int($1.pitch)) : min($0, Int($1.pitch))
             }
-            _ = session.mutateCamera { _ = $0.ensureKeyVisible(edge + semitones) }
+            _ = viewport.mutateCamera { _ = $0.ensureKeyVisible(edge + semitones) }
             refreshFromDocument()
         }
     }
 
     private func revealSelectionRange(start: Tick, end: Tick, preferEnd: Bool = true) {
-        guard let session else { return }
-        _ = session.mutateCamera {
+        guard let viewport else { return }
+        _ = viewport.mutateCamera {
             _ = $0.ensureRangeVisible(
                 startTick: UInt64(start), endTick: UInt64(end),
                 preferEnd: preferEnd, dpr: devicePixelRatio)

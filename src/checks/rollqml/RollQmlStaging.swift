@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawAppAudio
 import PorydawAppCommands
 import PorydawCore
@@ -18,7 +18,7 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     private static var stagedProjectRoot = ""
 
     private var timeSigFixtureIdentity: DocumentIdentity?
-    private var releasedDocument: DocumentSession?
+    private var releasedViewport: DocumentViewport?
     private var releasedGrid: PianoGrid?
     private weak var releasingTab: SongTabSession?
     private var releasingTabId = -1
@@ -58,10 +58,15 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
         qmlChildren.compactMap { $0 as? ApplicationSession }.first
     }
 
-    /// The selected tab's document session: the document's own timeline and
-    /// camera, for the deterministic drive seams below.
+    /// The selected tab's document session: the document's own timeline, for
+    /// the deterministic drive seams below.
     private var document: DocumentSession? {
         session?.selectedDocument
+    }
+
+    /// The selected tab's viewport: the camera the drive seams below move.
+    private var viewport: DocumentViewport? {
+        session?.workspace?.viewport
     }
 
     // ---- the run loop and the staged project --------------------------------
@@ -121,7 +126,7 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
 
     public func hostClosing() -> Bool {
         guard let session, let tab = session.songTabs.selectedPage else { return false }
-        releasedDocument = session.selectedDocument
+        releasedViewport = tab.workspace.viewport
         releasedGrid = tab.grid
         releasingTab = tab
         releasingTabId = tab.tabId
@@ -162,23 +167,24 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     }
 
     public func releasedDocumentCannotPublish() -> Bool {
-        guard let document = releasedDocument, let grid = releasedGrid else { return false }
+        guard let viewport = releasedViewport, let grid = releasedGrid else { return false }
         defer {
-            releasedDocument = nil
+            releasedViewport = nil
             releasedGrid = nil
         }
-        guard document.onCameraChange == nil, document.onCameraChangeDetailed == nil,
+        let document = viewport.session
+        guard viewport.onCameraChangeDetailed == nil,
             document.onChange == nil, document.onPlayback == nil
         else { return false }
         let priorBeatWidth = grid.beatWidth
         let priorRevisionText = grid.appliedRevisionText
         let priorRevision = document.document.revision
-        let currentZoom = document.camera.snapshot.pixelsPerBeat
-        let moved = document.mutateCamera { $0.setTimeZoom(currentZoom * 2) }
+        let currentZoom = viewport.camera.snapshot.pixelsPerBeat
+        let moved = viewport.mutateCamera { $0.setTimeZoom(currentZoom * 2) }
         document.document.setTimeSignature(
             tick: Tick(document.document.ticksPerBeat * 8), numerator: 5, denominatorPower: 2)
         return moved && document.document.revision > priorRevision
-            && document.onCameraChange == nil && document.onCameraChangeDetailed == nil
+            && viewport.onCameraChangeDetailed == nil
             && document.onChange == nil && document.onPlayback == nil
             && grid.beatWidth == priorBeatWidth
             && grid.appliedRevisionText == priorRevisionText
@@ -397,8 +403,8 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     /// Sets the camera's horizontal zoom — the deterministic `pxPerBeat` the
     /// follow-scroll check parks on.
     public func setCameraTimeZoom(pxPerBeat: Double) -> Bool {
-        guard let document, pxPerBeat.isFinite, pxPerBeat > 0 else { return false }
-        return document.mutateCamera { $0.setTimeZoom(pxPerBeat) }
+        guard let viewport, pxPerBeat.isFinite, pxPerBeat > 0 else { return false }
+        return viewport.mutateCamera { $0.setTimeZoom(pxPerBeat) }
     }
 
     /// The attached document's timeline length in ticks.
@@ -406,14 +412,14 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
         Double(document?.timeline.lengthTicks ?? 0)
     }
 
-    /// The plot-local projection of `tick` through the session camera.
+    /// The plot-local projection of `tick` through the viewport camera.
     public func cameraContentX(tick: Double) -> Double {
-        document?.camera.contentX(tick: tick) ?? 0
+        viewport?.camera.contentX(tick: tick) ?? 0
     }
 
-    /// The session camera's pixels-per-tick.
+    /// The viewport camera's pixels-per-tick.
     public func cameraPxPerTick() -> Double {
-        document?.camera.pixelsPerTick ?? 0
+        viewport?.camera.pixelsPerTick ?? 0
     }
 
     public func presentHeaderActivity(

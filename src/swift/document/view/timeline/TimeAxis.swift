@@ -67,7 +67,7 @@ public struct TimeAxis: Equatable, Sendable {
         self.map = map
     }
 
-    var ticksPerBeat: UInt32 { max(1, map.ticksPerBeat) }  // fallback axis is 24
+    public var ticksPerBeat: UInt32 { max(1, map.ticksPerBeat) }  // fallback axis is 24
     var lengthTicks: Tick { map.lengthTicks }  // 0 unbound
     public var loopStartTick: Tick { map.loopStartTick }  // kNoTick when absent
     public var loopEndTick: Tick { map.loopEndTick }  // kNoTick when absent

@@ -504,7 +504,12 @@ private func runTabReadinessChecks(
     report.expect(
         !freshSawUnreadyRow && !freshSawExtraRow, cppID: id,
         message: "fresh open installs no probe row: the strip never selects an unready or extra tab")
-    let fresh = document.camera.snapshot
+    let firstViewport = first.workspace.viewport
+    let fresh = firstViewport.camera.snapshot
+    let freshScale = firstViewport.scale
+    let freshMuted = document.mutedTracks
+    let freshDivision = first.gridPresenter().gridSelectionMenuId
+    let freshTriplet = first.gridPresenter().tripletGrid
     report.expect(
         first.isReady && first.songOpen, cppID: id,
         message: "A047 a fresh tab is published only after document and bank load")
@@ -512,7 +517,7 @@ private func runTabReadinessChecks(
         !document.timeline.events.isEmpty && document.bankLease.id.sourceRelativePath != "",
         cppID: id, message: "A048 first visible tab has a populated playback timeline and bank lease")
     report.expect(
-        document.editorViewState == seed, cppID: id,
+        firstViewport.editorViewState == seed, cppID: id,
         message: "A049 fresh tab owns the complete seeded editor state including ordered lanes")
     report.expect(
         fresh.scrollX == fresh.minHScroll && document.editCursor == 0
@@ -526,7 +531,7 @@ private func runTabReadinessChecks(
         first.drawerPresenter().chromeState == seed.chrome, cppID: id,
         message: "A052 initial drawer chrome is fully installed before tab publication")
     report.expect(
-        document.editorViewState.lanes == seed.lanes, cppID: id,
+        firstViewport.editorViewState.lanes == seed.lanes, cppID: id,
         message: "A053 first ready tab has every seeded lane height range and visibility")
     report.expect(
         app.songTabs.tabCount == 1, cppID: id,
@@ -542,20 +547,17 @@ private func runTabReadinessChecks(
     }
     document.setSelectedNotes([note.id])
     document.editCursor = 48
-    document.setScale(root: 2)
-    document.setScale(highlight: true)
+    firstViewport.setScale(root: 2)
+    firstViewport.setScale(highlight: true)
     document.mutedTracks = [0]
-    document.mutateCamera { _ = $0.setHScroll(12) }
+    firstViewport.mutateCamera { _ = $0.setHScroll(12) }
     first.gridPresenter().openGridMenu(kind: 1)
     first.gridPresenter().activateGridMenuRow(actionId: 16)
     first.gridPresenter().openGridMenu(kind: 2)
     first.gridPresenter().activateGridMenuRow(actionId: 1)
-    let priorCamera = document.camera.snapshot
-    let priorScale = document.scaleProjection
+    let priorCamera = firstViewport.camera.snapshot
     let priorNotes = document.selectedNoteOrder
-    let priorDivision = first.gridPresenter().gridSelectionMenuId
-    let priorTriplet = first.gridPresenter().tripletGrid
-    let priorEditor = document.editorViewState
+    let priorEditor = firstViewport.editorViewState
     do {
         var file = try MidiFile.decode(Array(Data(contentsOf: midiURL)))
         file.chunks[1].events.insert(.channel(tick: 72, status: 0x90, data0: 74, data1: 95), at: 4)
@@ -576,8 +578,8 @@ private func runTabReadinessChecks(
         oldSession.timeline.events == original, cppID: reloadID,
         message: "A062 pending reload retains the old rendered playback event sequence")
     report.expect(
-        oldSession.editorViewState == priorEditor
-            && oldSession.camera.snapshot == priorCamera
+        firstViewport.editorViewState == priorEditor
+            && firstViewport.camera.snapshot == priorCamera
             && oldSession.editCursor == 48 && oldSession.selectedNoteOrder == priorNotes,
         cppID: reloadID,
         message: "A063 pending reload retains complete editor camera cursor and selection")
@@ -593,7 +595,7 @@ private func runTabReadinessChecks(
         if app.songTabs.tabCount != 1 { pendingSawSecondRow = true }
         if app.songTabs.selectedPage === oldPage {
             if oldPage.isReady || oldSession.timeline.events != original
-                || oldSession.editorViewState != priorEditor
+                || firstViewport.editorViewState != priorEditor
             {
                 partialPublication = true
             }
@@ -635,20 +637,31 @@ private func runTabReadinessChecks(
     report.expect(
         landed.isReady && replacement !== oldSession, cppID: reloadID,
         message: "A069 replacement becomes command-ready only with its new document")
+    // Reload opens the song fresh in the same row. The editor view state is
+    // application-wide, so the drawer and lanes match; camera, cursor, grid,
+    // scale, mute and selection start over.
+    let landedViewport = landed.workspace.viewport
+    let landedCamera = landedViewport.camera.snapshot
+    let landedScale = landedViewport.scale
     report.expect(
-        replacement.editorViewState == priorEditor
+        landedViewport.editorViewState == priorEditor
             && landed.drawerPresenter().chromeState == seed.chrome
-            && replacement.camera.snapshot.pixelsPerBeat == priorCamera.pixelsPerBeat
-            && replacement.editCursor == 48 && replacement.scaleProjection == priorScale
-            && landed.gridPresenter().gridSelectionMenuId == priorDivision
-            && landed.gridPresenter().tripletGrid == priorTriplet
-            && replacement.mutedTracks == [0], cppID: reloadID,
-        message: "A070 completed publication retains full editor drawer lane camera cursor grid scale and mute state")
+            && landedCamera.pixelsPerBeat == fresh.pixelsPerBeat
+            && landedCamera.scrollX == landedCamera.minHScroll
+            && replacement.editCursor == 0
+            && landedScale.root == freshScale.root && landedScale.scale == freshScale.scale
+            && landedScale.highlight == freshScale.highlight && landedScale.fold == freshScale.fold
+            && landed.gridPresenter().gridSelectionMenuId == freshDivision
+            && landed.gridPresenter().tripletGrid == freshTriplet
+            && replacement.mutedTracks == freshMuted, cppID: reloadID,
+        message:
+            "A070 completed publication keeps the app-wide editor drawer and lane state and opens camera cursor grid scale and mute fresh"
+    )
     report.expect(
         landed.isReady && app.songTabs.tabCount == 1
-            && !partialPublication && replacement.selectedNoteOrder == priorNotes,
+            && !partialPublication && replacement.selectedNoteOrder.isEmpty,
         cppID: reloadID,
-        message: "A071 exactly one pending and one ready transition restore selected notes at completion")
+        message: "A071 exactly one pending and one ready transition open with an empty note selection")
 
     let recoveryID = "mainwindowrouting/MainWindowRoutingLifecycleTest::reloadRecovery"
 
@@ -686,7 +699,8 @@ private func runTabReadinessChecks(
         return
     }
     let scopedGrid = scopedPage.gridPresenter()
-    let scopedCamera = scopedDocument.camera
+    let scopedViewport = scopedPage.workspace.viewport
+    let scopedCamera = scopedViewport.camera
     if let firstNote = (0..<scopedDocument.document.engineTracks.usedTrackCount).flatMap({
         scopedDocument.document.notes(in: $0)
     }).filter({
@@ -696,7 +710,7 @@ private func runTabReadinessChecks(
         // Center the first note with a lead pad: MIDI middle, px offset.
         let middlePitch = 127.5
         let leadPad = 100.0
-        scopedDocument.mutateCamera { camera in
+        scopedViewport.mutateCamera { camera in
             _ = camera.setHScroll(
                 max(
                     camera.snapshot.minHScroll,

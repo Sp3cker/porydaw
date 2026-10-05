@@ -590,10 +590,11 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     }
 
     public func polyphonyRevealState() -> String {
-        guard let session = polyphonySession?.selectedDocument,
-            let saved = try? session.document.captureSave()
+        guard let viewport = polyphonySession?.workspace?.viewport,
+            let saved = try? viewport.session.document.captureSave()
         else { return "" }
-        let camera = session.camera
+        let session = viewport.session
+        let camera = viewport.camera
         let selected = session.selectedNoteOrder.map { String($0.rawValue) }.joined(separator: ",")
         return """
             {"track":\(session.selectedTrack ?? -1),"selected":[\(selected)],

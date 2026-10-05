@@ -1,3 +1,5 @@
+import PorydawDocument
+
 /// The historical QSettings workspace recipe. These keys are application-wide,
 /// not part of a project's files or the document's revision/history.
 public struct WorkspaceTabRecipe: Equatable, Sendable {

@@ -5,9 +5,9 @@ import PorydawCore
 import PorydawAppCommands
 
 @MainActor
-func checkRulerLoopSetAndUndo(_ report: CheckReport, session: DocumentSession) {
+func checkRulerLoopSetAndUndo(_ report: CheckReport, viewport: DocumentViewport) {
     let id = "swiftcore/PianoRoll::rulerLoopMenuSetAndTwoStepUndo"
-    let document = rulerMenuDocument(session)
+    let document = rulerMenuDocument(viewport.session)
     guard let note = document.notes(in: 0).first else {
         report.fail(id, "resize fixture note is absent")
         return
@@ -20,7 +20,7 @@ func checkRulerLoopSetAndUndo(_ report: CheckReport, session: DocumentSession) {
     let snapCell: Tick = 6
     let startTick = note.tick + note.duration
     let endTick = startTick + snapCell
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     report.expect(
         Tick(grid.snapTickDown(Double(startTick))) == startTick
             && Tick(grid.snapTickDown(Double(endTick))) == endTick,
@@ -107,12 +107,12 @@ func checkRulerLoopSetAndUndo(_ report: CheckReport, session: DocumentSession) {
 }
 
 @MainActor
-func checkRulerSignatureRemoval(_ report: CheckReport, session: DocumentSession) {
+func checkRulerSignatureRemoval(_ report: CheckReport, viewport: DocumentViewport) {
     let id = "swiftcore/PianoRoll::rulerLoopMenuEnablementSelectionContext"
-    let document = rulerMenuDocument(session)
+    let document = rulerMenuDocument(viewport.session)
     let snapCell: Tick = 6
     let chipTick = rulerSeedTick + snapCell
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     report.expect(
         Tick(grid.snapTickDown(Double(chipTick))) == chipTick,
         cppID: id, message: "the signature chip sits exactly on the snap lattice")
@@ -138,13 +138,13 @@ func checkRulerSignatureRemoval(_ report: CheckReport, session: DocumentSession)
 }
 
 @MainActor
-func checkRulerInsertTime(_ report: CheckReport, session: DocumentSession) {
+func checkRulerInsertTime(_ report: CheckReport, viewport: DocumentViewport) {
     let id = "swiftcore/PianoRoll::rulerLoopMenuInsertTimeAndStaleNoOp"
-    let document = rulerMenuDocument(session)
+    let document = rulerMenuDocument(viewport.session)
     let snapCell: Tick = 6
     let insertStart = rulerSeedTick + snapCell
     let insertEnd = insertStart + snapCell
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     report.expect(
         Tick(grid.snapTickDown(Double(insertStart))) == insertStart
             && Tick(grid.snapTickDown(Double(insertEnd))) == insertEnd,
@@ -188,15 +188,16 @@ func checkRulerInsertTime(_ report: CheckReport, session: DocumentSession) {
 }
 
 @MainActor
-func checkRenderedRulerMenuCommands(_ report: CheckReport, session: DocumentSession) {
+func checkRenderedRulerMenuCommands(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::rulerMenuSwiftRowsAndTwoStepUndo"
     let palette = GridPalette()
-    let grid = PianoGrid(session: session, palette: palette)
+    let grid = PianoGrid(viewport: viewport, palette: palette)
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 1)
     let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: palette)
+    automation.attach(viewport: viewport, palette: palette)
     defer { automation.detach() }
-    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let menu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
     let previousTrack = session.selectedTrack
     if previousTrack == nil { session.selectPrimaryTrack(0) }
     defer { session.selectedTrack = previousTrack }
@@ -205,8 +206,8 @@ func checkRenderedRulerMenuCommands(_ report: CheckReport, session: DocumentSess
 
     let start: Tick = session.timeline.loopStartTick == 72 ? 48 : 72
     let end: Tick = session.timeline.loopEndTick == 96 ? 120 : 96
-    let atStart = session.camera.contentX(tick: Double(start))
-    let atEnd = session.camera.contentX(tick: Double(end))
+    let atStart = viewport.camera.contentX(tick: Double(start))
+    let atEnd = viewport.camera.contentX(tick: Double(end))
     openRulerMenu(menu, at: atStart)
     report.expect(
         menu.isOpen && menu.rows.count > 0
@@ -281,7 +282,7 @@ func checkRenderedRulerMenuCommands(_ report: CheckReport, session: DocumentSess
     menu.beginSweep(contentX: atStart, pointerY: 0)
     menu.updateSweep(contentX: atEnd)
     menu.endSweep(contentX: atEnd)
-    openRulerMenu(menu, at: session.camera.contentX(tick: Double((start + end) / 2)))
+    openRulerMenu(menu, at: viewport.camera.contentX(tick: Double((start + end) / 2)))
     report.expect(
         (0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 5 && menu.rows[$0].enabled })
             && !(0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 2 }), cppID: id,
@@ -294,7 +295,7 @@ func checkRenderedRulerMenuCommands(_ report: CheckReport, session: DocumentSess
     report.expect(
         !menu.isOpen && session.timeSelection == nil,
         cppID: id, message: "clicking the ruler Clear row closes the menu and drops the range")
-    openRulerMenu(menu, at: session.camera.contentX(tick: Double((start + end) / 2)))
+    openRulerMenu(menu, at: viewport.camera.contentX(tick: Double((start + end) / 2)))
     report.expect(
         !(0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 8 }),
         cppID: id, message: "reopening the ruler menu after Clear loses its scoped rows")
@@ -302,7 +303,7 @@ func checkRenderedRulerMenuCommands(_ report: CheckReport, session: DocumentSess
     menu.beginSweep(contentX: atStart, pointerY: 0)
     menu.updateSweep(contentX: atEnd)
     menu.endSweep(contentX: atEnd)
-    openRulerMenu(menu, at: session.camera.contentX(tick: Double((start + end) / 2)))
+    openRulerMenu(menu, at: viewport.camera.contentX(tick: Double((start + end) / 2)))
     let staleBytes = coreTimeBytes(session.document)
     let staleIndex = session.document.history.undoIndex
     let staleCount = session.document.history.undoCount
@@ -320,14 +321,15 @@ func checkRenderedRulerMenuCommands(_ report: CheckReport, session: DocumentSess
 }
 
 @MainActor
-func checkRulerInsertTimePrompt(_ report: CheckReport, session: DocumentSession) {
+func checkRulerInsertTimePrompt(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::rulerInsertTimePromptWholeSong"
     let palette = GridPalette()
-    let grid = PianoGrid(session: session, palette: palette)
+    let grid = PianoGrid(viewport: viewport, palette: palette)
     let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: palette)
+    automation.attach(viewport: viewport, palette: palette)
     defer { automation.detach() }
-    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let menu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
     let previousCursor = session.editCursor
     defer { session.editCursor = previousCursor }
     guard let note = session.document.notes(in: 0).first else {
@@ -347,7 +349,7 @@ func checkRulerInsertTimePrompt(_ report: CheckReport, session: DocumentSession)
     let segment = axis.segmentAt(0)
     let barTicks = Tick(segment.beatTicks) * Tick(segment.beatsPerBar)
     session.editCursor = 0
-    openRulerMenu(menu, at: session.camera.contentX(tick: 0))
+    openRulerMenu(menu, at: viewport.camera.contentX(tick: 0))
     _ = menu.activate(actionId: 1)
     report.expect(
         menu.insertTimePromptOpen && !menu.isOpen
@@ -367,7 +369,7 @@ func checkRulerInsertTimePrompt(_ report: CheckReport, session: DocumentSession)
     report.expect(
         coreTimeBytes(session.document) == before, cppID: id,
         message: "one undo restores the song before prompted insertion")
-    openRulerMenu(menu, at: session.camera.contentX(tick: 0))
+    openRulerMenu(menu, at: viewport.camera.contentX(tick: 0))
     _ = menu.activate(actionId: 1)
     menu.cancelInsertTimePrompt()
     report.expect(

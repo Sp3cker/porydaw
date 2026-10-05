@@ -247,12 +247,12 @@ func drawerVelocityGestureTransactions(
     fixture.session.clearSelectedNotes()
     page.refreshFromDocument()
     let panBaseline = DocumentSnapshot(document)
-    let panScroll = fixture.session.camera.snapshot.scrollX
+    let panScroll = fixture.viewport.camera.snapshot.scrollX
     _ = page.pointerPress(x: 200, y: 40, surface: 1, button: 4, modifiers: 0)
     _ = page.pointerMove(x: 170, y: 40, buttons: 4)
     _ = page.pointerMove(x: 150, y: 40, buttons: 4)
     report.expect(
-        fixture.session.camera.snapshot.scrollX > panScroll, cppID: drawerVelocityTransactionID,
+        fixture.viewport.camera.snapshot.scrollX > panScroll, cppID: drawerVelocityTransactionID,
         message: "a middle drag pans the shared camera")
     report.expect(
         page.interactionActive, cppID: drawerVelocityTransactionID,

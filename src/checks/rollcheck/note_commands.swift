@@ -5,23 +5,24 @@ import PorydawCore
 @testable import PorydawDocument
 
 @MainActor
-func runNoteCommandChecks(_ report: CheckReport, session: DocumentSession) {
-    checkKeyboardDuplicateNotes(report, session: session)
-    checkKeyboardDuplicatePrefersTimeSelection(report, session: session)
-    checkRollNoteDragGuardsSharedCommands(report, session: session)
-    checkKeyboardSplitNotesGrid(report, session: session)
-    checkKeyboardSplitAtEditCursor(report, session: session)
-    checkKeyboardSplitNoop(report, session: session)
-    checkKeyboardJoinNotes(report, session: session)
-    checkKeyboardJoinMixedSpread(report, session: session)
-    checkKeyboardSplitSelectedPlusCursorStraddler(report, session: session)
-    checkKeyboardNoteCommandPopupActivation(report, session: session)
-    checkCommandRouting(report, session: session)
+func runNoteCommandChecks(_ report: CheckReport, viewport: DocumentViewport) {
+    checkKeyboardDuplicateNotes(report, viewport: viewport)
+    checkKeyboardDuplicatePrefersTimeSelection(report, viewport: viewport)
+    checkRollNoteDragGuardsSharedCommands(report, viewport: viewport)
+    checkKeyboardSplitNotesGrid(report, viewport: viewport)
+    checkKeyboardSplitAtEditCursor(report, viewport: viewport)
+    checkKeyboardSplitNoop(report, viewport: viewport)
+    checkKeyboardJoinNotes(report, viewport: viewport)
+    checkKeyboardJoinMixedSpread(report, viewport: viewport)
+    checkKeyboardSplitSelectedPlusCursorStraddler(report, viewport: viewport)
+    checkKeyboardNoteCommandPopupActivation(report, viewport: viewport)
+    checkCommandRouting(report, viewport: viewport)
 }
 
 @MainActor
 private struct NoteCommandFixture {
-    let session: DocumentSession
+    let viewport: DocumentViewport
+    var session: DocumentSession { viewport.session }
     let grid: PianoGrid
     let source: Note
     let tick: Tick
@@ -36,18 +37,19 @@ private struct NoteCommandFixture {
     let originalCursor: Tick
     let originalCamera: EditorCamera.Snapshot
 
-    init?(session: DocumentSession, grid: PianoGrid) {
+    init?(viewport: DocumentViewport, grid: PianoGrid) {
+        let session = viewport.session
         let document = session.document
         guard let originalBytes = try? document.state.file.encoded(),
             document.engineTracks.usedTrackCount > 0
         else { return nil }
-        self.session = session
+        self.viewport = viewport
         self.originalBytes = originalBytes
         originalIdentity = document.history.currentIdentity
         originalSelection = session.selectedNoteOrder
         originalTrack = session.selectedTrack
         originalCursor = session.editCursor
-        originalCamera = session.camera.snapshot
+        originalCamera = viewport.camera.snapshot
         self.grid = grid
         let cellStep = Tick(grid.visibleGridTicks)
         step = cellStep
@@ -117,7 +119,7 @@ private struct NoteCommandFixture {
         session.selectedTrack = originalTrack
         session.setSelectedNotes(originalSelection)
         session.editCursor = originalCursor
-        _ = session.mutateCamera {
+        _ = viewport.mutateCamera {
             $0.restore(
                 pixelsPerBeat: originalCamera.pixelsPerBeat,
                 keyHeight: originalCamera.keyHeight,
@@ -128,14 +130,14 @@ private struct NoteCommandFixture {
 
 @MainActor
 private func withNoteCommandFixture(
-    _ report: CheckReport, session: DocumentSession, id: String,
+    _ report: CheckReport, viewport: DocumentViewport, id: String,
     _ body: (NoteCommandFixture) -> Void
 ) {
-    let picker = PianoGrid(session: session)
-    let previousGridSelection = session.grid.selection
+    let picker = PianoGrid(viewport: viewport)
+    let previousGridSelection = viewport.grid.selection
     picker.openGridMenu(kind: 1)
     picker.activateGridMenuRow(actionId: 8)
-    guard let fixture = NoteCommandFixture(session: session, grid: picker) else {
+    guard let fixture = NoteCommandFixture(viewport: viewport, grid: picker) else {
         picker.openGridMenu(kind: 1)
         picker.activateGridMenuRow(actionId: previousGridSelection.toMenuId())
         report.fail(id, "could not seed a free grid-aligned note")
@@ -161,9 +163,10 @@ private func growToThreeCells(_ fixture: NoteCommandFixture) -> Note? {
 }
 
 @MainActor
-private func checkKeyboardDuplicateNotes(_ report: CheckReport, session: DocumentSession) {
+private func checkKeyboardDuplicateNotes(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardDuplicateNotes"
-    withNoteCommandFixture(report, session: session, id: id) { fixture in
+    withNoteCommandFixture(report, viewport: viewport, id: id) { fixture in
         let document = session.document
         let source = fixture.source
         report.expect(
@@ -194,23 +197,24 @@ private func checkKeyboardDuplicateNotes(_ report: CheckReport, session: Documen
 
 @MainActor
 private func checkKeyboardDuplicatePrefersTimeSelection(
-    _ report: CheckReport, session: DocumentSession
+    _ report: CheckReport, viewport: DocumentViewport
 ) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardDuplicatePrefersTimeSelection"
-    withNoteCommandFixture(report, session: session, id: id) { fixture in
+    withNoteCommandFixture(report, viewport: viewport, id: id) { fixture in
         let source = fixture.source
         report.expect(
             fixture.note(at: source.tick)?.id == source.id, cppID: id,
             message: "the duplicate-precedence seed is present")
         session.setSelectedNotes([source.id])
         let page = AutomationPage()
-        page.attach(session: session, palette: fixture.grid.palette)
+        page.attach(viewport: viewport, palette: fixture.grid.palette)
         defer { page.detach() }
         page.applyTimeSelection(
             AutomationTimeSelection(
                 range: TimeRange(startTick: source.tick, endTick: source.tick + fixture.step),
                 scope: .tracks([source.track])))
-        let ruler = RulerMenuPresenter(session: session, grid: fixture.grid, automation: page)
+        let ruler = RulerMenuPresenter(viewport: viewport, grid: fixture.grid, automation: page)
         let router = EditorCommandRouter(
             session: session, grid: fixture.grid, automation: page,
             rulerMenu: ruler)
@@ -255,9 +259,10 @@ private func checkKeyboardDuplicatePrefersTimeSelection(
 }
 
 @MainActor
-private func checkKeyboardSplitNotesGrid(_ report: CheckReport, session: DocumentSession) {
+private func checkKeyboardSplitNotesGrid(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardSplitNotesGrid"
-    withNoteCommandFixture(report, session: session, id: id) { fixture in
+    withNoteCommandFixture(report, viewport: viewport, id: id) { fixture in
         guard let source = growToThreeCells(fixture) else {
             report.fail(id, "grid-aligned split seed did not grow to three cells")
             return
@@ -299,9 +304,10 @@ private func checkKeyboardSplitNotesGrid(_ report: CheckReport, session: Documen
 }
 
 @MainActor
-private func checkKeyboardSplitAtEditCursor(_ report: CheckReport, session: DocumentSession) {
+private func checkKeyboardSplitAtEditCursor(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardSplitAtEditCursor"
-    withNoteCommandFixture(report, session: session, id: id) { fixture in
+    withNoteCommandFixture(report, viewport: viewport, id: id) { fixture in
         let source = fixture.source
         report.expect(
             fixture.note(at: source.tick)?.id == source.id,
@@ -330,9 +336,10 @@ private func checkKeyboardSplitAtEditCursor(_ report: CheckReport, session: Docu
 }
 
 @MainActor
-private func checkKeyboardSplitNoop(_ report: CheckReport, session: DocumentSession) {
+private func checkKeyboardSplitNoop(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardSplitNoop"
-    withNoteCommandFixture(report, session: session, id: id) { fixture in
+    withNoteCommandFixture(report, viewport: viewport, id: id) { fixture in
         let document = session.document
         session.clearSelectedNotes()
         fixture.grid.setEditCursorTick(tick: Int(session.timeline.lengthTicks))
@@ -355,9 +362,10 @@ private func checkKeyboardSplitNoop(_ report: CheckReport, session: DocumentSess
 }
 
 @MainActor
-private func checkKeyboardJoinNotes(_ report: CheckReport, session: DocumentSession) {
+private func checkKeyboardJoinNotes(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardJoinNotes"
-    withNoteCommandFixture(report, session: session, id: id) { fixture in
+    withNoteCommandFixture(report, viewport: viewport, id: id) { fixture in
         let source = fixture.source
         report.expect(
             fixture.note(at: source.tick)?.id == source.id,
@@ -402,9 +410,10 @@ private func checkKeyboardJoinNotes(_ report: CheckReport, session: DocumentSess
 }
 
 @MainActor
-private func checkKeyboardJoinMixedSpread(_ report: CheckReport, session: DocumentSession) {
+private func checkKeyboardJoinMixedSpread(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardJoinMixedSpread"
-    withNoteCommandFixture(report, session: session, id: id) { fixture in
+    withNoteCommandFixture(report, viewport: viewport, id: id) { fixture in
         let source = fixture.source
         let grid = fixture.step
         let pairTick = source.tick + 2 * grid
@@ -483,10 +492,11 @@ private func checkKeyboardJoinMixedSpread(_ report: CheckReport, session: Docume
 
 @MainActor
 private func checkKeyboardSplitSelectedPlusCursorStraddler(
-    _ report: CheckReport, session: DocumentSession
+    _ report: CheckReport, viewport: DocumentViewport
 ) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler"
-    withNoteCommandFixture(report, session: session, id: id) { fixture in
+    withNoteCommandFixture(report, viewport: viewport, id: id) { fixture in
         guard let source = growToThreeCells(fixture) else {
             report.fail(id, "the combined-split seed did not grow to three cells")
             return
@@ -567,11 +577,12 @@ private func checkKeyboardSplitSelectedPlusCursorStraddler(
 
 @MainActor
 private func checkKeyboardNoteCommandPopupActivation(
-    _ report: CheckReport, session: DocumentSession
+    _ report: CheckReport, viewport: DocumentViewport
 ) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardNoteCommandPopupActivation"
     for command: EditCommand in [.duplicate, .split, .join] {
-        withNoteCommandFixture(report, session: session, id: id) { fixture in
+        withNoteCommandFixture(report, viewport: viewport, id: id) { fixture in
             let source: Note
             if command == .split {
                 guard let grown = growToThreeCells(fixture) else {
@@ -656,18 +667,19 @@ private func checkKeyboardNoteCommandPopupActivation(
 }
 
 @MainActor
-private func checkRollNoteDragGuardsSharedCommands(_ report: CheckReport, session: DocumentSession) {
+private func checkRollNoteDragGuardsSharedCommands(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::rollNoteDragGuardsSharedCommands"
     let originalSelection = session.selectedNoteOrder
-    let originalCamera = session.camera.snapshot
-    let grid = makeCameraGrid(session: session)
+    let originalCamera = viewport.camera.snapshot
+    let grid = makeCameraGrid(viewport: viewport)
     var seededID: NoteID?
     defer {
         if let seededID, session.document.note(seededID) != nil {
             session.document.deleteNotes([seededID])
         }
         session.setSelectedNotes(originalSelection)
-        _ = session.mutateCamera {
+        _ = viewport.mutateCamera {
             $0.restore(
                 pixelsPerBeat: originalCamera.pixelsPerBeat,
                 keyHeight: originalCamera.keyHeight,
@@ -675,9 +687,9 @@ private func checkRollNoteDragGuardsSharedCommands(_ report: CheckReport, sessio
         }
     }
     guard
-        let pitch = session.camera.projection.pitch(
-            atY: 160, keyHeight: session.camera.snapshot.keyHeight,
-            scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio),
+        let pitch = viewport.camera.projection.pitch(
+            atY: 160, keyHeight: viewport.camera.snapshot.keyHeight,
+            scrollY: viewport.camera.snapshot.scrollY, dpr: grid.devicePixelRatio),
         pitch <= 115,
         let added = try? session.document.addNotes([
             NewNote(

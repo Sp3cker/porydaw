@@ -163,7 +163,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         transportBar = TransportBarPresenter()
         polyphony = PolyphonyPanelPresenter()
         emptyOtherEventsBand.configure(
-            session: nil, palette: palette,
+            viewport: nil, palette: palette,
             baseFontPx: GridCameraPolicy.seedBaseFontPx,
             appFontLineSpacing: 0)
         connectPolyphonyJump()
@@ -451,7 +451,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         persistenceConfigured = true
         editorViewState = EditorViewStatePreferences.load(store: preferences)
         for tab in songTabs.allTabs {
-            tab.workspace.session.applyEditorViewStateProjection(editorViewState)
+            tab.workspace.viewport.applyEditorViewStateProjection(editorViewState)
             tab.workspace.drawer.applyChrome(editorViewState.chrome)
             tab.workspace.automationPage.applyLaneRanges(editorViewState.lanes)
         }

@@ -126,7 +126,7 @@ extension SongTabsController {
             reloadId = -1
             replacementLabel = nil
             reloadsInFlight.insert(tabId)
-            app?.reloadApproved(label: replacement, restoring: ReloadedTab(tab))
+            app?.reloadApproved(label: replacement, replacing: PendingReload(tab))
             return
         }
         reloadsInFlight.remove(tabId)
@@ -152,17 +152,17 @@ extension SongTabsController {
 
     /// Swaps a ready reload into its original row without changing the
     /// selection the user made while the old document was loading.
-    func finishReload(_ tab: SongTabSession, restoring state: ReloadedTab) -> Bool {
-        guard reloadsInFlight.contains(state.tabId),
-            let index = tabIndex(of: state.tabId)
+    func finishReload(_ tab: SongTabSession, replacing pending: PendingReload) -> Bool {
+        guard reloadsInFlight.contains(pending.tabId),
+            let index = tabIndex(of: pending.tabId)
         else { return false }
-        guard state.matches(tabs[index]) else {
-            cancelReload(tabId: state.tabId)
+        guard pending.matches(tabs[index]) else {
+            cancelReload(tabId: pending.tabId)
             return false
         }
-        reloadsInFlight.remove(state.tabId)
+        reloadsInFlight.remove(pending.tabId)
         let previous = tabs[index]
-        let wasSelected = selectedId == state.tabId
+        let wasSelected = selectedId == pending.tabId
         app?.tabWillLeave(previous)
         previous.workspace.deactivate()
         tabs.remove(at: index)
@@ -182,15 +182,15 @@ extension SongTabsController {
 
     /// A terminal load failure retires the pending unchanged tab. If that
     /// tab changed in flight, keep its newer document command-ready instead.
-    func failReload(restoring state: ReloadedTab) {
-        guard reloadsInFlight.contains(state.tabId),
-            let index = tabIndex(of: state.tabId)
+    func failReload(_ pending: PendingReload) {
+        guard reloadsInFlight.contains(pending.tabId),
+            let index = tabIndex(of: pending.tabId)
         else { return }
-        guard state.matches(tabs[index]) else {
-            cancelReload(tabId: state.tabId)
+        guard pending.matches(tabs[index]) else {
+            cancelReload(tabId: pending.tabId)
             return
         }
-        reloadsInFlight.remove(state.tabId)
+        reloadsInFlight.remove(pending.tabId)
         closeTab(index: index)
     }
 

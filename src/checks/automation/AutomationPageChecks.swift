@@ -134,6 +134,7 @@ func drawerAutomationAutomationMidi(
 @MainActor
 struct drawerAutomationAutomationFixture {
     let session: DocumentSession
+    let viewport: DocumentViewport
     let page: AutomationPage
     let document: SongDocument
 
@@ -162,10 +163,12 @@ struct drawerAutomationAutomationFixture {
                 points: echo.map { LaneWrite(tick: $0.0, value: Int($0.1)) })
         }
         session.selectedTrack = 0
+        let viewport = DocumentViewport(session: session)
         self.session = session
+        self.viewport = viewport
         self.document = document
         page = AutomationPage(baseFontPx: baseFontPx)
-        page.attach(session: session, palette: GridPalette())
+        page.attach(viewport: viewport, palette: GridPalette())
         if plotted {
             page.configureBody(
                 width: 480, height: 120, gutter: 0, devicePixelRatio: 1,
@@ -183,7 +186,7 @@ struct drawerAutomationAutomationFixture {
                 page?.refreshEditCursor()
             }
         }
-        session.onCameraChange = { [weak page] _ in page?.refreshCamera() }
+        viewport.onCameraChangeDetailed = { [weak page] _, _ in page?.refreshCamera() }
     }
 
     var snapshot: DocumentSnapshot { DocumentSnapshot(document) }
@@ -250,7 +253,7 @@ struct drawerAutomationAutomationFixture {
     ) -> AutomationFrozenFacts {
         AutomationFrozenFacts(
             parameter: parameter, snapshot: laneSnapshot(parameter),
-            camera: session.camera.snapshot, selection: page.selection,
+            camera: viewport.camera.snapshot, selection: page.selection,
             modifiers: modifiers, songEndTick: songEndTick)
     }
 
@@ -261,10 +264,10 @@ struct drawerAutomationAutomationFixture {
     ) -> AutomationLaneProjection {
         let facts = facts(parameter)
         let projection = AutomationProjection(
-            camera: session.camera,
+            camera: viewport.camera,
             bounds: AutomationPlotBounds(width: width, height: height, devicePixelRatio: 1),
             geometry: page.geometry,
-            snapPolicy: AutomationProjectionCache().snapPolicy(session: session, font: page.baseFontPx, dpr: 1),
+            snapPolicy: AutomationProjectionCache().snapPolicy(viewport: viewport, font: page.baseFontPx, dpr: 1),
             songEndTick: songEndTick)
         return projection.project(
             facts.snapshot, selection: selection,
@@ -276,15 +279,15 @@ struct drawerAutomationAutomationFixture {
     }
 
     /// Plot-local x of one tick through the shared camera.
-    func x(_ tick: Tick) -> Double { session.camera.contentX(tick: Double(tick)) }
+    func x(_ tick: Tick) -> Double { viewport.camera.contentX(tick: Double(tick)) }
 
     /// Plot-local y of one value through the page's own geometry.
     func y(_ parameter: AutomationParameter, _ value: Int) -> Double {
         let projection = AutomationProjection(
-            camera: session.camera,
+            camera: viewport.camera,
             bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
             geometry: page.geometry,
-            snapPolicy: AutomationProjectionCache().snapPolicy(session: session, font: page.baseFontPx, dpr: 1),
+            snapPolicy: AutomationProjectionCache().snapPolicy(viewport: viewport, font: page.baseFontPx, dpr: 1),
             songEndTick: songEndTick)
         return projection.y(value, metadata: AutomationParameterMetadata(parameter: parameter))
     }
@@ -354,9 +357,10 @@ final class drawerAutomationPorydawSelectionClipboardState {
 
 @MainActor
 internal func runAutomationPageChecks(
-    _ report: CheckReport, session: DocumentSession,
+    _ report: CheckReport, viewport: DocumentViewport,
     service: ProjectService
 ) {
+    let session = viewport.session
     let clipboardState = drawerAutomationPorydawSelectionClipboardState()
     defer { clipboardState.restore() }
     drawerAutomationParameterCatalogAndMetadata(report)
@@ -438,10 +442,10 @@ internal func runAutomationPageChecks(
     drawerAutomationViewStatePreservation(report, suite: session, service: service)
     drawerAutomationOriginalClearMenus(report, suite: session, service: service)
     drawerAutomationOriginalRangeMenu(report, suite: session, service: service)
-    drawerAutomationLegacyResolverRows(report, camera: session.camera.snapshot)
-    drawerAutomationLegacyMetadataRows(report, camera: session.camera.snapshot)
-    drawerAutomationLegacyDefaultPromotion(report, camera: session.camera.snapshot)
-    drawerAutomationLegacySpanRows(report, camera: session.camera.snapshot)
+    drawerAutomationLegacyResolverRows(report, camera: viewport.camera.snapshot)
+    drawerAutomationLegacyMetadataRows(report, camera: viewport.camera.snapshot)
+    drawerAutomationLegacyDefaultPromotion(report, camera: viewport.camera.snapshot)
+    drawerAutomationLegacySpanRows(report, camera: viewport.camera.snapshot)
     do {
         try runBlocking {
             try await coreAutomationPanUndoRegression(report, suite: session, service: service)

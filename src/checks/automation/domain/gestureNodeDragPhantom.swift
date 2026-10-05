@@ -306,7 +306,7 @@ func drawerAutomationNodeDragAndPhantomOutcomes(
         scrolled.activate(parameter)
         let independentHitRadius = max(1, (scrolled.page.baseFontPx * 7 / 12).rounded())
         let scroll = scrolled.x(24) + independentHitRadius * 2
-        _ = scrolled.session.mutateCamera { $0.setHScroll(scroll) }
+        _ = scrolled.viewport.mutateCamera { $0.setHScroll(scroll) }
         guard let projected = scrolled.page.projection?.originPhantom,
             let handle = scrolled.page.publishedNodes.first(where: \.phantom)
         else {

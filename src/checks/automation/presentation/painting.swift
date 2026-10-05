@@ -429,11 +429,10 @@ func drawerAutomationPresentationPaintingModel(
         expected: 2, actual: tempoProjection.eventCount, cppID: drawerAutomationPaintingModelID,
         what: "Tempo keeps its own event count on the shared body")
     let sharedMap = AutomationProjection(
-        camera: fixture.session.camera,
+        camera: fixture.viewport.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: page.geometry,
-        snapPolicy: AutomationProjectionCache().snapPolicy(
-            session: fixture.session, font: page.baseFontPx, dpr: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(viewport: fixture.viewport, font: page.baseFontPx, dpr: 1),
         songEndTick: fixture.songEndTick)
     if let first = tempoProjection.points.first, let last = tempoProjection.points.last {
         report.expectEqual(

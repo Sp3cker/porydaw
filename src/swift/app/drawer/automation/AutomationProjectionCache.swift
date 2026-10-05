@@ -74,15 +74,16 @@ final class AutomationProjectionCache {
     }
 
     func projection(
-        snapshot: AutomationLaneSnapshot, session: DocumentSession,
+        snapshot: AutomationLaneSnapshot, viewport: DocumentViewport,
         camera: EditorCamera, bounds: AutomationPlotBounds,
         geometry: AutomationPlotGeometry, font: Double,
         range: Int?
     ) -> AutomationProjection {
+        let session = viewport.session
         refresh(session)
         if let cached = policies[snapshot.parameter], cached.revision == snapshot.revision,
             cached.range == range, cached.font == font,
-            cached.selection == session.grid.selection, cached.feel == session.grid.feel,
+            cached.selection == viewport.grid.selection, cached.feel == viewport.grid.feel,
             cached.projection.camera.snapshot == camera.snapshot,
             cached.projection.bounds == bounds, cached.projection.geometry == geometry,
             cached.projection.songEndTick == snapshot.songEndTick
@@ -91,17 +92,18 @@ final class AutomationProjectionCache {
         }
         let projection = AutomationProjection(
             camera: camera, bounds: bounds, geometry: geometry,
-            snapPolicy: snapPolicy(session: session, font: font, dpr: bounds.devicePixelRatio),
+            snapPolicy: snapPolicy(viewport: viewport, font: font, dpr: bounds.devicePixelRatio),
             songEndTick: snapshot.songEndTick,
             displayMaximum: AutomationProjection.displayMaximum(snapshot: snapshot, range: range))
         policies[snapshot.parameter] = (
-            snapshot.revision, range, font, session.grid.selection, session.grid.feel, projection
+            snapshot.revision, range, font, viewport.grid.selection, viewport.grid.feel, projection
         )
         return projection
     }
 
-    func snapPolicy(session: DocumentSession, font: Double, dpr: Double) -> AutomationSnapPolicy {
-        var grid = session.grid
+    func snapPolicy(viewport: DocumentViewport, font: Double, dpr: Double) -> AutomationSnapPolicy {
+        let session = viewport.session
+        var grid = viewport.grid
         grid.metrics = GridMetrics(
             baseFontPx: font, dpr: dpr, width: 0, height: 0,
             timeAxis: grid.axis)

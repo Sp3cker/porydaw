@@ -24,10 +24,10 @@ func drawerAutomationPanNeutralSnap(
         message: "the neutral snap radius covers more than one value step")
     let near = 64 + max(1, threshold - 1)
     let projection = AutomationProjection(
-        camera: fixture.session.camera,
+        camera: fixture.viewport.camera,
         bounds: AutomationPlotBounds(width: 480, height: height, devicePixelRatio: 1),
         geometry: fixture.page.geometry,
-        snapPolicy: AutomationProjectionCache().snapPolicy(session: fixture.session, font: 13, dpr: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(viewport: fixture.viewport, font: 13, dpr: 1),
         songEndTick: fixture.songEndTick)
     let yNear = (0..<Int(height)).first { y in
         let value = projection.value(atY: Double(y), metadata: metadata)

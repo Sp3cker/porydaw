@@ -6,14 +6,15 @@ import PorydawCore
 import QtBridge
 
 @MainActor
-func checkSelectionBandSweep(_ report: CheckReport, session: DocumentSession) {
+func checkSelectionBandSweep(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::selectionBandSweep"
     let initialSelection = session.selectedNoteOrder
-    let grid = makeCameraGrid(session: session)
+    let grid = makeCameraGrid(viewport: viewport)
     let pitch = [160.0, 200, 120, 240, 80].compactMap { y in
-        session.camera.projection.pitch(
-            atY: y, keyHeight: session.camera.snapshot.keyHeight,
-            scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
+        viewport.camera.projection.pitch(
+            atY: y, keyHeight: viewport.camera.snapshot.keyHeight,
+            scrollY: viewport.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
     }.first { candidate in
         !session.document.notes(in: grid.trackIndex).contains {
             Int($0.pitch) == candidate
@@ -39,7 +40,7 @@ func checkSelectionBandSweep(_ report: CheckReport, session: DocumentSession) {
         _ = session.document.history.undoDocument()
         session.setSelectedNotes(initialSelection)
     }
-    let roll = PianoGrid(session: session)
+    let roll = PianoGrid(viewport: viewport)
     roll.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     guard let a = selectionRect(added[0], grid: roll),
         let b = selectionRect(added[1], grid: roll)
@@ -110,17 +111,18 @@ func checkSelectionBandSweep(_ report: CheckReport, session: DocumentSession) {
 }
 
 @MainActor
-func checkSelectionNonScaleMove(_ report: CheckReport, session: DocumentSession) {
+func checkSelectionNonScaleMove(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::selectionNonScaleMove"
     let initialSelection = session.selectedNoteOrder
-    let grid = makeCameraGrid(session: session)
+    let grid = makeCameraGrid(viewport: viewport)
     let snap = max(1, grid.snapTicks)
     let tick = 240
     let duration = 4 * snap
     let pitch = [160.0, 200, 120, 240, 80].compactMap { y in
-        session.camera.projection.pitch(
-            atY: y, keyHeight: session.camera.snapshot.keyHeight,
-            scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
+        viewport.camera.projection.pitch(
+            atY: y, keyHeight: viewport.camera.snapshot.keyHeight,
+            scrollY: viewport.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
     }.first { candidate in
         !session.document.notes(in: grid.trackIndex).contains {
             Int($0.pitch) == candidate
@@ -155,7 +157,7 @@ func checkSelectionNonScaleMove(_ report: CheckReport, session: DocumentSession)
         report.fail(id, "could not capture planted move-note MIDI bytes")
         return
     }
-    let roll = PianoGrid(session: session)
+    let roll = PianoGrid(viewport: viewport)
     roll.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     guard let rect = selectionRect(noteID, grid: roll) else {
         report.fail(id, "wide move note was not projected")
@@ -163,7 +165,7 @@ func checkSelectionNonScaleMove(_ report: CheckReport, session: DocumentSession)
     }
     let x = rect.x + rect.width / 2
     let y = rect.y + rect.height / 2
-    let targetX = x + Double(2 * snap) * session.camera.snapshot.pixelsPerTick
+    let targetX = x + Double(2 * snap) * viewport.camera.snapshot.pixelsPerTick
     roll.beginPointer(x: x, y: y, modifiers: 0)
     report.expect(
         session.selectedNoteOrder == [noteID], cppID: id,

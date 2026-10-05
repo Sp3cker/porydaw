@@ -47,7 +47,7 @@ extension AutomationPage {
                 endPan()
                 return true
             }
-            DrawerPan.moved(x: x, previousX: &previousX, session: session)
+            DrawerPan.moved(x: x, previousX: &previousX, viewport: viewport)
             return true
         }
         if var live = band {

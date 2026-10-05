@@ -68,7 +68,8 @@ public final class RulerMenuPresenter {
     public var insertTimePromptMinimumBeatFractions: Int = 0
     public var insertTimePromptMaximumBeatFractions: Int = 3
 
-    private let session: DocumentSession
+    private let viewport: DocumentViewport
+    private var session: DocumentSession { viewport.session }
     private let grid: PianoGrid
     private let automation: AutomationPage
     private var capturedRevision: UInt64 = 0
@@ -88,8 +89,8 @@ public final class RulerMenuPresenter {
     private var clipboardObserver: UUID?
     private var selectionObserver: UUID?
 
-    public init(session: DocumentSession, grid: PianoGrid, automation: AutomationPage) {
-        self.session = session
+    public init(viewport: DocumentViewport, grid: PianoGrid, automation: AutomationPage) {
+        self.viewport = viewport
         self.grid = grid
         self.automation = automation
         selectionObserver = session.addSelectionTransitionObserver { [weak self] _ in
@@ -107,7 +108,7 @@ public final class RulerMenuPresenter {
 
     public func captureRulerPress(contentX: Double, pointerY: Double) {
         guard contentX.isFinite, pointerY.isFinite else { return }
-        let raw = session.camera.tickAtContentX(contentX)
+        let raw = viewport.camera.tickAtContentX(contentX)
         guard raw.isFinite else { return }
         if isOpen { close() }
         let chip = signatureTick(at: contentX, pointerY: pointerY)
@@ -169,7 +170,7 @@ public final class RulerMenuPresenter {
     /// sweep itself remains owned by the roll interaction lane.
     public func openTimeSelection(contentX: Double) {
         guard contentX.isFinite else { return }
-        let raw = session.camera.tickAtContentX(contentX)
+        let raw = viewport.camera.tickAtContentX(contentX)
         guard raw.isFinite,
             let selection = session.timeSelection, selection.isActive,
             selection.contains(TimeDefaults.tick(from: max(0, raw)))
@@ -340,7 +341,7 @@ public final class RulerMenuPresenter {
         guard contentX.isFinite, pointerY.isFinite else { return }
         if isOpen { close() }
         rulerPress = nil
-        let raw = session.camera.tickAtContentX(contentX)
+        let raw = viewport.camera.tickAtContentX(contentX)
         guard raw.isFinite else { return }
         sweepAnchor = snapped(raw)
         sweepPressX = contentX
@@ -357,7 +358,7 @@ public final class RulerMenuPresenter {
                     >= grid.dragDistance
         else { return }
         sweepWasRange = true
-        let raw = session.camera.tickAtContentX(contentX)
+        let raw = viewport.camera.tickAtContentX(contentX)
         guard raw.isFinite else { return }
         let tick = snapped(raw)
         guard tick != sweepAnchor else {
@@ -411,7 +412,7 @@ public final class RulerMenuPresenter {
         else { return nil }
         let tolerance = max(4, grid.baseFontPx * 0.5)
         for signature in session.document.timeSignatures.reversed() {
-            let x = session.camera.contentX(tick: Double(signature.tick))
+            let x = viewport.camera.contentX(tick: Double(signature.tick))
             let labelWidth =
                 Double("\(signature.numerator)/\(1 << min(signature.denominatorPower, 6))".count)
                 * grid.baseFontPx * 0.6
@@ -426,7 +427,7 @@ public final class RulerMenuPresenter {
 
     private func snapped(_ raw: Double) -> Tick {
         let position = min(Double(TimeDefaults.maxTick), max(0, raw))
-        return session.grid.snapTick(position, camera: session.camera)
+        return viewport.grid.snapTick(position, camera: viewport.camera)
     }
 
     private func publish(_ items: [RulerMenuRow]) {

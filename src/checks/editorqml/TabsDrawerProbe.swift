@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawDocument
 import QtBridge
 
@@ -43,7 +43,7 @@ public final class TabsDrawerProbe: QmlInstantiableStatus {
     }
     public func liveLaneCosmetics() -> String {
         guard let session = qmlChildren.compactMap({ $0 as? ShellPresenter }).first?.session,
-            let lanes = session.selectedDocument?.editorViewState.lanes,
+            let lanes = session.workspace?.viewport.editorViewState.lanes,
             let encoded = EditorViewStatePreferences.encodeLanes(lanes)
         else { return "" }
         return String(decoding: encoded, as: UTF8.self)

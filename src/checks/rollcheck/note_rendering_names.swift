@@ -5,16 +5,17 @@ import PorydawCore
 import QtBridge
 
 @MainActor
-func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
+func checkNoteNameMode(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::noteNameMode"
-    let oldCamera = session.camera
-    let grid = PianoGrid(session: session)
-    defer { session.mutateCamera { $0 = oldCamera } }
+    let oldCamera = viewport.camera
+    let grid = PianoGrid(viewport: viewport)
+    defer { viewport.mutateCamera { $0 = oldCamera } }
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 1)
     grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(35) }
     grid.refreshCamera()
-    guard let noteID = renderingSeed(report, id: id, session: session, grid: grid) else { return }
+    guard let noteID = renderingSeed(report, id: id, viewport: viewport, grid: grid) else { return }
     defer { session.document.deleteNotes([noteID]) }
     guard let note = session.document.note(noteID) else {
         report.fail(id, "note name seed disappeared")
@@ -25,15 +26,15 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     // Row heights that surely fit the fixed face: the oracle hides the
     // reduced caption face below its padded height, so use a tall row for the
     // positive case and a sub-threshold one for the gate case.
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         _ = camera.setKeyHeight(32)
         _ = camera.setVScroll(max(0, (127.5 - Double(pitch)) * 32 - 160))
     }
     grid.refreshCamera()
     // Widen the seeded cell well past name width, keeping it on screen.
-    _ = session.mutateCamera { _ = $0.setTimeZoom(280) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(280) }
     grid.refreshCamera()
-    _ = session.mutateCamera { camera in
+    _ = viewport.mutateCamera { camera in
         _ = camera.setHScroll(
             max(
                 camera.snapshot.minHScroll,
@@ -77,9 +78,9 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
         grid.measurementFonts[.noteName]?.pixelSize == 11, cppID: id,
         message: "the name label uses the fixed reduced caption face")
     // Too narrow: the same note at minimum time zoom earns no label.
-    _ = session.mutateCamera { _ = $0.setTimeZoom(4) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(4) }
     grid.refreshCamera()
-    _ = session.mutateCamera { camera in
+    _ = viewport.mutateCamera { camera in
         _ = camera.setHScroll(camera.snapshot.minHScroll)
     }
     grid.refreshCamera()
@@ -87,9 +88,9 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
         labeledNotes().isEmpty, cppID: id,
         message: "a too-narrow note gets no name label")
     // Below the key-height threshold: wide again, but rows too short.
-    _ = session.mutateCamera { _ = $0.setTimeZoom(280) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(280) }
     grid.refreshCamera()
-    _ = session.mutateCamera { camera in
+    _ = viewport.mutateCamera { camera in
         _ = camera.setHScroll(
             max(
                 camera.snapshot.minHScroll,
@@ -103,7 +104,7 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
         message: "no name labels below the key-height threshold")
     // Ghost exclusion from the real plotted list: an adjacent-row
     // other-track note decodes no name label while the mode is on.
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         _ = camera.setKeyHeight(32)
         _ = camera.setVScroll(max(0, (127.5 - Double(pitch)) * 32 - 160))
         _ = camera.setTimeZoom(280)
@@ -116,7 +117,7 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     ]
     func pitchFree(_ candidate: Int) -> Bool {
         candidate != pitch && (24...115).contains(candidate)
-            && session.camera.projection.row(forPitch: candidate) != PitchProjection.hiddenRow
+            && viewport.camera.projection.row(forPitch: candidate) != PitchProjection.hiddenRow
             && !session.document.notes(in: grid.trackIndex).contains { existing in
                 Int(existing.pitch) == candidate
                     && Int(existing.tick) < Int(note.tick) + Int(note.duration)
@@ -133,15 +134,15 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
         ]).first
     {
         // Center between the seed and ghost rows so both faces decode.
-        let snapshot = session.camera.snapshot
-        let seedRow = session.camera.projection.row(forPitch: pitch)
-        let ghostRow = session.camera.projection.row(forPitch: ghostPitch)
-        if let seedTop = session.camera.projection.contentRowTop(
+        let snapshot = viewport.camera.snapshot
+        let seedRow = viewport.camera.projection.row(forPitch: pitch)
+        let ghostRow = viewport.camera.projection.row(forPitch: ghostPitch)
+        if let seedTop = viewport.camera.projection.contentRowTop(
             seedRow, keyHeight: snapshot.keyHeight, dpr: grid.devicePixelRatio),
-            let ghostTop = session.camera.projection.contentRowTop(
+            let ghostTop = viewport.camera.projection.contentRowTop(
                 ghostRow, keyHeight: snapshot.keyHeight, dpr: grid.devicePixelRatio)
         {
-            session.mutateCamera { camera in
+            viewport.mutateCamera { camera in
                 _ = camera.setVScroll(
                     max(
                         0, min(seedTop, ghostTop) + snapshot.keyHeight / 2 - snapshot.rollHeight / 2))
@@ -175,7 +176,7 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
         message: "disabling the mode publishes no name labels")
     let beforeState = session.document.state
     let beforeIdentity = session.document.history.currentIdentity
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         _ = camera.setKeyHeight(32)
         _ = camera.setTimeZoom(20)
         _ = camera.setHScroll(camera.snapshot.minHScroll)
@@ -195,11 +196,11 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     }
     guard
         let short = ghostSeed(
-            report, id: id, session: session, grid: grid,
+            report, id: id, viewport: viewport, grid: grid,
             track: grid.trackIndex, spanCells: 1,
             nearPitch: pitch, excluding: [pitch]),
         let wide = ghostSeed(
-            report, id: id, session: session, grid: grid,
+            report, id: id, viewport: viewport, grid: grid,
             track: grid.trackIndex, spanCells: 12,
             nearPitch: pitch, excluding: [pitch, short.pitch])
     else { return }
@@ -238,7 +239,7 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     let fitHeight =
         measured.noteNameOccupiedHeight.rounded(.up)
         + 2 * grid.metrics.spaceHalf + grid.metrics.pixel
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         _ = camera.setKeyHeight(fitHeight)
         _ = camera.setVScroll(max(0, (127.5 - Double(wide.pitch)) * fitHeight - 160))
     }
@@ -246,7 +247,7 @@ func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) {
     report.expect(
         hasLabel(wide.id), cppID: id,
         message: "a row at the exact padded fit still labels")
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         _ = camera.setKeyHeight(fitHeight - grid.metrics.pixel)
         _ = camera.setVScroll(
             max(

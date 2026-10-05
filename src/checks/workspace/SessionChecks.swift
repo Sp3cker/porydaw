@@ -51,8 +51,11 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     }
     let service = opened.service
     let session = opened.session
+    // The one viewport for the shared session: its init owns the session's
+    // single repair hook, so every family below shares it.
+    let viewport = DocumentViewport(session: session)
 
-    sessionPlaybackProjectionAndStatePublication(report: report, session: session)
+    sessionPlaybackProjectionAndStatePublication(report: report, viewport: viewport)
 
     sessionSavePersistence(report: report, session: session, service: service, projectDir: projectDir)
 
@@ -64,30 +67,30 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
         return
     }
 
-    runEditorGridCameraChecks(report, session: session)
-    runGeometryChecks(report, session: session)
-    runGateChecks(report, session: session)
-    runPencilChecks(report, session: session)
-    runResizeChecks(report, session: session)
-    runScaleEditingChecks(report, session: session)
-    runNoteRenderingChecks(report, session: session)
-    runKeyboardChecks(report, session: session)
-    runSelectionChecks(report, session: session, fixtureRoot: fixtureRoot)
+    runEditorGridCameraChecks(report, viewport: viewport)
+    runGeometryChecks(report, viewport: viewport)
+    runGateChecks(report, viewport: viewport)
+    runPencilChecks(report, viewport: viewport)
+    runResizeChecks(report, viewport: viewport)
+    runScaleEditingChecks(report, viewport: viewport)
+    runNoteRenderingChecks(report, viewport: viewport)
+    runKeyboardChecks(report, viewport: viewport)
+    runSelectionChecks(report, viewport: viewport, fixtureRoot: fixtureRoot)
     runIdentityChecks(report, session: session)
-    runInterlockChecks(report, session: session)
-    runNoteCommandChecks(report, session: session)
-    runRemapChecks(report, session: session)
-    runPresentationChecks(report, session: session)
+    runInterlockChecks(report, viewport: viewport)
+    runNoteCommandChecks(report, viewport: viewport)
+    runRemapChecks(report, viewport: viewport)
+    runPresentationChecks(report, viewport: viewport)
     runTimeSignaturePromptChecks(report, session: session)
-    runTimemenuChecks(report, session: session)
-    runPitchBendChecks(report, session: session)
-    runRulerLoopMenuChecks(report, session: session)
-    runSharedPlayheadChecks(report, session: session, service: service)
+    runTimemenuChecks(report, viewport: viewport)
+    runPitchBendChecks(report, viewport: viewport)
+    runRulerLoopMenuChecks(report, viewport: viewport)
+    runSharedPlayheadChecks(report, viewport: viewport, service: service)
     runPlayheadFeatureChecks(report, suite: session, service: service)
     runEventListPlayheadChecks(report, session: session, service: service)
     runVelocityPageChecks(report, session: session, service: service)
     runVoiceChangesPageChecks(report, session: session, service: service)
-    runAutomationPageChecks(report, session: session, service: service)
+    runAutomationPageChecks(report, viewport: viewport, service: service)
     runHostBehaviorChecks(report, session: session, service: service, fixtureRoot: fixtureRoot)
     drawerOriginalNumericPromptTransaction(report, suite: session, service: service)
     editorSelectionCommandChecks(report, suite: session, service: service)

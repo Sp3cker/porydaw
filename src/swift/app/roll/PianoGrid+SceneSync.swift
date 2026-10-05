@@ -8,8 +8,7 @@ import PorydawAppCommands
 extension PianoGrid {
     @QtIgnored
     func updateTimeAxis() {
-        metrics.timeAxis = session.projectionCache.timeAxis
-        session.grid.axis = metrics.timeAxis
+        metrics.timeAxis = viewport.syncTimeAxis()
     }
 
     @QtIgnored
@@ -52,8 +51,8 @@ extension PianoGrid {
         default: displacesNotes = false
         }
         return GridSceneInput(
-            metrics: metrics, grid: session.grid, palette: palette, camera: session.camera,
-            scale: session.scaleProjection,
+            metrics: metrics, grid: viewport.grid, palette: palette, camera: viewport.camera,
+            scale: viewport.scale,
             typography: typography, fontSpec: { self.fontSpec($0) },
             fonts: measurementFonts, notes: visibleNotes,
             displayedNote: { self.displayedNote($0) },
@@ -173,7 +172,7 @@ extension PianoGrid {
     @discardableResult
     @QtIgnored
     private func updateTypography() -> Bool {
-        let cameraRowHeight = session.camera.snapshot.keyHeight
+        let cameraRowHeight = viewport.camera.snapshot.keyHeight
         let key = (
             fontPx: metrics.baseFontPx, dpr: metrics.dpr,
             rowHeight: cameraRowHeight
@@ -207,12 +206,12 @@ extension PianoGrid {
 
     @QtIgnored
     private func publishGeometry() {
-        let snapshot = session.camera.snapshot
+        let snapshot = viewport.camera.snapshot
         publish(\.beatWidth, snapshot.pixelsPerBeat)
         publish(\.rowHeight, snapshot.keyHeight)
         publish(\.cameraScrollX, snapshot.scrollX)
-        publish(\.scaleFold, session.scaleProjection.fold)
-        let rowCount = session.camera.projection.visibleRowCount
+        publish(\.scaleFold, viewport.scale.fold)
+        let rowCount = viewport.camera.projection.visibleRowCount
         publish(\.visibleRowCount, rowCount)
         publish(\.cameraScrollY, snapshot.scrollY)
         publish(\.cameraMaxVScroll, snapshot.maxVScroll)
@@ -225,9 +224,9 @@ extension PianoGrid {
         publish(\.resizeCursorExtent, cursorExtent)
         let tpb = Int(max(1, session.document.ticksPerBeat))
         publish(\.ticksPerBeat, tpb)
-        let snap = Int(session.grid.snapTicksAt(session.editCursor, camera: session.camera))
+        let snap = Int(viewport.grid.snapTicksAt(session.editCursor, camera: viewport.camera))
         publish(\.snapTicks, snap)
-        let gridTicks = Int(session.grid.gridTicksAt(session.editCursor, camera: session.camera))
+        let gridTicks = Int(viewport.grid.gridTicksAt(session.editCursor, camera: viewport.camera))
         publish(\.visibleGridTicks, gridTicks)
     }
 
@@ -247,8 +246,8 @@ extension PianoGrid {
 
     @QtIgnored
     func pitch(atY y: Double) -> Int {
-        let snapshot = session.camera.snapshot
-        return session.camera.projection.pitch(
+        let snapshot = viewport.camera.snapshot
+        return viewport.camera.projection.pitch(
             atY: y, keyHeight: snapshot.keyHeight,
             scrollY: snapshot.scrollY, dpr: metrics.dpr) ?? -1
     }
@@ -267,9 +266,9 @@ extension PianoGrid {
         case .move(let state):
             tick = max(0, tick + state.dTick)
             end = max(tick + 1, end + state.dTick)
-            if session.scaleProjection.fold && state.dKey != 0 {
-                let destination = session.scaleProjection.scale.pitch(
-                    pitch, steps: state.dKey, root: session.scaleProjection.root)
+            if viewport.scale.fold && state.dKey != 0 {
+                let destination = viewport.scale.scale.pitch(
+                    pitch, steps: state.dKey, root: viewport.scale.root)
                 if destination >= 0 { pitch = destination }
             } else {
                 pitch = min(127, max(0, pitch + state.dKey))
@@ -288,9 +287,9 @@ extension PianoGrid {
     private func hitZone(x: Double, y: Double, note: GridNote) -> (HitZone, Bool) {
         let reach = metrics.edgeGripReach
         let rect = metrics.noteRect(
-            camera: session.camera,
-            x0: session.camera.viewX(tick: Double(note.tick), dpr: metrics.dpr),
-            x1: session.camera.viewX(
+            camera: viewport.camera,
+            x0: viewport.camera.viewX(tick: Double(note.tick), dpr: metrics.dpr),
+            x1: viewport.camera.viewX(
                 tick: Double(note.tick + note.duration), dpr: metrics.dpr),
             pitch: note.pitch)
         guard y >= rect.y, y < rect.y + rect.h else { return (.none, false) }
@@ -329,7 +328,7 @@ extension PianoGrid {
         if let gesture {
             switch gesture {
             case .pendingDraw(let state):
-                return "Pending draw at tick \(session.grid.snapTick(state.pressTick, camera: session.camera))"
+                return "Pending draw at tick \(viewport.grid.snapTick(state.pressTick, camera: viewport.camera))"
             case .draw(let state):
                 return "Drawing — tick \(state.tick), duration \(state.duration), pitch \(state.key)"
             case .velocity:

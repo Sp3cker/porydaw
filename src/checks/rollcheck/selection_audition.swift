@@ -6,10 +6,11 @@ import PorydawCore
 import QtBridge
 
 @MainActor
-func checkSelectionBandAudition(_ report: CheckReport, session: DocumentSession) {
+func checkSelectionBandAudition(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::selectionBandSweep"
     let initialSelection = session.selectedNoteOrder
-    let grid = makeCameraGrid(session: session)
+    let grid = makeCameraGrid(viewport: viewport)
     guard let baseline = try? session.document.captureSave() else {
         report.fail(id, "could not capture the pre-band MIDI bytes")
         return
@@ -118,14 +119,15 @@ func checkSelectionBandAudition(_ report: CheckReport, session: DocumentSession)
 }
 
 @MainActor
-func checkTransposeAudition(_ report: CheckReport, session: DocumentSession) {
+func checkTransposeAudition(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::drawerTransposeAuditionReleasesOnPhysicalKeyUp"
     let originalSelection = session.selectedNoteOrder
     guard let baseline = try? session.document.captureSave() else {
         report.fail(id, "could not capture the pre-transpose MIDI bytes")
         return
     }
-    let grid = makeCameraGrid(session: session)
+    let grid = makeCameraGrid(viewport: viewport)
     defer {
         grid.onAudition = nil
         selectionRestore(
@@ -212,13 +214,14 @@ func checkMountedTransposeAudition(_ report: CheckReport, fixtureRoot: String) {
 }
 
 @MainActor
-func checkKeyboardAuditionTrackSwitch(_ report: CheckReport, session: DocumentSession) {
+func checkKeyboardAuditionTrackSwitch(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardAuditionTrackSwitch"
     let originalTrack = session.selectedTrack
     let originalSelection = session.selectedNoteOrder
-    let originalCamera = session.camera
-    defer { _ = session.mutateCamera { $0 = originalCamera } }
-    let grid = makeCameraGrid(session: session)
+    let originalCamera = viewport.camera
+    defer { _ = viewport.mutateCamera { $0 = originalCamera } }
+    let grid = makeCameraGrid(viewport: viewport)
     let pressedTrack = grid.trackIndex
     guard let baseline = try? session.document.captureSave() else {
         report.fail(id, "could not capture the pre-audition MIDI bytes")

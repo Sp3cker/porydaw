@@ -25,7 +25,7 @@ func drawerVelocityRollDragMovesDrawerNodes(
         return
     }
     let presenters = WorkspacePresenterFixture(
-        session: fixture.session, audio: audio,
+        viewport: fixture.viewport, audio: audio,
         callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
             revealTrackVoiceRequested: { _ in },
@@ -44,7 +44,7 @@ func drawerVelocityRollDragMovesDrawerNodes(
     let grid = workspace.grid
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     grid.resetCameraScroll()
-    _ = fixture.session.mutateCamera { _ = $0.setTimeZoom(35) }
+    _ = fixture.viewport.mutateCamera { _ = $0.setTimeZoom(35) }
     grid.refreshFromSession()
     fixture.session.setSelectedNotes([notes[0].id, notes[1].id])
     func node(_ note: Note) -> (value: Int, y: Double)? {

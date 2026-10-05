@@ -35,7 +35,7 @@ func runClipboardSelectionChecks(
             "selection fixture must contain three distinct notes")
         return
     }
-    clipboardLaneSelectionChecks(report, session: session)
+    clipboardLaneSelectionChecks(report, viewport: DocumentViewport(session: session))
     clipboardNoteSelectionChecks(report, session: session)
     clipboardTrackSelectionChecks(report, session: session)
     clipboardUnifiedTimeSelectionChecks(report, suite: suite, service: service)
@@ -123,7 +123,8 @@ private func clipboardNoteSelectionChecks(_ report: CheckReport, session: Docume
 }
 
 @MainActor
-private func clipboardLaneSelectionChecks(_ report: CheckReport, session: DocumentSession) {
+private func clipboardLaneSelectionChecks(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let emptyID = "clipboard/AutomationCoverageTest::emptySelectionAndEndpointPayload"
     let lanesID = "clipboard/AutomationCoverageTest::laneScopeCoverage"
     let tracksID = "clipboard/AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage"
@@ -161,7 +162,7 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, session: Docume
         visibleSelectedLanes(empty).isEmpty, cppID: emptyID,
         message: "A009 empty selection exposes no selected visible lanes")
     clipboardLaneEndpointAndHitChecks(
-        report, session: session, empty: empty,
+        report, viewport: viewport, empty: empty,
         volume: volume, pan: pan)
 
     let range = TimeRange(startTick: 24, endTick: 48)
@@ -375,9 +376,10 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, session: Docume
 
 @MainActor
 private func clipboardLaneEndpointAndHitChecks(
-    _ report: CheckReport, session: DocumentSession, empty: AutomationRowStack,
+    _ report: CheckReport, viewport: DocumentViewport, empty: AutomationRowStack,
     volume: AutomationParameter, pan: AutomationParameter
 ) {
+    let session = viewport.session
     let endpointID = "clipboard/AutomationCoverageTest::endpointSemantics"
     let emptyID = "clipboard/AutomationCoverageTest::emptySelectionAndEndpointPayload"
     let tempoOnly = empty.laneSet(from: .tempo, through: .tempo)
@@ -445,7 +447,7 @@ private func clipboardLaneEndpointAndHitChecks(
             camera: camera,
             bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: dpr),
             geometry: AutomationPlotGeometry(baseFontPx: 13),
-            snapPolicy: AutomationSnapPolicy(grid: session.grid, clockTicks: session.gridClockTicks),
+            snapPolicy: AutomationSnapPolicy(grid: viewport.grid, clockTicks: session.gridClockTicks),
             songEndTick: 384)
         let stack = AutomationRowStack.build(
             document: session.document, primaryTrack: 0,

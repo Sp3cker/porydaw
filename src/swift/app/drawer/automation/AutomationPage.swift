@@ -211,7 +211,8 @@ public final class AutomationPage: EditorDrawerPage {
     /// The playing tick the last presentation carried.
     @QtIgnored public internal(set) var presentedTick: Tick = 0
 
-    @QtIgnored weak var session: DocumentSession?
+    @QtIgnored weak var viewport: DocumentViewport?
+    @QtIgnored var session: DocumentSession? { viewport?.session }
     @QtIgnored var selectionTransitionToken: UUID?
     @QtIgnored var gesture: AutomationGesture?
     @QtIgnored var frozen: AutomationFrozenFacts?

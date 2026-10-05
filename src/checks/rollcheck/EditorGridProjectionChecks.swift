@@ -8,28 +8,29 @@ private let projectionID = "swiftcore/EditorGridCamera::projectionAndHitTesting"
 
 @MainActor
 func checkScratchDoubleDraw(
-    _ report: CheckReport, session: DocumentSession, grid: PianoGrid
+    _ report: CheckReport, viewport: DocumentViewport, grid: PianoGrid
 ) {
+    let session = viewport.session
     let id = "rollcheck/PianoRollStaticTest::scratchSpaceDrawGrowsTimeline"
     let document = session.document
     guard let bytes = try? document.state.file.encoded() else {
         report.fail(id, "cannot encode the original MIDI before the scratch draw")
         return
     }
-    let camera = session.camera
-    defer { _ = session.mutateCamera { $0 = camera } }
+    let camera = viewport.camera
+    defer { _ = viewport.mutateCamera { $0 = camera } }
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    _ = session.mutateCamera { _ = $0.setHScroll($0.snapshot.maxHScroll) }
+    _ = viewport.mutateCamera { _ = $0.setHScroll($0.snapshot.maxHScroll) }
     let length = session.timeline.lengthTicks
     let x = 320.0
     let y = 160.0
-    let tick = session.grid.snapTickDown(
-        session.camera.tickAtContentX(x),
-        camera: session.camera)
+    let tick = viewport.grid.snapTickDown(
+        viewport.camera.tickAtContentX(x),
+        camera: viewport.camera)
     guard
-        let key = session.camera.projection.pitch(
-            atY: y, keyHeight: session.camera.snapshot.keyHeight,
-            scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio
+        let key = viewport.camera.projection.pitch(
+            atY: y, keyHeight: viewport.camera.snapshot.keyHeight,
+            scrollY: viewport.camera.snapshot.scrollY, dpr: grid.devicePixelRatio
         )
     else {
         report.fail(id, "the scratch viewport contains no playable row")
@@ -60,14 +61,15 @@ func checkScratchDoubleDraw(
 
 @MainActor
 func checkProjection(
-    _ report: CheckReport, session: DocumentSession, grid: PianoGrid
+    _ report: CheckReport, viewport: DocumentViewport, grid: PianoGrid
 ) {
+    let session = viewport.session
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    _ = session.mutateCamera {
+    _ = viewport.mutateCamera {
         _ = $0.setTimeZoom(140)
         _ = $0.setHScroll($0.snapshot.maxHScroll / 2)
     }
-    let snapshotAtMarks = session.camera.snapshot
+    let snapshotAtMarks = viewport.camera.snapshot
     let timeProbe = RollContentProbe(grid)
     let segments = timeProbe.segments
     let tiled =
@@ -76,7 +78,7 @@ func checkProjection(
         && segments.allSatisfy { $0.beatTicks > 0 && $0.beatsPerBar > 0 }
     let visibleBegin = Int(max(0, snapshotAtMarks.scrollX) / snapshotAtMarks.pixelsPerTick)
     let visibleEnd = Int((snapshotAtMarks.scrollX + snapshotAtMarks.viewportWidth) / snapshotAtMarks.pixelsPerTick)
-    _ = session.mutateCamera {
+    _ = viewport.mutateCamera {
         _ = $0.setTimeZoom(70)
         _ = $0.scrollByPx(snapshotAtMarks.viewportWidth)
     }
@@ -98,14 +100,14 @@ func checkProjection(
         cppID: projectionID, message: "generated time marks cover the visible plot")
 
     let summaryBeforeCameraMove = grid.fetchNoteSummary()
-    _ = session.mutateCamera { _ = $0.scrollByPx(10) }
+    _ = viewport.mutateCamera { _ = $0.scrollByPx(10) }
     report.expect(
         grid.fetchNoteSummary() == summaryBeforeCameraMove,
         cppID: projectionID, message: "camera movement does not alter noteSummary document state")
 
     grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
-    let snapshot = session.camera.snapshot
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(35) }
+    let snapshot = viewport.camera.snapshot
     let notes = session.document.notes(in: grid.trackIndex)
     let pixel = 1 / grid.devicePixelRatio
     let viewBox = { (note: Note) in
@@ -128,13 +130,13 @@ func checkProjection(
     let projected =
         knownNote.flatMap { note -> Bool? in
             guard let box = knownBox else { return nil }
-            let row = session.camera.projection.row(forPitch: Int(note.pitch))
+            let row = viewport.camera.projection.row(forPitch: Int(note.pitch))
             let expectedY =
-                session.camera.projection.contentRowTop(
+                viewport.camera.projection.contentRowTop(
                     row, keyHeight: snapshot.keyHeight, dpr: grid.devicePixelRatio) ?? .nan
             return gridCameraNear(
                 box.x,
-                session.camera.contentTickX(
+                viewport.camera.contentTickX(
                     tick: Double(note.tick), dpr: grid.devicePixelRatio) - scrollX, tolerance: pixel)
                 && gridCameraNear(box.y, expectedY - scrollY + pixel, tolerance: pixel)
         } ?? false
@@ -142,7 +144,7 @@ func checkProjection(
         projected,
         cppID: projectionID, message: "known note rectangle equals the camera projection")
 
-    let zeroX = session.camera.viewX(tick: 0, dpr: grid.devicePixelRatio)
+    let zeroX = viewport.camera.viewX(tick: 0, dpr: grid.devicePixelRatio)
     let maskSlot = Int(RollPaletteSlot.preRollMask.rawValue)
     let maskPublished =
         contentProbe.palette.indices.contains(maskSlot)
@@ -166,16 +168,16 @@ func checkProjection(
     let snap = max(1, grid.snapTicks)
     let pitchDelta = originalNote.pitch < 127 ? 1 : -1
     let dragY = pitchDelta > 0 ? -grid.rowHeight : grid.rowHeight
-    let dragX = Double(snap) * session.camera.snapshot.pixelsPerTick
+    let dragX = Double(snap) * viewport.camera.snapshot.pixelsPerTick
     grid.updatePointer(
         x: pointerX + dragX, y: pointerY + dragY)
     let previewNote = RollContentProbe(grid).note(originalNote.id)
     let expectedTick = Int(originalNote.tick) + snap
     let expectedPitch = Int(originalNote.pitch) + pitchDelta
-    let previewRow = session.camera.projection.row(forPitch: expectedPitch)
+    let previewRow = viewport.camera.projection.row(forPitch: expectedPitch)
     let expectedPreviewY =
-        session.camera.projection.contentRowTop(
-            previewRow, keyHeight: session.camera.snapshot.keyHeight,
+        viewport.camera.projection.contentRowTop(
+            previewRow, keyHeight: viewport.camera.snapshot.keyHeight,
             dpr: grid.devicePixelRatio) ?? .nan
     let previewBox = previewNote.flatMap { _ in decodedNoteBox(grid, originalNote.id) }
     report.expect(
@@ -183,7 +185,7 @@ func checkProjection(
             && previewBox.map {
                 gridCameraNear(
                     $0.x,
-                    session.camera.contentTickX(
+                    viewport.camera.contentTickX(
                         tick: Double(expectedTick), dpr: grid.devicePixelRatio) - scrollX, tolerance: pixel)
                     && gridCameraNear($0.y, expectedPreviewY - scrollY + pixel, tolerance: pixel)
             } == true,
@@ -204,13 +206,13 @@ func checkProjection(
     var drawTick = 0
     drawCandidate: for candidateY in [250.0, 200.0, 150.0, 100.0, 50.0] {
         guard
-            let pitch = session.camera.projection.pitch(
-                atY: candidateY, keyHeight: session.camera.snapshot.keyHeight,
-                scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
+            let pitch = viewport.camera.projection.pitch(
+                atY: candidateY, keyHeight: viewport.camera.snapshot.keyHeight,
+                scrollY: viewport.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
         else { continue }
         for candidateX in [500.0, 550.0, 450.0, 600.0, 400.0] {
-            let tick = Int(session.camera.tickAtContentX(candidateX)) / snap * snap
-            let x = session.camera.viewX(
+            let tick = Int(viewport.camera.tickAtContentX(candidateX)) / snap * snap
+            let x = viewport.camera.viewX(
                 tick: Double(tick), dpr: grid.devicePixelRatio)
             let occupied = session.document.notes(in: grid.trackIndex).contains { note in
                 guard let box = viewBox(note) else { return false }
@@ -270,7 +272,7 @@ func checkProjection(
         session.document.revision == cancelRevision
             && session.document.notes(in: grid.trackIndex).count == cancelCount,
         cppID: projectionID, message: "Escape discards an active gesture without document mutation")
-    let outsideY = -session.camera.snapshot.scrollY - 100
+    let outsideY = -viewport.camera.snapshot.scrollY - 100
     grid.beginPointer(x: 100, y: outsideY, modifiers: 0)
     grid.updatePointer(x: 140, y: outsideY)
     grid.endPointer(x: 140, y: outsideY)

@@ -34,9 +34,10 @@ func clipboardUnifiedTimeSelectionChecks(
         report.fail(sanitize, "unified selection fixture must contain three distinct notes")
         return
     }
+    let viewport = DocumentViewport(session: session)
     let page = AutomationPage()
-    page.attach(session: session, palette: GridPalette())
-    defer { page.detach() }
+    page.attach(viewport: viewport, palette: GridPalette())
+    defer { withExtendedLifetime(viewport) { page.detach() } }
     let note = document.notes(in: 0)[0].id
     let parameter = AutomationParameter.controlChange(track: 0, controller: 7)
     var changes: [SessionChangeDomains] = []
@@ -178,7 +179,7 @@ func clipboardUnifiedTimeSelectionChecks(
     report.expect(
         session.timeSelection == selectionBeforeDetach, cppID: commit,
         message: "detaching a drawer leaves document-session selection intact")
-    page.attach(session: session, palette: GridPalette())
+    page.attach(viewport: viewport, palette: GridPalette())
     report.expect(
         page.selection == selectionBeforeDetach, cppID: commit,
         message: "reattached drawer projects the authoritative session selection")

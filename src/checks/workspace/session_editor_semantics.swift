@@ -131,12 +131,13 @@ internal func editorSelectionCommandChecks(
         document: document, service: service,
         lease: suite.bankLease, slots: suite.bankSlots,
         dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
-    let grid = PianoGrid(session: session)
+    let viewport = DocumentViewport(session: session)
+    let grid = PianoGrid(viewport: viewport)
     let page = AutomationPage()
-    page.attach(session: session, palette: GridPalette())
+    page.attach(viewport: viewport, palette: GridPalette())
     defer { page.detach() }
     session.onChange = { [weak page] _ in page?.refreshFromDocument() }
-    let ruler = RulerMenuPresenter(session: session, grid: grid, automation: page)
+    let ruler = RulerMenuPresenter(viewport: viewport, grid: grid, automation: page)
     let router = EditorCommandRouter(session: session, grid: grid, automation: page, rulerMenu: ruler)
     let lane = AutomationParameter.controlChange(track: 0, controller: TimeDefaults.ccPan)
     document.writeLane(
@@ -250,8 +251,9 @@ private func checkScaleDeleteUndoLeavesCleanDocument(
         document: document, service: service,
         lease: suite.bankLease, slots: suite.bankSlots,
         dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
-    session.setScale(highlight: true)
-    session.setScale(fold: true)
+    let viewport = DocumentViewport(session: session)
+    viewport.setScale(highlight: true)
+    viewport.setScale(fold: true)
     guard let extra = document.addTrack(voice: 0) else {
         report.fail(id, "could not add a track for the delete-undo clean-document read")
         return
@@ -270,6 +272,7 @@ private func checkScaleDeleteUndoLeavesCleanDocument(
     report.expect(
         !document.isDirty, cppID: id,
         message: "deleting then undoing every track edit leaves the document clean")
+    withExtendedLifetime(viewport) {}
 }
 
 @MainActor
@@ -278,67 +281,69 @@ private func checkPerTabScaleState(
     service: ProjectService
 ) {
     let id = "swiftcore/ApplicationSession::tabsScale"
-    func makeSession() -> DocumentSession {
+    func makeViewport() -> DocumentViewport {
         let document = SongDocument(
             file: makeMidiFixture(), config: suite.document.state.config,
             source: suite.document.source, trackBudget: suite.document.trackBudget)
-        return DocumentSession(
-            document: document, service: service,
-            lease: suite.bankLease, slots: suite.bankSlots,
-            dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
+        return DocumentViewport(
+            session: DocumentSession(
+                document: document, service: service,
+                lease: suite.bankLease, slots: suite.bankSlots,
+                dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000))
     }
-    let first = makeSession()
-    let second = makeSession()
-    func isDefault(_ session: DocumentSession) -> Bool {
-        let scale = session.scaleProjection
+    let first = makeViewport()
+    let second = makeViewport()
+    func isDefault(_ viewport: DocumentViewport) -> Bool {
+        let scale = viewport.scale
         return scale.root == 0 && scale.scale == .major && !scale.highlight && !scale.fold
     }
     report.expect(
         isDefault(first) && isDefault(second), cppID: id,
         message: "a fresh tab defaults to C major with Highlight and Fold off")
-    let firstHistory = first.document.history.currentIdentity
-    let secondHistory = second.document.history.currentIdentity
+    let firstDocument = first.session.document
+    let firstHistory = firstDocument.history.currentIdentity
+    let secondHistory = second.session.document.history.currentIdentity
     first.setScale(root: 9)
     first.setScale(type: .dorian)
     first.setScale(highlight: true)
     first.setScale(fold: true)
     report.expect(
-        isDefault(second) && first.scaleProjection.root == 9
-            && first.scaleProjection.scale == .dorian && first.scaleProjection.highlight
-            && first.scaleProjection.fold, cppID: id,
+        isDefault(second) && first.scale.root == 9
+            && first.scale.scale == .dorian && first.scale.highlight
+            && first.scale.fold, cppID: id,
         message: "unselected tab retains defaults after scale edits")
     second.setScale(root: 4)
     second.setScale(type: .naturalMinor)
     second.setScale(highlight: false)
     second.setScale(fold: false)
     report.expect(
-        first.scaleProjection.root == 9 && first.scaleProjection.fold
-            && second.scaleProjection.root == 4 && second.scaleProjection.scale == .naturalMinor
-            && first.document.history.currentIdentity == firstHistory
-            && second.document.history.currentIdentity == secondHistory,
+        first.scale.root == 9 && first.scale.fold
+            && second.scale.root == 4 && second.scale.scale == .naturalMinor
+            && firstDocument.history.currentIdentity == firstHistory
+            && second.session.document.history.currentIdentity == secondHistory,
         cppID: id, message: "scale state stays with its tab")
-    guard let additional = first.document.addTrack(voice: 0) else {
+    guard let additional = firstDocument.addTrack(voice: 0) else {
         report.fail(id, "could not add a track for tab-scale retention")
         return
     }
-    first.selectPrimaryTrack(additional)
-    first.selectPrimaryTrack(0)
+    first.session.selectPrimaryTrack(additional)
+    first.session.selectPrimaryTrack(0)
     report.expect(
-        first.scaleProjection.root == 9 && first.scaleProjection.scale == .dorian
-            && first.scaleProjection.highlight && first.scaleProjection.fold,
+        first.scale.root == 9 && first.scale.scale == .dorian
+            && first.scale.highlight && first.scale.fold,
         cppID: id, message: "track selection preserves per-tab scale state")
-    first.document.deleteTrack(additional)
+    firstDocument.deleteTrack(additional)
     report.expect(
-        first.scaleProjection.root == 9 && first.scaleProjection.scale == .dorian
-            && first.scaleProjection.highlight && first.scaleProjection.fold,
+        first.scale.root == 9 && first.scale.scale == .dorian
+            && first.scale.highlight && first.scale.fold,
         cppID: id, message: "deleting a track preserves the tab's scale state")
-    guard first.document.history.undoDocument() else {
+    guard firstDocument.history.undoDocument() else {
         report.fail(id, "could not undo the tab's deleted track")
         return
     }
     report.expect(
-        first.document.engineTracks.usedTrackCount > additional
-            && first.scaleProjection.root == 9 && first.scaleProjection.scale == .dorian
-            && first.scaleProjection.highlight && first.scaleProjection.fold,
+        firstDocument.engineTracks.usedTrackCount > additional
+            && first.scale.root == 9 && first.scale.scale == .dorian
+            && first.scale.highlight && first.scale.fold,
         cppID: id, message: "undo restores scale state across a deleted track")
 }

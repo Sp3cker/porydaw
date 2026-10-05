@@ -43,9 +43,10 @@ func noteValueLabeled(_ grid: PianoGrid, id: NoteID) -> (text: String, boxW: Dou
 @MainActor
 func renderingSeed(
     _ report: CheckReport, id: String,
-    session: DocumentSession, grid: PianoGrid
+    viewport: DocumentViewport, grid: PianoGrid
 ) -> NoteID? {
-    let camera = session.camera
+    let session = viewport.session
+    let camera = viewport.camera
     let projection = camera.projection
     let snapshot = camera.snapshot
     let track = grid.trackIndex
@@ -113,12 +114,13 @@ struct GhostSeed {
 
 @MainActor
 func ghostSeed(
-    _ report: CheckReport, id: String, session: DocumentSession,
+    _ report: CheckReport, id: String, viewport: DocumentViewport,
     grid: PianoGrid, track: Int, spanCells: Int,
     nearPitch: Int? = nil, nearTick: Int? = nil,
     excluding: Set<Int> = []
 ) -> GhostSeed? {
-    let camera = session.camera
+    let session = viewport.session
+    let camera = viewport.camera
     let projection = camera.projection
     let snapshot = camera.snapshot
     let occupied = (0..<session.document.engineTracks.usedTrackCount).flatMap {

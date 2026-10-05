@@ -228,7 +228,7 @@ func drawerVoiceHoverAndBankRefresh(
         }
     }
     page.detach()
-    page.attach(session: fixture.session, palette: GridPalette())
+    page.attach(viewport: fixture.viewport, palette: GridPalette())
     report.expect(
         page.publishedMarkers.count == programs.count
             && zip(page.publishedMarkers, programs).enumerated().allSatisfy { index, pair in
@@ -246,7 +246,7 @@ func drawerVoiceHoverAndBankRefresh(
         return
     }
     page.detach()
-    page.attach(session: fixture.session, palette: GridPalette())
+    page.attach(viewport: fixture.viewport, palette: GridPalette())
     report.expect(
         page.publishedMarkers.map(\.label) == namedLabels, cppID: drawerVoiceLabelID,
         message: "restoring the bank restores the named labels")
@@ -268,7 +268,7 @@ func drawerVoiceHoverAndBankRefresh(
         return
     }
     page.detach()
-    page.attach(session: fixture.session, palette: GridPalette())
+    page.attach(viewport: fixture.viewport, palette: GridPalette())
     let renamedLabel = page.publishedMarkers.count > 1 ? page.publishedMarkers[1].label : nil
     report.expect(
         renamedLabel?.contains("renamed_voice_symbol") == true
@@ -292,7 +292,7 @@ private func drawerVoiceWorkspaceHideShow(
         return
     }
     let presenters = WorkspacePresenterFixture(
-        session: fixture.session, audio: audio,
+        viewport: fixture.viewport, audio: audio,
         callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
             revealTrackVoiceRequested: { _ in },

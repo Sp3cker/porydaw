@@ -5,10 +5,11 @@ import PorydawCore
 import QtBridge
 
 @MainActor
-func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
+func checkNoteBorders(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::selectedNoteFrameRaster"
     let tinyID = "swiftcore/PianoRoll::tinyNoteBorderRaster"
-    let oldCamera = session.camera
+    let oldCamera = viewport.camera
     let priorSelection = session.selectedNoteOrder
     let document = session.document
     let initialIdentity = document.history.currentIdentity
@@ -16,17 +17,17 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
         report.fail(id, "note rendering fixture cannot encode the original song")
         return
     }
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     defer {
         session.clearSelectedNotes()
         session.setSelectedNotes(priorSelection)
-        session.mutateCamera { $0 = oldCamera }
+        viewport.mutateCamera { $0 = oldCamera }
     }
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(35) }
     grid.refreshCamera()
-    guard let noteID = renderingSeed(report, id: id, session: session, grid: grid) else { return }
+    guard let noteID = renderingSeed(report, id: id, viewport: viewport, grid: grid) else { return }
     defer {
         while document.history.currentIdentity != initialIdentity && document.history.canUndo {
             guard document.history.undoDocument() else { break }
@@ -40,7 +41,7 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
         return
     }
     session.clearSelectedNotes()
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         _ = camera.setKeyHeight(16.375)
         _ = camera.setVScroll(max(0, (127.5 - Double(note.pitch)) * 16.375 - 160))
     }
@@ -95,7 +96,7 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
     grid.refreshFromSession()
 
     grid.configureViewport(width: 640, height: 320, fontPx: 5, dpr: 1)
-    session.mutateCamera { camera in
+    viewport.mutateCamera { camera in
         _ = camera.setKeyHeight(5.0)
         _ = camera.setVScroll(max(0, (127.5 - Double(note.pitch)) * 5.0 - 160))
     }
@@ -135,16 +136,17 @@ func checkNoteBorders(_ report: CheckReport, session: DocumentSession) {
 }
 
 @MainActor
-func checkIdentityNoteColors(_ report: CheckReport, session: DocumentSession) {
+func checkIdentityNoteColors(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::velocityColorRaster"
-    let oldCamera = session.camera
-    let grid = PianoGrid(session: session)
-    defer { session.mutateCamera { $0 = oldCamera } }
+    let oldCamera = viewport.camera
+    let grid = PianoGrid(viewport: viewport)
+    defer { viewport.mutateCamera { $0 = oldCamera } }
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 1)
     grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(35) }
     grid.refreshCamera()
-    guard let noteID = renderingSeed(report, id: id, session: session, grid: grid) else { return }
+    guard let noteID = renderingSeed(report, id: id, viewport: viewport, grid: grid) else { return }
     defer { session.document.deleteNotes([noteID]) }
     let track = grid.trackIndex
     var colors: [Int: UInt32] = [:]

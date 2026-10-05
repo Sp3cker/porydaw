@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
 import PorydawDocument
@@ -211,6 +211,7 @@ private func sessionReloadAtomicBinding(report: CheckReport, projectDir: String)
         return
     }
     app.songTabs.selectTab(tabId: first.tabId)
+    let freshTrack = original.selectedTrack
     original.setSelectedNotes([note.id])
     original.selectedTrack = 0
     let selectedNotes = original.selectedNoteOrder
@@ -293,9 +294,9 @@ private func sessionReloadAtomicBinding(report: CheckReport, projectDir: String)
             && replacement.bankLoadName == "test_vg"
             && replacement.bankLease.id.sourceRelativePath == "sound/voicegroups/test_vg.inc"
             && replacement.bankSlots.first?.voice?.release == 4
-            && replacement.selectedTrack == 0 && replacement.selectedNoteOrder == selectedNotes,
+            && replacement.selectedTrack == freshTrack && replacement.selectedNoteOrder.isEmpty,
         cppID: id,
-        message: "A079 replacement publishes changed MIDI with complete test_vg bank and selection")
+        message: "A079 replacement publishes changed MIDI with complete test_vg bank and a fresh selection")
     report.expect(
         readyPublications == 1 && landed.isReady && landed !== first
             && landed.tabId == first.tabId && app.songTabs.tabCount == 2
@@ -305,7 +306,7 @@ private func sessionReloadAtomicBinding(report: CheckReport, projectDir: String)
 }
 
 @MainActor
-private func sessionReloadRetainsViewState(report: CheckReport, projectDir: String) {
+private func sessionReloadOpensFresh(report: CheckReport, projectDir: String) {
     let id = "mainwindowrouting/MainWindowRoutingLifecycleTest::readyReloadPreservesTransients"
     let parent = URL(fileURLWithPath: projectDir).deletingLastPathComponent().path
     let root = stageTestProject(in: parent, projectName: "swiftcore-reload-view-state")
@@ -353,8 +354,13 @@ private func sessionReloadRetainsViewState(report: CheckReport, projectDir: Stri
         return
     }
     app.songTabs.selectTab(tabId: page.tabId)
-    let opened = document.camera.snapshot
-    document.mutateCamera {
+    let viewport = page.workspace.viewport
+    let opened = viewport.camera.snapshot
+    let freshTrack = document.selectedTrack
+    let freshCursor = document.editCursor
+    let freshDivision = page.gridPresenter().gridSelectionMenuId
+    let freshTriplet = page.gridPresenter().tripletGrid
+    viewport.mutateCamera {
         _ = $0.setTimeZoom(opened.pixelsPerBeat * 2)
         _ = $0.setKeyHeight(opened.keyHeight * 1.5)
         _ = $0.setHScroll($0.maxHScroll / 2)
@@ -368,7 +374,7 @@ private func sessionReloadRetainsViewState(report: CheckReport, projectDir: Stri
     grid.openGridMenu(kind: 2)
     grid.activateGridMenuRow(actionId: 1)
     app.songTabs.setSelectedTabEventsVisible(visible: true)
-    let seededCamera = document.camera.snapshot
+    let seededCamera = viewport.camera.snapshot
     let seededDivision = grid.gridSelectionMenuId
     let seededTriplet = grid.tripletGrid
     let seeded =
@@ -394,7 +400,7 @@ private func sessionReloadRetainsViewState(report: CheckReport, projectDir: Stri
         if app.songTabs.selectedPage === page {
             if !page.isReady {
                 sawPending = true
-                if document.camera.snapshot != seededCamera || document.selectedTrack != 1
+                if viewport.camera.snapshot != seededCamera || document.selectedTrack != 1
                     || document.editCursor != 48 || grid.gridSelectionMenuId != seededDivision
                     || grid.tripletGrid != seededTriplet || !page.showsEvents
                     || !app.songTabs.selectedTabShowsEvents
@@ -415,19 +421,22 @@ private func sessionReloadRetainsViewState(report: CheckReport, projectDir: Stri
         report.fail(id, "view-state reload did not publish a replacement: \(app.lastSaveError)")
         return
     }
-    let landedCamera = replacement.camera.snapshot
+    // Reload opens the song fresh in the same row: only the Event List mode
+    // comes from the live tab; camera, track, cursor and grid start over.
+    let landedCamera = landed.workspace.viewport.camera.snapshot
     let landedGrid = landed.gridPresenter()
     report.expect(
         landed.tabId == page.tabId && landed !== page && replacement !== document
-            && landedCamera.pixelsPerBeat == seededCamera.pixelsPerBeat
-            && landedCamera.keyHeight == seededCamera.keyHeight
-            && landedCamera.scrollX == seededCamera.scrollX
-            && landedCamera.scrollY == seededCamera.scrollY
-            && replacement.selectedTrack == 1 && replacement.editCursor == 48
-            && landedGrid.gridSelectionMenuId == 16 && landedGrid.tripletGrid
+            && landedCamera.pixelsPerBeat == opened.pixelsPerBeat
+            && landedCamera.keyHeight == opened.keyHeight
+            && landedCamera.scrollX == opened.scrollX
+            && landedCamera.scrollY == opened.scrollY
+            && replacement.selectedTrack == freshTrack && replacement.editCursor == freshCursor
+            && landedGrid.gridSelectionMenuId == freshDivision
+            && landedGrid.tripletGrid == freshTriplet
             && landed.showsEvents && app.songTabs.selectedTabShowsEvents,
         cppID: id,
-        message: "A025 the ready replacement carries every seeded view member")
+        message: "A025 the ready replacement opens fresh and keeps only the live Event List mode")
 }
 
 @MainActor
@@ -586,7 +595,7 @@ internal func sessionOpenAndRecovery(
     sessionStartupRestore(report: report, projectDir: projectDir)
     sessionCatalogRefreshReplace(report: report, projectDir: projectDir)
     sessionReloadAtomicBinding(report: report, projectDir: projectDir)
-    sessionReloadRetainsViewState(report: report, projectDir: projectDir)
+    sessionReloadOpensFresh(report: report, projectDir: projectDir)
     // 1. Service open and error recovery
     let service = ProjectService()
     let songTablePath = projectDir + "/sound/song_table.inc"

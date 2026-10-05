@@ -5,15 +5,15 @@ import PorydawCore
 import PorydawDocument
 
 @MainActor
-func runTimemenuChecks(_ report: CheckReport, session: DocumentSession) {
-    checkTimeMenuInsertTime(report, session: session)
-    checkTimeSelectionMenuCommands(report, session: session)
-    checkTimeMenuHalfOpenBoundary(report, session: session)
-    checkTimeMenuClipboardRetirement(report, session: session)
-    checkEmptyTimeSelectionNudge(report, session: session)
-    checkRejectedTimeMenuPaste(report, session: session)
-    checkAdmittedTimeMenuPaste(report, session: session)
-    checkNoteDuplicateArming(report, session: session)
+func runTimemenuChecks(_ report: CheckReport, viewport: DocumentViewport) {
+    checkTimeMenuInsertTime(report, session: viewport.session)
+    checkTimeSelectionMenuCommands(report, viewport: viewport)
+    checkTimeMenuHalfOpenBoundary(report, viewport: viewport)
+    checkTimeMenuClipboardRetirement(report, viewport: viewport)
+    checkEmptyTimeSelectionNudge(report, viewport: viewport)
+    checkRejectedTimeMenuPaste(report, viewport: viewport)
+    checkAdmittedTimeMenuPaste(report, viewport: viewport)
+    checkNoteDuplicateArming(report, viewport: viewport)
 }
 
 @MainActor
@@ -72,16 +72,17 @@ private func checkTimeMenuInsertTime(_ report: CheckReport, session: DocumentSes
 }
 
 @MainActor
-private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: DocumentSession) {
+private func checkTimeSelectionMenuCommands(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::timeSelectionSwiftMenuInsertAndStale"
     let palette = GridPalette()
-    let grid = PianoGrid(session: session, palette: palette)
+    let grid = PianoGrid(viewport: viewport, palette: palette)
     let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: palette)
+    automation.attach(viewport: viewport, palette: palette)
     defer { automation.detach() }
     let previousClipboard = drawerAutomationPorydawSelectionClipboardState()
     defer { previousClipboard.restore() }
-    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let menu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
     let previousTrack = session.selectedTrack
     if previousTrack == nil { session.selectPrimaryTrack(0) }
     defer { session.selectedTrack = previousTrack }
@@ -105,7 +106,7 @@ private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: Docu
             $0.track == (session.selectedTrack ?? 0) && $0.tick == start + 6 && $0.pitch == 30
         } == true, cppID: id, message: "the time insertion fixture seeds its selected note")
     defer { _ = session.document.history.undoDocument() }
-    let midpoint = session.camera.contentX(tick: Double((start + end) / 2))
+    let midpoint = viewport.camera.contentX(tick: Double((start + end) / 2))
     automation.applyTimeSelection(
         AutomationTimeSelection(
             range: TimeRange(startTick: start, endTick: end),
@@ -184,7 +185,7 @@ private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: Docu
         AutomationTimeSelection(
             range: TimeRange(startTick: cellStart, endTick: cellStart + snapCell),
             scope: .tracks([session.selectedTrack ?? 0])))
-    menu.openTimeSelection(contentX: session.camera.contentX(tick: Double(cellStart + 1)))
+    menu.openTimeSelection(contentX: viewport.camera.contentX(tick: Double(cellStart + 1)))
     let cellBytes = coreTimeBytes(session.document)
     let cellIndex = session.document.history.undoIndex
     let cellCount = session.document.history.undoCount
@@ -205,7 +206,8 @@ private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: Docu
 }
 
 @MainActor
-private func checkTimeMenuClipboardRetirement(_ report: CheckReport, session: DocumentSession) {
+private func checkTimeMenuClipboardRetirement(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::timeSelectionMenuClipboardRetirement"
     let saved = drawerAutomationPorydawSelectionClipboardState()
     defer { saved.restore() }
@@ -216,11 +218,11 @@ private func checkTimeMenuClipboardRetirement(_ report: CheckReport, session: Do
             ticksPerBeat: UInt32(session.document.ticksPerBeat)),
         cppID: id, message: "an empty clip reaches the native clipboard")
     let palette = GridPalette()
-    let grid = PianoGrid(session: session, palette: palette)
+    let grid = PianoGrid(viewport: viewport, palette: palette)
     let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: palette)
+    automation.attach(viewport: viewport, palette: palette)
     defer { automation.detach() }
-    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let menu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
     let previousTrack = session.selectedTrack
     if previousTrack == nil { session.selectPrimaryTrack(0) }
     defer { session.selectedTrack = previousTrack }
@@ -229,7 +231,7 @@ private func checkTimeMenuClipboardRetirement(_ report: CheckReport, session: Do
         scope: .tracks([session.selectedTrack ?? 0]))
     session.applyTimeSelection(band)
     defer { session.clearTimeSelection() }
-    let midpoint = session.camera.contentX(tick: 84)
+    let midpoint = viewport.camera.contentX(tick: 84)
     menu.openTimeSelection(contentX: midpoint)
     let identity = session.document.history.currentIdentity
     let disabledBytes = coreTimeBytes(session.document)
@@ -270,7 +272,8 @@ private func checkTimeMenuClipboardRetirement(_ report: CheckReport, session: Do
 }
 
 @MainActor
-private func checkNoteDuplicateArming(_ report: CheckReport, session: DocumentSession) {
+private func checkNoteDuplicateArming(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::timeMenuNoteDuplicateAvailability"
     let oldTrack = session.selectedTrack
     let oldNotes = session.selectedNoteOrder
@@ -278,7 +281,7 @@ private func checkNoteDuplicateArming(_ report: CheckReport, session: DocumentSe
         session.selectedTrack = oldTrack
         session.setSelectedNotes(oldNotes)
     }
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     let tick = Tick(grid.snapTickDown(Double(session.timeline.lengthTicks + 96)))
     let seedID =
         (try? session.document.addNotes([
@@ -305,16 +308,17 @@ private func checkNoteDuplicateArming(_ report: CheckReport, session: DocumentSe
 }
 
 @MainActor
-private func checkRejectedTimeMenuPaste(_ report: CheckReport, session: DocumentSession) {
+private func checkRejectedTimeMenuPaste(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::rejectedNotePastePreservesViewState"
     let saved = drawerAutomationPorydawSelectionClipboardState()
     defer { saved.restore() }
     let clipboard = GridClipboard()
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: GridPalette())
+    automation.attach(viewport: viewport, palette: GridPalette())
     defer { automation.detach() }
-    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let menu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
     let oldTrack = session.selectedTrack
     let oldNotes = session.selectedNoteOrder
     let oldTime = session.timeSelection
@@ -368,7 +372,7 @@ private func checkRejectedTimeMenuPaste(_ report: CheckReport, session: Document
                             ]), ticksPerBeat: UInt32(session.document.ticksPerBeat)),
                     cppID: id, message: "a conflicting \(variant) payload reaches the native clipboard")
                 if fromMenu {
-                    let contentX = session.camera.contentX(
+                    let contentX = viewport.camera.contentX(
                         tick: Double(destination + (selected ? 6 : 0)))
                     if selected {
                         menu.openTimeSelection(contentX: contentX)
@@ -388,7 +392,7 @@ private func checkRejectedTimeMenuPaste(_ report: CheckReport, session: Document
                 let time = session.timeSelection
                 let scope = session.selectedTracks
                 let cursor = session.editCursor
-                let camera = session.camera.snapshot
+                let camera = viewport.camera.snapshot
                 let status = grid.statusText
                 let previousChange = session.onChange
                 var cursorPublications = 0
@@ -418,7 +422,7 @@ private func checkRejectedTimeMenuPaste(_ report: CheckReport, session: Document
                 report.expect(
                     session.selectedNoteOrder == notes && session.timeSelection == time
                         && session.selectedTracks == scope && session.editCursor == cursor
-                        && session.camera.snapshot == camera && grid.statusText == status,
+                        && viewport.camera.snapshot == camera && grid.statusText == status,
                     cppID: id, message: "a conflicting \(variant) paste preserves selection and view")
             }
         }
@@ -433,7 +437,8 @@ private func openRejectedPasteRulerMenu(_ menu: RulerMenuPresenter, at contentX:
 }
 
 @MainActor
-private func checkAdmittedTimeMenuPaste(_ report: CheckReport, session: DocumentSession) {
+private func checkAdmittedTimeMenuPaste(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::timeSelectionMenuPaste"
     let saved = drawerAutomationPorydawSelectionClipboardState()
     defer { saved.restore() }
@@ -442,9 +447,9 @@ private func checkAdmittedTimeMenuPaste(_ report: CheckReport, session: Document
     defer { session.selectedTrack = previousTrack }
     let previousCursor = session.editCursor
     defer { session.editCursor = previousCursor; session.clearTimeSelection() }
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: grid.palette)
+    automation.attach(viewport: viewport, palette: grid.palette)
     defer { automation.detach() }
     let track = session.selectedTrack ?? 0
     let destination = Tick(grid.snapTickDown(Double(session.timeline.lengthTicks + 96)))
@@ -518,11 +523,12 @@ private func checkAdmittedTimeMenuPaste(_ report: CheckReport, session: Document
 }
 
 @MainActor
-private func checkEmptyTimeSelectionNudge(_ report: CheckReport, session: DocumentSession) {
+private func checkEmptyTimeSelectionNudge(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::emptyTimeSelectionNudge"
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: GridPalette())
+    automation.attach(viewport: viewport, palette: GridPalette())
     defer { automation.detach() }
     let oldTrack = session.selectedTrack
     if oldTrack == nil { session.selectPrimaryTrack(0) }
@@ -554,7 +560,7 @@ private func checkEmptyTimeSelectionNudge(_ report: CheckReport, session: Docume
             && session.document.history.undoIndex == undoIndex
             && session.document.history.undoCount == undoCount,
         cppID: id, message: "nudging an empty band publishes no document edit")
-    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let menu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
     menu.openTimeSelection(tick: expectedStart + 1)
     report.expect(
         menu.isOpen && menu.menuKind == 2
@@ -571,14 +577,15 @@ private func checkEmptyTimeSelectionNudge(_ report: CheckReport, session: Docume
 }
 
 @MainActor
-private func checkTimeMenuHalfOpenBoundary(_ report: CheckReport, session: DocumentSession) {
+private func checkTimeMenuHalfOpenBoundary(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::timeSelectionMenuHalfOpenBoundary"
     let palette = GridPalette()
-    let grid = PianoGrid(session: session, palette: palette)
+    let grid = PianoGrid(viewport: viewport, palette: palette)
     let automation = AutomationPage(baseFontPx: grid.baseFontPx)
-    automation.attach(session: session, palette: palette)
+    automation.attach(viewport: viewport, palette: palette)
     defer { automation.detach() }
-    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let menu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
     let previousTrack = session.selectedTrack
     if previousTrack == nil { session.selectPrimaryTrack(0) }
     defer { session.selectedTrack = previousTrack }
@@ -589,13 +596,13 @@ private func checkTimeMenuHalfOpenBoundary(_ report: CheckReport, session: Docum
         AutomationTimeSelection(
             range: TimeRange(startTick: start, endTick: end),
             scope: .tracks([session.selectedTrack ?? 0])))
-    menu.openTimeSelection(contentX: session.camera.contentX(tick: Double(end - 1)))
+    menu.openTimeSelection(contentX: viewport.camera.contentX(tick: Double(end - 1)))
     report.expect(
         menu.isOpen && menu.menuKind == 2,
         cppID: id,
         message: "a press one tick inside the end stays inside the half-open interval")
     menu.close()
-    menu.openTimeSelection(contentX: session.camera.contentX(tick: Double(end) + 0.5))
+    menu.openTimeSelection(contentX: viewport.camera.contentX(tick: Double(end) + 0.5))
     report.expect(
         !menu.isOpen && menu.menuKind == 0,
         cppID: id,

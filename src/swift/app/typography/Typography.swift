@@ -33,11 +33,11 @@ public struct Typography {
     }
 
     func fontPx(_ multiplier: Double) -> Int {
-        Int(PorydawDocument.fontPx(Double(baseFontPx), multiplier))
+        Int(PorydawApp.fontPx(Double(baseFontPx), multiplier))
     }
 
     func fontPxF(_ multiplier: Double) -> Double {
-        PorydawDocument.fontPxF(Double(baseFontPx), multiplier)
+        PorydawApp.fontPxF(Double(baseFontPx), multiplier)
     }
 
     var body: GridFontSpec {

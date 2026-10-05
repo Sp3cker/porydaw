@@ -156,7 +156,7 @@ func trackHeaderScopeTransitions(
     report.expectEqual(
         expected: Set([0, 1]), actual: session.selectedTracks, cppID: id, what: "Shift extends range from primary")
     report.expectEqual(expected: 1, actual: session.selectedTrack, cppID: id, what: "range keeps primary")
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: DocumentViewport(session: session))
     grid.performCommand(command: EditCommand.muteTracks.rawValue)
     report.expectEqual(
         expected: Set([0, 1]), actual: session.mutedTracks, cppID: id, what: "mute command uses entire track scope")

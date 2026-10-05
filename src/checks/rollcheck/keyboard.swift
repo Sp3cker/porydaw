@@ -5,16 +5,16 @@ import PorydawCore
 @testable import PorydawDocument
 
 @MainActor
-func runKeyboardChecks(_ report: CheckReport, session: DocumentSession) {
-    checkKeyboardTranspose(report, session: session)
-    checkKeyboardKeepsEditedNoteVisible(report, session: session)
-    checkKeyboardResizeNotes(report, session: session)
-    checkTimelineInsertBlankTimeTracks(report, session: session)
-    checkTimelineInsertRejectedScope(report, session: session)
-    checkTimelineInsertBlankTimeLanes(report, session: session)
-    checkKeyboardSkipsGhosts(report, session: session)
-    checkTimeSelectionHighlights(report, session: session)
-    runKeyboardParityChecks(report, session: session)
+func runKeyboardChecks(_ report: CheckReport, viewport: DocumentViewport) {
+    checkKeyboardTranspose(report, viewport: viewport)
+    checkKeyboardKeepsEditedNoteVisible(report, viewport: viewport)
+    checkKeyboardResizeNotes(report, viewport: viewport)
+    checkTimelineInsertBlankTimeTracks(report, viewport: viewport)
+    checkTimelineInsertRejectedScope(report, viewport: viewport)
+    checkTimelineInsertBlankTimeLanes(report, viewport: viewport)
+    checkKeyboardSkipsGhosts(report, viewport: viewport)
+    checkTimeSelectionHighlights(report, viewport: viewport)
+    runKeyboardParityChecks(report, viewport: viewport)
     checkDrumPadLabels(report)
 }
 
@@ -31,19 +31,20 @@ struct KeyboardSeed {
 // with velocity 100 and the grid's drawn duration at the selected snap cell.
 @MainActor
 func withKeyboardSeed(
-    _ report: CheckReport, session: DocumentSession, id: String,
+    _ report: CheckReport, viewport: DocumentViewport, id: String,
     _ body: (PianoGrid, KeyboardSeed) -> Void
 ) {
+    let session = viewport.session
     let document = session.document
     let before = document.state
     let identity = document.history.currentIdentity
     let originalSelection = session.selectedNoteOrder
     let originalTrack = session.selectedTrack
-    let originalCamera = session.camera.snapshot
-    let grid = PianoGrid(session: session)
+    let originalCamera = viewport.camera.snapshot
+    let grid = PianoGrid(viewport: viewport)
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(35) }
     grid.refreshCamera()
     defer {
         while document.history.currentIdentity != identity && document.history.canUndo {
@@ -51,7 +52,7 @@ func withKeyboardSeed(
         }
         session.selectedTrack = originalTrack
         session.setSelectedNotes(originalSelection)
-        _ = session.mutateCamera {
+        _ = viewport.mutateCamera {
             $0.updateViewport(
                 width: originalCamera.viewportWidth,
                 rollHeight: originalCamera.rollHeight)
@@ -62,23 +63,23 @@ func withKeyboardSeed(
         }
         report.expect(
             document.state == before && document.history.currentIdentity == identity
-                && session.camera.snapshot == originalCamera,
+                && viewport.camera.snapshot == originalCamera,
             cppID: id, message: "undo restores the original song, camera, and history position")
     }
     let snap = Tick(max(1, grid.snapTicks))
-    let tick = Tick(max(0, Int(session.camera.tickAtContentX(88)) / Int(snap) * Int(snap)))
+    let tick = Tick(max(0, Int(viewport.camera.tickAtContentX(88)) / Int(snap) * Int(snap)))
     let duration = Tick(max(1, grid.visibleGridTicks))
     let track = grid.trackIndex
     guard track < document.engineTracks.usedTrackCount,
         let pitch = (24...115).reversed().first(where: { pitch in
-            let row = session.camera.projection.row(forPitch: pitch)
+            let row = viewport.camera.projection.row(forPitch: pitch)
             guard row != PitchProjection.hiddenRow,
-                let top = session.camera.projection.rowTop(
-                    row, keyHeight: session.camera.snapshot.keyHeight,
-                    scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio),
-                let bottom = session.camera.projection.rowBottom(
-                    row, keyHeight: session.camera.snapshot.keyHeight,
-                    scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio),
+                let top = viewport.camera.projection.rowTop(
+                    row, keyHeight: viewport.camera.snapshot.keyHeight,
+                    scrollY: viewport.camera.snapshot.scrollY, dpr: grid.devicePixelRatio),
+                let bottom = viewport.camera.projection.rowBottom(
+                    row, keyHeight: viewport.camera.snapshot.keyHeight,
+                    scrollY: viewport.camera.snapshot.scrollY, dpr: grid.devicePixelRatio),
                 top >= 0, bottom <= 320
             else { return false }
             return !(0..<document.engineTracks.usedTrackCount).contains { candidate in
@@ -120,9 +121,10 @@ func withKeyboardSeed(
 }
 
 @MainActor
-private func checkKeyboardTranspose(_ report: CheckReport, session: DocumentSession) {
+private func checkKeyboardTranspose(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardTranspose"
-    withKeyboardSeed(report, session: session, id: id) { grid, seed in
+    withKeyboardSeed(report, viewport: viewport, id: id) { grid, seed in
         session.setSelectedNotes([seed.id])
         let available = grid.commandAvailable(command: EditCommand.transposeUp.rawValue)
         let surface = EditSurfaceState(
@@ -160,9 +162,10 @@ private func checkKeyboardTranspose(_ report: CheckReport, session: DocumentSess
 }
 
 @MainActor
-private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, session: DocumentSession) {
+private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardKeepVisible"
-    withKeyboardSeed(report, session: session, id: id) { grid, seed in
+    withKeyboardSeed(report, viewport: viewport, id: id) { grid, seed in
         let originalState = session.document.state
         let originalIdentity = session.document.history.currentIdentity
         session.document.nudgeNotes([seed.id], byTicks: Int64(seed.snap), byKeys: -11)
@@ -176,22 +179,22 @@ private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, session:
                 && Int(parked.pitch) == seed.pitch - 11,
             cppID: id, message: "the keep-visible seed reaches its parked pitch and tick")
         let parkedPitch = Int(parked.pitch)
-        let row = session.camera.projection.row(forPitch: parkedPitch)
-        let height = session.camera.snapshot.keyHeight
-        _ = session.mutateCamera {
+        let row = viewport.camera.projection.row(forPitch: parkedPitch)
+        let height = viewport.camera.snapshot.keyHeight
+        _ = viewport.mutateCamera {
             _ = $0.setVScroll(Double(row + 1) * height)
         }
         report.expect(
-            Double(row) * height - session.camera.snapshot.scrollY < 0,
+            Double(row) * height - viewport.camera.snapshot.scrollY < 0,
             cppID: id, message: "the selected note is parked above the roll")
         grid.performCommand(command: EditCommand.transposeUp.rawValue)
         guard let transposed = session.document.note(seed.id) else {
             report.fail(id, "transpose lost the keep-visible note")
             return
         }
-        let snapshot = session.camera.snapshot
+        let snapshot = viewport.camera.snapshot
         let top =
-            Double(session.camera.projection.row(forPitch: Int(transposed.pitch)))
+            Double(viewport.camera.projection.row(forPitch: Int(transposed.pitch)))
             * snapshot.keyHeight - snapshot.scrollY
         report.expect(
             Int(transposed.pitch) == parkedPitch + 1 && transposed.tick == parked.tick,
@@ -203,11 +206,11 @@ private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, session:
         grid.performCommand(command: EditCommand.transposeDown.rawValue)
         let parkedTick = parked.tick
         let dpr = grid.devicePixelRatio
-        _ = session.mutateCamera {
+        _ = viewport.mutateCamera {
             _ = $0.setHScroll($0.contentX(tick: Double(parkedTick + seed.snap)) + 1 / dpr)
         }
         report.expect(
-            session.camera.viewX(
+            viewport.camera.viewX(
                 tick: Double(parkedTick + seed.snap),
                 dpr: dpr) < 0,
             cppID: id, message: "the next nudge starts left of the viewport")
@@ -216,14 +219,14 @@ private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, session:
             report.fail(id, "nudge lost the keep-visible note")
             return
         }
-        let startX = session.camera.viewX(tick: Double(nudged.tick), dpr: dpr)
+        let startX = viewport.camera.viewX(tick: Double(nudged.tick), dpr: dpr)
         report.expect(
             nudged.tick == parkedTick + seed.snap && startX == 0,
             cppID: id, message: "Right reveals the parked note at the left edge")
         let cellWidth =
-            session.camera.contentX(tick: Double(parkedTick + 2 * seed.snap))
-            - session.camera.contentX(tick: Double(parkedTick + seed.snap))
-        let rideCount = Int(ceil(session.camera.snapshot.viewportWidth / cellWidth)) + 2
+            viewport.camera.contentX(tick: Double(parkedTick + 2 * seed.snap))
+            - viewport.camera.contentX(tick: Double(parkedTick + seed.snap))
+        let rideCount = Int(ceil(viewport.camera.snapshot.viewportWidth / cellWidth)) + 2
         var expectedTick = UInt64(nudged.tick)
         var everyRideVisible = true
         for _ in 0..<rideCount {
@@ -233,15 +236,15 @@ private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, session:
                 report.fail(id, "repeated nudge lost the keep-visible note")
                 return
             }
-            let left = session.camera.viewX(tick: Double(current.tick), dpr: dpr)
-            let right = session.camera.viewX(
+            let left = viewport.camera.viewX(tick: Double(current.tick), dpr: dpr)
+            let right = viewport.camera.viewX(
                 tick: Double(
                     UInt64(current.tick)
                         + UInt64(current.duration)),
                 dpr: dpr)
             everyRideVisible =
                 everyRideVisible && left >= 0
-                && right <= session.camera.snapshot.viewportWidth - 1 / dpr
+                && right <= viewport.camera.snapshot.viewportWidth - 1 / dpr
         }
         report.expect(
             session.document.note(seed.id).map { UInt64($0.tick) == expectedTick } == true,
@@ -256,15 +259,15 @@ private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, session:
                 report.fail(id, "return nudge lost the keep-visible note")
                 return
             }
-            let left = session.camera.viewX(tick: Double(current.tick), dpr: dpr)
-            let right = session.camera.viewX(
+            let left = viewport.camera.viewX(tick: Double(current.tick), dpr: dpr)
+            let right = viewport.camera.viewX(
                 tick: Double(
                     UInt64(current.tick)
                         + UInt64(current.duration)),
                 dpr: dpr)
             everyReturnVisible =
                 everyReturnVisible && left >= 0
-                && right <= session.camera.snapshot.viewportWidth - 1 / dpr
+                && right <= viewport.camera.snapshot.viewportWidth - 1 / dpr
         }
         report.expect(
             everyReturnVisible, cppID: id,
@@ -285,9 +288,10 @@ private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, session:
 }
 
 @MainActor
-private func checkKeyboardResizeNotes(_ report: CheckReport, session: DocumentSession) {
+private func checkKeyboardResizeNotes(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardResizeNotes"
-    withKeyboardSeed(report, session: session, id: id) { grid, seed in
+    withKeyboardSeed(report, viewport: viewport, id: id) { grid, seed in
         let laterTick = seed.tick + 2 * seed.duration + seed.snap
         let laterDuration = seed.snap + (seed.duration == seed.snap + 1 ? 2 : 1)
         guard
@@ -430,9 +434,10 @@ private func checkKeyboardResizeNotes(_ report: CheckReport, session: DocumentSe
 }
 
 @MainActor
-private func checkKeyboardSkipsGhosts(_ report: CheckReport, session: DocumentSession) {
+private func checkKeyboardSkipsGhosts(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let id = "swiftcore/PianoRoll::keyboardTranspose"
-    withKeyboardSeed(report, session: session, id: id) { grid, seed in
+    withKeyboardSeed(report, viewport: viewport, id: id) { grid, seed in
         guard session.document.canAddTrack, let other = session.document.addTrack(voice: 0),
             other != seed.track
         else {

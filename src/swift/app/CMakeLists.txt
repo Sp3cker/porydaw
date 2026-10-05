@@ -2,7 +2,13 @@ set(SWIFT_GRID_DIR "${CMAKE_SOURCE_DIR}/src/ui/songview/quick/swiftroll")
 set(SWIFT_GRID_NATIVE_DIR "${SWIFT_GRID_DIR}/native")
 
 add_library(PorydawApp STATIC
+    DocumentViewport.swift
     DocumentWorkspace.swift
+    timeline/EditorCamera.swift
+    timeline/GridGeometry.swift
+    timeline/ScaleProjection.swift
+    timeline/EditorViewState.swift
+    drawer/EditorDrawerTypes.swift
     NativeAudio.swift
     export/WavExportJob.swift
     export/WavExportPresenter.swift

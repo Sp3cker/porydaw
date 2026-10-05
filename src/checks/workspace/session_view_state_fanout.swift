@@ -59,7 +59,7 @@ func runCompleteEditorViewStateChecks(
     }
     app.openProjectAndSong(path: root, label: "mus_session_test")
     guard until({ app.songTabs.tabCount == 1 || !app.lastSaveError.isEmpty }),
-        let first = app.selectedDocument
+        let first = app.selectedDocument, let firstView = app.workspace?.viewport
     else {
         report.fail(id, "complete state first copied song failed to open")
         return
@@ -67,7 +67,8 @@ func runCompleteEditorViewStateChecks(
     let firstID = app.songTabs.selectedId
     app.openSong(label: "mus_session_test2")
     guard until({ app.songTabs.tabCount == 2 || !app.lastSaveError.isEmpty }),
-        let second = app.selectedDocument, second !== first
+        let second = app.selectedDocument, second !== first,
+        let secondView = app.workspace?.viewport
     else {
         report.fail(id, "complete state second copied song failed to open")
         return
@@ -77,13 +78,13 @@ func runCompleteEditorViewStateChecks(
     let freshSecondDepth = second.document.history.undoCount
     var originCount = 0
     var siblingCount = 0
-    let firstCallback = first.onEditorViewStateChanged
-    let secondCallback = second.onEditorViewStateChanged
-    first.onEditorViewStateChanged = { state in
+    let firstCallback = firstView.onEditorViewStateChanged
+    let secondCallback = secondView.onEditorViewStateChanged
+    firstView.onEditorViewStateChanged = { state in
         siblingCount += 1
         firstCallback?(state)
     }
-    second.onEditorViewStateChanged = { state in
+    secondView.onEditorViewStateChanged = { state in
         originCount += 1
         secondCallback?(state)
     }
@@ -91,7 +92,7 @@ func runCompleteEditorViewStateChecks(
     var persistedCount = 0
     app.onEditorViewStateChanged = { _ in hubCount += 1 }
     app.onEditorViewStatePersisted = { _ in persistedCount += 1 }
-    guard second.setEditorViewState(seed) else {
+    guard secondView.setEditorViewState(seed) else {
         report.fail(id, "background tab could not accept complete editor seed")
         return
     }
@@ -108,27 +109,27 @@ func runCompleteEditorViewStateChecks(
         persistedCount == 1, cppID: id,
         message: "initial complete seed finishes exactly one preference write")
     report.expect(
-        first.editorViewState == seed, cppID: id,
+        firstView.editorViewState == seed, cppID: id,
         message: "A105 selected sibling holds every member of the complete editor seed")
     report.expect(
-        second.editorViewState == seed, cppID: id,
+        secondView.editorViewState == seed, cppID: id,
         message: "A106 background origin holds every member of the complete editor seed")
     report.expect(
         EditorViewStatePreferences.load(store: PreferencesStore()) == seed, cppID: id,
         message: "A107 synchronized preferences hold every member of the complete editor seed")
     report.expect(
-        second.editorViewState.lanes.hiddenLanes.count == 2, cppID: id,
+        secondView.editorViewState.lanes.hiddenLanes.count == 2, cppID: id,
         message: "A108 seeded background state holds two ordered hidden lanes")
     report.expect(
-        second.editorViewState.lanes.hiddenLanes.first == .init(track: 1, controller: 7),
+        secondView.editorViewState.lanes.hiddenLanes.first == .init(track: 1, controller: 7),
         cppID: id, message: "A109 first hidden lane remains CC7 on engine track one")
     report.expect(
-        second.editorViewState.lanes.hiddenLanes.last == .init(track: 0, controller: 80),
+        secondView.editorViewState.lanes.hiddenLanes.last == .init(track: 0, controller: 80),
         cppID: id, message: "A110 last hidden lane remains CC80 on engine track zero")
 
     var changed = seed
     changed.lanes.laneRanges["cc:0:74"] = 80
-    guard second.setEditorViewState(changed) else {
+    guard secondView.setEditorViewState(changed) else {
         report.fail(id, "background tab could not change CC74 range")
         return
     }
@@ -145,16 +146,16 @@ func runCompleteEditorViewStateChecks(
         siblingCount == 0, cppID: id,
         message: "A114 changing background CC74 range never originates from selected sibling")
     report.expect(
-        first.editorViewState.lanes.laneRanges["cc:0:74"] == 80, cppID: id,
+        firstView.editorViewState.lanes.laneRanges["cc:0:74"] == 80, cppID: id,
         message: "A115 selected sibling adopts the independent CC74 range 80")
     report.expect(
-        second.editorViewState.lanes.laneRanges["cc:0:74"] == 80, cppID: id,
+        secondView.editorViewState.lanes.laneRanges["cc:0:74"] == 80, cppID: id,
         message: "A116 background origin retains the independent CC74 range 80")
-    let sameRange = !second.setEditorViewState(changed)
-    var noOp = second.editorViewState
+    let sameRange = !secondView.setEditorViewState(changed)
+    var noOp = secondView.editorViewState
     let sameInsert = !noOp.lanes.emptyLanes.insert(.init(track: 0, controller: 74)).inserted
     let missingErase = noOp.lanes.emptyLanes.remove(.init(track: 3, controller: 99)) == nil
-    let sameValue = !second.setEditorViewState(noOp)
+    let sameValue = !secondView.setEditorViewState(noOp)
     report.expect(
         sameRange, cppID: id,
         message: "setting the same CC74 range leaves the complete editor value unchanged")
@@ -187,7 +188,7 @@ func runCompleteEditorViewStateChecks(
         return
     }
     let target = 0
-    let before = second.editorViewState
+    let before = secondView.editorViewState
     var expected = before
     expected.lanes.laneHeights = ["cc:1:74": floor + 3, "cc:0:7": floor + 5]
     expected.lanes.laneRanges = ["cc:1:74": 80, "tempo": 100]
@@ -200,7 +201,7 @@ func runCompleteEditorViewStateChecks(
         report.fail(id, "real document could not move engine track one to zero")
         return
     }
-    let remapped = second.editorViewState
+    let remapped = secondView.editorViewState
     report.expect(
         originCount == 3, cppID: id,
         message: "A124 real track move emits exactly one more origin notification")
@@ -238,7 +239,7 @@ func runCompleteEditorViewStateChecks(
         remapped == expected, cppID: id,
         message: "real track move remaps CC lane heights ranges empty and hidden identities exactly")
     report.expect(
-        first.editorViewState == expected, cppID: id,
+        firstView.editorViewState == expected, cppID: id,
         message: "A135 selected sibling receives the independently expected full remapped editor value")
     report.expect(
         EditorViewStatePreferences.load(store: PreferencesStore()) == expected, cppID: id,
@@ -258,10 +259,10 @@ func runCompleteEditorViewStateChecks(
         persistedCount == 4, cppID: id,
         message: "A139 Undo finishes exactly one more preference write")
     report.expect(
-        first.editorViewState == before, cppID: id,
+        firstView.editorViewState == before, cppID: id,
         message: "A140 Undo restores the sibling complete editor value")
     report.expect(
-        second.editorViewState == before, cppID: id,
+        secondView.editorViewState == before, cppID: id,
         message: "A141 Undo restores the background origin complete editor value")
     report.expect(
         (try? second.document.state.file.encoded()) == original, cppID: id,
@@ -275,7 +276,7 @@ func runCompleteEditorViewStateChecks(
 
     var reduced = EditorViewState()
     reduced.chrome = seed.chrome
-    guard second.setEditorViewState(reduced) else {
+    guard secondView.setEditorViewState(reduced) else {
         report.fail(id, "background tab could not accept chrome-only editor value")
         return
     }
@@ -301,7 +302,7 @@ func runCompleteEditorViewStateChecks(
         persistedCount == 0, cppID: id,
         message: "A148 quiet track move finishes no editor preference write")
     report.expect(
-        second.editorViewState == reduced, cppID: id,
+        secondView.editorViewState == reduced, cppID: id,
         message: "quiet track move leaves chrome-only editor value unchanged")
     guard second.document.history.undoDocument() else {
         report.fail(id, "document could not Undo the quiet engine-track move")
@@ -326,10 +327,10 @@ func runCompleteEditorViewStateChecks(
         !second.document.isDirty, cppID: id,
         message: "A154 quiet Undo restores clean document state")
     report.expect(
-        first.editorViewState == reduced, cppID: id,
+        firstView.editorViewState == reduced, cppID: id,
         message: "quiet move and Undo preserve the sibling chrome-only editor value")
 
-    guard second.setEditorViewState(seed) else {
+    guard secondView.setEditorViewState(seed) else {
         report.fail(id, "background tab could not restore complete seed before view-only mutation")
         return
     }
@@ -341,7 +342,7 @@ func runCompleteEditorViewStateChecks(
     let historyCount = second.document.history.undoCount
     var withEmpty = seed
     withEmpty.lanes.emptyLanes.insert(.init(track: 2, controller: 40))
-    guard second.setEditorViewState(withEmpty) else {
+    guard secondView.setEditorViewState(withEmpty) else {
         report.fail(id, "background tab could not insert the view-only CC40 empty lane")
         return
     }
@@ -355,13 +356,13 @@ func runCompleteEditorViewStateChecks(
         persistedCount == 1, cppID: id,
         message: "A158 empty lane insertion finishes exactly one preference write")
     report.expect(
-        first.editorViewState == second.editorViewState, cppID: id,
+        firstView.editorViewState == secondView.editorViewState, cppID: id,
         message: "A159 empty lane insertion projects origin value to selected sibling")
     report.expect(
-        first.editorViewState == withEmpty, cppID: id,
+        firstView.editorViewState == withEmpty, cppID: id,
         message: "empty lane insertion matches the independently specified complete state")
     report.expect(
-        EditorViewStatePreferences.load(store: PreferencesStore()) == second.editorViewState,
+        EditorViewStatePreferences.load(store: PreferencesStore()) == secondView.editorViewState,
         cppID: id, message: "A160 empty lane insertion stores the live origin complete state")
     report.expect(
         EditorViewStatePreferences.load(store: PreferencesStore()) == withEmpty, cppID: id,
@@ -378,7 +379,7 @@ func runCompleteEditorViewStateChecks(
     report.expect(
         siblingCount == 0, cppID: id,
         message: "view-only insertion never originates from selected sibling")
-    guard second.setEditorViewState(seed) else {
+    guard secondView.setEditorViewState(seed) else {
         report.fail(id, "background tab could not remove the view-only CC40 empty lane")
         return
     }
@@ -401,13 +402,13 @@ func runCompleteEditorViewStateChecks(
         second.document.history.undoCount == historyCount, cppID: id,
         message: "A170 view-only removal leaves document history count unchanged")
     report.expect(
-        first.editorViewState == seed, cppID: id,
+        firstView.editorViewState == seed, cppID: id,
         message: "view-only removal restores selected sibling complete value")
     report.expect(
         EditorViewStatePreferences.load(store: PreferencesStore()) == seed, cppID: id,
         message: "view-only removal restores synchronized complete preferences")
-    let beforeA = first.editorViewState
-    let beforeB = second.editorViewState
+    let beforeA = firstView.editorViewState
+    let beforeB = secondView.editorViewState
     guard let rejectedMidi = try? second.document.state.file.encoded() else {
         report.fail(id, "the live second MIDI must remain encodable before the rejected remap")
         return
@@ -424,10 +425,10 @@ func runCompleteEditorViewStateChecks(
         engineTrackMap: [0, 0], newChunkCount: chunkCount, newEngineTrackCount: 2)
     second.document.onChange?(DocumentChange(revision: rejectedRevision, trackRemap: rejected))
     report.expect(
-        first.editorViewState == beforeA, cppID: id,
+        firstView.editorViewState == beforeA, cppID: id,
         message: "A173 rejected live remap leaves the selected sibling view state unchanged")
     report.expect(
-        second.editorViewState == beforeB, cppID: id,
+        secondView.editorViewState == beforeB, cppID: id,
         message: "A174 rejected live remap leaves the background origin view state unchanged")
     report.expect(
         (try? second.document.state.file.encoded()) == rejectedMidi, cppID: id,
@@ -467,7 +468,7 @@ func runCompleteEditorViewStateChecks(
     siblingCount = 0
     hubCount = 0
     persistedCount = 0
-    guard second.setEditorViewState(isolated) else {
+    guard secondView.setEditorViewState(isolated) else {
         report.fail(isolationID, "background origin refused the fork-literal editor state")
         return
     }
@@ -478,10 +479,10 @@ func runCompleteEditorViewStateChecks(
         persistedCount == 1, cppID: isolationID,
         message: "A151 background editor state persists exactly once")
     report.expect(
-        second.editorViewState == isolated, cppID: isolationID,
+        secondView.editorViewState == isolated, cppID: isolationID,
         message: "A152 background origin reads back the fork-literal editor state")
     report.expect(
-        first.editorViewState == isolated, cppID: isolationID,
+        firstView.editorViewState == isolated, cppID: isolationID,
         message: "A153 selected sibling reads back the fork-literal editor state")
     report.expect(
         EditorViewStatePreferences.load(store: PreferencesStore()) == isolated,
@@ -512,7 +513,7 @@ func runCompleteEditorViewStateChecks(
     var cosmetics = EditorViewState()
     cosmetics.chrome.velocity = .init(visible: true, height: 180)
     cosmetics.chrome.activePage = .velocity
-    guard first.setEditorViewState(cosmetics) else {
+    guard firstView.setEditorViewState(cosmetics) else {
         report.fail(seamsID, "selected document must accept cosmetic state")
         return
     }
@@ -520,7 +521,7 @@ func runCompleteEditorViewStateChecks(
     app.velocityPage().refreshFromDocument()
     app.voiceChangesPage().refreshFromDocument()
     report.expect(
-        first.editorViewState == cosmetics, cppID: seamsID,
+        firstView.editorViewState == cosmetics, cppID: seamsID,
         message: "A028 three drawer document-changed deliveries preserve exact cosmetic state")
 
     let freshID = "host/HostIntegrationTest::documentMutationUndoRedoAndReloadPreemptPreview"

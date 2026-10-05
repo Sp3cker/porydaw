@@ -14,7 +14,7 @@ func drawerVoiceMarkerDragTransactions(
     let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
     let page = fixture.page
     let automation = AutomationPage(baseFontPx: 13)
-    automation.attach(session: fixture.session, palette: GridPalette())
+    automation.attach(viewport: fixture.viewport, palette: GridPalette())
     automation.configureBody(
         width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
         baseFontPx: 13, dragDistance: 10)
@@ -237,7 +237,7 @@ func drawerVoiceCancellationPaths(
     let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
     let page = fixture.page
     let automation = AutomationPage(baseFontPx: 13)
-    automation.attach(session: fixture.session, palette: GridPalette())
+    automation.attach(viewport: fixture.viewport, palette: GridPalette())
     automation.configureBody(
         width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
         baseFontPx: 13, dragDistance: 10)
@@ -292,7 +292,7 @@ func drawerVoiceCancellationPaths(
         what: "the cancelled drag commits nothing")
 
     // The canvas keeps drawing after a cancellation.
-    fixture.session.mutateCamera { $0.setHScroll($0.snapshot.scrollX + 20) }
+    fixture.viewport.mutateCamera { $0.setHScroll($0.snapshot.scrollX + 20) }
     report.expectEqual(
         expected: 3, actual: page.publishedMarkers.count, cppID: drawerVoiceCancellationID,
         what: "the projection survives the cancellation")
@@ -413,7 +413,7 @@ func drawerVoiceAltFineClockLattice(
         suite: suite, service: service, programs: programs,
         division: 96)
     let automation = AutomationPage(baseFontPx: 13)
-    automation.attach(session: fixture.session, palette: GridPalette())
+    automation.attach(viewport: fixture.viewport, palette: GridPalette())
     automation.configureBody(
         width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
         baseFontPx: 13, dragDistance: 10)
@@ -432,7 +432,7 @@ func drawerVoiceAltFineClockLattice(
     _ = page.pointerPress(x: startX, y: 10, surface: 1, button: 1, modifiers: 0)
     let altX = startX + 60
     _ = page.pointerMove(x: altX, y: 10, buttons: 1, modifiers: VoiceModifier.alt)
-    let raw = fixture.session.camera.tickAtContentX(altX)
+    let raw = fixture.viewport.camera.tickAtContentX(altX)
     report.expectEqual(
         expected: TimelineSnapPolicy.fineSnap(raw, clockTicks: clock), actual: page.dragPreviewTick,
         cppID: drawerVoiceFineSnapID,
@@ -469,7 +469,7 @@ func drawerVoiceCollisionDragOutcome(
     let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
     let page = fixture.page
     let automation = AutomationPage(baseFontPx: 13)
-    automation.attach(session: fixture.session, palette: GridPalette())
+    automation.attach(viewport: fixture.viewport, palette: GridPalette())
     automation.configureBody(
         width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
         baseFontPx: 13, dragDistance: 10)

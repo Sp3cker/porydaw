@@ -106,19 +106,19 @@ extension AutomationPage {
     /// Installs the document and palette owners. Called before the container
     /// attaches the page, so no publication precedes the session it reads.
     @QtIgnored
-    public func attach(session: DocumentSession, palette: GridPalette) {
+    public func attach(viewport: DocumentViewport, palette: GridPalette) {
         if let selectionTransitionToken, let previousSession = self.session {
             previousSession.removeSelectionTransitionObserver(selectionTransitionToken)
         }
-        self.session = session
-        selectionTransitionToken = session.addSelectionTransitionObserver { [weak self] _ in
+        self.viewport = viewport
+        selectionTransitionToken = viewport.session.addSelectionTransitionObserver { [weak self] _ in
             guard let self else { return }
             self.rebuildContent(selectionOnly: true)
             self.onCommandAvailabilityChanged?()
         }
         self.palette = palette
         refreshPromptStyles()
-        contextTick = session.editCursor
+        contextTick = viewport.session.editCursor
         lastPresentation = nil
         rebuildContent()
     }
@@ -132,7 +132,7 @@ extension AutomationPage {
             session.removeSelectionTransitionObserver(selectionTransitionToken)
         }
         selectionTransitionToken = nil
-        session = nil
+        viewport = nil
         projection = nil
         rows = []
         selectedParameters = []

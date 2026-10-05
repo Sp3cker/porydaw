@@ -35,7 +35,7 @@ func drawerVoiceContextMenuTransactions(
         message: "an open menu reports an active interaction")
 
     // A camera scroll after the open neither drifts the capture nor closes it.
-    fixture.session.mutateCamera { $0.setHScroll($0.snapshot.scrollX + 80) }
+    fixture.viewport.mutateCamera { $0.setHScroll($0.snapshot.scrollX + 80) }
     report.expect(page.hasMenu, cppID: drawerVoiceMenuID, message: "a camera scroll keeps the menu open")
     report.expectEqual(
         expected: target.text, actual: page.menuTargetIdentity, cppID: drawerVoiceMenuID,
@@ -143,7 +143,7 @@ func drawerVoiceScrolledMenuPick(
     let undoIndex = fixture.document.history.undoIndex
     _ = page.pointerPress(x: fixture.markerX(48), y: 10, surface: 1, button: 2, modifiers: 0)
     let captured = page.menuTargetIdentity
-    fixture.session.mutateCamera { $0.setHScroll($0.snapshot.scrollX + 80) }
+    fixture.viewport.mutateCamera { $0.setHScroll($0.snapshot.scrollX + 80) }
     guard page.hasMenu && page.activateMenuAction(actionId: VoiceChangesPagePolicy.changeVoiceAction) else {
         report.fail(drawerVoiceMenuID, "the scrolled change row did not open the picker")
         return
@@ -203,7 +203,8 @@ func drawerVoiceOriginalMenuTransactions(
         loadName: suite.bankLoadName, sampleRate: 48_000)
     session.selectedTrack = 0
     let page = VoiceChangesPage(baseFontPx: 13)
-    page.attach(session: session, palette: GridPalette())
+    let viewport = DocumentViewport(session: session)
+    page.attach(viewport: viewport, palette: GridPalette())
     page.configureBody(
         width: 1000, height: 160, gutter: 56, devicePixelRatio: 1,
         baseFontPx: 13, dragDistance: 10)
@@ -223,7 +224,7 @@ func drawerVoiceOriginalMenuTransactions(
     }
     func openMenu() {
         _ = page.pointerPress(
-            x: session.camera.viewX(tick: 144, dpr: 1),
+            x: viewport.camera.viewX(tick: 144, dpr: 1),
             y: 10, surface: 1, button: 2, modifiers: 0)
     }
     let before = DocumentSnapshot(document)
@@ -281,4 +282,5 @@ func drawerVoiceOriginalMenuTransactions(
             && document.history.canUndo == before.canUndo, 127)
     expect(value() == nil, 169)
     expect(bytes() == beforeBytes, 170)
+    withExtendedLifetime(viewport) {}
 }

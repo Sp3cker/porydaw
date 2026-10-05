@@ -16,12 +16,7 @@ add_library(PorydawDocument STATIC
     service/ProjectService+Samples.swift
     service/ProjectService+Songs.swift
     service/SongLabelPolicy.swift
-    view/EditorViewState.swift
-    view/EditorDrawerTypes.swift
     view/timeline/DocumentProjectionCache.swift
-    view/timeline/ScaleProjection.swift
-    view/timeline/EditorCamera.swift
-    view/timeline/GridGeometry.swift
     view/timeline/TimelineSnapPolicy.swift
     view/timeline/TimeAxis.swift
     view/automation/AutomationParameter.swift

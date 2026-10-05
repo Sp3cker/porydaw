@@ -71,7 +71,7 @@ public final class TransportBarPresenter: QmlUncreatable {
                 onAvailabilityChanged?()
             }
         }
-        let scale = session?.selectedDocument?.scaleProjection ?? ScaleProjection()
+        let scale = session?.workspace?.viewport.scale ?? ScaleProjection()
         publish(\.scaleRoot, scale.root)
         publish(\.scaleType, scale.scale.rawValue)
         publish(\.scaleHighlight, scale.highlight)
@@ -144,28 +144,28 @@ public final class TransportBarPresenter: QmlUncreatable {
     }
 
     public func setScaleRoot(root: Int) {
-        guard session?.songOpen == true, let document = session?.selectedDocument else { return }
-        document.setScale(root: root)
+        guard session?.songOpen == true, let viewport = session?.workspace?.viewport else { return }
+        viewport.setScale(root: root)
         refresh()
     }
 
     public func setScaleType(type: Int) {
-        guard session?.songOpen == true, let document = session?.selectedDocument,
+        guard session?.songOpen == true, let viewport = session?.workspace?.viewport,
             let scale = ScaleID(rawValue: type)
         else { return }
-        document.setScale(type: scale)
+        viewport.setScale(type: scale)
         refresh()
     }
 
     public func setScaleHighlight(enabled: Bool) {
-        guard session?.songOpen == true, let document = session?.selectedDocument else { return }
-        document.setScale(highlight: enabled)
+        guard session?.songOpen == true, let viewport = session?.workspace?.viewport else { return }
+        viewport.setScale(highlight: enabled)
         refresh()
     }
 
     public func setScaleFold(enabled: Bool) {
-        guard session?.songOpen == true, let document = session?.selectedDocument else { return }
-        document.setScale(fold: enabled)
+        guard session?.songOpen == true, let viewport = session?.workspace?.viewport else { return }
+        viewport.setScale(fold: enabled)
         refresh()
     }
 

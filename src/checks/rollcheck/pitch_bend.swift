@@ -16,7 +16,8 @@ func pitchBendFixtureSnapUp(_ tick: Double, fine: Bool) -> Int {
 }
 
 @MainActor
-func runPitchBendChecks(_ report: CheckReport, session: DocumentSession) {
+func runPitchBendChecks(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
     let geometry = PitchBendGeometry(fontPx: 14, lineSpacing: 17, dpr: 2)
     let origin = [96: 0, 192: 0]
     var curve = PitchBendKernel(
@@ -119,17 +120,17 @@ func runPitchBendChecks(_ report: CheckReport, session: DocumentSession) {
                     + geometry.canvasHeight) == 0,
         cppID: "swiftcore/PitchBendEditingTest::vertexCreation",
         message: "modulation uses the oracle's QRect-height scaling at the top pixel and clamps below zero")
-    pitchBendSharedGridPredicates(report, session: session)
+    pitchBendSharedGridPredicates(report, viewport: viewport)
     pitchBendGridRulePredicates(report, suite: session)
-    pitchBendReadoutPredicates(report, session: session)
-    pitchBendDocumentPredicates(report, session: session)
+    pitchBendReadoutPredicates(report, viewport: viewport)
+    pitchBendDocumentPredicates(report, viewport: viewport)
     pitchBendOwnerLifetimePredicates(report, suite: session)
     pitchBendExternalPreviewPredicates(report, suite: session)
     pitchBendUnterminatedPredicates(report, suite: session)
     pitchBendParityPredicates(report, suite: session)
-    pitchBendControllerPredicates(report, session: session)
-    pitchBendResetPredicates(report, session: session)
-    pitchBendSetterPredicates(report, session: session)
-    pitchBendFineRampPredicates(report, session: session)
+    pitchBendControllerPredicates(report, viewport: viewport)
+    pitchBendResetPredicates(report, viewport: viewport)
+    pitchBendSetterPredicates(report, viewport: viewport)
+    pitchBendFineRampPredicates(report, viewport: viewport)
     pitchBendVertexPredicates(report, suite: session)
 }

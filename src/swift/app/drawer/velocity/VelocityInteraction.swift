@@ -163,7 +163,7 @@ extension VelocityPage {
             live.previousY = y
             gesture = live
             var panX = previousX
-            DrawerPan.moved(x: x, previousX: &panX, session: session)
+            DrawerPan.moved(x: x, previousX: &panX, viewport: viewport)
         }
         return true
     }

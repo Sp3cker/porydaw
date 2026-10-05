@@ -97,6 +97,7 @@ func drawerVoiceVoiceChangesPageFixture(programs: [Int], division: UInt16 = 24) 
 @MainActor
 struct drawerVoiceVoiceChangesFixture {
     let session: DocumentSession
+    let viewport: DocumentViewport
     let page: VoiceChangesPage
     let document: SongDocument
 
@@ -113,9 +114,10 @@ struct drawerVoiceVoiceChangesFixture {
         session.clearSelectedNotes()
         session.editCursor = 0
         self.session = session
+        viewport = DocumentViewport(session: session)
         self.document = document
         page = VoiceChangesPage(baseFontPx: baseFontPx)
-        page.attach(session: session, palette: GridPalette())
+        page.attach(viewport: viewport, palette: GridPalette())
         page.configureBody(
             width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
             baseFontPx: baseFontPx, dragDistance: 10)
@@ -129,7 +131,7 @@ struct drawerVoiceVoiceChangesFixture {
                 page?.refreshEditCursor()
             }
         }
-        session.onCameraChange = { [weak page] _ in page?.refreshCamera() }
+        viewport.onCameraChangeDetailed = { [weak page] _, _ in page?.refreshCamera() }
     }
 
     var snapshot: DocumentSnapshot { DocumentSnapshot(document) }
@@ -139,7 +141,7 @@ struct drawerVoiceVoiceChangesFixture {
     /// Plot-local x of one tick through the shared camera, which is the space
     /// the page's own input arrives in.
     func markerX(_ tick: Tick) -> Double {
-        session.camera.viewX(tick: Double(tick), dpr: 1)
+        viewport.camera.viewX(tick: Double(tick), dpr: 1)
     }
 
     func marker(at tick: Tick) -> VoiceMarkerHandle? {
@@ -252,7 +254,7 @@ private func drawerVoiceContentBlob(
         cppID: drawerVoiceProjectionID,
         message: "voice list 0 decodes the fixture's held sections and frame grid")
     let markerXs = page.publishedMarkers.map(\.x)
-    fixture.session.mutateCamera { camera in _ = camera.setHScroll(17) }
+    fixture.viewport.mutateCamera { camera in _ = camera.setHScroll(17) }
     page.refreshCamera()
     report.expect(
         page.displayRevision == revision + 1 && page.displayList(list: 0) != initial
@@ -261,7 +263,7 @@ private func drawerVoiceContentBlob(
         message: "voice scroll rebuilds the viewport list with one revision; marker content x holds")
     let scrolledRevision = page.displayRevision
     let scrolledBytes = page.displayList(list: 0)
-    fixture.session.mutateCamera { camera in
+    fixture.viewport.mutateCamera { camera in
         camera.setTimeZoom(camera.snapshot.pixelsPerBeat * 2)
     }
     page.refreshCamera()

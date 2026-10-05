@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawDocument
 
 public func fontPx(_ base: Double, _ multiplier: Double) -> Double {
     multiplier == 0.0 ? 0.0 : max(1.0, (base * multiplier).rounded())

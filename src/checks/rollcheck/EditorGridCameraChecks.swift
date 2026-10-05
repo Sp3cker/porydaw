@@ -17,19 +17,20 @@ final class GridCameraIntegrationCounters {
 }
 
 @MainActor
-func runEditorGridCameraChecks(_ report: CheckReport, session: DocumentSession) {
-    let priorCamera = session.onCameraChangeDetailed
+func runEditorGridCameraChecks(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
+    let priorCamera = viewport.onCameraChangeDetailed
     let priorPlayback = session.onPlayback
     let priorChange = session.onChange
     defer {
-        session.onCameraChangeDetailed = priorCamera
+        viewport.onCameraChangeDetailed = priorCamera
         session.onPlayback = priorPlayback
         session.onChange = priorChange
     }
 
-    let grid = PianoGrid(session: session)
+    let grid = PianoGrid(viewport: viewport)
     let counters = GridCameraIntegrationCounters()
-    session.onCameraChangeDetailed = { _, change in
+    viewport.onCameraChangeDetailed = { _, change in
         counters.camera += 1
         grid.refreshCameraPresentation(change)
     }
@@ -42,29 +43,29 @@ func runEditorGridCameraChecks(_ report: CheckReport, session: DocumentSession) 
         if change.domains.contains(.cursor) {
             counters.cursor += 1
         }
-        let snapshot = session.camera.snapshot
+        let snapshot = viewport.camera.snapshot
         counters.coherentDocumentCallback = gridCameraNear(
             snapshot.maxHScroll,
             Double(session.timeline.lengthTicks) * snapshot.pixelsPerTick)
     }
 
-    checkViewport(report, session: session, grid: grid, counters: counters)
-    checkHoverChipResize(report, session: session, grid: grid)
-    checkGridCameraWheel(report, session: session, grid: grid, counters: counters)
-    checkProjection(report, session: session, grid: grid)
-    checkIsolation(report, session: session, grid: grid, counters: counters)
-    checkTrackOwnerRemap(report, session: session)
-    checkFractionalGridLattice(report, session: session)
+    checkViewport(report, viewport: viewport, grid: grid, counters: counters)
+    checkHoverChipResize(report, viewport: viewport, grid: grid)
+    checkGridCameraWheel(report, viewport: viewport, grid: grid, counters: counters)
+    checkProjection(report, viewport: viewport, grid: grid)
+    checkIsolation(report, viewport: viewport, grid: grid, counters: counters)
+    checkTrackOwnerRemap(report, viewport: viewport)
+    checkFractionalGridLattice(report, viewport: viewport)
     checkContentWindowBoundaryReversal(report)
-    checkScratchDoubleDraw(report, session: session, grid: grid)
+    checkScratchDoubleDraw(report, viewport: viewport, grid: grid)
 }
 
 @MainActor
 private func checkHoverChipResize(
-    _ report: CheckReport, session: DocumentSession, grid: PianoGrid
+    _ report: CheckReport, viewport: DocumentViewport, grid: PianoGrid
 ) {
     let id = "swiftcore/EditorGridCamera::hoverChipViewportHeight"
-    let originalCamera = session.camera
+    let originalCamera = viewport.camera
     let font = grid.baseFontPx
     let dpr = grid.devicePixelRatio
     defer {
@@ -72,13 +73,13 @@ private func checkHoverChipResize(
         grid.configureViewport(
             width: originalCamera.snapshot.viewportWidth,
             height: originalCamera.snapshot.rollHeight, fontPx: font, dpr: dpr)
-        session.mutateCamera { $0 = originalCamera }
+        viewport.mutateCamera { $0 = originalCamera }
     }
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     grid.resetCameraScroll()
     grid.updateHover(x: 0, y: 319)
     let key = grid.hoverKey
-    let scroll = session.camera.snapshot.scrollY
+    let scroll = viewport.camera.snapshot.scrollY
     let chipHeight = grid.scene.hoverChipHeight
     let contentKey = grid.scene.listContentKey
     report.expect(
@@ -87,12 +88,12 @@ private func checkHoverChipResize(
         cppID: id, message: "the stationary hover chip begins clamped to the viewport bottom")
     grid.configureViewport(width: 640, height: 315, fontPx: 13, dpr: 2)
     report.expect(
-        grid.hoverKey == key && session.camera.snapshot.scrollY == scroll
+        grid.hoverKey == key && viewport.camera.snapshot.scrollY == scroll
             && gridCameraNear(grid.scene.hoverChipY, 315 - chipHeight),
         cppID: id, message: "height-only shrink reclamps the stationary hover chip without scrolling")
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     report.expect(
-        grid.hoverKey == key && session.camera.snapshot.scrollY == scroll
+        grid.hoverKey == key && viewport.camera.snapshot.scrollY == scroll
             && gridCameraNear(grid.scene.hoverChipY, 320 - chipHeight),
         cppID: id, message: "height-only growth restores the stationary hover chip bottom clamp")
     report.expect(
@@ -102,14 +103,15 @@ private func checkHoverChipResize(
 
 @MainActor
 private func checkViewport(
-    _ report: CheckReport, session: DocumentSession, grid: PianoGrid,
+    _ report: CheckReport, viewport: DocumentViewport, grid: PianoGrid,
     counters: GridCameraIntegrationCounters
 ) {
+    let session = viewport.session
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    let first = session.camera.snapshot
+    let first = viewport.camera.snapshot
     let expectedMin = -min(max((640.0 * 0.10).rounded(), 48), 256)
     let expectedMaxV = max(
-        0, Double(session.camera.projection.visibleRowCount) * first.keyHeight - 320)
+        0, Double(viewport.camera.projection.visibleRowCount) * first.keyHeight - 320)
     report.expect(
         gridCameraNear(first.viewportWidth, 640) && gridCameraNear(first.rollHeight, 320),
         cppID: viewportID, message: "viewport dimensions are pushed into the session camera")
@@ -127,36 +129,36 @@ private func checkViewport(
         gridCameraNear(grid.beatWidth, first.pixelsPerBeat) && gridCameraNear(grid.rowHeight, first.keyHeight),
         cppID: viewportID, message: "published scales equal the session camera snapshot")
 
-    _ = session.mutateCamera {
+    _ = viewport.mutateCamera {
         _ = $0.setHScroll(min($0.snapshot.maxHScroll, 12.5))
         _ = $0.setVScroll(min($0.snapshot.maxVScroll, 20.25))
     }
-    let fractional = session.camera.snapshot
+    let fractional = viewport.camera.snapshot
     counters.camera = 0
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     report.expect(
-        session.camera.snapshot == fractional && counters.camera == 0,
+        viewport.camera.snapshot == fractional && counters.camera == 0,
         cppID: viewportID, message: "identical viewport push preserves fractional offsets and publishes nothing")
 
-    _ = session.mutateCamera { _ = $0.setVScroll($0.snapshot.maxVScroll) }
-    let shortHeight = session.camera.snapshot
+    _ = viewport.mutateCamera { _ = $0.setVScroll($0.snapshot.maxVScroll) }
+    let shortHeight = viewport.camera.snapshot
     grid.configureViewport(width: 640, height: 640, fontPx: 13, dpr: 2)
-    let tallViewport = session.camera.snapshot
+    let tallViewport = viewport.camera.snapshot
     report.expect(
         tallViewport.maxVScroll < shortHeight.maxVScroll
             && gridCameraNear(tallViewport.scrollY, tallViewport.maxVScroll),
         cppID: viewportID, message: "roll-height increase reclamps vertical scroll")
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
 
-    _ = session.mutateCamera {
+    _ = viewport.mutateCamera {
         _ = $0.setTimeZoom(35)
         _ = $0.setKeyHeight(13)
     }
     counters.camera = 0
     grid.configureViewport(width: 640, height: 320, fontPx: 26, dpr: 2)
-    let doubled = session.camera.snapshot
+    let doubled = viewport.camera.snapshot
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    let restored = session.camera.snapshot
+    let restored = viewport.camera.snapshot
     report.expect(
         gridCameraNear(doubled.pixelsPerBeat, 69) && gridCameraNear(doubled.keyHeight, 26),
         cppID: viewportID, message: "double-font push applies the rounded font-relative defaults")
@@ -168,16 +170,16 @@ private func checkViewport(
         cppID: viewportID, message: "each effective font push publishes exactly once")
 
     grid.configureViewport(width: 640, height: 320, fontPx: 26, dpr: 2)
-    _ = session.mutateCamera {
+    _ = viewport.mutateCamera {
         _ = $0.setTimeZoom(0)
         _ = $0.setKeyHeight(0)
     }
-    let fontMinimum = session.camera.snapshot
-    _ = session.mutateCamera {
+    let fontMinimum = viewport.camera.snapshot
+    _ = viewport.mutateCamera {
         _ = $0.setTimeZoom(.greatestFiniteMagnitude)
         _ = $0.setKeyHeight(.greatestFiniteMagnitude)
     }
-    let fontMaximum = session.camera.snapshot
+    let fontMaximum = viewport.camera.snapshot
     report.expect(
         gridCameraNear(fontMinimum.pixelsPerBeat, 9) && gridCameraNear(fontMinimum.keyHeight, 9),
         cppID: viewportID, message: "pushed font defines time and key-height minimums")
@@ -185,7 +187,7 @@ private func checkViewport(
         gridCameraNear(fontMaximum.pixelsPerBeat, 1_387) && gridCameraNear(fontMaximum.keyHeight, 69),
         cppID: viewportID, message: "pushed font defines time and key-height maximums")
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    _ = session.mutateCamera {
+    _ = viewport.mutateCamera {
         _ = $0.setTimeZoom(35)
         _ = $0.setKeyHeight(13)
     }
@@ -199,9 +201,9 @@ private func checkViewport(
     ])
     let farID = farIDs?.first
     let expandedLength = session.timeline.lengthTicks
-    _ = session.mutateCamera { _ = $0.setHScroll($0.snapshot.maxHScroll) }
+    _ = viewport.mutateCamera { _ = $0.setHScroll($0.snapshot.maxHScroll) }
     if let farID { session.document.deleteNotes([farID]) }
-    let shrunk = session.camera.snapshot
+    let shrunk = viewport.camera.snapshot
     report.expect(
         farID != nil && expandedLength > originalLength
             && session.timeline.lengthTicks < expandedLength
