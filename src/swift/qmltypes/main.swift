@@ -207,7 +207,9 @@ private struct MetaObjectWalk {
         for property in properties.sorted(by: { $0.0 < $1.0 }) {
             result += property.1
         }
-        var methods: [(String, String)] = []
+        // Manifest order is load-bearing: qmlcachegen bakes relative method indices
+        // from it for plugin-less modules, so this must match runtime registration
+        // order exactly. NEVER sort.
         for index in object.pointee.methodOffset()..<object.pointee.methodCount() {
             let method = object.pointee.method(index)
             let methodType = method.methodType().rawValue
@@ -241,11 +243,7 @@ private struct MetaObjectWalk {
                 text += "            }\n"
             }
             text += "        }\n"
-            let signature = method.methodSignature()
-            methods.append((String(signature.toStdString()), text))
-        }
-        for method in methods.sorted(by: { $0.0 < $1.0 }) {
-            result += method.1
+            result += text
         }
         return result + "    }\n"
     }
