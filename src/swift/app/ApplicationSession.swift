@@ -53,6 +53,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
     var settingsVoicegroups: [String] = []
     @QtIgnored
     var onVoicegroupCatalogChanged: (() -> Void)?
+    @QtIgnored var onStatusMessage: ((String) -> Void)?
+    @QtIgnored var onFailure: ((String, String) -> Void)?
+    @QtIgnored var onSaveStateChanged: (() -> Void)?
+    @QtIgnored var onProjectStateChanged: (() -> Void)?
+    @QtIgnored var onDocumentStateChanged: ((Bool) -> Void)?
+    @QtIgnored var onCommandAvailabilityChanged: (() -> Void)?
     @QtIgnored
     var catalogService: ProjectService?
     @QtIgnored var catalogRefreshIssued: UInt64 = 0
@@ -171,9 +177,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
         songTabs.attach(app: self)
         transportBar.attach(session: self)
         wavExport.attach(session: self)
-        transportBar.onAvailabilityChanged = { [weak self] in
-            self?.transportAvailabilityChanged()
-        }
         songDock.attach(session: self)
     }
 
@@ -267,8 +270,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     @QtIgnored
     public func reportSettingsFailure(_ message: String) {
-        lastSaveError = message
-        operationFailed(message: message)
+        publishLastSaveError(message)
+        publishOperationFailure(message: message)
     }
     public func sampleStudio() -> SampleStudioWorkflow {
         if let sampleStudioWorkflow { return sampleStudioWorkflow }
@@ -400,12 +403,21 @@ public final class ApplicationSession: QmlInstantiableStatus {
         cancelGridInputImpl(reason: reason)
     }
 
-    @QtSignal public func gridCommandAvailabilityChanged()
-    @QtSignal public func transportAvailabilityChanged()
-    @QtSignal public func projectRootChanged()
-    @QtSignal public func openFailed(message: String)
-    @QtSignal public func operationFailed(message: String)
-    @QtSignal public func statusMessage(message: String)
+    @QtIgnored
+    func publishStatusMessage(message: String) {
+        onStatusMessage?(message)
+    }
+
+    @QtIgnored
+    func publishOpenFailure(message: String) {
+        onFailure?("Open Failed", message)
+    }
+
+    @QtIgnored
+    func publishOperationFailure(message: String) {
+        onFailure?("Operation Failed", message)
+    }
+
     @QtSignal public func allTabsClosed()
 
     @QtSignal public func closeCancelled()
@@ -446,6 +458,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     public func restoreDisplayModes() {
         noteNameMode = preferences.bool(key: "noteNames", fallback: false)
+        onCommandAvailabilityChanged?()
     }
 
     public func openProject(path: String) {
@@ -538,6 +551,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// tab has a pending bank transition.
     func refreshDocumentState() {
         let hasSongs = songTabs.tabCount > 0
+        let songOpenChanged = songOpen != hasSongs
+        defer { onDocumentStateChanged?(songOpenChanged) }
         publish(\.songOpen, hasSongs)
         songDock.syncSelection()
         guard let session = workspace?.session else {

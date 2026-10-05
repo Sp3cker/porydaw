@@ -25,6 +25,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     private var selectedZone = -1
 
     @QtTracked public var editorOpen = false
+    @QtIgnored var onEditorOpenChanged: (() -> Void)?
     @QtTracked public var editorRevision = 0
     @QtTracked public var pickerRequested = false
     @QtTracked public var pickerFolder = ""
@@ -222,7 +223,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                         return
                     }
                 }
-                session.statusMessage(
+                session.publishStatusMessage(
                     message: editing
                         ? "Saved \(name) - the ROM's .bin recompiles on the next build"
                         : "Imported \(name) - DirectSoundWaveData_\(name) is now available to voicegroups")
@@ -245,7 +246,6 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         pendingTask = nil
         committing = false
         player?.close()
-        editorOpen = false
         stereoPromptOpen = false
         pickerRequested = false
         zonePickerOpen = false
@@ -257,6 +257,13 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         editName = nil
         selectedZone = -1
         reopenFromSource = false
+        setEditorOpen(false)
+    }
+
+    private func setEditorOpen(_ open: Bool) {
+        guard editorOpen != open else { return }
+        editorOpen = open
+        onEditorOpenChanged?()
     }
 
     public func editorReleased() {
@@ -320,7 +327,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         self.wave = wave
         self.player = player
         editorRevision += 1
-        editorOpen = true
+        setEditorOpen(true)
     }
 
     private func assign(name: String, slot: Int) async throws {

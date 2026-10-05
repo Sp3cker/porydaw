@@ -125,6 +125,7 @@ public final class EventListPresenter: QmlUncreatable {
     @QtIgnored public var onScrollToRow: ((Int) -> Void)?
     @QtIgnored public var onRevealVoiceRequested: ((Int) -> Void)?
     @QtIgnored public var onPerformEventListCommand: ((Int) -> Void)?
+    @QtIgnored public var onAvailabilityChanged: (() -> Void)?
 
     @QtIgnored var selectionAnchor = -1
     @QtIgnored var menuKind: EventListMenuKind?
@@ -196,6 +197,7 @@ public final class EventListPresenter: QmlUncreatable {
         lastScrollToRow = -1
         scrollToRowRequested = 0
         onScrollToRow = nil
+        onAvailabilityChanged?()
     }
 
     /// Rebuilds on document publication or a mapped-chunk selection change;
@@ -292,7 +294,9 @@ public final class EventListPresenter: QmlUncreatable {
     }
 
     public func setMenuOpen(open: Bool) {
+        guard menuOpen != open else { return }
         menuOpen = open
+        onAvailabilityChanged?()
     }
 
     /// Focuses a valid row and commits that row's tick to the document cursor.
@@ -308,6 +312,7 @@ public final class EventListPresenter: QmlUncreatable {
         if currentRow != oldRow { invalidateRowMenu() }
         session.editCursor = tick
         publishPlayheadTransition(from: oldPlayRow)
+        if currentRow != oldRow { onAvailabilityChanged?() }
     }
 
     /// Starts an in-cell edit when the model exposes that cell as editable.
@@ -318,6 +323,7 @@ public final class EventListPresenter: QmlUncreatable {
         editing = true
         editingRow = row
         editingColumn = column
+        onAvailabilityChanged?()
         return true
     }
 
@@ -358,13 +364,18 @@ public final class EventListPresenter: QmlUncreatable {
         let previousRow = currentRow
         dispatchSelectRow(row: row, modifiers: modifiers)
         if selectedRows != previous || currentRow != previousRow { invalidateRowMenu() }
+        if currentRow != previousRow && currentRow < 0 { onAvailabilityChanged?() }
     }
     public func selectAll() {
         let previous = selectedRows
         dispatchSelectAll()
         if selectedRows != previous { invalidateRowMenu() }
     }
-    public func setVisible(visible: Bool) { dispatchSetVisible(visible: visible) }
+    public func setVisible(visible: Bool) {
+        let wasVisible = self.visible
+        dispatchSetVisible(visible: visible)
+        if self.visible != wasVisible { onAvailabilityChanged?() }
+    }
     public func isCellEditable(row: Int, column: Int) -> Bool {
         dispatchIsCellEditable(row: row, column: column)
     }
@@ -453,12 +464,13 @@ public final class EventListPresenter: QmlUncreatable {
     }
 
     @QtSignal public func scrollToRow(row: Int)
-    @QtSignal public func rowsPublished()
 
     func clearEditing() {
+        let wasEditing = editing
         editing = false
         editingRow = -1
         editingColumn = -1
+        if wasEditing { onAvailabilityChanged?() }
     }
 
     private func remapCurrentChunk(using remap: TrackRemap) {
@@ -541,7 +553,7 @@ public final class EventListPresenter: QmlUncreatable {
         let shown = max(0, model.rowCount - (model.rowCount > 0 ? 1 : 0))
         let total = model.chunk.events.count + (chunkIndex == 0 ? model.tempos.count : 0)
         countText = shown == total ? "\(total) event(s)" : "\(shown) of \(total) events"
-        rowsPublished()
+        onAvailabilityChanged?()
     }
 
     private func publishRowValues() {

@@ -181,7 +181,9 @@ public final class EditorDrawerPresenter {
             publishDetachedChange(state, section: section)
             return
         }
-        publish(layout.toggleSection(section, drawerOwnsFocus: drawerOwnsFocus))
+        let change = layout.toggleSection(section, drawerOwnsFocus: drawerOwnsFocus)
+        cancelPages(change.cancelledSections)
+        publish(change)
     }
 
     public func setSectionVisible(kind: Int, visible: Bool, drawerOwnsFocus: Bool) {
@@ -196,10 +198,10 @@ public final class EditorDrawerPresenter {
             publishDetachedChange(state, section: section)
             return
         }
-        publish(
-            layout.setSectionVisible(
-                section, visible: visible,
-                drawerOwnsFocus: drawerOwnsFocus))
+        let change = layout.setSectionVisible(
+            section, visible: visible, drawerOwnsFocus: drawerOwnsFocus)
+        cancelPages(change.cancelledSections)
+        publish(change)
     }
 
     public func setSectionBodyHeight(kind: Int, height: Int) {
@@ -259,11 +261,16 @@ public final class EditorDrawerPresenter {
         publish(layout.adjustResizeHandle(section, direction: direction))
     }
 
-    /// The container's global cancellation entry point. Every reason is treated
-    /// identically: the chrome resize session ends and every attached page is
-    /// cancelled synchronously in Swift.
+    /// Ends resize before cancelling pages, then publishes the settled layout.
     public func inputCancelled(reason: Int) {
-        publish(layout.cancelInteractions())
+        _ = layout.cancelResize()
+        var cancelled: [DrawerSectionKind] = []
+        for kind in DrawerSectionKind.stackOrder {
+            guard let page = layout.attachedPage(kind) else { continue }
+            page.cancelSectionInteraction()
+            cancelled.append(kind)
+        }
+        publish(layout.publishCancellation(cancelled))
     }
 
     @QtIgnored
@@ -295,7 +302,16 @@ public final class EditorDrawerPresenter {
     /// kind as unavailable.
     @QtIgnored
     public func detachSection(_ page: EditorDrawerPage) {
+        guard layout.attachedPage(page.sectionKind) === page else { return }
+        page.cancelSectionInteraction()
         publish(layout.detachPage(page))
+    }
+
+    private func cancelPages(_ kinds: [DrawerSectionKind]) {
+        for kind in kinds {
+            let page = layout.attachedPage(kind)
+            page?.cancelSectionInteraction()
+        }
     }
 
     private func publish(_ change: EditorDrawerChangeSet) {

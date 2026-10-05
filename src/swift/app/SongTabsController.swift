@@ -287,8 +287,7 @@ public final class SongTabsController {
     /// The selected tab's workspace, or nil while no tab is open.
     @QtIgnored
     var selectedWorkspace: DocumentWorkspace? {
-        guard let index = tabIndex(of: selectedId) else { return nil }
-        return tabs[index].workspace
+        selectedPage?.workspace
     }
 
     /// Every live tab, in strip order.

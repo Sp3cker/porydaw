@@ -52,8 +52,19 @@ final class drawerLayoutDrawerHarness {
     {
         var working = layout
         let change = operation(&working)
+        for kind in change.cancelledSections {
+            let page = layout.attachedPage(kind)
+            page?.cancelSectionInteraction()
+        }
         layout = working
         return change
+    }
+
+    @discardableResult
+    func cancelInteractions() -> EditorDrawerChangeSet {
+        _ = layout.cancelResize()
+        let cancelled = DrawerSectionKind.stackOrder.filter { layout.attachedPage($0) != nil }
+        return apply { $0.publishCancellation(cancelled) }
     }
 }
 

@@ -148,11 +148,11 @@ public final class WavExportPresenter: QmlUncreatable {
             case .completed(let totalFrames):
                 let seconds = Int(totalFrames / UInt64(capture.options.sampleRate))
                 let clock = WavExportTotals.clockText(seconds: seconds)
-                session.statusMessage(
+                session.publishStatusMessage(
                     message:
                         "Exported \(path) (\(clock) @ \(capture.options.sampleRate) Hz)")
             case .cancelled:
-                session.statusMessage(message: "Export cancelled.")
+                session.publishStatusMessage(message: "Export cancelled.")
             case .failed(let message):
                 self.failureMessage = message
                 self.failureRevision += 1

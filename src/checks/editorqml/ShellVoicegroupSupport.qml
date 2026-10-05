@@ -16,13 +16,14 @@ TestCase {
     visible: true
     property alias bootstrap: voiceBootstrap
     property alias fileProbe: voiceFileProbe
-    property alias app: voiceApp
+    readonly property ApplicationSession app: voiceShell.session
+    property alias shellPresenter: voiceShell
     property alias panel: voicePanel
     property alias fullShellComponent: shellWindowComponent
 
     ShellQmlBootstrap { id: voiceBootstrap }
     TabsDrawerProbe { id: voiceFileProbe }
-    ApplicationSession { id: voiceApp }
+    ShellPresenter { id: voiceShell }
     property int saveStarts: 0
     property int saveFinishes: 0
     Connections {

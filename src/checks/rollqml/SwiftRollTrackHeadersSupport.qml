@@ -19,18 +19,12 @@ TestCase {
 
     readonly property real tolerance: 0.01
     property var overlay: null
-    property string openFailure: ""
 
     RollQmlBootstrap {
         id: bootstrapObject
         ApplicationSession { id: sessionObject }
     }
 
-    Connections {
-        target: session
-        function onOpenFailed(message) { testCase.openFailure = message }
-        function onOperationFailed(message) { testCase.openFailure = message }
-    }
     SignalSpy {
         id: voiceRequestSpyObject
         target: session
@@ -50,9 +44,9 @@ TestCase {
         bootstrap.seedDrawerPreferences(false, true, true, 0)
         verify(bootstrap.start("mus_route101"))
         verify(waitForNative(function() {
-            return session.songOpen || testCase.openFailure.length > 0
-        }, 30000), testCase.openFailure)
-        verify(session.songOpen, testCase.openFailure)
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), session.lastSaveError)
+        verify(session.songOpen, session.lastSaveError)
         verify(waitForNative(function() {
             return session.songDockController().songListPresenter().totalCount > 0
         }, 5000), "the Songs dock catalog is ready before checking scene-removal retention")

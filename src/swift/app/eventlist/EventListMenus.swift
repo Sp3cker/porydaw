@@ -130,16 +130,16 @@ extension EventListPresenter {
             })?.shortcutText ?? ""
         menuSeparatorCount = items.filter(\.separator).count
         menuItems.reset(to: items)
-        menuOpen = true
+        setMenuOpen(open: true)
     }
 
     func dispatchDismissMenu() {
-        menuOpen = false
         menuKind = nil
         menuRow = -1
         menuItems.reset(to: [])
         menuShortcutText = ""
         menuSeparatorCount = 0
+        setMenuOpen(open: false)
     }
 
     func invalidateRowMenu() {

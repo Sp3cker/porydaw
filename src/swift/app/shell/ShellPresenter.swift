@@ -63,7 +63,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var windowMaximized = false
     @QtTracked public var statusText = "Ready"
     @QtTracked public var windowTitle = "porydaw"
-    @QtTracked public var windowModified = false
     private var closePending = false
     private var closing = false
 
@@ -79,10 +78,21 @@ public final class ShellPresenter: QmlInstantiableStatus {
         session.onVoicegroupCatalogChanged = { [weak settingsStore] in
             settingsStore?.refreshVoicegroups()
         }
+        session.onStatusMessage = { [weak self] message in self?.statusText = message }
+        session.onFailure = { [weak self] title, message in
+            self?.presentFailure(title: title, message: message)
+        }
+        session.onSaveStateChanged = { [weak self] in self?.saveStateChanged() }
+        session.onProjectStateChanged = { [weak self] in self?.projectStateChanged() }
+        session.onDocumentStateChanged = { [weak self] songOpenChanged in
+            self?.documentStateChanged(songOpenChanged: songOpenChanged)
+        }
+        session.onCommandAvailabilityChanged = { [weak self] in self?.refreshActionStates() }
+        session.eventListPresenter().onAvailabilityChanged = { [weak self] in self?.refreshActionStates() }
+        session.sampleStudio().onEditorOpenChanged = { [weak self] in self?.refreshActionStates() }
+        session.songDockController().onSongsChanged = { [weak self] in self?.refreshActionStates() }
         let transport = session.transportBarPresenter()
-        let availabilityChanged = transport.onAvailabilityChanged
         transport.onAvailabilityChanged = { [weak self] in
-            availabilityChanged?()
             self?.refreshActionStates()
         }
         clipboardObserver = clipboard.addChangeObserver { [weak self] in
@@ -373,20 +383,18 @@ public final class ShellPresenter: QmlInstantiableStatus {
         session.openProject(path: url.path)
     }
 
-    public func refreshWindowChrome() {
+    private func refreshWindowChrome() {
         let project =
             session.projectOpen
             ? URL(fileURLWithPath: session.projectRoot, isDirectory: true).lastPathComponent : ""
         if let selected = session.songTabs.selectedPage {
             windowTitle = "\(selected.title) — \(project) — porydaw"
-            windowModified = selected.workspace.session.document.isDirty
         } else {
             windowTitle = project.isEmpty ? "porydaw" : "\(project) — porydaw"
-            windowModified = false
         }
     }
 
-    public func projectOpenChanged() {
+    private func projectStateChanged() {
         refreshWindowChrome()
         refreshActionStates()
         if session.projectOpen {
@@ -394,29 +402,23 @@ public final class ShellPresenter: QmlInstantiableStatus {
         }
     }
 
-    public func songOpenChanged() {
-        if session.songOpen { statusText = "Song open" }
+    private func documentStateChanged(songOpenChanged: Bool) {
+        if songOpenChanged && session.songOpen { statusText = "Song open" }
         refreshWindowChrome()
         refreshActionStates()
     }
 
-    public func saveStateChanged() {
+    private func saveStateChanged() {
         refreshWindowChrome()
         refreshActionStates()
         guard !session.saveInProgress, !session.lastSaveError.isEmpty else { return }
         criticalRequested(title: "Save Failed", message: session.lastSaveError)
     }
 
-    public func openFailed(message: String) {
+    private func presentFailure(title: String, message: String) {
         guard !message.isEmpty else { return }
         statusText = message
-        criticalRequested(title: "Open Failed", message: message)
-    }
-
-    public func operationFailed(message: String) {
-        guard !message.isEmpty else { return }
-        statusText = message
-        criticalRequested(title: "Operation Failed", message: message)
+        criticalRequested(title: title, message: message)
     }
 
     public func configureSettings(applicationName: String) {

@@ -39,23 +39,10 @@ TestCase {
 
     property var overlay: null
 
-    // What the session reported when an open failed, so a stalled open names
-    // its cause instead of only timing out.
-    property string openFailure: ""
-
     RollQmlBootstrap {
         id: bootstrap
 
         ApplicationSession { id: session }
-    }
-
-    // The session's own failure reports, recorded so the open assertion can
-    // name what the production path actually said.
-    Connections {
-        target: session
-
-        function onOpenFailed(message) { testCase.openFailure = message }
-        function onOperationFailed(message) { testCase.openFailure = message }
     }
 
     // Supply the real application session to the production composition.
@@ -79,7 +66,7 @@ TestCase {
         verify(bootstrap.start("mus_route101"),
                "the staged route101 project starts opening")
         verify(waitForNative(function() {
-            return session.songOpen || testCase.openFailure.length > 0
+            return session.songOpen || session.lastSaveError.length > 0
         }, 30000), "the staged route101 song opened" + testCase.openDiagnostics())
         verify(waitForNative(function() {
             return session.songDockController().songListPresenter().totalCount > 0
@@ -93,8 +80,6 @@ TestCase {
                        "projectOpen=" + session.projectOpen,
                        "songOpen=" + session.songOpen,
                        "stagedLabels=[" + testCase.stagedLabels() + "]"]
-        if (testCase.openFailure.length > 0)
-            details.push("openFailed=" + testCase.openFailure)
         if (session.lastSaveError.length > 0)
             details.push("lastSaveError=" + session.lastSaveError)
         return " (" + details.join("; ") + ")"

@@ -17,7 +17,6 @@ TestCase {
     visible: true
 
     property var overlay: null
-    property string openFailure: ""
 
     RollQmlBootstrap {
         id: bootstrap
@@ -26,13 +25,6 @@ TestCase {
     }
 
     CursorProbe { id: cursorProbe }
-
-    Connections {
-        target: session
-
-        function onOpenFailed(message) { testCase.openFailure = message }
-        function onOperationFailed(message) { testCase.openFailure = message }
-    }
 
     Component {
         id: overlayComponent
@@ -51,7 +43,7 @@ TestCase {
         verify(bootstrap.start("mus_route101"),
                "the staged route101 project starts opening")
         verify(waitForNative(function() {
-            return session.songOpen || testCase.openFailure.length > 0
+            return session.songOpen || session.lastSaveError.length > 0
         }, 30000), "the staged route101 song opened" + testCase.openDiagnostics())
         verify(waitForNative(function() {
             return session.songDockController().songListPresenter().totalCount > 0
@@ -64,8 +56,6 @@ TestCase {
                        "label=mus_route101",
                        "projectOpen=" + session.projectOpen,
                        "songOpen=" + session.songOpen]
-        if (testCase.openFailure.length > 0)
-            details.push("openFailed=" + testCase.openFailure)
         if (session.lastSaveError.length > 0)
             details.push("lastSaveError=" + session.lastSaveError)
         return " (" + details.join("; ") + ")"

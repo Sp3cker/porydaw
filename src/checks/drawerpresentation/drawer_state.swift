@@ -142,7 +142,7 @@ func drawerLayoutCheckDrawerCancellation(_ report: CheckReport) {
         message: "one transition cancels its hidden kind and the kind losing the active slot, in stack order")
 
     harness.trace.reset()
-    let fanOut = harness.apply { $0.cancelInteractions() }
+    let fanOut = harness.cancelInteractions()
     report.expect(
         pages[.velocity]!.cancelCount == 2 && pages[.voiceChanges]!.cancelCount == 2
             && pages[.automation]!.cancelCount == 2 && Set(harness.trace.kinds) == Set(DrawerSectionKind.allCases)
@@ -171,7 +171,7 @@ func drawerLayoutCheckDrawerCancellation(_ report: CheckReport) {
     let resizing = drawerLayoutMakeStoredDrawerHarness()
     resizing.harness.apply { $0.beginResize(.voiceChanges) }
     resizing.harness.apply { $0.applyResize(.voiceChanges, delta: 20) }
-    resizing.harness.apply { $0.cancelInteractions() }
+    resizing.harness.cancelInteractions()
     report.expect(
         resizing.harness.layout.resizeKind == nil && resizing.pages[.voiceChanges]!.cancelCount == 1
             && resizing.pages[.velocity]!.cancelCount == 1

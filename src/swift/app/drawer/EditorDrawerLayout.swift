@@ -126,15 +126,13 @@ public struct EditorDrawerLayout {
         return true
     }
 
-    /// Cancels `page` synchronously, then drops its slot, URL and rectangles. The
-    /// stored visibility and height survive and produce no control until a page is
-    /// attached again.
+    /// Drops the attachment and reports its cancellation for the host to perform.
+    /// Stored visibility and height survive until another page is attached.
     public mutating func detachPage(_ page: EditorDrawerPage) -> EditorDrawerChangeSet {
         let kind = page.sectionKind
         guard let attached = sections[kind].page, attached === page else {
             return .untouched(snapshot)
         }
-        attached.cancelSectionInteraction()
         sections[kind].page = nil
         sections[kind].contentUrl = ""
         return publish(cancelledSections: [kind])
@@ -274,17 +272,11 @@ public struct EditorDrawerLayout {
         return publish(preferences: resizePreferences(session))
     }
 
-    /// The container's global cancellation entry point: cancels the chrome resize
-    /// session and every attached page, recording and publishing nothing.
-    public mutating func cancelInteractions() -> EditorDrawerChangeSet {
-        resize = nil
-        var cancelled: [DrawerSectionKind] = []
-        for kind in DrawerSectionKind.stackOrder {
-            guard let page = sections[kind].page else { continue }
-            page.cancelSectionInteraction()
-            cancelled.append(kind)
-        }
-        return publish(cancelledSections: cancelled)
+    /// Resolves the layout after the host has cancelled the listed pages.
+    public mutating func publishCancellation(
+        _ cancelled: [DrawerSectionKind]
+    ) -> EditorDrawerChangeSet {
+        publish(cancelledSections: cancelled)
     }
 
     // MARK: Resolution
@@ -311,8 +303,7 @@ public struct EditorDrawerLayout {
             cancelledSections: cancelledSections)
     }
 
-    /// A visibility or active-page transition: cancels the affected pages first,
-    /// then publishes the new state and the focus request.
+    /// Plans affected-page cancellation and resolves the new state and focus.
     private mutating func transition(
         previousVisibility: KindValues<Bool>,
         previousActive: DrawerSectionKind,
@@ -320,16 +311,16 @@ public struct EditorDrawerLayout {
         activePagePreference: DrawerSectionKind?,
         drawerOwnsFocus: Bool
     ) -> EditorDrawerChangeSet {
-        let cancelled = cancelTransition(from: previousVisibility, previousActive: previousActive)
+        let cancelled = cancelledTransitionSections(
+            from: previousVisibility, previousActive: previousActive)
         let focus = focusRequest(drawerOwnsFocus: drawerOwnsFocus)
         return publish(
             preferences: preferences, activePagePreference: activePagePreference,
             focusRequest: focus, cancelledSections: cancelled)
     }
 
-    /// Each kind hidden by the transition, plus each kind losing the active slot
-    /// while it was visible, cancels its attached page synchronously.
-    private func cancelTransition(
+    /// Lists attached kinds hidden by the transition or losing the active slot.
+    private func cancelledTransitionSections(
         from previousVisibility: KindValues<Bool>,
         previousActive: DrawerSectionKind
     ) -> [DrawerSectionKind] {
@@ -338,8 +329,7 @@ public struct EditorDrawerLayout {
         for kind in DrawerSectionKind.stackOrder where previousVisibility[kind] {
             let hidden = !isVisible(kind)
             let lostActive = activeChanged && kind == previousActive
-            guard hidden || lostActive, let page = sections[kind].page else { continue }
-            page.cancelSectionInteraction()
+            guard hidden || lostActive, sections[kind].page != nil else { continue }
             cancelled.append(kind)
         }
         return cancelled

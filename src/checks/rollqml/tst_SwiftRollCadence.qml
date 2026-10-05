@@ -16,17 +16,10 @@ TestCase {
 
     property var overlay: null
     property var hostWindow: null
-    property string openFailure: ""
 
     RollQmlBootstrap {
         id: bootstrap
         ApplicationSession { id: session }
-    }
-
-    Connections {
-        target: session
-        function onOpenFailed(message) { testCase.openFailure = message }
-        function onOperationFailed(message) { testCase.openFailure = message }
     }
 
     SignalSpy {
@@ -48,7 +41,7 @@ TestCase {
         bootstrap.seedDrawerPreferences(false, true, true, 0)
         verify(bootstrap.start("mus_route101"), "the staged route101 project starts opening")
         verify(waitForNative(function() {
-            return session.songOpen || testCase.openFailure.length > 0
+            return session.songOpen || session.lastSaveError.length > 0
         }, 30000), "the staged route101 song opens")
         verify(session.songOpen, "the staged route101 song is open")
         verify(waitForNative(function() {

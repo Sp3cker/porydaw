@@ -46,71 +46,12 @@ Item {
         font: content.root.chromeTypography.caption
     }
 
-    // Session publications update the mounted application controls.
-    Connections {
-        target: content.shell.session
-        function onProjectOpenChanged(): void {
-            content.shell.projectOpenChanged()
-            content.shell.refreshActionStates()
-        }
-        function onProjectRootChanged(): void { content.shell.refreshWindowChrome() }
-        function onSongOpenChanged(): void {
-            content.shell.songOpenChanged()
-            content.shell.refreshActionStates()
-        }
-        function onSaveInProgressChanged(): void {
-            content.shell.saveStateChanged()
-            content.shell.refreshActionStates()
-        }
-        function onDocumentDirtyChanged(): void { content.shell.refreshWindowChrome() }
-        function onSongDocumentDirtyChanged(): void { content.shell.refreshWindowChrome() }
-        function onLastSaveErrorChanged(): void {
-            if (content.shell.session.lastSaveError.length > 0)
-                content.shell.statusText = content.shell.session.lastSaveError
-        }
-        function onCanUndoChanged(): void { content.shell.refreshActionStates() }
-        function onCanRedoChanged(): void { content.shell.refreshActionStates() }
-        function onGridCommandAvailabilityChanged(): void { content.shell.refreshActionStates() }
-        function onTransportAvailabilityChanged(): void { content.shell.refreshActionStates() }
-        function onNoteNameModeChanged(): void { content.shell.refreshActionStates() }
-        function onOpenFailed(message: string): void { content.shell.openFailed(message) }
-        function onOperationFailed(message: string): void { content.shell.operationFailed(message) }
-        function onStatusMessage(message: string): void { content.shell.statusText = message }
-    }
-    Connections {
-        target: content.shell.session.sampleStudio()
-        function onEditorOpenChanged(): void { content.shell.refreshActionStates() }
-    }
-    Connections {
-        target: content.songDock
-        function onSongsChanged(): void { content.shell.refreshActionStates() }
-    }
-    Connections {
-        target: content.shell.session.songTabs
-        function onSelectedTabShowsEventsChanged(): void { content.shell.refreshActionStates() }
-        function onSelectedPageChanged(): void {
-            content.shell.refreshWindowChrome()
-            content.shell.refreshActionStates()
-        }
-        function onSelectedIdChanged(): void { content.shell.refreshActionStates() }
-        function onTabCountChanged(): void { content.shell.refreshActionStates() }
-    }
     Connections {
         target: content.root.drawerSectionSource
         function onDrawerSectionPreferenceChanged(): void { content.shell.refreshActionStates() }
     }
     Connections {
-        target: content.shell.session.songOpen ? content.shell.session.eventListPresenter() : null
-        function onCurrentRowChanged(): void { content.shell.refreshActionStates() }
-        function onRowsPublished(): void { content.shell.refreshActionStates() }
-        function onAttachedChanged(): void { content.shell.refreshActionStates() }
-        function onVisibleChanged(): void { content.shell.refreshActionStates() }
-        function onEditingChanged(): void { content.shell.refreshActionStates() }
-        function onMenuOpenChanged(): void { content.shell.refreshActionStates() }
-    }
-    Connections {
         target: content.shell
-        function onPolyphonyVisibleChanged(): void { content.shell.refreshActionStates() }
         function onChooseProjectRequested(): void { content.ensureProjectPicker().open() }
         function onAboutRequested(): void { content.ensureAboutDialog().open() }
         function onSettingsRequested(songFirst: bool): void { content.ensureSettingsDialog().showSettings(songFirst) }

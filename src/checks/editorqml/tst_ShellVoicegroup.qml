@@ -7,7 +7,7 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 
 ShellVoicegroupSupport {
-    SignalSpy { id: statusSpy; signalName: "statusMessage" }
+    SignalSpy { id: statusSpy; signalName: "statusTextChanged" }
     function test_128RowsSelectionAndAudition() {
         const controller = app.voiceListController()
         compare(findChild(panel, "voicegroupRows").count, 128)
@@ -202,7 +202,7 @@ ShellVoicegroupSupport {
     }
     function test_yNewVoicegroupCreatesAndAssignsUndoably() {
         const controller = app.voiceListController()
-        statusSpy.target = app
+        statusSpy.target = shellPresenter
         statusSpy.clear()
         const button = findChild(panel, "vgNewVoicegroupButton")
         verify(button !== null, "the mounted dock exposes its New voicegroup button")
@@ -239,11 +239,12 @@ ShellVoicegroupSupport {
         verify(fileProbe.fileFingerprint(
             bootstrap.projectRoot + "/sound/voicegroups/vgsave_created.inc") !== "",
                "the created voicegroup file reaches the disk")
+        tryCompare(shellPresenter, "statusText",
+                   "Created sound/voicegroups/vgsave_created.inc and assigned it to mus_route101.")
         compare(statusSpy.count, 1, "success publishes one status line")
-        verify(statusSpy.signalArguments[0][0].indexOf("vgsave_created") >= 0
-               && statusSpy.signalArguments[0][0].indexOf("mus_route101") >= 0,
-               "the status line names the created file and song: "
-               + statusSpy.signalArguments[0][0])
+        verify(shellPresenter.statusText.indexOf("vgsave_created") >= 0
+               && shellPresenter.statusText.indexOf("mus_route101") >= 0,
+               "the status line names the created file and song: " + shellPresenter.statusText)
         app.requestUndo()
         verify(waitForNative(function() {
             return controller.bankLoadName === "fixture_rich"

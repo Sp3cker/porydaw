@@ -78,7 +78,7 @@ public final class NewSongController: QmlUncreatable {
                 self.wizardOpen = true
             } catch {
                 guard !Task.isCancelled, self.service === service else { return }
-                self.session?.operationFailed(message: String(describing: error))
+                self.session?.publishOperationFailure(message: String(describing: error))
             }
             if !Task.isCancelled, self.service === service { self.busy = false }
         }
@@ -123,7 +123,7 @@ public final class NewSongController: QmlUncreatable {
                 let songs = try await service.songs()
                 guard !Task.isCancelled, self.service === service else { return }
                 self.dock?.publishSongs(songs)
-                self.session?.statusMessage(message: "Created and registered \(request.label) (song ID \(id))")
+                self.session?.publishStatusMessage(message: "Created and registered \(request.label) (song ID \(id))")
                 if request.createVoicegroup {
                     _ = await self.session?.refreshVoicegroupCatalog()
                     guard !Task.isCancelled, self.service === service else { return }
@@ -131,7 +131,7 @@ public final class NewSongController: QmlUncreatable {
                 }
             } catch {
                 guard !Task.isCancelled, self.service === service else { return }
-                self.session?.operationFailed(message: Self.failureText(error))
+                self.session?.publishOperationFailure(message: Self.failureText(error))
                 if let root = self.session?.projectRoot, !root.isEmpty {
                     do {
                         try await service.open(root: root)

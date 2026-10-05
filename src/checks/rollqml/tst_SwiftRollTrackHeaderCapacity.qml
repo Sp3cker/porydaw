@@ -14,16 +14,10 @@ TestCase {
     visible: true
 
     property var overlay: null
-    property string openFailure: ""
 
     RollQmlBootstrap {
         id: bootstrap
         ApplicationSession { id: session }
-    }
-    Connections {
-        target: session
-        function onOpenFailed(message) { testCase.openFailure = message }
-        function onOperationFailed(message) { testCase.openFailure = message }
     }
     Component {
         id: overlayComponent
@@ -50,9 +44,9 @@ TestCase {
         bootstrap.seedDrawerPreferences(false, true, true, 0)
         verify(bootstrap.start("se_fanfare_1trk"))
         verify(waitForNative(function() {
-            return session.songOpen || testCase.openFailure.length > 0
-        }, 30000), testCase.openFailure)
-        verify(session.songOpen, testCase.openFailure)
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), session.lastSaveError)
+        verify(session.songOpen, session.lastSaveError)
         verify(waitForNative(function() {
             return session.songDockController().songListPresenter().totalCount > 0
         }, 5000), "the Songs dock catalog is ready before checking scene-removal retention")

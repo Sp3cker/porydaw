@@ -19,9 +19,6 @@ extension ApplicationSession {
         transportBar.refresh()
         refreshDocumentState()
         refreshVoicegroupDock()
-        // The selected workspace's grid owns command availability; switching
-        // tabs swaps it, so the window's Edit-menu enabled states must refresh.
-        gridCommandAvailabilityChanged()
         persistTabRecipe()
     }
 
@@ -181,7 +178,7 @@ extension ApplicationSession {
             if let tab { songTabs.cancelReload(tabId: tab.tabId) }
             return
         }
-        lastSaveError = ""
+        publishLastSaveError("")
         do {
             let session: DocumentSession
             if let prefetched = takePrefetchedSong(label: label, service: service) {
@@ -265,7 +262,8 @@ extension ApplicationSession {
             workspace.grid.refreshTimeSelectionHighlight()
             workspace.automationPage.onCommandAvailabilityChanged = { [weak self, weak workspace] in
                 workspace?.grid.refreshTimeSelectionHighlight()
-                self?.gridCommandAvailabilityChanged()
+                guard let self, let workspace, self.workspace === workspace else { return }
+                self.onCommandAvailabilityChanged?()
             }
             workspace.automationPage.onLaneRangeChanged = { [weak session] parameter, range in
                 guard let session, let key = EditorViewStateCodec.rowKey(for: parameter) else {
@@ -340,14 +338,14 @@ extension ApplicationSession {
             },
             gridCommandAvailabilityChanged: { [weak self, weak session] in
                 guard let self, let session, self.selectedDocument === session else { return }
-                self.gridCommandAvailabilityChanged()
+                self.onCommandAvailabilityChanged?()
             },
             sessionStateChanged: { [weak self, weak session] in
                 guard let session else { return }
                 self?.tabStateChanged(for: session)
             },
             publicationFailed: { [weak self] message in
-                self?.lastSaveError = message
+                self?.publishLastSaveError(message)
             },
             timeSignaturePromptInvalidated: { [weak self] session, revision in
                 self?.invalidateTimeSigPrompt(session: session, revision: revision)
@@ -395,6 +393,7 @@ extension ApplicationSession {
         }
         preferences.setBool(key: "noteNames", value: enabled)
         preferences.synchronize()
+        onCommandAvailabilityChanged?()
     }
 
 }
