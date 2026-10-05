@@ -46,6 +46,12 @@ Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.
 The Swift app builds on macOS, Linux, and Windows x86_64. Linux ARM64 and Windows
 x86_64 have been validated with Swift 6.4.0 and Qt 6.11.2.
 
+The QtBridge macro plugin (swift-syntax, ~3 minutes to compile) is built once per
+machine under `~/.cache/porydaw` (`%LOCALAPPDATA%\porydaw\build-cache` on Windows)
+and shared by every debug/release/asan tree and worktree with the same QtBridge pin,
+patch, and Swift compiler. `PORYDAW_BUILD_CACHE` relocates it (`OFF` keeps the
+plugin inside the build tree); concurrent first builds serialize on a directory lock.
+
 ## Contributing
 
 Swift is formatted with swift-format, which ships with the Swift toolchain (`swift format`;
