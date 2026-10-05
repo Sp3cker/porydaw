@@ -40,10 +40,15 @@ ShellTabsSupport {
     }
 
     function test_qReloadOpensFreshAndClearsHistory() {
+        // Note order and ghosting follow the selected track, and reload opens
+        // with the fresh track: compare the document's notes, not the view's.
         function semanticNotes(gridModel) {
             return JSON.stringify(JSON.parse(gridModel.fetchNoteSummary()).map(function(note) {
-                return [note.tick, note.duration, note.pitch, note.track,
-                        note.velocity, note.ghost]
+                return [note.track, note.tick, note.pitch, note.duration, note.velocity]
+            }).sort(function(a, b) {
+                for (var i = 0; i < a.length; ++i)
+                    if (a[i] !== b[i]) return a[i] - b[i]
+                return 0
             }))
         }
         fileProbe.stageCompleteState()
