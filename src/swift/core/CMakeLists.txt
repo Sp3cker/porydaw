@@ -8,6 +8,7 @@ add_library(PorydawCore STATIC
     PlaybackTimeline.swift
     SongDocument.swift
     DocumentChangeSet.swift
+    DocumentRevisions.swift
     SongHistory.swift
     NoteEditing.swift
     NoteCollision.swift

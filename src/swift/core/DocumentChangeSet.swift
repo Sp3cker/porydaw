@@ -1,6 +1,13 @@
 internal enum EventChange: Sendable {
     case insert(EventInsertion)
     case remove(EventRemoval)
+
+    var chunk: Int {
+        switch self {
+        case let .insert(insertion): insertion.chunk
+        case let .remove(removal): removal.chunk
+        }
+    }
 }
 
 internal struct EventInsertion: Sendable {

@@ -74,6 +74,15 @@ public final class EventListPresenter: QmlUncreatable {
     @QtTracked public var visible = false
     @QtTracked public var chunk = -1
     public var chunkLabels: [String] = []
+    /// Dependency key of the published rows, like a React `useMemo` deps array.
+    private struct RowDependencies: Equatable {
+        let chunk: UInt64
+        let tempo: UInt64
+        let structure: UInt64
+    }
+    private var appliedRows: RowDependencies?
+    /// PROTOTYPE probe — counts row rebuilds for the revision-stamp demo; delete after.
+    public private(set) var rebuildCount = 0
     @QtTracked public var filterMask = 127
     @QtTracked public var filterSummary = "All events"
     @QtTracked public var countText = ""
@@ -191,6 +200,7 @@ public final class EventListPresenter: QmlUncreatable {
         selectionAnchor = -1
         chunk = -1
         chunkLabels = []
+        appliedRows = nil
         menuItems.reset(to: [])
         menuKind = nil
         visible = false
@@ -202,8 +212,8 @@ public final class EventListPresenter: QmlUncreatable {
         onAvailabilityChanged?()
     }
 
-    /// Rebuilds on document publication or a mapped-chunk selection change;
-    /// cursor, dirty, history, bank and mix state otherwise retain the rows.
+    /// Rebuilds rows only when a stamp the rows read advanced, or the viewed chunk
+    /// changed; chunk labels are derived and republished only when they differ.
     @QtIgnored
     public func documentDidChange(_ change: SessionChange) {
         if change.domains.contains(.document) || change.trackRemap != nil {
@@ -232,6 +242,10 @@ public final class EventListPresenter: QmlUncreatable {
         }
 
         guard documentChanged || chunkChangedBySelection else { return }
+        if documentChanged { refreshChunkLabels(in: session.document) }
+        guard chunkChangedBySelection || rowDependencies(in: session.document) != appliedRows else {
+            return
+        }
         rebuildFromDocument(preservingCurrentRow: documentChanged && !chunkChangedBySelection)
     }
 
@@ -505,6 +519,24 @@ public final class EventListPresenter: QmlUncreatable {
         return nil
     }
 
+    private func rowDependencies(in document: SongDocument) -> RowDependencies? {
+        let stamps = document.revisions
+        guard stamps.chunks.indices.contains(chunkIndex) else { return nil }
+        return RowDependencies(
+            chunk: stamps.chunks[chunkIndex], tempo: chunkIndex == 0 ? stamps.tempo : 0,
+            structure: stamps.structure)
+    }
+
+    private func refreshChunkLabels(in document: SongDocument) {
+        let labels = document.rawChunks.indices.map { chunk in
+            if let engineTrack = firstEngineTrack(for: chunk, in: document) {
+                return "Chunk \(chunk) — Track \(engineTrack + 1)"
+            }
+            return "Chunk \(chunk) (tempo/meta)"
+        }
+        if labels != chunkLabels { chunkLabels = labels }
+    }
+
     func rebuildFromDocument(preservingCurrentRow: Bool) {
         guard let session, !session.isClosed else {
             model.setSource(nil)
@@ -513,12 +545,9 @@ public final class EventListPresenter: QmlUncreatable {
         }
         let document = session.document
         let chunks = document.rawChunks
-        chunkLabels = chunks.indices.map { chunk in
-            if let engineTrack = firstEngineTrack(for: chunk, in: document) {
-                return "Chunk \(chunk) — Track \(engineTrack + 1)"
-            }
-            return "Chunk \(chunk) (tempo/meta)"
-        }
+        refreshChunkLabels(in: document)
+        appliedRows = rowDependencies(in: document)
+        rebuildCount += 1
         guard chunks.indices.contains(chunkIndex) else {
             model.setSource(nil)
             publishRows()

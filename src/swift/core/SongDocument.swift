@@ -297,6 +297,7 @@ public final class SongDocument {
     public let trackBudget: Int
     public var onChange: ((DocumentChange) -> Void)?
     public private(set) var revision: UInt64 = 1
+    public private(set) var revisions: DocumentRevisions
 
     public var isDirty: Bool { history.isDirty }
     public var ticksPerBeat: Int { Int(state.file.division) }
@@ -349,6 +350,7 @@ public final class SongDocument {
         let nextNoteID = Self.mintAllNoteIDs(in: &adopted)
         state = SongState(file: adopted, tempo: tempos, config: config)
         projection = NoteProjection(file: adopted)
+        revisions = DocumentRevisions(chunkCount: adopted.chunks.count)
         self.nextNoteID = nextNoteID
         savedConfig = config
         self.source = source
@@ -507,7 +509,7 @@ public final class SongDocument {
         } else {
             gestureOrigin = nil
         }
-        publish(trackRemap: trackRemap)
+        publish(mutation.changes, trackRemap: trackRemap)
     }
 
     internal func origin(for group: HistoryGroup?, operation: HistoryOperation) -> SongState {
@@ -565,11 +567,12 @@ public final class SongDocument {
         changes.apply(to: &state, direction: direction)
         // Replay may mutate event buffers in place; identity alone cannot detect it.
         projection.repair(to: state.file, forceRebuild: true)
-        publish(trackRemap: trackRemap)
+        publish(changes, trackRemap: trackRemap)
     }
 
-    private func publish(trackRemap: TrackRemap? = nil) {
+    private func publish(_ changes: DocumentChangeSet, trackRemap: TrackRemap? = nil) {
         revision = revision == .max ? 1 : revision + 1
+        revisions.advance(for: changes, chunkCount: state.file.chunks.count)
         projection.repair(to: state.file)
         onChange?(DocumentChange(revision: revision, trackRemap: trackRemap))
     }
