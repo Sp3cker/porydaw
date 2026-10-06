@@ -57,10 +57,14 @@ endfunction()
 # Batch mode keeps one frontend process per batch of sources, so C++ interop's
 # per-process ClangImporter startup is paid once per batch instead of once per
 # source file. The driver ignores the flag outside incremental compilation, so
-# it stays gated on Debug — the only incremental configuration here.
+# it stays gated on Debug — the only incremental configuration here. The
+# type-check budgets enforce .omp/rules/swift-typecheck-complexity.md; they sit
+# above the ~1s lazy Qt C++ decl import the first body in each process pays.
 function(porydaw_enable_swift_batch_mode target)
     target_compile_options(${target} PRIVATE
-        "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:-enable-batch-mode>")
+        "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:-enable-batch-mode>"
+        "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:SHELL:-Xfrontend -warn-long-function-bodies=2000>"
+        "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:SHELL:-Xfrontend -warn-long-expression-type-checking=1000>")
 endfunction()
 
 # Optimize the native audio path even in debug builds: the miniaudio converter
