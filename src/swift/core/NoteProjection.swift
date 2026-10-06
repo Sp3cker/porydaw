@@ -16,12 +16,8 @@ public struct Note: Equatable, Sendable {
     public var endTick: UInt64? { isUnterminated ? nil : UInt64(tick) + UInt64(duration) }
 }
 
-/// The derived read model of a `MidiFile`: the engine-track map, the paired notes of every
-/// track, and a last-wins `NoteID` index. A pure function of the file it was built from -
-/// `prints` records each chunk's event storage so `repair(to:)` re-pairs only what changed.
-///
-/// Not `Sendable`: `prints` holds address identities, meaningful only while the file the
-/// projection describes is alive, and the projection is main-actor state besides.
+/// Derived per-track note pairing and last-wins ID index. Not Sendable.
+/// Event-storage fingerprints are valid only while the described file is alive.
 struct NoteProjection {
     let map: EngineTrackMap
     var tracks: [[Note]]
@@ -58,14 +54,9 @@ struct NoteProjection {
         prints = file.chunks.map { ChunkPrint($0.events) }
     }
 
-    /// Re-pairs only the chunks whose event storage changed since the last build.
-    /// Sound because `file` states are never mutated after handoff: every edit copies into a
-    /// candidate first, and copy-on-write detaches the copy on its first write while the old
-    /// state still shares the buffer. So an identical (buffer base, count) pair means identical
-    /// elements; any write produces a different base, count, or chunk count, all of which fall
-    /// back to a full build. Structural edits (add/delete/move track) change the chunk count or
-    /// engine map and also take the full path.
-    mutating func repair(to file: MidiFile) {
+    /// Re-pairs changed chunks; forced replay covers unchanged event-buffer identities.
+    /// Structural map changes rebuild the projection; retained readers use normal COW.
+    mutating func repair(to file: MidiFile, forceRebuild: Bool = false) {
         let newMap = file.engineTracks()
         guard newMap == map, file.chunks.count == prints.count else {
             self = NoteProjection(file: file)
@@ -73,17 +64,16 @@ struct NoteProjection {
         }
         for chunk in file.chunks.indices {
             let print = ChunkPrint(file.chunks[chunk].events)
-            guard print != prints[chunk] else { continue }
+            guard forceRebuild || print != prints[chunk] else { continue }
             for track in 0..<map.usedTrackCount where map.tracks[track].midiChunk == chunk {
                 for note in tracks[track] where note.id.isAssigned {
                     index.removeValue(forKey: note.id)
                 }
-                let paired = Self.pair(
+                Self.pair(
                     events: file.chunks[chunk].events,
                     channel: map.tracks[track].channel,
-                    chunk: chunk, track: track)
-                tracks[track] = paired
-                for note in paired where note.id.isAssigned {
+                    chunk: chunk, track: track, into: &tracks[track])
+                for note in tracks[track] where note.id.isAssigned {
                     index[note.id] = note
                 }
             }
@@ -134,6 +124,17 @@ struct NoteProjection {
 
     /// Pure over the caller's array; a struct static, so planning paths pair without a main-actor hop.
     static func pair(events: [MidiEvent], channel: UInt8, chunk: Int, track: Int) -> [Note] {
+        var result: [Note] = []
+        pair(events: events, channel: channel, chunk: chunk, track: track, into: &result)
+        return result
+    }
+
+    private static func pair(
+        events: [MidiEvent], channel: UInt8, chunk: Int, track: Int,
+        into result: inout [Note]
+    ) {
+        result.removeAll(keepingCapacity: true)
+        result.reserveCapacity(events.count / 2)
         // Only this track's channel pairs, so the pending note-end table needs one pitch row:
         // the previous shape kept a row per channel, which the pairing never read.
         // Scratch and scan stay pointer-based: measured in-process against this shape (DCE-proof
@@ -141,8 +142,6 @@ struct NoteProjection {
         // Span scan +6-9%, at or past the 5% budget, so the Span spellings are not used here.
         withUnsafeTemporaryAllocation(of: Int32.self, capacity: 256) { nextEnd in
             nextEnd.initialize(repeating: -1)
-            var result: [Note] = []
-            result.reserveCapacity(events.count / 2)
             events.withUnsafeBufferPointer { buffer in
                 for index in buffer.indices.reversed() {
                     let event = buffer[index]
@@ -166,7 +165,6 @@ struct NoteProjection {
                 }
             }
             result.reverse()
-            return result
         }
     }
 }

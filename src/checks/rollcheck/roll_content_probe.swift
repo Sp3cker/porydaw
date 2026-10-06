@@ -214,7 +214,7 @@ import QtBridge
 
     // The C decoder borrows the Data bytes: every record is copied out
     // inside withUnsafeBytes so no view pointer outlives the closure.
-    private static func decodePlot(_ data: Data) -> (rects: [PlotRect], labels: [PlotLabel]) {
+    fileprivate static func decodePlot(_ data: Data) -> (rects: [PlotRect], labels: [PlotLabel]) {
         data.withUnsafeBytes { raw -> (rects: [PlotRect], labels: [PlotLabel]) in
             var view = PdDlView()
             guard pd_dl_decode(raw.baseAddress, raw.count, &view),
@@ -338,4 +338,100 @@ import QtBridge
     public static func argb(_ color: QmlColor) -> UInt32 {
         PaletteMath.argb(color)
     }
+}
+
+@MainActor
+func checkRollPreviewInvalidation(_ report: CheckReport, viewport _: DocumentViewport) {
+    let id = "swiftcore/PianoRoll::previewDisplacementInvalidation"
+    let axis = TimeAxis(map: TimeMap(ticksPerBeat: 24, lengthTicks: 384))
+    let metrics = GridMetrics(
+        baseFontPx: 13, dpr: 2, width: 640, height: 320, timeAxis: axis)
+    let camera = EditorCamera(
+        ticksPerBeat: 24, lengthTicks: 384, viewportWidth: 640, rollHeight: 320,
+        limits: GridCameraPolicy.limits(baseFontPx: 13),
+        projection: PitchProjection(visiblePitches: [60, 61, 62, 63, 64, 65]))
+    let typography = Typography(baseFontPx: 13)
+    let fonts = GridTypography.fonts(metrics: metrics, typography: typography)
+    let measured = GridTypography(
+        fonts: fonts, rowHeight: camera.snapshot.keyHeight, pixel: metrics.pixel)
+    let noteID = NoteID(1)
+    var input = GridSceneInput(
+        metrics: metrics, grid: RollGrid(axis: axis, clockTicks: 1, metrics: metrics),
+        palette: GridPalette(), camera: camera,
+        typography: measured, fontSpec: { measured.font($0) }, fonts: fonts,
+        notes: [
+            GridNote(
+                noteId: noteID, tick: 24, duration: 24, pitch: 62, track: 0,
+                velocity: 100, ghost: false)
+        ],
+        selectedNotes: [noteID], usedTrackCount: 1)
+    let scene = GridScene()
+
+    func expectSpan(tick: Int, end: Int, pitch: Int, message: String) {
+        scene.rebuildNotes(input)
+        let decoded = RollContentProbe.decodePlot(scene.displayList(list: 0))
+        let face = decoded.rects.first { $0.id == noteID.rawValue }
+        let expected = metrics.noteBox(
+            camera: input.camera,
+            x0: input.camera.viewX(tick: Double(tick), dpr: metrics.dpr),
+            x1: input.camera.viewX(tick: Double(end), dpr: metrics.dpr), pitch: pitch)
+        let matches: Bool
+        if let face {
+            matches =
+                gridCameraNear(face.x, expected.x) && gridCameraNear(face.y, expected.y)
+                && gridCameraNear(face.w, expected.w) && gridCameraNear(face.h, expected.h)
+        } else {
+            matches = false
+        }
+        report.expect(matches, cppID: id, message: message)
+    }
+
+    expectSpan(tick: 24, end: 48, pitch: 62, message: "idle geometry matches the source note")
+    input.displacedNotes = [noteID]
+    input.displacement = .move(ticks: 6, keys: 1, fold: true, scale: .major, root: 0)
+    expectSpan(tick: 30, end: 54, pitch: 64, message: "folded move advances one C-major degree")
+    input.displacement = .move(ticks: 6, keys: 1, fold: true, scale: .major, root: 1)
+    expectSpan(
+        tick: 30, end: 54, pitch: 63,
+        message: "same-delta root change re-resolves the displayed pitch")
+    input.displacement = .move(ticks: 6, keys: 1, fold: true, scale: .major, root: 0)
+    expectSpan(tick: 30, end: 54, pitch: 64, message: "restoring the root restores its degree")
+    input.displacement = .move(ticks: 6, keys: 1, fold: true, scale: .naturalMinor, root: 0)
+    expectSpan(
+        tick: 30, end: 54, pitch: 63,
+        message: "same-delta scale change re-resolves the displayed pitch")
+    input.displacement = .move(ticks: 6, keys: 1, fold: false, scale: .major, root: 0)
+    expectSpan(tick: 30, end: 54, pitch: 63, message: "unfolded movement advances one semitone")
+    input.displacement = .move(ticks: 6, keys: 1, fold: true, scale: .major, root: 0)
+    expectSpan(tick: 30, end: 54, pitch: 64, message: "same-delta folding restores degree movement")
+    input.selectedNotes = []
+    expectSpan(
+        tick: 30, end: 54, pitch: 64,
+        message: "clearing rendered selection does not clear active displacement membership")
+    let ring = scene.plotPalette[Int(RollPaletteSlot.selectionRing.rawValue)]
+    let unselected = RollContentProbe.decodePlot(scene.displayList(list: 0)).rects
+    report.expect(
+        !unselected.contains { $0.id == noteID.rawValue && $0.over && $0.argb == ring },
+        cppID: id, message: "selection-only changes remove the painted ring during a move")
+    input.displacedNotes = []
+    expectSpan(
+        tick: 24, end: 48, pitch: 62,
+        message: "changed displacement membership restores source geometry at the same delta")
+    input.displacedNotes = [noteID]
+    input.notes[0] = GridNote(
+        noteId: noteID, tick: 36, duration: 30, pitch: 62, track: 0,
+        velocity: 100, ghost: false)
+    expectSpan(
+        tick: 42, end: 72, pitch: 64,
+        message: "changed source interval invalidates equal-delta move geometry")
+    input.displacement = .none
+    expectSpan(tick: 36, end: 66, pitch: 62, message: "cancel restores the latest source geometry")
+    input.displacement = .resize(leading: true, ticks: 6)
+    expectSpan(tick: 42, end: 66, pitch: 62, message: "leading resize keeps the opposite edge")
+    input.displacement = .resize(leading: false, ticks: 6)
+    expectSpan(
+        tick: 36, end: 72, pitch: 62,
+        message: "equal-delta resize edge change moves the trailing edge instead")
+    input.displacement = .none
+    expectSpan(tick: 36, end: 66, pitch: 62, message: "resize cancellation restores both edges")
 }

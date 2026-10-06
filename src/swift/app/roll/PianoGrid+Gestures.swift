@@ -227,32 +227,23 @@ extension PianoGrid {
     }
 
     @QtIgnored
-    func displayedNote(_ note: GridNote) -> (tick: Int, end: Int, pitch: Int) {
-        var tick = note.tick
-        var end = note.tick + note.duration
-        var pitch = note.pitch
-        guard let gesture, !note.ghost, session.selectedNotes.contains(note.noteId) else {
-            return (tick, end, pitch)
-        }
+    func noteDisplacement() -> RollNoteDisplacement {
         switch gesture {
-        case .resize(let state) where state.leading:
-            tick = min(max(0, tick + state.delta), end - 1)
         case .move(let state):
-            tick = max(0, tick + state.dTick)
-            end = max(tick + 1, end + state.dTick)
-            if viewport.scale.fold && state.dKey != 0 {
-                let destination = viewport.scale.scale.pitch(
-                    pitch, steps: state.dKey, root: viewport.scale.root)
-                if destination >= 0 { pitch = destination }
-            } else {
-                pitch = min(127, max(0, pitch + state.dKey))
-            }
+            let scale = viewport.scale
+            return .move(
+                ticks: state.dTick, keys: state.dKey,
+                fold: scale.fold, scale: scale.scale, root: scale.root)
         case .resize(let state):
-            end = max(tick + 1, end + state.delta)
+            return .resize(leading: state.leading, ticks: state.delta)
         default:
-            break
+            return .none
         }
-        return (tick, end, pitch)
+    }
+
+    @QtIgnored
+    func displayedNote(_ note: GridNote) -> (tick: Int, end: Int, pitch: Int) {
+        noteDisplacement().displayed(note, selected: session.selectedNotes)
     }
 
     enum HitZone { case none, body, leftEdge, rightEdge }
@@ -298,31 +289,30 @@ extension PianoGrid {
     }
 
     @QtIgnored
-    func currentStatusText() -> String {
+    func currentStatusPresentation() -> RollStatusPresentation {
         if let gesture {
             switch gesture {
             case .pendingDraw(let state):
-                return "Pending draw at tick \(viewport.grid.snapTick(state.pressTick, camera: viewport.camera))"
+                let tick = Int(viewport.grid.snapTick(state.pressTick, camera: viewport.camera))
+                return .pendingDraw(tick: tick)
             case .draw(let state):
-                return "Drawing — tick \(state.tick), duration \(state.duration), pitch \(state.key)"
+                return .draw(tick: state.tick, duration: state.duration, pitch: state.key)
             case .velocity:
-                return "Changing velocity"
+                return .velocity
             case .move(let state):
-                return "Moving \(session.selectedNotes.count) note(s) — dTick \(state.dTick), dKey \(state.dKey)"
+                return .move(count: session.selectedNotes.count, ticks: state.dTick, keys: state.dKey)
             case .resize:
-                return "Resizing \(session.selectedNotes.count) note(s)"
+                return .resize(count: session.selectedNotes.count)
             case .pendingMenu:
-                return "\(notes.count) notes, \(session.selectedNotes.count) selected"
+                return .idle(notes: notes.count, selected: session.selectedNotes.count)
             case .band:
-                return "Selecting \(session.selectedNotes.count) note(s)"
+                return .band(count: session.selectedNotes.count)
             case .pan:
-                return "Panning"
+                return .pan
             }
         }
-        if case .band = rightGesture {
-            return "Selecting \(session.selectedNotes.count) note(s)"
-        }
-        return "\(notes.count) notes, \(session.selectedNotes.count) selected"
+        if case .band = rightGesture { return .band(count: session.selectedNotes.count) }
+        return .idle(notes: notes.count, selected: session.selectedNotes.count)
     }
 
     @QtIgnored
@@ -475,69 +465,72 @@ extension PianoGrid {
 
     func beginPointerImpl(x: Double, y: Double, modifiers: Int) {
         guard gesture == nil else { return }
-        suppressedLeftRelease = false
-        pointerModifiers = modifiers
-        stopAudition()
-        pendingVelocityReanchor = nil
-        let pressTick = viewport.camera.tickAtContentX(x)
-        let pressKey = pitch(atY: y)
-        guard pressKey >= 0 else { return }
-        if let hit = hitNote(x: x, y: y) {
-            let note = notes[hit.index]
-            let control = modifiers & QtFact.controlModifier != 0
-            pendingControlToggle =
-                control && session.selectedNotes.contains(note.noteId)
-                ? note.noteId : nil
-            activeNoteId = note.noteId.rawValue
-            lastVelocity = note.velocity
-            keyboardAuditionKey = note.pitch
-            keyboardAuditionTrack = trackIndex
-            onAudition?(trackIndex, note.pitch, note.velocity)
-            if control && hit.zone != .leftEdge && hit.zone != .rightEdge {
-                gesture = .velocity(
-                    GridGesture.Velocity(
-                        noteId: note.noteId, pressY: y, original: note.velocity))
-                pendingVelocityReanchor =
-                    session.selectedNotes.contains(note.noteId) ? nil : note.noteId
-                cursorKind = GridCursorKind.velocity.rawValue
-                if hoverKey != note.pitch {
-                    hoverKey = note.pitch
-                    scene.rebuildHover(sceneInput())
+        let began = session.withStateChanges { () -> Bool in
+            suppressedLeftRelease = false
+            pointerModifiers = modifiers
+            stopAudition()
+            pendingVelocityReanchor = nil
+            let pressTick = viewport.camera.tickAtContentX(x)
+            let pressKey = pitch(atY: y)
+            guard pressKey >= 0 else { return false }
+            let previousHoverKey = hoverKey
+            if let hit = hitNote(x: x, y: y) {
+                let note = notes[hit.index]
+                let control = modifiers & QtFact.controlModifier != 0
+                pendingControlToggle =
+                    control && session.selectedNotes.contains(note.noteId)
+                    ? note.noteId : nil
+                activeNoteId = note.noteId.rawValue
+                lastVelocity = note.velocity
+                keyboardAuditionKey = note.pitch
+                keyboardAuditionTrack = trackIndex
+                onAudition?(trackIndex, note.pitch, note.velocity)
+                if control && hit.zone != .leftEdge && hit.zone != .rightEdge {
+                    gesture = .velocity(
+                        GridGesture.Velocity(
+                            noteId: note.noteId, pressY: y, original: note.velocity))
+                    pendingVelocityReanchor =
+                        session.selectedNotes.contains(note.noteId) ? nil : note.noteId
+                    cursorKind = GridCursorKind.velocity.rawValue
+                    if hoverKey != note.pitch { hoverKey = note.pitch }
+                } else {
+                    applyPressSelection(note.noteId, modifiers: modifiers)
+                    switch hit.zone {
+                    case .leftEdge:
+                        gesture = .resize(
+                            pressTick: pressTick, gripTick: note.tick,
+                            oppositeTick: note.tick + note.duration, leading: true)
+                    case .rightEdge:
+                        gesture = .resize(
+                            pressTick: pressTick, gripTick: note.tick + note.duration,
+                            oppositeTick: note.tick, leading: false)
+                    default:
+                        gesture = .move(pressTick: pressTick, pressKey: pressKey)
+                    }
+                }
+                if case .band(let band) = rightGesture, !control {
+                    rightBandDemoted = true
+                    rightGesture = .pendingMenu(
+                        GridGesture.PendingMenu(
+                            pressX: band.pressX, pressY: band.pressY,
+                            threshold: .infinity, hitNoteId: NoteID()))
+                    releaseBandAudition()
                 }
             } else {
-                applyPressSelection(note.noteId, modifiers: modifiers)
-                switch hit.zone {
-                case .leftEdge:
-                    gesture = .resize(
-                        pressTick: pressTick, gripTick: note.tick,
-                        oppositeTick: note.tick + note.duration, leading: true)
-                case .rightEdge:
-                    gesture = .resize(
-                        pressTick: pressTick, gripTick: note.tick + note.duration,
-                        oppositeTick: note.tick, leading: false)
-                default:
-                    gesture = .move(pressTick: pressTick, pressKey: pressKey)
-                }
+                guard !viewport.scale.fold || viewport.scale.contains(pressKey)
+                else { return false }
+                session.clearSelectedNotes()
+                gesture = .pendingDraw(
+                    GridGesture.PendingDraw(
+                        pressX: x, pressY: y, pressTick: pressTick, pressKey: pressKey))
+                keyboardAuditionKey = pressKey
+                keyboardAuditionTrack = trackIndex
+                onAudition?(trackIndex, pressKey, min(127, max(1, lastVelocity)))
             }
-            if case .band(let band) = rightGesture, !control {
-                rightBandDemoted = true
-                rightGesture = .pendingMenu(
-                    GridGesture.PendingMenu(
-                        pressX: band.pressX, pressY: band.pressY,
-                        threshold: .infinity, hitNoteId: NoteID()))
-                releaseBandAudition()
-            }
-        } else {
-            guard !viewport.scale.fold || viewport.scale.contains(pressKey)
-            else { return }
-            session.clearSelectedNotes()
-            gesture = .pendingDraw(
-                GridGesture.PendingDraw(
-                    pressX: x, pressY: y, pressTick: pressTick, pressKey: pressKey))
-            keyboardAuditionKey = pressKey
-            keyboardAuditionTrack = trackIndex
-            onAudition?(trackIndex, pressKey, min(127, max(1, lastVelocity)))
+            if hoverKey != previousHoverKey { scene.rebuildHover(sceneInput()) }
+            return true
         }
+        guard began else { return }
         refreshNotes()
     }
 

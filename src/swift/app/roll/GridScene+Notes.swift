@@ -12,7 +12,8 @@ extension GridScene {
         let colors = resolvePalette(input)
         let key = RollDrawingContent.key(input, palette: colors)
         if noteRecordsKey != key.notesSection {
-            noteRecordsMaxDuration = RollDrawingContent.resolveNotes(input, into: &noteRecords)
+            noteRecordsMaxDuration = RollDrawingContent.resolveNotes(
+                input, notes: input.renderNotes(), into: &noteRecords)
             noteRecordsKey = key.notesSection
             builtProjection = input.camera.projection
             contentGeneration += 1

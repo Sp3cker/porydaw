@@ -74,6 +74,7 @@ public final class PianoGrid: QmlUncreatable {
     @QtIgnored var publishedVelocityPreview: [NoteID: UInt8] = [:]
     @QtIgnored
     var lastCommandAvailability: [Bool] = []
+    @QtIgnored var lastStatusPresentation: RollStatusPresentation?
     @QtIgnored
     var lastCommandGestureActive = false
     @QtIgnored

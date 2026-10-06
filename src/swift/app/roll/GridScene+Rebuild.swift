@@ -15,11 +15,8 @@ struct GridSceneInput {
     var fontSpec: (GridFontKind) -> QmlFont
     var fonts: [GridFontKind: GridFontSpec] = [:]
     var notes: [GridNote] = []
-    var displayedNote: (GridNote) -> (tick: Int, end: Int, pitch: Int) = {
-        ($0.tick, $0.tick + $0.duration, $0.pitch)
-    }
-    // False when displayedNote is the identity, so content keys skip the per-note spans.
-    var displacesNotes = false
+    var displacement: RollNoteDisplacement = .none
+    var displacedNotes: Set<NoteID> = []
     var selectedNotes: Set<NoteID> = []
     var drawPreview: (tick: Int, duration: Int, pitch: Int)?
     var bandSelection: (x: Double, y: Double, w: Double, h: Double)?
@@ -36,6 +33,12 @@ struct GridSceneInput {
     // Band-2 list height: marker row + fitted ruler text + separator, as
     // published on PianoGrid. Part of the frame key like the camera box.
     var rulerHeight: Double = 0
+
+    // Only synchronous record resolution borrows source storage; cache keys retain owned values.
+    @_lifetime(borrow self)
+    func renderNotes() -> Span<GridNote> {
+        notes.span
+    }
 }
 
 /// Frame-tier key: content generation plus everything the per-frame plot

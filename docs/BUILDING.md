@@ -33,6 +33,27 @@ things a bare `cmake --build` does not:
 3. **Summarize**: only actionable lines are printed; everything is in
    `build/<cfg>/build.log`. Read that log on failure; rebuilding adds no detail.
 
+## Lifetime-aware Swift views
+
+`PorydawCore`, `PorydawDocument`, `PorydawApp`, and `PorydawAppAudio` enable
+`-enable-experimental-feature Lifetimes` privately with the Swift 6.4 toolchain.
+The roll renderer and playback builder use lifetime-bound `Span` views for
+synchronous reads; a view cannot outlive its storage owner. Published timelines,
+history origins, and retained presenter inputs remain owned snapshots. Borrowing
+does not remove legitimate copy-on-write allocations for retained readers.
+
+## Allocation verification
+
+Build Release before profiling (`deno task build:checks --release`). Compare
+identical fixtures and operation counts with Instruments **Allocations**. In its
+Statistics export, `All Heap Allocations` → `count-total` and `total-bytes`
+include allocations that were later freed. A surviving-object List export
+cannot measure allocation churn.
+
+State whether the measurement covers core editing, presenter rendering, or the
+whole app, and whether fixture setup and undo/redo are included. Do not divide
+whole-process totals into a claimed per-note or steady-state cost.
+
 ## Where the time goes
 
 Fresh tree = new worktree or new `build/<cfg>` directory.

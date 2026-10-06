@@ -173,6 +173,9 @@ configure_file(
     @ONLY
 )
 porydaw_swift_module(PorydawApp PorydawApp)
+target_compile_options(PorydawApp PRIVATE
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
+)
 
 if(PORYDAW_BUILD_CHECKS)
     target_compile_options(PorydawApp PRIVATE
@@ -232,6 +235,9 @@ add_library(PorydawAppAudio STATIC
     export/WavExport.swift
 )
 porydaw_swift_module(PorydawAppAudio PorydawAppAudio)
+target_compile_options(PorydawAppAudio PRIVATE
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
+)
 set_target_properties(PorydawAppAudio PROPERTIES
     AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
 )

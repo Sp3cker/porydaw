@@ -95,6 +95,19 @@ extension PianoGrid {
         refreshNotes()
     }
 
+    /// Updates selection styling and commands while retaining document note buffers.
+    /// A different primary track changes note ordering and ghost presentation.
+    @QtIgnored
+    public func refreshSelectionPresentation() {
+        let primaryTrack: Int? = session.document.engineTracks.usedTrackCount == 0 ? nil : trackIndex
+        guard session.selectedTrack == primaryTrack else {
+            refreshFromSession()
+            return
+        }
+        refreshCursorPresentation()
+        refreshNotes()
+    }
+
     @QtIgnored
     public func snapTickDown(_ tick: Double) -> Int {
         Int(viewport.grid.snapTickDown(tick, camera: viewport.camera))

@@ -306,8 +306,17 @@ public final class SongDocument {
 
     /// Always describes `state.file`; every state change repairs it before publication.
     private var projection: NoteProjection
-    /// One prior-state projection supports grouped gestures without rebuilding the song.
+    /// Non-gesture planning retains its source file alongside storage identities.
     private var memo: (file: MidiFile, projection: NoteProjection)?
+    /// The immutable origin never aliases the mutable current projection's index.
+    private struct GestureOrigin {
+        let group: HistoryGroup
+        let operation: HistoryOperation
+        let identity: DocumentIdentity
+        let state: SongState
+        var projection: NoteProjection?
+    }
+    private var gestureOrigin: GestureOrigin?
     private var nextNoteID: UInt64
     private var savedConfig: SongConfig
 
@@ -362,6 +371,16 @@ public final class SongDocument {
 
     internal func projection(for songState: SongState) -> NoteProjection {
         if projection.describes(songState.file) { return projection }
+        if let origin = gestureOrigin, let cached = origin.projection,
+            cached.describes(songState.file)
+        {
+            return cached
+        }
+        if let origin = gestureOrigin, !origin.state.differs(from: songState) {
+            let built = NoteProjection(file: origin.state.file)
+            gestureOrigin?.projection = built
+            return built
+        }
         if let memo, memo.projection.describes(songState.file) { return memo.projection }
         let built = NoteProjection(file: songState.file)
         memo = (songState.file, built)
@@ -455,6 +474,7 @@ public final class SongDocument {
         else { return }
         savedConfig = snapshot.config
         history.markSaved(snapshot.identity)
+        gestureOrigin = nil
     }
 
     internal func commit(
@@ -465,19 +485,47 @@ public final class SongDocument {
         guard history.acceptsDocumentMutation, changed, mutation.state.differs(from: state) else {
             return
         }
+        let cachedOrigin: GestureOrigin?
+        if let cached = gestureOrigin, cached.group == group,
+            cached.identity == history.currentIdentity,
+            cached.operation.matchesGesture(operation),
+            history.originChanges(for: group, operation: cached.operation) != nil
+        {
+            cachedOrigin = cached
+        } else {
+            cachedOrigin = nil
+        }
+        let startingState = cachedOrigin?.state ?? state
         state = mutation.state
         history.record(
             changes: mutation.changes, group: group, operation: operation,
             returnsToOrigin: returnsToOrigin, trackRemap: trackRemap)
+        if let group, history.originChanges(for: group, operation: operation) != nil {
+            gestureOrigin = GestureOrigin(
+                group: group, operation: operation, identity: history.currentIdentity,
+                state: startingState, projection: cachedOrigin?.projection)
+        } else {
+            gestureOrigin = nil
+        }
         publish(trackRemap: trackRemap)
     }
 
     internal func origin(for group: HistoryGroup?, operation: HistoryOperation) -> SongState {
-        guard let changes = history.originChanges(for: group, operation: operation) else {
+        guard let group, let changes = history.originChanges(for: group, operation: operation) else {
+            gestureOrigin = nil
             return state
+        }
+        if let cached = gestureOrigin, cached.group == group,
+            cached.identity == history.currentIdentity,
+            cached.operation.matchesGesture(operation)
+        {
+            return cached.state
         }
         var origin = state
         changes.apply(to: &origin, direction: .undo)
+        gestureOrigin = GestureOrigin(
+            group: group, operation: operation, identity: history.currentIdentity,
+            state: origin, projection: nil)
         return origin
     }
 
@@ -513,10 +561,10 @@ public final class SongDocument {
         _ changes: DocumentChangeSet, direction: BankHistoryDirection,
         trackRemap: TrackRemap?
     ) {
+        gestureOrigin = nil
         changes.apply(to: &state, direction: direction)
-        // History replays mutate the current arrays in place, so their storage identity can stay
-        // stable even though their elements changed. Rebuild instead of using identity repair.
-        projection = NoteProjection(file: state.file)
+        // Replay may mutate event buffers in place; identity alone cannot detect it.
+        projection.repair(to: state.file, forceRebuild: true)
         publish(trackRemap: trackRemap)
     }
 
