@@ -34,8 +34,8 @@ add_library(PorydawApp STATIC
     newsong/NewSongController.swift
     EditorCommandRouter.swift
     typography/Typography.swift
-    theme/TypographyFonts.swift
-    theme/LayoutSpaces.swift
+    typography/TypographyFonts.swift
+    typography/LayoutSpaces.swift
     transport/TransportBarPresenter.swift
     SongTabsController.swift
     SongTabsController+Close.swift
@@ -74,14 +74,14 @@ add_library(PorydawApp STATIC
     pitchbend/PitchBendKernel.swift
     pitchbend/PitchBendScene.swift
     pitchbend/PitchBendPresenter.swift
-    timeline/EditorViewStatePreferences.swift
+    shell/EditorViewStatePreferences.swift
     timeline/TimelineScrollbar.swift
     timeline/PlayheadGuides.swift
     timeline/SharedPlayhead.swift
     timeline/DisplayListWriter.swift
-    timeline/GridPalette.swift
-    timeline/ThemeColorTables.swift
-    timeline/GridTypography.swift
+    theme/GridPalette.swift
+    theme/ThemeColorTables.swift
+    roll/GridTypography.swift
     timeline/RulerMenuPresenter.swift
     drawer/EditorDrawer.swift
     drawer/PromptAppearance.swift

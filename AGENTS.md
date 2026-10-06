@@ -14,7 +14,9 @@ in that surface's `proof.*.txt` ledger.
 
 ```
 src/
-  swift/core/      — PorydawCore: document, MIDI, time/note/event editing, history
+  swift/core/      — PorydawCore: song document, MIDI, time/note/event editing, history
+  swift/document/  — PorydawDocument: DocumentSession, service/ (ProjectService), view/ (viewport, time axis, grid, camera, scale, voice-list and automation view types)
+  swift/sample/    — PorydawSample: sample import/decode, DSP, resampling, render, sample WAV I/O
   swift/playback/  — PorydawPlayback: sequencer, C playback bridge
   swift/project/   — Swift project store (asm/midi.cfg/bank files)
   swift/app/       — PorydawApp: session, presenters, audio, drawer, roll, timeline, shell
@@ -24,8 +26,7 @@ src/
   ui/songview/quick/ — production QML (swiftroll/, drawer/, shared controls)
   app/             — native host C ABI: clipboard, QML engine, item cursor, Qt main executor
   render/          — display-list boundary (see below)
-  audio/           — C++ audio engine + C decoders behind swift_playback.h
-  project/         — C++ project service behind swift_project_service.h / banklease.h
+  audio/           — C: miniaudio device, sample codec, swift_playback.h playback ABI
   checks/          — harnesses: swiftcore suites, QML lanes (editorqml/, rollqml/), proof ledgers
 tools/             — Deno build/check/format/proof runners
 external/          — poryaaaa (submodule), dr_libs, stb
@@ -74,27 +75,20 @@ server predates the index: kill `sourcekit-lsp`; the next query cold-starts.
 
 ## Files and modules
 
-One concept per file; the filename names the concept (`src/swift/app/drawer/`
-is the model). Size follows cohesion: keep decisions that are read together in
-one file, even past 600 lines; a file mixing concepts is the defect, not a long
-file holding one. Never split a concept into `Type+Aspect.swift` fragments to
-stay under a number; fragments under ~100 lines fold back into their owner
-unless they are a separately named concept.
+One concept per file, named for it (`drawer/` is the model); cohesion sets size
+— one concept past 600 lines is fine, mixed concepts are the defect. Never split
+into `Type+Aspect` fragments to stay under a number; fragments under ~100 lines
+fold back unless a separately named concept.
 
-Code placement follows the module graph, which points one way toward
-`PorydawCore`: Project, Playback and Document build on Core (Document also on
-Project); the `PorydawAppAudio`/`AppEventList`/`AppCommands` feature modules
-see only Core (and Playback for audio); `PorydawApp` sits on top. Each target's
-`CMakeLists.txt` is the authority.
-
-- A concept shared across modules lives in the lowest module all its consumers
-  already import; code with one consumer stays in that consumer's module.
-- Never add a module dependency to reach code; move the shared part down.
-- Module surfaces stay narrow: `internal` by default, `public` only for what
-  another module calls, so a change behind the surface stays in its module.
-- Feature code that needs only lower modules may live in its own feature
-  module (`PorydawAppEventList` is the model); a new module must remove a
-  dependency on `PorydawApp`, not just tidy a folder.
+Modules point one way toward `PorydawCore` (each `CMakeLists.txt` is the
+authority): Project/Playback/Document build on Core (Document also on Project);
+`AppAudio`/`AppEventList`/`AppCommands` see only Core (+Playback for audio);
+`PorydawApp` sits on top. Shared code lives in the lowest module all consumers
+already import; single-consumer code stays in its consumer; never add a
+dependency to reach code, move the shared part down. `internal` by default,
+`public` only for cross-module callers. Feature code needing only lower modules
+may own a module (`PorydawAppEventList` is the model); a new module must remove
+a `PorydawApp` dependency, not just tidy a folder.
 
 ## Worktrees and Git
 

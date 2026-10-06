@@ -23,16 +23,16 @@ add_library(PorydawDocument STATIC
     view/DocumentViewport.swift
     view/EditorDrawerTypes.swift
     view/EditorViewState.swift
-    view/timeline/DocumentProjectionCache.swift
-    view/timeline/EditorCamera.swift
-    view/timeline/GridGeometry.swift
-    view/timeline/ScaleProjection.swift
-    view/timeline/TimelineSnapPolicy.swift
-    view/timeline/TimeAxis.swift
-    view/automation/AutomationParameter.swift
-    view/automation/AutomationTimeSelection.swift
-    view/voicelist/VoicegroupCatalog.swift
-    view/voicelist/VoiceListSemantics.swift
+    view/DocumentProjectionCache.swift
+    view/EditorCamera.swift
+    view/GridGeometry.swift
+    view/ScaleProjection.swift
+    view/TimelineSnapPolicy.swift
+    view/TimeAxis.swift
+    view/AutomationParameter.swift
+    view/AutomationTimeSelection.swift
+    view/VoicegroupCatalog.swift
+    view/VoiceListSemantics.swift
 )
 
 set_target_properties(PorydawDocument PROPERTIES
