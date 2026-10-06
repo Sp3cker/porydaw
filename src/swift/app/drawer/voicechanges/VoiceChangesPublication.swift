@@ -99,8 +99,7 @@ extension VoiceChangesPage {
     ) {
         var rects: [DrawerStaticRect] = []
         if let track = currentTrack(session), plotHeight > 0 {
-            let color = SceneRectPacking.argb(
-                PaletteMath.hex(PaletteMath.trackIdentityOklab(track), alpha: 18))
+            let color = PaletteMath.argb(PaletteMath.hex(PaletteMath.trackIdentityOklab(track), alpha: 18))
             var program = session.timeline.tracks[track].firstProgram
             var start: Tick = 0
             for entry in entries {

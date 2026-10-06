@@ -117,27 +117,11 @@ public enum PaletteMath {
     }
 
     public static func channels(_ hex: String) -> (r: Int, g: Int, b: Int, a: Int) {
-        var value: UInt64 = 0
-        for byte in hex.utf8.dropFirst() {
-            let digit: UInt64
-            if byte >= 48 && byte <= 57 {
-                digit = UInt64(byte - 48)
-            } else if byte >= 65 && byte <= 70 {
-                digit = UInt64(byte - 55)
-            } else if byte >= 97 && byte <= 102 {
-                digit = UInt64(byte - 87)
-            } else {
-                break
-            }
-            value = (value << 4) | digit
-        }
-        if hex.utf8.count == 9 {
-            return (
-                Int((value >> 16) & 0xFF), Int((value >> 8) & 0xFF), Int(value & 0xFF),
-                Int((value >> 24) & 0xFF)
-            )
-        }
-        return (Int((value >> 16) & 0xFF), Int((value >> 8) & 0xFF), Int(value & 0xFF), 255)
+        let packed = argb(hex)
+        return (
+            Int((packed >> 16) & 0xFF), Int((packed >> 8) & 0xFF),
+            Int(packed & 0xFF), Int((packed >> 24) & 0xFF)
+        )
     }
 
     static let srgbToLinearTable: [Double] = (0...255).map { srgbToLinear(Double($0) / 255.0) }
@@ -199,9 +183,36 @@ public enum PaletteMath {
             b: Int(argb & 255))
     }
 
-    public static func argb(_ hex: String) -> UInt32 {
-        let c = channels(hex)
-        return UInt32(c.a) << 24 | UInt32(c.r) << 16 | UInt32(c.g) << 8 | UInt32(c.b)
+    // Strict "#RRGGBB" -> 0xFFRRGGBB / "#AARRGGBB" -> as-is, no allocation.
+    // "" yields 0xFF000000 (channels("") == (0, 0, 0, 255)); anything else unparseable yields 0.
+    @inline(__always) public static func argb(_ hex: String) -> UInt32 {
+        if hex.isEmpty { return 0xFF00_0000 }
+        var bytes = hex.utf8.makeIterator()
+        guard bytes.next() == UInt8(ascii: "#") else { return 0 }
+        var value: UInt32 = 0
+        var count = 0
+        while let byte = bytes.next() {
+            let digit: UInt32
+            switch byte {
+            case UInt8(ascii: "0")...UInt8(ascii: "9"):
+                digit = UInt32(byte - UInt8(ascii: "0"))
+            case UInt8(ascii: "a")...UInt8(ascii: "f"):
+                digit = UInt32(byte - UInt8(ascii: "a") + 10)
+            case UInt8(ascii: "A")...UInt8(ascii: "F"):
+                digit = UInt32(byte - UInt8(ascii: "A") + 10)
+            default:
+                return 0
+            }
+            value = (value << 4) | digit
+            count += 1
+            if count > 8 { return 0 }
+        }
+        if count == 6 {
+            value |= 0xFF00_0000
+        } else if count != 8 {
+            return 0
+        }
+        return value
     }
 
     public static func qmlColor(argb: UInt32) -> QmlColor {

@@ -341,7 +341,7 @@ func drawerAutomationNodeDragAndPhantomOutcomes(
         _ = scrolled.page.pointerMove(x: 0, y: y - 30, buttons: DrawerQtButton.left)
         let firstPreview = AutomationDisplayProbe(scrolled.page)
         let firstCurve = firstPreview.preview.first {
-            $0.argb == SceneRectPacking.argb(scrolled.page.palette.selectionEdge) && $0.h <= 2
+            $0.argb == PaletteMath.argb(scrolled.page.palette.selectionEdge) && $0.h <= 2
         }
         report.expect(
             firstPreview.valid && firstCurve != nil
@@ -351,7 +351,7 @@ func drawerAutomationNodeDragAndPhantomOutcomes(
         _ = scrolled.page.pointerMove(x: 0, y: targetY - 30, buttons: DrawerQtButton.left)
         let movedPreview = AutomationDisplayProbe(scrolled.page)
         let movedCurve = movedPreview.preview.first {
-            $0.argb == SceneRectPacking.argb(scrolled.page.palette.selectionEdge) && $0.h <= 2
+            $0.argb == PaletteMath.argb(scrolled.page.palette.selectionEdge) && $0.h <= 2
         }
         report.expect(
             movedPreview.valid && movedCurve != nil

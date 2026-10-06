@@ -153,42 +153,42 @@ enum RollDrawingContent {
     static func paletteColors(_ input: GridSceneInput) -> [UInt32] {
         let p = input.palette
         return [
-            SceneRectPacking.argb(p.rollBackground),
-            SceneRectPacking.argb(p.accidentalLane),
-            SceneRectPacking.argb(p.scaleHighlight),
-            SceneRectPacking.argb(p.gridLineBar),
-            SceneRectPacking.argb(p.gridLineBeat),
-            SceneRectPacking.argb(p.gridLineSub1),
-            SceneRectPacking.argb(p.gridLineSub2),
-            SceneRectPacking.argb(p.gridLineSub3),
-            SceneRectPacking.argb(p.noteBorder),
-            SceneRectPacking.argb(p.selectionRing),
-            SceneRectPacking.argb(p.selectionFill),
-            SceneRectPacking.argb(p.selectionEdge),
-            SceneRectPacking.argb(p.selectionFill),
-            SceneRectPacking.argb(p.selectionRing),
-            SceneRectPacking.argb(p.selectionRing),
+            PaletteMath.argb(p.rollBackground),
+            PaletteMath.argb(p.accidentalLane),
+            PaletteMath.argb(p.scaleHighlight),
+            PaletteMath.argb(p.gridLineBar),
+            PaletteMath.argb(p.gridLineBeat),
+            PaletteMath.argb(p.gridLineSub1),
+            PaletteMath.argb(p.gridLineSub2),
+            PaletteMath.argb(p.gridLineSub3),
+            PaletteMath.argb(p.noteBorder),
+            PaletteMath.argb(p.selectionRing),
+            PaletteMath.argb(p.selectionFill),
+            PaletteMath.argb(p.selectionEdge),
+            PaletteMath.argb(p.selectionFill),
+            PaletteMath.argb(p.selectionRing),
+            PaletteMath.argb(p.selectionRing),
             p.noteFillArgb(track: input.selectedTrack, velocity: input.lastVelocity),
-            SceneRectPacking.argb(p.keyboardNatural),
-            SceneRectPacking.argb(p.keyboardBlack),
-            SceneRectPacking.argb(p.keyboardSeparator),
-            SceneRectPacking.argb(p.keyboardHover),
-            SceneRectPacking.argb(p.keyboardLabel),
-            SceneRectPacking.argb(p.keyboardNatural),
-            SceneRectPacking.argb(p.keyboardBlack),
-            SceneRectPacking.argb(p.primaryText),
-            SceneRectPacking.argb(p.rowLine),
-            SceneRectPacking.argb(p.gridLineBeatFine),
-            SceneRectPacking.argb(p.preRollMask),
-            SceneRectPacking.argb(p.rulerPreRollMask),
-            SceneRectPacking.argb(p.gridLine),
-            SceneRectPacking.argb(p.chromeBackground),
-            SceneRectPacking.argb(p.separator),
-            SceneRectPacking.argb(p.rulerDetailText),
-            SceneRectPacking.argb(p.implicitSignature),
-            SceneRectPacking.argb(p.noteVelocityZero),
-            SceneRectPacking.argb(p.noteLabelAaLight),
-            SceneRectPacking.argb(p.noteLabelAaDark),
+            PaletteMath.argb(p.keyboardNatural),
+            PaletteMath.argb(p.keyboardBlack),
+            PaletteMath.argb(p.keyboardSeparator),
+            PaletteMath.argb(p.keyboardHover),
+            PaletteMath.argb(p.keyboardLabel),
+            PaletteMath.argb(p.keyboardNatural),
+            PaletteMath.argb(p.keyboardBlack),
+            PaletteMath.argb(p.primaryText),
+            PaletteMath.argb(p.rowLine),
+            PaletteMath.argb(p.gridLineBeatFine),
+            PaletteMath.argb(p.preRollMask),
+            PaletteMath.argb(p.rulerPreRollMask),
+            PaletteMath.argb(p.gridLine),
+            PaletteMath.argb(p.chromeBackground),
+            PaletteMath.argb(p.separator),
+            PaletteMath.argb(p.rulerDetailText),
+            PaletteMath.argb(p.implicitSignature),
+            PaletteMath.argb(p.noteVelocityZero),
+            PaletteMath.argb(p.noteLabelAaLight),
+            PaletteMath.argb(p.noteLabelAaDark),
         ]
     }
 
@@ -196,10 +196,10 @@ enum RollDrawingContent {
         let projection = input.camera.projection
         let noteTable = ThemeColorTables.noteFillTable(input.palette.theme)
         let ghostTable = ThemeColorTables.ghostFillTable(input.palette.theme)
-        let light = SceneRectPacking.argb(input.palette.keyboardNatural)
-        let dark = SceneRectPacking.argb(input.palette.keyboardBlack)
-        let fallbackLight = SceneRectPacking.argb(input.palette.noteLabelAaLight)
-        let fallbackDark = SceneRectPacking.argb(input.palette.noteLabelAaDark)
+        let light = PaletteMath.argb(input.palette.keyboardNatural)
+        let dark = PaletteMath.argb(input.palette.keyboardBlack)
+        let fallbackLight = PaletteMath.argb(input.palette.noteLabelAaLight)
+        let fallbackDark = PaletteMath.argb(input.palette.noteLabelAaDark)
         let notes = input.notes
         let selected = input.selectedNotes
         let displayed = input.displayedNote

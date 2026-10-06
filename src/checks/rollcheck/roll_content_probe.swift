@@ -332,7 +332,7 @@ import QtBridge
     }
 
     public static func argb(_ hex: String) -> UInt32 {
-        SceneRectPacking.argb(hex)
+        PaletteMath.argb(hex)
     }
 
     public static func argb(_ color: QmlColor) -> UInt32 {

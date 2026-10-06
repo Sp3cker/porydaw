@@ -89,7 +89,9 @@ already import; single-consumer code stays in its consumer; never add a
 dependency to reach code, move the shared part down. `internal` by default,
 `public` only for cross-module callers. Feature code needing only lower modules
 may own a module (`PorydawAppEventList` is the model); a new module must remove
-a `PorydawApp` dependency, not just tidy a folder.
+a `PorydawApp` dependency or measurably lower the one-file edit floor (record
+before/after in `docs/BUILDING.md`, as `PorydawAppPresentation` does), not just
+tidy a folder.
 
 ## Worktrees and Git
 

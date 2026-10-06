@@ -195,8 +195,8 @@ func drawerAutomationRasterHalfOpenGeometry(
                     && $0.ringColor == page.palette.selectionRing
             }, cppID: id, message: "each selected fork Pan group publishes an outer selection annulus")
         let selection = AutomationDisplayProbe(page)
-        let fillColor = SceneRectPacking.argb(page.palette.selectionFill)
-        let reticleEdge = SceneRectPacking.argb(page.palette.selectionEdge)
+        let fillColor = PaletteMath.argb(page.palette.selectionFill)
+        let reticleEdge = PaletteMath.argb(page.palette.selectionEdge)
         let endX = min(page.plotWidth, page.xForTick(endTick))
         report.expect(
             selection.valid

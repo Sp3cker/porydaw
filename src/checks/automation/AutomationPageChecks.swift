@@ -5,12 +5,6 @@ import PorydawCore
 @testable import PorydawDocument
 import PorydawNativeHost
 
-// Lane-wide re-export so suite files share the lower-lane APIs without per-file imports.
-@_exported import SwiftCoreCheckSupport
-@_exported import SwiftCoreCheckMedia
-@_exported import SwiftCoreCheckEdit
-@_exported import SwiftCoreCheckRoll
-
 // Direct coverage for the pure Swift Automation domain and its page owner. The
 // projection, parameter metadata, snapping and frozen transactions are driven
 // with synthetic values; the page owner and every commit path run against a real

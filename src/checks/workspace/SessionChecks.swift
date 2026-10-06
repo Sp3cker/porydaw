@@ -6,13 +6,6 @@ import PorydawCoreCheckNative
 import PorydawDocument
 import PorydawPlayback
 
-// Lane-wide re-export so suite files share the lower-lane APIs without per-file imports.
-@_exported import SwiftCoreCheckSupport
-@_exported import SwiftCoreCheckMedia
-@_exported import SwiftCoreCheckEdit
-@_exported import SwiftCoreCheckRoll
-@_exported import SwiftCoreCheckPages
-
 // MARK: - Project Session Suite
 
 @MainActor

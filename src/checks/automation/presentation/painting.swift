@@ -297,7 +297,7 @@ func drawerAutomationPresentationPaintingModel(
         page.publishedNodes.allSatisfy { !$0.projected },
         cppID: drawerAutomationPaintingModelID,
         message: "a fully written lane shows no synthetic nodes")
-    let curveInk = SceneRectPacking.argb(page.palette.automationNodeInk)
+    let curveInk = PaletteMath.argb(page.palette.automationNodeInk)
     let ghostInk = (curveInk & 0x00FF_FFFF) | 0x8000_0000
     let curveX = fixture.x(72)
     let volumeY = fixture.y(fixture.volumeLane, 127)
@@ -376,10 +376,9 @@ func drawerAutomationPresentationPaintingModel(
         ShellAppearance.apply(to: page.palette, mode: theme.mode, contrast: 50)
         page.refreshFromDocument()
         let drawing = AutomationDisplayProbe(page)
-        let ink = SceneRectPacking.argb(page.palette.automationNodeInk)
+        let ink = PaletteMath.argb(page.palette.automationNodeInk)
         let channels = PaletteMath.channels(page.palette.automationNodeInk)
-        let ghost = SceneRectPacking.argb(
-            PaletteMath.hex(r: channels.r, g: channels.g, b: channels.b, a: 128))
+        let ghost = PaletteMath.argb(PaletteMath.hex(r: channels.r, g: channels.g, b: channels.b, a: 128))
         let lastGhost = drawing.statics.lastIndex { $0.argb == ghost }
         let firstActive = drawing.statics.firstIndex { $0.argb == ink }
         guard drawing.valid, let lastGhost, let firstActive else {
@@ -469,7 +468,7 @@ func drawerAutomationPresentationPaintingModel(
         expected: volumeHeight, actual: page.plotHeight, cppID: drawerAutomationPaintingModelID,
         what: "Tempo shares the active lane's plot height")
     let tempoDrawing = AutomationDisplayProbe(page)
-    let separator = SceneRectPacking.argb(page.palette.separator)
+    let separator = PaletteMath.argb(page.palette.separator)
     report.expect(
         volumeWidth > 0 && volumeHeight > 0
             && page.plotWidth == volumeWidth && page.plotHeight == volumeHeight
@@ -523,7 +522,7 @@ func drawerAutomationPresentationPaintingModel(
                 && $0.argb == separator
         } == true, cppID: drawerAutomationPaintingModelID,
         message: "the resized bottom frame spans the new body in separator ink")
-    let ruleColor = SceneRectPacking.argb(page.palette.gridLineSub2)
+    let ruleColor = PaletteMath.argb(page.palette.gridLineSub2)
     report.expectEqual(
         expected: 3,
         actual: drawnAxis.filter {
@@ -731,8 +730,8 @@ func drawerAutomationPresentationPaintingModel(
     fixture.activate(fixture.panLane)
     let selectedNodes = page.publishedNodes.filter(\.selected)
     let selectionDrawing = AutomationDisplayProbe(page)
-    let compositionFill = SceneRectPacking.argb(page.palette.selectionFill)
-    let compositionEdge = SceneRectPacking.argb(page.palette.selectionEdge)
+    let compositionFill = PaletteMath.argb(page.palette.selectionFill)
+    let compositionEdge = PaletteMath.argb(page.palette.selectionEdge)
     let compositionEdges = selectionDrawing.statics.filter {
         $0.argb == compositionEdge && $0.w == 1
     }

@@ -22,12 +22,12 @@ extension AutomationPage {
         let grid = viewport.grid
         let axis = timeAxis(session)
         // Resolve each typed palette slot once; ghost ink uses alpha 128.
-        let separatorArgb = SceneRectPacking.argb(palette.separator)
-        let gridSub2Argb = SceneRectPacking.argb(palette.gridLineSub2)
-        let curveArgb = SceneRectPacking.argb(palette.automationNodeInk)
+        let separatorArgb = PaletteMath.argb(palette.separator)
+        let gridSub2Argb = PaletteMath.argb(palette.gridLineSub2)
+        let curveArgb = PaletteMath.argb(palette.automationNodeInk)
         let ghostArgb = (curveArgb & 0x00FF_FFFF) | 0x8000_0000
-        let selectionFillArgb = SceneRectPacking.argb(palette.selectionFill)
-        let selectionEdgeArgb = SceneRectPacking.argb(palette.selectionEdge)
+        let selectionFillArgb = PaletteMath.argb(palette.selectionFill)
+        let selectionEdgeArgb = PaletteMath.argb(palette.selectionEdge)
         let gridPalette = DrawerStaticsContent.gridPaletteColors(palette)
         var axisRects: [DrawerStaticRect] = []
         let frame = Float(max(1 / devicePixelRatio, fontPxF(baseFontPx, 1.0 / 12.0)))

@@ -5,11 +5,6 @@ import PorydawCore
 @testable import PorydawDocument
 import QtBridge
 
-// Lane-wide re-export so suite files share the support/media/edit APIs without per-file imports.
-@_exported import SwiftCoreCheckSupport
-@_exported import SwiftCoreCheckMedia
-@_exported import SwiftCoreCheckEdit
-
 @MainActor
 public func runSelectionChecks(_ report: CheckReport, viewport: DocumentViewport, fixtureRoot: String) {
     checkSelectionBandSweep(report, viewport: viewport)

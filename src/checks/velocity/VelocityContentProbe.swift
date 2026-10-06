@@ -38,7 +38,7 @@ func drawerVelocityContentBlobChecks(
     let fixture = drawerVelocityVelocityFixture(session: session, service: service)
     let page = fixture.page
     let palette = GridPalette()
-    let barArgb = SceneRectPacking.argb(palette.gridLineBar)
+    let barArgb = PaletteMath.argb(palette.gridLineBar)
     let initial0 = page.displayList(list: 0)
     let initial1 = page.displayList(list: 1)
     let revision = page.displayRevision
@@ -111,10 +111,10 @@ func drawerVelocityContentBlobChecks(
         page.detach()
         return
     }
-    let edgeArgb = SceneRectPacking.argb(palette.selectionEdge)
+    let edgeArgb = PaletteMath.argb(palette.selectionEdge)
     report.expect(
         pressed && page.displayRevision > settledRevision
-            && band.contains { $0.argb == SceneRectPacking.argb(palette.selectionFill) }
+            && band.contains { $0.argb == PaletteMath.argb(palette.selectionFill) }
             && band.filter({ $0.argb == edgeArgb }).count > 1,
         cppID: drawerVelocityProjectionID,
         message: "band gesture in scroll-stable px publishes the transient fill and dashed frame")
@@ -132,7 +132,7 @@ func drawerVelocityContentBlobChecks(
     report.expect(
         page.displayRevision == cleared + 1
             && recolored.contains {
-                $0.argb == SceneRectPacking.argb("#FF214365")
+                $0.argb == PaletteMath.argb("#FF214365")
             },
         cppID: drawerVelocityProjectionID,
         message: "palette content change publishes one revision and a decoded bar color")

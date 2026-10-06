@@ -79,8 +79,8 @@ func drawerAutomationDrawingContentChecks(
     _ = page.activateParameter(index: 0)
     let revision = page.displayRevision
     let probe = AutomationDisplayProbe(page)
-    let ink = SceneRectPacking.argb(page.palette.automationNodeInk)
-    let separator = SceneRectPacking.argb(page.palette.separator)
+    let ink = PaletteMath.argb(page.palette.automationNodeInk)
+    let separator = PaletteMath.argb(page.palette.separator)
     report.expect(
         probe.valid && probe.revision == revision && !probe.gridLines.isEmpty
             && probe.axis.contains {
@@ -121,8 +121,8 @@ func drawerAutomationDrawingContentChecks(
     page.selectRange(from: 12, to: 48)
     page.refreshFromDocument()
     let selected = AutomationDisplayProbe(page)
-    let fill = SceneRectPacking.argb(page.palette.selectionFill)
-    let edge = SceneRectPacking.argb(page.palette.selectionEdge)
+    let fill = PaletteMath.argb(page.palette.selectionFill)
+    let edge = PaletteMath.argb(page.palette.selectionEdge)
     let x0 = max(0, page.xForTick(12))
     let x1 = min(page.plotWidth, page.xForTick(48))
     report.expect(
@@ -168,7 +168,7 @@ func drawerAutomationDrawPreviewChecks(
         suite: suite, service: service, pan: [(24, 64), (72, 100), (120, 40)])
     fixture.activate(fixture.panLane)
     let page = fixture.page
-    let ink = SceneRectPacking.argb(page.palette.automationNodeInk)
+    let ink = PaletteMath.argb(page.palette.automationNodeInk)
     let coveredY = fixture.y(fixture.panLane, 100)
     func heldRun(atY y: Double, fromTick tick: Tick, _ probe: AutomationDisplayProbe) -> Bool {
         probe.statics.contains {

@@ -228,7 +228,7 @@ enum VelocityScene {
             context.map.levelCount > 1
         else { return }
         let stroke = input.geometry.gridLineStroke
-        let argb = SceneRectPacking.argb(input.palette.separator)
+        let argb = PaletteMath.argb(input.palette.separator)
         for level in 0..<(context.map.levelCount - 1) {
             rects.append(
                 DrawerStaticRect(

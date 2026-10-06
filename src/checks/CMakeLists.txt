@@ -31,7 +31,7 @@ endif()
 
 # Swift check sources need their own archive for CMake to emit compile rules.
 function(add_porydaw_check_lane name)
-    cmake_parse_arguments(PARSE_ARGV 1 CHECK "" "MODULE_NAME;MODULE_DIRECTORY"
+    cmake_parse_arguments(PARSE_ARGV 1 CHECK "NO_CORE_DEFAULTS" "MODULE_NAME;MODULE_DIRECTORY"
         "SOURCES;COMPILE_OPTIONS;LINK_LIBRARIES")
     add_library(${name} STATIC ${CHECK_SOURCES})
     set_target_properties(${name} PROPERTIES
@@ -52,6 +52,18 @@ function(add_porydaw_check_lane name)
             "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:${name},Swift_MODULE_DIRECTORY>>")
     endif()
     porydaw_enable_swift_batch_mode(${name})
+    if(NOT CHECK_NO_CORE_DEFAULTS)
+        target_compile_options(${name} PRIVATE
+            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
+            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
+            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/project/module.modulemap>"
+            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
+            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
+            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
+            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
+        )
+        target_link_libraries(${name} PRIVATE PorydawCore PorydawPlayback PorydawProject PorydawApp PorydawSample)
+    endif()
     target_compile_options(${name} PRIVATE ${CHECK_COMPILE_OPTIONS})
     target_link_libraries(${name} PRIVATE ${CHECK_LINK_LIBRARIES})
 endfunction()
@@ -61,6 +73,7 @@ function(add_porydaw_check name)
     cmake_parse_arguments(PARSE_ARGV 1 CHECK "" "SWIFT_LANE;MODULE_NAME;AUTOMOC"
         "SOURCES;SWIFT_SOURCES;SWIFT_COMPILE_OPTIONS;SWIFT_LINK_LIBRARIES")
     add_porydaw_check_lane(${CHECK_SWIFT_LANE}
+        NO_CORE_DEFAULTS
         MODULE_NAME "${CHECK_MODULE_NAME}"
         SOURCES ${CHECK_SWIFT_SOURCES}
         COMPILE_OPTIONS ${CHECK_SWIFT_COMPILE_OPTIONS}
@@ -107,8 +120,8 @@ porydaw_enable_project_warnings(porydaw_checks)
 
 if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
 # ---- Swift core-check lanes (parallel Swift modules, one DAG) ----
-# Lane DAG: support <- media <- edit <- roll <- pages <- project <- dispatch.
-# Suite files stay in place; lane membership is per-file (see SOURCES).
+# Graph: support: -; media: support; edit: support media; roll: support media edit; pages: support media edit roll; project: support media edit roll pages; dispatch: all six. Full chain, not siblings: @_exported re-exports are transitive, so loading any lane needs every re-exported upstream .swiftmodule present (removing roll/project media links fails with missing-required-module).
+# Suite files stay in place; lane membership is per-file (see SOURCES); cross-lane imports live in lanes/<Lane>Lane.swift.
     add_porydaw_check_lane(swift_core_check_support
         MODULE_NAME SwiftCoreCheckSupport
         MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_support"
@@ -122,15 +135,6 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/session_support.swift
         workspace/session_fixtures.swift
         support/NumericCheckSupport.swift
-        COMPILE_OPTIONS
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/project/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-        LINK_LIBRARIES PorydawCore PorydawPlayback PorydawProject PorydawApp PorydawSample
     )
     add_porydaw_check_lane(swift_core_check_media
         MODULE_NAME SwiftCoreCheckMedia
@@ -190,15 +194,8 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         audio/AudioAuditionChecks.swift
         playback/ResonanceSuppressionChecks.swift
         editcheck/ScaleChecks.swift
-        COMPILE_OPTIONS
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/project/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-        LINK_LIBRARIES PorydawCore PorydawPlayback PorydawProject PorydawApp PorydawSample swift_core_check_support
+        lanes/MediaLane.swift
+        LINK_LIBRARIES swift_core_check_support
     )
     add_porydaw_check_lane(swift_core_check_edit
         MODULE_NAME SwiftCoreCheckEdit
@@ -245,15 +242,8 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         automation/domain/xcmdRanges.swift
         automation/domain/automationFixture.swift
         automation/domain/stagedSnapshot.swift
-        COMPILE_OPTIONS
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/project/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-        LINK_LIBRARIES PorydawCore PorydawPlayback PorydawProject PorydawApp PorydawSample swift_core_check_support swift_core_check_media
+        lanes/EditLane.swift
+        LINK_LIBRARIES swift_core_check_support swift_core_check_media
     )
     add_porydaw_check_lane(swift_core_check_roll
         MODULE_NAME SwiftCoreCheckRoll
@@ -326,15 +316,8 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         nativegraphics/SharedPlayheadPureChecks.swift
         trackheaders/TrackHeadersChecks.swift
         trackheaders/TrackHeadersInputChecks.swift
-        COMPILE_OPTIONS
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/project/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-        LINK_LIBRARIES PorydawCore PorydawPlayback PorydawProject PorydawApp PorydawSample swift_core_check_support swift_core_check_media swift_core_check_edit
+        lanes/RollLane.swift
+        LINK_LIBRARIES swift_core_check_support swift_core_check_media swift_core_check_edit
     )
     add_porydaw_check_lane(swift_core_check_pages
         MODULE_NAME SwiftCoreCheckPages
@@ -408,15 +391,8 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         automation/AutomationPageChecks.swift
         automation/AutomationDrawingContentChecks.swift
         host/HostBehaviorChecks.swift
-        COMPILE_OPTIONS
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/project/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-        LINK_LIBRARIES PorydawCore PorydawPlayback PorydawProject PorydawApp PorydawSample swift_core_check_support swift_core_check_media swift_core_check_edit swift_core_check_roll
+        lanes/PagesLane.swift
+        LINK_LIBRARIES swift_core_check_support swift_core_check_media swift_core_check_edit swift_core_check_roll
     )
     add_porydaw_check_lane(swift_core_check_project
         MODULE_NAME SwiftCoreCheckProject
@@ -467,15 +443,8 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/bank_switching.swift
         workspace/sample_commit.swift
         workspace/session_catalog.swift
-        COMPILE_OPTIONS
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/project/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-        LINK_LIBRARIES PorydawCore PorydawPlayback PorydawProject PorydawApp PorydawSample swift_core_check_support swift_core_check_media swift_core_check_edit swift_core_check_roll swift_core_check_pages
+        lanes/ProjectLane.swift
+        LINK_LIBRARIES swift_core_check_support swift_core_check_media swift_core_check_edit swift_core_check_roll swift_core_check_pages
     )
     # Thin dispatcher: owns pdc_suite_run and re-exports nothing.
     add_porydaw_check_lane(swift_core_check
@@ -483,15 +452,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check"
         SOURCES
         support/corecheck/CoreCheckDispatch.swift
-        COMPILE_OPTIONS
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/project/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-        LINK_LIBRARIES PorydawCore PorydawPlayback PorydawProject PorydawApp PorydawSample swift_core_check_support swift_core_check_media swift_core_check_edit swift_core_check_roll swift_core_check_pages swift_core_check_project
+        LINK_LIBRARIES swift_core_check_support swift_core_check_media swift_core_check_edit swift_core_check_roll swift_core_check_pages swift_core_check_project
     )
     target_link_libraries(porydaw_checks PRIVATE swift_core_check swift_core_check_support swift_core_check_media swift_core_check_edit swift_core_check_roll swift_core_check_pages swift_core_check_project)
     target_sources(porydaw_checks PRIVATE

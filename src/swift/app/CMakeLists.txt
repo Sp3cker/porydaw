@@ -268,7 +268,6 @@ add_library(PorydawAppPresentation STATIC
     presentation/pitchbend/PitchBendKernel.swift
     presentation/roll/GridTypography.swift
     presentation/roll/NoteCommands.swift
-    presentation/roll/SceneRectPacking.swift
     presentation/shell/BundledFont.swift
     presentation/shell/EditorViewStatePreferences.swift
     presentation/shell/PreferencesStore.swift

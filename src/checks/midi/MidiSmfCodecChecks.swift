@@ -2,9 +2,6 @@ import Foundation
 import PorydawCore
 import PorydawCoreCheckNative
 
-// Lane-wide re-export so suite files share the support API without per-file imports.
-@_exported import SwiftCoreCheckSupport
-
 struct CodecObservation {
     var valid = false
     var encoded: [UInt8] = []
