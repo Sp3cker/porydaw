@@ -1,14 +1,15 @@
 import PorydawApp
+import PorydawAppPresentation
 import PorydawDocument
 
 @MainActor
-struct WorkspacePresenterFixture {
-    let playhead: SharedPlayheadPresenter
-    let guides: PlayheadGuidesPresenter
-    let eventList: EventListPresenter
-    let workspace: DocumentWorkspace
+public struct WorkspacePresenterFixture {
+    public let playhead: SharedPlayheadPresenter
+    public let guides: PlayheadGuidesPresenter
+    public let eventList: EventListPresenter
+    public let workspace: DocumentWorkspace
 
-    init(
+    public init(
         viewport: DocumentViewport, audio: NativeAudio,
         callbacks: DocumentWorkspace.Callbacks
     ) {

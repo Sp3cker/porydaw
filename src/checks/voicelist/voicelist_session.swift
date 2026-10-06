@@ -15,7 +15,7 @@ import PorydawPlayback
 // owner-driven flow (WorkspaceUi::rebuildVoicegroupPresentation).
 
 @MainActor
-internal func runVoiceListSessionChecks(_ report: CheckReport) {
+public func runVoiceListSessionChecks(_ report: CheckReport) {
     let bindingID = "vgsavecheck/VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks"
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
         report.fail(bindingID, "missing --swiftcore fixture root")

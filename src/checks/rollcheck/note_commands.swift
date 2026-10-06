@@ -5,7 +5,7 @@ import PorydawCore
 @testable import PorydawDocument
 
 @MainActor
-func runNoteCommandChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runNoteCommandChecks(_ report: CheckReport, viewport: DocumentViewport) {
     checkKeyboardDuplicateNotes(report, viewport: viewport)
     checkKeyboardDuplicatePrefersTimeSelection(report, viewport: viewport)
     checkRollNoteDragGuardsSharedCommands(report, viewport: viewport)

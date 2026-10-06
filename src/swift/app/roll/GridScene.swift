@@ -1,4 +1,5 @@
 import Foundation
+import PorydawAppPresentation
 import PorydawCore
 import PorydawDocument
 import QtBridge
@@ -268,11 +269,11 @@ public final class GridScene {
         if keyboardWidthKey != widthKey {
             keyboardWidthKey = widthKey
             keyboardChipWidths = input.keyboardNames?.enumerated().map { key, name in
-                t.chipAdvance(name.isEmpty ? GridScene.keyNames[key] : name)
+                t.chipAdvance(name.isEmpty ? midiKeyNames[key] : name)
             }
         }
         let name = input.keyboardNames?[input.hoverKey] ?? ""
-        let text = name.isEmpty ? GridScene.keyNames[input.hoverKey] : name
+        let text = name.isEmpty ? midiKeyNames[input.hoverKey] : name
         if hoverChipText != text { hoverChipText = text }
         let width =
             (keyboardChipWidths?[input.hoverKey]
@@ -294,6 +295,4 @@ public final class GridScene {
     static func isBlackKey(_ key: Int) -> Bool {
         [1, 3, 6, 8, 10].contains(key % 12)
     }
-
-    static let keyNames: [String] = (0..<128).map(midiKeyName)
 }

@@ -2,7 +2,7 @@ import Foundation
 import PorydawProject
 import PorydawProjectNative
 
-internal func runVoicegroupContextSuite(_ report: CheckReport) {
+public func runVoicegroupContextSuite(_ report: CheckReport) {
     fileIoChecks(report)
     runVoicegroupLoaderChecks(report)
     projectContextChecks(report)

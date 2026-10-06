@@ -123,7 +123,7 @@ private func exportCase(
 }
 
 @MainActor
-internal func runExportChecks(_ report: CheckReport) {
+public func runExportChecks(_ report: CheckReport) {
     let labels = ["mus_route101", "mus_route102"].filter {
         CheckEnvironment.fixturePath("sound/songs/midi/\($0).mid")
             .map { FileManager.default.fileExists(atPath: $0) } == true

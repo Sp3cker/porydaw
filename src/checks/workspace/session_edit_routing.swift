@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 import PorydawAppCommands
 import PorydawCore
 import PorydawCoreCheckNative

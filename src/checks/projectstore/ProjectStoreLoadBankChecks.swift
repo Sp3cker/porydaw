@@ -9,7 +9,7 @@ private func loadBankExpect(_ row: String, _ condition: Bool, _ report: CheckRep
     report.expect(condition, cppID: "projectstore-loadbank/\(row)", message: "\(row): \(detail)")
 }
 
-internal func runProjectStoreLoadBankSuite(_ report: CheckReport) {
+public func runProjectStoreLoadBankSuite(_ report: CheckReport) {
     loadBankProjectRows(report)
     loadBankMintedSymbols(report)
     loadBankGraftRow(report)

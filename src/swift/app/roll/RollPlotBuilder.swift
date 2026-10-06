@@ -1,5 +1,6 @@
 import Foundation
 import NativeDisplayList
+import PorydawAppPresentation
 import PorydawCore
 import PorydawDocument
 import QtBridge
@@ -397,7 +398,7 @@ struct RollPlotBuilder {
                             textOffset: 0, textLength: 0, argb: r.ink,
                             flags: flags, fontId: Self.fontNoteName,
                             pixelSize: UInt32(pixelSize)),
-                        text: GridScene.keyNames[p.pitch])
+                        text: midiKeyNames[p.pitch])
                     usedNameFont = true
                 }
             }

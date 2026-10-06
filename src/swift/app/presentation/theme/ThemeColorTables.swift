@@ -12,7 +12,7 @@ public enum ThemePreset: Int, CaseIterable, Sendable {
     }
 }
 
-enum ThemeColorTables {
+public enum ThemeColorTables {
     static let noteFillVanilla: [UInt32] = [
         // track 0 #CD5454
         0xFF8B_847E, 0xFF8C_847E, 0xFF8C_837D, 0xFF8D_837D, 0xFF8E_837D, 0xFF8E_837C, 0xFF8F_827C, 0xFF8F_827C,
@@ -889,7 +889,7 @@ enum ThemeColorTables {
         0xFF3C_5445, 0xFF27_3F31,  // track 14
         0xFF4B_4664, 0xFF39_3452,  // track 15
     ]
-    static let activityDimColors: [String] = [
+    public static let activityDimColors: [String] = [
         "#8F1722",
         "#29904B",
         "#651692",
@@ -926,21 +926,21 @@ enum ThemeColorTables {
         "#128154CD",
     ]
 
-    @inline(__always) static func noteFillTable(_ theme: ThemePreset) -> [UInt32] {
+    @inline(__always) public static func noteFillTable(_ theme: ThemePreset) -> [UInt32] {
         switch theme {
         case .vanilla: return noteFillVanilla
         case .darkNeutralHigh: return noteFillDarkNeutralHigh
         case .immaterial: return noteFillImmaterial
         }
     }
-    @inline(__always) static func ghostFillTable(_ theme: ThemePreset) -> [UInt32] {
+    @inline(__always) public static func ghostFillTable(_ theme: ThemePreset) -> [UInt32] {
         switch theme {
         case .vanilla: return ghostFillVanilla
         case .darkNeutralHigh: return ghostFillDarkNeutralHigh
         case .immaterial: return ghostFillImmaterial
         }
     }
-    @inline(__always) static func noteFill(_ theme: ThemePreset, track: Int, velocity: Int) -> UInt32 {
+    @inline(__always) public static func noteFill(_ theme: ThemePreset, track: Int, velocity: Int) -> UInt32 {
         let v = min(127, max(0, velocity))
         let t = PaletteMath.trackIdentityIndex(track)
         switch theme {
@@ -949,7 +949,7 @@ enum ThemeColorTables {
         case .immaterial: return noteFillImmaterial[t * 128 + v]
         }
     }
-    @inline(__always) static func ghostFill(_ theme: ThemePreset, track: Int, accidentalRow: Bool) -> UInt32 {
+    @inline(__always) public static func ghostFill(_ theme: ThemePreset, track: Int, accidentalRow: Bool) -> UInt32 {
         let t = PaletteMath.trackIdentityIndex(track)
         let i = t * 2 + (accidentalRow ? 1 : 0)
         switch theme {

@@ -264,35 +264,49 @@ private func loaderSameTones(_ a: UnsafePointer<ToneData>?, _ b: UnsafePointer<T
     }
 }
 
+/// Byte-compares the two fixed `voiceNames` tables in place; copying the
+/// 128×48 tuple out of the struct makes SIL diagnostics quadratic.
+private func loaderSameVoiceNames(
+    _ a: UnsafeMutablePointer<LoadedVoiceGroup>,
+    _ b: UnsafeMutablePointer<LoadedVoiceGroup>
+) -> Bool {
+    guard let offset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voiceNames) else {
+        preconditionFailure("LoadedVoiceGroup.voiceNames has no stored offset; header/build mismatch.")
+    }
+    let count = Int(VOICEGROUP_SIZE) * Int(VG_VOICE_NAME_LEN)
+    let left = UnsafeRawBufferPointer(start: UnsafeRawPointer(a) + offset, count: count)
+    let right = UnsafeRawBufferPointer(start: UnsafeRawPointer(b) + offset, count: count)
+    return left.elementsEqual(right)
+}
+
 private func loaderSameBank(
     _ a: UnsafeMutablePointer<LoadedVoiceGroup>,
     _ b: UnsafeMutablePointer<LoadedVoiceGroup>
 ) -> Bool {
-    let x = a.pointee, y = b.pointee
     guard
-        x.waveDataCount == y.waveDataCount && x.progWaveCount == y.progWaveCount && x.subGroupCount == y.subGroupCount
-            && x.keySplitTableCount == y.keySplitTableCount
+        a.pointee.waveDataCount == b.pointee.waveDataCount
+            && a.pointee.progWaveCount == b.pointee.progWaveCount
+            && a.pointee.subGroupCount == b.pointee.subGroupCount
+            && a.pointee.keySplitTableCount == b.pointee.keySplitTableCount
     else { return false }
-    let namesEqual = withUnsafeBytes(of: x.voiceNames) { left in
-        withUnsafeBytes(of: y.voiceNames) { right in left.elementsEqual(right) }
-    }
-    guard namesEqual else { return false }
-    for index in 0..<Int(x.waveDataCount) where !loaderSameWave(x.waveDatas[index], y.waveDatas[index]) { return false }
-    for index in 0..<Int(x.progWaveCount)
+    guard loaderSameVoiceNames(a, b) else { return false }
+    for index in 0..<Int(a.pointee.waveDataCount)
+    where !loaderSameWave(a.pointee.waveDatas[index], b.pointee.waveDatas[index]) { return false }
+    for index in 0..<Int(a.pointee.progWaveCount)
     where
-        loaderBytes(x.progWaves[index].map(UnsafeRawPointer.init), 16)
-        != loaderBytes(y.progWaves[index].map(UnsafeRawPointer.init), 16)
+        loaderBytes(a.pointee.progWaves[index].map(UnsafeRawPointer.init), 16)
+        != loaderBytes(b.pointee.progWaves[index].map(UnsafeRawPointer.init), 16)
     { return false }
-    for index in 0..<Int(x.keySplitTableCount)
+    for index in 0..<Int(a.pointee.keySplitTableCount)
     where
-        loaderBytes(x.keySplitTables[index].map(UnsafeRawPointer.init), 128)
-        != loaderBytes(y.keySplitTables[index].map(UnsafeRawPointer.init), 128)
+        loaderBytes(a.pointee.keySplitTables[index].map(UnsafeRawPointer.init), 128)
+        != loaderBytes(b.pointee.keySplitTables[index].map(UnsafeRawPointer.init), 128)
     { return false }
-    for index in 0..<Int(x.subGroupCount)
+    for index in 0..<Int(a.pointee.subGroupCount)
     where
         !loaderSameTones(
-            x.subGroups[index].map { UnsafePointer($0) },
-            y.subGroups[index].map { UnsafePointer($0) }, depth: 3)
+            a.pointee.subGroups[index].map { UnsafePointer($0) },
+            b.pointee.subGroups[index].map { UnsafePointer($0) }, depth: 3)
     {
         return false
     }

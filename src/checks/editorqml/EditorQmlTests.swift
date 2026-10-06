@@ -1,6 +1,7 @@
 import Foundation
 import Synchronization
 import PorydawApp
+import PorydawAppPresentation
 import PorydawAppAudio
 import PorydawAppCommands
 import PorydawCore
@@ -148,6 +149,7 @@ enum EditorQmlLane {
         qTestApp.setInputDir(EditorQmlPaths.testDirectory)
         qTestApp.setImportPath(EditorQmlPaths.qmlImportPath)
         qTestApp.setPluginsPath(EditorQmlPaths.pluginPath)
+        PorydawQmlTypes.aliasQmlModules()
         for type in PorydawQmlTypes.instantiable {
             type.registerQmlElement()
         }

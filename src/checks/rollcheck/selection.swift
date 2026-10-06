@@ -5,8 +5,13 @@ import PorydawCore
 @testable import PorydawDocument
 import QtBridge
 
+// Lane-wide re-export so suite files share the support/media/edit APIs without per-file imports.
+@_exported import SwiftCoreCheckSupport
+@_exported import SwiftCoreCheckMedia
+@_exported import SwiftCoreCheckEdit
+
 @MainActor
-func runSelectionChecks(_ report: CheckReport, viewport: DocumentViewport, fixtureRoot: String) {
+public func runSelectionChecks(_ report: CheckReport, viewport: DocumentViewport, fixtureRoot: String) {
     checkSelectionBandSweep(report, viewport: viewport)
     checkSelectionNonScaleMove(report, viewport: viewport)
     checkSelectionBandAudition(report, viewport: viewport)
@@ -19,7 +24,7 @@ func runSelectionChecks(_ report: CheckReport, viewport: DocumentViewport, fixtu
 }
 
 @MainActor
-func selectionRect(_ id: NoteID, grid: PianoGrid) -> SceneRect? {
+public func selectionRect(_ id: NoteID, grid: PianoGrid) -> SceneRect? {
     guard let note = grid.notes.first(where: { $0.noteId == id }) else { return nil }
     return rollNoteRect(note, grid: grid)
 }

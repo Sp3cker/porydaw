@@ -4,6 +4,7 @@ import PorydawDocument
 import PorydawPlaybackNative
 import QtBridge
 import PorydawAppAudio
+import PorydawAppPresentation
 
 @MainActor
 @QtBridgeable

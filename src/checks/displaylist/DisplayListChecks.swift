@@ -2,6 +2,7 @@ import Foundation
 import NativeDisplayList
 
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 
 // Round-trips DisplayListWriter output through the C decoder and rejects malformed buffers,
 // exercising both sides of the in-process C ABI contract field by field.
@@ -9,7 +10,7 @@ import NativeDisplayList
 private let displayListRoundTripID = "displaylist/DisplayListCheck::roundTrip"
 private let displayListRejectsID = "displaylist/DisplayListCheck::rejects"
 
-internal func runDisplayListChecks(_ report: CheckReport) {
+public func runDisplayListChecks(_ report: CheckReport) {
     displayListRoundTrip(report)
     displayListRejects(report)
 }

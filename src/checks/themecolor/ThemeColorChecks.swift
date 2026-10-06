@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 import QtBridge
 
 /// Ports the pure colour/resolver/contrast rules of
@@ -88,7 +89,7 @@ func themeRefContrast(_ first: QmlColor, _ second: String) -> Double {
 // MARK: - Suite entry
 
 @MainActor
-internal func runThemeColorChecks(_ report: CheckReport) {
+public func runThemeColorChecks(_ report: CheckReport) {
     themeColorMathChecks(report)
     themeModeAndContrastValidation(report)
     themePresetValueChecks(report)

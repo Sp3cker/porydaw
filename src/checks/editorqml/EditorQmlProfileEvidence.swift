@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppPresentation
 
 extension EditorQmlLane {
     /// One reference pane's production identity: the composition component the

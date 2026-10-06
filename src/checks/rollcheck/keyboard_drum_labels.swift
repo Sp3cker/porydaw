@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 @testable import PorydawAppCommands
 import PorydawCore
 @testable import PorydawDocument
@@ -8,8 +9,8 @@ import PorydawCore
 func checkDrumPadLabels(_ report: CheckReport) {
     let id = "timelinepan/TimelinePanTest::drumGutterLabelsAndHover"
     report.expect(
-        GridScene.keyNames.count == 128
-            && GridScene.keyNames.enumerated().allSatisfy { midiKeyName($0.offset) == $0.element },
+        midiKeyNames.count == 128
+            && midiKeyNames.enumerated().allSatisfy { midiKeyName($0.offset) == $0.element },
         cppID: id, message: "the cached MIDI key names cover all 128 pitches without label drift")
     guard let scratch = CheckEnvironment.fixtureRoot else {
         report.fail(id, "missing staged project fixtures")

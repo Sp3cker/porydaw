@@ -1,7 +1,7 @@
 import Foundation
 import PorydawProject
 
-internal func runProjectStoreReadSuite(_ report: CheckReport) {
+public func runProjectStoreReadSuite(_ report: CheckReport) {
     let id = "projectstore-reads"
     guard let fixtureRoot = CheckEnvironment.fixtureRoot,
         let tablePath = CheckEnvironment.fixturePath("sound/song_table.inc"),

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppPresentation
 import QtBridge
 import PorydawCore
 

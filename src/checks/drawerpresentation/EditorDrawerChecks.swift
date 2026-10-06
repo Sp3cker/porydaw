@@ -1,4 +1,5 @@
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 @testable import PorydawDocument
 import QtBridge
 
@@ -299,7 +300,7 @@ func drawerTypographyRoles(_ report: CheckReport) {
 }
 
 @MainActor
-func runEditorDrawerChecks(_ report: CheckReport) {
+public func runEditorDrawerChecks(_ report: CheckReport) {
     drawerLayoutCheckDrawerMetricsAndKinds(report)
     drawerLayoutCheckDrawerNoPageAndAvailability(report)
     drawerLayoutCheckDrawerStackingAndToggles(report)

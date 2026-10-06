@@ -15,7 +15,7 @@ internal let voicegroupEditingRowIDs: [String] = [
     "A096", "A097", "A098",
 ]
 
-internal func runVoicegroupEditingSuite(_ report: CheckReport) {
+public func runVoicegroupEditingSuite(_ report: CheckReport) {
     editingBlankSlot(report)
     editingSparseInsertions(report)
     for family in 0..<7 {

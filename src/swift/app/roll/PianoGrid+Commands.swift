@@ -3,6 +3,7 @@ import PorydawCore
 import PorydawDocument
 import QtBridge
 import PorydawAppCommands
+import PorydawAppPresentation
 
 @MainActor
 extension PianoGrid {

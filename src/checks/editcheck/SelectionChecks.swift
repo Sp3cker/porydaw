@@ -5,7 +5,7 @@ import PorydawCore
 @testable import PorydawDocument
 
 @MainActor
-func runClipboardSelectionChecks(
+public func runClipboardSelectionChecks(
     _ report: CheckReport, suite: DocumentSession,
     service: ProjectService
 ) {

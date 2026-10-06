@@ -17,7 +17,7 @@ final class GridCameraIntegrationCounters {
 }
 
 @MainActor
-func runEditorGridCameraChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runEditorGridCameraChecks(_ report: CheckReport, viewport: DocumentViewport) {
     let session = viewport.session
     let priorCamera = viewport.onCameraChangeDetailed
     let priorPlayback = session.onPlayback

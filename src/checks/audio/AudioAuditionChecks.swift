@@ -70,7 +70,7 @@ private final class AuditionCheckEngines {
     }
 }
 
-func runAudioAuditionChecks(_ report: CheckReport) {
+public func runAudioAuditionChecks(_ report: CheckReport) {
     checkHeldAndTimedAuditions(report)
     checkSampleAuditionSlots(report)
     checkWaveAuditionSlots(report)

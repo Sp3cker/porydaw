@@ -1,7 +1,7 @@
 import Foundation
 import PorydawSample
 
-internal func runRenderPipelineChecks(_ report: CheckReport) {
+public func runRenderPipelineChecks(_ report: CheckReport) {
     renderDeterminism(report)
     renderLoopGeometry(report)
     renderRiffPadding(report)

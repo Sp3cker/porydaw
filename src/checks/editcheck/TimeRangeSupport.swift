@@ -4,7 +4,7 @@ import PorydawCore
 import PorydawCoreCheckNative
 
 @MainActor
-func timeDocument(division: UInt16 = 24, trackBudget: Int = 3) -> SongDocument {
+public func timeDocument(division: UInt16 = 24, trackBudget: Int = 3) -> SongDocument {
     SongDocument(
         file: MidiFile(
             division: division,
@@ -15,11 +15,11 @@ func timeDocument(division: UInt16 = 24, trackBudget: Int = 3) -> SongDocument {
 }
 
 @MainActor
-func coreTimeBytes(_ document: SongDocument) -> [UInt8] {
+public func coreTimeBytes(_ document: SongDocument) -> [UInt8] {
     do { return try document.captureSave().bytes } catch { return [] }
 }
 
-func coreTimeXcmdTraffic(_ chunk: MidiChunk) -> [Xcmd.Event] {
+public func coreTimeXcmdTraffic(_ chunk: MidiChunk) -> [Xcmd.Event] {
     chunk.events.enumerated().compactMap { index, event in
         guard case let .channel(status, controller, value) = event.payload,
             status >> 4 == 0xB
@@ -30,15 +30,15 @@ func coreTimeXcmdTraffic(_ chunk: MidiChunk) -> [Xcmd.Event] {
     }
 }
 
-func noteShape(_ note: Note) -> String {
+public func noteShape(_ note: Note) -> String {
     "\(note.tick):\(note.pitch):\(note.duration)"
 }
 
-func coreTimePointShape(_ point: LanePoint) -> String {
+public func coreTimePointShape(_ point: LanePoint) -> String {
     "\(point.tick):\(point.value)"
 }
 
-func hasChannel(_ events: [MidiEvent], tick: Tick, type: UInt8, key: UInt8) -> Bool {
+public func hasChannel(_ events: [MidiEvent], tick: Tick, type: UInt8, key: UInt8) -> Bool {
     events.contains { event in
         guard event.tick == tick,
             case let .channel(status, data0, _) = event.payload
@@ -48,7 +48,7 @@ func hasChannel(_ events: [MidiEvent], tick: Tick, type: UInt8, key: UInt8) -> B
 }
 
 @MainActor
-func timeRangeDocument() throws -> SongDocument {
+public func timeRangeDocument() throws -> SongDocument {
     SongDocument(
         file: try MidiFile.decode(
             MidiFile(
@@ -62,7 +62,7 @@ func timeRangeDocument() throws -> SongDocument {
 }
 
 @MainActor
-func coreTimeNoteEndsBeforeOnsAt(
+public func coreTimeNoteEndsBeforeOnsAt(
     _ document: SongDocument, track: Int,
     tick: Tick
 ) -> Bool {

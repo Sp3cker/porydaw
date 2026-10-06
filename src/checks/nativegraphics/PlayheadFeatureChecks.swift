@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppPresentation
 import PorydawCore
 import PorydawDocument
 
@@ -454,7 +455,7 @@ private func checkPlayheadMiddlePan(
 }
 
 @MainActor
-func runPlayheadFeatureChecks(
+public func runPlayheadFeatureChecks(
     _ report: CheckReport, suite: DocumentSession,
     service: ProjectService
 ) {

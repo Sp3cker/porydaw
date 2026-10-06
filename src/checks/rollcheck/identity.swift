@@ -4,7 +4,7 @@ import PorydawCore
 @testable import PorydawDocument
 
 @MainActor
-func runIdentityChecks(_ report: CheckReport, session: DocumentSession) {
+public func runIdentityChecks(_ report: CheckReport, session: DocumentSession) {
     checkDuplicateNoteIdentity(report, session: session)
     checkOrdinaryProjection(report, fixture: session)
     checkRetainedCosmetics(report, fixture: session)

@@ -2,7 +2,7 @@ import Foundation
 import PorydawProject
 import PorydawProjectNative
 
-internal func runSynthCatalogSuite(_ report: CheckReport) {
+public func runSynthCatalogSuite(_ report: CheckReport) {
     synthSoundDataChecks(report)
     synthVoicegroupChecks(report)
     synthStagedFixtureChecks(report)

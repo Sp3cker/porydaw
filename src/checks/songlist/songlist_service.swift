@@ -16,7 +16,7 @@ import PorydawProject
 // fixtureRoot:) from the projectSession suite inside swift_core_check.
 
 @MainActor
-internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: String) {
+public func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: String) {
     runSongRegistrationChecks(report, fixtureRoot: fixtureRoot)
     runSongImportChecks(report, fixtureRoot: fixtureRoot)
     runMidiImportWizardChecks(report, fixtureRoot: fixtureRoot)

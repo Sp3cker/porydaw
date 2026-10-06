@@ -5,7 +5,7 @@ import PorydawCore
 import QtBridge
 
 @MainActor
-func runNoteRenderingChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runNoteRenderingChecks(_ report: CheckReport, viewport: DocumentViewport) {
     checkNoteBorders(report, viewport: viewport)
     checkIdentityNoteColors(report, viewport: viewport)
     checkNoteNameMode(report, viewport: viewport)

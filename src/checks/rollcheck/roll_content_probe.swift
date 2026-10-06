@@ -4,10 +4,11 @@ import PorydawCore
 import QtBridge
 
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 @testable import PorydawDocument
 
 /// Plot geometry decodes from displayList(0); note entries join decoded fills with grid domain state.
-@MainActor struct RollContentProbe {
+@MainActor public struct RollContentProbe {
     struct Note {
         let id: UInt64
         let tick: Int
@@ -330,11 +331,11 @@ import QtBridge
         return palette.indices.contains(index) ? palette[index] : nil
     }
 
-    static func argb(_ hex: String) -> UInt32 {
+    public static func argb(_ hex: String) -> UInt32 {
         SceneRectPacking.argb(hex)
     }
 
-    static func argb(_ color: QmlColor) -> UInt32 {
+    public static func argb(_ color: QmlColor) -> UInt32 {
         PaletteMath.argb(color)
     }
 }

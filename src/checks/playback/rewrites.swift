@@ -1,7 +1,7 @@
 import Foundation
 import PorydawCore
 
-internal func xcmdPairedRewrite(_ report: CheckReport) {
+public func xcmdPairedRewrite(_ report: CheckReport) {
     let events = [
         Xcmd.Event(index: 0, tick: 1, stream: 0, controller: 0x1E, value: 0x08),
         Xcmd.Event(index: 1, tick: 2, stream: 0, controller: 0x1D, value: 34),
@@ -192,7 +192,7 @@ private func xcmdPairSameTickPairsRetainActiveWriteOrder(_ report: CheckReport) 
         message: "same-tick writes did not retain canonical pair order")
 }
 
-internal func runXcmdRewritesOriginalChecks(_ report: CheckReport) {
+public func runXcmdRewritesOriginalChecks(_ report: CheckReport) {
     xcmdPairAddOnEmptyTrackEmitsCanonicalPair(report)
     xcmdPairAddUnderActiveStateEmitsFullPair(report)
     xcmdPairReplaceRebuildsEpochWithExplicitPair(report)

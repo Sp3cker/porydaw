@@ -2,20 +2,20 @@ import Foundation
 
 /// NSCondition protects every access to state; the unchecked boundary is
 /// confined to this one synchronous wait/signal box.
-internal final class ConditionBox<State: Sendable>: @unchecked Sendable {
+public final class ConditionBox<State: Sendable>: @unchecked Sendable {
     private let condition = NSCondition()
     private var state: State
 
-    init(_ state: State) { self.state = state }
+    public init(_ state: State) { self.state = state }
 
-    func update(_ body: (inout State) -> Void) {
+    public func update(_ body: (inout State) -> Void) {
         condition.lock()
         body(&state)
         condition.signal()
         condition.unlock()
     }
 
-    func wait(while pending: (State) -> Bool, timeout: TimeInterval) -> State {
+    public func wait(while pending: (State) -> Bool, timeout: TimeInterval) -> State {
         condition.lock()
         defer { condition.unlock() }
         let deadline = Date().addingTimeInterval(timeout)
@@ -24,7 +24,7 @@ internal final class ConditionBox<State: Sendable>: @unchecked Sendable {
     }
 }
 
-internal func awaitValue<Value: Sendable>(
+public func awaitValue<Value: Sendable>(
     _ operation: @escaping @Sendable () async throws -> Value
 ) -> Result<Value, Error>? {
     let result = ConditionBox<Result<Value, Error>?>(nil)
@@ -49,11 +49,11 @@ internal func awaitValue<Value: Sendable>(
 /// editingRichSource's copy. The `stagedFile` guard names the staged file the
 /// suite needs; suites that report their own missing-fixture errors keep their
 /// guards and only route the copy through here.
-internal enum TempProjectCopyError: Error {
+public enum TempProjectCopyError: Error {
     case missingStagedProject(String)
 }
 
-internal func withTempProjectCopy(
+public func withTempProjectCopy(
     prefix: String,
     stagedFile: String = "sound/voicegroups/fixture_rich.inc",
     _ body: (URL) throws -> Void
@@ -74,7 +74,7 @@ internal func withTempProjectCopy(
 /// MainActor variant for suites whose fixture body awaits MainActor services
 /// (ProjectService opens in ExportChecks and BankLeasesChecks).
 @MainActor
-internal func withTempProjectCopy(
+public func withTempProjectCopy(
     prefix: String,
     stagedFile: String = "sound/voicegroups/fixture_rich.inc",
     _ body: @MainActor (URL) throws -> Void

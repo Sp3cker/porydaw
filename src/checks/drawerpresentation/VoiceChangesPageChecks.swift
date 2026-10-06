@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppPresentation
 import PorydawCore
 import PorydawDocument
 
@@ -152,7 +153,7 @@ struct drawerVoiceVoiceChangesFixture {
 // MARK: - Suite entry
 
 @MainActor
-internal func runVoiceChangesPageChecks(
+public func runVoiceChangesPageChecks(
     _ report: CheckReport, session _: DocumentSession,
     service _: ProjectService
 ) {

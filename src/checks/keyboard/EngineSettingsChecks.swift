@@ -3,7 +3,7 @@ import PorydawCore
 import PorydawPlaybackNative
 
 @MainActor
-internal func runEngineSettingsChecks(_ report: CheckReport) {
+public func runEngineSettingsChecks(_ report: CheckReport) {
     let saved = EngineSettings(
         mixer: "sappy", maxPcmChannels: "8",
         mixRate: "21024", analogFilter: "true")

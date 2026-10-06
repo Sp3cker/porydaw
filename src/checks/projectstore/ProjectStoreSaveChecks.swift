@@ -16,7 +16,7 @@ private func sameSaveSlots(_ lhs: [VoicegroupSlotView], _ rhs: [VoicegroupSlotVi
         }
 }
 
-internal func runProjectStoreSaveSuite(_ report: CheckReport) {
+public func runProjectStoreSaveSuite(_ report: CheckReport) {
     do {
         try withTempProjectCopy(prefix: "projectstore-savebank") { root in
             let store = ProjectStore(projectRoot: root)

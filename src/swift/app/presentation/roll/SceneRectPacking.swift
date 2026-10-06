@@ -2,16 +2,16 @@ import Foundation
 import QtBridge
 
 @MainActor
-enum SceneRectPacking {
+public enum SceneRectPacking {
     static let unparseableColor: UInt32 = 0xFFFF_FFFF
 
-    @inline(__always) static func argb(_ fillColor: QmlColor) -> UInt32 {
+    @inline(__always) public static func argb(_ fillColor: QmlColor) -> UInt32 {
         PaletteMath.argb(fillColor)
     }
 
     // Strict "#RRGGBB" -> 0xFFRRGGBB / "#AARRGGBB" -> 0xAARRGGBB, no allocation.
     // "" still yields 0xFF000000 and all-zero still yields unparseableColor.
-    @inline(__always) static func argb(_ fillColor: String) -> UInt32 {
+    @inline(__always) public static func argb(_ fillColor: String) -> UInt32 {
         if fillColor.isEmpty { return 0xFF00_0000 }
         var bytes = fillColor.utf8.makeIterator()
         guard bytes.next() == UInt8(ascii: "#") else { return unparseableColor }

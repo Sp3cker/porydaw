@@ -2,6 +2,7 @@
 // Hands off to refreshNotes()/sceneInput() for scene projection and publication.
 import Foundation
 import PorydawAppCommands
+import PorydawAppPresentation
 import PorydawCore
 import PorydawDocument
 import QtBridge

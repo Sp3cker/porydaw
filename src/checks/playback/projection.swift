@@ -1,7 +1,7 @@
 import Foundation
 import PorydawCore
 
-internal func xcmdPairedProjection(_ report: CheckReport) {
+public func xcmdPairedProjection(_ report: CheckReport) {
     let events = [
         Xcmd.Event(index: 9, tick: 1, stream: 0, controller: 0x1E, value: 0x08),
         Xcmd.Event(index: 2, tick: 2, stream: 0, controller: 0x1D, value: 34),
@@ -103,7 +103,7 @@ private func xcmdPairConsumedIsSortedDedupIndexSet(_ report: CheckReport) {
         message: "protocol consumption was not a sorted raw-index set")
 }
 
-internal func runXcmdProjectionOriginalChecks(_ report: CheckReport) {
+public func runXcmdProjectionOriginalChecks(_ report: CheckReport) {
     xcmdPairSharedSelectorServesTwoCompletions(report)
     xcmdPairUnknownSelectorEpochStaysOpaque(report)
     xcmdPairDanglingKnownSelectorProjectsOpaque(report)

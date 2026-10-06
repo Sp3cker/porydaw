@@ -11,7 +11,7 @@ import PorydawProject
 // A045, A046, A047, A048, A049: saved-boundary count/value/identity and undo;
 // A050, A051, A052: cancelling-merge count/value/identity.
 
-internal func runProjectIdentitySuite(_ report: CheckReport) {
+public func runProjectIdentitySuite(_ report: CheckReport) {
     songName(report)
     songLabelGrammar(report)
     songRegistrationLabels(report)

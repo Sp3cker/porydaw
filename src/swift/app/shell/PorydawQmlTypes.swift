@@ -1,9 +1,16 @@
+import PorydawAppPresentation
 import PorydawDocument
 import QtBridge
 
 /// The QtBridge types registered by both the application and its build-time tooling.
 @MainActor
 public enum PorydawQmlTypes {
+    /// QtBridge keys QML URIs by Swift module; presentation types belong to the app's module.
+    /// Call before registering any type.
+    public static func aliasQmlModules() {
+        QMetaObjectBuilder.qmlModuleAliases["PorydawAppPresentation"] = "PorydawApp"
+    }
+
     /// Types that QML may construct, in application registration order.
     public static let instantiable: [QmlInstantiable.Type] = [ShellPresenter.self, ApplicationSession.self]
 

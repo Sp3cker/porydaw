@@ -146,12 +146,6 @@ public final class PreferencesStore: QmlInstantiableStatus {
         set(key, strings)
     }
 
-    func data(_ key: String) -> Data? { value(key) as? Data }
-
-    func setData(_ key: String, _ bytes: Data) {
-        set(key, bytes)
-    }
-
     private func set(_ key: String, _ value: Any?) {
         if let staged = Self.stagedFile {
             staged.values[key] = value
@@ -170,6 +164,15 @@ public final class PreferencesStore: QmlInstantiableStatus {
             preconditionFailure("Could not create preferences domain \(applicationID)")
         }
         return defaults
+    }
+}
+
+/// Swift-only accessors: `Data` has no QML projection, so they stay outside the registration pass.
+extension PreferencesStore {
+    public func data(_ key: String) -> Data? { value(key) as? Data }
+
+    public func setData(_ key: String, _ bytes: Data) {
+        set(key, bytes)
     }
 }
 

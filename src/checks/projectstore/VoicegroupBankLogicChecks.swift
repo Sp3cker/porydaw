@@ -1,7 +1,7 @@
 import Foundation
 import PorydawProject
 
-internal func runVoicegroupBankLogicSuite(_ report: CheckReport) {
+public func runVoicegroupBankLogicSuite(_ report: CheckReport) {
     bankLogicConflicts(report)
     bankLogicMaterialization(report)
     bankLogicSaveAndFence(report)

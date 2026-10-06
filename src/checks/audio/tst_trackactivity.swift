@@ -2,7 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppAudio
 
-func runTrackActivityChecks(_ report: CheckReport) {
+public func runTrackActivityChecks(_ report: CheckReport) {
     let zero = Array(repeating: AudioActivityLevel(), count: 16)
     func dark(_ value: TrackActivity.Intensity) -> Bool { value.left == 0 && value.right == 0 }
     var activity = TrackActivity()

@@ -2,7 +2,7 @@ import Foundation
 import PorydawCore
 
 @MainActor
-internal func xcmdPairedReconciliation(_ report: CheckReport) {
+public func xcmdPairedReconciliation(_ report: CheckReport) {
     let opaque = [
         Xcmd.Event(index: 0, tick: 1, stream: 0, controller: 0x1E, value: 0x2A, channel: 3),
         Xcmd.Event(index: 1, tick: 2, stream: 0, controller: 0x1D, value: 0x7F, channel: 3),
@@ -315,7 +315,7 @@ private func xcmdPairRelocatedEpochVacatesItsSpan(_ report: CheckReport) {
         message: "move onto a fully relocated opaque epoch's span was not accepted")
 }
 
-internal func runXcmdRawreconciliationOriginalChecks(_ report: CheckReport) {
+public func runXcmdRawreconciliationOriginalChecks(_ report: CheckReport) {
     xcmdPairWholeOpaqueRelocationIsByteExact(report)
     xcmdPairPartialOpaqueOperationsRejected(report)
     xcmdPairConflictingDuplicateRawOpsRejected(report)

@@ -1,12 +1,13 @@
 import Foundation
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 import PorydawAppAudio
 import PorydawCore
 @testable import PorydawDocument
 import PorydawPlayback
 
 @MainActor
-internal func runHostBehaviorChecks(
+public func runHostBehaviorChecks(
     _ report: CheckReport, session: DocumentSession,
     service: ProjectService, fixtureRoot: String
 ) {

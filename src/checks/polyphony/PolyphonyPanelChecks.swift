@@ -6,7 +6,7 @@ import PorydawCore
 import PorydawPlaybackNative
 
 @MainActor
-func runPolyphonyPanelChecks(_ report: CheckReport) {
+public func runPolyphonyPanelChecks(_ report: CheckReport) {
     let id = "swiftcore/PolyphonyPanel::snapshotProjection"
     let panel = PolyphonyPanelPresenter()
     panel.setVisible(showing: true)

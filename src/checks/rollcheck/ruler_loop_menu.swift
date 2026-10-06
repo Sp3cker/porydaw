@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 import PorydawCore
 @testable import PorydawDocument
 import PorydawAppCommands
@@ -9,7 +10,7 @@ import PorydawAppCommands
 let rulerSeedTick: Tick = 88 - (88 % 6)
 
 @MainActor
-func runRulerLoopMenuChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runRulerLoopMenuChecks(_ report: CheckReport, viewport: DocumentViewport) {
     checkRulerLoopSetAndUndo(report, viewport: viewport)
     checkRulerLoopBuildTotality(report, session: viewport.session)
     checkRulerSignatureRemoval(report, viewport: viewport)

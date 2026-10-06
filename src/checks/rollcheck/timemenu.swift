@@ -1,11 +1,12 @@
 import Foundation
 import PorydawApp
+import PorydawAppPresentation
 import PorydawAppCommands
 import PorydawCore
 import PorydawDocument
 
 @MainActor
-func runTimemenuChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runTimemenuChecks(_ report: CheckReport, viewport: DocumentViewport) {
     checkTimeMenuInsertTime(report, session: viewport.session)
     checkTimeSelectionMenuCommands(report, viewport: viewport)
     checkTimeMenuHalfOpenBoundary(report, viewport: viewport)

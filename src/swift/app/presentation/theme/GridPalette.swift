@@ -352,7 +352,7 @@ public final class GridPalette {
                 dark: PaletteMath.argb(keyboardBlack), fallbackLight: PaletteMath.argb(noteLabelAaLight),
                 fallbackDark: PaletteMath.argb(noteLabelAaDark)))
     }
-    @QtIgnored func noteFillArgb(track: Int, velocity: Int) -> UInt32 {
+    @QtIgnored public func noteFillArgb(track: Int, velocity: Int) -> UInt32 {
         ThemeColorTables.noteFill(theme, track: track, velocity: velocity)
     }
     public func noteFill(track: Int, velocity: Int) -> String {

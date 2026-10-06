@@ -4,7 +4,7 @@ import PorydawCore
 @testable import PorydawDocument
 
 @MainActor
-func runRemapChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runRemapChecks(_ report: CheckReport, viewport: DocumentViewport) {
     let session = viewport.session
     let document = session.document
     let originalState = document.state

@@ -4,7 +4,7 @@ import Foundation
 import PorydawCore
 import PorydawPlaybackNative
 
-func runResonanceSuppressionChecks(_ report: CheckReport) {
+public func runResonanceSuppressionChecks(_ report: CheckReport) {
     resonanceLawChecks(report)
     resonanceTimingChecks(report)
     resonanceTransitionChecks(report)
@@ -14,7 +14,7 @@ func runResonanceSuppressionChecks(_ report: CheckReport) {
 // fresh rig with the native AuditionVoicegroup release254 and the original
 // note-song velocity127, so the shared-sequence checkControllerSuppression is
 // not the only evidence for case independence.
-func runSuppressionStartStopChecks(_ report: CheckReport) {
+public func runSuppressionStartStopChecks(_ report: CheckReport) {
     do {
         try checkSuppressionSongStartUnity(report)
         try checkSuppressionPausePreservesAdaptation(report)
@@ -25,7 +25,7 @@ func runSuppressionStartStopChecks(_ report: CheckReport) {
     }
 }
 
-func runSuppressionReplacementChecks(_ report: CheckReport) {
+public func runSuppressionReplacementChecks(_ report: CheckReport) {
     do {
         try checkSuppressionSecondSongStart(report)
         try checkSuppressionResumeParksSequencer(report)

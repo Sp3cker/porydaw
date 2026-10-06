@@ -5,7 +5,7 @@ import PorydawCore
 import QtBridge
 
 @MainActor
-func runResizeChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runResizeChecks(_ report: CheckReport, viewport: DocumentViewport) {
     let session = viewport.session
     let originalCamera = viewport.camera.snapshot
     let originalSelection = session.selectedNoteOrder

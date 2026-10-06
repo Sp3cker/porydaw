@@ -2,7 +2,7 @@ import Foundation
 import PorydawCore
 import PorydawProject
 
-internal func runSongCatalogSuite(_ report: CheckReport) {
+public func runSongCatalogSuite(_ report: CheckReport) {
     songCatalogDiscovery(report)
     songCatalogFallbacks(report)
     songCatalogCandidates(report)

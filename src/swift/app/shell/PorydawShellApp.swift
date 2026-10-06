@@ -22,6 +22,7 @@ struct PorydawShellApp: QApp {
 
     init() {
         pd_startup_trace_mark("app-init")
+        PorydawQmlTypes.aliasQmlModules()
         #if !canImport(Darwin)
             _createExecutors(factory: PorydawExecutorFactory.self)
         #endif

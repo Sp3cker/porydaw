@@ -32,7 +32,7 @@ private final class ParallelActorResults: Sendable {
     }
 }
 
-internal func runProjectStoreActorSuite(_ report: CheckReport) {
+public func runProjectStoreActorSuite(_ report: CheckReport) {
     let projectRoot = FileManager.default.temporaryDirectory
         .appendingPathComponent("projectstore-actor-\(UUID().uuidString)", isDirectory: true)
     defer { try? FileManager.default.removeItem(at: projectRoot) }

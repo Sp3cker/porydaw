@@ -3,7 +3,7 @@ import PorydawCore
 import PorydawDocument
 
 @MainActor
-func makeSyntheticSession(
+public func makeSyntheticSession(
     suite: DocumentSession, service: ProjectService, file: MidiFile,
     sampleRate: Double = 48_000, config: SongConfig? = nil
 ) -> DocumentSession {

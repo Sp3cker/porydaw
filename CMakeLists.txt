@@ -414,7 +414,7 @@ endforeach()
 target_link_libraries(porydaw_app PUBLIC porydaw_native_host porydaw_icons porydaw_style)
 # Swift modules import native headers through their module maps; retain the
 # archive dependency without inheriting native compilation settings.
-foreach(swift_target IN ITEMS PorydawApp PorydawAppCommands PorydawAppAudio PorydawSample)
+foreach(swift_target IN ITEMS PorydawApp PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppPresentation PorydawSample)
     target_link_libraries(${swift_target} PRIVATE "$<LINK_ONLY:porydaw_native_host>")
 endforeach()
 if(WIN32)
@@ -460,7 +460,7 @@ if(WIN32)
     )
 endif()
 porydaw_link_linux_swift_runtime(porydaw_qmltypes
-    PorydawApp QtBridge PorydawAppCommands PorydawAppAudio PorydawAppEventList
+    PorydawApp QtBridge PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppPresentation
     PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
 set(porydaw_qmltypes_files
     "${porydaw_qmltypes_import_path}/PorydawApp/qmldir"
@@ -574,7 +574,7 @@ if(WIN32)
         "$<TARGET_FILE_DIR:BinaryParsing>")
 endif()
 porydaw_link_linux_swift_runtime(porydaw
-    porydaw_shell_entry PorydawApp QtBridge PorydawProject PorydawPlayback PorydawCore
+    porydaw_shell_entry PorydawApp PorydawAppPresentation QtBridge PorydawProject PorydawPlayback PorydawCore
     PorydawSample BinaryParsing)
 
 if(PORYDAW_BUILD_CHECKS)

@@ -3,6 +3,7 @@ import PorydawCore
 import PorydawDocument
 import QtBridge
 import PorydawAppCommands
+import PorydawAppPresentation
 
 /// Published constants, mirroring the production automation pane.
 public enum AutomationPagePolicy {

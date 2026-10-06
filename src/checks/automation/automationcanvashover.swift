@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 @testable import PorydawAppCommands
 import PorydawCore
 @testable import PorydawDocument

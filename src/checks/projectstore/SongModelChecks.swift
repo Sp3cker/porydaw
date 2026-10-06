@@ -1,7 +1,7 @@
 import PorydawCore
 import PorydawProject
 
-internal func runSongModelSuite(_ report: CheckReport) {
+public func runSongModelSuite(_ report: CheckReport) {
     let parseID = "swiftproject/SongModelChecks::parsesRawFlags"
     let raw = ["-Lfoo", "-G_first", "-vabc", "-G_final", "-R", "-Pbad", "-e", "-X", "-N", "-Zunknown", "-v080"]
     let parsed = SongFlags.fromRaw(raw)

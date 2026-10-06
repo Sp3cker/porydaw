@@ -7,7 +7,7 @@ import PorydawDocument
 // Keep the no-fold legacy probes and exercise Fold against a live session,
 // its selected-track projection, and the production grid command path.
 @MainActor
-func runScaleEditingChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runScaleEditingChecks(_ report: CheckReport, viewport: DocumentViewport) {
     let session = viewport.session
     let document = session.document
     let grid = PianoGrid(viewport: viewport)

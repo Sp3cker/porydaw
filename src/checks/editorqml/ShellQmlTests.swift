@@ -8,6 +8,7 @@ import QtBridge
 import QtBridgeCpp
 
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 @testable import PorydawAppAudio
 
 /// Hosts the actual production ShellWindow through Qt Quick Test. Each entry
@@ -68,6 +69,7 @@ enum ShellQmlLane {
         app.setInputDir(EditorQmlPaths.testDirectory)
         app.setImportPath(EditorQmlPaths.qmlImportPath)
         app.setPluginsPath(EditorQmlPaths.pluginPath)
+        PorydawQmlTypes.aliasQmlModules()
         for type in PorydawQmlTypes.instantiable {
             type.registerQmlElement()
         }

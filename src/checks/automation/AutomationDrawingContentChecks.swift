@@ -3,6 +3,7 @@ import NativeDisplayList
 import PorydawCore
 
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 @testable import PorydawDocument
 
 /// Viewport-space rects decoded from one AutomationPage display list, through

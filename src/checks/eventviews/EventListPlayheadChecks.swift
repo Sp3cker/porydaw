@@ -156,7 +156,7 @@ internal func playheadRowOracle(_ rows: [EventListRow], tick: Double) -> Int {
 }
 
 @MainActor
-internal func runEventListPlayheadChecks(
+public func runEventListPlayheadChecks(
     _ report: CheckReport, session suite: DocumentSession,
     service: ProjectService
 ) {

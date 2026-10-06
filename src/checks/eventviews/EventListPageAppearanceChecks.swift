@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 import QtBridge
 import PorydawCore
 @testable import PorydawDocument

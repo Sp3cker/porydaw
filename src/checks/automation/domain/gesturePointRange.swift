@@ -7,7 +7,7 @@ import PorydawCore
 // Entry order remains in AutomationPageChecks.swift.
 
 @MainActor
-func drawerAutomationPointRangeAndPencilReplacements(
+public func drawerAutomationPointRangeAndPencilReplacements(
     _ report: CheckReport, suite: DocumentSession,
     service: ProjectService
 ) {
@@ -391,7 +391,7 @@ let drawerAutomationEmptyPencilID = "swiftcore/AutomationPage::emptyLanePencilCo
 // The empty-lane pencil stroke commits its own one-edit byte/undo comparison.
 // Modulation opens on 0-16, so the stroke first selects the 127 display range.
 @MainActor
-func drawerAutomationEmptyLanePencilCommit(
+public func drawerAutomationEmptyLanePencilCommit(
     _ report: CheckReport, suite: DocumentSession,
     service: ProjectService
 ) {

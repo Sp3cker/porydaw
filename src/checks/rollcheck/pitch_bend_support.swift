@@ -83,7 +83,7 @@ func pitchBendCanvasPoint(
 }
 
 @MainActor
-func pitchBendStroke(
+public func pitchBendStroke(
     _ lane: PitchBendLane, x0f: Double, y0f: Double,
     x1f: Double, y1f: Double, modifiers: Int = 0
 ) {

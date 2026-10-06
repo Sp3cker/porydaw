@@ -86,7 +86,7 @@ private func xcmdPairUnknownRemoveIdentitiesRejected(_ report: CheckReport) {
         message: "removing a stale identity was not rejected")
 }
 
-internal func runXcmdOpaqueOriginalChecks(_ report: CheckReport) {
+public func runXcmdOpaqueOriginalChecks(_ report: CheckReport) {
     xcmdPairWriteAfterOpaqueEpochLeavesItUntouched(report)
     xcmdPairWriteInsideOpaqueEpochRejected(report)
     xcmdPairWriteInsideStrayRunSpanRejected(report)

@@ -7,11 +7,11 @@ public enum DrawerQtButton {
     public static let middle = 4
 }
 
-enum DrawerPan {
-    static let dragDistanceSeed: Double = 10
+public enum DrawerPan {
+    public static let dragDistanceSeed: Double = 10
 
     @MainActor
-    static func moved(x: Double, previousX: inout Double, viewport: DocumentViewport?) {
+    public static func moved(x: Double, previousX: inout Double, viewport: DocumentViewport?) {
         let delta = x - previousX
         previousX = x
         if delta != 0 {
@@ -20,6 +20,6 @@ enum DrawerPan {
     }
 }
 
-func manhattanExceeds(press: (x: Double, y: Double), x: Double, y: Double, threshold: Double) -> Bool {
+public func manhattanExceeds(press: (x: Double, y: Double), x: Double, y: Double, threshold: Double) -> Bool {
     abs(x - press.x) + abs(y - press.y) >= threshold
 }

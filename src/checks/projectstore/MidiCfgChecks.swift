@@ -1,7 +1,7 @@
 import Foundation
 import PorydawProject
 
-internal func runMidiCfgSuite(_ report: CheckReport) {
+public func runMidiCfgSuite(_ report: CheckReport) {
     midiCfgParsing(report)
     midiCfgByteConservation(report)
     midiCfgCreationAndRouting(report)

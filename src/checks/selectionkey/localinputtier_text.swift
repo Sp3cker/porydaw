@@ -1,10 +1,11 @@
 import PorydawApp
+import PorydawAppPresentation
 import PorydawAppCommands
 import PorydawCore
 import PorydawDocument
 
 @MainActor
-func drawerOriginalNumericPromptTransaction(
+public func drawerOriginalNumericPromptTransaction(
     _ report: CheckReport, suite: DocumentSession,
     service: ProjectService
 ) {

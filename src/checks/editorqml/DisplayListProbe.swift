@@ -3,6 +3,7 @@ import NativeDisplayList
 import QtBridge
 
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 
 @MainActor
 @QtBridgeable

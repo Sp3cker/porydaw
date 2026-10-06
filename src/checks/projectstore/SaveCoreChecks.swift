@@ -3,7 +3,7 @@ import PorydawProject
 
 internal let saveCoreRowIDs: [String] = ["A079"]
 
-internal func runSaveCoreSuite(_ report: CheckReport) {
+public func runSaveCoreSuite(_ report: CheckReport) {
     saveCoreBankRoundTrip(report)
     saveCoreSourceSaveAndPreview(report)
     saveCoreSectionRefusals(report)

@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 import PorydawCore
 @testable import PorydawDocument
 
@@ -33,10 +34,6 @@ private let pollingID = "swiftcore/SharedPlayhead::pollingLifecycle"
 private let compoundCommandID = "swiftcore/SharedPlayhead::compoundCommandPublication"
 
 let mappingTolerance = 1e-6
-
-func near(_ lhs: Double, _ rhs: Double, tolerance: Double = 1e-9) -> Bool {
-    abs(lhs - rhs) <= tolerance
-}
 
 // MARK: - Synthetic tempo fixture
 
@@ -157,7 +154,7 @@ private func pumpSharedPlayheadRunLoop(_ seconds: TimeInterval) {
 }
 
 @MainActor
-func runSharedPlayheadChecks(
+public func runSharedPlayheadChecks(
     _ report: CheckReport, viewport: DocumentViewport,
     service: ProjectService
 ) {

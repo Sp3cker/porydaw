@@ -2,7 +2,7 @@ import Foundation
 import PorydawCore
 
 @MainActor
-func runEventEditsSuite(_ report: CheckReport) {
+public func runEventEditsSuite(_ report: CheckReport) {
     trackEditing(report)
     trackNameRoles(report)
     rawTempoAndSignatureEditing(report)
@@ -33,7 +33,7 @@ func runEventEditsSuite(_ report: CheckReport) {
 }
 
 @MainActor
-func runXcmdEditsSuite(_ report: CheckReport) {
+public func runXcmdEditsSuite(_ report: CheckReport) {
     xcmdPairedProjection(report)
     runXcmdProjectionOriginalChecks(report)
     xcmdPairedRewrite(report)
@@ -45,7 +45,7 @@ func runXcmdEditsSuite(_ report: CheckReport) {
     runXcmdExportOriginalChecks(report)
 }
 
-func runMidiImportSuite(_ report: CheckReport) {
+public func runMidiImportSuite(_ report: CheckReport) {
     importAnalysis(report)
     importSmfReportRows(report)
     importTransforms(report)
@@ -53,7 +53,7 @@ func runMidiImportSuite(_ report: CheckReport) {
     importProjectRoundtrip(report)
 }
 
-func chunksSortedByTick(_ file: MidiFile) -> Bool {
+public func chunksSortedByTick(_ file: MidiFile) -> Bool {
     file.chunks.allSatisfy { chunk in
         zip(chunk.events, chunk.events.dropFirst()).allSatisfy { $0.0.tick <= $0.1.tick }
     }

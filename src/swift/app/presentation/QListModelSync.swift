@@ -3,7 +3,7 @@ import QtBridge
 /// Publish changed rows without resetting model identity or rewriting matches;
 /// a shared prefix and suffix stay put, so one inserted row moves no delegate.
 @MainActor
-func syncModel<Element: QVariantGettable>(
+public func syncModel<Element: QVariantGettable>(
     _ model: QListModel<Element>, _ values: [Element],
     matches: (Element, Element) -> Bool
 ) {
@@ -36,7 +36,7 @@ func syncModel<Element: QVariantGettable>(
 /// Retained rows: existing row objects update in place, new values append, extras drop.
 /// `update` returns whether the row changed; changed rows republish synchronously.
 @MainActor
-func syncRetained<Row: QVariantGettable, Value>(
+public func syncRetained<Row: QVariantGettable, Value>(
     _ model: QListModel<Row>, _ values: some Collection<Value>,
     make: (Value) -> Row, update: (Row, Value) -> Bool
 ) {
@@ -58,7 +58,7 @@ func syncRetained<Row: QVariantGettable, Value>(
 extension QObjectBuildable where Self: AnyObject {
     /// Writes a published property only when it changes, naming it once.
     @MainActor
-    func publish<Value: Equatable>(_ keyPath: ReferenceWritableKeyPath<Self, Value>, _ value: Value) {
+    public func publish<Value: Equatable>(_ keyPath: ReferenceWritableKeyPath<Self, Value>, _ value: Value) {
         if self[keyPath: keyPath] != value { self[keyPath: keyPath] = value }
     }
 }

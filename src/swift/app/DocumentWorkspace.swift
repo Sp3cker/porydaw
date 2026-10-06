@@ -2,6 +2,7 @@ import Foundation
 import PorydawCore
 import PorydawDocument
 import PorydawAppCommands
+import PorydawAppPresentation
 
 /// Owns one document's editor presenters and all document-scoped publication wiring.
 /// The application replaces and tears down this object as a single unit;

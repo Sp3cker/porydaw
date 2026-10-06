@@ -148,7 +148,7 @@ private func serviceBankCase(
 }
 
 @MainActor
-internal func runBankLeasesSuite(_ report: CheckReport) {
+public func runBankLeasesSuite(_ report: CheckReport) {
     serviceBankCase("openedSongResolvesBoundVoicegroup", report) { _, _, song in
         let cppID = "project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths"
         report.expect(

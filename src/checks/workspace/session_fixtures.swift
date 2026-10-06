@@ -4,7 +4,7 @@ import PorydawCore
 import PorydawCoreCheckNative
 import PorydawPlayback
 
-internal let rejectedVoicegroupCases: [(name: String, label: String, argument: String?)] = [
+public let rejectedVoicegroupCases: [(name: String, label: String, argument: String?)] = [
     ("absolute", "mus_vgid_absolute", "/abs/perc.vg"),
     ("empty", "mus_vgid_empty", nil),
     ("nested-parent", "mus_vgid_nested_parent", "drums/../../escape.vg"),
@@ -16,7 +16,7 @@ internal let rejectedVoicegroupCases: [(name: String, label: String, argument: S
 
 // MARK: - Synthetic Fixture Helpers
 
-internal func makeMidiFixture(
+public func makeMidiFixture(
     division: UInt16 = 24, bpmMicroseconds: UInt32 = 500_000,
     loopStart: Tick? = 48, loopEnd: Tick? = 144
 ) -> MidiFile {
@@ -52,7 +52,7 @@ internal func makeMidiFixture(
         ])
 }
 
-internal func stageTestProject(in rootDirectory: String, projectName: String) -> String {
+public func stageTestProject(in rootDirectory: String, projectName: String) -> String {
     let projectDir = URL(fileURLWithPath: rootDirectory).appendingPathComponent(projectName).path
     let soundDir = URL(fileURLWithPath: projectDir).appendingPathComponent("sound").path
     let songsDir = URL(fileURLWithPath: soundDir).appendingPathComponent("songs/midi").path

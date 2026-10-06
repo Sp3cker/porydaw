@@ -1,12 +1,13 @@
 import Foundation
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 import PorydawAppCommands
 import PorydawCore
 @testable import PorydawDocument
 import QtBridge
 
 @MainActor
-internal func runTrackHeadersChecks(
+public func runTrackHeadersChecks(
     _ report: CheckReport, session: DocumentSession,
     service: ProjectService
 ) {

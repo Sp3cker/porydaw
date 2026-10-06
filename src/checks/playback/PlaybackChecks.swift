@@ -8,7 +8,7 @@ private let exactSamplesID = "smfcheck/MidiSmfTest::tempoConversionSchedulesExac
 private let mappingID = "smfcheck/MidiSmfTest::engineTrackMappingAgreesAcrossProjections"
 private let identitiesID = "noteidcheck/NoteIdentityCheckTest::timelineTransportsOnlyStampedNoteIds"
 private let controllerDefaultsID = "no-row/core/timedefaults.h exhaustive functions"
-func runPlaybackSuite(_ report: CheckReport) {
+public func runPlaybackSuite(_ report: CheckReport) {
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
         report.fail(exactSamplesID, "missing --swiftcore fixture root")
         return

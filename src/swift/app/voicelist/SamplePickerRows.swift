@@ -1,5 +1,6 @@
 import Foundation
 import QtBridge
+import PorydawAppPresentation
 
 @MainActor
 @QtBridgeable

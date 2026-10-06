@@ -2,7 +2,7 @@ import PorydawApp
 import PorydawDocument
 
 @MainActor
-func runGateChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runGateChecks(_ report: CheckReport, viewport: DocumentViewport) {
     checkReadyRollZoom(report, viewport: viewport)
     checkReadyRulerAndScroll(report, viewport: viewport)
 }

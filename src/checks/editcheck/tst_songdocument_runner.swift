@@ -53,7 +53,7 @@ internal func coreEditCorpusSongs(_ report: CheckReport) throws -> [CoreEditCorp
     return songs
 }
 @MainActor
-internal func coreEditCorpusLoadCheck(_ report: CheckReport) {
+public func coreEditCorpusLoadCheck(_ report: CheckReport) {
     do {
         for loaded in try coreEditCorpusSongs(report) {
             let file = try MidiFile.decode(loaded.midiBytes)
@@ -76,7 +76,7 @@ internal func coreEditDistantBase(_ document: SongDocument) -> Tick {
 }
 
 @MainActor
-internal func coreEditHistoryCountAtTip(
+public func coreEditHistoryCountAtTip(
     _ document: SongDocument, report: CheckReport,
     cppID: String
 ) throws -> Int {

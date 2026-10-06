@@ -251,19 +251,36 @@ index 1705eed..4a20103 100644
      public var asArray: [Element] { storage }
  }
 diff --git a/Sources/QtBridge/QMetaObjectBuilder.swift b/Sources/QtBridge/QMetaObjectBuilder.swift
-index 102c863..00ae744 100644
+index 102c863..8ba9a4e 100644
 --- a/Sources/QtBridge/QMetaObjectBuilder.swift
 +++ b/Sources/QtBridge/QMetaObjectBuilder.swift
-@@ -14,6 +14,8 @@ import QtBridgeCpp
+@@ -14,6 +14,12 @@ import QtBridgeCpp
  @MainActor
  public class QMetaObjectBuilder
  {
 +    private static var builders: [ObjectIdentifier: QMetaObjectBuilder] = [:]
 +
++    /// QML import URI per Swift module name; unlisted modules register under their own name.
++    /// Set before the first type registers.
++    public static var qmlModuleAliases: [String: String] = [:]
++
      private let className: String
      private let moduleName: String
  
-@@ -66,18 +68,31 @@ public class QMetaObjectBuilder
+@@ -48,10 +54,11 @@ public class QMetaObjectBuilder
+     private init(type: QObjectBuildable.Type) {
+         self.className = String(describing: type)
+         let fullName = String(reflecting: type)
+-        self.moduleName = fullName
++        let swiftModule = fullName
+             .split(separator: ".")
+             .dropLast()
+             .joined(separator: ".")
++        self.moduleName = Self.qmlModuleAliases[swiftModule] ?? swiftModule
+ 
+         self.builder = SwiftMetaObjectBuilder(className)
+     }
+@@ -66,18 +73,31 @@ public class QMetaObjectBuilder
      /// This method is used by the bridging system. Don't call
      /// it directly.
      static public func create(from type: QObjectBuildable.Type) -> QMetaObjectBuilder {
@@ -295,7 +312,7 @@ index 102c863..00ae744 100644
      internal func setMetaObjectTo(objectHolder: QObjectHolder) {
          builder.setMetaObjectTo(objectHolder.proxy)
      }
-@@ -174,7 +189,7 @@ public class QMetaObjectBuilder
+@@ -174,7 +194,7 @@ public class QMetaObjectBuilder
          name: String,
          keyPath: WritableKeyPath<Root, Member>)
      {
@@ -304,7 +321,7 @@ index 102c863..00ae744 100644
              newValue != root[keyPath: keyPath]
          }
      }
-@@ -193,12 +208,30 @@ public class QMetaObjectBuilder
+@@ -193,12 +213,30 @@ public class QMetaObjectBuilder
          name: String,
          keyPath: WritableKeyPath<Root, Member>)
      {
@@ -337,7 +354,7 @@ index 102c863..00ae744 100644
          isChanged: @escaping (Member, Root) -> Bool)
      {
          registerSignal(for: name)
-@@ -217,7 +250,7 @@ public class QMetaObjectBuilder
+@@ -217,7 +255,7 @@ public class QMetaObjectBuilder
              guard var root = root as? Root else {
                  return false
              }
@@ -346,7 +363,7 @@ index 102c863..00ae744 100644
              if !isChanged(newValue, root) {
                  return false
              }
-@@ -402,6 +435,7 @@ public class QMetaObjectBuilder
+@@ -402,6 +440,7 @@ public class QMetaObjectBuilder
  
      internal func endMetaRegistration() {
          builder.endMetaRegistration()

@@ -12,7 +12,7 @@ private func isCanonicalPair(
 }
 
 @MainActor
-internal func xcmdPairedExport(_ report: CheckReport) {
+public func xcmdPairedExport(_ report: CheckReport) {
     let exported = Xcmd.canonicalizeForExport([
         Xcmd.Event(index: 0, tick: 1, stream: 0, controller: 0x1E, value: 0x08),
         Xcmd.Event(index: 1, tick: 2, stream: 0, controller: 0x1D, value: 10),
@@ -107,7 +107,7 @@ private func xcmdPairExplicitPointsRebuiltInTickOrder(_ report: CheckReport) {
         message: "explicit points were not rebuilt semantically identically in tick order")
 }
 
-internal func runXcmdExportOriginalChecks(_ report: CheckReport) {
+public func runXcmdExportOriginalChecks(_ report: CheckReport) {
     xcmdPairSharedSelectorRebuiltAsSameTickPairs(report)
     xcmdPairDanglingKnownSelectorRemoved(report)
     xcmdPairUnknownEpochAndStrayRunPreservedVerbatim(report)

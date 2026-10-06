@@ -312,7 +312,7 @@ private func swiftCodec(_ bytes: [UInt8]) -> CodecObservation {
     }
 }
 
-func midiBytes(format: UInt16, division: UInt16, tracks: [[UInt8]]) -> [UInt8] {
+public func midiBytes(format: UInt16, division: UInt16, tracks: [[UInt8]]) -> [UInt8] {
     var bytes: [UInt8] = [0x4D, 0x54, 0x68, 0x64]
     appendUInt32(6, to: &bytes)
     appendUInt16(format, to: &bytes)
@@ -342,7 +342,7 @@ private func appendUInt32(_ value: UInt32, to bytes: inout [UInt8]) {
     bytes.append(UInt8(truncatingIfNeeded: value))
 }
 
-func hex(_ text: String) -> [UInt8] {
+public func hex(_ text: String) -> [UInt8] {
     precondition(text.count.isMultiple(of: 2))
     var bytes: [UInt8] = []
     bytes.reserveCapacity(text.count / 2)

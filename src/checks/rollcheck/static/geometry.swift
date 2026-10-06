@@ -4,7 +4,7 @@ import PorydawCore
 @testable import PorydawDocument
 
 @MainActor
-func runGeometryChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runGeometryChecks(_ report: CheckReport, viewport: DocumentViewport) {
     checkFallbackAndSignatureBind(report, viewport: viewport)
     checkCeilingGridWalk(report)
     checkDefaultBindKeepsGeometry(report)

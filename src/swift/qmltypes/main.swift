@@ -270,6 +270,7 @@ private struct PorydawQmlTypesCommand {
     @MainActor
     private static func generate(in directory: URL) throws {
         var exports: [String: Export] = [:]
+        PorydawQmlTypes.aliasQmlModules()
         for type in PorydawQmlTypes.instantiable {
             type.registerQmlElement()
             try addExport(type, creatable: true, to: &exports)

@@ -2,7 +2,7 @@ import Foundation
 import PorydawCore
 import PorydawProject
 
-internal func runSongsMkSuite(_ report: CheckReport) {
+public func runSongsMkSuite(_ report: CheckReport) {
     let cppID = "swiftproject/SongsMkChecks::songsMkRoundTrip"
     let root = FileManager.default.temporaryDirectory
         .appendingPathComponent("porydaw-songsmk-\(UUID().uuidString)", isDirectory: true)

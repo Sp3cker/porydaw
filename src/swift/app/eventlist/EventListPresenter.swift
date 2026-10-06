@@ -3,6 +3,7 @@ import PorydawCore
 import PorydawDocument
 import QtBridge
 import PorydawAppEventList
+import PorydawAppPresentation
 
 /// The QML-facing value for one event-list row. Policy stays in
 /// `EventListModel`; this handle only publishes the values a delegate renders.

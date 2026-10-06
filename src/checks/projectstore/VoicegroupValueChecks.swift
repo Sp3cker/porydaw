@@ -1,7 +1,7 @@
 import Foundation
 import PorydawProject
 
-internal func runVoicegroupValueSuite(_ report: CheckReport) {
+public func runVoicegroupValueSuite(_ report: CheckReport) {
     checkVoicegroupMacroTables(report)
     checkVoicegroupAdsr(report)
     checkVoicegroupStructuralChanges(report)

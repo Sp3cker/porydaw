@@ -1,7 +1,7 @@
 import Foundation
 import PorydawDocument
 
-enum LayoutSpace: CaseIterable {
+public enum LayoutSpace: CaseIterable {
     case zero, half, one, two, three, four, six, eight
 
     var multiplier: Double {
@@ -28,31 +28,31 @@ public struct Typography {
         bodyFontPx = max(1, Int((Double(self.baseFontPx) * 1.125).rounded()))
     }
 
-    func space(_ token: LayoutSpace) -> Int {
+    public func space(_ token: LayoutSpace) -> Int {
         fontPx(token.multiplier)
     }
 
-    func fontPx(_ multiplier: Double) -> Int {
+    public func fontPx(_ multiplier: Double) -> Int {
         Int(PorydawDocument.fontPx(Double(baseFontPx), multiplier))
     }
 
-    func fontPxF(_ multiplier: Double) -> Double {
+    public func fontPxF(_ multiplier: Double) -> Double {
         PorydawDocument.fontPxF(Double(baseFontPx), multiplier)
     }
 
-    var body: GridFontSpec {
+    public var body: GridFontSpec {
         GridFontSpec(
             family: gridBodyFamily, pixelSize: bodyFontPx, weight: 400,
             letterSpacing: 0)
     }
 
-    var bodyBold: GridFontSpec {
+    public var bodyBold: GridFontSpec {
         GridFontSpec(
             family: gridBodyFamily, pixelSize: bodyFontPx, weight: 600,
             letterSpacing: 0)
     }
 
-    var bodyMono: GridFontSpec {
+    public var bodyMono: GridFontSpec {
         GridFontSpec(
             family: gridMonoFamily, pixelSize: bodyFontPx, weight: 400,
             letterSpacing: 0)
@@ -64,25 +64,25 @@ public struct Typography {
             letterSpacing: Double(baseFontPx) * (-1.0 / 26.0))
     }
 
-    var caption: GridFontSpec {
+    public var caption: GridFontSpec {
         GridFontSpec(
             family: gridBodyFamily, pixelSize: baseFontPx, weight: 400,
             letterSpacing: 0)
     }
 
-    var captionMinimum: GridFontSpec {
+    public var captionMinimum: GridFontSpec {
         GridFontSpec(
             family: gridBodyFamily, pixelSize: fontPx(2.0 / 3.0), weight: 400,
             letterSpacing: 0)
     }
 
-    var captionBold: GridFontSpec {
+    public var captionBold: GridFontSpec {
         GridFontSpec(
             family: gridBodyFamily, pixelSize: baseFontPx, weight: 600,
             letterSpacing: 0)
     }
 
-    var noteName: GridFontSpec {
+    public var noteName: GridFontSpec {
         #if os(macOS)
             caption
         #else

@@ -315,7 +315,7 @@ func engineMappingProjection(_ report: CheckReport) {
 }
 
 @MainActor
-func runMusicalSemanticsSuite(_ report: CheckReport) {
+public func runMusicalSemanticsSuite(_ report: CheckReport) {
     for cc in 0...127 {
         let controller = UInt8(cc)
         let info = m4aClassifyCC(controller)

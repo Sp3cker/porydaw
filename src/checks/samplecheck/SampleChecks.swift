@@ -2,23 +2,23 @@ import Foundation
 import PorydawSample
 
 @MainActor
-internal func runSampleChecks(_ report: CheckReport) {
+public func runSampleChecks(_ report: CheckReport) {
     runDecoderChecks(report)
     runCompressedDecoderChecks(report)
     runSoundFontChecks(report)
 }
 
-internal func runSampleProcessingChecks(_ report: CheckReport) {
+public func runSampleProcessingChecks(_ report: CheckReport) {
     runDspKernelChecks(report)
 }
 
-internal func runSampleStorageChecks(_ report: CheckReport) {
+public func runSampleStorageChecks(_ report: CheckReport) {
     runRegistrationChecks(report)
     runProvenanceChecks(report)
 }
 
 @MainActor
-internal func runSampleEditorChecks(_ report: CheckReport) {
+public func runSampleEditorChecks(_ report: CheckReport) {
     runEditorPresenterChecks(report)
     runLoopToolsChecks(report)
     runAuditionStripChecks(report)

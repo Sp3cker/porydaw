@@ -1,14 +1,22 @@
 import Foundation
 import PorydawApp
+import PorydawAppPresentation
 import PorydawCore
 import PorydawCoreCheckNative
 import PorydawDocument
 import PorydawPlayback
 
+// Lane-wide re-export so suite files share the lower-lane APIs without per-file imports.
+@_exported import SwiftCoreCheckSupport
+@_exported import SwiftCoreCheckMedia
+@_exported import SwiftCoreCheckEdit
+@_exported import SwiftCoreCheckRoll
+@_exported import SwiftCoreCheckPages
+
 // MARK: - Project Session Suite
 
 @MainActor
-internal func runProjectSessionSuite(_ report: CheckReport) {
+public func runProjectSessionSuite(_ report: CheckReport) {
     guard let scratch = CheckEnvironment.fixtureRoot else {
         report.fail("workspace/WorkspaceTabRecipe::restore", "missing staged settings directory")
         return
@@ -106,7 +114,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
 // MARK: - Bank History Suite
 
 @MainActor
-internal func runBankHistorySuite(_ report: CheckReport) {
+public func runBankHistorySuite(_ report: CheckReport) {
     historyTransitionRegressions(report)
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
         report.fail(

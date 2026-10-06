@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 @testable import PorydawAppCommands
 import PorydawCore
 @testable import PorydawDocument
@@ -7,7 +8,7 @@ import PorydawCore
 import PorydawPlaybackNative
 
 @MainActor
-func runPresentationChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runPresentationChecks(_ report: CheckReport, viewport: DocumentViewport) {
     let session = viewport.session
     checkHeaderPanFollow(report, viewport: viewport)
     checkHeaderRename(report, session: session)

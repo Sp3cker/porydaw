@@ -7,7 +7,7 @@ import PorydawDocument
 // Entry order remains in AutomationPageChecks.swift.
 
 @MainActor
-func drawerAutomationXcmdParity(
+public func drawerAutomationXcmdParity(
     _ report: CheckReport, suite: DocumentSession,
     service: ProjectService
 ) {
@@ -231,7 +231,7 @@ private struct XcmdDomainFixture {
 }
 
 @MainActor
-func drawerAutomationXcmdLaneEdits(_ report: CheckReport) {
+public func drawerAutomationXcmdLaneEdits(_ report: CheckReport) {
     let canonicalID = "automation-domain/AutomationDomainTest::xcmdCanonicalEdits"
     let canonical = XcmdDomainFixture()
     let before = canonical.snapshot

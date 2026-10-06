@@ -2,6 +2,9 @@ import Foundation
 import PorydawCore
 import PorydawCoreCheckNative
 
+// Lane-wide re-export so suite files share the support API without per-file imports.
+@_exported import SwiftCoreCheckSupport
+
 struct CodecObservation {
     var valid = false
     var encoded: [UInt8] = []
@@ -39,7 +42,7 @@ let xcmdConverterID =
     "roundtrip/MidiRoundtripTest::xcmdEchoTrafficCompilesToGameCommands"
 
 @MainActor
-func runMidiCodecSuite(_ report: CheckReport) {
+public func runMidiCodecSuite(_ report: CheckReport) {
     let fixtures:
         [(
             cppID: String, path: String, canonical: [UInt8]?,

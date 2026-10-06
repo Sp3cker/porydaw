@@ -5,7 +5,7 @@ import PorydawCoreCheckNative
 import PorydawDocument
 import PorydawPlayback
 
-internal func operationFailureMessage(_ error: Error) -> String? {
+public func operationFailureMessage(_ error: Error) -> String? {
     guard let serviceError = error as? ProjectServiceError else { return nil }
     switch serviceError {
     case .serviceClosed, .bankConflict: return nil
@@ -17,15 +17,15 @@ internal func operationFailureMessage(_ error: Error) -> String? {
     }
 }
 
-internal func noteOffSample(_ timeline: PlaybackTimeline, key: UInt8) -> UInt64? {
+public func noteOffSample(_ timeline: PlaybackTimeline, key: UInt8) -> UInt64? {
     timeline.events.first { $0.type == 0x8 && $0.data0 == key }?.sample
 }
 
-internal func bytes(at path: String) -> Data? {
+public func bytes(at path: String) -> Data? {
     try? Data(contentsOf: URL(fileURLWithPath: path))
 }
 
-internal func configLineBytes(at path: String, label: String) -> Data? {
+public func configLineBytes(at path: String, label: String) -> Data? {
     guard let contents = bytes(at: path) else { return nil }
     let prefix = Data("\(label).mid:".utf8)
     var lineStart = contents.startIndex

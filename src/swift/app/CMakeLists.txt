@@ -1,5 +1,24 @@
 set(SWIFT_GRID_DIR "${CMAKE_SOURCE_DIR}/src/ui/songview/quick/swiftroll")
 set(SWIFT_GRID_NATIVE_DIR "${SWIFT_GRID_DIR}/native")
+# New modules: add_library + porydaw_swift_module + porydaw_swift_qt_interop + extras.
+function(porydaw_swift_module target module_name)
+    set_target_properties(${target} PROPERTIES
+        Swift_MODULE_NAME ${module_name}
+        Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module"
+        Swift_LANGUAGE_VERSION 6
+    )
+    target_include_directories(${target} INTERFACE
+        "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:${target},Swift_MODULE_DIRECTORY>>"
+    )
+    porydaw_enable_swift_batch_mode(${target})
+endfunction()
+function(porydaw_swift_qt_interop target)
+    target_compile_options(${target} PUBLIC
+        "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"
+    )
+endfunction()
+
 
 add_library(PorydawApp STATIC
     DocumentWorkspace.swift
@@ -33,9 +52,6 @@ add_library(PorydawApp STATIC
     newsong/NewSongWizardState.swift
     newsong/NewSongController.swift
     EditorCommandRouter.swift
-    typography/Typography.swift
-    typography/TypographyFonts.swift
-    typography/LayoutSpaces.swift
     transport/TransportBarPresenter.swift
     SongTabsController.swift
     SongTabsController+Close.swift
@@ -51,7 +67,6 @@ add_library(PorydawApp STATIC
     voicelist/SamplePickerRows.swift
     voicelist/VoiceEditorController.swift
     MouseHints.swift
-    QListModelSync.swift
     QmlEngineAccess.swift
     roll/PianoGrid.swift
     roll/PianoGrid+Support.swift
@@ -63,31 +78,16 @@ add_library(PorydawApp STATIC
     roll/GridScene+Rebuild.swift
     roll/GridScene+Notes.swift
     roll/GridScene+Primitives.swift
-    roll/NoteCommands.swift
-    roll/SceneRectPacking.swift
     roll/RollDisplayLists.swift
     roll/RollPlotBuilder.swift
     roll/RollKeyboardBuilder.swift
     roll/RollRulerBuilder.swift
-    drawer/DrawerStaticsContent.swift
-    pitchbend/PitchBendGeometry.swift
-    pitchbend/PitchBendKernel.swift
     pitchbend/PitchBendScene.swift
     pitchbend/PitchBendPresenter.swift
-    shell/EditorViewStatePreferences.swift
-    timeline/TimelineScrollbar.swift
-    timeline/PlayheadGuides.swift
     timeline/SharedPlayhead.swift
-    timeline/DisplayListWriter.swift
-    theme/GridPalette.swift
-    theme/ThemeColorTables.swift
-    roll/GridTypography.swift
     timeline/RulerMenuPresenter.swift
     drawer/EditorDrawer.swift
-    drawer/PromptAppearance.swift
     drawer/EditorDrawerLayout.swift
-    drawer/DrawerPan.swift
-    drawer/LaneCaptionMetrics.swift
     drawer/otherEvents/OtherEventsStrip.swift
     drawer/otherEvents/OtherEventsBandPresenter.swift
     drawer/velocity/VelocityContext.swift
@@ -132,8 +132,6 @@ add_library(PorydawApp STATIC
     headers/TrackActivity.swift
     headers/TrackHeadersGeometry.swift
     headers/TrackHeadersInput.swift
-    shell/BundledFont.swift
-    shell/PreferencesStore.swift
     shell/ShellPresenter.swift
     shell/ShellActionCatalog.swift
     shell/ShellPresenter+ActionPolicy.swift
@@ -174,26 +172,15 @@ configure_file(
     "${CMAKE_CURRENT_BINARY_DIR}/commands/QtKeybindings.modulemap"
     @ONLY
 )
-set_target_properties(PorydawApp PROPERTIES
-    Swift_MODULE_NAME PorydawApp
-    Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module"
-    Swift_LANGUAGE_VERSION 6
-)
+porydaw_swift_module(PorydawApp PorydawApp)
 
 if(PORYDAW_BUILD_CHECKS)
     target_compile_options(PorydawApp PRIVATE
         "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>")
 endif()
 
-porydaw_enable_swift_batch_mode(PorydawApp)
-
-target_include_directories(PorydawApp INTERFACE
-    "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawApp,Swift_MODULE_DIRECTORY>>"
-)
-
+porydaw_swift_qt_interop(PorydawApp)
 target_compile_options(PorydawApp PUBLIC
-    "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/third_party>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin/m4a>"
@@ -208,7 +195,6 @@ target_compile_options(PorydawApp PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
 )
-
 target_link_libraries(PorydawApp PUBLIC PorydawCore PorydawDocument PorydawPlayback PorydawProject PorydawSample QtBridge Qt6::Gui)
 
 add_dependencies(PorydawApp QtBridgeMacros)
@@ -220,19 +206,12 @@ add_library(PorydawAppCommands STATIC
     commands/Clipboard.swift
     commands/ClipboardSemantics+Paste.swift
 )
+porydaw_swift_module(PorydawAppCommands PorydawAppCommands)
 set_target_properties(PorydawAppCommands PROPERTIES
-    Swift_MODULE_NAME PorydawAppCommands
-    Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module"
-    Swift_LANGUAGE_VERSION 6
     AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
 )
-target_include_directories(PorydawAppCommands INTERFACE
-    "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawAppCommands,Swift_MODULE_DIRECTORY>>"
-)
-porydaw_enable_swift_batch_mode(PorydawAppCommands)
+porydaw_swift_qt_interop(PorydawAppCommands)
 target_compile_options(PorydawAppCommands PUBLIC
-    "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/commands/QtKeybindings.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin>"
@@ -252,19 +231,12 @@ add_library(PorydawAppAudio STATIC
     audio/ResonanceSuppression.swift
     export/WavExport.swift
 )
+porydaw_swift_module(PorydawAppAudio PorydawAppAudio)
 set_target_properties(PorydawAppAudio PROPERTIES
-    Swift_MODULE_NAME PorydawAppAudio
-    Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module"
-    Swift_LANGUAGE_VERSION 6
     AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
 )
-target_include_directories(PorydawAppAudio INTERFACE
-    "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawAppAudio,Swift_MODULE_DIRECTORY>>"
-)
-porydaw_enable_swift_batch_mode(PorydawAppAudio)
+porydaw_swift_qt_interop(PorydawAppAudio)
 target_compile_options(PorydawAppAudio PUBLIC
-    "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/audio/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/third_party>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin>"
@@ -279,28 +251,59 @@ add_library(PorydawAppEventList STATIC
     eventlist/EventListModel.swift
     eventlist/EventListProjection.swift
 )
+porydaw_swift_module(PorydawAppEventList PorydawAppEventList)
 set_target_properties(PorydawAppEventList PROPERTIES
-    Swift_MODULE_NAME PorydawAppEventList
-    Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module"
-    Swift_LANGUAGE_VERSION 6
     AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
 )
-target_include_directories(PorydawAppEventList INTERFACE
-    "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawAppEventList,Swift_MODULE_DIRECTORY>>"
-)
-porydaw_enable_swift_batch_mode(PorydawAppEventList)
-target_compile_options(PorydawAppEventList PUBLIC
-    "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"
-)
+porydaw_swift_qt_interop(PorydawAppEventList)
 target_link_libraries(PorydawAppEventList PUBLIC PorydawCore)
 
+add_library(PorydawAppPresentation STATIC
+    presentation/QListModelSync.swift
+    presentation/drawer/DrawerPan.swift
+    presentation/drawer/DrawerStaticsContent.swift
+    presentation/drawer/LaneCaptionMetrics.swift
+    presentation/drawer/PromptAppearance.swift
+    presentation/pitchbend/PitchBendGeometry.swift
+    presentation/pitchbend/PitchBendKernel.swift
+    presentation/roll/GridTypography.swift
+    presentation/roll/NoteCommands.swift
+    presentation/roll/SceneRectPacking.swift
+    presentation/shell/BundledFont.swift
+    presentation/shell/EditorViewStatePreferences.swift
+    presentation/shell/PreferencesStore.swift
+    presentation/theme/GridPalette.swift
+    presentation/theme/ThemeColorTables.swift
+    presentation/timeline/DisplayListWriter.swift
+    presentation/timeline/PlayheadGuides.swift
+    presentation/timeline/TimelineScrollbar.swift
+    presentation/typography/LayoutSpaces.swift
+    presentation/typography/Typography.swift
+    presentation/typography/TypographyFonts.swift
+)
+porydaw_swift_module(PorydawAppPresentation PorydawAppPresentation)
+set_target_properties(PorydawAppPresentation PROPERTIES
+    AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
+)
+porydaw_swift_qt_interop(PorydawAppPresentation)
+target_compile_options(PorydawAppPresentation PUBLIC
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I$<JOIN:$<TARGET_PROPERTY:Qt6::Core,INTERFACE_INCLUDE_DIRECTORIES>, -Xcc -I>>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_NATIVE_DIR}/module.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_NATIVE_DIR}>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
+)
+target_link_libraries(PorydawAppPresentation PUBLIC PorydawCore PorydawDocument PorydawProject PorydawAppCommands QtBridge Qt6::Gui)
+
+add_dependencies(PorydawAppPresentation QtBridgeMacros)
+
 target_link_libraries(PorydawApp PUBLIC
-    PorydawAppCommands PorydawAppAudio PorydawAppEventList
+    PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppPresentation
 )
 
 if(PORYDAW_BUILD_CHECKS)
-    foreach(leaf PorydawAppCommands PorydawAppAudio PorydawAppEventList)
+    foreach(leaf PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppPresentation)
         target_compile_options(${leaf} PRIVATE
             "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>")
     endforeach()

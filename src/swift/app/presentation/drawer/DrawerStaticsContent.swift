@@ -8,31 +8,56 @@ import QtBridge
     import CoreGraphics
 #endif
 
-struct DrawerStaticRect {
-    var tickStart: UInt32
-    var tickEnd: UInt32
-    var y: Float
-    var height: Float
-    var argb: UInt32
-    var flags: UInt8 = 0
+public struct DrawerStaticRect {
+    public var tickStart: UInt32
+    public var tickEnd: UInt32
+    public var y: Float
+    public var height: Float
+    public var argb: UInt32
+    public var flags: UInt8 = 0
+
+    public init(
+        tickStart: UInt32, tickEnd: UInt32, y: Float, height: Float, argb: UInt32,
+        flags: UInt8 = 0
+    ) {
+        self.tickStart = tickStart
+        self.tickEnd = tickEnd
+        self.y = y
+        self.height = height
+        self.argb = argb
+        self.flags = flags
+    }
 }
 
-struct DrawerAnchoredRect {
-    var tick: UInt32
-    var dx: Float
-    var width: Float
-    var y: Float
-    var height: Float
-    var argb: UInt32
-    var flags: UInt8 = 0
+public struct DrawerAnchoredRect {
+    public var tick: UInt32
+    public var dx: Float
+    public var width: Float
+    public var y: Float
+    public var height: Float
+    public var argb: UInt32
+    public var flags: UInt8 = 0
+
+    public init(
+        tick: UInt32, dx: Float, width: Float, y: Float, height: Float, argb: UInt32,
+        flags: UInt8 = 0
+    ) {
+        self.tick = tick
+        self.dx = dx
+        self.width = width
+        self.y = y
+        self.height = height
+        self.argb = argb
+        self.flags = flags
+    }
 }
 
 @MainActor
-enum DrawerStaticsContent {}
+public enum DrawerStaticsContent {}
 
 @MainActor
 extension DrawerStaticsContent {
-    static func gridPaletteColors(_ palette: GridPalette) -> [Int: QmlColor] {
+    public static func gridPaletteColors(_ palette: GridPalette) -> [Int: QmlColor] {
         [
             3: palette.gridLineBar, 4: palette.gridLineBeat,
             5: palette.gridLineSub1, 6: palette.gridLineSub2,
@@ -40,7 +65,7 @@ extension DrawerStaticsContent {
         ]
     }
 
-    static func retainedEmptyDisplayList(cached: inout Data?) -> Data {
+    public static func retainedEmptyDisplayList(cached: inout Data?) -> Data {
         if let cached { return cached }
         var writer = DisplayListWriter()
         let empty = writer.finish()
@@ -48,7 +73,7 @@ extension DrawerStaticsContent {
         return empty
     }
 
-    static func buildGrid(
+    public static func buildGrid(
         into writer: inout DisplayListWriter, axis: TimeAxis, grid: RollGrid,
         camera: EditorCamera, viewport: CGSize, paletteColors: [Int: QmlColor]
     ) {
@@ -101,7 +126,7 @@ extension DrawerStaticsContent {
 
     // §11 tick-space rects. Bit 2 (dashed frame) is skipped: the caller owns
     // the dash pattern and routes those records to buildDashedFrame.
-    static func buildTickRects(
+    public static func buildTickRects(
         into writer: inout DisplayListWriter, rects: [DrawerStaticRect],
         camera: EditorCamera, dpr: Double, viewport: CGSize
     ) {
@@ -134,7 +159,7 @@ extension DrawerStaticsContent {
     }
 
     // §12 anchored rects: x = viewX(tick) + dx, device-snapped when bit 0 is set.
-    static func buildAnchored(
+    public static func buildAnchored(
         into writer: inout DisplayListWriter, rects: [DrawerAnchoredRect],
         camera: EditorCamera, dpr: Double, viewport: CGSize
     ) {
@@ -155,7 +180,7 @@ extension DrawerStaticsContent {
 
     // §14 dash pattern: the frame's four edges walked per period, each dash a
     // plain rect with a one-device-pixel stroke.
-    static func buildDashedFrame(
+    public static func buildDashedFrame(
         into writer: inout DisplayListWriter, box: CGRect, argb: UInt32,
         dashDevicePx: Double, gapDevicePx: Double, dpr: Double, viewport: CGSize
     ) {

@@ -1,4 +1,5 @@
 import Foundation
+import PorydawAppPresentation
 import PorydawCore
 import PorydawDocument
 import QtBridge
@@ -50,13 +51,6 @@ struct TrackHeaderSnapshot: Equatable {
     var activityActiveColor = QmlColor.clear
     var activityLeftHeight: Double = 0
     var activityRightHeight: Double = 0
-}
-
-extension GridFontSpec: Equatable {
-    static func == (lhs: GridFontSpec, rhs: GridFontSpec) -> Bool {
-        lhs.family == rhs.family && lhs.pixelSize == rhs.pixelSize
-            && lhs.weight == rhs.weight && lhs.letterSpacing == rhs.letterSpacing
-    }
 }
 
 struct TrackHeadersGeometry {

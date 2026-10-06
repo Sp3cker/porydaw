@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 import PorydawCore
 @testable import PorydawDocument
 import QtBridge
@@ -16,7 +17,7 @@ func pitchBendFixtureSnapUp(_ tick: Double, fine: Bool) -> Int {
 }
 
 @MainActor
-func runPitchBendChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runPitchBendChecks(_ report: CheckReport, viewport: DocumentViewport) {
     let session = viewport.session
     let geometry = PitchBendGeometry(fontPx: 14, lineSpacing: 17, dpr: 2)
     let origin = [96: 0, 192: 0]

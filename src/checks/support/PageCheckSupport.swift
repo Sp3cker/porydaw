@@ -8,12 +8,12 @@ import PorydawCore
 // the pre-existing canonical value from workspace/session_support.swift, which
 // the four retired per-page clones (20s each) now adopt.
 
-internal enum RunBlockingError: Error {
+public enum RunBlockingError: Error {
     case timeout
 }
 
 @MainActor
-internal func runBlocking<T>(_ operation: @escaping @MainActor () async throws -> T) throws -> T {
+public func runBlocking<T>(_ operation: @escaping @MainActor () async throws -> T) throws -> T {
     var outcome: Result<T, Error>?
     Task { @MainActor in
         do {
@@ -41,13 +41,13 @@ internal func runBlocking<T>(_ operation: @escaping @MainActor () async throws -
 /// the history identity (the Swift analogue of the legacy undo index) and the
 /// undo/redo reachability. Merged from the three identical per-page copies.
 @MainActor
-internal struct DocumentSnapshot: Equatable {
-    var revision: UInt64
-    var identity: DocumentIdentity
-    var canUndo: Bool
-    var canRedo: Bool
+public struct DocumentSnapshot: Equatable {
+    public var revision: UInt64
+    public var identity: DocumentIdentity
+    public var canUndo: Bool
+    public var canRedo: Bool
 
-    init(_ document: SongDocument) {
+    public init(_ document: SongDocument) {
         revision = document.revision
         identity = document.history.currentIdentity
         canUndo = document.history.canUndo

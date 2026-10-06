@@ -1,40 +1,50 @@
 import NativeGridTypography
+import PorydawCore
 import PorydawDocument
 import QtBridge
 
-enum GridFontKind {
+public enum GridFontKind {
     case ruler, beat, bold, sig, chip, keyLabel, noteName, noteValue
 }
 
-struct GridFontSpec {
-    let family: String
-    let pixelSize: Int
-    let weight: Int
-    let letterSpacing: Double
+public struct GridFontSpec: Equatable {
+    public let family: String
+    public let pixelSize: Int
+    public let weight: Int
+    public let letterSpacing: Double
+
+    public init(family: String, pixelSize: Int, weight: Int, letterSpacing: Double) {
+        self.family = family
+        self.pixelSize = pixelSize
+        self.weight = weight
+        self.letterSpacing = letterSpacing
+    }
 
     private static let qmlFeatures: [String: UInt32] = ["tnum": 1]
 
-    var qmlFont: QmlFont {
+    public var qmlFont: QmlFont {
         QmlFont(
             family: family, pixelSize: pixelSize, weight: weight,
             letterSpacing: letterSpacing, features: Self.qmlFeatures)
     }
 }
 
-let gridBodyFamily = "Atkinson Hyperlegible Next"
-let gridMonoFamily = "Atkinson Hyperlegible Mono"
+public let gridBodyFamily = "Atkinson Hyperlegible Next"
+public let gridMonoFamily = "Atkinson Hyperlegible Mono"
+/// Display names for all 128 MIDI keys, indexed by pitch.
+public let midiKeyNames: [String] = (0..<128).map(midiKeyName)
 
 @MainActor
-struct GridTypography {
-    let rulerAscent: Double
-    let rulerHeight: Double
-    let beatAscent: Double
-    let beatHeight: Double
-    let boldHeight: Double
-    let chipHeight: Double
-    let noteNameOccupiedHeight: Double
-    let noteValueOccupiedHeight: Double
-    let noteValueVisible: Bool
+public struct GridTypography {
+    public let rulerAscent: Double
+    public let rulerHeight: Double
+    public let beatAscent: Double
+    public let beatHeight: Double
+    public let boldHeight: Double
+    public let chipHeight: Double
+    public let noteNameOccupiedHeight: Double
+    public let noteValueOccupiedHeight: Double
+    public let noteValueVisible: Bool
     private let rulerMetrics: NativeFontMetrics
     private let beatMetrics: NativeFontMetrics
     private let boldMetrics: NativeFontMetrics
@@ -46,7 +56,7 @@ struct GridTypography {
     private let noteValueMetrics: NativeFontMetrics
     private let qmlFonts: [GridFontKind: QmlFont]
 
-    init(fonts: [GridFontKind: GridFontSpec], rowHeight: Double, pixel: Double = 1) {
+    public init(fonts: [GridFontKind: GridFontSpec], rowHeight: Double, pixel: Double = 1) {
         func measure(_ kind: GridFontKind) -> NativeFontMetrics {
             NativeFontMetrics(fonts[kind]!)
         }
@@ -86,10 +96,10 @@ struct GridTypography {
         noteValueMetrics = value
         noteValueOccupiedHeight = value.extents.height
         noteValueVisible = valueFit > 0 && value.extents.height <= (rowHeight - pixel).rounded(.down)
-        chipWidths = GridScene.keyNames.map { chip.advance($0) }
+        chipWidths = midiKeyNames.map { chip.advance($0) }
         let noteName = measure(.noteName)
         noteNameOccupiedHeight = noteName.extents.height
-        noteNameWidths = GridScene.keyNames.map { noteName.advance($0) }
+        noteNameWidths = midiKeyNames.map { noteName.advance($0) }
         var values = fonts.mapValues { $0.qmlFont }
         guard var keyLabelFont = values[.keyLabel] else {
             preconditionFailure("GridTypography requires the key-label font")
@@ -100,40 +110,40 @@ struct GridTypography {
         qmlFonts = values
     }
 
-    static func barLabel(_ bar: Int) -> String { "\(bar)" }
+    public static func barLabel(_ bar: Int) -> String { "\(bar)" }
 
-    static func beatLabel(_ bar: Int, _ beat: Int) -> String { "\(bar).\(beat)" }
+    public static func beatLabel(_ bar: Int, _ beat: Int) -> String { "\(bar).\(beat)" }
 
-    func rulerAdvance(bar: Int) -> Double {
+    public func rulerAdvance(bar: Int) -> Double {
         rulerMetrics.advance(Self.barLabel(bar))
     }
 
-    func beatAdvance(bar: Int, beat: Int) -> Double {
+    public func beatAdvance(bar: Int, beat: Int) -> Double {
         beatMetrics.advance(Self.beatLabel(bar, beat))
     }
 
-    func boldAdvance(_ label: String) -> Double {
+    public func boldAdvance(_ label: String) -> Double {
         boldMetrics.advance(label)
     }
-    func signatureAdvance(_ label: String) -> Double {
+    public func signatureAdvance(_ label: String) -> Double {
         signatureMetrics.advance(label)
     }
 
-    func chipAdvance(pitch: Int) -> Double { chipWidths[pitch] }
-    func chipAdvance(_ text: String) -> Double { chipMetrics.advance(text) }
-    func keyLabelAdvance(_ text: String) -> Double { keyLabelMetrics.advance(text) }
+    public func chipAdvance(pitch: Int) -> Double { chipWidths[pitch] }
+    public func chipAdvance(_ text: String) -> Double { chipMetrics.advance(text) }
+    public func keyLabelAdvance(_ text: String) -> Double { keyLabelMetrics.advance(text) }
 
-    func noteNameAdvance(pitch: Int) -> Double { noteNameWidths[pitch] }
-    func noteValueAdvance(_ text: String) -> Double { noteValueMetrics.advance(text) }
+    public func noteNameAdvance(pitch: Int) -> Double { noteNameWidths[pitch] }
+    public func noteValueAdvance(_ text: String) -> Double { noteValueMetrics.advance(text) }
 
-    func font(_ kind: GridFontKind) -> QmlFont {
+    public func font(_ kind: GridFontKind) -> QmlFont {
         guard let value = qmlFonts[kind] else {
             preconditionFailure("GridTypography requires every grid font")
         }
         return value
     }
 
-    static func fonts(metrics _: GridMetrics, typography: Typography) -> [GridFontKind: GridFontSpec] {
+    public static func fonts(metrics _: GridMetrics, typography: Typography) -> [GridFontKind: GridFontSpec] {
         let rulerPx = max(
             typography.fontPx(1.0 / 12.0),
             typography.caption.pixelSize - 1)
@@ -161,12 +171,12 @@ struct GridTypography {
 @MainActor
 // Visible to the swiftcore harness for the fitted-maximality check; the
 // canvas remains the only production consumer.
-final class NativeFontMetrics {
-    let session: OpaquePointer
-    let extents: SGFontExtents
+public final class NativeFontMetrics {
+    public let session: OpaquePointer
+    public let extents: SGFontExtents
     private let spec: GridFontSpec
 
-    init(_ spec: GridFontSpec) {
+    public init(_ spec: GridFontSpec) {
         self.spec = spec
         session = spec.family.withCString {
             sgf_create($0, Int32(spec.pixelSize), Int32(spec.weight), spec.letterSpacing)!
@@ -176,11 +186,11 @@ final class NativeFontMetrics {
 
     isolated deinit { sgf_destroy(session) }
 
-    func advance(_ text: String) -> Double {
+    public func advance(_ text: String) -> Double {
         text.withCString { sgf_advance(session, $0) }
     }
 
-    func fittedSize(rowHeight: Double) -> Int {
+    public func fittedSize(rowHeight: Double) -> Int {
         spec.family.withCString { family in
             var size = spec.pixelSize
             while size > 0 {

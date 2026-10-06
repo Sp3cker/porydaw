@@ -8,7 +8,7 @@ private let cameraZoomID = "swiftcore/EditorCamera::anchoredZoomAndRestore"
 private let cameraPitchID = "swiftcore/EditorCamera::pitchProjectionAndReveal"
 
 @MainActor
-func runEditorCameraChecks(_ report: CheckReport) {
+public func runEditorCameraChecks(_ report: CheckReport) {
     let limits = EditorCamera.Limits(
         defaultPixelsPerBeat: 32, minPixelsPerBeat: 4, maxPixelsPerBeat: 640,
         defaultKeyHeight: 12, minKeyHeight: 4, maxKeyHeight: 32,

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppPresentation
 import PorydawAppCommands
 import PorydawCore
 import PorydawDocument
@@ -152,7 +153,7 @@ struct drawerVelocityVelocityFixture {
 // MARK: - Suite entry
 
 @MainActor
-internal func runVelocityPageChecks(
+public func runVelocityPageChecks(
     _ report: CheckReport, session: DocumentSession,
     service: ProjectService
 ) {

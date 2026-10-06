@@ -1,25 +1,25 @@
 import QtBridge
 
 /// Font-relative prompt layout shared by the retained typed styles.
-enum PromptAppearance {
-    enum Surface {
+public enum PromptAppearance {
+    public enum Surface {
         case window, chrome, velocity, automation, input, pitchBend, transport
     }
 
-    struct Layout {
-        var borderWidth: Double = 1
-        var radius: Double
-        var dialogPadding: Double
-        var horizontalPadding: Double
-        var verticalPadding: Double
-        var buttonPadding: Double
-        var spacing: Double
-        var dragThreshold: Double
-        var minimumWidth: Double
-        var listHeight: Double
+    public struct Layout {
+        public var borderWidth: Double = 1
+        public var radius: Double
+        public var dialogPadding: Double
+        public var horizontalPadding: Double
+        public var verticalPadding: Double
+        public var buttonPadding: Double
+        public var spacing: Double
+        public var dragThreshold: Double
+        public var minimumWidth: Double
+        public var listHeight: Double
 
         @MainActor
-        init(base: Double) {
+        public init(base: Double) {
             let typography = Typography(baseFontPx: Int(base.rounded()))
             let half = Double(typography.space(.half))
             let one = Double(typography.space(.one))
@@ -68,7 +68,7 @@ public final class PromptStyle {
     public init() {}
 
     @QtIgnored
-    func update(
+    public func update(
         metrics: PromptAppearance.Layout, palette: GridPalette, font: QmlFont,
         surface: PromptAppearance.Surface = .window
     ) {

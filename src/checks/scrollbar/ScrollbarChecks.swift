@@ -1,8 +1,9 @@
 import PorydawApp
+import PorydawAppPresentation
 import PorydawDocument
 
 @MainActor
-func runTimelineScrollbarChecks(_ report: CheckReport) {
+public func runTimelineScrollbarChecks(_ report: CheckReport) {
     let id = "scrollbar/TimelineScrollbar::geometryAndInput"
     let limits = EditorCamera.Limits(
         defaultPixelsPerBeat: 32, minPixelsPerBeat: 4, maxPixelsPerBeat: 640,

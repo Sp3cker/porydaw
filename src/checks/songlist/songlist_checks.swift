@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppPresentation
 import PorydawCore
 import PorydawCoreCheckNative
 import PorydawDocument
@@ -442,7 +443,7 @@ private func songListNewSongLabelLaws(_ report: CheckReport) {
 // MARK: - Entry point
 
 @MainActor
-internal func runSongListModelChecks(_ report: CheckReport) {
+public func runSongListModelChecks(_ report: CheckReport) {
     songListPlayableGateAndBadges(report)
     songListCategories(report)
     songListSearch(report)

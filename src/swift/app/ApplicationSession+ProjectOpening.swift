@@ -5,6 +5,7 @@ import PorydawProject
 import QtBridge
 import PorydawAppAudio
 import PorydawAppCommands
+import PorydawAppPresentation
 
 @MainActor
 extension ApplicationSession {

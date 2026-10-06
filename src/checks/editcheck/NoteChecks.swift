@@ -2,10 +2,14 @@ import Foundation
 import PorydawCore
 import PorydawCoreCheckNative
 
+// Lane-wide re-export so suite files share the support/media APIs without per-file imports.
+@_exported import SwiftCoreCheckSupport
+@_exported import SwiftCoreCheckMedia
+
 private let noteEditsBasicID = "editcheck/EditCheckTest::noteEditingBasic"
 
 @MainActor
-func runNoteEditsSuite(_ report: CheckReport) {
+public func runNoteEditsSuite(_ report: CheckReport) {
     adoptionAndPairing(report)
     lifecycleFixturePairing(report)
     interleavedFixturePairing(report)
@@ -23,7 +27,7 @@ func runNoteEditsSuite(_ report: CheckReport) {
 }
 
 @MainActor
-func runDocumentHistorySuite(_ report: CheckReport) {
+public func runDocumentHistorySuite(_ report: CheckReport) {
     gestureAndIdentityHistory(report)
     saveIdentity(report)
     confirmedBankOrdering(report)

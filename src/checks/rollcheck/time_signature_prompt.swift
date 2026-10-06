@@ -4,7 +4,7 @@ import PorydawCore
 import PorydawDocument
 
 @MainActor
-func runTimeSignaturePromptChecks(_ report: CheckReport, session: DocumentSession) {
+public func runTimeSignaturePromptChecks(_ report: CheckReport, session: DocumentSession) {
     checkTimeSignatureAcceptUndo(report, session: session)
     checkTimeSignatureCursorEntry(report, session: session, onEvent: true)
     checkTimeSignatureCursorEntry(report, session: session, onEvent: false)

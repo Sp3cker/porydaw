@@ -4,7 +4,7 @@ import PorydawCore
 @testable import PorydawDocument
 
 @MainActor
-func runPencilChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runPencilChecks(_ report: CheckReport, viewport: DocumentViewport) {
     checkPencilFractionalPlacement(report, viewport: viewport)
     checkPencilPlacement(report, viewport: viewport)
     checkVelocityClickLatch(report, viewport: viewport)
@@ -16,16 +16,16 @@ func runPencilChecks(_ report: CheckReport, viewport: DocumentViewport) {
     checkDrawLatchAndCancel(report, viewport: viewport)
 }
 
-struct PencilCell {
-    let tick: Int
-    let duration: Int
-    let pitch: Int
-    let x: Double
-    let y: Double
+public struct PencilCell {
+    public let tick: Int
+    public let duration: Int
+    public let pitch: Int
+    public let x: Double
+    public let y: Double
 }
 
 @MainActor
-func pencilFreeCell(
+public func pencilFreeCell(
     viewport: DocumentViewport, grid: PianoGrid, firstProbe: Int = 40,
     fractional: Bool = false
 ) -> PencilCell? {
@@ -79,7 +79,7 @@ func pencilFreeCell(
 }
 
 @MainActor
-func pencilDraw(_ cell: PencilCell, grid: PianoGrid) {
+public func pencilDraw(_ cell: PencilCell, grid: PianoGrid) {
     grid.beginPointer(x: cell.x, y: cell.y, modifiers: 0)
     grid.endPointer(x: cell.x, y: cell.y)
     grid.doublePointer(x: cell.x, y: cell.y)

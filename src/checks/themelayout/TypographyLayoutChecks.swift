@@ -1,4 +1,5 @@
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 @testable import PorydawDocument
 
 let typographyLayoutScaleID = "swiftcore/TypographyLayout::scaleTables"
@@ -32,7 +33,7 @@ private let typographyLayoutBodyPxExpected: [Double] = [14, 18, 20]
 private let typographyLayoutRulerPxExpected: [Double] = [11, 15, 17]
 
 @MainActor
-func runTypographyLayoutChecks(_ report: CheckReport) {
+public func runTypographyLayoutChecks(_ report: CheckReport) {
     typographyLayoutCheckScaleTables(report)
     typographyLayoutCheckBasePropagation(report)
     typographyLayoutCheckFaceContracts(report)

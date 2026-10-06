@@ -4,7 +4,7 @@ import PorydawCore
 import PorydawDocument
 
 @MainActor
-final class NoteCommands {
+public final class NoteCommands {
     private let viewport: DocumentViewport
     private var session: DocumentSession { viewport.session }
     private let clipboard = GridClipboard()
@@ -13,14 +13,14 @@ final class NoteCommands {
     /// prompt transaction, so this row asks for it instead of committing a value.
     /// `true` means the request was accepted; the document is untouched either
     /// way until the prompt's own acceptance runs.
-    var requestSetVelocity: (() -> Bool)?
-    var requestPitchBend: (() -> Bool)?
+    public var requestSetVelocity: (() -> Bool)?
+    public var requestPitchBend: (() -> Bool)?
 
-    init(viewport: DocumentViewport) {
+    public init(viewport: DocumentViewport) {
         self.viewport = viewport
     }
 
-    func isAvailable(_ command: EditCommand) -> Bool {
+    public func isAvailable(_ command: EditCommand) -> Bool {
         switch command {
         case .copy, .cut, .duplicate, .delete, .transposeUp, .transposeDown,
             .transposeUpOctave, .transposeDownOctave, .nudgeLeft, .nudgeRight,
@@ -40,7 +40,7 @@ final class NoteCommands {
     }
 
     @discardableResult
-    func execute(
+    public func execute(
         _ command: EditCommand, snapTicks: Tick, editCursor: Tick,
         nextSubdivision: (Tick) -> Tick
     ) -> Bool {

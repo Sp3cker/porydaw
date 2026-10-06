@@ -4,7 +4,7 @@ import PorydawCore
 import PorydawCoreCheckNative
 
 @MainActor
-func runTimeEditsSuite(_ report: CheckReport) {
+public func runTimeEditsSuite(_ report: CheckReport) {
     rangeEditing(report)
     coreRangeCorpusChecks(report)
     coreTimeCorpusChecks(report)

@@ -8,7 +8,7 @@ import PorydawPlaybackNative
 import PorydawProject
 
 @MainActor
-func runAudioControllerChecks(_ report: CheckReport) {
+public func runAudioControllerChecks(_ report: CheckReport) {
     do {
         try checkControllerCuts(report)
         try checkAuditionTailTransitions(report)

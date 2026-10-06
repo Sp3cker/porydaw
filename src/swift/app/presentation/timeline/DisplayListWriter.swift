@@ -3,16 +3,16 @@ import NativeDisplayList
 
 // Emits the src/render/display_list.h wire format: header then fonts, rects,
 // labels and the shared text block, each array start padded to 8 bytes.
-struct DisplayListWriter {
+public struct DisplayListWriter {
     private var fonts: [PdDlFont] = []
     private var rects: [PdDlRect] = []
     private var labels: [PdDlLabel] = []
     private var text: [UInt8] = []
     private var output = Data()
 
-    init() {}
+    public init() {}
 
-    mutating func font(_ f: PdDlFont, family: String) {
+    public mutating func font(_ f: PdDlFont, family: String) {
         var font = f
         font.familyOffset = UInt32(text.count)
         text.append(contentsOf: family.utf8)
@@ -20,11 +20,11 @@ struct DisplayListWriter {
         fonts.append(font)
     }
 
-    mutating func rect(_ r: PdDlRect) {
+    public mutating func rect(_ r: PdDlRect) {
         rects.append(r)
     }
 
-    mutating func label(_ l: PdDlLabel, text s: String) {
+    public mutating func label(_ l: PdDlLabel, text s: String) {
         var label = l
         label.textOffset = UInt32(text.count)
         text.append(contentsOf: s.utf8)
@@ -32,7 +32,7 @@ struct DisplayListWriter {
         labels.append(label)
     }
 
-    mutating func finish() -> Data {
+    public mutating func finish() -> Data {
         output.removeAll(keepingCapacity: true)
         var header = PdDlHeader(
             magic: PD_DL_MAGIC,

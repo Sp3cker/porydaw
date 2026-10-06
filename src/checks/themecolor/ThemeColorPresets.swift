@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 import QtBridge
 
 // MARK: - Preset values and role contracts (themeCompleteness, lane legibility)
@@ -11,8 +12,8 @@ import QtBridge
 // alias the secondary ink in every theme (never the disabled ink). The
 // pressed-text rule (vanilla resting text, dark presets resting-button
 // surface) comes from themeresolver.cpp:38-52.
-struct ThemePresetRow {
-    let mode: String
+public struct ThemePresetRow: Sendable {
+    public let mode: String
     let window: String
     let text: String
     let disabled: String
@@ -34,7 +35,7 @@ struct ThemePresetRow {
     let keyboardSeparator: String
 }
 
-let themePresetRows: [ThemePresetRow] = [
+public let themePresetRows: [ThemePresetRow] = [
     ThemePresetRow(
         mode: "vanilla",
         window: "#C9C1BB", text: "#302C29", disabled: "#8B847E",

@@ -24,7 +24,7 @@ private func editExternally(root: URL, fence: TimeInterval) throws -> VgVoice? {
     return voice
 }
 
-internal func runProjectStoreEditSuite(_ report: CheckReport) {
+public func runProjectStoreEditSuite(_ report: CheckReport) {
     checkBlankTokenConflicts(report)
     do {
         try withTempProjectCopy(prefix: "projectstore-edit") { root in

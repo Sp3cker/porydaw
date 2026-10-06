@@ -5,7 +5,7 @@ import PorydawCore
 import QtBridge
 
 @MainActor
-func runInterlockChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runInterlockChecks(_ report: CheckReport, viewport: DocumentViewport) {
     checkGestureInterlock(report, viewport: viewport)
 }
 

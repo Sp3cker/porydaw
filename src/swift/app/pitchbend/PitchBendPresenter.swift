@@ -2,6 +2,7 @@ import Foundation
 import PorydawCore
 import PorydawDocument
 import PorydawAppCommands
+import PorydawAppPresentation
 import QtBridge
 
 /// One document-scoped popup. Draft gestures stay in the kernels; only completed

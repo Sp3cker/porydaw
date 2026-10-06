@@ -4,7 +4,7 @@ import PorydawCore
 import PorydawDocument
 
 @MainActor
-internal func runTrackHeadersInputChecks(
+public func runTrackHeadersInputChecks(
     _ report: CheckReport, session: DocumentSession,
     service: ProjectService
 ) {

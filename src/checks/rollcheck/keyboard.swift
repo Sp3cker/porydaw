@@ -5,7 +5,7 @@ import PorydawCore
 @testable import PorydawDocument
 
 @MainActor
-func runKeyboardChecks(_ report: CheckReport, viewport: DocumentViewport) {
+public func runKeyboardChecks(_ report: CheckReport, viewport: DocumentViewport) {
     checkKeyboardTranspose(report, viewport: viewport)
     checkKeyboardKeepsEditedNoteVisible(report, viewport: viewport)
     checkKeyboardResizeNotes(report, viewport: viewport)

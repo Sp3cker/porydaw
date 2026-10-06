@@ -93,7 +93,7 @@ internal func boundVoiceList() -> VoiceListController {
 }
 
 @MainActor
-internal func runVoiceListChecks(_ report: CheckReport) {
+public func runVoiceListChecks(_ report: CheckReport) {
     voiceListStableRows(report)
     voiceListRowRendering(report)
     voiceTypeNamePins(report)

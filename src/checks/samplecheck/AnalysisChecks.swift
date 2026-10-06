@@ -1,7 +1,7 @@
 import Foundation
 import PorydawSample
 
-internal func runSamplePitchChecks(_ report: CheckReport, key: Int) {
+public func runSamplePitchChecks(_ report: CheckReport, key: Int) {
     let matrix = report.scoped(cppID: "samplecheck/SampleProcessingTest::pitchMatrix")
     for rate in [8000.0, 13379.0, 22050.0, 44100.0] {
         let frequency = 440 * pow(2, Double(key - 69) / 12)
@@ -16,7 +16,7 @@ internal func runSamplePitchChecks(_ report: CheckReport, key: Int) {
     }
 }
 
-internal func runAnalysisChecks(_ report: CheckReport) {
+public func runAnalysisChecks(_ report: CheckReport) {
     let negative = report.scoped(cppID: "samplecheck/SampleProcessingTest::pitchNegativeCases")
     var noise = [Float](repeating: 0, count: 13379 * 2)
     var rng: UInt32 = 0xA5A5_A5A5

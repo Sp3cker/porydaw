@@ -4,6 +4,7 @@ import PorydawCore
 @testable import PorydawDocument
 
 @testable import PorydawApp
+@testable import PorydawAppPresentation
 @MainActor
 struct VelocityDisplayRect {
     let x: Double

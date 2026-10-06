@@ -1,5 +1,6 @@
 import Foundation
 import PorydawAppAudio
+import PorydawAppPresentation
 import QtBridge
 
 /// Owns the modal export workflow and its captured offline render.
