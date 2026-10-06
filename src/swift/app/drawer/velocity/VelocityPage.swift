@@ -339,10 +339,14 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
 
     // MARK: Session refresh
 
+    /// PROTOTYPE probe — counts document refreshes for the revision-stamp demo; delete after.
+    public private(set) var documentRefreshCount = 0
+
     /// Document, undo/redo, track or bank publication: stale captures cancel,
     /// then document content and selection presentation rebuild together.
     @QtIgnored
     public func refreshFromDocument() {
+        documentRefreshCount += 1
         refreshPromptStyle()
         guard let session else { return }
         appliedPrimaryTrack = session.selectedTrack

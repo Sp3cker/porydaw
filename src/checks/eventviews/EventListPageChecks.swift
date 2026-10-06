@@ -665,7 +665,7 @@ private func prototypeRevisionProbe(
         let stamps = document.revisions
         print(
             "PROTO \(rebuilt ? "REBUILD" : "skip   ") \(label)  revision=\(document.revision)"
-                + " chunks=\(stamps.chunks) tempo=\(stamps.tempo) config=\(stamps.config)"
+                + " chunks=\(stamps.chunks.map(\.notes)) time=\(stamps.time) config=\(stamps.config)"
                 + " structure=\(stamps.structure) rows=\(presenter.rowCount)")
     }
     step("note edit in chunk 1 (not viewed)") {

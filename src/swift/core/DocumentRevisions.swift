@@ -1,15 +1,33 @@
+/// Stamps for one chunk's content, split by what consumers read: a note move
+/// advances `notes` only, so lane and voice readers skip.
+public struct ChunkRevisions: Equatable, Sendable {
+    public internal(set) var notes: UInt64
+    public internal(set) var lanes: UInt64
+    public internal(set) var voices: UInt64
+    /// Names, markers, text, sysex and aftertouch.
+    public internal(set) var meta: UInt64
+
+    init(_ stamp: UInt64) {
+        notes = stamp
+        lanes = stamp
+        voices = stamp
+        meta = stamp
+    }
+}
+
 /// Version stamps per document dependency: a consumer memoizes derived state on
 /// the stamps it reads, like a React dependency array. Stamps are globally unique.
 public struct DocumentRevisions: Equatable, Sendable {
-    /// One stamp per MIDI chunk index; structure edits re-index, so they restamp all.
-    public private(set) var chunks: [UInt64]
+    /// Indexed by MIDI chunk; structure edits re-index, so they restamp every chunk.
+    public private(set) var chunks: [ChunkRevisions]
     public private(set) var structure: UInt64 = 1
-    public private(set) var tempo: UInt64 = 1
+    /// Tempo map, chunk end ticks, division: anything that moves the time axis.
+    public private(set) var time: UInt64 = 1
     public private(set) var config: UInt64 = 1
     private var clock: UInt64 = 1
 
     init(chunkCount: Int) {
-        chunks = Array(repeating: 1, count: chunkCount)
+        chunks = Array(repeating: ChunkRevisions(1), count: chunkCount)
     }
 
     private mutating func next() -> UInt64 {
@@ -22,12 +40,28 @@ public struct DocumentRevisions: Equatable, Sendable {
             || !changes.chunkMoves.isEmpty
         {
             structure = next()
-            chunks = (0..<chunkCount).map { _ in next() }
+            chunks = (0..<chunkCount).map { _ in ChunkRevisions(next()) }
         } else {
-            for change in changes.events { chunks[change.chunk] = next() }
-            for end in changes.chunkEnds { chunks[end.chunk] = next() }
+            for change in changes.events { stamp(change) }
         }
-        if changes.tempo != nil { tempo = next() }
-        if changes.config != nil || changes.fileMetadata != nil { config = next() }
+        if changes.tempo != nil || !changes.chunkEnds.isEmpty || changes.fileMetadata != nil {
+            time = next()
+        }
+        if changes.config != nil { config = next() }
+    }
+
+    private mutating func stamp(_ change: EventChange) {
+        let chunk = change.chunk
+        switch change.event.payload {
+        case let .channel(status, _, _):
+            switch status >> 4 {
+            case 0x8, 0x9: chunks[chunk].notes = next()
+            case 0xB, 0xE: chunks[chunk].lanes = next()
+            case 0xC: chunks[chunk].voices = next()
+            default: chunks[chunk].meta = next()
+            }
+        case .meta, .systemExclusive:
+            chunks[chunk].meta = next()
+        }
     }
 }

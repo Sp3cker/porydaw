@@ -311,10 +311,19 @@ public final class VoiceChangesPage: EditorDrawerPage {
     @QtIgnored
     public func refreshFromDocument() {
         guard let session else { return }
+        invalidateDocumentInteraction()
         refreshPromptStyle()
         presentedContextEndTick = TimeDefaults.noTick
         presentedContextStartTick = 0
         pickerCache.refresh(slots: session.bankSlots)
+        rebuildContent()
+    }
+
+    /// Retires drag, pan, picker and menu frozen against an older revision
+    /// without rebuilding content the edit did not touch.
+    @QtIgnored
+    public func invalidateDocumentInteraction() {
+        guard let session else { return }
         let track = session.selectedTrack ?? -1
         let revision = session.document.revision
         if let live = drag, live.revision != revision || live.track != track {
@@ -329,7 +338,6 @@ public final class VoiceChangesPage: EditorDrawerPage {
         if let live = menu, live.target.revision != revision || live.target.track != track {
             dismissVoiceMenu()
         }
-        rebuildContent()
     }
 
     /// Cursor-only publication: while stopped, update only the dependent voice

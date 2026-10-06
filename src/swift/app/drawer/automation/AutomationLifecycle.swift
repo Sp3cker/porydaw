@@ -225,8 +225,7 @@ extension AutomationPage {
         applyBodySceneConfiguration(configuration)
     }
 
-    func refreshFromDocumentImpl() {
-        refreshPromptStyles()
+    func invalidateDocumentInteractionImpl() {
         guard let session else { return }
         let revision = session.document.revision
         func stale(_ facts: AutomationFrozenFacts) -> Bool {
@@ -249,6 +248,11 @@ extension AutomationPage {
         if let tapGuard, tapGuard.revision != revision || tapGuard.parameter != activeParameter {
             resetTapTempo()
         }
+    }
+
+    func refreshFromDocumentImpl() {
+        refreshPromptStyles()
+        guard session != nil else { return }
         publishInteractionState()
         rebuildContent()
     }

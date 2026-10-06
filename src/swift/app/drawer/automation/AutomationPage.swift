@@ -307,8 +307,19 @@ public final class AutomationPage: EditorDrawerPage {
 
     // MARK: Refresh
 
+    /// PROTOTYPE probe — counts document refreshes for the revision-stamp demo; delete after.
+    public private(set) var documentRefreshCount = 0
+
     public func refreshFromDocument() {
+        documentRefreshCount += 1
+        invalidateDocumentInteraction()
         refreshFromDocumentImpl()
+    }
+
+    /// Retires gestures, prompts and menus frozen against an older revision
+    /// without rebuilding content the edit did not touch.
+    public func invalidateDocumentInteraction() {
+        invalidateDocumentInteractionImpl()
     }
 
     /// Camera-only publication: the same points at new plot positions. A live

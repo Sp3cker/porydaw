@@ -73,6 +73,8 @@ public final class DocumentWorkspace {
     private var lastPolledPlaying: Bool?
     private var appliedSongConfig: SongConfig
     private var appliedPrimaryTrack: Int?
+    /// Stamps the last fan-out ran against; the next one refreshes only readers of what moved.
+    private var appliedRevisions: DocumentRevisions
     // Camera work a hidden drawer section skipped; showing or re-attaching it
     // replays one catch-up (zoom subsumes horizontal).
     private var deferredCameraZoom: [DrawerSectionKind: Bool] = [:]
@@ -102,6 +104,7 @@ public final class DocumentWorkspace {
         let grid = PianoGrid(viewport: viewport, palette: palette, typography: typography)
         self.grid = grid
         appliedPrimaryTrack = session.selectedTrack
+        appliedRevisions = session.document.revisions
         let otherEventsBand = OtherEventsBandPresenter()
         otherEventsBand.configure(
             viewport: viewport, palette: grid.palette,
@@ -413,11 +416,46 @@ public final class DocumentWorkspace {
         applyCamera(kind, zoom: zoom)
     }
 
+    /// Which stamp groups advanced since the last fan-out, by consumer.
+    private struct Moved {
+        var time = false
+        var primaryNotes = false
+        var primaryLanes = false
+        var primaryVoices = false
+        var headers = false
+    }
+
+    private func moved(since previous: DocumentRevisions) -> Moved {
+        let stamps = session.document.revisions
+        var moved = Moved()
+        moved.time =
+            stamps.structure != previous.structure || stamps.time != previous.time
+            || stamps.config != previous.config
+        if moved.time {
+            return Moved(time: true, primaryNotes: true, primaryLanes: true, primaryVoices: true, headers: true)
+        }
+        for (now, before) in zip(stamps.chunks, previous.chunks)
+        where now.voices != before.voices || now.meta != before.meta {
+            moved.headers = true
+        }
+        let mapping = session.document.engineTracks
+        if let track = session.selectedTrack, mapping.tracks.indices.contains(track),
+            let chunk = mapping.tracks[track].midiChunk, stamps.chunks.indices.contains(chunk)
+        {
+            moved.primaryNotes = stamps.chunks[chunk].notes != previous.chunks[chunk].notes
+            moved.primaryLanes = stamps.chunks[chunk].lanes != previous.chunks[chunk].lanes
+            moved.primaryVoices = stamps.chunks[chunk].voices != previous.chunks[chunk].voices
+        }
+        return moved
+    }
+
     private func sessionDidChange(_ change: SessionChange) {
         rulerMenu.sessionDidChange(change)
         let documentChanged = change.domains.contains(.document)
         let primaryTrackChanged = appliedPrimaryTrack != session.selectedTrack
+        let moved = documentChanged ? moved(since: appliedRevisions) : Moved()
         if documentChanged {
+            appliedRevisions = session.document.revisions
             callbacks.timeSignaturePromptInvalidated(session, change.revision)
             pitchBend.documentDidChange()
         }
@@ -429,9 +467,11 @@ public final class DocumentWorkspace {
         }
 
         if documentChanged {
-            trackHeaders.documentDidChange(change)
             otherEventsBand.refreshDocument()
             if isActive { playhead.refreshImmediate() }
+        }
+        if moved.headers {
+            trackHeaders.documentDidChange(change)
         } else if !change.domains.intersection(headerDomains).isEmpty {
             trackHeaders.refreshFromDocument()
         }
@@ -464,7 +504,7 @@ public final class DocumentWorkspace {
         if change.domains.contains(.bank) {
             velocityPage.cancelSectionInteraction()
         }
-        if documentChanged || change.domains.contains(.bank) || primaryTrackChanged {
+        if moved.primaryNotes || moved.primaryVoices || change.domains.contains(.bank) || primaryTrackChanged {
             // Document rebuilds read the live camera, so they settle deferred camera work.
             velocityPage.refreshFromDocument()
             deferredCameraZoom[.velocity] = nil
@@ -473,14 +513,19 @@ public final class DocumentWorkspace {
         } else if change.domains.contains(.cursor) {
             velocityPage.refreshEditCursor()
         }
-        if documentChanged || change.domains.contains(.bank) || primaryTrackChanged {
+        if moved.primaryVoices || change.domains.contains(.bank) || primaryTrackChanged {
             voiceChangesPage.refreshFromDocument()
             deferredCameraZoom[.voiceChanges] = nil
+        } else {
+            if documentChanged { voiceChangesPage.invalidateDocumentInteraction() }
+            if change.domains.contains(.cursor) { voiceChangesPage.refreshEditCursor() }
+        }
+        if moved.primaryLanes || change.domains.contains(.bank) || primaryTrackChanged {
             automationPage.refreshFromDocument()
             deferredCameraZoom[.automation] = nil
-        } else if change.domains.contains(.cursor) {
-            voiceChangesPage.refreshEditCursor()
-            automationPage.refreshEditCursor()
+        } else {
+            if documentChanged { automationPage.invalidateDocumentInteraction() }
+            if change.domains.contains(.cursor) { automationPage.refreshEditCursor() }
         }
 
         if isActive && change.domains.contains(.mixState) {

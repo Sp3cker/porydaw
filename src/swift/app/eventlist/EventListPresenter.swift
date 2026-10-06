@@ -76,8 +76,8 @@ public final class EventListPresenter: QmlUncreatable {
     public var chunkLabels: [String] = []
     /// Dependency key of the published rows, like a React `useMemo` deps array.
     private struct RowDependencies: Equatable {
-        let chunk: UInt64
-        let tempo: UInt64
+        let chunk: ChunkRevisions
+        let time: UInt64
         let structure: UInt64
     }
     private var appliedRows: RowDependencies?
@@ -523,7 +523,7 @@ public final class EventListPresenter: QmlUncreatable {
         let stamps = document.revisions
         guard stamps.chunks.indices.contains(chunkIndex) else { return nil }
         return RowDependencies(
-            chunk: stamps.chunks[chunkIndex], tempo: chunkIndex == 0 ? stamps.tempo : 0,
+            chunk: stamps.chunks[chunkIndex], time: chunkIndex == 0 ? stamps.time : 0,
             structure: stamps.structure)
     }
 

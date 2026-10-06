@@ -170,8 +170,12 @@ public final class TrackHeadersPresenter {
         refreshFromDocument()
     }
 
+    /// PROTOTYPE probe — counts document refreshes for the revision-stamp demo; delete after.
+    public private(set) var documentRefreshCount = 0
+
     @QtIgnored
     public func refreshFromDocument() {
+        documentRefreshCount += 1
         guard let session, !session.isClosed else { return }
         let document = session.document
         let trackCount = document.engineTracks.usedTrackCount

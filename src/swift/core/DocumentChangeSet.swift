@@ -8,6 +8,13 @@ internal enum EventChange: Sendable {
         case let .remove(removal): removal.chunk
         }
     }
+
+    var event: MidiEvent {
+        switch self {
+        case let .insert(insertion): insertion.event
+        case let .remove(removal): removal.event
+        }
+    }
 }
 
 internal struct EventInsertion: Sendable {
