@@ -72,10 +72,30 @@ after CMake reconfigures or Swift edits — stale references/rename lie silently
 rename needs `timeout >= 120` cold. References empty while hover works means the
 server predates the index: kill `sourcekit-lsp`; the next query cold-starts.
 
-## File-size discipline
+## Files and modules
 
-Target 200–400 lines per file; review cohesion above 600. One concept per file
-(`src/swift/app/drawer/` is the model). No 80-line fragments either.
+One concept per file; the filename names the concept (`src/swift/app/drawer/`
+is the model). Size follows cohesion: keep decisions that are read together in
+one file, even past 600 lines; a file mixing concepts is the defect, not a long
+file holding one. Never split a concept into `Type+Aspect.swift` fragments to
+stay under a number; fragments under ~100 lines fold back into their owner
+unless they are a separately named concept. When files move or split, update
+the area's `README.md` map in the same change.
+
+Code placement follows the module graph, which points one way toward
+`PorydawCore`: Project, Playback and Document build on Core (Document also on
+Project); the `PorydawAppAudio`/`AppEventList`/`AppCommands` feature modules
+see only Core (and Playback for audio); `PorydawApp` sits on top. Each target's
+`CMakeLists.txt` is the authority.
+
+- A concept shared across modules lives in the lowest module all its consumers
+  already import; code with one consumer stays in that consumer's module.
+- Never add a module dependency to reach code; move the shared part down.
+- Module surfaces stay narrow: `internal` by default, `public` only for what
+  another module calls, so a change behind the surface stays in its module.
+- Feature code that needs only lower modules may live in its own feature
+  module (`PorydawAppEventList` is the model); a new module must remove a
+  dependency on `PorydawApp`, not just tidy a folder.
 
 ## Worktrees and Git
 
