@@ -149,7 +149,6 @@ enum EditorQmlLane {
         qTestApp.setInputDir(EditorQmlPaths.testDirectory)
         qTestApp.setImportPath(EditorQmlPaths.qmlImportPath)
         qTestApp.setPluginsPath(EditorQmlPaths.pluginPath)
-        PorydawQmlTypes.aliasQmlModules()
         for type in PorydawQmlTypes.instantiable {
             type.registerQmlElement()
         }

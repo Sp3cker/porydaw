@@ -58,8 +58,8 @@ endfunction()
 # per-process ClangImporter startup is paid once per batch instead of once per
 # source file. The driver ignores the flag outside incremental compilation, so
 # it stays gated on Debug — the only incremental configuration here. The
-# type-check budgets enforce .omp/rules/swift-typecheck-complexity.md; they sit
-# above the ~1s lazy Qt C++ decl import the first body in each process pays.
+# type-check budgets warn (never fail) past .omp/rules/swift-typecheck-complexity.md;
+# they sit above the ~1s lazy Qt C++ decl import the first body in each process pays.
 function(porydaw_enable_swift_batch_mode target)
     target_compile_options(${target} PRIVATE
         "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:-enable-batch-mode>"

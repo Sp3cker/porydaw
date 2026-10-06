@@ -117,7 +117,6 @@ enum RollQmlLane {
         app.setInputDir(inputDirectory)
         app.setImportPath(EditorQmlPaths.qmlImportPath)
         app.setPluginsPath(EditorQmlPaths.pluginPath)
-        PorydawQmlTypes.aliasQmlModules()
         for type in PorydawQmlTypes.instantiable {
             type.registerQmlElement()
         }

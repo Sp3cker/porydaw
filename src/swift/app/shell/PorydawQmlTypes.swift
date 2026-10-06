@@ -6,16 +6,23 @@ import QtBridge
 @MainActor
 public enum PorydawQmlTypes {
     /// QtBridge keys QML URIs by Swift module; presentation types belong to the app's module.
-    /// Call before registering any type.
-    public static func aliasQmlModules() {
+    private static let aliasedModules: Void = {
         QMetaObjectBuilder.qmlModuleAliases["PorydawAppPresentation"] = "PorydawApp"
-    }
+    }()
 
     /// Types that QML may construct, in application registration order.
-    public static let instantiable: [QmlInstantiable.Type] = [ShellPresenter.self, ApplicationSession.self]
+    public static var instantiable: [QmlInstantiable.Type] {
+        _ = aliasedModules
+        return [ShellPresenter.self, ApplicationSession.self]
+    }
 
     /// Swift-owned types that QML may name: existing registrations, then alphabetical additions.
-    public static let uncreatable: [QmlUncreatable.Type] = [
+    public static var uncreatable: [QmlUncreatable.Type] {
+        _ = aliasedModules
+        return uncreatableTypes
+    }
+
+    private static let uncreatableTypes: [QmlUncreatable.Type] = [
         EngineSettingsStore.self,
         EventListPresenter.self,
         MidiImportController.self,

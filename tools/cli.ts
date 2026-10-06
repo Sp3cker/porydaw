@@ -227,6 +227,9 @@ async function runQmlAot(args: string[], build = true): Promise<void> {
   if (args.includes("--release") && args.includes("--asan")) {
     usage("checks:qml-aot", "--release and --asan are mutually exclusive");
   }
+  if (args.includes("--asan") && Deno.build.os === "windows") {
+    usage("checks:qml-aot", "--asan is not supported on Windows");
+  }
   const update = args.includes("--update-baseline");
   if (args.includes("--allow-growth") && !update) {
     usage("checks:qml-aot", "--allow-growth requires --update-baseline");

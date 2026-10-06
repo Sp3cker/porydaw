@@ -69,7 +69,6 @@ enum ShellQmlLane {
         app.setInputDir(EditorQmlPaths.testDirectory)
         app.setImportPath(EditorQmlPaths.qmlImportPath)
         app.setPluginsPath(EditorQmlPaths.pluginPath)
-        PorydawQmlTypes.aliasQmlModules()
         for type in PorydawQmlTypes.instantiable {
             type.registerQmlElement()
         }

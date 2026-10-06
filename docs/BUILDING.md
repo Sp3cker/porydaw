@@ -12,7 +12,7 @@ deno task build:app   [--release|--asan]   # porydaw only            -> build/de
 deno task build:checks [--release|--asan]  # porydaw + porydaw_checks + mid2agb
 deno task checks ... [--asan]              # builds porydaw_checks, mid2agb, all_aotstats, then runs
 deno task checks:qml ... [--asan]          # editor drawer QML lane (same flags for checks:qml-roll, checks:shell)
-deno task checks:qml-aot                   # builds porydaw + all_aotstats, then the AOT ratchet
+deno task checks:qml-aot [--release|--asan] # builds porydaw + all_aotstats, then the AOT ratchet
 ```
 
 AGENTS.md § Build & checks is the task index; this file is the pipeline
@@ -158,7 +158,7 @@ interop (Qt headers). A one-file edit measures 6.4 s (emit-module 6.1 s, was
 9.2/7.2 s before the split). The emit-module job type-checks every declaration
 in the module plus the imported Clang decls, and pays a per-process ~1 s lazy Qt
 C++ decl import on the first `==`/`String.init` overload resolution. Type-check
-budgets of 2000 ms per body / 1000 ms per expression are enforced in Debug.
+budgets of 2000 ms per body / 1000 ms per expression warn (never fail) in Debug.
 `-incremental -enable-batch-mode` are already on (Debug). Only moving code out of
 `PorydawApp` into smaller modules lowers the floor further; `PorydawDocument`
 (Qt-free, no interop) shows the payoff at ~1 s per edit with no downstream rebuild

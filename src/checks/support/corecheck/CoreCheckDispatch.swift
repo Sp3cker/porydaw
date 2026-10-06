@@ -7,8 +7,7 @@ import SwiftCoreCheckProject
 import SwiftCoreCheckRoll
 import SwiftCoreCheckSupport
 
-/// Same-thread synchronous handoff of a CheckReport into MainActor-isolated
-/// suites; see pdcSuiteRun.
+/// Same-thread synchronous handoff of a CheckReport into MainActor suites; see pdcSuiteRun.
 private final class ReportBox: @unchecked Sendable {
     let report: CheckReport
     init(_ report: CheckReport) { self.report = report }
