@@ -1,30 +1,50 @@
 import PorydawCore
 
-/// Session-scoped, document-only projections. Bank and presentation state are
-/// deliberately absent: their changes need not advance the document revision.
+/// Session-scoped, document-only projections, each memoized on the revision
+/// stamps it reads so an edit re-derives only the tracks and axes it touched.
+/// Bank and presentation state are deliberately absent.
 @MainActor
 public final class DocumentProjectionCache {
+    /// Notes and lanes of one track carry raw event offsets, so they key on any
+    /// event edit in the chunk plus the facts that map the track to it.
+    private struct TrackKey: Equatable {
+        let chunk: Int?
+        let events: UInt64
+        let structure: UInt64
+        let meta: UInt64
+    }
+
     private struct LaneKey: Hashable {
         let track: Int
         let lane: Lane
     }
 
+    private struct AxisKey: Equatable {
+        let time: UInt64
+        let config: UInt64
+        let structure: UInt64
+        let meta: UInt64
+        let lengthTicks: Tick
+        let loopStartTick: Tick
+        let loopEndTick: Tick
+    }
+
     private unowned let session: DocumentSession
-    private var revision: UInt64?
-    private var trackNotes: [Int: [Note]] = [:]
+    private var trackNotes: [Int: (key: TrackKey, notes: [Note])] = [:]
     private var noteIndices: [Int: [NoteID: Int]] = [:]
-    private var lanes: [LaneKey: [LanePoint]] = [:]
-    private var cachedTimeAxis: TimeAxis?
+    private var lanes: [LaneKey: (key: TrackKey, points: [LanePoint])] = [:]
+    private var cachedTimeAxis: (key: AxisKey, axis: TimeAxis)?
 
     init(session: DocumentSession) {
         self.session = session
     }
 
     public func notes(in track: Int) -> [Note] {
-        invalidateIfNeeded()
-        if let notes = trackNotes[track] { return notes }
+        let key = trackKey(track: track)
+        if let cached = trackNotes[track], cached.key == key { return cached.notes }
         let notes = session.document.notes(in: track)
-        trackNotes[track] = notes
+        trackNotes[track] = (key, notes)
+        noteIndices.removeValue(forKey: track)
         return notes
     }
 
@@ -43,18 +63,22 @@ public final class DocumentProjectionCache {
     }
 
     public func lanePoints(track: Int, lane: Lane) -> [LanePoint] {
-        invalidateIfNeeded()
-        let key = LaneKey(track: track, lane: lane)
-        if let points = lanes[key] { return points }
+        let key = trackKey(track: track)
+        let laneKey = LaneKey(track: track, lane: lane)
+        if let cached = lanes[laneKey], cached.key == key { return cached.points }
         let points = session.document.lanePoints(track: track, lane: lane)
-        lanes[key] = points
+        lanes[laneKey] = (key, points)
         return points
     }
 
     public var timeAxis: TimeAxis {
-        invalidateIfNeeded()
-        if let axis = cachedTimeAxis { return axis }
+        let stamps = session.document.revisions
         let timeline = session.timeline
+        let key = AxisKey(
+            time: stamps.time, config: stamps.config, structure: stamps.structure,
+            meta: stamps.all.meta, lengthTicks: timeline.lengthTicks,
+            loopStartTick: timeline.loopStartTick, loopEndTick: timeline.loopEndTick)
+        if let cached = cachedTimeAxis, cached.key == key { return cached.axis }
         let axis = TimeAxis(
             map: TimeMap(
                 ticksPerBeat: UInt32(max(1, session.document.ticksPerBeat)),
@@ -66,19 +90,18 @@ public final class DocumentProjectionCache {
                         tick: $0.tick, numerator: $0.numerator,
                         denomPow2: $0.denominatorPower)
                 }))
-        cachedTimeAxis = axis
+        cachedTimeAxis = (key, axis)
         return axis
     }
 
-    /// Synchronous main-actor invalidation clears every derived fact before a
-    /// new revision can be read. Each projection is then rebuilt only on demand.
-    private func invalidateIfNeeded() {
-        let current = session.document.revision
-        guard revision != current else { return }
-        trackNotes.removeAll(keepingCapacity: true)
-        noteIndices.removeAll(keepingCapacity: true)
-        lanes.removeAll(keepingCapacity: true)
-        cachedTimeAxis = nil
-        revision = current
+    private func trackKey(track: Int) -> TrackKey {
+        let document = session.document
+        let stamps = document.revisions
+        let map = document.engineTracks
+        let chunk =
+            track >= 0 && track < map.usedTrackCount && map.tracks.indices.contains(track)
+            ? map.tracks[track].midiChunk : nil
+        let events = chunk.flatMap { stamps.chunks.indices.contains($0) ? stamps.chunks[$0].events : nil } ?? 0
+        return TrackKey(chunk: chunk, events: events, structure: stamps.structure, meta: stamps.all.meta)
     }
 }

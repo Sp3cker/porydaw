@@ -81,8 +81,6 @@ public final class EventListPresenter: QmlUncreatable {
         let structure: UInt64
     }
     private var appliedRows: RowDependencies?
-    /// PROTOTYPE probe — counts row rebuilds for the revision-stamp demo; delete after.
-    public private(set) var rebuildCount = 0
     @QtTracked public var filterMask = 127
     @QtTracked public var filterSummary = "All events"
     @QtTracked public var countText = ""
@@ -547,7 +545,6 @@ public final class EventListPresenter: QmlUncreatable {
         let chunks = document.rawChunks
         refreshChunkLabels(in: document)
         appliedRows = rowDependencies(in: document)
-        rebuildCount += 1
         guard chunks.indices.contains(chunkIndex) else {
             model.setSource(nil)
             publishRows()

@@ -472,8 +472,9 @@ public final class DocumentWorkspace {
         }
         if moved.headers {
             trackHeaders.documentDidChange(change)
-        } else if !change.domains.intersection(headerDomains).isEmpty {
-            trackHeaders.refreshFromDocument()
+        } else {
+            if documentChanged { trackHeaders.invalidateDocumentInteraction() }
+            if !change.domains.intersection(headerDomains).isEmpty { trackHeaders.refreshFromDocument() }
         }
         if documentChanged || change.domains.contains(.bank) {
             headerVoicePicker.refresh()
@@ -508,10 +509,13 @@ public final class DocumentWorkspace {
             // Document rebuilds read the live camera, so they settle deferred camera work.
             velocityPage.refreshFromDocument()
             deferredCameraZoom[.velocity] = nil
-        } else if change.domains.contains(.selection) {
-            velocityPage.refreshSelectionPresentation()
-        } else if change.domains.contains(.cursor) {
-            velocityPage.refreshEditCursor()
+        } else {
+            if documentChanged { velocityPage.invalidateDocumentInteraction() }
+            if change.domains.contains(.selection) {
+                velocityPage.refreshSelectionPresentation()
+            } else if change.domains.contains(.cursor) {
+                velocityPage.refreshEditCursor()
+            }
         }
         if moved.primaryVoices || change.domains.contains(.bank) || primaryTrackChanged {
             voiceChangesPage.refreshFromDocument()

@@ -381,6 +381,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         velocity/VelocityPaintDetentUnlockedChecks.swift
         velocity/VelocityRollCoreChecks.swift
         velocity/VelocityRollDrawerMirrorChecks.swift
+        velocity/WorkspaceRefreshScopeChecks.swift
         rollcheck/velocity_prompt.swift
         drawerpresentation/EditorDrawerChecks.swift
         drawerpresentation/other_events_band.swift

@@ -170,12 +170,22 @@ public final class TrackHeadersPresenter {
         refreshFromDocument()
     }
 
-    /// PROTOTYPE probe — counts document refreshes for the revision-stamp demo; delete after.
-    public private(set) var documentRefreshCount = 0
+    /// Retires a header menu or voice request aimed at an older revision
+    /// without rebuilding snapshots the edit did not touch.
+    @QtIgnored
+    public func invalidateDocumentInteraction() {
+        guard let session, !session.isClosed else { return }
+        let document = session.document
+        if let target = pendingMenu, !target.matches(document) { dismissHeaderMenu() }
+        if let target = pendingVoice, !target.matches(document) { pendingVoice = nil }
+    }
+
+    /// Document refreshes that rebuilt header snapshots; gated edits leave it unchanged.
+    @QtIgnored public internal(set) var contentBuildCount: UInt64 = 0
 
     @QtIgnored
     public func refreshFromDocument() {
-        documentRefreshCount += 1
+        contentBuildCount &+= 1
         guard let session, !session.isClosed else { return }
         let document = session.document
         let trackCount = document.engineTracks.usedTrackCount
@@ -188,8 +198,7 @@ public final class TrackHeadersPresenter {
             cancelTransientState()
             activity.resetPaused()
         }
-        if let target = pendingMenu, !target.matches(document) { dismissHeaderMenu() }
-        if let target = pendingVoice, !target.matches(document) { pendingVoice = nil }
+        invalidateDocumentInteraction()
         var next: [TrackHeaderSnapshot] = []
         next.reserveCapacity(expectedCount)
         var nextPrograms: [Int] = []

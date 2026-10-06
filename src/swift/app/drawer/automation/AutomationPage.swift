@@ -307,11 +307,7 @@ public final class AutomationPage: EditorDrawerPage {
 
     // MARK: Refresh
 
-    /// PROTOTYPE probe — counts document refreshes for the revision-stamp demo; delete after.
-    public private(set) var documentRefreshCount = 0
-
     public func refreshFromDocument() {
-        documentRefreshCount += 1
         invalidateDocumentInteraction()
         refreshFromDocumentImpl()
     }

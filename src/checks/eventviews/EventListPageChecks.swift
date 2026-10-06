@@ -171,7 +171,6 @@ internal func runEventListPageChecks(
     eventListRowMenuContract(report, suite: suite, service: service)
     eventListFilterMatrix(report, suite: suite, service: service)
     eventListMenuInvalidation(report, suite: suite, service: service)
-    prototypeRevisionProbe(report, suite: suite, service: service)
 }
 
 @MainActor
@@ -622,71 +621,4 @@ private func eventListMenuInvalidation(
     report.expect(
         presenter.menuOpen && presenter.currentRow == 1,
         cppID: id, message: "row changes leave the filter menu open")
-}
-
-/// PROTOTYPE — surfaces which document edits rebuild the event list rows. Delete after.
-@MainActor
-private func prototypeRevisionProbe(
-    _ report: CheckReport, suite: DocumentSession, service: ProjectService
-) {
-    let document = SongDocument(
-        file: MidiFile(
-            division: 24,
-            chunks: [
-                MidiChunk(events: [.meta(tick: 0, type: 6, data: [1])], endTick: 96),
-                MidiChunk(
-                    events: [
-                        .channel(tick: 0, status: 0x90, data0: 60, data1: 80),
-                        .channel(tick: 24, status: 0x80, data0: 60, data1: 0),
-                    ], endTick: 96),
-                MidiChunk(
-                    events: [
-                        .channel(tick: 0, status: 0x91, data0: 64, data1: 80),
-                        .channel(tick: 24, status: 0x81, data0: 64, data1: 0),
-                    ], endTick: 96),
-            ]), config: suite.document.state.config, source: suite.document.source,
-        trackBudget: suite.document.trackBudget)
-    let session = DocumentSession(
-        document: document, service: service, lease: suite.bankLease,
-        slots: suite.bankSlots, dirty: false, loadName: suite.bankLoadName,
-        sampleRate: 48_000)
-    let presenter = EventListPresenter()
-    session.onChange = { [weak presenter] change in presenter?.documentDidChange(change) }
-    presenter.attach(session: session)
-    presenter.setVisible(visible: true)
-    presenter.setChunk(index: 2)
-    var last = presenter.rebuildCount
-    var pattern: [Bool] = []
-    func step(_ label: String, _ action: () -> Void) {
-        action()
-        let rebuilt = presenter.rebuildCount != last
-        last = presenter.rebuildCount
-        pattern.append(rebuilt)
-        let stamps = document.revisions
-        print(
-            "PROTO \(rebuilt ? "REBUILD" : "skip   ") \(label)  revision=\(document.revision)"
-                + " chunks=\(stamps.chunks.map(\.notes)) time=\(stamps.time) config=\(stamps.config)"
-                + " structure=\(stamps.structure) rows=\(presenter.rowCount)")
-    }
-    step("note edit in chunk 1 (not viewed)") {
-        document.insertRawEvent(chunk: 1, event: .channel(tick: 48, status: 0x90, data0: 62, data1: 80))
-    }
-    step("note edit in chunk 2 (viewed)") {
-        document.insertRawEvent(chunk: 2, event: .channel(tick: 48, status: 0x91, data0: 66, data1: 80))
-    }
-    step("config toggle (exactGate)") {
-        var config = document.state.config
-        config.exactGate.toggle()
-        document.setConfig(config)
-    }
-    step("tempo edit (conductor; not viewed)") {
-        document.editTempo(TempoEdit(add: [TempoPoint(tick: 36, microsecondsPerQuarterNote: 400_000)]))
-    }
-    step("undo tempo") { _ = document.history.undoDocument() }
-    step("undo config") { _ = document.history.undoDocument() }
-    step("undo chunk 2 note (viewed)") { _ = document.history.undoDocument() }
-    step("undo chunk 1 note (not viewed)") { _ = document.history.undoDocument() }
-    report.expect(
-        pattern == [false, true, false, false, false, false, true, false], cppID: pageID,
-        message: "PROTO: only edits the viewed chunk reads rebuild the rows: \(pattern)")
 }

@@ -194,7 +194,7 @@ public func runVelocityPageChecks(
     drawerVelocityRollCoreRollControllerCancel(report, session: session, service: service)
     drawerVelocityRollCoreRollStationaryNoop(report, session: session, service: service)
     drawerVelocityRollDragMovesDrawerNodes(report, session: session, service: service)
-    prototypeFanoutProbe(report, session: session, service: service)
+    workspaceRefreshScope(report, session: session, service: service)
     drawerVelocityRollCoreOctaveShortcut(report, session: session, service: service)
     drawerVelocityRollCorePromptInterlock(report, session: session, service: service)
     drawerVelocityPromptTransaction(report, session: session, service: service)
@@ -267,81 +267,4 @@ func drawerVelocityCommandAvailability(
         expected: EditKeyRoute.alwaysConsume.rawValue, actual: row?.keyRoute.rawValue ?? -1,
         cppID: drawerVelocityCommandID,
         what: "the command table keeps Set Velocity's consume route")
-}
-
-/// PROTOTYPE — surfaces which presenters refresh per edit kind. Delete after.
-@MainActor
-private func prototypeFanoutProbe(
-    _ report: CheckReport, session: DocumentSession, service: ProjectService
-) {
-    let fixture = drawerVelocityVelocityFixture(session: session, service: service)
-    let document = fixture.document
-    let audio: NativeAudio
-    do {
-        audio = try runBlocking { try await NativeAudio() }
-    } catch {
-        report.fail(drawerVelocityRollMirrorID, "cannot create audio: \(error)")
-        return
-    }
-    let presenters = WorkspacePresenterFixture(
-        viewport: fixture.viewport, audio: audio,
-        callbacks: DocumentWorkspace.Callbacks(
-            changeTrackVoiceRequested: { _ in },
-            revealTrackVoiceRequested: { _ in },
-            gridCommandAvailabilityChanged: {}, sessionStateChanged: {},
-            publicationFailed: { _ in }, timeSignaturePromptInvalidated: { _, _ in }))
-    let workspace = presenters.workspace
-    defer {
-        workspace.teardown()
-        withExtendedLifetime((audio, presenters)) {}
-    }
-    workspace.activate()
-    let mapping = document.engineTracks.tracks[0]
-    guard let chunk = mapping.midiChunk else {
-        report.fail(drawerVelocityRollMirrorID, "track 0 has no chunk")
-        return
-    }
-    let channel = mapping.channel
-    var last = (
-        workspace.velocityPage.documentRefreshCount, workspace.automationPage.documentRefreshCount,
-        workspace.trackHeaders.documentRefreshCount
-    )
-    var pattern: [[Bool]] = []
-    func step(_ label: String, _ action: () -> Void) {
-        action()
-        let now = (
-            workspace.velocityPage.documentRefreshCount, workspace.automationPage.documentRefreshCount,
-            workspace.trackHeaders.documentRefreshCount
-        )
-        let refreshed = [now.0 != last.0, now.1 != last.1, now.2 != last.2]
-        last = now
-        pattern.append(refreshed)
-        let mark = { (hit: Bool) in hit ? "REFRESH" : "skip   " }
-        print(
-            "PROTO \(label.padding(toLength: 28, withPad: " ", startingAt: 0))"
-                + " velocity=\(mark(refreshed[0])) automation=\(mark(refreshed[1]))"
-                + " headers=\(mark(refreshed[2]))  stamps[\(chunk)]=\(document.revisions.chunks[chunk])")
-    }
-    step("note move") {
-        document.moveNotes([fixture.notes[0].id], byTicks: 24, byKeys: 0)
-    }
-    step("CC lane edit (same chunk)") {
-        document.insertRawEvent(
-            chunk: chunk, event: .channel(tick: 10, status: 0xB0 | channel, data0: 7, data1: 100))
-    }
-    step("program change (same chunk)") {
-        document.insertRawEvent(
-            chunk: chunk, event: .channel(tick: 10, status: 0xC0 | channel, data0: 5, data1: 0))
-    }
-    step("undo program change") { _ = document.history.undoDocument() }
-    step("undo CC edit") { _ = document.history.undoDocument() }
-    step("undo note move") { _ = document.history.undoDocument() }
-    report.expect(
-        pattern == [
-            [true, false, false], [false, true, false], [true, false, true],
-            [true, false, true], [false, true, false], [true, false, false],
-        ],
-        cppID: drawerVelocityRollMirrorID,
-        message: "PROTO: note moves refresh velocity only; lanes refresh automation; voices refresh headers: \(pattern)"
-    )
 }
