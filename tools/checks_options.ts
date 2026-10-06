@@ -15,6 +15,7 @@ export const CHECKS_HELP =
   --reporter quiet|verbose  default: quiet
   --verbose, -v        show per-harness results
   --pool=<n>           offscreen workers: 1..64 (default: ${DEFAULT_CHECK_POOL})
+  --asan               build and run from build/asan (not on Windows)
   --help               show this help without building
   --qt <args...>       Qt arguments for ONE harness selected by --filter;
                       all following arguments belong to Qt, not this runner

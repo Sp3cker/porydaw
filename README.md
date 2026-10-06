@@ -62,21 +62,11 @@ its existing style. TypeScript under `tools/` is formatted with `deno fmt`. Befo
 pull request, run:
 
 ```bash
-deno task format                              # format uncommitted Swift changes and tools/*.ts
 deno task format --check --base origin/fork-main  # what CI checks for a pull request
-```
-
-Build and run the check sweep with Deno:
-
-```bash
 deno task checks                             # native check runner harnesses (builds first)
-deno task checks --filter swiftcore          # Swift core/presenter suites
-deno task checks:shell                       # production ShellWindow QML lanes
-deno task checks:qml                         # editor drawer QML lane
-deno task checks:qml-roll                    # Swift roll window QML lane
-deno task checks:bridge                      # Swift/QML boundary guard
-deno task proof check                        # assertion-ledger structure
 ```
+
+The full task index and per-slice guidance are in AGENTS.md § Build & checks; pipeline internals in docs/BUILDING.md.
 
 `deno task build:checks --asan` builds the app and native checks with AddressSanitizer
 in `build/asan`, separate from normal Debug and Release builds. On macOS it uses
@@ -84,7 +74,7 @@ Clang from the selected Swift toolchain so both languages share an ASAN runtime.
 Run its native checks with:
 
 ```bash
-deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,PORYDAW_SAMPLE_CORPUS tools/run_checks.ts build/asan/porydaw_checks
+deno task checks --asan
 ```
 
 Checks pin consumer-visible behavior and distinct input/state transitions. Prefer typed
@@ -184,6 +174,7 @@ and the `Icons` singleton (requires fontTools):
 
 ```bash
 python3 tools/gen_ui_icons.py --fontawesome /path/to/fontawesome-pro-5.15.4-desktop
+python3 tools/gen_icons.py  # app-icon ladder under resources/ from resources/porydaw-1024.png
 ```
 
 - The Font Awesome Pro desktop package is a local download; it is never committed.

@@ -684,22 +684,3 @@ if(APPLE)
     set_source_files_properties(resources/porydaw.icns PROPERTIES
         MACOSX_PACKAGE_LOCATION Resources)
 endif()
-
-# ---- Offline render CLI (development/testing: parity vs poryaaaa_render) ----
-add_executable(porydaw_render_cli
-    tools/porydaw_render_cli.cpp
-    src/audio/swift_playback.h
-)
-target_include_directories(porydaw_render_cli PRIVATE src)
-target_link_libraries(porydaw_render_cli PRIVATE PorydawPlayback poryaaaa_engine)
-porydaw_enable_project_warnings(porydaw_render_cli)
-if(NOT WIN32)
-    # PorydawPlayback is a Swift archive, but this executable has only native,
-    # possibly LTO, objects: the C++ driver links, as for the application target.
-    set_target_properties(porydaw_render_cli PROPERTIES LINKER_LANGUAGE CXX)
-    porydaw_link_linux_swift_runtime(porydaw_render_cli
-        PorydawPlayback PorydawCore BinaryParsing)
-endif()
-if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_link_options(porydaw_render_cli PRIVATE -static)
-endif()

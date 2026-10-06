@@ -31,7 +31,6 @@ Commands below exist at the inspected revision. Reuse them in surface briefs; ch
 | DRAWER | `deno task verify:qml --verbose` | Editor drawer QML behavior registered in this lane. |
 | ROLL | `deno task verify:qml-roll --verbose` | Swift roll QML input, camera, headers, scrollbar, plots, automation and playhead lanes. |
 | ALL | `deno task verify --verbose` | Entire currently registered native runner; does not implicitly run the three separate QML lanes. |
-| RENDER-BUILD | `deno task build:render` | Builds the development render CLI; building is not an audio comparison or a GUI export check. |
 | PROOF | `deno task proof check` | Proof structure and source-anchor resolution only. |
 | EXECUTED | `deno task proof check --executed` | Classifies predicate anchors against runner evidence and rejects certain unsupported matches. Inspect “not executed” and “unverifiable”; exit zero alone is not complete parity, and does not close GAP/PARTIAL rows. |
 | STRICT-MAPPINGS | `deno task proof check --strict-mappings` | Fails on MATCHED sites citing no message-anchored predicate; plain `check` reports the same list as a warning. Required before treating a ledger as closed. |

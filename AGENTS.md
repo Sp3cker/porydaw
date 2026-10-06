@@ -21,13 +21,14 @@ src/
   swift/project/   — Swift project store (asm/midi.cfg/bank files)
   swift/app/       — PorydawApp: session, presenters, audio, drawer, roll, timeline, shell
     shell/                         # PorydawShellApp @main, ShellPresenter, ShellAppearance
+    presentation/              # PorydawAppPresentation: theme, typography, display-list writer, scene packing, prompt appearance, preferences, playhead guides, scrollbar, pitch-bend kernel, note commands
     drawer/                        # the model for one-concept-per-file layout
   ui/shell/        — PorydawApplication.qml, ShellWindow.qml, chrome
   ui/songview/quick/ — production QML (swiftroll/, drawer/, shared controls)
   app/             — native host C ABI: clipboard, QML engine, item cursor, Qt main executor
   render/          — display-list boundary (see below)
   audio/           — C: miniaudio device, sample codec, swift_playback.h playback ABI
-  checks/          — harnesses: swiftcore suites, QML lanes (editorqml/, rollqml/), proof ledgers
+  checks/          — harnesses: swift_core_check lanes (support/media/edit/roll/pages/project), QML lanes (editorqml/, rollqml/), proof ledgers
 tools/             — Deno build/check/format/proof runners
 external/          — poryaaaa (submodule), dr_libs, stb
 docs/plans/        — implementation plans; one directory per plan
@@ -83,7 +84,7 @@ fold back unless a separately named concept.
 Modules point one way toward `PorydawCore` (each `CMakeLists.txt` is the
 authority): Project/Playback/Document build on Core (Document also on Project);
 `AppAudio`/`AppEventList`/`AppCommands` see only Core (+Playback for audio);
-`PorydawApp` sits on top. Shared code lives in the lowest module all consumers
+`PorydawAppPresentation` (`src/swift/app/presentation`) depends on Core, Document, Project, AppCommands, and QtBridge; `PorydawApp` sits on top. Shared code lives in the lowest module all consumers
 already import; single-consumer code stays in its consumer; never add a
 dependency to reach code, move the shared part down. `internal` by default,
 `public` only for cross-module callers. Feature code needing only lower modules
@@ -101,19 +102,40 @@ handing off.
 
 ## Build & checks
 
-Agents use `deno task` only; never `cmake`/`ninja` directly.
+Agents use `deno task` only; never `cmake`/`ninja` directly. `.github/workflows/build.yml` and `release.yml` are the only permitted direct `cmake` callers (sccache, `cmake --install`).
 
-```bash
-deno task build:app [--release]              # app only (build/debug or build/release)
-deno task build:checks                       # app + checks + mid2agb
-deno task checks [--filter <name>] [--verbose]   # native harnesses (builds first)
-deno task checks --filter swiftcore          # Swift core/presenter suites
-deno task checks:shell | checks:qml | checks:qml-roll [--filter <entry>]  # QML lanes
-deno task checks:bridge                      # QtBridge surface guard
-deno task proof check --executed             # ledger structure/health
-deno task format [--check] [--base <ref>] [files...]   # swift-format on changed lines
-deno task lsp:swift                          # rebuild the sourcekit index
-```
+| Task + flags | What it builds / runs | When an agent needs it |
+|---|---|---|
+| `build` | prints task help | discovering task names |
+| `build:app [--release\|--asan]` | app only (`build/debug\|release\|asan`) | before running the app or a QML lane after Swift edits |
+| `build:checks [--release\|--asan]` | app + `porydaw_checks` + mid2agb | after `src/checks/**` or CMake edits |
+| `checks [--asan] [--filter <name>] [--exclude <name>] [--all] [--no-windowing-checks] [--verbose] [--pool=<n>] [--qt ...]` | builds checks, runs native harnesses; `--filter swiftcore` runs the six `swift_core_check` lanes | Swift logic verification; `--filter <suite>` for one slice |
+| `checks:qml` (same options) | editor drawer QML lane | drawer QML surface edits |
+| `checks:qml-roll` (same options) | Swift roll window QML lane | roll QML edits |
+| `checks:shell` (same options) | production `ShellWindow` QML lanes | shell QML edits |
+| `checks:bridge` | QtBridge surface guard | after any `@QtBridgeable`/QML surface change |
+| `bridge:baseline` | rewrites the bridge baseline | only when a surface change is intended |
+| `checks:qml-aot` | builds app + `all_aotstats`, runs the AOT ratchet | after `src/ui/**` or exposed-type edits |
+| `qml-aot:baseline` | rewrites the AOT baseline | only when a surface change is intended |
+| `format [--check] [--base <ref>] [files...]` | swift-format on changed lines, `deno fmt` on `tools/` | before handoff; `--check` for the CI shape |
+| `proof check [--executed]` | ledger structure / health / execution evidence | after check or assertion edits |
+| `proof:edit` | ledger row editor | renaming or moving proof rows |
+| `proof:compact` | ledger compactor | trimming resolved ledger bulk |
+| `setup` | fresh-machine setup | fresh machines / CI |
+| `setup:check` | setup tests (`setup_test.ts`, `setup_swift_test.ts`) | after `tools/**` edits, with `format --check` |
+| `lsp:swift` | rebuilds the sourcekit index | after CMake reconfigure / Swift edits |
+| `worktree:create -- <name> [--base fork-main]` | creates a linked worktree | separate worktree on request |
+| `bench:startup` | startup benchmark to a frame marker | startup-performance questions |
+| `bench:startup:ab` | alternating A/B startup comparison | comparing two builds |
+| `xctrace` | Instruments traces via the skill | trace-driven profiling |
+
+Which build for which slice:
+
+- Edit in `src/swift/{core,project,playback,sample,document}` or `src/swift/app/**` → `deno task build:app`, then the matching lane: `checks --filter <suite>` for Swift logic, `checks:shell` / `checks:qml` / `checks:qml-roll` for QML surfaces, `checks:bridge` for bridged declarations.
+- Edit in `src/checks/**` → `build:checks` + the lane.
+- Edit in `src/ui/**` → `checks:shell|qml|qml-roll` + `checks:qml-aot`.
+- Edit in `tools/**` → `setup:check` + `format --check`.
+- CMake edit → `build:checks` (reconfigure is automatic; flag edits drop stale Swift objects).
 
 A failed build prints its errors and `build/<config>/build.log`; read the log,
 rebuilding prints nothing new.

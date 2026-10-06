@@ -289,15 +289,6 @@ function printCapped(lines: string[], log: string): void {
   }
 }
 
-// A single-config tree from before the debug/release split: nothing builds it.
-async function warnLegacyTree(): Promise<void> {
-  if (!(await exists(join("build", "CMakeCache.txt")))) return;
-  console.error(
-    "build: build/ still holds an unused pre-split tree; builds use build/debug, " +
-      "build/release, and build/asan.",
-  );
-}
-
 export async function runBuild(
   targets: string[],
   config: BuildConfig,
@@ -331,7 +322,6 @@ export async function runBuild(
     Deno.exit(code || 1);
   };
 
-  await warnLegacyTree();
   const configured = await configure(directory, config, buildChecks);
   if (configured) {
     outputs.push(configured.text() + configured.text("stderr"));

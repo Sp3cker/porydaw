@@ -2,9 +2,10 @@ import { isAbsolute, relative, resolve } from "node:path";
 
 const BASELINE = "tools/qml_aot_baseline.json";
 export const QML_AOT_HELP =
-  `usage: deno task checks:qml-aot [--release] [--verbose] [--update-baseline [--allow-growth]] [--help]
+  `usage: deno task checks:qml-aot [--release|--asan] [--verbose] [--update-baseline [--allow-growth]] [--help]
   build the application, then ratchet production QML AOT compilation
   --release          use build/release (default: build/debug)
+  --asan             use build/asan (default: build/debug)
   --verbose          group compiler rejections and list dependency-only revision reads
   --update-baseline  record current numbers, refusing growth by default
   --allow-growth     allow baseline growth (requires --update-baseline)
@@ -101,6 +102,7 @@ function readBaseline(text: string): Baseline {
 async function main(): Promise<void> {
   const allowed: Record<string, true> = {
     "--release": true,
+    "--asan": true,
     "--verbose": true,
     "--update-baseline": true,
     "--allow-growth": true,
@@ -109,7 +111,8 @@ async function main(): Promise<void> {
   if (
     Deno.args.some((arg) => !Object.hasOwn(allowed, arg)) ||
     (Deno.args.includes("--allow-growth") &&
-      !Deno.args.includes("--update-baseline"))
+      !Deno.args.includes("--update-baseline")) ||
+    (Deno.args.includes("--release") && Deno.args.includes("--asan"))
   ) {
     console.error(QML_AOT_HELP);
     Deno.exit(2);
@@ -118,7 +121,11 @@ async function main(): Promise<void> {
     console.log(QML_AOT_HELP);
     return;
   }
-  const config = Deno.args.includes("--release") ? "release" : "debug";
+  const config = Deno.args.includes("--asan")
+    ? "asan"
+    : Deno.args.includes("--release")
+    ? "release"
+    : "debug";
   const directory = `build/${config}/.rcc/qmlcache`;
   const statsPaths: string[] = [];
   // Qt's all_aotstats target also writes all_aotstats.aotstats, which repeats

@@ -10,10 +10,13 @@ touching anything in this file's "do not" lists.
 ```bash
 deno task build:app   [--release|--asan]   # porydaw only            -> build/debug|release|asan
 deno task build:checks [--release|--asan]  # porydaw + porydaw_checks + mid2agb
-deno task build:render [--release|--asan]  # porydaw_render_cli
-deno task checks ...                       # builds porydaw_checks, mid2agb, all_aotstats, then runs
+deno task checks ... [--asan]              # builds porydaw_checks, mid2agb, all_aotstats, then runs
+deno task checks:qml ... [--asan]          # editor drawer QML lane (same flags for checks:qml-roll, checks:shell)
 deno task checks:qml-aot                   # builds porydaw + all_aotstats, then the AOT ratchet
 ```
+
+AGENTS.md § Build & checks is the task index; this file is the pipeline
+reference. For `checks:bridge`, `format`, and `setup` see that table.
 
 Never call `cmake` or `ninja` directly; `tools/cli.ts` → `tools/build.ts:runBuild` does
 things a bare `cmake --build` does not:
@@ -40,7 +43,7 @@ Fresh tree = new worktree or new `build/<cfg>` directory.
 | QML file edit | 2.5 s | qmlcachegen of that file + link |
 | C++ file edit | 2.5 s | one object + link |
 | Swift edit in `PorydawDocument` (Qt-free) | **~1 s** | module recompiles; unchanged `.swiftmodule` stops the cascade (restat) |
-| Swift edit in `PorydawApp` (140 sources) | **~8 s** | see [Swift incremental floor](#swift-incremental-floor) |
+| Swift edit in `PorydawApp` (118 files + `PorydawAppPresentation` 21 files) | **6.4 s** | see [Swift incremental floor](#swift-incremental-floor) |
 | fresh worktree, `build:app` | **105 s** (was 166 s) | configure 16 s, QtBridge/C++/QML ~60 s, Swift chain Core→Project→Document→App |
 | fresh worktree, `build:app --release` | ~175 s expected (was 348 s) | the 173 s swift-syntax step is gone; not re-measured end to end |
 | existing tree after a QtBridge patch change | 125–285 s | plugin rebuild (if the key is new) + every Swift module recompiles |
@@ -48,6 +51,16 @@ Fresh tree = new worktree or new `build/<cfg>` directory.
 The two numbers that used to dominate — 134 s (Debug) / 173 s (Release) of
 swift-syntax compilation per build tree plus a GitHub clone — are now paid once per
 machine. That is the mechanism described next.
+
+`swift_core_check` is six chained lanes (support/media/edit/roll/pages/project).
+A single file copying a large C struct (`LoadedVoiceGroup`) by value cost 57 s
+in the `SendNonSendable` SIL pass — access such structs through the pointer
+(see `VoicegroupLoaderChecks.loaderSameVoiceNames`).
+
+## CI
+
+`.github/workflows/build.yml` and `release.yml` call `cmake` directly (sccache,
+`cmake --install`); that is the only permitted direct caller.
 
 ## Shared QtBridge macro plugin (`~/.cache/porydaw`)
 
@@ -140,12 +153,14 @@ be explainable (e.g. `page: parent` self-references qmlsc cannot type).
 
 ## Swift incremental floor
 
-`PorydawApp` is one module of 140 files with C++ interop (Qt headers). An edit to any
-file runs two frontend jobs in parallel: compile that file, and emit the module
-interface. The emit-module job type-checks every declaration in the module plus the
-imported Clang decls (`typecheck-decl` + `import-clang-decl` ≈ 7 s of work) — that is
-the 8 s floor, and `-incremental -enable-batch-mode` are already on (Debug). Only
-moving code out of `PorydawApp` into smaller modules lowers it; `PorydawDocument`
+`PorydawApp` is 118 files plus `PorydawAppPresentation` at 21 files, with C++
+interop (Qt headers). A one-file edit measures 6.4 s (emit-module 6.1 s, was
+9.2/7.2 s before the split). The emit-module job type-checks every declaration
+in the module plus the imported Clang decls, and pays a per-process ~1 s lazy Qt
+C++ decl import on the first `==`/`String.init` overload resolution. Type-check
+budgets of 2000 ms per body / 1000 ms per expression are enforced in Debug.
+`-incremental -enable-batch-mode` are already on (Debug). Only moving code out of
+`PorydawApp` into smaller modules lowers the floor further; `PorydawDocument`
 (Qt-free, no interop) shows the payoff at ~1 s per edit with no downstream rebuild
 when the interface is unchanged.
 
