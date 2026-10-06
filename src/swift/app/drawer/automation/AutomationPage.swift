@@ -310,6 +310,12 @@ public final class AutomationPage: EditorDrawerPage {
         refreshFromDocumentImpl()
     }
 
+    /// Cancels stale captured transactions without rebuilding document geometry.
+    @QtIgnored
+    public func invalidateDocumentInteraction() {
+        invalidateDocumentInteractionImpl()
+    }
+
     /// Camera-only publication: the same points at new plot positions. A live
     /// gesture keeps its own frozen projection, so only the drawn content moves.
     public func refreshCamera() {

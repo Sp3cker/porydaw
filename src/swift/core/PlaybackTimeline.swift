@@ -245,15 +245,27 @@ public struct PlaybackTimelineBuilder {
     private var activeNoteTicks = [Tick?](repeating: nil, count: TrackLimits.hardwareCapacity * 128)
     private var scheduledEvents: [ScheduledPlaybackEvent] = []
     private var tempoEvents: [PlaybackEvent] = []
+    private var recycledEvents: [PlaybackEvent] = []
+    private var recycledTracks: [PlaybackTrack] = []
+    private var recycledTempoMap: [PlaybackTempoPoint] = []
+    private var recycledTimeSignatures: [PlaybackTimeSignature] = []
+    private var recycledOtherEvents: [PlaybackOtherEvent] = []
 
     /// Creates an empty builder whose scratch grows to fit subsequent input.
     public init() {}
 
-    /// Projects authoritative document state into an independent immutable timeline.
-    /// - Parameters:
-    ///   - state: Canonical state whose tempo and decoded settings drive scheduling.
-    ///   - sampleRate: Output samples per second.
-    /// - Returns: A timeline that remains valid through later builds.
+    /// Accepts safely reclaimed output capacity; retained readers remain protected by ordinary COW.
+    /// - Parameter timeline: A retired timeline no longer borrowed by the audio callback.
+    public mutating func recycle(_ timeline: consuming PlaybackTimeline) {
+        recycledEvents = timeline.events
+        recycledTracks = timeline.tracks
+        recycledTempoMap = timeline.tempoMap
+        recycledTimeSignatures = timeline.timeSignatures
+        recycledOtherEvents = timeline.otherEvents
+    }
+
+    /// Projects authoritative document state at the output sample rate.
+    /// The returned snapshot remains valid through later builds.
     public mutating func build(state: borrowing SongState, sampleRate: Double) -> PlaybackTimeline {
         build(
             file: state.file, tempo: state.tempo, sampleRate: sampleRate,
@@ -262,13 +274,8 @@ public struct PlaybackTimelineBuilder {
                 extendedClocks: state.config.extendedClocks))
     }
 
-    /// Projects MIDI with optional authoritative tempo into an independent timeline.
-    /// - Parameters:
-    ///   - file: Canonical MIDI input, read only for this synchronous build.
-    ///   - tempo: Authoritative tempo, or nil to extract file tempo metas.
-    ///   - sampleRate: Output samples per second.
-    ///   - settings: Hardware clock and gate scheduling policy.
-    /// - Returns: A timeline with no array-storage aliases retained by this builder.
+    /// Projects MIDI using supplied tempo, or file tempo metas when nil.
+    /// Output arrays are not retained as scratch; later builds preserve this snapshot.
     public mutating func build(
         file: borrowing MidiFile, tempo: borrowing [TempoPoint]? = nil,
         sampleRate: Double, settings: PlaybackSettings = PlaybackSettings()
@@ -295,9 +302,11 @@ public struct PlaybackTimelineBuilder {
             $0.point.tick == $1.point.tick ? $0.order < $1.order : $0.point.tick < $1.point.tick
         }
         let ticksPerBeat = UInt32(file.division)
-        let tempoMap = buildTempoMap(
+        var tempoMap = recycledTempoMap
+        recycledTempoMap = []
+        buildTempoMap(
             orderedTempo.span, ticksPerBeat: ticksPerBeat,
-            sampleRate: sampleRate)
+            sampleRate: sampleRate, into: &tempoMap)
 
         rawEvents.removeAll(keepingCapacity: true)
         rawOthers.removeAll(keepingCapacity: true)
@@ -477,7 +486,9 @@ public struct PlaybackTimelineBuilder {
                     data0: UInt8(bpm & 0x7F), data1: UInt8((bpm >> 7) & 0x7F)))
         }
 
-        let events = mergeTempoFirst(tempoEvents.span, scheduledEventView())
+        var events = recycledEvents
+        recycledEvents = []
+        mergeTempoFirst(tempoEvents.span, scheduledEventView(), into: &events)
         var lengthSamples: UInt64 = 0
         var lengthTicks: Tick = 0
         for event in events {
@@ -507,7 +518,9 @@ public struct PlaybackTimelineBuilder {
                 ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
         if loopEndTick != TimeDefaults.noTick { lengthTicks = max(lengthTicks, loopEndTick) }
 
-        var otherEvents: [PlaybackOtherEvent] = []
+        var otherEvents = recycledOtherEvents
+        recycledOtherEvents = []
+        otherEvents.removeAll(keepingCapacity: true)
         otherEvents.reserveCapacity(rawOthers.count)
         var otherTempo = TempoCursor()
         for raw in rawOthers {
@@ -522,9 +535,20 @@ public struct PlaybackTimelineBuilder {
             lengthTicks = max(lengthTicks, raw.tick)
         }
 
+        var tracks = recycledTracks
+        recycledTracks = []
+        tracks.removeAll(keepingCapacity: true)
+        tracks.reserveCapacity(mutableTracks.count)
+        for track in mutableTracks { tracks.append(track.value) }
+        var signatures = recycledTimeSignatures
+        recycledTimeSignatures = []
+        signatures.removeAll(keepingCapacity: true)
+        signatures.reserveCapacity(timeSignatures.count)
+        for signature in timeSignatures { signatures.append(signature.point) }
+
         return PlaybackTimeline(
-            events: events, tracks: mutableTracks.map(\.value), tempoMap: tempoMap,
-            timeSignatures: timeSignatures.map(\.point), otherEvents: otherEvents,
+            events: events, tracks: tracks, tempoMap: tempoMap,
+            timeSignatures: signatures, otherEvents: otherEvents,
             sampleRate: sampleRate, ticksPerBeat: ticksPerBeat,
             lengthSamples: lengthSamples, lengthTicks: lengthTicks,
             loopStartSample: loopStartSample, loopEndSample: loopEndSample,
@@ -541,9 +565,9 @@ public struct PlaybackTimelineBuilder {
 
 private func buildTempoMap(
     _ points: borrowing Span<OrderedTempo>, ticksPerBeat: UInt32,
-    sampleRate: Double
-) -> [PlaybackTempoPoint] {
-    var result: [PlaybackTempoPoint] = []
+    sampleRate: Double, into result: inout [PlaybackTempoPoint]
+) {
+    result.removeAll(keepingCapacity: true)
     result.reserveCapacity(points.count + 1)
     if points.isEmpty || points[0].point.tick != 0 {
         result.append(
@@ -566,7 +590,6 @@ private func buildTempoMap(
                 tick: point.tick, sampleOrigin: origin, beatsPerMinute: bpm,
                 microsecondsPerQuarterNote: point.microsecondsPerQuarterNote))
     }
-    return result
 }
 
 /// Projects mid2agb's quantized note gate back through the authoritative tempo
@@ -632,9 +655,9 @@ private struct TempoCursor {
 
 private func mergeTempoFirst(
     _ tempos: borrowing Span<PlaybackEvent>,
-    _ events: borrowing Span<ScheduledPlaybackEvent>
-) -> [PlaybackEvent] {
-    var result: [PlaybackEvent] = []
+    _ events: borrowing Span<ScheduledPlaybackEvent>, into result: inout [PlaybackEvent]
+) {
+    result.removeAll(keepingCapacity: true)
     result.reserveCapacity(tempos.count + events.count)
     var tempoIndex = 0
     var eventIndex = 0
@@ -655,7 +678,6 @@ private func mergeTempoFirst(
         result.append(events[eventIndex].event)
         eventIndex += 1
     }
-    return result
 }
 
 private func isExactLoopMarker(_ bytes: ArraySlice<UInt8>, marker: UInt8) -> Bool {

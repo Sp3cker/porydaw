@@ -362,6 +362,7 @@ func drawerVoiceCancellationPaths(
     report.expect(
         !gutterFixture.page.interactionActive, cppID: drawerVoiceCancellationID,
         message: "a gutter press reports no interaction")
+    drawerVoiceScopedWorkspaceEdits(report, suite: suite, service: service, programs: programs)
 }
 
 @MainActor
@@ -530,4 +531,229 @@ func drawerVoiceCollisionDragOutcome(
         actual:
             VoiceLanePolicy.occurrence(at: occupied.tick, in: restored)?.value,
         cppID: drawerVoiceCollisionID, what: "the displaced occurrence is back too")
+}
+
+@MainActor
+private func drawerVoiceScopedWorkspaceEdits(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService, programs: [Int]
+) {
+    let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
+    fixture.document.writeLane(
+        track: 0, lane: .controller(7), from: 36, through: 36,
+        points: [LaneWrite(tick: 36, value: 80)])
+    let audio: NativeAudio
+    do {
+        audio = try runBlocking { try await NativeAudio() }
+    } catch {
+        report.fail(drawerVoiceCancellationID, "scoped workspace edits cannot create audio: \(error)")
+        return
+    }
+    let presenters = WorkspacePresenterFixture(
+        viewport: fixture.viewport, audio: audio,
+        callbacks: DocumentWorkspace.Callbacks(
+            changeTrackVoiceRequested: { _ in }, revealTrackVoiceRequested: { _ in },
+            gridCommandAvailabilityChanged: {}, sessionStateChanged: {},
+            publicationFailed: { error in
+                report.fail(drawerVoiceCancellationID, "scoped workspace playback publication failed: \(error)")
+            }, timeSignaturePromptInvalidated: { _, _ in }))
+    let workspace = presenters.workspace
+    defer {
+        workspace.teardown()
+        withExtendedLifetime((audio, presenters)) {}
+    }
+    workspace.activate()
+    presenters.eventList.setVisible(visible: true)
+    let page = workspace.voiceChangesPage
+    let automation = workspace.automationPage
+    page.configureBody(
+        width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
+        baseFontPx: 13, dragDistance: 10)
+    automation.configureBody(
+        width: 400, height: 120, gutter: 56, devicePixelRatio: 1,
+        baseFontPx: 13, dragDistance: 10)
+    workspace.velocityPage.configureBody(
+        width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1,
+        baseFontPx: 13, dragDistance: 10)
+    let lane = AutomationParameter.controlChange(track: 0, controller: 7)
+    _ = automation.activateParameter(lane)
+    guard let primary = fixture.document.notes(in: 0).first,
+        let secondary = fixture.document.notes(in: 1).first,
+        let marker = page.publishedMarkers.first(where: { $0.tick == 48 }),
+        let oldPoint = fixture.session.projectionCache.lanePoints(track: 0, lane: .voice)
+            .first(where: { $0.tick == 48 })
+    else {
+        report.fail(drawerVoiceCancellationID, "the workspace exposes its notes and program marker")
+        return
+    }
+    let staticBytes = page.displayList(list: 0)
+    report.expect(
+        page.pointerDoubleClick(x: fixture.markerX(48), y: 10) && page.pickerOpen,
+        cppID: drawerVoiceCancellationID, message: "the program marker opens a real captured picker")
+    fixture.document.moveNotes([primary.id], byTicks: 60, byKeys: 0)
+    report.expect(
+        !page.pickerOpen && !page.hasPicker && !page.interactionActive
+            && page.displayList(list: 0) == staticBytes
+            && page.publishedMarkers.first(where: { $0.tick == 48 }) === marker,
+        cppID: drawerVoiceCancellationID,
+        message: "a note crossing cancels the visible picker while retaining voice marker geometry")
+    guard
+        let point = fixture.session.projectionCache.lanePoints(track: 0, lane: .voice)
+            .first(where: { $0.tick == 48 })
+    else {
+        report.fail(drawerVoiceCancellationID, "the program occurrence survives the note crossing")
+        return
+    }
+    _ = page.pointerMove(x: fixture.markerX(48), y: 10, buttons: 0)
+    report.expect(
+        point.eventIndex != oldPoint.eventIndex && marker.identity == VoiceOccurrence(point).text
+            && marker.hovered,
+        cppID: drawerVoiceCancellationID,
+        message: "rebased marker identity agrees with fresh hit-testing and hover after the note crossing")
+    _ = page.pointerPress(x: fixture.markerX(48), y: 10, surface: 1, button: 1, modifiers: 0)
+    report.expectEqual(
+        expected: VoiceOccurrence(point), actual: page.frozenOccurrence, cppID: drawerVoiceCancellationID,
+        what: "a fresh press captures the shifted program event, not its former raw offset")
+    _ = page.pointerMove(x: fixture.markerX(72), y: 10, buttons: 1)
+    report.expect(page.dragActive, cppID: drawerVoiceCancellationID, message: "the fresh voice drag previews")
+    fixture.document.moveNotes([secondary.id], byTicks: 0, byKeys: 1)
+    let afterExternalNote = fixture.snapshot
+    report.expect(
+        !page.hasGesture && !page.previewVisible && page.cursorKind == 0
+            && page.markerTicks == [0, 48, 120],
+        cppID: drawerVoiceCancellationID,
+        message: "an unrelated chunk note edit immediately cancels the visible voice drag and preview")
+    _ = page.pointerRelease(x: fixture.markerX(72), y: 10, button: 1)
+    report.expectEqual(
+        expected: afterExternalNote, actual: fixture.snapshot, cppID: drawerVoiceCancellationID,
+        what: "the cancelled voice drag cannot write on stale release")
+    _ = page.pointerDoubleClick(x: fixture.markerX(48), y: 10)
+    page.setPickerFilter(text: String(format: "%03d", programs[2]))
+    report.expect(
+        page.acceptPicker()
+            && fixture.document.lanePoints(track: 0, lane: .voice).first(where: { $0.tick == 48 })?.value
+                == programs[2]
+            && fixture.document.note(primary.id)?.tick == 60
+            && fixture.document.note(primary.id)?.pitch == primary.pitch,
+        cppID: drawerVoiceCancellationID,
+        message: "a fresh picker edits the correct program after note movement, leaving the note intact")
+
+    let automationBytes = automation.displayList(list: 1)
+    report.expect(
+        automation.openPrompt(tick: 36, value: 80) && automation.promptOpen,
+        cppID: drawerVoiceCancellationID, message: "the automation node opens its captured value prompt")
+    fixture.document.moveNotes([secondary.id], byTicks: 0, byKeys: 1)
+    let afterPromptCancellation = fixture.snapshot
+    report.expect(
+        !automation.promptOpen && !automation.hasPrompt && !automation.interactionActive
+            && automation.displayList(list: 1) == automationBytes
+            && !automation.acceptPrompt(displayedValue: 90)
+            && fixture.snapshot == afterPromptCancellation,
+        cppID: drawerVoiceCancellationID,
+        message: "an unrelated note revision visibly cancels the automation prompt without rebuilding its curve")
+    report.expect(
+        automation.openParameterMenu(index: automation.catalogIndex(of: lane), x: 0, y: 0)
+            && automation.menuOpen,
+        cppID: drawerVoiceCancellationID, message: "the automation lane opens a captured menu")
+    fixture.document.moveNotes([secondary.id], byTicks: 0, byKeys: 1)
+    report.expect(
+        !automation.menuOpen && !automation.hasMenu && !automation.interactionActive,
+        cppID: drawerVoiceCancellationID, message: "an unrelated note revision immediately closes automation menu rows")
+    _ = automation.pointerPress(x: fixture.markerX(24), y: 10, surface: 1, button: 2)
+    _ = automation.pointerMove(x: fixture.markerX(120), y: 10, buttons: 2)
+    report.expect(
+        automation.hasBand && automation.bandVisible,
+        cppID: drawerVoiceCancellationID, message: "the automation range band is visibly active before revision")
+    fixture.document.moveNotes([secondary.id], byTicks: 0, byKeys: 1)
+    let afterBandCancellation = fixture.snapshot
+    report.expect(
+        !automation.hasBand && !automation.bandVisible && !automation.interactionActive,
+        cppID: drawerVoiceCancellationID,
+        message: "an unrelated note revision synchronously hides the active range band")
+    _ = automation.pointerRelease(x: fixture.markerX(120), y: 10, button: 2)
+    report.expectEqual(
+        expected: afterBandCancellation, actual: fixture.snapshot, cppID: drawerVoiceCancellationID,
+        what: "the cancelled range release cannot write")
+    guard let node = automation.publishedNodes.first(where: { $0.tick == 36 }) else {
+        report.fail(drawerVoiceCancellationID, "the automation node survives scoped edits")
+        return
+    }
+    _ = automation.pointerPress(x: fixture.markerX(36), y: node.y, surface: 1, button: 1)
+    _ = automation.pointerMove(x: fixture.markerX(36), y: node.y + 20, buttons: 1)
+    report.expect(
+        automation.hasGesture && !automation.previewPoints.isEmpty,
+        cppID: drawerVoiceCancellationID, message: "the automation node drag has a visible draft")
+    fixture.document.moveNotes([secondary.id], byTicks: 0, byKeys: 1)
+    report.expect(
+        !automation.hasGesture && automation.previewPoints.isEmpty && automation.previewNodes.count == 0
+            && automation.cursorKind == 0 && !automation.interactionActive,
+        cppID: drawerVoiceCancellationID, message: "an unrelated note revision visibly cancels automation drag geometry"
+    )
+    report.expect(
+        automation.openPrompt(tick: 36, value: 80) && automation.acceptPrompt(displayedValue: 90)
+            && fixture.document.lanePoints(track: 0, lane: .controller(7)).first?.value == 90
+            && fixture.document.note(primary.id)?.tick == 60
+            && fixture.document.note(primary.id)?.velocity == primary.velocity,
+        cppID: drawerVoiceCancellationID,
+        message:
+            "a fresh automation edit after note crossing resolves current raw offsets and changes only its controller")
+    func expectMovementAligned(tick: Tick, pitch: UInt8, message: String) {
+        struct RollNote: Decodable {
+            let id: UInt64
+            let tick: Tick
+            let pitch: UInt8
+        }
+        let rows: [RollNote]
+        do {
+            rows = try JSONDecoder().decode(
+                [RollNote].self, from: Data(workspace.grid.fetchNoteSummary().utf8))
+        } catch {
+            report.fail(drawerVoiceCancellationID, "the roll note probe cannot be decoded: \(error)")
+            return
+        }
+        let roll = rows.first { $0.id == primary.id.rawValue }
+        let velocity = workspace.velocityPage.publishedHandlesSnapshot.first {
+            $0.noteIdText == String(primary.id.rawValue)
+        }
+        let event = presenters.eventList.model.chunk.events.first {
+            $0.noteID == primary.id && $0.typeNibble == 0x9
+        }
+        report.expect(
+            roll?.tick == tick && roll?.pitch == pitch && velocity?.tick == Double(tick)
+                && velocity?.value == Int(primary.velocity) && event?.tick == tick
+                && event?.payload == .channel(status: 0x90, data0: pitch, data1: primary.velocity),
+            cppID: drawerVoiceCancellationID, message: message)
+    }
+    fixture.document.nudgeNotes([primary.id], byTicks: 12, byKeys: 1)
+    fixture.document.nudgeNotes([primary.id], byTicks: 12, byKeys: 1)
+    expectMovementAligned(
+        tick: 84, pitch: primary.pitch + 2,
+        message: "merged note nudges publish aligned roll, velocity and event-list data")
+    report.expect(
+        fixture.document.history.undoDocument(), cppID: drawerVoiceCancellationID,
+        message: "the merged workspace movement undoes in one step")
+    expectMovementAligned(
+        tick: 60, pitch: primary.pitch,
+        message: "merged movement undo restores the roll, velocity and raw-event presentation")
+    report.expect(
+        fixture.document.history.redoDocument(), cppID: drawerVoiceCancellationID,
+        message: "the merged workspace movement redoes in one step")
+    expectMovementAligned(
+        tick: 84, pitch: primary.pitch + 2,
+        message: "merged movement redo restores aligned roll, velocity and event-list data")
+    let currentRow = presenters.eventList.rowHandle(row: 0)
+    automation.selectRange(from: 24, to: 72, lanes: [lane])
+    report.expect(
+        fixture.session.timeSelection?.lanes == [lane] && automation.selectedParameters == [lane]
+            && workspace.velocityPage.selectedCount == 0
+            && presenters.eventList.rowHandle(row: 0) === currentRow,
+        cppID: drawerVoiceCancellationID,
+        message: "lane time selection updates the automation scope without selecting notes or replacing event-list rows"
+    )
+    fixture.session.selectPrimaryTrack(1)
+    report.expect(
+        page.markerTicks == [0] && workspace.velocityPage.publishedNoteCount == 1
+            && automation.activeTrackIndex == 1 && presenters.eventList.chunkIndex == 2,
+        cppID: drawerVoiceCancellationID,
+        message: "primary-track changes still align all scoped pages and the event list")
 }

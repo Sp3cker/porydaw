@@ -370,7 +370,11 @@ public final class DocumentWorkspace {
         session.onPlayback = { [weak self] timeline in
             guard let self, self.isActive else { return }
             do {
-                try self.audio.publish(timeline)
+                try self.audio.publish(
+                    timeline,
+                    reclaim: { reclaimed in
+                        self.session.recyclePlaybackTimeline(reclaimed)
+                    })
             } catch {
                 self.callbacks.publicationFailed(String(describing: error))
             }
@@ -416,9 +420,28 @@ public final class DocumentWorkspace {
         rulerMenu.sessionDidChange(change)
         let documentChanged = change.domains.contains(.document)
         let primaryTrackChanged = appliedPrimaryTrack != session.selectedTrack
+        let effects = change.editEffects
+        let flags = effects.flags
+        let timeOrStructureChanged = !flags.intersection([.timeDomain, .structure]).isEmpty
+        let mapping = session.document.engineTracks
+        let primaryChunk: Int?
+        if let track = session.selectedTrack, mapping.tracks.indices.contains(track) {
+            primaryChunk = mapping.tracks[track].midiChunk
+        } else {
+            primaryChunk = nil
+        }
+        let primaryChunkChanged = primaryChunk.map { effects.affects(chunk: $0) } ?? false
+        let primaryNotesOrVoicesChanged =
+            primaryChunkChanged && !flags.intersection([.notes, .voices]).isEmpty
+        let voiceContentChanged =
+            timeOrStructureChanged || (primaryChunkChanged && flags.contains(.voices))
+        let automationContentChanged =
+            timeOrStructureChanged || flags.contains(.lanes)
         if documentChanged {
             callbacks.timeSignaturePromptInvalidated(session, change.revision)
             pitchBend.documentDidChange()
+            headerVoicePicker.cancelPicker()
+            trackHeaders.dismissHeaderMenu()
         }
         let headerDomains: SessionChangeDomains = [.selection, .bank, .cursor, .mixState]
         let applicationStateDomains: SessionChangeDomains = [.document, .dirty, .history, .bank, .scale]
@@ -427,23 +450,31 @@ public final class DocumentWorkspace {
             eventList.documentDidChange(change)
         }
 
-        if documentChanged {
+        if documentChanged && !flags.intersection([.voices, .trackNames, .structure]).isEmpty {
             trackHeaders.documentDidChange(change)
-            otherEventsBand.refreshDocument()
-            if isActive { playhead.refreshImmediate() }
         } else if !change.domains.intersection(headerDomains).isEmpty {
             trackHeaders.refreshFromDocument()
         }
-        if documentChanged || change.domains.contains(.bank) {
+        if documentChanged {
+            // Orphan note-offs and advanced CC/Xcmd records also belong to this band.
+            if !flags.intersection([.notes, .lanes, .otherEvents, .trackNames, .timeDomain, .structure]).isEmpty {
+                otherEventsBand.refreshDocument()
+            }
+            if isActive { playhead.refreshImmediate() }
+        }
+        if change.domains.contains(.bank) {
             headerVoicePicker.refresh()
         }
 
         if documentChanged || !change.domains.intersection([.selection, .scale, .bank]).isEmpty {
             if change.domains.contains(.selection) { pitchBend.cancelAndClose() }
-            if documentChanged || !change.domains.intersection([.scale, .bank]).isEmpty {
+            if timeOrStructureChanged || flags.contains(.notes)
+                || !change.domains.intersection([.scale, .bank]).isEmpty
+            {
                 grid.refreshFromSession()
             } else {
                 grid.refreshSelectionPresentation()
+                if documentChanged { grid.appliedRevisionText = String(change.revision) }
             }
             appliedPrimaryTrack = session.selectedTrack
         } else if change.domains.contains(.cursor) {
@@ -460,10 +491,15 @@ public final class DocumentWorkspace {
         if isActive && change.domains.contains(.bank) {
             audio.updateVoicegroup(session.bankLease)
         }
+        if documentChanged && (velocityPage.hasGesture || velocityPage.hasPrompt) {
+            velocityPage.cancelSectionInteraction()
+        }
         if change.domains.contains(.bank) {
             velocityPage.cancelSectionInteraction()
         }
-        if documentChanged || change.domains.contains(.bank) || primaryTrackChanged {
+        if timeOrStructureChanged || primaryNotesOrVoicesChanged
+            || change.domains.contains(.bank) || primaryTrackChanged
+        {
             // Document rebuilds read the live camera, so they settle deferred camera work.
             velocityPage.refreshFromDocument()
             deferredCameraZoom[.velocity] = nil
@@ -472,14 +508,22 @@ public final class DocumentWorkspace {
         } else if change.domains.contains(.cursor) {
             velocityPage.refreshEditCursor()
         }
-        if documentChanged || change.domains.contains(.bank) || primaryTrackChanged {
+        if voiceContentChanged || change.domains.contains(.bank) || primaryTrackChanged {
             voiceChangesPage.refreshFromDocument()
             deferredCameraZoom[.voiceChanges] = nil
+        } else {
+            if documentChanged {
+                if primaryChunkChanged { voiceChangesPage.refreshEventOffsets() }
+                voiceChangesPage.invalidateDocumentInteraction()
+            }
+            if change.domains.contains(.cursor) { voiceChangesPage.refreshEditCursor() }
+        }
+        if automationContentChanged || change.domains.contains(.bank) || primaryTrackChanged {
             automationPage.refreshFromDocument()
             deferredCameraZoom[.automation] = nil
-        } else if change.domains.contains(.cursor) {
-            voiceChangesPage.refreshEditCursor()
-            automationPage.refreshEditCursor()
+        } else {
+            if documentChanged { automationPage.invalidateDocumentInteraction() }
+            if change.domains.contains(.cursor) { automationPage.refreshEditCursor() }
         }
 
         if isActive && change.domains.contains(.mixState) {

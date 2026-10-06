@@ -92,9 +92,14 @@ public final class NativeAudio {
         }
     }
 
-    public func publish(_ timeline: PlaybackTimeline) throws {
+    /// Publishes on the control thread, synchronously returning safely retired output storage.
+    /// - Parameters:
+    ///   - timeline: The complete replacement timeline.
+    ///   - reclaim: Receives old timelines only after the callback can no longer use them.
+    /// - Throws: `NativeAudioError.publishFailed` if no song is bound.
+    public func publish(_ timeline: PlaybackTimeline, reclaim: (PlaybackTimeline) -> Void = { _ in }) throws {
         guard device.renderer.songLoaded else { throw NativeAudioError.publishFailed }
-        device.renderer.publish(timeline)
+        device.renderer.publish(timeline, reclaim: reclaim)
     }
 
     public func unload() {

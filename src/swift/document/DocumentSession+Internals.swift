@@ -40,11 +40,13 @@ extension DocumentSession {
 
     internal func publishChange(
         _ domains: SessionChangeDomains,
-        trackRemap: TrackRemap? = nil
+        trackRemap: TrackRemap? = nil,
+        editEffects: DocumentEditEffects = DocumentEditEffects()
     ) {
         guard !domains.isEmpty else { return }
         if stateChangeDepth > 0 {
             pendingDomains.formUnion(domains)
+            pendingEditEffects.formUnion(editEffects)
             if let trackRemap {
                 pendingTrackRemap =
                     pendingTrackRemap.map {
@@ -58,21 +60,23 @@ extension DocumentSession {
             SessionChange(
                 revision: document.revision,
                 trackRemap: trackRemap,
-                domains: domains))
+                domains: domains, editEffects: editEffects))
     }
 
     internal func flushStateChanges() {
         guard !pendingDomains.isEmpty else { return }
         let domains = pendingDomains
         let trackRemap = pendingTrackRemap
+        let editEffects = pendingEditEffects
         pendingDomains = []
         pendingTrackRemap = nil
+        pendingEditEffects = DocumentEditEffects()
         if domains.contains(.selection) { emitSelectionTransition() }
         onChange?(
             SessionChange(
                 revision: document.revision,
                 trackRemap: trackRemap,
-                domains: domains))
+                domains: domains, editEffects: editEffects))
     }
 
     private func emitSelectionTransition() {
@@ -111,10 +115,14 @@ extension DocumentSession {
             newEngineTrackCount: second.newEngineTrackCount)
     }
 
-    /// Reconciles selection before rebuilding with retained scratch, publishing
-    /// playback, and notifying presentation.
+    /// Repairs playback and cached reads before viewport callbacks, then reconciles
+    /// selection and publishes the completed document transition.
     internal func handleDocumentChange(_ change: DocumentChange) {
         withStateChanges {
+            let nextTimeline = timelineBuilder.build(state: document.state, sampleRate: timeline.sampleRate)
+            let reconciledChange = change.reconcilingPlaybackBounds(from: timeline, to: nextTimeline)
+            timeline = consume nextTimeline
+            projectionCache.documentDidChange(reconciledChange)
             if let remap = change.trackRemap {
                 onViewportRepair?(.trackRemap(remap))
             }
@@ -200,7 +208,6 @@ extension DocumentSession {
                 }
             }
             onViewportRepair?(.scaleFold)
-            timeline = timelineBuilder.build(state: document.state, sampleRate: timeline.sampleRate)
             onViewportRepair?(.timeDomain)
             onPlayback?(timeline)
             var domains: SessionChangeDomains = [.document, .dirty, .history]
@@ -209,7 +216,7 @@ extension DocumentSession {
             {
                 domains.insert(.selection)
             }
-            publishChange(domains, trackRemap: change.trackRemap)
+            publishChange(domains, trackRemap: change.trackRemap, editEffects: reconciledChange.editEffects)
         }
     }
 }

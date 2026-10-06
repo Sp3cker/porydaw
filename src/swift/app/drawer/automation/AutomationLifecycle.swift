@@ -226,6 +226,12 @@ extension AutomationPage {
 
     func refreshFromDocumentImpl() {
         refreshPromptStyles()
+        guard session != nil else { return }
+        invalidateDocumentInteractionImpl()
+        rebuildContent()
+    }
+
+    func invalidateDocumentInteractionImpl() {
         guard let session else { return }
         let revision = session.document.revision
         func stale(_ facts: AutomationFrozenFacts) -> Bool {
@@ -234,6 +240,8 @@ extension AutomationPage {
         }
         if let frozen, stale(frozen) {
             cancelGesture()
+            cursorKind = AutomationCursorKind.arrow.rawValue
+            publishPreview()
         }
         if let prompt, stale(prompt.facts) { cancelPrompt() }
         if let laneDelete, stale(laneDelete.facts) { cancelPrompt() }
@@ -244,12 +252,14 @@ extension AutomationPage {
             menu = nil
             publishMenuRows()
         }
-        if let band, band.revision != revision { self.band = nil }
+        if let band, band.revision != revision {
+            self.band = nil
+            publishBand()
+        }
         if let tapGuard, tapGuard.revision != revision || tapGuard.parameter != activeParameter {
             resetTapTempo()
         }
         publishInteractionState()
-        rebuildContent()
     }
 
     /// Cursor-only publication: the stopped readout consumes the session's

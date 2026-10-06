@@ -105,9 +105,28 @@ public struct TrackRemap: Equatable, Sendable {
 public struct DocumentChange: Equatable, Sendable {
     public let revision: UInt64
     public let trackRemap: TrackRemap?
-    public init(revision: UInt64, trackRemap: TrackRemap? = nil) {
+    public let editEffects: DocumentEditEffects
+    public init(
+        revision: UInt64, trackRemap: TrackRemap? = nil,
+        editEffects: DocumentEditEffects = DocumentEditEffects()
+    ) {
         self.revision = revision
         self.trackRemap = trackRemap
+        self.editEffects = editEffects
+    }
+
+    /// Adds time dependencies observed by the session's canonical playback build.
+    public func reconcilingPlaybackBounds(
+        from previous: borrowing PlaybackTimeline, to current: borrowing PlaybackTimeline
+    ) -> DocumentChange {
+        guard
+            previous.lengthTicks != current.lengthTicks
+                || previous.loopStartTick != current.loopStartTick
+                || previous.loopEndTick != current.loopEndTick
+        else { return self }
+        var effects = editEffects
+        effects.include(.timeDomain)
+        return DocumentChange(revision: revision, trackRemap: trackRemap, editEffects: effects)
     }
 }
 
@@ -485,6 +504,27 @@ public final class SongDocument {
         guard history.acceptsDocumentMutation, changed, mutation.state.differs(from: state) else {
             return
         }
+        var effects = mutation.changes.editEffects
+        if effects.flags.intersection([.trackNames, .structure]).isEmpty,
+            mutation.changes.contextualTrackNameRoles(in: state.file)
+                != mutation.changes.contextualTrackNameRoles(in: mutation.state.file)
+        {
+            effects.include(.trackNames)
+        }
+        if let previous = compatibleChanges(for: group, operation: operation) {
+            effects.formUnion(previous.editEffects)
+            if effects.flags.intersection([.trackNames, .structure]).isEmpty,
+                previous.contextualTrackNameRoles(in: state.file)
+                    != previous.contextualTrackNameRoles(in: mutation.state.file)
+            {
+                effects.include(.trackNames)
+            }
+        }
+        if effects.flags.intersection([.timeDomain, .structure]).isEmpty,
+            effects.contentExtents(in: state.file) != effects.contentExtents(in: mutation.state.file)
+        {
+            effects.include(.timeDomain)
+        }
         let cachedOrigin: GestureOrigin?
         if let cached = gestureOrigin, cached.group == group,
             cached.identity == history.currentIdentity,
@@ -507,7 +547,31 @@ public final class SongDocument {
         } else {
             gestureOrigin = nil
         }
-        publish(trackRemap: trackRemap)
+        publish(trackRemap: trackRemap, editEffects: effects)
+    }
+
+    private func compatibleChanges(
+        for group: HistoryGroup?, operation: HistoryOperation
+    ) -> DocumentChangeSet? {
+        switch operation {
+        case let .nudgeNotes(ids, _, _):
+            guard let previous = history.noteMoveOrigin(for: ids, absolutePitches: false),
+                previous.group == group
+            else { return nil }
+            return previous.changes
+        case let .nudgeNotePitches(ids, _):
+            guard let previous = history.noteMoveOrigin(for: ids, absolutePitches: true),
+                previous.group == group
+            else { return nil }
+            return previous.changes
+        case let .resizeNoteLengths(ids, _):
+            guard let previous = history.noteLengthOrigin(for: ids), previous.group == group else {
+                return nil
+            }
+            return previous.changes
+        default:
+            return history.originChanges(for: group, operation: operation)
+        }
     }
 
     internal func origin(for group: HistoryGroup?, operation: HistoryOperation) -> SongState {
@@ -562,16 +626,33 @@ public final class SongDocument {
         trackRemap: TrackRemap?
     ) {
         gestureOrigin = nil
+        var effects = changes.editEffects
+        let inspectNames = effects.flags.intersection([.trackNames, .structure]).isEmpty
+        let priorNames = inspectNames ? changes.contextualTrackNameRoles(in: state.file) : []
+        let inspectExtents = effects.flags.intersection([.timeDomain, .structure]).isEmpty
+        let priorExtents = inspectExtents ? effects.contentExtents(in: state.file) : nil
         changes.apply(to: &state, direction: direction)
-        // Replay may mutate event buffers in place; identity alone cannot detect it.
-        projection.repair(to: state.file, forceRebuild: true)
-        publish(trackRemap: trackRemap)
+        if inspectNames, priorNames != changes.contextualTrackNameRoles(in: state.file) {
+            effects.include(.trackNames)
+        }
+        if let priorExtents, priorExtents != effects.contentExtents(in: state.file) {
+            effects.include(.timeDomain)
+        }
+        // Replay can mutate event buffers in place without changing storage identity.
+        publish(trackRemap: trackRemap, editEffects: effects, forceRebuild: true)
     }
 
-    private func publish(trackRemap: TrackRemap? = nil) {
+    private func publish(
+        trackRemap: TrackRemap?, editEffects: DocumentEditEffects,
+        forceRebuild: Bool = false
+    ) {
         revision = revision == .max ? 1 : revision + 1
-        projection.repair(to: state.file)
-        onChange?(DocumentChange(revision: revision, trackRemap: trackRemap))
+        let previousMap = projection.map
+        projection.repair(to: state.file, forceRebuild: forceRebuild)
+        var effects = editEffects
+        if projection.map != previousMap { effects.include(.structure) }
+        onChange?(
+            DocumentChange(revision: revision, trackRemap: trackRemap, editEffects: effects))
     }
 
     private func projectTimeSignatures() -> [TimeSignature] {

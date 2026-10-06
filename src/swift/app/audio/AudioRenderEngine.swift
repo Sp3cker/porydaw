@@ -141,9 +141,10 @@ public final class AudioRenderEngine {
         player.reset()
         telemetry.clear()
     }
-    public func publish(_ timeline: PlaybackTimeline) {
+    /// Reclaims safe retired outputs synchronously on the control thread.
+    public func publish(_ timeline: PlaybackTimeline, reclaim: (PlaybackTimeline) -> Void = { _ in }) {
         guard songLoaded else { return }
-        handoff.publish(timeline)
+        handoff.publish(timeline, reclaim: reclaim)
     }
     public func unload() {
         transportState.reset()

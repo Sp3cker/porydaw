@@ -12,6 +12,7 @@ import PorydawPlaybackNative
 @MainActor
 internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, viewport: DocumentViewport) {
     let session = viewport.session
+    checkSessionEditEffects(report, sharing: session)
     // 3. Architecture Amendment: State-to-Playback factory verification
     // Verify initial timeline matches canonical state factory projection
     let initialExpectedTimeline = PlaybackTimeline.build(state: session.document.state, sampleRate: 48_000)
@@ -81,6 +82,11 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
         expected: UInt64(19_200), actual: editedSampleAt24,
         cppID: "project-io-flow/ProjectIoFlowTest::fifoDeliversInSubmissionOrder",
         what: "state factory projection computes exact 19200 samples for edited tempo")
+    report.expect(
+        publishedChanges.last?.editEffects.flags == [.timeDomain]
+            && publishedChanges.last?.editEffects.affectsAnyChunk == false,
+        cppID: "swiftcore/DocumentSession::tempoEditEffects",
+        message: "tempo scheduling transition publishes a global time dependency without forged chunk membership")
 
     // Build from the same canonical state under the two mid2agb clock/gate modes.
     let defaultGate60 = noteOffSample(session.timeline, key: 60)
@@ -111,6 +117,11 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
         defaultGate60 != configuredGate60,
         cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
         message: "exact gate changes an observable note-release sample")
+    report.expect(
+        publishedChanges.last?.editEffects.flags == [.configuration, .timeDomain]
+            && publishedChanges.last?.editEffects.affectsAnyChunk == false,
+        cppID: "swiftcore/DocumentSession::configurationEditEffects",
+        message: "clock configuration publishes its actual time dependency without touching MIDI chunks")
 
     // Undo and redo must reproduce both tempo and settings-sensitive event timing.
     do {
@@ -169,7 +180,8 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
         publishedChangeCount == publicationStart + 1
             && publishedChanges.last?.domains == [.cursor]
             && publishedChanges.last?.revision == preRevision
-            && publishedChanges.last?.trackRemap == nil,
+            && publishedChanges.last?.trackRemap == nil
+            && publishedChanges.last?.editEffects == DocumentEditEffects(),
         cppID: statePublicationID,
         message: "cursor-only mutation publishes exactly the cursor domain")
     publicationStart = publishedChangeCount
@@ -183,14 +195,16 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
     session.mutedTracks = [1]
     report.expect(
         publishedChangeCount == publicationStart + 1
-            && publishedChanges.last?.domains == [.mixState],
+            && publishedChanges.last?.domains == [.mixState]
+            && publishedChanges.last?.editEffects == DocumentEditEffects(),
         cppID: statePublicationID,
         message: "mute mutation publishes exactly the mix-state domain")
     publicationStart = publishedChangeCount
     session.soloedTracks = [1]
     report.expect(
         publishedChangeCount == publicationStart + 1
-            && publishedChanges.last?.domains == [.mixState],
+            && publishedChanges.last?.domains == [.mixState]
+            && publishedChanges.last?.editEffects == DocumentEditEffects(),
         cppID: statePublicationID,
         message: "solo mutation publishes exactly the mix-state domain")
     publicationStart = publishedChangeCount
@@ -208,6 +222,7 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
             && session.editCursor == 96
             && session.selectedTrack == 0
             && session.mutedTracks == [0]
+            && change.editEffects == DocumentEditEffects()
     }
     publicationStart = publishedChangeCount
     do {
@@ -252,6 +267,116 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
             cppID: "swiftcore/DocumentSession::selectionPrunesDeletedNotes",
             what: "selection reconciler prunes dead note IDs when notes are deleted")
     }
+}
+
+@MainActor
+private func checkSessionEditEffects(_ report: CheckReport, sharing original: DocumentSession) {
+    let id = "swiftcore/DocumentSession::nestedEditEffects"
+    let chunks = (0..<3).map { track in
+        MidiChunk(
+            events: [
+                .channel(status: 0xC0, data0: 0),
+                .channel(tick: 20, status: 0x90, data0: UInt8(60 + track), data1: 90),
+                .channel(tick: 40, status: 0x80, data0: UInt8(60 + track)),
+            ], endTick: 128)
+    }
+    let document = SongDocument(file: MidiFile(division: 24, chunks: chunks))
+    let session = DocumentSession(
+        document: document, service: original.service, lease: original.bankLease,
+        slots: original.bankSlots, dirty: original.bankDirty, loadName: original.bankLoadName)
+    defer {
+        do {
+            _ = try runBlocking { await session.close() }
+        } catch {
+            report.fail(id, "effect fixture session close failed: \(error)")
+        }
+    }
+    guard let note = document.notes(in: 0).first else {
+        report.fail(id, "nested effect fixture must expose its first note"); return
+    }
+    let retainedNotes = session.projectionCache.notes(in: 0)
+    let retainedAxis = session.projectionCache.timeAxis
+    var changes: [SessionChange] = []
+    session.onChange = { changes.append($0) }
+    var repairedCallbacksReadCurrentNotes = true
+    var repairedCallbacksReadCurrentAxis = true
+    session.onViewportRepair = { _ in
+        repairedCallbacksReadCurrentNotes =
+            repairedCallbacksReadCurrentNotes
+            && session.projectionCache.notes(in: 0).first?.tick == document.note(note.id)?.tick
+        repairedCallbacksReadCurrentAxis =
+            repairedCallbacksReadCurrentAxis
+            && session.projectionCache.timeAxis.lengthTicks == session.timeline.lengthTicks
+    }
+    session.withStateChanges {
+        document.nudgeNotes([note.id], byTicks: 3, byKeys: 0)
+        session.withStateChanges {
+            document.writeLane(
+                track: 2, lane: .controller(7), from: 10, through: 10,
+                points: [LaneWrite(tick: 10, value: 72)])
+            session.editCursor = 77
+        }
+    }
+    report.expect(
+        changes.count == 1
+            && changes.last?.domains == [.document, .dirty, .history, .cursor]
+            && changes.last?.editEffects.flags == [.notes, .lanes, .timeDomain]
+            && changes.last?.editEffects.affects(chunk: 0) == true
+            && changes.last?.editEffects.affects(chunk: 2) == true
+            && changes.last?.editEffects.affects(chunk: 1) == false
+            && document.note(note.id)?.tick == 23
+            && session.timeline.lengthTicks == 43
+            && session.projectionCache.timeAxis.lengthTicks == 43
+            && document.state.file.chunks[0].endTick == 128
+            && document.lanePoints(track: 2, lane: .controller(7)).first?.value == 72,
+        cppID: id, message: "nested batch publishes one exact union for actually moved notes and written lane data")
+    report.expect(
+        repairedCallbacksReadCurrentNotes && retainedNotes.first?.tick == 20,
+        cppID: id, message: "viewport callbacks read repaired note data while retained pre-edit notes stay immutable")
+    session.editCursor = 78
+    report.expect(
+        changes.count == 2 && changes.last?.domains == [.cursor]
+            && changes.last?.editEffects == DocumentEditEffects(),
+        cppID: id, message: "flush resets the accumulated effects before a subsequent session-only publication")
+    report.expect(document.history.undoDocument(), cppID: id, message: "batched lane write undoes")
+    report.expect(
+        document.lanePoints(track: 2, lane: .controller(7)).isEmpty
+            && document.note(note.id)?.tick == 23
+            && changes.last?.editEffects.flags == [.lanes]
+            && changes.last?.editEffects.affects(chunk: 2) == true
+            && changes.last?.editEffects.affects(chunk: 0) == false,
+        cppID: id, message: "history remains per-command and undo publishes only the replayed lane chunk")
+    report.expect(document.history.redoDocument(), cppID: id, message: "batched lane write redoes")
+    report.expect(
+        document.lanePoints(track: 2, lane: .controller(7)).first?.value == 72
+            && changes.last?.editEffects.flags == [.lanes]
+            && changes.last?.editEffects.affects(chunk: 2) == true
+            && changes.last?.editEffects.affects(chunk: 1) == false,
+        cppID: id, message: "redo restores visible lane data and retains exact unaffected membership")
+    document.nudgeNotes([note.id], byTicks: 60, byKeys: 0)
+    report.expect(
+        repairedCallbacksReadCurrentAxis && retainedAxis.lengthTicks == 40
+            && session.projectionCache.timeAxis.lengthTicks == 103
+            && session.timeline.lengthTicks == 103
+            && document.state.file.chunks[0].endTick == 128
+            && changes.last?.editEffects.flags == [.notes, .timeDomain]
+            && changes.last?.editEffects.affects(chunk: 0) == true
+            && changes.last?.editEffects.affects(chunk: 1) == false,
+        cppID: id,
+        message: "extent callbacks read the final timeline-backed axis while the retained old axis stays unchanged")
+    report.expect(document.history.undoDocument(), cppID: id, message: "fixed-end extent movement undoes")
+    report.expect(
+        repairedCallbacksReadCurrentAxis && session.projectionCache.timeAxis.lengthTicks == 43
+            && session.timeline.lengthTicks == 43
+            && document.state.file.chunks[0].endTick == 128
+            && changes.last?.editEffects.flags == [.notes, .timeDomain],
+        cppID: id, message: "undo restores the prior actual musical extent without relying on the stored chunk end")
+    report.expect(document.history.redoDocument(), cppID: id, message: "fixed-end extent movement redoes")
+    report.expect(
+        repairedCallbacksReadCurrentAxis && session.projectionCache.timeAxis.lengthTicks == 103
+            && session.timeline.lengthTicks == 103
+            && changes.last?.editEffects.flags == [.notes, .timeDomain],
+        cppID: id, message: "redo restores the final timeline-backed axis before viewport callbacks")
 }
 
 @MainActor

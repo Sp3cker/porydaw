@@ -12,6 +12,8 @@ internal func coreNoteMoveTransactionChecks(_ report: CheckReport) {
         try coreNoteMoveAdmissionChecks(report)
         try coreNoteCachedMoveOrigins(report)
         try coreNoteCachedLengthOrigins(report)
+        try coreNoteEditEffects(report)
+        coreContextualTrackNameEffects(report)
     } catch {
         report.fail(id, "note move transaction checks failed: \(error)")
     }
@@ -380,4 +382,121 @@ private func coreNoteCachedLengthOrigins(_ report: CheckReport) throws {
     report.expectEqual(
         expected: baseline, actual: try document.state.file.encoded(), cppID: id,
         what: "second undo restores the original length bytes")
+}
+
+@MainActor
+private func coreNoteEditEffects(_ report: CheckReport) throws {
+    let id = "swiftcore/noteEditEffects"
+    var chunks = Array(repeating: MidiChunk(endTick: 128), count: 66)
+    for (chunk, pitch) in [(64, UInt8(60)), (65, UInt8(64))] {
+        chunks[chunk].events = [
+            .channel(status: 0xC0, data0: 0),
+            .channel(tick: 20, status: 0x90, data0: pitch, data1: 90),
+            .channel(tick: 40, status: 0x80, data0: pitch),
+            .meta(tick: 100, type: 0x58, data: [4, 2, 24, 8]),
+        ]
+    }
+    let document = SongDocument(file: MidiFile(division: 24, chunks: chunks))
+    guard let first = document.notes(in: 0).first, let second = document.notes(in: 1).first else {
+        report.fail(id, "high-index fixture must expose both notes"); return
+    }
+    let baseline = try document.state.file.encoded()
+    var changes: [DocumentChange] = []
+    document.onChange = { changes.append($0) }
+    let group = HistoryGroup()
+    report.expect(
+        document.moveNotes([first.id, second.id], toPitches: [61, 65], group: group),
+        cppID: id, message: "two-chunk gesture admits initial pitches")
+    report.expect(
+        document.moveNotes([first.id, second.id], toPitches: [60, 66], group: group),
+        cppID: id, message: "replacement admits one restored and one newly moved note")
+    report.expect(
+        document.note(first.id)?.pitch == 60 && document.note(second.id)?.pitch == 66
+            && changes.last?.editEffects.flags == [.notes]
+            && changes.last?.editEffects.affects(chunk: 64) == true
+            && changes.last?.editEffects.affects(chunk: 65) == true
+            && changes.last?.editEffects.affects(chunk: 63) == false
+            && changes.last?.editEffects.affects(chunk: 66) == false,
+        cppID: id, message: "replacement publishes restored chunk 64 as well as changed chunk 65, exactly")
+    report.expect(
+        document.moveNotes([first.id, second.id], toPitches: [60, 64], group: group),
+        cppID: id, message: "cumulative gesture returns both notes to origin")
+    let cancelledBytes = try document.state.file.encoded()
+    report.expect(
+        cancelledBytes == baseline
+            && !document.history.canUndo
+            && changes.count == 3
+            && changes.last?.editEffects.flags == [.notes]
+            && changes.last?.editEffects.affects(chunk: 65) == true
+            && changes.last?.editEffects.affects(chunk: 63) == false,
+        cppID: id, message: "empty cumulative cancellation restores exact bytes and publishes restored content")
+
+    document.nudgeNotes([first.id], byTicks: 3, byKeys: 0)
+    report.expect(
+        document.note(first.id)?.tick == 23
+            && document.state.file.chunks[64].endTick == 128
+            && document.state.file.chunks[64].events.last?.tick == 100
+            && changes.last?.editEffects.flags == [.notes, .timeDomain]
+            && changes.last?.editEffects.affects(chunk: 64) == true
+            && changes.last?.editEffects.affects(chunk: 65) == false,
+        cppID: id, message: "single-chunk movement above 63 preserves unaffected chunk membership")
+    report.expect(document.history.undoDocument(), cppID: id, message: "high-index movement undoes")
+    report.expect(
+        document.note(first.id)?.tick == 20
+            && changes.last?.editEffects.affects(chunk: 64) == true
+            && changes.last?.editEffects.affects(chunk: 65) == false,
+        cppID: id, message: "undo restores the original note and identifies only replayed chunk 64")
+    report.expect(document.history.redoDocument(), cppID: id, message: "high-index movement redoes")
+    report.expect(
+        document.note(first.id)?.tick == 23
+            && changes.last?.editEffects.affects(chunk: 64) == true
+            && changes.last?.editEffects.affects(chunk: 65) == false,
+        cppID: id, message: "redo restores the moved note and exact affected membership")
+    let beforeRejected = changes.count
+    report.expect(
+        !document.moveNotes([first.id], toPitches: [61], byTicks: Int64(TimeDefaults.maxTick) + 1)
+            && document.note(first.id)?.tick == 23 && changes.count == beforeRejected,
+        cppID: id, message: "rejected movement changes neither notes nor published effects")
+}
+
+@MainActor
+private func coreContextualTrackNameEffects(_ report: CheckReport) {
+    let id = "swiftcore/contextualTrackNameEffects"
+    let document = SongDocument(
+        file: MidiFile(
+            division: 24,
+            chunks: [
+                MidiChunk(
+                    events: [
+                        .channel(status: 0xC0, data0: 0),
+                        .meta(tick: 5, type: 0x20, data: [0]),
+                        .channel(tick: 10, status: 0xB0, data0: 7, data1: 90),
+                        .meta(tick: 20, type: 0x03, data: [76, 97, 116, 101]),
+                        .channel(tick: 30, status: 0x90, data0: 60, data1: 90),
+                        .channel(tick: 40, status: 0x80, data0: 60),
+                    ], endTick: 128)
+            ]))
+    var changes: [DocumentChange] = []
+    document.onChange = { changes.append($0) }
+    report.expect(document.trackName(0) == "Late", cppID: id, message: "channel boundary exposes the late name")
+    document.modifyRawEvent(
+        chunk: 0, index: 2, event: .channel(tick: 25, status: 0xB0, data0: 7, data1: 90))
+    report.expect(
+        document.trackName(0).isEmpty
+            && document.lanePoints(track: 0, lane: .controller(7)).first?.tick == 25
+            && changes.last?.editEffects.flags.contains(.trackNames) == true
+            && changes.last?.editEffects.flags.contains(.lanes) == true
+            && changes.last?.editEffects.affects(chunk: 0) == true
+            && changes.last?.editEffects.affects(chunk: 1) == false,
+        cppID: id, message: "moving a channel boundary across the prefix name publishes its changed eligibility")
+    report.expect(document.history.undoDocument(), cppID: id, message: "contextual name crossing undoes")
+    report.expect(
+        document.trackName(0) == "Late"
+            && changes.last?.editEffects.flags.contains(.trackNames) == true,
+        cppID: id, message: "undo restores the exposed name and its consumer dependency")
+    report.expect(document.history.redoDocument(), cppID: id, message: "contextual name crossing redoes")
+    report.expect(
+        document.trackName(0).isEmpty
+            && changes.last?.editEffects.flags.contains(.trackNames) == true,
+        cppID: id, message: "redo hides the name again and publishes its consumer dependency")
 }

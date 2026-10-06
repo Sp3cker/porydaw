@@ -4,16 +4,10 @@ import PorydawCore
 /// deliberately absent: their changes need not advance the document revision.
 @MainActor
 public final class DocumentProjectionCache {
-    private struct LaneKey: Hashable {
-        let track: Int
-        let lane: Lane
-    }
-
     private unowned let session: DocumentSession
-    private var revision: UInt64?
     private var trackNotes: [Int: [Note]] = [:]
     private var noteIndices: [Int: [NoteID: Int]] = [:]
-    private var lanes: [LaneKey: [LanePoint]] = [:]
+    private var lanes: [Int: [Lane: [LanePoint]]] = [:]
     private var cachedTimeAxis: TimeAxis?
 
     init(session: DocumentSession) {
@@ -21,7 +15,6 @@ public final class DocumentProjectionCache {
     }
 
     public func notes(in track: Int) -> [Note] {
-        invalidateIfNeeded()
         if let notes = trackNotes[track] { return notes }
         let notes = session.document.notes(in: track)
         trackNotes[track] = notes
@@ -43,16 +36,13 @@ public final class DocumentProjectionCache {
     }
 
     public func lanePoints(track: Int, lane: Lane) -> [LanePoint] {
-        invalidateIfNeeded()
-        let key = LaneKey(track: track, lane: lane)
-        if let points = lanes[key] { return points }
+        if let points = lanes[track]?[lane] { return points }
         let points = session.document.lanePoints(track: track, lane: lane)
-        lanes[key] = points
+        lanes[track, default: [:]][lane] = points
         return points
     }
 
     public var timeAxis: TimeAxis {
-        invalidateIfNeeded()
         if let axis = cachedTimeAxis { return axis }
         let timeline = session.timeline
         let axis = TimeAxis(
@@ -70,15 +60,28 @@ public final class DocumentProjectionCache {
         return axis
     }
 
-    /// Synchronous main-actor invalidation clears every derived fact before a
-    /// new revision can be read. Each projection is then rebuilt only on demand.
-    private func invalidateIfNeeded() {
-        let current = session.document.revision
-        guard revision != current else { return }
-        trackNotes.removeAll(keepingCapacity: true)
-        noteIndices.removeAll(keepingCapacity: true)
-        lanes.removeAll(keepingCapacity: true)
-        cachedTimeAxis = nil
-        revision = current
+    /// The session invalidates offsets before any observer reads the new document.
+    /// Untouched chunks retain their projections, independently of revision.
+    func documentDidChange(_ change: DocumentChange) {
+        let effects = change.editEffects
+        if effects.flags.contains(.structure) {
+            trackNotes.removeAll(keepingCapacity: true)
+            noteIndices.removeAll(keepingCapacity: true)
+            lanes.removeAll(keepingCapacity: true)
+        } else if effects.affectsAnyChunk {
+            let mapping = session.document.engineTracks
+            for track in 0..<mapping.usedTrackCount {
+                guard let chunk = mapping.tracks[track].midiChunk,
+                    effects.affects(chunk: chunk)
+                else { continue }
+                // Both notes and lane points carry raw-event offsets.
+                trackNotes.removeValue(forKey: track)
+                noteIndices.removeValue(forKey: track)
+                lanes.removeValue(forKey: track)
+            }
+        }
+        if !effects.flags.intersection([.timeDomain, .structure]).isEmpty {
+            cachedTimeAxis = nil
+        }
     }
 }

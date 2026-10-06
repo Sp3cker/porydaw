@@ -202,6 +202,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
     @QtIgnored var entriesRevision: UInt64?
     @QtIgnored var entriesTrack: Int?
     @QtIgnored var cachedEntries: [VoiceProjectionEntry] = []
+    private var entryEventOffsets: [Int] = []
     // Retained display-list buffer (list 0 grid + held spans) and the writer
     // reused across frames; the one list rebuilds with one bump.
     @QtIgnored var displayLists: [Data] = []
@@ -236,6 +237,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
         refreshPromptStyle()
         contextTick = viewport.session.editCursor
         presentedContextEndTick = TimeDefaults.noTick
+        entryEventOffsets = lanePoints().map(\.eventIndex)
         presentedContextStartTick = 0
         rebuildContent()
     }
@@ -304,9 +306,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
 
     // MARK: Session refresh
 
-    /// Document, Undo/Redo, track or bank publication: a frozen gesture, picker
-    /// or menu whose captured identity no longer holds cancels, then content
-    /// rebuilds. Nothing here re-points a captured target at a new occurrence.
+    /// Relevant content, track or bank changes rebuild the page after cancelling
+    /// stale captures. Unrelated edits use the interaction-only route below.
     @QtIgnored
     public func refreshFromDocument() {
         guard let session else { return }
@@ -314,6 +315,16 @@ public final class VoiceChangesPage: EditorDrawerPage {
         presentedContextEndTick = TimeDefaults.noTick
         presentedContextStartTick = 0
         pickerCache.refresh(slots: session.bankSlots)
+        entryEventOffsets = lanePoints().map(\.eventIndex)
+        invalidateDocumentInteraction()
+        if picker != nil { refreshPicker() }
+        rebuildContent()
+    }
+
+    /// Cancels revision-bound targets immediately without rebuilding static content.
+    @QtIgnored
+    public func invalidateDocumentInteraction() {
+        guard let session else { return }
         let track = session.selectedTrack ?? -1
         let revision = session.document.revision
         if let live = drag, live.revision != revision || live.track != track {
@@ -322,13 +333,49 @@ public final class VoiceChangesPage: EditorDrawerPage {
         if let live = panRevision, live != revision { cancelPan() }
         if let live = picker, live.target.revision != revision || live.target.track != track {
             cancelPicker()
-        } else if picker != nil {
-            refreshPicker()
         }
         if let live = menu, live.target.revision != revision || live.target.track != track {
             dismissVoiceMenu()
         }
-        rebuildContent()
+    }
+
+    /// Rebinds raw-event identities after edits that leave the voice lane unchanged.
+    /// Geometry, labels, readout and display lists remain retained.
+    @QtIgnored
+    public func refreshEventOffsets() {
+        guard let session, let track = currentTrack(session), entriesTrack == track
+        else { return }
+        let points = lanePoints()
+        let previousHover = hoverIdentity
+        let previousSelection = selectedIdentity
+        var identitiesChanged = false
+        for index in cachedEntries.indices {
+            let displayedIdentity = cachedEntries[index].identity
+            let sourceOrder = cachedEntries[index].sourceOrder
+            let point = points[sourceOrder]
+            let previousOffset = entryEventOffsets[sourceOrder]
+            guard previousOffset != point.eventIndex else { continue }
+            entryEventOffsets[sourceOrder] = point.eventIndex
+            let identity = VoiceOccurrence(point).text
+            var previousIdentity = displayedIdentity
+            if displayedIdentity == identity {
+                // A preceding viewport publication may already have refreshed entries.
+                var previousOccurrence = VoiceOccurrence(point)
+                previousOccurrence.eventIndex = previousOffset
+                previousIdentity = previousOccurrence.text
+            } else {
+                identitiesChanged = true
+                cachedEntries[index].identity = identity
+                markerLookup[displayedIdentity]?.identity = identity
+            }
+            if previousHover == previousIdentity { hoverIdentity = identity }
+            if previousSelection == previousIdentity { selectedIdentity = identity }
+        }
+        if identitiesChanged {
+            markerLookup.removeAll(keepingCapacity: true)
+            for marker in published { markerLookup[marker.identity] = marker }
+        }
+        entriesRevision = session.document.revision
     }
 
     /// Cursor-only publication: while stopped, update only the dependent voice

@@ -171,6 +171,7 @@ internal func runEventListPageChecks(
     eventListRowMenuContract(report, suite: suite, service: service)
     eventListFilterMatrix(report, suite: suite, service: service)
     eventListMenuInvalidation(report, suite: suite, service: service)
+    eventListScopedSnapshots(report, suite: suite, service: service)
 }
 
 @MainActor
@@ -621,4 +622,151 @@ private func eventListMenuInvalidation(
     report.expect(
         presenter.menuOpen && presenter.currentRow == 1,
         cppID: id, message: "row changes leave the filter menu open")
+}
+
+@MainActor
+private func eventListScopedSnapshots(
+    _ report: CheckReport, suite: DocumentSession, service: ProjectService
+) {
+    let document = SongDocument(
+        file: MidiFile(
+            division: 24,
+            chunks: [
+                MidiChunk(events: [.meta(tick: 0, type: 6, data: [1])], endTick: 192),
+                MidiChunk(
+                    events: [
+                        .channel(tick: 0, status: 0xC0, data0: 0),
+                        .channel(tick: 0, status: 0x90, data0: 60, data1: 80),
+                        .channel(tick: 12, status: 0x80, data0: 60),
+                        .channel(tick: 24, status: 0xB0, data0: 7, data1: 64),
+                    ], endTick: 192),
+                MidiChunk(
+                    events: [
+                        .channel(tick: 48, status: 0x91, data0: 67, data1: 90),
+                        .channel(tick: 72, status: 0x81, data0: 67),
+                    ], endTick: 192),
+            ]), config: suite.document.state.config, source: suite.document.source,
+        trackBudget: suite.document.trackBudget)
+    let session = DocumentSession(
+        document: document, service: service, lease: suite.bankLease,
+        slots: suite.bankSlots, dirty: false, loadName: suite.bankLoadName,
+        sampleRate: 48_000)
+    session.selectedTrack = 0
+    let presenter = EventListPresenter()
+    var observedDocumentEffects = DocumentEditEffects()
+    session.onChange = { [weak presenter] change in
+        if change.domains.contains(.document) { observedDocumentEffects = change.editEffects }
+        presenter?.documentDidChange(change)
+    }
+    presenter.attach(session: session, chunkIndex: 1)
+    presenter.setVisible(visible: true)
+    presenter.selectRow(row: 1, modifiers: 0)
+    let retainedModel = presenter.model
+    let retainedRow = presenter.rowHandle(row: 1)
+    let retainedSecondary = document.rawChunks[2]
+    guard let secondary = document.notes(in: 1).first,
+        let primary = session.projectionCache.notes(in: 0).first,
+        let oldLanePoint = session.projectionCache.lanePoints(track: 0, lane: .controller(7)).first
+    else {
+        report.fail(pageID, "the scoped source fixture exposes both notes and its controller")
+        return
+    }
+    document.moveNotes([secondary.id], byTicks: 12, byKeys: 1)
+    report.expect(
+        presenter.model.chunk == retainedModel.chunk && presenter.currentRow == 1
+            && presenter.selectedRows == [1] && presenter.rowHandle(row: 1) === retainedRow,
+        cppID: pageID, message: "editing another chunk retains the visible rows, focus and selection")
+    presenter.setChunk(index: 2)
+    report.expect(
+        presenter.model.chunk.events.contains { $0.noteID == secondary.id && $0.tick == 60 }
+            && retainedSecondary.events.contains { $0.noteID == secondary.id && $0.tick == 48 },
+        cppID: pageID, message: "switching into the edited chunk reads new data without mutating its old snapshot")
+    presenter.setChunk(index: 1)
+    document.moveNotes([primary.id], byTicks: 36, byKeys: 0)
+    guard let freshLanePoint = session.projectionCache.lanePoints(track: 0, lane: .controller(7)).first
+    else {
+        report.fail(pageID, "the controller survives the note crossing")
+        return
+    }
+    report.expect(
+        freshLanePoint.eventIndex != oldLanePoint.eventIndex
+            && document.rawChunks[freshLanePoint.chunk].events[freshLanePoint.eventIndex].payload
+                == .channel(status: 0xB0, data0: 7, data1: 64)
+            && session.projectionCache.note(primary.id, in: 0)?.tick == 36
+            && primary.tick == 0 && retainedModel.chunk.events[1].tick == 0,
+        cppID: pageID,
+        message: "a note crossing refreshes event offsets and notes while retained sources stay unchanged")
+    report.expect(
+        presenter.model.chunk.events.contains { $0.noteID == primary.id && $0.tick == 36 },
+        cppID: pageID, message: "the affected event-list source displays the moved note")
+    report.expect(document.history.undoDocument(), cppID: pageID, message: "the crossing undoes")
+    report.expect(
+        session.projectionCache.note(primary.id, in: 0)?.tick == 0
+            && presenter.model.chunk.events.contains { $0.noteID == primary.id && $0.tick == 0 },
+        cppID: pageID, message: "undo restores both projected notes and visible raw-event data")
+    report.expect(document.history.redoDocument(), cppID: pageID, message: "the crossing redoes")
+    guard let editablePoint = session.projectionCache.lanePoints(track: 0, lane: .controller(7)).first
+    else {
+        report.fail(pageID, "redo restores the editable controller occurrence")
+        return
+    }
+    document.moveLanePoints(
+        track: 0, lane: .controller(7),
+        moves: [LanePointMove(point: editablePoint, tick: editablePoint.tick, value: 91)])
+    report.expect(
+        document.lanePoints(track: 0, lane: .controller(7)).first?.value == 91
+            && document.note(primary.id)?.tick == 36 && document.note(primary.id)?.velocity == 80
+            && presenter.model.chunk.events.contains { $0.payload == .channel(status: 0xB0, data0: 7, data1: 91) },
+        cppID: pageID, message: "a lane edit after redo targets the controller, not the shifted note event")
+    session.setSelectedNotes([primary.id])
+    guard let beforeControllerInsert = session.projectionCache.note(primary.id, in: 0),
+        let previousEndIndex = beforeControllerInsert.endIndex
+    else {
+        report.fail(pageID, "the selected note exposes both cached raw-event offsets")
+        return
+    }
+    let retainedChunk = document.rawChunks[beforeControllerInsert.chunk]
+    let unaffectedNotes = session.projectionCache.notes(in: 1)
+    document.writeLane(
+        track: 0, lane: .controller(10), from: 12, through: 12,
+        points: [LaneWrite(tick: 12, value: 45)])
+    guard let freshNote = session.projectionCache.note(primary.id, in: 0),
+        let freshEndIndex = freshNote.endIndex
+    else {
+        report.fail(pageID, "controller insertion retains the selected note and its ending")
+        return
+    }
+    let events = document.rawChunks[freshNote.chunk].events
+    report.expect(
+        observedDocumentEffects.flags.contains(.lanes) && !observedDocumentEffects.flags.contains(.notes)
+            && freshNote.onIndex == beforeControllerInsert.onIndex + 1
+            && freshEndIndex == previousEndIndex + 1
+            && events[freshNote.onIndex].noteID == primary.id
+            && events[freshEndIndex].tick == 48
+            && events[freshEndIndex].payload == .channel(status: 0x80, data0: primary.pitch, data1: 0)
+            && retainedChunk.events[beforeControllerInsert.onIndex].noteID == primary.id
+            && retainedChunk.events[previousEndIndex].tick == 48
+            && session.projectionCache.notes(in: 1) == unaffectedNotes,
+        cppID: pageID,
+        message:
+            "inserting a controller before a cached note refreshes both raw offsets and retains old and unaffected sources"
+    )
+    let selectedNotes = session.selectedNoteOrder.compactMap {
+        session.projectionCache.note($0, in: 0)
+    }
+    report.expect(
+        selectedNotes.count == 1 && document.moveRange(notes: selectedNotes, points: [], by: 12),
+        cppID: pageID, message: "selected range movement accepts the fresh cached offsets after controller insertion")
+    report.expect(
+        document.note(primary.id)?.tick == 48 && document.note(primary.id)?.endTick == 60
+            && document.note(primary.id)?.pitch == primary.pitch
+            && document.note(primary.id)?.velocity == primary.velocity
+            && document.lanePoints(track: 0, lane: .controller(10)).first?.tick == 12
+            && document.lanePoints(track: 0, lane: .controller(10)).first?.value == 45
+            && document.lanePoints(track: 0, lane: .controller(7)).first?.value == 91
+            && presenter.model.chunk.events.contains { $0.noteID == primary.id && $0.tick == 48 },
+        cppID: pageID,
+        message:
+            "the selected range edit moves the intended note pair, preserves both controllers and publishes current event rows"
+    )
 }

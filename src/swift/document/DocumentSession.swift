@@ -27,14 +27,17 @@ public struct SessionChange: Sendable {
     public var revision: UInt64
     public var trackRemap: TrackRemap?
     public var domains: SessionChangeDomains
+    public var editEffects: DocumentEditEffects
 
     public init(
         revision: UInt64, trackRemap: TrackRemap? = nil,
-        domains: SessionChangeDomains = [.document, .dirty, .history]
+        domains: SessionChangeDomains = [.document, .dirty, .history],
+        editEffects: DocumentEditEffects = DocumentEditEffects()
     ) {
         self.revision = revision
         self.trackRemap = trackRemap
         self.domains = domains
+        self.editEffects = editEffects
     }
 }
 
@@ -176,6 +179,7 @@ public final class DocumentSession {
     internal var stateChangeDepth = 0
     internal var pendingDomains: SessionChangeDomains = []
     internal var pendingTrackRemap: TrackRemap?
+    internal var pendingEditEffects = DocumentEditEffects()
     internal var publishedTrackTime = TrackTimeSelection()
 
     public init(
@@ -196,6 +200,11 @@ public final class DocumentSession {
             self?.handleDocumentChange(change)
         }
         sharedBank.attach(self)
+    }
+
+    /// Returns a safely reclaimed playback snapshot to the retained builder.
+    public func recyclePlaybackTimeline(_ timeline: consuming PlaybackTimeline) {
+        timelineBuilder.recycle(timeline)
     }
 
     /// Coalesces synchronous session mutations into one publication. Nested

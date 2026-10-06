@@ -165,6 +165,7 @@ public final class EventListPresenter: QmlUncreatable {
         visible = false
         self.chunkIndex = chunkIndex
         attached = true
+        refreshChunkLabels()
         rebuildFromDocument(preservingCurrentRow: false)
     }
 
@@ -201,8 +202,8 @@ public final class EventListPresenter: QmlUncreatable {
         onAvailabilityChanged?()
     }
 
-    /// Rebuilds on document publication or a mapped-chunk selection change;
-    /// cursor, dirty, history, bank and mix state otherwise retain the rows.
+    /// Retains the source snapshot until its chunk, tempo rows or mapping changes.
+    /// Selection can switch the configured chunk without a document edit.
     @QtIgnored
     public func documentDidChange(_ change: SessionChange) {
         if change.domains.contains(.document) || change.trackRemap != nil {
@@ -230,8 +231,15 @@ public final class EventListPresenter: QmlUncreatable {
             chunkChangedBySelection = true
         }
 
-        guard documentChanged || chunkChangedBySelection else { return }
-        rebuildFromDocument(preservingCurrentRow: documentChanged && !chunkChangedBySelection)
+        let effects = change.editEffects
+        let structureChanged = effects.flags.contains(.structure) || change.trackRemap != nil
+        if structureChanged { refreshChunkLabels() }
+        let tempoChanged =
+            chunkIndex == 0 && effects.flags.contains(.timeDomain)
+            && model.tempos != session.document.state.tempo
+        let sourceChanged = structureChanged || effects.affects(chunk: chunkIndex) || tempoChanged
+        guard sourceChanged || chunkChangedBySelection else { return }
+        rebuildFromDocument(preservingCurrentRow: sourceChanged && !chunkChangedBySelection)
     }
 
     /// Explicit refresh hook for a host that changed the selected chunk.
@@ -504,6 +512,17 @@ public final class EventListPresenter: QmlUncreatable {
         return nil
     }
 
+    private func refreshChunkLabels() {
+        guard let session, !session.isClosed else { return }
+        let document = session.document
+        chunkLabels = document.rawChunks.indices.map { chunk in
+            if let engineTrack = firstEngineTrack(for: chunk, in: document) {
+                return "Chunk \(chunk) — Track \(engineTrack + 1)"
+            }
+            return "Chunk \(chunk) (tempo/meta)"
+        }
+    }
+
     func rebuildFromDocument(preservingCurrentRow: Bool) {
         guard let session, !session.isClosed else {
             model.setSource(nil)
@@ -512,12 +531,6 @@ public final class EventListPresenter: QmlUncreatable {
         }
         let document = session.document
         let chunks = document.rawChunks
-        chunkLabels = chunks.indices.map { chunk in
-            if let engineTrack = firstEngineTrack(for: chunk, in: document) {
-                return "Chunk \(chunk) — Track \(engineTrack + 1)"
-            }
-            return "Chunk \(chunk) (tempo/meta)"
-        }
         guard chunks.indices.contains(chunkIndex) else {
             model.setSource(nil)
             publishRows()

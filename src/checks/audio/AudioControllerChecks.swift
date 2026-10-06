@@ -1,6 +1,6 @@
 import Foundation
 import PorydawApp
-import PorydawAppAudio
+@testable import PorydawAppAudio
 import PorydawCore
 import PorydawDocument
 import PorydawPlayback
@@ -10,6 +10,8 @@ import PorydawProject
 @MainActor
 func runAudioControllerChecks(_ report: CheckReport) {
     do {
+        checkTimelineReclamationSafety(report)
+        try checkControllerReclamation(report)
         try checkControllerCuts(report)
         try checkAuditionTailTransitions(report)
         try checkControllerPublication(report)
@@ -22,6 +24,178 @@ func runAudioControllerChecks(_ report: CheckReport) {
         try checkControllerPitchBendAudio(report)
         try checkNativeAudioLifetime(report)
     } catch { report.fail("swiftcore/AudioController", "controller initialization failed: \(error)") }
+}
+
+private func recyclingTimelineFile(_ identity: UInt8) -> MidiFile {
+    MidiFile(
+        division: 24,
+        chunks: [
+            MidiChunk(
+                events: [
+                    .meta(type: 0x51, data: [0x07, 0xA1, 0x20]),
+                    .meta(type: 0x58, data: [identity + 3, 2]),
+                    .meta(type: 0x06, data: [0x5B]),
+                    .meta(tick: 72, type: 0x06, data: [0x5D]),
+                ], endTick: 72),
+            MidiChunk(
+                events: [
+                    .meta(type: 0x03, data: Array("Voice \(identity)".utf8)),
+                    .channel(status: 0xC0, data0: identity),
+                    .channel(
+                        tick: 24, status: 0x90, data0: 60 + identity, data1: 100, noteID: NoteID(UInt64(identity))),
+                    .channel(tick: 48, status: 0x80, data0: 60 + identity),
+                    .meta(tick: 72, type: 0x05, data: Array("lyric \(identity)".utf8)),
+                ], endTick: 72),
+        ])
+}
+
+private func checkTimelineReclamationSafety(_ report: CheckReport) {
+    let id = "no-row/audio/timelineReclamationSafety"
+    var builder = PlaybackTimelineBuilder()
+    let retained = builder.build(file: recyclingTimelineFile(1), sampleRate: 1000)
+    let handoff = AudioTimelineHandoff()
+    handoff.reset(retained)
+    var reclaimed: [NoteID] = []
+    func publish(_ identity: UInt8) {
+        let timeline = builder.build(file: recyclingTimelineFile(identity), sampleRate: 1000)
+        handoff.publish(timeline) { old in
+            guard let note = old.events.first(where: { $0.type == 0x9 }) else {
+                report.fail(id, "reclaimed populated timeline lost its note identity")
+                return
+            }
+            reclaimed.append(note.noteID)
+            builder.recycle(old)
+        }
+    }
+
+    publish(2)
+    report.expect(reclaimed.isEmpty, cppID: id, message: "advertised initial snapshot is not reclaimed")
+    publish(3)
+    report.expectEqual(
+        expected: [NoteID(2)], actual: reclaimed, cppID: id,
+        what: "only replaced never-acquired pending output is returned")
+    report.expect(
+        handoff.active?.pointee.events.first { $0.type == 0x9 }?.noteID == NoteID(1)
+            && handoff.active?.pointee.tracks[0].name == "Voice 1",
+        cppID: id, message: "rapid pending replacement preserves the initially advertised snapshot")
+    guard let acquired = handoff.acquirePending() else {
+        report.fail(id, "latest pending timeline was not acquired")
+        return
+    }
+    report.expect(
+        acquired.pointee.events.first { $0.type == 0x9 }?.noteID == NoteID(3)
+            && acquired.pointee.tracks[0].name == "Voice 3",
+        cppID: id, message: "acquisition adopts the latest complete timeline")
+    report.expectEqual(
+        expected: [NoteID(2)], actual: reclaimed, cppID: id,
+        what: "callback acquisition does not invoke producer reclamation")
+    publish(4)
+    publish(5)
+    report.expectEqual(
+        expected: [NoteID(2), NoteID(1), NoteID(4)], actual: reclaimed, cppID: id,
+        what: "acknowledged older retired and replaced pending outputs are reclaimed once")
+    report.expect(
+        handoff.active == acquired && acquired.pointee.events.first { $0.type == 0x9 }?.sample == 500
+            && acquired.pointee.events.first { $0.type == 0x9 }?.noteID == NoteID(3)
+            && acquired.pointee.tracks[0].firstProgram == 3,
+        cppID: id, message: "advertised acquired output remains readable through rapid publications")
+    _ = handoff.acquirePending()
+    publish(6)
+    report.expectEqual(
+        expected: [NoteID(2), NoteID(1), NoteID(4), NoteID(3)], actual: reclaimed, cppID: id,
+        what: "previous acquired output is returned only after a later acquisition")
+
+    let replacement = builder.build(
+        file: recyclingTimelineFile(7),
+        tempo: [TempoPoint(tick: 0, microsecondsPerQuarterNote: 750_000)],
+        sampleRate: 2000, settings: PlaybackSettings(exactGate: true, extendedClocks: true))
+    report.expect(
+        retained.events.first { $0.type == 0x9 }?.noteID == NoteID(1)
+            && retained.events.first { $0.type == 0x9 }?.sample == 500
+            && retained.tracks[0].name == "Voice 1" && retained.tracks[0].noteCount == 1
+            && retained.tempoMap[0].microsecondsPerQuarterNote == 500_000
+            && retained.timeSignatures[0].numerator == 4
+            && retained.otherEvents.last?.label == "Lyric: lyric 1"
+            && retained.loopEndSample == 1500,
+        cppID: id, message: "external retained output remains immutable after its storage is offered for reuse")
+    report.expect(
+        replacement.events.first { $0.type == 0x9 }?.sample == 1500
+            && replacement.events.first { $0.type == 0x9 }?.noteID == NoteID(7)
+            && replacement.tracks[0].name == "Voice 7" && replacement.tracks[0].firstProgram == 7
+            && replacement.timeSignatures[0].numerator == 10
+            && replacement.otherEvents.last?.label == "Lyric: lyric 7"
+            && replacement.otherEvents.last?.sample == 4500
+            && replacement.tempoMap[0].microsecondsPerQuarterNote == 750_000
+            && replacement.loopEndSample == 4500,
+        cppID: id, message: "recycled arrays are completely refilled with new samples, identities and metadata")
+    builder.recycle(replacement)
+    let empty = builder.build(file: MidiFile(division: 48, chunks: []), sampleRate: 4000)
+    report.expect(
+        empty.events.count == 1 && empty.events[0].type == playbackTempoEventType
+            && empty.tracks.allSatisfy { !$0.used && $0.name.isEmpty && $0.noteCount == 0 && $0.firstProgram == -1 }
+            && empty.tempoMap.count == 1 && empty.timeSignatures.isEmpty && empty.otherEvents.isEmpty
+            && empty.lengthSamples == 0 && empty.lengthTicks == 0 && !empty.hasLoop
+            && empty.ticksPerBeat == 48 && empty.sampleRate == 4000
+            && empty.loopStartTick == TimeDefaults.noTick && empty.loopEndTick == TimeDefaults.noTick
+            && empty.usedTrackCount == 0 && empty.droppedTracks == 0 && empty.settings == PlaybackSettings(),
+        cppID: id, message: "empty input clears every reclaimed output's prior semantics")
+    report.expect(
+        replacement.events.first { $0.type == 0x9 }?.noteID == NoteID(7)
+            && replacement.events.first { $0.type == 0x9 }?.sample == 1500
+            && replacement.tracks[0].name == "Voice 7"
+            && replacement.tempoMap[0].microsecondsPerQuarterNote == 750_000
+            && replacement.timeSignatures[0].numerator == 10
+            && replacement.otherEvents.last?.sample == 4500,
+        cppID: id, message: "retained recycled output survives a subsequent empty build with different timing")
+    handoff.reset(empty)
+    report.expect(
+        handoff.acquirePending() == nil && handoff.active?.pointee.events == empty.events,
+        cppID: id,
+        message: "quiescent reset releases both pending and retired ownership and installs only its initial value")
+    handoff.reset()
+    handoff.reset()
+    report.expect(
+        handoff.active == nil && handoff.acquirePending() == nil,
+        cppID: id, message: "repeated quiescent reset leaves no advertised or pending timeline")
+    handoff.reset(retained)
+    publish(2)
+    _ = handoff.acquirePending()
+    publish(3)
+    report.expect(
+        handoff.active?.pointee.tracks[0].name == "Voice 2",
+        cppID: id, message: "publishing after reset preserves the newly acquired timeline")
+}
+
+private func checkControllerReclamation(_ report: CheckReport) throws {
+    let id = "no-row/audio/controllerReclamation"
+    let rig = try AudioControllerCheckFixture()
+    var reclaimed: [NoteID] = []
+    func publish(_ identity: UInt8) {
+        let timeline = PlaybackTimeline.build(file: recyclingTimelineFile(identity), sampleRate: Double(rig.rate))
+        rig.renderer.publish(timeline) { old in
+            if let note = old.events.first(where: { $0.type == 0x9 }) { reclaimed.append(note.noteID) }
+        }
+    }
+    publish(1)
+    publish(2)
+    report.expectEqual(
+        expected: [NoteID(1)], actual: reclaimed, cppID: id,
+        what: "render facade synchronously forwards replaced pending output")
+    _ = rig.render(1)
+    report.expect(
+        reclaimed == [NoteID(1)] && rig.renderer.timeline?.tracks[0].name == "Voice 2",
+        cppID: id, message: "render adopts latest output without calling reclaim")
+    publish(3)
+    rig.renderer.unload()
+    report.expect(
+        !rig.renderer.songLoaded && rig.renderer.timeline == nil,
+        cppID: id, message: "cold unload discards acquired, retired and pending outputs safely")
+    rig.renderer.bind(timeline: rig.timeline(), voicegroup: rig.voices, settings: AudioSettings())
+    rig.renderer.play()
+    let samples = rig.render(rig.ramp + rig.settle + 4096)
+    report.expect(
+        rig.sustaining(60) && audioControllerCheckPeak(samples.suffix(2048)) > 0.01,
+        cppID: id, message: "cold rebind after reclamation still produces audible samples")
 }
 
 @MainActor

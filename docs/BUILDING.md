@@ -39,6 +39,17 @@ synchronous reads; a view cannot outlive its storage owner. Published timelines,
 history origins, and retained presenter inputs remain owned snapshots. Borrowing
 does not remove legitimate copy-on-write allocations for retained readers.
 
+Document changes carry content effects and touched chunks through commit, merged
+edits, undo/redo, and session batches. Presenter caches retain unaffected tracks;
+any changed event sequence invalidates both note-pair and lane-event offsets in
+that chunk. Selection-only changes do not rebuild document projections.
+
+The session retains its playback builder. Audio publication returns safely
+retired timelines synchronously on the producer thread; the builder moves their
+array capacity into the next output before refilling it. The audio callback only
+adopts snapshots: it never reclaims publication storage. Retained external
+snapshots remain independent through normal copy-on-write.
+
 ## Allocation verification
 
 Build Release before profiling (`deno task build:checks --release`). Compare
