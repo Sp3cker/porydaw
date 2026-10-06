@@ -14,13 +14,6 @@ public enum VoiceInputSurface: Int, Sendable {
     case plot = 1
 }
 
-/// Qt pointer buttons as QML carries them (`mouse.button`).
-enum VoiceQtButton {
-    static let left = 1
-    static let right = 2
-    static let middle = 4
-}
-
 /// Qt keyboard modifier bits as QML carries them (`mouse.modifiers`). The alt
 /// bit is the drawer's fine-snap modifier.
 public enum VoiceModifier {

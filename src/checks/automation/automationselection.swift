@@ -58,23 +58,23 @@ func drawerAutomationRestoredInteractionContracts(
     let page = fixture.page
     let x = fixture.x(24)
     let y = fixture.y(fixture.panLane, 60)
-    _ = page.pointerPress(x: x, y: y, surface: 1, button: AutomationQtButton.left)
-    _ = page.pointerRelease(x: x, y: y, button: AutomationQtButton.left)
+    _ = page.pointerPress(x: x, y: y, surface: 1, button: DrawerQtButton.left)
+    _ = page.pointerRelease(x: x, y: y, button: DrawerQtButton.left)
     report.expectEqual(
         expected: [String](), actual: fixture.values(fixture.panLane), cppID: id,
         what: "stationary selection click deletes grabbed node only")
     report.expectEqual(
         expected: ["48:70"], actual: fixture.values(fixture.volumeLane), cppID: id,
         what: "stationary selection click preserves other lanes")
-    _ = page.pointerPress(x: 400, y: 90, surface: 1, button: AutomationQtButton.right)
-    _ = page.pointerRelease(x: 400, y: 90, button: AutomationQtButton.right)
+    _ = page.pointerPress(x: 400, y: 90, surface: 1, button: DrawerQtButton.right)
+    _ = page.pointerRelease(x: 400, y: 90, button: DrawerQtButton.right)
     report.expect(
         page.selection == nil, cppID: id,
         message: "outside right press clears selection before opening a menu")
     page.dismissMenu()
     page.selectRange(from: 0, to: fixture.songEndTick, lanes: [fixture.panLane])
-    _ = page.pointerPress(x: 400, y: 90, surface: 1, button: AutomationQtButton.right)
-    _ = page.pointerMove(x: 404, y: 86, buttons: AutomationQtButton.right)
+    _ = page.pointerPress(x: 400, y: 90, surface: 1, button: DrawerQtButton.right)
+    _ = page.pointerMove(x: 404, y: 86, buttons: DrawerQtButton.right)
     report.expect(
         !page.bandVisible
             && page.selection?.range
@@ -82,12 +82,12 @@ func drawerAutomationRestoredInteractionContracts(
                     startTick: 0, endTick: fixture.songEndTick),
         cppID: id,
         message: "a pending band preserves selection below the Manhattan threshold")
-    _ = page.pointerMove(x: 405, y: 85, buttons: AutomationQtButton.right)
+    _ = page.pointerMove(x: 405, y: 85, buttons: DrawerQtButton.right)
     report.expect(
         page.bandVisible, cppID: id,
         message: "diagonal travel activates at Manhattan ten before Euclidean ten")
-    _ = page.pointerMove(x: 400, y: 60, buttons: AutomationQtButton.right)
-    _ = page.pointerRelease(x: 400, y: 60, button: AutomationQtButton.right)
+    _ = page.pointerMove(x: 400, y: 60, buttons: DrawerQtButton.right)
+    _ = page.pointerRelease(x: 400, y: 60, button: DrawerQtButton.right)
     report.expect(
         page.selection == nil, cppID: id,
         message: "activated zero-width band clears selection")
@@ -119,8 +119,8 @@ func drawerAutomationRestoredInteractionContracts(
     if let point = synthetic.page.projection?.points.first {
         _ = synthetic.page.pointerPress(
             x: point.x, y: point.y, surface: 1,
-            button: AutomationQtButton.right)
-        _ = synthetic.page.pointerRelease(x: point.x, y: point.y, button: AutomationQtButton.right)
+            button: DrawerQtButton.right)
+        _ = synthetic.page.pointerRelease(x: point.x, y: point.y, button: DrawerQtButton.right)
         report.expect(
             synthetic.page.publishedMenuRows.first {
                 $0.actionId == AutomationMenuAction.deleteNode.rawValue
@@ -186,10 +186,10 @@ func drawerAutomationRestoredInteractionContracts(
 
     _ = hover.page.pointerPress(
         x: hover.x(48), y: hover.y(hover.volumeLane, 70),
-        surface: 1, button: AutomationQtButton.right)
+        surface: 1, button: DrawerQtButton.right)
     _ = hover.page.pointerRelease(
         x: hover.x(48), y: hover.y(hover.volumeLane, 70),
-        button: AutomationQtButton.right)
+        button: DrawerQtButton.right)
     report.expect(
         hover.page.menuTargetIsPoint, cppID: id,
         message: "the written point owns its captured menu target")
@@ -308,9 +308,9 @@ private func hostTempoRangeAndBandRows(
     let endX = startX + fontPx(font, 12)
     _ = page.pointerPress(
         x: startX, y: y, surface: AutomationInputSurface.plot.rawValue,
-        button: AutomationQtButton.right)
-    _ = page.pointerMove(x: endX, y: y, buttons: AutomationQtButton.right)
-    _ = page.pointerRelease(x: endX, y: y, button: AutomationQtButton.right)
+        button: DrawerQtButton.right)
+    _ = page.pointerMove(x: endX, y: y, buttons: DrawerQtButton.right)
+    _ = page.pointerRelease(x: endX, y: y, button: DrawerQtButton.right)
     report.expect(
         fixture.session.timeSelection?.isActive == true, cppID: tempoID,
         message: "A148 the right-button tempo drag publishes an active time selection")
@@ -405,7 +405,7 @@ func drawerAutomationMixedDragTempoRow(
     let endX = drawerAutomationArmHorizontalTempoDrag(fixture)
     _ = fixture.page.pointerRelease(
         x: endX, y: fixture.y(.tempo, 120),
-        button: AutomationQtButton.left,
+        button: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     report.expect(
         fixture.tempoValues == ["0:80", "144:120", "384:64"]

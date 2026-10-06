@@ -12,13 +12,6 @@ public enum AutomationInputSurface: Int, Sendable {
     case plot = 1
 }
 
-/// Qt pointer buttons as QML carries them (`mouse.button`).
-public enum AutomationQtButton {
-    public static let left = 1
-    public static let right = 2
-    public static let middle = 4
-}
-
 /// Qt keyboard modifier bits as QML carries them (`mouse.modifiers`).
 public enum AutomationQtModifier {
     public static let shift = 0x0200_0000

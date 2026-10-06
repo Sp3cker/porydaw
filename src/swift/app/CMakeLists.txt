@@ -59,7 +59,6 @@ add_library(PorydawApp STATIC
     roll/PianoGrid+Camera.swift
     roll/PianoGrid+Commands.swift
     roll/PianoGrid+SceneSync.swift
-    roll/GridGesture.swift
     roll/GridScene.swift
     roll/GridScene+Rebuild.swift
     roll/GridScene+Notes.swift

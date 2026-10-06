@@ -39,7 +39,7 @@ func drawerAutomationPencilOwnershipAndShift(
     report.expect(
         fixture.page.pointerPress(
             x: fixture.x(120), y: 60, surface: 1,
-            button: AutomationQtButton.left),
+            button: DrawerQtButton.left),
         cppID: id, message: "a pencil press outside the selection starts")
     report.expect(
         page.isPainting && page.isPencilMode && !page.isPanning && !page.hasBand,
@@ -51,7 +51,7 @@ func drawerAutomationPencilOwnershipAndShift(
         cppID: id, message: "a pencil press leaves the document revision and edit cursor untouched")
     _ = page.pointerMove(
         x: fixture.x(144), y: fixture.y(fixture.panLane, 90),
-        buttons: AutomationQtButton.left)
+        buttons: DrawerQtButton.left)
     report.expect(
         page.documentRevision == revisionBefore
             && page.frozenRevision == revisionBefore
@@ -62,7 +62,7 @@ func drawerAutomationPencilOwnershipAndShift(
         message: "starting a pencil stroke outside clears the selection")
     _ = page.pointerRelease(
         x: fixture.x(144), y: fixture.y(fixture.panLane, 90),
-        button: AutomationQtButton.left)
+        button: DrawerQtButton.left)
     report.expect(
         otherLanes.map { fixture.values($0) } == otherBefore
             && fixture.document.lanePoints(track: 0, lane: .voice) == voiceBefore

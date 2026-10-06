@@ -32,6 +32,22 @@ enum DrawerStaticsContent {}
 
 @MainActor
 extension DrawerStaticsContent {
+    static func gridPaletteColors(_ palette: GridPalette) -> [Int: QmlColor] {
+        [
+            3: palette.gridLineBar, 4: palette.gridLineBeat,
+            5: palette.gridLineSub1, 6: palette.gridLineSub2,
+            7: palette.gridLineSub3, 25: palette.gridLineBeatFine,
+        ]
+    }
+
+    static func retainedEmptyDisplayList(cached: inout Data?) -> Data {
+        if let cached { return cached }
+        var writer = DisplayListWriter()
+        let empty = writer.finish()
+        cached = empty
+        return empty
+    }
+
     static func buildGrid(
         into writer: inout DisplayListWriter, axis: TimeAxis, grid: RollGrid,
         camera: EditorCamera, viewport: CGSize, paletteColors: [Int: QmlColor]

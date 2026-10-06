@@ -541,7 +541,7 @@ public final class AutomationPage: EditorDrawerPage {
     }
 
     public func outsideMenuPress(x: Double, y: Double, button: Int) {
-        let retarget = menuTargetIsPoint && button == AutomationQtButton.right
+        let retarget = menuTargetIsPoint && button == DrawerQtButton.right
         dismissMenu()
         guard retarget, let facts = frozenFacts(modifiers: .init()) else { return }
         let projection = makeProjection(facts: facts, camera: liveCamera())

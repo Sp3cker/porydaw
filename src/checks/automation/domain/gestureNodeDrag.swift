@@ -478,14 +478,14 @@ func drawerAutomationGestureContractParity(
         report.expect(
             bandFixture.page.pointerPress(
                 x: from, y: y, surface: 1,
-                button: AutomationQtButton.right), cppID: drawerAutomationContractParityID,
+                button: DrawerQtButton.right), cppID: drawerAutomationContractParityID,
             message: "a real right press stages the active parameter's time band")
-        _ = bandFixture.page.pointerMove(x: to, y: y, buttons: AutomationQtButton.right)
+        _ = bandFixture.page.pointerMove(x: to, y: y, buttons: DrawerQtButton.right)
         report.expect(
             bandFixture.page.bandVisible && bandFixture.page.interactionActive,
             cppID: drawerAutomationContractParityID,
             message: "the held right drag visibly stages its time band before release")
-        _ = bandFixture.page.pointerRelease(x: to, y: y, button: AutomationQtButton.right)
+        _ = bandFixture.page.pointerRelease(x: to, y: y, button: DrawerQtButton.right)
         let selected = bandFixture.page.selection
         report.expect(
             selected?.isActive == true && selected?.scope == .lanes
@@ -539,10 +539,10 @@ func drawerAutomationGestureContractParity(
     let cancelRevision = cancel.snapshot
     _ = cancel.page.pointerPress(
         x: cancel.x(24), y: cancel.y(cancel.panLane, 60), surface: 1,
-        button: AutomationQtButton.left)
+        button: DrawerQtButton.left)
     _ = cancel.page.pointerMove(
         x: cancel.x(24) + 24, y: cancel.y(cancel.panLane, 60) - 12,
-        buttons: AutomationQtButton.left)
+        buttons: DrawerQtButton.left)
     cancel.page.cancelSectionInteraction()
     report.expect(
         !cancel.page.interactionActive, cppID: drawerAutomationContractParityID,
@@ -577,7 +577,7 @@ func drawerAutomationStagedGestureSnapshots(
     guard
         armed.page.pointerPress(
             x: armed.x(24), y: armed.y(armed.panLane, 64), surface: 1,
-            button: AutomationQtButton.left)
+            button: DrawerQtButton.left)
     else {
         report.fail(drawerAutomationStagedSnapshotsID, "a press grabs the node before the row rebuild")
         return
@@ -587,7 +587,7 @@ func drawerAutomationStagedGestureSnapshots(
     let armTravel = armed.page.geometry.nodeDragActivationDistance + 2
     _ = armed.page.pointerMove(
         x: armed.x(24) + armTravel, y: armed.y(armed.panLane, 64),
-        buttons: AutomationQtButton.left)
+        buttons: DrawerQtButton.left)
     guard armed.page.hasGesture else {
         report.fail(drawerAutomationStagedSnapshotsID, "the node drag is live past the slop before the row rebuild")
         return
@@ -611,14 +611,14 @@ func drawerAutomationStagedGestureSnapshots(
     guard
         grouped.page.pointerPress(
             x: groupX, y: groupY, surface: 1,
-            button: AutomationQtButton.left)
+            button: DrawerQtButton.left)
     else {
         report.fail(drawerAutomationStagedSnapshotsID, "a press grabs the same-tick group")
         return
     }
-    _ = grouped.page.pointerMove(x: groupX + groupTravel, y: groupY, buttons: AutomationQtButton.left)
-    _ = grouped.page.pointerMove(x: groupEndX, y: groupY, buttons: AutomationQtButton.left)
-    _ = grouped.page.pointerRelease(x: groupEndX, y: groupY, button: AutomationQtButton.left)
+    _ = grouped.page.pointerMove(x: groupX + groupTravel, y: groupY, buttons: DrawerQtButton.left)
+    _ = grouped.page.pointerMove(x: groupEndX, y: groupY, buttons: DrawerQtButton.left)
+    _ = grouped.page.pointerRelease(x: groupEndX, y: groupY, button: DrawerQtButton.left)
     let groupAfter = DrawerAutomationStagedSnapshot(grouped.document)
     report.expect(
         grouped.values(grouped.panLane) == ["144:10", "144:20", "288:40"]
@@ -640,13 +640,13 @@ func drawerAutomationStagedGestureSnapshots(
     guard
         stale.page.pointerPress(
             x: staleX, y: staleY, surface: 1,
-            button: AutomationQtButton.left)
+            button: DrawerQtButton.left)
     else {
         report.fail(drawerAutomationStagedSnapshotsID, "a press grabs the node before the geometry rebuild")
         return
     }
     let staleTravel = stale.page.geometry.nodeDragActivationDistance + 2
-    _ = stale.page.pointerMove(x: staleX + staleTravel, y: staleY, buttons: AutomationQtButton.left)
+    _ = stale.page.pointerMove(x: staleX + staleTravel, y: staleY, buttons: DrawerQtButton.left)
     // The mounted geometryChanged order: retire the live interaction first, then rebuild the body.
     stale.page.cancelSectionInteraction()
     stale.page.configureBody(
@@ -656,7 +656,7 @@ func drawerAutomationStagedGestureSnapshots(
         report.fail(drawerAutomationStagedSnapshotsID, "the geometry rebuild retires the staged node drag")
         return
     }
-    _ = stale.page.pointerRelease(x: staleX + staleTravel, y: staleY, button: AutomationQtButton.left)
+    _ = stale.page.pointerRelease(x: staleX + staleTravel, y: staleY, button: DrawerQtButton.left)
     report.expectEqual(
         expected: stalePrePress, actual: DrawerAutomationStagedSnapshot(stale.document),
         cppID: drawerAutomationStagedSnapshotsID,
@@ -664,16 +664,16 @@ func drawerAutomationStagedGestureSnapshots(
     let recoverBefore = DrawerAutomationStagedSnapshot(stale.document)
     _ = stale.page.pointerPress(
         x: stale.x(24), y: stale.y(stale.panLane, 64), surface: 1,
-        button: AutomationQtButton.left)
+        button: DrawerQtButton.left)
     _ = stale.page.pointerMove(
         x: stale.x(24) + staleTravel, y: stale.y(stale.panLane, 64),
-        buttons: AutomationQtButton.left)
+        buttons: DrawerQtButton.left)
     _ = stale.page.pointerMove(
         x: stale.x(24) + staleTravel, y: stale.y(stale.panLane, 90),
-        buttons: AutomationQtButton.left)
+        buttons: DrawerQtButton.left)
     _ = stale.page.pointerRelease(
         x: stale.x(24) + staleTravel, y: stale.y(stale.panLane, 90),
-        button: AutomationQtButton.left)
+        button: DrawerQtButton.left)
     guard stale.values(stale.panLane) == ["24:90", "120:40"] else {
         report.fail(drawerAutomationStagedSnapshotsID, "input recovers after a geometry rebuild cancellation")
         return

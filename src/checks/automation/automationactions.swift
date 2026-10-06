@@ -177,10 +177,10 @@ func drawerAutomationProjectionInsertionAndPencilClick(
     report.expect(
         fixture.page.pointerPress(
             x: x, y: y, surface: AutomationInputSurface.plot.rawValue,
-            button: AutomationQtButton.left),
+            button: DrawerQtButton.left),
         cppID: clickID, message: "the page starts the pencil click at an intermediate tick")
     report.expect(
-        fixture.page.pointerRelease(x: x, y: y, button: AutomationQtButton.left),
+        fixture.page.pointerRelease(x: x, y: y, button: DrawerQtButton.left),
         cppID: clickID, message: "the page commits the pencil click")
     report.expectEqual(
         expected: [72],
@@ -201,10 +201,10 @@ func drawerAutomationProjectionInsertionAndPencilClick(
         fixture.page.pointerPress(
             x: nextX, y: nextY,
             surface: AutomationInputSurface.plot.rawValue,
-            button: AutomationQtButton.left),
+            button: DrawerQtButton.left),
         cppID: clickID, message: "the page starts the following cell click")
     report.expect(
-        fixture.page.pointerRelease(x: nextX, y: nextY, button: AutomationQtButton.left),
+        fixture.page.pointerRelease(x: nextX, y: nextY, button: DrawerQtButton.left),
         cppID: clickID, message: "the page commits the following cell click")
     report.expectEqual(
         expected: [72],
@@ -228,12 +228,12 @@ func drawerAutomationProjectionInsertionAndPencilClick(
         biased.page.pointerPress(
             x: biasedX, y: biased.y(biased.panLane, 72),
             surface: AutomationInputSurface.plot.rawValue,
-            button: AutomationQtButton.left),
+            button: DrawerQtButton.left),
         cppID: clickID, message: "the page starts a late-cell pencil click")
     report.expect(
         biased.page.pointerRelease(
             x: biasedX, y: biased.y(biased.panLane, 72),
-            button: AutomationQtButton.left),
+            button: DrawerQtButton.left),
         cppID: clickID, message: "the page commits the late-cell click")
     report.expectEqual(
         expected: [72],

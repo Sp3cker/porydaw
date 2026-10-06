@@ -340,16 +340,16 @@ func drawerAutomationShiftRampEndpoints(
     guard
         fixture.page.pointerPress(
             x: pressX, y: pressY, surface: 1,
-            button: AutomationQtButton.left, modifiers: rampModifiers)
+            button: DrawerQtButton.left, modifiers: rampModifiers)
     else {
         report.fail(drawerAutomationShiftRampID, "a Shift press on the background arms the ramp")
         return
     }
     _ = fixture.page.pointerMove(
-        x: releaseX, y: releaseY, buttons: AutomationQtButton.left,
+        x: releaseX, y: releaseY, buttons: DrawerQtButton.left,
         modifiers: rampModifiers)
     _ = fixture.page.pointerRelease(
-        x: releaseX, y: releaseY, button: AutomationQtButton.left,
+        x: releaseX, y: releaseY, button: DrawerQtButton.left,
         modifiers: rampModifiers)
     let rampAfter = DrawerAutomationStagedSnapshot(fixture.document)
     report.expect(

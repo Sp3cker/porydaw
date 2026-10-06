@@ -15,11 +15,7 @@ extension VelocityPage {
     /// Valid empty list for out-of-range fetches before the first publish.
     /// Built once and retained.
     @QtIgnored func retainedEmptyDisplayList() -> Data {
-        if let cached = cachedEmptyDisplayList { return cached }
-        var writer = DisplayListWriter()
-        let empty = writer.finish()
-        cachedEmptyDisplayList = empty
-        return empty
+        DrawerStaticsContent.retainedEmptyDisplayList(cached: &cachedEmptyDisplayList)
     }
 
     @QtIgnored func rebuildContent() {
@@ -233,11 +229,7 @@ extension VelocityPage {
         if rebuildBands { drawingBands = VelocityScene.modelBands(input, axis: axis) }
         let viewport = CGSize(width: plotWidth, height: plotHeight)
         let dpr = devicePixelRatio
-        let colors = [
-            3: input.palette.gridLineBar, 4: input.palette.gridLineBeat,
-            5: input.palette.gridLineSub1, 6: input.palette.gridLineSub2,
-            7: input.palette.gridLineSub3, 25: input.palette.gridLineBeatFine,
-        ]
+        let colors = DrawerStaticsContent.gridPaletteColors(palette)
         // Release the previous buffers before the retained writer reuses its
         // own: otherwise finish()'s shared output copies on write each frame.
         var writer = listWriter

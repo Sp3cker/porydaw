@@ -61,18 +61,18 @@ extension VoiceChangesPage {
         }
         previousX = x
         switch button {
-        case VoiceQtButton.right:
+        case DrawerQtButton.right:
             // Capture before any signal-producing step: the target is fixed from
             // live state, so nothing after the capture can drift it.
             guard let target = captureTarget(at: x) else { return true }
             openMenu(target, anchorX: x, anchorY: max(0, y))
             return true
-        case VoiceQtButton.middle:
+        case DrawerQtButton.middle:
             clearHover()
             panRevision = session?.document.revision
             refreshInteractionPublished()
             return true
-        case VoiceQtButton.left:
+        case DrawerQtButton.left:
             clearHover()
             let hit = markerHit(at: x)
             guard let hit else {
@@ -136,12 +136,12 @@ extension VoiceChangesPage {
     func dispatchPointerRelease(x: Double, y: Double, button: Int) -> Bool {
         guard let session else { return false }
         _ = y
-        if button == VoiceQtButton.middle {
+        if button == DrawerQtButton.middle {
             cancelPan()
             publishHoverHintProfile(marker: markerHit(at: x) != nil)
             return true
         }
-        guard button == VoiceQtButton.left, let live = drag else { return false }
+        guard button == DrawerQtButton.left, let live = drag else { return false }
         let mutation = VoiceChangesTransactions.move(
             live,
             revision: session.document.revision,

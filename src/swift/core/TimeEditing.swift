@@ -235,7 +235,7 @@ extension SongDocument {
             noteInsertions[chunk].append(
                 .channel(
                     tick: note.tick, status: 0x90 | channel, data0: note.pitch,
-                    data1: UInt8(min(max(Int(note.velocity), 1), 127)),
+                    data1: clampVelocity(Int(note.velocity)),
                     noteID: mintNoteID()))
             noteInsertions[chunk].append(
                 .channel(

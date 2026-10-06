@@ -21,13 +21,6 @@ public enum VelocityInputSurface: Int, Sendable {
     case plot = 1
 }
 
-/// Qt pointer buttons as QML carries them (`mouse.button`).
-enum VelocityQtButton {
-    static let left = 1
-    static let right = 2
-    static let middle = 4
-}
-
 /// Qt keyboard modifier bits as QML carries them (`mouse.modifiers`).
 enum VelocityModifier {
     static let shift = 0x0200_0000

@@ -83,8 +83,8 @@ func drawerAutomationHistoryUndoRedo(
     let blankX = blank.x(unwrittenTick)
     _ = blank.page.pointerPress(
         x: blankX, y: 60, surface: AutomationInputSurface.plot.rawValue,
-        button: AutomationQtButton.left)
-    _ = blank.page.pointerRelease(x: blankX, y: 60, button: AutomationQtButton.left)
+        button: DrawerQtButton.left)
+    _ = blank.page.pointerRelease(x: blankX, y: 60, button: DrawerQtButton.left)
     report.expect(
         !beforeBlank && !blank.lanePoints(blank.panLane).contains { $0.tick == unwrittenTick },
         cppID: drawerAutomationHistoryID, message: "an unwritten tick holds no point")
@@ -107,9 +107,9 @@ func drawerAutomationCcPointerDragPlayback(
     let history = fixture.document.history.undoCount
     _ = fixture.page.pointerPress(
         x: sourceX, y: sourceY, surface: 1,
-        button: AutomationQtButton.left)
-    _ = fixture.page.pointerMove(x: sourceX, y: activationY, buttons: AutomationQtButton.left)
-    _ = fixture.page.pointerMove(x: sourceX, y: endY, buttons: AutomationQtButton.left)
+        button: DrawerQtButton.left)
+    _ = fixture.page.pointerMove(x: sourceX, y: activationY, buttons: DrawerQtButton.left)
+    _ = fixture.page.pointerMove(x: sourceX, y: endY, buttons: DrawerQtButton.left)
     report.expect(
         fixture.snapshot == before
             && fixture.playbackValues(fixture.panLane, at: 48) == [40]
@@ -117,7 +117,7 @@ func drawerAutomationCcPointerDragPlayback(
         message: "held CC pointer drag keeps both playback events unchanged")
     let committed = fixture.page.pointerRelease(
         x: sourceX, y: endY,
-        button: AutomationQtButton.left)
+        button: DrawerQtButton.left)
     report.expect(
         committed && fixture.values(fixture.panLane) == ["48:84", "96:100"]
             && fixture.document.history.undoCount == history + 1, cppID: id,

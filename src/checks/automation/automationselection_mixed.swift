@@ -25,12 +25,12 @@ func drawerAutomationArmHorizontalTempoDrag(_ fixture: drawerAutomationAutomatio
     let endX = activationX + fixture.x(144) - sourceX
     _ = page.pointerPress(
         x: sourceX, y: sourceY, surface: 1,
-        button: AutomationQtButton.left, modifiers: AutomationQtModifier.shift)
+        button: DrawerQtButton.left, modifiers: AutomationQtModifier.shift)
     _ = page.pointerMove(
-        x: activationX, y: sourceY, buttons: AutomationQtButton.left,
+        x: activationX, y: sourceY, buttons: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     _ = page.pointerMove(
-        x: endX, y: sourceY, buttons: AutomationQtButton.left,
+        x: endX, y: sourceY, buttons: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     return endX
 }
@@ -85,7 +85,7 @@ func drawerAutomationMixedSelectionDragPlayback(
         message: "mixed drag preview leaves MIDI bytes index and all selected points unchanged")
     _ = page.pointerRelease(
         x: endX, y: fixture.y(.tempo, 120),
-        button: AutomationQtButton.left, modifiers: AutomationQtModifier.shift)
+        button: DrawerQtButton.left, modifiers: AutomationQtModifier.shift)
     report.expect(
         editedCount == 1 && fixture.document.revision == before.revision + 1
             && fixture.document.history.undoCount == history + 1
@@ -188,7 +188,7 @@ func drawerAutomationTempoOnlyHorizontalPlayback(
         message: "Tempo-only horizontal drag freezes document and playback while held")
     _ = fixture.page.pointerRelease(
         x: endX, y: fixture.y(.tempo, 120),
-        button: AutomationQtButton.left,
+        button: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     report.expect(
         fixture.playbackTempo(at: 144)?.microseconds == 499_999
@@ -222,19 +222,19 @@ func drawerAutomationTempoOnlyHorizontalPlayback(
     }
     _ = panLfo.page.pointerPress(
         x: panX, y: panY, surface: 1,
-        button: AutomationQtButton.left, modifiers: AutomationQtModifier.shift)
+        button: DrawerQtButton.left, modifiers: AutomationQtModifier.shift)
     _ = panLfo.page.pointerMove(
-        x: armX, y: panY, buttons: AutomationQtButton.left,
+        x: armX, y: panY, buttons: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     _ = panLfo.page.pointerMove(
-        x: finishX, y: panY, buttons: AutomationQtButton.left,
+        x: finishX, y: panY, buttons: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     report.expect(
         (try? panLfo.document.state.file.encoded()) == panLfoBytes
             && panLfo.document.history.undoIndex == panLfoIndex, cppID: id,
         message: "Pan LFO selected preview does not write raw events")
     _ = panLfo.page.pointerRelease(
-        x: finishX, y: panY, button: AutomationQtButton.left,
+        x: finishX, y: panY, button: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     report.expect(
         panLfo.document.revision == panLfoBefore.revision + 1
@@ -413,7 +413,7 @@ func drawerAutomationMixedDragRebuildCancellation(
     let rebuildIndex = fixture.document.history.undoIndex
     _ = page.pointerRelease(
         x: endX, y: fixture.y(.tempo, 120),
-        button: AutomationQtButton.left, modifiers: AutomationQtModifier.shift)
+        button: DrawerQtButton.left, modifiers: AutomationQtModifier.shift)
     report.expect(
         page.selection == selection && fixture.snapshot == rebuilt
             && rebuilt.revision == before.revision + 1, cppID: id,
@@ -459,13 +459,13 @@ func drawerAutomationCcOnlyExactIntervalDrag(
     let endX = activationX + fixture.x(144) - sourceX
     _ = fixture.page.pointerPress(
         x: sourceX, y: sourceY, surface: 1,
-        button: AutomationQtButton.left,
+        button: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     _ = fixture.page.pointerMove(
-        x: activationX, y: sourceY, buttons: AutomationQtButton.left,
+        x: activationX, y: sourceY, buttons: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     _ = fixture.page.pointerMove(
-        x: endX, y: sourceY, buttons: AutomationQtButton.left,
+        x: endX, y: sourceY, buttons: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     report.expect(
         DrawerAutomationStagedSnapshot(fixture.document) == held
@@ -473,7 +473,7 @@ func drawerAutomationCcOnlyExactIntervalDrag(
         cppID: drawerAutomationCcOnlyIntervalID,
         message: "held CC-only preview freezes the song and emits no edit notification")
     _ = fixture.page.pointerRelease(
-        x: endX, y: sourceY, button: AutomationQtButton.left,
+        x: endX, y: sourceY, button: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     report.expect(
         fixture.page.selection?.range == TimeRange(startTick: 144, endTick: 192)

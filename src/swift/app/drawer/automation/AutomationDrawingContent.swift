@@ -27,11 +27,7 @@ extension AutomationPage {
         let ghostArgb = (curveArgb & 0x00FF_FFFF) | 0x8000_0000
         let selectionFillArgb = SceneRectPacking.argb(palette.selectionFill)
         let selectionEdgeArgb = SceneRectPacking.argb(palette.selectionEdge)
-        let gridPalette: [Int: QmlColor] = [
-            3: palette.gridLineBar, 4: palette.gridLineBeat,
-            5: palette.gridLineSub1, 6: palette.gridLineSub2,
-            7: palette.gridLineSub3, 25: palette.gridLineBeatFine,
-        ]
+        let gridPalette = DrawerStaticsContent.gridPaletteColors(palette)
         var axisRects: [DrawerStaticRect] = []
         let frame = Float(max(1 / devicePixelRatio, fontPxF(baseFontPx, 1.0 / 12.0)))
         if plotWidth > 0, plotHeight > 0 {
@@ -204,11 +200,7 @@ extension AutomationPage {
 
     /// Valid empty list for unbuilt bands and out-of-range fetches.
     func retainedEmptyDisplayList() -> Data {
-        if let cached = cachedEmptyDisplayList { return cached }
-        var writer = DisplayListWriter()
-        let empty = writer.finish()
-        cachedEmptyDisplayList = empty
-        return empty
+        DrawerStaticsContent.retainedEmptyDisplayList(cached: &cachedEmptyDisplayList)
     }
 
     private func appendDrawingCurve(

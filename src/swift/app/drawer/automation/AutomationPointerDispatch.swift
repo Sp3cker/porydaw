@@ -10,16 +10,16 @@ extension AutomationPage {
         guard session != nil, surface == AutomationInputSurface.plot.rawValue else { return false }
         hoverX = x
         previousX = x
-        if button == AutomationQtButton.left || button == AutomationQtButton.right {
+        if button == DrawerQtButton.left || button == DrawerQtButton.right {
             clearSelectionIfPressIsOutside(x: x)
         }
         switch button {
-        case AutomationQtButton.middle:
+        case DrawerQtButton.middle:
             panActive = true
             cursorKind = AutomationCursorKind.closedHand.rawValue
             publishInteractionState()
             return true
-        case AutomationQtButton.right:
+        case DrawerQtButton.right:
             guard let facts = frozenFacts(modifiers: .init()) else { return false }
             let projection = makeProjection(facts: facts, camera: liveCamera())
             let tick = projection.tick(atX: x, fine: false)
@@ -31,7 +31,7 @@ extension AutomationPage {
             publishBand()
             publishInteractionState()
             return true
-        case AutomationQtButton.left:
+        case DrawerQtButton.left:
             return pressPlot(x: x, y: y, modifiers: AutomationQtModifier.automation(modifiers))
         default:
             return false
@@ -43,7 +43,7 @@ extension AutomationPage {
         hoverX = x
         hoverY = y
         if panActive {
-            guard buttons & AutomationQtButton.middle != 0 else {
+            guard buttons & DrawerQtButton.middle != 0 else {
                 endPan()
                 return true
             }
@@ -134,11 +134,11 @@ extension AutomationPage {
     func dispatchPointerRelease(x: Double, y: Double, button: Int, modifiers: Int = 0) -> Bool {
         guard session != nil else { return false }
         switch button {
-        case AutomationQtButton.middle:
+        case DrawerQtButton.middle:
             guard panActive else { return false }
             endPan()
             return true
-        case AutomationQtButton.right:
+        case DrawerQtButton.right:
             guard var live = band else { return false }
             live.currentTick = snapped(tickAtX: x, modifiers: modifiers)
             band = nil
@@ -146,7 +146,7 @@ extension AutomationPage {
             releaseBand(live, x: x, y: y)
             publishInteractionState()
             return true
-        case AutomationQtButton.left:
+        case DrawerQtButton.left:
             return releasePlot(x: x, y: y, modifiers: AutomationQtModifier.automation(modifiers))
         default:
             return false

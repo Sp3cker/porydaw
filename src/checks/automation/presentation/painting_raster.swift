@@ -81,13 +81,13 @@ func drawerAutomationRasterScrolledPhantom(
         _ = page.pointerMove(x: 0, y: sourceY, buttons: 0)
         let pressed = page.pointerPress(
             x: 0, y: sourceY, surface: 1,
-            button: AutomationQtButton.left)
+            button: DrawerQtButton.left)
         report.expect(
             pressed && page.hasGesture,
             cppID: id, message: "a real plot press captures the scrolled source phantom")
-        _ = page.pointerMove(x: 0, y: targetY, buttons: AutomationQtButton.left)
+        _ = page.pointerMove(x: 0, y: targetY, buttons: DrawerQtButton.left)
         let dragAnchor = 2 * targetY - sourceY
-        _ = page.pointerMove(x: 0, y: dragAnchor, buttons: AutomationQtButton.left)
+        _ = page.pointerMove(x: 0, y: dragAnchor, buttons: DrawerQtButton.left)
         report.expectEqual(
             expected: original, actual: fixture.snapshot, cppID: id,
             what: "the scrolled phantom hover and drag do not commit")
@@ -123,10 +123,10 @@ func drawerAutomationRasterScrolledPhantom(
         _ = page.pointerMove(x: 0, y: sourceY, buttons: 0)
         let rearmed = page.pointerPress(
             x: 0, y: sourceY, surface: 1,
-            button: AutomationQtButton.left)
-        _ = page.pointerMove(x: 0, y: targetY, buttons: AutomationQtButton.left)
-        _ = page.pointerMove(x: 0, y: dragAnchor, buttons: AutomationQtButton.left)
-        let committed = page.pointerRelease(x: 0, y: dragAnchor, button: AutomationQtButton.left)
+            button: DrawerQtButton.left)
+        _ = page.pointerMove(x: 0, y: targetY, buttons: DrawerQtButton.left)
+        _ = page.pointerMove(x: 0, y: dragAnchor, buttons: DrawerQtButton.left)
+        let committed = page.pointerRelease(x: 0, y: dragAnchor, button: DrawerQtButton.left)
         report.expect(
             !page.hoverVisible && page.hoverText.isEmpty
                 && !page.publishedNodes.contains(where: \.hovered),
