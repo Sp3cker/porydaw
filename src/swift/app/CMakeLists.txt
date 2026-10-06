@@ -250,7 +250,7 @@ add_library(PorydawAppAudio STATIC
     audio/AudioAudition.swift
     audio/AudioSampleAudition.swift
     audio/ResonanceSuppression.swift
-    audio/WavExport.swift
+    export/WavExport.swift
 )
 set_target_properties(PorydawAppAudio PROPERTIES
     Swift_MODULE_NAME PorydawAppAudio
