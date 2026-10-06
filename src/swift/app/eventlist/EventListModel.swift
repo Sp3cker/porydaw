@@ -214,43 +214,8 @@ public struct EventListModel: Equatable, Sendable {
     /// Actual document mutation remains owned by the document presenter.
     public func validatesEdit(row: Int, column: Int, text: String) -> Bool {
         guard isCellEditable(row: row, column: column) else { return false }
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        switch column {
-        case 0:
-            guard let value = UInt64(trimmed) else { return false }
-            return value <= UInt64(TimeDefaults.maxTick)
-        case 1:
-            guard let value = Int(trimmed) else { return false }
-            if rows[row].tempo != nil { return (0...10).contains(value) }
-            switch value {
-            case EventListEventType.noteOff.rawValue,
-                EventListEventType.noteOn.rawValue,
-                EventListEventType.polyTouch.rawValue,
-                EventListEventType.cc.rawValue,
-                EventListEventType.program.rawValue,
-                EventListEventType.channelTouch.rawValue,
-                EventListEventType.bend.rawValue,
-                EventListEventType.sysEx0.rawValue,
-                EventListEventType.sysEx7.rawValue,
-                EventListEventType.meta.rawValue:
-                return true
-            default:
-                return false
-            }
-        case 2:
-            guard let value = Int(trimmed) else { return false }
-            return (1...16).contains(value)
-        case 3, 4:
-            guard let value = Int(trimmed) else { return false }
-            return (0...127).contains(value)
-        case 5:
-            if rows[row].tempo != nil {
-                return Int(trimmed).map { (20...255).contains($0) } ?? false
-            }
-            return Self.parseBlob(trimmed) != nil
-        default:
-            return false
-        }
+        return EventListCellPolicy.accepts(
+            column: column, text: text, isTempo: rows[row].tempo != nil)
     }
 
     private static func makeRows(

@@ -1,5 +1,7 @@
 # Plan 01 — Area maps (lever: cause g; fixes discovery in 9 of 12 traced questions)
 
+**Reverted by user ruling:** maps go stale; all five READMEs were deleted after execution.
+
 Route: **Direct** for every task (doc writes, mechanical, reversible; no build surface).
 Model: `src/swift/app/drawer/README.md` (the repo's existing anatomy map). Evidence: Q5
 (map-covered) read 2 files / 629 opened vs Q2 (same shape, unmapped) 12 / 4,013 (wc-verified).
@@ -106,10 +108,10 @@ Write `src/checks/README.md`. Required content (from Q12 + catalog facts):
 
 ### Task 5 — Drawer README commit-row fix
 
-`src/swift/app/drawer/README.md:86` — the velocity commit row says `VelocityPage.commitVelocities`;
-the function is `VelocityInteraction.commitVelocities` (private, `velocity/VelocityInteraction.swift:421-424`)
-→ `session.document.setVelocities`, reached from gesture release (:409-413) and prompt acceptance
-(:292-293). Replace the row with that chain (the qualified name, not just the file, was wrong).
+`src/swift/app/drawer/README.md:86` — keep the symbol `VelocityPage.commitVelocities` (correct:
+`VelocityInteraction.swift:9` is `extension VelocityPage`; no `VelocityInteraction` type exists) and
+add its location (private, `velocity/VelocityInteraction.swift:421-424`) plus both callers: gesture
+release (`finishGesture` :409-413) and prompt acceptance (`dispatchAcceptPrompt` :292-293).
 
 ## Acceptance predicate (controller-run; no automated check covers doc accuracy — named gap)
 

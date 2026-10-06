@@ -275,6 +275,7 @@ target_compile_options(PorydawAppAudio PUBLIC
 target_link_libraries(PorydawAppAudio PUBLIC PorydawCore PorydawPlayback)
 
 add_library(PorydawAppEventList STATIC
+    eventlist/EventListCellPolicy.swift
     eventlist/EventListModel.swift
     eventlist/EventListProjection.swift
 )

@@ -165,6 +165,11 @@ public enum TimeDefaults {
         value == 0 ? Double(tempoBPM) : Double(microsecondsPerMinute) / Double(value)
     }
 
+    /// Converts microseconds per quarter note to the nearest integer BPM.
+    public static func roundedTempoBPM(forMicrosecondsPerQuarterNote value: UInt32) -> Int {
+        Int(tempoBPM(forMicrosecondsPerQuarterNote: value).rounded())
+    }
+
     public static func clampTempoMicrosecondsPerQuarterNote(_ value: UInt32) -> UInt32 {
         min(
             max(value, microsecondsPerQuarterNote(forBPM: maximumTempoBPM)),

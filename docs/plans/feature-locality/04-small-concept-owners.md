@@ -81,10 +81,12 @@ automation/event-list display slots ride the lane); `deno task format --check`.
 - Comments ≤2 lines; policy types stay pure value-semantic (test seam, no state).
 - Do not reformat untouched ranges; `deno task format --check` scopes to changed lines.
 
-## Open decision (user; do not execute without it) — song-settings resolver (Q3's (a)-slice)
+## Task 3 (user chose option A) — song-settings resolver (Q3's (a)-slice)
 
-`NativeAudio.songSettings` (:179-181), `AudioRenderEngine.applySettings` (:180-187),
-`WavExportPresenter` (:131-132) and `WavExport` (:160-162) each compose/apply song audio settings.
-Option A: add a Task 3 here making `NativeAudio.songSettings` the single resolver (presenters and
-renderers translate only; NativeAudio already imports every involved module). Option B: accept the
-split with reason. Recorded in OVERVIEW §6; not decided in this plan set.
+Trace correction: composition was already single (`NativeAudio.songSettings`; `WavExportPresenter`
+only calls it). The split was placement and application:
+- `AudioSettings.applyingSong` lived in `export/WavExportJob.swift` though live playback uses it;
+  moved beside its only production consumer, `NativeAudio.songSettings` (same module).
+- Bind, preview reset and WAV export each repeated voicegroup + settings + mix rate; now one
+  `AudioRenderEngine.configure(_:voicegroup:settings:)`. `bindEngineVoicegroup` deleted;
+  `applySettings` private. `updateSettings` keeps its changed-rate guard (the rate rebuilds reverb).

@@ -48,10 +48,8 @@ extension EventListModel {
         }
         if let tempo = item.tempo {
             let bpm = String(
-                Int(
-                    TimeDefaults.tempoBPM(
-                        forMicrosecondsPerQuarterNote: tempo.microsecondsPerQuarterNote
-                    ).rounded()))
+                TimeDefaults.roundedTempoBPM(
+                    forMicrosecondsPerQuarterNote: tempo.microsecondsPerQuarterNote))
             values.rowKind = 1
             values.c1 = "Tempo"
             values.c5 = "\(bpm) BPM"
@@ -91,10 +89,8 @@ extension EventListModel {
         if item.isEndOfTrack { return column == 1 && !editing ? "End of track" : "" }
         if let tempo = item.tempo {
             let bpm = String(
-                Int(
-                    TimeDefaults.tempoBPM(
-                        forMicrosecondsPerQuarterNote: tempo.microsecondsPerQuarterNote
-                    ).rounded()))
+                TimeDefaults.roundedTempoBPM(
+                    forMicrosecondsPerQuarterNote: tempo.microsecondsPerQuarterNote))
             switch column {
             case 1: return editing ? String(EventListEventType.tempo.rawValue) : "Tempo"
             case 5: return editing ? bpm : "\(bpm) BPM"

@@ -1,5 +1,7 @@
 # Plan 05 — FEATURE: dotted-quarter displayed beats in compound meter
 
+**Shelved by user:** not executed; the user cannot verify compound-meter beat grouping by ear or eye.
+
 **This is a behavior change, not a refactor step.** Approval-gated: the user must accept the
 visible change (in 6/8 the ruler, transport and polyphony readouts show 2 numbered beats per
 bar instead of 6) before execution. Sequenced after 02 (the policy lives in `core/Meter.swift`).

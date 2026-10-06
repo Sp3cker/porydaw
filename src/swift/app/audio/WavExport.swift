@@ -157,9 +157,7 @@ public enum WavExport {
             throw .cannotWrite(path: path, reason: "Cannot initialize audio engine.")
         }
         defer { m4a_engine_free(engine) }
-        AudioRenderEngine.bindEngineVoicegroup(engine, voicegroup: voices)
-        AudioRenderEngine.applySettings(settings, to: engine)
-        m4a_engine_set_pcm_mix_rate(engine, settings.pcmMixRate)
+        AudioRenderEngine.configure(engine, voicegroup: voices, settings: settings)
 
         var left = [Float](repeating: 0, count: chunkFrames)
         var right = [Float](repeating: 0, count: chunkFrames)

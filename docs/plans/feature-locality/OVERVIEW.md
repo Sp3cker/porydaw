@@ -6,6 +6,11 @@ Method: 12 read-set traces of realistic agent questions (files opened, lines nee
 totals, per-file cause attribution). Read-only; plans only. Companion evidence:
 `local://feature-locality-evidence.md` (git co-change stats, hub files) + this plan set.
 
+**Status after execution:** 01–04 executed, including 04 Task 3 (user chose option A for the
+song-settings decision in §6). 05 shelved by user. User ruling afterwards: area maps go stale, so
+all five READMEs (including `drawer/README.md`) were deleted and AGENTS.md no longer mentions maps.
+Map rows and map-dependent claims below are historical.
+
 ## 1. Verdict: one of several — and not the biggest
 
 Concept ownership (cause **a**) explains **~15%** of measured excess reading. It is the strongest
@@ -86,10 +91,9 @@ Measured:
   `ApplicationSession+8` reads badly *without* one and because fragments are aspects, not concepts.
 
 **Adopted (user-approved):** AGENTS.md `## Files and modules` replaces the old section. It keeps
-cohesion-first sizing and the fragment fold-back rule, requires the area map update in the same
-change, and adds module-graph placement (lowest common importer for shared concepts, one-consumer
-code stays put, no new dependency edges, `internal` by default, new modules only to cut a
-dependency on `PorydawApp`).
+cohesion-first sizing and the fragment fold-back rule and adds module-graph placement (lowest
+common importer for shared concepts, one-consumer code stays put, no new dependency edges,
+`internal` by default, new modules only to cut a dependency on `PorydawApp`).
 
 ## 4. Plan files and execution order
 
@@ -107,8 +111,6 @@ Milestones: commit after 01 (docs); checkpoint 02+03 together (structural, disjo
 `deno task` commands per brief; `deno task build:checks` precedes the first check run after any
 CMake source-list edit; `deno task format --check` on changed files; `deno task checks:bridge`
 after any file that touches a `@QtBridgeable` class body (none planned in 01–04).
-Maps stay honest by review, not CI: any change touching a mapped file re-resolves that map's
-citations for the touched rows (01 acceptance item 4).
 
 ## 5. Rejected options (with reasons)
 

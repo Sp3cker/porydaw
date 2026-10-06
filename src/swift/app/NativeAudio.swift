@@ -129,8 +129,9 @@ public final class NativeAudio {
     public func stop() { device.renderer.stop() }
     public func seek(sample: UInt64) { device.renderer.seek(sample) }
     public func setLoopEnabled(_ enabled: Bool) { device.renderer.setLoopEnabled(enabled) }
-    public func setMuteMask(_ mask: UInt32) { device.renderer.setMuteMask(mask) }
-    public func setSoloMask(_ mask: UInt32) { device.renderer.setSoloMask(mask) }
+    public func setMix(muted: Set<Int>, soloed: Set<Int>) {
+        device.renderer.setMix(muted: muted, soloed: soloed)
+    }
     public func setOutputVolume(_ percent: Int) { device.renderer.setOutputVolume(percent) }
     public func setResonanceSuppression(_ enabled: Bool) {
         device.renderer.setResonanceSuppression(enabled)
@@ -178,5 +179,14 @@ public final class NativeAudio {
 
     public func songSettings(for config: SongConfig) -> AudioSettings {
         engineSettings.applyingSong(config)
+    }
+}
+
+extension AudioSettings {
+    public func applyingSong(_ config: SongConfig) -> AudioSettings {
+        var settings = self
+        settings.songVolume = UInt8(clamping: config.masterVolume)
+        settings.reverb = UInt8(clamping: config.reverb ?? 50)
+        return settings
     }
 }

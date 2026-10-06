@@ -174,32 +174,31 @@ private func checkControllerControls(_ report: CheckReport) throws {
         cppID: "swiftcore/AudioController::volumeRamp", message: "volume reaches zero at 10 ms, not immediately")
     audio.setOutputVolume(100)
     _ = rig.render(rig.ramp)
-    audio.setMuteMask(1)
+    audio.setMix(muted: [0], soloed: [])
     let muted = rig.render(rig.rate)
     report.expect(
         !rig.sustaining(60) && audioControllerCheckPeak(muted.suffix(4096)) <= 1 / 32768,
         cppID: "swiftcore/AudioController::muteOnly",
         message: "mute-only releases the sounding track and drains to silence")
-    audio.setMuteMask(0)
+    audio.setMix(muted: [], soloed: [])
     audio.publish(rig.timeline(retriggerAt: 192))
     audio.seek(190_000)
     let unmuted = rig.render(12_000)
     report.expect(
         rig.sustaining(60) && audioControllerCheckPeak(unmuted.suffix(2048)) > 0.01,
         cppID: "swiftcore/AudioController::muteOnly", message: "future note-on sounds after unmute")
-    audio.setSoloMask(1)
-    audio.setMuteMask(1)
+    audio.setMix(muted: [0], soloed: [0])
     _ = rig.render(1)
     report.expect(
         !rig.sustaining(60), cppID: "swiftcore/AudioController::soloPrecedence",
         message: "muted track remains muted inside the solo set")
-    audio.setMuteMask(0)
+    audio.setMix(muted: [], soloed: [0])
     audio.seek(190_000)
     _ = rig.render(12_000)
     report.expect(
         rig.sustaining(60), cppID: "swiftcore/AudioController::soloPrecedence",
         message: "unmuted solo track accepts its next note")
-    audio.setSoloMask(2)
+    audio.setMix(muted: [], soloed: [1])
     _ = rig.render(1)
     report.expect(
         !rig.sustaining(60), cppID: "swiftcore/AudioController::soloPrecedence",
@@ -325,7 +324,7 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
         expected: cursor + UInt64(rig.rate), actual: audio.playheadSamples,
         cppID: "swiftcore/AudioController::voicePreviewIsolation", what: "sequence advances during voice preview")
     audio.audition.previewVoice(program: 0, key: 67, velocity: 0)
-    audio.setMuteMask(1)
+    audio.setMix(muted: [0], soloed: [])
     let drained = rig.render(rig.rate * 2)
     report.expect(
         audioControllerCheckPeak(drained.suffix(4096)) <= 1 / 32768,

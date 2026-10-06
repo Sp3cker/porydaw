@@ -79,8 +79,7 @@ is the model). Size follows cohesion: keep decisions that are read together in
 one file, even past 600 lines; a file mixing concepts is the defect, not a long
 file holding one. Never split a concept into `Type+Aspect.swift` fragments to
 stay under a number; fragments under ~100 lines fold back into their owner
-unless they are a separately named concept. When files move or split, update
-the area's `README.md` map in the same change.
+unless they are a separately named concept.
 
 Code placement follows the module graph, which points one way toward
 `PorydawCore`: Project, Playback and Document build on Core (Document also on

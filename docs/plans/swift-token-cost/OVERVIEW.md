@@ -8,7 +8,8 @@ Consumer: next agent picks up from these files. No code edits made; plans only.
 
 1. **Drawer lanes** — planner REJECTED the shared-kernel hypothesis (NOT VERIFIED).
    37 files / 11,805 lines share a lifecycle pattern, not a pipeline; extractable overlap ~3.4–5.5%.
-   Approved narrow win only: literal-dedup (~60–100 lines) + lane anatomy map. See `01-drawer-lanes.md`.
+   Approved narrow win only: literal-dedup (~60–100 lines) + lane anatomy map (map later deleted:
+   maps go stale; see feature-locality OVERVIEW). See `01-drawer-lanes.md`.
    Investigator's original #1 ranking was wrong; best verified structural win is now #2 (roll).
 2. **Roll gestures + scene sync** — `src/swift/app/roll/`.
    One drag co-loads ~5 files / ~1631 lines (PianoGrid 423 + Gestures 512 + GridGesture 211 + SceneSync 393 + Rebuild 92).
