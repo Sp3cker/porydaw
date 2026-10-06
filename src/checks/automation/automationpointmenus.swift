@@ -145,10 +145,10 @@ func drawerAutomationPointMenuDeleteAndStale(
     let before = fixture.snapshot
     _ = page.pointerPress(
         x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
-        surface: 1, button: AutomationQtButton.right)
+        surface: 1, button: DrawerQtButton.right)
     _ = page.pointerRelease(
         x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
-        button: AutomationQtButton.right)
+        button: DrawerQtButton.right)
     report.expect(
         page.menuTargetIsPoint, cppID: id,
         message: "the written point owns its captured menu target")
@@ -180,10 +180,10 @@ func drawerAutomationPointMenuDeleteAndStale(
     stale.activate(stale.panLane)
     _ = stale.page.pointerPress(
         x: stale.x(24), y: stale.y(stale.panLane, 64),
-        surface: 1, button: AutomationQtButton.right)
+        surface: 1, button: DrawerQtButton.right)
     _ = stale.page.pointerRelease(
         x: stale.x(24), y: stale.y(stale.panLane, 64),
-        button: AutomationQtButton.right)
+        button: DrawerQtButton.right)
     report.expect(
         stale.page.menuTargetIsPoint, cppID: staleID,
         message: "the stale target opens its point menu")
@@ -290,8 +290,8 @@ func drawerAutomationDuplicatePromptAndParameterSwitch(
     let routed = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     routed.activate(routed.panLane)
     _ = routed.page.pointerPress(
-        x: routed.x(24), y: routed.y(routed.panLane, 64), surface: 1, button: AutomationQtButton.right)
-    _ = routed.page.pointerRelease(x: routed.x(24), y: routed.y(routed.panLane, 64), button: AutomationQtButton.right)
+        x: routed.x(24), y: routed.y(routed.panLane, 64), surface: 1, button: DrawerQtButton.right)
+    _ = routed.page.pointerRelease(x: routed.x(24), y: routed.y(routed.panLane, 64), button: DrawerQtButton.right)
     report.expect(routed.page.menuTargetIsPoint, cppID: id, message: "the written point owns its Set Value menu target")
     report.expect(routed.page.menuOpen, cppID: id, message: "the point menu opens for the Set Value route")
     report.expect(
@@ -468,16 +468,16 @@ func drawerAutomationOutsidePressRetarget(
     let page = fixture.page
     _ = page.pointerPress(
         x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
-        surface: 1, button: AutomationQtButton.right)
+        surface: 1, button: DrawerQtButton.right)
     _ = page.pointerRelease(
         x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
-        button: AutomationQtButton.right)
+        button: DrawerQtButton.right)
     report.expect(
         page.menuTargetIsPoint, cppID: id,
         message: "the first point owns its captured menu target")
     page.outsideMenuPress(
         x: fixture.x(120), y: fixture.y(fixture.panLane, 40),
-        button: AutomationQtButton.right)
+        button: DrawerQtButton.right)
     report.expect(
         page.menuTargetIsPoint, cppID: id,
         message: "an outside right press on another node retargets the menu")
@@ -491,26 +491,26 @@ func drawerAutomationOutsidePressRetarget(
 
     _ = page.pointerPress(
         x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
-        surface: 1, button: AutomationQtButton.right)
+        surface: 1, button: DrawerQtButton.right)
     _ = page.pointerRelease(
         x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
-        button: AutomationQtButton.right)
+        button: DrawerQtButton.right)
     report.expect(
         page.menuTargetIsPoint, cppID: id,
         message: "the point menu reopens")
     let missBefore = fixture.snapshot
-    page.outsideMenuPress(x: fixture.x(168), y: 60, button: AutomationQtButton.right)
+    page.outsideMenuPress(x: fixture.x(168), y: 60, button: DrawerQtButton.right)
     report.expect(!page.menuOpen, cppID: id, message: "the miss closes the shared menu")
     report.expect(
-        !page.pointerRelease(x: fixture.x(168), y: 60, button: AutomationQtButton.right),
+        !page.pointerRelease(x: fixture.x(168), y: 60, button: DrawerQtButton.right),
         cppID: id, message: "the paired release claims no band")
     report.expectEqual(
         expected: missBefore, actual: fixture.snapshot, cppID: id,
         what: "the dismissed menu writes nothing")
     let foreignID = "automation/AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives"
     _ = page.pointerPress(
-        x: fixture.x(24), y: fixture.y(fixture.panLane, 64), surface: 1, button: AutomationQtButton.right)
-    _ = page.pointerRelease(x: fixture.x(24), y: fixture.y(fixture.panLane, 64), button: AutomationQtButton.right)
+        x: fixture.x(24), y: fixture.y(fixture.panLane, 64), surface: 1, button: DrawerQtButton.right)
+    _ = page.pointerRelease(x: fixture.x(24), y: fixture.y(fixture.panLane, 64), button: DrawerQtButton.right)
     report.expect(page.menuTargetIsPoint, cppID: foreignID, message: "the point menu reopens for the Escape route")
     report.expect(page.menuOpen, cppID: foreignID, message: "the reopened point menu is open")
     let menuEscapeBefore = fixture.snapshot
@@ -540,10 +540,10 @@ func drawerAutomationSelectionInvalidation(
 
     _ = page.pointerPress(
         x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
-        surface: 1, button: AutomationQtButton.right)
+        surface: 1, button: DrawerQtButton.right)
     _ = page.pointerRelease(
         x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
-        button: AutomationQtButton.right)
+        button: DrawerQtButton.right)
     report.expect(page.menuOpen, cppID: id, message: "the point menu opens before selection changes")
     fixture.session.applyTimeSelection(selection(20, 100))
     report.expect(
@@ -678,8 +678,8 @@ func drawerAutomationSharedPopupArbitration(
     fixture.session.applyTimeSelection(selection)
     let missX = fixture.x(48)
     let missY = fixture.y(fixture.panLane, 20)
-    _ = page.pointerPress(x: missX, y: missY, surface: 1, button: AutomationQtButton.right)
-    _ = page.pointerRelease(x: missX, y: missY, button: AutomationQtButton.right)
+    _ = page.pointerPress(x: missX, y: missY, surface: 1, button: DrawerQtButton.right)
+    _ = page.pointerRelease(x: missX, y: missY, button: DrawerQtButton.right)
     report.expect(
         workspace.rulerMenu.isOpen && workspace.rulerMenu.menuKind == 2,
         cppID: id, message: "a miss press inside the selection opens the time menu")
@@ -690,8 +690,8 @@ func drawerAutomationSharedPopupArbitration(
     report.expect(
         !workspace.rulerMenu.isOpen, cppID: id,
         message: "Escape dismisses the fallback menu")
-    _ = page.pointerPress(x: missX, y: missY, surface: 1, button: AutomationQtButton.right)
-    _ = page.pointerRelease(x: missX, y: missY, button: AutomationQtButton.right)
+    _ = page.pointerPress(x: missX, y: missY, surface: 1, button: DrawerQtButton.right)
+    _ = page.pointerRelease(x: missX, y: missY, button: DrawerQtButton.right)
     _ = workspace.rulerMenu.activate(actionId: 8)
     report.expect(
         fixture.session.timeSelection == nil && !workspace.rulerMenu.isOpen,
@@ -699,8 +699,8 @@ func drawerAutomationSharedPopupArbitration(
 
     let pointX = fixture.x(24)
     let pointY = fixture.y(fixture.panLane, 64)
-    _ = page.pointerPress(x: pointX, y: pointY, surface: 1, button: AutomationQtButton.right)
-    _ = page.pointerRelease(x: pointX, y: pointY, button: AutomationQtButton.right)
+    _ = page.pointerPress(x: pointX, y: pointY, surface: 1, button: DrawerQtButton.right)
+    _ = page.pointerRelease(x: pointX, y: pointY, button: DrawerQtButton.right)
     workspace.grid.openGridMenu(kind: 1)
     report.expect(
         workspace.grid.gridMenuKind == 1 && !page.hasMenu,
@@ -722,8 +722,8 @@ func drawerAutomationSharedPopupArbitration(
         !page.hasPrompt, cppID: id,
         message: "no prompt surfaces after the takeover")
 
-    _ = page.pointerPress(x: pointX, y: pointY, surface: 1, button: AutomationQtButton.right)
-    _ = page.pointerRelease(x: pointX, y: pointY, button: AutomationQtButton.right)
+    _ = page.pointerPress(x: pointX, y: pointY, surface: 1, button: DrawerQtButton.right)
+    _ = page.pointerRelease(x: pointX, y: pointY, button: DrawerQtButton.right)
     workspace.rulerMenu.captureRulerPress(contentX: fixture.x(120), pointerY: 0)
     workspace.rulerMenu.openRulerAtRelease()
     report.expect(
@@ -740,8 +740,8 @@ func drawerAutomationSharedPopupArbitration(
         dismissForAutomation?()
         workspace?.grid.openGridMenu(kind: 1)
     }
-    _ = page.pointerPress(x: pointX, y: pointY, surface: 1, button: AutomationQtButton.right)
-    _ = page.pointerRelease(x: pointX, y: pointY, button: AutomationQtButton.right)
+    _ = page.pointerPress(x: pointX, y: pointY, surface: 1, button: DrawerQtButton.right)
+    _ = page.pointerRelease(x: pointX, y: pointY, button: DrawerQtButton.right)
     page.onMenuOpened = dismissForAutomation
     report.expect(
         workspace.grid.gridMenuKind == 1 && !page.hasMenu,

@@ -130,7 +130,7 @@ func drawerAutomationMiddlePanIsolation(
     let cursorBefore = fixture.session.editCursor
     let scrollBefore = fixture.viewport.camera.snapshot.scrollX
     report.expect(
-        page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle),
+        page.pointerPress(x: 100, y: 60, surface: 1, button: DrawerQtButton.middle),
         cppID: id, message: "a middle press starts the pan")
     report.expect(page.isPanning, cppID: id, message: "the page publishes the live pan")
     report.expectEqual(
@@ -145,14 +145,14 @@ func drawerAutomationMiddlePanIsolation(
     report.expect(
         !page.bandVisible, cppID: id,
         message: "a middle pan never previews the pan lane as a range")
-    _ = page.pointerMove(x: 52, y: 60, buttons: AutomationQtButton.middle)
+    _ = page.pointerMove(x: 52, y: 60, buttons: DrawerQtButton.middle)
     report.expectEqual(
         expected: scrollBefore + 48, actual: fixture.viewport.camera.snapshot.scrollX, cppID: id,
         what: "the pan scrolls the shared camera by the travel")
     report.expectEqual(
         expected: before, actual: fixture.snapshot, cppID: id,
         what: "panning mutates nothing")
-    _ = page.pointerRelease(x: 52, y: 60, button: AutomationQtButton.middle)
+    _ = page.pointerRelease(x: 52, y: 60, button: DrawerQtButton.middle)
     report.expect(!page.isPanning, cppID: id, message: "releasing ends the pan")
     report.expectEqual(
         expected: before, actual: fixture.snapshot, cppID: id,
@@ -165,7 +165,7 @@ func drawerAutomationMiddlePanIsolation(
         message: "the released middle pan leaves no range preview")
 
     let switchID = "automation/AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan"
-    _ = page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle)
+    _ = page.pointerPress(x: 100, y: 60, surface: 1, button: DrawerQtButton.middle)
     report.expect(page.isPanning, cppID: switchID, message: "a second pan starts")
     fixture.activate(fixture.volumeLane)
     report.expect(
@@ -177,7 +177,7 @@ func drawerAutomationMiddlePanIsolation(
     report.expectEqual(
         expected: before, actual: fixture.snapshot, cppID: switchID,
         what: "switching mid-pan writes nothing")
-    _ = page.pointerRelease(x: 100, y: 60, button: AutomationQtButton.middle)
+    _ = page.pointerRelease(x: 100, y: 60, button: DrawerQtButton.middle)
     report.expectEqual(
         expected: before, actual: fixture.snapshot, cppID: switchID,
         what: "releasing after the switch commits nothing")
@@ -196,10 +196,10 @@ func drawerAutomationMiddlePanIsolation(
     report.expect(
         oldRows.row(for: oldPan) != nil, cppID: switchID,
         message: "the old row belongs to the original track")
-    _ = page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle)
+    _ = page.pointerPress(x: 100, y: 60, surface: 1, button: DrawerQtButton.middle)
     fixture.session.selectedTrack = 1
     page.refreshFromDocument()
-    _ = page.pointerRelease(x: 100, y: 60, button: AutomationQtButton.middle)
+    _ = page.pointerRelease(x: 100, y: 60, button: DrawerQtButton.middle)
     let newRows = AutomationRowStack.build(
         document: fixture.document, primaryTrack: 1, selection: nil,
         ready: true, songEndTick: fixture.songEndTick)

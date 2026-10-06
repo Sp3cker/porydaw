@@ -45,10 +45,10 @@ extension SongDocument {
         guard history.acceptsDocumentMutation else { return [] }
         guard !notes.isEmpty else { return [] }
         var mutation = DocumentMutation(state)
-        var spans: [PlannedNote] = []
+        var spans: [TimeNoteSpan] = []
         spans.reserveCapacity(notes.count)
         for note in notes {
-            guard let mapping = mapping(for: note.track, in: mutation.state.file) else {
+            guard mapping(for: note.track, in: mutation.state.file) != nil else {
                 throw NoteEditError.invalidTrack(note.track)
             }
             guard note.pitch <= 127 else { throw NoteEditError.invalidPitch(Int(note.pitch)) }
@@ -57,12 +57,15 @@ extension SongDocument {
                 throw NoteEditError.tickOverflow
             }
             spans.append(
-                PlannedNote(
-                    track: note.track, chunk: mapping.chunk, pitch: note.pitch,
+                TimeNoteSpan(
+                    track: note.track, pitch: note.pitch,
                     tick: note.tick,
-                    endTick: UInt64(note.tick) + UInt64(duration)))
+                    end: UInt64(note.tick) + UInt64(duration)))
         }
-        guard participantsAreCompatible(spans, allowExactDuplicates: true) else {
+        spans.sort {
+            collisionOrder(($0.track, $0.pitch, $0.tick), ($1.track, $1.pitch, $1.tick))
+        }
+        guard spansAreCompatible(spans: spans, allowExactDuplicates: true) else {
             throw NoteEditError.conflictingEditedNotes
         }
         var insertedIDs: [NoteID] = []
@@ -129,8 +132,8 @@ extension SongDocument {
             switch edge {
             case .leading:
                 tick =
-                    note.endTick.map { min(shiftedTick(note.tick, by: delta), Tick($0 - 1)) }
-                    ?? shiftedTick(note.tick, by: delta)
+                    note.endTick.map { min(TimeDefaults.shiftTickClamped(note.tick, by: delta), Tick($0 - 1)) }
+                    ?? TimeDefaults.shiftTickClamped(note.tick, by: delta)
                 end = note.endTick
             case .trailing:
                 tick = note.tick
@@ -165,7 +168,9 @@ extension SongDocument {
         order.reserveCapacity(notes.count)
         for index in notes.indices where !notes[index].isUnterminated { order.append(index) }
         order.sort {
-            (notes[$0].track, notes[$0].pitch, notes[$0].tick) < (notes[$1].track, notes[$1].pitch, notes[$1].tick)
+            collisionOrder(
+                (notes[$0].track, notes[$0].pitch, notes[$0].tick),
+                (notes[$1].track, notes[$1].pitch, notes[$1].tick))
         }
         for index in order.indices.dropFirst() {
             let previous = order[index - 1]
@@ -280,16 +285,16 @@ extension SongDocument {
         guard ids.count == relocations.count else { return false }
         var active: [Int] = []
         active.reserveCapacity(relocations.count)
-        var spans: [PlannedNote] = []
+        var spans: [TimeNoteSpan] = []
         spans.reserveCapacity(relocations.count)
         for (index, relocation) in relocations.enumerated() {
             let note = relocation.original
             if let end = relocation.endTick {
                 spans.append(
-                    PlannedNote(
-                        track: note.track, chunk: note.chunk,
+                    TimeNoteSpan(
+                        track: note.track,
                         pitch: relocation.pitch, tick: relocation.tick,
-                        endTick: end))
+                        end: end))
             }
             if relocation.tick == note.tick, relocation.pitch == note.pitch,
                 relocation.endTick == note.endTick
@@ -299,7 +304,10 @@ extension SongDocument {
             active.append(index)
         }
         if active.isEmpty, group == nil { return true }
-        guard participantsAreCompatible(spans, allowExactDuplicates: false) else { return false }
+        spans.sort {
+            collisionOrder(($0.track, $0.pitch, $0.tick), ($1.track, $1.pitch, $1.tick))
+        }
+        guard spansAreCompatible(spans: spans, allowExactDuplicates: false) else { return false }
         var mutation = DocumentMutation(base)
         var removals = Array(repeating: [Int](), count: base.file.chunks.count)
         var insertions = Array(repeating: [MidiEvent](), count: base.file.chunks.count)
@@ -387,14 +395,12 @@ extension SongDocument {
     }
 
     private func collectEditedWins(
-        spans: [PlannedNote], editedIDs: Set<NoteID>, source: SongState,
+        spans: [TimeNoteSpan], editedIDs: Set<NoteID>, source: SongState,
         removals: inout [[Int]], insertions: inout [[MidiEvent]],
         replacedEnds: inout Set<NoteID>
     ) {
         guard !spans.isEmpty else { return }
-        let orderedSpans = spans.sorted {
-            ($0.track, $0.pitch, $0.tick) < ($1.track, $1.pitch, $1.tick)
-        }
+        let orderedSpans = spans
         let sortedTracks = orderedSpans.map(\.track).sorted()
         var affectedTracks: [Int] = []
         affectedTracks.reserveCapacity(sortedTracks.count)
@@ -405,49 +411,32 @@ extension SongDocument {
         for track in affectedTracks {
             let stationaryNotes = sourceNotes.indices.contains(track) ? sourceNotes[track] : []
             for stationary in stationaryNotes {
-                guard !stationary.isUnterminated, !editedIDs.contains(stationary.id),
-                    let originalEnd = stationary.endTick
-                else { continue }
-                var start = stationary.tick
-                var end = originalEnd
-                var trimStart = false
-                var trimEnd = false
-                var covered = false
-                for span in orderedSpans
-                where span.track == track && span.pitch == stationary.pitch {
-                    guard span.endTick > UInt64(start), UInt64(span.tick) < end else { continue }
-                    if start < span.tick {
-                        end = UInt64(span.tick)
-                        trimEnd = true
-                        break
-                    }
-                    if end > span.endTick {
-                        start = Tick(span.endTick)
-                        trimStart = true
-                    } else {
-                        covered = true
-                        break
-                    }
-                }
-                if covered || trimEnd { replacedEnds.insert(stationary.id) }
-                if covered {
+                guard let originalEnd = stationary.endTick else { continue }
+                switch resolveStationaryCollisions(
+                    spans: orderedSpans[...], stationary: stationary, editedIDs: editedIDs)
+                {
+                case .covered:
+                    replacedEnds.insert(stationary.id)
                     removals[stationary.chunk].append(stationary.onIndex)
                     if let endIndex = stationary.endIndex {
                         removals[stationary.chunk].append(endIndex)
                     }
-                } else {
-                    if trimStart {
+                case .trimmed(let start, let end):
+                    if end != originalEnd { replacedEnds.insert(stationary.id) }
+                    if start != stationary.tick {
                         removals[stationary.chunk].append(stationary.onIndex)
                         var event = source.file.chunks[stationary.chunk].events[stationary.onIndex]
                         event.tick = start
                         insertions[stationary.chunk].append(event)
                     }
-                    if trimEnd, let endIndex = stationary.endIndex {
+                    if end != originalEnd, let endIndex = stationary.endIndex {
                         removals[stationary.chunk].append(endIndex)
                         var event = source.file.chunks[stationary.chunk].events[endIndex]
                         event.tick = Tick(end)
                         insertions[stationary.chunk].append(event)
                     }
+                case .untouched:
+                    break
                 }
             }
         }
@@ -471,39 +460,4 @@ internal struct RelocatedNote {
     let tick: Tick
     let pitch: UInt8
     let endTick: UInt64?
-}
-
-private struct PlannedNote {
-    let track: Int
-    let chunk: Int
-    let pitch: UInt8
-    let tick: Tick
-    let endTick: UInt64
-}
-
-private func participantsAreCompatible(
-    _ spans: [PlannedNote],
-    allowExactDuplicates: Bool
-) -> Bool {
-    let sorted = spans.sorted {
-        ($0.track, $0.pitch, $0.tick) < ($1.track, $1.pitch, $1.tick)
-    }
-    guard sorted.count > 1 else { return true }
-    for index in 1..<sorted.count {
-        let previous = sorted[index - 1]
-        let current = sorted[index]
-        guard previous.track == current.track, previous.pitch == current.pitch,
-            previous.endTick > UInt64(current.tick)
-        else { continue }
-        if !allowExactDuplicates || previous.tick != current.tick || previous.endTick != current.endTick {
-            return false
-        }
-    }
-    return true
-}
-
-private func shiftedTick(_ tick: Tick, by delta: Int64) -> Tick {
-    let (sum, overflow) = Int64(tick).addingReportingOverflow(delta)
-    if overflow { return delta < 0 ? 0 : TimeDefaults.maxTick }
-    return Tick(min(max(sum, 0), Int64(TimeDefaults.maxTick)))
 }

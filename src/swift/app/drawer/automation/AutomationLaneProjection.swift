@@ -115,10 +115,8 @@ public struct AutomationLaneSnapshot: Equatable, Sendable {
         switch parameter {
         case .tempo:
             sources = document.state.tempo.enumerated().map { index, point in
-                let bpm = Int(
-                    TimeDefaults.tempoBPM(
-                        forMicrosecondsPerQuarterNote: point.microsecondsPerQuarterNote
-                    ).rounded())
+                let bpm = TimeDefaults.roundedTempoBPM(
+                    forMicrosecondsPerQuarterNote: point.microsecondsPerQuarterNote)
                 return AutomationSourcePoint(
                     identity: AutomationPointIdentity(
                         revision: document.revision, parameter: parameter, tick: point.tick,

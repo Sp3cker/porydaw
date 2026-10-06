@@ -640,13 +640,13 @@ func drawerAutomationKeyboardIngress(
     _ = outside.page.pointerPress(
         x: outside.x(120), y: outside.y(outside.panLane, 64),
         surface: AutomationInputSurface.plot.rawValue,
-        button: AutomationQtButton.left)
+        button: DrawerQtButton.left)
     report.expect(
         outside.page.selection == nil && outside.session.timeSelection == nil,
         cppID: selID, message: "a plain left press clears the time selection")
     _ = outside.page.pointerRelease(
         x: outside.x(120), y: outside.y(outside.panLane, 64),
-        button: AutomationQtButton.left)
+        button: DrawerQtButton.left)
 
     let precedence = drawerAutomationAutomationFixture(
         suite: suite, service: service,
@@ -663,11 +663,11 @@ func drawerAutomationKeyboardIngress(
     _ = precedence.page.pointerMove(
         x: precedence.x(24) + 30,
         y: precedence.y(precedence.panLane, 64),
-        buttons: AutomationQtButton.left)
+        buttons: DrawerQtButton.left)
     _ = precedence.page.pointerMove(
         x: precedence.x(24) + 60,
         y: precedence.y(precedence.panLane, 64),
-        buttons: AutomationQtButton.left)
+        buttons: DrawerQtButton.left)
     report.expect(
         precedence.page.hasGesture, cppID: selID,
         message: "the adapter drag arms before Escape")
@@ -686,7 +686,7 @@ func drawerAutomationKeyboardIngress(
     _ = precedence.page.pointerRelease(
         x: precedence.x(24) + 60,
         y: precedence.y(precedence.panLane, 64),
-        button: AutomationQtButton.left)
+        button: DrawerQtButton.left)
     report.expectEqual(
         expected: grabbed, actual: precedence.snapshot, cppID: selID,
         what: "escape cancels the adapter drag without mutation")
@@ -731,11 +731,11 @@ func drawerAutomationBandEscape(
     let bandID = "automation/AutomationEditingTest::rightBandPreviewIsolated"
     let band = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     band.activate(band.panLane)
-    _ = band.page.pointerPress(x: band.x(24), y: 60, surface: 1, button: AutomationQtButton.right)
+    _ = band.page.pointerPress(x: band.x(24), y: 60, surface: 1, button: DrawerQtButton.right)
     report.expect(
         !band.page.isPanning, cppID: bandID,
         message: "a right press starts no pan before moving")
-    _ = band.page.pointerMove(x: band.x(120), y: 60, buttons: AutomationQtButton.right)
+    _ = band.page.pointerMove(x: band.x(120), y: 60, buttons: DrawerQtButton.right)
     report.expect(band.page.bandVisible, cppID: bandID, message: "the right drag arms the band")
     let bandBefore = band.snapshot
     report.expect(band.page.handleEscape(), cppID: bandID, message: "Escape claims the live band")

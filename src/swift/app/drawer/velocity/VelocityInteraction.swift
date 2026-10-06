@@ -38,7 +38,7 @@ extension VelocityPage {
         pressedNote = nil
         switch input {
         case .ruler:
-            guard button == VelocityQtButton.left, axis.inRuler(x: x, rulerWidth: rulerWidth)
+            guard button == DrawerQtButton.left, axis.inRuler(x: x, rulerWidth: rulerWidth)
             else { return false }
             guard !contextUnsupported else { return true }
             let unlock = detentsUnlocked(modifiers: modifiers, allowShift: false)
@@ -55,7 +55,7 @@ extension VelocityPage {
             gesture = live
             finishGesture(commit: !live.preview.isEmpty)
         case .plot:
-            if button == VelocityQtButton.middle {
+            if button == DrawerQtButton.middle {
                 // The shared camera's pan, requested from the band that renders
                 // its projection: one delta per move, clamped by the camera.
                 beginGesture(
@@ -63,7 +63,7 @@ extension VelocityPage {
                     modifiers: modifiers)
                 return true
             }
-            if button == VelocityQtButton.right {
+            if button == DrawerQtButton.right {
                 beginGesture(
                     kind: .pendingBand, x: x, y: y, detentUnlock: false, notes: [],
                     modifiers: modifiers)
@@ -80,7 +80,7 @@ extension VelocityPage {
                 }
                 return true
             }
-            guard button == VelocityQtButton.left else { return false }
+            guard button == DrawerQtButton.left else { return false }
             let unlock = detentsUnlocked(modifiers: modifiers, allowShift: true)
             if isShift(modifiers) {
                 guard !contextUnsupported else { return true }
@@ -172,16 +172,16 @@ extension VelocityPage {
     func dispatchPointerRelease(x: Double, y: Double, button: Int) -> Bool {
         guard session != nil, let live = gesture else { return false }
         guard
-            (button == VelocityQtButton.middle && live.kind == .pan)
-                || (button == VelocityQtButton.right && (live.kind == .band || live.kind == .pendingBand))
-                || (button == VelocityQtButton.left && live.kind != .pan
+            (button == DrawerQtButton.middle && live.kind == .pan)
+                || (button == DrawerQtButton.right && (live.kind == .band || live.kind == .pendingBand))
+                || (button == DrawerQtButton.left && live.kind != .pan
                     && live.kind != .band && live.kind != .pendingBand)
         else { return false }
-        if button == VelocityQtButton.middle {
+        if button == DrawerQtButton.middle {
             finishGesture(commit: false)
             return true
         }
-        if button == VelocityQtButton.right {
+        if button == DrawerQtButton.right {
             // Secondary release only resolves selection: a band replaces or extends it,
             // while a stationary press toggles a note or clears empty space.
             switch live.kind {
@@ -205,7 +205,7 @@ extension VelocityPage {
             }
             return true
         }
-        guard button == VelocityQtButton.left else { return true }
+        guard button == DrawerQtButton.left else { return true }
         switch live.kind {
         case .paint:
             let commit = !live.notes.isEmpty && !live.preview.isEmpty

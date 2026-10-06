@@ -93,10 +93,8 @@ extension AutomationPage {
         else {
             return nil
         }
-        return Int(
-            TimeDefaults.tempoBPM(
-                forMicrosecondsPerQuarterNote: point.microsecondsPerQuarterNote
-            ).rounded())
+        return TimeDefaults.roundedTempoBPM(
+            forMicrosecondsPerQuarterNote: point.microsecondsPerQuarterNote)
     }
 
     /// Whether the accepted clipboard holds points for the active parameter, which

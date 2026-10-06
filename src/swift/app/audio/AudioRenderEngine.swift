@@ -101,14 +101,22 @@ public final class AudioRenderEngine {
     public func pause() { if transport == .playing { transportState.requested = .paused } }
     public func stop() { transportState.stop() }
     public func setLoopEnabled(_ enabled: Bool) { loop.store(enabled, ordering: .relaxed) }
-    public func setMuteMask(_ mask: UInt32) { mute.store(mask, ordering: .relaxed) }
-    public func setSoloMask(_ mask: UInt32) { solo.store(mask, ordering: .relaxed) }
+    public func setMix(muted: Set<Int>, soloed: Set<Int>) {
+        mute.store(Self.trackMask(muted), ordering: .relaxed)
+        solo.store(Self.trackMask(soloed), ordering: .relaxed)
+    }
     public func setOutputVolume(_ percent: Int) { transportState.outputVolume = percent }
     public func setResonanceSuppression(_ enabled: Bool) { suppression.setEnabled(enabled) }
     public func setPolyDebugInvert(_ enabled: Bool) { invert.store(enabled, ordering: .relaxed) }
     public func resetPolyStats() { polyReset.wrappingAdd(1, ordering: .relaxed) }
     public func seek(_ sample: UInt64) {
         if songLoaded { transportState.pendingSeek.store(sample, ordering: .releasing) }
+    }
+
+    private static func trackMask(_ tracks: Set<Int>) -> UInt32 {
+        tracks.reduce(into: UInt32(0)) { mask, track in
+            if (0..<16).contains(track) { mask |= UInt32(1) << track }
+        }
     }
 
     public func bind(
@@ -122,9 +130,7 @@ public final class AudioRenderEngine {
         self.settings = settings
         m4a_engine_destroy(main)
         _ = m4a_engine_init(main, Float(sampleRate))
-        m4a_engine_set_voicegroup(main, voicegroup)
-        Self.applySettings(settings, to: main)
-        m4a_engine_set_pcm_mix_rate(main, settings.pcmMixRate)
+        Self.configure(main, voicegroup: voicegroup, settings: settings)
         Sequencer.chase(engine: main, timeline: timeline, position: 0)
         Sequencer.primeVoices(engine: main, timeline: timeline, position: 0)
         resetPreview()
@@ -156,6 +162,7 @@ public final class AudioRenderEngine {
         let changedRate = self.settings.pcmMixRate != settings.pcmMixRate
         self.settings = settings
         Self.applySettings(settings, to: main)
+        // A mix-rate change rebuilds the reverb, so only a changed rate is applied.
         if changedRate { m4a_engine_set_pcm_mix_rate(main, settings.pcmMixRate) }
         resetPreview()
     }
@@ -171,13 +178,16 @@ public final class AudioRenderEngine {
         }
         resetPreview()
     }
-    public static func bindEngineVoicegroup(
+    /// Configures a freshly initialized engine; the mix rate goes last because it rebuilds the reverb.
+    public static func configure(
         _ engine: UnsafeMutablePointer<M4AEngine>,
-        voicegroup: UnsafeMutablePointer<ToneData>?
+        voicegroup: UnsafeMutablePointer<ToneData>?, settings: AudioSettings
     ) {
         m4a_engine_set_voicegroup(engine, voicegroup)
+        applySettings(settings, to: engine)
+        m4a_engine_set_pcm_mix_rate(engine, settings.pcmMixRate)
     }
-    public static func applySettings(_ settings: AudioSettings, to engine: UnsafeMutablePointer<M4AEngine>) {
+    private static func applySettings(_ settings: AudioSettings, to engine: UnsafeMutablePointer<M4AEngine>) {
         m4a_engine_set_song_volume(engine, settings.songVolume)
         m4a_engine_set_reverb_amount(engine, settings.reverb)
         m4a_engine_set_max_pcm_channels(engine, settings.maxPcmChannels)
@@ -187,9 +197,7 @@ public final class AudioRenderEngine {
     private func resetPreview() {
         m4a_engine_destroy(preview)
         _ = m4a_engine_init(preview, Float(sampleRate))
-        m4a_engine_set_voicegroup(preview, voicegroup)
-        Self.applySettings(settings, to: preview)
-        m4a_engine_set_pcm_mix_rate(preview, settings.pcmMixRate)
+        Self.configure(preview, voicegroup: voicegroup, settings: settings)
         audition.resetPreview()
     }
 

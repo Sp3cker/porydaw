@@ -569,19 +569,19 @@ func drawerAutomationCompletedGestureOneEditLaw(
     guard
         fixture.page.pointerPress(
             x: pressX, y: pressY, surface: 1,
-            button: AutomationQtButton.left)
+            button: DrawerQtButton.left)
     else {
         report.fail(drawerAutomationGestureLawID, "a press grabs the node for the one-edit gesture")
         return
     }
     let travel = fixture.page.geometry.nodeDragActivationDistance + 2
-    _ = fixture.page.pointerMove(x: pressX + travel, y: pressY, buttons: AutomationQtButton.left)
+    _ = fixture.page.pointerMove(x: pressX + travel, y: pressY, buttons: DrawerQtButton.left)
     _ = fixture.page.pointerMove(
         x: pressX + travel, y: fixture.y(fixture.panLane, 90),
-        buttons: AutomationQtButton.left)
+        buttons: DrawerQtButton.left)
     _ = fixture.page.pointerRelease(
         x: pressX + travel, y: fixture.y(fixture.panLane, 90),
-        button: AutomationQtButton.left)
+        button: DrawerQtButton.left)
     let after = DrawerAutomationStagedSnapshot(fixture.document)
     report.expect(
         after.revision == before.revision + 1
@@ -606,14 +606,14 @@ func drawerAutomationParkedGestureUnchangedLaw(
     guard
         fixture.page.pointerPress(
             x: fixture.x(24), y: fixture.y(fixture.panLane, 64), surface: 1,
-            button: AutomationQtButton.left)
+            button: DrawerQtButton.left)
     else {
         report.fail(drawerAutomationParkedLawID, "a press parks on the node for the unchanged law")
         return
     }
     _ = fixture.page.pointerMove(
         x: fixture.x(24) + 2, y: fixture.y(fixture.panLane, 64),
-        buttons: AutomationQtButton.left)
+        buttons: DrawerQtButton.left)
     fixture.page.cancelSectionInteraction()
     report.expect(
         DrawerAutomationStagedSnapshot(fixture.document) == before,

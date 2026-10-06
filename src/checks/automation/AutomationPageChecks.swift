@@ -311,7 +311,7 @@ struct drawerAutomationAutomationFixture {
         to target: Int, armPixels: Double = 30, modifiers: Int
     ) -> Bool {
         let surface = AutomationInputSurface.plot.rawValue
-        let button = AutomationQtButton.left
+        let button = DrawerQtButton.left
         let pressX = x(from.tick)
         let pressY = y(parameter, from.value)
         let targetY = y(parameter, target)

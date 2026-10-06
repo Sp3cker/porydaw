@@ -11,41 +11,29 @@ extension EventListPresenter {
     }
 
     func dispatchSteppedEditingText(currentText: String, delta: Int) -> String {
-        guard canStepEditing(), delta != 0, let current = Int(currentText) else {
-            return currentText
-        }
-        let bounds =
-            editingColumn == 2
-            ? 1...16
-            : editingColumn == 5 ? 20...255 : 0...127
-        guard bounds.contains(current) else { return currentText }
-        return String(max(bounds.lowerBound, min(bounds.upperBound, current + delta)))
+        guard canStepEditing() else { return currentText }
+        return EventListCellPolicy.steppedText(
+            column: editingColumn, currentText: currentText, delta: delta)
     }
 
     public func commitCellEdit(row: Int, column: Int, text: String) -> Bool {
-        let convertingToTempo =
-            column == 1 && chunkIndex == 0
-            && text.trimmingCharacters(in: .whitespacesAndNewlines)
-                == String(EventListEventType.tempo.rawValue)
-            && model.row(at: row)?.event != nil
         guard let session, !session.isClosed,
             session.document.rawChunks.indices.contains(chunkIndex),
-            model.validatesEdit(row: row, column: column, text: text) || convertingToTempo,
-            let item = model.row(at: row)
+            let item = model.row(at: row),
+            let value = EventListCellPolicy.parseCommit(
+                column: column, text: text, item: item,
+                isEditable: model.isCellEditable(row: row, column: column),
+                chunkIndex: chunkIndex, lastEventTick: model.chunk.events.last?.tick ?? 0)
         else { return false }
         let document = session.document
-        let input = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if item.isEndOfTrack {
-            guard let tick = Tick(input),
-                tick >= (model.chunk.events.last?.tick ?? 0)
-            else { return false }
+            guard case let .tick(tick) = value else { return false }
             document.setChunkEnd(chunkIndex, tick: tick)
             return true
         }
         if let tempo = item.tempo {
-            switch column {
-            case 0:
-                guard let tick = Tick(input) else { return false }
+            switch value {
+            case let .tick(tick):
                 document.editTempo(
                     TempoEdit(
                         remove: [tempo],
@@ -54,22 +42,20 @@ extension EventListPresenter {
                                 tick: tick,
                                 microsecondsPerQuarterNote: tempo.microsecondsPerQuarterNote)
                         ]))
-            case 1:
-                guard let kind = Int(input) else { return false }
-                if kind == EventListEventType.tempo.rawValue { return true }
+            case let .kind(kind):
+                if kind == .tempo { return true }
                 guard
                     let newEvent = Self.retyped(
                         MidiEvent.meta(
                             tick: tempo.tick, type: 6,
-                            data: []), as: kind)
+                            data: []), as: kind.rawValue)
                 else {
                     return false
                 }
                 document.editRawAndTempo(
                     chunk: chunkIndex, deleting: [],
                     tempo: TempoEdit(remove: [tempo]), inserting: newEvent)
-            case 5:
-                guard let bpm = Int(input) else { return false }
+            case let .tempoBPM(bpm):
                 document.editTempo(
                     TempoEdit(
                         remove: [tempo],
@@ -79,13 +65,12 @@ extension EventListPresenter {
                                 microsecondsPerQuarterNote: TimeDefaults.microsecondsPerQuarterNote(
                                     forBPM: bpm))
                         ]))
-            default: return false
+            case .channel, .data0, .data1, .blob: return false
             }
             return true
         }
         guard let event = item.event, let index = item.eventIndex else { return false }
-        if column == 1, input == String(EventListEventType.tempo.rawValue) {
-            guard chunkIndex == 0 else { return false }
+        if case .kind(.tempo) = value {
             document.editRawAndTempo(
                 chunk: chunkIndex, deleting: [index],
                 tempo: TempoEdit(add: [
@@ -95,44 +80,37 @@ extension EventListPresenter {
             return true
         }
         var replacement = event
-        switch column {
-        case 0:
-            guard let tick = Tick(input) else { return false }
+        switch value {
+        case let .tick(tick):
             replacement.tick = tick
-        case 1:
-            guard let kind = Int(input), let changed = Self.retyped(event, as: kind) else {
+        case let .kind(kind):
+            guard let changed = Self.retyped(event, as: kind.rawValue) else {
                 return false
             }
             replacement = changed
-        case 2:
-            guard let value = UInt8(input),
-                case let .channel(status, data0, data1) = event.payload
-            else { return false }
+        case let .channel(value):
+            guard case let .channel(status, data0, data1) = event.payload else { return false }
             replacement.payload = .channel(
                 status: (status & 0xF0) | (value - 1),
                 data0: data0, data1: data1)
-        case 3:
-            guard let value = UInt8(input) else { return false }
+        case let .data0(value):
             switch event.payload {
             case let .channel(status, _, data1):
                 replacement.payload = .channel(status: status, data0: value, data1: data1)
             case let .meta(_, bytes): replacement.payload = .meta(type: value, data: bytes)
             default: return false
             }
-        case 4:
-            guard let value = UInt8(input),
-                case let .channel(status, data0, _) = event.payload
-            else { return false }
+        case let .data1(value):
+            guard case let .channel(status, data0, _) = event.payload else { return false }
             replacement.payload = .channel(status: status, data0: data0, data1: value)
-        case 5:
-            guard let bytes = EventListModel.parseBlob(input) else { return false }
+        case let .blob(bytes):
             switch event.payload {
             case let .meta(type, _): replacement.payload = .meta(type: type, data: bytes)
             case let .systemExclusive(status, _):
                 replacement.payload = .systemExclusive(status: status, data: bytes)
             default: return false
             }
-        default: return false
+        case .tempoBPM: return false
         }
         document.modifyRawEvent(chunk: chunkIndex, index: index, event: replacement)
         return true

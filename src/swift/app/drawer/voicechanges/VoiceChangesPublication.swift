@@ -90,11 +90,7 @@ extension VoiceChangesPage {
     /// Valid empty list for out-of-range fetches before the first publish.
     /// Built once and retained.
     @QtIgnored func retainedEmptyDisplayList() -> Data {
-        if let cached = cachedEmptyDisplayList { return cached }
-        var writer = DisplayListWriter()
-        let empty = writer.finish()
-        cachedEmptyDisplayList = empty
-        return empty
+        DrawerStaticsContent.retainedEmptyDisplayList(cached: &cachedEmptyDisplayList)
     }
 
     private func publishDisplayLists(
@@ -123,11 +119,7 @@ extension VoiceChangesPage {
                         height: Float(plotHeight), argb: color))
             }
         }
-        let colors: [Int: QmlColor] = [
-            3: palette.gridLineBar, 4: palette.gridLineBeat,
-            5: palette.gridLineSub1, 6: palette.gridLineSub2,
-            7: palette.gridLineSub3, 25: palette.gridLineBeatFine,
-        ]
+        let colors = DrawerStaticsContent.gridPaletteColors(palette)
         let viewportSize = CGSize(width: plotWidth, height: plotHeight)
         let camera = viewport.camera
         // Release the previous buffer before the retained writer reuses its

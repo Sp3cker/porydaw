@@ -18,7 +18,7 @@ func drawerAutomationBandIsolatesTempoAndCc(
     let before = fixture.snapshot
     let pendingRevision = page.documentRevision
     let pendingCursor = fixture.session.editCursor
-    _ = page.pointerPress(x: fixture.x(24), y: 60, surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerPress(x: fixture.x(24), y: 60, surface: 1, button: DrawerQtButton.right)
     report.expect(
         page.hasBand && page.activeParameter == .tempo,
         cppID: id, message: "a pending band belongs to the active Tempo lane")
@@ -26,12 +26,12 @@ func drawerAutomationBandIsolatesTempoAndCc(
         page.documentRevision == pendingRevision
             && fixture.session.editCursor == pendingCursor,
         cppID: id, message: "a pending band leaves the document revision and edit cursor untouched")
-    _ = page.pointerMove(x: fixture.x(120), y: 60, buttons: AutomationQtButton.right)
+    _ = page.pointerMove(x: fixture.x(120), y: 60, buttons: DrawerQtButton.right)
     report.expect(
         page.documentRevision == pendingRevision
             && fixture.session.editCursor == pendingCursor,
         cppID: id, message: "a travelled band leaves the document revision and edit cursor untouched")
-    _ = page.pointerRelease(x: fixture.x(120), y: 60, button: AutomationQtButton.right)
+    _ = page.pointerRelease(x: fixture.x(120), y: 60, button: DrawerQtButton.right)
     report.expect(
         page.selection?.tempo == true
             && page.selection?.lanes.isEmpty == true,
@@ -54,12 +54,12 @@ func drawerAutomationBandIsolatesTempoAndCc(
     report.expect(fixture.undo(), cppID: id, message: "the tempo drag undoes")
 
     fixture.activate(fixture.panLane)
-    _ = page.pointerPress(x: fixture.x(24), y: 60, surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerPress(x: fixture.x(24), y: 60, surface: 1, button: DrawerQtButton.right)
     report.expect(
         page.hasBand && page.activeParameter == fixture.panLane,
         cppID: id, message: "a pending band belongs to the active Pan lane")
-    _ = page.pointerMove(x: fixture.x(120), y: 60, buttons: AutomationQtButton.right)
-    _ = page.pointerRelease(x: fixture.x(120), y: 60, button: AutomationQtButton.right)
+    _ = page.pointerMove(x: fixture.x(120), y: 60, buttons: DrawerQtButton.right)
+    _ = page.pointerRelease(x: fixture.x(120), y: 60, button: DrawerQtButton.right)
     report.expect(
         page.selection?.tempo == false
             && page.selection?.lanes == Set([fixture.panLane]),
@@ -67,23 +67,23 @@ func drawerAutomationBandIsolatesTempoAndCc(
     _ = page.pointerPress(
         x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
         surface: AutomationInputSurface.plot.rawValue,
-        button: AutomationQtButton.middle)
+        button: DrawerQtButton.middle)
     report.expect(
         page.isPanning && !page.hasBand, cppID: id,
         message: "a pan press publishes its pan and no band")
     _ = page.pointerRelease(
         x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
-        button: AutomationQtButton.middle)
+        button: DrawerQtButton.middle)
     let bodyX = fixture.x(144)
     let bodyY = fixture.y(fixture.panLane, 64)
     report.expect(
         page.pointerPress(
             x: bodyX, y: bodyY,
             surface: AutomationInputSurface.plot.rawValue,
-            button: AutomationQtButton.left)
+            button: DrawerQtButton.left)
             && !page.isPanning && !page.hasBand,
         cppID: id, message: "a body press starts no pan and no band")
-    _ = page.pointerRelease(x: bodyX, y: bodyY, button: AutomationQtButton.left)
+    _ = page.pointerRelease(x: bodyX, y: bodyY, button: DrawerQtButton.left)
 }
 
 @MainActor
@@ -139,14 +139,14 @@ func drawerAutomationMultiCcDragExcludesOthers(
     let endX = activationX + horizontal.x(72) - sourceX
     _ = horizontal.page.pointerPress(
         x: sourceX, y: sourceY, surface: 1,
-        button: AutomationQtButton.left,
+        button: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     _ = horizontal.page.pointerMove(
         x: activationX, y: sourceY,
-        buttons: AutomationQtButton.left,
+        buttons: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     _ = horizontal.page.pointerMove(
-        x: endX, y: sourceY, buttons: AutomationQtButton.left,
+        x: endX, y: sourceY, buttons: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     report.expect(
         horizontal.snapshot == held
@@ -158,7 +158,7 @@ func drawerAutomationMultiCcDragExcludesOthers(
         expected: 0, actual: publishedDocumentEdits, cppID: id,
         what: "held multi-CC preview emits no document publication")
     _ = horizontal.page.pointerRelease(
-        x: endX, y: sourceY, button: AutomationQtButton.left,
+        x: endX, y: sourceY, button: DrawerQtButton.left,
         modifiers: AutomationQtModifier.shift)
     report.expectEqual(
         expected: TimeRange(startTick: 48, endTick: 144),

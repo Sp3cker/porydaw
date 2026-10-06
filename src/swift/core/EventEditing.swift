@@ -523,11 +523,3 @@ extension SongDocument {
         return copy
     }
 }
-
-private extension TrackRemap {
-    var isIdentity: Bool {
-        newChunkCount == chunkMap.count && newEngineTrackCount == engineTrackMap.count
-            && chunkMap.enumerated().allSatisfy { $0.element == Optional($0.offset) }
-            && engineTrackMap.enumerated().allSatisfy { $0.element == Optional($0.offset) }
-    }
-}

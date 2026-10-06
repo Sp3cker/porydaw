@@ -268,8 +268,8 @@ func drawerAutomationHoverModel(
     fixture.activate(fixture.panLane)
     let pressX = fixture.x(72)
     let pressY = fixture.y(fixture.panLane, lane.heldValue(at: 72) ?? 64)
-    _ = page.pointerPress(x: pressX, y: pressY, surface: 1, button: AutomationQtButton.left)
-    _ = page.pointerMove(x: pressX + 24, y: pressY - 12, buttons: AutomationQtButton.left)
+    _ = page.pointerPress(x: pressX, y: pressY, surface: 1, button: DrawerQtButton.left)
+    _ = page.pointerMove(x: pressX + 24, y: pressY - 12, buttons: DrawerQtButton.left)
     fixture.document.writeLane(
         track: 0, lane: .controller(TimeDefaults.ccPan), from: 0,
         through: TimeDefaults.noTick,
@@ -283,7 +283,7 @@ func drawerAutomationHoverModel(
         message: "a document rebuild aborts the drag")
     let rebuilt = fixture.snapshot
     let afterRebuild = fixture.values(fixture.panLane)
-    _ = page.pointerRelease(x: pressX + 24, y: pressY - 12, button: AutomationQtButton.left)
+    _ = page.pointerRelease(x: pressX + 24, y: pressY - 12, button: DrawerQtButton.left)
     report.expectEqual(
         expected: afterRebuild, actual: fixture.values(fixture.panLane), cppID: drawerAutomationHoverModelID,
         what: "a stale release after a mid-gesture rebuild commits nothing")
@@ -321,11 +321,11 @@ func drawerAutomationMenuHintMuting(
     report.expect(
         page.pointerPress(
             x: node.x, y: node.y, surface: 1,
-            button: AutomationQtButton.right),
+            button: DrawerQtButton.right),
         cppID: drawerAutomationMenuHintMutingID,
         message: "a right press on a node starts its band")
     report.expect(
-        page.pointerRelease(x: node.x, y: node.y, button: AutomationQtButton.right),
+        page.pointerRelease(x: node.x, y: node.y, button: DrawerQtButton.right),
         cppID: drawerAutomationMenuHintMutingID,
         message: "a stationary right release opens the node menu")
     report.expect(
@@ -456,14 +456,14 @@ func drawerAutomationHoverResidual(
     let profile = page.hoverHintProfile
     let sweepX = fixture.x(72)
     let sweepY = fixture.y(fixture.panLane, 64)
-    _ = page.pointerPress(x: sweepX, y: sweepY, surface: 1, button: AutomationQtButton.left)
-    _ = page.pointerMove(x: sweepX + 48, y: sweepY - 30, buttons: AutomationQtButton.left)
+    _ = page.pointerPress(x: sweepX, y: sweepY, surface: 1, button: DrawerQtButton.left)
+    _ = page.pointerMove(x: sweepX + 48, y: sweepY - 30, buttons: DrawerQtButton.left)
     report.expectEqual(
         expected: profile, actual: page.hoverHintProfile, cppID: drawerAutomationHoverResidualID,
         what: "a live sweep retains its originating hint profile")
-    _ = page.pointerMove(x: sweepX + 52, y: sweepY - 34, buttons: AutomationQtButton.left)
+    _ = page.pointerMove(x: sweepX + 52, y: sweepY - 34, buttons: DrawerQtButton.left)
     report.expect(
-        page.pointerRelease(x: sweepX + 52, y: sweepY - 34, button: AutomationQtButton.left),
+        page.pointerRelease(x: sweepX + 52, y: sweepY - 34, button: DrawerQtButton.left),
         cppID: drawerAutomationHoverResidualID, message: "the drafted sweep commits")
     report.expect(
         fixture.undo(), cppID: drawerAutomationHoverResidualID,
@@ -492,7 +492,7 @@ func drawerAutomationFocusLossRetainsGesture(
     guard
         staged.page.pointerPress(
             x: staged.x(24), y: staged.y(staged.panLane, 64), surface: 1,
-            button: AutomationQtButton.left)
+            button: DrawerQtButton.left)
     else {
         report.fail(drawerAutomationFocusLossID, "a press grabs the node before focus moves away")
         return
@@ -500,7 +500,7 @@ func drawerAutomationFocusLossRetainsGesture(
     let dragTravel = staged.page.geometry.nodeDragActivationDistance + 2
     _ = staged.page.pointerMove(
         x: staged.x(24) + dragTravel, y: staged.y(staged.panLane, 64),
-        buttons: AutomationQtButton.left)
+        buttons: DrawerQtButton.left)
     guard staged.page.hasGesture else {
         report.fail(drawerAutomationFocusLossID, "the node drag is live while focus moves away")
         return
@@ -534,7 +534,7 @@ func drawerAutomationFocusLossKeepsPress(
     guard
         held.page.pointerPress(
             x: pressX, y: pressY, surface: 1,
-            button: AutomationQtButton.left)
+            button: DrawerQtButton.left)
     else {
         report.fail(drawerAutomationFocusPressID, "a background press captures the pointer grab")
         return
@@ -572,8 +572,8 @@ func drawerAutomationGhostRightClickPrompt(
         return
     }
     let before = fixture.snapshot
-    _ = page.pointerPress(x: x, y: y, surface: 1, button: AutomationQtButton.right)
-    _ = page.pointerRelease(x: x, y: y, button: AutomationQtButton.right)
+    _ = page.pointerPress(x: x, y: y, surface: 1, button: DrawerQtButton.right)
+    _ = page.pointerRelease(x: x, y: y, button: DrawerQtButton.right)
     report.expect(
         page.hasPrompt && !page.menuOpen, cppID: id,
         message: "a right click on the ghost opens its value prompt, not a menu")
@@ -599,8 +599,8 @@ func drawerAutomationGhostRightClickPrompt(
         pan: [(24, 64), (120, 40)])
     selected.activate(selected.panLane)
     selected.page.selectRange(from: 48, to: 96)
-    _ = selected.page.pointerPress(x: x, y: y, surface: 1, button: AutomationQtButton.right)
-    _ = selected.page.pointerRelease(x: x, y: y, button: AutomationQtButton.right)
+    _ = selected.page.pointerPress(x: x, y: y, surface: 1, button: DrawerQtButton.right)
+    _ = selected.page.pointerRelease(x: x, y: y, button: DrawerQtButton.right)
     report.expect(
         selected.page.menuOpen && !selected.page.hasPrompt, cppID: id,
         message: "a right click inside the time selection keeps its range menu")

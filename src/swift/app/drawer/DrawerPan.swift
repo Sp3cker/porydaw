@@ -1,5 +1,12 @@
 import PorydawDocument
 
+/// Qt pointer buttons as QML carries them (`mouse.button`).
+public enum DrawerQtButton {
+    public static let left = 1
+    public static let right = 2
+    public static let middle = 4
+}
+
 enum DrawerPan {
     static let dragDistanceSeed: Double = 10
 

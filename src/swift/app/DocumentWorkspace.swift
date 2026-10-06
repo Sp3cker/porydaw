@@ -206,8 +206,7 @@ public final class DocumentWorkspace {
         audio.bind(
             timeline: session.timeline, bank: session.bankLease,
             config: session.document.state.config)
-        audio.setMuteMask(Self.trackMask(session.mutedTracks))
-        audio.setSoloMask(Self.trackMask(session.soloedTracks))
+        audio.setMix(muted: session.mutedTracks, soloed: session.soloedTracks)
         appliedSongConfig = session.document.state.config
         // The engine is bound before the publication is reinstalled, so no
         // timeline of this document can be published onto another document's
@@ -376,12 +375,6 @@ public final class DocumentWorkspace {
         }
     }
 
-    private static func trackMask(_ tracks: Set<Int>) -> UInt32 {
-        tracks.reduce(into: UInt32(0)) { mask, track in
-            if (0..<16).contains(track) { mask |= UInt32(1) << track }
-        }
-    }
-
     private func cameraDidChange(_ change: EditorCamera.Change) {
         grid.refreshCameraPresentation(change)
         if isActive {
@@ -454,8 +447,7 @@ public final class DocumentWorkspace {
             audio.updateSettings(config: appliedSongConfig)
         }
         if isActive && (change.domains.contains(.mixState) || change.trackRemap != nil) {
-            audio.setMuteMask(Self.trackMask(session.mutedTracks))
-            audio.setSoloMask(Self.trackMask(session.soloedTracks))
+            audio.setMix(muted: session.mutedTracks, soloed: session.soloedTracks)
         }
 
         if isActive && change.domains.contains(.bank) {

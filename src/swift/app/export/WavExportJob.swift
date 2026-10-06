@@ -6,15 +6,6 @@ import PorydawPlayback
 import PorydawPlaybackNative
 import PorydawProject
 
-extension AudioSettings {
-    public func applyingSong(_ config: SongConfig) -> AudioSettings {
-        var settings = self
-        settings.songVolume = UInt8(clamping: config.masterVolume)
-        settings.reverb = UInt8(clamping: config.reverb ?? 50)
-        return settings
-    }
-}
-
 public struct WavExportCapture: Sendable {
     public let state: SongState
     public let lease: ProjectBankLease

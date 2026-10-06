@@ -128,8 +128,8 @@ func drawerAutomationPencilCursorKind(
     let pressX = fixture.x(72)
     let pressY = fixture.y(fixture.panLane, 96)
     let pencilBefore = fixture.snapshot
-    _ = page.pointerPress(x: pressX, y: pressY, surface: 1, button: AutomationQtButton.left)
-    _ = page.pointerRelease(x: pressX, y: pressY, button: AutomationQtButton.left)
+    _ = page.pointerPress(x: pressX, y: pressY, surface: 1, button: DrawerQtButton.left)
+    _ = page.pointerRelease(x: pressX, y: pressY, button: DrawerQtButton.left)
     report.expectEqual(
         expected: AutomationCursorKind.pencil.rawValue, actual: page.cursorKind,
         cppID: drawerAutomationCursorKindID,
@@ -165,19 +165,19 @@ func drawerAutomationPencilCursorKind(
     if let node = fixture.projection(fixture.panLane).points.first(where: { $0.tick == 24 }) {
         _ = page.pointerPress(
             x: node.x, y: node.y, surface: 1,
-            button: AutomationQtButton.left, modifiers: AutomationQtModifier.shift)
+            button: DrawerQtButton.left, modifiers: AutomationQtModifier.shift)
         _ = page.pointerMove(
-            x: node.x + 30, y: node.y, buttons: AutomationQtButton.left,
+            x: node.x + 30, y: node.y, buttons: DrawerQtButton.left,
             modifiers: AutomationQtModifier.shift)
         _ = page.pointerMove(
-            x: node.x + 34, y: node.y, buttons: AutomationQtButton.left,
+            x: node.x + 34, y: node.y, buttons: DrawerQtButton.left,
             modifiers: AutomationQtModifier.shift)
         report.expectEqual(
             expected: AutomationCursorKind.sizeHorizontal.rawValue, actual: page.cursorKind,
             cppID: drawerAutomationCursorKindID,
             what: "a Shift node drag locks the time axis")
         _ = page.pointerRelease(
-            x: node.x + 34, y: node.y, button: AutomationQtButton.left,
+            x: node.x + 34, y: node.y, button: DrawerQtButton.left,
             modifiers: AutomationQtModifier.shift)
         report.expectEqual(
             expected: AutomationCursorKind.arrow.rawValue, actual: page.cursorKind,

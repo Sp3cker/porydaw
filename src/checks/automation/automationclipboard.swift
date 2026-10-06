@@ -26,8 +26,8 @@ func drawerAutomationRangeEditAndClipboard(
         let y = fixture.y(fixture.panLane, 80)
         _ = fixture.page.pointerPress(
             x: x, y: y, surface: AutomationInputSurface.plot.rawValue,
-            button: AutomationQtButton.right, modifiers: 0)
-        _ = fixture.page.pointerRelease(x: x, y: y, button: AutomationQtButton.right, modifiers: 0)
+            button: DrawerQtButton.right, modifiers: 0)
+        _ = fixture.page.pointerRelease(x: x, y: y, button: DrawerQtButton.right, modifiers: 0)
         defer { fixture.page.dismissMenu() }
         return fixture.page.publishedMenuRows.first {
             $0.actionId == AutomationMenuAction.rangePaste.rawValue

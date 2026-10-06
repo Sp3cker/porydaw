@@ -317,10 +317,8 @@ public enum AutomationNodeResolver {
             guard let source = frozen.occurrences(at: move.sourceTick).first?.tempoPoint else {
                 return false
             }
-            let bpm = Int(
-                TimeDefaults.tempoBPM(
-                    forMicrosecondsPerQuarterNote: source.microsecondsPerQuarterNote
-                ).rounded())
+            let bpm = TimeDefaults.roundedTempoBPM(
+                forMicrosecondsPerQuarterNote: source.microsecondsPerQuarterNote)
             var destination = TempoPoint(
                 tick: move.tick,
                 microsecondsPerQuarterNote: source.microsecondsPerQuarterNote)

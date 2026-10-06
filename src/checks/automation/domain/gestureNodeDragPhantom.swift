@@ -279,14 +279,14 @@ func drawerAutomationNodeDragAndPhantomOutcomes(
         report.expect(
             tickMove.page.pointerPress(
                 x: start, y: y, surface: 1,
-                button: AutomationQtButton.left),
+                button: DrawerQtButton.left),
             cppID: tickID, message: "the written node takes its drag")
-        _ = tickMove.page.pointerMove(x: start + 30, y: y, buttons: AutomationQtButton.left)
-        _ = tickMove.page.pointerMove(x: finish, y: y, buttons: AutomationQtButton.left)
+        _ = tickMove.page.pointerMove(x: start + 30, y: y, buttons: DrawerQtButton.left)
+        _ = tickMove.page.pointerMove(x: finish, y: y, buttons: DrawerQtButton.left)
         report.expectEqual(
             expected: before, actual: tickMove.snapshot, cppID: tickID,
             what: "a node drag preview writes nothing before release")
-        _ = tickMove.page.pointerRelease(x: finish, y: y, button: AutomationQtButton.left)
+        _ = tickMove.page.pointerRelease(x: finish, y: y, button: DrawerQtButton.left)
         let actual = parameter == .tempo ? tickMove.tempoValues : tickMove.values(tickMove.panLane)
         let expected = parameter == .tempo ? ["96:100", "120:120"] : ["96:60", "120:40"]
         report.expectEqual(
@@ -335,9 +335,9 @@ func drawerAutomationNodeDragAndPhantomOutcomes(
         report.expect(
             scrolled.page.pointerPress(
                 x: 0, y: y, surface: 1,
-                button: AutomationQtButton.left),
+                button: DrawerQtButton.left),
             cppID: phantomID, message: "the origin phantom takes its press")
-        _ = scrolled.page.pointerMove(x: 0, y: y - 30, buttons: AutomationQtButton.left)
+        _ = scrolled.page.pointerMove(x: 0, y: y - 30, buttons: DrawerQtButton.left)
         let firstPreview = AutomationDisplayProbe(scrolled.page)
         let firstCurve = firstPreview.preview.first {
             $0.argb == SceneRectPacking.argb(scrolled.page.palette.selectionEdge) && $0.h <= 2
@@ -347,7 +347,7 @@ func drawerAutomationNodeDragAndPhantomOutcomes(
                 && (firstCurve?.w ?? 0) > independentHitRadius * 2,
             cppID: phantomID,
             message: "an activated phantom paints a full held-value preview curve")
-        _ = scrolled.page.pointerMove(x: 0, y: targetY - 30, buttons: AutomationQtButton.left)
+        _ = scrolled.page.pointerMove(x: 0, y: targetY - 30, buttons: DrawerQtButton.left)
         let movedPreview = AutomationDisplayProbe(scrolled.page)
         let movedCurve = movedPreview.preview.first {
             $0.argb == SceneRectPacking.argb(scrolled.page.palette.selectionEdge) && $0.h <= 2
@@ -368,7 +368,7 @@ func drawerAutomationNodeDragAndPhantomOutcomes(
             what: "a scrolled-origin preview writes nothing")
         _ = scrolled.page.pointerRelease(
             x: 0, y: targetY - 30,
-            button: AutomationQtButton.left)
+            button: DrawerQtButton.left)
         let written = parameter == .tempo ? scrolled.tempoValues : scrolled.values(scrolled.panLane)
         report.expectEqual(
             expected: ["24:110", "120:\(parameter == .tempo ? 120 : 40)"],
@@ -403,18 +403,18 @@ func drawerAutomationNodeDragAndPhantomOutcomes(
         report.expect(
             selected.page.pointerPress(
                 x: sourceX, y: sourceY, surface: 1,
-                button: AutomationQtButton.left),
+                button: DrawerQtButton.left),
             cppID: rangeID, message: "the selected node takes the group drag")
         _ = selected.page.pointerMove(
             x: sourceX + 30, y: sourceY,
-            buttons: AutomationQtButton.left)
+            buttons: DrawerQtButton.left)
         _ = selected.page.pointerMove(
             x: endX, y: sourceY,
-            buttons: AutomationQtButton.left)
+            buttons: DrawerQtButton.left)
         report.expectEqual(
             expected: before, actual: selected.snapshot, cppID: rangeID,
             what: "the selected-range preview writes nothing")
-        _ = selected.page.pointerRelease(x: endX, y: sourceY, button: AutomationQtButton.left)
+        _ = selected.page.pointerRelease(x: endX, y: sourceY, button: DrawerQtButton.left)
         let movedValues = parameter == .tempo ? selected.tempoValues : selected.values(selected.panLane)
         report.expectEqual(
             expected: ["0:80", "144:100", "240:64", "384:110"],

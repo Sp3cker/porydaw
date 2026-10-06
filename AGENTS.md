@@ -14,7 +14,9 @@ in that surface's `proof.*.txt` ledger.
 
 ```
 src/
-  swift/core/      — PorydawCore: document, MIDI, time/note/event editing, history
+  swift/core/      — PorydawCore: song document, MIDI, time/note/event editing, history
+  swift/document/  — PorydawDocument: DocumentSession, service/ (ProjectService), view/ (viewport, time axis, grid, camera, scale, voice-list and automation view types)
+  swift/sample/    — PorydawSample: sample import/decode, DSP, resampling, render, sample WAV I/O
   swift/playback/  — PorydawPlayback: sequencer, C playback bridge
   swift/project/   — Swift project store (asm/midi.cfg/bank files)
   swift/app/       — PorydawApp: session, presenters, audio, drawer, roll, timeline, shell
@@ -24,8 +26,7 @@ src/
   ui/songview/quick/ — production QML (swiftroll/, drawer/, shared controls)
   app/             — native host C ABI: clipboard, QML engine, item cursor, Qt main executor
   render/          — display-list boundary (see below)
-  audio/           — C++ audio engine + C decoders behind swift_playback.h
-  project/         — C++ project service behind swift_project_service.h / banklease.h
+  audio/           — C: miniaudio device, sample codec, swift_playback.h playback ABI
   checks/          — harnesses: swiftcore suites, QML lanes (editorqml/, rollqml/), proof ledgers
 tools/             — Deno build/check/format/proof runners
 external/          — poryaaaa (submodule), dr_libs, stb
@@ -72,10 +73,22 @@ after CMake reconfigures or Swift edits — stale references/rename lie silently
 rename needs `timeout >= 120` cold. References empty while hover works means the
 server predates the index: kill `sourcekit-lsp`; the next query cold-starts.
 
-## File-size discipline
+## Files and modules
 
-Target 200–400 lines per file; review cohesion above 600. One concept per file
-(`src/swift/app/drawer/` is the model). No 80-line fragments either.
+One concept per file, named for it (`drawer/` is the model); cohesion sets size
+— one concept past 600 lines is fine, mixed concepts are the defect. Never split
+into `Type+Aspect` fragments to stay under a number; fragments under ~100 lines
+fold back unless a separately named concept.
+
+Modules point one way toward `PorydawCore` (each `CMakeLists.txt` is the
+authority): Project/Playback/Document build on Core (Document also on Project);
+`AppAudio`/`AppEventList`/`AppCommands` see only Core (+Playback for audio);
+`PorydawApp` sits on top. Shared code lives in the lowest module all consumers
+already import; single-consumer code stays in its consumer; never add a
+dependency to reach code, move the shared part down. `internal` by default,
+`public` only for cross-module callers. Feature code needing only lower modules
+may own a module (`PorydawAppEventList` is the model); a new module must remove
+a `PorydawApp` dependency, not just tidy a folder.
 
 ## Worktrees and Git
 

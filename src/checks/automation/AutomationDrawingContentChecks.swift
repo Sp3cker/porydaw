@@ -185,7 +185,7 @@ func drawerAutomationDrawPreviewChecks(
         message: "the resting lane draws the 72 node and its held run")
     let before = fixture.snapshot
     let pressY = fixture.y(fixture.panLane, 20)
-    let button = AutomationQtButton.left
+    let button = DrawerQtButton.left
     _ = page.pointerPress(x: fixture.x(48), y: pressY, surface: 1, button: button)
     _ = page.pointerMove(x: fixture.x(48), y: pressY - 30, buttons: button)
     _ = page.pointerMove(x: fixture.x(88), y: pressY - 30, buttons: button)
