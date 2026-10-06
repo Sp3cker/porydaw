@@ -111,10 +111,8 @@ extension DocumentSession {
             newEngineTrackCount: second.newEngineTrackCount)
     }
 
-    /// Coordinates selection reconciliation before presentation/playback: dead
-    /// note references are pruned and the track scope follows the remap, then
-    /// the timeline is rebuilt via the state factory, playback is published,
-    /// and the presenter is notified.
+    /// Reconciles selection before rebuilding with retained scratch, publishing
+    /// playback, and notifying presentation.
     internal func handleDocumentChange(_ change: DocumentChange) {
         withStateChanges {
             if let remap = change.trackRemap {
@@ -202,7 +200,7 @@ extension DocumentSession {
                 }
             }
             onViewportRepair?(.scaleFold)
-            timeline = PlaybackTimeline.build(state: document.state, sampleRate: timeline.sampleRate)
+            timeline = timelineBuilder.build(state: document.state, sampleRate: timeline.sampleRate)
             onViewportRepair?(.timeDomain)
             onPlayback?(timeline)
             var domains: SessionChangeDomains = [.document, .dirty, .history]

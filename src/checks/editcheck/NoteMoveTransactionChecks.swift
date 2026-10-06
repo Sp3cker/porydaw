@@ -10,6 +10,8 @@ internal func coreNoteMoveTransactionChecks(_ report: CheckReport) {
         try coreNoteMoveCollisionRejections(report, id)
         try coreNoteIncrementalTransactions(report, id)
         try coreNoteMoveAdmissionChecks(report)
+        try coreNoteCachedMoveOrigins(report)
+        try coreNoteCachedLengthOrigins(report)
     } catch {
         report.fail(id, "note move transaction checks failed: \(error)")
     }
@@ -246,4 +248,136 @@ private func coreNoteMoveAdmissionChecks(_ report: CheckReport) throws {
     report.expectEqual(
         expected: duplicateBefore.position, actual: coreRangeHistoryPosition(duplicates, report, id),
         cppID: id, what: "admitted duplicate no-op adds no history")
+}
+
+@MainActor
+private func coreNoteCachedMoveOrigins(_ report: CheckReport) throws {
+    let id = "swiftcore/noteMoveOriginLifetime"
+    let document = try coreNoteDocument(trackCount: 1)
+    let ids = try document.addNotes([
+        NewNote(track: 0, tick: 20, pitch: 60, duration: 20, velocity: 81),
+        NewNote(track: 0, tick: 20, pitch: 59, duration: 10, velocity: 92),
+    ])
+    let baseline = document.state
+    let baselineNotes = document.notes(in: 0)
+    let baselineBytes = try baseline.file.encoded()
+    let beforeIndex = document.history.undoIndex
+    for (delta, pitch, survivorTick, survivorDuration) in [
+        (1, 60, 30, 10), (1, 61, 20, 20), (-1, 60, 30, 10),
+    ] {
+        document.nudgeNotes([ids[1]], byTicks: 0, byKeys: delta)
+        report.expect(
+            document.note(ids[1])?.pitch == UInt8(pitch)
+                && document.note(ids[0])?.tick == Tick(survivorTick)
+                && document.note(ids[0])?.duration == Tick(survivorDuration),
+            cppID: id, message: "three compatible nudges trim, restore, then trim the original collision")
+    }
+    report.expectEqual(
+        expected: beforeIndex + 1, actual: document.history.undoIndex, cppID: id,
+        what: "three compatible nudges retain one history entry")
+    let collidedNotes = document.notes(in: 0)
+    let collidedState = document.state
+    let collidedBytes = try collidedState.file.encoded()
+    document.nudgeNotes([ids[1]], byTicks: 0, byKeys: -1)
+    report.expectEqual(
+        expected: baselineBytes, actual: try document.state.file.encoded(), cppID: id,
+        what: "relative cancellation restores exact bytes including the collision survivor")
+    report.expectEqual(
+        expected: beforeIndex, actual: document.history.undoIndex, cppID: id,
+        what: "relative cancellation discards only the grouped movement")
+
+    for _ in 0..<3 { document.nudgeNotes([ids[1]], byTicks: 1, byKeys: 0) }
+    report.expect(
+        document.note(ids[1])?.tick == 23, cppID: id,
+        message: "a fresh three-press group after cancellation uses the restored origin")
+    report.expect(document.history.undoDocument(), cppID: id, message: "fresh merged group undoes")
+    report.expectEqual(
+        expected: baselineBytes, actual: try document.state.file.encoded(), cppID: id,
+        what: "one undo restores the fresh group's exact origin")
+    report.expect(document.history.redoDocument(), cppID: id, message: "fresh merged group redoes")
+    document.nudgeNotes([ids[1]], byTicks: 1, byKeys: 0)
+    report.expect(
+        document.note(ids[1])?.tick == 24, cppID: id,
+        message: "a compatible nudge after redo rebuilds the original group origin")
+    report.expect(document.history.undoDocument(), cppID: id, message: "post-redo merged group undoes")
+    report.expectEqual(
+        expected: baselineBytes, actual: try document.state.file.encoded(), cppID: id,
+        what: "undo after a post-redo merge restores the exact baseline")
+    document.nudgeNotes([ids[1]], byTicks: 2, byKeys: 0)
+    report.expect(
+        document.note(ids[1])?.tick == 22 && !document.history.canRedo, cppID: id,
+        message: "new movement after undo replaces the redo branch without a stale origin")
+    report.expect(
+        baselineNotes.count == 2
+            && baselineNotes.first(where: { $0.id == ids[0] })?.tick == 20
+            && baselineNotes.first(where: { $0.id == ids[0] })?.duration == 20
+            && baselineNotes.first(where: { $0.id == ids[1] })?.pitch == 59,
+        cppID: id, message: "retained origin notes preserve the original collision spans and pitches")
+    report.expectEqual(
+        expected: baselineBytes, actual: try baseline.file.encoded(), cppID: id,
+        what: "retained origin state remains byte-for-byte unchanged")
+    report.expect(
+        collidedNotes.first(where: { $0.id == ids[0] })?.tick == 30
+            && collidedNotes.first(where: { $0.id == ids[1] })?.pitch == 60,
+        cppID: id, message: "retained intermediate note buffers survive cancellation and history replay")
+    report.expectEqual(
+        expected: collidedBytes, actual: try collidedState.file.encoded(), cppID: id,
+        what: "retained intermediate event buffers remain unchanged")
+
+    let group = HistoryGroup()
+    document.moveNotes([ids[1]], byTicks: 0, byKeys: 1, group: group)
+    document.nudgeVelocities([ids[1]], by: -1)
+    let foreignBoundary = try document.state.file.encoded()
+    document.moveNotes([ids[1]], byTicks: 0, byKeys: 2, group: group)
+    report.expect(
+        document.note(ids[1])?.pitch == 62 && document.note(ids[1])?.velocity == 91,
+        cppID: id, message: "a foreign commit makes a reused group start from the current state")
+    report.expect(document.history.undoDocument(), cppID: id, message: "post-boundary movement undoes")
+    report.expectEqual(
+        expected: foreignBoundary, actual: try document.state.file.encoded(), cppID: id,
+        what: "undo restores the foreign boundary rather than a stale group origin")
+}
+
+@MainActor
+private func coreNoteCachedLengthOrigins(_ report: CheckReport) throws {
+    let id = "swiftcore/noteLengthOriginLifetime"
+    let document = try coreNoteDocument(trackCount: 1)
+    let ids = try document.addNotes([
+        NewNote(track: 0, tick: 20, pitch: 60, duration: 10, velocity: 81),
+        NewNote(track: 0, tick: 35, pitch: 60, duration: 15, velocity: 92),
+    ])
+    let baseline = try document.state.file.encoded()
+    let beforeIndex = document.history.undoIndex
+    for delta in [Int64(10), 5, 5] { document.resizeNoteLengths([ids[0]], byTicks: delta) }
+    report.expect(
+        document.note(ids[0])?.duration == 30 && document.note(ids[1]) == nil
+            && document.history.undoIndex == beforeIndex + 1,
+        cppID: id, message: "three compatible length presses merge while fully covering the neighbor")
+    let retained = document.notes(in: 0)
+    document.resizeNoteLengths([ids[0]], byTicks: -10)
+    report.expect(
+        document.note(ids[0])?.duration == 20 && document.note(ids[1])?.tick == 40
+            && document.note(ids[1])?.duration == 10,
+        cppID: id, message: "compatible resize reversal restores the origin's trimmed neighbor")
+    report.expect(document.history.undoDocument(), cppID: id, message: "merged lengths undo once")
+    report.expectEqual(
+        expected: baseline, actual: try document.state.file.encoded(), cppID: id,
+        what: "length undo restores exact original bytes")
+    report.expect(
+        retained.count == 1 && retained.first?.duration == 30,
+        cppID: id, message: "retained paired notes remain unchanged through resize reversal and undo")
+    document.resizeNoteLengths([ids[0]], byTicks: -100)
+    let clamped = try document.state.file.encoded()
+    for _ in 0..<3 { document.resizeNoteLengths([ids[0]], byTicks: 1) }
+    report.expect(
+        document.note(ids[0])?.duration == 4 && document.history.undoIndex == beforeIndex + 2,
+        cppID: id, message: "clamped reversal splits and subsequent compatible lengths merge")
+    report.expect(document.history.undoDocument(), cppID: id, message: "post-clamp group undoes")
+    report.expectEqual(
+        expected: clamped, actual: try document.state.file.encoded(), cppID: id,
+        what: "post-clamp undo restores the split origin exactly")
+    report.expect(document.history.undoDocument(), cppID: id, message: "clamped length edit undoes")
+    report.expectEqual(
+        expected: baseline, actual: try document.state.file.encoded(), cppID: id,
+        what: "second undo restores the original length bytes")
 }

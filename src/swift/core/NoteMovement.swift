@@ -8,12 +8,13 @@ extension SongDocument {
         group: HistoryGroup? = nil
     ) {
         guard history.acceptsDocumentMutation, !ids.isEmpty else { return }
-        let operation = HistoryOperation.moveNotes(ids.sorted { $0.rawValue < $1.rawValue })
+        let orderedIDs = ids.sorted { $0.rawValue < $1.rawValue }
+        let operation = HistoryOperation.moveNotes(orderedIDs)
         let base = origin(for: group, operation: operation)
         guard let notes = resolve(ids, in: base),
             let moves = noteMoves(notes.span, byTicks: tickDelta, pitches: .relative(keyDelta))
         else { return }
-        relocate(ids, base: base, group: group, operation: operation, relocations: moves)
+        relocate(orderedIDs, base: base, group: group, operation: operation, relocations: moves)
     }
 
     /// Absolute pitches and a cumulative tick delta relative to the gesture origin.
@@ -24,12 +25,13 @@ extension SongDocument {
         group: HistoryGroup? = nil
     ) -> Bool {
         guard history.acceptsDocumentMutation, !ids.isEmpty else { return false }
-        let operation = HistoryOperation.moveNotesToPitches(ids.sorted { $0.rawValue < $1.rawValue })
+        let orderedIDs = ids.sorted { $0.rawValue < $1.rawValue }
+        let operation = HistoryOperation.moveNotesToPitches(orderedIDs)
         let base = origin(for: group, operation: operation)
         guard let notes = resolve(ids, in: base),
             let moves = noteMoves(notes.span, byTicks: delta, pitches: .absolute(pitches))
         else { return false }
-        return relocate(ids, base: base, group: group, operation: operation, relocations: moves)
+        return relocate(orderedIDs, base: base, group: group, operation: operation, relocations: moves)
     }
 
     /// Incremental keyboard movement. Compatible presses merge; a clamped reversal
@@ -71,8 +73,11 @@ extension SongDocument {
             let ticks = previous.ticks.addingReportingOverflow(delta)
             let keys = previous.keys.addingReportingOverflow(pitches.keyDelta)
             if !ticks.overflow && !keys.overflow {
-                var candidate = state
-                previous.changes.apply(to: &candidate, direction: .undo)
+                let previousOperation: HistoryOperation =
+                    pitches.isAbsolute
+                    ? .nudgeNotePitches(orderedIDs, previous.ticks)
+                    : .nudgeNotes(orderedIDs, previous.ticks, previous.keys)
+                let candidate = origin(for: previous.group, operation: previousOperation)
                 let cumulative = pitches.isAbsolute ? pitches : .relative(keys.partialValue)
                 if let original = resolve(ids, in: candidate),
                     let replay = noteMoves(original.span, byTicks: ticks.partialValue, pitches: cumulative),
@@ -93,7 +98,7 @@ extension SongDocument {
             ? .nudgeNotePitches(orderedIDs, totalTicks)
             : .nudgeNotes(orderedIDs, totalTicks, totalKeys)
         return relocate(
-            ids, base: base, group: group ?? HistoryGroup(), operation: operation,
+            orderedIDs, base: base, group: group ?? HistoryGroup(), operation: operation,
             relocations: moves)
     }
 }

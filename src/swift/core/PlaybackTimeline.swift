@@ -2,8 +2,7 @@ import Foundation
 
 public let playbackTempoEventType: UInt8 = 0x01
 
-/// Playback-only song settings. Reconcile this with Task 2's `SongConfig` once
-/// that type owns the canonical decoded project flags.
+/// Clock and gate policies projected from SongConfig for scheduling.
 public struct PlaybackSettings: Equatable, Sendable {
     public let exactGate: Bool
     public let extendedClocks: Bool
@@ -162,21 +161,13 @@ public struct PlaybackTimeline: Sendable {
         sampleRate: Double,
         settings: PlaybackSettings = PlaybackSettings()
     ) -> PlaybackTimeline {
-        buildTimeline(
-            file: file, authoritativeTempo: tempo, sampleRate: sampleRate,
-            settings: settings)
+        var builder = PlaybackTimelineBuilder()
+        return builder.build(file: file, tempo: tempo, sampleRate: sampleRate, settings: settings)
     }
-    /// The sole document-state projection factory (Task 6 amendment).
-    /// Delegates to the file-based builder with the authoritative state tempo
-    /// and PlaybackSettings derived from the state's decoded config; tempo
-    /// metas stay stripped from the file (never a file-tempo fallback).
-    /// Neither mutates, encodes/decodes, nor creates a settings owner.
+    /// Cold convenience factory using authoritative state tempo and decoded settings.
     public static func build(state: borrowing SongState, sampleRate: Double) -> PlaybackTimeline {
-        build(
-            file: state.file, tempo: state.tempo, sampleRate: sampleRate,
-            settings: PlaybackSettings(
-                exactGate: state.config.exactGate,
-                extendedClocks: state.config.extendedClocks))
+        var builder = PlaybackTimelineBuilder()
+        return builder.build(state: state, sampleRate: sampleRate)
     }
 
     public var hasLoop: Bool {
@@ -225,6 +216,11 @@ private struct RawOtherEvent {
     let order: Int
 }
 
+private struct ScheduledPlaybackEvent {
+    let event: PlaybackEvent
+    let order: Int
+}
+
 private struct MutableTrack {
     var name = ""
     var used = false
@@ -236,287 +232,328 @@ private struct MutableTrack {
     }
 }
 
-private func buildTimeline(
-    file: borrowing MidiFile, authoritativeTempo: [TempoPoint]?,
-    sampleRate: Double, settings: PlaybackSettings
-) -> PlaybackTimeline {
-    let ticksPerBeat = UInt32(file.division)
-    let orderedTempo = normalizedTempo(authoritativeTempo ?? extractedTempo(from: file))
-    let tempoMap = buildTempoMap(
-        orderedTempo, ticksPerBeat: ticksPerBeat,
-        sampleRate: sampleRate)
+/// Retains construction scratch without retaining aliases of published timeline arrays.
+/// Keep one builder in the synchronous producer; builds require exclusive mutable access.
+public struct PlaybackTimelineBuilder {
+    private var orderedTempo: [OrderedTempo] = []
+    private var rawEvents: [RawPlaybackEvent] = []
+    private var rawOthers: [RawOtherEvent] = []
+    private var timeSignatures: [(point: PlaybackTimeSignature, order: Int)] = []
+    private var trackNames: [String] = []
+    private var chunkToEngine: [Int] = []
+    private var mutableTracks = Array(repeating: MutableTrack(), count: TrackLimits.hardwareCapacity)
+    private var activeNoteTicks = [Tick?](repeating: nil, count: TrackLimits.hardwareCapacity * 128)
+    private var scheduledEvents: [ScheduledPlaybackEvent] = []
+    private var tempoEvents: [PlaybackEvent] = []
 
-    var rawEvents: [RawPlaybackEvent] = []
-    var rawOthers: [RawOtherEvent] = []
-    var timeSignatures: [(point: PlaybackTimeSignature, order: Int)] = []
-    var trackNames = Array(repeating: "", count: file.chunks.count)
-    var loopStartTick = TimeDefaults.noTick
-    var loopEndTick = TimeDefaults.noTick
+    /// Creates an empty builder whose scratch grows to fit subsequent input.
+    public init() {}
 
-    for (chunkIndex, chunk) in file.chunks.enumerated() {
-        var channelPrefix: Int?
-        for event in chunk.events {
-            if event.isChannel {
-                channelPrefix = nil
-            } else if case .meta(let type, let data) = event.payload,
-                type == 0x20, let byte = data.first
-            {
-                channelPrefix = Int(byte & 0x0F)
+    /// Projects authoritative document state into an independent immutable timeline.
+    /// - Parameters:
+    ///   - state: Canonical state whose tempo and decoded settings drive scheduling.
+    ///   - sampleRate: Output samples per second.
+    /// - Returns: A timeline that remains valid through later builds.
+    public mutating func build(state: borrowing SongState, sampleRate: Double) -> PlaybackTimeline {
+        build(
+            file: state.file, tempo: state.tempo, sampleRate: sampleRate,
+            settings: PlaybackSettings(
+                exactGate: state.config.exactGate,
+                extendedClocks: state.config.extendedClocks))
+    }
+
+    /// Projects MIDI with optional authoritative tempo into an independent timeline.
+    /// - Parameters:
+    ///   - file: Canonical MIDI input, read only for this synchronous build.
+    ///   - tempo: Authoritative tempo, or nil to extract file tempo metas.
+    ///   - sampleRate: Output samples per second.
+    ///   - settings: Hardware clock and gate scheduling policy.
+    /// - Returns: A timeline with no array-storage aliases retained by this builder.
+    public mutating func build(
+        file: borrowing MidiFile, tempo: borrowing [TempoPoint]? = nil,
+        sampleRate: Double, settings: PlaybackSettings = PlaybackSettings()
+    ) -> PlaybackTimeline {
+        orderedTempo.removeAll(keepingCapacity: true)
+        if let tempo = copy tempo {
+            let points = tempo.span
+            for index in points.indices {
+                orderedTempo.append(OrderedTempo(point: points[index], order: index))
             }
-
-            switch event.payload {
-            case .channel(_, let data0, let data1):
-                let type = event.typeNibble
-                switch type {
-                case 0x8, 0xB, 0xC, 0xE:
-                    rawEvents.append(
-                        RawPlaybackEvent(
-                            tick: event.tick, midiChunk: chunkIndex, type: type,
-                            data0: data0, data1: data1, noteID: NoteID(), order: rawEvents.count))
-                case 0x9:
-                    let playType: UInt8 = data1 == 0 ? 0x8 : 0x9
-                    rawEvents.append(
-                        RawPlaybackEvent(
-                            tick: event.tick, midiChunk: chunkIndex, type: playType,
-                            data0: data0, data1: data1,
-                            noteID: playType == 0x9 ? (event.noteID ?? NoteID()) : NoteID(),
-                            order: rawEvents.count))
-                case 0xA:
-                    rawOthers.append(
-                        RawOtherEvent(
-                            tick: event.tick, midiChunk: chunkIndex,
-                            label: "Poly aftertouch key \(data0) = \(data1)", order: rawOthers.count))
-                case 0xD:
-                    rawOthers.append(
-                        RawOtherEvent(
-                            tick: event.tick, midiChunk: chunkIndex,
-                            label: "Channel pressure \(data0)", order: rawOthers.count))
-                default:
-                    break
-                }
-
-            case .systemExclusive(_, let data):
-                rawOthers.append(
-                    RawOtherEvent(
-                        tick: event.tick, midiChunk: chunkIndex,
-                        label: "SysEx (\(data.count) bytes)", order: rawOthers.count))
-
-            case .meta(let type, let data):
-                if type == 0x51 && data.count == 3 {
-                    continue
-                }
-                if type == 0x58 && data.count >= 2 {
-                    timeSignatures.append(
-                        (
-                            PlaybackTimeSignature(
-                                tick: event.tick, numerator: data[0], denominatorPowerOfTwo: data[1]),
-                            timeSignatures.count
-                        ))
-                } else if type == 0x20 && !data.isEmpty {
-                    continue
-                } else if type == 0x03 && channelPrefix != nil && !MidiFile.metaIsMarker(event) {
-                    continue
-                } else if type == 0x03 && channelPrefix == nil && trackNames[chunkIndex].isEmpty {
-                    trackNames[chunkIndex] = latin1(data.prefix(64)).trimmingCharacters(
-                        in: .whitespacesAndNewlines)
-                } else if (0x01...0x07).contains(type) {
-                    let markerBytes = data.prefix(32)
-                    if isExactLoopMarker(markerBytes, marker: 0x5B), loopStartTick == TimeDefaults.noTick {
-                        loopStartTick = event.tick
-                    } else if isExactLoopMarker(markerBytes, marker: 0x5D),
-                        loopEndTick == TimeDefaults.noTick
-                    {
-                        loopEndTick = event.tick
-                    } else {
-                        let text = latin1(markerBytes).trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !text.isEmpty {
-                            let names = [
-                                "Text", "Copyright", "Track name", "Instrument",
-                                "Lyric", "Marker", "Cue point",
-                            ]
-                            rawOthers.append(
-                                RawOtherEvent(
-                                    tick: event.tick, midiChunk: chunkIndex,
-                                    label: "\(names[Int(type) - 1]): \(text)", order: rawOthers.count))
-                        }
+        } else {
+            for chunk in file.chunks {
+                for event in chunk.events {
+                    guard case .meta(let type, let data) = event.payload, type == 0x51, data.count == 3 else {
+                        continue
                     }
-                } else {
-                    rawOthers.append(
-                        RawOtherEvent(
-                            tick: event.tick, midiChunk: chunkIndex,
-                            label: String(format: "Meta 0x%02x (%d bytes)", type, data.count),
-                            order: rawOthers.count))
+                    let value = UInt32(data[0]) << 16 | UInt32(data[1]) << 8 | UInt32(data[2])
+                    let point = TempoPoint(tick: event.tick, microsecondsPerQuarterNote: value)
+                    orderedTempo.append(OrderedTempo(point: point, order: orderedTempo.count))
                 }
             }
         }
-    }
-
-    rawEvents.sort { lhs, rhs in
-        lhs.tick == rhs.tick ? lhs.order < rhs.order : lhs.tick < rhs.tick
-    }
-    rawOthers.sort { lhs, rhs in
-        lhs.tick == rhs.tick ? lhs.order < rhs.order : lhs.tick < rhs.tick
-    }
-    timeSignatures.sort { lhs, rhs in
-        lhs.point.tick == rhs.point.tick ? lhs.order < rhs.order : lhs.point.tick < rhs.point.tick
-    }
-
-    let mapping = file.engineTracks()
-    var chunkToEngine = Array(repeating: -1, count: file.chunks.count)
-    var mutableTracks = Array(repeating: MutableTrack(), count: TrackLimits.hardwareCapacity)
-    for engineTrack in 0..<mapping.usedTrackCount {
-        guard let chunkIndex = mapping.tracks[engineTrack].midiChunk else { continue }
-        chunkToEngine[chunkIndex] = engineTrack
-        mutableTracks[engineTrack].used = true
-        mutableTracks[engineTrack].name = trackNames[chunkIndex]
-    }
-
-    var activeNoteTicks = [Tick?](
-        repeating: nil,
-        count: TrackLimits.hardwareCapacity * 128)
-    var scheduledEvents: [(event: PlaybackEvent, order: Int)] = []
-    scheduledEvents.reserveCapacity(rawEvents.count)
-    var musicalTempo = TempoCursor()
-    for raw in rawEvents {
-        let engineTrack = chunkToEngine[raw.midiChunk]
-        guard engineTrack >= 0 else { continue }
-        let key = engineTrack * 128 + Int(raw.data0 & 0x7F)
-        var sample = musicalTempo.sample(
-            for: UInt64(raw.tick), tempoMap: tempoMap,
-            ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
-        if raw.type == 0x9 {
-            activeNoteTicks[key] = raw.tick
-        } else if raw.type == 0x8, let noteOnTick = activeNoteTicks[key],
-            raw.tick >= noteOnTick
-        {
-            activeNoteTicks[key] = nil
-            sample = gateEndSample(
-                noteOnTick: noteOnTick, noteOffTick: raw.tick, tempoMap: tempoMap,
-                ticksPerBeat: ticksPerBeat, sampleRate: sampleRate, settings: settings)
+        orderedTempo.sort {
+            $0.point.tick == $1.point.tick ? $0.order < $1.order : $0.point.tick < $1.point.tick
         }
-        let event = PlaybackEvent(
-            sample: sample, tick: raw.tick, type: raw.type, track: UInt8(engineTrack),
-            data0: raw.data0, data1: raw.data1, noteID: raw.noteID)
-        scheduledEvents.append((event, raw.order))
-        if event.type == 0x9 { mutableTracks[engineTrack].noteCount += 1 }
-        if event.type == 0xC && mutableTracks[engineTrack].firstProgram < 0 {
-            mutableTracks[engineTrack].firstProgram = Int(event.data0)
-        }
-    }
-    scheduledEvents.sort { lhs, rhs in
-        if lhs.event.sample != rhs.event.sample { return lhs.event.sample < rhs.event.sample }
-        if lhs.event.type == 0x8 && rhs.event.type != 0x8 { return true }
-        if rhs.event.type == 0x8 && lhs.event.type != 0x8 { return false }
-        return lhs.order < rhs.order
-    }
-    let musicalEvents = scheduledEvents.map(\.event)
+        let ticksPerBeat = UInt32(file.division)
+        let tempoMap = buildTempoMap(
+            orderedTempo.span, ticksPerBeat: ticksPerBeat,
+            sampleRate: sampleRate)
 
-    var tempoEvents: [PlaybackEvent] = []
-    tempoEvents.reserveCapacity(tempoMap.count)
-    for point in tempoMap {
-        let roundedBPM = point.beatsPerMinute.isFinite ? Int(point.beatsPerMinute + 0.5) : 0x3FFF
-        let bpm = min(max(roundedBPM, 1), 0x3FFF)
-        tempoEvents.append(
-            PlaybackEvent(
-                sample: UInt64(point.sampleOrigin + 0.5), tick: point.tick,
-                type: playbackTempoEventType, track: 0,
-                data0: UInt8(bpm & 0x7F), data1: UInt8((bpm >> 7) & 0x7F)))
-    }
+        rawEvents.removeAll(keepingCapacity: true)
+        rawOthers.removeAll(keepingCapacity: true)
+        timeSignatures.removeAll(keepingCapacity: true)
+        trackNames.removeAll(keepingCapacity: true)
+        trackNames.reserveCapacity(file.chunks.count)
+        for _ in file.chunks.indices { trackNames.append("") }
+        var loopStartTick = TimeDefaults.noTick
+        var loopEndTick = TimeDefaults.noTick
 
-    let events = mergeTempoFirst(tempoEvents, musicalEvents)
-    var lengthSamples: UInt64 = 0
-    var lengthTicks: Tick = 0
-    for event in events {
-        lengthSamples = max(lengthSamples, event.sample)
-        lengthTicks = max(lengthTicks, event.tick)
-    }
+        for (chunkIndex, chunk) in file.chunks.enumerated() {
+            var channelPrefix: Int?
+            for event in chunk.events {
+                if event.isChannel {
+                    channelPrefix = nil
+                } else if case .meta(let type, let data) = event.payload,
+                    type == 0x20, let byte = data.first
+                {
+                    channelPrefix = Int(byte & 0x0F)
+                }
 
-    let loopStartSample =
-        loopStartTick == TimeDefaults.noTick
-        ? UInt64.max
-        : sampleAssumingSegment(
-            for: Double(loopStartTick),
-            point: tempoMap[
-                lastIndex(
-                    atOrBefore: Double(loopStartTick), in: tempoMap,
-                    key: { Double($0.tick) })],
-            ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
-    let loopEndSample =
-        loopEndTick == TimeDefaults.noTick
-        ? UInt64.max
-        : sampleAssumingSegment(
-            for: Double(loopEndTick),
-            point: tempoMap[
-                lastIndex(
-                    atOrBefore: Double(loopEndTick), in: tempoMap,
-                    key: { Double($0.tick) })],
-            ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
-    if loopEndTick != TimeDefaults.noTick { lengthTicks = max(lengthTicks, loopEndTick) }
+                switch event.payload {
+                case .channel(_, let data0, let data1):
+                    let type = event.typeNibble
+                    switch type {
+                    case 0x8, 0xB, 0xC, 0xE:
+                        rawEvents.append(
+                            RawPlaybackEvent(
+                                tick: event.tick, midiChunk: chunkIndex, type: type,
+                                data0: data0, data1: data1, noteID: NoteID(), order: rawEvents.count))
+                    case 0x9:
+                        let playType: UInt8 = data1 == 0 ? 0x8 : 0x9
+                        rawEvents.append(
+                            RawPlaybackEvent(
+                                tick: event.tick, midiChunk: chunkIndex, type: playType,
+                                data0: data0, data1: data1,
+                                noteID: playType == 0x9 ? (event.noteID ?? NoteID()) : NoteID(),
+                                order: rawEvents.count))
+                    case 0xA:
+                        rawOthers.append(
+                            RawOtherEvent(
+                                tick: event.tick, midiChunk: chunkIndex,
+                                label: "Poly aftertouch key \(data0) = \(data1)", order: rawOthers.count))
+                    case 0xD:
+                        rawOthers.append(
+                            RawOtherEvent(
+                                tick: event.tick, midiChunk: chunkIndex,
+                                label: "Channel pressure \(data0)", order: rawOthers.count))
+                    default:
+                        break
+                    }
 
-    var otherEvents: [PlaybackOtherEvent] = []
-    otherEvents.reserveCapacity(rawOthers.count)
-    var otherTempo = TempoCursor()
-    for raw in rawOthers {
-        let track = chunkToEngine[raw.midiChunk]
-        otherEvents.append(
-            PlaybackOtherEvent(
-                tick: raw.tick,
-                sample: otherTempo.sample(
-                    for: UInt64(raw.tick), tempoMap: tempoMap,
-                    ticksPerBeat: ticksPerBeat, sampleRate: sampleRate),
-                track: track, label: raw.label))
-        lengthTicks = max(lengthTicks, raw.tick)
-    }
+                case .systemExclusive(_, let data):
+                    rawOthers.append(
+                        RawOtherEvent(
+                            tick: event.tick, midiChunk: chunkIndex,
+                            label: "SysEx (\(data.count) bytes)", order: rawOthers.count))
 
-    return PlaybackTimeline(
-        events: events, tracks: mutableTracks.map(\.value), tempoMap: tempoMap,
-        timeSignatures: timeSignatures.map(\.point), otherEvents: otherEvents,
-        sampleRate: sampleRate, ticksPerBeat: ticksPerBeat,
-        lengthSamples: lengthSamples, lengthTicks: lengthTicks,
-        loopStartSample: loopStartSample, loopEndSample: loopEndSample,
-        loopStartTick: loopStartTick, loopEndTick: loopEndTick,
-        usedTrackCount: mapping.usedTrackCount, droppedTracks: mapping.droppedTracks,
-        settings: settings)
-}
-
-private func extractedTempo(from file: borrowing MidiFile) -> [TempoPoint] {
-    var result: [TempoPoint] = []
-    for chunk in file.chunks {
-        for event in chunk.events {
-            guard case .meta(let type, let data) = event.payload, type == 0x51, data.count == 3 else {
-                continue
+                case .meta(let type, let data):
+                    if type == 0x51 && data.count == 3 {
+                        continue
+                    }
+                    if type == 0x58 && data.count >= 2 {
+                        timeSignatures.append(
+                            (
+                                PlaybackTimeSignature(
+                                    tick: event.tick, numerator: data[0], denominatorPowerOfTwo: data[1]),
+                                timeSignatures.count
+                            ))
+                    } else if type == 0x20 && !data.isEmpty {
+                        continue
+                    } else if type == 0x03 && channelPrefix != nil && !MidiFile.metaIsMarker(event) {
+                        continue
+                    } else if type == 0x03 && channelPrefix == nil && trackNames[chunkIndex].isEmpty {
+                        trackNames[chunkIndex] = latin1(data.prefix(64)).trimmingCharacters(
+                            in: .whitespacesAndNewlines)
+                    } else if (0x01...0x07).contains(type) {
+                        let markerBytes = data.prefix(32)
+                        if isExactLoopMarker(markerBytes, marker: 0x5B), loopStartTick == TimeDefaults.noTick {
+                            loopStartTick = event.tick
+                        } else if isExactLoopMarker(markerBytes, marker: 0x5D),
+                            loopEndTick == TimeDefaults.noTick
+                        {
+                            loopEndTick = event.tick
+                        } else {
+                            let text = latin1(markerBytes).trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !text.isEmpty {
+                                let names = [
+                                    "Text", "Copyright", "Track name", "Instrument",
+                                    "Lyric", "Marker", "Cue point",
+                                ]
+                                rawOthers.append(
+                                    RawOtherEvent(
+                                        tick: event.tick, midiChunk: chunkIndex,
+                                        label: "\(names[Int(type) - 1]): \(text)", order: rawOthers.count))
+                            }
+                        }
+                    } else {
+                        rawOthers.append(
+                            RawOtherEvent(
+                                tick: event.tick, midiChunk: chunkIndex,
+                                label: String(format: "Meta 0x%02x (%d bytes)", type, data.count),
+                                order: rawOthers.count))
+                    }
+                }
             }
-            let value = UInt32(data[0]) << 16 | UInt32(data[1]) << 8 | UInt32(data[2])
-            result.append(TempoPoint(tick: event.tick, microsecondsPerQuarterNote: value))
         }
-    }
-    return result
-}
 
-private func normalizedTempo(_ points: [TempoPoint]) -> [OrderedTempo] {
-    var ordered = points.enumerated().map {
-        OrderedTempo(point: $0.element, order: $0.offset)
+        rawEvents.sort { lhs, rhs in
+            lhs.tick == rhs.tick ? lhs.order < rhs.order : lhs.tick < rhs.tick
+        }
+        rawOthers.sort { lhs, rhs in
+            lhs.tick == rhs.tick ? lhs.order < rhs.order : lhs.tick < rhs.tick
+        }
+        timeSignatures.sort { lhs, rhs in
+            lhs.point.tick == rhs.point.tick ? lhs.order < rhs.order : lhs.point.tick < rhs.point.tick
+        }
+
+        let mapping = file.engineTracks()
+        chunkToEngine.removeAll(keepingCapacity: true)
+        chunkToEngine.reserveCapacity(file.chunks.count)
+        for _ in file.chunks.indices { chunkToEngine.append(-1) }
+        for index in mutableTracks.indices { mutableTracks[index] = MutableTrack() }
+        for engineTrack in 0..<mapping.usedTrackCount {
+            guard let chunkIndex = mapping.tracks[engineTrack].midiChunk else { continue }
+            chunkToEngine[chunkIndex] = engineTrack
+            mutableTracks[engineTrack].used = true
+            mutableTracks[engineTrack].name = trackNames[chunkIndex]
+        }
+
+        for index in activeNoteTicks.indices { activeNoteTicks[index] = nil }
+        scheduledEvents.removeAll(keepingCapacity: true)
+        scheduledEvents.reserveCapacity(rawEvents.count)
+        var musicalTempo = TempoCursor()
+        for raw in rawEvents {
+            let engineTrack = chunkToEngine[raw.midiChunk]
+            guard engineTrack >= 0 else { continue }
+            let key = engineTrack * 128 + Int(raw.data0 & 0x7F)
+            var sample = musicalTempo.sample(
+                for: UInt64(raw.tick), tempoMap: tempoMap,
+                ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
+            if raw.type == 0x9 {
+                activeNoteTicks[key] = raw.tick
+            } else if raw.type == 0x8, let noteOnTick = activeNoteTicks[key],
+                raw.tick >= noteOnTick
+            {
+                activeNoteTicks[key] = nil
+                sample = gateEndSample(
+                    noteOnTick: noteOnTick, noteOffTick: raw.tick, tempoMap: tempoMap,
+                    ticksPerBeat: ticksPerBeat, sampleRate: sampleRate, settings: settings)
+            }
+            let event = PlaybackEvent(
+                sample: sample, tick: raw.tick, type: raw.type, track: UInt8(engineTrack),
+                data0: raw.data0, data1: raw.data1, noteID: raw.noteID)
+            scheduledEvents.append(ScheduledPlaybackEvent(event: event, order: raw.order))
+            if event.type == 0x9 { mutableTracks[engineTrack].noteCount += 1 }
+            if event.type == 0xC && mutableTracks[engineTrack].firstProgram < 0 {
+                mutableTracks[engineTrack].firstProgram = Int(event.data0)
+            }
+        }
+        scheduledEvents.sort { lhs, rhs in
+            if lhs.event.sample != rhs.event.sample { return lhs.event.sample < rhs.event.sample }
+            if lhs.event.type == 0x8 && rhs.event.type != 0x8 { return true }
+            if rhs.event.type == 0x8 && lhs.event.type != 0x8 { return false }
+            return lhs.order < rhs.order
+        }
+
+        tempoEvents.removeAll(keepingCapacity: true)
+        tempoEvents.reserveCapacity(tempoMap.count)
+        for point in tempoMap {
+            let roundedBPM = point.beatsPerMinute.isFinite ? Int(point.beatsPerMinute + 0.5) : 0x3FFF
+            let bpm = min(max(roundedBPM, 1), 0x3FFF)
+            tempoEvents.append(
+                PlaybackEvent(
+                    sample: UInt64(point.sampleOrigin + 0.5), tick: point.tick,
+                    type: playbackTempoEventType, track: 0,
+                    data0: UInt8(bpm & 0x7F), data1: UInt8((bpm >> 7) & 0x7F)))
+        }
+
+        let events = mergeTempoFirst(tempoEvents.span, scheduledEventView())
+        var lengthSamples: UInt64 = 0
+        var lengthTicks: Tick = 0
+        for event in events {
+            lengthSamples = max(lengthSamples, event.sample)
+            lengthTicks = max(lengthTicks, event.tick)
+        }
+
+        let loopStartSample =
+            loopStartTick == TimeDefaults.noTick
+            ? UInt64.max
+            : sampleAssumingSegment(
+                for: Double(loopStartTick),
+                point: tempoMap[
+                    lastIndex(
+                        atOrBefore: Double(loopStartTick), in: tempoMap,
+                        key: { Double($0.tick) })],
+                ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
+        let loopEndSample =
+            loopEndTick == TimeDefaults.noTick
+            ? UInt64.max
+            : sampleAssumingSegment(
+                for: Double(loopEndTick),
+                point: tempoMap[
+                    lastIndex(
+                        atOrBefore: Double(loopEndTick), in: tempoMap,
+                        key: { Double($0.tick) })],
+                ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
+        if loopEndTick != TimeDefaults.noTick { lengthTicks = max(lengthTicks, loopEndTick) }
+
+        var otherEvents: [PlaybackOtherEvent] = []
+        otherEvents.reserveCapacity(rawOthers.count)
+        var otherTempo = TempoCursor()
+        for raw in rawOthers {
+            let track = chunkToEngine[raw.midiChunk]
+            otherEvents.append(
+                PlaybackOtherEvent(
+                    tick: raw.tick,
+                    sample: otherTempo.sample(
+                        for: UInt64(raw.tick), tempoMap: tempoMap,
+                        ticksPerBeat: ticksPerBeat, sampleRate: sampleRate),
+                    track: track, label: raw.label))
+            lengthTicks = max(lengthTicks, raw.tick)
+        }
+
+        return PlaybackTimeline(
+            events: events, tracks: mutableTracks.map(\.value), tempoMap: tempoMap,
+            timeSignatures: timeSignatures.map(\.point), otherEvents: otherEvents,
+            sampleRate: sampleRate, ticksPerBeat: ticksPerBeat,
+            lengthSamples: lengthSamples, lengthTicks: lengthTicks,
+            loopStartSample: loopStartSample, loopEndSample: loopEndSample,
+            loopStartTick: loopStartTick, loopEndTick: loopEndTick,
+            usedTrackCount: mapping.usedTrackCount, droppedTracks: mapping.droppedTracks,
+            settings: settings)
     }
-    ordered.sort {
-        $0.point.tick == $1.point.tick ? $0.order < $1.order : $0.point.tick < $1.point.tick
+
+    @_lifetime(borrow self)
+    private borrowing func scheduledEventView() -> Span<ScheduledPlaybackEvent> {
+        scheduledEvents.span
     }
-    return ordered
 }
 
 private func buildTempoMap(
-    _ points: [OrderedTempo], ticksPerBeat: UInt32,
+    _ points: borrowing Span<OrderedTempo>, ticksPerBeat: UInt32,
     sampleRate: Double
 ) -> [PlaybackTempoPoint] {
     var result: [PlaybackTempoPoint] = []
     result.reserveCapacity(points.count + 1)
-    if points.first?.point.tick != 0 {
+    if points.isEmpty || points[0].point.tick != 0 {
         result.append(
             PlaybackTempoPoint(
                 tick: 0, sampleOrigin: 0, beatsPerMinute: 120,
                 microsecondsPerQuarterNote: TimeDefaults.defaultTempoMicrosecondsPerQuarterNote))
     }
     var origin = 0.0
-    for orderedPoint in points {
+    for index in points.indices {
+        let orderedPoint = points[index]
         let point = orderedPoint.point
         if let previous = result.last {
             origin =
@@ -593,22 +630,31 @@ private struct TempoCursor {
     }
 }
 
-private func mergeTempoFirst(_ tempos: [PlaybackEvent], _ events: [PlaybackEvent]) -> [PlaybackEvent] {
+private func mergeTempoFirst(
+    _ tempos: borrowing Span<PlaybackEvent>,
+    _ events: borrowing Span<ScheduledPlaybackEvent>
+) -> [PlaybackEvent] {
     var result: [PlaybackEvent] = []
     result.reserveCapacity(tempos.count + events.count)
     var tempoIndex = 0
     var eventIndex = 0
     while tempoIndex < tempos.count && eventIndex < events.count {
-        if tempos[tempoIndex].sample <= events[eventIndex].sample {
+        if tempos[tempoIndex].sample <= events[eventIndex].event.sample {
             result.append(tempos[tempoIndex])
             tempoIndex += 1
         } else {
-            result.append(events[eventIndex])
+            result.append(events[eventIndex].event)
             eventIndex += 1
         }
     }
-    result.append(contentsOf: tempos[tempoIndex...])
-    result.append(contentsOf: events[eventIndex...])
+    while tempoIndex < tempos.count {
+        result.append(tempos[tempoIndex])
+        tempoIndex += 1
+    }
+    while eventIndex < events.count {
+        result.append(events[eventIndex].event)
+        eventIndex += 1
+    }
     return result
 }
 

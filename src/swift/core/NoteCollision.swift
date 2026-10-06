@@ -31,11 +31,11 @@ internal nonisolated func spansAreCompatible(
     return true
 }
 
-// Spans must be sorted by (track, pitch, tick); the caller owns note iteration and emission order.
+// Spans must be sorted by (track, pitch, tick); the caller excludes edited notes and owns iteration and emission order.
 internal nonisolated func resolveStationaryCollisions(
-    spans: ArraySlice<TimeNoteSpan>, stationary: Note, editedIDs: Set<NoteID>
+    spans: ArraySlice<TimeNoteSpan>, stationary: Note
 ) -> NoteCollisionDecision {
-    guard !editedIDs.contains(stationary.id), let originalEnd = stationary.endTick else {
+    guard let originalEnd = stationary.endTick else {
         return .untouched
     }
     var first = spans.startIndex

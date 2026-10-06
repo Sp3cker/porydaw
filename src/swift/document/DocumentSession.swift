@@ -80,17 +80,17 @@ public struct SaveConflictError: Error, Sendable {
 /// session-only selection/track-scope/mute-solo, the current bank
 /// lease, and the published playback projection.
 ///
-/// Every timeline projection goes through the canonical state factory, for the
-/// initial open and for every edit/history rebuild alike. Document history
-/// operations stay immediate; bank transitions serialize on the service actor.
+/// Initial open and edit/history projections share one retained timeline builder.
+/// Document history stays immediate; bank transitions serialize on the service actor.
 /// Selection and other session state never dirty the document and never enter
 /// history.
 @MainActor
 public final class DocumentSession {
     public private(set) var document: SongDocument
     public private(set) lazy var projectionCache = DocumentProjectionCache(session: self)
-    /// Current projection, always rebuilt via the state factory.
+    /// Current immutable projection from the session's retained builder.
     public internal(set) var timeline: PlaybackTimeline
+    internal var timelineBuilder: PlaybackTimelineBuilder
     public var bankLease: ProjectBankLease { sharedBank.value.lease }
     public var bankSlots: [BankSlotView] { sharedBank.value.slots }
     public var bankDirty: Bool { sharedBank.value.dirty }
@@ -189,7 +189,9 @@ public final class DocumentSession {
             for: AppliedBankEdit(
                 lease: lease, slots: slots, dirty: dirty, loadName: loadName,
                 materializationToken: nil))
-        timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
+        var builder = PlaybackTimelineBuilder()
+        timeline = builder.build(state: document.state, sampleRate: sampleRate)
+        timelineBuilder = builder
         document.onChange = { [weak self] change in
             self?.handleDocumentChange(change)
         }

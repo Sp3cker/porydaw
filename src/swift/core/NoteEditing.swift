@@ -70,12 +70,11 @@ extension SongDocument {
         }
         var insertedIDs: [NoteID] = []
         insertedIDs.reserveCapacity(notes.count)
-        var removals = Array(repeating: [Int](), count: mutation.state.file.chunks.count)
-        var insertions = Array(repeating: [MidiEvent](), count: mutation.state.file.chunks.count)
+        var edits: [Int: NoteChunkEdits] = [:]
         var replacedEnds: Set<NoteID> = []
         collectEditedWins(
-            spans: spans, editedIDs: Set(), source: mutation.state,
-            removals: &removals, insertions: &insertions, replacedEnds: &replacedEnds)
+            spans: spans, editedIDs: [], source: mutation.state,
+            edits: &edits, replacedEnds: &replacedEnds)
         for note in notes {
             guard let mapping = mapping(for: note.track, in: mutation.state.file) else {
                 throw NoteEditError.invalidTrack(note.track)
@@ -83,18 +82,19 @@ extension SongDocument {
             let duration = max(note.duration, 1)
             let id = mintNoteID()
             insertedIDs.append(id)
-            insertions[mapping.chunk].append(
+            edits[mapping.chunk, default: NoteChunkEdits()].insertions.append(
                 .channel(
                     tick: note.tick, status: 0x90 | mapping.channel, data0: note.pitch,
                     data1: clampVelocity(Int(note.velocity)), noteID: id))
-            insertions[mapping.chunk].append(
+            edits[mapping.chunk, default: NoteChunkEdits()].insertions.append(
                 .channel(
                     tick: note.tick + duration, status: 0x90 | mapping.channel,
                     data0: note.pitch, data1: 0))
         }
-        retainSharedEnds(source: mutation.state, replacedEnds: replacedEnds, removals: &removals)
-        for chunk in insertions.indices where !removals[chunk].isEmpty || !insertions[chunk].isEmpty {
-            mutation.apply(removing: removals[chunk], inserting: insertions[chunk], chunk: chunk)
+        retainSharedEnds(source: mutation.state, replacedEnds: replacedEnds, edits: &edits)
+        for (chunk, edit) in edits.sorted(by: { $0.key < $1.key }) {
+            guard !edit.removals.isEmpty || !edit.insertions.isEmpty else { continue }
+            mutation.apply(removing: edit.removals, inserting: edit.insertions, chunk: chunk)
         }
         commit(mutation, group: nil, operation: .addNotes)
         return insertedIDs
@@ -117,7 +117,8 @@ extension SongDocument {
     ) {
         guard history.acceptsDocumentMutation else { return }
         guard !ids.isEmpty else { return }
-        let operation = HistoryOperation.resizeNotes(ids.sorted { $0.rawValue < $1.rawValue }, edge)
+        let orderedIDs = ids.sorted { $0.rawValue < $1.rawValue }
+        let operation = HistoryOperation.resizeNotes(orderedIDs, edge)
         let base = origin(for: group, operation: operation)
         guard let original = resolve(ids, in: base) else { return }
         guard
@@ -145,7 +146,7 @@ extension SongDocument {
                     pitch: note.pitch, endTick: end))
         }
         relocate(
-            ids, base: base, group: group, operation: operation,
+            orderedIDs, base: base, group: group, operation: operation,
             relocations: relocations)
     }
 
@@ -203,8 +204,9 @@ extension SongDocument {
         if let previous = history.noteLengthOrigin(for: orderedIDs) {
             let sum = previous.delta.addingReportingOverflow(delta)
             if !sum.overflow {
-                var candidate = state
-                previous.changes.apply(to: &candidate, direction: .undo)
+                let candidate = origin(
+                    for: previous.group,
+                    operation: .resizeNoteLengths(orderedIDs, previous.delta))
                 if let notes = resolve(ids, in: candidate),
                     resizeNotesDurations(notes.span, byTicks: sum.partialValue) == durations
                 {
@@ -221,7 +223,7 @@ extension SongDocument {
                 endTick: UInt64(note.tick) + UInt64(duration))
         }
         relocate(
-            ids, base: base, group: group ?? HistoryGroup(),
+            orderedIDs, base: base, group: group ?? HistoryGroup(),
             operation: .resizeNoteLengths(orderedIDs, total), relocations: relocations)
     }
 
@@ -277,6 +279,7 @@ extension SongDocument {
         commit(mutation, group: nil, operation: .setVelocities, changed: changed)
     }
 
+    /// IDs are sorted for membership; relocations preserve the caller's pin order.
     @discardableResult
     internal func relocate(
         _ ids: [NoteID], base: SongState, group: HistoryGroup?,
@@ -309,17 +312,18 @@ extension SongDocument {
         }
         guard spansAreCompatible(spans: spans, allowExactDuplicates: false) else { return false }
         var mutation = DocumentMutation(base)
-        var removals = Array(repeating: [Int](), count: base.file.chunks.count)
-        var insertions = Array(repeating: [MidiEvent](), count: base.file.chunks.count)
+        var edits: [Int: NoteChunkEdits] = [:]
         var replacedEnds: Set<NoteID> = []
         collectEditedWins(
-            spans: spans, editedIDs: Set(ids), source: base,
-            removals: &removals, insertions: &insertions, replacedEnds: &replacedEnds)
+            spans: spans, editedIDs: ids, source: base,
+            edits: &edits, replacedEnds: &replacedEnds)
         for index in active {
             let relocation = relocations[index]
             let note = relocation.original
-            removals[note.chunk].append(note.onIndex)
-            if let endIndex = note.endIndex { removals[note.chunk].append(endIndex) }
+            edits[note.chunk, default: NoteChunkEdits()].removals.append(note.onIndex)
+            if let endIndex = note.endIndex {
+                edits[note.chunk, default: NoteChunkEdits()].removals.append(endIndex)
+            }
             replacedEnds.insert(note.id)
             var on = base.file.chunks[note.chunk].events[note.onIndex]
             on.tick = relocation.tick
@@ -327,7 +331,7 @@ extension SongDocument {
                 on.payload = .channel(status: status, data0: relocation.pitch, data1: velocity)
             }
             on.noteID = note.id
-            insertions[note.chunk].append(on)
+            edits[note.chunk, default: NoteChunkEdits()].insertions.append(on)
             if let endTick = relocation.endTick {
                 var end: MidiEvent
                 if let endIndex = note.endIndex {
@@ -343,14 +347,14 @@ extension SongDocument {
                         tick: Tick(endTick), status: 0x90 | note.channel,
                         data0: relocation.pitch, data1: 0)
                 }
-                insertions[note.chunk].append(end)
+                edits[note.chunk, default: NoteChunkEdits()].insertions.append(end)
             }
         }
-        retainSharedEnds(source: base, replacedEnds: replacedEnds, removals: &removals)
-        for chunk in removals.indices {
-            guard !removals[chunk].isEmpty || !insertions[chunk].isEmpty else { continue }
+        retainSharedEnds(source: base, replacedEnds: replacedEnds, edits: &edits)
+        for (chunk, edit) in edits.sorted(by: { $0.key < $1.key }) {
+            guard !edit.removals.isEmpty || !edit.insertions.isEmpty else { continue }
             mutation.apply(
-                removing: removals[chunk], inserting: insertions[chunk],
+                removing: edit.removals, inserting: edit.insertions,
                 chunk: chunk)
         }
         commit(
@@ -379,61 +383,63 @@ extension SongDocument {
         return result
     }
 
-    private func collectRemovals(_ notes: [Note], into removals: inout [[Int]]) {
+    private func collectRemovals(_ notes: [Note], into edits: inout [Int: NoteChunkEdits]) {
         for note in notes {
-            removals[note.chunk].append(note.onIndex)
-            if let endIndex = note.endIndex { removals[note.chunk].append(endIndex) }
+            edits[note.chunk, default: NoteChunkEdits()].removals.append(note.onIndex)
+            if let endIndex = note.endIndex {
+                edits[note.chunk, default: NoteChunkEdits()].removals.append(endIndex)
+            }
         }
     }
 
     private func remove(_ notes: [Note], from mutation: inout DocumentMutation) {
-        var removals = Array(repeating: [Int](), count: mutation.state.file.chunks.count)
-        collectRemovals(notes, into: &removals)
-        for chunk in removals.indices where !removals[chunk].isEmpty {
-            mutation.apply(removing: removals[chunk], inserting: [], chunk: chunk)
+        var edits: [Int: NoteChunkEdits] = [:]
+        collectRemovals(notes, into: &edits)
+        for (chunk, edit) in edits.sorted(by: { $0.key < $1.key }) {
+            mutation.apply(removing: edit.removals, inserting: [], chunk: chunk)
         }
     }
 
     private func collectEditedWins(
-        spans: [TimeNoteSpan], editedIDs: Set<NoteID>, source: SongState,
-        removals: inout [[Int]], insertions: inout [[MidiEvent]],
+        spans: [TimeNoteSpan], editedIDs: [NoteID], source: SongState,
+        edits: inout [Int: NoteChunkEdits],
         replacedEnds: inout Set<NoteID>
     ) {
         guard !spans.isEmpty else { return }
-        let orderedSpans = spans
-        let sortedTracks = orderedSpans.map(\.track).sorted()
         var affectedTracks: [Int] = []
-        affectedTracks.reserveCapacity(sortedTracks.count)
-        for track in sortedTracks where affectedTracks.last != track {
-            affectedTracks.append(track)
+        affectedTracks.reserveCapacity(spans.count)
+        for span in spans where affectedTracks.last != span.track {
+            affectedTracks.append(span.track)
         }
         let sourceNotes = projection(for: source).tracks
         for track in affectedTracks {
             let stationaryNotes = sourceNotes.indices.contains(track) ? sourceNotes[track] : []
             for stationary in stationaryNotes {
-                guard let originalEnd = stationary.endTick else { continue }
+                guard !containsNoteID(stationary.id, in: editedIDs),
+                    let originalEnd = stationary.endTick
+                else { continue }
                 switch resolveStationaryCollisions(
-                    spans: orderedSpans[...], stationary: stationary, editedIDs: editedIDs)
+                    spans: spans[...], stationary: stationary)
                 {
                 case .covered:
                     replacedEnds.insert(stationary.id)
-                    removals[stationary.chunk].append(stationary.onIndex)
+                    edits[stationary.chunk, default: NoteChunkEdits()].removals.append(stationary.onIndex)
                     if let endIndex = stationary.endIndex {
-                        removals[stationary.chunk].append(endIndex)
+                        edits[stationary.chunk, default: NoteChunkEdits()].removals.append(endIndex)
                     }
                 case .trimmed(let start, let end):
                     if end != originalEnd { replacedEnds.insert(stationary.id) }
                     if start != stationary.tick {
-                        removals[stationary.chunk].append(stationary.onIndex)
+                        edits[stationary.chunk, default: NoteChunkEdits()].removals.append(stationary.onIndex)
                         var event = source.file.chunks[stationary.chunk].events[stationary.onIndex]
                         event.tick = start
-                        insertions[stationary.chunk].append(event)
+                        edits[stationary.chunk, default: NoteChunkEdits()].insertions.append(event)
                     }
                     if end != originalEnd, let endIndex = stationary.endIndex {
-                        removals[stationary.chunk].append(endIndex)
+                        edits[stationary.chunk, default: NoteChunkEdits()].removals.append(endIndex)
                         var event = source.file.chunks[stationary.chunk].events[endIndex]
                         event.tick = Tick(end)
-                        insertions[stationary.chunk].append(event)
+                        edits[stationary.chunk, default: NoteChunkEdits()].insertions.append(event)
                     }
                 case .untouched:
                     break
@@ -443,11 +449,11 @@ extension SongDocument {
     }
 
     private func retainSharedEnds(
-        source: SongState, replacedEnds: Set<NoteID>, removals: inout [[Int]]
+        source: SongState, replacedEnds: Set<NoteID>, edits: inout [Int: NoteChunkEdits]
     ) {
         for notes in projection(for: source).tracks {
-            guard let chunk = notes.first?.chunk, !removals[chunk].isEmpty else { continue }
-            removals[chunk].removeAll { index in
+            guard let chunk = notes.first?.chunk, edits[chunk]?.removals.isEmpty == false else { continue }
+            edits[chunk]?.removals.removeAll { index in
                 source.file.chunks[chunk].events[index].isNoteEnd
                     && notes.contains { $0.endIndex == index && !replacedEnds.contains($0.id) }
             }
@@ -460,4 +466,23 @@ internal struct RelocatedNote {
     let tick: Tick
     let pitch: UInt8
     let endTick: UInt64?
+}
+
+private struct NoteChunkEdits {
+    var removals: [Int] = []
+    var insertions: [MidiEvent] = []
+}
+
+private func containsNoteID(_ id: NoteID, in sortedIDs: [NoteID]) -> Bool {
+    var lower = 0
+    var upper = sortedIDs.count
+    while lower < upper {
+        let middle = lower + (upper - lower) / 2
+        if sortedIDs[middle].rawValue < id.rawValue {
+            lower = middle + 1
+        } else {
+            upper = middle
+        }
+    }
+    return lower < sortedIDs.count && sortedIDs[lower] == id
 }

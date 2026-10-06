@@ -18,6 +18,7 @@ func runPlaybackSuite(_ report: CheckReport) {
         .appendingPathComponent("sound/songs/midi/mus_route101.mid").path
     checkProjectFixture(path: projectFixture, report: report)
     checkExactSamples(report)
+    runReusableTimelineBuilderChecks(report)
 
     let projectionPath = URL(fileURLWithPath: fixtureRoot)
         .appendingPathComponent("swiftcore-projection.mid").path

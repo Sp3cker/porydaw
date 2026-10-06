@@ -54,10 +54,73 @@ public enum RollPaletteSlot: UInt16 {
     case noteLabelAaDark
 }
 
+// The complete displacement inputs are scalars; source and membership live in the notes key.
+enum RollNoteDisplacement: Equatable {
+    case none
+    case move(ticks: Int, keys: Int, fold: Bool, scale: ScaleID, root: Int)
+    case resize(leading: Bool, ticks: Int)
+
+    @MainActor
+    func displayed(_ note: GridNote, selected: borrowing Set<NoteID>) -> (tick: Int, end: Int, pitch: Int) {
+        var tick = note.tick
+        var end = note.tick + note.duration
+        var pitch = note.pitch
+        if case .none = self { return (tick, end, pitch) }
+        guard !note.ghost, selected.contains(note.noteId) else { return (tick, end, pitch) }
+        switch self {
+        case .none:
+            break
+        case .move(let ticks, let keys, let fold, let scale, let root):
+            tick = max(0, tick + ticks)
+            end = max(tick + 1, end + ticks)
+            if fold && keys != 0 {
+                let destination = scale.pitch(pitch, steps: keys, root: root)
+                if destination >= 0 { pitch = destination }
+            } else {
+                pitch = min(127, max(0, pitch + keys))
+            }
+        case .resize(let leading, let ticks):
+            if leading {
+                tick = min(max(0, tick + ticks), end - 1)
+            } else {
+                end = max(tick + 1, end + ticks)
+            }
+        }
+        return (tick, end, pitch)
+    }
+}
+
+enum RollStatusPresentation: Equatable {
+    case pendingDraw(tick: Int)
+    case draw(tick: Int, duration: Int, pitch: Int)
+    case velocity
+    case move(count: Int, ticks: Int, keys: Int)
+    case resize(count: Int)
+    case idle(notes: Int, selected: Int)
+    case band(count: Int)
+    case pan
+
+    var text: String {
+        switch self {
+        case .pendingDraw(let tick): return "Pending draw at tick \(tick)"
+        case .draw(let tick, let duration, let pitch):
+            return "Drawing — tick \(tick), duration \(duration), pitch \(pitch)"
+        case .velocity: return "Changing velocity"
+        case .move(let count, let ticks, let keys):
+            return "Moving \(count) note(s) — dTick \(ticks), dKey \(keys)"
+        case .resize(let count): return "Resizing \(count) note(s)"
+        case .idle(let notes, let selected): return "\(notes) notes, \(selected) selected"
+        case .band(let count): return "Selecting \(count) note(s)"
+        case .pan: return "Panning"
+        }
+    }
+}
+
 // Everything the notes section reads; draw-preview motion leaves it equal.
 struct RollNotesSectionKey: Equatable {
     var notes: [GridNote]
-    var displayedSpans: [RollDrawingContent.DisplayedSpan]
+    var displacement: RollNoteDisplacement
+    var displacedNotes: Set<NoteID>
     var selectedNotes: Set<NoteID>
     var projection: PitchProjection
     var timeSelection: AutomationTimeSelection?
@@ -78,7 +141,7 @@ struct RollDrawingContentKey: Equatable {
 
     var keyboardNames: [String]?
     var typographyAvailable: Bool
-    var fonts: [GridFontKind: RollDrawingContent.FontSignature]
+    var fonts: RollDrawingContent.FontDescriptors
     var drawPreview: RollDrawingContent.DrawPreviewSignature?
     var lastVelocity: Int
     var noteNameMode: Bool
@@ -90,11 +153,6 @@ struct RollDrawingContentKey: Equatable {
 
 @MainActor
 enum RollDrawingContent {
-    struct DisplayedSpan: Equatable {
-        var tick: Int
-        var end: Int
-        var pitch: Int
-    }
 
     struct DrawPreviewSignature: Equatable {
         var tick: Int
@@ -102,22 +160,27 @@ enum RollDrawingContent {
         var pitch: Int
     }
 
-    struct FontSignature: Equatable {
-        var family: String
-        var pixelSize: Int
-        var weight: Int
-        var letterSpacing: Double
+    struct FontDescriptors: Equatable {
+        var values: [GridFontKind: GridFontSpec]
+
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            guard lhs.values.count == rhs.values.count else { return false }
+            for (kind, font) in lhs.values {
+                guard let other = rhs.values[kind],
+                    font.family == other.family, font.pixelSize == other.pixelSize,
+                    font.weight == other.weight, font.letterSpacing == other.letterSpacing
+                else { return false }
+            }
+            return true
+        }
     }
 
     static func key(_ input: GridSceneInput, palette: [UInt32]) -> RollDrawingContentKey {
         RollDrawingContentKey(
             notesSection: RollNotesSectionKey(
                 notes: input.notes,
-                displayedSpans: input.displacesNotes
-                    ? input.notes.map {
-                        let span = input.displayedNote($0)
-                        return DisplayedSpan(tick: span.tick, end: span.end, pitch: span.pitch)
-                    } : [],
+                displacement: input.displacement,
+                displacedNotes: input.displacedNotes,
                 selectedNotes: input.selectedNotes,
                 projection: input.camera.projection,
                 timeSelection: input.timeSelection,
@@ -133,11 +196,7 @@ enum RollDrawingContent {
             palette: palette,
             keyboardNames: input.keyboardNames,
             typographyAvailable: input.typography != nil,
-            fonts: input.fonts.mapValues {
-                FontSignature(
-                    family: $0.family, pixelSize: $0.pixelSize,
-                    weight: $0.weight, letterSpacing: $0.letterSpacing)
-            },
+            fonts: FontDescriptors(values: input.fonts),
             drawPreview: input.drawPreview.map {
                 DrawPreviewSignature(tick: $0.tick, duration: $0.duration, pitch: $0.pitch)
             },
@@ -191,7 +250,10 @@ enum RollDrawingContent {
         ]
     }
 
-    static func resolveNotes(_ input: GridSceneInput, into records: inout [RollNote]) -> Int {
+    static func resolveNotes(
+        _ input: borrowing GridSceneInput, notes: borrowing Span<GridNote>,
+        into records: inout [RollNote]
+    ) -> Int {
         let projection = input.camera.projection
         let noteTable = ThemeColorTables.noteFillTable(input.palette.theme)
         let ghostTable = ThemeColorTables.ghostFillTable(input.palette.theme)
@@ -199,17 +261,17 @@ enum RollDrawingContent {
         let dark = SceneRectPacking.argb(input.palette.keyboardBlack)
         let fallbackLight = SceneRectPacking.argb(input.palette.noteLabelAaLight)
         let fallbackDark = SceneRectPacking.argb(input.palette.noteLabelAaDark)
-        let notes = input.notes
         let selected = input.selectedNotes
-        let displayed = input.displayedNote
         records.removeAll(keepingCapacity: true)
         records.reserveCapacity(notes.count)
         var maxDuration = 0
         // Ghost records precede plain notes in paint order, independently of tick order.
         for pass in 0..<2 {
             let ghostPass = pass == 0
-            for note in notes where note.ghost == ghostPass {
-                let (tick, end, pitch) = displayed(note)
+            for index in notes.indices {
+                let note = notes[index]
+                if note.ghost != ghostPass { continue }
+                let (tick, end, pitch) = input.displacement.displayed(note, selected: input.displacedNotes)
                 if (0..<128).contains(pitch),
                     projection.row(forPitch: pitch) == PitchProjection.hiddenRow
                 {

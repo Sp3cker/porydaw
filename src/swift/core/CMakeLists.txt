@@ -31,6 +31,9 @@ set_target_properties(PorydawCore PROPERTIES
     Swift_LANGUAGE_VERSION 6
 )
 porydaw_enable_swift_batch_mode(PorydawCore)
+target_compile_options(PorydawCore PRIVATE
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
+)
 
 target_include_directories(PorydawCore INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawCore,Swift_MODULE_DIRECTORY>>"

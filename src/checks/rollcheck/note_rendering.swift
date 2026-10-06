@@ -14,4 +14,5 @@ func runNoteRenderingChecks(_ report: CheckReport, viewport: DocumentViewport) {
     checkProjectionEconomy(report, viewport: viewport)
     checkRollPlotCullBound(report, viewport: viewport)
     checkRulerSweepSingleTrackScope(report, viewport: viewport)
+    checkRollPreviewInvalidation(report, viewport: viewport)
 }

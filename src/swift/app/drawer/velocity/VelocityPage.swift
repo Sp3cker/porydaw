@@ -229,6 +229,7 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     @QtIgnored var handlesByID: [NoteID: VelocityHandle] = [:]
     @QtIgnored var paintCandidates: [Note] = []
     @QtIgnored var handleGeometryKey: HandleGeometryKey?
+    private var appliedPrimaryTrack: Int?
 
     struct HandleGeometryKey: Equatable {
         var geometry: VelocityNodeGeometry
@@ -337,12 +338,34 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
 
     // MARK: Session refresh
 
-    /// Document, undo/redo, track or selection publication: a live interaction
-    /// whose captured identity no longer matches cancels, then content rebuilds.
+    /// Document, undo/redo, track or bank publication: stale captures cancel,
+    /// then document content and selection presentation rebuild together.
     @QtIgnored
     public func refreshFromDocument() {
         refreshPromptStyle()
         guard let session else { return }
+        appliedPrimaryTrack = session.selectedTrack
+        reconcileCapturedTargets(session)
+        rebuildContent()
+    }
+
+    /// Re-resolves selected-note pitch/time/voice compatibility and presentation.
+    /// Document geometry and drawing bands remain retained unless the track changes.
+    @QtIgnored
+    public func refreshSelectionPresentation() {
+        guard let session else { return }
+        guard appliedPrimaryTrack == session.selectedTrack else {
+            refreshFromDocument()
+            return
+        }
+        reconcileCapturedTargets(session)
+        guard plotHeight > 0 || plotWidth > 0 else { return }
+        publishPresentationContext()
+        refreshAxisAndHandles(republishDisplayLists: false)
+        publishTransient(updateDrawing: false)
+    }
+
+    private func reconcileCapturedTargets(_ session: DocumentSession) {
         if let gesture,
             gesture.revision != session.document.revision
                 || gesture.track != (session.selectedTrack ?? -1)
@@ -351,7 +374,6 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
         }
         if promptRevisionMismatch(session) { cancelPrompt() }
         if gesture?.kind == .paint { paintCandidates = VelocityScene.selectedTrackNotes(session) }
-        rebuildContent()
     }
 
     /// Cursor-only publication: while stopped, re-resolve the velocity context

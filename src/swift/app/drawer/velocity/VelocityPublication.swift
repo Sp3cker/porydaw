@@ -24,6 +24,13 @@ extension VelocityPage {
         geometry = VelocityNodeGeometry(
             baseFontPx: baseFontPx,
             devicePixelRatio: devicePixelRatio)
+        publishPresentationContext()
+        refreshAxisAndHandles(republishDisplayLists: false)
+        publishTransient(updateDrawing: false)
+        publishDisplayLists()
+    }
+
+    @QtIgnored func publishPresentationContext() {
         let presented = VelocityScene.presentation(
             session, playing: playing,
             contextTick: contextTick)
@@ -34,20 +41,22 @@ extension VelocityPage {
         contextSlot = presented.slot
         contextVoiceName = presented.map.voiceName
         publish(\.detentsAvailable, presented.status == .resolved && presented.map.isPSG)
-        refreshAxisAndHandles(republishDisplayLists: false)
-        publishTransient(updateDrawing: false)
-        publishDisplayLists()
     }
 
     /// Republishes the axis, handle and ruler rows; a content rebuild passes
     /// `false` because it publishes its display lists after the transient.
     @QtIgnored func refreshAxisAndHandles(republishDisplayLists: Bool = true) {
-        let built = VelocityScene.axisAndHandles(
-            sceneInput(reuseGeometry: handleReuseGeometry()),
-            previousHandles: handlesByID)
-        rebuildAxis(built.axis)
-        publishHandles(built.handles)
-        publishAxis(built.rows)
+        var input = sceneInput(reuseGeometry: false)
+        let nextAxis = VelocityScene.axisModel(input)
+        input.reuseGeometry = handleReuseGeometry(axis: nextAxis)
+        let values = VelocityScene.handleRows(input, axis: nextAxis, previousHandles: handlesByID)
+        let relativeGesture =
+            input.interaction.relativeActivated
+            || input.selectedNotes.count > 1 || input.interaction.hovered != nil
+        let rows = VelocityScene.axisRows(input, axis: nextAxis, relativeGesture: relativeGesture)
+        rebuildAxis(nextAxis)
+        publishHandles(values)
+        publishAxis(rows)
         publishReadout()
         if republishDisplayLists { publishDisplayLists() }
     }
@@ -93,10 +102,10 @@ extension VelocityPage {
 
     /// The handle-reuse decision: geometry, track, DPR and axis mode form one
     /// key, and an unchanged key reuses the previous handle objects in place.
-    private func handleReuseGeometry() -> Bool {
+    private func handleReuseGeometry(axis nextAxis: VelocityAxisModel? = nil) -> Bool {
         let key = HandleGeometryKey(
             geometry: geometry, track: session?.selectedTrack ?? 0,
-            dpr: devicePixelRatio, intrinsic: axis.mode == .intrinsic)
+            dpr: devicePixelRatio, intrinsic: (nextAxis ?? axis).mode == .intrinsic)
         let reuse = handleGeometryKey == key
         handleGeometryKey = key
         return reuse

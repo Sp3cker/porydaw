@@ -26,7 +26,7 @@ extension SongDocument {
             for note in notes where !editedIDs.contains(note.id) {
                 guard let originalEnd = note.endTick, let endIndex = note.endIndex else { continue }
                 switch resolveStationaryCollisions(
-                    spans: ordered[firstSpan..<afterTrack], stationary: note, editedIDs: editedIDs)
+                    spans: ordered[firstSpan..<afterTrack], stationary: note)
                 {
                 case .covered:
                     actions.remove(chunk: note.chunk, index: note.onIndex)

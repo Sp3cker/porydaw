@@ -71,6 +71,7 @@ public final class DocumentWorkspace {
     private var lastPlayheadPresentation: SharedPlayheadPresentation?
     private var lastPolledPlaying: Bool?
     private var appliedSongConfig: SongConfig
+    private var appliedPrimaryTrack: Int?
     // Camera work a hidden drawer section skipped; showing or re-attaching it
     // replays one catch-up (zoom subsumes horizontal).
     private var deferredCameraZoom: [DrawerSectionKind: Bool] = [:]
@@ -99,6 +100,7 @@ public final class DocumentWorkspace {
         // same object.
         let grid = PianoGrid(viewport: viewport, palette: palette, typography: typography)
         self.grid = grid
+        appliedPrimaryTrack = session.selectedTrack
         let otherEventsBand = OtherEventsBandPresenter()
         otherEventsBand.configure(
             viewport: viewport, palette: grid.palette,
@@ -413,7 +415,7 @@ public final class DocumentWorkspace {
     private func sessionDidChange(_ change: SessionChange) {
         rulerMenu.sessionDidChange(change)
         let documentChanged = change.domains.contains(.document)
-        let fullPageDomains: SessionChangeDomains = [.document, .selection, .bank]
+        let primaryTrackChanged = appliedPrimaryTrack != session.selectedTrack
         if documentChanged {
             callbacks.timeSignaturePromptInvalidated(session, change.revision)
             pitchBend.documentDidChange()
@@ -438,7 +440,12 @@ public final class DocumentWorkspace {
 
         if documentChanged || !change.domains.intersection([.selection, .scale, .bank]).isEmpty {
             if change.domains.contains(.selection) { pitchBend.cancelAndClose() }
-            grid.refreshFromSession()
+            if documentChanged || !change.domains.intersection([.scale, .bank]).isEmpty {
+                grid.refreshFromSession()
+            } else {
+                grid.refreshSelectionPresentation()
+            }
+            appliedPrimaryTrack = session.selectedTrack
         } else if change.domains.contains(.cursor) {
             grid.refreshCursorPresentation()
         }
@@ -456,18 +463,21 @@ public final class DocumentWorkspace {
         if change.domains.contains(.bank) {
             velocityPage.cancelSectionInteraction()
         }
-        if !change.domains.intersection(fullPageDomains).isEmpty {
+        if documentChanged || change.domains.contains(.bank) || primaryTrackChanged {
             // Document rebuilds read the live camera, so they settle deferred camera work.
             velocityPage.refreshFromDocument()
             deferredCameraZoom[.velocity] = nil
-            voiceChangesPage.refreshFromDocument()
-            deferredCameraZoom[.voiceChanges] = nil
-            if documentChanged || change.domains.contains(.bank) {
-                automationPage.refreshFromDocument()
-                deferredCameraZoom[.automation] = nil
-            }
+        } else if change.domains.contains(.selection) {
+            velocityPage.refreshSelectionPresentation()
         } else if change.domains.contains(.cursor) {
             velocityPage.refreshEditCursor()
+        }
+        if documentChanged || change.domains.contains(.bank) || primaryTrackChanged {
+            voiceChangesPage.refreshFromDocument()
+            deferredCameraZoom[.voiceChanges] = nil
+            automationPage.refreshFromDocument()
+            deferredCameraZoom[.automation] = nil
+        } else if change.domains.contains(.cursor) {
             voiceChangesPage.refreshEditCursor()
             automationPage.refreshEditCursor()
         }

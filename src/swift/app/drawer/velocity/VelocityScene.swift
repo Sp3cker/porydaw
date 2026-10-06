@@ -144,35 +144,7 @@ struct VelocityAxisRows {
     var labels: [SceneTextValue] = []
 }
 
-/// The value axis, note handle rows and ruler rows one interaction state produces.
-/// The time grid and the PSG bands are built at display-list publication.
-struct VelocityAxisAndHandles {
-    let axis: VelocityAxisModel
-    let handles: [VelocityHandle]
-    let rows: VelocityAxisRows
-}
-
 extension VelocityScene {
-    /// The build a content rebuild, a hover, a pointer exit or a detent change
-    /// publishes; `previousHandles` is the page's lookup of its last rows.
-    static func axisAndHandles(
-        _ input: VelocitySceneInput,
-        previousHandles: [NoteID: VelocityHandle]
-    ) -> VelocityAxisAndHandles {
-        let axis = axisModel(input)
-        let projection = VelocityProjection(
-            camera: input.camera, geometry: input.geometry,
-            devicePixelRatio: input.devicePixelRatio, axis: axis)
-        let handles = projectedHandleRows(
-            input, axis: axis, projection: projection,
-            previousHandles: previousHandles)
-        let relativeGesture =
-            input.interaction.relativeActivated
-            || input.selectedNotes.count > 1 || input.interaction.hovered != nil
-        let rows = axisRows(input, axis: axis, relativeGesture: relativeGesture)
-        return VelocityAxisAndHandles(axis: axis, handles: handles, rows: rows)
-    }
-
     /// The live-gesture build: only the handle rows, projected against the
     /// page's published `axis`; the ruler rows, grid and bands stay as published.
     static func handleRows(

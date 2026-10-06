@@ -179,6 +179,9 @@ set_target_properties(PorydawApp PROPERTIES
     Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module"
     Swift_LANGUAGE_VERSION 6
 )
+target_compile_options(PorydawApp PRIVATE
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
+)
 
 if(PORYDAW_BUILD_CHECKS)
     target_compile_options(PorydawApp PRIVATE
@@ -257,6 +260,9 @@ set_target_properties(PorydawAppAudio PROPERTIES
     Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module"
     Swift_LANGUAGE_VERSION 6
     AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
+)
+target_compile_options(PorydawAppAudio PRIVATE
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
 )
 target_include_directories(PorydawAppAudio INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawAppAudio,Swift_MODULE_DIRECTORY>>"

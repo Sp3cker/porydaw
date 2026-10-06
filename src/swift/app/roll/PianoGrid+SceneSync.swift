@@ -6,6 +6,8 @@ import PorydawAppCommands
 
 @MainActor
 extension PianoGrid {
+    private static let availabilityCommands = EditCommand.allCases
+
     @QtIgnored
     func updateTimeAxis() {
         metrics.timeAxis = viewport.syncTimeAxis()
@@ -45,18 +47,14 @@ extension PianoGrid {
             selectionBand != nil
                 && rightPointerModifiers & QtFact.controlModifier == 0
             ? [] : session.selectedNotes
-        let displacesNotes: Bool
-        switch gesture {
-        case .move, .resize: displacesNotes = true
-        default: displacesNotes = false
-        }
+        let displacement = noteDisplacement()
+        let displacedNotes: Set<NoteID> = displacement == .none ? [] : session.selectedNotes
         return GridSceneInput(
             metrics: metrics, grid: viewport.grid, palette: palette, camera: viewport.camera,
             scale: viewport.scale,
             typography: typography, fontSpec: { self.fontSpec($0) },
             fonts: measurementFonts, notes: visibleNotes,
-            displayedNote: { self.displayedNote($0) },
-            displacesNotes: displacesNotes,
+            displacement: displacement, displacedNotes: displacedNotes,
             selectedNotes: selectedNotes,
             drawPreview: drawPreview, bandSelection: selectionBand,
             lastVelocity: lastVelocity, hoverKey: hoverKey,
@@ -259,12 +257,25 @@ extension PianoGrid {
         if bandSelectionY != bandY { bandSelectionY = bandY }
         if bandSelectionWidth != bandW { bandSelectionWidth = bandW }
         if bandSelectionHeight != bandH { bandSelectionHeight = bandH }
-        let status = currentStatusText()
-        if statusText != status { statusText = status }
-        let availability = EditCommand.allCases.map { commands.isAvailable($0) }
-        if availability != lastCommandAvailability || interactionActive != lastCommandGestureActive {
-            lastCommandAvailability = availability
-            lastCommandGestureActive = interactionActive
+        let status = currentStatusPresentation()
+        if status != lastStatusPresentation {
+            lastStatusPresentation = status
+            let text = status.text
+            if statusText != text { statusText = text }
+        }
+        var availabilityChanged = interactionActive != lastCommandGestureActive
+        for (index, command) in Self.availabilityCommands.enumerated() {
+            let available = commands.isAvailable(command)
+            if index == lastCommandAvailability.count {
+                lastCommandAvailability.append(available)
+                availabilityChanged = true
+            } else if lastCommandAvailability[index] != available {
+                lastCommandAvailability[index] = available
+                availabilityChanged = true
+            }
+        }
+        lastCommandGestureActive = interactionActive
+        if availabilityChanged {
             onCommandAvailabilityChanged?()
         }
         publishGeometry()
