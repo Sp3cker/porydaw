@@ -560,6 +560,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         SWIFT_LINK_LIBRARIES QtBridge PorydawApp
         SOURCES
         editorqml/EditorQmlPaths.swift.in
+        support/qmlcheckfonts.cpp
         # Source-directory inputs resolve NativeWait.js imports without staging.
         editorqml/NativeWait.js
         editorqml/tst_DisplayListSameFrame.qml
@@ -603,6 +604,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         rollqml/RollQmlPaths.swift.in
         rollqml/cursor_probe.cpp
         rollqml/cursor_probe.h
+        support/qmlcheckfonts.cpp
         # Roll suites resolve "../editorqml/NativeWait.js" from their sources.
         editorqml/NativeWait.js
     )
@@ -700,5 +702,6 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editorqml/tst_ShellVoicegroupEditing.qml
         editorqml/tst_ShellVoicegroupPicker.qml
         editorqml/tst_ShellVoicegroupSave.qml
+        support/qmlcheckfonts.cpp
     )
 endif()
