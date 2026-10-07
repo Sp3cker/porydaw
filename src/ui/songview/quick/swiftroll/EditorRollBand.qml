@@ -279,9 +279,6 @@ Item {
                 anchors.fill: parent
                 active: false
                 onLoaded: {
-                    if (rollBandContent.root.eventListPresenter) {
-                        rollBandContent.root.eventListPresenter.setVisible(rollBandContent.root.showEvents)
-                    }
                     if (rollBandContent.root.showEvents && rollBandContent.root.visible)
                         Qt.callLater(function() {
                             if (rollBandContent.root.showEvents && eventPage.item)

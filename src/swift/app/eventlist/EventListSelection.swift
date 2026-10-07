@@ -42,14 +42,20 @@ extension EventListPresenter {
     }
 
     func dispatchSetVisible(visible: Bool) {
-        if visible, !self.visible, let session,
-            let selectedChunk = mappedChunk(for: session.selectedTrack, in: session.document),
-            selectedChunk != chunkIndex
-        {
-            setChunk(index: selectedChunk)
-        }
+        guard self.visible != visible else { return }
         self.visible = visible
-        if !visible {
+        if visible {
+            guard attached else { return }
+            var chunkChanged = false
+            if let session,
+                let selectedChunk = mappedChunk(for: session.selectedTrack, in: session.document),
+                selectedChunk != chunkIndex
+            {
+                chunkIndex = selectedChunk
+                chunkChanged = true
+            }
+            rebuildFromDocument(preservingCurrentRow: !chunkChanged)
+        } else {
             clearEditing()
             dismissMenu()
         }

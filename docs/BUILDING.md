@@ -54,6 +54,16 @@ State whether the measurement covers core editing, presenter rendering, or the
 whole app, and whether fixture setup and undo/redo are included. Do not divide
 whole-process totals into a claimed per-note or steady-state cost.
 
+The MIDI Event List formats and publishes rows only while open. Closing it
+unloads the QML page and leaves the last published rows untouched; hidden
+document and transport updates do not format or publish rows. Reopening
+rebuilds the selected track's mapped MIDI chunk from the current document.
+Cover this behavior with `deno task checks:shell --filter shell-event-list`.
+Tab return and background reload are covered by
+`deno task checks:shell --filter shell-tabs-open-select --qt ShellTabs::test_eventListRowsResumeWithTab`.
+Compare CPU-profile stacks under keyboard commands separately from loading
+and opening the page.
+
 ## Where the time goes
 
 Fresh tree = new worktree or new `build/<cfg>` directory.

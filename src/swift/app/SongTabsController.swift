@@ -352,6 +352,7 @@ public final class SongTabsController {
     /// follows through its session binding.
     public func setSelectedTabEventsVisible(visible: Bool) {
         guard let page = selectedPage else { return }
+        app?.eventListPresenter().setVisible(visible: visible)
         if page.showsEvents != visible { page.showsEvents = visible }
         if selectedTabShowsEvents != visible { selectedTabShowsEvents = visible }
     }

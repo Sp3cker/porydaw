@@ -4,6 +4,115 @@ import QtTest
 
 ShellEventListSupport {
 
+    function test_closedRowsAreRebuiltOnOpen() {
+        failOnWarning(/QQmlVMEMetaObject|ReferenceError|TypeError|Binding loop/)
+        settings.setString("lastProjectDir", "")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null)
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        waitForShellScene()
+        const router = shell.shellPresenter
+        const session = router.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), "song load settles")
+        verify(session.songOpen, session.lastSaveError)
+        const presenter = session.eventListPresenter()
+        compare(presenter.visible, false)
+        compare(presenter.rowCount, 0)
+        compare(presenter.rowHandle(0), null)
+        router.activate("view.event_list")
+        tryCompare(presenter, "visible", true, 3000)
+        let surface = null
+        tryVerify(function() {
+            surface = findChild(shell.sceneLoader.item, "swiftRollOverlay")
+            return surface !== null && findChild(surface, "eventListPage") !== null
+        }, 3000)
+        const grid = surface.gridModel
+        const notes = JSON.parse(grid.fetchNoteSummary())
+        let target = null
+        let targetRow = -1
+        for (let index = 0; index < presenter.rowCount && target === null; ++index) {
+            if (presenter.rowType(index) !== 1)
+                continue
+            const tick = presenter.rowTick(index)
+            const pitch = Number(presenter.cellDisplay(index, 3))
+            if (pitch >= 127 || notes.some(function(note) {
+                return note.tick === tick && note.pitch === pitch + 1
+            }))
+                continue
+            target = notes.find(function(note) {
+                return !note.ghost && note.tick === tick && note.pitch === pitch
+            }) || null
+            if (target !== null)
+                targetRow = index
+        }
+        verify(target !== null, "an unambiguous note can move up without clipping")
+        const tick = target.tick
+        const pitch = target.pitch
+        const chunk = presenter.chunkIndex
+        presenter.selectRow(targetRow, Qt.NoModifier)
+        tryCompare(presenter, "currentRow", targetRow, 3000)
+        const rowsBeforeClose = presenter.rowCount
+        const rowHandles = []
+        for (let index = 0; index < rowsBeforeClose; ++index)
+            rowHandles.push(presenter.rowHandle(index))
+        function rowSnapshot() {
+            return rowHandles.map(function(row) {
+                return [row.c0, row.c1, row.c3]
+            })
+        }
+        const publishedBeforeClose = rowSnapshot()
+        router.activate("view.event_list")
+        tryCompare(presenter, "visible", false, 3000)
+        compare(presenter.rowCount, rowsBeforeClose)
+        compare(rowSnapshot(), publishedBeforeClose)
+        tryVerify(function() {
+            return findChild(surface, "eventListPage") === null
+        }, 3000)
+        const roll = findChild(surface, "swiftRollInput")
+        verify(roll !== null)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        router.activate("roll.select_all")
+        keyClick(Qt.Key_Up)
+        tryVerify(function() {
+            return JSON.parse(grid.fetchNoteSummary()).some(function(note) {
+                return note.id === target.id && note.pitch === pitch + 1 && note.selected
+            })
+        }, 3000)
+        wait(0)
+        compare(presenter.rowCount, rowsBeforeClose)
+        compare(rowSnapshot(), publishedBeforeClose)
+        router.activate("view.event_list")
+        tryCompare(presenter, "visible", true, 3000)
+        compare(presenter.chunkIndex, chunk)
+        compare(presenter.currentRow, targetRow)
+        let page = null
+        tryVerify(function() {
+            page = findChild(surface, "eventListPage")
+            return page !== null
+        }, 3000)
+        const table = findChild(page, "eventListTable")
+        verify(table !== null)
+        tryCompare(table, "rows", presenter.rowCount, 3000)
+        let refreshedRow = -1
+        for (let index = 0; index < presenter.rowCount; ++index) {
+            if (presenter.rowType(index) === 1 && presenter.rowTick(index) === tick
+                && presenter.cellDisplay(index, 3) === String(pitch + 1)) {
+                refreshedRow = index
+                break
+            }
+        }
+        verify(refreshedRow >= 0)
+        const cell = cellAt(table, refreshedRow, 3)
+        const label = findChild(cell, "eventListCell_" + refreshedRow + "_3")
+        verify(label !== null)
+        compare(label.text, String(pitch + 1))
+    }
+
     function test_filterAndEditOnMountedPage() {
         settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
@@ -33,8 +142,11 @@ ShellEventListSupport {
         shellPresenter.activate("view.event_list")
         tryCompare(session.songTabs, "selectedTabShowsEvents", true, 3000)
         tryCompare(presenter, "visible", true, 3000)
-        const page = findChild(tab, "eventListPage")
-        verify(page !== null, "existing event-list page is rendered")
+        let page = null
+        tryVerify(function() {
+            page = findChild(tab, "eventListPage")
+            return page !== null
+        }, 3000, "the requested event-list page is rendered")
         typographyPage = page
         tryVerify(function() {
             return page.headerFont.pixelSize === presenter.fonts.caption.pixelSize

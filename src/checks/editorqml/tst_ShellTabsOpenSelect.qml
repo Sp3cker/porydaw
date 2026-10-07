@@ -6,6 +6,72 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 
 ShellTabsSupport {
+    function test_eventListRowsResumeWithTab() {
+        failOnWarning(/QQmlVMEMetaObject|ReferenceError|TypeError|Binding loop/)
+        const ids = openShell(["mus_route101", "mus_littleroot_test"])
+        tabs().selectTab(ids[0])
+        tabs().setSelectedTabEventsVisible(true)
+        const surface = surfaceOf(ids[0])
+        const presenter = surface.eventListPresenter
+        tryCompare(presenter, "visible", true, 3000)
+        tryVerify(function() {
+            return findChild(surface, "eventListTable") !== null
+        }, 3000, "the first tab's event page is mounted before switching")
+        const rows = presenter.rowCount
+        const firstType = presenter.cellDisplay(0, 1)
+        verify(rows > 0, "the first tab initially renders its events")
+        tabs().selectTab(ids[1])
+        tryCompare(presenter, "visible", false, 3000)
+        tryCompare(presenter, "rowCount", 0, 3000,
+                   "the background tab releases its event rows")
+        tabs().selectTab(ids[0])
+        tryCompare(presenter, "visible", true, 3000)
+        tryCompare(presenter, "rowCount", rows, 3000)
+        let table = null
+        tryVerify(function() {
+            table = findChild(surface, "eventListTable")
+            return table !== null
+        }, 3000)
+        tryCompare(table, "rows", rows, 3000)
+        table.forceLayout()
+        table.positionViewAtRow(0, TableView.Contain)
+        table.forceLayout()
+        tryVerify(function() {
+            const cell = table.itemAtCell(Qt.point(1, 0))
+            const label = cell ? findChild(cell, "eventListCell_0_1") : null
+            return label !== null && label.text === firstType
+        }, 3000, "returning to the mounted page restores its rendered events")
+
+        tabs().selectTab(ids[1])
+        tabs().setSelectedTabEventsVisible(true)
+        tryVerify(function() {
+            return findChild(surfaceOf(ids[1]), "eventListPage") !== null
+        }, 3000)
+        const oldBackgroundSession = pageOf(ids[1]).session
+        session().openSong("mus_littleroot_test")
+        tabs().selectTab(ids[0])
+        verify(waitForNative(function() {
+            return pageOf(ids[1]).session !== oldBackgroundSession
+        }, 30000), "the background tab replaces its document")
+        tryVerify(function() {
+            const background = surfaceOf(ids[1])
+            return background !== null
+                && background.applicationSession === pageOf(ids[1]).session
+                && findChild(background, "eventListPage") !== null
+        }, 3000, "the replacement background tab mounts its retained event page")
+        compare(tabs().selectedId, ids[0])
+        compare(presenter.visible, true)
+        compare(presenter.rowCount, rows)
+        table.forceLayout()
+        table.positionViewAtRow(0, TableView.Contain)
+        table.forceLayout()
+        tryVerify(function() {
+            const cell = table.itemAtCell(Qt.point(1, 0))
+            const label = cell ? findChild(cell, "eventListCell_0_1") : null
+            return label !== null && label.text === firstType
+        }, 3000, "background page creation cannot replace selected event content")
+    }
+
     function test_aOpenSwitchAndGeometry() {
         var ids = openShell(["mus_route101", "mus_littleroot_test", "mus_route102"])
         var firstId = ids[0]

@@ -41,8 +41,6 @@ FocusScope {
         const eventsHeldFocus = root.eventPage.item && (root.eventPage.item as Item).activeFocus
         if (!root.showEvents)
             root.eventPage.active = false
-        if (root.eventListPresenter)
-            root.eventListPresenter.setVisible(root.showEvents)
         root.eventListHost.visible = root.showEvents
         if (root.showEvents)
             root.eventPage.active = true
@@ -418,8 +416,6 @@ FocusScope {
     Component.onCompleted: {
         if (hintService && hintWindowActive)
             hintService.setWindowActive(true)
-        if (root.eventListPresenter)
-            root.eventListPresenter.setVisible(root.showEvents)
         root.eventListHost.visible = root.showEvents
         root.eventPage.active = root.showEvents
         configureViewport()

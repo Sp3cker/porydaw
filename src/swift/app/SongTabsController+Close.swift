@@ -264,6 +264,7 @@ extension SongTabsController {
         if selectedPage !== page { selectedPage = page }
         let showsEvents = page?.showsEvents ?? false
         if selectedTabShowsEvents != showsEvents { selectedTabShowsEvents = showsEvents }
+        app?.eventListPresenter().setVisible(visible: showsEvents)
     }
 
     /// Drops every row, retaining each tab with the application until the page

@@ -244,18 +244,8 @@ public final class DocumentWorkspace {
             flushDeferredCamera(kind)
         }
         playheadGuides.attach(viewport: viewport)
-        let engineTracks = session.document.engineTracks
-        let initialChunk: Int
-        if let track = session.selectedTrack,
-            (0..<engineTracks.usedTrackCount).contains(track),
-            engineTracks.tracks.indices.contains(track),
-            let chunk = engineTracks.tracks[track].midiChunk
-        {
-            initialChunk = chunk
-        } else {
-            // The native controller starts on chunk zero when no track is selected.
-            initialChunk = 0
-        }
+        let initialChunk =
+            eventList.mappedChunk(for: session.selectedTrack, in: session.document) ?? 0
         eventList.attach(session: session, chunkIndex: initialChunk)
         playhead.attach(viewport: viewport, audio: audio, grid: grid, drawer: drawer)
         lastPolledPlaying = nil

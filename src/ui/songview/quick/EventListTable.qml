@@ -11,7 +11,6 @@ Item {
     final required property EventListPresenter controller
     final required property FontMetrics tableFontMetrics
     final required property FontMetrics headerFontMetrics
-    property bool tableLayoutPending: false
     final property alias eventTable: eventTable
 
 
@@ -26,16 +25,16 @@ Item {
         return Math.max(0, Math.min(maximum, value))
     }
     function requestTableLayout(): void {
-        if (table.tableLayoutPending)
-            return
-        table.tableLayoutPending = true
-        Qt.callLater(table.applyTableLayout)
+        tableLayoutTimer.start()
     }
 
-    function applyTableLayout(): void {
-        table.tableLayoutPending = false
-        eventTable.forceLayout()
+    Timer {
+        id: tableLayoutTimer
+        interval: 0
+        repeat: false
+        onTriggered: eventTable.forceLayout()
     }
+    Component.onDestruction: tableLayoutTimer.stop()
 
     function widthForColumn(column: int): real {
         return table.page.columnWidth(column)

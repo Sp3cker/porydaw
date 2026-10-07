@@ -50,6 +50,7 @@ internal final class EventListPlayheadFixture {
             presenter?.documentDidChange(change)
         }
         presenter.attach(session: session, chunkIndex: 0)
+        presenter.setVisible(visible: true)
     }
 }
 

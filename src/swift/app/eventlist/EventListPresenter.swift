@@ -165,15 +165,17 @@ public final class EventListPresenter: QmlUncreatable {
         publishColumnWidths()
     }
 
-    /// Installs one document and rebuilds its configured chunk synchronously.
+    /// Installs the document, materializing rows only for an already-visible page.
     @QtIgnored
     public func attach(session: DocumentSession, chunkIndex: Int = 0) {
+        let pageVisible = visible
+        // Tab visibility belongs to the view, not the document being replaced.
         if self.session !== session { detach() }
         self.session = session
-        visible = false
         self.chunkIndex = chunkIndex
         attached = true
-        rebuildFromDocument(preservingCurrentRow: false)
+        visible = pageVisible
+        if visible { rebuildFromDocument(preservingCurrentRow: false) }
     }
 
     /// Drops the document and clears all published rows and transient state.
@@ -210,27 +212,26 @@ public final class EventListPresenter: QmlUncreatable {
         onAvailabilityChanged?()
     }
 
-    /// Rebuilds rows only when a stamp the rows read advanced, or the viewed chunk
-    /// changed; chunk labels are derived and republished only when they differ.
+    /// Hidden pages retain only chunk remapping; visible rows rebuild when their
+    /// source stamps change.
     @QtIgnored
     public func documentDidChange(_ change: SessionChange) {
-        if change.domains.contains(.document) || change.trackRemap != nil {
-            invalidateRowMenu()
-        }
         guard attached, let session, !session.isClosed else { return }
+
+        let documentChanged = change.domains.contains(.document) || change.trackRemap != nil
+        if documentChanged, let remap = change.trackRemap {
+            remapCurrentChunk(using: remap)
+        }
+        guard visible else { return }
+        if documentChanged { invalidateRowMenu() }
 
         if change.domains.contains(.bank) {
             model.voiceNames = voiceNames()
             publishRowValues()
         }
 
-        let documentChanged = change.domains.contains(.document) || change.trackRemap != nil
-        if documentChanged, let remap = change.trackRemap {
-            remapCurrentChunk(using: remap)
-        }
-
         var chunkChangedBySelection = false
-        if change.domains.contains(.selection), visible,
+        if change.domains.contains(.selection),
             let selectedChunk = mappedChunk(for: session.selectedTrack, in: session.document),
             selectedChunk != chunkIndex
         {
@@ -250,7 +251,7 @@ public final class EventListPresenter: QmlUncreatable {
     /// Explicit refresh hook for a host that changed the selected chunk.
     @QtIgnored
     public func refresh() {
-        guard attached else { return }
+        guard attached, visible else { return }
         invalidateRowMenu()
         rebuildFromDocument(preservingCurrentRow: true)
     }
@@ -285,6 +286,7 @@ public final class EventListPresenter: QmlUncreatable {
         guard self.playheadTick != tick || self.playing != playing else { return }
         self.playheadTick = tick
         self.playing = playing
+        guard visible else { return }
         let oldPlayRow = model.playRow
         model.setPlayheadTick(tick)
         publishPlayheadTransition(from: oldPlayRow)
@@ -536,6 +538,7 @@ public final class EventListPresenter: QmlUncreatable {
     }
 
     func rebuildFromDocument(preservingCurrentRow: Bool) {
+        guard visible else { return }
         guard let session, !session.isClosed else {
             model.setSource(nil)
             publishRows()
@@ -555,6 +558,7 @@ public final class EventListPresenter: QmlUncreatable {
             tempos: chunkIndex == 0 ? session.document.state.tempo : [],
             filterMask: filterMask,
             preservingCurrentRow: preservingCurrentRow)
+        model.setPlayheadTick(playheadTick)
         chunk = chunkIndex
         selectedRows = selectedRows.filter { model.rows.indices.contains($0) }
         model.voiceNames = voiceNames()

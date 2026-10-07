@@ -108,6 +108,7 @@ internal func eventListChunkLabelParity(
         sampleRate: 48_000)
     let presenter = EventListPresenter()
     presenter.attach(session: session)
+    presenter.setVisible(visible: true)
     report.expectEqual(
         expected: "Chunk 0 (tempo/meta)", actual: presenter.chunkLabels[0],
         cppID: pageID, what: "unmapped conductor chunk names tempo/meta")
@@ -334,6 +335,7 @@ internal func eventListSummaryParity(
         sampleRate: 48_000)
     let presenter = EventListPresenter()
     presenter.attach(session: session)
+    presenter.setVisible(visible: true)
     presenter.setChunk(index: 0)
     func summary(of predicate: (EventListRow) -> Bool) -> String {
         guard let row = presenter.model.rows.first(where: predicate) else { return "" }

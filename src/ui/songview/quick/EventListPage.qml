@@ -84,7 +84,6 @@ FocusScope {
 
     signal navigationFocusRequested()
     onNavigationFocusRequested: navigationFocus.forceActiveFocus(Qt.OtherFocusReason)
-    Component.onCompleted: controller.setVisible(visible)
 
     // The scope remembers its last focused child. Return from cell editing
     // to a non-text leaf so Delete and Select All reach the shared router.
@@ -364,10 +363,6 @@ FocusScope {
         controller: page.controller
         headerFontMetrics: headerMetrics
         controlFontMetrics: controlMetrics
-    }
-    onVisibleChanged: {
-        if (controller)
-            controller.setVisible(visible)
     }
 
     Connections {
