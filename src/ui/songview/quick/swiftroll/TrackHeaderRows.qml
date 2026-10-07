@@ -141,6 +141,11 @@ Item {
                 y: index * root.headersModel.rowHeight
                 width: translatedRows.width
                 height: root.headersModel.rowHeight
+                objectName: "timelineHeaderRow_" + track
+                Accessible.role: Accessible.Button
+                Accessible.name: title
+                Accessible.ignored: isAddTrack
+                Accessible.onPressAction: root.headersModel.selectTrack(track)
 
                 property bool complete: false
 

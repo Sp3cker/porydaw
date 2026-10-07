@@ -85,7 +85,7 @@ extension TrackHeadersPresenter {
         if target == .addTrack {
             guard button == 1 else { return true }
         } else if button == 2 {
-            selectTrack(track)
+            selectTrack(track: track)
             showHeaderMenu(track: track, x: x, y: y)
             return true
         } else if target != .mute && target != .solo {
@@ -93,8 +93,6 @@ extension TrackHeadersPresenter {
                 modifiers & 0x0400_0000 != 0
                 ? .toggle : modifiers & 0x0200_0000 != 0 ? .range : .plain
             session.adjustTrackScope(track: track, action: action)
-            if let primary = session.selectedTrack { onTrackSelected?(primary) }
-            refreshFromDocument()
             guard button == 1, modifiers & (0x0200_0000 | 0x0400_0000) == 0 else { return true }
             pointer.dragArmed = true
         } else if button != 1 {
@@ -163,7 +161,7 @@ extension TrackHeadersPresenter {
         publishPointerVisuals()
         guard target == .body || target == .voice else { return true }
         let track = snapshots[row].track
-        selectTrack(track)
+        selectTrack(track: track)
         if target == .voice { requestTrackVoice(track: track) } else { beginRename(track: track) }
         return true
     }

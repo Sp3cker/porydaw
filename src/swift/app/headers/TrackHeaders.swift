@@ -87,7 +87,6 @@ public final class TrackHeadersPresenter {
     @QtIgnored public var onAddTrackRequested: (() -> Void)?
     @QtIgnored public var onChangeTrackVoiceRequested: ((Int) -> Void)?
     @QtIgnored public var onRevealTrackVoiceRequested: ((Int) -> Void)?
-    @QtIgnored public var onTrackSelected: ((Int) -> Void)?
     @QtIgnored public var onContextMenuRequested: ((Double, Double) -> Void)?
     @QtIgnored var session: DocumentSession?
     @QtIgnored var palette = GridPalette()
@@ -159,7 +158,6 @@ public final class TrackHeadersPresenter {
         onAddTrackRequested = nil
         onChangeTrackVoiceRequested = nil
         onRevealTrackVoiceRequested = nil
-        onTrackSelected = nil
         onContextMenuRequested = nil
     }
 
@@ -442,7 +440,7 @@ public final class TrackHeadersPresenter {
         case 2: onRevealTrackVoiceRequested?(target.track)
         case 3: beginRename(track: target.track)
         case 4:
-            if let added = session.document.duplicateTrack(target.track) { selectTrack(added) }
+            if let added = session.document.duplicateTrack(target.track) { selectTrack(track: added) }
             refreshFromDocument()
         case 5:
             session.document.deleteTrack(target.track)
@@ -463,7 +461,7 @@ public final class TrackHeadersPresenter {
             if session.document.canAddTrack,
                 let track = session.document.addTrack(voice: program)
             {
-                selectTrack(track)
+                selectTrack(track: track)
             }
         } else if validTrack(target.track) {
             let points = session.document.lanePoints(track: target.track, lane: .voice)
@@ -496,12 +494,9 @@ public final class TrackHeadersPresenter {
         return (0..<session.document.engineTracks.usedTrackCount).contains(track)
     }
 
-    @QtIgnored
-    func selectTrack(_ track: Int) {
+    public func selectTrack(track: Int) {
         guard let session, validTrack(track) else { return }
         session.selectPrimaryTrack(track)
-        onTrackSelected?(track)
-        refreshFromDocument()
     }
 
     @QtIgnored

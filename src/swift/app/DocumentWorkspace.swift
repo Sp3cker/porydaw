@@ -162,9 +162,6 @@ public final class DocumentWorkspace {
             viewport.setEditorViewState(next)
         }
 
-        headers.onTrackSelected = { [weak grid] track in
-            grid?.setTrack(index: track)
-        }
         headers.onAddTrackRequested = { [weak headerVoicePicker] in
             callbacks.addTrackVoiceRequested()
             headerVoicePicker?.open(track: -1)
