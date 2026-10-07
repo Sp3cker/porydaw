@@ -1,12 +1,12 @@
 // Table-of-contents handling: run metadata, template name, schema discovery.
 import {
+  attr,
   child,
-  childList,
+  children,
+  exportElements,
   firstLine,
-  isObj,
-  parseXml,
-  runCapture,
   text,
+  type XmlElement,
 } from "./xml.ts";
 
 export type SchemaName = "cpu-profile" | "time-profile" | "os-signpost";
@@ -26,12 +26,9 @@ function epochSeconds(value: string): number {
   return ms / 1000;
 }
 
-function runFromNode(node: unknown): RunInfo {
-  const numAttr = isObj(node) &&
-      typeof node["@_number"] === "string"
-    ? Number(node["@_number"])
-    : NaN;
-  if (!isObj(node) || !Number.isSafeInteger(numAttr)) {
+function runFromNode(node: XmlElement): RunInfo {
+  const numAttr = Number(attr(node, "number") || NaN);
+  if (!Number.isSafeInteger(numAttr)) {
     throw new Error("unparsable TOC: run without a number");
   }
   const info = child(node, "info");
@@ -40,10 +37,9 @@ function runFromNode(node: unknown): RunInfo {
     "(unknown template)";
   const data = child(node, "data");
   const schemas: string[] = [];
-  for (const table of childList(data, "table")) {
-    if (isObj(table) && typeof table["@_schema"] === "string") {
-      schemas.push(table["@_schema"]);
-    }
+  for (const table of children(data, "table")) {
+    const schema = attr(table, "schema");
+    if (schema) schemas.push(schema);
   }
   return {
     number: numAttr,
@@ -57,21 +53,20 @@ function runFromNode(node: unknown): RunInfo {
 
 /** Export --toc for a trace and return one RunInfo per run. */
 export async function loadToc(trace: string): Promise<RunInfo[]> {
-  let xml: string;
+  const nodes: XmlElement[] = [];
   try {
-    xml = await runCapture("xcrun", [
-      "xctrace",
-      "export",
-      "--input",
-      trace,
-      "--toc",
-    ]);
+    for await (
+      const run of exportElements(
+        ["xctrace", "export", "--input", trace, "--toc"],
+        { run: true },
+      )
+    ) {
+      nodes.push(run);
+    }
   } catch (error) {
     throw new Error(`cannot read trace ${trace}: ${firstLine(error)}`);
   }
-  const doc = parseXml(xml);
-  const toc = child(doc, "trace-toc");
-  const runs = childList(toc, "run").map(runFromNode);
+  const runs = nodes.map(runFromNode);
   if (runs.length === 0) throw new Error(`unparsable TOC: no runs in ${trace}`);
   return runs;
 }

@@ -24,7 +24,7 @@
     "xctrace": "deno run --allow-read --allow-write --allow-run=xcrun --allow-env=HOME,TMPDIR tools/xctrace.ts"
   },
   "imports": {
-    "fast-xml-parser": "npm:fast-xml-parser@5.3.0"
+    "saxes": "npm:saxes@6.0.0"
   },
   "fmt": {
     "include": ["tools/**/*.ts"]

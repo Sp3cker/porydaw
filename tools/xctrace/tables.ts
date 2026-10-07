@@ -1,23 +1,21 @@
-// Row extraction for the three supported schemas. Every export goes through
-// id/ref resolution (see xml.ts) so backtraces, frames, binaries, threads,
-// processes, weights and timestamps arrive as plain trees.
+// Row extraction for the three supported schemas, streamed from `xctrace
+// export`: rows arrive one at a time with id/ref reuse already resolved.
 import {
+  attr,
   child,
-  childList,
-  collectIds,
-  deref,
-  fmt,
-  isObj,
+  children,
+  exportElements,
   num,
-  parseXml,
-  runCapture,
   text,
+  type XmlElement,
 } from "./xml.ts";
 import type { SchemaName } from "./toc.ts";
 
 export interface Frame {
   sym: string;
   binary: string;
+  /** Sampled pc (leaf) or return address; NaN when not exported. */
+  addr: number;
 }
 
 export interface ProfileSample {
@@ -27,8 +25,8 @@ export interface ProfileSample {
   mainThread: boolean;
   proc: string;
   weight: number;
-  /** Leaf first. */
-  stack: Frame[];
+  /** Leaf first; shared between samples with the same backtrace. */
+  stack: readonly Frame[];
 }
 
 export type SignpostType = "Begin" | "End" | "Event" | string;
@@ -41,30 +39,30 @@ export interface SignpostEvent {
   name: string;
   ident: string;
 }
-/** Export one table (all matching nodes merged: os-signpost repeats per
- *  category) and return its resolved rows. */
-export async function exportRows(
+
+/** Stream one table's rows (os-signpost repeats one node per category). */
+export async function* exportRows(
   trace: string,
   run: number,
   schema: SchemaName,
-): Promise<unknown[]> {
-  const xml = await runCapture("xcrun", [
-    "xctrace",
-    "export",
-    "--input",
-    trace,
-    "--xpath",
-    `/trace-toc/run[@number="${run}"]/data/table[@schema="${schema}"]`,
-  ]);
-  const doc = parseXml(xml);
-  const result = child(doc, "trace-query-result");
-  const nodes = childList(result, "node");
-  if (nodes.length === 0) {
+): AsyncGenerator<XmlElement> {
+  let nodes = 0;
+  for await (
+    const element of exportElements([
+      "xctrace",
+      "export",
+      "--input",
+      trace,
+      "--xpath",
+      `/trace-toc/run[@number="${run}"]/data/table[@schema="${schema}"]`,
+    ], { row: true, node: true })
+  ) {
+    if (element.name === "node") nodes++;
+    else yield element;
+  }
+  if (nodes === 0) {
     throw new Error(`missing table: no ${schema} table in run ${run}`);
   }
-  const rows: unknown[] = [];
-  for (const node of nodes) rows.push(...childList(node, "row"));
-  return rows.map((row) => deref(row, collectIds(doc)));
 }
 
 function displayName(fmtValue: string, fallback: string): string {
@@ -73,65 +71,69 @@ function displayName(fmtValue: string, fallback: string): string {
   return fmtValue || fallback;
 }
 
-function threadFields(thread: unknown): { name: string; main: boolean } {
-  const name = displayName(
-    fmt(thread),
-    `tid ${text(child(thread, "tid")) || "?"}`,
-  );
-  return { name, main: name.toLowerCase() === "main thread" };
-}
-
-function procName(process: unknown): string {
-  const name = displayName(fmt(process), "");
+function procName(process: XmlElement | undefined): string {
+  const name = displayName(attr(process, "fmt"), "");
   // fmt is "name (pid)"; the bare name keys cross-trace aggregation.
   const bare = name.replace(/ \([0-9]+\)$/, "");
   if (bare) return bare;
   return text(child(process, "pid")) || "?";
 }
-function backtraceFrames(tagged: unknown): Frame[] {
-  const frames = childList(child(tagged, "backtrace"), "frame");
-  return frames.map((frame) => {
-    if (!isObj(frame)) return { sym: "?", binary: "?" };
-    const rawName = frame["@_name"];
-    const sym = typeof rawName === "string" && rawName
-      ? rawName
-      : fmt(frame) || "?";
-    const binary = child(frame, "binary");
-    const binaryName = isObj(binary) && typeof binary["@_name"] === "string" &&
-        binary["@_name"]
-      ? binary["@_name"]
-      : "?";
-    return { sym, binary: binaryName };
-  });
+
+function backtraceFrames(tagged: XmlElement | undefined): Frame[] {
+  // cpu-profile puts frames directly under <tagged-backtrace>; others nest <backtrace>.
+  const holder = child(tagged, "backtrace") ?? tagged;
+  return children(holder, "frame").map((frame) => ({
+    sym: attr(frame, "name") || attr(frame, "fmt") || "?",
+    binary: attr(child(frame, "binary"), "name") || "?",
+    addr: parseInt(attr(frame, "addr"), 16),
+  }));
 }
 
 /** Typed samples from cpu-profile (cycle-weight) or time-profile (weight) rows. */
-export function profileSamples(rows: unknown[]): ProfileSample[] {
-  return rows.map((row) => {
-    const time = num(child(row, "sample-time"));
+export async function* profileSamples(
+  rows: AsyncIterable<XmlElement>,
+): AsyncGenerator<ProfileSample> {
+  // Refs resolve to one shared element, so repeated backtraces convert once.
+  const stacks = new WeakMap<XmlElement, Frame[]>();
+  for await (const row of rows) {
+    const tNs = num(child(row, "sample-time"));
+    const weight = num(child(row, "cycle-weight") ?? child(row, "weight"));
+    if (!Number.isFinite(tNs) || !Number.isFinite(weight)) continue;
     const thread = child(row, "thread");
-    const { name, main } = threadFields(thread);
-    const weightNode = child(row, "cycle-weight") ?? child(row, "weight");
-    return {
-      tNs: time,
+    const name = displayName(
+      attr(thread, "fmt"),
+      `tid ${text(child(thread, "tid")) || "?"}`,
+    );
+    const tagged = child(row, "tagged-backtrace");
+    let stack = tagged && stacks.get(tagged);
+    if (!stack) {
+      stack = backtraceFrames(tagged);
+      if (tagged) stacks.set(tagged, stack);
+    }
+    yield {
+      tNs,
       thread: name,
-      mainThread: main,
+      mainThread: name.toLowerCase() === "main thread",
       proc: procName(child(row, "process")),
-      weight: num(weightNode),
-      stack: backtraceFrames(child(row, "tagged-backtrace")),
+      weight,
+      stack,
     };
-  }).filter((sample) =>
-    Number.isFinite(sample.tNs) && Number.isFinite(sample.weight)
-  );
+  }
 }
 
-export function signpostEvents(rows: unknown[]): SignpostEvent[] {
-  return rows.map((row) => ({
-    tNs: num(child(row, "event-time")),
-    type: text(child(row, "event-type")) || "?",
-    subsystem: text(child(row, "subsystem")),
-    category: text(child(row, "category")),
-    name: text(child(row, "signpost-name")),
-    ident: text(child(row, "os-signpost-identifier")),
-  })).filter((event) => Number.isFinite(event.tNs));
+export async function* signpostEvents(
+  rows: AsyncIterable<XmlElement>,
+): AsyncGenerator<SignpostEvent> {
+  for await (const row of rows) {
+    const tNs = num(child(row, "event-time"));
+    if (!Number.isFinite(tNs)) continue;
+    yield {
+      tNs,
+      type: text(child(row, "event-type")) || "?",
+      subsystem: text(child(row, "subsystem")),
+      category: text(child(row, "category")),
+      name: text(child(row, "signpost-name")),
+      ident: text(child(row, "os-signpost-identifier")),
+    };
+  }
 }

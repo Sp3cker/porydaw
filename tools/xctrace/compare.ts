@@ -1,13 +1,9 @@
 // Compare before/after trace pairs: per-pair reduction plus median reduction
 // for the process total, main thread, --binary self, and any --metric.
 // Each trace uses its own interval (flag overrides that trace's sidecar).
-import { findRun, inferSchema, loadToc } from "./toc.ts";
-import { exportRows, profileSamples, signpostEvents } from "./tables.ts";
 import {
-  aggregateProfile,
-  aggregateSignposts,
+  loadSummary,
   type ProfileSummary,
-  resolveInterval,
   type SignpostSummary,
   type SummarizeOptions,
 } from "./summarize.ts";
@@ -58,21 +54,13 @@ function metricWeights(
   return null;
 }
 
-async function loadForCompare(
+function loadForCompare(
   trace: string,
   options: CompareOptions,
 ): Promise<ProfileSummary | SignpostSummary> {
-  const runs = await loadToc(trace);
-  const run = findRun(runs, options.run);
-  const schema = options.schema ?? inferSchema(run);
-  const interval = await resolveInterval(trace, options.intervalFlag);
-  const rows = await exportRows(trace, options.run, schema);
-  if (schema === "os-signpost") {
-    return aggregateSignposts(trace, run, signpostEvents(rows), interval);
-  }
   // Full symbol maps stay in memory here so --metric can hit outside top N;
   // the --binary scope only selects the binary-self row, never the lookup set.
-  return aggregateProfile(trace, run, schema, profileSamples(rows), interval, {
+  return loadSummary(trace, {
     ...options,
     binary: undefined,
     top: Number.MAX_SAFE_INTEGER,

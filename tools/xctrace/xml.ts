@@ -1,4 +1,5 @@
-// XML plumbing for xctrace exports: fast-xml-parser DOM plus id/ref resolution.
+// Streaming XML for xctrace exports: SAX over the export's stdout builds small
+// element trees, resolving xctrace's id/ref reuse in document order.
 //
 // Discovered xctrace column names (see tables.ts for row shapes):
 //   cpu-profile : time/sample-time, thread/thread, process/process, core/core,
@@ -11,34 +12,14 @@
 //                 category/category, message/os-log-metadata, emit-location/return-location
 //   toc run info: target/device/process/environment, summary/start-date/end-date/
 //                 duration/template-name, processes/process, data/table[@schema]
-import { XMLParser } from "fast-xml-parser";
+import { SaxesParser } from "saxes";
 
-const parser = new XMLParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: "@_",
-  textNodeName: "#text",
-  // Repeated elements always arrive as arrays so callers never branch.
-  isArray: (name) =>
-    name === "row" || name === "col" || name === "node" ||
-    name === "table" || name === "run" || name === "frame" ||
-    name === "item" || name === "process",
-  trimValues: true,
-  parseTagValue: false,
-});
-
-/** Parse an xctrace XML export; throws a one-line Error on malformed input. */
-export function parseXml(text: string): Record<string, unknown> {
-  try {
-    const doc = parser.parse(text, true) as unknown;
-    if (typeof doc !== "object" || doc === null) {
-      throw new Error("empty XML document");
-    }
-    return doc as Record<string, unknown>;
-  } catch (error) {
-    throw new Error(
-      `unparsable XML: ${firstLine(error)}`,
-    );
-  }
+/** One element; ref'd elements are the shared, read-only id definition. */
+export interface XmlElement {
+  readonly name: string;
+  readonly attrs: Readonly<Record<string, string>>;
+  readonly children: XmlElement[];
+  text: string;
 }
 
 export function firstLine(error: unknown): string {
@@ -46,120 +27,124 @@ export function firstLine(error: unknown): string {
   return message.split("\n")[0];
 }
 
-/** Plain-object test for parsed-XML nodes (FXP objects carry @_ attrs). */
-export function isObj(node: unknown): node is Record<string, unknown> {
-  return typeof node === "object" && node !== null && !Array.isArray(node);
+/** First child named `name`. */
+export function child(
+  element: XmlElement | undefined,
+  name: string,
+): XmlElement | undefined {
+  return element?.children.find((candidate) => candidate.name === name);
 }
 
-/** Collect every element with an id attribute into id -> element. */
-export function collectIds(
-  root: unknown,
-  into: Map<string, unknown> = new Map(),
-): Map<string, unknown> {
-  if (Array.isArray(root)) {
-    for (const item of root) collectIds(item, into);
-  } else if (isObj(root)) {
-    const id = root["@_id"];
-    if (typeof id === "string") into.set(id, root);
-    for (const value of Object.values(root)) collectIds(value, into);
-  }
-  return into;
+export function children(
+  element: XmlElement | undefined,
+  name: string,
+): XmlElement[] {
+  return element?.children.filter((candidate) => candidate.name === name) ??
+    [];
 }
 
-/**
- * Deep-copy a parsed tree with every {@_ref} element replaced by its id
- * target. xctrace reuses backtraces, frames, binaries, threads, processes,
- * weights and timestamps this way; callers work on plain resolved trees.
- */
-export function deref(root: unknown, ids: Map<string, unknown>): unknown {
-  return derefOne(root, ids, []);
+/** Attribute value, or "" when absent. */
+export function attr(element: XmlElement | undefined, name: string): string {
+  return element?.attrs[name] ?? "";
 }
 
-function derefOne(
-  node: unknown,
-  ids: Map<string, unknown>,
-  stack: string[],
-): unknown {
-  if (Array.isArray(node)) {
-    return node.map((item) => derefOne(item, ids, stack));
-  }
-  if (!isObj(node)) return node;
-  const ref = node["@_ref"];
-  if (typeof ref === "string") {
-    if (stack.includes(ref)) return {};
-    const target = ids.get(ref);
-    if (target === undefined) return {};
-    return derefOne(target, ids, [...stack, ref]);
-  }
-  const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(node)) {
-    if (key === "@_id" || key === "@_ref") continue;
-    out[key] = derefOne(value, ids, stack);
-  }
-  return out;
-}
-
-/** Element text: leaf strings, {#text} leaves, or "" for empty/sentinel nodes. */
-export function text(node: unknown): string {
-  if (typeof node === "string") return node;
-  if (!isObj(node)) return "";
-  const inner = node["#text"];
-  if (typeof inner === "string") return inner;
-  if (typeof inner === "number") return String(inner);
-  return "";
+/** Trimmed text; "" for absent or empty (<sentinel/>) cells. */
+export function text(element: XmlElement | undefined): string {
+  return element?.text.trim() ?? "";
 }
 
 /** Numeric leaf value; NaN when absent/unparsable (callers decide strictness). */
-export function num(node: unknown): number {
-  const raw = text(node).trim();
-  if (!raw) return NaN;
-  return Number(raw);
+export function num(element: XmlElement | undefined): number {
+  const raw = text(element);
+  return raw ? Number(raw) : NaN;
 }
 
-/** fmt="..." display string of an element, else "". */
-export function fmt(node: unknown): string {
-  if (!isObj(node)) return "";
-  const value = node["@_fmt"];
-  return typeof value === "string" ? value : "";
-}
-
-/** First child under key, unwrapping single-element arrays. */
-export function child(node: unknown, key: string): unknown {
-  if (!isObj(node)) return undefined;
-  const value = node[key];
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
-
-/** Child list under key: [] when absent, unwrapping FXP's repeated-tag arrays. */
-export function childList(node: unknown, key: string): unknown[] {
-  if (!isObj(node)) return [];
-  const value = node[key];
-  if (value === undefined) return [];
-  return Array.isArray(value) ? value : [value];
-}
-
-/** Run a command, capturing stdout; throws a one-line Error on failure. */
-export async function runCapture(cmd: string, args: string[]): Promise<string> {
-  let output;
+/**
+ * Run `xcrun <args>` and yield each closed element named in `names`, detached
+ * from its parent so consumed rows are never retained.
+ */
+export async function* exportElements(
+  args: string[],
+  names: Readonly<Record<string, true>>,
+): AsyncGenerator<XmlElement> {
+  let process: Deno.ChildProcess;
   try {
-    const childProcess = new Deno.Command(cmd, {
+    process = new Deno.Command("xcrun", {
       args,
       stdin: "null",
       stdout: "piped",
       stderr: "piped",
     }).spawn();
-    output = await childProcess.output();
   } catch (error) {
-    throw new Error(`${cmd} failed to start: ${firstLine(error)}`);
+    throw new Error(`xcrun failed to start: ${firstLine(error)}`);
   }
-  const decoder = new TextDecoder();
-  if (!output.success) {
-    throw new Error(
-      `${cmd} ${args[0] ?? ""} failed: ${
-        firstLine(decoder.decode(output.stderr).trim() || `code ${output.code}`)
-      }`,
-    );
+  const stderr = new Response(process.stderr).text();
+  const parser = new SaxesParser();
+  const ids = new Map<string, XmlElement>();
+  const open: XmlElement[] = [];
+  let ready: XmlElement[] = [];
+  const appendText = (value: string) => {
+    const top = open.at(-1);
+    if (top) top.text += value;
+  };
+  parser.on("opentag", (tag) => {
+    open.push({
+      name: tag.name,
+      attrs: tag.attributes,
+      children: [],
+      text: "",
+    });
+  });
+  parser.on("text", appendText);
+  parser.on("cdata", appendText);
+  parser.on("closetag", () => {
+    let element = open.pop()!;
+    const ref = element.attrs.ref;
+    if (ref !== undefined) {
+      const target = ids.get(ref);
+      if (target === undefined) throw new Error(`unresolved ref ${ref}`);
+      element = target;
+    } else if (element.attrs.id !== undefined) {
+      ids.set(element.attrs.id, element);
+    }
+    if (Object.hasOwn(names, element.name)) ready.push(element);
+    else open.at(-1)?.children.push(element);
+  });
+  const feed = (chunk: string | null) => {
+    try {
+      if (chunk === null) parser.close();
+      else parser.write(chunk);
+    } catch (error) {
+      throw new Error(`unparsable XML: ${firstLine(error)}`);
+    }
+    const batch = ready;
+    ready = [];
+    return batch;
+  };
+  let finished = false;
+  try {
+    for await (
+      const chunk of process.stdout.pipeThrough(new TextDecoderStream())
+    ) {
+      yield* feed(chunk);
+    }
+    const status = await process.status;
+    finished = true;
+    if (!status.success) {
+      throw new Error(
+        `xcrun ${args[0] ?? ""} failed: ${
+          firstLine((await stderr).trim() || `code ${status.code}`)
+        }`,
+      );
+    }
+    yield* feed(null);
+  } finally {
+    if (!finished) {
+      try {
+        process.kill();
+      } catch {
+        // Already exited.
+      }
+    }
   }
-  return decoder.decode(output.stdout);
 }

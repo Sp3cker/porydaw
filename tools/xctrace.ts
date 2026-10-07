@@ -1,12 +1,13 @@
 // deno task xctrace — record Instruments traces and summarize them locally.
-// Thin wrapper over `xcrun xctrace record` plus offline summarize/compare
-// over `xcrun xctrace export` XML. No Python, no ad-hoc app timing.
+// Thin wrapper over `xcrun xctrace record` plus offline summarize/compare/
+// inline over streamed `xcrun xctrace export` XML. No Python, no ad-hoc timing.
 import {
   compareJson,
   type CompareOptions,
   compareStructured,
   renderCompareLines,
 } from "./xctrace/compare.ts";
+import { loadInlineReport, renderInlineText } from "./xctrace/inline.ts";
 import {
   loadSummary,
   parseIntervalFlag,
@@ -49,6 +50,17 @@ compare: pair before/after traces in order.
   {pairs: [{before: {trace, interval, source}, after, metrics:
   {processTotal: {before, after, reductionPct}, mainThread, binarySelf?,
   metric?}}], medians, dropped} built from the same values as the text.
+
+inline: out-of-line calls within one binary on a profile's hot paths.
+  deno task xctrace inline <file.trace> --binary <name> [--run 1]
+      [--interval <startEpoch>,<endEpoch>] [--thread main|<name>] [--top 20] [--json]
+  Instruments records only real frames, so a --binary frame directly above
+  another is a call the compiler kept out of line. Ranked by local %: weight
+  where the callee is the deepest --binary frame (its own code plus what it
+  calls outside the binary; outside % is that second part). incl % counts
+  every sample containing the call; sites counts distinct caller return
+  addresses. kind: closure (closure/partial apply/thunk), copy (outlined
+  copy/value witness), stub (DYLD stub), unnamed (linker-folded), call.
 `;
 
 const RECORD_HELP =
@@ -63,6 +75,9 @@ const COMPARE_HELP =
   {pairs: [{before: {trace, interval, source}, after, metrics:
   {processTotal: {before, after, reductionPct}, mainThread, binarySelf?,
   metric?}}], medians, dropped} built from the same values as the text.
+`;
+const INLINE_HELP =
+  `usage: deno task xctrace inline <file.trace> --binary <name> [--run 1] [--interval <startEpoch>,<endEpoch>] [--thread main|<name>] [--top 20] [--json]
 `;
 
 function fail(message: string): never {
@@ -337,6 +352,30 @@ async function runCompare(args: string[]): Promise<void> {
   }
 }
 
+async function runInline(args: string[]): Promise<void> {
+  if (args.includes("--help")) {
+    console.log(INLINE_HELP);
+    return;
+  }
+  const { positionals, flags } = splitArgs(args, VALUE_FLAGS);
+  if (positionals.length !== 1) {
+    fail("inline requires exactly one <file.trace>");
+  }
+  const options = parseFilters(flags, {});
+  if (options.binary === undefined) fail("inline requires --binary <name>");
+  const report = await loadInlineReport(positionals[0], options.binary, options)
+    .catch((error: unknown) => fail(firstLine(error)));
+  if (options.json) {
+    console.log(JSON.stringify(
+      { ...report, calls: report.calls.slice(0, options.top) },
+      null,
+      2,
+    ));
+  } else {
+    for (const line of renderInlineText(report, options.top)) console.log(line);
+  }
+}
+
 const [command, ...rest] = Deno.args;
 try {
   if (command === undefined || command === "--help") {
@@ -347,6 +386,8 @@ try {
     await runSummarize(rest);
   } else if (command === "compare") {
     await runCompare(rest);
+  } else if (command === "inline") {
+    await runInline(rest);
   } else {
     fail(`unknown command ${command}`);
   }

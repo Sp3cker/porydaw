@@ -6,6 +6,7 @@ import { findRun, inferSchema, loadToc } from "./toc.ts";
 import type { RunInfo, SchemaName } from "./toc.ts";
 import { exportRows, profileSamples, signpostEvents } from "./tables.ts";
 import type { ProfileSample, SignpostEvent } from "./tables.ts";
+import type { XmlElement } from "./xml.ts";
 
 export interface SummarizeOptions {
   schema?: SchemaName;
@@ -72,18 +73,43 @@ export async function resolveInterval(
   return { start: null, end: null, source: "whole-run" };
 }
 
-export function threadKept(
-  sample: ProfileSample,
-  query: string | undefined,
-): boolean {
-  if (!query) return true;
-  if (query.toLowerCase() === "main") return sample.mainThread;
-  return sample.thread.toLowerCase().includes(query.toLowerCase());
-}
-
 function inInterval(epoch: number, interval: IntervalUse): boolean {
   if (interval.start === null || interval.end === null) return true;
   return epoch >= interval.start && epoch <= interval.end;
+}
+
+export interface OpenedTrace {
+  run: RunInfo;
+  schema: SchemaName;
+  interval: IntervalUse;
+  rows: AsyncGenerator<XmlElement>;
+}
+
+/** TOC, schema and interval for one trace; rows stream on first read. */
+export async function openTrace(
+  trace: string,
+  options: SummarizeOptions,
+): Promise<OpenedTrace> {
+  const run = findRun(await loadToc(trace), options.run);
+  const schema = options.schema ?? inferSchema(run);
+  const interval = await resolveInterval(trace, options.intervalFlag);
+  return { run, schema, interval, rows: exportRows(trace, run.number, schema) };
+}
+
+/** Profile samples on the --thread filter whose time lies in the interval. */
+export async function* keptSamples(
+  opened: OpenedTrace,
+  thread: string | undefined,
+): AsyncGenerator<ProfileSample> {
+  const query = thread?.toLowerCase();
+  for await (const sample of profileSamples(opened.rows)) {
+    const threadKept = !query ||
+      (query === "main"
+        ? sample.mainThread
+        : sample.thread.toLowerCase().includes(query));
+    const epoch = opened.run.startEpoch + sample.tNs / 1e9;
+    if (threadKept && inInterval(epoch, opened.interval)) yield sample;
+  }
 }
 
 export interface SymbolStat {
@@ -110,24 +136,21 @@ export interface ProfileSummary {
   symbolScope: string | null;
 }
 
-export function aggregateProfile(
+async function aggregateProfile(
   trace: string,
-  run: RunInfo,
-  schema: SchemaName,
-  samples: ProfileSample[],
-  interval: IntervalUse,
+  opened: OpenedTrace,
   options: SummarizeOptions,
-): ProfileSummary {
-  const kept = samples.filter((sample) =>
-    threadKept(sample, options.thread) &&
-    inInterval(run.startEpoch + sample.tNs / 1e9, interval)
-  );
-  const total = kept.reduce((sum, sample) => sum + sample.weight, 0);
+): Promise<ProfileSummary> {
+  const { run, schema, interval } = opened;
+  let sampleCount = 0;
+  let total = 0;
   const byProc = new Map<string, number>();
   const byThread = new Map<string, { weight: number; main: boolean }>();
   const byBinary = new Map<string, number>();
   const bySymbol = new Map<string, SymbolStat>();
-  for (const sample of kept) {
+  for await (const sample of keptSamples(opened, options.thread)) {
+    sampleCount++;
+    total += sample.weight;
     byProc.set(sample.proc, (byProc.get(sample.proc) ?? 0) + sample.weight);
     const thread = byThread.get(sample.thread) ??
       { weight: 0, main: sample.mainThread };
@@ -175,7 +198,7 @@ export function aggregateProfile(
     schema,
     unit: schema === "cpu-profile" ? "cycle-weight" : "weight",
     interval,
-    sampleCount: kept.length,
+    sampleCount,
     total,
     processes: [...byProc.entries()]
       .map(([name, weight]) => ({ name, weight, pct: pct(weight) }))
@@ -225,7 +248,7 @@ function median(sorted: number[]): number {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-export function aggregateSignposts(
+function aggregateSignposts(
   trace: string,
   run: RunInfo,
   events: SignpostEvent[],
@@ -316,22 +339,12 @@ export async function loadSummary(
   trace: string,
   options: SummarizeOptions,
 ): Promise<Summary> {
-  const runs = await loadToc(trace);
-  const run = findRun(runs, options.run);
-  const schema = options.schema ?? inferSchema(run);
-  const interval = await resolveInterval(trace, options.intervalFlag);
-  const rows = await exportRows(trace, options.run, schema);
-  if (schema === "os-signpost") {
-    return aggregateSignposts(trace, run, signpostEvents(rows), interval);
+  const opened = await openTrace(trace, options);
+  if (opened.schema === "os-signpost") {
+    const events = await Array.fromAsync(signpostEvents(opened.rows));
+    return aggregateSignposts(trace, opened.run, events, opened.interval);
   }
-  return aggregateProfile(
-    trace,
-    run,
-    schema,
-    profileSamples(rows),
-    interval,
-    options,
-  );
+  return await aggregateProfile(trace, opened, options);
 }
 
 export function parseIntervalFlag(value: string): [number, number] {
@@ -350,7 +363,9 @@ function intervalLabel(interval: IntervalUse): string {
   return `${interval.start},${interval.end} (${interval.source})`;
 }
 
-function headerLines(summary: Summary): string[] {
+export function headerLines(
+  summary: { trace: string; run: RunInfo; interval: IntervalUse },
+): string[] {
   const run = summary.run;
   const duration = Number.isFinite(run.durationSec)
     ? `  duration: ${run.durationSec.toFixed(3)} s`
