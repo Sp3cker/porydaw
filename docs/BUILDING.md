@@ -202,10 +202,42 @@ budgets of 2000 ms per body / 1000 ms per expression warn (never fail) in Debug.
 (Qt-free, no interop) shows the payoff at ~1 s per edit with no downstream rebuild
 when the interface is unchanged.
 
+`PorydawVoicegroup` (`src/swift/voicegroup/`, 20 files, 4.6k lines, no Swift
+dependencies, C interop only via `voicegroup_asset_batch.h`) was split out of
+`PorydawProject` (33 → 21 files). Measured on the same semantic one-file edit in
+`VoicegroupSource.swift`: body-only edit 2.1 s → 1.9 s; declaration-adding edit
+18.2 s → 19.5 s (the `.swiftmodule` changes, so Project → Document →
+AppPresentation → App still recompile). The split pays for itself through
+isolation and the benchmark below, not the floor.
+
 Swift incremental state is mtime-based: `touch`, `git checkout` across branches, or
 `git stash pop` recompile whole modules even when content is identical. Changing a
 module's compile flags (including via `-D` defines) drops its objects (see
 `reconcileSwiftObjects`), which is intended.
+
+## Voicegroup loading: parity and performance gate
+
+Voicegroups are parsed, resolved and assembled in Swift (`PorydawVoicegroup`);
+C keeps only the byte-span sample decoders and the engine. `deno task checks
+--filter projectstore-parity` loads every hub voicegroup through the reference
+C loader and the Swift `BankBuilder` and asserts byte-identical banks (tones,
+names, keysplit tables, sub-banks, decoded sample bytes). Set
+`PORYDAW_PARITY_PROJECT_ROOT=<decomp project>` to sweep a real project.
+
+The same check gates performance per target on the warm (second) load:
+Swift malloc calls ≤ C, Swift live blocks ≤ C + 1 + sub-bank count (one Swift
+instance each), and, on optimized builds only, total load time ≤ C. Debug
+builds print times but assert only allocations. Release, warm,
+pokeemerald-expansion (274 voicegroups): C 342.7 ms / 54,840 mallocs, Swift
+158.7 ms / 41,116; fixture (7): C 0.55 ms / 246, Swift 0.47 ms / 102.
+
+Every `Unsafe*` site in the module was A/B'd against a `Span`/`MutableSpan`/
+`InlineArray`/`ParserSpan` variant on that sweep (5 alternating rounds,
+medians); the safe variant ships unless it is more than 25 % slower. Thirteen of
+fourteen sites are safe; the one exception is the sample picker's bulk PCM copy
+(`Array(UnsafeBufferPointer)` vs `OutputSpan` append: 369 ms vs 661 ms). The
+C-boundary handoffs (`ToneData*` to `m4a_engine_set_voicegroup`, decoder
+outputs, `free`, POSIX syscalls) are exempt and marked in code.
 
 ## Verifying a build-system change
 

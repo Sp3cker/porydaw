@@ -73,19 +73,6 @@ public struct VoicegroupText: Sendable {
         return bytes
     }
 
-    static func prepareGrammar() {
-        _ = VoiceMacroSpec.all
-        _ = VoicegroupSource.alignPrefix
-        _ = VoicegroupSource.headerPrefix
-        _ = VoicegroupSource.cryReversePrefix
-        _ = VoicegroupSource.cryPrefix
-        _ = VgVoiceDesc.displayPrefixes
-        // Force runtime metadata, not just constant-sized inline storage, before loads.
-        _ = String(reflecting: InlineArray<128, VgVoiceDesc?>.self)
-        _ = String(reflecting: InlineArray<32, VoicegroupLocation?>.self)
-        _ = String(reflecting: MutableSpan<UInt8>.self)
-    }
-
     /// Folds the loader grammar without allocating any per-line editor records.
     public static func parse(
         bytes: [UInt8], sectionLabel: String = "", contiguousFill: Bool = false,

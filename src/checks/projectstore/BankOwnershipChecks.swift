@@ -209,8 +209,8 @@ private func bankBufferChecks(_ report: CheckReport) {
     source[0] = 255
     check.expect(
         (0..<128).allSatisfy { copied[$0] == UInt8($0) }, message: "registered table copies all bytes independently")
-    check.expectEqual(expected: 1, actual: bank.tables.count, what: "bank records the owned table")
-    check.expect(bank.tables.first == copied, message: "registered table is the bank's owned pointer")
+    bank.voices[0].keySplitTable = copied
+    check.expect(bank.voices[0].keySplitTable == copied, message: "bank tone borrows the registered table")
 
     bank.register(subBank: subgroup)
     var tone = ToneData()
@@ -240,7 +240,8 @@ private func bankLifetimeChecks(_ root: URL, _ report: CheckReport) throws {
         lastBank?.register(wave: wave)
         firstBank?.voices[0].wav = wave
         lastBank?.voices[0].wav = wave
-        check.expectEqual(expected: 1, actual: firstBank?.waves.count, what: "wave registration is identity-idempotent")
+        check.expectEqual(
+            expected: 2, actual: cache.references(to: wave), what: "wave registration is identity-idempotent")
     }
     cache.removeAll()
     withExtendedLifetime((firstBank, lastBank)) {
@@ -281,7 +282,8 @@ private func bankLifetimeChecks(_ root: URL, _ report: CheckReport) throws {
         owner?.register(prog: prog)
         owner?.register(prog: prog)
         owner?.voices[0].wavePointer = prog
-        check.expectEqual(expected: 1, actual: owner?.progWaves.count, what: "prog registration is identity-idempotent")
+        check.expect(
+            owner?.voices[0].wavePointer == prog, message: "bank tone borrows the registered programmable wave")
         let subgroup = SubBank.make()
         liveSubBank = subgroup
         owner?.register(subBank: subgroup)

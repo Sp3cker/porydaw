@@ -136,7 +136,7 @@ public final class WaveCache {
         let headerSize = MemoryLayout<WaveData>.size
         guard let storage = calloc(1, headerSize + 17) else { return nil }
         let raw = storage.bindMemory(to: WaveData.self, capacity: 1)
-        let payload = storage.advanced(by: headerSize).bindMemory(to: Int8.self, capacity: 17)
+        let payload = storage.advanced(by: headerSize).assumingMemoryBound(to: Int8.self)
         var header = WaveData()
         header.status = 0x4000
         header.freq = 0x0105_8920
@@ -170,6 +170,7 @@ public final class WaveCache {
         entries[raw] = entry
     }
 
+    // Test-only ownership observation for bank eviction and identity-idempotent registration.
     func references(to raw: UnsafeMutablePointer<WaveData>) -> Int? { entries[raw]?.refs }
 
     public func release(_ raw: UnsafeMutablePointer<WaveData>) {
@@ -185,7 +186,8 @@ public final class WaveCache {
     }
 
     public func removeAll() {
-        for (raw, entry) in entries {
+        let snapshot = Array(entries)
+        for (raw, entry) in snapshot {
             if entry.refs == 0 {
                 entries.removeValue(forKey: raw)
                 free(raw)

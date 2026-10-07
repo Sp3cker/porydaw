@@ -18,8 +18,6 @@ public struct BankBuildInputs {
             @escaping (VoicegroupLocation, _ contiguousFill: Bool, _ noSubRecurse: Bool) throws -> VoicegroupText
     ) {
         _ = layout.ensuringDeepScan()
-        VoicegroupText.prepareGrammar()
-        Bank.prepareOwnershipMetadata()
         self.layout = layout
         self.soundMap = soundMap
         self.progMap = progMap
@@ -60,6 +58,7 @@ public struct BankBuilder {
 
     /// Resolves synths, mapped WAV/AIF/BIN candidates, then the serial directory fallback.
     /// - Throws: `BankBuildError.hardFailure` for decoder or path failures.
+    // Successful decode-to-register paths are infallible; the cache owns the allocation until registration.
     public func resolveSample(symbol: ArraySlice<UInt8>) throws -> UnsafeMutablePointer<WaveData>? {
         do {
             switch inputs.soundMap[symbol] {

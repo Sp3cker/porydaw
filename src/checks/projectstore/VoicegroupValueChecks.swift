@@ -268,13 +268,17 @@ private func checkVoicegroupMacroParsing(_ report: CheckReport) {
             ("voice_directsound_alt_extra 60, 0, sample, 1, 2, 3, 4", .none, nil),
             ("voice_directsound\t60, 0, sample, 1, 2, 3, 4", .none, nil),
             ("voice_directsound 60, 0, sample, 1, 2, 3", .broken, nil),
-            ("voice_directsound 60, 0, sample, 1, 2, 3, 4, 5", .editable, nil),
-            ("voice_directsound bad, 0, sample, 1, 2, 3, 4", .broken, 0),
-            ("voice_directsound 60, 0, , 1, 2, 3, 4", .broken, 0),
+            // C voicegroup_loader.c:2569-2592 reads four envelope values and ignores trailing arguments.
+            ("voice_directsound 60, 0, sample, 1, 2, 3, 4, 5", .editable, 0),
+            // C voicegroup_loader.c:2571-2572 treats an invalid key as a soft miss.
+            ("voice_directsound bad, 0, sample, 1, 2, 3, 4", .broken, nil),
+            // C voicegroup_loader.c:2579-2583 treats an empty symbol as a soft miss.
+            ("voice_directsound 60, 0, , 1, 2, 3, 4", .broken, nil),
             ("voice_directsound 60, 0, sample, bad, 2, 3, 4", .broken, nil),
             ("voice_programmable_wave60, 0, wave, 1, 2, 3, 4", .editable, 7),
             ("voice_programmable_wave_alt60, 0, wave, 1, 2, 3, 4", .editable, 7),
-            ("voice_programmable_wave_alt_extra 60, 0, wave, 1, 2, 3, 4", .broken, 7),
+            // C voicegroup_loader.c:2735-2753 consumes the prefix match with invalid arguments but writes no fields.
+            ("voice_programmable_wave_alt_extra 60, 0, wave, 1, 2, 3, 4", .broken, nil),
             ("voice_keysplit_all_extra voicegroup_kit", .none, nil),
             ("voice_keysplit voicegroup_split", .broken, nil),
             ("voice_keysplit_all ", .none, nil),

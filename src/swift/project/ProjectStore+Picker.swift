@@ -62,7 +62,7 @@ extension ProjectStore {
         switch kind {
         case "sample":
             guard let wave = cache.direct[symbol] else { return nil }
-            return withExtendedLifetime(cache.bank) { Self.sampleSound(wave) }
+            return Self.sampleSound(wave, bank: cache.bank)
         case "wave":
             guard let wave = cache.waves[symbol] else { return nil }
             return withExtendedLifetime(cache.bank) { Self.waveSound(wave) }
@@ -76,7 +76,7 @@ extension ProjectStore {
             let envelope: (UInt8, UInt8, UInt8, UInt8) =
                 (tone.attack, tone.decay, tone.sustain, tone.release)
             if tone.type & 7 == 0, let wave = tone.wav {
-                return Self.sampleSound(wave, toneKey: tone.key, envelope: envelope)
+                    return Self.sampleSound(wave, bank: split.bank, toneKey: tone.key, envelope: envelope)
             }
             if tone.type & 7 == 3, let wave = tone.wavePointer {
                 return Self.waveSound(wave, envelope: envelope)
@@ -134,17 +134,18 @@ extension ProjectStore {
     }
 
     private static func sampleSound(
-        _ wave: UnsafeMutablePointer<WaveData>, toneKey: UInt8 = 60,
+        _ wave: UnsafeMutablePointer<WaveData>, bank: Bank, toneKey: UInt8 = 60,
         envelope: (UInt8, UInt8, UInt8, UInt8)? = nil
     ) -> PickerSound? {
-        let header = Span(_unsafeStart: wave, count: 1)[0]
-        guard let data = header.data, header.size > 0, let size = Int(exactly: header.size) else { return nil }
-        // Span + OutputSpan scalar copying measured 79% slower over five alternating
-        // real-corpus rounds. Keep this bounded bulk snapshot while the bank is pinned.
-        let bytes = Array(UnsafeBufferPointer(start: data, count: size))
-        return .sample(
-            bytes: bytes, frequency: header.freq, loopStart: header.loopStart,
-            looped: header.status & 0x4000 != 0, toneKey: toneKey, envelope: envelope)
+        withExtendedLifetime(bank) {
+            let header = Span(_unsafeStart: wave, count: 1)[0]
+            guard let data = header.data, header.size > 0, let size = Int(exactly: header.size) else { return nil }
+            // Bulk snapshot A/B evidence: docs/BUILDING.md, "Voicegroup loading: parity and performance gate".
+            let bytes = Array(UnsafeBufferPointer(start: data, count: size))
+            return .sample(
+                bytes: bytes, frequency: header.freq, loopStart: header.loopStart,
+                looped: header.status & 0x4000 != 0, toneKey: toneKey, envelope: envelope)
+        }
     }
 
     private static func waveSound(

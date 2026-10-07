@@ -158,6 +158,7 @@ private func parityLiveBlocks() -> Int {
 
 private func parityStartAllocations() {
     #if canImport(Darwin)
+        guard parityMallocLoggerAvailable else { return }
         let slot = parityLoggerSlot()
         parityAllocationState.withLock { state in
             state.calls = 0
@@ -173,6 +174,7 @@ private func parityStartAllocations() {
 
 private func parityStopAllocations() -> Int {
     #if canImport(Darwin)
+        guard parityMallocLoggerAvailable else { return 0 }
         let slot = parityLoggerSlot()
         return parityAllocationState.withLock { state in
             slot.pointee = state.saved
@@ -302,6 +304,13 @@ public func runVoicegroupParitySuite(_ report: CheckReport) {
         }
     } catch {
         report.fail(cppID, "fixture parity failed: \(error)")
+    }
+    if let root = ProcessInfo.processInfo.environment["PORYDAW_PARITY_PROJECT_ROOT"] {
+        do {
+            try parityCheckRoot(root, snapshots: nil, report: report)
+        } catch {
+            report.fail(cppID, "project sweep failed: \(error)")
+        }
     }
 }
 
@@ -474,13 +483,18 @@ private func parityCheckRoot(_ root: String, snapshots: URL?, report: CheckRepor
                     + "malloc calls C \(reference.calls) / Swift \(swift.calls); live blocks C \(reference.mallocs) / Swift \(swift.mallocs)"
             )
             #if canImport(Darwin)
-                report.expect(
-                    swift.calls <= reference.calls, cppID: cppID,
-                    message: "\(root)/\(name): Swift malloc calls <= C")
-                // Swift Bank/SubBank instances add one block each; project text buffers are excluded.
-                report.expect(
-                    swift.mallocs <= reference.mallocs + 1 + swift.subBanks, cppID: cppID,
-                    message: "\(root)/\(name): Swift bank-owned live blocks <= C + Bank/SubBank instances")
+                if parityMallocLoggerAvailable {
+                    report.expect(
+                        swift.calls <= reference.calls, cppID: cppID,
+                        message: "\(root)/\(name): Swift malloc calls <= C")
+                    // Swift Bank/SubBank instances add one block each; project text buffers are excluded.
+                    report.expect(
+                        swift.mallocs <= reference.mallocs + 1 + swift.subBanks, cppID: cppID,
+                        message: "\(root)/\(name): Swift bank-owned live blocks <= C + Bank/SubBank instances")
+                } else {
+                    report.pass(
+                        cppID, row: "\(root)/\(name): allocation gate skipped under ASAN; ASAN owns leak checking")
+                }
             #endif
             report.expect(
                 matches, cppID: cppID,

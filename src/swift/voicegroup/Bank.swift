@@ -46,18 +46,9 @@ public final class Bank: ManagedBuffer<Bank.Storage, ToneData> {
     public var voices: UnsafeMutablePointer<ToneData> { header.voices }
     public var names: UnsafeMutablePointer<CChar> { header.names }
     public var subBanks: [SubBank] { header.subBanks }
-    public var tables: [UnsafeMutablePointer<UInt8>] { header.tables }
-    public var waves: [UnsafeMutablePointer<WaveData>] { header.waves }
-    public var progWaves: [UnsafeMutablePointer<UInt32>] { header.progWaves }
-
-    static func prepareOwnershipMetadata() {
-        _ = Bank.self
-        _ = SubBank.self
-        _ = [SubBank]()
-        _ = [UnsafeMutablePointer<UInt8>]()
-        _ = [UnsafeMutablePointer<WaveData>]()
-        _ = [UnsafeMutablePointer<UInt32>]()
-    }
+    private var tables: [UnsafeMutablePointer<UInt8>] { header.tables }
+    private var waves: [UnsafeMutablePointer<WaveData>] { header.waves }
+    private var progWaves: [UnsafeMutablePointer<UInt32>] { header.progWaves }
 
     public static func make(cache: WaveCache = WaveCache()) -> Bank {
         create(minimumCapacity: bankStorageCapacity) { storage in
@@ -138,8 +129,9 @@ private func bankVoiceName(_ names: UnsafePointer<CChar>, at slot: Int) -> Strin
 
 private func initializeBankSlab(_ voices: UnsafeMutablePointer<ToneData>) {
     let count = 128 * (MemoryLayout<ToneData>.stride + Int(VG_VOICE_NAME_LEN))
-    let storage = UnsafeMutableRawPointer(voices).assumingMemoryBound(to: UInt8.self)
-    var bytes = MutableSpan(_unsafeStart: storage, count: count)
-    bytes.update(repeating: 0)
+    voices.withMemoryRebound(to: UInt8.self, capacity: count) { storage in
+        var bytes = MutableSpan(_unsafeStart: storage, count: count)
+        bytes.update(repeating: 0)
+    }
 }
 
