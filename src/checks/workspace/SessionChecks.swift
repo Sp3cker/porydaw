@@ -95,6 +95,7 @@ public func runProjectSessionSuite(_ report: CheckReport) {
     runHostBehaviorChecks(report, session: session, service: service, fixtureRoot: fixtureRoot)
     drawerOriginalNumericPromptTransaction(report, suite: session, service: service)
     editorSelectionCommandChecks(report, suite: session, service: service)
+    arrowKeyTrackSelectionChecks(report, suite: session, service: service)
     runTimeRoutingChecks(report: report, suite: session, service: service)
     runEditRoutingChecks(report: report, fixtureRoot: fixtureRoot)
     runClipboardSelectionChecks(report, suite: session, service: service)

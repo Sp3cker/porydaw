@@ -339,14 +339,20 @@ ShellEventListSupport {
                               "songTab_" + fixture.session.songTabs.selectedId)
         const input = findChild(tab, "drawerBarInput")
         verify(input && input.visible, "the drawer bar input is mounted")
-        presenter.selectRow(0, Qt.NoModifier)
-        const row = presenter.currentRow
         mouseClick(input, input.width / 2, input.height / 2)
         const bar = input.parent
         tryCompare(bar, "activeFocus", true, 3000)
-        keyClick(Qt.Key_Down)
-        keyClick(Qt.Key_Up)
-        compare(presenter.currentRow, row, "drawer focus keeps the event rows put")
+        // With nothing selected, arrows step the track: leave toward a neighbour, then return.
+        const grid = fixture.session.songTabs.selectedPage.gridPresenter()
+        const track = grid.trackIndex
+        const away = track === 0 ? Qt.Key_Down : Qt.Key_Up
+        keyClick(away)
+        const neighbour = away === Qt.Key_Down ? track + 1 : track - 1
+        tryCompare(grid, "trackIndex", neighbour, 3000,
+                   "an arrow under drawer focus moves to the neighbouring track")
+        keyClick(away === Qt.Key_Down ? Qt.Key_Up : Qt.Key_Down)
+        tryCompare(grid, "trackIndex", track, 3000,
+                   "the opposite arrow returns to the original track")
         compare(bar.activeFocus, true, "the drawer retains focus through both keys")
     }
     function test_viewStateVisibilityFlag() {

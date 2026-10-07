@@ -111,6 +111,8 @@ public struct EditCommandPolicy: Sendable {
     public var transposeSemitones: Int = 0
     public var nudgeDelta: Int = 0
     public var eventRowDelta: Int = 0
+    /// Swift-only: primary-track step taken when the notes target is empty (plain Up/Down).
+    public var trackStepWithoutNotes: Int = 0
     public var survivesPointerGesture: Bool = false
     public var terminalWhenUnmatched: Bool = false
     public var focusedTextOwnership: EditFocusedTextOwnership = .none
@@ -119,13 +121,16 @@ public struct EditCommandPolicy: Sendable {
 // Row helpers mirror the C++ constexpr builders verbatim: same field sets,
 // same comments. Lane-scoped Up/Down is an ineligible mutation, not a
 // foreign key: the selection owns it as a consumed no-op.
-private func transposeRow(_ command: EditCommand, _ semitones: Int) -> EditCommandPolicy {
+private func transposeRow(
+    _ command: EditCommand, _ semitones: Int, trackStepWithoutNotes: Int = 0
+) -> EditCommandPolicy {
     EditCommandPolicy(
         command: command,
         rangeOperation: .transpose,
         notesOperation: .transpose,
         ownershipOnUnavailable: .ownsKey,
-        transposeSemitones: semitones)
+        transposeSemitones: semitones,
+        trackStepWithoutNotes: trackStepWithoutNotes)
 }
 
 private func nudgeRow(_ command: EditCommand, _ delta: Int) -> EditCommandPolicy {
@@ -197,8 +202,8 @@ public let editCommandTable: [EditCommandPolicy] = [
         command: .pitchBend,
         notesOperation: .pitchBend,
         autoRepeatRule: .consumeWhenEligible),
-    transposeRow(.transposeUp, 1),
-    transposeRow(.transposeDown, -1),
+    transposeRow(.transposeUp, 1, trackStepWithoutNotes: -1),
+    transposeRow(.transposeDown, -1, trackStepWithoutNotes: 1),
     transposeRow(.transposeUpOctave, 12),
     transposeRow(.transposeDownOctave, -12),
     nudgeRow(.nudgeLeft, -1),

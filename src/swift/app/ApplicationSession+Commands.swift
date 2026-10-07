@@ -18,6 +18,10 @@ extension ApplicationSession {
         commandRouter?.perform(command)
     }
 
+    func selectAdjacentGridTrack(_ command: EditCommand) {
+        commandRouter?.selectAdjacentTrack(command)
+    }
+
     func routeGridKeyImpl(command: Int, autoRepeat: Bool) -> Int {
         guard let command = EditCommand(rawValue: command) else {
             return EditKeyDecision.decline.rawValue

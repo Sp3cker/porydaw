@@ -74,6 +74,12 @@ public struct EditorCommandRouter {
                 commandAvailable: isAvailable(command)))
     }
 
+    /// Runs `.selectAdjacentTrack`: steps the primary track by the command's row.
+    public func selectAdjacentTrack(_ command: EditCommand) {
+        guard let track = session.selectedTrack else { return }
+        session.selectPrimaryTrack(track + editCommandPolicy(command).trackStepWithoutNotes)
+    }
+
     public func perform(_ command: EditCommand) {
         guard isAvailable(command) else { return }
         if command == .paste || targetsTimeSelection(command) {

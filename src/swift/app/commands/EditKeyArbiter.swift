@@ -6,9 +6,9 @@ public enum EditKeyOrigin: Int {
 
 /// The routing verdict for one recognized key: decline hands the key back
 /// to its local owner, consume swallows it without acting, execute runs
-/// the command's activation path.
+/// the command's activation path, selectAdjacentTrack steps the primary track instead.
 public enum EditKeyDecision: Int {
-    case decline = 0, consume = 1, execute = 2
+    case decline = 0, consume = 1, execute = 2, selectAdjacentTrack = 3
 }
 
 /// The host-arbitrated surface snapshot the resolver judges (spec §1 D1):
@@ -113,6 +113,9 @@ public enum EditKeyArbiter {
             // ownsKey is a consumed no-op (lane-scoped transpose), else
             // terminalWhenUnmatched decides.
             if !surface.commandAvailable {
+                if target == .notes && policy.trackStepWithoutNotes != 0 {
+                    return .selectAdjacentTrack
+                }
                 return policy.ownershipOnUnavailable == .ownsKey
                     ? .consume
                     : (policy.terminalWhenUnmatched ? .consume : .decline)  // :475-478

@@ -240,6 +240,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
                 } else {
                     session.performGridCommand(command: command.rawValue)
                 }
+            } else if decision == EditKeyDecision.selectAdjacentTrack.rawValue {
+                session.selectAdjacentGridTrack(command)
             }
             return true
         }

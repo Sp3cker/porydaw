@@ -237,6 +237,90 @@ internal func editorSelectionCommandChecks(
     checkScaleDeleteUndoLeavesCleanDocument(report, suite: suite, service: service)
 }
 
+@MainActor
+internal func arrowKeyTrackSelectionChecks(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
+    let id = "swiftcore/ApplicationSession::arrowKeyTrackSelection"
+    let document = SongDocument(
+        file: makeMidiFixture(), config: suite.document.state.config,
+        source: suite.document.source, trackBudget: suite.document.trackBudget)
+    let session = DocumentSession(
+        document: document, service: service,
+        lease: suite.bankLease, slots: suite.bankSlots,
+        dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
+    guard document.duplicateTrack(0) == 1, let note = document.notes(in: 0).first,
+        let otherTrackNote = document.notes(in: 1).first
+    else {
+        report.fail(id, "fixture needs two tracks with notes")
+        return
+    }
+    let viewport = DocumentViewport(session: session)
+    let grid = PianoGrid(viewport: viewport)
+    let page = AutomationPage()
+    page.attach(viewport: viewport, palette: GridPalette())
+    defer { page.detach() }
+    let ruler = RulerMenuPresenter(viewport: viewport, grid: grid, automation: page)
+    let router = EditorCommandRouter(session: session, grid: grid, automation: page, rulerMenu: ruler)
+    // ShellPresenter.routeEditorKey's activation of each decision.
+    func press(_ command: EditCommand, repeating: Bool = false) -> EditKeyDecision {
+        let decision = router.route(command, autoRepeat: repeating)
+        if decision == .execute { router.perform(command) }
+        if decision == .selectAdjacentTrack { router.selectAdjacentTrack(command) }
+        return decision
+    }
+    session.selectPrimaryTrack(0)
+
+    report.expect(
+        router.route(.transposeDown, autoRepeat: false) == .selectAdjacentTrack
+            && session.selectedTrack == 0,
+        cppID: id, message: "routing Down with nothing selected decides without moving")
+    _ = press(.transposeDown)
+    report.expect(
+        session.selectedTrack == 1, cppID: id,
+        message: "Down with nothing selected moves to the track below")
+    _ = press(.transposeDown)
+    report.expect(
+        session.selectedTrack == 1, cppID: id, message: "Down on the last track stays there")
+    _ = press(.transposeUp, repeating: true)
+    report.expect(
+        session.selectedTrack == 0, cppID: id, message: "a held Up moves to the track above")
+    report.expect(
+        press(.transposeDownOctave) == .consume && session.selectedTrack == 0, cppID: id,
+        message: "Shift+Down with a track below never changes track")
+    router.perform(.transposeDown)
+    report.expect(
+        session.selectedTrack == 0, cppID: id,
+        message: "menu Transpose Down never changes track")
+
+    session.setSelectedNotes([otherTrackNote.id])
+    _ = press(.transposeDown)
+    report.expect(
+        session.selectedTrack == 1 && document.note(otherTrackNote.id)?.pitch == otherTrackNote.pitch,
+        cppID: id, message: "notes selected only on another track still let Down change track")
+    session.selectPrimaryTrack(0)
+    session.setSelectedNotes([note.id])
+    report.expect(
+        press(.transposeDown) == .execute && session.selectedTrack == 0
+            && document.note(note.id)?.pitch == note.pitch - 1,
+        cppID: id, message: "selected notes keep Down as transpose")
+    session.setSelectedNotes([])
+    page.applyTimeSelection(
+        AutomationTimeSelection(
+            range: TimeRange(startTick: 0, endTick: 24), scope: .tracks([0])))
+    report.expect(
+        press(.transposeDown) == .execute && session.selectedTrack == 0
+            && document.note(note.id)?.pitch == note.pitch - 2,
+        cppID: id, message: "an active time range keeps Down as transpose")
+    page.clearTimeSelection()
+    grid.beginRightPointer(x: 0, y: 0)
+    report.expect(
+        press(.transposeDown) == .consume && session.selectedTrack == 0, cppID: id,
+        message: "a live pointer gesture swallows Down without changing track")
+    grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
+}
+
 // Fork tabs_scale.cpp:149-151 stage track selection plus Highlight/Fold writes
 // around deleteTrack(0)/undo; only the dirty flag below is otherwise unread.
 @MainActor
