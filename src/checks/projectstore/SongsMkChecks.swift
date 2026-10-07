@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import PorydawProject
+import PorydawVoicegroup
 
 public func runSongsMkSuite(_ report: CheckReport) {
     let cppID = "swiftproject/SongsMkChecks::songsMkRoundTrip"

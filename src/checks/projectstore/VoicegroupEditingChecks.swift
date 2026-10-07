@@ -1,14 +1,15 @@
 import Foundation
 import PorydawCore
 import PorydawProject
-import PorydawProjectNative
+import PorydawVoicegroup
+import PorydawVoicegroupNative
 
 internal let voicegroupEditingRowIDs: [String] = [
     "A001", "A003", "A004", "A005", "A006", "A007", "A008", "A009", "A010", "A011", "A012",
     "A013", "A014", "A015", "A016", "A017", "A018", "A019", "A020", "A021", "A022", "A023",
     "A024", "A025", "A026", "A027", "A028", "A029", "A030", "A031", "A032", "A033", "A034",
     "A035", "A036", "A037", "A038", "A039", "A040", "A041", "A042", "A043", "A044", "A045",
-    "A046", "A047", "A048", "A049", "A050", "A051", "A052", "A053", "A054", "A055", "A056",
+    "A046", "A047", "A048", "A049", "A050", "A051", "A052", "A053", "A054",
     "A057", "A058", "A059", "A060", "A061", "A062", "A063", "A064", "A065", "A066", "A067",
     "A068", "A069", "A070", "A071", "A072", "A073", "A074", "A075", "A076", "A077", "A078",
     "A079", "A080", "A081", "A082", "A083", "A084", "A085", "A093", "A094", "A095",
@@ -156,88 +157,6 @@ private func editingLoad(
 {
     root.path.withCString { rootPath in
         name.withCString { loadName in voicegroup_load(rootPath, loadName, config) }
-    }
-}
-
-// Loads an outside-project staged preview through a project context, mirroring the
-// editor preview path: the staged file by absolute path, assets against the project root.
-private func editingLoadPreview(
-    root: URL, file: URL, sectionLabel: String
-)
-    -> UnsafeMutablePointer<LoadedVoiceGroup>?
-{
-    let adapter = EditingPreviewFiles(root: root.path)
-    let readBatch: VoicegroupReadBatchFn = editingPreviewReadBatch
-    let releaseBatch: VoicegroupReleaseBatchFn = editingPreviewReleaseBatch
-    var fileIo = VoicegroupFileIo(
-        user: Unmanaged.passUnretained(adapter).toOpaque(),
-        readBatch: readBatch,
-        releaseBatch: releaseBatch)
-    return withExtendedLifetime(adapter) {
-        guard let project = root.path.withCString({ voicegroup_project_open($0, nil, &fileIo) }) else {
-            return nil
-        }
-        defer { voicegroup_project_free(project) }
-        return file.path.withCString { stagedPath in
-            sectionLabel.withCString { section in
-                var location = VoicegroupTarget(filePath: stagedPath, sectionLabel: section)
-                return voicegroup_project_load(project, &location)
-            }
-        }
-    }
-}
-
-private final class EditingPreviewFiles {
-    let root: String
-    init(root: String) { self.root = root }
-}
-
-private func editingPreviewReadBatch(
-    _ context: UnsafeMutableRawPointer?,
-    _ paths: UnsafePointer<UnsafePointer<CChar>?>?,
-    _ count: Int,
-    _ out: UnsafeMutablePointer<VoicegroupFileBlob>?,
-    _ error: UnsafeMutablePointer<CChar>?,
-    _ errorCapacity: Int
-) -> Bool {
-    if let error, errorCapacity > 0 { error.pointee = 0 }
-    guard count > 0 else { return true }
-    guard let context, let paths, let out else { return false }
-    let root = Unmanaged<EditingPreviewFiles>.fromOpaque(context).takeUnretainedValue().root
-    for index in 0..<count { out[index] = VoicegroupFileBlob() }
-    for index in 0..<count {
-        guard let requested = paths[index].map({ String(cString: $0) }), !requested.isEmpty else {
-            return false
-        }
-        let resolved: String
-        if requested.hasPrefix("/") {
-            resolved = requested
-        } else if root.hasSuffix("/") {
-            resolved = root + requested
-        } else {
-            resolved = root + "/" + requested
-        }
-        guard let data = try? Data(contentsOf: URL(fileURLWithPath: resolved)) else { continue }
-        let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: max(1, data.count))
-        data.withUnsafeBytes { buffer in
-            if let base = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) {
-                bytes.initialize(from: base, count: data.count)
-            }
-        }
-        out[index] = VoicegroupFileBlob(data: bytes, size: data.count, found: true)
-    }
-    return true
-}
-
-private func editingPreviewReleaseBatch(
-    _ context: UnsafeMutableRawPointer?,
-    _ blobs: UnsafeMutablePointer<VoicegroupFileBlob>?,
-    _ count: Int
-) {
-    guard let blobs, count > 0 else { return }
-    for index in 0..<count {
-        blobs[index].data?.deallocate()
-        blobs[index] = VoicegroupFileBlob()
     }
 }
 
@@ -472,36 +391,24 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
                     : (family >= 5 ? editingLoaderVoiceName(edited.symbol) : editingVoiceName(baseline, slot)))
             editingExpect("A053", source.setVoice(slot: slot, voice: edited), report, "A053: edited voice is accepted")
             editingExpect("A054", source.dirty, report, "A054: edited voice makes source dirty")
-            let previewDir = FileManager.default.temporaryDirectory.appendingPathComponent(
-                "voicegroup-editing-preview-\(UUID().uuidString)", isDirectory: true)
-            defer { try? FileManager.default.removeItem(at: previewDir) }
-            try FileManager.default.createDirectory(at: previewDir, withIntermediateDirectories: true)
-            editingExpect(
-                "A055",
-                FileManager.default.fileExists(atPath: previewDir.path) && !previewDir.path.hasPrefix(root.path + "/"),
-                report,
-                "A055: preview directory is available")
-            let previewFile = previewDir.appendingPathComponent("\(source.loadName).inc")
-            try Data(source.renderPreview()).write(to: previewFile)
-            editingExpect(
-                "A056", FileManager.default.fileExists(atPath: previewFile.path), report,
-                "A056: preview bytes are written to the loader path")
-            let preview = editingLoadPreview(root: root, file: previewFile, sectionLabel: source.sectionLabel)
-            editingExpect("A057", preview != nil, report, "A057: native loader accepts edited preview")
+            let store = try VoicegroupStore(projectRoot: root.path)
+            let preview = try? BankBuilder(inputs: store.bankBuildInputs()).build(
+                source.descriptors(),
+                at: VoicegroupLocation(filePath: source.filePath, sectionLabel: source.sectionLabel))
+            editingExpect("A057", preview != nil, report, "A057: Swift builder accepts edited preview")
             guard let preview else { return }
-            defer { voicegroup_free(preview) }
             editingEqual(
-                "A058", expectedName, editingVoiceName(preview, slot), report,
+                "A058", expectedName, preview.name(at: slot), report,
                 "A058: preview resolves edited display name")
             editingEqual(
-                "A059", vgMacroVoiceType(edited.macro), editingTone(preview, slot).type, report,
+                "A059", vgMacroVoiceType(edited.macro), preview.voices[slot].type, report,
                 "A059: preview loads the edited voice type")
             if family >= 4 {
                 if aggregateOracleSlot >= 0 {
                     editingExpect(
                         "A060",
                         editingSameResolvedTone(
-                            editingTone(preview, slot), editingTone(baseline, aggregateOracleSlot),
+                            preview.voices[slot], editingTone(baseline, aggregateOracleSlot),
                             key: family >= 5 ? 36 : 60), report,
                         "A060: preview aggregate resolves the same playable child as existing aggregate")
                 } else {

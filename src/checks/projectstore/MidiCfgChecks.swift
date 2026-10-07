@@ -1,5 +1,6 @@
 import Foundation
 import PorydawProject
+import PorydawVoicegroup
 
 public func runMidiCfgSuite(_ report: CheckReport) {
     midiCfgParsing(report)

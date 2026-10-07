@@ -1,5 +1,6 @@
 import Foundation
 import PorydawBackups
+import PorydawVoicegroup
 import PorydawCore
 import PorydawProject
 

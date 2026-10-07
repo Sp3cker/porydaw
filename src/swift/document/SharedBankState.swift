@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 import PorydawProject
 import Synchronization
 

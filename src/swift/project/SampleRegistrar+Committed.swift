@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 
 public struct CommittedSample: Sendable {
     public let name: String

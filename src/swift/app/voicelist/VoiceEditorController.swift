@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 import PorydawDocument
 import PorydawProject
 import QtBridge

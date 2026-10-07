@@ -6,6 +6,7 @@ import PorydawDocument
 import PorydawPlayback
 import PorydawPlaybackNative
 import PorydawProject
+import PorydawVoicegroup
 
 @MainActor
 public func runAudioControllerChecks(_ report: CheckReport) {

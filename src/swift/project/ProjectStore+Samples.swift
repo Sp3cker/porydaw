@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 
 public struct SampleCommitRequest: Sendable {
     public let name: String
@@ -29,11 +30,7 @@ extension ProjectStore {
                 error.message.isEmpty
                     ? "Could not commit \(request.name)." : error.message)
         }
-        guard let context = ProjectContext.open(projectRoot: projectRoot) else {
-            throw VoicegroupStoreError.operationFailed("Could not refresh the project sample maps.")
-        }
-        let views = voicegroupStore?.rebind(context: context) ?? []
-        projectContext = context
+        let views = try voicegroupStore?.rebind() ?? []
         pickerSamples = nil
         return views.map { adoptBankLease(view: $0) }
     }

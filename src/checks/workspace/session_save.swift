@@ -5,6 +5,7 @@ import PorydawCoreCheckNative
 import PorydawDocument
 import PorydawPlayback
 import PorydawProject
+import PorydawVoicegroup
 
 @MainActor
 internal func sessionSavePersistence(

@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 import PorydawCore
 
 /// Parses midi.cfg and updates song flags without rewriting unrelated file bytes.

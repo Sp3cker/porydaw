@@ -1,29 +1,17 @@
 add_library(PorydawProject STATIC
-    ProjectFileStore.swift
     ProjectIdentity.swift
-    FileIo.swift
     MidiCfg.swift
     SongModel.swift
-    ProjectContext.swift
     SongsMk.swift
-    VoiceValues.swift
     SongCatalog.swift
     SongRegistration.swift
     SongRegistration+Debug.swift
     SongRegistration+Writes.swift
     SongRegistration+Removal.swift
     SongRegistration+Store.swift
-    VoicegroupSource.swift
-    VoicegroupSource+Create.swift
-    VoiceEdits.swift
-    VoicegroupSave.swift
-    AsmLine.swift
-    SynthCatalog.swift
-    VoicegroupStore.swift
     ProjectStore.swift
     ProjectStore+Open.swift
     ProjectStore+Reads.swift
-    MintedSynths.swift
     ProjectStore+Bank.swift
     ProjectStore+Edit.swift
     ProjectStore+Save.swift
@@ -32,12 +20,6 @@ add_library(PorydawProject STATIC
     ProjectStore+Synth.swift
     SampleRegistrar.swift
     SampleRegistrar+Committed.swift
-)
-
-configure_file(
-    module.modulemap.in
-    "${CMAKE_CURRENT_BINARY_DIR}/module.modulemap"
-    @ONLY
 )
 
 set_target_properties(PorydawProject PROPERTIES
@@ -49,14 +31,9 @@ set_target_properties(PorydawProject PROPERTIES
     AUTORCC OFF
 )
 
-target_compile_options(PorydawProject PUBLIC
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/module.modulemap>"
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin>"
-)
-
 target_include_directories(PorydawProject INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawProject,Swift_MODULE_DIRECTORY>>"
 )
 porydaw_enable_swift_batch_mode(PorydawProject)
 
-target_link_libraries(PorydawProject PUBLIC PorydawCore)
+target_link_libraries(PorydawProject PUBLIC PorydawCore PorydawVoicegroup)

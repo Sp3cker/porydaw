@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 import PorydawCore
 
 /// An immutable view of the songs and player limits loaded at project open.
@@ -48,12 +49,12 @@ extension ProjectStore {
     /// - Throws: An open error if the root or loader is invalid, or a catalog error if the song table is invalid.
     public func open() async throws -> ProjectSnapshot {
         let snapshot = try loadSongSnapshot()
-        guard let context = ProjectContext.open(projectRoot: projectRoot) else {
+        do {
+            voicegroupStore = try VoicegroupStore(projectRoot: projectRoot)
+        } catch {
             throw ProjectStoreOpenError.cannotInitializeVoicegroupLoader
         }
         pickerSamples = nil
-        projectContext = context
-        voicegroupStore = VoicegroupStore(projectRoot: projectRoot, context: context)
         openedSnapshot = snapshot
         return snapshot
     }

@@ -1,7 +1,8 @@
 import Foundation
 import PorydawApp
 import PorydawProject
-import PorydawProjectNative
+import PorydawVoicegroup
+import PorydawVoicegroupNative
 import PorydawSample
 
 @MainActor

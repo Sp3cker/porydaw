@@ -1,6 +1,7 @@
 import Foundation
 import PorydawProject
-import PorydawProjectNative
+import PorydawVoicegroup
+import PorydawVoicegroupNative
 
 public func runSynthCatalogSuite(_ report: CheckReport) {
     synthSoundDataChecks(report)

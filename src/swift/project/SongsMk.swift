@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 
 /// Reads and updates the songs.mk flag backend used by projects without midi.cfg.
 public enum SongsMk {

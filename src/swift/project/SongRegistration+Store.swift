@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 
 extension ProjectStore {
     public func registrationStatus(label: String, constant: String) throws -> RegistrationStatus {

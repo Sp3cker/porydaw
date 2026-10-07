@@ -56,13 +56,13 @@ function(add_porydaw_check_lane name)
         target_compile_options(${name} PRIVATE
             "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
             "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/project/module.modulemap>"
+            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/voicegroup/module.modulemap>"
             "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
             "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
             "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
             "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
         )
-        target_link_libraries(${name} PRIVATE PorydawCore PorydawPlayback PorydawProject PorydawApp PorydawSample)
+        target_link_libraries(${name} PRIVATE PorydawCore PorydawPlayback PorydawProject PorydawVoicegroup PorydawApp PorydawSample)
     endif()
     target_compile_options(${name} PRIVATE ${CHECK_COMPILE_OPTIONS})
     target_link_libraries(${name} PRIVATE ${CHECK_LINK_LIBRARIES})
@@ -398,6 +398,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_porydaw_check_lane(swift_core_check_project
         MODULE_NAME SwiftCoreCheckProject
         MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_project"
+        COMPILE_OPTIONS "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
         SOURCES
         workspace/SessionChecks.swift
         projectstore/MidiBackupChecks.swift
@@ -423,6 +424,12 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         projectstore/BankLeasesChecks.swift
         projectstore/ExportChecks.swift
         projectstore/ExportCaptureChecks.swift
+        projectstore/BankDigest.swift
+        projectstore/VoicegroupParityChecks.swift
+        projectstore/ProjectLayoutChecks.swift
+        projectstore/KeysplitTablesChecks.swift
+        projectstore/BankOwnershipChecks.swift
+        projectstore/VoicegroupLocatorChecks.swift
         workspace/editor_view_state_checks.swift
         workspace/session_view_state.swift
         workspace/session_view_state_fanout.swift

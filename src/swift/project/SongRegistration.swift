@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 
 public enum SongRegistrationError: Error, LocalizedError, Sendable {
     case failed(String)

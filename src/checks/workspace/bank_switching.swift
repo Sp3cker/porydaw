@@ -3,6 +3,7 @@ import PorydawApp
 import PorydawCoreCheckNative
 import PorydawDocument
 import PorydawProject
+import PorydawVoicegroup
 
 @MainActor
 internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {

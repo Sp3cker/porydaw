@@ -1,0 +1,4 @@
+module PorydawVoicegroupNative {
+    header "@PORYAAAA_DIR@/plugin/voicegroup_asset_batch.h"
+    export *
+}

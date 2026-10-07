@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 import PorydawProject
 
 internal let saveCoreRowIDs: [String] = ["A079"]
@@ -95,11 +96,11 @@ private func saveCoreSourceSaveAndPreview(_ report: CheckReport) {
             return
         }
         report.expectEqual(
-            expected: Array(original), actual: source.renderPreview(), cppID: "source-save/S5",
-            what: "S5: per-file preview retains the entire original buffer")
+            expected: Array(original), actual: source.sourceBytes(), cppID: "source-save/S5",
+            what: "S5: the source retains the entire original buffer")
         report.expectEqual(
-            expected: "solo", actual: source.previewShadowName, cppID: "source-save/S18",
-            what: "S18: per-file shadow basename uses the source file, not the declaration")
+            expected: "solo", actual: source.loadName, cppID: "source-save/S18",
+            what: "S18: per-file load identity uses the source file, not the declaration")
         voice.release = 2
         report.expect(
             source.setVoice(slot: 0, voice: voice) && source.dirty,
@@ -137,8 +138,8 @@ private func saveCoreSourceSaveAndPreview(_ report: CheckReport) {
                 what: "S13: edited line keeps its CRLF and argument formatting")
         }
         report.expectEqual(
-            expected: Array(saved), actual: source.renderPreview(), cppID: "source-save/S14",
-            what: "S14: per-file preview renders saved bytes in full")
+            expected: Array(saved), actual: source.sourceBytes(), cppID: "source-save/S14",
+            what: "S14: the clean source retains saved bytes in full")
 
         try multi.write(to: multiPath)
         let section = VoicegroupSource()
@@ -147,13 +148,17 @@ private func saveCoreSourceSaveAndPreview(_ report: CheckReport) {
             return
         }
         report.expect(
-            section.isMonolithic && section.previewShadowName == "voicegroup_first",
+            section.isMonolithic && section.loadName == "voicegroup_first",
             cppID: "source-save/S15",
-            message: "S15: monolithic preview uses the selected declaration basename")
-        report.expectEqual(
-            expected: Array("voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 1\n".utf8),
-            actual: section.renderPreview(), cppID: "source-save/S16",
-            what: "S16: monolithic preview isolates the first section and excludes its sibling")
+            message: "S15: monolithic load identity uses the selected declaration")
+        let store = try VoicegroupStore(projectRoot: root.path)
+        let text = try section.descriptors()
+        let preview = try BankBuilder(inputs: store.bankBuildInputs()).build(
+            text, at: VoicegroupLocation(filePath: section.filePath, sectionLabel: section.sectionLabel))
+        report.expect(
+            preview.voices[0].release == 1 && text.voices[1] == nil && preview.voices[1].release == 0,
+            cppID: "source-save/S16",
+            message: "S16: descriptor preview isolates the first section and excludes its sibling")
         report.expectEqual(
             expected: multi, actual: try Data(contentsOf: multiPath), cppID: "source-save/S17",
             what: "S17: preview never persists its section to the project file")

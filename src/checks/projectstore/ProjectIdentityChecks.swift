@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import PorydawProject
+import PorydawVoicegroup
 
 // V-1: proof.identity.txt A037-A052 pin SongHistory/QUndoStack mergeWith
 // machinery (stack count, command value, obsolete commands, and document

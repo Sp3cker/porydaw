@@ -1,28 +1,42 @@
 import Foundation
+import PorydawVoicegroup
 import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
 import PorydawDocument
-import PorydawProjectNative
+import PorydawVoicegroupNative
 import PorydawPlayback
 
 // MARK: - Bank Edit Scenarios
 
 @MainActor
 internal func bankPreviewFailure(report: CheckReport, session: DocumentSession, projectDir: String) {
-    // A real preview-directory failure must reject the candidate without
+    // A real asset-read failure must reject the candidate without
     // replacing the visible bank or modifying its source file.
     let previewSlots = session.bankSlots
     let previewDirty = session.bankDirty
     let previewSourcePath = projectDir + "/" + session.bankLease.id.sourceRelativePath
     let previewSourceBytes = bytes(at: previewSourcePath)
-    let previewPath = FileManager.default.temporaryDirectory.appendingPathComponent(
-        "porydaw-vgpreview-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true
-    ).path
+    let blockedWave = projectDir + "/sound/programmable_wave_samples/fixture_pulse.pcm"
     do {
-        try? FileManager.default.removeItem(atPath: previewPath)
-        try Data([0]).write(to: URL(fileURLWithPath: previewPath))
-        defer { try? FileManager.default.removeItem(atPath: previewPath) }
+        let attributes = try FileManager.default.attributesOfItem(atPath: blockedWave)
+        guard let permissions = attributes[.posixPermissions] as? NSNumber else {
+            report.fail(
+                "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                "fixture wave permissions are missing")
+            return
+        }
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: blockedWave)
+        defer {
+            do {
+                try FileManager.default.setAttributes(
+                    [.posixPermissions: permissions], ofItemAtPath: blockedWave)
+            } catch {
+                report.fail(
+                    "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                    "cannot restore fixture wave permissions: \(error)")
+            }
+        }
         var rejected = session.bankSlots[0].voice!
         rejected.key = rejected.key == 127 ? 126 : rejected.key + 1
         do {
@@ -32,7 +46,7 @@ internal func bankPreviewFailure(report: CheckReport, session: DocumentSession, 
             }
             report.fail(
                 "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
-                "blocked preview directory should reject the bank edit")
+                "unreadable fixture wave should reject the bank edit")
         } catch {
             let refusal = error as? ProjectServiceError
             let previewRefusal: Bool
@@ -45,7 +59,7 @@ internal func bankPreviewFailure(report: CheckReport, session: DocumentSession, 
     } catch {
         report.fail(
             "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
-            "could not block the preview directory: \(error)")
+            "could not make the fixture wave unreadable: \(error)")
     }
     report.expectEqual(
         expected: previewSlots, actual: session.bankSlots,
@@ -70,11 +84,11 @@ internal func bankBlankMaterialization(
     let newVoice = BankVoice(macro: BankVoiceMacro.square1, key: 65, pan: 5, sweep: 0, duty: 2)
     let beforeMaterializationSlots = session.bankSlots
     var materializedSlots = beforeMaterializationSlots
-    materializedSlots[3] = BankSlotView(kind: BankSlotKind.editable, voice: newVoice)
+    materializedSlots[4] = BankSlotView(kind: BankSlotKind.editable, voice: newVoice)
 
     do {
         let materialized = try runBlocking {
-            try await session.applyBankEdit(slot: 3, value: newVoice, expected: nil)
+            try await session.applyBankEdit(slot: 4, value: newVoice, expected: nil)
         }
         let originalToken = materialized.materializationToken
         report.expect(
@@ -86,7 +100,7 @@ internal func bankBlankMaterialization(
             cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
             what: "blank materialization publishes the requested voice and preserves other slots")
         report.expect(
-            session.bankLease[3].type
+            session.bankLease[4].type
                 == UInt8(VOICE_SQUARE_1),
             cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
             message: "materialized blank slot has square-one engine type")
@@ -113,7 +127,7 @@ internal func bankBlankMaterialization(
             cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
             what: "redo rematerializes the voice without changing other slots")
         report.expect(
-            session.bankLease[3].type
+            session.bankLease[4].type
                 == UInt8(VOICE_SQUARE_1),
             cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
             message: "redo restores the blank slot square-one engine type")
@@ -287,7 +301,7 @@ internal func bankMergeSealing(report: CheckReport, session: DocumentSession) {
             message: "adjacent same-slot edits merge and self-canceling pairs vanish")
         let reachedPreceding = try runBlocking { try await session.undo() }
         report.expect(
-            reachedPreceding && session.bankSlots[3].kind == BankSlotKind.none,
+            reachedPreceding && session.bankSlots[4].kind == BankSlotKind.none,
             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
             message: "real-service pan A-to-B-to-A removes its entry so undo reaches the preceding materialization")
         _ = try runBlocking { try await session.redo() }

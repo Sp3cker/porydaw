@@ -118,6 +118,31 @@ void SwiftCoreTest::samplePitch93()
     pdc_suite_run(PDC_SUITE_SAMPLE_PITCH_93, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::voicegroupParity()
+{
+    pdc_suite_run(PDC_SUITE_VOICE_PARITY, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::projectLayout()
+{
+    pdc_suite_run(PDC_SUITE_PROJECT_LAYOUT, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::keysplitTables()
+{
+    pdc_suite_run(PDC_SUITE_KEYSPLIT_TABLES, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::bankOwnership()
+{
+    pdc_suite_run(PDC_SUITE_BANK_OWNERSHIP, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::voicegroupLocator()
+{
+    pdc_suite_run(PDC_SUITE_VOICE_LOCATOR, reportSwiftCheck, this);
+}
+
 void SwiftCoreTest::noteEdits()
 {
     pdc_suite_run(PDC_SUITE_NOTE_EDITS, reportSwiftCheck, this);

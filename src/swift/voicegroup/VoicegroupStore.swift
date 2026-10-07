@@ -11,11 +11,11 @@ public enum VoicegroupStoreError: Error, LocalizedError {
     }
 }
 
-// The source and its current native bank are canonical; published slot values are snapshots.
+/// The source and its current bank are canonical; published slot values are snapshots.
 private struct BankRecord {
     let id: VoicegroupId
     let source: VoicegroupSource
-    var current: BankHandle
+    var current: Bank
     var sourceFileTime: Date
     var published: LoadedBankView
 }
@@ -49,56 +49,67 @@ private struct TokenRegistry {
     }
 }
 
-/// Worker-confined bank ownership. Call every method from the store's serial executor;
-/// the loader's own context worker performs native calls outside the cooperative pool.
+/// Worker-confined bank ownership. Call every method from the store's serial executor.
 public final class VoicegroupStore {
     private let projectRoot: String
-    private(set) var context: ProjectContext
+    private var layout: ProjectLayout
+    private var soundMap: SoundDataMap
+    private var progMap: ProgWaveMap
+    private var keysplits: KeysplitTables
+    private let cache = WaveCache()
+    private var locator: VoicegroupLocator
+    private let textCache = VoicegroupTextCache()
+    /// Pending definitions are mutated only by the owning project's serial executor.
+    public var pendingSynths: [String: VgSynthDesc] = [:]
     private var records: [VoicegroupId: BankRecord] = [:]
     private var memos: [String: BankMemo] = [:]
     private var tokens = TokenRegistry()
 
-    /// Opens a loader for a project before any bank is requested.
-    /// - Parameter projectRoot: Root containing the project's sound files.
-    /// - Throws: `VoicegroupStoreError` when the loader cannot open the project.
+    /// Opens the project's layout and parses its asset maps before loading banks.
+    /// - Throws: `VoicegroupStoreError` when the root or asset maps cannot be read.
     public init(projectRoot: String) throws {
-        guard let context = ProjectContext.open(projectRoot: projectRoot) else {
+        let root = URL(filePath: projectRoot).standardizedFileURL.path
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: root, isDirectory: &isDirectory), isDirectory.boolValue else {
             throw VoicegroupStoreError.operationFailed("Could not initialize the project voicegroup loader.")
         }
-        self.projectRoot = URL(filePath: projectRoot).standardizedFileURL.path
-        self.context = context
-    }
-    /// Shares the store-owned loader instead of opening a second native project.
-    /// - Parameters:
-    ///   - projectRoot: Root containing the project's sound files.
-    ///   - context: The store's already-opened loader context.
-    init(projectRoot: String, context: ProjectContext) {
-        self.projectRoot = URL(filePath: projectRoot).standardizedFileURL.path
-        self.context = context
+        let layout = ProjectLayout(projectRoot: root)
+        self.projectRoot = root
+        self.layout = layout
+        locator = VoicegroupLocator(layout: layout)
+        do {
+            soundMap = try SoundDataMap.parse(files: layout.soundDataFiles)
+            progMap = try ProgWaveMap.parse(files: layout.programmableWaveFiles)
+            keysplits = try KeysplitTables.parse(files: layout.keysplitTableFiles)
+        } catch {
+            throw VoicegroupStoreError.operationFailed("Could not parse the project sample maps: \(error)")
+        }
     }
 
-    /// Rebuilds loaded banks against refreshed sample maps without changing source edits or history.
-    /// - Parameter context: Fresh project loader context.
-    /// - Returns: Successfully refreshed bank publications.
-    func rebind(context: ProjectContext) -> [LoadedBankView] {
-        self.context = context
+    /// Refreshes maps and rebuilds loaded banks from their current, possibly dirty sources.
+    /// - Throws: `VoicegroupStoreError` when the refreshed asset maps cannot be parsed.
+    public func rebind() throws -> [LoadedBankView] {
+        cache.removeAll()
+        let refreshed = ProjectLayout(projectRoot: projectRoot)
+        do {
+            let sound = try SoundDataMap.parse(files: refreshed.soundDataFiles)
+            let prog = try ProgWaveMap.parse(files: refreshed.programmableWaveFiles)
+            let tables = try KeysplitTables.parse(files: refreshed.keysplitTableFiles)
+            soundMap = sound
+            progMap = prog
+            keysplits = tables
+        } catch {
+            throw VoicegroupStoreError.operationFailed("Could not refresh the project sample maps: \(error)")
+        }
+        layout = refreshed
+        locator = VoicegroupLocator(layout: refreshed)
+        textCache.removeAll()
         var views: [LoadedBankView] = []
         views.reserveCapacity(records.count)
         for (id, var record) in records {
-            let source = record.source
-            let bank: BankHandle?
-            if source.dirty {
-                bank = source.loadPreviewedSource(using: context)
-            } else {
-                bank = context.load(
-                    target: .init(
-                        filePath: source.filePath,
-                        sectionLabel: source.sectionLabel))
-                bank?.graftMintedSynths(source: source)
-            }
-            guard let bank else { continue }
+            guard let bank = try? buildBank(source: record.source) else { continue }
             record.current = bank
-            record.published = Self.publish(id: id, source: source, bank: bank)
+            record.published = Self.publish(id: id, source: record.source, bank: bank)
             records[id] = record
             views.append(record.published)
         }
@@ -121,9 +132,16 @@ public final class VoicegroupStore {
             return record.published
         }
 
+        guard let location = locator.locate(voicegroupArg: arg) else {
+            throw VoicegroupStoreError.operationFailed("No voicegroup file declares voicegroup\(arg).")
+        }
+        let bytes = try VoicegroupText.read(location.filePath)
+        let text = try VoicegroupText.parse(bytes: bytes, sectionLabel: location.sectionLabel)
+        let bank = try BankBuilder(inputs: bankBuildInputs()).build(text, at: location)
         let source = VoicegroupSource()
         var error: String?
-        guard source.open(projectRoot: projectRoot, voicegroupArg: arg, error: &error) else {
+        guard source.open(location: location, bytes: bytes, projectRoot: projectRoot, voicegroupArg: arg, error: &error)
+        else {
             throw VoicegroupStoreError.operationFailed(error ?? "Could not open the voicegroup source.")
         }
         let path = URL(filePath: source.filePath).standardizedFileURL.path
@@ -159,10 +177,6 @@ public final class VoicegroupStore {
                 return record.published
             }
         }
-        guard let bank = context.load(target: .init(filePath: path, sectionLabel: source.sectionLabel)) else {
-            throw VoicegroupStoreError.operationFailed("Could not load voicegroup source \(path).")
-        }
-        bank.graftMintedSynths(source: source)
         let view = Self.publish(id: id, source: source, bank: bank)
         records[id] = BankRecord(
             id: id, source: source, current: bank,
@@ -204,8 +218,10 @@ public final class VoicegroupStore {
                 return .conflict(.init(voicegroup: input.id))
             }
         }
-
-        guard let bank = source.loadPreviewedSource(using: context) else {
+        let bank: Bank
+        do {
+            bank = try buildBank(source: source)
+        } catch {
             let restored = source.restoreSourceBytes(before)
             precondition(restored, "Previously parsed voicegroup bytes must restore")
             throw VoicegroupStoreError.operationFailed("Edited voicegroup failed to load.")
@@ -254,15 +270,7 @@ public final class VoicegroupStore {
         // Nil is reserved for the supersede race (another edit landed between the
         // save snapshot and didSave); write failures throw above instead.
         guard saved else { return nil }
-        guard
-            let bank = context.load(
-                target: .init(
-                    filePath: record.source.filePath,
-                    sectionLabel: record.source.sectionLabel))
-        else {
-            throw VoicegroupStoreError.operationFailed("Saved voicegroup failed to reload.")
-        }
-        bank.graftMintedSynths(source: record.source)
+        let bank = try buildBank(source: record.source)
         guard let time = modificationTime(record.source.filePath) else {
             throw VoicegroupStoreError.operationFailed("Cannot read \(record.source.filePath)")
         }
@@ -276,18 +284,78 @@ public final class VoicegroupStore {
         return record.published
     }
 
-    /// Auditions the current source via a `loadName.inc` shadow staged outside the project.
-    /// - Parameter id: Identity of a loaded bank.
-    /// - Returns: A self-contained preview bank, or nil when loading fails.
-    public func preview(id: VoicegroupId) -> BankHandle? {
-        records[id]?.source.loadPreviewedSource(using: context)
+    /// Builds a detached bank directly from the loaded source's current descriptors.
+    /// - Returns: A self-contained preview bank, or nil when building fails.
+    public func preview(id: VoicegroupId) -> Bank? {
+        guard let source = records[id]?.source else { return nil }
+        return try? buildBank(source: source)
     }
 
     /// Returns the record's current detached publication without loading.
     /// - Parameter id: Identity of a loaded bank.
     /// - Returns: The published view, or nil when the bank is not loaded.
-    func currentPublication(id: VoicegroupId) -> LoadedBankView? {
+    public func currentPublication(id: VoicegroupId) -> LoadedBankView? {
         records[id]?.published
+    }
+
+    /// Shares the store's maps, decode cache and text cache with the picker.
+    /// All use stays on the owning project's serial executor; banks retain decoded assets.
+    public func bankBuildInputs() throws -> BankBuildInputs {
+        var overlay = soundMap
+        for definition in VoicegroupSource.synthInstruments(projectRoot).defs {
+            guard mintedSynthDesc(symbol: definition.symbol) != nil else { continue }
+            Self.overlaySynth(definition.descriptor, symbol: definition.symbol, into: &overlay)
+        }
+        for (symbol, descriptor) in pendingSynths {
+            Self.overlaySynth(descriptor, symbol: symbol, into: &overlay)
+        }
+        for record in records.values {
+            let location = VoicegroupLocation(
+                filePath: record.source.filePath, sectionLabel: record.source.sectionLabel)
+            textCache.set(record.source.sourceBytes(), at: location)
+            for slot in 0..<128 {
+                guard let symbol = record.source.voiceAt(slot: slot)?.symbol,
+                    let descriptor = mintedSynthDesc(symbol: symbol)
+                else { continue }
+                Self.overlaySynth(descriptor, symbol: symbol, into: &overlay)
+            }
+        }
+        return BankBuildInputs(
+            layout: layout, soundMap: overlay, progMap: progMap, keysplits: keysplits,
+            cache: cache, locator: locator,
+            textProvider: { location, contiguousFill, noSubRecurse in
+                try self.textCache.text(at: location, contiguousFill: contiguousFill, noSubRecurse: noSubRecurse)
+            })
+    }
+
+    private func buildBank(source: VoicegroupSource) throws -> Bank {
+        do {
+            let text = try source.descriptors()
+            var inputs = try bankBuildInputs()
+            for index in 0..<128 {
+                guard let symbol = text.voices[index]?.symbol else { continue }
+                let name = String(decoding: symbol, as: UTF8.self)
+                guard let descriptor = mintedSynthDesc(symbol: name) else { continue }
+                Self.overlaySynth(descriptor, symbol: name, into: &inputs.soundMap)
+            }
+            let location = VoicegroupLocation(filePath: source.filePath, sectionLabel: source.sectionLabel)
+            textCache.set(source.sourceBytes(), at: location)
+            return try BankBuilder(inputs: inputs).build(text, at: location)
+        } catch let error as VoicegroupStoreError {
+            throw error
+        } catch {
+            throw VoicegroupStoreError.operationFailed("Could not build \(source.filePath): \(error)")
+        }
+    }
+
+    private static func overlaySynth(_ descriptor: VgSynthDesc, symbol: String, into map: inout SoundDataMap) {
+        let key = Array(symbol.utf8)[...]
+        guard map[key] == nil else { return }
+        map.entries[SymbolKey(key)] = .synth([
+            0x80, UInt8(truncatingIfNeeded: descriptor.waveform),
+            UInt8(truncatingIfNeeded: descriptor.baseDuty), UInt8(truncatingIfNeeded: descriptor.dutyStep),
+            UInt8(truncatingIfNeeded: descriptor.modDepth), UInt8(truncatingIfNeeded: descriptor.phase),
+        ])
     }
 
     private func refreshIfStale(id: VoicegroupId) throws -> Bool {
@@ -307,7 +375,7 @@ public final class VoicegroupStore {
         (try? FileManager.default.attributesOfItem(atPath: path))?[.modificationDate] as? Date
     }
 
-    private static func publish(id: VoicegroupId, source: VoicegroupSource, bank: BankHandle) -> LoadedBankView {
+    private static func publish(id: VoicegroupId, source: VoicegroupSource, bank: Bank) -> LoadedBankView {
         var slots: [VoicegroupSlotView] = []
         slots.reserveCapacity(128)
         for slot in 0..<128 {

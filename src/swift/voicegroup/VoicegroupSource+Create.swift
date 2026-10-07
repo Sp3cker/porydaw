@@ -1,10 +1,10 @@
 import Foundation
 
 /// Refusal from the per-file voicegroup writer. Refusal paths write nothing.
-struct VoicegroupCreateError: Error, LocalizedError {
+public struct VoicegroupCreateError: Error, LocalizedError {
     let message: String
 
-    var errorDescription: String? { message }
+    public var errorDescription: String? { message }
 }
 
 extension VoicegroupSource {
