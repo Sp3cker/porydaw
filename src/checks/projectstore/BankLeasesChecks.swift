@@ -385,11 +385,23 @@ public func runBankLeasesSuite(_ report: CheckReport) {
         var rejected = before
         rejected.key = 62
         let candidate = rejected
-        let blocker = FileManager.default.temporaryDirectory.appendingPathComponent(
-            "porydaw-vgpreview-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)
-        try? FileManager.default.removeItem(at: blocker)
-        try Data().write(to: blocker)
-        defer { try? FileManager.default.removeItem(at: blocker) }
+        // Programmable waves are decoded on every rebuild, bypassing the sample cache.
+        let blockedWave = root.appendingPathComponent("sound/programmable_wave_samples/fixture_pulse.pcm")
+        let attributes = try FileManager.default.attributesOfItem(atPath: blockedWave.path)
+        guard let permissions = attributes[.posixPermissions] as? NSNumber else {
+            throw BankLeasesCheckError.failed("fixture wave permissions are missing")
+        }
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: blockedWave.path)
+        defer {
+            do {
+                try FileManager.default.setAttributes(
+                    [.posixPermissions: permissions], ofItemAtPath: blockedWave.path)
+            } catch {
+                report.fail(
+                    "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                    "cannot restore fixture wave permissions: \(error)")
+            }
+        }
         let attempted = awaitValue {
             try await store.applyVoicegroupEdit(
                 lease: initial, operation: .set(.init(slot: directSoundSlot, value: candidate, expected: before)))
@@ -398,9 +410,8 @@ public func runBankLeasesSuite(_ report: CheckReport) {
             case .operationFailed = error
         else {
             throw BankLeasesCheckError.failed(
-                "preview blocker did not reject the candidate: \(String(describing: attempted))")
+                "unreadable fixture wave did not reject the candidate: \(String(describing: attempted))")
         }
-        try FileManager.default.removeItem(at: blocker)
         let survived = try bankAwait { try await store.loadBank(voicegroupArg: song.cfg.voicegroupArgument) }
         let sourceAfter = try Data(
             contentsOf: URL(filePath: root.appendingPathComponent(initial.id.sourceRelativePath).path))

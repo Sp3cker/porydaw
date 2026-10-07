@@ -94,8 +94,8 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
         expected: "Noise", actual: list.rows[2].typeName, cppID: bindingID,
         what: "slot 2 renders the fixture's noise voice")
     report.expectEqual(
-        expected: "003  [Blank]", actual: list.rows[3].title, cppID: bindingID,
-        what: "slot 3 renders the blank template row")
+        expected: "004  [Blank]", actual: list.rows[4].title, cppID: bindingID,
+        what: "slot 4 renders the blank template row")
     report.expectEqual(
         expected: "test_vg", actual: list.selectorText, cppID: bindingID,
         what: "the selector reflects the song's -G arg as a display name")
@@ -254,13 +254,13 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
 
     let blankID = "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably"
     report.expect(
-        list.voiceDraft(3)?.materializesBlank == true, cppID: blankID, message: "fixture slot 3 is a blank draft")
-    guard let draft = list.voiceDraft(3), draft.materializesBlank else {
+        list.voiceDraft(4)?.materializesBlank == true, cppID: blankID, message: "fixture slot 4 is a blank draft")
+    guard let draft = list.voiceDraft(4), draft.materializesBlank else {
         return
     }
     do {
         _ = try runBlocking {
-            try await list.applyVoiceEdit(slot: 3, voice: draft.voice)
+            try await list.applyVoiceEdit(slot: 4, voice: draft.voice)
         }
     } catch {
         report.fail(blankID, "blank materialization threw: \(error)")
@@ -268,10 +268,10 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
     }
     list.refresh(from: session)
     report.expectEqual(
-        expected: draft.voice, actual: session.bankSlots[3].voice, cppID: blankID,
+        expected: draft.voice, actual: session.bankSlots[4].voice, cppID: blankID,
         what: "a blank slot materializes the template voice")
     report.expectEqual(
-        expected: "003  Sample", actual: list.rows[3].title, cppID: blankID,
+        expected: "004  Sample", actual: list.rows[4].title, cppID: blankID,
         what: "the materialized row renders its type-named title")
     do {
         _ = try runBlocking { try await session.undo() }
@@ -281,10 +281,10 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
     }
     list.refresh(from: session)
     report.expect(
-        session.bankSlots[3].voice == nil, cppID: blankID,
+        session.bankSlots[4].voice == nil, cppID: blankID,
         message: "materialization undo returns the slot to blank")
     report.expectEqual(
-        expected: "003  [Blank]", actual: list.rows[3].title, cppID: blankID,
+        expected: "004  [Blank]", actual: list.rows[4].title, cppID: blankID,
         what: "the reverted row renders the blank template again")
     do {
         _ = try runBlocking { try await session.redo() }
@@ -294,8 +294,8 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
     }
     list.refresh(from: session)
     report.expect(
-        session.bankSlots[3].voice == draft.voice
-            && list.rows[3].title == "003  Sample" && !session.document.isDirty,
+        session.bankSlots[4].voice == draft.voice
+            && list.rows[4].title == "004  Sample" && !session.document.isDirty,
         cppID: blankID,
         message: "the blank template materializes again on redo without dirtying the song")
     do {

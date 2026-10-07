@@ -30,7 +30,16 @@ public final class VoicegroupLocator {
         let base = Array(argument.drop(while: { $0 == "_" }).utf8)[...]
         let label = Array(("voicegroup" + argument).utf8)[...]
         if let found = probe(base: base, label: label, layout: layout) { return found }
-        return probe(base: base, label: label, layout: layout.ensuringDeepScan())
+        if let found = probe(base: base, label: label, layout: layout.ensuringDeepScan()) { return found }
+        // Hub indices may contain both includes and declarations, which native
+        // monolithic discovery excludes. Preserve the top-level source fallback.
+        for relative in ["sound/voice_groups.inc", "sound/voicegroups.inc"] {
+            let path = layout.projectRoot + "/" + relative
+            if declares(path, symbol: label, isLabel: true) {
+                return VoicegroupLocation(filePath: path, sectionLabel: String(decoding: label, as: UTF8.self))
+            }
+        }
+        return nil
     }
 
     public func locateKeysplitTarget(symbol: String) -> VoicegroupLocation? {

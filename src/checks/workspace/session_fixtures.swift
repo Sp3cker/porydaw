@@ -99,10 +99,22 @@ public func stageTestProject(in rootDirectory: String, projectName: String) -> S
             voice_square_1 60, 0, 2, 2, 2, 3, 12, 4
             voice_square_2 60, 0, 1, 3, 2, 11, 4
             voice_noise 60, 0, 1, 2, 2, 10, 3
+            voice_programmable_wave 60, 0, ProgrammableWaveData_fixture_pulse, 2, 3, 12, 4
         """
     try! voicegroup.write(
         toFile: URL(fileURLWithPath: vgDir).appendingPathComponent("test_vg.inc").path,
         atomically: true, encoding: .utf8)
+
+    let waveDir = soundDir + "/programmable_wave_samples"
+    try! fm.createDirectory(atPath: waveDir, withIntermediateDirectories: true)
+    try! Data(repeating: 0xF0, count: 16).write(
+        to: URL(fileURLWithPath: waveDir + "/fixture_pulse.pcm"))
+    try! """
+    .align 2
+    ProgrammableWaveData_fixture_pulse::
+        .incbin "sound/programmable_wave_samples/fixture_pulse.pcm"
+    """.write(
+        toFile: soundDir + "/programmable_wave_data.inc", atomically: true, encoding: .utf8)
 
     let voicegroupHub = """
         .include "sound/voicegroups/test_vg.inc"

@@ -166,9 +166,9 @@ public func runBankHistorySuite(_ report: CheckReport) {
         cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
         what: "slot 0 is editable square 1")
     report.expectEqual(
-        expected: BankSlotKind.none, actual: session.bankSlots[3].kind,
+        expected: BankSlotKind.none, actual: session.bankSlots[4].kind,
         cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
-        what: "slot 3 is initially blank")
+        what: "slot 4 is initially blank")
 
     let oldLease = session.bankLease
     var bankPublications: [SessionChange] = []

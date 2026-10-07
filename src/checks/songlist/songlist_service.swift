@@ -341,7 +341,7 @@ public func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: String)
         report.expectEqual(
             expected: 128, actual: opened.bankSlots.count, cppID: id,
             what: "the bank publishes every slot")
-        let cry = opened.bankSlots[3]
+        let cry = opened.bankSlots[4]
         report.expectEqual(
             expected: BankSlotKind.readOnlyVoice, actual: cry.kind, cppID: id,
             what: "the cry line is a read-only slot")
@@ -362,7 +362,7 @@ public func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: String)
             expected: nil, actual: opened.bankSlots[0].tone, cppID: id,
             what: "editable slots publish no tone")
         report.expectEqual(
-            expected: nil, actual: opened.bankSlots[4].tone, cppID: id,
+            expected: nil, actual: opened.bankSlots[5].tone, cppID: id,
             what: "blank slots publish no tone")
 
         // The register/delete transaction (proof B012/B013): plan, confirm,
