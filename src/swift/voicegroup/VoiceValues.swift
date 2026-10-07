@@ -140,7 +140,8 @@ public struct VoicegroupSlotView: Sendable {
 }
 
 /// Immutable publication of bank state; the bank owns all its borrowed assets.
-public struct LoadedBankView: Sendable {
+// Bank is immutable after build; shared read-only.
+public struct LoadedBankView: @unchecked Sendable {
     public let id: VoicegroupId
     public let bank: Bank
     public let loadName: String

@@ -17,6 +17,9 @@ public struct BankBuildInputs {
         textProvider:
             @escaping (VoicegroupLocation, _ contiguousFill: Bool, _ noSubRecurse: Bool) throws -> VoicegroupText
     ) {
+        _ = layout.ensuringDeepScan()
+        VoicegroupText.prepareGrammar()
+        Bank.prepareOwnershipMetadata()
         self.layout = layout
         self.soundMap = soundMap
         self.progMap = progMap
@@ -41,10 +44,10 @@ public struct BankBuilder {
 
     /// Builds and retains every pointed-to allocation before publishing the bank.
     /// - Throws: `BankBuildError` on a hard asset, text, table, or cycle failure.
-    public func build(_ text: VoicegroupText, at location: VoicegroupLocation) throws -> Bank {
-        var state = BuildState(bank: Bank(), keysplits: inputs.keysplits)
-        state.activeLocations.reserveCapacity(32)
-        state.activeLocations.append(location)
+    public func build(_ text: borrowing VoicegroupText, at location: VoicegroupLocation) throws -> Bank {
+        var state = BuildState(bank: Bank.make(cache: inputs.cache), keysplits: inputs.keysplits)
+        state.activeLocations[0] = location
+        state.activeCount = 1
         do {
             try fill(text, at: location, voices: state.bank.voices, names: state.bank.names, state: &state)
             return state.bank
@@ -57,7 +60,7 @@ public struct BankBuilder {
 
     /// Resolves synths, mapped WAV/AIF/BIN candidates, then the serial directory fallback.
     /// - Throws: `BankBuildError.hardFailure` for decoder or path failures.
-    public func resolveSample(symbol: String) throws -> WaveRef? {
+    public func resolveSample(symbol: ArraySlice<UInt8>) throws -> UnsafeMutablePointer<WaveData>? {
         do {
             switch inputs.soundMap[symbol] {
             case .synth(let descriptor):
@@ -66,23 +69,37 @@ public struct BankBuilder {
                 }
                 return wave
             case .sample(let relativePath):
-                let binPath = try absolutePath(relativePath)
+                let pathBytes = relativePath.utf8
+                let path = pathBytes.span
                 if relativePath.hasSuffix(".bin") {
-                    let base = String(relativePath.dropLast(4))
-                    let wavPath = try absolutePath(base + ".wav")
-                    if let wave = try inputs.cache.wave(absolutePath: wavPath, format: .wav) { return wave }
-                    let aifPath = try absolutePath(base + ".aif")
-                    if let wave = try inputs.cache.wave(absolutePath: aifPath, format: .aiff) { return wave }
+                    if let wave = try inputs.cache.wave(
+                        directory: inputs.layout.projectRoot, relativePath: path, format: .wav,
+                        suffix: ".wav", removingLast: 4)
+                    {
+                        return wave
+                    }
+                    if let wave = try inputs.cache.wave(
+                        directory: inputs.layout.projectRoot, relativePath: path, format: .aiff,
+                        suffix: ".aif", removingLast: 4)
+                    {
+                        return wave
+                    }
                 }
-                return try inputs.cache.wave(absolutePath: binPath, format: .bin)
+                return try inputs.cache.wave(directory: inputs.layout.projectRoot, relativePath: path, format: .bin)
             case nil:
                 for directory in inputs.layout.ensuringDeepScan().sampleDirectories {
-                    let base = directory + "/" + symbol
-                    // Native serial candidates use snprintf's bounded path, not build_path.
-                    let wavPath = String(decoding: (base + ".wav").utf8.prefix(511), as: UTF8.self)
-                    if let wave = try inputs.cache.wave(absolutePath: wavPath, format: .wav) { return wave }
-                    let aifPath = String(decoding: (base + ".aif").utf8.prefix(511), as: UTF8.self)
-                    if let wave = try inputs.cache.wave(absolutePath: aifPath, format: .aiff) { return wave }
+                    if let wave = try inputs.cache.wave(
+                        directory: directory, relativePath: symbol.span, format: .wav,
+                        suffix: ".wav", truncate: true)
+                    {
+                        return wave
+                    }
+                    if let wave = try inputs.cache.wave(
+                        directory: directory, relativePath: symbol.span, format: .aiff,
+                        suffix: ".aif", truncate: true)
+                    {
+                        return wave
+                    }
                 }
                 return nil
             }
@@ -93,7 +110,7 @@ public struct BankBuilder {
 
     /// Resolves a fresh programmable-wave allocation, with mapped misses remaining soft.
     /// - Throws: `BankBuildError.hardFailure` for decoder or path failures.
-    public func resolveProgWave(symbol: String) throws -> ProgWaveRef? {
+    public func resolveProgWave(symbol: ArraySlice<UInt8>) throws -> UnsafeMutablePointer<UInt32>? {
         guard let relativePath = inputs.progMap[symbol] else { return nil }
         do {
             return try inputs.cache.prog(absolutePath: absolutePath(relativePath))
@@ -102,20 +119,22 @@ public struct BankBuilder {
         }
     }
 
-    private func resolveCry(symbol: String) throws -> WaveRef? {
+    private func resolveCry(symbol: ArraySlice<UInt8>) throws -> UnsafeMutablePointer<WaveData>? {
         guard case .sample(let relativePath) = inputs.soundMap[symbol] else { return nil }
-        return try inputs.cache.wave(absolutePath: absolutePath(relativePath), format: .bin)
+        let pathBytes = relativePath.utf8
+        return try inputs.cache.wave(directory: inputs.layout.projectRoot, relativePath: pathBytes.span, format: .bin)
     }
 
     private struct BuildState {
         let bank: Bank
         var keysplits: KeysplitTables
         var scannedKeysplits = false
-        var activeLocations: [VoicegroupLocation] = []
+        var activeLocations = InlineArray<32, VoicegroupLocation?>(repeating: nil)
+        var activeCount = 0
     }
 
     private func fill(
-        _ text: VoicegroupText, at location: VoicegroupLocation,
+        _ text: borrowing VoicegroupText, at location: VoicegroupLocation,
         voices: UnsafeMutablePointer<ToneData>, names: UnsafeMutablePointer<CChar>, state: inout BuildState
     ) throws {
         var endIndex = try write(text, voices: voices, names: names, startIndex: 0, state: &state)
@@ -134,73 +153,79 @@ public struct BankBuilder {
     }
 
     private func write(
-        _ text: VoicegroupText, voices: UnsafeMutablePointer<ToneData>, names: UnsafeMutablePointer<CChar>,
+        _ text: borrowing VoicegroupText, voices: UnsafeMutablePointer<ToneData>, names: UnsafeMutablePointer<CChar>,
         startIndex: Int, state: inout BuildState
     ) throws -> Int {
+        let slots = text.voices.span
         for index in 0..<(128 - startIndex) {
-            guard let descriptor = text.voices[index] else { continue }
+            guard let descriptor = slots[index] else { continue }
             let slot = startIndex + index
-            let tone = voices.advanced(by: slot)
-            tone.pointee.type = descriptor.type
-            tone.pointee.key = descriptor.key
-            tone.pointee.panSweep = descriptor.panSweep
-            tone.pointee.attack = descriptor.attack
-            tone.pointee.decay = descriptor.decay
-            tone.pointee.sustain = descriptor.sustain
-            tone.pointee.release = descriptor.release
+            var tone = ToneData()
+            tone.type = descriptor.type
+            tone.key = descriptor.key
+            tone.panSweep = descriptor.panSweep
+            tone.attack = descriptor.attack
+            tone.decay = descriptor.decay
+            tone.sustain = descriptor.sustain
+            tone.release = descriptor.release
             copyName(descriptor.displayName, to: names.advanced(by: slot * Int(VG_VOICE_NAME_LEN)))
             switch descriptor.type {
             case UInt8(VOICE_KEYSPLIT), UInt8(VOICE_KEYSPLIT_ALL):
                 if !descriptor.suppressSubgroup {
                     let subgroup = try resolveSubgroup(symbol: descriptor.symbol, state: &state)
-                    tone.pointee.subGroup = subgroup.map { UnsafeMutableRawPointer($0.voices) }
+                    tone.subGroup = subgroup.map { UnsafeMutableRawPointer($0.voices) }
                 }
                 if descriptor.type == UInt8(VOICE_KEYSPLIT),
                     let table = try keysplitTable(named: descriptor.tableSymbol, state: &state)
                 {
-                    tone.pointee.keySplitTable = table.table.withUnsafeBufferPointer { bytes in
-                        guard let base = bytes.baseAddress else { preconditionFailure("Keysplit table is empty") }
-                        return state.bank.registerTable(base)
-                    }
+                    tone.keySplitTable = state.bank.registerTable(table.table.span)
                 }
             case UInt8(VOICE_CRY), UInt8(VOICE_CRY_REVERSE):
                 if let wave = try resolveCry(symbol: descriptor.symbol) {
                     state.bank.register(wave: wave)
-                    tone.pointee.wav = wave.raw
+                    tone.wav = wave
                 }
             case UInt8(VOICE_DIRECTSOUND), UInt8(VOICE_DIRECTSOUND_NO_RESAMPLE), UInt8(VOICE_DIRECTSOUND_ALT):
                 if let wave = try resolveSample(symbol: descriptor.symbol) {
                     state.bank.register(wave: wave)
-                    tone.pointee.wav = wave.raw
+                    tone.wav = wave
                 }
             case UInt8(VOICE_PROGRAMMABLE_WAVE), UInt8(VOICE_PROGRAMMABLE_WAVE_ALT):
                 if let wave = try resolveProgWave(symbol: descriptor.symbol) {
                     state.bank.register(prog: wave)
-                    tone.pointee.wavePointer = wave.raw
+                    tone.wavePointer = wave
                 }
             default:
-                tone.pointee.wavePointer = UnsafeMutablePointer<UInt32>(bitPattern: Int(descriptor.wavePointerBits))
+                tone.wavePointer = UnsafeMutablePointer<UInt32>(bitPattern: Int(descriptor.wavePointerBits))
             }
+            var destination = MutableSpan(_unsafeStart: voices, count: 128)
+            destination[slot] = tone
         }
         return min(128, startIndex + text.endIndex)
     }
 
-    private func resolveSubgroup(symbol: String, state: inout BuildState) throws -> SubBank? {
+    private func resolveSubgroup(symbol: ArraySlice<UInt8>, state: inout BuildState) throws -> SubBank? {
         guard let location = inputs.locator.locateSubgroup(symbol: symbol) else { return nil }
-        guard !state.activeLocations.contains(location) else { throw BankBuildError.cycle(location) }
-        guard state.activeLocations.count < 32 else {
+        for index in 0..<state.activeCount {
+            guard state.activeLocations[index] != location else { throw BankBuildError.cycle(location) }
+        }
+        guard state.activeCount < 32 else {
             throw BankBuildError.hardFailure("Active voicegroup location stack is full")
         }
-        state.activeLocations.append(location)
-        defer { state.activeLocations.removeLast() }
+        state.activeLocations[state.activeCount] = location
+        state.activeCount += 1
+        defer {
+            state.activeCount -= 1
+            state.activeLocations[state.activeCount] = nil
+        }
         let text = try providedText(at: location, contiguousFill: true, noSubRecurse: false)
-        let subgroup = SubBank()
+        let subgroup = SubBank.make()
         state.bank.register(subBank: subgroup)
         try fill(text, at: location, voices: subgroup.voices, names: subgroup.names, state: &state)
         return subgroup
     }
 
-    private func keysplitTable(named symbol: String, state: inout BuildState) throws -> KeysplitTable? {
+    private func keysplitTable(named symbol: ArraySlice<UInt8>, state: inout BuildState) throws -> KeysplitTable? {
         if let table = state.keysplits.table(named: symbol) { return table }
         if !state.scannedKeysplits {
             let files = inputs.layout.ensuringDeepScan().keysplitTableFiles
@@ -231,15 +256,19 @@ public struct BankBuilder {
         guard root.utf8.count + 1 + relativePath.utf8.count < 512 else {
             throw BankBuildError.hardFailure("Asset path is too long: \(relativePath)")
         }
-        return (root + "/" + relativePath).replacingOccurrences(of: "\\", with: "/")
+        let path = root + "/" + relativePath
+        for byte in relativePath.utf8 {
+            if byte == 92 { return path.replacingOccurrences(of: "\\", with: "/") }
+        }
+        return path
     }
 
-    private func copyName(_ name: String, to destination: UnsafeMutablePointer<CChar>) {
+    private func copyName(_ name: ArraySlice<UInt8>, to destination: UnsafeMutablePointer<CChar>) {
+        let count = min(name.count, Int(VG_VOICE_NAME_LEN) - 1)
+        let source = name.span
+        var target = MutableSpan(_unsafeStart: destination, count: Int(VG_VOICE_NAME_LEN))
         var index = 0
-        for byte in name.utf8.prefix(Int(VG_VOICE_NAME_LEN) - 1) {
-            destination[index] = CChar(bitPattern: byte)
-            index += 1
-        }
-        destination[index] = 0
+        while index < count { target[index] = CChar(bitPattern: source[index]); index += 1 }
+        target[count] = 0
     }
 }

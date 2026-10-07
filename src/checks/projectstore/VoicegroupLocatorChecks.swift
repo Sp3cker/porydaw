@@ -39,9 +39,9 @@ private func locatorExpected(
     result.sustain = adsr.2
     result.release = adsr.3
     result.wavePointerBits = bits
-    result.symbol = symbol
-    result.tableSymbol = table
-    result.displayName = name
+    result.symbol = Array(symbol.utf8)[...]
+    result.tableSymbol = Array(table.utf8)[...]
+    result.displayName = Array(name.utf8)[...]
     return result
 }
 
@@ -99,7 +99,7 @@ private func locatorFixture(_ root: URL, _ report: CheckReport) throws {
         report.expectEqual(
             expected: expected[slot], actual: text.voices[slot], cppID: cppID, what: "rich slot \(slot), every field")
     }
-    report.expect(text.voices[13...].allSatisfy { $0 == nil }, cppID: cppID, message: "unwritten rich tail")
+    report.expect((13..<128).allSatisfy { text.voices[$0] == nil }, cppID: cppID, message: "unwritten rich tail")
     report.expect(!text.continuesIntoIncludedFile, cppID: cppID, message: "top-level does not continue")
     let subText = try source.descriptors(contiguousFill: true)
     report.expect(
@@ -108,7 +108,7 @@ private func locatorFixture(_ root: URL, _ report: CheckReport) throws {
     let drumsPath = root.appendingPathComponent("sound/voicegroups/fixture_drums_a.inc").path
     guard let drums = locatorSource(drumsPath, report: report) else { return }
     let drumText = try drums.descriptors()
-    report.expect(drumText.voices[..<36].allSatisfy { $0 == nil }, cppID: cppID, message: "starting-note gap")
+    report.expect((0..<36).allSatisfy { drumText.voices[$0] == nil }, cppID: cppID, message: "starting-note gap")
     report.expectEqual(
         expected: locatorExpected(
             0, adsr: (255, 80, 144, 40), symbol: "DirectSoundWaveData_fixture_drum", name: "fixture_drum"),
@@ -120,7 +120,7 @@ private func locatorFixture(_ root: URL, _ report: CheckReport) throws {
         expected: locatorExpected(
             0, adsr: (255, 120, 160, 48), symbol: "DirectSoundWaveData_fixture_pluck", name: "fixture_pluck"),
         actual: drumText.voices[38], cppID: cppID, what: "drum slot 38")
-    report.expect(drumText.voices[39...].allSatisfy { $0 == nil }, cppID: cppID, message: "unwritten drum tail")
+    report.expect((39..<128).allSatisfy { drumText.voices[$0] == nil }, cppID: cppID, message: "unwritten drum tail")
     let editorDrums = VoicegroupSource()
     var editorError: String?
     let opened = editorDrums.open(projectRoot: root.path, voicegroupArg: "_fixture_drums_a", error: &editorError)
@@ -228,7 +228,7 @@ private func locatorLineRules(_ root: URL, _ report: CheckReport) throws {
         expected: locatorExpected(64, key: 0, symbol: "voicegroup_kit", table: "table, extra", name: "kit"),
         actual: text.voices[16], cppID: cppID, what: "hex metadata jump and EOL table symbol")
     report.expectEqual(
-        expected: String(repeating: "x", count: 47), actual: text.voices[17]?.displayName,
+        expected: Array(String(repeating: "x", count: 47).utf8)[...], actual: text.voices[17]?.displayName,
         cppID: cppID, what: "zero metadata does not jump and display name capped")
     let long = String(repeating: "a", count: 256)
     let hardFailures = [
@@ -288,14 +288,15 @@ private func locatorBoundaries(_ path: URL, _ report: CheckReport) throws {
     try Data("voice_group successor\ncry ignored\n".utf8).write(to: path)
     guard let successor = locatorSource(path.path, report: report) else { return }
     let stopped = try successor.descriptors(noSubRecurse: true)
-    report.expect(stopped.voices.allSatisfy { $0 == nil }, cppID: cppID, message: "noSubRecurse stops at voice_group")
+    report.expect(
+        (0..<128).allSatisfy { stopped.voices[$0] == nil }, cppID: cppID, message: "noSubRecurse stops at voice_group")
     let capped = "voice_noise 60, 0, 1, 2, 3, 4, 5\n"
     try Data((String(repeating: capped, count: 128) + "cry \(String(repeating: "x", count: 256))\n").utf8).write(
         to: path)
     guard let capSource = locatorSource(path.path, report: report) else { return }
     let cap = try capSource.descriptors(contiguousFill: true)
     report.expect(
-        cap.voices.allSatisfy { $0?.type == 4 } && !cap.continuesIntoIncludedFile,
+        (0..<128).allSatisfy { cap.voices[$0]?.type == 4 } && !cap.continuesIntoIncludedFile,
         cppID: cppID, message: "128 cap stops before later hard failure")
     try Data(
         """
@@ -318,9 +319,11 @@ private func locatorBoundaries(_ path: URL, _ report: CheckReport) throws {
     guard let nulSource = locatorSource(path.path, report: report) else { return }
     let nulText = try nulSource.descriptors()
     report.expectEqual(
-        expected: "before", actual: nulText.voices[0]?.symbol, cppID: cppID, what: "NUL terminates parser content")
+        expected: Array("before".utf8)[...], actual: nulText.voices[0]?.symbol, cppID: cppID,
+        what: "NUL terminates parser content")
     report.expectEqual(
-        expected: "after", actual: nulText.voices[1]?.symbol, cppID: cppID, what: "next physical line after NUL")
+        expected: Array("after".utf8)[...], actual: nulText.voices[1]?.symbol, cppID: cppID,
+        what: "next physical line after NUL")
     report.expectEqual(
         expected: [UInt8](nulRaw.utf8), actual: nulSource.sourceBytes(), cppID: cppID,
         what: "NUL remains in raw source bytes")

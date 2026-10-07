@@ -104,6 +104,21 @@ public final class VoicegroupSource {
         return reload(error: &error)
     }
 
+    func open(
+        location: VoicegroupLocation, bytes: [UInt8], projectRoot: String,
+        voicegroupArg: String, error: inout String?
+    ) -> Bool {
+        self.projectRoot = projectRoot
+        self.voicegroupArg = voicegroupArg
+        filePath = location.filePath
+        sectionLabel = location.sectionLabel
+        loadName = sectionLabel.isEmpty ? ProjectFileStore.completeBaseName(filePath) : sectionLabel
+        guard parse(bytes, error: &error) else { return false }
+        pristineSource = bytes
+        dirty = false
+        return true
+    }
+
     /// Re-reads the located file, discarding unsaved edits and resetting pristine bytes.
     /// - Parameter error: Receives a diagnostic if reading or parsing fails.
     /// - Returns: Whether the file was read and its section found.
@@ -173,10 +188,10 @@ public final class VoicegroupSource {
         var endsWithNewline: Bool
     }
 
-    private static let alignPrefix = Array(".align".utf8)
-    private static let headerPrefix = Array("voice_group ".utf8)
-    private static let cryReversePrefix = Array("cry_reverse ".utf8)
-    private static let cryPrefix = Array("cry ".utf8)
+    static let alignPrefix = Array(".align".utf8)
+    static let headerPrefix = Array("voice_group ".utf8)
+    static let cryReversePrefix = Array("cry_reverse ".utf8)
+    static let cryPrefix = Array("cry ".utf8)
 
     private func select(path: String, declarations: [Declaration], symbol: String) -> Selection {
         guard let declaration = declarations.first(where: { $0.symbol == symbol }) else { return .absent }
@@ -321,7 +336,7 @@ public final class VoicegroupSource {
                 parsed.sectionBegin = index
             }
             line.isSectionBoundary =
-                Self.hasSectionLabelSeparator(text) || text.starts(with: Self.alignPrefix)
+                Self.hasSectionLabelSeparator(text[...]) || text.starts(with: Self.alignPrefix)
             if !done && isMonolithic && voices > 0 && line.isSectionBoundary {
                 done = true
                 parsed.sectionEnd = index
@@ -329,7 +344,7 @@ public final class VoicegroupSource {
             if text.starts(with: Self.headerPrefix) {
                 line.kind = .header
                 do {
-                    line.startingSlot = try Self.headerStartingSlot(text)
+                    line.startingSlot = try Self.headerStartingSlot(text[...])
                 } catch {
                     line.hardFailure = "voice_group symbol is overlong"
                 }
@@ -424,92 +439,106 @@ public final class VoicegroupSource {
         return voice
     }
 
-    private static func nextInteger(_ rest: inout ArraySlice<UInt8>) -> Int? {
-        var bytes = rest.drop(while: isSpace)
-        let negative = bytes.first == 45
-        if bytes.first == 43 || negative { bytes = bytes.dropFirst() }
+    static func nextInteger(_ rest: inout ArraySlice<UInt8>) -> Int? {
+        let source = rest
+        let bytes = source.span
+        var index = 0
+        while index < bytes.count && isSpace(bytes[index]) { index += 1 }
+        guard index < bytes.count else { return nil }
+        let negative = bytes[index] == 45
+        if negative || bytes[index] == 43 { index += 1 }
         var radix = 10
-        if bytes.first == 48 {
+        if index < bytes.count && bytes[index] == 48 {
             radix = 8
-            if bytes.count > 2 {
-                let second = bytes[bytes.startIndex + 1]
-                if (second == 120 || second == 88), let digit = digitValue(bytes[bytes.startIndex + 2]), digit < 16 {
-                    radix = 16
-                    bytes = bytes.dropFirst(2)
-                }
+            if index + 2 < bytes.count && (bytes[index + 1] == 120 || bytes[index + 1] == 88),
+                let digit = digitValue(bytes[index + 2]), digit < 16
+            {
+                radix = 16
+                index += 2
             }
         }
-        let start = bytes.startIndex
+        let start = index
         var magnitude = 0
         let limit = negative ? 2_147_483_648 : 2_147_483_647
-        while let first = bytes.first, let digit = digitValue(first), digit < radix {
+        while index < bytes.count, let digit = digitValue(bytes[index]), digit < radix {
             guard magnitude <= (limit - digit) / radix else { return nil }
             magnitude = magnitude * radix + digit
-            bytes = bytes.dropFirst()
+            index += 1
         }
-        guard bytes.startIndex > start else { return nil }
-        rest = bytes
+        guard index > start else { return nil }
+        rest = source[(source.startIndex + index)...]
         return negative ? -magnitude : magnitude
     }
 
     private static func digitValue(_ byte: UInt8) -> Int? {
-        switch byte {
-        case 48...57: Int(byte - 48)
-        case 65...70: Int(byte - 65) + 10
-        case 97...102: Int(byte - 97) + 10
-        default: nil
-        }
+        if byte >= 48 && byte <= 57 { return Int(byte - 48) }
+        if byte >= 65 && byte <= 70 { return Int(byte - 65) + 10 }
+        if byte >= 97 && byte <= 102 { return Int(byte - 97) + 10 }
+        return nil
     }
 
-    private static func expectComma(_ rest: inout ArraySlice<UInt8>) -> Bool {
-        rest = rest.drop(while: { $0 == 32 || $0 == 9 })
-        guard rest.first == 44 else { return false }
-        rest = rest.dropFirst()
+    static func expectComma(_ rest: inout ArraySlice<UInt8>) -> Bool {
+        let source = rest
+        let bytes = source.span
+        var index = 0
+        while index < bytes.count && (bytes[index] == 32 || bytes[index] == 9) { index += 1 }
+        guard index < bytes.count && bytes[index] == 44 else { return false }
+        rest = source[(source.startIndex + index + 1)...]
         return true
     }
 
     private static func extractSymbol(_ rest: inout ArraySlice<UInt8>, comma: Bool) throws -> String? {
-        var bytes = rest.drop(while: { $0 == 32 || $0 == 9 })
-        let end: Int
-        if comma {
-            guard let separator = bytes.firstIndex(of: 44) else { return nil }
-            end = separator
-        } else {
-            end = bytes.endIndex
-        }
-        var symbol = bytes[..<end]
-        while let last = symbol.last, isSpace(last) { symbol = symbol.dropLast() }
-        symbol = symbol.drop(while: isSpace)
-        guard !symbol.isEmpty else { return nil }
-        guard symbol.count < 256 else { throw ArgumentError.overlongSymbol }
-        bytes = comma ? bytes[(end + 1)...] : bytes[end...]
-        rest = bytes
-        return String(decoding: symbol, as: UTF8.self)
+        try extractSymbolBytes(&rest, comma: comma).map { String(decoding: $0, as: UTF8.self) }
     }
 
-    private static func isSpace(_ byte: UInt8) -> Bool { byte == 32 || (9...13).contains(byte) }
+    static func extractSymbolBytes(_ rest: inout ArraySlice<UInt8>, comma: Bool) throws -> ArraySlice<UInt8>? {
+        var start = rest.startIndex
+        while start < rest.endIndex && isSpace(rest[start]) { start += 1 }
+        var end = rest.endIndex
+        if comma {
+            end = start
+            while end < rest.endIndex && rest[end] != 44 { end += 1 }
+            guard end < rest.endIndex else { return nil }
+        }
+        var symbolEnd = end
+        while symbolEnd > start && isSpace(rest[symbolEnd - 1]) { symbolEnd -= 1 }
+        guard symbolEnd > start else { return nil }
+        guard symbolEnd - start < 256 else { throw ArgumentError.overlongSymbol }
+        let symbol = rest[start..<symbolEnd]
+        rest = rest[(comma ? end + 1 : end)...]
+        return symbol
+    }
 
-    private static func headerStartingSlot(_ text: [UInt8]) throws -> Int? {
-        var arguments = text[12...]
-        guard try extractSymbol(&arguments, comma: true) != nil,
+    static func isSpace(_ byte: UInt8) -> Bool { byte == 32 || (byte >= 9 && byte <= 13) }
+
+    static func headerStartingSlot(_ text: ArraySlice<UInt8>) throws -> Int? {
+        var arguments = text[(text.startIndex + 12)...]
+        guard try extractSymbolBytes(&arguments, comma: true) != nil,
             let slot = nextInteger(&arguments), (1..<128).contains(slot)
         else { return nil }
         return slot
     }
 
-    static func contentBounds(_ raw: [UInt8]) -> Range<Int> {
-        var end = min(raw.firstIndex(of: 64) ?? raw.count, raw.firstIndex(of: 0) ?? raw.count)
-        if raw.count >= 2 {
-            for index in 0..<(raw.count - 1) where raw[index] == 47 && raw[index + 1] == 47 {
-                end = min(end, index)
+    static func contentBounds(_ raw: ArraySlice<UInt8>) -> Range<Int> {
+        let bytes = raw.span
+        var end = bytes.count
+        var index = 0
+        while index < end {
+            if bytes[index] == 64 || bytes[index] == 0
+                || (bytes[index] == 47 && index + 1 < end && bytes[index + 1] == 47)
+            {
+                end = index
                 break
             }
+            index += 1
         }
-        while end > 0 && isSpace(raw[end - 1]) { end -= 1 }
+        while end > 0 && isSpace(bytes[end - 1]) { end -= 1 }
         var start = 0
-        while start < end && isSpace(raw[start]) { start += 1 }
-        return start..<end
+        while start < end && isSpace(bytes[start]) { start += 1 }
+        return (raw.startIndex + start)..<(raw.startIndex + end)
     }
+
+    static func contentBounds(_ raw: [UInt8]) -> Range<Int> { contentBounds(raw[...]) }
 
     private static func splitLines(_ bytes: [UInt8]) -> (lines: [[UInt8]], endsWithNewline: Bool) {
         let endsWithNewline = bytes.isEmpty || bytes.last == 10
@@ -537,10 +566,10 @@ public final class VoicegroupSource {
         return false
     }
 
-    private static func hasSectionLabelSeparator(_ bytes: [UInt8]) -> Bool {
+    static func hasSectionLabelSeparator(_ bytes: ArraySlice<UInt8>) -> Bool {
         guard bytes.count >= 2 else { return false }
-        for index in 0..<(bytes.count - 1) where bytes[index] == 58 && bytes[index + 1] == 58 {
-            return index > 0
+        for index in bytes.startIndex..<(bytes.endIndex - 1) where bytes[index] == 58 && bytes[index + 1] == 58 {
+            return index > bytes.startIndex
         }
         return false
     }

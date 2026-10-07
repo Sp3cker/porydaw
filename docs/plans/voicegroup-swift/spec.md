@@ -55,10 +55,10 @@ src/swift/voicegroup/
   ProjectLayout.swift            T3
   SoundDataMap.swift             T3 (SoundDataMap + ProgWaveMap)
   KeysplitTables.swift           T4
-  Bank.swift                     T5 (Bank, SubBank, WaveRef, ProgWaveRef)
+  Bank.swift                     T5 (Bank, SubBank, raw asset ownership)
   WaveCache.swift                T5
   VoicegroupLocator.swift        T6
-  VoiceDescriptor.swift          T6 (VgVoiceDesc + VoicegroupSource.descriptors())
+  VoiceDescriptor.swift          T6 (VgVoiceDesc, VoicegroupText, VoicegroupTextCache)
   BankBuilder.swift              T7
 ```
 
@@ -122,62 +122,71 @@ public struct KeysplitTables: Sendable {
 ### T5 — bank ownership and decoders
 
 ```swift
-/// Owns one decoder allocation; `deinit` calls `free`. Never copied.
-public final class WaveRef: @unchecked Sendable {
-    public let raw: UnsafeMutablePointer<WaveData>
-    public let path: String                    // cache key: absolute path or "synth-macro:<symbol>"
-}
-public final class ProgWaveRef: @unchecked Sendable {
-    public let raw: UnsafeMutablePointer<UInt32>   // 16 packed bytes; free() in deinit
-    public let path: String
-}
-public final class SubBank {                   // one voice_keysplit/_all target
-    public let voices: UnsafeMutablePointer<ToneData>     // 128, calloc'd, free() in deinit
-    public let names: UnsafeMutablePointer<CChar>         // 128 * VG_VOICE_NAME_LEN, calloc'd
+public final class SubBank: ManagedBuffer<(voices: UnsafeMutablePointer<ToneData>, names: UnsafeMutablePointer<CChar>), ToneData> {
+    public var voices: UnsafeMutablePointer<ToneData>     // 128, zeroed tail storage
+    public var names: UnsafeMutablePointer<CChar>         // 128 * VG_VOICE_NAME_LEN, same allocation
     public func name(at slot: Int) -> String
 }
-public final class Bank: @unchecked Sendable {
-    public let voices: UnsafeMutablePointer<ToneData>     // 128, calloc'd, free() in deinit
-    public let names: UnsafeMutablePointer<CChar>         // 128 * VG_VOICE_NAME_LEN
-    public private(set) var subBanks: [SubBank]
-    public private(set) var tables: [UnsafeMutablePointer<UInt8>]   // 128 bytes each, malloc'd
-    public private(set) var waves: [WaveRef]              // retained for lifetime
-    public private(set) var progWaves: [ProgWaveRef]
-    public init()
+public final class Bank: ManagedBuffer<Bank.Storage, ToneData> {
+    public var voices: UnsafeMutablePointer<ToneData>     // 128, zeroed tail storage
+    public var names: UnsafeMutablePointer<CChar>         // same allocation
+    public var subBanks: [SubBank]
+    public var tables: [UnsafeMutablePointer<UInt8>]       // 128 bytes each, malloc'd
+    public var waves: [UnsafeMutablePointer<WaveData>]
+    public var progWaves: [UnsafeMutablePointer<UInt32>]
+    public static func make(cache: WaveCache = WaveCache()) -> Bank
     public func name(at slot: Int) -> String
     /// Sub-bank whose `voices` pointer equals `tone.subGroup`, or nil.
     public func subBank(for tone: ToneData) -> SubBank?
-    // Builder-only mutation (internal): register(wave:), register(prog:), register(table:) -> UnsafeMutablePointer<UInt8>, register(subBank:)
+    // Builder-only mutation (internal): register(wave:), register(prog:), registerTable(_: borrowing Span<UInt8>) -> UnsafeMutablePointer<UInt8>, register(subBank:)
 }
-/// Project-scoped decode cache. Keyed by WaveRef.path. Not thread-safe; owned by VoicegroupStore.
+/// Project-scoped decode cache. Owns entries { raw, refs }; serialized by VoicegroupStore.
 public final class WaveCache {
     public init()
     /// Reads and decodes; nil on soft miss (missing/undecodable), throws WaveDecodeError on hardFailure.
-    public func wave(absolutePath: String, format: WaveFormat) throws -> WaveRef?
-    public func synth(symbol: String, descriptor: [UInt8]) -> WaveRef?      // spec §6 build_synth_wavedata layout
-    public func prog(absolutePath: String) throws -> ProgWaveRef?
+    public func wave(absolutePath: String, format: WaveFormat) throws -> UnsafeMutablePointer<WaveData>?
+    public func synth(symbol: ArraySlice<UInt8>, descriptor: [UInt8]) -> UnsafeMutablePointer<WaveData>?
+    public func prog(absolutePath: String) throws -> UnsafeMutablePointer<UInt32>?
     public func removeAll()
 }
 public enum WaveFormat { case wav, aiff, bin }
 ```
 
-Free order on `Bank.deinit` mirrors spec §8: waves are released by ARC when the
-last `Bank` referencing a `WaveRef` dies; `tables`, `subBanks`, `voices`,
-`names` are freed by the bank.
+`Bank.make` and the internal `SubBank.make` allocate one managed buffer each.
+Capacity is `128 + ceil(128 * VG_VOICE_NAME_LEN / MemoryLayout<ToneData>.stride)`;
+names occupy the byte region following tone element 127. Tail pointers remain
+stable for the owning instance's lifetime. Bank's header stores its raw asset
+arrays, sub-banks, tables, and strong cache reference. `Bank.deinit` releases
+waves through the cache and frees uncached prog waves and tables. Cache
+eviction frees unreferenced waves immediately and retains referenced waves
+until their last bank releases them. Bank/SubBank are non-Sendable;
+`LoadedBankView` and `ProjectBankLease` carry unchecked Sendable under the
+immutable-after-build, shared-read-only publication invariant.
+
+Bank slab initialization, table/name writes, and name reads use bounded
+`MutableSpan`/`Span` views over engine-compatible owned storage. The project
+decode cache hashes normalized path bytes with the same FNV helper as
+`SymbolKey`; a collision chain checks byte equality before returning a hit.
+Pointer-identity reference counts keep asset retain/release independent of
+cache size. Asset and subgroup path construction uses `InlineArray<512, UInt8>`;
+only POSIX handoffs borrow C pointers.
+
 
 ### T6 — locator and descriptors
 
 ```swift
-public struct VoicegroupLocation: Equatable, Sendable {
+public struct VoicegroupLocation: Hashable, Sendable {
     public let filePath: String                // absolute
     public let sectionLabel: String            // "" for a per-file voicegroup
 }
-public struct VoicegroupLocator {
+public final class VoicegroupLocator {
     public init(layout: ProjectLayout)
     /// spec §4 find_voicegroup probe order. nil when not found.
     public func locate(voicegroupArg: String) -> VoicegroupLocation?
     public func locateKeysplitTarget(symbol: String) -> VoicegroupLocation?   // §4 find_keysplit_voicegroup
     public func locateDrumsetTarget(symbol: String) -> VoicegroupLocation?    // §4 find_drumset_voicegroup
+    public func locateSubgroup(symbol: ArraySlice<UInt8>) -> VoicegroupLocation?
+    public func removeAll()
     /// spec §4 next_included_voicegroup continuation; nil when none.
     public func nextIncludedFile(after filePath: String) -> String?
 }
@@ -188,13 +197,19 @@ public struct VgVoiceDesc: Equatable, Sendable {
     public var panSweep: UInt8                 // spec §5 formula applied
     public var attack, decay, sustain, release: UInt8   // spec §5 masks applied
     public var wavePointerBits: UInt8          // square/noise duty bits (§5), else 0
-    public var symbol: String                  // sample / wave / sub-voicegroup symbol, "" if none
-    public var tableSymbol: String             // voice_keysplit table symbol, "" if none
-    public var displayName: String             // spec §5 set_voice_display_name result
+    public var symbol: ArraySlice<UInt8>        // borrowed sample/wave/subgroup bytes
+    public var tableSymbol: ArraySlice<UInt8>   // borrowed table bytes
+    public var displayName: ArraySlice<UInt8>   // copied directly into bank names
 }
 public struct VoicegroupText: Sendable {
-    public let voices: [VgVoiceDesc?]          // 128; nil = slot never written
+    public let voices: InlineArray<128, VgVoiceDesc?> // nil = slot never written
+    public let endIndex: Int
     public let continuesIntoIncludedFile: Bool // spec §5 contiguousFill continuation needed
+    public static func read(_ path: String) throws -> [UInt8]
+    public static func parse(
+        bytes: [UInt8], sectionLabel: String = "", contiguousFill: Bool = false,
+        noSubRecurse: Bool = false
+    ) throws -> VoicegroupText
 }
 public enum VoicegroupTextError: Error, Equatable, Sendable {
     case hardFailure(line: Int, reason: String) // one-based source line
@@ -207,6 +222,21 @@ extension VoicegroupSource {
 }
 ```
 
+The byte fold shares macro specifications, integer parsing, comment trimming,
+and section-boundary helpers with the editor tokenizer; it creates no editor
+line records. Descriptors retain slices of the owned source bytes.
+`VoicegroupTextCache` retains file bytes and parsed descriptors per location,
+reuses descriptors only for matching continuation/recursion options, invalidates
+parsed text when editor bytes are replaced, and clears on store rebind.
+Load-path prefix, whitespace, integer, and comma scanning uses concrete byte
+indices, without generic slice equality or iterator witnesses. Map and locator
+memo lookups wrap source slices in `SymbolKey`, whose equality and hashing use
+explicit byte loops. Parameterized synth declarations use BinaryParsing's
+`ParserSpan` with the native base-0, sign, saturation, and no-progress rules.
+
+The store reads and builds first, then opens the editor from those same bytes.
+Locator probes use POSIX stack paths and memoize subgroup results.
+
 ### T7 — builder
 
 ```swift
@@ -217,7 +247,7 @@ public struct BankBuildInputs {
     public var keysplits: KeysplitTables
     public var cache: WaveCache
     public var locator: VoicegroupLocator
-    /// Supplies parsed text for sub-voicegroups; the store backs it with its VoicegroupSource cache.
+    /// Supplies byte-folded sub-voicegroup text from the store's VoicegroupTextCache.
     public var textProvider: (VoicegroupLocation, _ contiguousFill: Bool, _ noSubRecurse: Bool) throws -> VoicegroupText
     public init(
         layout: ProjectLayout, soundMap: SoundDataMap, progMap: ProgWaveMap,
@@ -229,9 +259,9 @@ public enum BankBuildError: Error { case hardFailure(String), cycle(VoicegroupLo
 public struct BankBuilder {
     public init(inputs: BankBuildInputs)
     /// spec §6 resolution; sub-voicegroups via textProvider with cycle guard.
-    public func build(_ text: VoicegroupText, at location: VoicegroupLocation) throws -> Bank
-    public func resolveSample(symbol: String) throws -> WaveRef?
-    public func resolveProgWave(symbol: String) throws -> ProgWaveRef?
+    public func build(_ text: borrowing VoicegroupText, at location: VoicegroupLocation) throws -> Bank
+    public func resolveSample(symbol: ArraySlice<UInt8>) throws -> UnsafeMutablePointer<WaveData>?
+    public func resolveProgWave(symbol: ArraySlice<UInt8>) throws -> UnsafeMutablePointer<UInt32>?
 }
 ```
 

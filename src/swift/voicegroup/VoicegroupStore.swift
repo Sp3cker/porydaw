@@ -58,7 +58,7 @@ public final class VoicegroupStore {
     private var keysplits: KeysplitTables
     private let cache = WaveCache()
     private var locator: VoicegroupLocator
-    private var textCache: [VoicegroupLocation: VoicegroupSource] = [:]
+    private let textCache = VoicegroupTextCache()
     /// Pending definitions are mutated only by the owning project's serial executor.
     public var pendingSynths: [String: VgSynthDesc] = [:]
     private var records: [VoicegroupId: BankRecord] = [:]
@@ -132,9 +132,16 @@ public final class VoicegroupStore {
             return record.published
         }
 
+        guard let location = locator.locate(voicegroupArg: arg) else {
+            throw VoicegroupStoreError.operationFailed("No voicegroup file declares voicegroup\(arg).")
+        }
+        let bytes = try VoicegroupText.read(location.filePath)
+        let text = try VoicegroupText.parse(bytes: bytes, sectionLabel: location.sectionLabel)
+        let bank = try BankBuilder(inputs: bankBuildInputs()).build(text, at: location)
         let source = VoicegroupSource()
         var error: String?
-        guard source.open(projectRoot: projectRoot, voicegroupArg: arg, error: &error) else {
+        guard source.open(location: location, bytes: bytes, projectRoot: projectRoot, voicegroupArg: arg, error: &error)
+        else {
             throw VoicegroupStoreError.operationFailed(error ?? "Could not open the voicegroup source.")
         }
         let path = URL(filePath: source.filePath).standardizedFileURL.path
@@ -170,7 +177,6 @@ public final class VoicegroupStore {
                 return record.published
             }
         }
-        let bank = try buildBank(source: source)
         let view = Self.publish(id: id, source: source, bank: bank)
         records[id] = BankRecord(
             id: id, source: source, current: bank,
@@ -295,7 +301,6 @@ public final class VoicegroupStore {
     /// Shares the store's maps, decode cache and text cache with the picker.
     /// All use stays on the owning project's serial executor; banks retain decoded assets.
     public func bankBuildInputs() throws -> BankBuildInputs {
-        textCache.removeAll()
         var overlay = soundMap
         for definition in VoicegroupSource.synthInstruments(projectRoot).defs {
             guard mintedSynthDesc(symbol: definition.symbol) != nil else { continue }
@@ -307,7 +312,7 @@ public final class VoicegroupStore {
         for record in records.values {
             let location = VoicegroupLocation(
                 filePath: record.source.filePath, sectionLabel: record.source.sectionLabel)
-            textCache[location] = record.source
+            textCache.set(record.source.sourceBytes(), at: location)
             for slot in 0..<128 {
                 guard let symbol = record.source.voiceAt(slot: slot)?.symbol,
                     let descriptor = mintedSynthDesc(symbol: symbol)
@@ -319,18 +324,7 @@ public final class VoicegroupStore {
             layout: layout, soundMap: overlay, progMap: progMap, keysplits: keysplits,
             cache: cache, locator: locator,
             textProvider: { location, contiguousFill, noSubRecurse in
-                let source: VoicegroupSource
-                if let cached = self.textCache[location] {
-                    source = cached
-                } else {
-                    source = VoicegroupSource()
-                    var error: String?
-                    guard source.open(location: location, error: &error) else {
-                        throw VoicegroupStoreError.operationFailed(error ?? "Cannot read \(location.filePath)")
-                    }
-                    self.textCache[location] = source
-                }
-                return try source.descriptors(contiguousFill: contiguousFill, noSubRecurse: noSubRecurse)
+                try self.textCache.text(at: location, contiguousFill: contiguousFill, noSubRecurse: noSubRecurse)
             })
     }
 
@@ -338,12 +332,14 @@ public final class VoicegroupStore {
         do {
             let text = try source.descriptors()
             var inputs = try bankBuildInputs()
-            for voice in text.voices {
-                guard let symbol = voice?.symbol, let descriptor = mintedSynthDesc(symbol: symbol) else { continue }
-                Self.overlaySynth(descriptor, symbol: symbol, into: &inputs.soundMap)
+            for index in 0..<128 {
+                guard let symbol = text.voices[index]?.symbol else { continue }
+                let name = String(decoding: symbol, as: UTF8.self)
+                guard let descriptor = mintedSynthDesc(symbol: name) else { continue }
+                Self.overlaySynth(descriptor, symbol: name, into: &inputs.soundMap)
             }
             let location = VoicegroupLocation(filePath: source.filePath, sectionLabel: source.sectionLabel)
-            textCache[location] = source
+            textCache.set(source.sourceBytes(), at: location)
             return try BankBuilder(inputs: inputs).build(text, at: location)
         } catch let error as VoicegroupStoreError {
             throw error
@@ -353,8 +349,9 @@ public final class VoicegroupStore {
     }
 
     private static func overlaySynth(_ descriptor: VgSynthDesc, symbol: String, into map: inout SoundDataMap) {
-        guard map[symbol] == nil else { return }
-        map.entries[symbol] = .synth([
+        let key = Array(symbol.utf8)[...]
+        guard map[key] == nil else { return }
+        map.entries[SymbolKey(key)] = .synth([
             0x80, UInt8(truncatingIfNeeded: descriptor.waveform),
             UInt8(truncatingIfNeeded: descriptor.baseDuty), UInt8(truncatingIfNeeded: descriptor.dutyStep),
             UInt8(truncatingIfNeeded: descriptor.modDepth), UInt8(truncatingIfNeeded: descriptor.phase),

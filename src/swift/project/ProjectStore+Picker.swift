@@ -24,8 +24,9 @@ public struct PickerSampleInfo: Sendable, Equatable {
 }
 
 struct PickerSampleCache {
-    let direct: [String: WaveRef]
-    let waves: [String: ProgWaveRef]
+    let bank: Bank
+    let direct: [String: UnsafeMutablePointer<WaveData>]
+    let waves: [String: UnsafeMutablePointer<UInt32>]
     let keysplits: [String: (bank: Bank, table: KeysplitTable)]
 }
 
@@ -34,10 +35,11 @@ extension ProjectStore {
     /// - Returns: Metadata for loaded symbols with nonempty sample data.
     public func pickerSampleInfo() -> [String: PickerSampleInfo] {
         guard let cache = loadPickerSamples() else { return [:] }
+        return withExtendedLifetime(cache.bank) {
         var info: [String: PickerSampleInfo] = [:]
         info.reserveCapacity(cache.direct.count)
         for (symbol, reference) in cache.direct {
-            let wave = reference.raw
+                let wave = reference
             guard wave.pointee.data != nil, wave.pointee.size > 0
             else { continue }
             let rateHz = Int(wave.pointee.freq / 1024)
@@ -47,6 +49,7 @@ extension ProjectStore {
                 rateHz: rateHz, seconds: Double(wave.pointee.size) / Double(rateHz))
         }
         return info
+        }
     }
 
     /// Resolves the picker's symbol through the same Swift builder as loaded banks.
@@ -59,15 +62,16 @@ extension ProjectStore {
         switch kind {
         case "sample":
             guard let wave = cache.direct[symbol] else { return nil }
-            return Self.sampleSound(wave.raw)
+            return withExtendedLifetime(cache.bank) { Self.sampleSound(wave) }
         case "wave":
             guard let wave = cache.waves[symbol] else { return nil }
-            return Self.waveSound(wave.raw)
+            return withExtendedLifetime(cache.bank) { Self.waveSound(wave) }
         case "keysplit":
             guard let split = cache.keysplits[symbol] else { return nil }
+            return withExtendedLifetime(split.bank) {
             let subIndex = Int(split.table.table[60])
             guard subIndex < 128 else { return nil }
-            let tone = split.bank.voices[subIndex]
+                let tone = Span(_unsafeStart: split.bank.voices, count: 128)[subIndex]
             guard tone.type & 0xC0 == 0 else { return nil }
             let envelope: (UInt8, UInt8, UInt8, UInt8) =
                 (tone.attack, tone.decay, tone.sustain, tone.release)
@@ -78,6 +82,7 @@ extension ProjectStore {
                 return Self.waveSound(wave, envelope: envelope)
             }
             return nil
+            }
         default:
             return nil
         }
@@ -89,19 +94,28 @@ extension ProjectStore {
         do {
             let inputs = try store.bankBuildInputs()
             let builder = BankBuilder(inputs: inputs)
-            var direct: [String: WaveRef] = [:]
-            var waves: [String: ProgWaveRef] = [:]
+            let bank = Bank.make(cache: inputs.cache)
+            var direct: [String: UnsafeMutablePointer<WaveData>] = [:]
+            var waves: [String: UnsafeMutablePointer<UInt32>] = [:]
             var keysplits: [String: (bank: Bank, table: KeysplitTable)] = [:]
             for symbol in VoicegroupSource.directSoundSymbols(projectRoot) {
-                if let wave = try builder.resolveSample(symbol: symbol) { direct[symbol] = wave }
+                if let wave = try builder.resolveSample(symbol: Array(symbol.utf8)[...]) {
+                    bank.register(wave: wave)
+                    direct[symbol] = wave
+                }
             }
             for symbol in VoicegroupSource.progWaveSymbols(projectRoot) {
-                if let wave = try builder.resolveProgWave(symbol: symbol) { waves[symbol] = wave }
+                if let wave = try builder.resolveProgWave(symbol: Array(symbol.utf8)[...]) {
+                    bank.register(prog: wave)
+                    waves[symbol] = wave
+                }
             }
             var tables = inputs.keysplits
             var scannedTables = false
             for instrument in VoicegroupSource.keysplitInstruments(projectRoot) {
-                guard let location = inputs.locator.locateSubgroup(symbol: instrument.symbol) else { continue }
+                guard let location = inputs.locator.locateSubgroup(symbol: Array(instrument.symbol.utf8)[...]) else {
+                    continue
+                }
                 let text = try inputs.textProvider(location, true, false)
                 let bank = try builder.build(text, at: location)
                 if tables.table(named: instrument.table) == nil, !scannedTables {
@@ -111,7 +125,7 @@ extension ProjectStore {
                 guard let table = tables.table(named: instrument.table) else { continue }
                 keysplits[instrument.symbol] = (bank, table)
             }
-            let cache = PickerSampleCache(direct: direct, waves: waves, keysplits: keysplits)
+            let cache = PickerSampleCache(bank: bank, direct: direct, waves: waves, keysplits: keysplits)
             pickerSamples = cache
             return cache
         } catch {
@@ -123,22 +137,25 @@ extension ProjectStore {
         _ wave: UnsafeMutablePointer<WaveData>, toneKey: UInt8 = 60,
         envelope: (UInt8, UInt8, UInt8, UInt8)? = nil
     ) -> PickerSound? {
-        guard let data = wave.pointee.data, wave.pointee.size > 0,
-            let size = Int(exactly: wave.pointee.size)
-        else { return nil }
+        let header = Span(_unsafeStart: wave, count: 1)[0]
+        guard let data = header.data, header.size > 0, let size = Int(exactly: header.size) else { return nil }
+        // Span + OutputSpan scalar copying measured 79% slower over five alternating
+        // real-corpus rounds. Keep this bounded bulk snapshot while the bank is pinned.
+        let bytes = Array(UnsafeBufferPointer(start: data, count: size))
         return .sample(
-            bytes: Array(UnsafeBufferPointer(start: data, count: size)),
-            frequency: wave.pointee.freq, loopStart: wave.pointee.loopStart,
-            looped: wave.pointee.status & 0x4000 != 0,
-            toneKey: toneKey, envelope: envelope)
+            bytes: bytes, frequency: header.freq, loopStart: header.loopStart,
+            looped: header.status & 0x4000 != 0, toneKey: toneKey, envelope: envelope)
     }
 
     private static func waveSound(
         _ wave: UnsafeMutablePointer<UInt32>,
         envelope: (UInt8, UInt8, UInt8, UInt8)? = nil
     ) -> PickerSound {
-        let bytes = wave.withMemoryRebound(to: UInt8.self, capacity: 16) {
-            Array(UnsafeBufferPointer(start: $0, count: 16))
+        let words = Span(_unsafeStart: wave, count: 4)
+        let source = Span<UInt8>(viewing: words.bytes)
+        let bytes = [UInt8](capacity: 16) { output in
+            var index = 0
+            while index < 16 { output.append(source[index]); index += 1 }
         }
         return .wave(bytes: bytes, envelope: envelope)
     }

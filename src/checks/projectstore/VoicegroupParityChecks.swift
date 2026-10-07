@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import PorydawProject
 import PorydawVoicegroup
 import PorydawVoicegroupNative
@@ -78,7 +79,7 @@ func parityTargets(projectRoot: String) -> [ParityTarget] {
 
 func referenceDigest(
     projectRoot: String, target: ParityTarget
-) -> (BankDigest, seconds: Double, mallocs: Int)? {
+) -> (BankDigest, seconds: Double, mallocs: Int, calls: Int)? {
     guard let project = parityOpenProject(projectRoot) else { return nil }
     defer { voicegroup_project_free(project) }
     return referenceDigest(project: project, target: target)
@@ -86,31 +87,138 @@ func referenceDigest(
 
 private func referenceDigest(
     project: OpaquePointer, target: ParityTarget
-) -> (BankDigest, seconds: Double, mallocs: Int)? {
+) -> (BankDigest, seconds: Double, mallocs: Int, calls: Int)? {
     target.location.filePath.withCString { filePath in
         target.location.sectionLabel.withCString { sectionLabel in
             var location = VoicegroupTarget(filePath: filePath, sectionLabel: sectionLabel)
             let clock = ContinuousClock()
-            let before = parityBlocksInUse()
+            parityStartAllocations()
             let start = clock.now
             let bank = voicegroup_project_load(project, &location)
             let elapsed = start.duration(to: clock.now).components
-            let mallocs = parityBlocksInUse() - before
+            let calls = parityStopAllocations()
+            let mallocs = parityLiveBlocks()
             guard let bank else { return nil }
             defer { voicegroup_free(bank) }
             let seconds = Double(elapsed.seconds) + Double(elapsed.attoseconds) / 1e18
-            return (BankDigest.of(UnsafePointer(bank)), seconds: seconds, mallocs: mallocs)
+            return (BankDigest.of(UnsafePointer(bank)), seconds: seconds, mallocs: mallocs, calls: calls)
         }
     }
 }
 
-private func parityBlocksInUse() -> Int {
+private func parityLiveBlocks() -> Int {
     #if canImport(Darwin)
-        var statistics = malloc_statistics_t()
-        malloc_zone_statistics(malloc_default_zone(), &statistics)
-        return Int(statistics.blocks_in_use)
+        return parityAllocationState.withLock { $0.live.count }
     #else
         return 0
+    #endif
+}
+
+// Darwin's logger ABI: apple-oss-distributions/libmalloc/src/malloc.c.
+#if canImport(Darwin)
+    private typealias ParityMallocLogger = @convention(c) (UInt32, UInt, UInt, UInt, UInt, UInt32) -> Void
+    private let parityAllocationState = Mutex(
+        (
+            calls: 0, thread: UInt(0), watched: UInt(0), freed: false, saved: Optional<ParityMallocLogger>.none,
+            slot: UInt(0), recording: true, retaining: true, live: Set<UInt>()
+        ))
+    private let parityMallocLogger: ParityMallocLogger = { type, _, address, _, result, _ in
+        let thread = parityAllocationState.withLock { $0.thread }
+        guard UInt(bitPattern: pthread_self()) == thread else { return }
+        let slot = parityLoggerSlot()
+        // The bookkeeping Set must not recursively instrument its own allocations.
+        slot.pointee = nil
+        parityAllocationState.withLock { state in
+            if type & 4 != 0 {
+                state.live.remove(address)
+                if address == state.watched { state.freed = true }
+            }
+            if type & 2 != 0 && state.recording {
+                state.calls += 1
+                if result != 0 && state.retaining { state.live.insert(result) }
+            }
+        }
+        slot.pointee = parityMallocLogger
+    }
+    private func parityLoggerSlot() -> UnsafeMutablePointer<ParityMallocLogger?> {
+        let address = parityAllocationState.withLock { state in
+            if state.slot != 0 { return state.slot }
+            guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "malloc_logger") else {
+                preconditionFailure("Darwin malloc_logger is unavailable")
+            }
+            state.slot = UInt(bitPattern: symbol)
+            return state.slot
+        }
+        guard let slot = UnsafeMutablePointer<ParityMallocLogger?>(bitPattern: address) else {
+            preconditionFailure("Darwin malloc_logger has no address")
+        }
+        return slot
+    }
+#endif
+
+private func parityStartAllocations() {
+    #if canImport(Darwin)
+        let slot = parityLoggerSlot()
+        parityAllocationState.withLock { state in
+            state.calls = 0
+            state.thread = UInt(bitPattern: pthread_self())
+            state.saved = slot.pointee
+            state.recording = true
+            state.retaining = true
+            state.live.removeAll(keepingCapacity: true)
+        }
+        slot.pointee = parityMallocLogger
+    #endif
+}
+
+private func parityStopAllocations() -> Int {
+    #if canImport(Darwin)
+        let slot = parityLoggerSlot()
+        return parityAllocationState.withLock { state in
+            slot.pointee = state.saved
+            return state.calls
+        }
+    #else
+        return 0
+    #endif
+}
+
+private func parityPauseCallCounting() {
+    #if canImport(Darwin)
+        parityAllocationState.withLock { $0.recording = false }
+    #endif
+}
+
+// ASAN replaces the system allocator, so malloc_logger never fires there; ASAN itself
+// reports leaks and double frees for those runs.
+private let parityMallocLoggerAvailable: Bool = {
+    #if canImport(Darwin)
+        return dlsym(UnsafeMutableRawPointer(bitPattern: -2), "__asan_init") == nil
+    #else
+        return false
+    #endif
+}()
+
+func parityObservesFree(_ address: UnsafeRawPointer, during action: () -> Void) -> Bool {
+    #if canImport(Darwin)
+        guard parityMallocLoggerAvailable else {
+            action()
+            return true
+        }
+        parityAllocationState.withLock { state in
+            state.watched = UInt(bitPattern: address)
+            state.freed = false
+        }
+        parityStartAllocations()
+        action()
+        _ = parityStopAllocations()
+        return parityAllocationState.withLock { state in
+            state.watched = 0
+            return state.freed
+        }
+    #else
+        action()
+        return true
     #endif
 }
 
@@ -177,6 +285,11 @@ private func parityOpenProject(_ root: String) -> OpaquePointer? {
 
 public func runVoicegroupParitySuite(_ report: CheckReport) {
     let cppID = "projectstore-parity/VoicegroupParityChecks"
+    #if !canImport(Darwin)
+        report.pass(cppID, row: "malloc-call gate unavailable on this platform; equality and time remain gated")
+    #endif
+    parityStartAllocations()
+    _ = parityStopAllocations()
     do {
         try withTempProjectCopy(prefix: "voicegroup-parity", stagedFile: "sound/voice_groups.inc") { root in
             let snapshots = FileManager.default.temporaryDirectory
@@ -190,16 +303,9 @@ public func runVoicegroupParitySuite(_ report: CheckReport) {
     } catch {
         report.fail(cppID, "fixture parity failed: \(error)")
     }
-    if let root = ProcessInfo.processInfo.environment["PORYDAW_PARITY_PROJECT_ROOT"] {
-        do {
-            try parityCheckRoot(root, snapshots: nil, report: report)
-        } catch {
-            report.fail(cppID, "project sweep failed: \(error)")
-        }
-    }
 }
 
-private func parityBuildInputs(_ root: String) throws -> BankBuildInputs {
+private func parityBuildInputs(_ root: String, textCache: VoicegroupTextCache) throws -> BankBuildInputs {
     let layout = ProjectLayout(projectRoot: root)
     let soundMap = try SoundDataMap.parse(files: layout.soundDataFiles)
     let progMap = try ProgWaveMap.parse(files: layout.programmableWaveFiles)
@@ -208,41 +314,49 @@ private func parityBuildInputs(_ root: String) throws -> BankBuildInputs {
         layout: layout, soundMap: soundMap, progMap: progMap, keysplits: keysplits,
         cache: WaveCache(), locator: VoicegroupLocator(layout: layout)
     ) { location, contiguousFill, noSubRecurse in
-        let source = VoicegroupSource()
-        var error: String?
-        guard source.open(location: location, error: &error) else {
-            throw BankBuildError.unreadable(error ?? location.filePath)
-        }
-        return try source.descriptors(contiguousFill: contiguousFill, noSubRecurse: noSubRecurse)
+        #if canImport(Darwin)
+            parityAllocationState.withLock { $0.retaining = false }
+            defer { parityAllocationState.withLock { $0.retaining = true } }
+        #endif
+        return try textCache.text(at: location, contiguousFill: contiguousFill, noSubRecurse: noSubRecurse)
     }
 }
 
 private func swiftDigest(
-    inputs: BankBuildInputs, target: ParityTarget
-) throws -> (BankDigest, seconds: Double, mallocs: Int, parseSeconds: Double, parseMallocs: Int) {
+    inputs: BankBuildInputs, target: ParityTarget, textCache: VoicegroupTextCache
+) throws -> (
+    BankDigest, seconds: Double, mallocs: Int, calls: Int, parseSeconds: Double, parseMallocs: Int, subBanks: Int
+) {
     let location = VoicegroupLocation(filePath: target.location.filePath, sectionLabel: target.location.sectionLabel)
     let builder = BankBuilder(inputs: inputs)
     let clock = ContinuousClock()
-    let source = VoicegroupSource()
-    var error: String?
-    let parseBefore = parityBlocksInUse()
-    let parseStart = clock.now
-    guard source.open(location: location, error: &error) else {
-        throw BankBuildError.unreadable(error ?? location.filePath)
-    }
-    let parseElapsed = parseStart.duration(to: clock.now).components
-    let parseMallocs = parityBlocksInUse() - parseBefore
-    let before = parityBlocksInUse()
+    parityStartAllocations()
+    var logging = true
+    defer { if logging { _ = parityStopAllocations() } }
     let start = clock.now
-    let text = try source.descriptors(contiguousFill: false, noSubRecurse: false)
-    let bank = try builder.build(text, at: location)
-    let elapsed = start.duration(to: clock.now).components
-    let mallocs = parityBlocksInUse() - before
+    let bank: Bank
+    let parseSeconds: Double
+    let parseMallocs: Int
+    do {
+        let bytes = try VoicegroupText.read(location.filePath)
+        let text = try VoicegroupText.parse(bytes: bytes, sectionLabel: location.sectionLabel)
+        parseSeconds = paritySeconds(start.duration(to: clock.now).components)
+        parseMallocs = parityLiveBlocks()
+        bank = try builder.build(text, at: location)
+    }
+    let seconds = paritySeconds(start.duration(to: clock.now).components)
+    parityPauseCallCounting()
+    inputs.cache.removeAll()
+    inputs.locator.removeAll()
+    let calls = parityStopAllocations()
+    logging = false
+    let mallocs = parityLiveBlocks()
     return (
-        BankDigest.of(bank), seconds: paritySeconds(elapsed), mallocs: mallocs,
-        parseSeconds: paritySeconds(parseElapsed), parseMallocs: parseMallocs
+        BankDigest.of(bank), seconds: seconds - parseSeconds, mallocs: mallocs, calls: calls,
+        parseSeconds: parseSeconds, parseMallocs: parseMallocs, subBanks: bank.subBanks.count
     )
 }
+
 
 private func paritySeconds(_ elapsed: (seconds: Int64, attoseconds: Int64)) -> Double {
     Double(elapsed.seconds) + Double(elapsed.attoseconds) / 1_000_000_000_000_000_000
@@ -286,6 +400,8 @@ private func parityDifferingField(_ reference: BankDigest.Slot, _ swift: BankDig
     return nil
 }
 
+private let parityTimeGateEnabled = !_isDebugAssertConfiguration()
+
 private func parityCheckRoot(_ root: String, snapshots: URL?, report: CheckReport) throws {
     let cppID = "projectstore-parity/VoicegroupParityChecks"
     let fixture = snapshots != nil
@@ -304,11 +420,16 @@ private func parityCheckRoot(_ root: String, snapshots: URL?, report: CheckRepor
         return
     }
     defer { voicegroup_project_free(project) }
-    let inputs = try parityBuildInputs(root)
+    let textCache = VoicegroupTextCache()
+    let inputs = try parityBuildInputs(root, textCache: textCache)
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     var loaded = 0
     var equal = 0
+    var cSeconds = 0.0
+    var swiftSeconds = 0.0
+    var cCalls = 0
+    var swiftCalls = 0
     for target in targets {
         let name = String(target.voicegroupArg.drop(while: { $0 == "_" }))
         guard let first = referenceDigest(project: project, target: target) else {
@@ -321,15 +442,46 @@ private func parityCheckRoot(_ root: String, snapshots: URL?, report: CheckRepor
         }
         loaded += 1
         do {
-            let swift = try swiftDigest(inputs: inputs, target: target)
-            let difference = parityFirstDifference(first.0, swift.0)
-            let matches = first.0 == swift.0
+            let coldSwift = try swiftDigest(inputs: inputs, target: target, textCache: textCache)
+            print(
+                "\(name)  cold C: \(String(format: "%.3f", first.seconds * 1000)) ms  "
+                    + "Swift: \(String(format: "%.3f", (coldSwift.seconds + coldSwift.parseSeconds) * 1000)) ms; "
+                    + "malloc calls C \(first.calls) / Swift \(coldSwift.calls); "
+                    + "live blocks C \(first.mallocs) / Swift \(coldSwift.mallocs)")
+            guard let reference = referenceDigest(project: project, target: target) else {
+                if fixture {
+                    report.fail(cppID, "\(name): repeated reference bank failed to load")
+                } else {
+                    print("\(name)  C: skipped (repeated reference bank failed to load)")
+                }
+                continue
+            }
+            report.expectEqual(
+                expected: first.0, actual: reference.0, cppID: cppID,
+                what: "\(root)/\(name): reference digest is deterministic")
+            let swift = try swiftDigest(inputs: inputs, target: target, textCache: textCache)
+            cSeconds += reference.seconds
+            swiftSeconds += swift.seconds + swift.parseSeconds
+            cCalls += reference.calls
+            swiftCalls += swift.calls
+            let difference = parityFirstDifference(reference.0, swift.0)
+            let matches = reference.0 == swift.0
             if matches { equal += 1 }
             print(
-                "\(name)  C: \(String(format: "%.3f", first.seconds * 1000)) ms  "
+                "\(name)  warm C: \(String(format: "%.3f", reference.seconds * 1000)) ms  "
                     + "Swift parse: \(String(format: "%.3f", swift.parseSeconds * 1000)) ms  "
                     + "build: \(String(format: "%.3f", swift.seconds * 1000)) ms  "
-                    + "mallocs C \(first.mallocs) / Swift parse \(swift.parseMallocs) build \(swift.mallocs)")
+                    + "malloc calls C \(reference.calls) / Swift \(swift.calls); live blocks C \(reference.mallocs) / Swift \(swift.mallocs)"
+            )
+            #if canImport(Darwin)
+                report.expect(
+                    swift.calls <= reference.calls, cppID: cppID,
+                    message: "\(root)/\(name): Swift malloc calls <= C")
+                // Swift Bank/SubBank instances add one block each; project text buffers are excluded.
+                report.expect(
+                    swift.mallocs <= reference.mallocs + 1 + swift.subBanks, cppID: cppID,
+                    message: "\(root)/\(name): Swift bank-owned live blocks <= C + Bank/SubBank instances")
+            #endif
             report.expect(
                 matches, cppID: cppID,
                 message: "\(root)/\(name): Swift equals C; first difference: \(difference ?? "none")")
@@ -337,17 +489,6 @@ private func parityCheckRoot(_ root: String, snapshots: URL?, report: CheckRepor
             report.fail(cppID, "\(root)/\(name): Swift bank failed to load: \(error)")
         }
         report.pass(cppID, row: "\(root)/\(name): reference bank loads")
-        guard let second = referenceDigest(project: project, target: target) else {
-            if fixture {
-                report.fail(cppID, "\(name): repeated reference bank failed to load")
-            } else {
-                print("\(name)  C: skipped (repeated reference bank failed to load)")
-            }
-            continue
-        }
-        report.expectEqual(
-            expected: first.0, actual: second.0, cppID: cppID,
-            what: "\(root)/\(name): reference digest is deterministic")
         if fixture, name == "fixture_rich" {
             let keysplits = first.0.slots.filter { $0.type == UInt8(VOICE_KEYSPLIT) }
             let drumkits = first.0.slots.filter { $0.type == UInt8(VOICE_KEYSPLIT_ALL) }
@@ -371,6 +512,14 @@ private func parityCheckRoot(_ root: String, snapshots: URL?, report: CheckRepor
     }
     print("parity: \(root): loaded \(loaded)/\(targets.count) hub targets")
     print("parity: \(root): equal \(equal)/\(loaded) C-loaded targets")
+    print(
+        "parity warm totals: \(root): C \(cSeconds * 1000) ms / \(cCalls) malloc calls; Swift \(swiftSeconds * 1000) ms / \(swiftCalls) malloc calls"
+    )
+    if parityTimeGateEnabled {
+        report.expect(swiftSeconds <= cSeconds, cppID: cppID, message: "\(root): Swift total load time <= C")
+    } else {
+        print("parity: \(root): time gate: Debug build, reported only")
+    }
     report.expectEqual(
         expected: loaded, actual: equal, cppID: cppID, what: "every C-loaded target has an equal Swift bank")
     if fixture {

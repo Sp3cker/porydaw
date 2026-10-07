@@ -398,6 +398,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_porydaw_check_lane(swift_core_check_project
         MODULE_NAME SwiftCoreCheckProject
         MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_project"
+        COMPILE_OPTIONS "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
         SOURCES
         workspace/SessionChecks.swift
         projectstore/ProjectIdentityChecks.swift

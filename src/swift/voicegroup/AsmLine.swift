@@ -13,8 +13,7 @@ public struct AsmLine {
     }
 
     public static func lines(_ path: String) -> [Bytes]? {
-        guard let data = try? ProjectFileStore.read(path) else { return nil }
-        let bytes = [UInt8](data)
+        guard let bytes = try? VoicegroupText.read(path) else { return nil }
         var lines: [Bytes] = []
         var start = 0
         var index = 0
@@ -37,11 +36,22 @@ public struct AsmLine {
 
     public static func text(_ bytes: Bytes) -> String { String(decoding: bytes, as: UTF8.self) }
 
+    static func text(_ bytes: borrowing Span<UInt8>) -> String {
+        let view = copy bytes
+        if let utf8 = try? UTF8Span(validating: view) { return String(copying: utf8) }
+        var repaired: [UInt8] = []
+        repaired.reserveCapacity(bytes.count)
+        var index = 0
+        while index < bytes.count { repaired.append(bytes[index]); index += 1 }
+        return String(decoding: repaired, as: UTF8.self)
+    }
+
     public static func hasPrefix(_ bytes: Bytes, _ literal: [UInt8]) -> Bool {
         guard bytes.count >= literal.count else { return false }
+        let source = bytes.span
         var offset = 0
         while offset < literal.count {
-            if bytes[bytes.startIndex + offset] != literal[offset] { return false }
+            if source[offset] != literal[offset] { return false }
             offset += 1
         }
         return true
@@ -118,5 +128,38 @@ public struct AsmLine {
             end += 1
         }
         return nil
+    }
+}
+
+/// Borrowed byte key with concrete hashing and comparison on bank-loading paths.
+public struct SymbolKey: Hashable, Sendable {
+    public let bytes: ArraySlice<UInt8>
+
+    public init(_ bytes: ArraySlice<UInt8>) { self.bytes = bytes }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        guard lhs.bytes.count == rhs.bytes.count else { return false }
+        let left = lhs.bytes.span
+        let right = rhs.bytes.span
+        var index = 0
+        while index < left.count {
+            if left[index] != right[index] { return false }
+            index += 1
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(Self.byteHash(bytes.span))
+    }
+
+    static func byteHash(_ source: borrowing Span<UInt8>) -> UInt64 {
+        var value: UInt64 = 14_695_981_039_346_656_037
+        var index = 0
+        while index < source.count {
+            value = (value ^ UInt64(source[index])) &* 1_099_511_628_211
+            index += 1
+        }
+        return value
     }
 }

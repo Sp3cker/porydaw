@@ -1,84 +1,118 @@
 import Foundation
+#if canImport(Darwin)
+    import Darwin
+#else
+    import Glibc
+#endif
 
-/// Absolute source file and optional bare label selected by the loader.
 public struct VoicegroupLocation: Hashable, Sendable {
     public let filePath: String
     public let sectionLabel: String
-
     public init(filePath: String, sectionLabel: String) {
         self.filePath = filePath
         self.sectionLabel = sectionLabel
     }
 }
 
-/// Ordered C-loader probes over a project's eager and deferred discovery results.
-public struct VoicegroupLocator {
+/// Ordered native probes, memoized only for subgroup symbols.
+public final class VoicegroupLocator {
     private let layout: ProjectLayout
+    private var subgroups: [SymbolKey: VoicegroupLocation?] = [:]
+    private let includedFiles: [Substring: String?]
+    public init(layout: ProjectLayout) {
+        self.layout = layout
+        includedFiles = Self.includeOrder(projectRoot: layout.projectRoot)
+    }
+    public func removeAll() { subgroups.removeAll() }
 
-    public init(layout: ProjectLayout) { self.layout = layout }
-
-    /// Locates a song argument, retaining the editor's leading-underscore normalization.
     public func locate(voicegroupArg: String) -> VoicegroupLocation? {
         let argument = voicegroupArg.isEmpty ? "_dummy" : voicegroupArg
-        let base = String(argument.drop(while: { $0 == "_" }))
-        let label = "voicegroup" + argument
+        let base = Array(argument.drop(while: { $0 == "_" }).utf8)[...]
+        let label = Array(("voicegroup" + argument).utf8)[...]
         if let found = probe(base: base, label: label, layout: layout) { return found }
         return probe(base: base, label: label, layout: layout.ensuringDeepScan())
     }
 
-    /// Applies the first `_keysplit` truncation and the two directory passes from C §4.
     public func locateKeysplitTarget(symbol: String) -> VoicegroupLocation? {
-        guard let base = Self.subgroupName(symbol, infix: "_keysplit", preserveTail: false) else { return nil }
+        guard let base = Self.subgroupName(Array(symbol.utf8)[...], infix: "_keysplit", preserveTail: false) else {
+            return nil
+        }
         if let found = subdirectory("keysplits", name: base, layout: layout) { return found }
         return subdirectory("keysplits", name: base, layout: layout.ensuringDeepScan())
     }
 
-    /// Removes the first `_drumset` infix, retaining its tail, per C §4.
     public func locateDrumsetTarget(symbol: String) -> VoicegroupLocation? {
-        guard let base = Self.subgroupName(symbol, infix: "_drumset", preserveTail: true) else { return nil }
+        guard let base = Self.subgroupName(Array(symbol.utf8)[...], infix: "_drumset", preserveTail: true) else {
+            return nil
+        }
         if let found = subdirectory("drumsets", name: base, layout: layout) { return found }
         return subdirectory("drumsets", name: base, layout: layout.ensuringDeepScan())
     }
 
-    /// Resolves the C sub-loader's bare name after stripping one voicegroup_ prefix.
-    public func locateSubgroup(symbol: String) -> VoicegroupLocation? {
-        let name = symbol.hasPrefix("voicegroup_") ? String(symbol.dropFirst(11)) : symbol
-        if let found = probe(base: name, label: name, layout: layout) { return found }
-        return probe(base: name, label: name, layout: layout.ensuringDeepScan())
+    public func locateSubgroup(symbol: ArraySlice<UInt8>) -> VoicegroupLocation? {
+        if let cached = subgroups[SymbolKey(symbol)] { return cached }
+        let name = Self.matches(symbol, "voicegroup_") ? symbol[(symbol.startIndex + 11)...] : symbol
+        let found =
+            probe(base: name, label: name, layout: layout)
+            ?? probe(base: name, label: name, layout: layout.ensuringDeepScan())
+        subgroups[SymbolKey(symbol)] = .some(found)
+        return found
     }
 
-    /// Returns the immediate hub successor; a missing successor ends contiguity.
     public func nextIncludedFile(after filePath: String) -> String? {
-        let current = Self.basename(filePath)
-        for relative in ["sound/voice_groups.inc", "sound/voicegroups.inc"] {
-            guard let index = Self.path(layout.projectRoot, relative),
-                let data = try? ProjectFileStore.read(index)
-            else { continue }
-            var foundCurrent = false
-            for raw in ProjectFileStore.splitLines(data).lines {
-                let bytes = [UInt8](raw)
-                let text = bytes[VoicegroupSource.contentBounds(bytes)]
-                let prefix = ".include"
-                guard text.starts(with: prefix.utf8) else { continue }
-                let rest = text.dropFirst(prefix.utf8.count).drop(while: { $0 == 32 || (9...13).contains($0) })
-                guard rest.first == 34, let quote = rest.dropFirst().firstIndex(of: 34) else { continue }
-                let included = rest.dropFirst()[..<quote]
-                guard !included.isEmpty, included.count <= 511 else { continue }
-                let name = String(decoding: included, as: UTF8.self)
-                if foundCurrent {
-                    guard let path = Self.path(layout.projectRoot, name), ProjectFileStore.exists(path) else {
-                        return nil
-                    }
-                    return path
-                }
-                if Self.basename(name) == current { foundCurrent = true }
-            }
-            if foundCurrent { return nil }
+        let currentBytes = filePath.utf8
+        let current = currentBytes.span
+        var currentStart = 0
+        for index in 0..<current.count {
+            if current[index] == 47 || current[index] == 92 { currentStart = index + 1 }
         }
-        return nil
+        let start = currentBytes.index(currentBytes.startIndex, offsetBy: currentStart)
+        guard let recorded = includedFiles[filePath[start...]], let next = recorded,
+            next.utf8.count < 512, next.withCString({ access($0, F_OK) }) == 0
+        else { return nil }
+        return next
     }
 
-    private func probe(base: String, label: String, layout: ProjectLayout) -> VoicegroupLocation? {
+    private static func includeOrder(projectRoot: String) -> [Substring: String?] {
+        var result: [Substring: String?] = [:]
+        for relative in ["sound/voice_groups.inc", "sound/voicegroups.inc"] {
+            guard let bytes = try? VoicegroupText.read(projectRoot + "/" + relative) else { continue }
+            var previous: Substring?
+            var start = 0
+            while start < bytes.count {
+                var end = start
+                while end < bytes.count && bytes[end] != 10 { end += 1 }
+                let raw = bytes[start..<end]
+                start = end + 1
+                let text = raw[VoicegroupSource.contentBounds(raw)]
+                guard Self.matches(text, ".include") else { continue }
+                var first = text.startIndex + 8
+                while first < text.endIndex && VoicegroupSource.isSpace(text[first]) { first += 1 }
+                guard first < text.endIndex && text[first] == 34 else { continue }
+                first += 1
+                var quote = first
+                while quote < text.endIndex && text[quote] != 34 { quote += 1 }
+                guard quote < text.endIndex else { continue }
+                let included = text[first..<quote]
+                guard !included.isEmpty, included.count <= 511 else { continue }
+                let name = String(decoding: included, as: UTF8.self).replacingOccurrences(of: "\\", with: "/")
+                let path = projectRoot + "/" + name
+                if let previous, result[previous] == nil { result[previous] = .some(path) }
+                var basenameStart = 0
+                let nameBytes = name.utf8
+                let nameSpan = nameBytes.span
+                for index in 0..<nameSpan.count {
+                    if nameSpan[index] == 47 { basenameStart = index + 1 }
+                }
+                previous = name[nameBytes.index(nameBytes.startIndex, offsetBy: basenameStart)...]
+            }
+            if let previous, result[previous] == nil { result[previous] = .some(nil) }
+        }
+        return result
+    }
+
+    private func probe(base: ArraySlice<UInt8>, label: ArraySlice<UInt8>, layout: ProjectLayout) -> VoicegroupLocation?
+    {
         for directory in layout.voicegroupDirectories {
             if let found = file(directory: directory, name: base) { return found }
         }
@@ -93,27 +127,37 @@ public struct VoicegroupLocator {
             return found
         }
         for directory in layout.voicegroupDirectories {
-            if let found = file(directory: directory, name: "vg_" + base) { return found }
+            if let found = file(directory: directory, name: base, prefix: "vg_") { return found }
         }
-        if label.utf8.count < 256 {
-            for path in layout.monolithicFiles {
-                if declarations(path).contains(where: { $0.isLabel && $0.symbol == label }) {
-                    return VoicegroupLocation(filePath: path, sectionLabel: label)
-                }
+        if label.count < 256 {
+            for path in layout.monolithicFiles where declares(path, symbol: label, isLabel: true) {
+                return VoicegroupLocation(filePath: path, sectionLabel: String(decoding: label, as: UTF8.self))
             }
         }
-        guard !base.isEmpty, base.utf8.count < 256 else { return nil }
+        guard !base.isEmpty, base.count < 256 else { return nil }
         for directory in layout.voicegroupDirectories {
-            guard let entries = try? FileManager.default.contentsOfDirectory(atPath: directory) else { continue }
-            for entry in entries {
-                let suffix = URL(filePath: entry).pathExtension.lowercased()
-                guard suffix == "inc" || suffix == "s", let path = Self.path(directory, entry) else { continue }
-                var isDirectory: ObjCBool = false
-                guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), !isDirectory.boolValue
-                else {
-                    continue
+            guard let stream = directory.withCString({ opendir($0) }) else { continue }
+            defer { closedir(stream) }
+            while let entry = readdir(stream) {
+                let name = withUnsafePointer(to: &entry.pointee.d_name) {
+                    $0.withMemoryRebound(to: CChar.self, capacity: Int(NAME_MAX) + 1) { String(cString: $0) }
                 }
-                if declarations(path).contains(where: { !$0.isLabel && $0.symbol == "voicegroup_" + base }) {
+                let nameBytes = name.utf8
+                let extensionBytes = nameBytes.span
+                let count = extensionBytes.count
+                // C declared-name fallback: voicegroup_loader.c:2175 accepts .S/.INC too.
+                let assembly =
+                    count >= 2 && extensionBytes[count - 2] == 46
+                    && (extensionBytes[count - 1] == 115 || extensionBytes[count - 1] == 83)
+                let include =
+                    count >= 4 && extensionBytes[count - 4] == 46 && (extensionBytes[count - 3] | 32) == 105
+                    && (extensionBytes[count - 2] | 32) == 110 && (extensionBytes[count - 1] | 32) == 99
+                guard assembly || include else { continue }
+                let path = directory + "/" + name
+                guard path.utf8.count < 512 else { continue }
+                var info = stat()
+                guard path.withCString({ stat($0, &info) }) == 0, (info.st_mode & S_IFMT) != S_IFDIR else { continue }
+                if declares(path, symbol: base, isLabel: false) {
                     return VoicegroupLocation(filePath: path, sectionLabel: "")
                 }
             }
@@ -121,16 +165,40 @@ public struct VoicegroupLocator {
         return nil
     }
 
-    private func declarations(_ path: String) -> [VoicegroupSource.Declaration] {
-        guard let data = try? ProjectFileStore.read(path) else { return [] }
-        return VoicegroupSource.declarations(in: [UInt8](data))
+    private func declares(_ path: String, symbol: ArraySlice<UInt8>, isLabel: Bool) -> Bool {
+        guard let bytes = try? VoicegroupText.read(path) else { return false }
+        var start = 0
+        while start < bytes.count {
+            var end = start
+            while end < bytes.count && bytes[end] != 10 { end += 1 }
+            let raw = bytes[start..<end]
+            start = end + 1
+            let text = raw[VoicegroupSource.contentBounds(raw)]
+            if isLabel {
+                if text.count >= symbol.count + 2, Self.equalPrefix(text, symbol),
+                    text[text.startIndex + symbol.count] == 58, text[text.startIndex + symbol.count + 1] == 58,
+                    text.count == symbol.count + 2 || VoicegroupSource.isSpace(text[text.startIndex + symbol.count + 2])
+                {
+                    return true
+                }
+            } else if Self.matches(text, "voice_group ") {
+                var first = text.startIndex + 11
+                while first < text.endIndex && VoicegroupSource.isSpace(text[first]) { first += 1 }
+                var last = first
+                while last < text.endIndex && !VoicegroupSource.isSpace(text[last]) && text[last] != 44 { last += 1 }
+                let name = text[first..<last]
+                // C file_declares_voice_group matches the unprefixed declaration (2143–2147).
+                if name.count == symbol.count, Self.equalPrefix(name, symbol) { return true }
+            }
+        }
+        return false
     }
 
-    private func subdirectory(_ subdirectory: String, name: String, layout: ProjectLayout) -> VoicegroupLocation? {
+    private func subdirectory(
+        _ subdirectory: String, name: ArraySlice<UInt8>, layout: ProjectLayout
+    ) -> VoicegroupLocation? {
         for directory in layout.voicegroupDirectories {
-            if let nested = Self.path(directory, subdirectory), let found = file(directory: nested, name: name) {
-                return found
-            }
+            if let found = file(directory: directory, name: name, prefix: subdirectory + "/") { return found }
         }
         for directory in layout.voicegroupDirectories where Self.basename(directory) == subdirectory {
             if let found = file(directory: directory, name: name) { return found }
@@ -138,25 +206,86 @@ public struct VoicegroupLocator {
         return nil
     }
 
-    private func file(directory: String, name: String) -> VoicegroupLocation? {
-        for suffix in [".inc", ".s"] {
-            if let path = Self.path(directory, name + suffix), ProjectFileStore.exists(path) {
-                return VoicegroupLocation(filePath: path, sectionLabel: "")
+    private func file(directory: String, name: ArraySlice<UInt8>, prefix: String = "") -> VoicegroupLocation? {
+        let directoryBytes = directory.utf8
+        let directorySpan = directoryBytes.span
+        let prefixBytes = prefix.utf8
+        let prefixSpan = prefixBytes.span
+        for suffixIndex in 0..<2 {
+            let suffix = suffixIndex == 0 ? ".inc" : ".s"
+            let suffixBytes = suffix.utf8
+            let suffixSpan = suffixBytes.span
+            let count = directorySpan.count + 1 + prefixSpan.count + name.count + suffixSpan.count
+            guard count < 512 else { continue }
+            var storage = InlineArray<512, UInt8>(repeating: 0)
+            do {
+                var path = storage.mutableSpan
+                let symbol = name.span
+                var index = 0
+                for offset in 0..<directorySpan.count { path[index] = directorySpan[offset]; index += 1 }
+                path[index] = 47; index += 1
+                for offset in 0..<prefixSpan.count { path[index] = prefixSpan[offset]; index += 1 }
+                for offset in 0..<symbol.count {
+                    let byte = symbol[offset]
+                    path[index] = byte == 92 ? 47 : byte; index += 1
+                }
+                for offset in 0..<suffixSpan.count { path[index] = suffixSpan[offset]; index += 1 }
+            }
+            let bytes = storage.span
+            // POSIX access borrows the bounded, NUL-terminated path only for the syscall.
+            let exists = bytes.withUnsafeBufferPointer {
+                guard let base = $0.baseAddress else { preconditionFailure("Inline path is nonempty") }
+                return access(UnsafeRawPointer(base).assumingMemoryBound(to: CChar.self), F_OK) == 0
+            }
+            if exists {
+                return VoicegroupLocation(filePath: AsmLine.text(bytes.extracting(0..<count)), sectionLabel: "")
             }
         }
         return nil
     }
 
-    private static func subgroupName(_ symbol: String, infix: String, preserveTail: Bool) -> String? {
-        guard let range = symbol.range(of: infix), range.lowerBound != symbol.startIndex else { return nil }
-        var base = String(symbol[..<range.lowerBound])
-        if preserveTail { base += symbol[range.upperBound...] }
-        return base.utf8.count < 256 ? base : nil
+    private static func subgroupName(
+        _ symbol: ArraySlice<UInt8>, infix: String, preserveTail: Bool
+    ) -> ArraySlice<UInt8>? {
+        let markerBytes = infix.utf8
+        let marker = markerBytes.span
+        let length = marker.count
+        guard symbol.count >= length else { return nil }
+        for index in symbol.startIndex...(symbol.endIndex - length) {
+            var offset = 0
+            while offset < length && symbol[index + offset] == marker[offset] { offset += 1 }
+            guard offset == length else { continue }
+            guard index > symbol.startIndex else { return nil }
+            let head = symbol[..<index]
+            if !preserveTail { return head.count < 256 ? head : nil }
+            let tail = symbol[(index + length)...]
+            if tail.isEmpty { return head.count < 256 ? head : nil }
+            guard head.count + tail.count < 256 else { return nil }
+            return (Array(head) + tail)[...]
+        }
+        return nil
     }
 
-    private static func path(_ directory: String, _ relative: String) -> String? {
-        let path = directory + "/" + relative.replacingOccurrences(of: "\\", with: "/")
-        return path.utf8.count < 512 ? path : nil
+    private static func matches(_ bytes: ArraySlice<UInt8>, _ prefix: String) -> Bool {
+        let prefixBytes = prefix.utf8
+        let literal = prefixBytes.span
+        guard bytes.count >= literal.count else { return false }
+        var index = 0
+        while index < literal.count {
+            guard bytes[bytes.startIndex + index] == literal[index] else { return false }
+            index += 1
+        }
+        return true
+    }
+
+    private static func equalPrefix(_ bytes: ArraySlice<UInt8>, _ prefix: ArraySlice<UInt8>) -> Bool {
+        guard bytes.count >= prefix.count else { return false }
+        var index = 0
+        while index < prefix.count {
+            guard bytes[bytes.startIndex + index] == prefix[prefix.startIndex + index] else { return false }
+            index += 1
+        }
+        return true
     }
 
     private static func basename(_ path: String) -> String {

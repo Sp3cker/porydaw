@@ -15,6 +15,22 @@ public struct KeysplitTable: Equatable, Sendable {
 
 public struct KeysplitTables: Sendable {
     public let tables: [KeysplitTable]
+    private let indices: [SymbolKey: Int]
+
+    public init(tables: [KeysplitTable]) {
+        self.tables = tables
+        var indices: [SymbolKey: Int] = [:]
+        indices.reserveCapacity(tables.count)
+        for (index, table) in tables.enumerated() {
+            let key = Array(table.name.utf8)[...]
+            if indices[SymbolKey(key)] == nil { indices[SymbolKey(key)] = index }
+        }
+        self.indices = indices
+    }
+
+    public func table(named: ArraySlice<UInt8>) -> KeysplitTable? {
+        indices[SymbolKey(named)].map { tables[$0] }
+    }
 
     private static let macroPrefix = Array("keysplit ".utf8)
     private static let setPrefix = Array(".set ".utf8)

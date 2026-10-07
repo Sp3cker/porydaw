@@ -31,8 +31,8 @@ private func bankDecodeParity(
         check.fail("WaveCache did not decode the valid sample")
         return
     }
-    withExtendedLifetime(wave) {
-        let actual = wave.raw.pointee
+    withExtendedLifetime(cache) {
+        let actual = wave.pointee
         let expected = reference.pointee
         check.expectEqual(expected: expected.type, actual: actual.type, what: "type matches native decoder")
         check.expectEqual(expected: expected.status, actual: actual.status, what: "status matches native decoder")
@@ -49,16 +49,18 @@ private func bankDecodeParity(
         check.expect(
             memcmp(actualBytes, expectedBytes, count) == 0,
             message: "PCM bytes and guard byte match native decoder")
-        let payload = UnsafeMutableRawPointer(wave.raw).advanced(by: MemoryLayout<WaveData>.size)
+        let payload = UnsafeMutableRawPointer(wave).advanced(by: MemoryLayout<WaveData>.size)
         check.expect(
             UnsafeMutableRawPointer(actualBytes) == payload,
             message: "header and PCM occupy one native allocation")
     }
-    check.expectEqual(expected: path, actual: wave.path, what: "wave preserves its exact path cache key")
+    check.expectEqual(
+        expected: wave, actual: try cache.wave(absolutePath: path, format: format),
+        what: "wave preserves its exact path cache key")
     let warm = try cache.wave(absolutePath: path, format: format)
-    check.expect(warm === wave, message: "second decode returns the identical object")
+    check.expect(warm == wave, message: "second decode returns the identical object")
     let samePathOtherFormat = try cache.wave(absolutePath: path, format: .wav)
-    check.expect(samePathOtherFormat === wave, message: "cache identity depends only on the exact path")
+    check.expect(samePathOtherFormat == wave, message: "cache identity depends only on the exact path")
 }
 
 private func bankDecoderChecks(_ root: URL, _ report: CheckReport) throws {
@@ -110,7 +112,7 @@ private func bankDecoderChecks(_ root: URL, _ report: CheckReport) throws {
     let canonical = try cache.wave(absolutePath: loop, format: .bin)
     let distinct = try cache.wave(absolutePath: distinctPath, format: .bin)
     check.expect(
-        distinct != nil && distinct !== canonical, message: "different path strings remain distinct cache keys")
+        distinct != nil && distinct != canonical, message: "different path strings remain distinct cache keys")
 
     let hard = report.scoped(cppID: "voicegroup/BankOwnershipChecks::hardReadFailure")
     do {
@@ -131,12 +133,13 @@ private func bankSynthChecks(_ report: CheckReport) {
     let check = report.scoped(cppID: "voicegroup/BankOwnershipChecks::synth")
     let cache = WaveCache()
     let descriptor: [UInt8] = [0x80, 1, 0x30, 6, 0x10, 0x20]
-    guard let wave = cache.synth(symbol: "check_bank", descriptor: descriptor) else {
+    let symbol = Array("check_bank".utf8)[...]
+    guard let wave = cache.synth(symbol: symbol, descriptor: descriptor) else {
         check.fail("synth allocation failed")
         return
     }
-    withExtendedLifetime(wave) {
-        let header = wave.raw.pointee
+    withExtendedLifetime(cache) {
+        let header = wave.pointee
         check.expectEqual(expected: UInt16(0), actual: header.type, what: "synth type is zero")
         check.expectEqual(expected: UInt16(0x4000), actual: header.status, what: "synth status is 0x4000")
         check.expectEqual(
@@ -152,16 +155,20 @@ private func bankSynthChecks(_ report: CheckReport) {
         let expected = descriptor + Array(repeating: UInt8(0), count: 11)
         check.expectEqual(expected: expected, actual: bytes, what: "six descriptor bytes precede eleven zero bytes")
         check.expect(
-            UnsafeRawPointer(data) == UnsafeRawPointer(wave.raw).advanced(by: MemoryLayout<WaveData>.size),
+            UnsafeRawPointer(data) == UnsafeRawPointer(wave).advanced(by: MemoryLayout<WaveData>.size),
             message: "synth payload immediately follows its header")
     }
     check.expectEqual(
-        expected: "synth-macro:check_bank", actual: wave.path, what: "synth cache key matches native spelling")
-    let warm = cache.synth(symbol: "check_bank", descriptor: [0x80, 2, 0, 0, 0, 0])
-    check.expect(warm === wave, message: "a synth cache hit returns the original symbol's object")
+        expected: wave, actual: cache.synth(symbol: symbol, descriptor: descriptor),
+        what: "synth symbol cache key resolves its allocation")
+    let warm = cache.synth(symbol: symbol, descriptor: [0x80, 2, 0, 0, 0, 0])
+    check.expect(warm == wave, message: "a synth cache hit returns the original symbol's object")
+    let bank = Bank.make(cache: cache)
+    bank.register(wave: wave)
     cache.removeAll()
-    let fresh = cache.synth(symbol: "check_bank", descriptor: descriptor)
-    check.expect(fresh != nil && fresh !== wave, message: "cache eviction permits a new synth allocation")
+    let fresh = cache.synth(symbol: symbol, descriptor: descriptor)
+    check.expect(fresh != nil && fresh != wave, message: "cache eviction permits a new synth allocation")
+    withExtendedLifetime(bank) {}
 }
 
 private func bankNameChecks(
@@ -182,8 +189,8 @@ private func bankNameChecks(
 
 private func bankBufferChecks(_ report: CheckReport) {
     let check = report.scoped(cppID: "voicegroup/BankOwnershipChecks::buffers")
-    let bank = Bank()
-    let subgroup = SubBank()
+    let bank = Bank.make()
+    let subgroup = SubBank.make()
     let zeroedBank = UnsafeRawBufferPointer(start: bank.voices, count: 128 * MemoryLayout<ToneData>.stride)
     let zeroedSubgroup = UnsafeRawBufferPointer(start: subgroup.voices, count: 128 * MemoryLayout<ToneData>.stride)
     check.expect(zeroedBank.allSatisfy { $0 == 0 }, message: "all 128 bank tones are calloc-zeroed")
@@ -195,15 +202,9 @@ private func bankBufferChecks(_ report: CheckReport) {
     )
 
     var source = (0..<128).map { UInt8($0) }
-    let copied = source.withUnsafeBufferPointer { bytes -> UnsafeMutablePointer<UInt8>? in
-        guard let base = bytes.baseAddress else { return nil }
-        let table = bank.registerTable(base)
-        check.expect(UnsafePointer(table) != base, message: "registered table owns a distinct allocation")
-        return table
-    }
-    guard let copied else {
-        check.fail("source table has no storage")
-        return
+    let copied = bank.registerTable(source.span)
+    source.withUnsafeBufferPointer { bytes in
+        check.expect(UnsafePointer(copied) != bytes.baseAddress, message: "registered table owns a distinct allocation")
     }
     source[0] = 255
     check.expect(
@@ -216,7 +217,7 @@ private func bankBufferChecks(_ report: CheckReport) {
     check.expect(bank.subBank(for: tone) == nil, message: "nil subgroup has no registered sub-bank")
     tone.subGroup = UnsafeMutableRawPointer(subgroup.voices)
     check.expect(bank.subBank(for: tone) === subgroup, message: "sub-bank lookup matches voices pointer identity")
-    let unrelated = SubBank()
+    let unrelated = SubBank.make()
     tone.subGroup = UnsafeMutableRawPointer(unrelated.voices)
     check.expect(bank.subBank(for: tone) == nil, message: "unregistered subgroup pointer does not match")
 }
@@ -225,9 +226,9 @@ private func bankLifetimeChecks(_ root: URL, _ report: CheckReport) throws {
     let check = report.scoped(cppID: "voicegroup/BankOwnershipChecks::lifetime")
     let path = root.appendingPathComponent("sound/direct_sound_samples/fixture_loop.bin").path
     let cache = WaveCache()
-    var firstBank: Bank? = Bank()
-    var lastBank: Bank? = Bank()
-    weak var liveWave: WaveRef?
+    var firstBank: Bank? = Bank.make(cache: cache)
+    var lastBank: Bank? = Bank.make(cache: cache)
+    var liveWave: UnsafeMutablePointer<WaveData>?
     do {
         guard let wave = try cache.wave(absolutePath: path, format: .bin) else {
             check.fail("lifetime sample did not decode")
@@ -237,23 +238,28 @@ private func bankLifetimeChecks(_ root: URL, _ report: CheckReport) throws {
         firstBank?.register(wave: wave)
         firstBank?.register(wave: wave)
         lastBank?.register(wave: wave)
-        firstBank?.voices[0].wav = wave.raw
-        lastBank?.voices[0].wav = wave.raw
+        firstBank?.voices[0].wav = wave
+        lastBank?.voices[0].wav = wave
         check.expectEqual(expected: 1, actual: firstBank?.waves.count, what: "wave registration is identity-idempotent")
     }
     cache.removeAll()
     withExtendedLifetime((firstBank, lastBank)) {
-        check.expect(liveWave != nil, message: "live banks retain the wave after cache eviction")
+        check.expect(
+            liveWave.flatMap { cache.references(to: $0) } == 2,
+            message: "live banks retain the wave after cache eviction")
     }
     firstBank = nil
     withExtendedLifetime(lastBank) {
-        check.expect(liveWave != nil, message: "a second bank continues to retain the shared wave")
+        check.expect(
+            liveWave.flatMap { cache.references(to: $0) } == 1,
+            message: "a second bank continues to retain the shared wave")
     }
-    lastBank = nil
-    check.expect(liveWave == nil, message: "dropping the last bank deallocates the evicted wave")
+    guard let liveWave else { return }
+    let freedWave = parityObservesFree(UnsafeRawPointer(liveWave)) { lastBank = nil }
+    check.expect(freedWave, message: "dropping the last bank deallocates the evicted wave")
 
-    var owner: Bank? = Bank()
-    weak var liveProg: ProgWaveRef?
+    var owner: Bank? = Bank.make(cache: cache)
+    var liveProg: UnsafeMutablePointer<UInt32>?
     weak var liveSubBank: SubBank?
     do {
         guard let prog = try cache.prog(absolutePath: path), let second = try cache.prog(absolutePath: path) else {
@@ -261,21 +267,22 @@ private func bankLifetimeChecks(_ root: URL, _ report: CheckReport) throws {
             return
         }
         check.expect(
-            prog !== second && prog.raw != second.raw, message: "programmable waves are freshly allocated, never cached"
+            prog != second, message: "programmable waves are freshly allocated, never cached"
         )
-        check.expectEqual(expected: path, actual: prog.path, what: "programmable wave retains its source path")
+        defer { free(second) }
+        check.expect(prog != second, message: "programmable source path decodes into a fresh allocation")
         let bytes = try ProjectFileStore.read(path)
         let sameBytes = bytes.withUnsafeBytes { source -> Bool in
             guard let base = source.baseAddress else { return false }
-            return memcmp(prog.raw, base, 16) == 0
+            return memcmp(prog, base, 16) == 0
         }
         check.expect(sameBytes, message: "programmable decoder copies exactly the first sixteen input bytes")
         liveProg = prog
         owner?.register(prog: prog)
         owner?.register(prog: prog)
-        owner?.voices[0].wavePointer = prog.raw
+        owner?.voices[0].wavePointer = prog
         check.expectEqual(expected: 1, actual: owner?.progWaves.count, what: "prog registration is identity-idempotent")
-        let subgroup = SubBank()
+        let subgroup = SubBank.make()
         liveSubBank = subgroup
         owner?.register(subBank: subgroup)
         owner?.voices[1].subGroup = UnsafeMutableRawPointer(subgroup.voices)
@@ -283,8 +290,9 @@ private func bankLifetimeChecks(_ root: URL, _ report: CheckReport) throws {
     withExtendedLifetime(owner) {
         check.expect(liveProg != nil && liveSubBank != nil, message: "bank retains programmable waves and sub-banks")
     }
-    owner = nil
-    check.expect(liveProg == nil, message: "bank destruction releases its programmable wave")
+    guard let liveProg else { return }
+    let freedProg = parityObservesFree(UnsafeRawPointer(liveProg)) { owner = nil }
+    check.expect(freedProg, message: "bank destruction releases its programmable wave")
     check.expect(liveSubBank == nil, message: "bank destruction releases its sub-bank buffers")
 }
 

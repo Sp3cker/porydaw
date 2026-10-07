@@ -23,9 +23,9 @@ public func runProjectLayoutSuite(_ report: CheckReport) {
                 expected: [String](), actual: layout.monolithicFiles,
                 cppID: cppID, what: "standard include hub rejected by monolithic gate")
             let samples = try SoundDataMap.parse(files: layout.soundDataFiles)
-            var expectedSamples: [String: SoundDataEntry] = [:]
+            var expectedSamples: [SymbolKey: SoundDataEntry] = [:]
             for name in ["loop", "pluck", "bass", "drum"] {
-                expectedSamples["DirectSoundWaveData_fixture_" + name] = .sample(
+                expectedSamples[SymbolKey(Array(("DirectSoundWaveData_fixture_" + name).utf8)[...])] = .sample(
                     relativePath: "sound/direct_sound_samples/fixture_" + name + ".bin")
             }
             report.expectEqual(
@@ -34,7 +34,8 @@ public func runProjectLayoutSuite(_ report: CheckReport) {
             let waves = try ProgWaveMap.parse(files: layout.programmableWaveFiles)
             report.expectEqual(
                 expected: "sound/programmable_wave_samples/fixture_pulse.pcm",
-                actual: waves["ProgrammableWaveData_fixture_pulse"], cppID: cppID, what: "fixture prog path")
+                actual: waves[Array("ProgrammableWaveData_fixture_pulse".utf8)[...]], cppID: cppID,
+                what: "fixture prog path")
             report.expectEqual(expected: 3, actual: waves.entries.count, cppID: cppID, what: "fixture prog symbols")
             try layoutGrammarChecks(root, report, cppID)
             try layoutDiscoveryChecks(root, report, cppID)
@@ -92,41 +93,41 @@ private func layoutGrammarChecks(_ root: URL, _ report: CheckReport, _ cppID: St
         cppID: cppID, what: "synth file follows sample file")
     let map = try SoundDataMap.parse(files: layout.soundDataFiles)
     report.expectEqual(
-        expected: .synth([0x80, 0, 1, 255, 8, 4]), actual: map["Pulse"], cppID: cppID,
+        expected: .synth([0x80, 0, 1, 255, 8, 4]), actual: map[Array("Pulse".utf8)[...]], cppID: cppID,
         what: "pulse six bytes, base zero and truncation, first definition wins")
     report.expectEqual(
-        expected: .synth([0x80, 0, 9, 0, 0, 0]), actual: map["Custom"], cppID: cppID,
+        expected: .synth([0x80, 0, 9, 0, 0, 0]), actual: map[Array("Custom".utf8)[...]], cppID: cppID,
         what: "custom missing parameters zero filled")
     for name in ["Saw", "Quarter"] {
         report.expectEqual(
-            expected: .synth([0x80, 1, 0, 0, 0, 0]), actual: map[name], cppID: cppID,
+            expected: .synth([0x80, 1, 0, 0, 0, 0]), actual: map[Array(name.utf8)[...]], cppID: cppID,
             what: "\(name) ignores parameters")
     }
     for name in ["Half", "Triangle"] {
         report.expectEqual(
-            expected: .synth([0x80, 2, 0, 0, 0, 0]), actual: map[name], cppID: cppID,
+            expected: .synth([0x80, 2, 0, 0, 0, 0]), actual: map[Array(name.utf8)[...]], cppID: cppID,
             what: "\(name) synth type")
     }
     report.expectEqual(
-        expected: .sample(relativePath: "boundary.bin"), actual: map["Boundary"], cppID: cppID,
+        expected: .sample(relativePath: "boundary.bin"), actual: map[Array("Boundary".utf8)[...]], cppID: cppID,
         what: "comma macro boundary ignored without consuming label")
     report.expectEqual(
-        expected: .sample(relativePath: "sound/cries/test.bin"), actual: map["Cries"], cppID: cppID,
+        expected: .sample(relativePath: "sound/cries/test.bin"), actual: map[Array("Cries".utf8)[...]], cppID: cppID,
         what: "incbin substring accepted and cries retained")
     report.expect(
-        map["InvalidQuotes"] == nil && map["Spaced"] == nil, cppID: cppID,
+        map[Array("InvalidQuotes".utf8)[...]] == nil && map[Array("Spaced".utf8)[...]] == nil, cppID: cppID,
         message: "unquoted incbin consumes label and whitespace before colon is rejected")
     report.expectEqual(
-        expected: .sample(relativePath: "first.bin"), actual: map["SampleFirst"], cppID: cppID,
+        expected: .sample(relativePath: "first.bin"), actual: map[Array("SampleFirst".utf8)[...]], cppID: cppID,
         what: "sample wins over later synth")
     let duplicate = try layoutWrite(root, "sound/duplicate.inc", "Pulse::\n.incbin \"last.bin\"\n")
     let duplicateMap = try SoundDataMap.parse(files: [path, duplicate])
     report.expectEqual(
-        expected: map["Pulse"], actual: duplicateMap["Pulse"], cppID: cppID,
+        expected: map[Array("Pulse".utf8)[...]], actual: duplicateMap[Array("Pulse".utf8)[...]], cppID: cppID,
         what: "duplicates across files retain first definition")
     let prog = try ProgWaveMap.parse(files: [path, duplicate])
     report.expectEqual(
-        expected: "later.bin", actual: prog["Pulse"], cppID: cppID,
+        expected: "later.bin", actual: prog[Array("Pulse".utf8)[...]], cppID: cppID,
         what: "prog ignores synth lines and retains first incbin definition")
     let missing = root.path + "/missing-map.inc"
     do {

@@ -45,6 +45,10 @@ target_include_directories(PorydawVoicegroup INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawVoicegroup,Swift_MODULE_DIRECTORY>>"
 )
 porydaw_enable_swift_batch_mode(PorydawVoicegroup)
+target_compile_options(PorydawVoicegroup PRIVATE
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
+)
+target_link_libraries(PorydawVoicegroup PRIVATE BinaryParsing)
 
 if(PORYDAW_BUILD_CHECKS)
     target_compile_options(PorydawVoicegroup PRIVATE
