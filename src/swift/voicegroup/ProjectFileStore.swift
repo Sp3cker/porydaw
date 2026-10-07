@@ -219,10 +219,10 @@ public enum ProjectFileStore {
 }
 
 /// A load-scoped listing with positive existence evidence; misses still use filesystem lookup.
-struct ProjectDirectoryCache {
-    struct File {
-        let url: URL
-        let filename: String
+public struct ProjectDirectoryCache {
+    public struct File {
+        public let url: URL
+        public let filename: String
     }
 
     private static let resourceKeys: Set<URLResourceKey> = [
@@ -230,11 +230,11 @@ struct ProjectDirectoryCache {
     ]
     private static let prefetchedKeys = Array(resourceKeys)
 
-    let files: [File]
+    public let files: [File]
     private let directory: URL
     private let existingNames: [String: String]
 
-    init(directory: URL) {
+    public init(directory: URL) {
         self.directory = directory
         let entries =
             (try? FileManager.default.contentsOfDirectory(
@@ -259,7 +259,7 @@ struct ProjectDirectoryCache {
         self.existingNames = existingNames
     }
 
-    func exists(_ filename: String) -> Bool {
+    public func exists(_ filename: String) -> Bool {
         // Swift keys compare canonically; only byte-exact hits prove filesystem existence.
         if let cached = existingNames[filename], cached.utf8.elementsEqual(filename.utf8) {
             return true

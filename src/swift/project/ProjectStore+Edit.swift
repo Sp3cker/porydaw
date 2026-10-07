@@ -1,3 +1,5 @@
+import PorydawVoicegroup
+
 /// An adopted bank publication after an edit, or a confirmed not-applied conflict.
 public enum ProjectBankEditOutcome: Sendable {
     case applied(lease: ProjectBankLease, materialization: BlankSlotMaterialization?, materializationToken: UInt64?)

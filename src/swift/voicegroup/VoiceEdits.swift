@@ -1,4 +1,4 @@
-import PorydawProjectNative
+import PorydawVoicegroupNative
 
 private struct BlankSlotInsertion {
     let index: Int

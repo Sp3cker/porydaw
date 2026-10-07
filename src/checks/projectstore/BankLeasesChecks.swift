@@ -3,6 +3,7 @@ import PorydawApp
 import PorydawCore
 import PorydawDocument
 import PorydawProject
+import PorydawVoicegroup
 
 private enum BankLeasesCheckError: Error {
     case failed(String)

@@ -118,6 +118,11 @@ void SwiftCoreTest::samplePitch93()
     pdc_suite_run(PDC_SUITE_SAMPLE_PITCH_93, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::voicegroupParity()
+{
+    pdc_suite_run(PDC_SUITE_VOICE_PARITY, reportSwiftCheck, this);
+}
+
 void SwiftCoreTest::noteEdits()
 {
     pdc_suite_run(PDC_SUITE_NOTE_EDITS, reportSwiftCheck, this);

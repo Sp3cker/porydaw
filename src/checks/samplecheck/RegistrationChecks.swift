@@ -3,8 +3,9 @@ import PorydawAppAudio
 import PorydawCore
 import PorydawPlayback
 import PorydawPlaybackNative
-import PorydawProjectNative
+import PorydawVoicegroupNative
 import PorydawProject
+import PorydawVoicegroup
 import PorydawSample
 
 private func succeeded<Value, Failure: Error>(_ result: Result<Value, Failure>) -> Bool {

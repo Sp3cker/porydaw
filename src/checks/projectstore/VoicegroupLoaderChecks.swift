@@ -1,6 +1,7 @@
 import Foundation
 import PorydawProject
-import PorydawProjectNative
+import PorydawVoicegroup
+import PorydawVoicegroupNative
 import Synchronization
 
 private let batchAssetCount = 16

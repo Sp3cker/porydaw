@@ -263,6 +263,14 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureFiles = project + editor,
              .platforms = swiftPlatforms});
         result.push_back(
+            {.name = "projectstore-parity",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupParity"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project + editor,
+             .platforms = swiftPlatforms});
+        result.push_back(
             {.name = "projectstore-actor",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreActor"}),
              .handler = swiftCore,

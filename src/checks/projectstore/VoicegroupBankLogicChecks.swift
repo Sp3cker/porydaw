@@ -1,5 +1,6 @@
 import Foundation
 import PorydawProject
+import PorydawVoicegroup
 
 public func runVoicegroupBankLogicSuite(_ report: CheckReport) {
     bankLogicConflicts(report)

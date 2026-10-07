@@ -1,5 +1,5 @@
 import Foundation
-import PorydawProjectNative
+import PorydawVoicegroupNative
 
 /// Editable voice macros in the frozen C++ ordinal order used by PdVoiceValue.
 public enum VgMacro: Int32, CaseIterable, Sendable {

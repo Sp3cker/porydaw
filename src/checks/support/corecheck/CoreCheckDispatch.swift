@@ -88,6 +88,7 @@ public func pdcSuiteRun(
     case PDC_SUITE_SAMPLE_PITCH_69: runSamplePitchChecks(report, key: 69)
     case PDC_SUITE_SAMPLE_PITCH_81: runSamplePitchChecks(report, key: 81)
     case PDC_SUITE_SAMPLE_PITCH_93: runSamplePitchChecks(report, key: 93)
+    case PDC_SUITE_VOICE_PARITY: runVoicegroupParitySuite(report)
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

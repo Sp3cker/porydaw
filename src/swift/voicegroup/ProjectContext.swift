@@ -1,21 +1,21 @@
 import Foundation
-import PorydawProjectNative
+import PorydawVoicegroupNative
 
 /// Owns one native project's discovery state on its own dedicated serial worker.
 /// The store executor confines callers; the context-owned worker keeps the
 /// native pointer and every loader call off the cooperative pool.
-final class ProjectContext {
-    struct Target: Sendable {
-        let filePath: String
-        let sectionLabel: String
+public final class ProjectContext {
+    public struct Target: Sendable {
+        public let filePath: String
+        public let sectionLabel: String
 
-        init(filePath: String, sectionLabel: String = "") {
+        public init(filePath: String, sectionLabel: String = "") {
             self.filePath = filePath
             self.sectionLabel = sectionLabel
         }
     }
 
-    let projectRoot: String
+    public let projectRoot: String
     private let worker: ContextWorker
 
     private init(projectRoot: String, worker: ContextWorker) {
@@ -23,7 +23,7 @@ final class ProjectContext {
         self.worker = worker
     }
 
-    static func open(projectRoot: String) -> ProjectContext? {
+    public static func open(projectRoot: String) -> ProjectContext? {
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: projectRoot, isDirectory: &isDirectory),
             isDirectory.boolValue
@@ -37,11 +37,12 @@ final class ProjectContext {
         return ProjectContext(projectRoot: projectRoot, worker: worker)
     }
 
-    func load(target: Target) -> BankHandle? {
+    public func load(target: Target) -> BankHandle? {
         worker.load(target: target)
     }
 
-    func loadSamples(direct: [String], wave: [String], keysplit: [String], tables: [String]) -> SampleSetHandle? {
+    public func loadSamples(direct: [String], wave: [String], keysplit: [String], tables: [String]) -> SampleSetHandle?
+    {
         guard keysplit.count == tables.count,
             direct.count <= Int(Int32.max), wave.count <= Int(Int32.max),
             keysplit.count <= Int(Int32.max)
@@ -74,7 +75,7 @@ public final class BankHandle: @unchecked Sendable {
 /// The loader returns independently owned storage. Borrow `raw` only on the worker;
 /// ARC may destroy the handle on any thread after the final borrow completes.
 public final class SampleSetHandle: @unchecked Sendable {
-    let raw: UnsafeMutablePointer<LoadedSampleSet>
+    public let raw: UnsafeMutablePointer<LoadedSampleSet>
 
     fileprivate init(raw: UnsafeMutablePointer<LoadedSampleSet>) {
         self.raw = raw

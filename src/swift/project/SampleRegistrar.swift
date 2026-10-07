@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 
 public struct SampleRegistrationError: Error, Equatable, Sendable {
     public let message: String

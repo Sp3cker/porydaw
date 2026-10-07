@@ -1,5 +1,6 @@
 import Foundation
 import PorydawProject
+import PorydawVoicegroup
 
 public func runVoicegroupValueSuite(_ report: CheckReport) {
     checkVoicegroupMacroTables(report)

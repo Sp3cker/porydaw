@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 import PorydawCore
 
 /// An immutable view of the songs and player limits loaded at project open.

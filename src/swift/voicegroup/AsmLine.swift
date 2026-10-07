@@ -1,18 +1,18 @@
 import Foundation
 
 /// Cross-platform byte parser; keep index loops (generic slice helpers tripled allocations).
-struct AsmLine {
-    typealias Bytes = ArraySlice<UInt8>
+public struct AsmLine {
+    public typealias Bytes = ArraySlice<UInt8>
 
-    let bytes: Bytes
-    private(set) var position: Int
+    public let bytes: Bytes
+    public private(set) var position: Int
 
-    init(_ bytes: Bytes) {
+    public init(_ bytes: Bytes) {
         self.bytes = bytes
         position = bytes.startIndex
     }
 
-    static func lines(_ path: String) -> [Bytes]? {
+    public static func lines(_ path: String) -> [Bytes]? {
         guard let data = try? ProjectFileStore.read(path) else { return nil }
         let bytes = [UInt8](data)
         var lines: [Bytes] = []
@@ -29,15 +29,15 @@ struct AsmLine {
         return lines
     }
 
-    static func isSpace(_ byte: UInt8) -> Bool { byte == 32 || (byte >= 9 && byte <= 13) }
+    public static func isSpace(_ byte: UInt8) -> Bool { byte == 32 || (byte >= 9 && byte <= 13) }
 
-    static func isWord(_ byte: UInt8) -> Bool {
+    public static func isWord(_ byte: UInt8) -> Bool {
         (byte >= 97 && byte <= 122) || (byte >= 65 && byte <= 90) || (byte >= 48 && byte <= 57) || byte == 95
     }
 
-    static func text(_ bytes: Bytes) -> String { String(decoding: bytes, as: UTF8.self) }
+    public static func text(_ bytes: Bytes) -> String { String(decoding: bytes, as: UTF8.self) }
 
-    static func hasPrefix(_ bytes: Bytes, _ literal: [UInt8]) -> Bool {
+    public static func hasPrefix(_ bytes: Bytes, _ literal: [UInt8]) -> Bool {
         guard bytes.count >= literal.count else { return false }
         var offset = 0
         while offset < literal.count {
@@ -47,11 +47,11 @@ struct AsmLine {
         return true
     }
 
-    static func equals(_ bytes: Bytes, _ literal: [UInt8]) -> Bool {
+    public static func equals(_ bytes: Bytes, _ literal: [UInt8]) -> Bool {
         bytes.count == literal.count && hasPrefix(bytes, literal)
     }
 
-    static func contains(_ bytes: Bytes, _ needle: [UInt8]) -> Bool {
+    public static func contains(_ bytes: Bytes, _ needle: [UInt8]) -> Bool {
         var index = bytes.startIndex
         while index + needle.count <= bytes.endIndex {
             if hasPrefix(bytes[index...], needle) { return true }
@@ -60,7 +60,7 @@ struct AsmLine {
         return false
     }
 
-    static func trimmed(_ bytes: Bytes) -> Bytes {
+    public static func trimmed(_ bytes: Bytes) -> Bytes {
         var start = bytes.startIndex
         var end = bytes.endIndex
         while start < end, isSpace(bytes[start]) { start += 1 }
@@ -68,7 +68,7 @@ struct AsmLine {
         return bytes[start..<end]
     }
 
-    static func content(_ bytes: Bytes) -> Bytes {
+    public static func content(_ bytes: Bytes) -> Bytes {
         var end = bytes.endIndex
         var index = bytes.startIndex
         while index < bytes.endIndex {
@@ -83,31 +83,31 @@ struct AsmLine {
     }
 
     @discardableResult
-    mutating func skipSpaces() -> Bool {
+    public mutating func skipSpaces() -> Bool {
         let start = position
         while position < bytes.endIndex, Self.isSpace(bytes[position]) { position += 1 }
         return position > start
     }
 
-    mutating func word() -> Bytes? {
+    public mutating func word() -> Bytes? {
         let start = position
         while position < bytes.endIndex, Self.isWord(bytes[position]) { position += 1 }
         return position > start ? bytes[start..<position] : nil
     }
 
-    mutating func consume(_ literal: [UInt8]) -> Bool {
+    public mutating func consume(_ literal: [UInt8]) -> Bool {
         guard Self.hasPrefix(bytes[position...], literal) else { return false }
         position += literal.count
         return true
     }
 
-    mutating func consume(_ byte: UInt8) -> Bool {
+    public mutating func consume(_ byte: UInt8) -> Bool {
         guard position < bytes.endIndex, bytes[position] == byte else { return false }
         position += 1
         return true
     }
 
-    mutating func until(_ terminator: UInt8) -> Bytes? {
+    public mutating func until(_ terminator: UInt8) -> Bytes? {
         var end = position
         while end < bytes.endIndex {
             if bytes[end] == terminator {

@@ -1,7 +1,8 @@
 import Foundation
 import PorydawCore
 import PorydawProject
-import PorydawProjectNative
+import PorydawVoicegroup
+import PorydawVoicegroupNative
 
 internal let voicegroupEditingRowIDs: [String] = [
     "A001", "A003", "A004", "A005", "A006", "A007", "A008", "A009", "A010", "A011", "A012",

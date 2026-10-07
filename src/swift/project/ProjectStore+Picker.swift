@@ -1,5 +1,6 @@
 import Foundation
-import PorydawProjectNative
+import PorydawVoicegroup
+import PorydawVoicegroupNative
 
 /// A detached audio preview; no pointer into the project loader escapes its worker.
 public enum PickerSound: Sendable {

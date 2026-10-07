@@ -17,10 +17,10 @@ public struct SourceLine: Sendable {
 }
 
 /// Refusal to rebase or save a source whose on-disk declaration no longer safely matches it.
-struct VoicegroupSourceConflict: Error, LocalizedError {
+public struct VoicegroupSourceConflict: Error, LocalizedError {
     let message: String
 
-    var errorDescription: String? { message }
+    public var errorDescription: String? { message }
 }
 
 /// Byte-preserving source model for a single voicegroup, whether standalone or in an index file.

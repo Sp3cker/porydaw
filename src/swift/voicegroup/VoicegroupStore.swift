@@ -72,7 +72,7 @@ public final class VoicegroupStore {
     /// - Parameters:
     ///   - projectRoot: Root containing the project's sound files.
     ///   - context: The store's already-opened loader context.
-    init(projectRoot: String, context: ProjectContext) {
+    public init(projectRoot: String, context: ProjectContext) {
         self.projectRoot = URL(filePath: projectRoot).standardizedFileURL.path
         self.context = context
     }
@@ -80,7 +80,7 @@ public final class VoicegroupStore {
     /// Rebuilds loaded banks against refreshed sample maps without changing source edits or history.
     /// - Parameter context: Fresh project loader context.
     /// - Returns: Successfully refreshed bank publications.
-    func rebind(context: ProjectContext) -> [LoadedBankView] {
+    public func rebind(context: ProjectContext) -> [LoadedBankView] {
         self.context = context
         var views: [LoadedBankView] = []
         views.reserveCapacity(records.count)
@@ -286,7 +286,7 @@ public final class VoicegroupStore {
     /// Returns the record's current detached publication without loading.
     /// - Parameter id: Identity of a loaded bank.
     /// - Returns: The published view, or nil when the bank is not loaded.
-    func currentPublication(id: VoicegroupId) -> LoadedBankView? {
+    public func currentPublication(id: VoicegroupId) -> LoadedBankView? {
         records[id]?.published
     }
 

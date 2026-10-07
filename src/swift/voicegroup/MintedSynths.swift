@@ -1,5 +1,5 @@
 import Foundation
-import PorydawProjectNative
+import PorydawVoicegroupNative
 
 /// Native waveform storage pinned by the bank handle until its loader allocation is freed.
 // Grafted only by the serialized store before publication; the native buffers stay pinned thereafter.

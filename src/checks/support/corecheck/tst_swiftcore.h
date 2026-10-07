@@ -63,6 +63,7 @@ class SwiftCoreTest final : public QObject
     void samplePitch69();
     void samplePitch81();
     void samplePitch93();
+    void voicegroupParity();
 };
 
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);

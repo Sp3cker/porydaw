@@ -1,7 +1,8 @@
 import Foundation
+import PorydawVoicegroup
 import PorydawCore
 import PorydawProject
-import PorydawProjectNative
+import PorydawVoicegroupNative
 
 // MARK: - Public errors
 
@@ -349,11 +350,11 @@ internal func projectFailure(_ error: any Error) -> ProjectServiceError {
     return .operationFailed(error.localizedDescription)
 }
 
-internal func projectVoice(_ voice: BankVoice) throws -> PorydawProject.VgVoice {
-    guard let macro = PorydawProject.VgMacro(rawValue: voice.macro) else {
+internal func projectVoice(_ voice: BankVoice) throws -> PorydawVoicegroup.VgVoice {
+    guard let macro = PorydawVoicegroup.VgMacro(rawValue: voice.macro) else {
         throw ProjectServiceError.operationFailed("Voice macro ordinal is out of range.")
     }
-    return PorydawProject.VgVoice(
+    return PorydawVoicegroup.VgVoice(
         macro: macro, key: Int(voice.key), pan: Int(voice.pan),
         symbol: voice.symbol, keysplitTable: voice.keysplitTable,
         sweep: Int(voice.sweep), duty: Int(voice.duty), period: Int(voice.period),
@@ -361,7 +362,7 @@ internal func projectVoice(_ voice: BankVoice) throws -> PorydawProject.VgVoice 
         sustain: Int(voice.sustain), release: Int(voice.release))
 }
 
-private func copyVoice(_ voice: PorydawProject.VgVoice) -> BankVoice {
+private func copyVoice(_ voice: PorydawVoicegroup.VgVoice) -> BankVoice {
     let macro = voice.macro.rawValue
     let key = Int32(voice.key)
     let pan = Int32(voice.pan)

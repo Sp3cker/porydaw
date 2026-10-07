@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 
 extension ProjectStore {
     /// Resolves an instrument descriptor to an on-disk or memory-only symbol.

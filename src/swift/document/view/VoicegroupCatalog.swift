@@ -1,4 +1,5 @@
 import PorydawProject
+import PorydawVoicegroup
 
 /// Project-scoped symbol choices used by the voice editor; the bank itself
 /// carries only its currently loaded slot values.

@@ -1,5 +1,5 @@
 import Foundation
-import PorydawProjectNative
+import PorydawVoicegroupNative
 import Synchronization
 
 /// One resolved project file. An unreadable or missing file has no bytes and is not found.

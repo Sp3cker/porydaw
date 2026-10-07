@@ -3,6 +3,7 @@ import PorydawCore
 import PorydawDocument
 import PorydawPlayback
 import PorydawProject
+import PorydawVoicegroup
 import PorydawPlaybackNative
 import PorydawAudioDeviceNative
 import PorydawAppAudio

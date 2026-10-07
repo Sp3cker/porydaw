@@ -1,4 +1,4 @@
-module PorydawProjectNative {
+module PorydawVoicegroupNative {
     header "@PORYAAAA_DIR@/plugin/voicegroup_loader.h"
     export *
 }

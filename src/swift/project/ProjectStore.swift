@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 
 /// Serializes project-store operations; native blocking work belongs on ProjectContext's worker.
 public actor ProjectStore {

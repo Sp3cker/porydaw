@@ -1,9 +1,10 @@
 import Foundation
+import PorydawVoicegroup
 import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
 import PorydawDocument
-import PorydawProjectNative
+import PorydawVoicegroupNative
 import PorydawPlayback
 
 // MARK: - Bank Edit Scenarios
