@@ -30,6 +30,12 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     public var projectRoot: String = RollQmlBootstrap.stagedProjectRoot
     @QtTracked public var preferences = PreferencesStore()
 
+    /// The staged bundled-face files the production shell loads.
+    public let regularFontSource: String = BundledFont.regular.source
+    public let semiboldFontSource: String = BundledFont.semibold.source
+    public let monoFontSource: String = BundledFont.mono.source
+    public let iconsFontSource: String = BundledFont.icons.source
+
     public func resetPreferences() -> Bool {
         preferences.resetPreferences()
     }

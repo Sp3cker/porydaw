@@ -42,8 +42,7 @@ TimelinePanSupport {
             var dy = Math.max(0, Math.floor(row.height * dpr * 0.3))
             for (var py = y - dy; py <= y + dy; ++py) {
                 for (var px = 0; px < a.width; ++px) {
-                    if (a.red(px, py) !== b.red(px, py) || a.green(px, py) !== b.green(px, py)
-                            || a.blue(px, py) !== b.blue(px, py))
+                    if (a.pixel(px, py) !== b.pixel(px, py))
                         return true
                 }
             }

@@ -23,6 +23,23 @@ TestCase {
         ApplicationSession { id: sessionObject }
     }
 
+    FontLoader {
+        id: rollRegularFont
+        source: lane.bootstrap.regularFontSource
+    }
+    FontLoader {
+        id: rollSemiboldFont
+        source: lane.bootstrap.semiboldFontSource
+    }
+    FontLoader {
+        id: rollMonoFont
+        source: lane.bootstrap.monoFontSource
+    }
+    FontLoader {
+        id: rollIconsFont
+        source: lane.bootstrap.iconsFontSource
+    }
+
     Component {
         id: overlayFactory
         SwiftRollOverlay { applicationSession: lane.session }
@@ -62,6 +79,12 @@ TestCase {
     }
 
     function mountOverlay() {
+        lane.verify(lane.waitForNative(function() {
+            return rollRegularFont.status === FontLoader.Ready
+                && rollSemiboldFont.status === FontLoader.Ready
+                && rollMonoFont.status === FontLoader.Ready
+                && rollIconsFont.status === FontLoader.Ready
+        }, 5000), "the bundled fonts load before the production overlay")
         var item = lane.overlayComponent.createObject(lane, {
             "width": lane.width,
             "height": lane.height
