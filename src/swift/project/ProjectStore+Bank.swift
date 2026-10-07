@@ -13,9 +13,7 @@ extension ProjectStore {
         return adoptBankLease(view: try store.loadBank(voicegroupArg: voicegroupArg))
     }
 
-    /// Adopts a loaded bank into Swift ownership: holding the lease's `BankHandle`
-    /// keeps the bank alive via ARC. Internal so the edit surface
-    /// publishes through the same path.
+    /// Pins the published bank through ARC; edits adopt leases through the same path.
     func adoptBankLease(view: LoadedBankView) -> ProjectBankLease {
         publicationRevision += 1
         return ProjectBankLease(

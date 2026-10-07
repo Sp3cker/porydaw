@@ -2,7 +2,7 @@ import Foundation
 import PorydawVoicegroup
 import PorydawVoicegroupNative
 
-/// A detached audio preview; no pointer into the project loader escapes its worker.
+/// A detached audio preview; no pointer into a bank escapes the project worker.
 public enum PickerSound: Sendable {
     case sample(
         bytes: [Int8], frequency: UInt32, loopStart: UInt32,
@@ -24,23 +24,21 @@ public struct PickerSampleInfo: Sendable, Equatable {
 }
 
 struct PickerSampleCache {
-    let set: SampleSetHandle
-    let direct: [String]
-    let waves: [String]
-    let keysplits: [(symbol: String, table: String)]
+    let direct: [String: WaveRef]
+    let waves: [String: ProgWaveRef]
+    let keysplits: [String: (bank: Bank, table: KeysplitTable)]
 }
 
 extension ProjectStore {
-    /// Reads direct-sound metadata from the project's cached sample set.
+    /// Reads direct-sound metadata from the project's cached decoded samples.
     /// - Returns: Metadata for loaded symbols with nonempty sample data.
     public func pickerSampleInfo() -> [String: PickerSampleInfo] {
         guard let cache = loadPickerSamples() else { return [:] }
-        let set = cache.set.raw.pointee
         var info: [String: PickerSampleInfo] = [:]
         info.reserveCapacity(cache.direct.count)
-        for (index, symbol) in cache.direct.enumerated() {
-            guard index < Int(set.count), let wave = set.waves[index],
-                wave.pointee.data != nil, wave.pointee.size > 0
+        for (symbol, reference) in cache.direct {
+            let wave = reference.raw
+            guard wave.pointee.data != nil, wave.pointee.size > 0
             else { continue }
             let rateHz = Int(wave.pointee.freq / 1024)
             guard rateHz > 0 else { continue }
@@ -51,36 +49,25 @@ extension ProjectStore {
         return info
     }
 
-    /// Resolves the picker's symbol through the same project loader as the bank.
+    /// Resolves the picker's symbol through the same Swift builder as loaded banks.
     /// - Parameters:
     ///   - symbol: The complete assembler symbol.
     ///   - kind: `sample`, `wave`, or `keysplit`.
     /// - Returns: Playable detached bytes, or nil for an unresolved or unsupported instrument.
     public func pickerSound(symbol: String, kind: String) -> PickerSound? {
         guard let cache = loadPickerSamples() else { return nil }
-        let set = cache.set
         switch kind {
         case "sample":
-            guard let index = cache.direct.firstIndex(of: symbol),
-                index < Int(set.raw.pointee.count),
-                let wave = set.raw.pointee.waves[index]
-            else { return nil }
-            return Self.sampleSound(wave)
+            guard let wave = cache.direct[symbol] else { return nil }
+            return Self.sampleSound(wave.raw)
         case "wave":
-            guard let index = cache.waves.firstIndex(of: symbol),
-                index < Int(set.raw.pointee.progWaveCount),
-                let wave = set.raw.pointee.progWaves[index]
-            else { return nil }
-            return Self.waveSound(wave)
+            guard let wave = cache.waves[symbol] else { return nil }
+            return Self.waveSound(wave.raw)
         case "keysplit":
-            guard let index = cache.keysplits.firstIndex(where: { $0.symbol == symbol }),
-                index < Int(set.raw.pointee.keysplitCount)
-            else { return nil }
-            let split = set.raw.pointee.keysplits[index]
-            guard let table = split.table, let group = split.subGroup else { return nil }
-            let subIndex = Int(table[60])
+            guard let split = cache.keysplits[symbol] else { return nil }
+            let subIndex = Int(split.table.table[60])
             guard subIndex < 128 else { return nil }
-            let tone = group[subIndex]
+            let tone = split.bank.voices[subIndex]
             guard tone.type & 0xC0 == 0 else { return nil }
             let envelope: (UInt8, UInt8, UInt8, UInt8) =
                 (tone.attack, tone.decay, tone.sustain, tone.release)
@@ -97,21 +84,39 @@ extension ProjectStore {
     }
 
     private func loadPickerSamples() -> PickerSampleCache? {
-        guard let projectContext else { return nil }
+        guard let store = voicegroupStore else { return nil }
         if let pickerSamples { return pickerSamples }
-        let direct = VoicegroupSource.directSoundSymbols(projectRoot)
-        let waves = VoicegroupSource.progWaveSymbols(projectRoot)
-        let keysplits = VoicegroupSource.keysplitInstruments(projectRoot)
-        guard
-            let set = projectContext.loadSamples(
-                direct: direct, wave: waves, keysplit: keysplits.map(\.symbol),
-                tables: keysplits.map(\.table))
-        else { return nil }
-        let cache = PickerSampleCache(
-            set: set, direct: direct, waves: waves,
-            keysplits: keysplits)
-        pickerSamples = cache
-        return cache
+        do {
+            let inputs = try store.bankBuildInputs()
+            let builder = BankBuilder(inputs: inputs)
+            var direct: [String: WaveRef] = [:]
+            var waves: [String: ProgWaveRef] = [:]
+            var keysplits: [String: (bank: Bank, table: KeysplitTable)] = [:]
+            for symbol in VoicegroupSource.directSoundSymbols(projectRoot) {
+                if let wave = try builder.resolveSample(symbol: symbol) { direct[symbol] = wave }
+            }
+            for symbol in VoicegroupSource.progWaveSymbols(projectRoot) {
+                if let wave = try builder.resolveProgWave(symbol: symbol) { waves[symbol] = wave }
+            }
+            var tables = inputs.keysplits
+            var scannedTables = false
+            for instrument in VoicegroupSource.keysplitInstruments(projectRoot) {
+                guard let location = inputs.locator.locateSubgroup(symbol: instrument.symbol) else { continue }
+                let text = try inputs.textProvider(location, true, false)
+                let bank = try builder.build(text, at: location)
+                if tables.table(named: instrument.table) == nil, !scannedTables {
+                    tables = try KeysplitTables.parse(files: inputs.layout.ensuringDeepScan().keysplitTableFiles)
+                    scannedTables = true
+                }
+                guard let table = tables.table(named: instrument.table) else { continue }
+                keysplits[instrument.symbol] = (bank, table)
+            }
+            let cache = PickerSampleCache(direct: direct, waves: waves, keysplits: keysplits)
+            pickerSamples = cache
+            return cache
+        } catch {
+            return nil
+        }
     }
 
     private static func sampleSound(

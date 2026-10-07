@@ -13,7 +13,7 @@ private func loadBankExpect(_ row: String, _ condition: Bool, _ report: CheckRep
 public func runProjectStoreLoadBankSuite(_ report: CheckReport) {
     loadBankProjectRows(report)
     loadBankMintedSymbols(report)
-    loadBankGraftRow(report)
+    loadBankMintedResolution(report)
 }
 
 private func loadBankProjectRows(_ report: CheckReport) {
@@ -59,7 +59,7 @@ private func loadBankProjectRows(_ report: CheckReport) {
             if case .success(let second) = secondLoad {
                 loadBankExpect(
                     "L02", second.sharesBank(with: first), report,
-                    "unchanged bank reuses the native bank identity")
+                    "unchanged bank reuses the Swift bank identity")
                 loadBankExpect(
                     "L07",
                     first.sharesBank(with: second) && first.slotViews.count == 128 && second.slotViews.count == 128
@@ -131,7 +131,7 @@ private func loadBankMintedSymbols(_ report: CheckReport) {
         "reverse synth symbols enforce exact pulse hex, waveform stems, and decimal suffixes")
 }
 
-private func loadBankGraftRow(_ report: CheckReport) {
+private func loadBankMintedResolution(_ report: CheckReport) {
     do {
         try withTempProjectCopy(prefix: "projectstore-loadbank") { root in
             let store = try VoicegroupStore(projectRoot: root.path)
@@ -143,11 +143,17 @@ private func loadBankGraftRow(_ report: CheckReport) {
                 input: .init(
                     id: initial.id, operation: .set(.init(slot: 0, value: minted, expected: original))))
             if case .applied(let changed) = outcome {
+                let wave = changed.view.bank.voices[0].wav
+                let payload = wave?.pointee.data
+                let resolvedSynth =
+                    wave?.pointee.size == 0 && wave?.pointee.status == 0x4000
+                    && payload?[0] == -128 && payload?[1] == 0 && payload?[2] == -128
+                    && payload?[3] == 0 && payload?[4] == 0 && payload?[5] == 0
                 loadBankExpect(
                     "L06",
-                    changed.view.dirty && changed.view.slotViews[0].voice == minted
+                    changed.view.dirty && changed.view.slotViews[0].voice == minted && resolvedSynth
                         && initial.slotViews[0].voice == original && !initial.dirty,
-                    report, "minted symbol loads in edited preview while the old publication stays intact")
+                    report, "minted overlay resolves synth bytes while the old publication stays intact")
                 guard (try? store.saveVoicegroup(id: initial.id)) != nil else {
                     loadBankExpect("L09", false, report, "edited bank failed to persist before adopted reload")
                     return

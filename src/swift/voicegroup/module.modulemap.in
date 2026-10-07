@@ -1,5 +1,4 @@
 module PorydawVoicegroupNative {
-    header "@PORYAAAA_DIR@/plugin/voicegroup_loader.h"
     header "@PORYAAAA_DIR@/plugin/voicegroup_asset_batch.h"
     export *
 }

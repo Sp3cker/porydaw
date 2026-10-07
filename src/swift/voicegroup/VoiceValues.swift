@@ -139,16 +139,16 @@ public struct VoicegroupSlotView: Sendable {
     }
 }
 
-/// Immutable publication of bank state; the bank handle owns its native bank.
+/// Immutable publication of bank state; the bank owns all its borrowed assets.
 public struct LoadedBankView: Sendable {
     public let id: VoicegroupId
-    public let bank: BankHandle
+    public let bank: Bank
     public let loadName: String
     public let dirty: Bool
     public let slotViews: [VoicegroupSlotView]
 
     public init(
-        id: VoicegroupId, bank: BankHandle, loadName: String, dirty: Bool,
+        id: VoicegroupId, bank: Bank, loadName: String, dirty: Bool,
         slotViews: [VoicegroupSlotView]
     ) {
         self.id = id

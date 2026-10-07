@@ -37,6 +37,17 @@ struct BankDigest: Equatable, Codable {
         }
     }
 
+    static func of(_ bank: Bank) -> BankDigest {
+        withExtendedLifetime(bank) {
+            of(voices: bank.voices, names: bank.names) { subgroup in
+                guard let subBank = bank.subBanks.first(where: { UnsafeRawPointer($0.voices) == subgroup }) else {
+                    return nil
+                }
+                return UnsafePointer(subBank.names)
+            }
+        }
+    }
+
     static func of(
         voices: UnsafePointer<ToneData>, names: UnsafePointer<CChar>,
         subBankNames: (UnsafeRawPointer) -> UnsafePointer<CChar>?

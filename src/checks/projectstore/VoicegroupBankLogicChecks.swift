@@ -286,28 +286,52 @@ private func bankLogicHardFailures(_ report: CheckReport) {
                 "B18A", missingEditError is VoicegroupStoreError, report,
                 "editing an unloaded identity throws a domain error")
             guard let original = initial.slotViews[4].voice else { throw BankLogicFixtureError.missingVoice }
-            // A regular file at the per-process preview staging root prevents staging.
-            let blocker = FileManager.default.temporaryDirectory.appendingPathComponent(
-                "porydaw-vgpreview-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)
-            try? FileManager.default.removeItem(at: blocker)
-            try Data("block preview directory".utf8).write(to: blocker)
-            defer { try? FileManager.default.removeItem(at: blocker) }
+            // Programmable waves are decoded afresh, so this read cannot hit the sample cache.
+            let blockedWave = root.appendingPathComponent("sound/programmable_wave_samples/fixture_pulse.pcm")
+            let attributes = try FileManager.default.attributesOfItem(atPath: blockedWave.path)
+            guard let permissions = attributes[.posixPermissions] as? NSNumber else {
+                throw BankLogicFixtureError.missingFixture
+            }
             var replacement = original
             replacement.release = original.release == 9 ? 10 : 9
             var editError: Error?
             do {
-                _ = try store.applyVoicegroupEdit(
-                    input: .init(
-                        id: initial.id, operation: .set(.init(slot: 4, value: replacement, expected: original))))
-            } catch {
-                editError = error
+                try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: blockedWave.path)
+                defer {
+                    do {
+                        try FileManager.default.setAttributes(
+                            [.posixPermissions: permissions], ofItemAtPath: blockedWave.path)
+                    } catch {
+                        report.fail("projectstore-banklogic/B19", "cannot restore fixture wave permissions: \(error)")
+                    }
+                }
+                do {
+                    _ = try store.applyVoicegroupEdit(
+                        input: .init(
+                            id: initial.id, operation: .set(.init(slot: 4, value: replacement, expected: original))))
+                } catch {
+                    editError = error
+                }
             }
             let diskBytes = try Data(contentsOf: path)
             bankLogicExpect(
                 "B19",
                 editError is VoicegroupStoreError && diskBytes == originalBytes
                     && initial.slotViews[4].voice == original, report,
-                "failed native reload throws a domain error without changing disk bytes")
+                "failed Swift asset resolution throws a domain error without changing disk bytes")
+            let restored = store.currentPublication(id: initial.id)
+            let recovered = try store.applyVoicegroupEdit(
+                input: .init(
+                    id: initial.id, operation: .set(.init(slot: 4, value: replacement, expected: original))))
+            if case .applied(let result) = recovered {
+                bankLogicExpect(
+                    "B19A",
+                    restored?.slotViews[4].voice == original && restored?.dirty == false
+                        && result.view.slotViews[4].voice == replacement && result.view.dirty,
+                    report, "failed edit restores the source so the original expected-value edit succeeds afterwards")
+            } else {
+                bankLogicExpect("B19A", false, report, "failed edit must restore the source before the next edit")
+            }
         }
     } catch {
         report.fail("projectstore-banklogic/B18", "B18: hard-failure fixture or operation failed: \(error)")

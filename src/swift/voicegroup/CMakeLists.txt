@@ -1,6 +1,7 @@
 add_library(PorydawVoicegroup STATIC
     AsmLine.swift
     Bank.swift
+    BankBuilder.swift
     KeysplitTables.swift
     ProjectLayout.swift
     SoundDataMap.swift
@@ -14,8 +15,6 @@ add_library(PorydawVoicegroup STATIC
     SynthCatalog.swift
     MintedSynths.swift
     VoicegroupStore.swift
-    ProjectContext.swift
-    FileIo.swift
     ProjectFileStore.swift
     VoicegroupId.swift
     ProjectBankLease.swift

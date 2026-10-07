@@ -1,41 +1,4 @@
 import Foundation
-import PorydawVoicegroupNative
-
-/// Native waveform storage pinned by the bank handle until its loader allocation is freed.
-// Grafted only by the serialized store before publication; the native buffers stay pinned thereafter.
-final class MintedSynthStorage: @unchecked Sendable {
-    let waves: UnsafeMutablePointer<WaveData>
-    let bytes: UnsafeMutablePointer<UInt8>
-
-    init() {
-        waves = .allocate(capacity: 128)
-        waves.initialize(repeating: WaveData(), count: 128)
-        bytes = .allocate(capacity: 128 * 17)
-        bytes.initialize(repeating: 0, count: 128 * 17)
-    }
-
-    deinit {
-        waves.deinitialize(count: 128)
-        waves.deallocate()
-        bytes.deinitialize(count: 128 * 17)
-        bytes.deallocate()
-    }
-
-    func graft(slot: Int, descriptor: VgSynthDesc) -> UnsafeMutablePointer<WaveData> {
-        let wave = waves.advanced(by: slot)
-        let samples = bytes.advanced(by: slot * 17)
-        wave.pointee.status = 0x4000
-        wave.pointee.freq = 0x01058920
-        wave.pointee.data = UnsafeMutableRawPointer(samples).assumingMemoryBound(to: Int8.self)
-        samples[0] = 0x80
-        samples[1] = UInt8(truncatingIfNeeded: descriptor.waveform)
-        samples[2] = UInt8(truncatingIfNeeded: descriptor.baseDuty)
-        samples[3] = UInt8(truncatingIfNeeded: descriptor.dutyStep)
-        samples[4] = UInt8(truncatingIfNeeded: descriptor.modDepth)
-        samples[5] = UInt8(truncatingIfNeeded: descriptor.phase)
-        return wave
-    }
-}
 
 /// Decodes the canonical Golden Sun synth symbol and optional decimal collision suffix.
 /// - Parameter symbol: The voice's exact assembler symbol.
@@ -67,33 +30,4 @@ private func mintedCollisionSuffix(_ suffix: Substring) -> Bool {
     guard suffix.first == "_" else { return false }
     let digits = suffix.dropFirst()
     return !digits.isEmpty && digits.utf8.allSatisfy { (48...57).contains($0) }
-}
-
-extension BankHandle {
-    /// Fills only unresolved direct-sound voices carrying canonical minted synth symbols.
-    /// - Parameter source: The editable voicegroup that produced this loader bank.
-    func graftMintedSynths(source: VoicegroupSource) {
-        let definitions = Dictionary(
-            VoicegroupSource.synthInstruments(source.projectRoot).defs.map {
-                ($0.symbol, $0.descriptor)
-            }, uniquingKeysWith: { first, _ in first })
-        withUnsafeMutablePointer(to: &raw.pointee.voices) { tuple in
-            tuple.withMemoryRebound(to: ToneData.self, capacity: 128) { tones in
-                for slot in 0..<128 {
-                    guard let voice = source.voiceAt(slot: slot), tones[slot].wav == nil else { continue }
-                    switch voice.macro {
-                    case .directSound, .directSoundNoResample, .directSoundAlt: break
-                    default: continue
-                    }
-                    guard
-                        let descriptor = definitions[voice.symbol]
-                            ?? mintedSynthDesc(symbol: voice.symbol)
-                    else { continue }
-                    let storage = mintedStorage ?? MintedSynthStorage()
-                    mintedStorage = storage
-                    tones[slot].wav = storage.graft(slot: slot, descriptor: descriptor)
-                }
-            }
-        }
-    }
 }

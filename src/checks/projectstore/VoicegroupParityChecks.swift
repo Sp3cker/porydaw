@@ -199,6 +199,93 @@ public func runVoicegroupParitySuite(_ report: CheckReport) {
     }
 }
 
+private func parityBuildInputs(_ root: String) throws -> BankBuildInputs {
+    let layout = ProjectLayout(projectRoot: root)
+    let soundMap = try SoundDataMap.parse(files: layout.soundDataFiles)
+    let progMap = try ProgWaveMap.parse(files: layout.programmableWaveFiles)
+    let keysplits = try KeysplitTables.parse(files: layout.keysplitTableFiles)
+    return BankBuildInputs(
+        layout: layout, soundMap: soundMap, progMap: progMap, keysplits: keysplits,
+        cache: WaveCache(), locator: VoicegroupLocator(layout: layout)
+    ) { location, contiguousFill, noSubRecurse in
+        let source = VoicegroupSource()
+        var error: String?
+        guard source.open(location: location, error: &error) else {
+            throw BankBuildError.unreadable(error ?? location.filePath)
+        }
+        return try source.descriptors(contiguousFill: contiguousFill, noSubRecurse: noSubRecurse)
+    }
+}
+
+private func swiftDigest(
+    inputs: BankBuildInputs, target: ParityTarget
+) throws -> (BankDigest, seconds: Double, mallocs: Int, parseSeconds: Double, parseMallocs: Int) {
+    let location = VoicegroupLocation(filePath: target.location.filePath, sectionLabel: target.location.sectionLabel)
+    let builder = BankBuilder(inputs: inputs)
+    let clock = ContinuousClock()
+    let source = VoicegroupSource()
+    var error: String?
+    let parseBefore = parityBlocksInUse()
+    let parseStart = clock.now
+    guard source.open(location: location, error: &error) else {
+        throw BankBuildError.unreadable(error ?? location.filePath)
+    }
+    let parseElapsed = parseStart.duration(to: clock.now).components
+    let parseMallocs = parityBlocksInUse() - parseBefore
+    let before = parityBlocksInUse()
+    let start = clock.now
+    let text = try source.descriptors(contiguousFill: false, noSubRecurse: false)
+    let bank = try builder.build(text, at: location)
+    let elapsed = start.duration(to: clock.now).components
+    let mallocs = parityBlocksInUse() - before
+    return (
+        BankDigest.of(bank), seconds: paritySeconds(elapsed), mallocs: mallocs,
+        parseSeconds: paritySeconds(parseElapsed), parseMallocs: parseMallocs
+    )
+}
+
+private func paritySeconds(_ elapsed: (seconds: Int64, attoseconds: Int64)) -> Double {
+    Double(elapsed.seconds) + Double(elapsed.attoseconds) / 1_000_000_000_000_000_000
+}
+
+private func parityFirstDifference(_ reference: BankDigest, _ swift: BankDigest, path: String = "") -> String? {
+    guard reference.slots.count == swift.slots.count else { return path + "slots.count" }
+    for index in reference.slots.indices {
+        let expected = reference.slots[index]
+        let actual = swift.slots[index]
+        let slotPath = path + "slot \(index)."
+        if let field = parityDifferingField(expected, actual) { return slotPath + field }
+        switch (expected.subBank, actual.subBank) {
+        case (.none, .none):
+            break
+        case (.some(let referenceSub), .some(let swiftSub)):
+            if let difference = parityFirstDifference(referenceSub, swiftSub, path: slotPath + "subBank.") {
+                return difference
+            }
+        case (.none, .some), (.some, .none):
+            return slotPath + "subBank"
+        }
+    }
+    return nil
+}
+
+private func parityDifferingField(_ reference: BankDigest.Slot, _ swift: BankDigest.Slot) -> String? {
+    if reference.type != swift.type { return "type" }
+    if reference.key != swift.key { return "key" }
+    if reference.length != swift.length { return "length" }
+    if reference.panSweep != swift.panSweep { return "panSweep" }
+    if reference.attack != swift.attack { return "attack" }
+    if reference.decay != swift.decay { return "decay" }
+    if reference.sustain != swift.sustain { return "sustain" }
+    if reference.release != swift.release { return "release" }
+    if reference.waveKey != swift.waveKey { return "waveKey" }
+    if reference.progKey != swift.progKey { return "progKey" }
+    if reference.wavePointerBits != swift.wavePointerBits { return "wavePointerBits" }
+    if reference.tableKey != swift.tableKey { return "tableKey" }
+    if reference.name != swift.name { return "name" }
+    return nil
+}
+
 private func parityCheckRoot(_ root: String, snapshots: URL?, report: CheckReport) throws {
     let cppID = "projectstore-parity/VoicegroupParityChecks"
     let fixture = snapshots != nil
@@ -217,9 +304,11 @@ private func parityCheckRoot(_ root: String, snapshots: URL?, report: CheckRepor
         return
     }
     defer { voicegroup_project_free(project) }
+    let inputs = try parityBuildInputs(root)
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     var loaded = 0
+    var equal = 0
     for target in targets {
         let name = String(target.voicegroupArg.drop(while: { $0 == "_" }))
         guard let first = referenceDigest(project: project, target: target) else {
@@ -231,7 +320,22 @@ private func parityCheckRoot(_ root: String, snapshots: URL?, report: CheckRepor
             continue
         }
         loaded += 1
-        print("\(name)  C: \(String(format: "%.3f", first.seconds * 1000)) ms  \(first.mallocs) mallocs")
+        do {
+            let swift = try swiftDigest(inputs: inputs, target: target)
+            let difference = parityFirstDifference(first.0, swift.0)
+            let matches = first.0 == swift.0
+            if matches { equal += 1 }
+            print(
+                "\(name)  C: \(String(format: "%.3f", first.seconds * 1000)) ms  "
+                    + "Swift parse: \(String(format: "%.3f", swift.parseSeconds * 1000)) ms  "
+                    + "build: \(String(format: "%.3f", swift.seconds * 1000)) ms  "
+                    + "mallocs C \(first.mallocs) / Swift parse \(swift.parseMallocs) build \(swift.mallocs)")
+            report.expect(
+                matches, cppID: cppID,
+                message: "\(root)/\(name): Swift equals C; first difference: \(difference ?? "none")")
+        } catch {
+            report.fail(cppID, "\(root)/\(name): Swift bank failed to load: \(error)")
+        }
         report.pass(cppID, row: "\(root)/\(name): reference bank loads")
         guard let second = referenceDigest(project: project, target: target) else {
             if fixture {
@@ -266,6 +370,9 @@ private func parityCheckRoot(_ root: String, snapshots: URL?, report: CheckRepor
         }
     }
     print("parity: \(root): loaded \(loaded)/\(targets.count) hub targets")
+    print("parity: \(root): equal \(equal)/\(loaded) C-loaded targets")
+    report.expectEqual(
+        expected: loaded, actual: equal, cppID: cppID, what: "every C-loaded target has an equal Swift bank")
     if fixture {
         report.expectEqual(expected: targets.count, actual: loaded, cppID: cppID, what: "all fixture targets load")
     }

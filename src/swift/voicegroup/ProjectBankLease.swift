@@ -1,11 +1,10 @@
 import Foundation
 import PorydawVoicegroupNative
 
-/// A Swift-owned lease over a loaded bank, plus a detached snapshot of its source publication.
-/// Holding the `BankHandle` keeps the bank alive via ARC; all other stored values are immutable.
-/// Consumers read the bank through value accessors; `engineVoices` is the single raw handoff.
+/// Pins a bank through ARC and carries an immutable snapshot of its source publication.
+/// Consumers read value accessors; `engineVoices` is the single raw engine handoff.
 public final class ProjectBankLease: @unchecked Sendable {
-    let bank: BankHandle
+    let bank: Bank
     public let id: VoicegroupId
     public let loadName: String
     public let sectionLabel: String
@@ -14,7 +13,7 @@ public final class ProjectBankLease: @unchecked Sendable {
     public let publicationOwner: UUID
     public let publicationRevision: UInt64
 
-    public init(bank: BankHandle, view: LoadedBankView, publicationOwner: UUID, publicationRevision: UInt64) {
+    public init(bank: Bank, view: LoadedBankView, publicationOwner: UUID, publicationRevision: UInt64) {
         self.bank = bank
         id = view.id
         loadName = view.loadName
@@ -38,17 +37,7 @@ public final class ProjectBankLease: @unchecked Sendable {
     /// The loader's name for `slot`, decoded up to its NUL terminator, untrimmed.
     public func voiceName(at slot: Int) -> String {
         Self.requireSlot(slot)
-        return withExtendedLifetime(bank) {
-            let names = (UnsafeRawPointer(bank.raw) + Self.voiceNamesOffset)
-                .assumingMemoryBound(to: CChar.self)
-            let start = names.advanced(by: slot * Int(VG_VOICE_NAME_LEN))
-            let length =
-                (0..<Int(VG_VOICE_NAME_LEN)).first(where: {
-                    start[$0] == 0
-                }) ?? Int(VG_VOICE_NAME_LEN)
-            let bytes = UnsafeRawPointer(start).assumingMemoryBound(to: UInt8.self)
-            return String(decoding: UnsafeBufferPointer(start: bytes, count: length), as: UTF8.self)
-        }
+        return bank.name(at: slot)
     }
 
     /// Resolves the split facts of the tone in `slot` into `VgMacro` ordinals per MIDI key.
@@ -93,52 +82,24 @@ public final class ProjectBankLease: @unchecked Sendable {
     public func drumPadNames(at slot: Int) -> [String]? {
         withVoice(at: slot) { voice in
             let tone = voice.pointee
-            guard tone.type == UInt8(VOICE_KEYSPLIT_ALL),
-                let subgroup = tone.subGroup?.assumingMemoryBound(to: ToneData.self)
-            else { return nil }
-            return (0..<128).map { key in
-                guard let name = voicegroup_subgroup_slot_name(UnsafePointer(bank.raw), subgroup, Int32(key))
-                else { return "" }
-                let bounded = UnsafeBufferPointer(
-                    start: UnsafeRawPointer(name).assumingMemoryBound(to: UInt8.self),
-                    count: Int(VG_VOICE_NAME_LEN))
-                let length = bounded.firstIndex(of: 0) ?? bounded.count
-                return String(decoding: bounded.prefix(length), as: UTF8.self)
-            }
+            guard tone.type == UInt8(VOICE_KEYSPLIT_ALL), let subgroup = bank.subBank(for: tone) else { return nil }
+            return (0..<128).map { subgroup.name(at: $0) }
         }
     }
 
     /// The bank's voice array, for handing to the C audio engine, which stores it.
     /// Valid only while the caller retains this lease. Never use it in document-layer code;
     /// read tones through the value accessors instead.
-    @unsafe public var engineVoices: UnsafeMutablePointer<ToneData> { voices }
-
-    private var voices: UnsafeMutablePointer<ToneData> {
-        (UnsafeMutableRawPointer(bank.raw) + Self.voicesOffset).assumingMemoryBound(to: ToneData.self)
-    }
+    @unsafe public var engineVoices: UnsafeMutablePointer<ToneData> { bank.voices }
 
     private func withVoice<T>(at slot: Int, _ body: (UnsafeMutablePointer<ToneData>) -> T) -> T {
         Self.requireSlot(slot)
-        return withExtendedLifetime(bank) { body(voices + slot) }
+        return withExtendedLifetime(bank) { body(bank.voices + slot) }
     }
 
     private static func requireSlot(_ slot: Int) {
         precondition((0..<Int(VOICEGROUP_SIZE)).contains(slot), "Voicegroup slot \(slot) is out of range.")
     }
-
-    private static let voicesOffset: Int = {
-        guard let offset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices) else {
-            preconditionFailure("LoadedVoiceGroup.voices has no stored offset; header/build mismatch.")
-        }
-        return offset
-    }()
-
-    private static let voiceNamesOffset: Int = {
-        guard let offset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voiceNames) else {
-            preconditionFailure("LoadedVoiceGroup.voiceNames has no stored offset; header/build mismatch.")
-        }
-        return offset
-    }()
 }
 
 extension ToneData {

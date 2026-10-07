@@ -218,15 +218,35 @@ public struct BankBuildInputs {
     public var cache: WaveCache
     public var locator: VoicegroupLocator
     /// Supplies parsed text for sub-voicegroups; the store backs it with its VoicegroupSource cache.
-    public var textProvider: (VoicegroupLocation) throws -> VoicegroupText
+    public var textProvider: (VoicegroupLocation, _ contiguousFill: Bool, _ noSubRecurse: Bool) throws -> VoicegroupText
+    public init(
+        layout: ProjectLayout, soundMap: SoundDataMap, progMap: ProgWaveMap,
+        keysplits: KeysplitTables, cache: WaveCache, locator: VoicegroupLocator,
+        textProvider: @escaping (VoicegroupLocation, _ contiguousFill: Bool, _ noSubRecurse: Bool) throws -> VoicegroupText
+    )
 }
 public enum BankBuildError: Error { case hardFailure(String), cycle(VoicegroupLocation), unreadable(String) }
 public struct BankBuilder {
-    public init(_ inputs: BankBuildInputs)
+    public init(inputs: BankBuildInputs)
     /// spec §6 resolution; sub-voicegroups via textProvider with cycle guard.
     public func build(_ text: VoicegroupText, at location: VoicegroupLocation) throws -> Bank
+    public func resolveSample(symbol: String) throws -> WaveRef?
+    public func resolveProgWave(symbol: String) throws -> ProgWaveRef?
 }
 ```
+
+The descriptor fold supplies `VoicegroupText.endIndex` (including consumed
+malformed slots) and per-descriptor internal `suppressSubgroup` metadata.
+Initial sub-banks request `textProvider(location, true, false)`; include
+successors request `(location, false, true)`. Nested subgroups resolve in the
+initial section, but not after its boundary or in include successors (C §6).
+`VoicegroupLocation` is `Hashable` for the store's source cache.
+`VoicegroupLocator.locateSubgroup(symbol:)` strips one `voicegroup_` prefix and
+uses the C bare-name probe order, including exact monolithic labels; the
+existing picker alias probes retain their semantics.
+Picker sample and programmable-wave previews use the two public resolvers
+without allocating a bank. Missing assets remain soft; decode and overlong-path
+failures throw `BankBuildError.hardFailure`.
 
 ### T8 — cutover contract
 

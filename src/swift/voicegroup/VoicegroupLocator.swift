@@ -1,7 +1,7 @@
 import Foundation
 
 /// Absolute source file and optional bare label selected by the loader.
-public struct VoicegroupLocation: Equatable, Sendable {
+public struct VoicegroupLocation: Hashable, Sendable {
     public let filePath: String
     public let sectionLabel: String
 
@@ -38,6 +38,13 @@ public struct VoicegroupLocator {
         guard let base = Self.subgroupName(symbol, infix: "_drumset", preserveTail: true) else { return nil }
         if let found = subdirectory("drumsets", name: base, layout: layout) { return found }
         return subdirectory("drumsets", name: base, layout: layout.ensuringDeepScan())
+    }
+
+    /// Resolves the C sub-loader's bare name after stripping one voicegroup_ prefix.
+    public func locateSubgroup(symbol: String) -> VoicegroupLocation? {
+        let name = symbol.hasPrefix("voicegroup_") ? String(symbol.dropFirst(11)) : symbol
+        if let found = probe(base: name, label: name, layout: layout) { return found }
+        return probe(base: name, label: name, layout: layout.ensuringDeepScan())
     }
 
     /// Returns the immediate hub successor; a missing successor ends contiguity.

@@ -13,6 +13,7 @@ public struct VgVoiceDesc: Equatable, Sendable {
     public var symbol = ""
     public var tableSymbol = ""
     public var displayName = ""
+    var suppressSubgroup = false
 
     public init() {}
 }
@@ -20,11 +21,13 @@ public struct VgVoiceDesc: Equatable, Sendable {
 /// One bank's parsed slots, with the C sub-bank include-continuation decision.
 public struct VoicegroupText: Sendable {
     public let voices: [VgVoiceDesc?]
+    public let endIndex: Int
     public let continuesIntoIncludedFile: Bool
 
-    public init(voices: [VgVoiceDesc?], continuesIntoIncludedFile: Bool) {
-        precondition(voices.count == 128)
+    public init(voices: [VgVoiceDesc?], endIndex: Int, continuesIntoIncludedFile: Bool) {
+        precondition(voices.count == 128 && (0...128).contains(endIndex))
         self.voices = voices
+        self.endIndex = endIndex
         self.continuesIntoIncludedFile = continuesIntoIncludedFile
     }
 }
@@ -68,6 +71,7 @@ extension VoicegroupSource {
             case .editable, .readOnlyVoice:
                 var descriptor = voices[slot] ?? VgVoiceDesc()
                 descriptor.populate(line)
+                descriptor.suppressSubgroup = inContinuation || noSubRecurse
                 voices[slot] = descriptor
                 slot += 1
                 consumed += 1
@@ -79,7 +83,7 @@ extension VoicegroupSource {
             }
         }
         let continues = contiguousFill && !isMonolithic && slot > 0 && slot < 128
-        return VoicegroupText(voices: voices, continuesIntoIncludedFile: continues)
+        return VoicegroupText(voices: voices, endIndex: slot, continuesIntoIncludedFile: continues)
     }
 }
 

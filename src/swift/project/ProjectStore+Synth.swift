@@ -7,11 +7,14 @@ extension ProjectStore {
     /// - Returns: The reusable symbol, without writing project files.
     /// - Throws: `VoicegroupStoreError` when the project cannot define the waveform.
     public func mintSynth(_ descriptor: VgSynthDesc) throws -> String {
+        guard let store = voicegroupStore else {
+            throw VoicegroupStoreError.operationFailed("Project is not open.")
+        }
         let catalog = VoicegroupSource.synthInstruments(projectRoot)
         if let existing = catalog.defs.first(where: { $0.descriptor == descriptor }) {
             return existing.symbol
         }
-        if let pending = pendingSynths.first(where: { $0.value == descriptor }) {
+        if let pending = store.pendingSynths.first(where: { $0.value == descriptor }) {
             return pending.key
         }
         guard catalog.creatable(), SynthDefinitions.word(for: descriptor, in: catalog) != nil else {
@@ -22,25 +25,25 @@ extension ProjectStore {
         let base = vgSynthSymbolName(descriptor)
         var symbol = base
         var suffix = 2
-        while catalog.find(symbol) != nil || samples.contains(symbol) || pendingSynths[symbol] != nil {
+        while catalog.find(symbol) != nil || samples.contains(symbol) || store.pendingSynths[symbol] != nil {
             symbol = "\(base)_\(suffix)"
             suffix += 1
         }
-        pendingSynths[symbol] = descriptor
+        store.pendingSynths[symbol] = descriptor
         return symbol
     }
 
     func savePendingSynths(for id: VoicegroupId) throws -> [String] {
-        guard let view = voicegroupStore?.currentPublication(id: id) else { return [] }
+        guard let store = voicegroupStore, let view = store.currentPublication(id: id) else { return [] }
         let symbols = Set(view.slotViews.compactMap { $0.voice?.symbol })
-        let definitions = pendingSynths.filter { symbols.contains($0.key) }.sorted { $0.key < $1.key }
+        let definitions = store.pendingSynths.filter { symbols.contains($0.key) }.sorted { $0.key < $1.key }
         guard !definitions.isEmpty else { return [] }
         try SynthDefinitions.write(definitions.map { ($0.key, $0.value) }, root: projectRoot)
         return definitions.map(\.key)
     }
 
     func didSaveSynths(_ symbols: [String]) {
-        for symbol in symbols { pendingSynths.removeValue(forKey: symbol) }
+        for symbol in symbols { voicegroupStore?.pendingSynths.removeValue(forKey: symbol) }
     }
 }
 
