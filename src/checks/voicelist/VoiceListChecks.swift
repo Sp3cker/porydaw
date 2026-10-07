@@ -635,4 +635,9 @@ private func voiceListUsedMarks(_ report: CheckReport) {
     report.expectEqual(
         expected: false, actual: list.slotIsMarkedUsed(slot: 4), cppID: cppID,
         what: "a nil bind clears the used marks")
+    list.setUsedVoices([4])
+    list.bindBank(slots: nil)
+    report.expectEqual(
+        expected: false, actual: list.slotIsMarkedUsed(slot: 4), cppID: cppID,
+        what: "a repeated nil bind clears marks set while unbound")
 }

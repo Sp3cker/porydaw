@@ -64,6 +64,13 @@ Tab return and background reload are covered by
 Compare CPU-profile stacks under keyboard commands separately from loading
 and opening the page.
 
+Unchanged bank rebinds skip Voicegroup row derivation. Bank edits, loading and
+binding transitions, nil-bind used-mark clears, and catalog callbacks still
+refresh rows. Headers, selector, used marks, and editor state update independently.
+Bank titles reuse cached `000`–`127` labels and Swift strings instead of printf.
+Cover with `deno task checks --filter swiftcore-projectsession` and
+`deno task checks:shell --filter shell-voicegroup`.
+
 ## Where the time goes
 
 Fresh tree = new worktree or new `build/<cfg>` directory.

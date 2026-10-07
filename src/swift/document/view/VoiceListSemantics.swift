@@ -297,19 +297,44 @@ public enum VoiceListSemantics {
         return "\(voice.attack & 0xFF) \(voice.decay & 0xFF) \(voice.sustain & 0xFF) \(voice.release & 0xFF)"
     }
 
-    /// voiceColumnText: "NNN  <name>" — sample symbols shed the
-    /// DirectSoundWave prefix so the instrument reads first; symbol-less
-    /// voices fall back to the type name.
+    /// The voice list's fixed bank domain.
+    public static let slotCount = 128
+
+    /// The "NNN" slot numbers of the bank domain, built once.
+    private static let slotLabels: [String] = (0..<slotCount).map(paddedSlotNumber)
+
+    /// The list's "%03d" slot number: cached inside the bank domain, spelled
+    /// the same way outside it.
+    public static func slotLabel(_ slot: Int) -> String {
+        slotLabels.indices.contains(slot) ? slotLabels[slot] : paddedSlotNumber(slot)
+    }
+
+    /// printf "%03d" without Foundation. printf reads the argument as a C
+    /// int, so out-of-domain slots keep that low-32-bit spelling.
+    private static func paddedSlotNumber(_ slot: Int) -> String {
+        let value = Int32(truncatingIfNeeded: slot)
+        let digits = String(value.magnitude)
+        let sign = value < 0 ? "-" : ""
+        let fill = 3 - sign.utf8.count - digits.utf8.count
+        return fill > 0 ? sign + String(repeating: "0", count: fill) + digits : sign + digits
+    }
+
+    /// Titles use "NNN  <name>", stripping DirectSoundWave and its nested Data_ prefix.
+    /// An empty name falls back to the voice type.
     public static func voiceColumnText(slot: Int, symbol: String, typeName: String) -> String {
-        var shown = symbol
+        var shown = symbol[...]
         if shown.hasPrefix("DirectSoundWave") {
-            shown = String(shown.dropFirst("DirectSoundWave".count))
+            shown = shown.dropFirst("DirectSoundWave".count)
             if shown.hasPrefix("Data_") {
-                shown = String(shown.dropFirst("Data_".count))
+                shown = shown.dropFirst("Data_".count)
             }
         }
-        if shown.isEmpty { shown = typeName }
-        return String(format: "%03d  %@", slot, shown)
+        if shown.isEmpty { shown = typeName[...] }
+        var title = slotLabel(slot)
+        title.reserveCapacity(title.utf8.count + 2 + shown.utf8.count)
+        title += "  "
+        title.append(contentsOf: shown)
+        return title
     }
 
     /// SongRegistry::voicegroupDisplayName: the leading underscore folds

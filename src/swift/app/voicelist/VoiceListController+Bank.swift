@@ -81,8 +81,11 @@ extension VoiceListController {
     ) {
         releaseVoice()
         let wasLoading = isLoading
-        publish(\.isLoading, false)
         let bound = newSlots != nil
+        let rowInputsChanged =
+            wasLoading || isBound != bound || slots != (newSlots ?? [])
+            || (newSlots == nil && !usedVoices.isEmpty)
+        publish(\.isLoading, false)
         publish(\.isBound, bound)
         slots = newSlots ?? []
         publish(\.bankDirty, dirty)
@@ -96,7 +99,9 @@ extension VoiceListController {
         if newSlots == nil {
             usedVoices = []
         }
-        rederiveRows()
+        if rowInputsChanged {
+            rederiveRows()
+        }
         editor.refresh()
         updateSelectorEnabled()
     }
@@ -202,7 +207,7 @@ extension VoiceListController {
             publishRow(
                 VoiceListRow(
                     slot: slot,
-                    title: String(format: "%03d  Loading...", slot),
+                    title: VoiceListSemantics.slotLabel(slot) + "  Loading...",
                     used: usedVoices.contains(slot)), at: slot)
             return
         }
@@ -212,7 +217,7 @@ extension VoiceListController {
             publishRow(
                 VoiceListRow(
                     slot: slot,
-                    title: String(format: "%03d  [Blank]", slot),
+                    title: VoiceListSemantics.slotLabel(slot) + "  [Blank]",
                     used: usedVoices.contains(slot)), at: slot)
             return
         }
@@ -258,7 +263,7 @@ extension VoiceListController {
         }
         publishRow(
             VoiceListRow(
-                slot: slot, title: String(format: "%03d", slot),
+                slot: slot, title: VoiceListSemantics.slotLabel(slot),
                 used: usedVoices.contains(slot)), at: slot)
     }
 }
