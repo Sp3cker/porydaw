@@ -1,6 +1,12 @@
 add_library(PorydawVoicegroup STATIC
     AsmLine.swift
+    Bank.swift
+    KeysplitTables.swift
+    ProjectLayout.swift
+    SoundDataMap.swift
+    VoiceDescriptor.swift
     VoiceValues.swift
+    VoicegroupLocator.swift
     VoicegroupSource.swift
     VoicegroupSource+Create.swift
     VoiceEdits.swift
@@ -13,6 +19,7 @@ add_library(PorydawVoicegroup STATIC
     ProjectFileStore.swift
     VoicegroupId.swift
     ProjectBankLease.swift
+    WaveCache.swift
 )
 
 configure_file(
@@ -39,3 +46,8 @@ target_include_directories(PorydawVoicegroup INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawVoicegroup,Swift_MODULE_DIRECTORY>>"
 )
 porydaw_enable_swift_batch_mode(PorydawVoicegroup)
+
+if(PORYDAW_BUILD_CHECKS)
+    target_compile_options(PorydawVoicegroup PRIVATE
+        "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>")
+endif()

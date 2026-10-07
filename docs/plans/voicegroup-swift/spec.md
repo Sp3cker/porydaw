@@ -91,12 +91,12 @@ public enum SoundDataEntry: Equatable, Sendable {
 }
 public struct SoundDataMap: Sendable {
     public var entries: [String: SoundDataEntry]
-    public static func parse(files: [String]) -> SoundDataMap   // spec §2 grammar + duplicate rule
+    public static func parse(files: [String]) throws -> SoundDataMap   // spec §2 grammar + duplicate rule
     public subscript(symbol: String) -> SoundDataEntry? { get }
 }
 public struct ProgWaveMap: Sendable {
     public var entries: [String: String]       // symbol → relative path
-    public static func parse(files: [String]) -> ProgWaveMap
+    public static func parse(files: [String]) throws -> ProgWaveMap
     public subscript(symbol: String) -> String? { get }
 }
 ```
@@ -196,9 +196,14 @@ public struct VoicegroupText: Sendable {
     public let voices: [VgVoiceDesc?]          // 128; nil = slot never written
     public let continuesIntoIncludedFile: Bool // spec §5 contiguousFill continuation needed
 }
+public enum VoicegroupTextError: Error, Equatable, Sendable {
+    case hardFailure(line: Int, reason: String) // one-based source line
+}
 extension VoicegroupSource {
-    /// Descriptors for the loaded section, spec §5 slot-advance rules.
-    public func descriptors() -> VoicegroupText
+    /// Opens an exact location while retaining the editor's non-contiguous section bounds.
+    public func open(location: VoicegroupLocation, error: inout String?) -> Bool
+    /// C :3483 defaults; sub-banks (:2360) use contiguousFill; successors (:2328) use noSubRecurse.
+    public func descriptors(contiguousFill: Bool = false, noSubRecurse: Bool = false) throws -> VoicegroupText
 }
 ```
 

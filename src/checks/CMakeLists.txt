@@ -424,6 +424,10 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         projectstore/ExportCaptureChecks.swift
         projectstore/BankDigest.swift
         projectstore/VoicegroupParityChecks.swift
+        projectstore/ProjectLayoutChecks.swift
+        projectstore/KeysplitTablesChecks.swift
+        projectstore/BankOwnershipChecks.swift
+        projectstore/VoicegroupLocatorChecks.swift
         workspace/editor_view_state_checks.swift
         workspace/session_view_state.swift
         workspace/session_view_state_fanout.swift

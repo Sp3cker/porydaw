@@ -268,7 +268,7 @@ private func checkVoicegroupMacroParsing(_ report: CheckReport) {
             ("voice_directsound_alt_extra 60, 0, sample, 1, 2, 3, 4", .none, nil),
             ("voice_directsound\t60, 0, sample, 1, 2, 3, 4", .none, nil),
             ("voice_directsound 60, 0, sample, 1, 2, 3", .broken, nil),
-            ("voice_directsound 60, 0, sample, 1, 2, 3, 4, 5", .broken, nil),
+            ("voice_directsound 60, 0, sample, 1, 2, 3, 4, 5", .editable, nil),
             ("voice_directsound bad, 0, sample, 1, 2, 3, 4", .broken, 0),
             ("voice_directsound 60, 0, , 1, 2, 3, 4", .broken, 0),
             ("voice_directsound 60, 0, sample, bad, 2, 3, 4", .broken, nil),

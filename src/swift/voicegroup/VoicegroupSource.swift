@@ -10,6 +10,10 @@ public struct SourceLine: Sendable {
     public var macroText: [UInt8] = []
     public var argPieces: [[UInt8]] = []
     public var tail: [UInt8] = []
+    var startingSlot: Int?
+    var isSectionBoundary = false
+    var cryType: UInt8?
+    var hardFailure: String?
 
     public init(raw: [UInt8]) {
         self.raw = raw
@@ -92,6 +96,14 @@ public final class VoicegroupSource {
         return false
     }
 
+    /// Opens an exact loader location without changing editor section-boundary semantics.
+    public func open(location: VoicegroupLocation, error: inout String?) -> Bool {
+        filePath = location.filePath
+        sectionLabel = location.sectionLabel
+        loadName = sectionLabel.isEmpty ? ProjectFileStore.completeBaseName(filePath) : sectionLabel
+        return reload(error: &error)
+    }
+
     /// Re-reads the located file, discarding unsaved edits and resetting pristine bytes.
     /// - Parameter error: Receives a diagnostic if reading or parsing fails.
     /// - Returns: Whether the file was read and its section found.
@@ -148,7 +160,7 @@ public final class VoicegroupSource {
         case invalid(String)
     }
 
-    private struct Declaration {
+    struct Declaration {
         var symbol: String
         var isLabel: Bool
     }
@@ -165,24 +177,14 @@ public final class VoicegroupSource {
     private static let headerPrefix = Array("voice_group ".utf8)
     private static let cryReversePrefix = Array("cry_reverse ".utf8)
     private static let cryPrefix = Array("cry ".utf8)
-    private static let doubleColon: [UInt8] = [58, 58]
-
-    private static let macroDeclaration: NSRegularExpression = {
-        guard let expression = try? NSRegularExpression(pattern: #"^\s*voice_group\s+(\w+)"#) else {
-            preconditionFailure("The voice_group declaration pattern must compile")
-        }
-        return expression
-    }()
-    private static let labelDeclaration: NSRegularExpression = {
-        guard let expression = try? NSRegularExpression(pattern: #"^\s*(voicegroup\w+)::"#) else {
-            preconditionFailure("The voicegroup label pattern must compile")
-        }
-        return expression
-    }()
 
     private func select(path: String, declarations: [Declaration], symbol: String) -> Selection {
         guard let declaration = declarations.first(where: { $0.symbol == symbol }) else { return .absent }
-        if declarations.count > 1 {
+        var editorDeclarations = 0
+        for candidate in declarations where !candidate.isLabel || candidate.symbol.hasPrefix("voicegroup") {
+            editorDeclarations += 1
+        }
+        if editorDeclarations > 1 {
             guard declaration.isLabel else {
                 return .invalid(
                     "\(path) declares \(symbol) with the voice_group macro inside a multi-voicegroup file — not an editable layout."
@@ -198,20 +200,24 @@ public final class VoicegroupSource {
         return .found
     }
 
-    private static func declarations(in content: [UInt8]) -> [Declaration] {
+    static func declarations(in content: [UInt8]) -> [Declaration] {
         var found: [Declaration] = []
         for raw in splitLines(content).lines {
-            let end = raw.last == 13 ? raw.count - 1 : raw.count
-            let line = String(decoding: raw[..<end], as: UTF8.self)
-            let range = NSRange(line.startIndex..<line.endIndex, in: line)
-            if let match = macroDeclaration.firstMatch(in: line, range: range),
-                let name = Range(match.range(at: 1), in: line)
+            let text = raw[contentBounds(raw)]
+            let header = headerPrefix.dropLast()
+            if text.starts(with: header),
+                text.count == header.count || isSpace(text[text.startIndex + header.count])
             {
-                found.append(.init(symbol: "voicegroup_" + String(line[name]), isLabel: false))
-            } else if let match = labelDeclaration.firstMatch(in: line, range: range),
-                let name = Range(match.range(at: 1), in: line)
+                let name = text.dropFirst(header.count).drop(while: isSpace)
+                    .prefix { !isSpace($0) && $0 != 44 }
+                if !name.isEmpty {
+                    found.append(.init(symbol: "voicegroup_" + String(decoding: name, as: UTF8.self), isLabel: false))
+                }
+            } else if let colon = text.firstIndex(of: 58), colon > text.startIndex,
+                colon + 1 < text.endIndex, text[colon + 1] == 58,
+                colon + 2 == text.endIndex || isSpace(text[colon + 2])
             {
-                found.append(.init(symbol: String(line[name]), isLabel: true))
+                found.append(.init(symbol: String(decoding: text[..<colon], as: UTF8.self), isLabel: true))
             }
         }
         return found
@@ -286,6 +292,9 @@ public final class VoicegroupSource {
     }
 
     private func parsedSource(_ content: [UInt8]) -> ParsedSource? {
+        guard sectionLabel.utf8.count < 256,
+            !sectionLabel.utf8.contains(where: { Self.isSpace($0) || $0 == 58 || $0 == 44 })
+        else { return nil }
         let split = Self.splitLines(content)
         var parsed = ParsedSource(
             lines: [], slotToLine: [Int](repeating: -1, count: 128),
@@ -303,113 +312,193 @@ public final class VoicegroupSource {
             let bounds = Self.contentBounds(raw)
             let text = Array(raw[bounds])
             defer { parsed.lines.append(line) }
-            if done || text.isEmpty { continue }
+            if text.isEmpty { continue }
             if !active {
-                guard text.starts(with: marker) else { continue }
+                guard text.starts(with: marker),
+                    text.count == marker.count || Self.isSpace(text[marker.count])
+                else { continue }
                 active = true
                 parsed.sectionBegin = index
-            } else if isMonolithic && voices > 0
-                && (Self.containsAfterFirst(text, Self.doubleColon) || text.starts(with: Self.alignPrefix))
-            {
+            }
+            line.isSectionBoundary =
+                Self.hasSectionLabelSeparator(text) || text.starts(with: Self.alignPrefix)
+            if !done && isMonolithic && voices > 0 && line.isSectionBoundary {
                 done = true
                 parsed.sectionEnd = index
-                continue
             }
-            if nextSlot >= 128 { continue }
             if text.starts(with: Self.headerPrefix) {
                 line.kind = .header
-                if let startingSlot = Self.headerStartingSlot(text) { nextSlot = startingSlot }
+                do {
+                    line.startingSlot = try Self.headerStartingSlot(text)
+                } catch {
+                    line.hardFailure = "voice_group symbol is overlong"
+                }
+                if !done, nextSlot < 128, let startingSlot = line.startingSlot { nextSlot = startingSlot }
                 continue
             }
-            let matchedMacro = VoiceMacroSpec.all.first(where: { text.starts(with: $0.prefix) })
-            let readOnly = text.starts(with: Self.cryReversePrefix) || text.starts(with: Self.cryPrefix)
+            if !done && nextSlot >= 128 { continue }
+            let matchedMacro = VoiceMacroSpec.all.first { text.starts(with: $0.prefix) }
+            let reverseCry = text.starts(with: Self.cryReversePrefix)
+            let readOnly = reverseCry || text.starts(with: Self.cryPrefix)
             guard matchedMacro != nil || readOnly else { continue }
-            line.slot = nextSlot
-            nextSlot += 1
-            voices += 1
-            if let definition = matchedMacro {
-                line.indent = Array(raw[..<bounds.lowerBound])
-                line.macroText = Array(text[..<definition.prefix.count])
-                line.tail = Array(raw[bounds.upperBound...])
-                line.argPieces = Self.split(text[definition.prefix.count...], on: 44)
-                if let voice = Self.decode(definition, pieces: line.argPieces) {
-                    line.kind = .editable
-                    line.voice = voice
-                } else {
-                    line.kind = .broken
-                }
-            } else {
-                line.kind = .readOnlyVoice
+            if !done {
+                line.slot = nextSlot
+                nextSlot += 1
+                voices += 1
+                parsed.slotToLine[line.slot] = index
             }
-            if line.slot < 128 { parsed.slotToLine[line.slot] = index }
+            do {
+                if let definition = matchedMacro {
+                    let argumentStart = definition.prefix.count
+                    line.indent = Array(raw[..<bounds.lowerBound])
+                    line.macroText = Array(text[..<argumentStart])
+                    line.tail = Array(raw[bounds.upperBound...])
+                    line.argPieces = Self.split(text[argumentStart...], on: 44)
+                    if let voice = try Self.decode(definition, arguments: text[argumentStart...]) {
+                        line.kind = .editable
+                        line.voice = voice
+                    } else {
+                        line.kind = .broken
+                    }
+                } else {
+                    var arguments = text[(reverseCry ? Self.cryReversePrefix.count : Self.cryPrefix.count)...]
+                    if let symbol = try Self.extractSymbol(&arguments, comma: false) {
+                        line.kind = .readOnlyVoice
+                        line.voice.symbol = symbol
+                        line.cryType = reverseCry ? 0x30 : 0x20
+                    } else {
+                        line.kind = .broken
+                    }
+                }
+            } catch {
+                line.kind = .broken
+                line.hardFailure = "voice symbol is overlong"
+            }
         }
         return parsed.sectionBegin >= 0 ? parsed : nil
     }
 
-    private static func decode(_ spec: VoiceMacroSpec, pieces: [[UInt8]]) -> VgVoice? {
-        guard pieces.count == spec.argumentCount else { return nil }
-        let values = pieces.map { piece in
-            var start = 0
-            var end = piece.count
-            while start < end && isSpace(piece[start]) { start += 1 }
-            while end > start && isSpace(piece[end - 1]) { end -= 1 }
-            return Array(piece[start..<end])
-        }
-        for (index, value) in values.enumerated() {
-            let symbol = spec.category == .keysplit || index == spec.symbolField
-            guard symbol ? !value.isEmpty : isInteger(value) else { return nil }
-        }
+    private enum ArgumentError: Error { case overlongSymbol }
+
+    private static func decode(_ spec: VoiceMacroSpec, arguments: ArraySlice<UInt8>) throws -> VgVoice? {
+        var rest = arguments
         var voice = VgVoice(macro: spec.macro)
         if spec.category == .keysplitAll {
-            voice.symbol = String(decoding: values[0], as: UTF8.self)
+            guard let symbol = try extractSymbol(&rest, comma: false) else { return nil }
+            voice.symbol = symbol
         } else if spec.category == .keysplit {
-            voice.symbol = String(decoding: values[0], as: UTF8.self)
-            voice.keysplitTable = String(decoding: values[1], as: UTF8.self)
+            guard let symbol = try extractSymbol(&rest, comma: true),
+                let table = try extractSymbol(&rest, comma: false)
+            else { return nil }
+            voice.symbol = symbol
+            voice.keysplitTable = table
         } else {
-            voice.key = number(values[0])
-            voice.pan = number(values[1])
-            var index = 2
+            guard let key = nextInteger(&rest), expectComma(&rest),
+                let pan = nextInteger(&rest), expectComma(&rest)
+            else { return nil }
+            voice.key = key
+            voice.pan = pan
             if spec.symbolField != nil {
-                voice.symbol = String(decoding: values[index], as: UTF8.self)
-                index += 1
+                guard let symbol = try extractSymbol(&rest, comma: true) else { return nil }
+                voice.symbol = symbol
             } else if spec.category == .square1 {
-                voice.sweep = number(values[index]); index += 1
-                voice.duty = number(values[index]); index += 1
-            } else if spec.category == .square2 {
-                voice.duty = number(values[index]); index += 1
+                guard let sweep = nextInteger(&rest), expectComma(&rest),
+                    let duty = nextInteger(&rest), expectComma(&rest)
+                else { return nil }
+                voice.sweep = sweep
+                voice.duty = duty
             } else {
-                voice.period = number(values[index]); index += 1
+                guard let bits = nextInteger(&rest), expectComma(&rest) else { return nil }
+                if spec.category == .square2 { voice.duty = bits } else { voice.period = bits }
             }
-            voice.attack = number(values[index]); index += 1
-            voice.decay = number(values[index]); index += 1
-            voice.sustain = number(values[index]); index += 1
-            voice.release = number(values[index])
+            guard let attack = nextInteger(&rest), expectComma(&rest),
+                let decay = nextInteger(&rest), expectComma(&rest),
+                let sustain = nextInteger(&rest), expectComma(&rest),
+                let release = nextInteger(&rest)
+            else { return nil }
+            voice.attack = attack
+            voice.decay = decay
+            voice.sustain = sustain
+            voice.release = release
         }
         return voice
     }
 
-    private static func number(_ bytes: [UInt8]) -> Int { Int(String(decoding: bytes, as: UTF8.self)) ?? 0 }
-    private static func isInteger(_ bytes: [UInt8]) -> Bool {
-        guard !bytes.isEmpty else { return false }
-        let start = bytes[0] == 43 || bytes[0] == 45 ? 1 : 0
-        return start < bytes.count && bytes[start...].allSatisfy { (48...57).contains($0) }
+    private static func nextInteger(_ rest: inout ArraySlice<UInt8>) -> Int? {
+        var bytes = rest.drop(while: isSpace)
+        let negative = bytes.first == 45
+        if bytes.first == 43 || negative { bytes = bytes.dropFirst() }
+        var radix = 10
+        if bytes.first == 48 {
+            radix = 8
+            if bytes.count > 2 {
+                let second = bytes[bytes.startIndex + 1]
+                if (second == 120 || second == 88), let digit = digitValue(bytes[bytes.startIndex + 2]), digit < 16 {
+                    radix = 16
+                    bytes = bytes.dropFirst(2)
+                }
+            }
+        }
+        let start = bytes.startIndex
+        var magnitude = 0
+        let limit = negative ? 2_147_483_648 : 2_147_483_647
+        while let first = bytes.first, let digit = digitValue(first), digit < radix {
+            guard magnitude <= (limit - digit) / radix else { return nil }
+            magnitude = magnitude * radix + digit
+            bytes = bytes.dropFirst()
+        }
+        guard bytes.startIndex > start else { return nil }
+        rest = bytes
+        return negative ? -magnitude : magnitude
     }
+
+    private static func digitValue(_ byte: UInt8) -> Int? {
+        switch byte {
+        case 48...57: Int(byte - 48)
+        case 65...70: Int(byte - 65) + 10
+        case 97...102: Int(byte - 97) + 10
+        default: nil
+        }
+    }
+
+    private static func expectComma(_ rest: inout ArraySlice<UInt8>) -> Bool {
+        rest = rest.drop(while: { $0 == 32 || $0 == 9 })
+        guard rest.first == 44 else { return false }
+        rest = rest.dropFirst()
+        return true
+    }
+
+    private static func extractSymbol(_ rest: inout ArraySlice<UInt8>, comma: Bool) throws -> String? {
+        var bytes = rest.drop(while: { $0 == 32 || $0 == 9 })
+        let end: Int
+        if comma {
+            guard let separator = bytes.firstIndex(of: 44) else { return nil }
+            end = separator
+        } else {
+            end = bytes.endIndex
+        }
+        var symbol = bytes[..<end]
+        while let last = symbol.last, isSpace(last) { symbol = symbol.dropLast() }
+        symbol = symbol.drop(while: isSpace)
+        guard !symbol.isEmpty else { return nil }
+        guard symbol.count < 256 else { throw ArgumentError.overlongSymbol }
+        bytes = comma ? bytes[(end + 1)...] : bytes[end...]
+        rest = bytes
+        return String(decoding: symbol, as: UTF8.self)
+    }
+
     private static func isSpace(_ byte: UInt8) -> Bool { byte == 32 || (9...13).contains(byte) }
 
-    private static func headerStartingSlot(_ text: [UInt8]) -> Int? {
-        guard let comma = text[12...].firstIndex(of: 44) else { return nil }
-        let rest = text[(comma + 1)...].drop(while: isSpace)
-        let signed = rest.first == 43 || rest.first == 45
-        let digits = rest.dropFirst(signed ? 1 : 0).prefix { (48...57).contains($0) }
-        guard !digits.isEmpty else { return nil }
-        let number = Array(rest.prefix(digits.count + (signed ? 1 : 0)))
-        // The C loader accepts a decimal prefix, ignoring later comment or text.
-        guard let slot = Int(String(decoding: number, as: UTF8.self)), (1..<128).contains(slot) else { return nil }
+    private static func headerStartingSlot(_ text: [UInt8]) throws -> Int? {
+        var arguments = text[12...]
+        guard try extractSymbol(&arguments, comma: true) != nil,
+            let slot = nextInteger(&arguments), (1..<128).contains(slot)
+        else { return nil }
         return slot
     }
 
-    private static func contentBounds(_ raw: [UInt8]) -> Range<Int> {
-        var end = raw.firstIndex(of: 64) ?? raw.count
+    static func contentBounds(_ raw: [UInt8]) -> Range<Int> {
+        var end = min(raw.firstIndex(of: 64) ?? raw.count, raw.firstIndex(of: 0) ?? raw.count)
         if raw.count >= 2 {
             for index in 0..<(raw.count - 1) where raw[index] == 47 && raw[index + 1] == 47 {
                 end = min(end, index)
@@ -448,7 +537,11 @@ public final class VoicegroupSource {
         return false
     }
 
-    private static func containsAfterFirst(_ bytes: [UInt8], _ needle: [UInt8]) -> Bool {
-        contains(bytes, needle, startingAt: 1)
+    private static func hasSectionLabelSeparator(_ bytes: [UInt8]) -> Bool {
+        guard bytes.count >= 2 else { return false }
+        for index in 0..<(bytes.count - 1) where bytes[index] == 58 && bytes[index + 1] == 58 {
+            return index > 0
+        }
+        return false
     }
 }

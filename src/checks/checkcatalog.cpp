@@ -271,6 +271,38 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureFiles = project + editor,
              .platforms = swiftPlatforms});
         result.push_back(
+            {.name = "projectstore-layout",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectLayout"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project + editor,
+             .platforms = swiftPlatforms});
+        result.push_back(
+            {.name = "projectstore-keysplits",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "keysplitTables"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project + editor,
+             .platforms = swiftPlatforms});
+        result.push_back(
+            {.name = "projectstore-bank",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "bankOwnership"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project + editor,
+             .platforms = swiftPlatforms});
+        result.push_back(
+            {.name = "projectstore-locator",
+             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupLocator"}),
+             .handler = swiftCore,
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = project + editor,
+             .platforms = swiftPlatforms});
+        result.push_back(
             {.name = "projectstore-actor",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreActor"}),
              .handler = swiftCore,
