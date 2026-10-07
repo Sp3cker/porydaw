@@ -1,4 +1,5 @@
 import Foundation
+import PorydawBackups
 import PorydawCore
 import PorydawProject
 
@@ -179,12 +180,23 @@ extension ProjectService {
             if let bank {
                 refreshed = try await saveBankStage(bank, in: store)
             }
+            try Task.checkCancellation()
+            guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
+            if let bytes = try rawMidiBytes(source: snapshot.destination) {
+                try await backups.preserveOriginal(songName: snapshot.destination.label, bytes: bytes)
+                try Task.checkCancellation()
+                guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
+                try await backups.record(songName: snapshot.destination.label, bytes: bytes)
+                try Task.checkCancellation()
+                guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
+            }
             do {
                 try await store.writeFile(snapshot.destination.midiPath, data: Data(snapshot.bytes))
             } catch ProjectFileStoreError.cannotWrite(let path) {
                 throw ProjectServiceError.songSaveUnavailable(
                     label: snapshot.destination.label, path: path)
             }
+            guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
             var flagsWritten = false
             if snapshot.flagsNeeded {
                 let midiDir = URL(filePath: snapshot.destination.midiPath)
@@ -194,6 +206,7 @@ extension ProjectService {
                     config: snapshot.config)
                 flagsWritten = true
             }
+            guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
             return SaveReceipt(flagsWritten: flagsWritten, bank: refreshed)
         } catch {
             let failure = projectFailure(error)

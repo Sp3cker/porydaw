@@ -1,6 +1,7 @@
 import Foundation
 import PorydawAppCommands
 import PorydawAppPresentation
+import PorydawBackups
 import PorydawDocument
 import PorydawNativeHost
 import QtBridge
@@ -51,6 +52,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     private var hasLoadedWorkspace = false
     private var hasObservedStartupEditor = false
     @QtIgnored var closeSettlementTask: Task<Void, Never>?
+    private var backupsFolderTask: Task<Void, Never>?
     @QtTracked public var themeMode = "vanilla"
     @QtTracked public var gridLineContrast = 50
     public var dockColumnMinWidth: Int = 15 * 13
@@ -104,6 +106,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     }
 
     isolated deinit {
+        backupsFolderTask?.cancel()
         if let clipboardObserver { clipboard.removeChangeObserver(clipboardObserver) }
     }
 
@@ -115,7 +118,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
     public func action(id: String) -> Optional<ShellActionState> {
         if let state = actionStates[id] { return state }
         guard ShellActionCatalog.byId[id] != nil else { return nil }
-        let label = id == "help.about" ? "About porydaw" : keybindings.label(id)
+        let keybindingLabel = id == "help.about" ? "About porydaw" : keybindings.label(id)
+        let label = keybindingLabel.isEmpty ? ShellActionCatalog.menuLabels[id] ?? "" : keybindingLabel
         let state = ShellActionState(
             enabled: isActionEnabled(id: id, workspaceLoaded: hasLoadedWorkspace),
             checked: isActionChecked(id: id), checkable: isActionCheckable(id: id), label: label,
@@ -155,6 +159,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         }
         switch id {
         case "file.open_project": chooseProjectRequested()
+        case "file.open_backups": requestBackupsFolder()
         case "songs.find": session.songDockController().presenter.focusSearch()
         case "file.new_song": session.songDockController().newSongController().requestNewSong()
         case "file.import_midi": session.songDockController().midiImportController().requestImport()
@@ -205,6 +210,30 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "help.about": aboutRequested()
         default: break
         }
+    }
+
+    private func requestBackupsFolder() {
+        guard backupsFolderTask == nil else { return }
+        backupsFolderTask = Task { @MainActor [weak self] in
+            do {
+                let directory = try await MidiBackupStore.shared.directory()
+                guard !Task.isCancelled, let self, self.sceneActive, !self.closing else { return }
+                self.backupsFolderTask = nil
+                self.backupsFolderRequested(url: directory.absoluteString)
+            } catch {
+                guard !Task.isCancelled, let self, self.sceneActive, !self.closing else { return }
+                self.backupsFolderTask = nil
+                self.presentFailure(title: "Open Backups Failed", message: error.localizedDescription)
+            }
+        }
+    }
+
+    /// Reports an OS explorer rejection through the shell's existing failure surface.
+    public func backupsFolderOpenFailed(url: String) {
+        guard sceneActive, !closing else { return }
+        presentFailure(
+            title: "Open Backups Failed",
+            message: "The operating system could not open the backups folder:\n\(url)")
     }
 
     public func routeEditorKey(key: Int, modifiers: Int, autoRepeat: Bool) -> Bool {
@@ -280,6 +309,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
     private func finishClose() {
         guard !closing else { return }
         closing = true
+        backupsFolderTask?.cancel()
+        backupsFolderTask = nil
         // This must precede sceneActive=false: workspace input cancellation
         // still reaches the live QML scene (ApplicationSession.hostClosing).
         session.hostClosing()
@@ -531,6 +562,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     }
 
     @QtSignal public func chooseProjectRequested()
+    @QtSignal public func backupsFolderRequested(url: String)
     @QtSignal public func settingsRequested(songFirst: Bool)
     @QtSignal public func aboutRequested()
     @QtSignal public func quitRequested()

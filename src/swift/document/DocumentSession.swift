@@ -152,6 +152,11 @@ public final class DocumentSession {
     public var onViewportRepair: ((ViewportRepair) -> Void)?
 
     public var onPlayback: ((PlaybackTimeline) -> Void)?
+    public var onBackupFailure: ((String) -> Void)?
+    private var periodicBackupTask: Task<Void, Never>?
+    private var activeBackupTask: Task<Void, Error>?
+    private var lastBackedUpRevision: UInt64?
+    private var lastBackupFailure: String?
     internal var selectionTransitionObservers: [UUID: (SelectionTransition) -> Void] = [:]
 
     public func addSelectionTransitionObserver(_ observer: @escaping (SelectionTransition) -> Void) -> UUID {
@@ -196,6 +201,64 @@ public final class DocumentSession {
             self?.handleDocumentChange(change)
         }
         sharedBank.attach(self)
+        periodicBackupTask = Task { [weak self] in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(60))
+                    guard !Task.isCancelled, self != nil else { return }
+                    try await self?.backupNow()
+                } catch is CancellationError {
+                    return
+                } catch {
+                    // backupNow publishes failures and leaves the revision eligible for retry.
+                }
+            }
+        }
+    }
+
+    deinit {
+        periodicBackupTask?.cancel()
+        activeBackupTask?.cancel()
+    }
+
+    /// Records changed dirty state without saving or changing document history.
+    public func backupNow() async throws {
+        try requireOpen()
+        try Task.checkCancellation()
+        if let activeBackupTask {
+            try await activeBackupTask.value
+            try requireOpen()
+            return
+        }
+        guard document.isDirty, document.revision != lastBackedUpRevision else { return }
+        do {
+            let snapshot = try document.captureSave()
+            let service = service
+            let task = Task { try await service.backup(snapshot) }
+            activeBackupTask = task
+            defer { activeBackupTask = nil }
+            try await task.value
+            try requireOpen()
+            try Task.checkCancellation()
+            guard document.source == snapshot.destination else { return }
+            lastBackedUpRevision = snapshot.revision
+            lastBackupFailure = nil
+        } catch {
+            if !isClosed, !(error is CancellationError) {
+                let reason: String
+                if case let .operationFailed(message) = projectFailure(error) {
+                    reason = message
+                } else {
+                    reason = String(describing: error)
+                }
+                let message = "Backup \(document.source.label): \(reason)"
+                if lastBackupFailure != message {
+                    lastBackupFailure = message
+                    onBackupFailure?(message)
+                }
+            }
+            throw error
+        }
     }
 
     /// Coalesces synchronous session mutations into one publication. Nested
@@ -268,6 +331,7 @@ public final class DocumentSession {
         let snapshot = try document.captureSave()
         if !forceOverwrite { try checkMidiConflict(against: snapshot) }
         let receipt = try await service.save(snapshot, bank: bank)
+        try requireOpen()
         document.didSave(snapshot)
         lastKnownMidiBytes = snapshot.bytes
         var domains: SessionChangeDomains = [.dirty, .history]
@@ -448,12 +512,19 @@ public final class DocumentSession {
     @discardableResult
     public func close() async -> Bool {
         guard !bankPersistenceInFlight, !document.history.bankTransitionInFlight else { return false }
+        isClosed = true
+        periodicBackupTask?.cancel()
+        periodicBackupTask = nil
+        activeBackupTask?.cancel()
+        // Draining cancelled work is cleanup; backupNow already reports non-cancellation failures.
+        _ = try? await activeBackupTask?.value
+        activeBackupTask = nil
+        onBackupFailure = nil
         onChange = nil
         onViewportRepair = nil
         selectionTransitionObservers.removeAll()
         onPlayback = nil
         document.onChange = nil
-        isClosed = true
         sharedBank.detach(self)
         return true
     }

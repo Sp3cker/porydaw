@@ -14,6 +14,7 @@ enum ShellActionCatalog {
 
     static let actions: [Action] = [
         Action("file.open_project"),
+        Action("file.open_backups"),
         Action("file.new_song"),
         Action("file.import_midi"),
         Action("songs.find"),
@@ -123,6 +124,7 @@ enum ShellActionCatalog {
     ]
     static let menuLabels = [
         "file.open_project": "Open Project...",
+        "file.open_backups": "Open Backups...",
         "file.import_midi": "Import MIDI...",
         "file.export_wav": "Export WAV...",
         "tools.import_sample": "Import Sample...",

@@ -6,7 +6,7 @@
 # Invariant: no file in this target may import (transitively or directly)
 # QtBridge, QtBridgeCpp, Qt, or any PorydawApp* module, and this target
 # must never pass -cxx-interoperability-mode. Allowed: Foundation,
-# Synchronization, PorydawCore, PorydawProject, PorydawProjectNative (C loader).
+# Synchronization, PorydawBackups, PorydawCore, PorydawProject, PorydawProjectNative (C loader).
 add_library(PorydawDocument STATIC
     DocumentSession.swift
     DocumentSession+Internals.swift
@@ -57,4 +57,4 @@ if(PORYDAW_BUILD_CHECKS)
         "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>")
 endif()
 
-target_link_libraries(PorydawDocument PUBLIC PorydawCore PorydawProject)
+target_link_libraries(PorydawDocument PUBLIC PorydawBackups PorydawCore PorydawProject)

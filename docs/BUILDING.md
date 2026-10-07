@@ -13,6 +13,7 @@ deno task build:checks [--release|--asan]  # porydaw + porydaw_checks + mid2agb
 deno task checks ... [--asan]              # builds porydaw_checks, mid2agb, all_aotstats, then runs
 deno task checks:qml ... [--asan]          # editor drawer QML lane (same flags for checks:qml-roll, checks:shell)
 deno task checks:qml-aot [--release|--asan] # builds porydaw + all_aotstats, then the AOT ratchet
+deno task checks:backups                 # Foundation-only Swift package tests; no app/Qt build
 ```
 
 AGENTS.md § Build & checks is the task index; this file is the pipeline
@@ -32,6 +33,44 @@ things a bare `cmake --build` does not:
    command changed, before and (if a reconfigure happened mid-build) after the build.
 3. **Summarize**: only actionable lines are printed; everything is in
    `build/<cfg>/build.log`. Read that log on failure; rebuilding adds no detail.
+
+## Standalone backup module
+
+`src/swift/backups` is the `PorydawBackups` Swift 6 package. It depends only on
+Foundation. SwiftPM and the application's CMake target compile the same
+`MidiBackupStore.swift`; no copied implementation or app test harness is involved.
+
+From the repository, run `deno task checks:backups`. Outside the app build, run:
+
+```bash
+swift test --package-path src/swift/backups
+```
+
+The package directory can be used as a local SwiftPM dependency or copied out of
+the repository. Import `PorydawBackups` and initialize `MidiBackupStore(root:)`
+with an explicit backup directory. Call `preserveOriginal(songName:bytes:at:)`
+for initial raw bytes, and `record(songName:bytes:at:)` for subsequent snapshots.
+Both are actor-isolated throwing methods. `directory()` creates and returns the
+root. Without an explicit root, the existing Porydaw app-data location applies.
+Storage treats MIDI as opaque bytes; it does not parse or repair them.
+
+Swift Testing covers real filesystem storage, naming, deduplication, retention,
+restart and write failures. Porydaw's `swiftcore-projectsession` lane retains the
+document/save integration checks; storage tests do not import its model or Qt.
+Run these tests as a regular user: the unreadable-snapshot regression requires
+filesystem permissions to deny a read and intentionally fails if root bypasses them.
+
+One-source incremental app-build check on 2026-10-07, Apple Silicon, Debug:
+
+| Storage placement | Warm `build:app` wall time | Swift module rebuilt |
+|---|---:|---|
+| Before extraction | 1.08 s | PorydawProject, 34 sources |
+| Standalone module | 0.59 s | PorydawBackups, 1 source |
+
+Measured once per layout with `touch MidiBackupStore.swift` followed by
+`/usr/bin/time -p deno task build:app`, with no concurrent builds. The logs showed
+only the named Swift module rebuilding; this is an unchanged-interface
+invalidation measurement, not a clean-build benchmark.
 
 ## Lifetime-aware Swift views
 

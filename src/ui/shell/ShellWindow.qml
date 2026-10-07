@@ -178,6 +178,10 @@ ThemedWindow {
     }
     Connections {
         target: shell
+        function onBackupsFolderRequested(url: string): void {
+            if (!Qt.openUrlExternally(url))
+                shell.backupsFolderOpenFailed(url)
+        }
         function onCloseReadyChanged(): void {
             if (!shell.closeReady)
                 return

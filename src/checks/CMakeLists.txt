@@ -400,6 +400,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_project"
         SOURCES
         workspace/SessionChecks.swift
+        projectstore/MidiBackupChecks.swift
         projectstore/ProjectIdentityChecks.swift
         projectstore/SongModelChecks.swift
         projectstore/MidiCfgChecks.swift

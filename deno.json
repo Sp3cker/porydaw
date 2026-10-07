@@ -1,6 +1,7 @@
 {
   "tasks": {
     "checks": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts checks",
+    "checks:backups": "swift test --package-path src/swift/backups --scratch-path build/backups",
     "build": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build",
     "build:app": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:app",
     "build:checks": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:checks",

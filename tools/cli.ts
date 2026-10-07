@@ -86,6 +86,7 @@ Examples:
 // this stays in sync with the task table.
 export const ROOT_HELP = `usage: deno task <command> [options]
   checks           build and run checks
+  checks:backups   test the standalone backup package without Qt or the app
   build            this help (deno task build, not a real build)
   build:app        build the application
   build:checks     build the application, checks, and mid2agb

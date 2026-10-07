@@ -39,7 +39,11 @@ public func pdcSuiteRun(
     case PDC_SUITE_XCMD_EDITS: onMain(report, runXcmdEditsSuite)
     case PDC_SUITE_MIDI_IMPORT: runMidiImportSuite(report)
     case PDC_SUITE_TIME_EDITS: onMain(report, runTimeEditsSuite)
-    case PDC_SUITE_PROJECT_SESSION: onMain(report, runProjectSessionSuite)
+    case PDC_SUITE_PROJECT_SESSION:
+        onMain(report) {
+            runProjectSessionSuite($0)
+            runMidiBackupChecks($0)
+        }
     case PDC_SUITE_BANK_HISTORY: onMain(report, runBankHistorySuite)
     case PDC_SUITE_PROJECT_IDENTITY: runProjectIdentitySuite(report)
     case PDC_SUITE_SONG_MODEL: runSongModelSuite(report)

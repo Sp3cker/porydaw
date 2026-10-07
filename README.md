@@ -14,6 +14,37 @@ View the [Changelog][changelog] to see what's new.
 
 <img src="docsrc/img/introduction-porydaw-screen.png" width="600" alt="Porydaw main window">
 
+## MIDI backups
+
+Porydaw snapshots changed, unsaved MIDI every 60 seconds, including songs in
+background tabs. Before saving over a MIDI file, it also backs up the exact
+existing bytes. If that backup fails, the MIDI overwrite is refused.
+An unreadable older snapshot does not block a fresh backup.
+
+Use **File > Open Backups...** to open the backups folder in your OS file explorer.
+Backups are ordinary MIDI files: `Backups/song/song1.mid`, `song2.mid`, and so on.
+The next increment comes from the existing filenames; there are no metadata or
+counter files. Same-named songs share a folder, including across projects.
+
+File 1 is the first backup and is never automatically deleted. Porydaw also keeps
+the ten highest increments and the first backup from each of the last thirty UTC
+days with backups, using file modification dates for the daily grouping.
+Consecutive identical snapshots are skipped. Inactive days do not expire backups;
+closing Porydaw does not remove them. Unrelated files and old-format backup
+directories are left untouched.
+
+Backups live under `~/Library/Application Support/porydaw/Backups` on macOS,
+`%LOCALAPPDATA%\porydaw\Backups` on Windows, and `$XDG_DATA_HOME/porydaw/Backups`
+(`~/.local/share/porydaw/Backups` by default) on Linux. To recover manually, copy
+the chosen MIDI out of its backup folder before importing it or replacing your
+project's MIDI with Porydaw closed. Backups protect MIDI only, not voicegroups,
+samples, or other project files, and do not replace an external disk backup.
+
+The storage module is a standalone, Foundation-only Swift package at
+`src/swift/backups`. Run `deno task checks:backups` to test it without building
+Porydaw or Qt. See [Building Porydaw](docs/BUILDING.md#standalone-backup-module)
+for the module interface and standalone command.
+
 ## Download
 
 Download Porydaw below to start using it immediately. Older versions of Porydaw may be downloaded from the [Releases][releases] page.

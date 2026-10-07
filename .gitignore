@@ -1,6 +1,8 @@
 build/
 build-*/
 .cache/
+.build/
+.swiftpm/
 compile_commands.json
 CMakeUserPresets.json
 *.user

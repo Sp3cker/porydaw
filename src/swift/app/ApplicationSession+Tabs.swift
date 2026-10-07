@@ -192,6 +192,12 @@ extension ApplicationSession {
                 session = try await DocumentSession.open(
                     service: service, label: label, sampleRate: audio.sampleRate)
             }
+            session.onBackupFailure = { [weak self, weak session] message in
+                guard let self, let session, !self.isDisposed, !session.isClosed,
+                    self.catalogService === service
+                else { return }
+                self.onStatusMessage?(message)
+            }
             let viewport = DocumentViewport(session: session)
             viewport.applyEditorViewStateProjection(editorViewState)
             let workspace = DocumentWorkspace(

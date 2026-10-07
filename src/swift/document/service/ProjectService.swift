@@ -1,4 +1,5 @@
 import Foundation
+import PorydawBackups
 import PorydawCore
 import PorydawProject
 import PorydawProjectNative
@@ -314,8 +315,11 @@ public actor ProjectService {
     internal var snapshot: ProjectSnapshot?
     internal var projectRoot = ""
     internal var closed = false
+    internal let backups: MidiBackupStore
 
-    public init() {}
+    public init(backups: MidiBackupStore = .shared) {
+        self.backups = backups
+    }
 
     internal func requireStore() throws -> ProjectStore {
         guard !closed else { throw ProjectServiceError.serviceClosed }
@@ -327,6 +331,31 @@ public actor ProjectService {
     internal func publish(_ value: AppliedBankEdit, from source: ProjectStore) async {
         guard !closed, store === source else { return }
         await bankViews.publish(value)
+    }
+
+    /// Captures dirty document bytes without saving the source or its flags.
+    public func backup(_ snapshot: SaveSnapshot) async throws {
+        let sourceStore = try requireStore()
+        try Task.checkCancellation()
+        if let bytes = try rawMidiBytes(source: snapshot.destination) {
+            try await backups.preserveOriginal(songName: snapshot.destination.label, bytes: bytes)
+            try Task.checkCancellation()
+            guard !closed, store === sourceStore else { throw ProjectServiceError.serviceClosed }
+        }
+        try await backups.record(songName: snapshot.destination.label, bytes: snapshot.bytes)
+        try Task.checkCancellation()
+        guard !closed, store === sourceStore else { throw ProjectServiceError.serviceClosed }
+    }
+
+    internal func rawMidiBytes(source: SongSource) throws -> [UInt8]? {
+        do {
+            return Array(try Data(contentsOf: URL(fileURLWithPath: source.midiPath)))
+        } catch let error as CocoaError where error.code == .fileReadNoSuchFile {
+            return nil
+        } catch {
+            throw ProjectServiceError.operationFailed(
+                "Read MIDI for backup \(source.midiPath): \(error.localizedDescription)")
+        }
     }
 
     /// Idempotent. Owned leases outlive the service.

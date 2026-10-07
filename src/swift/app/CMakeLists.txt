@@ -198,7 +198,7 @@ target_compile_options(PorydawApp PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
 )
-target_link_libraries(PorydawApp PUBLIC PorydawCore PorydawDocument PorydawPlayback PorydawProject PorydawSample QtBridge Qt6::Gui)
+target_link_libraries(PorydawApp PUBLIC PorydawBackups PorydawCore PorydawDocument PorydawPlayback PorydawProject PorydawSample QtBridge Qt6::Gui)
 
 add_dependencies(PorydawApp QtBridgeMacros)
 
