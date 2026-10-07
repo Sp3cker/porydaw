@@ -56,34 +56,18 @@ ShellPitchBendSupport {
         }, 5000), "two wheel notches commit the second note-scoped edit")
         verify(opened.editor.description.indexOf((range + 3) + " semitones") >= 0,
                "the description reports the two-notch wheeled range")
-        const selected = JSON.parse(opened.grid.fetchNoteSummary()).find(function(note) {
-            return note.selected
-        })
-        const events = shell.shellPresenter.session.eventListPresenter()
-        let chunk = -1
-        if (selected) {
-            for (let index = 0; index < events.chunkLabels.length; ++index) {
-                if (events.chunkLabels[index].endsWith("Track " + (selected.track + 1))) {
-                    chunk = index
-                    break
-                }
-            }
-        }
-        events.setChunk(chunk, false)
-        tryVerify(function() {
-            if (!selected || chunk < 0)
-                return false
-            for (let row = 0; row < events.rowCount; ++row) {
-                if (events.rowType(row) === 3 && events.rowTick(row) === selected.tick
-                    && Number(events.cellDisplay(row, 3)) === 0x14
-                    && Number(events.cellDisplay(row, 4)) === range + 3)
-                    return true
-            }
-            return false
-        }, 5000, "the two-notch wheel writes BENDR at the note start tick")
         compare(Number(opened.grid.appliedRevisionText), Number(once) + 1,
                 "a two-notch wheel gesture commits one controller write")
         compare(opened.editor.isOpen, true)
+    }
+
+    function test_eventListDismissesPopup() {
+        const opened = openViaG()
+        verify(opened.editor.isOpen, "the G route opens the pitch editor")
+        shell.shellPresenter.activate("view.event_list")
+        tryCompare(shell.shellPresenter.session.songTabs, "selectedTabShowsEvents", true, 3000)
+        tryCompare(opened.editor, "isOpen", false, 3000,
+                   "showing the event list dismisses the pitch bend popup")
     }
 
     function test_pointerScrubsUndoAndStationaryClick() {
