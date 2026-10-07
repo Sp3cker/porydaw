@@ -400,6 +400,11 @@ public final class TrackHeadersPresenter {
         pointerDoubleClick(x: x, y: y, button: button, modifiers: modifiers)
     }
     public func updateHover(x: Double, y: Double) { hover(x: x, y: y) }
+    /// True over a track's selectable body: the same hit-test clicks use.
+    public func pointerOverTrackBody(x: Double, y: Double) -> Bool {
+        let target = hitTarget(row: rowAt(y), x: x, y: y)
+        return target == .body || target == .voice
+    }
     public func clearHover() {
         if pointer.dragging {
             pointer.hoverRow = -1; pointer.hoverTarget = .none

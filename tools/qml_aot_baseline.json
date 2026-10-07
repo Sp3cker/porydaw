@@ -1,6 +1,6 @@
 {
-  "rejected": 150,
-  "total": 6440,
+  "rejected": 145,
+  "total": 6443,
   "files": {
     "src/ui/icons/AppIcon.qml": 2,
     "src/ui/icons/Icons.qml": 0,
@@ -59,8 +59,8 @@
     "src/ui/songview/quick/drawer/VoicePicker.qml": 2,
     "src/ui/songview/quick/EventListCell.qml": 3,
     "src/ui/songview/quick/EventListMenu.qml": 2,
-    "src/ui/songview/quick/EventListPage.qml": 11,
-    "src/ui/songview/quick/EventListTable.qml": 4,
+    "src/ui/songview/quick/EventListPage.qml": 8,
+    "src/ui/songview/quick/EventListTable.qml": 3,
     "src/ui/songview/quick/EventListToolbar.qml": 1,
     "src/ui/songview/quick/HintProfiles.qml": 0,
     "src/ui/songview/quick/HoverHint.qml": 1,
@@ -84,7 +84,7 @@
     "src/ui/songview/quick/swiftroll/SongTab.qml": 0,
     "src/ui/songview/quick/swiftroll/SongTabs.qml": 3,
     "src/ui/songview/quick/swiftroll/SwiftRollOverlay.qml": 0,
-    "src/ui/songview/quick/swiftroll/TrackHeaderBand.qml": 7,
+    "src/ui/songview/quick/swiftroll/TrackHeaderBand.qml": 6,
     "src/ui/songview/quick/swiftroll/TrackHeaderRows.qml": 1,
     "src/ui/songview/quick/swiftroll/TrackHeaderScrollbar.qml": 1,
     "src/ui/songview/quick/TimelineScrollbar.qml": 3,
