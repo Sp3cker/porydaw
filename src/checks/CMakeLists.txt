@@ -95,7 +95,7 @@ function(add_porydaw_check name)
     )
     porydaw_link_linux_swift_runtime(${name}
         ${CHECK_SWIFT_LANE} PorydawApp QtBridge PorydawAppCommands PorydawAppAudio
-        PorydawAppEventList PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
+        PorydawAppEventList PorydawDocument PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
     # run_checks.ts requires mid2agb beside the build-root harnesses.
     add_dependencies(${name} mid2agb)
 endfunction()
@@ -494,7 +494,7 @@ target_link_libraries(porydaw_checks PRIVATE
 porydaw_link_linux_swift_runtime(porydaw_checks
     swift_core_check swift_core_check_support swift_core_check_media swift_core_check_edit
     swift_core_check_roll swift_core_check_pages swift_core_check_project PorydawApp QtBridge
-    PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
+    PorydawDocument PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
 target_precompile_headers(porydaw_checks PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/src/porydaw_pch.hpp>")
 target_compile_definitions(porydaw_checks PRIVATE

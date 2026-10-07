@@ -173,6 +173,8 @@ if(APPLE AND NOT CMAKE_Swift_COMPILER_TARGET)
         "${porydaw_swift_arch}-apple-macosx${CMAKE_OSX_DEPLOYMENT_TARGET}")
 endif()
 enable_language(Swift)
+# Swift's archive driver retains removed members unless the archive is recreated.
+list(PREPEND CMAKE_Swift_CREATE_STATIC_LIBRARY "\"${CMAKE_COMMAND}\" -E rm -f <TARGET>")
 if(WIN32)
     string(APPEND CMAKE_Swift_FLAGS " -use-ld=lld")
     set(CMAKE_STATIC_LIBRARY_PREFIX_Swift "lib")
@@ -452,6 +454,7 @@ if(WIN32)
     target_link_directories(porydaw_qmltypes PRIVATE
         "$ENV{SDKROOT}/usr/lib/swift/windows/x86_64"
         "$<TARGET_FILE_DIR:PorydawApp>"
+        "$<TARGET_FILE_DIR:PorydawDocument>"
         "$<TARGET_FILE_DIR:PorydawProject>"
         "$<TARGET_FILE_DIR:PorydawPlayback>"
         "$<TARGET_FILE_DIR:PorydawCore>"
@@ -461,7 +464,7 @@ if(WIN32)
 endif()
 porydaw_link_linux_swift_runtime(porydaw_qmltypes
     PorydawApp QtBridge PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppPresentation
-    PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
+    PorydawDocument PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
 set(porydaw_qmltypes_files
     "${porydaw_qmltypes_import_path}/PorydawApp/qmldir"
     "${porydaw_qmltypes_import_path}/PorydawApp/PorydawApp.qmltypes"
@@ -567,6 +570,7 @@ if(WIN32)
     target_link_directories(porydaw PRIVATE
         "$ENV{SDKROOT}/usr/lib/swift/windows/x86_64"
         "$<TARGET_FILE_DIR:PorydawApp>"
+        "$<TARGET_FILE_DIR:PorydawDocument>"
         "$<TARGET_FILE_DIR:PorydawProject>"
         "$<TARGET_FILE_DIR:PorydawPlayback>"
         "$<TARGET_FILE_DIR:PorydawCore>"
@@ -574,7 +578,7 @@ if(WIN32)
         "$<TARGET_FILE_DIR:BinaryParsing>")
 endif()
 porydaw_link_linux_swift_runtime(porydaw
-    porydaw_shell_entry PorydawApp PorydawAppPresentation QtBridge PorydawProject PorydawPlayback PorydawCore
+    porydaw_shell_entry PorydawApp PorydawAppPresentation QtBridge PorydawDocument PorydawProject PorydawPlayback PorydawCore
     PorydawSample BinaryParsing)
 
 if(PORYDAW_BUILD_CHECKS)
