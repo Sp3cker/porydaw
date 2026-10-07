@@ -88,9 +88,7 @@
     }
 
     function pixelsDiffer(testCase, before, after, x, y) {
-        return before.red(x, y) !== after.red(x, y)
-            || before.green(x, y) !== after.green(x, y)
-            || before.blue(x, y) !== after.blue(x, y)
+        return before.pixel(x, y) !== after.pixel(x, y)
     }
 
     function changedPixels(testCase, before, after, region, limit) {
