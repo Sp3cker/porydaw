@@ -100,7 +100,7 @@ struct VoiceListEditOrigin {
 @MainActor
 @QtBridgeable
 public final class VoiceListController: QmlUncreatable {
-    public static let slotCount = 128
+    public static let slotCount = VoiceListSemantics.slotCount
 
     /// The 128 stable row handles, always present; content rewrites in place.
     public var rows: QListModel<VoiceListRowHandle> = QListModel()
@@ -255,7 +255,7 @@ public final class VoiceListController: QmlUncreatable {
     public init() {
         rows.reset(
             to: (0..<VoiceListController.slotCount).map { slot in
-                VoiceListRowHandle(VoiceListRow(slot: slot, title: String(format: "%03d", slot)))
+                VoiceListRowHandle(VoiceListRow(slot: slot, title: VoiceListSemantics.slotLabel(slot)))
             })
         editor.owner = self
     }
