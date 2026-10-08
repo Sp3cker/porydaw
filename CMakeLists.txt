@@ -457,6 +457,8 @@ if(WIN32)
         "$ENV{SDKROOT}/usr/lib/swift/windows/x86_64"
         "$<TARGET_FILE_DIR:PorydawApp>"
         "$<TARGET_FILE_DIR:PorydawDocument>"
+        "$<TARGET_FILE_DIR:PorydawVoicegroup>"
+        "$<TARGET_FILE_DIR:PorydawBackups>"
         "$<TARGET_FILE_DIR:PorydawProject>"
         "$<TARGET_FILE_DIR:PorydawPlayback>"
         "$<TARGET_FILE_DIR:PorydawCore>"
@@ -466,7 +468,7 @@ if(WIN32)
 endif()
 porydaw_link_linux_swift_runtime(porydaw_qmltypes
     PorydawApp QtBridge PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppPresentation
-    PorydawDocument PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
+    PorydawDocument PorydawVoicegroup PorydawBackups PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
 set(porydaw_qmltypes_files
     "${porydaw_qmltypes_import_path}/PorydawApp/qmldir"
     "${porydaw_qmltypes_import_path}/PorydawApp/PorydawApp.qmltypes"
@@ -573,6 +575,8 @@ if(WIN32)
         "$ENV{SDKROOT}/usr/lib/swift/windows/x86_64"
         "$<TARGET_FILE_DIR:PorydawApp>"
         "$<TARGET_FILE_DIR:PorydawDocument>"
+        "$<TARGET_FILE_DIR:PorydawVoicegroup>"
+        "$<TARGET_FILE_DIR:PorydawBackups>"
         "$<TARGET_FILE_DIR:PorydawProject>"
         "$<TARGET_FILE_DIR:PorydawPlayback>"
         "$<TARGET_FILE_DIR:PorydawCore>"
@@ -581,7 +585,7 @@ if(WIN32)
 endif()
 porydaw_link_linux_swift_runtime(porydaw
     porydaw_shell_entry PorydawApp PorydawAppPresentation QtBridge PorydawDocument PorydawProject PorydawPlayback PorydawCore
-    PorydawSample BinaryParsing)
+    PorydawVoicegroup PorydawBackups PorydawSample BinaryParsing)
 
 if(PORYDAW_BUILD_CHECKS)
     add_subdirectory(src/checks)
