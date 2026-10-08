@@ -34,6 +34,47 @@ things a bare `cmake --build` does not:
 3. **Summarize**: only actionable lines are printed; everything is in
    `build/<cfg>/build.log`. Read that log on failure; rebuilding adds no detail.
 
+## Source-level Swift compile timings
+
+`deno task bench:swift-compile` measures Debug type checking using the current
+Swift compilation database. It refreshes compiler commands without rebuilding
+the SourceKit index. This is not total compilation or incremental-build timing.
+
+```bash
+deno task bench:swift-compile                                  # all first-party modules
+deno task bench:swift-compile --module PorydawApp --repeat 2
+deno task bench:swift-compile --file src/swift/app/history/UndoHistoryPanel.swift
+deno task bench:swift-compile --file src/swift/app/history/UndoHistoryPanel.swift --no-build
+```
+
+The first run in an unconfigured tree prepares the app, or only the requested
+module when `--module` is supplied without `--file`. Later filtered runs build
+only the selected module targets and their dependencies through `runBuild`.
+`--no-build` skips that preparation; the caller must keep dependencies current.
+Module mode uses one frontend batch. File mode selects only the requested
+primary-file frontend jobs while preserving the module's other source inputs.
+The timing invocations do not emit objects, modules, or index records.
+
+By default each measurement runs with normal and reversed source order.
+`--repeat N` reports the median per function and expression in each order;
+`--order normal` disables the order comparison. Expression rows at the same
+location use the peak per run, not their sum. Function-body and expression
+times overlap and must not be added together.
+
+Each run creates `build/swift-timings/<timestamp>/` (or a new `--output`
+directory) containing raw logs, `report.json`, and `functions.csv`, `files.csv`,
+`expressions.csv`, and `generated.csv`. The JSON records compiler versions,
+actual commands, source SHA-256 hashes, exit statuses, wall times, and raw
+timing records. Failed measurements produce a failing exit status and are
+excluded from rankings; the report retains their diagnostics and failure state.
+
+File totals sum authored function-body medians. Macro-generated and build-generated
+bodies are separate, not silently charged to an authored file. Rankings use the
+lower source-order measurement, but preserve both columns: lazy import and
+compiler work can move between functions when source order changes. A low
+measurement is not proof that the function costs that much in every build.
+Compare before/after using the same module/file mode and compiler settings.
+
 ## Standalone backup module
 
 `src/swift/backups` is the `PorydawBackups` Swift 6 package. It depends only on

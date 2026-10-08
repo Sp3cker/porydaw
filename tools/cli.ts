@@ -92,6 +92,7 @@ export const ROOT_HELP = `usage: deno task <command> [options]
   build:checks     build the application, checks, and mid2agb
   bench:startup    benchmark existing Release app spawn to first frame
   bench:startup:ab compare startup before/after a change
+  bench:swift-compile rank source-level Swift type-checking costs
   setup            provision a fresh checkout
   setup:check      typecheck and test the setup tooling
   checks:bridge    check the Swift/QML QtBridge surface
