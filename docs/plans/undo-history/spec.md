@@ -217,3 +217,57 @@ public func jump(toIndex target: Int) async throws -> Int
   `deno task checks:qml-aot` (new `src/ui` file); `deno task format --check`.
 - No proof-ledger rows: this is new behavior with no retired native counterpart; no
   standalone ledger work.
+
+## 10. Review notes (open questions before planning)
+
+Items marked *bug* break the behavior described above as written; the rest are decisions
+to settle.
+
+1. *Bug: jump bypasses `DocumentSession.stepHistory`.* §5 calls
+   `session.document.history.jump`, but menu undo/redo go through
+   `DocumentSession.stepHistory`. That path loads the next voicegroup bank before crossing
+   a `-G` change, drains bank results, publishes the change, and re-highlights duplicated
+   time ranges. Proposal: `DocumentSession.jump(toIndex:)` loops `stepHistory`; the panel
+   calls that, and `SongHistory.jump` is not needed.
+2. *Bug: `savedStepIndex` uses `0` for two states.* §4.3 makes offset `0` the oldest step;
+   §4.6 returns `0` for the base state. "Saved after the first edit" and "saved with no
+   edits" both mark the oldest row. It also needs a value for "saved step evicted by the
+   cap". Proposal: `Int?` (or a distinct base value), `nil` when no step matches.
+3. *Bug: the opened state is unreachable.* Row `o` jumps to `o + 1` and there is no base
+   row, so the oldest step can never be undone from the window. Proposal: a pinned
+   "Opened" row below the oldest step that jumps to `0` and can carry the saved marker.
+4. *Bug: a forward jump can overshoot when it drops a stale bank entry.* Redo removes a
+   stale `entries[index]` without moving the cursor (`SongHistory.swift`, stale redo
+   path), so every later step shifts down one place. Clamping `target` to the new count
+   applies one extra step; `target` should drop by one per entry removed below it.
+5. *Bug: bank steps share their identity with the step before them.* A bank entry records
+   `currentIdentity` at record time, so a document step and the bank steps after it can
+   all match `savedIdentity`. Decide which row carries the saved marker (e.g. the last
+   applied match, or bank rows never carry it).
+6. Window shortcuts while the window has focus. Shell commands use `Qt.WindowShortcut`
+   (`ShellContent.qml`). If this is a separate `DialogWindow`, Cmd+Z / Cmd+Shift+Z do
+   nothing while it is focused. Either host it in the shell window or give it its own
+   undo/redo shortcuts, as `SampleStudioDialog.qml` does.
+7. Jumps during a live gesture or prompt. A note drag, the velocity prompt, or the pitch
+   bend popup holds a document snapshot; a jump underneath leaves that snapshot stale.
+   Menu undo has the same exposure, but the window makes it easier to hit. Simplest rule:
+   disable jumps while any of them is open.
+8. Tab switch mid-jump. The panel follows the selected tab, but an in-flight jump belongs
+   to the document it started on. Pin the jump to that session so the gate and the
+   refresh afterwards do not act on the new tab.
+9. Rebuild cost on long jumps. Every jump iteration bumps `revision` and awaits, so the
+   bridge may flush between steps, and `QListModel` row updates are synchronous: a
+   300-step jump could rebuild 512 rows 300 times. Undo/redo only flip `applied`/
+   `isCurrent` on the rows crossed, a record appends one row, and eviction removes rows
+   from the bottom; patching those rows avoids the cost. Otherwise measure it first.
+10. Redo tail loss is easier to hit from the window. Jump back 40 steps, nudge a note,
+    and 40 steps disappear. That matches standard undo, but a cheap signal helps (status
+    text such as "Discarded 40 redo steps" when a record drops a long tail).
+11. Eviction and session-side per-step state. `DocumentSession.duplicatedSelections`
+    keys duplicated-range highlights by history identity and is never pruned. When the cap
+    evicts steps, their entries should go too. That needs eviction to report the removed
+    identities, or the ranges to live on the history entries themselves.
+12. Additional verification: a jump across a `-G` change through the session path; the
+    saved marker after the saved step is evicted; first-edit vs no-edit save marker; a
+    forward jump that drops a stale entry lands on the clicked step; Cmd+Z while the
+    window has focus.
