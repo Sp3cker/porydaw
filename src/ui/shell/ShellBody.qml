@@ -35,11 +35,7 @@ Item {
     }
     SplitView {
         id: shellBody
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: polyDock.visible ? polyDock.left
-            : historyDock.visible ? historyDock.left : parent.right
+        anchors.fill: parent
         orientation: Qt.Horizontal
 
         SongsDockColumn {
@@ -62,141 +58,146 @@ Item {
             }
         }
 
-        SongTabs {
-            id: editorScene
-            objectName: "shellSongTabs"
+        Item {
             SplitView.fillWidth: true
             SplitView.fillHeight: true
-            focus: true
-            controller: body.shell.session.songTabs
-            layoutSpaces: body.shell.session.layoutSpaces
-            shellRouter: body.shell
-            onContextMenuAt: (x, y) => {
-                body.shell.refreshActionStates()
-                gridContextMenu.menu.x = x
-                gridContextMenu.menu.y = y
-                gridContextMenu.menu.open()
+
+            SongTabs {
+                id: editorScene
+                objectName: "shellSongTabs"
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: polyDock.visible ? polyDock.left : parent.right
+                focus: true
+                controller: body.shell.session.songTabs
+                layoutSpaces: body.shell.session.layoutSpaces
+                shellRouter: body.shell
+                onContextMenuAt: (x, y) => {
+                    body.shell.refreshActionStates()
+                    gridContextMenu.menu.x = x
+                    gridContextMenu.menu.y = y
+                    gridContextMenu.menu.open()
+                }
+                Text {
+                    objectName: "shellEmptySongMessage"
+                    anchors.centerIn: parent
+                    visible: !body.shell.session.songOpen
+                    text: qsTr("Open a project and song to begin.")
+                    font: body.root.chromeTypography.body
+                    color: body.shell.session.palette.windowText
+                    horizontalAlignment: Text.AlignHCenter
+                }
             }
-            Text {
-                objectName: "shellEmptySongMessage"
-                anchors.centerIn: parent
-                visible: !body.shell.session.songOpen
-                text: qsTr("Open a project and song to begin.")
-                font: body.root.chromeTypography.body
-                color: body.shell.session.palette.windowText
-                horizontalAlignment: Text.AlignHCenter
-            }
-        }
-    }
-    Item {
-        id: polyDock
-        objectName: "shellPolyphonyDock"
-        visible: body.shell.polyphonyVisible
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.right: historyDock.visible ? historyDock.left : parent.right
-        width: Math.min(body.root.chromeBaseFontPx * 32,
-                        parent.width * (historyDock.visible ? 0.32 : 0.48))
-        z: 2
-        Rectangle {
-            anchors.fill: parent
-            color: body.root.colors.windowBackground
-            border.color: body.root.colors.outline
-        }
-        Row {
-            id: polyTitle
-            width: parent.width
-            height: Math.max(bodyMetrics.height, body.transportToolExtent)
-                    + 2 * body.root.chromeSpacing.half + 2
-            Text {
-                objectName: "shellPolyphonyTitle"
-                width: parent.width - polyClose.width
-                height: parent.height
-                leftPadding: body.root.chromeSpacing.two
-                text: qsTr("Polyphony Debugger")
-                font: body.root.chromeTypography.body
-                color: body.root.colors.windowText
-                verticalAlignment: Text.AlignVCenter
-            }
-            Button {
-                id: polyClose
-                objectName: "shellPolyphonyClose"
-                height: parent.height
-                font: body.root.chromeTypography.body
-                text: qsTr("×")
-                onClicked: body.shell.activate("view.polyphony_debugger")
-            }
-        }
-        PolyphonyPanel {
-            id: polyPanel
-            anchors.top: polyTitle.bottom
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            presenter: body.shell.session.polyphony
-            colors: body.root.colors
-            typography: body.root.chromeTypography
-            layoutSpaces: body.root.chromeSpacing
-            baseFontPx: body.root.chromeBaseFontPx
-        }
-        Timer {
-            running: polyDock.visible && body.shell.session.songOpen
-            repeat: true
-            interval: 100
-            onTriggered: body.shell.session.polyphony.poll()
-        }
-    }
-    Item {
-        id: historyDock
-        objectName: "shellUndoHistoryDock"
-        visible: body.shell.undoHistoryVisible
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.right: parent.right
-        width: Math.min(body.root.chromeBaseFontPx * 32,
-                        parent.width * (polyDock.visible ? 0.32 : 0.48))
-        z: 2
-        Keys.onEscapePressed: body.shell.activate("view.undo_history")
-        Rectangle {
-            anchors.fill: parent
-            color: body.root.colors.windowBackground
-            border.color: body.root.colors.outline
-        }
-        Row {
-            id: historyTitle
-            width: parent.width
-            height: Math.max(bodyMetrics.height, body.transportToolExtent)
-                    + 2 * body.root.chromeSpacing.half + 2
-            Text {
-                objectName: "shellUndoHistoryTitle"
-                width: parent.width - historyClose.width
-                height: parent.height
-                leftPadding: body.root.chromeSpacing.two
-                text: qsTr("Undo History")
-                font: body.root.chromeTypography.body
-                color: body.root.colors.windowText
-                verticalAlignment: Text.AlignVCenter
-            }
-            Button {
-                id: historyClose
-                objectName: "shellUndoHistoryClose"
-                height: parent.height
-                font: body.root.chromeTypography.body
-                text: qsTr("×")
-                onClicked: body.shell.activate("view.undo_history")
+            Item {
+                id: polyDock
+                objectName: "shellPolyphonyDock"
+                visible: body.shell.polyphonyVisible
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
+                width: Math.min(body.root.chromeBaseFontPx * 32,
+                                body.width * (historyDock.visible ? 0.32 : 0.48))
+                z: 2
+                Rectangle {
+                    anchors.fill: parent
+                    color: body.root.colors.windowBackground
+                    border.color: body.root.colors.outline
+                }
+                Row {
+                    id: polyTitle
+                    width: parent.width
+                    height: Math.max(bodyMetrics.height, body.transportToolExtent)
+                            + 2 * body.root.chromeSpacing.half + 2
+                    Text {
+                        objectName: "shellPolyphonyTitle"
+                        width: parent.width - polyClose.width
+                        height: parent.height
+                        leftPadding: body.root.chromeSpacing.two
+                        text: qsTr("Polyphony Debugger")
+                        font: body.root.chromeTypography.body
+                        color: body.root.colors.windowText
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    Button {
+                        id: polyClose
+                        objectName: "shellPolyphonyClose"
+                        height: parent.height
+                        font: body.root.chromeTypography.body
+                        text: qsTr("×")
+                        onClicked: body.shell.activate("view.polyphony_debugger")
+                    }
+                }
+                PolyphonyPanel {
+                    id: polyPanel
+                    anchors.top: polyTitle.bottom
+                    anchors.bottom: parent.bottom
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    presenter: body.shell.session.polyphony
+                    colors: body.root.colors
+                    typography: body.root.chromeTypography
+                    layoutSpaces: body.root.chromeSpacing
+                    baseFontPx: body.root.chromeBaseFontPx
+                }
+                Timer {
+                    running: polyDock.visible && body.shell.session.songOpen
+                    repeat: true
+                    interval: 100
+                    onTriggered: body.shell.session.polyphony.poll()
+                }
             }
         }
-        UndoHistoryDock {
-            anchors.top: historyTitle.bottom
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            presenter: body.shell.session.undoHistory
-            colors: body.root.colors
-            typography: body.root.chromeTypography
-            layoutSpaces: body.root.chromeSpacing
-            baseFontPx: body.root.chromeBaseFontPx
-            onCloseRequested: body.shell.activate("view.undo_history")
+        Item {
+            id: historyDock
+            objectName: "shellUndoHistoryDock"
+            visible: body.shell.undoHistoryVisible
+            SplitView.fillHeight: true
+            SplitView.minimumWidth: Math.min(body.shell.dockColumnMinWidth, SplitView.maximumWidth)
+            SplitView.maximumWidth: body.width * (polyDock.visible ? 0.32 : 0.48)
+            SplitView.preferredWidth: body.root.chromeBaseFontPx * 32
+            Keys.onEscapePressed: body.shell.activate("view.undo_history")
+            Rectangle {
+                anchors.fill: parent
+                color: body.root.colors.windowBackground
+                border.color: body.root.colors.outline
+            }
+            Row {
+                id: historyTitle
+                width: parent.width
+                height: Math.max(bodyMetrics.height, body.transportToolExtent)
+                        + 2 * body.root.chromeSpacing.half + 2
+                Text {
+                    objectName: "shellUndoHistoryTitle"
+                    width: parent.width - historyClose.width
+                    height: parent.height
+                    leftPadding: body.root.chromeSpacing.two
+                    text: qsTr("Undo History")
+                    font: body.root.chromeTypography.body
+                    color: body.root.colors.windowText
+                    verticalAlignment: Text.AlignVCenter
+                }
+                Button {
+                    id: historyClose
+                    objectName: "shellUndoHistoryClose"
+                    height: parent.height
+                    font: body.root.chromeTypography.body
+                    text: qsTr("×")
+                    onClicked: body.shell.activate("view.undo_history")
+                }
+            }
+            UndoHistoryDock {
+                anchors.top: historyTitle.bottom
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                presenter: body.shell.session.undoHistory
+                colors: body.root.colors
+                typography: body.root.chromeTypography
+                layoutSpaces: body.root.chromeSpacing
+                baseFontPx: body.root.chromeBaseFontPx
+                onCloseRequested: body.shell.activate("view.undo_history")
+            }
         }
     }
 

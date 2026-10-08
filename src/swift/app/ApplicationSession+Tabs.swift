@@ -18,7 +18,6 @@ extension ApplicationSession {
         let pickerOpen = workspace?.headerVoicePicker.pickerOpen ?? false
         publish(\.headerVoicePickerOpen, pickerOpen)
         polyphony.setContext(session: workspace?.session)
-        syncUndoHistory()
         transportBar.refresh()
         refreshDocumentState()
         refreshVoicegroupDock()
@@ -67,7 +66,6 @@ extension ApplicationSession {
         songTabs.refreshDirty()
         refreshDocumentState()
         guard selectedDocument === session else { return }
-        syncUndoHistory()
         transportBar.refresh()
         refreshVoicegroupDock()
     }

@@ -5,6 +5,7 @@ import PorydawProject
 import QtBridge
 import PorydawAppAudio
 import PorydawAppCommands
+import PorydawAppHistory
 import PorydawAppPresentation
 
 @MainActor
@@ -50,30 +51,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var polyphony: PolyphonyPanelPresenter
     @QtTracked public let undoHistory: UndoHistoryPanel = UndoHistoryPanel()
     private var undoHistoryVisible = false
-    @QtIgnored
-    lazy var historyNavigation: HistoryNavigation = HistoryNavigation(
-        prepare: { [weak self] availability in
-            guard let self else { return }
-            canUndo = false
-            canRedo = false
-            undoHistory.publish(\.canJump, availability.canJump)
-            publishLastSaveError("")
-            onDocumentStateChanged?(false)
-        },
-        reportFailure: { [weak self] message in
-            self?.publishLastSaveError(message)
-            self?.publishOperationFailure(message: message)
-        },
-        refreshAvailability: { [weak self] in
-            self?.refreshDocumentState()
-        })
-
-    @QtIgnored
-    var historyBankTransitionInFlight: Bool {
-        songTabs.tabs.contains {
-            $0.workspace.session.document.history.bankTransitionInFlight
-        }
-    }
 
     @QtIgnored
     public internal(set) var projectRoot = ""
@@ -194,8 +171,29 @@ public final class ApplicationSession: QmlInstantiableStatus {
             baseFontPx: GridCameraPolicy.seedBaseFontPx,
             appFontLineSpacing: 0)
         connectPolyphonyJump()
-        undoHistory.onJumpRequested = { [weak self] target in
-            self?.requestHistoryJumpImpl(toIndex: target)
+        undoHistory.context = { [weak self] in
+            guard let self else { return (session: nil, bankTransitionInFlight: false) }
+            return (
+                session: workspace?.session,
+                bankTransitionInFlight: songTabs.tabs.contains {
+                    $0.workspace.session.document.history.bankTransitionInFlight
+                }
+            )
+        }
+        undoHistory.onEvent = { [weak self] event in
+            guard let self else { return }
+            switch event {
+            case .began:
+                canUndo = false
+                canRedo = false
+                publishLastSaveError("")
+                onDocumentStateChanged?(false)
+            case .failed(let message):
+                publishLastSaveError(message)
+                publishOperationFailure(message: message)
+            case .settled:
+                refreshDocumentState()
+            }
         }
         eventList.onRevealVoiceRequested = { [voiceList] program in
             voiceList.revealSlot(slot: program)
@@ -548,11 +546,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     public func requestUndo() {
-        requestUndoImpl()
+        undoHistory.request(.undo)
     }
 
     public func requestRedo() {
-        requestRedoImpl()
+        undoHistory.request(.redo)
     }
 
     public func play() {
@@ -581,12 +579,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     func setUndoHistoryVisible(_ visible: Bool) {
         undoHistoryVisible = visible
-        syncUndoHistory()
-    }
-
-    @QtIgnored
-    func syncUndoHistory() {
-        undoHistory.sync(history: selectedDocument?.document.history, visible: undoHistoryVisible)
+        refreshDocumentState()
     }
 
     /// Follows the selected tab's document, but gates Undo/Redo while any
@@ -597,9 +590,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         defer { onDocumentStateChanged?(songOpenChanged) }
         publish(\.songOpen, hasSongs)
         songDock.syncSelection()
-        let historyAvailability = historyNavigation.availability(
-            for: workspace?.session, bankTransitionInFlight: historyBankTransitionInFlight)
-        undoHistory.publish(\.canJump, historyAvailability.canJump)
+        let historyAvailability = undoHistory.refresh(visible: undoHistoryVisible)
         publish(\.canUndo, historyAvailability.canUndo)
         publish(\.canRedo, historyAvailability.canRedo)
         guard let session = workspace?.session else {

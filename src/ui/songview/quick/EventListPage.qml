@@ -109,7 +109,7 @@ FocusScope {
 
     EventListToolbar {
         id: toolbar
-        page: parent
+        page: parent as EventListPage
         controller: page.controller
     }
 
@@ -119,7 +119,7 @@ FocusScope {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        page: parent
+        page: parent as EventListPage
         controller: page.controller
         tableFontMetrics: tableMetrics
         headerFontMetrics: headerMetrics
@@ -128,8 +128,10 @@ FocusScope {
     function rowIsSelected(row: int): bool {
         if (row < 0 || row >= controller.rowCount)
             return false
-        const handle = controller.rowHandle(row)
-        return handle && handle.selected
+        const handle = controller.rowHandle(row) as EventListRowHandle
+        if (!handle)
+            return false
+        return handle.selected
     }
 
     function persistedColumnWidth(column: int): real {
@@ -359,7 +361,7 @@ FocusScope {
 
     EventListMenu {
         anchors.fill: parent
-        page: parent
+        page: parent as EventListPage
         controller: page.controller
         headerFontMetrics: headerMetrics
         controlFontMetrics: controlMetrics

@@ -128,23 +128,4 @@ extension ApplicationSession {
             self?.publishSaveState(inProgress: false)
         }
     }
-
-    func requestUndoImpl() {
-        guard let session = workspace?.session else { return }
-        historyNavigation.request(
-            .undo, session: session, bankTransitionInFlight: historyBankTransitionInFlight)
-    }
-
-    func requestRedoImpl() {
-        guard let session = workspace?.session else { return }
-        historyNavigation.request(
-            .redo, session: session, bankTransitionInFlight: historyBankTransitionInFlight)
-    }
-
-    func requestHistoryJumpImpl(toIndex target: Int) {
-        guard let session = workspace?.session else { return }
-        historyNavigation.request(
-            .jump(toIndex: target), session: session,
-            bankTransitionInFlight: historyBankTransitionInFlight)
-    }
 }

@@ -1,3 +1,4 @@
+import PorydawAppHistory
 import PorydawAppPresentation
 import PorydawDocument
 import QtBridge
@@ -5,9 +6,11 @@ import QtBridge
 /// The QtBridge types registered by both the application and its build-time tooling.
 @MainActor
 public enum PorydawQmlTypes {
-    /// QtBridge keys QML URIs by Swift module; presentation types belong to the app's module.
+    /// QtBridge keys QML URIs by Swift module; presentation and history types
+    /// belong to the app's module.
     private static let aliasedModules: Void = {
         QMetaObjectBuilder.qmlModuleAliases["PorydawAppPresentation"] = "PorydawApp"
+        QMetaObjectBuilder.qmlModuleAliases["PorydawAppHistory"] = "PorydawApp"
     }()
 
     /// Types that QML may construct, in application registration order.

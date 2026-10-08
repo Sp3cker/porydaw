@@ -100,7 +100,7 @@ ShellMenusSupport {
         const polyDock = child("shellPolyphonyDock")
         tryCompare(polyDock, "visible", true)
         verify(waitForPolish(dock))
-        verify(polyDock.x + polyDock.width <= dock.x)
+        verify(polyDock.mapToItem(dock, polyDock.width, 0).x <= 0)
         const close = child("shellUndoHistoryClose")
         mouseClick(close, close.width / 2, close.height / 2)
         tryCompare(dock, "visible", false)
