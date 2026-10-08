@@ -45,6 +45,8 @@ extension SongDocument {
             if let stream = event.stream { grouped[stream, default: []].append(event) }
         }
         let consumed = xcmdConsumed(in: state.file)
+        // Streams are visited in hash order; emitting by source position keeps same-tick order deterministic.
+        var emitted: [(source: TimeEventRef, chunk: Int, event: MidiEvent)] = []
         for points in grouped.values {
             let ordered = points.sorted { ($0.tick, $0.chunk, $0.index) < ($1.tick, $1.chunk, $1.index) }
             let atStart = ordered.last { $0.tick <= range.startTick }
@@ -55,7 +57,7 @@ extension SongDocument {
                 } else {
                     var copy = state.file.chunks[source.chunk].events[source.index]
                     copy.tick = range.endTick
-                    extra[source.chunk].append(copy)
+                    emitted.append((source, source.chunk, copy))
                 }
             } else if let prototype = firstInside,
                 let value = defaultEvent(
@@ -63,7 +65,7 @@ extension SongDocument {
                     kind: prototype.kind, tick: range.endTick)
             {
                 let chunk = prototype.kind == .signature ? 0 : prototype.chunk
-                if extra.indices.contains(chunk) { extra[chunk].append(value) }
+                if extra.indices.contains(chunk) { emitted.append((prototype, chunk, value)) }
             }
             for point in ordered where point.tick > range.startTick && point.tick < range.endTick {
                 if consumed[point.chunk].contains(point.index) {
@@ -71,10 +73,12 @@ extension SongDocument {
                 } else {
                     var copy = state.file.chunks[point.chunk].events[point.index]
                     copy.tick += range.span
-                    extra[point.chunk].append(copy)
+                    emitted.append((point, point.chunk, copy))
                 }
             }
         }
+        emitted.sort { ($0.source.chunk, $0.source.index) < ($1.source.chunk, $1.source.index) }
+        for item in emitted { extra[item.chunk].append(item.event) }
     }
 
     func shiftEndsRight(

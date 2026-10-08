@@ -741,4 +741,39 @@ func duplicationAndGlobals(_ report: CheckReport) {
             "editcheck/EditCheckTest::timeRangeWholeSong",
             "whole-song duplication fixture failed: \(error)")
     }
+    duplicateSeamOrder(report)
+}
+
+/// Seeds at a duplicate's seam keep their source order; stream grouping is hash-ordered.
+@MainActor
+private func duplicateSeamOrder(_ report: CheckReport) {
+    let id = "editcheck/EditCheckTest::timeRangeAutomationSeamsAndDefaults"
+    let document = timeDocument()
+    for controller: UInt8 in [91, 1, 10, 7, 11] {
+        document.writeLane(
+            track: 0, lane: .controller(controller), from: 580, through: 580,
+            points: [LaneWrite(tick: 580, value: 40)])
+    }
+    guard let chunk = document.engineTracks.tracks[0].midiChunk else {
+        report.fail(id, "track 0 has no MIDI chunk")
+        return
+    }
+    func controllers(at tick: Tick) -> [UInt8] {
+        document.rawChunks[chunk].events.compactMap { event in
+            guard event.tick == tick, event.typeNibble == 0xB, case let .channel(_, first, _) = event.payload
+            else { return nil }
+            return first
+        }
+    }
+    let source = controllers(at: 580)
+    // Hash order changes per process and table address, so several rounds catch a regression.
+    for _ in 0..<4 {
+        report.expect(
+            document.duplicateTime(TimeRange(startTick: 590, endTick: 610), scope: TimeScope(tracks: [0])),
+            cppID: id, message: "seam-order duplication commits")
+        report.expect(
+            source.count == 5 && controllers(at: 610) == source,
+            cppID: id, message: "duplicate seeds its seam controllers in source order")
+        report.expect(document.history.undoDocument(), cppID: id, message: "seam-order duplication undoes")
+    }
 }

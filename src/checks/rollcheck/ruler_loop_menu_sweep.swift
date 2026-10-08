@@ -144,16 +144,9 @@ private func checkDuplicateUndoRehighlightsSource(
     func step(_ direction: BankHistoryDirection) -> Bool {
         (try? runBlocking { direction == .undo ? try await session.undo() : try await session.redo() }) == true
     }
-    // Notes, not save bytes: same-tick controller seeds land in hash order (TimeEditing+Streams.swift:48).
-    func notes() -> [[Int]] {
-        (0..<document.engineTracks.usedTrackCount).flatMap { track in
-            document.notes(in: track).map { [track, Int($0.tick), Int($0.duration), Int($0.pitch)] }
-        }
-    }
     let original = coreTimeBytes(document)
     router.perform(.duplicate)
     let once = coreTimeBytes(document)
-    let onceNotes = notes()
     router.perform(.duplicate)
     report.expect(
         automation.selection?.range == shifted(2) && once != original,
@@ -173,7 +166,7 @@ private func checkDuplicateUndoRehighlightsSource(
         cppID: id, message: "undo after redo re-highlights the swept range again")
     router.perform(.duplicate)
     report.expect(
-        notes() == onceNotes,
+        coreTimeBytes(document) == once,
         cppID: id, message: "duplicating after undo copies the re-highlighted range")
     report.expect(
         step(.undo) && coreTimeBytes(document) == original && automation.selection == swept,
