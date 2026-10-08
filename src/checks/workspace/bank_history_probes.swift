@@ -12,6 +12,7 @@ private enum HistoryProbeFailure: Error {
 
 @MainActor
 private final class ControlledHistoryBankAction: BankHistoryAction {
+    let historyLabel = "Controlled bank edit"
     enum Outcome {
         case success
         case stale
@@ -60,6 +61,7 @@ private final class ControlledHistoryBankAction: BankHistoryAction {
 
 @MainActor
 private final class MergingHistoryBankAction: BankHistoryAction {
+    let historyLabel = "Merged bank edit"
     let before: Int
     let after: Int
 

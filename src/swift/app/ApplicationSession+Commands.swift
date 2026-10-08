@@ -131,37 +131,20 @@ extension ApplicationSession {
 
     func requestUndoImpl() {
         guard let session = workspace?.session else { return }
-        canUndo = false
-        canRedo = false
-        publishLastSaveError("")
-        onDocumentStateChanged?(false)
-        Task { [weak self] in
-            do {
-                _ = try await session.undo()
-            } catch {
-                let message = String(describing: error)
-                self?.publishLastSaveError(message)
-                self?.publishOperationFailure(message: message)
-                self?.refreshDocumentState()
-            }
-        }
+        historyNavigation.request(
+            .undo, session: session, bankTransitionInFlight: historyBankTransitionInFlight)
     }
 
     func requestRedoImpl() {
         guard let session = workspace?.session else { return }
-        canUndo = false
-        canRedo = false
-        publishLastSaveError("")
-        onDocumentStateChanged?(false)
-        Task { [weak self] in
-            do {
-                _ = try await session.redo()
-            } catch {
-                let message = String(describing: error)
-                self?.publishLastSaveError(message)
-                self?.publishOperationFailure(message: message)
-                self?.refreshDocumentState()
-            }
-        }
+        historyNavigation.request(
+            .redo, session: session, bankTransitionInFlight: historyBankTransitionInFlight)
+    }
+
+    func requestHistoryJumpImpl(toIndex target: Int) {
+        guard let session = workspace?.session else { return }
+        historyNavigation.request(
+            .jump(toIndex: target), session: session,
+            bankTransitionInFlight: historyBankTransitionInFlight)
     }
 }

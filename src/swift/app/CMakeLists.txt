@@ -37,6 +37,9 @@ add_library(PorydawApp STATIC
     samplestudio/SampleProvenanceStore.swift
     samplestudio/SampleStudioWorkflow.swift
     audio/PolyphonyPanelPresenter.swift
+    history/HistoryNavigation.swift
+    history/UndoHistoryPanel.swift
+    history/UndoHistoryRow.swift
     ApplicationSession.swift
     ApplicationSession+Tabs.swift
     ApplicationSession+Close.swift

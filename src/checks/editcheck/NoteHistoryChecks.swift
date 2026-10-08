@@ -313,6 +313,7 @@ private final class ProbeMergeCounter {
 
 @MainActor
 private final class ProbeBankAction: BankHistoryAction {
+    let historyLabel = "Probe bank edit"
     let value: Int
     let counter: ProbeMergeCounter
 

@@ -359,6 +359,10 @@ public final class SongDocument {
         history.attachApply { [weak self] changes, direction, trackRemap in
             self?.applyHistory(changes, direction: direction, trackRemap: trackRemap)
         }
+        history.attachLabeler { [weak self] operation, changes in
+            guard let self else { return HistoryStepLabel.fixedPhrase(for: operation) }
+            return HistoryStepLabel.build(document: self, operation: operation, changes: changes)
+        }
     }
 
     public func notes(in track: Int) -> [Note] {

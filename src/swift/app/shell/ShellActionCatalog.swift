@@ -76,6 +76,7 @@ enum ShellActionCatalog {
         Action("view.velocity_drawer"),
         Action("view.voice_changes_drawer"),
         Action("view.polyphony_debugger"),
+        Action("view.undo_history"),
         Action("view.note_names"),
         Action("tools.import_sample"),
         Action("help.about"),

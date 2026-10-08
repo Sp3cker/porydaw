@@ -47,6 +47,8 @@ extension ShellPresenter {
             return session.songOpen && session.transportBarPresenter().state != 0
         case "view.event_list":
             return session.songTabs.selectedPage != nil
+        case "view.undo_history":
+            return session.songOpen || undoHistoryVisible
         case "view.automation_drawer", "view.velocity_drawer", "view.voice_changes_drawer":
             return session.songTabs.selectedPage != nil && !session.songTabs.selectedTabShowsEvents
         default: return true  // open project and quit were always enabled
@@ -56,7 +58,7 @@ extension ShellPresenter {
     func isActionCheckable(id: String) -> Bool {
         switch id {
         case "view.event_list", "view.automation_drawer", "view.velocity_drawer",
-            "view.voice_changes_drawer", "view.polyphony_debugger",
+            "view.voice_changes_drawer", "view.polyphony_debugger", "view.undo_history",
             "view.note_names", "transport.loop",
             "transport.follow_playhead", "transport.resonance":
             return true
@@ -74,6 +76,7 @@ extension ShellPresenter {
         case "view.voice_changes_drawer":
             return session.songTabs.selectedPage?.drawerPresenter().voiceChangesSection.visible ?? false
         case "view.polyphony_debugger": return polyphonyVisible
+        case "view.undo_history": return undoHistoryVisible
         case "view.note_names": return session.noteNameMode
         case "transport.loop": return session.transportBarPresenter().loopEnabled
         case "transport.follow_playhead": return session.transportBarPresenter().followPlayhead

@@ -48,6 +48,32 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// binds the strip before the first open and after the last close.
     @QtTracked public var songTabs: SongTabsController
     @QtTracked public var polyphony: PolyphonyPanelPresenter
+    @QtTracked public let undoHistory: UndoHistoryPanel = UndoHistoryPanel()
+    private var undoHistoryVisible = false
+    @QtIgnored
+    lazy var historyNavigation: HistoryNavigation = HistoryNavigation(
+        prepare: { [weak self] availability in
+            guard let self else { return }
+            canUndo = false
+            canRedo = false
+            undoHistory.publish(\.canJump, availability.canJump)
+            publishLastSaveError("")
+            onDocumentStateChanged?(false)
+        },
+        reportFailure: { [weak self] message in
+            self?.publishLastSaveError(message)
+            self?.publishOperationFailure(message: message)
+        },
+        refreshAvailability: { [weak self] in
+            self?.refreshDocumentState()
+        })
+
+    @QtIgnored
+    var historyBankTransitionInFlight: Bool {
+        songTabs.tabs.contains {
+            $0.workspace.session.document.history.bankTransitionInFlight
+        }
+    }
 
     @QtIgnored
     public internal(set) var projectRoot = ""
@@ -168,6 +194,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
             baseFontPx: GridCameraPolicy.seedBaseFontPx,
             appFontLineSpacing: 0)
         connectPolyphonyJump()
+        undoHistory.onJumpRequested = { [weak self] target in
+            self?.requestHistoryJumpImpl(toIndex: target)
+        }
         eventList.onRevealVoiceRequested = { [voiceList] program in
             voiceList.revealSlot(slot: program)
         }
@@ -549,6 +578,17 @@ public final class ApplicationSession: QmlInstantiableStatus {
         setNoteNameModeImpl(enabled: enabled)
     }
 
+    @QtIgnored
+    func setUndoHistoryVisible(_ visible: Bool) {
+        undoHistoryVisible = visible
+        syncUndoHistory()
+    }
+
+    @QtIgnored
+    func syncUndoHistory() {
+        undoHistory.sync(history: selectedDocument?.document.history, visible: undoHistoryVisible)
+    }
+
     /// Follows the selected tab's document, but gates Undo/Redo while any
     /// tab has a pending bank transition.
     func refreshDocumentState() {
@@ -557,24 +597,20 @@ public final class ApplicationSession: QmlInstantiableStatus {
         defer { onDocumentStateChanged?(songOpenChanged) }
         publish(\.songOpen, hasSongs)
         songDock.syncSelection()
+        let historyAvailability = historyNavigation.availability(
+            for: workspace?.session, bankTransitionInFlight: historyBankTransitionInFlight)
+        undoHistory.publish(\.canJump, historyAvailability.canJump)
+        publish(\.canUndo, historyAvailability.canUndo)
+        publish(\.canRedo, historyAvailability.canRedo)
         guard let session = workspace?.session else {
             publish(\.documentDirty, false)
             publish(\.songDocumentDirty, false)
-            publish(\.canUndo, false)
-            publish(\.canRedo, false)
             return
         }
         let songDirty = session.document.isDirty
         publish(\.songDocumentDirty, songDirty)
         let dirty = songDirty || session.bankDirty
         publish(\.documentDirty, dirty)
-        let bankPending = songTabs.tabs.contains {
-            $0.workspace.session.document.history.bankTransitionInFlight
-        }
-        let undoAvailable = !bankPending && session.document.history.canUndo
-        publish(\.canUndo, undoAvailable)
-        let redoAvailable = !bankPending && session.document.history.canRedo
-        publish(\.canRedo, redoAvailable)
     }
 
 }

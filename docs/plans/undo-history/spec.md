@@ -218,10 +218,11 @@ public func jump(toIndex target: Int) async throws -> Int
 - No proof-ledger rows: this is new behavior with no retired native counterpart; no
   standalone ledger work.
 
-## 10. Review notes (open questions before planning)
+## 10. Review notes (resolved)
 
-Items marked *bug* break the behavior described above as written; the rest are decisions
-to settle.
+Resolved by the Rulings in [plan.md](plan.md): items 1–5 by R1–R5, 6 by R6 (in-window
+dock), 7 by R7 (no extra gating), 8 by R8, 9 by R9, 10 by R10 (no notice), 11 by R11,
+12 by the task checks. Items marked *bug* broke the behavior described above as written.
 
 1. *Bug: jump bypasses `DocumentSession.stepHistory`.* §5 calls
    `session.document.history.jump`, but menu undo/redo go through
