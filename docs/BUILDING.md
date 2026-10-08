@@ -226,7 +226,9 @@ AOT statistics" means something built `porydaw` without `all_aotstats`.
 
 When QML or exposed Swift types change legitimately: `deno task qml-aot:baseline`
 (the only task permitted to write `tools/`), then review the diff — rejections should
-be explainable (e.g. `page: parent` self-references qmlsc cannot type).
+be explainable. Keep component references and QObject return values explicitly
+typed where qmlsc needs them: `EventListPage` casts its child `page` bindings and
+row handles, compiling 116/123 entries on Qt 6.11 without a baseline update.
 
 ## Swift incremental floor
 
@@ -240,6 +242,23 @@ budgets of 2000 ms per body / 1000 ms per expression warn (never fail) in Debug.
 `PorydawApp` into smaller modules lowers the floor further; `PorydawDocument`
 (Qt-free, no interop) shows the payoff at ~1 s per edit with no downstream rebuild
 when the interface is unchanged.
+
+`PorydawAppHistory` owns the history presenter and retained row type; `PorydawApp`
+only supplies session context and shell callbacks. Replay and labels stay in
+Document/Core. A history-only edit rebuilds the two-source leaf, not the app module.
+The QML shell uses its horizontal `SplitView` to resize history from the pane's
+left divider. The chosen width survives hide/show within the current window;
+it is not a saved preference.
+
+| History presenter placement | Warm build samples (s) | Median (s) |
+|---|---|---:|
+| `PorydawApp` | 7.40, 6.75, 7.11 | 7.11 |
+| `PorydawAppHistory` | 1.16, 1.15, 1.15 | 1.15 |
+
+Measured 2026-10-08 on Apple Silicon, Debug, with no concurrent builds: each sample
+ran `touch src/swift/app/history/UndoHistoryPanel.swift` then
+`/usr/bin/time -p deno task build:app`. This measures interface-preserving
+recompilation; public-interface changes can still rebuild downstream modules.
 
 `PorydawVoicegroup` (`src/swift/voicegroup/`, 20 files, 4.6k lines, no Swift
 dependencies, C interop only via `voicegroup_asset_batch.h`) was split out of

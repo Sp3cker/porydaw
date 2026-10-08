@@ -1,3 +1,4 @@
+import PorydawAppHistory
 import PorydawAppPresentation
 import PorydawDocument
 import QtBridge
@@ -5,9 +6,11 @@ import QtBridge
 /// The QtBridge types registered by both the application and its build-time tooling.
 @MainActor
 public enum PorydawQmlTypes {
-    /// QtBridge keys QML URIs by Swift module; presentation types belong to the app's module.
+    /// QtBridge keys QML URIs by Swift module; presentation and history types
+    /// belong to the app's module.
     private static let aliasedModules: Void = {
         QMetaObjectBuilder.qmlModuleAliases["PorydawAppPresentation"] = "PorydawApp"
+        QMetaObjectBuilder.qmlModuleAliases["PorydawAppHistory"] = "PorydawApp"
     }()
 
     /// Types that QML may construct, in application registration order.
@@ -86,6 +89,8 @@ public enum PorydawQmlTypes {
         TrackHeaderRowHandle.self,
         TrackHeadersPresenter.self,
         TypographyFonts.self,
+        UndoHistoryPanel.self,
+        UndoHistoryRow.self,
         VelocityHandle.self,
         VoiceChangesPage.self,
         VoiceListArgChoice.self,
@@ -141,6 +146,8 @@ extension TrackHeaderMenuItem: QmlUncreatable {}
 extension TrackHeaderRowHandle: QmlUncreatable {}
 extension TrackHeadersPresenter: QmlUncreatable {}
 extension TypographyFonts: QmlUncreatable {}
+extension UndoHistoryPanel: QmlUncreatable {}
+extension UndoHistoryRow: QmlUncreatable {}
 extension VelocityHandle: QmlUncreatable {}
 extension VoiceChangesPage: QmlUncreatable {}
 extension VoiceListArgChoice: QmlUncreatable {}

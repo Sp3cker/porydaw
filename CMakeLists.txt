@@ -343,6 +343,7 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/TransportOutputDial.qml
         src/ui/shell/PolyphonyPanel.qml
         src/ui/shell/PolyphonyChannelGroup.qml
+        src/ui/shell/UndoHistoryDock.qml
         src/ui/shell/settings/SettingsFieldRow.qml
         src/ui/shell/settings/SettingsDialog.qml
         src/ui/shell/settings/EngineSettingsPage.qml

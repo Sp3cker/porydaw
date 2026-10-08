@@ -318,6 +318,63 @@ ShellLaneSupport {
         }
     }
 
+    function auditUndoHistory(context) {
+        const presenter = shell.shellPresenter
+        const history = presenter.session.undoHistory
+        presenter.activate("view.undo_history")
+        const dock = findChild(shell, "shellUndoHistoryDock")
+        const list = findChild(shell, "undoHistoryList")
+        verify(dock !== null && list !== null, "undo history dock mounts")
+        tryCompare(dock, "visible", true)
+        verify(waitForNative(function() {
+            return history.canJump && list.count === 1
+        }, 5000), "the opened song has its base history row")
+
+        presenter.activate("roll.select_all")
+        presenter.activate("roll.transpose_up")
+        verify(waitForNative(function() {
+            return history.canJump && list.count === 2
+        }, 5000), "transpose adds an applied history row")
+        presenter.activate("roll.delete")
+        verify(waitForNative(function() {
+            return history.canJump && list.count === 3
+        }, 5000), "delete adds another history row")
+        presenter.activate("edit.undo")
+        verify(waitForNative(function() {
+            return history.canJump && history.currentRow === 1
+                && list.itemAtIndex(0) !== null && list.itemAtIndex(1) !== null
+        }, 5000), "history displays both applied and undone rows")
+
+        const undone = list.itemAtIndex(0)
+        const applied = list.itemAtIndex(1)
+        compare(undone.step.applied, false)
+        compare(applied.step.applied, true)
+        const undoneLabel = findChild(undone, "undoHistoryLabel")
+        const appliedLabel = findChild(applied, "undoHistoryLabel")
+        verify(undoneLabel !== null && appliedLabel !== null, "history labels exist")
+        compare(undoneLabel.enabled, true)
+        compare(appliedLabel.enabled, true)
+        compare(undoneLabel.color, presenter.session.palette.secondaryText)
+        compare(appliedLabel.color, presenter.session.palette.windowText)
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, shell, 5000),
+               "the shell submits both history text states before contrast capture")
+        const image = grab(shell.contentItem)
+        verify(Audit.measure(undoneLabel, image, shell.contentItem) !== null,
+               "the undone label is measured, not disabled-exempt")
+        verify(Audit.measure(appliedLabel, image, shell.contentItem) !== null,
+               "the applied label is measured")
+        // ListView delegates are not in the window's QObject data tree.
+        record(context + " undo history", Audit.audit(shell.contentItem, grab,
+               [dock, undone, applied, list.itemAtIndex(2)]))
+
+        history.activate(2)
+        verify(waitForNative(function() {
+            return history.canJump && history.currentRow === 2
+        }, 5000), "the history audit restores the opened song")
+        presenter.activate("view.undo_history")
+        tryCompare(dock, "visible", false)
+    }
+
     function report(label) {
         verify(measured > 0, label + ": text items were measured")
         verify(failures.length === 0, label + ": " + failures.length
@@ -380,6 +437,8 @@ ShellLaneSupport {
         }, 3000, "polyphony dock opens")
         auditWindow(mode + " polyphony")
         presenter.activate("view.polyphony_debugger")
+
+        auditUndoHistory(mode)
 
         presenter.activate("view.event_list")
         tryCompare(session.songTabs, "selectedTabShowsEvents", true, 3000)

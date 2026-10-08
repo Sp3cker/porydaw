@@ -128,6 +128,7 @@ public func runBankHistorySuite(_ report: CheckReport) {
     releaseEditorBankHistorySemantics(report, fixtureRoot: fixtureRoot)
     bankSaveMergeBoundaryParity(report: report, fixtureRoot: fixtureRoot)
     bankSwitchingParity(report: report, fixtureRoot: fixtureRoot)
+    runHistoryJumpChecks(report, fixtureRoot: fixtureRoot)
     bankMissingBasisAndApplied(report: report, fixtureRoot: fixtureRoot)
     sessionCatalogOutageRetainsLastValid(report: report, fixtureRoot: fixtureRoot)
 

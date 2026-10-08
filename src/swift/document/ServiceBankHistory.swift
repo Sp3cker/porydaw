@@ -26,6 +26,7 @@ final class BankResultInbox {
 /// blank materialization never merges). Save points seal via markSaved.
 @MainActor
 final class ServiceBankAction: BankHistoryAction {
+    let historyLabel: String
     private let service: ProjectService
     private let slot: Int
     /// The pre-edit voice; nil when the slot was blank.
@@ -43,6 +44,7 @@ final class ServiceBankAction: BankHistoryAction {
     ) {
         self.service = service
         self.slot = slot
+        historyLabel = "Edit voicegroup slot \(slot)"
         self.before = before
         self.after = after
         self.token = token

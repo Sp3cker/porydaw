@@ -225,6 +225,7 @@ internal func bankSaveMergeBoundaryParity(report: CheckReport, fixtureRoot: Stri
 
 @MainActor
 private final class MergingBoundaryAction: BankHistoryAction {
+    let historyLabel = "Boundary bank edit"
     let before: Int
     let after: Int
     var merges = 0

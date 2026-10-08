@@ -55,6 +55,7 @@ extension DocumentSession {
     /// Highlights `copy` and binds both ranges to the duplication just committed:
     /// undoing it re-highlights `source`, redoing it re-highlights `copy`.
     public func highlightDuplicatedSelection(source: AutomationTimeSelection, copy: AutomationTimeSelection) {
+        duplicatedSelections = duplicatedSelections.filter { document.history.contains($0.key) }
         duplicatedSelections[document.history.currentIdentity] = DuplicatedSelection(source: source, copy: copy)
         applyTimeSelection(copy)
     }

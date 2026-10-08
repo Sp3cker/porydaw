@@ -4,6 +4,18 @@ public struct DocumentIdentity: Hashable, Sendable {
     fileprivate let rawValue: UInt64
 }
 
+/// A retained history step without exposing its replay payload.
+public struct HistoryStep: Equatable, Sendable {
+    /// Label captured when the step was recorded or merged.
+    public let label: String
+    /// Whether this step precedes the applied-entry cursor.
+    public let applied: Bool
+    /// Whether this step is the last applied entry.
+    public let isCurrent: Bool
+    /// Whether this document step represents the saved identity; false for bank steps.
+    public let isSaved: Bool
+}
+
 public struct HistoryGroup: Hashable, Sendable {
     private let rawValue: UUID
 
@@ -27,6 +39,8 @@ public enum BankHistoryReplayError: Error, Equatable, Sendable {
 
 @MainActor
 public protocol BankHistoryAction: AnyObject {
+    /// Captured description of the bank edit, including its subject.
+    var historyLabel: String { get }
     func apply(direction: BankHistoryDirection) async throws
     func merged(with newer: any BankHistoryAction) -> (any BankHistoryAction)?
     func rebaseCurrent(with newer: any BankHistoryAction)
@@ -40,6 +54,15 @@ public extension BankHistoryAction {
 
 @MainActor
 public final class SongHistory {
+    /// Maximum number of retained steps, including redoable entries.
+    public static let stepLimit: Int = 512
+    /// Advances once per projection-visible mutation, including a save marker move.
+    public private(set) var revision: Int = 0
+    /// Whether the cap has ever advanced the base beyond the opened state.
+    public private(set) var hasEvictedSteps = false
+    /// Whether the saved identity matches the oldest kept state.
+    public var baseIsSaved: Bool { savedIdentity == baseIdentity }
+
     public var canUndo: Bool { transition == nil && index > 0 }
     public var canRedo: Bool { transition == nil && index < entries.count }
     /// Applied-entry cursor. Mirrors QUndoStack::index().
@@ -50,6 +73,31 @@ public final class SongHistory {
     public var currentIdentity: DocumentIdentity {
         guard index > 0 else { return baseIdentity }
         return entries[index - 1].afterIdentity
+    }
+
+    /// Projects a retained step, or nil for an offset outside the log.
+    /// - Parameter offset: Oldest-first offset, starting at zero.
+    public func step(at offset: Int) -> HistoryStep? {
+        guard entries.indices.contains(offset) else { return nil }
+        let label: String
+        let isSaved: Bool
+        switch entries[offset] {
+        case let .document(entry):
+            label = entry.label
+            isSaved = entry.afterIdentity == savedIdentity
+        case let .bank(entry):
+            label = entry.action.historyLabel
+            isSaved = false
+        }
+        return HistoryStep(
+            label: label, applied: offset < index,
+            isCurrent: offset == index - 1, isSaved: isSaved)
+    }
+
+    /// Tests whether an identity belongs to the kept base or any retained entry.
+    /// - Parameter identity: Document state identity to locate.
+    public func contains(_ identity: DocumentIdentity) -> Bool {
+        identity == baseIdentity || entries.contains { $0.afterIdentity == identity }
     }
 
     private enum Entry {
@@ -69,6 +117,7 @@ public final class SongHistory {
         var afterIdentity: DocumentIdentity
         let group: HistoryGroup?
         var operation: HistoryOperation
+        var label: String
         var trackRemap: TrackRemap?
         var mergeSealed: Bool
     }
@@ -82,9 +131,10 @@ public final class SongHistory {
     private var entries: [Entry] = []
     private var index = 0
     private var nextIdentity: UInt64 = 2
-    private let baseIdentity = DocumentIdentity(rawValue: 1)
+    private var baseIdentity = DocumentIdentity(rawValue: 1)
     private var savedIdentity = DocumentIdentity(rawValue: 1)
     private var applyDocument: ((DocumentChangeSet, BankHistoryDirection, TrackRemap?) -> Void)?
+    private var labelDocument: ((HistoryOperation, DocumentChangeSet) -> String)?
     private var transition: BankTransitionToken?
     private var nextTransition: UInt64 = 1
 
@@ -96,6 +146,7 @@ public final class SongHistory {
         assert(transition == nil, "Cannot mark saved during a bank transition.")
         guard transition == nil else { return }
         savedIdentity = identity
+        revision += 1
         guard index > 0, case var .document(entry) = entries[index - 1] else { return }
         entry.mergeSealed = true
         entries[index - 1] = .document(entry)
@@ -180,6 +231,7 @@ public final class SongHistory {
                 previous.action = merged
                 entries[index - 1] = .bank(previous)
             }
+            revision += 1
             return
         }
         entries.append(
@@ -188,6 +240,8 @@ public final class SongHistory {
                     action: action, identity: currentIdentity,
                     mergeSealed: false)))
         index += 1
+        evictOverflow()
+        revision += 1
     }
 
     @discardableResult
@@ -196,6 +250,7 @@ public final class SongHistory {
             case let .document(entry) = entries[index - 1]
         else { return false }
         index -= 1
+        revision += 1
         applyDocument?(entry.changes, .undo, entry.trackRemap?.inverted())
         return true
     }
@@ -206,6 +261,7 @@ public final class SongHistory {
             case let .document(entry) = entries[index]
         else { return false }
         index += 1
+        revision += 1
         applyDocument?(entry.changes, .redo, entry.trackRemap)
         return true
     }
@@ -216,6 +272,7 @@ public final class SongHistory {
         switch entries[index - 1] {
         case let .document(entry):
             index -= 1
+            revision += 1
             applyDocument?(entry.changes, .undo, entry.trackRemap?.inverted())
         case let .bank(entry):
             guard let token = beginBankTransition() else { return false }
@@ -227,6 +284,7 @@ public final class SongHistory {
                 entries.remove(at: index - 1)
                 index -= 1
             }
+            revision += 1
         }
         return true
     }
@@ -237,6 +295,7 @@ public final class SongHistory {
         switch entries[index] {
         case let .document(entry):
             index += 1
+            revision += 1
             applyDocument?(entry.changes, .redo, entry.trackRemap)
         case let .bank(entry):
             guard let token = beginBankTransition() else { return false }
@@ -247,6 +306,7 @@ public final class SongHistory {
             } catch BankHistoryReplayError.staleEntry {
                 entries.remove(at: index)
             }
+            revision += 1
         }
         return true
     }
@@ -258,6 +318,12 @@ public final class SongHistory {
         _ apply: @escaping (DocumentChangeSet, BankHistoryDirection, TrackRemap?) -> Void
     ) {
         applyDocument = apply
+    }
+
+    internal func attachLabeler(
+        _ labeler: @escaping (HistoryOperation, DocumentChangeSet) -> String
+    ) {
+        labelDocument = labeler
     }
 
     internal func originChanges(
@@ -327,8 +393,10 @@ public final class SongHistory {
                 previous.afterIdentity = mintIdentity()
                 previous.trackRemap = trackRemap
                 previous.operation = operation
+                previous.label = labelDocument?(operation, changes) ?? HistoryStepLabel.fixedPhrase(for: operation)
                 entries[index - 1] = .document(previous)
             }
+            revision += 1
             return
         }
         guard !changes.isEmpty else { return }
@@ -337,8 +405,12 @@ public final class SongHistory {
             .document(
                 DocumentEntry(
                     changes: changes, afterIdentity: mintIdentity(), group: group,
-                    operation: operation, trackRemap: trackRemap, mergeSealed: false)))
+                    operation: operation,
+                    label: labelDocument?(operation, changes) ?? HistoryStepLabel.fixedPhrase(for: operation),
+                    trackRemap: trackRemap, mergeSealed: false)))
         index += 1
+        evictOverflow()
+        revision += 1
     }
 
     internal func sealMergeBoundary() {
@@ -351,6 +423,15 @@ public final class SongHistory {
             entry.mergeSealed = true
             entries[index - 1] = .bank(entry)
         }
+    }
+
+    private func evictOverflow() {
+        let count = entries.count - Self.stepLimit
+        guard count > 0 else { return }
+        baseIdentity = entries[count - 1].afterIdentity
+        entries.removeFirst(count)
+        index -= count
+        hasEvictedSteps = true
     }
 
     private func discardRedo() {

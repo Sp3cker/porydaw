@@ -128,40 +128,4 @@ extension ApplicationSession {
             self?.publishSaveState(inProgress: false)
         }
     }
-
-    func requestUndoImpl() {
-        guard let session = workspace?.session else { return }
-        canUndo = false
-        canRedo = false
-        publishLastSaveError("")
-        onDocumentStateChanged?(false)
-        Task { [weak self] in
-            do {
-                _ = try await session.undo()
-            } catch {
-                let message = String(describing: error)
-                self?.publishLastSaveError(message)
-                self?.publishOperationFailure(message: message)
-                self?.refreshDocumentState()
-            }
-        }
-    }
-
-    func requestRedoImpl() {
-        guard let session = workspace?.session else { return }
-        canUndo = false
-        canRedo = false
-        publishLastSaveError("")
-        onDocumentStateChanged?(false)
-        Task { [weak self] in
-            do {
-                _ = try await session.redo()
-            } catch {
-                let message = String(describing: error)
-                self?.publishLastSaveError(message)
-                self?.publishOperationFailure(message: message)
-                self?.refreshDocumentState()
-            }
-        }
-    }
 }

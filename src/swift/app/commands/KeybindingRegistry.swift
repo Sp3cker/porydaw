@@ -137,6 +137,7 @@ public struct KeybindingRegistry {
         .init("view.velocity_drawer", .window, "Velocity Drawer", keys: "V"),
         .init("view.voice_changes_drawer", .window, "Voice Changes Drawer", keys: "P"),
         .init("view.polyphony_debugger", .window, "Polyphony Debugger", keys: "Ctrl+Shift+P"),
+        .init("view.undo_history", .window, "Undo History"),
         .init("tools.import_sample", .window, "Import Sample"),
         .init("transport.go_to_start", .window, "Go to Start", keys: "Home"),
         .init("transport.play", .window, "Play"),

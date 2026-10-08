@@ -303,12 +303,25 @@ target_link_libraries(PorydawAppPresentation PUBLIC PorydawCore PorydawDocument 
 
 add_dependencies(PorydawAppPresentation QtBridgeMacros)
 
+add_library(PorydawAppHistory STATIC
+    history/UndoHistoryPanel.swift
+    history/UndoHistoryRow.swift
+)
+porydaw_swift_module(PorydawAppHistory PorydawAppHistory)
+set_target_properties(PorydawAppHistory PROPERTIES
+    AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
+)
+porydaw_swift_qt_interop(PorydawAppHistory)
+target_link_libraries(PorydawAppHistory PUBLIC PorydawCore PorydawDocument PorydawAppPresentation QtBridge)
+
+add_dependencies(PorydawAppHistory QtBridgeMacros)
+
 target_link_libraries(PorydawApp PUBLIC
-    PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppPresentation
+    PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppHistory PorydawAppPresentation
 )
 
 if(PORYDAW_BUILD_CHECKS)
-    foreach(leaf PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppPresentation)
+    foreach(leaf PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppHistory PorydawAppPresentation)
         target_compile_options(${leaf} PRIVATE
             "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>")
     endforeach()

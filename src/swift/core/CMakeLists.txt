@@ -10,6 +10,7 @@ add_library(PorydawCore STATIC
     DocumentChangeSet.swift
     DocumentRevisions.swift
     SongHistory.swift
+    HistoryStepLabel.swift
     NoteEditing.swift
     NoteCollision.swift
     NoteMovement.swift

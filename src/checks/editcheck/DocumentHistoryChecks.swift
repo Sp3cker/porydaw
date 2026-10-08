@@ -19,6 +19,21 @@ private func twoTrackFile() -> MidiFile {
         ])
 }
 
+private func historyGestureFile() -> MidiFile {
+    MidiFile(
+        division: 24,
+        chunks: [
+            MidiChunk(
+                events: [
+                    .channel(status: 0xC0, data0: 1),
+                    .channel(status: 0x90, data0: 60, data1: 100),
+                    .channel(status: 0x90, data0: 64, data1: 90),
+                    .channel(tick: 12, status: 0x80, data0: 60),
+                    .channel(tick: 24, status: 0x80, data0: 64),
+                ], endTick: 48)
+        ])
+}
+
 @MainActor
 func documentHistoryContracts(_ report: CheckReport) {
     documentLoadPublicationContract(report)
@@ -33,6 +48,18 @@ func documentHistoryContracts(_ report: CheckReport) {
     }
     do { try documentMergedOverlapContract(report) } catch {
         report.fail("editcheck/EditCheckTest::documentMergedOverlapPublication", "overlap history failed: \(error)")
+    }
+    do { try historyEvictionProjectionContract(report) } catch {
+        report.fail("editcheck/EditCheckTest::historyEvictionProjection", "eviction projection failed: \(error)")
+    }
+    do { try historySavedProjectionContract(report) } catch {
+        report.fail("editcheck/EditCheckTest::historySavedProjection", "saved projection failed: \(error)")
+    }
+    do { try historyLabelProjectionContract(report) } catch {
+        report.fail("editcheck/EditCheckTest::historyLabelProjection", "label projection failed: \(error)")
+    }
+    do { try historyRevisionProjectionContract(report) } catch {
+        report.fail("editcheck/EditCheckTest::historyRevisionProjection", "revision projection failed: \(error)")
     }
 }
 
@@ -388,4 +415,326 @@ private func documentMergedOverlapContract(_ report: CheckReport) throws {
     report.expect(
         document.note(movedID)?.pitch == 73, cppID: id,
         message: "redo fourth move returns to pitch 73")
+}
+
+@MainActor
+private func historyEvictionProjectionContract(_ report: CheckReport) throws {
+    let id = "editcheck/EditCheckTest::historyEvictionProjection"
+    let document = SongDocument(file: twoTrackFile())
+    let history = document.history
+    let opened = history.currentIdentity
+    document.didSave(try document.captureSave())
+    document.setChunkEnd(1, tick: 49)
+    let first = history.currentIdentity
+    for offset in 2...513 { document.setChunkEnd(1, tick: Tick(48 + offset)) }
+    let tip = history.currentIdentity
+    report.expect(
+        SongHistory.stepLimit == 512 && history.undoCount == 512 && history.undoIndex == 512,
+        cppID: id, message: "513 appends retain 512 applied entries")
+    report.expect(
+        history.hasEvictedSteps && document.isDirty && !history.baseIsSaved,
+        cppID: id, message: "eviction advances the base beyond the on-open save")
+    report.expectEqual(
+        expected: 514, actual: history.revision, cppID: id,
+        what: "save plus 513 appends includes eviction in a single append bump")
+    report.expect(
+        !history.contains(opened) && history.contains(first) && history.contains(tip),
+        cppID: id, message: "identity lookup retains the advanced base and live tip, not opened")
+    report.expect(
+        history.step(at: -1) == nil && history.step(at: 512) == nil,
+        cppID: id, message: "projection rejects offsets outside the retained log")
+    for _ in 0..<512 { _ = history.undoDocument() }
+    report.expect(
+        history.undoIndex == 0 && history.undoCount == 512 && history.canRedo,
+        cppID: id, message: "undo-to-base preserves the full redo tail after eviction")
+    report.expect(
+        history.currentIdentity == first && document.isDirty,
+        cppID: id, message: "undo-to-zero stays dirty against an evicted on-open save")
+    report.expect(
+        history.step(at: 0)?.applied == false && history.step(at: 0)?.isCurrent == false,
+        cppID: id, message: "no retained row is current or applied at the base")
+    for _ in 0..<512 { _ = history.redoDocument() }
+    report.expect(
+        history.currentIdentity == tip && history.undoIndex == 512,
+        cppID: id, message: "redo restores the exact retained tip without further eviction")
+    _ = history.undoDocument()
+    _ = history.undoDocument()
+    document.setChunkEnd(1, tick: 900)
+    report.expect(
+        history.undoCount == 511 && history.undoIndex == 511 && !history.canRedo,
+        cppID: id, message: "record after undo discards only the redo tail")
+    let bankHistory = SongHistory()
+    for value in 1...513 {
+        bankHistory.recordConfirmedBank(ProjectionBankAction(before: -1, after: value))
+    }
+    report.expect(
+        bankHistory.undoCount == 512 && bankHistory.undoIndex == 512
+            && bankHistory.revision == 513 && bankHistory.hasEvictedSteps,
+        cppID: id, message: "nonmerged bank appends share the cap and single revision bump")
+}
+
+@MainActor
+private func historySavedProjectionContract(_ report: CheckReport) throws {
+    let id = "editcheck/EditCheckTest::historySavedProjection"
+    let document = SongDocument(file: twoTrackFile())
+    let history = document.history
+    document.didSave(try document.captureSave())
+    report.expect(
+        history.baseIsSaved && !history.hasEvictedSteps && history.undoCount == 0,
+        cppID: id, message: "save at open marks the unevicted base")
+    document.setChunkEnd(1, tick: 49)
+    document.didSave(try document.captureSave())
+    let saved = history.currentIdentity
+    report.expect(
+        history.step(at: 0)?.isSaved == true && !history.baseIsSaved,
+        cppID: id, message: "save marks the document step rather than the base")
+    history.recordConfirmedBank(ProjectionBankAction(before: 0, after: 1))
+    report.expect(
+        history.step(at: 0)?.isSaved == true && history.step(at: 1)?.isSaved == false,
+        cppID: id, message: "a bank step sharing the saved identity never carries its marker")
+    _ = try runBlocking { try await history.undo() }
+    _ = history.undoDocument()
+    report.expect(
+        history.step(at: 0)?.isSaved == true && !history.baseIsSaved && document.isDirty,
+        cppID: id, message: "save-then-undo keeps the marker on the unapplied document step")
+    document.didSave(try document.captureSave())
+    report.expect(
+        history.baseIsSaved && history.step(at: 0)?.isSaved == false,
+        cppID: id, message: "saving after undo moves the marker back to the base")
+    _ = history.redoDocument()
+    document.didSave(try document.captureSave())
+    for offset in 2...513 { document.setChunkEnd(1, tick: Tick(48 + offset)) }
+    report.expect(
+        history.baseIsSaved && history.contains(saved),
+        cppID: id, message: "the last evicted saved state can still be the kept base")
+    document.setChunkEnd(1, tick: 800)
+    var anySaved = history.baseIsSaved
+    for offset in 0..<history.undoCount {
+        anySaved = anySaved || history.step(at: offset)?.isSaved == true
+    }
+    report.expect(
+        !history.contains(saved) && !anySaved && document.isDirty,
+        cppID: id, message: "a save older than the kept base leaves no saved marker anywhere")
+}
+
+@MainActor
+private func historyLabelProjectionContract(_ report: CheckReport) throws {
+    let id = "editcheck/EditCheckTest::historyLabelProjection"
+    let document = SongDocument(file: twoTrackFile())
+    let history = document.history
+    document.renameTrack(0, to: "Lead")
+    report.expectEqual(
+        expected: "Rename track", actual: history.step(at: 0)?.label, cppID: id,
+        what: "track-management steps use their fixed phrase")
+    let added = try document.addNotes([
+        NewNote(track: 0, tick: 30, pitch: 65, duration: 4, velocity: 80)
+    ])
+    report.expectEqual(
+        expected: "Track Lead - edited 1 note", actual: history.step(at: 1)?.label, cppID: id,
+        what: "single-track note insertion captures a singular note label")
+    document.renameTrack(0, to: "Renamed")
+    report.expectEqual(
+        expected: "Track Lead - edited 1 note", actual: history.step(at: 1)?.label, cppID: id,
+        what: "later rename cannot rewrite an earlier captured label")
+    let pair = try document.addNotes([
+        NewNote(track: 0, tick: 36, pitch: 66, duration: 4, velocity: 80),
+        NewNote(track: 0, tick: 36, pitch: 67, duration: 4, velocity: 80),
+    ])
+    report.expectEqual(
+        expected: "Track Renamed - edited 2 notes", actual: history.step(at: 3)?.label, cppID: id,
+        what: "two note insertions count note-ons, not their note ends")
+    _ = document.setVelocities(
+        pair.map { NoteVelocity(noteID: $0, velocity: 75) },
+        expectedRevision: document.revision)
+    report.expectEqual(
+        expected: "Track Renamed - edited 2 notes", actual: history.step(at: 4)?.label, cppID: id,
+        what: "replacement note-ons count each identity only once")
+    document.moveNotes(added, byTicks: 1, byKeys: 0)
+    report.expectEqual(
+        expected: "Track Renamed - edited 1 note", actual: history.step(at: 5)?.label, cppID: id,
+        what: "note movement uses its ID payload count")
+    let group = HistoryGroup()
+    document.deleteNotes(pair)
+    _ = try document.addNotes([
+        NewNote(track: 1, tick: 30, pitch: 70, duration: 4, velocity: 80)
+    ])
+    report.expectEqual(
+        expected: "Track 2 - edited 1 note", actual: history.step(at: 7)?.label, cppID: id,
+        what: "unnamed tracks use their one-based engine position")
+    _ = try document.addNotes([
+        NewNote(track: 0, tick: 42, pitch: 72, duration: 4, velocity: 80),
+        NewNote(track: 1, tick: 42, pitch: 73, duration: 4, velocity: 80),
+    ])
+    report.expectEqual(
+        expected: "Edited 2 notes", actual: history.step(at: 8)?.label, cppID: id,
+        what: "multi-track changes omit the track prefix")
+    document.insertRawEvent(chunk: 1, event: .channel(tick: 40, status: 0xB0, data0: 7, data1: 80))
+    report.expectEqual(
+        expected: "Track Renamed - edited 1 event", actual: history.step(at: 9)?.label, cppID: id,
+        what: "raw event insertion uses singular event")
+    guard let eventIndex = document.rawChunks[1].events.firstIndex(where: { $0.typeNibble == 0xB }),
+        let programIndex = document.rawChunks[1].events.firstIndex(where: { $0.typeNibble == 0xC })
+    else {
+        report.fail(id, "inserted controller event is missing")
+        return
+    }
+    document.modifyRawEvent(
+        chunk: 1, index: eventIndex,
+        event: .channel(tick: 40, status: 0xB0, data0: 7, data1: 81))
+    report.expectEqual(
+        expected: "Track Renamed - edited 1 event", actual: history.step(at: 10)?.label, cppID: id,
+        what: "raw event replacement counts once, not remove plus insert")
+    document.deleteRawEvents(chunk: 1, indices: [programIndex, eventIndex])
+    report.expectEqual(
+        expected: "Track Renamed - edited 2 events", actual: history.step(at: 11)?.label, cppID: id,
+        what: "multiple removed events use the plural event label")
+    let gesture = SongDocument(file: historyGestureFile())
+    let gestureIDs = gesture.notes(in: 0).map(\.id)
+    gesture.moveNotes(gestureIDs, byTicks: 1, byKeys: 0, group: group)
+    gesture.renameTrack(0, to: "Later")
+    let mergedGroup = HistoryGroup()
+    gesture.moveNotes(gestureIDs, byTicks: 1, byKeys: 0, group: mergedGroup)
+    gesture.moveNotes(gestureIDs, byTicks: 2, byKeys: 0, group: mergedGroup)
+    report.expect(
+        gesture.history.undoCount == 3
+            && gesture.history.step(at: 2)?.label == "Track Later - edited 2 notes",
+        cppID: id, message: "merged gesture refreshes its captured label and payload count")
+    history.recordConfirmedBank(ProjectionBankAction(before: 0, after: 1))
+    report.expectEqual(
+        expected: "Edit probe slot 1", actual: history.step(at: 12)?.label, cppID: id,
+        what: "bank projection reads the explicit action label")
+    history.recordConfirmedBank(ProjectionBankAction(before: 1, after: 2))
+    report.expectEqual(
+        expected: "Edit probe slot 2", actual: history.step(at: 12)?.label, cppID: id,
+        what: "bank merge projects the replacement action's own label")
+}
+
+@MainActor
+private func historyRevisionProjectionContract(_ report: CheckReport) throws {
+    let id = "editcheck/EditCheckTest::historyRevisionProjection"
+    let document = SongDocument(file: historyGestureFile())
+    let history = document.history
+    let ids = document.notes(in: 0).map(\.id)
+    let group = HistoryGroup()
+    var revision = history.revision
+    document.moveNotes(ids, byTicks: 1, byKeys: 0, group: group)
+    report.expectEqual(expected: revision + 1, actual: history.revision, cppID: id, what: "append bumps once")
+    revision = history.revision
+    document.moveNotes(ids, byTicks: 2, byKeys: 0, group: group)
+    report.expectEqual(expected: revision + 1, actual: history.revision, cppID: id, what: "merge replace bumps once")
+    revision = history.revision
+    document.moveNotes(ids, byTicks: 0, byKeys: 0, group: group)
+    report.expectEqual(expected: revision + 1, actual: history.revision, cppID: id, what: "merge removal bumps once")
+    revision = history.revision
+    _ = history.undoDocument()
+    _ = history.redoDocument()
+    document.moveNotes(ids, byTicks: 0, byKeys: 0)
+    report.expectEqual(
+        expected: revision, actual: history.revision, cppID: id, what: "rejected and no-op calls do not bump")
+    document.moveNotes(ids, byTicks: 1, byKeys: 0, group: group)
+    revision = history.revision
+    document.didSave(try document.captureSave())
+    report.expectEqual(expected: revision + 1, actual: history.revision, cppID: id, what: "markSaved bumps once")
+    document.moveNotes(ids, byTicks: 2, byKeys: 0, group: group)
+    report.expectEqual(
+        expected: 2, actual: history.undoCount, cppID: id, what: "save seals the adjacent document merge")
+    revision = history.revision
+    _ = history.undoDocument()
+    report.expectEqual(expected: revision + 1, actual: history.revision, cppID: id, what: "document undo bumps once")
+    report.expect(
+        history.step(at: 0)?.applied == true && history.step(at: 0)?.isCurrent == true
+            && history.step(at: 1)?.applied == false && history.step(at: 1)?.isCurrent == false,
+        cppID: id, message: "projection flags follow the applied cursor")
+    revision = history.revision
+    _ = history.redoDocument()
+    report.expectEqual(expected: revision + 1, actual: history.revision, cppID: id, what: "document redo bumps once")
+    revision = history.revision
+    _ = try runBlocking { try await history.undo() }
+    report.expectEqual(
+        expected: revision + 1, actual: history.revision, cppID: id, what: "async document undo bumps once")
+    revision = history.revision
+    _ = try runBlocking { try await history.redo() }
+    report.expectEqual(
+        expected: revision + 1, actual: history.revision, cppID: id, what: "async document redo bumps once")
+    _ = history.undoDocument()
+    revision = history.revision
+    document.setChunkEnd(0, tick: 100)
+    report.expectEqual(
+        expected: revision + 1, actual: history.revision, cppID: id, what: "redo discard folds into the append bump")
+    revision = history.revision
+    history.recordConfirmedBank(ProjectionBankAction(before: 0, after: 1))
+    report.expectEqual(expected: revision + 1, actual: history.revision, cppID: id, what: "bank append bumps once")
+    revision = history.revision
+    history.recordConfirmedBank(ProjectionBankAction(before: 1, after: 2))
+    report.expectEqual(
+        expected: revision + 1, actual: history.revision, cppID: id, what: "bank merge replace bumps once")
+    revision = history.revision
+    history.recordConfirmedBank(ProjectionBankAction(before: 2, after: 0))
+    report.expectEqual(
+        expected: revision + 1, actual: history.revision, cppID: id, what: "bank merge removal bumps once")
+    history.recordConfirmedBank(ProjectionBankAction(before: 0, after: 1))
+    revision = history.revision
+    history.sealBankMerge()
+    report.expectEqual(expected: revision, actual: history.revision, cppID: id, what: "bank sealing does not bump")
+    guard let token = history.beginBankTransition() else {
+        report.fail(id, "bank transition did not begin")
+        return
+    }
+    let guardedUndo = try runBlocking { try await history.undo() }
+    let guardedRedo = try runBlocking { try await history.redo() }
+    report.expect(
+        !guardedUndo && !guardedRedo && history.revision == revision,
+        cppID: id, message: "transition-guarded replay calls do not bump")
+    history.endBankTransition(token)
+    report.expectEqual(
+        expected: revision, actual: history.revision, cppID: id, what: "transition begin and end do not bump")
+    _ = try runBlocking { try await history.undo() }
+    report.expectEqual(expected: revision + 1, actual: history.revision, cppID: id, what: "bank undo bumps once")
+    revision = history.revision
+    _ = try runBlocking { try await history.redo() }
+    report.expectEqual(expected: revision + 1, actual: history.revision, cppID: id, what: "bank redo bumps once")
+    history.sealBankMerge()
+    let stale = ProjectionBankAction(before: 0, after: 1)
+    stale.isStale = true
+    history.recordConfirmedBank(stale)
+    revision = history.revision
+    let count = history.undoCount
+    _ = try runBlocking { try await history.undo() }
+    report.expect(
+        history.revision == revision + 1 && history.undoCount == count - 1,
+        cppID: id, message: "stale undo removal bumps once")
+    let staleRedo = ProjectionBankAction(before: 0, after: 1)
+    history.recordConfirmedBank(staleRedo)
+    _ = try runBlocking { try await history.undo() }
+    staleRedo.isStale = true
+    revision = history.revision
+    let cursor = history.undoIndex
+    _ = try runBlocking { try await history.redo() }
+    report.expect(
+        history.revision == revision + 1 && history.undoIndex == cursor,
+        cppID: id, message: "stale redo removal bumps once without advancing the cursor")
+}
+
+@MainActor
+private final class ProjectionBankAction: BankHistoryAction {
+    let before: Int
+    let after: Int
+    let historyLabel: String
+    var isStale = false
+    var isRedundant: Bool { before == after }
+
+    init(before: Int, after: Int) {
+        self.before = before
+        self.after = after
+        historyLabel = "Edit probe slot \(after)"
+    }
+
+    func apply(direction _: BankHistoryDirection) async throws {
+        if isStale { throw BankHistoryReplayError.staleEntry }
+    }
+
+    func merged(with newer: any BankHistoryAction) -> (any BankHistoryAction)? {
+        guard let newer = newer as? ProjectionBankAction, after == newer.before else { return nil }
+        return ProjectionBankAction(before: before, after: newer.after)
+    }
 }

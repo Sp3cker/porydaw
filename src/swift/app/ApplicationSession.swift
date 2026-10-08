@@ -5,6 +5,7 @@ import PorydawProject
 import QtBridge
 import PorydawAppAudio
 import PorydawAppCommands
+import PorydawAppHistory
 import PorydawAppPresentation
 
 @MainActor
@@ -48,6 +49,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// binds the strip before the first open and after the last close.
     @QtTracked public var songTabs: SongTabsController
     @QtTracked public var polyphony: PolyphonyPanelPresenter
+    @QtTracked public let undoHistory: UndoHistoryPanel = UndoHistoryPanel()
+    private var undoHistoryVisible = false
 
     @QtIgnored
     public internal(set) var projectRoot = ""
@@ -168,6 +171,30 @@ public final class ApplicationSession: QmlInstantiableStatus {
             baseFontPx: GridCameraPolicy.seedBaseFontPx,
             appFontLineSpacing: 0)
         connectPolyphonyJump()
+        undoHistory.context = { [weak self] in
+            guard let self else { return (session: nil, bankTransitionInFlight: false) }
+            return (
+                session: workspace?.session,
+                bankTransitionInFlight: songTabs.tabs.contains {
+                    $0.workspace.session.document.history.bankTransitionInFlight
+                }
+            )
+        }
+        undoHistory.onEvent = { [weak self] event in
+            guard let self else { return }
+            switch event {
+            case .began:
+                canUndo = false
+                canRedo = false
+                publishLastSaveError("")
+                onDocumentStateChanged?(false)
+            case .failed(let message):
+                publishLastSaveError(message)
+                publishOperationFailure(message: message)
+            case .settled:
+                refreshDocumentState()
+            }
+        }
         eventList.onRevealVoiceRequested = { [voiceList] program in
             voiceList.revealSlot(slot: program)
         }
@@ -519,11 +546,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     public func requestUndo() {
-        requestUndoImpl()
+        undoHistory.request(.undo)
     }
 
     public func requestRedo() {
-        requestRedoImpl()
+        undoHistory.request(.redo)
     }
 
     public func play() {
@@ -549,6 +576,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
         setNoteNameModeImpl(enabled: enabled)
     }
 
+    @QtIgnored
+    func setUndoHistoryVisible(_ visible: Bool) {
+        undoHistoryVisible = visible
+        refreshDocumentState()
+    }
+
     /// Follows the selected tab's document, but gates Undo/Redo while any
     /// tab has a pending bank transition.
     func refreshDocumentState() {
@@ -557,24 +590,18 @@ public final class ApplicationSession: QmlInstantiableStatus {
         defer { onDocumentStateChanged?(songOpenChanged) }
         publish(\.songOpen, hasSongs)
         songDock.syncSelection()
+        let historyAvailability = undoHistory.refresh(visible: undoHistoryVisible)
+        publish(\.canUndo, historyAvailability.canUndo)
+        publish(\.canRedo, historyAvailability.canRedo)
         guard let session = workspace?.session else {
             publish(\.documentDirty, false)
             publish(\.songDocumentDirty, false)
-            publish(\.canUndo, false)
-            publish(\.canRedo, false)
             return
         }
         let songDirty = session.document.isDirty
         publish(\.songDocumentDirty, songDirty)
         let dirty = songDirty || session.bankDirty
         publish(\.documentDirty, dirty)
-        let bankPending = songTabs.tabs.contains {
-            $0.workspace.session.document.history.bankTransitionInFlight
-        }
-        let undoAvailable = !bankPending && session.document.history.canUndo
-        publish(\.canUndo, undoAvailable)
-        let redoAvailable = !bankPending && session.document.history.canRedo
-        publish(\.canRedo, redoAvailable)
     }
 
 }

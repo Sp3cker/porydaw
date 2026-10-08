@@ -450,6 +450,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/bank_sharing.swift
         workspace/bank_sharing_history.swift
         workspace/bank_switching.swift
+        workspace/history_jump.swift
         workspace/sample_commit.swift
         workspace/session_catalog.swift
         lanes/ProjectLane.swift

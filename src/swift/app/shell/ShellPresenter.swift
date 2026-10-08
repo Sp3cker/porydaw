@@ -60,6 +60,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var dockColumnWidth = Int((21.5 * 13).rounded())
     @QtTracked public var dockSongsRatio = 0.5
     @QtTracked public var polyphonyVisible = false
+    @QtTracked public var undoHistoryVisible = false
     @QtTracked public var windowX = -1
     @QtTracked public var windowY = -1
     @QtTracked public var windowWidth = -1
@@ -207,6 +208,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "view.polyphony_debugger":
             polyphonyVisible.toggle()
             session.polyphony.setVisible(showing: polyphonyVisible)
+        case "view.undo_history":
+            undoHistoryVisible.toggle()
+            session.setUndoHistoryVisible(undoHistoryVisible)
         case "help.about": aboutRequested()
         default: break
         }

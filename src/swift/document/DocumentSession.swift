@@ -461,6 +461,27 @@ public final class DocumentSession {
         try await stepHistory(.redo)
     }
 
+    /// Replays history steps to the clamped target, returning the reached index.
+    /// Throws a replay failure after any preceding steps have committed.
+    @discardableResult
+    public func jump(toIndex target: Int) async throws -> Int {
+        let history = document.history
+        var target = min(max(target, 0), history.undoCount)
+        while true {
+            target = min(target, history.undoCount)
+            let indexBefore = history.undoIndex
+            guard indexBefore != target else { return indexBefore }
+            let countBefore = history.undoCount
+            let direction: BankHistoryDirection = indexBefore > target ? .undo : .redo
+            guard try await stepHistory(direction) else { return history.undoIndex }
+            if direction == .redo, history.undoCount < countBefore,
+                history.undoIndex == indexBefore
+            {
+                target -= 1
+            }
+        }
+    }
+
     /// Crosses a -G history edit even if its replacement bank fails to load.
     /// The last valid lease remains bound while the requested cfg stays undoable.
     private func stepHistory(_ direction: BankHistoryDirection) async throws -> Bool {
