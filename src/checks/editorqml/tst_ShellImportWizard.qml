@@ -90,7 +90,17 @@ ShellLaneSupport {
                "fixture opens without song")
         compare(presenter.session.songOpen, false, "project need not have a song")
         verify(row.enabled, "project enables import")
-        compare(child("shellFileMenu").itemAt(2).objectName, "shellAction_file.import_midi",
+        const fileMenu = child("shellFileMenu")
+        function menuIndex(name) {
+            for (let i = 0; i < fileMenu.count; ++i) {
+                if (fileMenu.itemAt(i).objectName === name)
+                    return i
+            }
+            return -1
+        }
+        const newSong = menuIndex("shellAction_file.new_song")
+        verify(newSong >= 0, "File menu offers New Song")
+        compare(menuIndex("shellAction_file.import_midi"), newSong + 1,
                 "Import MIDI follows New Song directly")
         bootstrap.preferences.setString("lastImportDir", rootPath + "/test_midis")
         const picker = openPicker(sourcePath)

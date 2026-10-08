@@ -245,4 +245,42 @@ ShellPitchBendSupport {
                    "dismissal returns keyboard focus to the roll input")
     }
 
+    function test_gridShortcutsRetuneOpenPopupRules() {
+        const opened = openViaG()
+        const graph = findChild(opened.view, "pitchBendGraph")
+        verify(graph !== null && graph.activeFocus, "the popup graph owns the keyboard")
+        const note = JSON.parse(opened.grid.fetchNoteSummary()).find(function(n) {
+            return n.selected
+        })
+        const revision = opened.grid.appliedRevisionText
+        function interiorRules(step) {
+            return Math.floor((note.tick + note.duration - 1) / step) - Math.floor(note.tick / step)
+        }
+        function renderedRules() {
+            const canvas = graph.canvasRect
+            return graph.children.filter(function(child) {
+                return child.height === canvas.height && child.width < canvas.width / 4
+            }).map(function(child) { return child.x }).sort(function(a, b) { return a - b })
+        }
+        keyClick(Qt.Key_1, Qt.ControlModifier)
+        tryCompare(opened.grid, "gridSelectionMenuId", 4, 3000,
+                   "Ctrl+1 over the open popup narrows the roll grid")
+        const quarterRules = renderedRules()
+        keyClick(Qt.Key_1, Qt.ControlModifier)
+        keyClick(Qt.Key_1, Qt.ControlModifier)
+        keyClick(Qt.Key_1, Qt.ControlModifier)
+        tryCompare(opened.grid, "gridSelectionMenuId", 32, 3000,
+                   "repeated Ctrl+1 keeps walking the grid over the popup")
+        const fineRules = renderedRules()
+        compare(fineRules.length, interiorRules(opened.grid.snapTicks),
+                "the popup draws one rule per 1/32 step inside the note")
+        verify(fineRules.length > quarterRules.length
+               && quarterRules.every(function(x) { return fineRules.indexOf(x) !== -1 }),
+               "the 1/32 rules refine the quarter rules the popup drew before")
+        keyClick(Qt.Key_3, Qt.ControlModifier)
+        tryCompare(opened.grid, "tripletGrid", true, 3000, "Ctrl+3 toggles triplet feel over the popup")
+        compare(opened.editor.isOpen, true, "grid shortcuts keep the popup open")
+        compare(opened.grid.appliedRevisionText, revision, "grid shortcuts never edit the document")
+    }
+
 }

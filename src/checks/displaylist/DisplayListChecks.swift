@@ -48,7 +48,7 @@ private func displayListFixture() -> (
             id: UInt64(PD_DL_ID_LOOP_END), argb: 0x8000_FFFF, flags: UInt32(PD_DL_RECT_OVER)),
         PdDlRect(
             x: 1.5, y: 2.5, w: 3.5, h: 4.5,
-            id: UInt64.max, argb: 0xDEAD_BEEF, flags: 0),
+            id: UInt64.max, argb: 0xDEAD_BEEF, argbRight: 0x00AD_BEEF, flags: 0),
     ]
     for rect in rects {
         writer.rect(rect)
@@ -246,6 +246,16 @@ private func displayListRejects(_ report: CheckReport) {
         with: [2, 0, 0, 0])
     check.expect(!displayListDecodes(unknownRectFlag), message: "rect carries unknown flag bit")
 
+    if let reservedField = MemoryLayout<PdDlRect>.offset(of: \.reserved) {
+        var reservedRect = valid
+        let reservedOffset =
+            MemoryLayout<PdDlHeader>.stride + 2 * MemoryLayout<PdDlFont>.stride + reservedField
+        reservedRect.replaceSubrange(reservedOffset..<reservedOffset + 4, with: [1, 0, 0, 0])
+        check.expect(!displayListDecodes(reservedRect), message: "rect carries a nonzero reserved word")
+    } else {
+        check.expect(false, message: "PdDlRect.reserved has a stored offset")
+    }
+
     var unknownLabelFlag = valid
     let labelFlagsOffset =
         MemoryLayout<PdDlHeader>.stride
@@ -289,6 +299,8 @@ private func expectRect(
     check.expectEqual(expected: expected.h, actual: actual.h, what: "rect[\(index)].h")
     check.expectEqual(expected: expected.id, actual: actual.id, what: "rect[\(index)].id")
     check.expectEqual(expected: expected.argb, actual: actual.argb, what: "rect[\(index)].argb")
+    check.expectEqual(
+        expected: expected.argbRight, actual: actual.argbRight, what: "rect[\(index)].argbRight")
     check.expectEqual(expected: expected.flags, actual: actual.flags, what: "rect[\(index)].flags")
 }
 

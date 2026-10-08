@@ -138,10 +138,11 @@ extension AutomationPage {
         case .duplicate:
             changed = session.document.duplicateTime(range, scope: scope)
             if changed {
+                let source = selection
                 selection.range = TimeRange(
                     startTick: range.endTick,
                     endTick: range.endTick + range.span)
-                applyTimeSelection(selection)
+                session.highlightDuplicatedSelection(source: source, copy: selection)
                 session.editCursor = selection.range.endTick
                 revealSelectionRange(start: selection.range.startTick, end: selection.range.endTick)
             }

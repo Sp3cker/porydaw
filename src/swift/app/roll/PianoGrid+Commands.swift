@@ -22,16 +22,13 @@ extension PianoGrid {
             pencilMode.toggle()
         case .gridNarrow:
             guard viewport.grid.narrow() else { return }
-            refreshGridMenuPresentation()
-            refreshFromSession()
+            gridLatticeDidChange()
         case .gridWiden:
             guard viewport.grid.widen() else { return }
-            refreshGridMenuPresentation()
-            refreshFromSession()
+            gridLatticeDidChange()
         case .gridTriplet:
             guard viewport.grid.toggleFeel() else { return }
-            refreshGridMenuPresentation()
-            refreshFromSession()
+            gridLatticeDidChange()
         default:
             let position = TimeDefaults.tick(from: Double(editCursorTick))
             let grid = viewport.grid.snapTicksAt(position, camera: viewport.camera)
@@ -119,8 +116,14 @@ extension PianoGrid {
             ? viewport.grid.setSelection(GridSelection.fromMenuId(actionId))
             : viewport.grid.setFeel(actionId == 1 ? .triplet : .straight)
         guard changed else { return }
-        refreshGridMenuPresentation()
+        gridLatticeDidChange()
+    }
+
+    /// Re-snaps a held drag to the new lattice, then republishes the roll and lattice observers.
+    private func gridLatticeDidChange() {
+        resnapHeldGesture()
         refreshFromSession()
+        onGridLatticeChanged?()
     }
 
     private func gridDivisionText(_ selection: GridSelection) -> String {

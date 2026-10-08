@@ -260,24 +260,27 @@ public let editCommandTable: [EditCommandPolicy] = [
     EditCommandPolicy(
         command: .shortenNote,
         notesOperation: .shorten),
+    // Grid rows survive gestures: the roll re-snaps a held drag to the new lattice.
     EditCommandPolicy(
         command: .gridNarrow,
         standaloneOperation: .gridNarrow,
         keyRoute: .alwaysConsume,
-        originRule: .timelineOnly),
+        originRule: .timelineOnly,
+        survivesPointerGesture: true),
     EditCommandPolicy(
         command: .gridWiden,
         standaloneOperation: .gridWiden,
         keyRoute: .alwaysConsume,
-        originRule: .timelineOnly),
+        originRule: .timelineOnly,
+        survivesPointerGesture: true),
     EditCommandPolicy(
         command: .gridTriplet,
         standaloneOperation: .gridTriplet,
         keyRoute: .availabilityGated,
         originRule: .timelineOnly,
-        // Toggling feel re-lattices the drag's snap positions, so it
-        // stays gesture-gated; repeats consume without retoggling.
-        autoRepeatRule: .consumeWhenEligible),
+        // Repeats consume without retoggling.
+        autoRepeatRule: .consumeWhenEligible,
+        survivesPointerGesture: true),
 ]
 
 /// The policy row of one command, read out of the canonical table.

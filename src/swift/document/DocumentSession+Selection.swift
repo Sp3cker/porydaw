@@ -52,6 +52,13 @@ extension DocumentSession {
 
     public func clearTimeSelection() { applyTimeSelection(nil) }
 
+    /// Highlights `copy` and binds both ranges to the duplication just committed:
+    /// undoing it re-highlights `source`, redoing it re-highlights `copy`.
+    public func highlightDuplicatedSelection(source: AutomationTimeSelection, copy: AutomationTimeSelection) {
+        duplicatedSelections[document.history.currentIdentity] = DuplicatedSelection(source: source, copy: copy)
+        applyTimeSelection(copy)
+    }
+
     public func timeSelectionCoversTrack(_ track: Int) -> Bool {
         guard (0..<document.engineTracks.usedTrackCount).contains(track),
             let selection = timeSelection, selection.isActive,
@@ -157,4 +164,9 @@ extension DocumentSession {
         selectedNotes.removeAll()
         publishChange([.selection])
     }
+}
+
+struct DuplicatedSelection {
+    let source: AutomationTimeSelection
+    let copy: AutomationTimeSelection
 }

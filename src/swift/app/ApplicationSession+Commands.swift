@@ -15,7 +15,11 @@ extension ApplicationSession {
 
     func performGridCommandImpl(command: Int) {
         guard let command = EditCommand(rawValue: command) else { return }
-        commandRouter?.perform(command)
+        performRouted(command)
+    }
+
+    private func performRouted(_ command: EditCommand) {
+        if let refusal = commandRouter?.perform(command) { publishStatusMessage(message: refusal) }
     }
 
     func selectAdjacentGridTrack(_ command: EditCommand) {
@@ -67,7 +71,7 @@ extension ApplicationSession {
         case .delete: eventList.deleteSelected()
         case .moveEventUp: eventList.moveEvent(delta: -1)
         case .moveEventDown: eventList.moveEvent(delta: 1)
-        default: commandRouter?.perform(command)
+        default: performRouted(command)
         }
     }
 

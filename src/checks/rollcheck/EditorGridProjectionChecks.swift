@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+import PorydawAppCommands
 import PorydawCore
 @testable import PorydawDocument
 import QtBridge
@@ -57,6 +58,49 @@ func checkScratchDoubleDraw(
         singleUndo && document.history.undoIndex == history
             && (try? document.state.file.encoded()) == bytes, cppID: id,
         message: "A105 one scratch-draw undo restores the exact original MIDI bytes")
+}
+
+/// A grid change under a held double-click draw re-anchors the draw on the new lattice.
+@MainActor
+func checkHeldDrawResnapsAnchor(
+    _ report: CheckReport, viewport: DocumentViewport, grid: PianoGrid
+) {
+    let session = viewport.session
+    let id = "swiftcore/PianoRoll::heldDrawResnapsToGridChange"
+    let document = session.document
+    let camera = viewport.camera
+    let selection = viewport.grid.selection
+    defer {
+        _ = viewport.mutateCamera { $0 = camera }
+        _ = viewport.grid.setSelection(selection)
+    }
+    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
+    _ = viewport.mutateCamera { _ = $0.setHScroll($0.snapshot.maxHScroll) }
+    _ = viewport.grid.setSelection(.musical(4))
+    let beat = Double(document.ticksPerBeat)
+    let beatStart = (viewport.camera.tickAtContentX(320) / beat).rounded(.up) * beat
+    let pressTick = beatStart + 0.6 * beat
+    let x = viewport.camera.contentX(tick: pressTick)
+    let quarterAnchor = viewport.grid.snapTickDown(pressTick, camera: viewport.camera)
+    let history = document.history.undoIndex
+    grid.doublePointer(x: x, y: 160)
+    grid.performCommand(command: EditCommand.gridNarrow.rawValue)
+    let eighthAnchor = viewport.grid.snapTickDown(pressTick, camera: viewport.camera)
+    guard case .draw(let held, _, _) = grid.currentStatusPresentation() else {
+        report.fail(id, "the double-click draw stays held across the grid change")
+        grid.endPointer(x: x, y: 160)
+        return
+    }
+    report.expect(
+        quarterAnchor != eighthAnchor && held == Int(eighthAnchor), cppID: id,
+        message: "the held draw re-anchors on the 1/8 lattice without pointer motion")
+    let before = Set(document.notes(in: grid.trackIndex).map(\.id))
+    grid.endPointer(x: x, y: 160)
+    let drawn = document.notes(in: grid.trackIndex).first { !before.contains($0.id) }
+    report.expect(
+        drawn?.tick == eighthAnchor, cppID: id,
+        message: "releasing commits the re-anchored draw")
+    if document.history.undoIndex == history + 1 { _ = document.history.undoDocument() }
 }
 
 @MainActor

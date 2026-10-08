@@ -39,6 +39,9 @@ struct RollPlotBuilder {
     private static let idNone = UInt64(PD_DL_ID_NONE)
     private static let idLoopStart = UInt64(PD_DL_ID_LOOP_START)
     private static let idLoopEnd = UInt64(PD_DL_ID_LOOP_END)
+    /// The C++ loop glow: alpha 150 at the line, 18 a fifth of the way out, 0 at space(Eight).
+    private static let glowPeak = 150.0
+    private static let glowKnee = 18.0
     private static let fontNoteName: UInt32 = 6
     private static let fontNoteValue: UInt32 = 7
     private static let velocityTexts: [String] = (0..<128).map { String($0) }
@@ -487,44 +490,31 @@ struct RollPlotBuilder {
                     ? camera.viewX(tick: Double(metrics.timeAxis.loopEndTick), dpr: dpr)
                     : Double.greatestFiniteMagnitude
                 if x1 > 0 && x0 < width {
-                    let glowWidth = min(2 * metrics.baseFontPx, x1 - x0)
+                    let glowWidth = min(metrics.spaceEight, x1 - x0)
                     let glowInk = ink(.loopGlow) & 0x00FF_FFFF
-                    let glowBand = max(1, metrics.spaceHalf)
-                    func appendGlow(left: Double, fadesRight: Bool) {
-                        if !(glowWidth > 0) { return }
-                        let right = min(left + glowWidth, width)
-                        var bandIdx = max(
-                            0, Int(floor((0 - left) / glowBand)))
-                        while left + Double(bandIdx) * glowBand < right {
-                            let bandLeft = left + Double(bandIdx) * glowBand
-                            let bandRight = min(
-                                left + Double(bandIdx + 1) * glowBand,
-                                left + glowWidth)
-                            let midpoint = (bandLeft + bandRight) / 2
-                            let fraction =
-                                fadesRight
-                                ? (midpoint - left) / glowWidth
-                                : (left + glowWidth - midpoint) / glowWidth
-                            let alpha: Double
-                            if fraction <= 0.2 {
-                                alpha = 150 + (18 - 150) * fraction / 0.2
-                            } else {
-                                alpha = 18 * (1 - fraction) / 0.8
-                            }
-                            let vl = max(0, bandLeft)
-                            let vr = min(width, bandRight)
-                            if vr > vl {
-                                emitClipped(
-                                    vl, -soY, vr - vl, gridH,
-                                    UInt32(alpha.rounded()) << 24 | glowInk,
-                                    over: true)
-                            }
-                            bandIdx += 1
+                    let headWidth = 0.2 * glowWidth
+                    let top = max(-soY, 0)
+                    let bottom = min(gridH - soY, height)
+                    // One over-layer gradient from alpha a0 to a1 across [left, right), clipped to the plot.
+                    func emitFade(_ left: Double, _ right: Double, _ a0: Double, _ a1: Double) {
+                        let l = max(left, 0)
+                        let r = min(right, width)
+                        guard r > l, bottom > top else { return }
+                        func faded(at x: Double) -> UInt32 {
+                            UInt32((a0 + (a1 - a0) * (x - left) / (right - left)).rounded()) << 24 | glowInk
                         }
+                        writer.rect(
+                            PdDlRect(
+                                x: l, y: top, w: r - l, h: bottom - top, id: Self.idNone,
+                                argb: faded(at: l), argbRight: faded(at: r), flags: Self.rectOver))
                     }
-                    if hasStart { appendGlow(left: x0, fadesRight: true) }
-                    if hasEnd {
-                        appendGlow(left: x1 - glowWidth, fadesRight: false)
+                    if glowWidth > 0 && hasStart {
+                        emitFade(x0, x0 + headWidth, Self.glowPeak, Self.glowKnee)
+                        emitFade(x0 + headWidth, x0 + glowWidth, Self.glowKnee, 0)
+                    }
+                    if glowWidth > 0 && hasEnd {
+                        emitFade(x1 - glowWidth, x1 - headWidth, 0, Self.glowKnee)
+                        emitFade(x1 - headWidth, x1, Self.glowKnee, Self.glowPeak)
                     }
                     let edge = ink(.loopEdge)
                     if hasStart {

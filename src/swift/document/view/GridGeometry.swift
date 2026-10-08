@@ -449,6 +449,7 @@ public struct GridMetrics: Sendable {
     public var rulerBeatLabelZoomFactor: Double = 3.0
     public var spaceHalf: Double = 2
     public var spaceTwo: Double = 7
+    public var spaceEight: Double = 26
     public var pixel: Double = 1
 
     public static let ticksPerBeat = 24
@@ -479,6 +480,7 @@ public struct GridMetrics: Sendable {
         autoGridMinCell = fontPx(b, 4.0 / 3.0)
         spaceHalf = fontPx(b, 0.125)
         spaceTwo = fontPx(b, 0.5)
+        spaceEight = fontPx(b, 2)
         pixel = physicalPixel(dpr)
     }
 

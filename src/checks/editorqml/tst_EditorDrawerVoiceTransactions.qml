@@ -65,6 +65,13 @@ EditorDrawerTestSupport {
                   "the background hover draws its label")
         verify(hoverLabel.width > 0 && hoverLabel.height > 0,
                "the hover draws a usable label rect")
+        var hoverGuide = findChild(testCase.surface, "sharedPlayheadHoverVoiceChangesGuide")
+        verify(hoverGuide, "the surface composed the voice row's hover guide")
+        tryVerify(function() { return hoverGuide.visible }, 1000,
+                  "the voice-row hover draws the shared hover guide")
+        mouseMove(gutter, gutter.width / 2, gutter.height / 2)
+        tryVerify(function() { return !hoverGuide.visible }, 1000,
+                  "leaving the voice plot clears the shared hover guide")
     }
 
     function test_productionVoiceChangesPointerAndMenuTransactions() {
@@ -130,6 +137,9 @@ EditorDrawerTestSupport {
         VoiceSupport.awaitVoiceModal(testCase, "voiceChangeMenu", true)
         var panel = findChild(testCase.surface, "voiceMenuPanel")
         verify(panel, "the menu composed its panel")
+        var pressScene = input.mapToItem(null, markerPoint.x, markerPoint.y)
+        var panelScene = panel.mapToItem(null, 0, 0)
+        fuzzyCompare(panelScene.x, pressScene.x, 1, "the menu opens at the right press's x")
         PageSupport.auditVisibleTextInk(testCase, panel, "voice context menu")
         compare(findChild(panel, "quickMenuFrame").Accessible.role, Accessible.PopupMenu,
                 "the panel publishes the popup-menu role")

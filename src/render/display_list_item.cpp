@@ -2,6 +2,7 @@
 
 #include <QtCore/qmetaobject.h>
 #include <QtCore/qstring.h>
+#include <QtGui/qbrush.h>
 #include <QtGui/qcolor.h>
 #include <QtGui/qfont.h>
 #include <QtGui/qmatrix4x4.h>
@@ -25,7 +26,17 @@ namespace {
 
 bool drawable(const PdDlRect &rect)
 {
-    return rect.w > 0 && rect.h > 0 && (rect.argb >> 24) != 0;
+    return rect.w > 0 && rect.h > 0 && ((rect.argb | rect.argbRight) >> 24) != 0;
+}
+
+QSGGeometry::ColoredPoint2D vertex(float x, float y, uint32_t argb)
+{
+    const auto alpha = uchar(argb >> 24);
+    QSGGeometry::ColoredPoint2D point;
+    point.set(x, y, uchar((((argb >> 16) & 0xFF) * alpha + 127) / 255),
+              uchar((((argb >> 8) & 0xFF) * alpha + 127) / 255),
+              uchar(((argb & 0xFF) * alpha + 127) / 255), alpha);
+    return point;
 }
 
 bool onLayer(const PdDlRect &rect, bool over)
@@ -67,16 +78,12 @@ class RectGeometryNode final : public QSGGeometryNode
             const float top = float(rect.y);
             const float right = float(rect.x + rect.w);
             const float bottom = float(rect.y + rect.h);
-            const auto alpha = uchar(rect.argb >> 24);
-            const auto red = uchar((((rect.argb >> 16) & 0xFF) * alpha + 127) / 255);
-            const auto green = uchar((((rect.argb >> 8) & 0xFF) * alpha + 127) / 255);
-            const auto blue = uchar(((rect.argb & 0xFF) * alpha + 127) / 255);
-            v[0].set(left, top, red, green, blue, alpha);
-            v[1].set(left, bottom, red, green, blue, alpha);
-            v[2].set(right, top, red, green, blue, alpha);
-            v[3].set(right, top, red, green, blue, alpha);
-            v[4].set(left, bottom, red, green, blue, alpha);
-            v[5].set(right, bottom, red, green, blue, alpha);
+            v[0] = vertex(left, top, rect.argb);
+            v[1] = vertex(left, bottom, rect.argb);
+            v[2] = vertex(right, top, rect.argbRight);
+            v[3] = v[2];
+            v[4] = v[1];
+            v[5] = vertex(right, bottom, rect.argbRight);
             v += 6;
         }
         m_geometry.markVertexDataDirty();
@@ -104,7 +111,14 @@ class PainterRectNode final : public QSGRenderNode
             if (!onLayer(rect, over))
                 continue;
             const QRectF area(rect.x, rect.y, rect.w, rect.h);
-            m_rects.emplace_back(area, QColor::fromRgba(rect.argb));
+            if (rect.argb == rect.argbRight) {
+                m_rects.emplace_back(area, QColor::fromRgba(rect.argb));
+            } else {
+                QLinearGradient fade(area.topLeft(), area.topRight());
+                fade.setColorAt(0, QColor::fromRgba(rect.argb));
+                fade.setColorAt(1, QColor::fromRgba(rect.argbRight));
+                m_rects.emplace_back(area, QBrush(fade));
+            }
             m_bounds = m_bounds.united(area);
         }
         markDirty(QSGNode::DirtyMaterial);
@@ -125,14 +139,14 @@ class PainterRectNode final : public QSGRenderNode
         painter->setTransform(matrix()->toTransform());
         painter->setOpacity(inheritedOpacity());
         painter->setRenderHint(QPainter::Antialiasing, false);
-        for (const auto &[area, color] : m_rects)
-            painter->fillRect(area, color);
+        for (const auto &[area, brush] : m_rects)
+            painter->fillRect(area, brush);
         painter->restore();
     }
 
   private:
     QQuickWindow *m_window;
-    std::vector<std::pair<QRectF, QColor>> m_rects;
+    std::vector<std::pair<QRectF, QBrush>> m_rects;
     QRectF m_bounds;
 };
 

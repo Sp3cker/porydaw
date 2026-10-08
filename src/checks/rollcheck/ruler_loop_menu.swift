@@ -17,6 +17,7 @@ public func runRulerLoopMenuChecks(_ report: CheckReport, viewport: DocumentView
     checkRulerInsertTime(report, viewport: viewport)
     checkRenderedRulerMenuCommands(report, viewport: viewport)
     checkRulerInsertTimePrompt(report, viewport: viewport)
+    checkRulerLoopMarkerDrag(report, viewport: viewport)
     checkRulerMenuRetirement(report, viewport: viewport)
     checkRulerSweepScopeTapAndChip(report, viewport: viewport)
     checkRulerSelectedKeyboardScope(report, viewport: viewport)

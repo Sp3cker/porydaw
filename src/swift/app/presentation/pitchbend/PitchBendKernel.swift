@@ -26,8 +26,8 @@ public struct PitchBendKernel {
     public let startTick: Int
     public let endTick: Int
     /// The snap lattice ticks strictly inside the note: one grid rule each.
-    public let gridTicks: [Int]
-    public let fineTicks: Int
+    public private(set) var gridTicks: [Int]
+    public private(set) var fineTicks: Int
     private let snapTick: (Double, Bool) -> Int
     private let snapTickUp: (Double, Bool) -> Int
     public var geometry: PitchBendGeometry
@@ -49,18 +49,10 @@ public struct PitchBendKernel {
         self.geometry = geometry
         self.startTick = startTick
         self.endTick = endTick
-        var gridTicks: [Int] = []
-        var tick = snapUp(Double(startTick), false)
-        while tick > startTick && tick < endTick {
-            gridTicks.append(tick)
-            let next = snapUp(Double(tick), false)
-            guard next > tick else { break }
-            tick = next
-        }
-        self.gridTicks = gridTicks
-        self.fineTicks = max(1, fineTicks)
         snapTick = snap
         snapTickUp = snapUp
+        gridTicks = Self.lattice(startTick: startTick, endTick: endTick, snapUp: snapUp)
+        self.fineTicks = max(1, fineTicks)
         self.points = points
         self.endValue = min(
             max(endValue, lane == .pitch ? -8192 : 0),
@@ -99,6 +91,26 @@ public struct PitchBendKernel {
         gesture = nil
         keyboardTick = startTick
         liveValue = 0
+    }
+
+    /// Re-reads the snap lattice after the editing grid changed under the open note.
+    public mutating func relattice(fineTicks: Int) {
+        gridTicks = Self.lattice(startTick: startTick, endTick: endTick, snapUp: snapTickUp)
+        self.fineTicks = max(1, fineTicks)
+    }
+
+    private static func lattice(
+        startTick: Int, endTick: Int, snapUp: (Double, Bool) -> Int
+    ) -> [Int] {
+        var ticks: [Int] = []
+        var tick = snapUp(Double(startTick), false)
+        while tick > startTick && tick < endTick {
+            ticks.append(tick)
+            let next = snapUp(Double(tick), false)
+            guard next > tick else { break }
+            tick = next
+        }
+        return ticks
     }
 
     public mutating func select(_ tick: Int?) {

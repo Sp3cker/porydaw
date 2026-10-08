@@ -69,6 +69,8 @@ public final class PianoGrid: QmlUncreatable {
     @QtIgnored public var onSetVelocityRequested: (() -> Bool)?
     @QtIgnored public var onPitchBendRequested: (() -> Bool)?
     @QtIgnored public var onGridMenuOpened: (() -> Void)?
+    /// Fires after the editing snap lattice (division or feel) changed.
+    @QtIgnored public var onGridLatticeChanged: (() -> Void)?
     /// Receives the roll's live Ctrl-drag velocity preview; empty when none is staged.
     @QtIgnored public var onVelocityPreviewChanged: (([NoteID: UInt8]) -> Void)?
     @QtIgnored var publishedVelocityPreview: [NoteID: UInt8] = [:]

@@ -96,6 +96,7 @@ public func runProjectSessionSuite(_ report: CheckReport) {
     drawerOriginalNumericPromptTransaction(report, suite: session, service: service)
     editorSelectionCommandChecks(report, suite: session, service: service)
     arrowKeyTrackSelectionChecks(report, suite: session, service: service)
+    overlapRefusalChecks(report, suite: session, service: service)
     runTimeRoutingChecks(report: report, suite: session, service: service)
     runEditRoutingChecks(report: report, fixtureRoot: fixtureRoot)
     runClipboardSelectionChecks(report, suite: session, service: service)

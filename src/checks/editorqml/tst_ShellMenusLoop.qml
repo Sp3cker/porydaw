@@ -130,6 +130,64 @@ ShellMenusSupport {
         }, 5000), "the second Undo restores the loop start independently")
     }
 
+    function test_rulerLoopMarkerHoverCursorAndDragUndo() {
+        openShell()
+        openSong()
+        var session = shell.shellPresenter.session
+        var page = editorPage()
+        var grid = session.gridPresenter()
+        var start = findChild(shell, "shellAction_edit.set_loop_start")
+        var end = findChild(shell, "shellAction_edit.set_loop_end")
+        var renderer = findChild(page, "timelineQuickRulerMarks")
+        var ruler = findChild(page, "timelineRulerInput")
+        verify(start && end && renderer && ruler)
+        var cell = Math.max(1, grid.snapTicks)
+        var startTick = Math.max(cell, grid.editCursorTick + cell)
+        var endTick = startTick + 8 * cell
+        grid.setEditCursorTick(startTick)
+        tryVerify(function() { return start.enabled }, 3000)
+        start.triggered()
+        grid.setEditCursorTick(endTick)
+        end.triggered()
+        var xAt = function(tick) {
+            return tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+        }
+        var markerStartX = function() {
+            var marker = renderer.face(renderer.loopStartId)
+            return marker.width === undefined ? null
+                : renderer.mapToItem(ruler, marker.x, marker.y).x + 0.5
+        }
+        tryVerify(function() {
+            var x = markerStartX()
+            return x !== null && Math.abs(x - xAt(startTick)) <= 0.75
+        }, 3000, "the loop start marker renders at its tick")
+        var y = grid.rulerMarkerRowHeight / 2
+        var x0 = xAt(startTick)
+        mouseMove(ruler, xAt(startTick + 4 * cell), y)
+        tryCompare(ruler, "cursorShape", Qt.ArrowCursor, 3000,
+                   "the ruler between markers keeps the arrow cursor")
+        mouseMove(ruler, x0, y)
+        tryCompare(ruler, "cursorShape", Qt.SizeHorCursor, 3000,
+                   "hovering a loop marker shows the left-right resize cursor")
+        var target = startTick + 2 * cell
+        mousePress(ruler, x0, y, Qt.LeftButton)
+        mouseMove(ruler, (x0 + xAt(target)) / 2, y, -1, Qt.LeftButton)
+        mouseMove(ruler, xAt(target), y, -1, Qt.LeftButton)
+        tryCompare(ruler, "cursorShape", Qt.SizeHorCursor, 3000,
+                   "the resize cursor holds through the drag")
+        mouseRelease(ruler, xAt(target), y, Qt.LeftButton)
+        tryVerify(function() {
+            var x = markerStartX()
+            return x !== null && Math.abs(x - xAt(target)) <= 0.75
+        }, 3000, "dragging the start marker moves it on the ruler")
+        compare(grid.editCursorTick, endTick, "dragging a marker leaves the edit cursor")
+        session.requestUndo()
+        verify(waitForNative(function() {
+            var x = markerStartX()
+            return x !== null && Math.abs(x - xAt(startTick)) <= 0.75
+        }, 5000), "one Undo returns the whole marker drag")
+    }
+
     function test_rulerCursorInsertDiffersFromSelectionEditMenu() {
         openShell()
         openSong()

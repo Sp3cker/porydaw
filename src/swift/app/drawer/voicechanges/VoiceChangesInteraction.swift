@@ -66,7 +66,7 @@ extension VoiceChangesPage {
             // Capture before any signal-producing step: the target is fixed from
             // live state, so nothing after the capture can drift it.
             guard let target = captureTarget(at: x) else { return true }
-            openMenu(target, anchorX: x, anchorY: max(0, y))
+            openMenu(target, anchorX: x + plotOrigin, anchorY: max(0, y))
             return true
         case DrawerQtButton.middle:
             clearHover()
@@ -74,7 +74,6 @@ extension VoiceChangesPage {
             refreshInteractionPublished()
             return true
         case DrawerQtButton.left:
-            clearHover()
             let hit = markerHit(at: x)
             guard let hit else {
                 selectedIdentity = ""
@@ -418,6 +417,7 @@ extension VoiceChangesPage {
             else { return }
             hoverIdentity = identity
             hoverTick = Double(hit.tick)
+            onHoverGuide?(hit.tick)
             hoverText = ""
             hoverVisible = false
             publishHoverLabel(x: labelX, y: 0, width: labelWidth, height: plotHeight)
@@ -436,6 +436,7 @@ extension VoiceChangesPage {
         let lineX = xForTick(tick)
         hoverIdentity = nil
         hoverTick = Double(tick)
+        onHoverGuide?(tick)
         publish(\.hoverText, label)
         publishHoverLabel(
             x: lineX + pad, y: 0, width: max(0, plotWidth - lineX),
@@ -449,6 +450,7 @@ extension VoiceChangesPage {
         guard hoverIdentity != nil || hoverVisible || !hoverText.isEmpty || hoverTick != 0
         else { return }
         hoverIdentity = nil
+        onHoverGuide?(nil)
         hoverText = ""
         hoverVisible = false
         hoverTick = 0

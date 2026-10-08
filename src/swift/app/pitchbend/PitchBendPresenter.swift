@@ -57,6 +57,14 @@ public final class PitchBendPresenter {
     @QtTracked public var currentMod: PitchBendLane?
     @QtIgnored public var onAuditionFromTick: ((Tick) -> Void)?
     @QtIgnored public var onSoloTracksRequested: (() -> Void)?
+    private let keybindings = KeybindingRegistry()
+    /// The window's grid-lattice actions; the popup forwards them to the roll.
+    private static let gridActions = ShellActionCatalog.actions.filter {
+        switch $0.command {
+        case .gridNarrow?, .gridWiden?, .gridTriplet?: true
+        default: false
+        }
+    }
 
     public init(
         viewport: DocumentViewport, grid: PianoGrid, palette: GridPalette,
@@ -266,6 +274,17 @@ public final class PitchBendPresenter {
         refreshDescription()
     }
 
+    /// The roll publishes every snap-lattice change; the open note's rules follow it.
+    @QtIgnored
+    public func gridLatticeDidChange() {
+        guard isOpen else { return }
+        let fineTicks = Int(viewport.grid.fineGridTicks(camera: viewport.camera))
+        currentPitch?.kernel.relattice(fineTicks: fineTicks)
+        currentPitch?.rebuild()
+        currentMod?.kernel.relattice(fineTicks: fineTicks)
+        currentMod?.rebuild()
+    }
+
     public func routeUnclaimedKey(key: Int, modifiers: Int, autoRepeat: Bool) -> Bool {
         if key == 0x01000007 || key == 0x01000003 {
             currentPitch?.removeSelectedVertex()
@@ -277,12 +296,20 @@ public final class PitchBendPresenter {
             currentMod?.kernel.finish()
             return true
         }
-        if !autoRepeat && KeybindingRegistry().matches(key, modifiers, "transport.play_pause") {
+        if !autoRepeat && keybindings.matches(key, modifiers, "transport.play_pause") {
             if let note { onAuditionFromTick?(Tick(note.tick)) }
             return true
         }
-        if KeybindingRegistry().matches(key, modifiers, "roll.solo_tracks") {
+        if keybindings.matches(key, modifiers, "roll.solo_tracks") {
             onSoloTracksRequested?()
+            return true
+        }
+        if let action = Self.gridActions.first(where: { keybindings.matches(key, modifiers, $0.id) }),
+            let command = action.command
+        {
+            if !autoRepeat || editCommandPolicy(command).autoRepeatRule == .reexecute {
+                grid.performCommand(command: command.rawValue)
+            }
             return true
         }
         return false

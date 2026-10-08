@@ -116,6 +116,9 @@ public final class DocumentWorkspace {
         grid.onPitchBendRequested = { [weak pitchBend] in
             pitchBend?.openSelected() ?? false
         }
+        grid.onGridLatticeChanged = { [weak pitchBend] in
+            pitchBend?.gridLatticeDidChange()
+        }
         pitchBend.onSoloTracksRequested = { [weak grid] in
             grid?.performCommand(command: EditCommand.soloTracks.rawValue)
         }
@@ -179,6 +182,12 @@ public final class DocumentWorkspace {
         }
         voiceChangesPage.onAuditionVoice = { [weak audio] program, key, velocity in
             audio?.previewVoice(program: program, key: key, velocity: velocity)
+        }
+        voiceChangesPage.onHoverGuide = { [unowned playheadGuides, weak viewport] tick in
+            let owner = PlayheadGuideHoverOwner.voiceChanges.rawValue
+            guard let tick, let viewport else { return playheadGuides.clearHover(owner: owner) }
+            playheadGuides.updateHover(
+                owner: owner, contentX: viewport.camera.contentX(tick: Double(tick)))
         }
         grid.onCommandAvailabilityChanged = callbacks.gridCommandAvailabilityChanged
         grid.onSetVelocityRequested = { [weak velocityPage] in
@@ -349,6 +358,7 @@ public final class DocumentWorkspace {
         headerVoicePicker.onOpenChanged = nil
         headerVoicePicker.onAuditionVoice = nil
         voiceChangesPage.onAuditionVoice = nil
+        voiceChangesPage.onHoverGuide = nil
         grid.onVelocityPreviewChanged = nil
         velocityPage.detach()
         velocityPage.onVelocityAccepted = nil

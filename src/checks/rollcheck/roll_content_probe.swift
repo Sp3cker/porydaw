@@ -55,6 +55,7 @@ import QtBridge
         let h: Double
         let id: UInt64
         let argb: UInt32
+        let argbRight: UInt32
         let over: Bool
     }
     struct PlotLabel {
@@ -228,7 +229,7 @@ import QtBridge
                 let r = rectBase[i]
                 rects.append(
                     PlotRect(
-                        x: r.x, y: r.y, w: r.w, h: r.h, id: r.id, argb: r.argb,
+                        x: r.x, y: r.y, w: r.w, h: r.h, id: r.id, argb: r.argb, argbRight: r.argbRight,
                         over: r.flags & UInt32(PD_DL_RECT_OVER) != 0))
             }
             let labelCount = Int(header.pointee.labelCount)

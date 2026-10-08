@@ -364,6 +364,22 @@ extension SongDocument {
         return true
     }
 
+    /// Whether two of these notes already overlap at one pitch on one track.
+    /// Moving them together keeps that overlap, so `relocate` refuses the move.
+    public func notesOverlapAtSamePitch(_ ids: [NoteID]) -> Bool {
+        guard let notes = resolve(ids, in: state) else { return false }
+        var spans: [TimeNoteSpan] = []
+        spans.reserveCapacity(notes.count)
+        for note in notes {
+            guard let end = note.endTick else { continue }
+            spans.append(TimeNoteSpan(track: note.track, pitch: note.pitch, tick: note.tick, end: end))
+        }
+        spans.sort {
+            collisionOrder(($0.track, $0.pitch, $0.tick), ($1.track, $1.pitch, $1.tick))
+        }
+        return !spansAreCompatible(spans: spans, allowExactDuplicates: false)
+    }
+
     internal func resolve(
         _ ids: [NoteID], in songState: SongState,
         tracks: Set<Int>? = nil

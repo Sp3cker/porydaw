@@ -56,6 +56,9 @@ Item {
                         anchors.fill: parent
                         acceptedButtons: Qt.LeftButton | Qt.RightButton
                         activeFocusOnTab: true
+                        hoverEnabled: true
+                        cursorShape: (rulerModule.root.rulerMenu?.loopMarkerHovered ?? false)
+                            ? Qt.SizeHorCursor : Qt.ArrowCursor
                         onDoubleClicked: (mouse) => {
                             rulerMoves.flush()
                             if (mouse.button !== Qt.LeftButton)
@@ -67,14 +70,14 @@ Item {
                         onPressed: (mouse) => {
                             rulerMoves.flush()
                             if (mouse.button === Qt.LeftButton) {
-                                rulerModule.root.rulerMenu.beginSweep(mouse.x, mouse.y, mouse.modifiers)
+                                rulerModule.root.rulerMenu.beginRulerSweep(mouse.x, mouse.y, mouse.modifiers)
                             } else if (mouse.button === Qt.RightButton) {
                                 rulerModule.root.timeMenuFocus = false
                                 rulerModule.root.timeSigHost.captureTimeSigMenuPress(mouse.x, mouse.y)
                             }
                         }
                         onPositionChanged: (mouse) => {
-                            if (mouse.buttons & Qt.LeftButton)
+                            if (mouse.buttons & Qt.LeftButton || mouse.buttons === Qt.NoButton)
                                 rulerMoves.enqueue(mouse.x, mouse.y,
                                                    mouse.buttons, mouse.modifiers)
                         }
@@ -82,6 +85,7 @@ Item {
                             rulerMoves.flush()
                             if (mouse.button === Qt.LeftButton) {
                                 rulerModule.root.rulerMenu.endSweep(mouse.x, mouse.y)
+                                rulerModule.root.rulerMenu.updateRulerHover(mouse.x, mouse.y)
                             } else if (mouse.button === Qt.RightButton) {
                                 rulerModule.root.timeSigMenuPosition = mapToItem(rulerModule.root, mouse.x, mouse.y)
                                 rulerModule.root.timeSigHost.openTimeSigMenu()
@@ -91,11 +95,19 @@ Item {
                             rulerMoves.flush()
                             rulerModule.root.rulerMenu.cancelSweep()
                         }
+                        onExited: {
+                            rulerMoves.flush()
+                            if (!rulerInput.pressed)
+                                rulerModule.root.rulerMenu.clearRulerHover()
+                        }
                         MoveCoalescer {
                             id: rulerMoves
                             dispatch: rulerMoves.dispatchMove
                             function dispatchMove(x: real, y: real, buttons: int, modifiers: int): void {
-                                rulerModule.root.rulerMenu.updateSweep(x, y)
+                                if (buttons & Qt.LeftButton)
+                                    rulerModule.root.rulerMenu.updateSweep(x, y)
+                                else
+                                    rulerModule.root.rulerMenu.updateRulerHover(x, y)
                             }
                         }
                     }

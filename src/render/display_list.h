@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 #define PD_DL_MAGIC   0x314C4450u        /* "PDL1" little-endian */
-#define PD_DL_VERSION 1u
+#define PD_DL_VERSION 2u
 
 typedef struct {
     uint32_t magic, version;
@@ -24,11 +24,13 @@ typedef struct {                         /* 24 B */
     uint32_t familyOffset, familyLength; /* UTF-8 in the text block */
 } PdDlFont;
 
-typedef struct {                         /* 48 B; viewport logical px, already snapped; w,h > 0 */
+typedef struct {                         /* 56 B; viewport logical px, already snapped; w,h > 0 */
     double   x, y, w, h;
     uint64_t id;                         /* PD_DL_ID_NONE, a note id, or a PD_DL_ID_* reserved id */
-    uint32_t argb;
+    uint32_t argb, argbRight;            /* left/right edge colours, interpolated across w;
+                                            equal for a solid fill */
     uint32_t flags;                      /* PD_DL_RECT_OVER: paint above this list's labels */
+    uint32_t reserved;                   /* zero */
 } PdDlRect;
 
 typedef struct {                         /* 64 B; viewport logical px; text laid out in (w,h) */

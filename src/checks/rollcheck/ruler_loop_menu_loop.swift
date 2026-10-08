@@ -377,3 +377,106 @@ func checkRulerInsertTimePrompt(_ report: CheckReport, viewport: DocumentViewpor
         !menu.insertTimePromptOpen && coreTimeBytes(session.document) == before,
         cppID: id, message: "cancelling the prompt never writes time")
 }
+
+/// Ruler loop markers drag as one undo step, clamp past each other, and the grid glow fades per device pixel.
+@MainActor
+func checkRulerLoopMarkerDrag(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
+    let document = session.document
+    let id = "swiftcore/PianoRoll::rulerLoopMarkerDrag"
+    let palette = GridPalette()
+    let grid = PianoGrid(viewport: viewport, palette: palette)
+    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
+    let automation = AutomationPage(baseFontPx: grid.baseFontPx)
+    automation.attach(viewport: viewport, palette: palette)
+    defer { automation.detach() }
+    let menu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automation)
+    let previousCursor = session.editCursor
+    defer { session.editCursor = previousCursor }
+    let cell = viewport.grid.snapTicksAt(0, camera: viewport.camera)
+    let start = 4 * cell
+    let end = 12 * cell
+    func x(_ tick: Tick) -> Double { viewport.camera.contentX(tick: Double(tick)) }
+    let row = grid.rulerMarkerRowHeight / 2
+    document.setLoop(end: false, tick: Int64(start))
+    document.setLoop(end: true, tick: Int64(end))
+    let index = document.history.undoIndex
+    let bytes = coreTimeBytes(document)
+    session.editCursor = 0
+
+    menu.updateRulerHover(contentX: x(start), pointerY: row)
+    let onMarker = menu.loopMarkerHovered
+    menu.updateRulerHover(contentX: x((start + end) / 2), pointerY: row)
+    let betweenMarkers = menu.loopMarkerHovered
+    menu.updateRulerHover(contentX: x(start), pointerY: grid.rulerMarkerRowHeight + 1)
+    report.expect(
+        cell > 0 && onMarker && !betweenMarkers && !menu.loopMarkerHovered,
+        cppID: id, message: "only the marker row over a loop marker reports the resize hover")
+
+    menu.beginRulerSweep(contentX: x(start), pointerY: row)
+    menu.updateSweep(contentX: x(start + 2 * cell), pointerY: row)
+    menu.updateSweep(contentX: x(start + 3 * cell), pointerY: row)
+    let dragging = menu.loopMarkerHovered
+    menu.endSweep(contentX: x(start + 3 * cell), pointerY: row)
+    report.expect(
+        dragging && session.timeline.loopStartTick == start + 3 * cell
+            && session.timeline.loopEndTick == end && document.history.undoIndex == index + 1,
+        cppID: id, message: "dragging the start marker moves it to the snapped pointer as one undo entry")
+    report.expect(
+        session.editCursor == 0 && session.timeSelection?.isActive != true,
+        cppID: id, message: "a marker drag neither moves the edit cursor nor sweeps a time range")
+    _ = document.history.undoDocument()
+    report.expect(
+        coreTimeBytes(document) == bytes, cppID: id,
+        message: "one undo restores the dragged marker")
+
+    menu.beginRulerSweep(contentX: x(end), pointerY: row)
+    menu.updateSweep(contentX: x(start - cell), pointerY: row)
+    menu.endSweep(contentX: x(start - cell), pointerY: row)
+    report.expect(
+        session.timeline.loopEndTick == start + cell && session.timeline.loopStartTick == start,
+        cppID: id, message: "the end marker stops one snap cell after the start marker")
+    _ = document.history.undoDocument()
+
+    menu.beginRulerSweep(contentX: x(start), pointerY: row)
+    menu.updateSweep(contentX: x(start + 2 * cell), pointerY: row)
+    menu.updateSweep(contentX: x(start), pointerY: row)
+    menu.endSweep(contentX: x(start), pointerY: row)
+    menu.beginRulerSweep(contentX: x(start), pointerY: row)
+    menu.updateSweep(contentX: x(start + 2 * cell), pointerY: row)
+    menu.cancelSweep()
+    report.expect(
+        coreTimeBytes(document) == bytes && document.history.undoIndex == index
+            && !menu.loopMarkerHovered,
+        cppID: id, message: "returning or cancelling a marker drag leaves no edit or undo entry")
+
+    menu.beginRulerSweep(contentX: x(start), pointerY: row)
+    menu.endSweep(contentX: x(start), pointerY: row)
+    report.expect(
+        session.editCursor == start && coreTimeBytes(document) == bytes,
+        cppID: id, message: "a click on a marker still places the edit cursor")
+
+    grid.refreshFromSession()
+    let glowInk = RollContentProbe.argb(palette.selectionRing) & 0x00FF_FFFF
+    let glow = RollContentProbe(grid).plotRects
+        .filter { $0.id == 0 && $0.argb & 0x00FF_FFFF == glowInk && $0.argb >> 24 < 0xFF }
+        .sorted { $0.x < $1.x }
+    let startGlow = glow.filter { $0.x < x((start + end) / 2) }
+    func alpha(_ argb: UInt32) -> UInt32 { argb >> 24 }
+    let continuous = zip(startGlow, startGlow.dropFirst()).allSatisfy {
+        abs($0.x + $0.w - $1.x) < 1e-9 && $0.argbRight == $1.argb
+    }
+    let glowWidth = grid.metrics.spaceEight
+    report.expect(
+        startGlow.count == 2 && continuous
+            && startGlow.allSatisfy { alpha($0.argb) > alpha($0.argbRight) }
+            && alpha(startGlow[0].argb) == 150 && alpha(startGlow[0].argbRight) == 18
+            && alpha(startGlow[1].argbRight) == 0
+            && abs(startGlow[0].w - 0.2 * glowWidth) < 1e-9
+            && abs(startGlow[1].x + startGlow[1].w - x(start) - glowWidth)
+                <= 0.5 / grid.devicePixelRatio + 1e-9,
+        cppID: id,
+        message: "the loop glow is the C++ space(Eight) gradient: 150 to 18 over a fifth, then to 0")
+    _ = document.history.undoDocument()
+    _ = document.history.undoDocument()
+}

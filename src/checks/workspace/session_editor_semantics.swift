@@ -321,6 +321,58 @@ internal func arrowKeyTrackSelectionChecks(
     grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
 }
 
+@MainActor
+internal func overlapRefusalChecks(
+    _ report: CheckReport, suite: DocumentSession,
+    service: ProjectService
+) {
+    let id = "swiftcore/ApplicationSession::overlapRefusal"
+    let document = SongDocument(
+        file: makeMidiFixture(), config: suite.document.state.config,
+        source: suite.document.source, trackBudget: suite.document.trackBudget)
+    let session = DocumentSession(
+        document: document, service: service,
+        lease: suite.bankLease, slots: suite.bankSlots,
+        dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
+    guard let note = document.notes(in: 0).first, let end = note.endTick, note.duration > 1 else {
+        report.fail(id, "fixture needs a sounding note on track 0")
+        return
+    }
+    // Raw insertion bypasses the editor's overlap guard, like an imported file.
+    document.insertRawEvent(
+        chunk: note.chunk,
+        event: .channel(tick: note.tick + 1, status: 0x90 | note.channel, data0: note.pitch, data1: 100))
+    document.insertRawEvent(
+        chunk: note.chunk,
+        event: .channel(tick: Tick(end) + 1, status: 0x90 | note.channel, data0: note.pitch, data1: 0))
+    let pair = document.notes(in: 0).filter { $0.pitch == note.pitch && $0.tick <= note.tick + 1 }
+    guard pair.count == 2 else {
+        report.fail(id, "fixture did not gain an overlapping same-pitch pair")
+        return
+    }
+    let viewport = DocumentViewport(session: session)
+    let grid = PianoGrid(viewport: viewport)
+    let page = AutomationPage()
+    page.attach(viewport: viewport, palette: GridPalette())
+    defer { page.detach() }
+    let ruler = RulerMenuPresenter(viewport: viewport, grid: grid, automation: page)
+    let router = EditorCommandRouter(session: session, grid: grid, automation: page, rulerMenu: ruler)
+    session.selectPrimaryTrack(0)
+    session.setSelectedNotes(pair.map(\.id))
+    let revision = document.revision
+    let refusal = router.perform(.transposeUp)
+    report.expect(
+        refusal != nil && document.revision == revision, cppID: id,
+        message: "transposing an overlapping same-pitch pair is refused with status text")
+    report.expect(
+        router.perform(.nudgeRight) != nil && document.revision == revision, cppID: id,
+        message: "nudging the same pair reports the same refusal")
+    session.setSelectedNotes([pair[0].id])
+    report.expect(
+        router.perform(.transposeUp) == nil && document.note(pair[0].id)?.pitch == note.pitch + 1,
+        cppID: id, message: "one note of the pair still transposes without a refusal")
+}
+
 // Fork tabs_scale.cpp:149-151 stage track selection plus Highlight/Fold writes
 // around deleteTrack(0)/undo; only the dirty flag below is otherwise unread.
 @MainActor

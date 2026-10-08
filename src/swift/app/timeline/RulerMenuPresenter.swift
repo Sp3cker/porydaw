@@ -68,6 +68,8 @@ public final class RulerMenuPresenter {
     @QtTracked public var insertTimePromptMaximumBeats = 3
     public var insertTimePromptMinimumBeatFractions: Int = 0
     public var insertTimePromptMaximumBeatFractions: Int = 3
+    /// The pointer is over, or dragging, a ruler loop marker: QML shows the resize cursor.
+    @QtTracked public var loopMarkerHovered = false
 
     private let viewport: DocumentViewport
     private var session: DocumentSession { viewport.session }
@@ -83,6 +85,17 @@ public final class RulerMenuPresenter {
     private var sweepPressY = 0.0
     private var sweepWasRange = false
     private var sweepMultiTrack = false
+    /// A press on a loop marker: a click places the edit cursor, a drag moves the marker as one undo step.
+    private struct LoopMarkerDrag {
+        let end: Bool
+        let origin: Tick
+        let pressTick: Tick
+        let pressX: Double
+        let pressY: Double
+        let group = HistoryGroup()
+        var moved = false
+    }
+    private var loopDrag: LoopMarkerDrag?
     private var pendingInsert: (tick: Tick, revision: UInt64, beatTicks: UInt32, beatsPerBar: UInt32)?
     /// Fork commitEditCursor egress, installed by the owning session.
     @QtIgnored public var onCommitCursor: ((Tick) -> Void)?
@@ -124,8 +137,7 @@ public final class RulerMenuPresenter {
         let tick = press.chip ?? snapped(press.raw)
         if !inside {
             session.clearTimeSelection()
-            session.editCursor = tick
-            onCommitCursor?(tick)
+            commitCursor(tick)
         }
         capturedTick = tick
         capturedSelection = session.timeSelection
@@ -342,6 +354,7 @@ public final class RulerMenuPresenter {
         guard contentX.isFinite, pointerY.isFinite else { return }
         if isOpen { close() }
         rulerPress = nil
+        loopDrag = nil
         let raw = viewport.camera.tickAtContentX(contentX)
         guard raw.isFinite else { return }
         sweepAnchor = snapped(raw)
@@ -351,12 +364,42 @@ public final class RulerMenuPresenter {
         sweepMultiTrack = modifiers & Self.controlModifier != 0
     }
 
+    /// A ruler press: a loop marker under the pointer starts a marker drag, else a range sweep.
+    public func beginRulerSweep(contentX: Double, pointerY: Double, modifiers: Int = 0) {
+        guard let marker = loopMarker(at: contentX, pointerY: pointerY) else {
+            beginSweep(contentX: contentX, pointerY: pointerY, modifiers: modifiers)
+            return
+        }
+        if isOpen { close() }
+        rulerPress = nil
+        sweepAnchor = nil
+        loopDrag = LoopMarkerDrag(
+            end: marker.end, origin: marker.tick,
+            pressTick: snapped(viewport.camera.tickAtContentX(contentX)),
+            pressX: contentX, pressY: pointerY)
+        loopMarkerHovered = true
+    }
+
+    public func updateRulerHover(contentX: Double, pointerY: Double) {
+        guard loopDrag == nil else { return }
+        let hovered = loopMarker(at: contentX, pointerY: pointerY) != nil
+        if loopMarkerHovered != hovered { loopMarkerHovered = hovered }
+    }
+
+    public func clearRulerHover() {
+        guard loopDrag == nil, loopMarkerHovered else { return }
+        loopMarkerHovered = false
+    }
+
     public func updateSweep(contentX: Double, pointerY: Double = 0) {
+        if loopDrag != nil {
+            dragLoopMarker(contentX: contentX, pointerY: pointerY)
+            return
+        }
         guard let sweepAnchor, contentX.isFinite, pointerY.isFinite else { return }
         guard
             sweepWasRange
-                || abs(contentX - sweepPressX) + abs(pointerY - sweepPressY)
-                    >= grid.dragDistance
+                || pastDragDistance(contentX, pointerY, fromX: sweepPressX, fromY: sweepPressY)
         else { return }
         sweepWasRange = true
         let raw = viewport.camera.tickAtContentX(contentX)
@@ -375,12 +418,17 @@ public final class RulerMenuPresenter {
     }
 
     public func endSweep(contentX: Double, pointerY: Double = 0) {
+        if loopDrag != nil {
+            dragLoopMarker(contentX: contentX, pointerY: pointerY)
+            if let drag = loopDrag, !drag.moved { commitCursor(drag.pressTick) }
+            loopDrag = nil
+            return
+        }
         updateSweep(contentX: contentX, pointerY: pointerY)
         if sweepWasRange {
             if session.timeSelection?.isActive != true { session.clearTimeSelection() }
         } else if let sweepAnchor {
-            session.editCursor = sweepAnchor
-            onCommitCursor?(sweepAnchor)
+            commitCursor(sweepAnchor)
         }
         sweepAnchor = nil
         sweepWasRange = false
@@ -388,10 +436,64 @@ public final class RulerMenuPresenter {
     }
 
     public func cancelSweep() {
+        if let drag = loopDrag, drag.moved {
+            session.document.setLoop(end: drag.end, tick: Int64(drag.origin), group: drag.group)
+        }
         sweepAnchor = nil
         rulerPress = nil
         sweepWasRange = false
         sweepMultiTrack = false
+        loopDrag = nil
+        clearRulerHover()
+    }
+
+    private func commitCursor(_ tick: Tick) {
+        session.editCursor = tick
+        onCommitCursor?(tick)
+    }
+
+    private func pastDragDistance(_ x: Double, _ y: Double, fromX: Double, fromY: Double) -> Bool {
+        abs(x - fromX) + abs(y - fromY) >= grid.dragDistance
+    }
+
+    /// Past the drag distance, moves the marker to the snapped pointer, one snap step short of the other marker.
+    private func dragLoopMarker(contentX: Double, pointerY: Double) {
+        guard var drag = loopDrag, contentX.isFinite, pointerY.isFinite,
+            drag.moved || pastDragDistance(contentX, pointerY, fromX: drag.pressX, fromY: drag.pressY)
+        else { return }
+        drag.moved = true
+        loopDrag = drag
+        let timeline = session.timeline
+        let other = drag.end ? timeline.loopStartTick : timeline.loopEndTick
+        var target = snapped(viewport.camera.tickAtContentX(contentX))
+        if other != TimeDefaults.noTick {
+            let camera = viewport.camera
+            target =
+                drag.end
+                ? max(target, viewport.grid.snapTickUp(Double(other) + 1, camera: camera))
+                : min(target, viewport.grid.snapTickDown(max(0, Double(other) - 1), camera: camera))
+        }
+        session.document.setLoop(end: drag.end, tick: Int64(target), group: drag.group)
+    }
+
+    /// The loop marker whose line or bracket glyph lies under a marker-row pointer.
+    private func loopMarker(at contentX: Double, pointerY: Double) -> (end: Bool, tick: Tick)? {
+        guard contentX.isFinite, pointerY >= 0, pointerY < grid.rulerMarkerRowHeight
+        else { return nil }
+        let tolerance = max(4, grid.baseFontPx * 0.5)
+        let glyphReach = grid.baseFontPx * 1.1
+        func distance(_ tick: Tick) -> Double? {
+            guard tick != TimeDefaults.noTick else { return nil }
+            let x = viewport.camera.contentX(tick: Double(tick))
+            guard contentX >= x - tolerance, contentX <= x + glyphReach else { return nil }
+            return abs(contentX - x)
+        }
+        let timeline = session.timeline
+        let start = distance(timeline.loopStartTick)
+        if let end = distance(timeline.loopEndTick), start.map({ end < $0 }) ?? true {
+            return (true, timeline.loopEndTick)
+        }
+        return start == nil ? nil : (false, timeline.loopStartTick)
     }
 
     private func sweepTrackScope(start: Tick, end: Tick) -> Set<Int> {

@@ -327,15 +327,21 @@ extension SongDocument {
             trackRemap: rawTrackRemap(before: state.file, after: mutation.state.file))
     }
 
-    public func setLoop(end: Bool, tick: Int64?) {
+    /// A reused `group` replays `tick` from the gesture's starting marker, so a drag is one undo step.
+    public func setLoop(end: Bool, tick: Int64?, group: HistoryGroup? = nil) {
         guard history.acceptsDocumentMutation else { return }
-        guard !state.file.chunks.isEmpty else { return }
-        var mutation = DocumentMutation(state)
+        let base = origin(for: group, operation: .setLoop)
+        guard !base.file.chunks.isEmpty else { return }
+        var mutation = DocumentMutation(base)
         var marker: MidiEvent
         var chunk = 0
-        let roles = classifyEvents(in: state.file)
+        let roles = classifyEvents(in: base.file)
         if let location = end ? roles.loopEnd : roles.loopStart {
             chunk = location.chunk
+            if group != nil, let tick, base.file.chunks[chunk].events[location.index].tick == tick {
+                commit(DocumentMutation(base), group: group, operation: .setLoop, returnsToOrigin: true)
+                return
+            }
             marker = mutation.remove(chunk: chunk, offset: location.index)
         } else {
             guard tick != nil else { return }
@@ -346,7 +352,7 @@ extension SongDocument {
             marker.tick = Tick(tick)
             mutation.insert(marker, chunk: chunk)
         }
-        commit(mutation, group: nil, operation: .setLoop)
+        commit(mutation, group: group, operation: .setLoop)
     }
 
     public func setTimeSignature(tick: Tick, numerator: Int, denominatorPower: Int) {

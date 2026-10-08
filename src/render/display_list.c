@@ -70,7 +70,7 @@ bool pd_dl_decode(const void *bytes, size_t length, PdDlView *out) {
         }
     }
     for (uint32_t i = 0; i < header->rectCount; ++i) {
-        if (rects[i].flags & (uint32_t)~PD_DL_RECT_OVER) {
+        if ((rects[i].flags & (uint32_t)~PD_DL_RECT_OVER) || rects[i].reserved != 0) {
             return false;
         }
     }

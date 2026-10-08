@@ -63,3 +63,20 @@ public struct DisplayListWriter {
         records.span.bytes.withUnsafeBytes { output.append(contentsOf: $0) }
     }
 }
+
+extension PdDlRect {
+    /// A solid fill: both edge colours are `argb`.
+    public init(x: Double, y: Double, w: Double, h: Double, id: UInt64, argb: UInt32, flags: UInt32) {
+        self.init(x: x, y: y, w: w, h: h, id: id, argb: argb, argbRight: argb, flags: flags)
+    }
+
+    /// A horizontal gradient from `argb` at the left edge to `argbRight` at the right edge.
+    public init(
+        x: Double, y: Double, w: Double, h: Double, id: UInt64,
+        argb: UInt32, argbRight: UInt32, flags: UInt32
+    ) {
+        self.init(
+            x: x, y: y, w: w, h: h, id: id, argb: argb, argbRight: argbRight,
+            flags: flags, reserved: 0)
+    }
+}

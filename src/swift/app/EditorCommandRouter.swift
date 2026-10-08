@@ -80,27 +80,42 @@ public struct EditorCommandRouter {
         session.selectPrimaryTrack(track + editCommandPolicy(command).trackStepWithoutNotes)
     }
 
-    public func perform(_ command: EditCommand) {
-        guard isAvailable(command) else { return }
+    /// Returns status text when a note move was refused because the selected
+    /// notes already overlap at one pitch; nil otherwise.
+    @discardableResult
+    public func perform(_ command: EditCommand) -> String? {
+        guard isAvailable(command) else { return nil }
         if command == .paste || targetsTimeSelection(command) {
             // Ownership, not mutation success, decides whether notes may run.
             // An empty or unchanged range never falls through to selected notes.
             _ = automation.consumeSelectionCommand(command: command)
-            return
+            return nil
         }
         if command == .insertTime {
             _ = rulerMenu.openInsertTimePromptAtCursor()
-            return
+            return nil
         }
-        if command == .delete && automation.consumeHoverDelete() { return }
+        if command == .delete && automation.consumeHoverDelete() { return nil }
         if command == .pencilMode {
             grid.performCommand(command: command.rawValue)
             automation.isPencilMode = grid.pencilMode
-            return
+            return nil
         }
         // Note and standalone commands keep their existing grid executor.
         // Clipboard paste above is document-wide, never selected by focus.
+        let revision = session.document.revision
         grid.performCommand(command: command.rawValue)
+        switch command {
+        case .transposeUp, .transposeDown, .transposeUpOctave, .transposeDownOctave,
+            .nudgeLeft, .nudgeRight, .lengthenNote, .shortenNote:
+            guard session.document.revision == revision else { return nil }
+            let track = session.selectedTrack
+            let moved = session.selectedNoteOrder.filter { session.document.note($0)?.track == track }
+            guard session.document.notesOverlapAtSamePitch(moved) else { return nil }
+            return "Can't move the selected notes: some overlap at the same pitch."
+        default:
+            return nil
+        }
     }
 }
 

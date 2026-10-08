@@ -118,6 +118,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
             auditionDiagnostic = auditionAvailable ? "" : "Voice audition is unavailable."
         }
     }
+    /// The shared timeline hover guide: the hovered tick, or nil to clear.
+    @QtIgnored var onHoverGuide: ((Tick?) -> Void)?
 
     // MARK: Published models
 

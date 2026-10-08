@@ -33,16 +33,21 @@ enum GridGesture {
         var pressKey: Int
     }
 
+    /// `pressTick` is raw; the anchor is its snap, so a lattice change re-anchors the draw.
     struct Draw {
-        var anchorTick: Int
+        var pressTick: Double
         var tick: Int
         var duration: Int
         var key: Int
+        var pointerX: Double
+        var pointerY: Double
     }
 
     struct Move {
         var pressTick: Double
         var pressKey: Int
+        var pointerX: Double
+        var pointerY: Double
         var dTick: Int = 0
         var dKey: Int = 0
     }
@@ -59,6 +64,8 @@ enum GridGesture {
         var gripTick: Int
         var oppositeTick: Int
         var leading: Bool
+        var pointerX: Double
+        var pointerY: Double
         var delta: Int = 0
     }
 
@@ -83,18 +90,28 @@ enum GridGesture {
         var deltaY: Double = 0
     }
 
-    static func move(pressTick: Double, pressKey: Int) -> GridGesture {
-        .move(Move(pressTick: pressTick, pressKey: pressKey))
+    static func move(pressTick: Double, pressKey: Int, x: Double, y: Double) -> GridGesture {
+        .move(Move(pressTick: pressTick, pressKey: pressKey, pointerX: x, pointerY: y))
     }
 
     static func resize(
         pressTick: Double, gripTick: Int, oppositeTick: Int,
-        leading: Bool
+        leading: Bool, x: Double, y: Double
     ) -> GridGesture {
         .resize(
             Resize(
                 pressTick: pressTick, gripTick: gripTick,
-                oppositeTick: oppositeTick, leading: leading))
+                oppositeTick: oppositeTick, leading: leading, pointerX: x, pointerY: y))
+    }
+
+    /// The held pointer of a gesture whose preview snaps to the grid lattice.
+    var latticePointer: (x: Double, y: Double)? {
+        switch self {
+        case .draw(let state): (state.pointerX, state.pointerY)
+        case .move(let state): (state.pointerX, state.pointerY)
+        case .resize(let state): (state.pointerX, state.pointerY)
+        case .pendingDraw, .velocity, .pendingMenu, .band, .pan: nil
+        }
     }
 
     func updated(
@@ -115,27 +132,30 @@ enum GridGesture {
             }
             let anchor = grid.snapTickDown(state.pressTick, camera: camera)
             let draw = Draw(
-                anchorTick: Int(anchor), tick: Int(anchor),
-                duration: Int(grid.snapTicksAt(anchor, camera: camera)), key: state.pressKey)
+                pressTick: state.pressTick, tick: Int(anchor),
+                duration: Int(grid.snapTicksAt(anchor, camera: camera)), key: state.pressKey,
+                pointerX: x, pointerY: y)
             return GridGesture.draw(draw).updated(
                 x: x, y: y, metrics: metrics, grid: grid, camera: camera, scale: scale)
         case .draw(var state):
+            state.pointerX = x
+            state.pointerY = y
+            let anchor = Int(grid.snapTickDown(state.pressTick, camera: camera))
             let tick = camera.tickAtContentX(x)
-            let gridTicks = Int(grid.snapTicksAt(Tick(max(0, state.anchorTick)), camera: camera))
-            if tick >= Double(state.anchorTick) {
-                state.tick = state.anchorTick
-                state.duration =
-                    max(
-                        state.anchorTick + gridTicks,
-                        Int(grid.snapTickUp(tick, camera: camera))) - state.anchorTick
+            let gridTicks = Int(grid.snapTicksAt(Tick(max(0, anchor)), camera: camera))
+            if tick >= Double(anchor) {
+                state.tick = anchor
+                state.duration = max(anchor + gridTicks, Int(grid.snapTickUp(tick, camera: camera))) - anchor
             } else {
                 state.tick = Int(grid.snapTickDown(tick, camera: camera))
-                state.duration = state.anchorTick + gridTicks - state.tick
+                state.duration = anchor + gridTicks - state.tick
             }
             let key = pitch(y)
             if key >= 0 && (!scale.fold || scale.contains(key)) { state.key = key }
             return .draw(state)
         case .move(var state):
+            state.pointerX = x
+            state.pointerY = y
             let tick = camera.tickAtContentX(x)
             let gridTicks = Int(
                 grid.snapTicksAt(
@@ -177,6 +197,8 @@ enum GridGesture {
             state.preview = min(127, max(1, state.original + state.delta))
             return .velocity(state)
         case .resize(var state):
+            state.pointerX = x
+            state.pointerY = y
             let tick = camera.tickAtContentX(x)
             let desired = Double(state.gripTick) + (tick - state.pressTick)
             let snapped =
@@ -499,13 +521,13 @@ extension PianoGrid {
                     case .leftEdge:
                         gesture = .resize(
                             pressTick: pressTick, gripTick: note.tick,
-                            oppositeTick: note.tick + note.duration, leading: true)
+                            oppositeTick: note.tick + note.duration, leading: true, x: x, y: y)
                     case .rightEdge:
                         gesture = .resize(
                             pressTick: pressTick, gripTick: note.tick + note.duration,
-                            oppositeTick: note.tick, leading: false)
+                            oppositeTick: note.tick, leading: false, x: x, y: y)
                     default:
-                        gesture = .move(pressTick: pressTick, pressKey: pressKey)
+                        gesture = .move(pressTick: pressTick, pressKey: pressKey, x: x, y: y)
                     }
                 }
                 if case .band(let band) = rightGesture, !control {
@@ -774,14 +796,22 @@ extension PianoGrid {
         guard key >= 0, !viewport.scale.fold || viewport.scale.contains(key)
         else { return }
         session.clearSelectedNotes()
-        let tick = viewport.grid.snapTickDown(
-            viewport.camera.tickAtContentX(x),
-            camera: viewport.camera)
+        let pressTick = viewport.camera.tickAtContentX(x)
+        let tick = viewport.grid.snapTickDown(pressTick, camera: viewport.camera)
         gesture = .draw(
             GridGesture.Draw(
-                anchorTick: Int(tick), tick: Int(tick),
-                duration: Int(viewport.grid.snapTicksAt(tick, camera: viewport.camera)), key: key))
+                pressTick: pressTick, tick: Int(tick),
+                duration: Int(viewport.grid.snapTicksAt(tick, camera: viewport.camera)), key: key,
+                pointerX: x, pointerY: y))
         refreshNotes()
+    }
+
+    /// Re-snaps a held move, resize or draw at its own pointer after the grid lattice changed.
+    func resnapHeldGesture() {
+        guard let gesture, let pointer = gesture.latticePointer else { return }
+        self.gesture = gesture.updated(
+            x: pointer.x, y: pointer.y, metrics: metrics, grid: viewport.grid,
+            camera: viewport.camera, scale: viewport.scale)
     }
 
     func beginKeyboardPointerImpl(y: Double) {

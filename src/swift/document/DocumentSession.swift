@@ -107,6 +107,8 @@ public final class DocumentSession {
     public internal(set) var selectedNotes: Set<NoteID> = []
     public internal(set) var selectedTracks: Set<Int> = []
     public internal(set) var timeSelection: AutomationTimeSelection?
+    /// Source and copy ranges of each time duplication, keyed by its history entry.
+    internal var duplicatedSelections: [DocumentIdentity: DuplicatedSelection] = [:]
     public enum TrackScopeAction: Sendable { case plain, toggle, range }
     internal var changingPrimaryInternally = false
     public var selectedTrack: Int? {
@@ -483,6 +485,7 @@ public final class DocumentSession {
             flushPendingBankNotification()
         }
         let previousArg = document.state.config.voicegroupArgument
+        let identityBefore = document.history.currentIdentity
         let changed: Bool
         switch direction {
         case .undo: changed = try await document.history.undo()
@@ -490,6 +493,13 @@ public final class DocumentSession {
         }
         withStateChanges {
             var domains: SessionChangeDomains = [.dirty, .history]
+            // Bank entries keep the identity; only a crossed document entry restores.
+            let identityAfter = document.history.currentIdentity
+            if changed, identityAfter != identityBefore,
+                let duplicated = duplicatedSelections[direction == .undo ? identityBefore : identityAfter]
+            {
+                applyTimeSelection(direction == .undo ? duplicated.source : duplicated.copy)
+            }
             if changed, let preparedBank,
                 document.state.config.voicegroupArgument != previousArg
             {

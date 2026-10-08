@@ -115,6 +115,7 @@ private func checkRulerSweepScope(_ report: CheckReport, fixture: RulerCheckFixt
         cppID: id,
         message: "A026: a Control ruler drag sweeps the exact range with intersecting-track scope")
     menu.endSweep(contentX: fixture.atFar)
+    checkDuplicateUndoRehighlightsSource(report, fixture: fixture, swept: modified)
     report.expect(
         session.document.history.undoDocument(), cppID: id,
         message: "the intersecting note insertion is undoable")
@@ -123,6 +124,60 @@ private func checkRulerSweepScope(_ report: CheckReport, fixture: RulerCheckFixt
             && coreTimeBytes(session.document) == docBytes, cppID: id,
         message: "undoing the note and track restores the fixture bytes")
     return modified.range.endTick
+}
+
+/// Undoing a time duplication re-highlights the range it copied; redo re-highlights the copy.
+@MainActor
+private func checkDuplicateUndoRehighlightsSource(
+    _ report: CheckReport, fixture: RulerCheckFixture, swept: AutomationTimeSelection
+) {
+    let id = "swiftcore/PianoRoll::timelineRulerScope"
+    let session = fixture.session
+    let document = session.document
+    let automation = fixture.automation
+    let router = EditorCommandRouter(
+        session: session, grid: fixture.grid, automation: automation, rulerMenu: fixture.menu)
+    let span = swept.range.span
+    func shifted(_ copies: Tick) -> TimeRange {
+        TimeRange(startTick: swept.range.startTick + copies * span, endTick: swept.range.endTick + copies * span)
+    }
+    func step(_ direction: BankHistoryDirection) -> Bool {
+        (try? runBlocking { direction == .undo ? try await session.undo() : try await session.redo() }) == true
+    }
+    // Notes, not save bytes: same-tick controller seeds land in hash order (TimeEditing+Streams.swift:48).
+    func notes() -> [[Int]] {
+        (0..<document.engineTracks.usedTrackCount).flatMap { track in
+            document.notes(in: track).map { [track, Int($0.tick), Int($0.duration), Int($0.pitch)] }
+        }
+    }
+    let original = coreTimeBytes(document)
+    router.perform(.duplicate)
+    let once = coreTimeBytes(document)
+    let onceNotes = notes()
+    router.perform(.duplicate)
+    report.expect(
+        automation.selection?.range == shifted(2) && once != original,
+        cppID: id, message: "each duplicate highlights its copy")
+    report.expect(
+        step(.undo) && coreTimeBytes(document) == once && automation.selection?.range == shifted(1)
+            && automation.selection?.scope == swept.scope,
+        cppID: id, message: "undoing a duplicate re-highlights the range it copied")
+    report.expect(
+        step(.undo) && coreTimeBytes(document) == original && automation.selection == swept,
+        cppID: id, message: "undoing the first duplicate re-highlights the swept range")
+    report.expect(
+        step(.redo) && coreTimeBytes(document) == once && automation.selection?.range == shifted(1),
+        cppID: id, message: "redoing a duplicate re-highlights its copy")
+    report.expect(
+        step(.undo) && automation.selection == swept,
+        cppID: id, message: "undo after redo re-highlights the swept range again")
+    router.perform(.duplicate)
+    report.expect(
+        notes() == onceNotes,
+        cppID: id, message: "duplicating after undo copies the re-highlighted range")
+    report.expect(
+        step(.undo) && coreTimeBytes(document) == original && automation.selection == swept,
+        cppID: id, message: "the repeated duplicate undoes to the swept range")
 }
 
 @MainActor
