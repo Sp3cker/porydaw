@@ -191,7 +191,26 @@ The two numbers that used to dominate — 134 s (Debug) / 173 s (Release) of
 swift-syntax compilation per build tree plus a GitHub clone — are now paid once per
 machine. That is the mechanism described next.
 
-`swift_core_check` is six chained lanes (support/media/edit/roll/pages/project).
+Core checks are three modules. `SwiftCoreCheckSupport` (fixtures, `CheckReport`)
+and `SwiftCoreCheckLogic` (checks that need no `PorydawApp`) compile without C++
+interop and build beside the app chain. `SwiftCoreCheck` holds the app-facing
+checks and `pdc_suite_run`; it imports `SwiftCoreCheckLogic` only in files that use
+it, so a Logic declaration edit recompiles those files, not the module. A check that
+needs no `PorydawApp`/QtBridge type belongs in Logic: interop costs ~0.4–0.6 s per
+module compile plus lazy C++ lookups (`PorydawAppAudio` 760 → 360 ms when dropped).
+
+`deno task build:checks` wall time, Debug, before (six chained interop lanes,
+support → media → edit → roll → pages → project → dispatcher) and after:
+
+| scenario | before | after |
+|---|---|---|
+| public API added in `PorydawCore` | 27.9 s | 18.8–20.4 s |
+| internal declaration added in `PorydawApp` | 23.2 s | 15.2 s |
+| every core-check source touched | 13.3 s | 7.1–7.8 s |
+| declaration added in a Logic check file | 7.4 s | 3.6 s |
+| declaration added in a `SwiftCoreCheck` file | — | 2.5 s |
+| body-only edit in a Logic check file | — | 1.2 s |
+
 A single file copying a large C struct (`LoadedVoiceGroup`) by value cost 57 s
 in the `SendNonSendable` SIL pass — access such structs through the pointer
 (see `VoicegroupLoaderChecks.loaderSameVoiceNames`).

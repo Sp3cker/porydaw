@@ -3,6 +3,7 @@ import Foundation
 @testable import PorydawAppPresentation
 import PorydawCore
 @testable import PorydawDocument
+import SwiftCoreCheckLogic
 
 // Node-drag scenarios paired with gestures.cpp.
 // Entry order remains in AutomationPageChecks.swift.

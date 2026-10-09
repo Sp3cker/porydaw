@@ -119,8 +119,30 @@ target_include_directories(porydaw_checks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 porydaw_enable_project_warnings(porydaw_checks)
 
 if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
-# Logic is interop-free and builds beside the app.
+# Support and Logic are interop-free and build beside the app.
 # SwiftCoreCheck holds the app-facing checks and pdc_suite_run.
+    add_porydaw_check_lane(swift_core_check_support
+        NO_CORE_DEFAULTS
+        MODULE_NAME SwiftCoreCheckSupport
+        MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_support"
+        COMPILE_OPTIONS
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
+        "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/voicegroup/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
+        SOURCES
+        support/corecheck/CoreCheckSupport.swift
+        editcheck/TimeRangeSupport.swift
+        support/PageCheckSupport.swift
+        support/DocumentSessionFixture.swift
+        projectstore/ProjectStoreCheckSupport.swift
+        workspace/session_support.swift
+        workspace/session_fixtures.swift
+        support/NumericCheckSupport.swift
+        LINK_LIBRARIES PorydawCore PorydawPlayback PorydawProject PorydawVoicegroup PorydawSample PorydawDocument PorydawAppAudio
+    )
     add_porydaw_check_lane(swift_core_check_logic
         NO_CORE_DEFAULTS
         MODULE_NAME SwiftCoreCheckLogic
@@ -133,6 +155,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
         SOURCES
+        lanes/SwiftCoreCheckLogicLane.swift
         audio/AudioAuditionChecks.swift
         audio/controllerfixture.swift
         audio/resonancefixture.swift
@@ -162,7 +185,6 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editcheck/TimeRangeRangeEditingChecks.swift
         editcheck/TimeRangeRangeMovementChecks.swift
         editcheck/TimeRangeRemovalAndSeamsChecks.swift
-        editcheck/TimeRangeSupport.swift
         editcheck/TrackLifecycleChecks.swift
         editcheck/tst_songdocument_runner.swift
         editcheck/tst_songdocument_songnotes.swift
@@ -194,7 +216,6 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         projectstore/ProjectIdentityChecks.swift
         projectstore/ProjectLayoutChecks.swift
         projectstore/ProjectStoreActorChecks.swift
-        projectstore/ProjectStoreCheckSupport.swift
         projectstore/ProjectStoreEditChecks.swift
         projectstore/ProjectStoreLoadBankChecks.swift
         projectstore/ProjectStoreOpenChecks.swift
@@ -224,22 +245,16 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         songlist/SongImportChecks.swift
         songlist/SongRegionRegistrationChecks.swift
         songlist/SongRegistrationChecks.swift
-        support/DocumentSessionFixture.swift
-        support/NumericCheckSupport.swift
-        support/PageCheckSupport.swift
-        support/corecheck/CoreCheckSupport.swift
         workspace/bank_edits.swift
         workspace/bank_history_probes.swift
         workspace/bank_saves.swift
         workspace/bank_sharing_history.swift
         workspace/bank_switching.swift
         workspace/history_jump.swift
-        workspace/session_fixtures.swift
         workspace/session_save.swift
         workspace/session_save_delta.swift
-        workspace/session_support.swift
         workspace/voicegroup_creation.swift
-        LINK_LIBRARIES PorydawCore PorydawPlayback PorydawProject PorydawVoicegroup PorydawSample PorydawDocument PorydawAppAudio
+        LINK_LIBRARIES swift_core_check_support PorydawCore PorydawPlayback PorydawProject PorydawVoicegroup PorydawSample PorydawDocument PorydawAppAudio
     )
     add_porydaw_check_lane(swift_core_check
         MODULE_NAME SwiftCoreCheck
@@ -435,9 +450,9 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/transport_checks.swift
         support/corecheck/CoreCheckDispatch.swift
         lanes/SwiftCoreCheckLane.swift
-        LINK_LIBRARIES swift_core_check_logic
+        LINK_LIBRARIES swift_core_check_logic swift_core_check_support
     )
-    target_link_libraries(porydaw_checks PRIVATE swift_core_check swift_core_check_logic)
+    target_link_libraries(porydaw_checks PRIVATE swift_core_check swift_core_check_logic swift_core_check_support)
     target_sources(porydaw_checks PRIVATE
         support/corecheck/tst_swiftcore.cpp
         support/corecheck/tst_swiftcore.h
@@ -474,7 +489,7 @@ target_link_libraries(porydaw_checks PRIVATE
     QtBridgeCpp
 )
 porydaw_link_linux_swift_runtime(porydaw_checks
-    swift_core_check swift_core_check_logic PorydawApp QtBridge
+    swift_core_check swift_core_check_logic swift_core_check_support PorydawApp QtBridge
     PorydawDocument PorydawVoicegroup PorydawBackups PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
 target_precompile_headers(porydaw_checks PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/src/porydaw_pch.hpp>")

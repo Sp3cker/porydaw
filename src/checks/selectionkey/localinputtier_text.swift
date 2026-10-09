@@ -3,6 +3,7 @@ import PorydawAppPresentation
 import PorydawAppCommands
 import PorydawCore
 import PorydawDocument
+import SwiftCoreCheckLogic
 
 @MainActor
 public func drawerOriginalNumericPromptTransaction(

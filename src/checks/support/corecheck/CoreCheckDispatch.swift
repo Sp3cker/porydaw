@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCoreCheckNative
+import SwiftCoreCheckLogic
 
 /// Same-thread synchronous handoff of a CheckReport into MainActor suites; see pdcSuiteRun.
 private final class ReportBox: @unchecked Sendable {
