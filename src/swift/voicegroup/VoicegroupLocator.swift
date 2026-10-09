@@ -1,9 +1,4 @@
 import Foundation
-#if canImport(Darwin)
-    import Darwin
-#else
-    import Glibc
-#endif
 
 public struct VoicegroupLocation: Hashable, Sendable {
     public let filePath: String
@@ -80,9 +75,7 @@ public final class VoicegroupLocator {
         guard let recorded = includedFiles[filePath[start...]], let next = recorded,
             next.utf8.count < 512
         else { return nil }
-        let status: Int32 = next.withCString { pointer -> Int32 in access(pointer, F_OK) }
-        guard status == 0
-        else { return nil }
+        guard next.withCString(NativeFileSystem.exists) else { return nil }
         return next
     }
 
@@ -149,12 +142,7 @@ public final class VoicegroupLocator {
         }
         guard !base.isEmpty, base.count < 256 else { return nil }
         for directory in layout.voicegroupDirectories {
-            guard let stream = directory.withCString({ opendir($0) }) else { continue }
-            defer { closedir(stream) }
-            while let entry = readdir(stream) {
-                let name = withUnsafePointer(to: &entry.pointee.d_name) {
-                    $0.withMemoryRebound(to: CChar.self, capacity: Int(NAME_MAX) + 1) { String(cString: $0) }
-                }
+            for name in NativeFileSystem.names(directory, skippingDotFiles: false) {
                 let nameBytes = name.utf8
                 let extensionBytes = nameBytes.span
                 let count = extensionBytes.count
@@ -174,9 +162,7 @@ public final class VoicegroupLocator {
                 guard assembly || include else { continue }
                 let path = directory + "/" + name
                 guard path.utf8.count < 512 else { continue }
-                var info = stat()
-                let status: Int32 = path.withCString { pointer -> Int32 in stat(pointer, &info) }
-                guard status == 0, (info.st_mode & S_IFMT) != S_IFDIR else { continue }
+                guard let kind = NativeFileSystem.kind(path), kind != .directory else { continue }
                 if declares(path, symbol: base, isLabel: false) {
                     return VoicegroupLocation(filePath: path, sectionLabel: "")
                 }
@@ -255,10 +241,10 @@ public final class VoicegroupLocator {
                 for offset in 0..<suffixSpan.count { path[index] = suffixSpan[offset]; index += 1 }
             }
             let bytes = storage.span
-            // POSIX access borrows the bounded, NUL-terminated path only for the syscall.
+            // The probe borrows the bounded, NUL-terminated path only for the call.
             let exists = bytes.withUnsafeBufferPointer {
                 guard let base = $0.baseAddress else { preconditionFailure("Inline path is nonempty") }
-                return access(UnsafeRawPointer(base).assumingMemoryBound(to: CChar.self), F_OK) == 0
+                return NativeFileSystem.exists(UnsafeRawPointer(base).assumingMemoryBound(to: CChar.self))
             }
             if exists {
                 return VoicegroupLocation(filePath: AsmLine.text(bytes.extracting(0..<count)), sectionLabel: "")

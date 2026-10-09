@@ -7,12 +7,13 @@ const HELP = `usage: deno task bench:startup [options]
   --until <stage>      first-frame|chrome-frame|workspace-frame|editor-frame (default first-frame)
   --project <path>     project root passed to the app (optional)
   --song <label>       song label passed to the app (optional)
+  --binary <path>      executable to launch (default the build/release app)
   --budget-ms <ms>     user-set selected-frame ceiling (default 300)
   --timeout-ms <ms>    deadline per launch (default 10000)
   --check             exit 1 if ANY run misses the budget, including run 1
   --help              show this help without launching
 
-Requires an existing Release app: deno task build:app --release
+Requires an existing Release app (deno task build:app --release) or --binary.
 Does not build or use 'open'; only its own spawned processes are terminated.
 Measures monotonic process-spawn to receipt of the selected native frame marker.
 Each frame marker is QQuickWindow::frameSwapped: a frame queued for presentation,
@@ -46,6 +47,7 @@ export interface Options {
   timeoutMs: number;
   project?: string;
   song?: string;
+  binary?: string;
   check: boolean;
 }
 
@@ -78,6 +80,7 @@ export function parseOptions(args: string[]): Options {
         "--timeout-ms",
         "--project",
         "--song",
+        "--binary",
       ]
         .includes(flag)
     ) throw new Error(`unknown argument ${args[i]}`);
@@ -86,6 +89,7 @@ export function parseOptions(args: string[]): Options {
       throw new Error(`${flag} requires a value`);
     }
     if (flag === "--project") options.project = resolve(value);
+    else if (flag === "--binary") options.binary = resolve(value);
     else if (flag === "--song") options.song = value;
     else if (flag === "--until") {
       if (
@@ -307,7 +311,7 @@ async function main(): Promise<number> {
   const options = parseOptions(Deno.args);
   const root = await Deno.realPath(new URL("..", import.meta.url));
   const directory = join(root, "build", "release");
-  const binary = join(
+  const binary = options.binary ?? join(
     directory,
     ...(await usesMultiConfigBuild(directory) ? ["Release"] : []),
     ...(Deno.build.os === "darwin"
@@ -318,8 +322,11 @@ async function main(): Promise<number> {
     if (!(await Deno.stat(binary)).isFile) throw new Error("not a file");
   } catch (error) {
     throw new Error(
-      `Release executable unavailable for ${options.until}: ${binary}\n` +
-        `Build first: deno task build:app --release\n${error}`,
+      `Executable unavailable for ${options.until}: ${binary}\n` +
+        (options.binary
+          ? "Check the --binary path"
+          : "Build first: deno task build:app --release") +
+        `\n${error}`,
     );
   }
   console.log(`Release executable: ${binary}`);

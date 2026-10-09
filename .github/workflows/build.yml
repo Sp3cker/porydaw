@@ -160,15 +160,16 @@ jobs:
           cmake --install build --prefix porydaw-windows
           if (Test-Path RELEASE-README.txt) { Copy-Item RELEASE-README.txt porydaw-windows/README.txt }
 
-      # Proves the staged folder is self-contained: no Qt or Swift on PATH.
+      # Proves the staged folder is self-contained: the first QML frame with no Qt or Swift on PATH.
       - name: Launch staged porydaw.exe
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          $deno = (Get-Command deno).Source
           $env:Path = "$env:SystemRoot\System32;$env:SystemRoot"
           Remove-Item Env:QT_PLUGIN_PATH, Env:QML2_IMPORT_PATH -ErrorAction SilentlyContinue
-          $p = Start-Process -FilePath porydaw-windows\porydaw.exe -ArgumentList --version -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "porydaw.exe --version exited $($p.ExitCode)" }
+          & $deno run --allow-read --allow-run tools/startup_bench.ts --runs 1 --timeout-ms 60000 --budget-ms 60000 --binary porydaw-windows\porydaw.exe
+          if ($LASTEXITCODE -ne 0) { throw "porydaw.exe did not reach its first frame" }
 
       - name: Upload Windows artifact
         if: runner.os == 'Windows'
