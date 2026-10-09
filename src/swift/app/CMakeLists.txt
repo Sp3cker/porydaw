@@ -241,7 +241,6 @@ target_compile_options(PorydawAppAudio PRIVATE
 set_target_properties(PorydawAppAudio PROPERTIES
     AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
 )
-porydaw_swift_qt_interop(PorydawAppAudio)
 target_compile_options(PorydawAppAudio PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/audio/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/third_party>"
