@@ -1,5 +1,6 @@
 import Foundation
 import PorydawSample
+@testable import SwiftCoreCheckLogic
 
 public func runRenderPipelineChecks(_ report: CheckReport) {
     renderDeterminism(report)
@@ -85,8 +86,8 @@ struct RiffChunk {
 }
 
 func readRiffChunks(_ bytes: [UInt8]) -> [RiffChunk]? {
-    guard bytes.count >= 12, Array(bytes[0..<4]) == Array("RIFF".utf8),
-        Array(bytes[8..<12]) == Array("WAVE".utf8), Int(getU32(bytes, 4)) + 8 == bytes.count
+    guard bytes.count >= 12, bytes[0..<4].elementsEqual("RIFF".utf8),
+        bytes[8..<12].elementsEqual("WAVE".utf8), Int(getU32(bytes, 4)) + 8 == bytes.count
     else { return nil }
     var offset = 12
     var chunks: [RiffChunk] = []
@@ -195,8 +196,11 @@ private func renderCrossfade(_ report: CheckReport) {
     check.expect(
         fixed.seam.valid && fixed.seam.ampLsb < original.seam.ampLsb && fixed.seam.ampLsb <= 3,
         message: "crossfade bake tames the seam click")
+    let fadeWindowMatches: Bool =
+        fixed.size == original.size
+        && fixed.s8.dropLast(160).elementsEqual(original.s8.dropLast(160))
     check.expect(
-        fixed.size == original.size && Array(fixed.s8.dropLast(160)) == Array(original.s8.dropLast(160)),
+        fadeWindowMatches,
         message: "crossfade changes only the final fade window")
     params.loopStart = 2
     params.loopEnd = 700

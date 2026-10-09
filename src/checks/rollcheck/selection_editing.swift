@@ -96,11 +96,10 @@ func checkGroupedVelocityDrag(_ report: CheckReport, viewport: DocumentViewport)
     report.expect(
         session.document.note(seed.ids[0]).map { grid.hoverKey == Int($0.pitch) } == true,
         cppID: id, message: "the modifier press pins the hover mark to the anchor row")
+    let anchorPitch: Int = session.document.note(seed.ids[0]).map { Int($0.pitch) } ?? -1
+    let firstAudition = noteAuditions.first
     report.expect(
-        noteAuditions.first.map {
-            $0.pitch == (session.document.note(seed.ids[0]).map { Int($0.pitch) } ?? -1)
-                && $0.velocity == 93
-        } == true
+        firstAudition?.pitch == anchorPitch && firstAudition?.velocity == 93
             && grid.lastVelocity == 93, cppID: id,
         message: "Ctrl note press auditions its own velocity and latches the drawing velocity")
     let preCount = session.document.history.undoCount
@@ -120,19 +119,19 @@ func checkGroupedVelocityDrag(_ report: CheckReport, viewport: DocumentViewport)
         grid.statusText.contains("Changing velocity"), cppID: id,
         message: "the velocity drag publishes its preview status")
     report.expect(
-        session.document.note(seed.ids[0]).map { Int($0.velocity) } == 93, cppID: id,
+        session.document.note(seed.ids[0])?.velocity == UInt8(93), cppID: id,
         message: "the velocity preview commits nothing before release")
     grid.endPointer(x: aX, y: aY + 15)
     grid.dragDistance = platformSlop
     report.expect(
-        session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78, cppID: id,
+        session.document.note(seed.ids[0])?.velocity == UInt8(78), cppID: id,
         message: "a 15px modifier drag lands the anchor at 78 from 93")
     report.expect(
-        noteAuditions.last.map { $0.velocity == 0 } == true
+        noteAuditions.last?.velocity == 0
             && grid.lastVelocity == 78, cppID: id,
         message: "velocity release stops the note audition and latches the committed anchor velocity")
     report.expect(
-        session.document.note(seed.ids[1]).map { Int($0.velocity) } == 78, cppID: id,
+        session.document.note(seed.ids[1])?.velocity == UInt8(78), cppID: id,
         message: "the grouped drag applies the same delta to the other selected note")
     report.expect(
         Set(session.selectedNoteOrder) == Set(seed.ids), cppID: id,
@@ -151,8 +150,8 @@ func checkGroupedVelocityDrag(_ report: CheckReport, viewport: DocumentViewport)
     grid.updatePointer(x: aX, y: aY + 15)
     grid.endPointer(x: aX, y: aY + 15)
     report.expect(
-        session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78
-            && session.document.note(seed.ids[1]).map { Int($0.velocity) } == 78, cppID: id,
+        session.document.note(seed.ids[0])?.velocity == UInt8(78)
+            && session.document.note(seed.ids[1])?.velocity == UInt8(78), cppID: id,
         message: "dragging down again reaches the same grouped velocities")
     report.expect(
         session.document.history.undoIndex == repeatIndex + 1, cppID: id,
@@ -171,8 +170,8 @@ func checkGroupedVelocityDrag(_ report: CheckReport, viewport: DocumentViewport)
         session.document.note(seed.ids[1]) == originalB, cppID: id,
         message: "repeating the grouped velocity drag restores the other note's complete record")
     report.expect(
-        session.document.note(seed.ids[0]).map { Int($0.velocity) } == 93
-            && session.document.note(seed.ids[1]).map { Int($0.velocity) } == 93, cppID: id,
+        session.document.note(seed.ids[0])?.velocity == UInt8(93)
+            && session.document.note(seed.ids[1])?.velocity == UInt8(93), cppID: id,
         message: "repeating the grouped drag the other way restores both velocities")
     report.expect(
         Set(session.selectedNoteOrder) == Set(seed.ids), cppID: id,
@@ -356,8 +355,11 @@ func checkThresholdDrawCell(_ report: CheckReport, viewport: DocumentViewport) {
         cppID: id,
         message: "toggling note-name mode while drawing leaves the pending note face unchanged")
     grid.endPointer(x: dragX, y: cell.y)
-    let drawn = session.document.notes(in: grid.trackIndex).filter {
-        Int($0.tick) == cell.tick && Int($0.pitch) == cell.pitch
+    let drawn = session.document.notes(in: grid.trackIndex).filter { note in
+        let tick: Int = Int(note.tick)
+        guard tick == cell.tick else { return false }
+        let pitch: Int = Int(note.pitch)
+        return pitch == cell.pitch
     }
     report.expect(
         drawn.count == 1 && drawn.first.map { Int($0.duration) == snap } == true,

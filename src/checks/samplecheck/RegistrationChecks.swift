@@ -7,6 +7,7 @@ import PorydawVoicegroupNative
 import PorydawProject
 import PorydawVoicegroup
 import PorydawSample
+@testable import SwiftCoreCheckLogic
 
 private func succeeded<Value, Failure: Error>(_ result: Result<Value, Failure>) -> Bool {
     if case .success = result { return true }

@@ -170,8 +170,9 @@ public func runExportChecks(_ report: CheckReport) {
             cppID: "exportcheck/MidiExportTest::offlineExportProducesValidRiffPcm",
             message: "S008: progress strictly increases and ends at one")
         let wav = try Data(contentsOf: path)
+        let expectedWavBytes: Int = 44 + Int(totals.totalFrames) * 4
         report.expect(
-            wav.count == 44 + Int(totals.totalFrames) * 4,
+            wav.count == expectedWavBytes,
             cppID: "exportcheck/MidiExportTest::offlineExportProducesValidRiffPcm",
             message: "S010: WAV byte count equals header plus stereo frames")
         guard wav.count >= 44 else { throw ExportCheckError.failed("WAV header truncated") }

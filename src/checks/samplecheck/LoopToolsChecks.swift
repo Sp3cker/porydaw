@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawSample
+@testable import SwiftCoreCheckLogic
 
 @MainActor
 internal func runLoopToolsChecks(_ report: CheckReport) {

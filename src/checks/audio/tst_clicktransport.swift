@@ -1,5 +1,4 @@
 import Foundation
-@testable import PorydawApp
 @testable import PorydawAppAudio
 import PorydawCore
 import PorydawPlayback

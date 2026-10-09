@@ -186,12 +186,14 @@ private func saveCoreSectionRefusals(_ report: CheckReport) {
     let overlapping = Data(
         ("voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 7\n\t.align 2\n" + second).utf8)
     let malformed = Data(("voicegroup_first:\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 1\n\t.align 2\n" + second).utf8)
-    let sibling = Data(
-        ("voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 1\n\t.align 2\n"
-            + "voicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 9\n").utf8)
-    let expected = Data(
-        ("voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 2\n\t.align 2\n"
-            + "voicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 9\n").utf8)
+    let siblingText: String =
+        "voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 1\n\t.align 2\n"
+        + "voicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 9\n"
+    let sibling: Data = Data(siblingText.utf8)
+    let expectedText: String =
+        "voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 2\n\t.align 2\n"
+        + "voicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 9\n"
+    let expected: Data = Data(expectedText.utf8)
     do {
         try FileManager.default.createDirectory(
             at: path.deletingLastPathComponent(),
@@ -362,9 +364,10 @@ private func saveCoreSynthWriteGates(_ report: CheckReport) {
                 let wired = try Data(contentsOf: assembly)
                 report.expectEqual(
                     expected: Data(
-                        ("\t.include \"sound/direct_sound_data.inc\"\n"
-                            + "\t.include \"sound/direct_sound_synth_data.inc\"\n"
-                            + "\t.include \"sound/music_player_table.inc\"\n").utf8), actual: wired, cppID: cppID,
+                        ("\t.include \"sound/direct_sound_data.inc\"\n\t.include \"sound/direct_sound_synth_data.inc\"\n\t.include \"sound/music_player_table.inc\"\n")
+                            .utf8),
+                    actual: wired,
+                    cppID: cppID,
                     what: "synth write preserves sibling includes in exact order")
                 let second = awaitValue { try await store.saveVoicegroup(lease: saved) }
                 report.expect(

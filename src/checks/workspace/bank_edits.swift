@@ -1,6 +1,5 @@
 import Foundation
 import PorydawVoicegroup
-import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
 import PorydawDocument
@@ -580,8 +579,9 @@ internal func releaseBoundaryEngineParity(_ report: CheckReport, fixtureRoot: St
             report.fail(id, "rich fixture does not contain the DirectSound release boundary voice")
             return
         }
-        try (sampleVoice.prefix(3).joined(separator: "\n") + "\n")
-            .write(
+        let joinedSource: String = sampleVoice.prefix(3).joined(separator: "\n")
+        let sourceText: String = joinedSource + "\n"
+        try sourceText.write(
                 toFile: root + "/sound/voicegroups/fixture_rich.inc",
                 atomically: true, encoding: .utf8)
         try """

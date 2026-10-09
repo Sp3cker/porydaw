@@ -225,11 +225,17 @@ extension EditorQmlLane {
     /// the image it names at the requested device pixel ratio.
     private static func pngPixelSize(path: String) -> (width: Double, height: Double)? {
         guard let handle = FileHandle(forReadingAtPath: path),
-            let data = try? handle.read(upToCount: 24), data.count == 24,
-            data.prefix(8) == Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+            let data = try? handle.read(upToCount: 24), data.count == 24
+        else { return nil }
+        let signature: [UInt8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        let header: Data = Data(signature)
+        guard data.prefix(8) == header
         else { return nil }
         func bigEndian32(_ offset: Int) -> Double {
-            data.dropFirst(offset).prefix(4).reduce(0) { $0 * 256 + Double($1) }
+            let bytes: Data = data.dropFirst(offset).prefix(4)
+            return bytes.reduce(Double(0)) { (value: Double, byte: UInt8) -> Double in
+                value * Double(256) + Double(byte)
+            }
         }
         return (bigEndian32(16), bigEndian32(20))
     }

@@ -246,8 +246,12 @@ private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, viewport
                 everyRideVisible && left >= 0
                 && right <= viewport.camera.snapshot.viewportWidth - 1 / dpr
         }
+        var matchesNoteExpectation6: Bool = false
+        if let note = session.document.note(seed.id) {
+            matchesNoteExpectation6 = UInt64(note.tick) == expectedTick
+        }
         report.expect(
-            session.document.note(seed.id).map { UInt64($0.tick) == expectedTick } == true,
+            matchesNoteExpectation6,
             cppID: id, message: "the note rides right by every requested snap step")
         report.expect(
             everyRideVisible, cppID: id,
@@ -295,13 +299,14 @@ private func checkKeyboardResizeNotes(_ report: CheckReport, viewport: DocumentV
         let laterTick = seed.tick + 2 * seed.duration + seed.snap
         let laterDuration = seed.snap + (seed.duration == seed.snap + 1 ? 2 : 1)
         guard
-            let laterPitch = (24...115).reversed().first(where: { pitch in
+            let laterPitch = (24...115).reversed().first(where: { (pitch: Int) -> Bool in
                 pitch != seed.pitch
                     && !(0..<session.document.engineTracks.usedTrackCount).contains {
                         track in
-                        session.document.notes(in: track).contains { note in
-                            Int(note.pitch) == pitch && UInt64(note.tick) < UInt64(laterTick + laterDuration)
-                                && (note.endTick ?? UInt64.max) > UInt64(laterTick)
+                        session.document.notes(in: track).contains { (note: Note) -> Bool in
+                            guard Int(note.pitch) == pitch else { return false }
+                            guard UInt64(note.tick) < UInt64(laterTick + laterDuration) else { return false }
+                            return (note.endTick ?? UInt64.max) > UInt64(laterTick)
                         }
                     }
             }),
@@ -378,10 +383,11 @@ private func checkKeyboardResizeNotes(_ report: CheckReport, viewport: DocumentV
                     && nextB.duration == b.duration - shrink,
                 cppID: id, message: "Shift+Left shortens both notes by the same step")
         }
+        let firstDuration: Tick = session.document.note(seed.id)?.duration ?? Tick(0)
+        let secondDuration: Tick = session.document.note(second)?.duration ?? Tick(0)
+        let minimumDuration: Tick = min(firstDuration, secondDuration)
         report.expect(
-            min(
-                session.document.note(seed.id)?.duration ?? 0,
-                session.document.note(second)?.duration ?? 0) == 1,
+            minimumDuration == Tick(1),
             cppID: id, message: "repeated Shift+Left reaches the one-tick floor")
         let atFloor = session.document.state
         let floorBytes = coreTimeBytes(session.document)

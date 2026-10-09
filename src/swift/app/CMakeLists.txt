@@ -12,10 +12,13 @@ function(porydaw_swift_module target module_name)
     )
     porydaw_enable_swift_batch_mode(${target})
 endfunction()
+# Lazy Qt C++ imports bill ~20–600 ms to whichever expression touches them first, so
+# interop modules and their importers keep a 1000 ms warning; the later flag wins.
 function(porydaw_swift_qt_interop target)
     target_compile_options(${target} PUBLIC
         "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"
+        "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:SHELL:-Xfrontend -warn-long-expression-type-checking=1000>"
     )
 endfunction()
 
@@ -241,7 +244,6 @@ target_compile_options(PorydawAppAudio PRIVATE
 set_target_properties(PorydawAppAudio PROPERTIES
     AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
 )
-porydaw_swift_qt_interop(PorydawAppAudio)
 target_compile_options(PorydawAppAudio PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/audio/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/third_party>"
@@ -261,7 +263,6 @@ porydaw_swift_module(PorydawAppEventList PorydawAppEventList)
 set_target_properties(PorydawAppEventList PROPERTIES
     AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
 )
-porydaw_swift_qt_interop(PorydawAppEventList)
 target_link_libraries(PorydawAppEventList PUBLIC PorydawCore)
 
 add_library(PorydawAppPresentation STATIC

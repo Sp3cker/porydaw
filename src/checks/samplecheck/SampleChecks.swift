@@ -1,5 +1,6 @@
 import Foundation
 import PorydawSample
+@testable import SwiftCoreCheckLogic
 
 @MainActor
 public func runSampleChecks(_ report: CheckReport) {

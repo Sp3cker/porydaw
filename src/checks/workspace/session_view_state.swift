@@ -702,11 +702,13 @@ private func runTabReadinessChecks(
     let scopedGrid = scopedPage.gridPresenter()
     let scopedViewport = scopedPage.workspace.viewport
     let scopedCamera = scopedViewport.camera
-    if let firstNote = (0..<scopedDocument.document.engineTracks.usedTrackCount).flatMap({
+    let sourceNotes = (0..<scopedDocument.document.engineTracks.usedTrackCount).flatMap {
         scopedDocument.document.notes(in: $0)
-    }).filter({
-        scopedCamera.projection.row(forPitch: Int($0.pitch)) != PitchProjection.hiddenRow
-    }).min(by: { $0.tick < $1.tick }) {
+    }
+    let visibleNotes = sourceNotes.filter { note -> Bool in
+        scopedCamera.projection.row(forPitch: Int(note.pitch)) != PitchProjection.hiddenRow
+    }
+    if let firstNote = visibleNotes.min(by: { lhs, rhs -> Bool in lhs.tick < rhs.tick }) {
         let snap = scopedCamera.snapshot
         // Center the first note with a lead pad: MIDI middle, px offset.
         let middlePitch = 127.5
@@ -729,10 +731,12 @@ private func runTabReadinessChecks(
     do {
         try FileManager.default.removeItem(at: midiURL)
         app.openSong(label: "mus_session_test")
+        var matches42: Bool = !scopedPage.isReady
+        if matches42 { matches42 = scopedPage.gridPresenter().renderedNoteCount == completeRenderCount }
+        let expectedEventCount: Int = original.count + 2
+        if matches42 { matches42 = scopedDocument.timeline.events.count == expectedEventCount }
         report.expect(
-            !scopedPage.isReady
-                && scopedPage.gridPresenter().renderedNoteCount == completeRenderCount
-                && scopedDocument.timeline.events.count == original.count + 2,
+            matches42,
             cppID: recoveryID,
             message: "missing source leaves its old complete render while pending")
         report.expect(

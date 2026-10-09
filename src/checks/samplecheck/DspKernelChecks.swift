@@ -49,7 +49,7 @@ private func dspResampleDc(_ report: CheckReport) {
     let length = Int((Double(input.count) * ratio).rounded())
     let output = SampleDsp.resampleSinc(input, ratio: ratio, outCount: length)
     check.expect(
-        (100..<(length - 100)).allSatisfy { abs(Double(output[$0]) - 0.25) <= 1e-4 },
+        (100..<(length - 100)).allSatisfy { (index: Int) -> Bool in abs(Double(output[index]) - 0.25) <= 1e-4 },
         message: "A003 interior DC gain retains 0.25 within 1e-4")
 }
 
@@ -60,7 +60,7 @@ private func dspResampleImpulse(_ report: CheckReport) {
     let output = SampleDsp.resampleSinc(input, ratio: 0.5, outCount: 2000)
     check.expect(output[1000] > 0.1, message: "A004 centered impulse survives decimation")
     check.expect(
-        (1...500).allSatisfy { distance in
+        (1...500).allSatisfy { (distance: Int) -> Bool in
             abs(Double(output[1000 + distance]) - Double(output[1000 - distance])) <= 2e-6
         }, message: "A005 impulse has symmetric taps within 2e-6")
 }
@@ -87,7 +87,7 @@ private func dspResampleFrequency(_ report: CheckReport) {
 private func dspResampleIdentity(_ report: CheckReport) {
     let check = report.scoped(cppID: "samplecheck/SampleProcessingTest::resampleIdentity")
     var random: UInt32 = 12345
-    let input: [Float] = (0..<5000).map { _ in
+    let input: [Float] = (0..<5000).map { (_: Int) -> Float in
         random = random &* 1_664_525 &+ 1_013_904_223
         return Float(Double(random) / 4_294_967_296.0 - 0.5)
     }
@@ -111,13 +111,13 @@ private func dspQuantization(_ report: CheckReport) {
 
     let roundtrip = report.scoped(cppID: "samplecheck/SampleProcessingTest::quantizationU8Roundtrip")
     roundtrip.expect(
-        (0..<256).allSatisfy { value in
+        (0..<256).allSatisfy { (value: Int) -> Bool in
             Int(SampleDsp.quantizeToAgb8(Double(value - 128) / 128.0)) == value - 128
         }, message: "A010 unsigned PCM roundtrips every byte through signed quantization")
 
     let dither = report.scoped(cppID: "samplecheck/SampleProcessingTest::quantizationDither")
     var random: UInt32 = 999
-    let noise: [Float] = (0..<2000).map { _ in
+    let noise: [Float] = (0..<2000).map { (_: Int) -> Float in
         random = random &* 1_664_525 &+ 1_013_904_223
         return Float(Double(random) / 4_294_967_296.0 - 0.5)
     }

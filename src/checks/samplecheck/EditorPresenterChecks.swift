@@ -4,6 +4,7 @@ import PorydawProject
 import PorydawVoicegroup
 import PorydawVoicegroupNative
 import PorydawSample
+@testable import SwiftCoreCheckLogic
 
 @MainActor
 internal func runEditorPresenterChecks(_ report: CheckReport) {
@@ -249,15 +250,15 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
                 == "32-bit float WAV, 2 channels, 44100.25 Hz, 12000 samples (0.27 s)",
             message: "floating stereo source uses fractional rate and plural channels")
         state.expect(
-            gesture.normalizeChoices
-                == ["Auto", "Looped (−9 dBFS loop RMS)", "One-shot (peak)", "Off"],
+            gesture.normalizeChoices == ["Auto", "Looped (−9 dBFS loop RMS)", "One-shot (peak)", "Off"],
             message: "normalize choices reproduce fork labels")
+        let expectedRates: [String] = [
+            "5734", "7884", "10512", "13379", "15768", "18157",
+            "21024", "26758", "31536", "36314", "40137", "42048",
+        ]
+        let rateChoicesMatch: Bool = Array(gesture.rateChoices.dropFirst()) == expectedRates
         state.expect(
-            Array(gesture.rateChoices.dropFirst())
-                == [
-                    "5734", "7884", "10512", "13379", "15768", "18157",
-                    "21024", "26758", "31536", "36314", "40137", "42048",
-                ],
+            rateChoicesMatch,
             message: "rate presets reproduce fork kGbaMixRates ordering")
         var formatted = ProcessedSample()
         formatted.size = 1520

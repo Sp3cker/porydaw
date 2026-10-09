@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import SwiftCoreCheckLogic
 
 private func duplicateFixtureFile() -> MidiFile {
     MidiFile(

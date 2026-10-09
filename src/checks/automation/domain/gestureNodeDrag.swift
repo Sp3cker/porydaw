@@ -3,6 +3,7 @@ import Foundation
 @testable import PorydawAppPresentation
 import PorydawCore
 @testable import PorydawDocument
+import SwiftCoreCheckLogic
 
 // Node-drag scenarios paired with gestures.cpp.
 // Entry order remains in AutomationPageChecks.swift.
@@ -367,9 +368,10 @@ func drawerAutomationGestureContractParity(
         suite: suite, service: service,
         tempo: [(0, 500_000), (96, 400_000)])
     let tempoFacts = tempo.facts(.tempo)
-    let preservedUs =
-        tempo.document.state.tempo.first(where: { $0.tick == 0 })?
-        .microsecondsPerQuarterNote ?? 0
+    let sourceTempo: TempoPoint? = tempo.document.state.tempo.first {
+        (point: TempoPoint) -> Bool in point.tick == Tick(0)
+    }
+    let preservedUs: UInt32 = sourceTempo?.microsecondsPerQuarterNote ?? UInt32(0)
     guard
         let tempoPlan = AutomationNodeResolver.moves([
             .init(
@@ -386,10 +388,13 @@ func drawerAutomationGestureContractParity(
     report.expect(
         AutomationCommit.apply(tempoPlan, in: tempo.document),
         cppID: drawerAutomationContractParityID, message: "the tempo move commits")
+    let movedTempo: TempoPoint? = tempo.document.state.tempo.first {
+        (point: TempoPoint) -> Bool in point.tick == Tick(48)
+    }
+    let movedUs: UInt32 = movedTempo?.microsecondsPerQuarterNote ?? UInt32(0)
     report.expectEqual(
         expected: preservedUs,
-        actual: tempo.document.state.tempo.first(where: { $0.tick == 48 })?
-            .microsecondsPerQuarterNote ?? 0, cppID: drawerAutomationContractParityID,
+        actual: movedUs, cppID: drawerAutomationContractParityID,
         what: "an unchanged-value tempo move preserves its microseconds")
     report.expectEqual(
         expected: tempoBefore.revision + 1, actual: tempo.document.revision,
@@ -421,11 +426,18 @@ func drawerAutomationGestureContractParity(
     report.expectEqual(
         expected: fractionalBefore.revision + 1, actual: fractional.document.revision,
         cppID: drawerAutomationContractParityID, what: "one fractional drag is one revision")
+    let fractionalTiming: [(Tick, UInt32)] = fractional.document.state.tempo.map {
+        (point: TempoPoint) -> (Tick, UInt32) in
+        (point.tick, point.microsecondsPerQuarterNote)
+    }
+    let expectedTiming: [(Tick, UInt32)] = [(192, 499_999), (288, 545_455)]
     report.expect(
-        fractional.document.state.tempo.map { ($0.tick, $0.microsecondsPerQuarterNote) }
-            .elementsEqual(
-                [(Tick(192), UInt32(499_999)), (Tick(288), UInt32(545_455))],
-                by: { $0 == $1 }),
+        fractionalTiming.elementsEqual(
+            expectedTiming,
+            by: {
+                (actual: (Tick, UInt32), expected: (Tick, UInt32)) -> Bool in
+                actual == expected
+            }),
         cppID: drawerAutomationContractParityID,
         message: "the free-tick Tempo drag preserves raw fractional microseconds and its sibling")
     report.expect(

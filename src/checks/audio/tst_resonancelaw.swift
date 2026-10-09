@@ -1,5 +1,4 @@
 import Foundation
-import PorydawApp
 import PorydawAppAudio
 
 func resonanceLawChecks(_ report: CheckReport) {

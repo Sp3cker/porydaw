@@ -167,11 +167,14 @@ private func editingTone(_ bank: UnsafeMutablePointer<LoadedVoiceGroup>, _ slot:
 }
 
 private func editingVoiceName(_ bank: UnsafeMutablePointer<LoadedVoiceGroup>, _ slot: Int) -> String {
-    withUnsafePointer(to: &bank.pointee.voiceNames) {
-        $0.withMemoryRebound(to: CChar.self, capacity: 128 * Int(VG_VOICE_NAME_LEN)) {
-            String(cString: $0.advanced(by: slot * Int(VG_VOICE_NAME_LEN)))
-        }
+    guard let tableOffset: Int = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voiceNames) else {
+        preconditionFailure("LoadedVoiceGroup.voiceNames has no stored offset; header/build mismatch.")
     }
+    let nameLength: Int = Int(VG_VOICE_NAME_LEN)
+    let offset: Int = tableOffset + slot * nameLength
+    let characters: UnsafePointer<CChar> = UnsafeRawPointer(bank).advanced(by: offset)
+        .assumingMemoryBound(to: CChar.self)
+    return String(cString: characters)
 }
 
 private struct EditingSnapshot: Equatable {
@@ -189,10 +192,17 @@ private struct EditingSnapshot: Equatable {
 private func editingSnapshot(_ bank: UnsafeMutablePointer<LoadedVoiceGroup>, _ slot: Int) -> EditingSnapshot {
     let tone = editingTone(bank, slot)
     let cgb = tone.type & UInt8(VOICE_TYPE_CGB_MASK)
-    let packed: UInt =
-        (tone.type != UInt8(VOICE_KEYSPLIT) && tone.type != UInt8(VOICE_KEYSPLIT_ALL)
-            && (cgb == UInt8(VOICE_SQUARE_1) || cgb == UInt8(VOICE_SQUARE_2) || cgb == UInt8(VOICE_NOISE)))
-        ? UInt(bitPattern: tone.wavePointer) : 0
+    let isSplit: Bool
+    switch tone.type {
+    case UInt8(VOICE_KEYSPLIT), UInt8(VOICE_KEYSPLIT_ALL): isSplit = true
+    default: isSplit = false
+    }
+    let isPacked: Bool
+    switch cgb {
+    case UInt8(VOICE_SQUARE_1), UInt8(VOICE_SQUARE_2), UInt8(VOICE_NOISE): isPacked = true
+    default: isPacked = false
+    }
+    let packed: UInt = !isSplit && isPacked ? UInt(bitPattern: tone.wavePointer) : 0
     return EditingSnapshot(
         type: tone.type, key: tone.key, panSweep: tone.panSweep,
         attack: tone.attack, decay: tone.decay, sustain: tone.sustain,
@@ -220,7 +230,9 @@ private func editingResolvedTone(_ aggregate: ToneData, key: Int) -> ToneData? {
     } else {
         tone = aggregate
     }
-    return tone.type & (UInt8(VOICE_KEYSPLIT) | UInt8(VOICE_KEYSPLIT_ALL)) == 0 ? tone : nil
+    let aggregateMask: UInt8 = UInt8(VOICE_KEYSPLIT) | UInt8(VOICE_KEYSPLIT_ALL)
+    let isAggregate: Bool = tone.type & aggregateMask != 0
+    return isAggregate ? nil : tone
 }
 
 private func editingSameWave(
@@ -308,8 +320,11 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
             var edited: VgVoice
             switch family {
             case 0:
-                let found = editingFirstSlot(source) {
-                    $0 == .directSound || $0 == .directSoundNoResample || $0 == .directSoundAlt
+                let found = editingFirstSlot(source) { (macro: VgMacro) -> Bool in
+                    switch macro {
+                    case .directSound, .directSoundNoResample, .directSoundAlt: return true
+                    default: return false
+                    }
                 }
                 editingExpect("A043", found != nil, report, "A043: fixture retains a DirectSound voice")
                 guard let found, var voice = source.voiceAt(slot: found) else { return }
@@ -515,10 +530,11 @@ private func editingConfiguredBaselineAndSynth(_ report: CheckReport) {
             try FileManager.default.createDirectory(
                 at: midi.deletingLastPathComponent(),
                 withIntermediateDirectories: true)
-            try Data([
+            let midiBytes: [UInt8] = [
                 0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0, 96,
                 0x4d, 0x54, 0x72, 0x6b, 0, 0, 0, 4, 0, 0xff, 0x2f, 0,
-            ]).write(to: midi)
+            ]
+            try Data(midiBytes).write(to: midi)
             let project = ProjectStore(projectRoot: root)
             let opened = awaitValue { try await project.open() }
             let song = awaitValue { try await project.songMeta(label: "mus_gym") }
@@ -537,9 +553,12 @@ private func editingConfiguredBaselineAndSynth(_ report: CheckReport) {
                 message: "the song's configured voicegroup argument resolves and loads the baseline bank")
 
             let source = try openRichSource(at: root)
-            let slot = (0..<128).first { index in
+            let slot = (0..<128).first { (index: Int) -> Bool in
                 guard let macro = source.voiceAt(slot: index)?.macro else { return false }
-                return macro == .directSound || macro == .directSoundNoResample || macro == .directSoundAlt
+                switch macro {
+                case .directSound, .directSoundNoResample, .directSoundAlt: return true
+                default: return false
+                }
             }
             guard let slot, var voice = source.voiceAt(slot: slot) else {
                 report.fail(synthID, "rich bank has no DirectSound voice")

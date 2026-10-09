@@ -5,6 +5,7 @@ import PorydawCoreCheckNative
 import PorydawDocument
 import PorydawPlayback
 import PorydawProject
+@testable import SwiftCoreCheckLogic
 
 // Fixture-backed ProjectService song-listing checks: the staged decomp
 // project gains one unregistered stray (.mid only) and one partial

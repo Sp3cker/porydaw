@@ -31,7 +31,7 @@ endif()
 
 # Swift check sources need their own archive for CMake to emit compile rules.
 function(add_porydaw_check_lane name)
-    cmake_parse_arguments(PARSE_ARGV 1 CHECK "NO_CORE_DEFAULTS" "MODULE_NAME;MODULE_DIRECTORY"
+    cmake_parse_arguments(PARSE_ARGV 1 CHECK "" "MODULE_NAME;MODULE_DIRECTORY"
         "SOURCES;COMPILE_OPTIONS;LINK_LIBRARIES")
     add_library(${name} STATIC ${CHECK_SOURCES})
     set_target_properties(${name} PROPERTIES
@@ -52,18 +52,6 @@ function(add_porydaw_check_lane name)
             "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:${name},Swift_MODULE_DIRECTORY>>")
     endif()
     porydaw_enable_swift_batch_mode(${name})
-    if(NOT CHECK_NO_CORE_DEFAULTS)
-        target_compile_options(${name} PRIVATE
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/voicegroup/module.modulemap>"
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-        )
-        target_link_libraries(${name} PRIVATE PorydawCore PorydawPlayback PorydawProject PorydawVoicegroup PorydawApp PorydawSample)
-    endif()
     target_compile_options(${name} PRIVATE ${CHECK_COMPILE_OPTIONS})
     target_link_libraries(${name} PRIVATE ${CHECK_LINK_LIBRARIES})
 endfunction()
@@ -73,7 +61,6 @@ function(add_porydaw_check name)
     cmake_parse_arguments(PARSE_ARGV 1 CHECK "" "SWIFT_LANE;MODULE_NAME;AUTOMOC"
         "SOURCES;SWIFT_SOURCES;SWIFT_COMPILE_OPTIONS;SWIFT_LINK_LIBRARIES")
     add_porydaw_check_lane(${CHECK_SWIFT_LANE}
-        NO_CORE_DEFAULTS
         MODULE_NAME "${CHECK_MODULE_NAME}"
         SOURCES ${CHECK_SWIFT_SOURCES}
         COMPILE_OPTIONS ${CHECK_SWIFT_COMPILE_OPTIONS}
@@ -119,352 +106,338 @@ target_include_directories(porydaw_checks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 porydaw_enable_project_warnings(porydaw_checks)
 
 if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
-# ---- Swift core-check lanes (parallel Swift modules, one DAG) ----
-# Graph: support: -; media: support; edit: support media; roll: support media edit; pages: support media edit roll; project: support media edit roll pages; dispatch: all six. Full chain, not siblings: @_exported re-exports are transitive, so loading any lane needs every re-exported upstream .swiftmodule present (removing roll/project media links fails with missing-required-module).
-# Suite files stay in place; lane membership is per-file (see SOURCES); cross-lane imports live in lanes/<Lane>Lane.swift.
+    # Every core-check module gets these; only SwiftCoreCheck adds the app/render maps
+    # and PorydawApp, so Support and Logic stay interop-free and build beside the app.
+    set(core_check_swift_options
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/voicegroup/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
+    )
+    set(core_check_libraries
+        PorydawCore PorydawPlayback PorydawProject PorydawVoicegroup PorydawSample PorydawDocument PorydawAppAudio)
     add_porydaw_check_lane(swift_core_check_support
         MODULE_NAME SwiftCoreCheckSupport
         MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_support"
+        COMPILE_OPTIONS ${core_check_swift_options}
         SOURCES
         support/corecheck/CoreCheckSupport.swift
         editcheck/TimeRangeSupport.swift
         support/PageCheckSupport.swift
         support/DocumentSessionFixture.swift
-        support/WorkspacePresenterFixture.swift
         projectstore/ProjectStoreCheckSupport.swift
         workspace/session_support.swift
         workspace/session_fixtures.swift
         support/NumericCheckSupport.swift
+        LINK_LIBRARIES ${core_check_libraries}
     )
-    add_porydaw_check_lane(swift_core_check_media
-        MODULE_NAME SwiftCoreCheckMedia
-        MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_media"
+    add_porydaw_check_lane(swift_core_check_logic
+        MODULE_NAME SwiftCoreCheckLogic
+        MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_logic"
+        COMPILE_OPTIONS ${core_check_swift_options} "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>"
         SOURCES
-        midi/MidiSmfCodecChecks.swift
-        midi/MidiSmfCodecCompare.swift
-        midi/MidiSemanticsChecks.swift
-        midi/MidiSemanticsExpected.swift
-        midi/MidiEngineBoundsChecks.swift
-        playback/PlaybackChecks.swift
+        lanes/SwiftCoreCheckLogicLane.swift
+        audio/AudioAuditionChecks.swift
         audio/controllerfixture.swift
-        audio/tst_clicktransport.swift
-        audio/tst_audiotelemetry.swift
-        audio/tst_trackactivity.swift
-        playback/publish.swift
-        playback/transportfixture.swift
-        playback/tst_loop.swift
-        playback/tst_prime.swift
-        polyphony/polyphonyengine.swift
-        polyphony/PolyphonyPanelChecks.swift
-        playback/tst_xcmd.swift
-        keyboard/tst_velocitymodel.swift
-        keyboard/tst_velocityaxis.swift
-        keyboard/tst_velocitygesture.swift
-        keyboard/KeybindingRegistryChecks.swift
-        keyboard/EngineSettingsChecks.swift
-        themecolor/ThemeColorChecks.swift
-        themecolor/ThemeColorPresets.swift
-        displaylist/DisplayListChecks.swift
-        samplecheck/SampleChecks.swift
-        samplecheck/SampleFixtures.swift
-        samplecheck/DecoderChecks.swift
-        samplecheck/CompressedDecoderChecks.swift
-        samplecheck/SoundFontChecks.swift
-        samplecheck/DspKernelChecks.swift
-        samplecheck/RenderPipelineChecks.swift
-        samplecheck/AnalysisChecks.swift
-        samplecheck/RegistrationChecks.swift
-        samplecheck/ProvenanceChecks.swift
-        samplecheck/EditorPresenterChecks.swift
-        samplecheck/LoopToolsChecks.swift
-        samplecheck/AuditionStripChecks.swift
-        samplecheck/WaveformChecks.swift
-        playback/projection.swift
-        playback/rewrites.swift
-        playback/opaque.swift
-        playback/rawreconciliation.swift
-        playback/export.swift
-        playback/cgb.swift
-        playback/settle.swift
-        playback/tails.swift
         audio/resonancefixture.swift
+        audio/tst_audiotelemetry.swift
+        audio/tst_clicktransport.swift
         audio/tst_resonancelaw.swift
         audio/tst_resonancetiming.swift
-        audio/AudioControllerChecks.swift
-        audio/AudioAuditionChecks.swift
-        playback/ResonanceSuppressionChecks.swift
-        editcheck/ScaleChecks.swift
-        lanes/MediaLane.swift
-        LINK_LIBRARIES swift_core_check_support
-    )
-    add_porydaw_check_lane(swift_core_check_edit
-        MODULE_NAME SwiftCoreCheckEdit
-        MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_edit"
-        SOURCES
-        editcheck/tst_songdocument_songraw.swift
-        editcheck/tst_songdocument_runner.swift
-        editcheck/tst_songdocument_songranges.swift
-        editcheck/tst_songdocument_songnotes.swift
-        editcheck/NoteCorpusChecks.swift
-        editcheck/NoteMoveTransactionChecks.swift
-        editcheck/NoteMoveCorpusChecks.swift
+        automation/domain/stagedSnapshot.swift
+        automation/domain/xcmdRanges.swift
+        editcheck/DocumentEditChecks.swift
+        editcheck/DocumentHistoryChecks.swift
+        editcheck/DocumentTrackChecks.swift
+        editcheck/EventViewsEditsParity.swift
+        editcheck/MidiImportChecks.swift
         editcheck/NoteChecks.swift
+        editcheck/NoteCorpusChecks.swift
         editcheck/NoteHistoryChecks.swift
         editcheck/NoteIdentityChecks.swift
-        editcheck/DocumentHistoryChecks.swift
-        editcheck/DocumentEditChecks.swift
-        editcheck/DocumentTrackChecks.swift
-        editcheck/EventChecks.swift
-        editcheck/MidiImportWizardLawChecks.swift
-        editcheck/EventViewsEditsParity.swift
-        editcheck/EventViewsRemapBucketsParity.swift
-        editcheck/TrackCorpusChecks.swift
-        editcheck/TimeRangeChecks.swift
+        editcheck/NoteMoveCorpusChecks.swift
+        editcheck/NoteMoveTransactionChecks.swift
+        editcheck/ScaleChecks.swift
+        editcheck/SelectionTrackChecks.swift
+        editcheck/TickBoundsChecks.swift
+        editcheck/TimeCorpusChecks.swift
+        editcheck/TimeRangeDuplicationAndGlobalsChecks.swift
+        editcheck/TimeRangeInsertionAndBoundariesChecks.swift
         editcheck/TimeRangeRangeEditingChecks.swift
         editcheck/TimeRangeRangeMovementChecks.swift
         editcheck/TimeRangeRemovalAndSeamsChecks.swift
-        editcheck/TimeRangeInsertionAndBoundariesChecks.swift
-        editcheck/TimeRangeDuplicationAndGlobalsChecks.swift
-        editcheck/TimeCorpusChecks.swift
-        editcheck/SelectionChecks.swift
-        editcheck/SelectionTrackChecks.swift
-        editcheck/SelectionTransitions.swift
-        editcheck/TickBoundsChecks.swift
-        editcheck/ClipboardCodecChecks.swift
-        editcheck/ClipboardEditingChecks.swift
         editcheck/TrackLifecycleChecks.swift
-        editcheck/TrackContractsChecks.swift
-        editcheck/MidiImportChecks.swift
-        editcheck/XcmdPlaybackChecks.swift
-        editcheck/FormatZeroChecks.swift
-        automation/domain/gesturePointRange.swift
-        automation/domain/xcmd.swift
-        automation/domain/xcmdRanges.swift
-        automation/domain/automationFixture.swift
-        automation/domain/stagedSnapshot.swift
-        lanes/EditLane.swift
-        LINK_LIBRARIES swift_core_check_support swift_core_check_media
-    )
-    add_porydaw_check_lane(swift_core_check_roll
-        MODULE_NAME SwiftCoreCheckRoll
-        MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_roll"
-        SOURCES
-        rollcheck/static/camera.swift
-        rollcheck/static/camera_wheel.swift
-        rollcheck/static/geometry.swift
-        rollcheck/static/gate.swift
-        rollcheck/camera_grid.swift
-        rollcheck/rollheaderfixture.swift
-        rollcheck/pencil.swift
-        rollcheck/resize.swift
-        rollcheck/scale_editing.swift
-        rollcheck/note_rendering.swift
-        rollcheck/note_rendering_support.swift
-        rollcheck/roll_content_probe.swift
-        rollcheck/note_rendering_borders.swift
-        rollcheck/note_rendering_velocity.swift
-        rollcheck/note_rendering_names.swift
-        rollcheck/note_rendering_ghosts.swift
-        rollcheck/note_rendering_economy.swift
-        rollcheck/keyboard.swift
-        rollcheck/keyboard_timeline_insert.swift
-        rollcheck/keyboard_drum_labels.swift
-        rollcheck/keyboard_time_selection.swift
-        rollcheck/keyboard_parity.swift
-        rollcheck/selection.swift
-        rollcheck/selection_band.swift
-        rollcheck/selection_audition.swift
-        rollcheck/selection_editing.swift
-        rollcheck/identity.swift
-        rollcheck/interlock.swift
-        rollcheck/note_commands.swift
-        rollcheck/note_commands_routing.swift
-        rollcheck/remap.swift
-        rollcheck/presentation.swift
-        rollcheck/time_signature_prompt.swift
-        rollcheck/pitch_bend.swift
-        rollcheck/pitch_bend_support.swift
-        rollcheck/pitch_bend_document.swift
-        rollcheck/pitch_bend_lifecycle.swift
-        rollcheck/pitch_bend_editing.swift
-        rollcheck/ruler_loop_menu.swift
-        rollcheck/ruler_loop_menu_retirement.swift
-        rollcheck/ruler_loop_menu_loop.swift
-        rollcheck/ruler_loop_menu_sweep.swift
-        rollcheck/ruler_loop_menu_seek.swift
-        nativegraphics/tst_playhead_quick.swift
-        nativegraphics/PlayheadFeatureChecks.swift
-        eventviews/EventListPlayheadChecks.swift
-        eventviews/EventListPlayheadFocusChecks.swift
-        eventviews/EventListPlayheadContractChecks.swift
-        eventviews/EventListPageChecks.swift
-        eventviews/EventListPageAppearanceChecks.swift
-        eventviews/EventListPageCellCommitChecks.swift
-        trackheaders/headerfixture.swift
-        trackheaders/headerinputfixture.swift
-        trackheaders/tst_trackheadermodel.swift
-        trackheaders/trackheaderinput.swift
-        trackheaders/trackheadermutations.swift
-        trackheaders/trackheadermenu.swift
-        trackheaders/trackheaderraster.swift
-        trackheaders/tst_trackactivitymeter.swift
-        rollcheck/EditorGridCameraChecks.swift
-        rollcheck/EditorGridLatticeChecks.swift
-        rollcheck/EditorGridProjectionChecks.swift
-        rollcheck/EditorGridCameraIsolation.swift
-        nativegraphics/SharedPlayheadChecks.swift
-        nativegraphics/SharedPlayheadPureChecks.swift
-        trackheaders/TrackHeadersChecks.swift
-        trackheaders/TrackHeadersInputChecks.swift
-        lanes/RollLane.swift
-        LINK_LIBRARIES swift_core_check_support swift_core_check_media swift_core_check_edit
-    )
-    add_porydaw_check_lane(swift_core_check_pages
-        MODULE_NAME SwiftCoreCheckPages
-        MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_pages"
-        SOURCES
-        scrollbar/ScrollbarChecks.swift
-        rollcheck/timemenu.swift
-        songlist/songlist_checks.swift
-        songlist/songlist_service.swift
-        songlist/SongRegistrationChecks.swift
-        songlist/SongDeletionChecks.swift
-        songlist/SongRegionRegistrationChecks.swift
-        songlist/SongDebugLayoutChecks.swift
-        songlist/SongImportChecks.swift
-        songlist/MidiImportWizardChecks.swift
-        songlist/NewSongWizardChecks.swift
-        voicelist/VoiceListChecks.swift
-        voicelist/VoiceListIntentChecks.swift
-        voicelist/voicelist_session.swift
-        automation/domain/tst_automationdomain.swift
-        automation/domain/tst_automationdomainLegacy.swift
-        automation/domain/gestureSweep.swift
-        automation/domain/gestureNodeDrag.swift
-        automation/domain/gestureNodeContract.swift
-        automation/domain/gestureNodeDragPhantom.swift
-        automation/domain/gesturePencil.swift
-        automation/presentation/painting.swift
-        automation/presentation/painting_raster.swift
-        automation/presentation/tst_automationpresentation.swift
-        automation/automationcanvaslayout.swift
-        automation/automationpointmenus.swift
-        automation/automationclipboard.swift
-        automation/automationcanvasediting.swift
-        automation/automationcanvashover.swift
-        automation/tst_automationediting.swift
-        automation/automationtaptempo.swift
-        automation/automationactions.swift
-        automation/automationselection.swift
-        automation/automationselection_band.swift
-        automation/automationselection_pencil.swift
-        automation/automationselection_mixed.swift
-        automation/automationmenus.swift
-        selectionkey/localinputtier_text.swift
-        selectionkey/localinputtier_window.swift
-        drawerpresentation/velocity.swift
-        drawerpresentation/velocity_context.swift
-        drawerpresentation/voice_projection.swift
-        drawerpresentation/voice_picker.swift
-        drawerpresentation/voice_interaction.swift
-        drawerpresentation/voice_lifecycle.swift
-        drawerpresentation/voicemenus.swift
-        drawerpresentation/drawer_basics.swift
-        drawerpresentation/drawer_resize.swift
-        drawerpresentation/drawer_state.swift
-        velocity/velocitydetentdragging.swift
-        velocity/tst_velocityediting.swift
-        velocity/VelocityClickSelectionChecks.swift
-        velocity/VelocityClickCancellationChecks.swift
-        velocity/VelocityPaintDetentChecks.swift
-        velocity/VelocityProgramFlowChecks.swift
-        velocity/VelocityPaintDetentUnlockedChecks.swift
-        velocity/VelocityRollCoreChecks.swift
-        velocity/VelocityRollDrawerMirrorChecks.swift
-        velocity/WorkspaceRefreshScopeChecks.swift
-        rollcheck/velocity_prompt.swift
-        drawerpresentation/EditorDrawerChecks.swift
-        drawerpresentation/other_events_band.swift
-        themelayout/TypographyLayoutChecks.swift
-        velocity/VelocityPageChecks.swift
-        velocity/VelocityContentProbe.swift
-        drawerpresentation/VoiceChangesPageChecks.swift
-        automation/AutomationPageChecks.swift
-        automation/AutomationDrawingContentChecks.swift
-        host/HostBehaviorChecks.swift
-        lanes/PagesLane.swift
-        LINK_LIBRARIES swift_core_check_support swift_core_check_media swift_core_check_edit swift_core_check_roll
-    )
-    add_porydaw_check_lane(swift_core_check_project
-        MODULE_NAME SwiftCoreCheckProject
-        MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_project"
-        COMPILE_OPTIONS "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
-        SOURCES
-        workspace/SessionChecks.swift
+        editcheck/tst_songdocument_runner.swift
+        editcheck/tst_songdocument_songnotes.swift
+        editcheck/tst_songdocument_songranges.swift
+        editcheck/tst_songdocument_songraw.swift
+        midi/MidiEngineBoundsChecks.swift
+        playback/PlaybackChecks.swift
+        playback/ResonanceSuppressionChecks.swift
+        playback/cgb.swift
+        playback/export.swift
+        playback/opaque.swift
+        playback/projection.swift
+        playback/publish.swift
+        playback/rawreconciliation.swift
+        playback/rewrites.swift
+        playback/settle.swift
+        playback/tails.swift
+        playback/transportfixture.swift
+        playback/tst_loop.swift
+        playback/tst_prime.swift
+        playback/tst_xcmd.swift
+        polyphony/polyphonyengine.swift
+        projectstore/BankDigest.swift
+        projectstore/BankLeasesChecks.swift
+        projectstore/BankOwnershipChecks.swift
+        projectstore/KeysplitTablesChecks.swift
         projectstore/MidiBackupChecks.swift
-        projectstore/ProjectIdentityChecks.swift
-        projectstore/SongModelChecks.swift
         projectstore/MidiCfgChecks.swift
-        projectstore/SongsMkChecks.swift
-        projectstore/SongCatalogChecks.swift
-        projectstore/SynthCatalogChecks.swift
-        projectstore/VoicegroupValueChecks.swift
-        projectstore/WriteFailureFixture.swift
-        projectstore/SaveCoreChecks.swift
-        projectstore/VoicegroupEditingChecks.swift
-        projectstore/VoicegroupLoaderChecks.swift
-        projectstore/VoicegroupContextChecks.swift
-        projectstore/VoicegroupBankLogicChecks.swift
+        projectstore/ProjectIdentityChecks.swift
+        projectstore/ProjectLayoutChecks.swift
         projectstore/ProjectStoreActorChecks.swift
+        projectstore/ProjectStoreEditChecks.swift
+        projectstore/ProjectStoreLoadBankChecks.swift
         projectstore/ProjectStoreOpenChecks.swift
         projectstore/ProjectStoreReadChecks.swift
-        projectstore/ProjectStoreLoadBankChecks.swift
-        projectstore/ProjectStoreEditChecks.swift
         projectstore/ProjectStoreSaveChecks.swift
-        projectstore/BankLeasesChecks.swift
-        projectstore/ExportChecks.swift
-        projectstore/ExportCaptureChecks.swift
-        projectstore/BankDigest.swift
-        projectstore/VoicegroupParityChecks.swift
-        projectstore/ProjectLayoutChecks.swift
-        projectstore/KeysplitTablesChecks.swift
-        projectstore/BankOwnershipChecks.swift
+        projectstore/SaveCoreChecks.swift
+        projectstore/SongCatalogChecks.swift
+        projectstore/SongModelChecks.swift
+        projectstore/SongsMkChecks.swift
+        projectstore/SynthCatalogChecks.swift
+        projectstore/VoicegroupBankLogicChecks.swift
+        projectstore/VoicegroupContextChecks.swift
+        projectstore/VoicegroupEditingChecks.swift
+        projectstore/VoicegroupLoaderChecks.swift
         projectstore/VoicegroupLocatorChecks.swift
-        workspace/editor_view_state_checks.swift
-        workspace/session_view_state.swift
-        workspace/session_view_state_fanout.swift
-        workspace/transport_checks.swift
-        workspace/startup_checks.swift
-        workspace/session_editor_semantics.swift
-        workspace/session_time_routing.swift
-        workspace/session_edit_routing.swift
-        workspace/session_io.swift
-        workspace/session_playback.swift
-        workspace/session_save.swift
-        workspace/session_save_delta.swift
-        workspace/bank_history_probes.swift
-        workspace/bank_undo_publication.swift
-        workspace/voicegroup_creation.swift
+        projectstore/VoicegroupParityChecks.swift
+        projectstore/VoicegroupValueChecks.swift
+        projectstore/WriteFailureFixture.swift
+        rollcheck/time_signature_prompt.swift
+        samplecheck/AnalysisChecks.swift
+        samplecheck/CompressedDecoderChecks.swift
+        samplecheck/DecoderChecks.swift
+        samplecheck/DspKernelChecks.swift
+        samplecheck/SampleFixtures.swift
+        songlist/SongDebugLayoutChecks.swift
+        songlist/SongDeletionChecks.swift
+        songlist/SongImportChecks.swift
+        songlist/SongRegionRegistrationChecks.swift
+        songlist/SongRegistrationChecks.swift
         workspace/bank_edits.swift
+        workspace/bank_history_probes.swift
         workspace/bank_saves.swift
-        workspace/bank_sharing.swift
         workspace/bank_sharing_history.swift
         workspace/bank_switching.swift
         workspace/history_jump.swift
-        workspace/sample_commit.swift
-        workspace/session_catalog.swift
-        lanes/ProjectLane.swift
-        LINK_LIBRARIES swift_core_check_support swift_core_check_media swift_core_check_edit swift_core_check_roll swift_core_check_pages
+        workspace/session_save.swift
+        workspace/session_save_delta.swift
+        workspace/voicegroup_creation.swift
+        LINK_LIBRARIES swift_core_check_support ${core_check_libraries}
     )
-    # Thin dispatcher: owns pdc_suite_run and re-exports nothing.
     add_porydaw_check_lane(swift_core_check
         MODULE_NAME SwiftCoreCheck
         MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check"
+        COMPILE_OPTIONS ${core_check_swift_options}
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
         SOURCES
+        support/WorkspacePresenterFixture.swift
+        audio/AudioControllerChecks.swift
+        audio/tst_trackactivity.swift
+        displaylist/DisplayListChecks.swift
+        keyboard/EngineSettingsChecks.swift
+        keyboard/KeybindingRegistryChecks.swift
+        keyboard/tst_velocityaxis.swift
+        keyboard/tst_velocitygesture.swift
+        keyboard/tst_velocitymodel.swift
+        midi/MidiSemanticsChecks.swift
+        midi/MidiSemanticsExpected.swift
+        midi/MidiSmfCodecChecks.swift
+        midi/MidiSmfCodecCompare.swift
+        polyphony/PolyphonyPanelChecks.swift
+        samplecheck/AuditionStripChecks.swift
+        samplecheck/EditorPresenterChecks.swift
+        samplecheck/LoopToolsChecks.swift
+        samplecheck/ProvenanceChecks.swift
+        samplecheck/RegistrationChecks.swift
+        samplecheck/RenderPipelineChecks.swift
+        samplecheck/SampleChecks.swift
+        samplecheck/SoundFontChecks.swift
+        samplecheck/WaveformChecks.swift
+        themecolor/ThemeColorChecks.swift
+        themecolor/ThemeColorPresets.swift
+        automation/domain/automationFixture.swift
+        automation/domain/gesturePointRange.swift
+        automation/domain/xcmd.swift
+        editcheck/ClipboardCodecChecks.swift
+        editcheck/ClipboardEditingChecks.swift
+        editcheck/EventChecks.swift
+        editcheck/EventViewsRemapBucketsParity.swift
+        editcheck/FormatZeroChecks.swift
+        editcheck/MidiImportWizardLawChecks.swift
+        editcheck/SelectionChecks.swift
+        editcheck/SelectionTransitions.swift
+        editcheck/TimeRangeChecks.swift
+        editcheck/TrackContractsChecks.swift
+        editcheck/TrackCorpusChecks.swift
+        editcheck/XcmdPlaybackChecks.swift
+        eventviews/EventListPageAppearanceChecks.swift
+        eventviews/EventListPageCellCommitChecks.swift
+        eventviews/EventListPageChecks.swift
+        eventviews/EventListPlayheadChecks.swift
+        eventviews/EventListPlayheadContractChecks.swift
+        eventviews/EventListPlayheadFocusChecks.swift
+        nativegraphics/PlayheadFeatureChecks.swift
+        nativegraphics/SharedPlayheadChecks.swift
+        nativegraphics/SharedPlayheadPureChecks.swift
+        nativegraphics/tst_playhead_quick.swift
+        rollcheck/EditorGridCameraChecks.swift
+        rollcheck/EditorGridCameraIsolation.swift
+        rollcheck/EditorGridLatticeChecks.swift
+        rollcheck/EditorGridProjectionChecks.swift
+        rollcheck/camera_grid.swift
+        rollcheck/identity.swift
+        rollcheck/interlock.swift
+        rollcheck/keyboard.swift
+        rollcheck/keyboard_drum_labels.swift
+        rollcheck/keyboard_parity.swift
+        rollcheck/keyboard_time_selection.swift
+        rollcheck/keyboard_timeline_insert.swift
+        rollcheck/note_commands.swift
+        rollcheck/note_commands_routing.swift
+        rollcheck/note_rendering.swift
+        rollcheck/note_rendering_borders.swift
+        rollcheck/note_rendering_economy.swift
+        rollcheck/note_rendering_ghosts.swift
+        rollcheck/note_rendering_names.swift
+        rollcheck/note_rendering_support.swift
+        rollcheck/note_rendering_velocity.swift
+        rollcheck/pencil.swift
+        rollcheck/pitch_bend.swift
+        rollcheck/pitch_bend_document.swift
+        rollcheck/pitch_bend_editing.swift
+        rollcheck/pitch_bend_lifecycle.swift
+        rollcheck/pitch_bend_support.swift
+        rollcheck/presentation.swift
+        rollcheck/remap.swift
+        rollcheck/resize.swift
+        rollcheck/roll_content_probe.swift
+        rollcheck/rollheaderfixture.swift
+        rollcheck/ruler_loop_menu.swift
+        rollcheck/ruler_loop_menu_loop.swift
+        rollcheck/ruler_loop_menu_retirement.swift
+        rollcheck/ruler_loop_menu_seek.swift
+        rollcheck/ruler_loop_menu_sweep.swift
+        rollcheck/scale_editing.swift
+        rollcheck/selection.swift
+        rollcheck/selection_audition.swift
+        rollcheck/selection_band.swift
+        rollcheck/selection_editing.swift
+        rollcheck/static/camera.swift
+        rollcheck/static/camera_wheel.swift
+        rollcheck/static/gate.swift
+        rollcheck/static/geometry.swift
+        trackheaders/TrackHeadersChecks.swift
+        trackheaders/TrackHeadersInputChecks.swift
+        trackheaders/headerfixture.swift
+        trackheaders/headerinputfixture.swift
+        trackheaders/trackheaderinput.swift
+        trackheaders/trackheadermenu.swift
+        trackheaders/trackheadermutations.swift
+        trackheaders/trackheaderraster.swift
+        trackheaders/tst_trackactivitymeter.swift
+        trackheaders/tst_trackheadermodel.swift
+        automation/AutomationDrawingContentChecks.swift
+        automation/AutomationPageChecks.swift
+        automation/automationactions.swift
+        automation/automationcanvasediting.swift
+        automation/automationcanvashover.swift
+        automation/automationcanvaslayout.swift
+        automation/automationclipboard.swift
+        automation/automationmenus.swift
+        automation/automationpointmenus.swift
+        automation/automationselection.swift
+        automation/automationselection_band.swift
+        automation/automationselection_mixed.swift
+        automation/automationselection_pencil.swift
+        automation/automationtaptempo.swift
+        automation/domain/gestureNodeContract.swift
+        automation/domain/gestureNodeDrag.swift
+        automation/domain/gestureNodeDragPhantom.swift
+        automation/domain/gesturePencil.swift
+        automation/domain/gestureSweep.swift
+        automation/domain/tst_automationdomain.swift
+        automation/domain/tst_automationdomainLegacy.swift
+        automation/presentation/painting.swift
+        automation/presentation/painting_raster.swift
+        automation/presentation/tst_automationpresentation.swift
+        automation/tst_automationediting.swift
+        drawerpresentation/EditorDrawerChecks.swift
+        drawerpresentation/VoiceChangesPageChecks.swift
+        drawerpresentation/drawer_basics.swift
+        drawerpresentation/drawer_resize.swift
+        drawerpresentation/drawer_state.swift
+        drawerpresentation/other_events_band.swift
+        drawerpresentation/velocity.swift
+        drawerpresentation/velocity_context.swift
+        drawerpresentation/voice_interaction.swift
+        drawerpresentation/voice_lifecycle.swift
+        drawerpresentation/voice_picker.swift
+        drawerpresentation/voice_projection.swift
+        drawerpresentation/voicemenus.swift
+        host/HostBehaviorChecks.swift
+        rollcheck/timemenu.swift
+        rollcheck/velocity_prompt.swift
+        scrollbar/ScrollbarChecks.swift
+        selectionkey/localinputtier_text.swift
+        selectionkey/localinputtier_window.swift
+        songlist/MidiImportWizardChecks.swift
+        songlist/NewSongWizardChecks.swift
+        songlist/songlist_checks.swift
+        songlist/songlist_service.swift
+        themelayout/TypographyLayoutChecks.swift
+        velocity/VelocityClickCancellationChecks.swift
+        velocity/VelocityClickSelectionChecks.swift
+        velocity/VelocityContentProbe.swift
+        velocity/VelocityPageChecks.swift
+        velocity/VelocityPaintDetentChecks.swift
+        velocity/VelocityPaintDetentUnlockedChecks.swift
+        velocity/VelocityProgramFlowChecks.swift
+        velocity/VelocityRollCoreChecks.swift
+        velocity/VelocityRollDrawerMirrorChecks.swift
+        velocity/WorkspaceRefreshScopeChecks.swift
+        velocity/tst_velocityediting.swift
+        velocity/velocitydetentdragging.swift
+        voicelist/VoiceListChecks.swift
+        voicelist/VoiceListIntentChecks.swift
+        voicelist/voicelist_session.swift
+        projectstore/ExportCaptureChecks.swift
+        projectstore/ExportChecks.swift
+        workspace/SessionChecks.swift
+        workspace/bank_sharing.swift
+        workspace/bank_undo_publication.swift
+        workspace/editor_view_state_checks.swift
+        workspace/sample_commit.swift
+        workspace/session_catalog.swift
+        workspace/session_edit_routing.swift
+        workspace/session_editor_semantics.swift
+        workspace/session_io.swift
+        workspace/session_playback.swift
+        workspace/session_time_routing.swift
+        workspace/session_view_state.swift
+        workspace/session_view_state_fanout.swift
+        workspace/startup_checks.swift
+        workspace/transport_checks.swift
         support/corecheck/CoreCheckDispatch.swift
-        LINK_LIBRARIES swift_core_check_support swift_core_check_media swift_core_check_edit swift_core_check_roll swift_core_check_pages swift_core_check_project
+        lanes/SwiftCoreCheckLane.swift
+        LINK_LIBRARIES swift_core_check_logic swift_core_check_support ${core_check_libraries} PorydawApp
     )
-    target_link_libraries(porydaw_checks PRIVATE swift_core_check swift_core_check_support swift_core_check_media swift_core_check_edit swift_core_check_roll swift_core_check_pages swift_core_check_project)
+    target_link_libraries(porydaw_checks PRIVATE swift_core_check swift_core_check_logic swift_core_check_support)
     target_sources(porydaw_checks PRIVATE
         support/corecheck/tst_swiftcore.cpp
         support/corecheck/tst_swiftcore.h
@@ -501,8 +474,7 @@ target_link_libraries(porydaw_checks PRIVATE
     QtBridgeCpp
 )
 porydaw_link_linux_swift_runtime(porydaw_checks
-    swift_core_check swift_core_check_support swift_core_check_media swift_core_check_edit
-    swift_core_check_roll swift_core_check_pages swift_core_check_project PorydawApp QtBridge
+    swift_core_check swift_core_check_logic swift_core_check_support PorydawApp QtBridge
     PorydawDocument PorydawVoicegroup PorydawBackups PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
 target_precompile_headers(porydaw_checks PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/src/porydaw_pch.hpp>")

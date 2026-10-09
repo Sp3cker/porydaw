@@ -3,6 +3,7 @@ import PorydawApp
 import PorydawAppCommands
 import PorydawCore
 import PorydawCoreCheckNative
+import SwiftCoreCheckLogic
 
 @MainActor
 func runClipboardEditingSuite(_ report: CheckReport) {

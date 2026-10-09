@@ -10,7 +10,7 @@ public func runProjectStoreOpenSuite(_ report: CheckReport) {
         report.fail("\(id)/A01", "staged project fixture paths are missing")
         return
     }
-    let expectedLabels = [
+    let expectedLabels: [String] = [
         "mus_dummy", "mus_littleroot_test", "mus_route101", "mus_route102",
         "mus_gsc_route38", "mus_caught", "mus_petalburg", "mus_oldale",
         "mus_gym", "mus_surf", "mus_victory_wild", "se_use_item",
@@ -25,12 +25,16 @@ public func runProjectStoreOpenSuite(_ report: CheckReport) {
         report.fail("\(id)/A01", "cannot read staged song table and midi.cfg: \(error)")
         return
     }
-    let tableLabels = table.split(whereSeparator: \.isNewline).compactMap { line -> String? in
-        let fields = line.split(whereSeparator: { $0 == "," || $0.isWhitespace })
-        guard fields.first == "song", fields.count >= 3 else { return nil }
+    let tableLabels: [String] = table.split(whereSeparator: \.isNewline).compactMap { (line: Substring) -> String? in
+        let fields: [Substring] = line.split(whereSeparator: { (character: Character) -> Bool in
+            character == "," || character.isWhitespace
+        })
+        guard let first = fields.first, first == "song", fields.count >= 3 else { return nil }
         return String(fields[1])
     }
-    let cfgLines = cfg.split(whereSeparator: \.isNewline).map(String.init)
+    let cfgLines: [String] = cfg.split(whereSeparator: \.isNewline).map { (line: Substring) -> String in
+        String(line)
+    }
     let rootURL = URL(fileURLWithPath: fixtureRoot, isDirectory: true).standardizedFileURL
     let store = ProjectStore(projectRoot: rootURL)
     let opened = awaitValue { try await store.open() }
@@ -60,12 +64,17 @@ public func runProjectStoreOpenSuite(_ report: CheckReport) {
     report.expectEqual(
         expected: expectedLabels, actual: snapshot.songs.map(\.label),
         cppID: flowID, what: "opened value retains every fixture song in table order")
+    let expectedPlayers: [String] = [
+        "MUSIC_PLAYER_BGM", "MUSIC_PLAYER_SE1", "MUSIC_PLAYER_SE2",
+        "MUSIC_PLAYER_SE3", "MUSIC_PLAYER_SE_1TRK",
+    ]
+    let expectedNumbers: [Int] = [0, 1, 2, 3, 4]
+    let expectedTracks: [Int] = [16, 3, 3, 3, 1]
+    let playerNames: Bool = snapshot.players.map(\.name) == expectedPlayers
+    let playerNumbers: Bool = snapshot.players.map(\.number) == expectedNumbers
+    let playerTracks: Bool = snapshot.players.map(\.trackCount) == expectedTracks
     report.expect(
-        snapshot.players.map(\.name) == [
-            "MUSIC_PLAYER_BGM", "MUSIC_PLAYER_SE1", "MUSIC_PLAYER_SE2",
-            "MUSIC_PLAYER_SE3", "MUSIC_PLAYER_SE_1TRK",
-        ] && snapshot.players.map(\.number) == [0, 1, 2, 3, 4]
-            && snapshot.players.map(\.trackCount) == [16, 3, 3, 3, 1],
+        playerNames && playerNumbers && playerTracks,
         cppID: flowID, message: "opened value retains all five fixture players, indices and track limits")
     let oneTrack = snapshot.songs.first { $0.label == "se_fanfare_1trk" }
     report.expect(
@@ -74,8 +83,9 @@ public func runProjectStoreOpenSuite(_ report: CheckReport) {
     report.expectEqual(
         expected: 1, actual: oneTrack.map { snapshot.trackBudgetFor(song: $0) },
         cppID: flowID, what: "one-track fixture effect receives exactly one playable track")
-    let selected = snapshot.songs.first {
-        $0.isPlayable && $0.midPath.map { FileManager.default.fileExists(atPath: $0) } == true
+    let selected = snapshot.songs.first { song -> Bool in
+        guard song.isPlayable, let path = song.midPath else { return false }
+        return FileManager.default.fileExists(atPath: path)
     }
     report.expect(
         selected?.isPlayable == true,
@@ -158,12 +168,11 @@ public func runProjectStoreOpenSuite(_ report: CheckReport) {
             ],
             actual: voicegroups, cppID: supportID,
             what: "A002: opened project enumerates exactly the seven fixture voicegroup arguments")
+        let customNames: Bool = custom.players.map(\.name) == expectedPlayers
+        let customNumbers: Bool = custom.players.map(\.number) == expectedNumbers
+        let customLast: Bool = custom.players.last?.trackCount == -1
         report.expect(
-            custom.players.map(\.name) == [
-                "MUSIC_PLAYER_BGM", "MUSIC_PLAYER_SE1", "MUSIC_PLAYER_SE2",
-                "MUSIC_PLAYER_SE3", "MUSIC_PLAYER_SE_1TRK",
-            ] && custom.players.map(\.number) == [0, 1, 2, 3, 4]
-                && custom.players.last?.trackCount == -1,
+            customNames && customNumbers && customLast,
             cppID: supportID,
             message: "A003: opened project retains the five declared player names, numbers and omitted fifth limit")
         report.expect(
@@ -229,18 +238,26 @@ public func runProjectStoreOpenSuite(_ report: CheckReport) {
         }
         let second = try secondOutcome.get()
         report.expect(
-            first.root == original.root && first.root == detachedRoot.path && first.songs == original.songs
-                && first.songs.map(\.label) == expectedLabels && first.songs.first?.player == "MUSIC_PLAYER_BGM"
-                && first.players == original.players && first.trackBudgets == original.budgets,
+            { () -> Bool in
+                guard first.root == original.root, first.root == detachedRoot.path,
+                    first.songs == original.songs, first.songs.map(\.label) == expectedLabels
+                else { return false }
+                guard let song = first.songs.first, song.player == "MUSIC_PLAYER_BGM" else { return false }
+                return first.players == original.players && first.trackBudgets == original.budgets
+            }(),
             cppID: flowID,
             message:
                 "returned copied-project value keeps its original root, songs, configuration and players after registry replacement"
         )
         report.expect(
-            second.root == detachedRoot.path && second.songs.map(\.label) == expectedLabels
-                && second.songs.first?.player == "MUSIC_PLAYER_SE_1TRK" && second.songs != original.songs
-                && second.players == original.players && second.trackBudgets == original.budgets
-                && second.songs.first.map { second.trackBudgetFor(song: $0) } == 1,
+            { () -> Bool in
+                guard second.root == detachedRoot.path, second.songs.map(\.label) == expectedLabels,
+                    let song = second.songs.first, song.player == "MUSIC_PLAYER_SE_1TRK",
+                    second.songs != original.songs, second.players == original.players,
+                    second.trackBudgets == original.budgets
+                else { return false }
+                return second.trackBudgetFor(song: song) == 1
+            }(),
             cppID: flowID,
             message: "reopening the copied project publishes the replaced song player and one-track limit")
     } catch {
@@ -281,8 +298,11 @@ public func runProjectStoreOpenSuite(_ report: CheckReport) {
         if case .success(let changed) = outcome {
             let absent = changed.songs.first { $0.label == "mus_route102" }
             report.expect(
-                absent?.registered == true && absent?.hasMid == false && absent?.midPath == nil
-                    && changed.songs.first(where: { $0.label == "mus_route101" })?.hasMid == true,
+                { () -> Bool in
+                    guard let absent, absent.registered, !absent.hasMid, absent.midPath == nil else { return false }
+                    guard let present = changed.songs.first(where: { $0.label == "mus_route101" }) else { return false }
+                    return present.hasMid
+                }(),
                 cppID: "\(id)/A07", message: "registered song without a MIDI file remains in catalog as non-playable")
         } else {
             report.fail(

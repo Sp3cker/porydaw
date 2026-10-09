@@ -210,19 +210,27 @@ private func bankLogicSaveAndFence(_ report: CheckReport) {
             let fresh = try VoicegroupStore(projectRoot: root.path).loadBank(voicegroupArg: "_fixture_rich")
             bankLogicExpect(
                 "B15",
-                saved.id == fresh.id && saved.loadName == fresh.loadName && saved.dirty == fresh.dirty
-                    && saved.slotViews.count == fresh.slotViews.count
-                    && zip(saved.slotViews, fresh.slotViews).allSatisfy {
-                        $0.kind == $1.kind && $0.voice == $1.voice
-                    }, report, "saved publication matches an independent fresh load")
+                { () -> Bool in
+                    guard saved.id == fresh.id, saved.loadName == fresh.loadName, saved.dirty == fresh.dirty,
+                        saved.slotViews.count == fresh.slotViews.count
+                    else { return false }
+                    return zip(saved.slotViews, fresh.slotViews).allSatisfy {
+                        (left: VoicegroupSlotView, right: VoicegroupSlotView) -> Bool in
+                        left.kind == right.kind && left.voice == right.voice
+                    }
+                }(), report, "saved publication matches an independent fresh load")
             let otherAfter = try storeB.loadBank(voicegroupArg: "_fixture_alt")
             bankLogicExpect(
                 "B15A",
-                otherBefore.id == otherAfter.id && otherBefore.loadName == otherAfter.loadName
-                    && otherBefore.slotViews.count == otherAfter.slotViews.count
-                    && zip(otherBefore.slotViews, otherAfter.slotViews).allSatisfy {
-                        $0.kind == $1.kind && $0.voice == $1.voice
-                    }, report, "saving one bank does not replace another bank's context")
+                { () -> Bool in
+                    guard otherBefore.id == otherAfter.id, otherBefore.loadName == otherAfter.loadName,
+                        otherBefore.slotViews.count == otherAfter.slotViews.count
+                    else { return false }
+                    return zip(otherBefore.slotViews, otherAfter.slotViews).allSatisfy {
+                        (left: VoicegroupSlotView, right: VoicegroupSlotView) -> Bool in
+                        left.kind == right.kind && left.voice == right.voice
+                    }
+                }(), report, "saving one bank does not replace another bank's context")
             // Set an explicit newer mtime: even coarse-resolution filesystems must expose the fence.
             let previousTime = (try FileManager.default.attributesOfItem(atPath: path.path))[.modificationDate] as? Date
             try FileManager.default.setAttributes(
@@ -400,9 +408,9 @@ private func bankLogicSameFilePreservation(_ report: CheckReport) {
         guard let savedFirst = try store.saveVoicegroup(id: first.id) else {
             throw BankLogicFixtureError.unexpectedOutcome
         }
-        let lateDisk = Data(
-            ("voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 2\n\t.align 2\n"
-                + "voicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 5\n").utf8)
+        let lateDisk: Data = Data(
+            "voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 2\n\t.align 2\nvoicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 5\n"
+                .utf8)
         let lateBytes = try Data(contentsOf: path)
         bankLogicExpect(
             "B24", !savedFirst.dirty && savedFirst.slotViews[0].voice == firstEdit && lateBytes == lateDisk, report,
@@ -481,18 +489,23 @@ private func bankLogicSiblingInsertionOffset(_ report: CheckReport) {
         else {
             throw BankLogicFixtureError.unexpectedOutcome
         }
-        let expected =
-            afterFirst.prefix(afterFirst.count - secondTail.count)
-            + Data(
-                ("@ sibling comment\r\nvoicegroup_second::\r\n" + "\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 5\r\n").utf8)
+        let prefix: Data = afterFirst.prefix(afterFirst.count - secondTail.count)
+        let replacementText: String =
+            "@ sibling comment\r\nvoicegroup_second::\r\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 5\r\n"
+        let replacementBytes: Data = Data(replacementText.utf8)
+        let expected: Data = prefix + replacementBytes
         let finalBytes = try Data(contentsOf: path)
         let fresh = try VoicegroupStore(projectRoot: root.path)
         let freshFirst = try fresh.loadBank(voicegroupArg: "_first")
         let freshSecond = try fresh.loadBank(voicegroupArg: "_second")
         bankLogicExpect(
             "B28",
-            finalBytes == expected && freshFirst.slotViews[1].voice == inserted
-                && freshSecond.slotViews[0].voice == secondEdit && freshSecond.slotViews[1].voice == nil,
+            { () -> Bool in
+                guard finalBytes == expected, freshFirst.slotViews[1].voice == inserted,
+                    freshSecond.slotViews[0].voice == secondEdit
+                else { return false }
+                return freshSecond.slotViews[1].voice == nil
+            }(),
             report, "saving the shifted bank writes its section into the sibling's inserted image")
     } catch {
         report.fail("projectstore-banklogic/B25", "B25: sibling-insertion fixture or operation failed: \(error)")
@@ -539,8 +552,12 @@ private func bankLogicSameTimestampSibling(_ report: CheckReport) {
         let savedBytes = try Data(contentsOf: path)
         bankLogicExpect(
             "B29",
-            fenced == fence && saved?.dirty == false && saved?.slotViews[0].voice == firstEdit
-                && savedBytes == expected, report,
+            { () -> Bool in
+                guard fenced == fence, let saved, !saved.dirty, saved.slotViews[0].voice == firstEdit else {
+                    return false
+                }
+                return savedBytes == expected
+            }(), report,
             "save reconciles a same-timestamp sibling change instead of overwriting it")
     } catch {
         report.fail("projectstore-banklogic/B29", "B29: same-timestamp fixture or operation failed: \(error)")

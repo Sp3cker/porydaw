@@ -469,7 +469,7 @@ func importProjectRoundtrip(_ report: CheckReport) {
                 imported.division == 24, cppID: roundtripID,
                 message: "A080 rescaled imported MIDI uses division 24")
             report.expect(
-                imported.chunks.count == 3, cppID: roundtripID,
+                imported.chunks.count == Int(3), cppID: roundtripID,
                 message: "A081 decoded imported fixture retains three chunks")
 
             let label = "mus_onboardcheck_import"
@@ -502,7 +502,7 @@ func importProjectRoundtrip(_ report: CheckReport) {
                 reread.division == 24, cppID: roundtripID,
                 message: "A091 persisted imported MIDI retains division 24")
             report.expect(
-                reread.chunks.count == 3, cppID: roundtripID,
+                reread.chunks.count == Int(3), cppID: roundtripID,
                 message: "A086 persisted imported MIDI retains all three fixture chunks")
             report.expect(
                 FileManager.default.fileExists(

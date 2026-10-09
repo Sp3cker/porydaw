@@ -5,6 +5,7 @@ import PorydawCore
 import PorydawCoreCheckNative
 import PorydawDocument
 import PorydawPlayback
+@testable import SwiftCoreCheckLogic
 
 // MARK: - Project Session Suite
 

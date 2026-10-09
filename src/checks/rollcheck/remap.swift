@@ -152,15 +152,29 @@ private final class RemapProbe {
         clear()
         let document = session.document
         let count = document.engineTracks.usedTrackCount
+        var matchesExpectation3: Bool = headers.rows.count == count + (document.canAddTrack ? 1 : 0)
+        if matchesExpectation3 {
+            let headerTracks: [Int] = (0..<headers.rows.count).compactMap { (index: Int) -> Int? in
+                let row = headers.rows[index]
+                return row.isAddTrack ? nil : row.track
+            }
+            let expectedTracks: [Int] = Array(0..<count)
+            matchesExpectation3 = headerTracks == expectedTracks
+        }
+        if matchesExpectation3 {
+            matchesExpectation3 = (0..<count).allSatisfy { (index: Int) -> Bool in
+                let name: String = document.trackName(index)
+                let ordinal: Int = index + 1
+                let displayName: String = name.isEmpty ? "Track \(ordinal)" : name
+                let expectedTitle: String = "\(ordinal) · \(displayName)"
+                return headers.rows[index].title == expectedTitle
+            }
+        }
+        if matchesExpectation3 {
+            matchesExpectation3 = (!document.canAddTrack || headers.rows[count].isAddTrack)
+        }
         report.expect(
-            headers.rows.count == count + (document.canAddTrack ? 1 : 0)
-                && (0..<headers.rows.count).map { headers.rows[$0] }
-                    .filter { !$0.isAddTrack }.map(\.track) == Array(0..<count)
-                && (0..<count).allSatisfy {
-                    let name = document.trackName($0)
-                    return headers.rows[$0].title == "\($0 + 1) · \(name.isEmpty ? "Track \($0 + 1)" : name)"
-                }
-                && (!document.canAddTrack || headers.rows[count].isAddTrack),
+            matchesExpectation3,
             cppID: cppID, message: "\(phase): header records follow current track order")
     }
 }
@@ -754,10 +768,18 @@ func checkTrackOwnerRemap(_ report: CheckReport, viewport: DocumentViewport) {
         session.mutedTracks == [1] && session.soloedTracks == [0]
             && session.selectedTrack == 0,
         cppID: id, message: "move remaps mute, solo, and selection owners to the new index")
+    var matchesMappedExpectation1: Bool = false
+    if let matchedValue = remappedAtDocument.last {
+        matchesMappedExpectation1 = matchedValue.muted == [1]
+        if matchesMappedExpectation1 {
+            matchesMappedExpectation1 = matchedValue.soloed == [0]
+        }
+        if matchesMappedExpectation1 {
+            matchesMappedExpectation1 = matchedValue.selected == 0
+        }
+    }
     report.expect(
-        remappedAtDocument.last.map {
-            $0.muted == [1] && $0.soloed == [0] && $0.selected == 0
-        } == true,
+        matchesMappedExpectation1,
         cppID: id, message: "owner remap lands before the document change publishes")
     _ = session.document.history.undoDocument()
     report.expect(

@@ -28,7 +28,7 @@ src/
   app/             — native host C ABI: clipboard, QML engine, item cursor, Qt main executor
   render/          — display-list boundary (see below)
   audio/           — C: miniaudio device, sample codec, swift_playback.h playback ABI
-  checks/          — harnesses: swift_core_check lanes (support/media/edit/roll/pages/project), QML lanes (editorqml/, rollqml/), proof ledgers
+  checks/          — harnesses: swift_core_check (interop-free SwiftCoreCheckSupport/SwiftCoreCheckLogic modules + interop SwiftCoreCheck), QML lanes (editorqml/, rollqml/), proof ledgers
 tools/             — Deno build/check/format/proof runners
 external/          — poryaaaa (submodule), dr_libs, stb
 docs/plans/        — implementation plans; one directory per plan
@@ -111,7 +111,7 @@ Agents use `deno task` only; never `cmake`/`ninja` directly. `.github/workflows/
 | `build` | prints task help | discovering task names |
 | `build:app [--release\|--asan]` | app only (`build/debug\|release\|asan`) | before running the app or a QML lane after Swift edits |
 | `build:checks [--release\|--asan]` | app + `porydaw_checks` + mid2agb | after `src/checks/**` or CMake edits |
-| `checks [--asan] [--filter <name>] [--exclude <name>] [--all] [--no-windowing-checks] [--verbose] [--pool=<n>] [--qt ...]` | builds checks, runs native harnesses; `--filter swiftcore` runs the six `swift_core_check` lanes | Swift logic verification; `--filter <suite>` for one slice |
+| `checks [--asan] [--filter <name>] [--exclude <name>] [--all] [--no-windowing-checks] [--verbose] [--pool=<n>] [--qt ...]` | builds checks, runs native harnesses; `--filter swiftcore` runs the `swift_core_check` suites | Swift logic verification; `--filter <suite>` for one slice |
 | `checks:qml` (same options) | editor drawer QML lane | drawer QML surface edits |
 | `checks:qml-roll` (same options) | Swift roll window QML lane | roll QML edits |
 | `checks:shell` (same options) | production `ShellWindow` QML lanes | shell QML edits |

@@ -580,20 +580,20 @@ private let themeTableID = "themelayout/ThemeLayoutTest::themeColorTables"
 // The Oklch dimming the track activity renderer applied to each identity
 // fill: lower L by 0.18, shrink chroma only while out of sRGB gamut.
 private func themeActivityDimOracle(_ identity: PaletteMath.Oklab) -> String {
-    let lightness = max(0, identity.lightness - 0.18)
-    var a = identity.a
-    var b = identity.b
+    let lightness: Double = max(0, identity.lightness - 0.18)
+    var a: Double = identity.a
+    var b: Double = identity.b
     for _ in 0..<12 {
         let lab = PaletteMath.Oklab(lightness: lightness, a: a, b: b)
-        let l = lightness + 0.3963377774 * a + 0.2158037573 * b
-        let m = lightness - 0.1055613458 * a - 0.0638541728 * b
-        let s = lightness - 0.0894841775 * a - 1.2914855480 * b
-        let l3 = l * l * l
-        let m3 = m * m * m
-        let s3 = s * s * s
-        let r = 4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3
-        let g = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3
-        let blue = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3
+        let l: Double = lightness + 0.3963377774 * a + 0.2158037573 * b
+        let m: Double = lightness - 0.1055613458 * a - 0.0638541728 * b
+        let s: Double = lightness - 0.0894841775 * a - 1.2914855480 * b
+        let l3: Double = l * l * l
+        let m3: Double = m * m * m
+        let s3: Double = s * s * s
+        let r: Double = 4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3
+        let g: Double = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3
+        let blue: Double = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3
         if r >= 0, r <= 1, g >= 0, g <= 1, blue >= 0, blue <= 1 {
             return PaletteMath.hex(lab)
         }
@@ -609,12 +609,12 @@ private func themeActivityDimOracle(_ identity: PaletteMath.Oklab) -> String {
 @MainActor
 private func themeColorTableChecks(_ report: CheckReport) {
     let black = PaletteMath.oklab(r: 0, g: 0, b: 0)
-    var stemMismatches = 0
-    var stemExample = ""
-    var dimMismatches = 0
-    var dimExample = ""
-    var heldMismatches = 0
-    var heldExample = ""
+    var stemMismatches: Int = 0
+    var stemExample: String = ""
+    var dimMismatches: Int = 0
+    var dimExample: String = ""
+    var heldMismatches: Int = 0
+    var heldExample: String = ""
     for track in 0..<16 {
         let slot = PaletteMath.trackIdentityIndex(track)
         let identity = PaletteMath.trackIdentityOklab(track)
@@ -635,24 +635,27 @@ private func themeColorTableChecks(_ report: CheckReport) {
             if dimExample.isEmpty { dimExample = "track=\(track) expected=\(expectedDim)" }
         }
     }
+    let stemCount: Int = PaletteMath.velocityStemColors.count
     report.expect(
-        PaletteMath.velocityStemColors.count == 16, cppID: themeTableID,
+        stemCount == 16, cppID: themeTableID,
         message: "stem table covers all sixteen identity slots")
     let stemMessage =
         stemMismatches == 0
         ? "stem table matches the one-third-to-black mix"
         : "stem table drifts (\(stemMismatches) mismatches, first \(stemExample))"
     report.expect(stemMismatches == 0, cppID: themeTableID, message: stemMessage)
+    let dimCount: Int = ThemeColorTables.activityDimColors.count
     report.expect(
-        ThemeColorTables.activityDimColors.count == 16, cppID: themeTableID,
+        dimCount == 16, cppID: themeTableID,
         message: "activity-dim table covers all sixteen identity slots")
     let dimMessage =
         dimMismatches == 0
         ? "activity-dim table matches the Oklch dimming oracle"
         : "activity-dim table drifts (\(dimMismatches) mismatches, first \(dimExample))"
     report.expect(dimMismatches == 0, cppID: themeTableID, message: dimMessage)
+    let heldCount: Int = ThemeColorTables.voiceHeldColors.count
     report.expect(
-        ThemeColorTables.voiceHeldColors.count == 16, cppID: themeTableID,
+        heldCount == 16, cppID: themeTableID,
         message: "voice-held table covers all sixteen identity slots")
     let heldMessage =
         heldMismatches == 0
@@ -667,8 +670,8 @@ private func themeColorTableChecks(_ report: CheckReport) {
             message: "\(tag): the applied palette carries its theme preset")
         let zeroChannels = PaletteMath.channels(palette.noteVelocityZero)
         let zeroLab = PaletteMath.oklab(r: zeroChannels.r, g: zeroChannels.g, b: zeroChannels.b)
-        var noteMismatches = 0
-        var noteExample = ""
+        var noteMismatches: Int = 0
+        var noteExample: String = ""
         for track in 0..<16 {
             let identity = PaletteMath.trackIdentityOklab(track)
             for velocity in 0...127 {
@@ -693,8 +696,8 @@ private func themeColorTableChecks(_ report: CheckReport) {
             ? "\(tag): note table matches the identity-mix oracle for 16 tracks x 128 velocities"
             : "\(tag): note table drifts (\(noteMismatches) mismatches, first \(noteExample))"
         report.expect(noteMismatches == 0, cppID: themeTableID, message: noteMessage)
-        var ghostMismatches = 0
-        var ghostExample = ""
+        var ghostMismatches: Int = 0
+        var ghostExample: String = ""
         for track in 0..<16 {
             let identity = PaletteMath.trackIdentityOklab(track)
             for accidentalRow: Bool in [false, true] {

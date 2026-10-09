@@ -87,10 +87,10 @@ public func runScaleEditingChecks(_ report: CheckReport, viewport: DocumentViewp
         report.expect(
             document.history.currentIdentity == beforeCommand,
             cppID: boundaryID, message: "out-of-range Up recorded no edit")
+        let boundaryNote = document.note(noteID)
         report.expect(
-            document.note(noteID).map {
-                $0.tick == tBase && $0.pitch == 127
-            } == true, cppID: boundaryID, message: "out-of-range Up kept top B127 in place")
+            boundaryNote?.tick == tBase && boundaryNote?.pitch == UInt8(127),
+            cppID: boundaryID, message: "out-of-range Up kept top B127 in place")
         guard restoreDocument() else {
             report.fail(boundaryID, "boundary probe could not restore the entry document")
             return
@@ -207,7 +207,7 @@ private func runFoldScaleIntegrationChecks(
     }
     let selectedPitches = Set(document.notes(in: track).map(\.pitch))
     guard
-        let foreignPitch = (73..<128).first(where: { pitch in
+        let foreignPitch = (73..<128).first(where: { (pitch: Int) -> Bool in
             pitch % 12 == 1 && !selectedPitches.contains(UInt8(pitch))
         })
     else {
@@ -327,8 +327,8 @@ private func checkFoldPointerAndLifecycle(
     let document = session.document
     let occupied = Set(document.notes(in: track).map(\.pitch))
     guard
-        let pitch = (1..<128).first(where: {
-            $0 % 12 == 1 && !occupied.contains(UInt8($0))
+        let pitch = (1..<128).first(where: { (candidate: Int) -> Bool in
+            candidate % 12 == 1 && !occupied.contains(UInt8(candidate))
         }),
         let added = try? document.addNotes([
             NewNote(
@@ -424,10 +424,10 @@ private func checkFoldPointerAndLifecycle(
     grid.beginPointer(x: x, y: box.y + box.h / 2, modifiers: 0)
     grid.updatePointer(x: x + delta, y: box.y + box.h / 2)
     grid.endPointer(x: x + delta, y: box.y + box.h / 2)
+    let movedException = document.note(exception)
     report.expect(
-        document.note(exception).map {
-            $0.pitch == exceptionNote.pitch && $0.tick != exceptionNote.tick
-        } == true, cppID: id, message: "fold horizontal move keeps the exception pitch")
+        movedException?.pitch == exceptionNote.pitch && movedException?.tick != exceptionNote.tick,
+        cppID: id, message: "fold horizontal move keeps the exception pitch")
     let postHorizontalIndex = document.history.undoIndex
     let postHorizontalCount = document.history.undoCount
     let postHorizontalChanged = document.history.currentIdentity != preHorizontalIdentity

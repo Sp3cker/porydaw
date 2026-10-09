@@ -52,8 +52,8 @@ func drawerAutomationPencilStrokeFilters(
     let zigzagID = "automation/AutomationEditingTest::pencilZigzagStrokePreservesDirectionalExtrema"
     let zigzagLane = drawerAutomationAutomationFixture(suite: suite, service: service, modulation: [])
     let zigzagFacts = zigzagLane.facts(zigzagLane.modulationLane)
-    let zigzagValues = [32, 100, 28, 92, 44, 84]
-    let zigzagCells = (0..<6).map { pencilCell(Tick(24 + $0 * 24)) }
+    let zigzagValues: [Int] = [32, 100, 28, 92, 44, 84]
+    let zigzagCells: [AutomationGridCell] = (0..<6).map { (index: Int) in pencilCell(Tick(24 + index * 24)) }
     guard
         var zigzag = AutomationPencilTransaction(
             facts: zigzagFacts, firstSample: pencilSample(36, Double(zigzagValues[0])),
@@ -68,7 +68,8 @@ func drawerAutomationPencilStrokeFilters(
             cells: [zigzagCells[index]])
     }
     report.expectEqual(
-        expected: (0..<6).map { Tick(24 + $0 * 24) }, actual: zigzag.strokePoints.map(\.tick),
+        expected: (0..<6).map { (index: Int) -> Tick in Tick(24 + index * 24) },
+        actual: zigzag.strokePoints.map(\.tick),
         cppID: zigzagID, what: "the zigzag keeps one point per crossed cell")
     report.expectEqual(
         expected: zigzagValues, actual: zigzag.strokePoints.map(\.value), cppID: zigzagID,
@@ -98,7 +99,7 @@ func drawerAutomationPencilStrokeFilters(
     let densityID = "automation/AutomationEditingTest::pencilDiagonalStrokeEventDensityInvariance"
     let densityLane = drawerAutomationAutomationFixture(suite: suite, service: service, modulation: [])
     let densityFacts = densityLane.facts(densityLane.modulationLane)
-    let densityCells = (0..<6).map { pencilCell(Tick(24 + $0 * 24)) }
+    let densityCells: [AutomationGridCell] = (0..<6).map { (index: Int) in pencilCell(Tick(24 + index * 24)) }
     func densityStroke(intermediates: Int) -> [AutomationLanePoint]? {
         guard
             var stroke = AutomationPencilTransaction(
@@ -126,7 +127,7 @@ func drawerAutomationPencilStrokeFilters(
     report.expectEqual(
         expected: sparse, actual: dense, cppID: densityID,
         what: "10 vs 50 intermediate samples give identical completion points")
-    let requested = [8, 30, 53, 75, 98, 120]
+    let requested: [Int] = [8, 30, 53, 75, 98, 120]
     report.expect(
         sparse.count >= requested.count
             && dense.count >= requested.count

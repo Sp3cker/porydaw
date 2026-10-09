@@ -328,9 +328,25 @@ private func checkSharedEndPitchMove(_ report: CheckReport, fixture: DocumentSes
         report.expect(
             collision.note(collisionNotes[0].id).map { $0.tick == 24 && $0.endTick == 36 } == true,
             cppID: id, message: "moving into an occupied pitch trims only the overlapping predecessor")
+        var matchesExpectation11: Bool = false
+        if let matchedValue = collision.note(collisionNotes[1].id) {
+            matchesExpectation11 = matchedValue.tick == 48
+            if matchesExpectation11 {
+                matchesExpectation11 = matchedValue.endTick == 72
+            }
+        }
+        if matchesExpectation11 {
+            if let matchedValue = collision.note(collisionNotes[2].id) {
+                matchesExpectation11 = matchedValue.tick == 96
+                if matchesExpectation11 {
+                    matchesExpectation11 = matchedValue.endTick == 120
+                }
+            } else {
+                matchesExpectation11 = false
+            }
+        }
         report.expect(
-            collision.note(collisionNotes[1].id).map { $0.tick == 48 && $0.endTick == 72 } == true
-                && collision.note(collisionNotes[2].id).map { $0.tick == 96 && $0.endTick == 120 } == true,
+            matchesExpectation11,
             cppID: id, message: "notes at and after the moved note's end keep their original intervals")
         let collisionReopened = SongDocument(
             file: try MidiFile.decode(collision.captureSave().bytes))
