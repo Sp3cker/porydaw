@@ -1,5 +1,7 @@
 import {
   discoverModules,
+  fileRankings,
+  importTimings,
   type ModuleJob,
   parseOptions,
   parseTimings,
@@ -32,6 +34,7 @@ const first = `${root}/src/swift/core/First.swift`;
 const second = `${root}/src/swift/core/Second.swift`;
 const job: ModuleJob = {
   module: "PorydawCore",
+  target: "PorydawCore",
   cwd: `${root}/build/debug`,
   sources: [first, second],
   command: [
@@ -42,7 +45,7 @@ const job: ModuleJob = {
     "-Onone",
     "-incremental",
     "-output-file-map",
-    "outputs.json",
+    "CMakeFiles/PorydawCore.dir/Debug/output-file-map.json",
     "-emit-module",
     "-emit-module-path",
     "module.swiftmodule",
@@ -135,9 +138,56 @@ Deno.test("compilation database rejects foreign source inputs and shell placehol
   );
 });
 
+Deno.test("build targets come from CMake metadata, not Swift module names", () => {
+  const command = [...job.command];
+  command[command.indexOf("-module-name") + 1] = "PorydawShellEntry";
+  command[command.indexOf("-output-file-map") + 1] =
+    "CMakeFiles/porydaw_shell_entry.dir/Debug/output-file-map.json";
+  const modules = discoverModules([{
+    directory: job.cwd,
+    file: first,
+    arguments: command,
+  }], root);
+  equal(modules[0].module, "PorydawShellEntry");
+  equal(modules[0].target, "porydaw_shell_entry");
+});
+
+Deno.test("first-party check sources participate in discovery and file reports", () => {
+  const source = `${root}/src/checks/Scenario.swift`;
+  const command = job.command.map((arg) => arg === first ? source : arg).filter(
+    (arg) => arg !== second,
+  );
+  const modules = discoverModules([{
+    directory: job.cwd,
+    file: source,
+    arguments: command,
+  }], root);
+  equal(modules[0].sources, [source]);
+  const run = {
+    module: job.module,
+    order: "normal",
+    iteration: 1,
+    exit: 0,
+    wallMs: 100,
+    log: "raw.log",
+    commands: [],
+    timings: [],
+  };
+  equal(
+    fileRankings([], root, modules, [], [run])[0].file,
+    "src/checks/Scenario.swift",
+  );
+});
+
 Deno.test("timing compiler mode cannot write normal build or index outputs", () => {
   const command = timingCommand(job, true, false);
-  for (const output of ["outputs.json", "module.swiftmodule", "indexstore"]) {
+  for (
+    const output of [
+      "CMakeFiles/PorydawCore.dir/Debug/output-file-map.json",
+      "module.swiftmodule",
+      "indexstore",
+    ]
+  ) {
     if (command.includes(output)) {
       throw new Error(`retained build output ${output}`);
     }
@@ -175,6 +225,7 @@ Deno.test("timing parsing distinguishes expressions, bodies, generated code, and
     `warning: unrelated diagnostic\n0.01ms\t<invalid loc>\n12.5ms\t${first}:8:2\n21.5ms\t${first}:7:1\tinstance method Core.first\n3.5ms\t@__swiftmacro_Test.swift:14:20\tstatic method Core.generated\n`;
   const rows = parseTimings(text);
   equal(rows.map((row) => [row.ms, row.symbol ?? null, row.generated]), [
+    [0.01, null, false],
     [12.5, null, false],
     [21.5, "instance method Core.first", false],
     [3.5, "static method Core.generated", true],
@@ -224,4 +275,83 @@ Deno.test("invalid benchmark counts and missing filters fail instead of narrowin
   rejects(() => parseOptions(["--file", "--no-build"]), "requires a value");
   rejects(() => parseOptions(["--order", "random"]), "normal or both");
   rejects(() => parseOptions(["--typo"]), "unknown option");
+});
+
+Deno.test("file rankings include zero-body sources without hiding failed measurements", () => {
+  const run = {
+    module: job.module,
+    order: "normal",
+    iteration: 1,
+    exit: 0,
+    wallMs: 100,
+    log: "raw.log",
+    commands: [],
+    timings: [],
+  };
+  const rows = fileRankings([], root, [job], [], [run]);
+  equal(rows.map((row) => [row.file, row.normalMs, row.reversedMs]), [
+    ["src/swift/core/First.swift", 0, null],
+    ["src/swift/core/Second.swift", 0, null],
+  ]);
+  equal(
+    fileRankings([], root, [job], [first], [{ ...run, exit: 1 }]).map(
+      (row) => [row.file, row.normalMs, row.reversedMs],
+    ),
+    [["src/swift/core/First.swift", null, null]],
+  );
+});
+
+Deno.test("compiler import timers convert wall seconds without adding overlapping timers or instruction counts", () => {
+  const rows = importTimings(
+    {
+      "time.swift.import-clang-decl.wall": 0.4,
+      "time.swift.import-clang-decl.user": 0.3,
+      "time.swift.import-clang-decl.instr": 200000000,
+      "time.swift.Import resolution.wall": 0.02,
+      "time.swift.typecheck-expr.wall": 0.5,
+      "AST.NumTotalClangImportedEntities": 15000,
+    },
+    "History",
+    "normal",
+    "stats.json",
+  );
+  equal(rows.map((row) => [row.counter, row.instrumentedMs]), [
+    ["time.swift.import-clang-decl.wall", 400],
+    ["time.swift.Import resolution.wall", 20],
+  ]);
+});
+
+Deno.test("budget rankings keep order-sensitive hotspots above consistently faster files", () => {
+  const runs = [
+    {
+      module: job.module,
+      order: "normal",
+      iteration: 1,
+      exit: 0,
+      wallMs: 100,
+      log: "normal.log",
+      commands: [],
+      timings: parseTimings(
+        `120ms\t${first}:1:1\tfirst\n80ms\t${second}:1:1\tsecond`,
+      ),
+    },
+    {
+      module: job.module,
+      order: "reversed",
+      iteration: 1,
+      exit: 0,
+      wallMs: 100,
+      log: "reversed.log",
+      commands: [],
+      timings: parseTimings(
+        `1ms\t${first}:1:1\tfirst\n80ms\t${second}:1:1\tsecond`,
+      ),
+    },
+  ];
+  const bodies = rankTimings(runs, true);
+  equal(bodies.map((row) => row.symbol), ["first", "second"]);
+  equal(fileRankings(bodies, root, [job], [], runs).map((row) => row.file), [
+    "src/swift/core/First.swift",
+    "src/swift/core/Second.swift",
+  ]);
 });

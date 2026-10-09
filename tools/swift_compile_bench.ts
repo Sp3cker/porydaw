@@ -6,6 +6,7 @@ const HELP = `usage: deno task bench:swift-compile [options]
   --module <name>  restrict to a Swift module (repeatable)
   --file <path>    run only this file's frontend job (repeatable)
   --no-build       use existing dependencies; caller must keep them current
+  --import-stats   run separate module-level compiler statistics jobs
   --order <mode>   both (default) or normal; both reverses source order
   --repeat <n>     measurements per source order (default 1)
   --output <dir>   new report directory (default build/swift-timings/<timestamp>)
@@ -14,7 +15,7 @@ const HELP = `usage: deno task bench:swift-compile [options]
 
 Debug type-checking only, not optimization, code generation, or linking.
 File sums exclude generated bodies; generated timings have a separate report.
-First run prepares the app; later filtered runs build only selected modules.
+First run prepares app/check dependencies; later runs build only selected modules.
 File mode retains all module inputs but executes only selected primary jobs.
 Results depend on lazy imports and source order; never add expression to body times.
 `;
@@ -23,6 +24,7 @@ export interface Options {
   modules: string[];
   files: string[];
   build: boolean;
+  importStats: boolean;
   order: "normal" | "both";
   repeat: number;
   top: number;
@@ -34,6 +36,7 @@ export function parseOptions(args: string[]): Options {
     modules: [],
     files: [],
     build: true,
+    importStats: false,
     order: "both",
     repeat: 1,
     top: 10,
@@ -42,6 +45,10 @@ export function parseOptions(args: string[]): Options {
     const flag = args[i];
     if (flag === "--no-build") {
       options.build = false;
+      continue;
+    }
+    if (flag === "--import-stats") {
+      options.importStats = true;
       continue;
     }
     if (
@@ -83,6 +90,7 @@ interface CompilationEntry {
 
 export interface ModuleJob {
   module: string;
+  target: string;
   cwd: string;
   command: string[];
   sources: string[];
@@ -93,7 +101,7 @@ export function discoverModules(
   root: string,
 ): ModuleJob[] {
   const modules = new Map<string, ModuleJob>();
-  const prefix = resolve(root, "src/swift") + "/";
+  const prefix = resolve(root, "src") + "/";
   for (const entry of entries) {
     const file = resolve(entry.directory, entry.file);
     if (!file.startsWith(prefix) || !file.endsWith(".swift")) continue;
@@ -112,7 +120,24 @@ export function discoverModules(
     if (sources.some((source) => !source.startsWith(resolve(root) + "/"))) {
       throw new Error(`${module} has Swift inputs outside this worktree`);
     }
-    modules.set(module, { module, cwd: entry.directory, command, sources });
+    const mapIndex = command.indexOf("-output-file-map");
+    const target = mapIndex < 0
+      ? undefined
+      : /(?:^|[\\/])CMakeFiles[\\/]([^\\/]+)\.dir[\\/]/.exec(
+        command[mapIndex + 1] ?? "",
+      )?.[1];
+    if (!target) {
+      throw new Error(
+        `cannot determine ${module}'s CMake target from its output-file-map`,
+      );
+    }
+    modules.set(module, {
+      module,
+      target,
+      cwd: entry.directory,
+      command,
+      sources,
+    });
   }
   if (!modules.size) {
     throw new Error(
@@ -249,7 +274,6 @@ export function parseTimings(text: string, root?: string): Timing[] {
     const match = /^(\d+(?:\.\d+)?)ms\s+(.+)$/.exec(line);
     if (!match) continue;
     const [location, ...symbol] = match[2].split("\t");
-    if (location === "<invalid loc>") continue;
     timings.push({
       ms: Number(match[1]),
       location,
@@ -339,29 +363,54 @@ export function rankTimings(
     ...row,
     normalMs: values.has("normal") ? median(values.get("normal")!) : null,
     reversedMs: values.has("reversed") ? median(values.get("reversed")!) : null,
-  })).sort((a, b) => lower(b) - lower(a));
+  })).sort((a, b) => worstOrder(b) - worstOrder(a));
 }
 
-function lower(
+function worstOrder(
   row: { normalMs: number | null; reversedMs: number | null },
 ): number {
-  return Math.min(
+  return Math.max(
     ...[row.normalMs, row.reversedMs].filter((value): value is number =>
       value !== null
     ),
   );
 }
 
-function fileRankings(bodies: Ranked[], root: string) {
+export function fileRankings(
+  bodies: Ranked[],
+  root: string,
+  jobs: ModuleJob[],
+  selected: string[],
+  measurements: Measurement[],
+) {
   const files = new Map<
     string,
     {
       module: string;
       file: string;
-      normalMs: number;
+      normalMs: number | null;
       reversedMs: number | null;
     }
   >();
+  for (const job of jobs) {
+    const successful = measurements.filter((run) =>
+      run.module === job.module && run.exit === 0
+    );
+    for (const source of job.sources) {
+      if (
+        !source.startsWith(resolve(root, "src") + "/") ||
+        (selected.length && !selected.includes(source))
+      ) continue;
+      files.set(JSON.stringify([job.module, source]), {
+        module: job.module,
+        file: relative(root, source),
+        normalMs: successful.some((run) => run.order === "normal") ? 0 : null,
+        reversedMs: successful.some((run) => run.order === "reversed")
+          ? 0
+          : null,
+      });
+    }
+  }
   for (const body of bodies) {
     if (body.generated) continue;
     const path = body.location.replace(/:\d+:\d+$/, "");
@@ -374,13 +423,15 @@ function fileRankings(bodies: Ranked[], root: string) {
         normalMs: 0,
         reversedMs: null,
       };
-    row.normalMs += body.normalMs ?? 0;
+    if (body.normalMs !== null) {
+      row.normalMs = (row.normalMs ?? 0) + body.normalMs;
+    }
     if (body.reversedMs !== null) {
       row.reversedMs = (row.reversedMs ?? 0) + body.reversedMs;
     }
     files.set(key, row);
   }
-  return [...files.values()].sort((a, b) => lower(b) - lower(a));
+  return [...files.values()].sort((a, b) => worstOrder(b) - worstOrder(a));
 }
 
 function csv(rows: object[], fields: string[]): string {
@@ -421,6 +472,42 @@ async function refreshDatabase(root: string, directory: string) {
   }
 }
 
+async function firstPartySources(directory: string): Promise<string[]> {
+  const sources: string[] = [];
+  for await (const entry of Deno.readDir(directory)) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory) sources.push(...await firstPartySources(path));
+    else if (entry.isFile && path.endsWith(".swift")) sources.push(path);
+  }
+  return sources.sort();
+}
+
+export interface ImportTiming {
+  module: string;
+  order: string;
+  statsFile: string;
+  counter: string;
+  instrumentedMs: number;
+}
+
+export function importTimings(
+  statistics: Record<string, number>,
+  module: string,
+  order: string,
+  statsFile: string,
+): ImportTiming[] {
+  return Object.entries(statistics).filter(([counter]) =>
+    counter.startsWith("time.") && counter.endsWith(".wall") &&
+    /import|load-stdlib/i.test(counter)
+  ).map(([counter, seconds]) => ({
+    module,
+    order,
+    statsFile,
+    counter,
+    instrumentedMs: seconds * 1000,
+  }));
+}
+
 async function main(args: string[]): Promise<number> {
   if (args.includes("--help")) {
     console.log(HELP);
@@ -443,12 +530,7 @@ async function main(args: string[]): Promise<number> {
         "no Debug compilation database; omit --no-build to prepare dependencies",
       );
     }
-    await runBuild(
-      options.modules.length && !options.files.length
-        ? options.modules
-        : ["porydaw"],
-      "debug",
-    );
+    await runBuild(["porydaw_checks"], "debug");
   }
   await refreshDatabase(root, directory);
   let jobs = selectModules(
@@ -457,7 +539,7 @@ async function main(args: string[]): Promise<number> {
     root,
   );
   if (options.build && exists) {
-    await runBuild(jobs.map((job) => job.module), "debug");
+    await runBuild(jobs.map((job) => job.target), "debug");
     await refreshDatabase(root, directory);
     jobs = selectModules(
       discoverModules(JSON.parse(await Deno.readTextFile(database)), root),
@@ -557,29 +639,127 @@ async function main(args: string[]): Promise<number> {
       }
     }
   }
+  const importTimers: ImportTiming[] = [];
+  const importProfiles: {
+    module: string;
+    order: string;
+    directory: string;
+    command: string[];
+    cwd: string;
+    log: string;
+    exit: number;
+  }[] = [];
+  if (options.importStats) {
+    for (
+      const order of options.order === "both"
+        ? ["normal", "reversed"]
+        : ["normal"]
+    ) {
+      for (const job of jobs) {
+        const directory = join(output, `${job.module}.${order}.stats`);
+        await Deno.mkdir(directory);
+        const command = [
+          ...timingCommand(job, order === "reversed", false),
+          "-Xfrontend",
+          "-stats-output-dir",
+          "-Xfrontend",
+          directory,
+          "-Xfrontend",
+          "-trace-stats-events",
+          "-Xfrontend",
+          "-profile-stats-entities",
+        ];
+        const result = await execute(command, job.cwd);
+        const log = join(directory, "compiler.log");
+        await Deno.writeTextFile(log, result.text);
+        importProfiles.push({
+          module: job.module,
+          order,
+          directory,
+          command,
+          cwd: job.cwd,
+          log,
+          exit: result.code,
+        });
+        for await (const entry of Deno.readDir(directory)) {
+          if (
+            !entry.isFile || !entry.name.startsWith("stats-") ||
+            !entry.name.endsWith(".json")
+          ) continue;
+          const statsFile = join(directory, entry.name);
+          importTimers.push(
+            ...importTimings(
+              JSON.parse(await Deno.readTextFile(statsFile)),
+              job.module,
+              order,
+              statsFile,
+            ),
+          );
+        }
+      }
+    }
+  }
+  importTimers.sort((a, b) => b.instrumentedMs - a.instrumentedMs);
   const sourceFilter = (row: Ranked) =>
-    !files.length || row.generated ||
+    !files.length || row.generated || row.location === "<invalid loc>" ||
     files.some((file) => row.location.startsWith(file + ":"));
   const bodies = rankTimings(measurements, true).filter(sourceFilter);
   const expressions = rankTimings(measurements, false).filter(sourceFilter);
-  const authored = bodies.filter((row) => !row.generated);
+  const authored = bodies.filter((row) =>
+    !row.generated && row.location !== "<invalid loc>"
+  );
+  const unattributed = bodies.filter((row) => row.location === "<invalid loc>");
   const generated = bodies.filter((row) => row.generated);
-  const rankedFiles = fileRankings(authored, root);
-  const failed = measurements.some((measurement) => measurement.exit !== 0);
+  const rankedFiles = fileRankings(authored, root, jobs, files, measurements);
+  const orderSensitivity = [...authored, ...generated, ...unattributed].filter(
+    (row) => row.normalMs !== null && row.reversedMs !== null,
+  ).map((row) => ({
+    ...row,
+    spreadMs: Math.abs(row.normalMs! - row.reversedMs!),
+  })).sort((a, b) => b.spreadMs - a.spreadMs);
+  const failed = measurements.some((measurement) => measurement.exit !== 0) ||
+    importProfiles.some((profile) => profile.exit !== 0);
+  const discovered = discoverModules(
+    JSON.parse(await Deno.readTextFile(database)),
+    root,
+  );
+  const inputs = new Set(discovered.flatMap((job) => job.sources));
+  const inventory = await firstPartySources(join(root, "src"));
+  const unconfigured = inventory.filter((source) => !inputs.has(source)).map((
+    source,
+  ) => relative(root, source));
+  const incomplete = !options.files.length && !options.modules.length &&
+    unconfigured.length > 0;
   const report = {
     schemaVersion: 1,
-    status: failed ? "failed" : "ok",
+    status: failed ? "failed" : incomplete ? "incomplete" : "ok",
     metric:
       "Debug function-body type-checking ms; file sums exclude generated bodies. Expressions overlap bodies. Shared/lazy work remains order-sensitive; not total compilation time.",
     root,
     created: new Date().toISOString(),
     options,
+    host: Deno.build,
+    coverage: {
+      inventory: inventory.map((source) => relative(root, source)),
+      unconfigured,
+      selectedModules: jobs.map((job) => job.module),
+    },
     compilers,
     sourceHashes: hashes,
     moduleCommands: jobs,
     measurements,
     functions: authored,
     generated,
+    sharedImportAttribution: {
+      limitation:
+        "Order sensitivity can expose shared/lazy work charged to a body. Spread is not measured import time and is not subtracted from file totals.",
+      orderSensitivity,
+      unattributedBodies: unattributed,
+      importProfiles,
+      importTimers,
+      instrumentation:
+        "Compiler-wide timers from separate instrumented jobs. Timers overlap and instrumentation changes durations; never add them or subtract them from benchmark body times.",
+    },
     expressions,
     files: rankedFiles,
   };
@@ -599,8 +779,17 @@ async function main(args: string[]): Promise<number> {
     const [name, rows, fields] of [
       ["functions", authored, timingFields],
       ["generated", generated, timingFields],
+      ["unattributed", unattributed, timingFields],
       ["expressions", expressions, timingFields],
+      ["order-sensitivity", orderSensitivity, [...timingFields, "spreadMs"]],
       ["files", rankedFiles, ["module", "file", "normalMs", "reversedMs"]],
+      ["compiler-imports", importTimers, [
+        "module",
+        "order",
+        "statsFile",
+        "counter",
+        "instrumentedMs",
+      ]],
     ] as const
   ) {
     await Deno.writeTextFile(
@@ -610,7 +799,7 @@ async function main(args: string[]): Promise<number> {
   }
   const ms = (value: number | null) => value === null ? "—" : value.toFixed(2);
   console.log(
-    "\nAuthored functions: normal / reversed ms (ranked by lower measurement)",
+    "\nAuthored functions: normal / reversed ms (ranked by higher measurement)",
   );
   for (const row of authored.slice(0, options.top)) {
     console.log(
@@ -627,10 +816,17 @@ async function main(args: string[]): Promise<number> {
   for (const row of expressions.slice(0, options.top)) {
     console.log(`${ms(row.normalMs)} / ${ms(row.reversedMs)}  ${row.location}`);
   }
+  if (unconfigured.length) {
+    console.log(
+      `\nUnconfigured first-party Swift (not counted as passing):\n${
+        unconfigured.join("\n")
+      }`,
+    );
+  }
   console.log(
     `\n${generated.length} generated bodies reported separately. Report: ${output}`,
   );
-  return failed ? 1 : 0;
+  return failed || incomplete ? 1 : 0;
 }
 
 if (import.meta.main) {

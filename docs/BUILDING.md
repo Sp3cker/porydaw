@@ -45,12 +45,14 @@ deno task bench:swift-compile                                  # all first-party
 deno task bench:swift-compile --module PorydawApp --repeat 2
 deno task bench:swift-compile --file src/swift/app/history/UndoHistoryPanel.swift
 deno task bench:swift-compile --file src/swift/app/history/UndoHistoryPanel.swift --no-build
+deno task bench:swift-compile --module PorydawAppHistory --repeat 3 --import-stats
 ```
 
-The first run in an unconfigured tree prepares the app, or only the requested
-module when `--module` is supplied without `--file`. Later filtered runs build
-only the selected module targets and their dependencies through `runBuild`.
-`--no-build` skips that preparation; the caller must keep dependencies current.
+The first run in an unconfigured tree prepares app/check dependencies. Discovery
+includes first-party Swift under `src/`, including the check harnesses. Later
+filtered runs build only the selected CMake targets and their dependencies;
+targets come from compiler output-file-map metadata, not Swift module names.
+`--no-build` skips preparation; the caller must keep dependencies current.
 Module mode uses one frontend batch. File mode selects only the requested
 primary-file frontend jobs while preserving the module's other source inputs.
 The timing invocations do not emit objects, modules, or index records.
@@ -63,17 +65,35 @@ times overlap and must not be added together.
 
 Each run creates `build/swift-timings/<timestamp>/` (or a new `--output`
 directory) containing raw logs, `report.json`, and `functions.csv`, `files.csv`,
-`expressions.csv`, and `generated.csv`. The JSON records compiler versions,
+`expressions.csv`, `generated.csv`, `unattributed.csv`, `order-sensitivity.csv`,
+and `compiler-imports.csv`. Unlocated bodies are retained separately; files
+without body diagnostics remain in the file report. The JSON records compiler versions,
 actual commands, source SHA-256 hashes, exit statuses, wall times, and raw
 timing records. Failed measurements produce a failing exit status and are
 excluded from rankings; the report retains their diagnostics and failure state.
+The source inventory also lists files without configured compiler jobs. An
+unfiltered run exits nonzero with `status: incomplete` when those gaps exist;
+uncompiled files are not reported as passing. Filtered runs retain the inventory
+but judge only their selected jobs.
 
 File totals sum authored function-body medians. Macro-generated and build-generated
 bodies are separate, not silently charged to an authored file. Rankings use the
-lower source-order measurement, but preserve both columns: lazy import and
-compiler work can move between functions when source order changes. A low
-measurement is not proof that the function costs that much in every build.
+higher source-order measurement, preserving both columns: lazy import and
+compiler work can move between functions when source order changes. The separate
+order-sensitivity report records the spread, not measured import time; no shared
+cost is subtracted. A budget requires both order measurements to pass, not just
+the lower ranked value.
 Compare before/after using the same module/file mode and compiler settings.
+An authored-body budget improvement can move lazy work into a generated body.
+Compare generated totals and frontend wall times too; a passing authored budget
+does not establish a total-compilation speedup.
+
+`--import-stats` runs separate module-level compiler statistics jobs after all
+benchmark measurements, including when a primary-file filter is selected.
+It saves raw counters, source-entity profiles and event traces. Import timers
+in `compiler-imports.csv` are instrumented, compiler-wide and overlapping;
+instrumentation changes their durations. Never sum them or subtract them from
+the uninstrumented function-body budget.
 
 ## Standalone backup module
 
