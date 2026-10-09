@@ -12,10 +12,13 @@ function(porydaw_swift_module target module_name)
     )
     porydaw_enable_swift_batch_mode(${target})
 endfunction()
+# Lazy Qt C++ imports bill ~20–600 ms to whichever expression touches them first, so
+# interop modules and their importers keep a 1000 ms warning; the later flag wins.
 function(porydaw_swift_qt_interop target)
     target_compile_options(${target} PUBLIC
         "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"
+        "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:SHELL:-Xfrontend -warn-long-expression-type-checking=1000>"
     )
 endfunction()
 
