@@ -171,12 +171,12 @@ an application crash.
 
 ## Conventions
 
-- Swift 6 and QML. No new C++ outside the native boundary above.
+- Swift 6.4 and QML. No new C++ outside the native boundary above.
 - UI geometry derives from the resolved base font pixel size through the Swift
   layout policies; hard-coded pixel constants in presenters or QML are a bug.
-- Fonts are unhinted (`PreferNoHinting`) wherever rendered or measured.
 - Per-frame Swift builders are allocation-free in steady state: no string
   formatting or hex parsing per record; colors come from the theme tables.
+- Add explicit types to closures to make builds faster
 - Comments at most 2 lines; delete stale ones when you touch that code.
 
 ## Workarounds require approval
