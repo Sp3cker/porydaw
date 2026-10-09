@@ -222,7 +222,10 @@ jobs:
           -DCMAKE_JOB_POOLS=link=1 -DCMAKE_JOB_POOL_LINK=link
 
       - name: Build
-        run: cmake --build build-asan -j"$(nproc)"
+        run: |
+          df -h / "$GITHUB_WORKSPACE"; free -m; swapon --show || true
+          ( while sleep 5; do echo "MON $(date +%T) $(free -m | awk '/Mem/{print "used="$3" avail="$7}') $(free -m | awk '/Swap/{print "swap="$3}') disk_free=$(df -m --output=avail / | tail -n1)MB top=$(ps -eo rss=,comm= --sort=-rss | head -n 3 | awk '{printf "%s:%dMB,", $2, $1/1024}')"; done ) &
+          cmake --build build-asan -j"$(nproc)"
 
       - name: Run harnesses
         run: >-
