@@ -15,7 +15,7 @@ private func decoderWidths(_ report: CheckReport) {
         check.expect(
             sample.sourceKind == .wav && sample.sourcePath == "fix/tone8.wav", message: "prepared u8 WAV imports")
         check.expect(sample.frameCount == 64, message: "u8 prepared frame count")
-        let u8SamplesMatch = sample.buffer.indices.allSatisfy { index in
+        let u8SamplesMatch: Bool = sample.buffer.indices.allSatisfy { (index: Int) -> Bool in
             let expected = Float(Double(index * 2 - 128) / 128)
             return sample.buffer[index] == expected
         }
@@ -123,7 +123,11 @@ private func decoderStereo(_ report: CheckReport) {
     stereo.bits = 16
     stereo.channels = 2
     stereo.withSmpl = false
-    let left: [Int16] = (0..<200).map { Int16((16000 * sin(2 * .pi * Double($0) / 50)).rounded()) }
+    let left: [Int16] = (0..<200).map { (index: Int) -> Int16 in
+        let angle: Double = 2 * Double.pi * Double(index) / 50
+        let amplitude: Double = 16000 * sin(angle)
+        return Int16(amplitude.rounded())
+    }
     for value in left {
         putU16(&stereo.samples, UInt16(bitPattern: value))
         putU16(&stereo.samples, UInt16(bitPattern: -value))
@@ -192,7 +196,7 @@ private func decoderAiff(_ report: CheckReport) {
     spec.loop = true
     spec.loopStartPos = 100
     spec.loopEndPos = 400
-    let values: [Int16] = (0..<500).map { Int16(($0 * 37) % 30001 - 15000) }
+    let values: [Int16] = (0..<500).map { (index: Int) -> Int16 in Int16((index * 37) % 30001 - 15000) }
     for value in values { putBe16(&spec.ssnd, UInt16(bitPattern: value)) }
     do {
         let sample = try SampleImport.decode(fixtureAiff(spec), sourcePath: "f/a.aif")
@@ -292,7 +296,9 @@ private func decoderRefusals(_ report: CheckReport) {
             message: "non-forward WAV loop drops the loop with one warning")
     } catch { check.expect(false, message: "valid WAV with non-forward loop refused") }
 
-    var soundFont = Data("RIFF".utf8) + Data(repeating: 0, count: 4) + Data("sfbk".utf8)
+    var soundFont = Data("RIFF".utf8)
+    soundFont.append(contentsOf: [UInt8](repeating: 0, count: 4))
+    soundFont.append(contentsOf: "sfbk".utf8)
     let sfbkRejected: Bool
     do {
         _ = try SampleImport.decode(soundFont, sourcePath: "wrong.wav")

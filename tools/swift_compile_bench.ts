@@ -412,7 +412,8 @@ export function fileRankings(
     }
   }
   for (const body of bodies) {
-    if (body.generated) continue;
+    // Local functions are timed inside their enclosing body; adding them double-counts.
+    if (body.generated || body.symbol.startsWith("local function ")) continue;
     const path = body.location.replace(/:\d+:\d+$/, "");
     if (!isAbsolute(path) || relative(root, path).startsWith("..")) continue;
     const key = JSON.stringify([body.module, path]);

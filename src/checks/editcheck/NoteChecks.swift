@@ -54,12 +54,20 @@ private func adoptionAndPairing(_ report: CheckReport) {
         notes[2].isUnterminated,
         cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
         message: "unterminated note is preserved")
+    var adoptedIdentitiesUnique: Bool = notes.allSatisfy { $0.id.isAssigned }
+    if adoptedIdentitiesUnique {
+        let adoptedIDs: [NoteID] = notes.map(\.id)
+        let uniqueIDs: Set<NoteID> = Set(adoptedIDs)
+        adoptedIdentitiesUnique = uniqueIDs.count == Int(3)
+    }
     report.expect(
-        notes.allSatisfy { $0.id.isAssigned } && Set(notes.map(\.id)).count == 3,
+        adoptedIdentitiesUnique,
         cppID: "noteidcheck/NoteIdentityCheckTest::adoptedSmfRemintsForeignIds",
         message: "adoption remints unique document identities")
+    let rawEvents: [MidiEvent] = document.rawChunks.flatMap(\.events)
+    let containsTempo: Bool = rawEvents.contains { $0.metaType == 0x51 }
     report.expect(
-        !document.rawChunks.flatMap(\.events).contains(where: { $0.metaType == 0x51 }),
+        !containsTempo,
         cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
         message: "typed tempo is removed from raw chunks")
     report.expectEqual(
@@ -69,9 +77,18 @@ private func adoptionAndPairing(_ report: CheckReport) {
         what: "valid conductor tempo becomes typed state")
 
     let decoded = (try? file.encoded()).flatMap { try? MidiFile.decode($0) }
+    var parsedIDsUnassigned: Bool = false
+    if let decoded {
+        let parsedEvents: [MidiEvent] = decoded.chunks.flatMap(\.events)
+        let noteOns: [MidiEvent] = parsedEvents.filter(\.isNoteOn)
+        let isUnassigned: (MidiEvent) -> Bool = { event in
+            guard let id = event.noteID else { return true }
+            return !id.isAssigned
+        }
+        parsedIDsUnassigned = noteOns.allSatisfy(isUnassigned)
+    }
     report.expect(
-        decoded?.chunks.flatMap(\.events).filter(\.isNoteOn)
-            .allSatisfy { !($0.noteID?.isAssigned ?? false) } == true,
+        parsedIDsUnassigned,
         cppID: "noteidcheck/NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned",
         message: "serialized MIDI carries no note identity")
     report.expect(
@@ -259,11 +276,15 @@ private func insertionAndCollision(_ report: CheckReport) {
         duplicateIDs?.count == 2 && duplicateIDs?[0] != duplicateIDs?[1],
         cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
         message: "exact duplicate insertions receive distinct identities")
+    let isDuplicate: (Note) -> Bool = { note in
+        guard note.tick == 110 else { return false }
+        guard note.pitch == 61 else { return false }
+        return note.duration == 10
+    }
+    let duplicateCount: Int = document.notes(in: 0).filter(isDuplicate).count
     report.expectEqual(
         expected: 2,
-        actual: document.notes(in: 0).filter {
-            $0.tick == 110 && $0.pitch == 61 && $0.duration == 10
-        }.count, cppID: "editcheck/EditCheckTest::noteEditingBatch",
+        actual: duplicateCount, cppID: "editcheck/EditCheckTest::noteEditingBatch",
         what: "exact duplicate insertions remain distinct notes")
 
     let revisionBeforeNoOp = document.revision
@@ -282,7 +303,7 @@ private func movementAndResize(_ report: CheckReport) {
             NewNote(track: 0, tick: 0, pitch: 70, duration: 4, velocity: 100),
             NewNote(track: 0, tick: 0, pitch: 69, duration: 2, velocity: 90),
             NewNote(track: 0, tick: 20, pitch: 64, duration: 10, velocity: 80),
-        ]), ids.count == 3
+        ]), ids.count == Int(3)
     else {
         report.fail(noteEditsBasicID, "fixture insertion failed")
         return
@@ -421,7 +442,12 @@ private func velocityEditing(_ report: CheckReport) {
         cppID: "velocity-model/VelocityModelTest::gestureCompletionAndDeltaFromOriginals",
         what: "one relative batch publishes one revision")
     document.history.undoDocument()
-    let restored = document.note(ids[0])?.velocity == 99 && document.note(ids[1])?.velocity == 127
+    var restored: Bool = false
+    if let firstVelocity = document.note(ids[0])?.velocity, firstVelocity == 99 {
+        if let secondVelocity = document.note(ids[1])?.velocity {
+            restored = secondVelocity == 127
+        }
+    }
     document.history.redoDocument()
     report.expect(
         restored && document.note(ids[0])?.velocity == 1,
@@ -435,7 +461,7 @@ private func compatibilityRegressions(_ report: CheckReport) {
         let selected = try? rejection.addNotes([
             NewNote(track: 0, tick: 0, pitch: 60, duration: 4, velocity: 90),
             NewNote(track: 0, tick: 0, pitch: 62, duration: 4, velocity: 91),
-        ]), selected.count == 2, let saved = try? rejection.captureSave()
+        ]), selected.count == Int(2), let saved = try? rejection.captureSave()
     else { return }
     rejection.didSave(saved)
     rejection.nudgeVelocities([selected[0]], by: 1)
@@ -496,9 +522,11 @@ private func compatibilityRegressions(_ report: CheckReport) {
     _ = try? overlap.addNotes([
         NewNote(track: 0, tick: 10, pitch: 67, duration: 4, velocity: 70)
     ])
-    let retainedEnd = overlap.rawChunks[1].events.first { event in
-        event.tick == 10 && event.isNoteEnd
-    }?.payload
+    let isRetainedEnd: (MidiEvent) -> Bool = { event in
+        guard event.tick == 10 else { return false }
+        return event.isNoteEnd
+    }
+    let retainedEnd: MidiEventPayload? = overlap.rawChunks[1].events.first(where: isRetainedEnd)?.payload
     report.expect(
         retainedEnd == .channel(status: 0x80, data0: 67, data1: 39),
         cppID: "editcheck/EditCheckTest::noteMoveOverlap",

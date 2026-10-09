@@ -355,3 +355,26 @@ Deno.test("budget rankings keep order-sensitive hotspots above consistently fast
     "src/swift/core/Second.swift",
   ]);
 });
+
+Deno.test("file totals count local functions once, inside their enclosing body", () => {
+  const run = {
+    module: job.module,
+    order: "normal",
+    iteration: 1,
+    exit: 0,
+    wallMs: 100,
+    log: "normal.log",
+    commands: [],
+    timings: parseTimings(
+      `40ms\t${first}:2:10\tlocal function M.(file).outer().inner()\n` +
+        `45ms\t${first}:1:6\tglobal function M.(file).outer()`,
+    ),
+  };
+  const bodies = rankTimings([run], true);
+  equal(
+    fileRankings(bodies, root, [job], [first], [run]).map((row) =>
+      row.normalMs
+    ),
+    [45],
+  );
+});

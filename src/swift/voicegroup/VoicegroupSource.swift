@@ -224,7 +224,7 @@ public final class VoicegroupSource {
                 text.count == header.count || isSpace(text[text.startIndex + header.count])
             {
                 let name = text.dropFirst(header.count).drop(while: isSpace)
-                    .prefix { !isSpace($0) && $0 != 44 }
+                    .prefix { (byte: UInt8) -> Bool in !isSpace(byte) && byte != UInt8(44) }
                 if !name.isEmpty {
                     found.append(.init(symbol: "voicegroup_" + String(decoding: name, as: UTF8.self), isLabel: false))
                 }
@@ -308,7 +308,9 @@ public final class VoicegroupSource {
 
     private func parsedSource(_ content: [UInt8]) -> ParsedSource? {
         guard sectionLabel.utf8.count < 256,
-            !sectionLabel.utf8.contains(where: { Self.isSpace($0) || $0 == 58 || $0 == 44 })
+            !sectionLabel.utf8.contains(where: { (byte: UInt8) -> Bool in
+                Self.isSpace(byte) || byte == UInt8(58) || byte == UInt8(44)
+            })
         else { return nil }
         let split = Self.splitLines(content)
         var parsed = ParsedSource(
@@ -445,12 +447,12 @@ public final class VoicegroupSource {
         var index = 0
         while index < bytes.count && isSpace(bytes[index]) { index += 1 }
         guard index < bytes.count else { return nil }
-        let negative = bytes[index] == 45
-        if negative || bytes[index] == 43 { index += 1 }
+        let negative: Bool = bytes[index] == UInt8(45)
+        if negative || bytes[index] == UInt8(43) { index += 1 }
         var radix = 10
-        if index < bytes.count && bytes[index] == 48 {
+        if index < bytes.count && bytes[index] == UInt8(48) {
             radix = 8
-            if index + 2 < bytes.count && (bytes[index + 1] == 120 || bytes[index + 1] == 88),
+            if index + 2 < bytes.count && (bytes[index + 1] == UInt8(120) || bytes[index + 1] == UInt8(88)),
                 let digit = digitValue(bytes[index + 2]), digit < 16
             {
                 radix = 16
@@ -481,8 +483,8 @@ public final class VoicegroupSource {
         let source = rest
         let bytes = source.span
         var index = 0
-        while index < bytes.count && (bytes[index] == 32 || bytes[index] == 9) { index += 1 }
-        guard index < bytes.count && bytes[index] == 44 else { return false }
+        while index < bytes.count && (bytes[index] == UInt8(32) || bytes[index] == UInt8(9)) { index += 1 }
+        guard index < bytes.count && bytes[index] == UInt8(44) else { return false }
         rest = source[(source.startIndex + index + 1)...]
         return true
     }
@@ -524,8 +526,9 @@ public final class VoicegroupSource {
         var end = bytes.count
         var index = 0
         while index < end {
-            if bytes[index] == 64 || bytes[index] == 0
-                || (bytes[index] == 47 && index + 1 < end && bytes[index + 1] == 47)
+            let byte: UInt8 = bytes[index]
+            if byte == UInt8(64) || byte == UInt8(0)
+                || (byte == UInt8(47) && index + 1 < end && bytes[index + 1] == UInt8(47))
             {
                 end = index
                 break
@@ -568,7 +571,8 @@ public final class VoicegroupSource {
 
     static func hasSectionLabelSeparator(_ bytes: ArraySlice<UInt8>) -> Bool {
         guard bytes.count >= 2 else { return false }
-        for index in bytes.startIndex..<(bytes.endIndex - 1) where bytes[index] == 58 && bytes[index + 1] == 58 {
+        for index in bytes.startIndex..<(bytes.endIndex - 1)
+        where bytes[index] == UInt8(58) && bytes[index + 1] == UInt8(58) {
             return index > bytes.startIndex
         }
         return false

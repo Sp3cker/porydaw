@@ -122,10 +122,10 @@ func runCompleteEditorViewStateChecks(
         secondView.editorViewState.lanes.hiddenLanes.count == 2, cppID: id,
         message: "A108 seeded background state holds two ordered hidden lanes")
     report.expect(
-        secondView.editorViewState.lanes.hiddenLanes.first == .init(track: 1, controller: 7),
+        secondView.editorViewState.lanes.hiddenLanes.first == EditorLaneState.Lane(track: 1, controller: 7),
         cppID: id, message: "A109 first hidden lane remains CC7 on engine track one")
     report.expect(
-        secondView.editorViewState.lanes.hiddenLanes.last == .init(track: 0, controller: 80),
+        secondView.editorViewState.lanes.hiddenLanes.last == EditorLaneState.Lane(track: 0, controller: 80),
         cppID: id, message: "A110 last hidden lane remains CC80 on engine track zero")
 
     var changed = seed

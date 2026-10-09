@@ -61,7 +61,8 @@ By default each measurement runs with normal and reversed source order.
 `--repeat N` reports the median per function and expression in each order;
 `--order normal` disables the order comparison. Expression rows at the same
 location use the peak per run, not their sum. Function-body and expression
-times overlap and must not be added together.
+times overlap and must not be added together. File totals skip `local function`
+rows: the compiler times them inside their enclosing body.
 
 Each run creates `build/swift-timings/<timestamp>/` (or a new `--output`
 directory) containing raw logs, `report.json`, and `functions.csv`, `files.csv`,

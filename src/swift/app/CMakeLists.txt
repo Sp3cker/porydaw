@@ -261,7 +261,6 @@ porydaw_swift_module(PorydawAppEventList PorydawAppEventList)
 set_target_properties(PorydawAppEventList PROPERTIES
     AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
 )
-porydaw_swift_qt_interop(PorydawAppEventList)
 target_link_libraries(PorydawAppEventList PUBLIC PorydawCore)
 
 add_library(PorydawAppPresentation STATIC

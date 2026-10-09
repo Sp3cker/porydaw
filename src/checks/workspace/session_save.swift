@@ -415,7 +415,9 @@ private func sessionSaveReceipts(report: CheckReport, fixtureRoot: String) {
                 guard event.tick == 288,
                     case let .channel(status, pitch, velocity) = event.payload
                 else { return false }
-                return status & 0xF0 == 0x90 && pitch == 74 && velocity == 90
+                let command: UInt8 = status & 0xF0
+                guard command == UInt8(0x90), pitch == UInt8(74) else { return false }
+                return velocity == UInt8(90)
             }
         }
         report.expect(
@@ -581,8 +583,9 @@ private func sessionSynthUndoTail(report: CheckReport, fixtureRoot: String) {
             report.fail(id, "rich fixture does not expose the original DirectSound source voice")
             return
         }
-        try (richLines.prefix(3).joined(separator: "\n") + "\n")
-            .write(
+        let joinedSource: String = richLines.prefix(3).joined(separator: "\n")
+        let sourceText: String = joinedSource + "\n"
+        try sourceText.write(
                 toFile: root + "/sound/voicegroups/fixture_rich.inc",
                 atomically: true, encoding: .utf8)
         try """

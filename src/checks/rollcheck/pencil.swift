@@ -131,8 +131,11 @@ private func checkPencilFractionalPlacement(_ report: CheckReport, viewport: Doc
         return
     }
     pencilDraw(cell, grid: grid)
-    let atTick = session.document.notes(in: grid.trackIndex).filter {
-        Int($0.tick) == cell.tick && Int($0.pitch) == cell.pitch
+    let atTick = session.document.notes(in: grid.trackIndex).filter { note in
+        let tick: Int = Int(note.tick)
+        guard tick == cell.tick else { return false }
+        let pitch: Int = Int(note.pitch)
+        return pitch == cell.pitch
     }
     report.expect(
         atTick.count == 1, cppID: id,
@@ -174,7 +177,7 @@ private func checkPencilPlacement(_ report: CheckReport, viewport: DocumentViewp
     }
     report.expect(note != nil, cppID: id, message: "pointer draw creates a note at the selected cell")
     report.expect(
-        note.map { Int($0.velocity) == 100 } == true, cppID: id,
+        note?.velocity == UInt8(100), cppID: id,
         message: "the newly drawn note has default velocity 100")
     pencilRestore(report, id: id, session: session, baseline: baseline)
 }
@@ -506,7 +509,7 @@ private func checkDrawLatchAndCancel(_ report: CheckReport, viewport: DocumentVi
         .first { !beforeIDs.contains($0.id) }
     report.expect(
         session.document.revision == revision + 1
-            && created.map { Int($0.velocity) == 100 } == true,
+            && created?.velocity == UInt8(100),
         cppID: id, message: "draw commits one note at the default latched velocity")
     grid.lastVelocity = 77
     guard let second = emptyCell() else {
@@ -520,7 +523,7 @@ private func checkDrawLatchAndCancel(_ report: CheckReport, viewport: DocumentVi
     let latched = session.document.notes(in: grid.trackIndex)
         .first { !beforeSecond.contains($0.id) }
     report.expect(
-        latched.map { Int($0.velocity) == 77 } == true,
+        latched?.velocity == UInt8(77),
         cppID: id, message: "draw commits at the latched last-used velocity")
     if let latchedID = latched?.id {
         grid.doublePointer(x: second.x + 10, y: second.y)

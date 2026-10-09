@@ -35,7 +35,10 @@ func pitchBendParityPredicates(_ report: CheckReport, suite: DocumentSession) {
         message: "a note across a signature seam opens its editor")
     pitchBendStroke(graph, x0f: 0.10, y0f: 0.80, x1f: 0.90, y1f: 0.20)
     let interior = session.document.lanePoints(track: 0, lane: .pitchBend)
-        .filter { $0.tick > 288 && $0.tick < 672 }
+        .filter { value -> Bool in
+            guard value.tick > 288 else { return false }
+            return value.tick < 672
+        }
     report.expect(
         !interior.isEmpty
             && interior.allSatisfy {
@@ -48,7 +51,10 @@ func pitchBendParityPredicates(_ report: CheckReport, suite: DocumentSession) {
     presenter.resetPitchCurve()
     pitchBendStroke(graph, x0f: 0.12, y0f: 0.75, x1f: 0.88, y1f: 0.30)
     let resnapped = session.document.lanePoints(track: 0, lane: .pitchBend)
-        .filter { $0.tick > 288 && $0.tick < 672 }
+        .filter { value -> Bool in
+            guard value.tick > 288 else { return false }
+            return value.tick < 672
+        }
     report.expect(
         !resnapped.isEmpty
             && resnapped.allSatisfy {
@@ -61,7 +67,10 @@ func pitchBendParityPredicates(_ report: CheckReport, suite: DocumentSession) {
     presenter.resetPitchCurve()
     pitchBendStroke(graph, x0f: 0.14, y0f: 0.70, x1f: 0.86, y1f: 0.35)
     let zoomed = session.document.lanePoints(track: 0, lane: .pitchBend)
-        .filter { $0.tick > 288 && $0.tick < 672 }
+        .filter { value -> Bool in
+            guard value.tick > 288 else { return false }
+            return value.tick < 672
+        }
     report.expect(
         !zoomed.isEmpty
             && zoomed.allSatisfy {
@@ -93,9 +102,12 @@ func pitchBendParityPredicates(_ report: CheckReport, suite: DocumentSession) {
         presenter.routeUnclaimedKey(key: 0x20, modifiers: 0, autoRepeat: false)
             && auditions == [288],
         cppID: keyID, message: "Space auditions from the note's start tick")
+    var matchesExpectation7: Bool = !presenter.routeUnclaimedKey(key: 0x20, modifiers: 0, autoRepeat: true)
+    if matchesExpectation7 {
+        matchesExpectation7 = auditions.count == Int(1)
+    }
     report.expect(
-        !presenter.routeUnclaimedKey(key: 0x20, modifiers: 0, autoRepeat: true)
-            && auditions.count == 1,
+        matchesExpectation7,
         cppID: keyID, message: "held Space does not repeat the note audition")
     report.expect(
         presenter.routeUnclaimedKey(key: 0x53, modifiers: 0, autoRepeat: false)
@@ -197,7 +209,10 @@ func pitchBendResetPredicates(_ report: CheckReport, viewport: DocumentViewport)
     pitchBendDrawCurve(mod)
     let drawn = coreTimeBytes(document)
     let interior = document.lanePoints(track: scene.note.track, lane: .controller(1))
-        .filter { $0.tick > scene.note.tick && $0.tick < scene.noteEnd }
+        .filter { value -> Bool in
+            guard value.tick > scene.note.tick else { return false }
+            return value.tick < scene.noteEnd
+        }
     report.expect(
         document.history.undoIndex == index + 1 && interior.contains { $0.value > 0 },
         cppID: modID, message: "a mod-wheel stroke writes note-scoped CC1 with interior motion")
@@ -221,13 +236,25 @@ func pitchBendResetPredicates(_ report: CheckReport, viewport: DocumentViewport)
     report.expect(
         document.history.undoIndex == resetIndex + 1, cppID: modID,
         message: "the mod-wheel reset pushes one history entry")
+    let noteStart: Int = Int(scene.note.tick)
+    let noteEnd: Int = Int(scene.noteEnd)
+    var matchesExpectation16: Bool = mod.kernel.points.keys.allSatisfy { (tick: Int) -> Bool in
+        if tick == noteStart { return true }
+        return tick == noteEnd
+    }
+    if matchesExpectation16 {
+        matchesExpectation16 = mod.kernel.points[Int(scene.note.tick)] == Int(0)
+    }
+    if matchesExpectation16 {
+        let points: [LanePoint] = document.lanePoints(track: scene.note.track, lane: .controller(1))
+        matchesExpectation16 = points.allSatisfy { (point: LanePoint) -> Bool in
+            guard point.tick >= scene.note.tick else { return true }
+            guard point.tick < scene.noteEnd else { return true }
+            return point.value == 0
+        }
+    }
     report.expect(
-        mod.kernel.points.keys.allSatisfy {
-            $0 == Int(scene.note.tick) || $0 == Int(scene.noteEnd)
-        } && mod.kernel.points[Int(scene.note.tick)] == 0
-            && document.lanePoints(track: scene.note.track, lane: .controller(1))
-                .filter { $0.tick >= scene.note.tick && $0.tick < scene.noteEnd }
-                .allSatisfy { $0.value == 0 },
+        matchesExpectation16,
         cppID: modID, message: "the mod-wheel reset zeroes the lane over the note span")
     report.expect(
         pitchBendLaneHasPoint(
@@ -255,13 +282,23 @@ func pitchBendResetPredicates(_ report: CheckReport, viewport: DocumentViewport)
     report.expect(
         document.history.undoIndex == pitchIndex + 1, cppID: pitchID,
         message: "the pitch reset pushes one history entry")
+    var matchesExpectation18: Bool = pitch.kernel.points.keys.allSatisfy { (tick: Int) -> Bool in
+        if tick == noteStart { return true }
+        return tick == noteEnd
+    }
+    if matchesExpectation18 {
+        matchesExpectation18 = pitch.kernel.points[Int(scene.note.tick)] == Int(0)
+    }
+    if matchesExpectation18 {
+        let points: [LanePoint] = document.lanePoints(track: scene.note.track, lane: .pitchBend)
+        matchesExpectation18 = points.allSatisfy { (point: LanePoint) -> Bool in
+            guard point.tick >= scene.note.tick else { return true }
+            guard point.tick < scene.noteEnd else { return true }
+            return point.value == 0
+        }
+    }
     report.expect(
-        pitch.kernel.points.keys.allSatisfy {
-            $0 == Int(scene.note.tick) || $0 == Int(scene.noteEnd)
-        } && pitch.kernel.points[Int(scene.note.tick)] == 0
-            && document.lanePoints(track: scene.note.track, lane: .pitchBend)
-                .filter { $0.tick >= scene.note.tick && $0.tick < scene.noteEnd }
-                .allSatisfy { $0.value == 0 },
+        matchesExpectation18,
         cppID: pitchID, message: "the pitch reset zeroes the curve over the note span")
     report.expect(
         pitchBendLaneHasPoint(
@@ -293,7 +330,10 @@ func pitchBendFineRampPredicates(_ report: CheckReport, viewport: DocumentViewpo
         scene.presenter.pitchGraph(), x0f: 0.10, y0f: 0.85,
         x1f: 0.90, y1f: 0.15, modifiers: 0x0800_0000)
     let interior = document.lanePoints(track: scene.note.track, lane: .pitchBend)
-        .filter { $0.tick > scene.note.tick && $0.tick < scene.noteEnd }
+        .filter { value -> Bool in
+            guard value.tick > scene.note.tick else { return false }
+            return value.tick < scene.noteEnd
+        }
     report.expect(
         document.history.undoIndex == index + 1 && interior.count >= 3,
         cppID: id, message: "an Alt drag commits a fine-grid ramp")

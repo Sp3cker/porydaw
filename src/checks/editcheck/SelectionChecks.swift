@@ -29,7 +29,7 @@ public func runClipboardSelectionChecks(
         document: document, service: service,
         lease: suite.bankLease, slots: suite.bankSlots,
         dirty: false, loadName: suite.bankLoadName)
-    guard document.notes(in: 0).count == 3 else {
+    guard document.notes(in: 0).count == Int(3) else {
         report.fail(
             "clipboard/SelectionCheckTest::noteSelectionSanitizesAndExcludesTime",
             "selection fixture must contain three distinct notes")
@@ -103,22 +103,38 @@ private func clipboardNoteSelectionChecks(_ report: CheckReport, session: Docume
     report.expectEqual(
         expected: [ids[2], ids[0]], actual: session.selectedNoteOrder, cppID: reconcile,
         what: "A048 reconciliation preserves reverse selection order rather than sorting by document order")
+    var deletionPublishesSelection: Bool = changes.count == Int(1)
+    if deletionPublishesSelection {
+        deletionPublishesSelection = changes[0].contains(.selection)
+    }
     report.expect(
-        changes.count == 1 && changes[0].contains(.selection), cppID: reconcile,
+        deletionPublishesSelection, cppID: reconcile,
         message: "A049 one selection publication accompanies deletion reconciliation")
     changes.removeAll()
     document.renameTrack(0, to: "selection-reconcile")
+    var renamePreservesSelection: Bool = changes.count == Int(1)
+    if renamePreservesSelection {
+        let expectedDomains: SessionChangeDomains = [.document, .dirty, .history]
+        renamePreservesSelection = changes[0] == expectedDomains
+    }
+    if renamePreservesSelection {
+        let expectedOrder: [NoteID] = [ids[2], ids[0]]
+        renamePreservesSelection = session.selectedNoteOrder == expectedOrder
+    }
     report.expect(
-        changes.count == 1 && changes[0] == [.document, .dirty, .history]
-            && session.selectedNoteOrder == [ids[2], ids[0]], cppID: reconcile,
+        renamePreservesSelection, cppID: reconcile,
         message: "A050 idempotent reconciliation publishes no selection change")
     changes.removeAll()
     document.deleteNotes([ids[0], ids[2]])
     report.expect(
         session.selectedNoteOrder.isEmpty && session.selectedNotes.isEmpty,
         cppID: reconcile, message: "A051 reconciliation to empty removes membership")
+    var emptyReconciliationPublishes: Bool = changes.count == Int(1)
+    if emptyReconciliationPublishes {
+        emptyReconciliationPublishes = changes[0].contains(.selection)
+    }
     report.expect(
-        changes.count == 1 && changes[0].contains(.selection), cppID: reconcile,
+        emptyReconciliationPublishes, cppID: reconcile,
         message: "A052 reconciliation to empty publishes once")
 }
 
@@ -323,11 +339,11 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, viewport: Docum
         cppID: "clipboard/AutomationCoverageTest::endpointSemantics",
         message: "ordered CC7 copy contains only fixture CC7 events and no CC10 sibling or notes")
     let nativeBytes = copiedVolume.flatMap { ClipboardCodec.encode($0, ticksPerBeat: 24) }
-    report.expect(
-        nativeBytes
-            == Data(
+    let expectedBytes: Data = Data(
                 #"{"format":1,"lanes":[{"cc":7,"points":[[0,100],[48,108]],"track":0}],"span":72,"tempo":[],"ticksPerBeat":24,"tracks":[],"wholeLane":false}"#
-                    .utf8),
+            .utf8)
+    report.expect(
+        nativeBytes == expectedBytes,
         cppID: "clipboard/AutomationCoverageTest::endpointSemantics",
         message: "ordered CC7 clipboard MIME bytes match the fixture without CC10 sibling bytes")
     report.expect(
@@ -347,14 +363,21 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, viewport: Docum
     let pasteResult = decoded.flatMap {
         ClipboardSemantics.paste($0.clip, at: 24, selectedTrack: 0, into: copyFixture)
     }
+    var pastedLanePointsMatch: Bool = pasteResult?.nextCursor == 96
+    if pastedLanePointsMatch {
+        let laneFacts: [String] = copyFixture.lanePoints(track: 0, lane: .controller(7)).map {
+                "\($0.tick):\($0.value)"
+        }
+        pastedLanePointsMatch = laneFacts == ["24:100", "72:108"]
+    }
+    if pastedLanePointsMatch {
+        let laneFacts: [String] = copyFixture.lanePoints(track: 0, lane: .controller(10)).map {
+                "\($0.tick):\($0.value)"
+        }
+        pastedLanePointsMatch = laneFacts == ["48:64"]
+    }
     report.expect(
-        pasteResult?.nextCursor == 96
-            && copyFixture.lanePoints(track: 0, lane: .controller(7)).map {
-                "\($0.tick):\($0.value)"
-            } == ["24:100", "72:108"]
-            && copyFixture.lanePoints(track: 0, lane: .controller(10)).map {
-                "\($0.tick):\($0.value)"
-            } == ["48:64"],
+        pastedLanePointsMatch,
         cppID: "clipboard/AutomationCoverageTest::endpointSemantics",
         message: "decoded CC7 paste restores exactly two Volume events and preserves Pan")
     report.expect(

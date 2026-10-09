@@ -457,14 +457,28 @@ func checkRulerLoopMarkerDrag(_ report: CheckReport, viewport: DocumentViewport)
         cppID: id, message: "a click on a marker still places the edit cursor")
 
     grid.refreshFromSession()
-    let glowInk = RollContentProbe.argb(palette.selectionRing) & 0x00FF_FFFF
-    let glow = RollContentProbe(grid).plotRects
-        .filter { $0.id == 0 && $0.argb & 0x00FF_FFFF == glowInk && $0.argb >> 24 < 0xFF }
-        .sorted { $0.x < $1.x }
-    let startGlow = glow.filter { $0.x < x((start + end) / 2) }
+    let colorMask: UInt32 = 0x00FF_FFFF
+    let glowInk: UInt32 = RollContentProbe.argb(palette.selectionRing) & colorMask
+    let plotRects: [RollContentProbe.PlotRect] = RollContentProbe(grid).plotRects
+    let filteredGlow: [RollContentProbe.PlotRect] = plotRects.filter { (rect: RollContentProbe.PlotRect) -> Bool in
+        guard rect.id == UInt64(0) else { return false }
+        guard rect.argb & colorMask == glowInk else { return false }
+        return rect.argb >> 24 < UInt32(0xFF)
+    }
+    let glow: [RollContentProbe.PlotRect] = filteredGlow.sorted {
+        (left: RollContentProbe.PlotRect, right: RollContentProbe.PlotRect) -> Bool in
+        left.x < right.x
+    }
+    let middleX: Double = x((start + end) / 2)
+    let startGlow: [RollContentProbe.PlotRect] = glow.filter { (rect: RollContentProbe.PlotRect) -> Bool in
+        rect.x < middleX
+    }
     func alpha(_ argb: UInt32) -> UInt32 { argb >> 24 }
-    let continuous = zip(startGlow, startGlow.dropFirst()).allSatisfy {
-        abs($0.x + $0.w - $1.x) < 1e-9 && $0.argbRight == $1.argb
+    let continuous: Bool = zip(startGlow, startGlow.dropFirst()).allSatisfy {
+        (left: RollContentProbe.PlotRect, right: RollContentProbe.PlotRect) -> Bool in
+        let rightEdge: Double = left.x + left.w
+        guard abs(rightEdge - right.x) < 1e-9 else { return false }
+        return left.argbRight == right.argb
     }
     let glowWidth = grid.metrics.spaceEight
     report.expect(

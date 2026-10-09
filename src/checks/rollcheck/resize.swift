@@ -129,10 +129,15 @@ private func checkResizeOffGrid(_ report: CheckReport, viewport: DocumentViewpor
         dpr: grid.devicePixelRatio)
     grid.updatePointer(x: pull, y: y)
     grid.endPointer(x: pull, y: y)
+    var matchesNoteExpectation1: Bool = false
+    if let note = document.note(noteID) {
+        matchesNoteExpectation1 = Int(note.tick) == d.tick
+        if matchesNoteExpectation1 {
+            matchesNoteExpectation1 = Int(note.duration) == 2 * d.duration
+        }
+    }
     report.expect(
-        document.note(noteID).map {
-            Int($0.tick) == d.tick && Int($0.duration) == 2 * d.duration
-        } == true, cppID: id, message: "off-grid right edge ends exactly two ruler cells after start")
+        matchesNoteExpectation1, cppID: id, message: "off-grid right edge ends exactly two ruler cells after start")
     report.expect(
         resizeUndoTo(planted, session: session)
             && (try? document.captureSave().bytes) == before,
@@ -204,8 +209,12 @@ private func checkResizeSelection(_ report: CheckReport, viewport: DocumentViewp
     report.expect(
         session.selectedNotes == Set([bID, dID]), cppID: id,
         message: "stationary Ctrl+edge joins grabbed note to selection")
+    var matchesNoteExpectation2: Bool = false
+    if let note = document.note(dID) {
+        matchesNoteExpectation2 = Int(note.duration) == 2 * d.duration
+    }
     report.expect(
-        document.note(dID).map { Int($0.duration) == 2 * d.duration } == true,
+        matchesNoteExpectation2,
         cppID: id, message: "stationary Ctrl+edge does not resize grabbed note")
     report.expect(
         document.history.currentIdentity == selected && document.revision == revision,
@@ -220,13 +229,18 @@ private func checkResizeSelection(_ report: CheckReport, viewport: DocumentViewp
     grid.beginPointer(x: edge, y: y, modifiers: 0)
     grid.updatePointer(x: edge + cellWidth, y: y)
     grid.endPointer(x: edge + cellWidth, y: y)
+    var matchesNoteExpectation3: Bool = false
+    if let note = document.note(dID) {
+        matchesNoteExpectation3 = Int(note.duration) == 3 * d.duration
+    }
     report.expect(
-        document.note(dID).map { Int($0.duration) == 3 * d.duration } == true,
+        matchesNoteExpectation3,
         cppID: id, message: "unmodified edge drag grows grabbed note by exactly one cell")
-    report.expect(
-        document.note(bID).map {
-            Int($0.duration) == Int(bBefore.duration) + d.duration
-        } == true, cppID: id, message: "edge drag grows the rest of selection by one cell")
+    var matchesNoteExpectation4: Bool = false
+    if let note = document.note(bID) {
+        matchesNoteExpectation4 = Int(note.duration) == Int(bBefore.duration) + d.duration
+    }
+    report.expect(matchesNoteExpectation4, cppID: id, message: "edge drag grows the rest of selection by one cell")
     report.expect(
         document.revision == revision + 1
             && document.history.currentIdentity != selected,
@@ -515,8 +529,12 @@ private func checkEdgeResize(_ report: CheckReport, viewport: DocumentViewport) 
     grid.beginPointer(x: aRect.x + aRect.width - 1, y: rowY, modifiers: 0)
     grid.updatePointer(x: pullX, y: rowY)
     grid.endPointer(x: pullX, y: rowY)
+    var matchesNoteExpectation10: Bool = false
+    if let note = session.document.note(a) {
+        matchesNoteExpectation10 = Int(note.duration) == 2 * snap
+    }
     report.expect(
-        session.document.note(a).map { Int($0.duration) == 2 * snap } == true,
+        matchesNoteExpectation10,
         cppID: id, message: "off-grid right-edge drag snaps the end to the ruler grid")
     let quarterPx = Double(snap) * viewport.camera.snapshot.pixelsPerTick / 4
     // Overshoot trailing drag: pull the right edge before the note start; the
@@ -530,8 +548,12 @@ private func checkEdgeResize(_ report: CheckReport, viewport: DocumentViewport) 
     grid.beginPointer(x: aRect2.x + aRect2.width - 1, y: rowY, modifiers: 0)
     grid.updatePointer(x: overshootX, y: rowY)
     grid.endPointer(x: overshootX, y: rowY)
+    var matchesNoteExpectation11: Bool = false
+    if let note = session.document.note(a) {
+        matchesNoteExpectation11 = Int(note.duration) == snap
+    }
     report.expect(
-        session.document.note(a).map { Int($0.duration) == snap } == true,
+        matchesNoteExpectation11,
         cppID: id, message: "overshot right-edge drag stops at one snap cell")
     // Leading-edge drag: pull the left edge three quarters of a cell backward;
     // the commit snaps the start to the lattice and preserves the end tick.
@@ -681,9 +703,11 @@ private func checkResizeSharedEnd(_ report: CheckReport, fixture: DocumentSessio
             cppID: id, message: "the overlapping predecessor ends at the resized start")
         report.expect(
             notes.dropFirst(2).allSatisfy { original in
-                document.note(original.id).map {
-                    $0.tick == original.tick && $0.duration == original.duration
-                        && $0.pitch == original.pitch && $0.velocity == original.velocity
+                document.note(original.id).map { (note: Note) -> Bool in
+                    guard note.tick == original.tick else { return false }
+                    guard note.duration == original.duration else { return false }
+                    guard note.pitch == original.pitch else { return false }
+                    return note.velocity == original.velocity
                 } == true
             }, cppID: id, message: "later same-pitch notes retain their starts and durations")
         let edited = try document.captureSave().bytes

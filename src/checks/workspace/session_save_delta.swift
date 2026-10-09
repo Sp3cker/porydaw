@@ -136,8 +136,14 @@ private func semanticEventDiff(expected: MidiFile, actual: MidiFile) -> String? 
         guard want.endTick == got.endTick else {
             return "track \(chunk) endTick \(want.endTick) vs \(got.endTick)"
         }
-        let wantTempo = want.events.filter { $0.metaType == 0x51 }
-        let gotTempo = got.events.filter { $0.metaType == 0x51 }
+        let wantTempo = want.events.filter { event -> Bool in
+            guard let type = event.metaType else { return false }
+            return type == UInt8(0x51)
+        }
+        let gotTempo = got.events.filter { event -> Bool in
+            guard let type = event.metaType else { return false }
+            return type == UInt8(0x51)
+        }
         guard wantTempo == gotTempo else {
             return
                 "track \(chunk) tempo stream differs (\(wantTempo.count) vs \(gotTempo.count) events)"

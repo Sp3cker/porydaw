@@ -518,7 +518,8 @@ extension SongDocument {
                 Xcmd.traffic(
                     in: copy.chunks[chunk],
                     stream: stream))
-            let removals = patch.removeEvents.filter { $0 <= UInt64(Int.max) }.map(Int.init)
+            let removals: [Int] = patch.removeEvents.filter { (index: UInt64) -> Bool in index <= UInt64(Int.max) }
+                .map { (index: UInt64) -> Int in Int(index) }
             let insertions = patch.inserts.map {
                 MidiEvent.channel(
                     tick: $0.tick, status: 0xB0 | $0.channel,
