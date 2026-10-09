@@ -1,5 +1,6 @@
 import Foundation
 import PorydawSample
+@testable import SwiftCoreCheckLogic
 
 public func runRenderPipelineChecks(_ report: CheckReport) {
     renderDeterminism(report)

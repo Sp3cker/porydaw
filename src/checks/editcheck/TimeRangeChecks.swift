@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+@testable import SwiftCoreCheckLogic
 
 @MainActor
 public func runTimeEditsSuite(_ report: CheckReport) {

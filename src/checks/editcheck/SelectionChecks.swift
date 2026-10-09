@@ -3,6 +3,7 @@ import Foundation
 import PorydawAppCommands
 import PorydawCore
 @testable import PorydawDocument
+@testable import SwiftCoreCheckLogic
 
 @MainActor
 public func runClipboardSelectionChecks(

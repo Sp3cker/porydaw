@@ -1,6 +1,5 @@
 import Foundation
 import PorydawVoicegroup
-import PorydawApp
 import PorydawCore
 import PorydawDocument
 import PorydawProject

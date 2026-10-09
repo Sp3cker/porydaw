@@ -1,6 +1,7 @@
 import Foundation
 import PorydawProject
 import PorydawSample
+@testable import SwiftCoreCheckLogic
 
 internal func runProvenanceChecks(_ report: CheckReport) {
     let hash = report.scoped(cppID: "swiftcore/SampleSourceHash::vectors")

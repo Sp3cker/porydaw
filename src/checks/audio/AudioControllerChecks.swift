@@ -7,6 +7,7 @@ import PorydawPlayback
 import PorydawPlaybackNative
 import PorydawProject
 import PorydawVoicegroup
+@testable import SwiftCoreCheckLogic
 
 @MainActor
 public func runAudioControllerChecks(_ report: CheckReport) {

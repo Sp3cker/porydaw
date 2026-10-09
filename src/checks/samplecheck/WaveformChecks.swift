@@ -3,6 +3,7 @@ import NativeDisplayList
 import PorydawApp
 import PorydawAppPresentation
 import PorydawSample
+@testable import SwiftCoreCheckLogic
 
 @MainActor
 internal func runWaveformChecks(_ report: CheckReport) {

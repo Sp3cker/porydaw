@@ -1,8 +1,6 @@
 import Foundation
 import PorydawCore
 
-@testable import PorydawApp
-@testable import PorydawAppCommands
 @testable import PorydawDocument
 
 // The staged-gesture snapshot triple: serialized song bytes, revision and

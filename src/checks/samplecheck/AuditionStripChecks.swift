@@ -3,6 +3,7 @@ import PorydawApp
 import PorydawAppAudio
 import PorydawPlayback
 import PorydawSample
+@testable import SwiftCoreCheckLogic
 
 extension AudioRenderEngine: SampleAuditionOutput {
     public func auditionSample(

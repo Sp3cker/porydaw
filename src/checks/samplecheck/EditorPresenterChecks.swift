@@ -4,6 +4,7 @@ import PorydawProject
 import PorydawVoicegroup
 import PorydawVoicegroupNative
 import PorydawSample
+@testable import SwiftCoreCheckLogic
 
 @MainActor
 internal func runEditorPresenterChecks(_ report: CheckReport) {

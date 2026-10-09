@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import PorydawCoreCheckNative
+@testable import SwiftCoreCheckLogic
 
 // Tags for the checked-in independent value expectations below.
 internal enum CoreMidiOracleValueOp: UInt32 {
