@@ -1,9 +1,4 @@
 import Foundation
-#if canImport(Darwin)
-    import Darwin
-#else
-    import Glibc
-#endif
 
 /// Parsed ToneData scalars and borrowed symbols for one written slot.
 public struct VgVoiceDesc: Equatable, Sendable {
@@ -41,35 +36,7 @@ public struct VoicegroupText: Sendable {
 
     /// Reads directly into the retained byte array, without Data or a second copy.
     public static func read(_ path: String) throws -> [UInt8] {
-        let fd = path.withCString { open($0, O_RDONLY) }
-        guard fd >= 0 else { throw BankBuildError.unreadable(path) }
-        defer { close(fd) }
-        var info = stat()
-        guard fstat(fd, &info) == 0, info.st_mode & S_IFMT == S_IFREG,
-            info.st_size >= 0, info.st_size <= Int.max
-        else {
-            throw BankBuildError.unreadable(path)
-        }
-        let count = Int(info.st_size)
-        var failed = false
-        var bytes = [UInt8](repeating: 0, count: count)
-        // POSIX read borrows the bounded mutable span only for the syscall.
-        var destination = bytes.mutableSpan
-        destination.withUnsafeMutableBufferPointer { buffer in
-            var offset = 0
-            while offset < count {
-                guard let base = buffer.baseAddress else { preconditionFailure("File buffer has no storage") }
-                #if canImport(Darwin)
-                    let received = Darwin.read(fd, base.advanced(by: offset), count - offset)
-                #else
-                    let received = Glibc.read(fd, base.advanced(by: offset), count - offset)
-                #endif
-                if received < 0 && errno == EINTR { continue }
-                guard received > 0 else { failed = true; return }
-                offset += received
-            }
-        }
-        guard !failed else { throw BankBuildError.unreadable(path) }
+        guard let bytes = NativeFileSystem.readRegularFile(path) else { throw BankBuildError.unreadable(path) }
         return bytes
     }
 

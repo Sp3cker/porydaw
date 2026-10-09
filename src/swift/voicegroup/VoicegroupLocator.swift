@@ -1,9 +1,4 @@
 import Foundation
-#if canImport(Darwin)
-    import Darwin
-#else
-    import Glibc
-#endif
 
 public struct VoicegroupLocation: Hashable, Sendable {
     public let filePath: String
@@ -149,12 +144,7 @@ public final class VoicegroupLocator {
         }
         guard !base.isEmpty, base.count < 256 else { return nil }
         for directory in layout.voicegroupDirectories {
-            guard let stream = directory.withCString({ opendir($0) }) else { continue }
-            defer { closedir(stream) }
-            while let entry = readdir(stream) {
-                let name = withUnsafePointer(to: &entry.pointee.d_name) {
-                    $0.withMemoryRebound(to: CChar.self, capacity: Int(NAME_MAX) + 1) { String(cString: $0) }
-                }
+            for name in NativeFileSystem.names(directory, skippingDotFiles: false) {
                 let nameBytes = name.utf8
                 let extensionBytes = nameBytes.span
                 let count = extensionBytes.count
@@ -174,9 +164,7 @@ public final class VoicegroupLocator {
                 guard assembly || include else { continue }
                 let path = directory + "/" + name
                 guard path.utf8.count < 512 else { continue }
-                var info = stat()
-                let status: Int32 = path.withCString { pointer -> Int32 in stat(pointer, &info) }
-                guard status == 0, (info.st_mode & S_IFMT) != S_IFDIR else { continue }
+                guard let kind = NativeFileSystem.kind(path), kind != .directory else { continue }
                 if declares(path, symbol: base, isLabel: false) {
                     return VoicegroupLocation(filePath: path, sectionLabel: "")
                 }

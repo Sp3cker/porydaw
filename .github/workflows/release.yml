@@ -16,6 +16,10 @@ on:
         description: 'Release title (defaults to the tag)'
         required: false
         default: ''
+      dry_run:
+        description: 'Build and launch-test only; upload workflow artifacts, publish nothing'
+        type: boolean
+        default: false
 
 jobs:
   # Creates the release up front so the per-platform jobs only ever attach
@@ -39,6 +43,7 @@ jobs:
           echo "Safe tag: $safe_tag (title: ${{ inputs.tag }})"
 
       - name: Create the release
+        if: ${{ !inputs.dry_run }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.SAFE_TAG }}
@@ -80,9 +85,13 @@ jobs:
       - name: Package AppImage
         # linuxdeploy bundles Qt and the Swift runtime libraries. The shell QML and
         # bundled fonts load from the executable's directory, so they sit beside it.
+        # Wayland ships beside xcb: Qt 6.10+ has one libqwayland.so, and the
+        # waylandcompositor module makes the plugin deploy its client plugins.
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
           QML_SOURCES_PATHS: src/ui
+          EXTRA_PLATFORM_PLUGINS: libqwayland.so
+          EXTRA_QT_MODULES: waylandcompositor
           VERSION: ${{ env.SAFE_TAG }}
         run: |
           mkdir -p AppDir/usr/bin
@@ -97,6 +106,20 @@ jobs:
             --plugin qt \
             --output appimage
 
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      # Proves the bundle is self-contained: the first QML frame on Xvfb with no Qt paths set.
+      - name: Launch packaged porydaw
+        run: |
+          command -v xvfb-run || sudo apt-get install -y --no-install-recommends xvfb
+          deno_bin="$(command -v deno)"
+          env -u QT_PLUGIN_PATH -u QML2_IMPORT_PATH -u LD_LIBRARY_PATH PATH=/usr/bin:/bin \
+            xvfb-run -a "$deno_bin" run --allow-read --allow-run tools/startup_bench.ts \
+            --runs 1 --timeout-ms 60000 --budget-ms 60000 --binary AppDir/usr/bin/porydaw
+
       - name: Prep Release Directory
         run: |
           mkdir "$BUILD_NAME"
@@ -105,12 +128,20 @@ jobs:
           zip -r "$BUILD_NAME.zip" "$BUILD_NAME"
 
       - name: Release
+        if: ${{ !inputs.dry_run }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.SAFE_TAG }}
           files: porydaw-linux.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload dry-run artifact
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: porydaw-linux
+          path: porydaw-linux.zip
 
   build-macos:
     needs: create-release
@@ -188,12 +219,20 @@ jobs:
           zip -r "$BUILD_NAME.zip" "$BUILD_NAME"
 
       - name: Release
+        if: ${{ !inputs.dry_run }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.SAFE_TAG }}
           files: ${{ env.BUILD_NAME }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload dry-run artifact
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BUILD_NAME }}
+          path: ${{ env.BUILD_NAME }}.zip
 
   build-windows:
     needs: create-release
@@ -248,23 +287,32 @@ jobs:
           cmake --install build --prefix "$env:BUILD_NAME"
           Copy-Item RELEASE-README.txt "$env:BUILD_NAME/README.txt"
 
-      # Proves the staged folder is self-contained: no Qt or Swift on PATH.
+      # Proves the staged folder is self-contained: the first QML frame with no Qt or Swift on PATH.
       - name: Launch staged porydaw.exe
         shell: pwsh
         run: |
+          $deno = (Get-Command deno).Source
           $env:Path = "$env:SystemRoot\System32;$env:SystemRoot"
           Remove-Item Env:QT_PLUGIN_PATH, Env:QML2_IMPORT_PATH -ErrorAction SilentlyContinue
-          $p = Start-Process -FilePath "$env:BUILD_NAME\porydaw.exe" -ArgumentList --version -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "porydaw.exe --version exited $($p.ExitCode)" }
+          & $deno run --allow-read --allow-run tools/startup_bench.ts --runs 1 --timeout-ms 60000 --budget-ms 60000 --binary "$env:BUILD_NAME\porydaw.exe"
+          if ($LASTEXITCODE -ne 0) { throw "porydaw.exe did not reach its first frame" }
 
       - name: Zip Release Directory
         shell: pwsh
         run: Compress-Archive -Path "$env:BUILD_NAME" -DestinationPath "$env:BUILD_NAME.zip"
 
       - name: Release
+        if: ${{ !inputs.dry_run }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.SAFE_TAG }}
           files: porydaw-windows.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload dry-run artifact
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: porydaw-windows
+          path: porydaw-windows.zip

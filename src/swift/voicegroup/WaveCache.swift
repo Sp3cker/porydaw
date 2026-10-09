@@ -1,10 +1,5 @@
 import Foundation
 import PorydawVoicegroupNative
-#if canImport(Darwin)
-    import Darwin
-#else
-    import Glibc
-#endif
 
 public enum WaveFormat { case wav, aiff, bin }
 public struct WaveDecodeError: Error, Equatable, Sendable {

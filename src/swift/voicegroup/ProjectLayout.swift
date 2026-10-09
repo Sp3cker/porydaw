@@ -1,12 +1,6 @@
 import Foundation
 import Synchronization
 
-#if canImport(Darwin)
-    import Darwin
-#else
-    import Glibc
-#endif
-
 /// Discovered paths in native probe order, with a cached, additive deep scan.
 public final class ProjectLayout: Sendable {
     public let projectRoot: String
@@ -114,32 +108,12 @@ private struct LayoutPaths {
         return (base + "/" + relative).replacingOccurrences(of: "\\", with: "/")
     }
 
-    static func isDirectory(_ path: String) -> Bool {
-        var info = stat()
-        return stat(path, &info) == 0 && (info.st_mode & mode_t(S_IFMT)) == mode_t(S_IFDIR)
-    }
+    static func isDirectory(_ path: String) -> Bool { NativeFileSystem.kind(path) == .directory }
 
-    static func isFile(_ path: String) -> Bool {
-        var info = stat()
-        return stat(path, &info) == 0 && (info.st_mode & mode_t(S_IFMT)) == mode_t(S_IFREG)
-    }
+    static func isFile(_ path: String) -> Bool { NativeFileSystem.kind(path) == .regular }
 
     // Native discovery preserves readdir order; sorted catalog listings cannot be reused.
-    static func names(_ path: String) -> [String] {
-        guard let directory = opendir(path) else { return [] }
-        defer { closedir(directory) }
-        var result: [String] = []
-        while let entry = readdir(directory) {
-            let capacity = MemoryLayout.size(ofValue: entry.pointee.d_name)
-            let name = withUnsafePointer(to: &entry.pointee.d_name) {
-                $0.withMemoryRebound(to: CChar.self, capacity: capacity) {
-                    String(cString: $0)
-                }
-            }
-            if !name.hasPrefix(".") { result.append(name) }
-        }
-        return result
-    }
+    static func names(_ path: String) -> [String] { NativeFileSystem.names(path, skippingDotFiles: true) }
 
     static func isAssembly(_ name: String) -> Bool {
         let lower = name.lowercased()
