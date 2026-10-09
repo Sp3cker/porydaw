@@ -40,6 +40,14 @@ jobs:
         with:
           version: "6.11.*"
           cache: true
+      # Build with the .swift-version toolchain, as local builds do; Xcode's Debug codegen differs.
+      - name: Install pinned Swift toolchain
+        run: |
+          curl -fsSL https://download.swift.org/swiftly/darwin/swiftly.pkg -o "$RUNNER_TEMP/swiftly.pkg"
+          installer -pkg "$RUNNER_TEMP/swiftly.pkg" -target CurrentUserHomeDirectory
+          "$HOME/.swiftly/bin/swiftly" init --skip-install --assume-yes --no-modify-profile --quiet-shell-followup
+          "$HOME/.swiftly/bin/swiftly" install --use --assume-yes "$(cat .swift-version)"
+          "$HOME/.swiftly/bin/swiftc" --version
       - name: Setup tests
         run: deno task setup:check
       - name: Formatting
