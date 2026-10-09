@@ -366,10 +366,12 @@ export function rankTimings(
   })).sort((a, b) => worstOrder(b) - worstOrder(a));
 }
 
+// Rows without a measured order sort after every measured row.
 function worstOrder(
   row: { normalMs: number | null; reversedMs: number | null },
 ): number {
   return Math.max(
+    -1,
     ...[row.normalMs, row.reversedMs].filter((value): value is number =>
       value !== null
     ),
@@ -421,7 +423,7 @@ export function fileRankings(
       {
         module: body.module,
         file: relative(root, path),
-        normalMs: 0,
+        normalMs: null,
         reversedMs: null,
       };
     if (body.normalMs !== null) {

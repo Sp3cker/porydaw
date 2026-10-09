@@ -1,3 +1,3 @@
-// Core-check lane upstream; every file in the lane sees this module.
+// Module-wide import: every SwiftCoreCheck file sees SwiftCoreCheckSupport.
 
 @_exported import SwiftCoreCheckSupport

@@ -31,7 +31,7 @@ endif()
 
 # Swift check sources need their own archive for CMake to emit compile rules.
 function(add_porydaw_check_lane name)
-    cmake_parse_arguments(PARSE_ARGV 1 CHECK "NO_CORE_DEFAULTS" "MODULE_NAME;MODULE_DIRECTORY"
+    cmake_parse_arguments(PARSE_ARGV 1 CHECK "" "MODULE_NAME;MODULE_DIRECTORY"
         "SOURCES;COMPILE_OPTIONS;LINK_LIBRARIES")
     add_library(${name} STATIC ${CHECK_SOURCES})
     set_target_properties(${name} PROPERTIES
@@ -52,18 +52,6 @@ function(add_porydaw_check_lane name)
             "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:${name},Swift_MODULE_DIRECTORY>>")
     endif()
     porydaw_enable_swift_batch_mode(${name})
-    if(NOT CHECK_NO_CORE_DEFAULTS)
-        target_compile_options(${name} PRIVATE
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/voicegroup/module.modulemap>"
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
-            "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-        )
-        target_link_libraries(${name} PRIVATE PorydawCore PorydawPlayback PorydawProject PorydawVoicegroup PorydawApp PorydawSample)
-    endif()
     target_compile_options(${name} PRIVATE ${CHECK_COMPILE_OPTIONS})
     target_link_libraries(${name} PRIVATE ${CHECK_LINK_LIBRARIES})
 endfunction()
@@ -73,7 +61,6 @@ function(add_porydaw_check name)
     cmake_parse_arguments(PARSE_ARGV 1 CHECK "" "SWIFT_LANE;MODULE_NAME;AUTOMOC"
         "SOURCES;SWIFT_SOURCES;SWIFT_COMPILE_OPTIONS;SWIFT_LINK_LIBRARIES")
     add_porydaw_check_lane(${CHECK_SWIFT_LANE}
-        NO_CORE_DEFAULTS
         MODULE_NAME "${CHECK_MODULE_NAME}"
         SOURCES ${CHECK_SWIFT_SOURCES}
         COMPILE_OPTIONS ${CHECK_SWIFT_COMPILE_OPTIONS}
@@ -119,19 +106,21 @@ target_include_directories(porydaw_checks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 porydaw_enable_project_warnings(porydaw_checks)
 
 if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
-# Support and Logic are interop-free and build beside the app.
-# SwiftCoreCheck holds the app-facing checks and pdc_suite_run.
-    add_porydaw_check_lane(swift_core_check_support
-        NO_CORE_DEFAULTS
-        MODULE_NAME SwiftCoreCheckSupport
-        MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_support"
-        COMPILE_OPTIONS
+    # Every core-check module gets these; only SwiftCoreCheck adds the app/render maps
+    # and PorydawApp, so Support and Logic stay interop-free and build beside the app.
+    set(core_check_swift_options
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
-        "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/voicegroup/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
+    )
+    set(core_check_libraries
+        PorydawCore PorydawPlayback PorydawProject PorydawVoicegroup PorydawSample PorydawDocument PorydawAppAudio)
+    add_porydaw_check_lane(swift_core_check_support
+        MODULE_NAME SwiftCoreCheckSupport
+        MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_support"
+        COMPILE_OPTIONS ${core_check_swift_options}
         SOURCES
         support/corecheck/CoreCheckSupport.swift
         editcheck/TimeRangeSupport.swift
@@ -141,19 +130,12 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/session_support.swift
         workspace/session_fixtures.swift
         support/NumericCheckSupport.swift
-        LINK_LIBRARIES PorydawCore PorydawPlayback PorydawProject PorydawVoicegroup PorydawSample PorydawDocument PorydawAppAudio
+        LINK_LIBRARIES ${core_check_libraries}
     )
     add_porydaw_check_lane(swift_core_check_logic
-        NO_CORE_DEFAULTS
         MODULE_NAME SwiftCoreCheckLogic
         MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_logic"
-        COMPILE_OPTIONS
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
-        "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/voicegroup/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
+        COMPILE_OPTIONS ${core_check_swift_options} "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>"
         SOURCES
         lanes/SwiftCoreCheckLogicLane.swift
         audio/AudioAuditionChecks.swift
@@ -254,12 +236,15 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/session_save.swift
         workspace/session_save_delta.swift
         workspace/voicegroup_creation.swift
-        LINK_LIBRARIES swift_core_check_support PorydawCore PorydawPlayback PorydawProject PorydawVoicegroup PorydawSample PorydawDocument PorydawAppAudio
+        LINK_LIBRARIES swift_core_check_support ${core_check_libraries}
     )
     add_porydaw_check_lane(swift_core_check
         MODULE_NAME SwiftCoreCheck
         MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check"
-        COMPILE_OPTIONS "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
+        COMPILE_OPTIONS ${core_check_swift_options}
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
         SOURCES
         support/WorkspacePresenterFixture.swift
         audio/AudioControllerChecks.swift
@@ -450,7 +435,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/transport_checks.swift
         support/corecheck/CoreCheckDispatch.swift
         lanes/SwiftCoreCheckLane.swift
-        LINK_LIBRARIES swift_core_check_logic swift_core_check_support
+        LINK_LIBRARIES swift_core_check_logic swift_core_check_support ${core_check_libraries} PorydawApp
     )
     target_link_libraries(porydaw_checks PRIVATE swift_core_check swift_core_check_logic swift_core_check_support)
     target_sources(porydaw_checks PRIVATE

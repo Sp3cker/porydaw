@@ -301,6 +301,40 @@ Deno.test("file rankings include zero-body sources without hiding failed measure
   );
 });
 
+Deno.test("unmeasured orders stay null and sort after measured files", () => {
+  const failed = {
+    module: job.module,
+    order: "normal",
+    iteration: 1,
+    exit: 1,
+    wallMs: 100,
+    log: "failed.log",
+    commands: [],
+    timings: [],
+  };
+  const extra = `${root}/src/swift/core/Extra.swift`;
+  const reversedOnly = {
+    module: job.module,
+    location: `${extra}:3:1`,
+    symbol: "global function M.(file).extra()",
+    generated: false,
+    normalMs: null,
+    reversedMs: 7,
+  };
+  equal(
+    fileRankings([reversedOnly], root, [job], [], [failed]).map((row) => [
+      row.file,
+      row.normalMs,
+      row.reversedMs,
+    ]),
+    [
+      ["src/swift/core/Extra.swift", null, 7],
+      ["src/swift/core/First.swift", null, null],
+      ["src/swift/core/Second.swift", null, null],
+    ],
+  );
+});
+
 Deno.test("compiler import timers convert wall seconds without adding overlapping timers or instruction counts", () => {
   const rows = importTimings(
     {
