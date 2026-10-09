@@ -10,7 +10,7 @@ import Foundation
 enum NativeFileSystem {
     enum Kind { case directory, regular, other }
 
-    /// nil when the path cannot be stat'ed.
+    /// nil when the path cannot be probed.
     static func kind(_ path: String) -> Kind? {
         #if os(Windows)
             var directory: ObjCBool = false
@@ -24,6 +24,15 @@ enum NativeFileSystem {
             case mode_t(S_IFREG): return .regular
             default: return .other
             }
+        #endif
+    }
+
+    /// True when the NUL-terminated UTF-8 path names an existing entry (no F_OK on Windows).
+    static func exists(_ path: UnsafePointer<CChar>) -> Bool {
+        #if os(Windows)
+            return FileManager.default.fileExists(atPath: String(cString: path))
+        #else
+            return access(path, F_OK) == 0
         #endif
     }
 

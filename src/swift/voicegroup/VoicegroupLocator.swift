@@ -75,9 +75,7 @@ public final class VoicegroupLocator {
         guard let recorded = includedFiles[filePath[start...]], let next = recorded,
             next.utf8.count < 512
         else { return nil }
-        let status: Int32 = next.withCString { pointer -> Int32 in access(pointer, F_OK) }
-        guard status == 0
-        else { return nil }
+        guard next.withCString(NativeFileSystem.exists) else { return nil }
         return next
     }
 
@@ -243,10 +241,10 @@ public final class VoicegroupLocator {
                 for offset in 0..<suffixSpan.count { path[index] = suffixSpan[offset]; index += 1 }
             }
             let bytes = storage.span
-            // POSIX access borrows the bounded, NUL-terminated path only for the syscall.
+            // The probe borrows the bounded, NUL-terminated path only for the call.
             let exists = bytes.withUnsafeBufferPointer {
                 guard let base = $0.baseAddress else { preconditionFailure("Inline path is nonempty") }
-                return access(UnsafeRawPointer(base).assumingMemoryBound(to: CChar.self), F_OK) == 0
+                return NativeFileSystem.exists(UnsafeRawPointer(base).assumingMemoryBound(to: CChar.self))
             }
             if exists {
                 return VoicegroupLocation(filePath: AsmLine.text(bytes.extracting(0..<count)), sectionLabel: "")

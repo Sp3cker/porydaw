@@ -1,5 +1,12 @@
 import Foundation
 import PorydawVoicegroupNative
+#if canImport(Darwin)
+    import Darwin
+#elseif canImport(Glibc)
+    import Glibc
+#elseif canImport(ucrt)
+    import ucrt
+#endif
 
 public enum WaveFormat { case wav, aiff, bin }
 public struct WaveDecodeError: Error, Equatable, Sendable {
@@ -100,10 +107,10 @@ public final class WaveCache {
         let path = storage.span
         let bytes = path.extracting(0..<count)
         if let cached = cachedWave(bytes) { return cached }
-        // POSIX access borrows the bounded, NUL-terminated path only for the syscall.
+        // The probe borrows the bounded, NUL-terminated path only for the call.
         let exists = path.withUnsafeBufferPointer {
             guard let base = $0.baseAddress else { preconditionFailure("Inline path is nonempty") }
-            return access(UnsafeRawPointer(base).assumingMemoryBound(to: CChar.self), F_OK) == 0
+            return NativeFileSystem.exists(UnsafeRawPointer(base).assumingMemoryBound(to: CChar.self))
         }
         guard exists else { return nil }
         return try wave(absolutePath: AsmLine.text(bytes), format: format)
@@ -196,7 +203,7 @@ public final class WaveCache {
     }
 
     private func read(_ path: String) throws -> [UInt8]? {
-        if path.withCString({ access($0, F_OK) }) != 0 { return nil }
+        if !path.withCString(NativeFileSystem.exists) { return nil }
         do { return try VoicegroupText.read(path) } catch { throw WaveDecodeError(path: path) }
     }
 }

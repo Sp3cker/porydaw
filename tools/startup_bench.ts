@@ -322,8 +322,11 @@ async function main(): Promise<number> {
     if (!(await Deno.stat(binary)).isFile) throw new Error("not a file");
   } catch (error) {
     throw new Error(
-      `Release executable unavailable for ${options.until}: ${binary}\n` +
-        `Build first: deno task build:app --release\n${error}`,
+      `Executable unavailable for ${options.until}: ${binary}\n` +
+        (options.binary
+          ? "Check the --binary path"
+          : "Build first: deno task build:app --release") +
+        `\n${error}`,
     );
   }
   console.log(`Release executable: ${binary}`);
