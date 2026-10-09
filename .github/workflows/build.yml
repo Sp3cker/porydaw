@@ -212,14 +212,15 @@ jobs:
         run: |
           pulseaudio -D --exit-idle-time=-1 || true
           pactl load-module module-null-sink sink_name=ci || true
-      # Concurrent ASAN+debug-info links exhaust the runner's memory; link one at a time.
+      # GNU ld needs >16 GB to link the ASAN+debug-info check binary; lld does not.
       - name: Configure
         run: >-
+          { which ld.lld; ls /usr/local/bin | grep -iE 'lld|^ld'; } || true;
           cmake -S . -B build-asan -G Ninja -DPORYDAW_ASAN=ON
           -DCMAKE_BUILD_TYPE=RelWithDebInfo
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
-          -DCMAKE_JOB_POOLS=link=1 -DCMAKE_JOB_POOL_LINK=link
+          -DCMAKE_LINKER_TYPE=LLD
 
       - name: Build
         run: |
