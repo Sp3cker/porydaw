@@ -198,10 +198,10 @@ jobs:
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DCMAKE_LINKER_TYPE=LLD
-          -DCMAKE_Swift_FLAGS_RELWITHDEBINFO="-O -g -num-threads $(nproc)"
+          -DCMAKE_Swift_FLAGS_RELWITHDEBINFO="-O -g -num-threads 6"
 
       - name: Build
-        run: cmake --build /mnt/ci/build-asan -j"$(nproc)"
+        run: cmake --build /mnt/ci/build-asan -j6
 
       - name: Run harnesses
         run: |
