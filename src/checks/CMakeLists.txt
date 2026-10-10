@@ -437,6 +437,14 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         lanes/SwiftCoreCheckLane.swift
         LINK_LIBRARIES swift_core_check_logic swift_core_check_support ${core_check_libraries} PorydawApp
     )
+    if(PORYDAW_ASAN AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        # The test-only lane can compile without optimizing every assertion.
+        # The Swift/C timing gate stays optimized in swift_core_check_logic.
+        set_target_properties(swift_core_check PROPERTIES Swift_COMPILATION_MODE incremental)
+        target_compile_options(swift_core_check PRIVATE
+            "$<$<COMPILE_LANGUAGE:Swift>:-enable-batch-mode>"
+            "$<$<COMPILE_LANGUAGE:Swift>:-Onone>")
+    endif()
     target_link_libraries(porydaw_checks PRIVATE swift_core_check swift_core_check_logic swift_core_check_support)
     target_sources(porydaw_checks PRIVATE
         support/corecheck/tst_swiftcore.cpp
