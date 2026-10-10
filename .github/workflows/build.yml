@@ -190,6 +190,7 @@ jobs:
         run: |
           pulseaudio -D --exit-idle-time=-1 || true
           pactl load-module module-null-sink sink_name=ci || true
+      # Six concurrent build jobs fit the guest's tested RAM budget.
       # LLD avoids GNU ld's >16 GB peak when linking the ASAN check binary.
       - name: Configure
         run: >-
