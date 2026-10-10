@@ -198,17 +198,23 @@ jobs:
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DCMAKE_LINKER_TYPE=LLD
+          -DCMAKE_Swift_FLAGS_RELWITHDEBINFO="-O -g -num-threads $(nproc)"
 
       - name: Build
         run: cmake --build /mnt/ci/build-asan -j"$(nproc)"
 
       - name: Run harnesses
-        run: >-
-          QT_QUICK_BACKEND=software
-          deno run --allow-read --allow-write --allow-run
-          --allow-env=ASAN_OPTIONS,DISPLAY,PORYDAW_SAMPLE_CORPUS,PORYDAW_CHECK_HOST
-          tools/run_checks.ts /mnt/ci/build-asan/porydaw_checks
-          --no-windowing-checks --pool=1
+        run: |
+          checks=(deno run --allow-read --allow-write --allow-run
+            --allow-env=ASAN_OPTIONS,DISPLAY,PORYDAW_SAMPLE_CORPUS,PORYDAW_CHECK_HOST
+            tools/run_checks.ts /mnt/ci/build-asan/porydaw_checks
+            --no-windowing-checks)
+          set +e
+          QT_QUICK_BACKEND=software "${checks[@]}" --filter=projectstore-parity --pool=1
+          parity_status=$?
+          QT_QUICK_BACKEND=software "${checks[@]}" --exclude=projectstore-parity --pool=4
+          remaining_status=$?
+          (( parity_status == 0 && remaining_status == 0 ))
 
       - name: sccache stats
         run: sccache --show-stats || true
