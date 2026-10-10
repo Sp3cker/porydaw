@@ -51,6 +51,7 @@ DialogWindow {
                 onPlayerSelected: function(index): void { wizard.controller.selectPlayer(index) }
             }
             ImportSoundPage {
+                id: soundPage
                 colors: wizard.colors; typography: wizard.typography; layoutSpaces: wizard.layoutSpaces
                 voicegroupOptions: wizard.controller.voicegroupOptions
                 voicegroupText: wizard.controller.voicegroupText
@@ -90,7 +91,7 @@ DialogWindow {
     Shortcut {
         sequences: ["Return", "Enter"]
         context: Qt.WindowShortcut
-        enabled: wizard.visible
+        enabled: wizard.visible && !(wizard.controller.page === 1 && soundPage.voicegroupEditing)
         onActivated: {
             if (!wizard.controller.identityComplete || wizard.controller.busy)
                 return

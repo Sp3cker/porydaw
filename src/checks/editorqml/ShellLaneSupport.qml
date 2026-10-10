@@ -155,8 +155,11 @@ TestCase {
     function choose(combo, index) {
         mouseClick(combo, combo.width - combo.height / 2, combo.height / 2)
         verify(waitForNative(function() { return combo.popup.opened }, 3000), "choices open")
+        combo.popup.contentItem.positionViewAtIndex(index, ListView.Contain)
+        verify(waitForNative(function() {
+            return combo.popup.contentItem.itemAtIndex(index) !== null
+        }, 3000), "choice is mounted")
         const item = combo.popup.contentItem.itemAtIndex(index)
-        verify(item !== null, "choice is mounted")
         mouseClick(item)
         verify(waitForNative(function() { return combo.currentIndex === index }, 3000), "choice settles")
     }

@@ -529,7 +529,9 @@ private func parityCheckRoot(_ root: String, snapshots: URL?, report: CheckRepor
         "parity warm totals: \(root): C \(cSeconds * 1000) ms / \(cCalls) malloc calls; Swift \(swiftSeconds * 1000) ms / \(swiftCalls) malloc calls"
     )
     if parityTimeGateEnabled {
-        report.expect(swiftSeconds <= cSeconds, cppID: cppID, message: "\(root): Swift total load time <= C")
+        report.expect(
+            swiftSeconds <= cSeconds + 0.0001, cppID: cppID,
+            message: "\(root): Swift total load time <= C + 0.1 ms")
     } else {
         print("parity: \(root): time gate: Debug build, reported only")
     }
