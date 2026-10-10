@@ -3,8 +3,6 @@ name: Build
 on:
   push:
     branches: [fork-main]
-  pull_request:
-  workflow_dispatch:
 
 concurrency:
   group: build-${{ github.workflow }}-${{ github.ref }}
@@ -17,7 +15,7 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-      # Full history: changed lines are measured from the merge-base with the base.
+      # Full history: changed lines are measured from the previous fork-main push.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -28,7 +26,7 @@ jobs:
       # swift-format ships with the runner image's Swift toolchain.
       - name: Check formatting
         env:
-          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before || 'HEAD' }}
+          BASE: ${{ github.event.before }}
         run: deno task format --check --base "$BASE"
 
   build-linux:
@@ -181,55 +179,35 @@ jobs:
   # AddressSanitizer sweep of the porydaw_checks catalog with the software Qt Quick
   # backend; windowing checks and the QML lanes are not run here.
   asan-checks:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, porydaw-ci]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 1
 
-      - name: Cache C/C++ objects
-        uses: mozilla-actions/sccache-action@v0.0.9
-
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: "6.11.*"
-          cache: true
-
-      - name: Set up Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
-      - name: Install PulseAudio and lld
-        run: >-
-          sudo apt-get update
-          && sudo apt-get install -y --no-install-recommends
-          pulseaudio pulseaudio-utils lld
-
       - name: Start a dummy audio server
         run: |
           pulseaudio -D --exit-idle-time=-1 || true
           pactl load-module module-null-sink sink_name=ci || true
-      # GNU ld peaks above the runner's 16 GB linking the ASAN check binary; lld peaks near 4.4 GB.
+      # LLD avoids GNU ld's >16 GB peak when linking the ASAN check binary.
       - name: Configure
         run: >-
-          cmake -S . -B build-asan -G Ninja -DPORYDAW_ASAN=ON
+          cmake -S . -B /mnt/ci/build-asan -G Ninja -DPORYDAW_ASAN=ON
           -DCMAKE_BUILD_TYPE=RelWithDebInfo
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DCMAKE_LINKER_TYPE=LLD
 
       - name: Build
-        run: cmake --build build-asan -j"$(nproc)"
+        run: cmake --build /mnt/ci/build-asan -j"$(nproc)"
 
       - name: Run harnesses
         run: >-
           QT_QUICK_BACKEND=software
           deno run --allow-read --allow-write --allow-run
           --allow-env=ASAN_OPTIONS,DISPLAY,PORYDAW_SAMPLE_CORPUS,PORYDAW_CHECK_HOST
-          tools/run_checks.ts build-asan/porydaw_checks
+          tools/run_checks.ts /mnt/ci/build-asan/porydaw_checks
           --no-windowing-checks --pool=1
 
       - name: sccache stats
