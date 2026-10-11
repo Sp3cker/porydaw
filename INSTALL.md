@@ -17,91 +17,52 @@ Porydaw is a Swift 6.4 + QML application (Swift owns behavior, exposed to QML th
 
 The Swift app builds on macOS, Linux, and Windows x86_64. Linux ARM64 and Windows x86_64 have been validated with Swift 6.4.0 and Qt 6.11.2. See [Windows build and runtime notes](docs/windows-build.md) for the Windows toolchain, build fixes, launch commands, and check limitations. Release downloads above may still contain the older C++ application.
 
-Porydaw uses one Deno setup command. It checks installed host build tools before making changes, provisions only missing prerequisites, initializes `poryaaaa`, creates checkout-local Qt and formatter tooling, configures the complete check-enabled build, and builds the application.
+The scripting harness is Python 3.13, provisioned by [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.0 or newer. No Deno, Node, pip or global Python packages are needed. Install uv first, then the host native tools:
 
-Install Deno 2 first. The setup command cannot install Deno because Deno runs the command.
+- Git and CMake 3.24 or newer.
+- A C/C++20 toolchain: Xcode command-line tools on macOS, your distribution's compiler tools on Linux, or Visual Studio 2022's C++ workload and Windows SDK.
+- [Swift 6.4 or newer](https://www.swift.org/install/), including `swift format`. macOS uses `.swift-version` through swiftly; Windows also needs Swift's matching SDK and runtime.
 
-Install a working [Swift 6.4 toolchain](https://www.swift.org/install/) before running setup. Setup checks that the selected Swift compiler can compile and link a Swift 6.4 program; it does not provision Swift or its platform runtime dependencies. On macOS, use the version in `.swift-version`.
-
-- macOS: `brew install deno`
-- Windows: `winget install DenoLand.Deno`
-- Linux: install Deno 2 using the [official Deno instructions](https://docs.deno.com/runtime/getting_started/installation/).
-
-Then clone and set up the checkout:
+Setup validates these host tools; it never runs a host package manager, requests elevation or installs Swift. Install missing prerequisites manually using the links in its errors.
 
 ```bash
 git clone https://github.com/Sp3cker/porydaw
 cd porydaw
+uv sync --locked
+uv run --no-sync dev setup
 
-# Optional: inspect the selected platform setup without changing the machine.
-deno task setup --dry-run
-
-deno task setup
-
-# Optional: select a specific Qt patch if the latest download is unavailable.
-deno task setup --qt-version 6.11.2
+# Optional: select a specific Qt 6.11 patch.
+uv run --no-sync dev setup --qt-version 6.11.2
 ```
 
-Selecting a Qt patch replaces cached Qt package paths in the existing build. Later setup and build tasks reuse that selection. Swift compiler options supplied through `SWIFTC` or cached `CMAKE_Swift_COMPILER_ARG1` are preserved during prerequisite checks. Swift's version is checked before provisioning; compilation and linking are checked after missing native tools are installed.
+`uv sync --locked` creates this checkout's `.venv`, downloads Python if needed, and installs pinned Ninja and Ruff. Run it once per checkout/worktree and after `pyproject.toml` or `uv.lock` changes. Normal commands use `--no-sync`: warm harness invocation does not check a Python package registry or implicitly synchronize dependencies.
 
-`deno task setup` needs an internet connection when a prerequisite is missing. Before invoking a package manager, it checks CMake, the selected generator, a C and C++20 toolchain, a Swift 6.4 toolchain including its bundled swift-format (`swift format`, used by `deno task format`), and Python. Compatible installed tools are left unchanged. If an installed tool is incompatible, setup stops before provisioning it and reports the required and detected versions. On macOS the Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.
+Setup initializes the pinned `poryaaaa` dependency, provisions checkout-local Qt, then builds the Release app with checks enabled. Its four stages report elapsed time. The optional Qt installer dependencies are synchronized with `uv sync --locked --group qt` only when Qt needs downloading; they are not installed by default. Local Qt lives under `.cache/setup/qt/<host>-<architecture>/<version>/<kit>`. Existing selected local Qt is reused. Explicit `--qt-version` replaces cached Qt package paths; later builds retain the selection.
 
-When it must provision a missing host prerequisite, it uses:
-
-- Homebrew for CMake, Ninja, and Python, plus Xcode Command Line Tools for the macOS compiler;
-- WinGet plus Visual Studio 2022 Build Tools on Windows;
-- `apt-get` (Debian/Ubuntu), `pacman` (Arch), or `dnf` (Fedora) on Linux.
-
-The required host tools are CMake 3.24 or newer, a C++20 compiler, Swift 6.4 (pinned by `.swift-version` on macOS via swiftly), Python 3.10 or newer that can create a virtual environment with pip, and the generator selected for the build. Qt 6.11 and its installer (aqtinstall) are installed only into this checkout:
-
-```text
-.cache/setup/qt/
-.cache/setup-venv/
-```
-
-The cache is reusable and ignored by Git. Delete `.cache/setup/` and `.cache/setup-venv/` to download fresh local Qt and Python tooling. The setup command preserves an existing CMake build generator rather than replacing it.
-
-`deno task setup --dry-run` checks the installed native toolchain and reports whether it is compatible, incompatible, or missing tools that setup would install; it never invokes a package manager. The normal command reports six numbered stages, marks reusable local tooling, and shows elapsed time while Qt or the application builds in an interactive terminal. If prerequisite provisioning fails, it prints relevant official manual-install links; rerunning the command reuses completed local work.
-
-After setup, use the repository tasks:
+New builds use standard Ninja. A tree configured with another generator must be removed and recreated; there is no generator compatibility layer. Debug, Release and ASAN use separate `build/debug`, `build/release` and `build/asan` trees.
 
 ```bash
-deno task build:app
-deno task build:checks
-deno task checks
-deno task format --check
-deno task setup:check
+uv run --no-sync dev --help
+uv run --no-sync dev build:app
+uv run --no-sync dev build:checks --release
+uv run --no-sync dev checks --release
+uv run --no-sync dev tools:check
+uv run --no-sync dev format --check
 ```
 
-Debug and Release builds live in separate trees: `build/debug` (the default) and `build/release`
-(`--release`, and the tree `deno task setup` builds). Switching configurations never reconfigures a
-tree in place.
+Build output shows phase wall times and the slowest new Ninja commands. The full log is `build/<config>/build.log`; read it on failure instead of rebuilding for detail. Swift command hashes invalidate objects when compile flags change, including CMake regeneration during Ninja. Unchanged builds retain incremental objects and the shared QtBridge macro cache.
 
-Build tasks print only what needs attention: on failure, the failed step and its errors; on success,
-one line naming the built binary, plus any warnings located in project sources. The complete
-CMake/Ninja output of the last run is in `build/<config>/build.log`.
-
-Swift targets compile in batches on Debug builds, so a target's C++-interop frontend startup is paid
-once per batch instead of once per source file. Swift's incremental driver reuses an object whenever
-the sources and their dependencies are unchanged — the compile command included — so a build drops
-the objects of any Swift target whose compile command no longer matches the one its objects were
-built with. That happens once per flag change (a CMake option edit, or a flip between `build:app`
-and `build:checks`), not on unchanged builds.
-
-Launch the application built by `deno task setup` with the platform-appropriate command
-(`deno task build:app` builds the same paths under `build/debug`):
+Launch the Release application with:
 
 ```bash
 # macOS
 open build/release/porydaw.app
 
-# Windows
+# Windows — use the runtime environment in docs/windows-build.md
 .\build\release\porydaw.exe
 
 # Linux
 ./build/release/porydaw
 ```
 
-The Windows path above is for the current default Ninja generator. An existing Visual Studio multi-config build keeps its generator and places the executable under `build/release/Release/`. Launch with the matching Qt runtime environment described in the Windows guide.
-
-`deno task checks` runs the check lanes declared for the host platform. The native Swift suites are enabled on macOS and Linux; they remain platform-skipped on Windows because the check harness does not link its Swift test library there yet. The QML lanes are currently built only on macOS. Windows checks use the Release build tree. A selection that leaves no runnable check on the host exits with status 2 instead of passing.
+Native Swift suites run on macOS and Linux; Windows currently skips those suites because the check harness does not link its Swift test library there. QML lanes currently build only on macOS. Windows checks use Release by default. An empty selection exits 2 rather than passing. Prebuilt binaries can be run with `uv run --no-sync dev checks:run <binary>`.

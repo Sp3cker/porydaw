@@ -29,7 +29,7 @@ Framework mode stays **off**. This is an application, not a Qt module.
 When they conflict, the repo wins:
 
 - `AGENTS.md`, `CLAUDE.md`, `.omp/rules/`, and existing call-site style.
-- `deno task build:app` / `build:checks` / `verify`. Never invoke `cmake` / `cmake --build` directly.
+- `uv run --no-sync dev build:app` / `build:checks`. Never invoke `cmake` / `cmake --build` directly.
 - Widget geometry uses `layout::` (`fontPx`, `fontPxF`, `space`, `singlePixel`). Hard-coded pixel constants in widgets are a bug.
 - Headers already use `.h` and `.hpp`; match the file you are in. Do not mass-rename.
 - No QML. UI is Qt Widgets + Svg.
@@ -55,7 +55,7 @@ python3 .omp/vendor/qt-cpp-review/references/lint-scripts/qt_review_lint.py <fil
 1. Load the pack, then read the files you will change and their existing patterns.
 2. Make the smallest change that satisfies the request and the skill constraints.
 3. Re-run the linter and the six missions on the files you touched.
-4. If a focused harness exists for the change, run `deno task checks --filter <name>`. Skip project-wide suites unless asked.
+4. If a focused harness exists for the change, run `uv run --no-sync dev checks --filter <name>`. Skip project-wide suites unless asked.
 
 ## Output
 

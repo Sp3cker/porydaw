@@ -1,88 +1,54 @@
 ---
 name: verify
-description: Build porydaw and run in-repo harnesses through deno task. Use when verifying a change, running checks, or choosing a build/checks command.
+description: Build Porydaw and run in-repo harnesses through uv/Python. Use when verifying changes or choosing build/check commands.
 ---
 
-# Verifying porydaw changes
+# Verifying Porydaw changes
 
-Agents MUST use `deno task`. Do not invoke `cmake` / `cmake --build` directly.
-There is no `deno task build`.
+Agents use `uv run --no-sync dev`; never invoke CMake or Ninja directly. Provision each checkout/worktree with `uv sync --locked`, and repeat sync only after project/lock changes. Use `dev --help` to discover commands. CI's artifact jobs are the documented direct-CMake exception.
 
 ## Build
 
 ```bash
-deno task build:app       # porydaw app only, in build/debug
-deno task build:checks    # app + porydaw_checks + mid2agb, in build/debug
-deno task build:app --release  # same, in build/release
+uv run --no-sync dev build:app
+uv run --no-sync dev build:checks
+uv run --no-sync dev build:app --release
 ```
 
-Debug and Release are separate trees (`build/debug`, `build/release`). Prefer
-`build:checks` when you will run harnesses.
-
-A failed build prints the failing step, its errors, and
-`build/<config>/build.log`. Read that log for more detail; rebuilding prints
-nothing new.
+Debug, Release and ASAN use separate `build/debug`, `build/release`, `build/asan` trees. All use standard Ninja. Prefer `build:checks` before native harnesses. A failed build prints the failing phase, actionable errors and `build/<config>/build.log`; read that log rather than rerunning for details. Phase times and slowest new Ninja commands provide build attribution; parallel command durations are not a wall-time partition.
 
 ## Run harnesses
 
 ```bash
-# Normal source change: builds checks, then runs the affected harnesses.
-deno task checks --filter rollcheck
+uv run --no-sync dev checks --filter <name>
+uv run --no-sync dev checks:shell --filter <name>
+uv run --no-sync dev checks:qml --filter <name>
+uv run --no-sync dev checks:qml-roll --filter <name>
 ```
 
-Choose the narrowest verification that proves the changed behavior. For a
-source change, identify the affected harness or harnesses and run them with
-`deno task checks --filter <name>`; it builds `porydaw_checks` first. Exercise
-the actual changed behavior too when a harness alone cannot establish it.
+Choose the narrowest lane that proves the behavior. Exercise the changed path too when a harness cannot establish it. Run unfiltered checks for cross-cutting changes, plausible broader fallout or an explicit request, not by default. Failures print complete output; no verbose rerun is necessary.
 
-Run unfiltered `deno task checks` only for a cross-cutting change, after a
-failure that makes broader fallout plausible, when targeted checks leave
-material unresolved risk, or when the user explicitly requests full coverage.
-Do not broaden or repeat checks merely by default. A failing harness prints its
-complete output; do not rerun it with `--verbose` to see more.
-
-### Instruction-only changes
-
-Do not build the app or run harnesses automatically for documentation,
-skill, or instruction-only edits. Instead, validate the relevant Markdown or
-front-matter syntax, metadata, and changed link targets using the
-repository-provided check where one exists; otherwise inspect those affected
-elements directly. Run application verification only if the edit changes an
-executable contract or introduces unresolved risk that requires it.
-
-Do not:
-
-- run `./build/debug/porydaw --vgcheck` / `--viewcheck` / other `--*check` flags
-- copy a decomp tree to `/tmp` or `/tmp/scratch`
-- call `tools/run_checks.sh`
-
-Harnesses live in `src/checks/` and run from `porydaw_checks`. The Deno
-runner asks that binary for `--manifest`, gives each harness a private
-scratch path, and stages only the fixture files declared in the C++
-registry. Optional corpus: `PORYDAW_SAMPLE_CORPUS`.
-
-New coverage belongs in `src/checks/` (`*check.cpp` or a sibling file
-registered there). Do not stand up a scratch CMake project that compiles
-widgets out of tree.
-
-## Format
+`tools/porydaw_dev/checks.py` reads each binary's `--manifest`, stages only its declared fixtures in a private scratch path and removes that path afterward. Do not manually copy decomp trees or invoke retired application `--*check` flags. Optional sample corpus: `PORYDAW_SAMPLE_CORPUS`. Coverage belongs with the Swift/QML owner under `src/checks/`; follow AGENTS.md's native-boundary rules.
 
 ```bash
-deno task format            # swift-format on uncommitted Swift changes, deno fmt on tools/
-deno task format --check    # what the pre-commit hook runs
+# Prebuilt CI binary; no configure/build.
+uv run --no-sync dev checks:run /path/to/porydaw_checks --filter <name>
+# Python harness behavior and Ruff.
+uv run --no-sync dev tools:check
+# Standalone Swift backup storage, no app/Qt build.
+uv run --no-sync dev checks:backups
 ```
 
-## ASAN
-
-Memory bugs can pass silently in a normal build. CI's `asan-checks` job
-configures `build-asan` with `-DPORYDAW_ASAN=ON` and runs the raw runner,
-`tools/run_checks.ts build-asan/porydaw_checks`, directly.
-
-`deno task` cannot configure that tree. Do not invent a local ASAN cmake
-line unless the user asks. If `build-asan/porydaw_checks` already exists:
+## Format and ASAN
 
 ```bash
-deno run --allow-read --allow-write --allow-run \
-  --allow-env=ASAN_OPTIONS,DISPLAY,PORYDAW_SAMPLE_CORPUS \
-  tools/run_checks.ts build-asan/porydaw_checks --filter <name>
+uv run --no-sync dev format        # changed Swift lines via swift format; Python via Ruff
+uv run --no-sync dev format --check
+uv run --no-sync dev checks --asan --filter <name>
 ```
+
+ASAN is unavailable on Windows. Local ASAN uses `build/asan`; CI may pass its externally built ASAN binary to `checks:run`. Do not invent a direct-CMake command.
+
+## Instruction-only changes
+
+Do not build or run application harnesses for docs/skill-only changes. Inspect changed Markdown, metadata, links and executable examples; use an existing syntax check when available. Run application verification only if the edit changes an executable contract or leaves material runtime risk.

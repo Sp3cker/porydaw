@@ -53,7 +53,7 @@ function(add_porydaw_check_lane name)
     target_link_libraries(${name} PRIVATE ${CHECK_LINK_LIBRARIES})
 endfunction()
 
-# Keep QML hosts as plain build-root executables for run_checks.ts.
+# Keep QML hosts as plain build-root executables for the Python check runner.
 function(add_porydaw_check name)
     cmake_parse_arguments(PARSE_ARGV 1 CHECK "" "SWIFT_LANE;MODULE_NAME;AUTOMOC"
         "SOURCES;SWIFT_SOURCES;SWIFT_COMPILE_OPTIONS;SWIFT_LINK_LIBRARIES")
@@ -80,7 +80,7 @@ function(add_porydaw_check name)
     porydaw_link_linux_swift_runtime(${name}
         ${CHECK_SWIFT_LANE} PorydawApp QtBridge PorydawAppCommands PorydawAppAudio
         PorydawAppEventList PorydawDocument PorydawVoicegroup PorydawBackups PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
-    # run_checks.ts requires mid2agb beside the build-root harnesses.
+    # The Python check runner requires mid2agb beside the build-root harnesses.
     add_dependencies(${name} mid2agb)
 endfunction()
 

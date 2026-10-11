@@ -56,7 +56,7 @@ extension EditorQmlLane {
         "keyboardLabel", "selectionRing",
     ]
 
-    /// The fixture root `run_checks.ts` stages for `fixtureRootKind`
+    /// The fixture root the Python check runner stages for `fixtureRootKind`
     /// `decomp-project` (`src/checks/fixtures/decompproject`).
     static let profileFixtureRoot = "decompproject"
 

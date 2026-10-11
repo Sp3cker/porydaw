@@ -8,28 +8,30 @@ touching anything in this file's "do not" lists.
 ## Entry points
 
 ```bash
-deno task build:app   [--release|--asan]   # porydaw only            -> build/debug|release|asan
-deno task build:checks [--release|--asan]  # porydaw + porydaw_checks + mid2agb
-deno task checks ... [--asan]              # builds porydaw_checks, mid2agb, all_aotstats, then runs
-deno task checks:qml ... [--asan]          # editor drawer QML lane (same flags for checks:qml-roll, checks:shell)
-deno task checks:qml-aot [--release|--asan] # builds porydaw + all_aotstats, then the AOT ratchet
-deno task checks:backups                 # Foundation-only Swift package tests; no app/Qt build
+uv run --no-sync dev build:app [--release|--asan]    # app -> build/debug|release|asan
+uv run --no-sync dev build:checks [--release|--asan] # app + native checks + mid2agb
+uv run --no-sync dev checks ... [--release|--asan]   # native lanes and AOT ratchet
+uv run --no-sync dev checks:qml ...                 # drawer; also checks:qml-roll/checks:shell
+uv run --no-sync dev checks:qml-aot [--release|--asan]
+uv run --no-sync dev checks:backups                 # Foundation-only Swift package tests
 ```
 
 AGENTS.md § Build & checks is the task index; this file is the pipeline
 reference. For `checks:bridge`, `format`, and `setup` see that table.
 
+Provision once with `uv sync --locked`, including each new worktree and after lock/project changes. Warm commands use `--no-sync`; no implicit Python dependency resolution. `--help` loads only the command front end. See [INSTALL.md](../INSTALL.md) for native host prerequisites and optional checkout-local Qt provisioning.
+
 On macOS, native targets use the selected Qt framework's non-system search
 path. This keeps an older `/usr/local/include/Qt*` installation from
 shadowing Homebrew or checkout-local Qt headers during QML AOT compilation.
 
-Never call `cmake` or `ninja` directly; `tools/cli.ts` → `tools/build.ts:runBuild` does
-things a bare `cmake --build` does not:
+Never call `cmake` or `ninja` directly; `tools/porydaw_dev/cli.py` →
+`build.py:run_build` does things a bare `cmake --build` does not:
 
-1. **Configure only when needed** (`configure()`): compares the cache's build type,
-   compilers, `PORYDAW_BUILD_CHECKS`, ASAN, and the poryaaaa submodule revision; a
-   matching tree skips CMake entirely (no-op build: ~0.3 s).
-2. **Reconcile Swift objects** (`reconcileSwiftObjects()`): Swift's incremental driver
+1. **Configure only when needed** (`needs_configure`): compares cached build type,
+   compilers, checks, ASAN, Qt selection and canonical poryaaaa source. Matching
+   trees skip explicit configure; Ninja can still regenerate CMake internally.
+2. **Reconcile Swift objects** (`reconcile_swift_objects`): Swift's incremental driver
    reuses objects whenever sources are unchanged, even if compile flags changed, so a
    reconfigure that rewrites Swift flags would silently keep stale objects. The runner
    hashes each Swift compile edge's command line into
@@ -38,13 +40,29 @@ things a bare `cmake --build` does not:
 3. **Summarize**: only actionable lines are printed; everything is in
    `build/<cfg>/build.log`. Read that log on failure; rebuilding adds no detail.
 
+The Python runner reports environment, poryaaaa, explicit configure, Swift reconcile and Ninja phase wall times. It snapshots Ninja's log before/after each invocation and ranks only new command records, grouped by start/end/hash. Parallel command durations overlap: their sum is not elapsed time or a critical-path calculation. Full details stay in the build log.
+
+Migration smoke on Apple Silicon, Qt 6.11.2, shared QtBridge macro cache: fresh Debug app build 58 s; Release app 92.1 s (explicit configure 8.312 s, Ninja 83.679 s). An observed warm Debug no-op was 0.26 s wall, 0.011 s Ninja. These are single observations, not an A/B comparison against the older table. A native-check build attributed 67.825 s to AudioControllerChecks and 32.079 s to AudioAuditionChecks, exposing the slow consumer commands instead of charging everything to the harness.
+
+Bootstrap observation: uv 0.13.0 ARM64 archive 14,692,549 bytes in 0.778 s; managed Python 3.13.16 download 24.1 MiB; Ruff wheel 8.8 MiB. Default sync installs the project, Ninja and Ruff; the optional Qt group is absent until provisioning needs it. Cached locked offline sync completed in 0.15 s. Qt and the host compiler/SDK remain the larger environment costs; no claim that the complete environment is only the uv archive.
+
+The `Build` and `All checks` workflows run only on pushes to `fork-main`.
+Linux ASAN runs on the self-hosted Linux x64 `porydaw-ci` runner, retaining its
+`/mnt/ci/build-asan` tree with 12 build jobs, six Swift threads and check pool four.
+It runs Python harness tests before the native sweep, excluding windowing checks
+and QML lanes; those run in the GitHub-hosted macOS `All checks` job. The Linux
+release build also uses `porydaw-ci`; macOS/Windows artifact builds and the
+standalone Linux harness-test job remain GitHub-hosted.
+Startup benchmark commands remain available, but their synthetic process and
+statistics tests are excluded from the harness suite.
+
 ## Standalone backup module
 
 `src/swift/backups` is the `PorydawBackups` Swift 6 package. It depends only on
 Foundation. SwiftPM and the application's CMake target compile the same
 `MidiBackupStore.swift`; no copied implementation or app test harness is involved.
 
-From the repository, run `deno task checks:backups`. Outside the app build, run:
+From the repository, run `uv run --no-sync dev checks:backups`. Outside the app build, run:
 
 ```bash
 swift test --package-path src/swift/backups
@@ -72,7 +90,7 @@ One-source incremental app-build check on 2026-10-07, Apple Silicon, Debug:
 | Standalone module | 0.59 s | PorydawBackups, 1 source |
 
 Measured once per layout with `touch MidiBackupStore.swift` followed by
-`/usr/bin/time -p deno task build:app`, with no concurrent builds. The logs showed
+the then-current Deno harness under `/usr/bin/time -p`, with no concurrent builds. The logs showed
 only the named Swift module rebuilding; this is an unchanged-interface
 invalidation measurement, not a clean-build benchmark.
 
@@ -87,7 +105,7 @@ does not remove legitimate copy-on-write allocations for retained readers.
 
 ## Allocation verification
 
-Build Release before profiling (`deno task build:checks --release`). Compare
+Build Release before profiling (`uv run --no-sync dev build:checks --release`). Compare
 identical fixtures and operation counts with Instruments **Allocations**. In its
 Statistics export, `All Heap Allocations` → `count-total` and `total-bytes`
 include allocations that were later freed. A surviving-object List export
@@ -101,9 +119,9 @@ The MIDI Event List formats and publishes rows only while open. Closing it
 unloads the QML page and leaves the last published rows untouched; hidden
 document and transport updates do not format or publish rows. Reopening
 rebuilds the selected track's mapped MIDI chunk from the current document.
-Cover this behavior with `deno task checks:shell --filter shell-event-list`.
+Cover this behavior with `uv run --no-sync dev checks:shell --filter shell-event-list`.
 Tab return and background reload are covered by
-`deno task checks:shell --filter shell-tabs-open-select --qt ShellTabs::test_eventListRowsResumeWithTab`.
+`uv run --no-sync dev checks:shell --filter shell-tabs-open-select --qt ShellTabs::test_eventListRowsResumeWithTab`.
 Compare CPU-profile stacks under keyboard commands separately from loading
 and opening the page.
 
@@ -111,8 +129,8 @@ Unchanged bank rebinds skip Voicegroup row derivation. Bank edits, loading and
 binding transitions, nil-bind used-mark clears, and catalog callbacks still
 refresh rows. Headers, selector, used marks, and editor state update independently.
 Bank titles reuse cached `000`–`127` labels and Swift strings instead of printf.
-Cover with `deno task checks --filter swiftcore-projectsession` and
-`deno task checks:shell --filter shell-voicegroup`.
+Cover with `uv run --no-sync dev checks --filter swiftcore-projectsession` and
+`uv run --no-sync dev checks:shell --filter shell-voicegroup`.
 
 ## Where the time goes
 
@@ -147,7 +165,7 @@ modules remain whole-module optimized. `CMAKE_Swift_NUM_THREADS` limits Swift
 driver parallelism; Ninja's `-j` does not limit frontends within a Swift build
 edge. Configure both limits explicitly to avoid nested oversubscription.
 
-`deno task build:checks` wall time, Debug, before (six chained interop lanes,
+Pre-uv `build:checks` wall time, Debug, before (six chained interop lanes,
 support → media → edit → roll → pages → project → dispatcher) and after:
 
 | scenario | before | after |
@@ -246,15 +264,15 @@ one legitimate trigger for the QML cascade; expect 30–60 s.
 
 ## QML AOT statistics and the ratchet
 
-`tools/qml_aot.ts` reads `build/<cfg>/.rcc/qmlcache/module_*.aotstats` and compares
+`tools/porydaw_dev/qml_aot.py` reads `build/<cfg>/.rcc/qmlcache/module_*.aotstats` and compares
 per-file qmlsc rejection counts against `tools/qml_aot_baseline.json`. Qt only writes
 those files for the `all_aotstats` target, which is not part of `all`; the `checks`
 lane and `checks:qml-aot` therefore build it explicitly. Qt's own aggregate
 `all_aotstats.aotstats` repeats every module and is ignored by name. "Missing or empty
 AOT statistics" means something built `porydaw` without `all_aotstats`.
 
-When QML or exposed Swift types change legitimately: `deno task qml-aot:baseline`
-(the only task permitted to write `tools/`), then review the diff — rejections should
+When QML or exposed Swift types change legitimately: `uv run --no-sync dev qml-aot:baseline`,
+then review the baseline diff — rejections should
 be explainable. Keep component references and QObject return values explicitly
 typed where qmlsc needs them: `EventListPage` casts its child `page` bindings and
 row handles, compiling 116/123 entries on Qt 6.11 without a baseline update.
@@ -288,7 +306,7 @@ it is not a saved preference.
 
 Measured 2026-10-08 on Apple Silicon, Debug, with no concurrent builds: each sample
 ran `touch src/swift/app/history/UndoHistoryPanel.swift` then
-`/usr/bin/time -p deno task build:app`. This measures interface-preserving
+timed an app build through the pre-uv harness. This measures interface-preserving
 recompilation; public-interface changes can still rebuild downstream modules.
 
 `PorydawVoicegroup` (`src/swift/voicegroup/`, 20 files, 4.6k lines, no Swift
@@ -302,12 +320,12 @@ isolation and the benchmark below, not the floor.
 Swift incremental state is mtime-based: `touch`, `git checkout` across branches, or
 `git stash pop` recompile whole modules even when content is identical. Changing a
 module's compile flags (including via `-D` defines) drops its objects (see
-`reconcileSwiftObjects`), which is intended.
+`reconcile_swift_objects`), which is intended.
 
 ## Voicegroup loading: parity and performance gate
 
 Voicegroups are parsed, resolved and assembled in Swift (`PorydawVoicegroup`);
-C keeps only the byte-span sample decoders and the engine. `deno task checks
+C keeps only the byte-span sample decoders and the engine. `uv run --no-sync dev checks
 --filter projectstore-parity` loads every hub voicegroup through the reference
 C loader and the Swift `BankBuilder` and asserts byte-identical banks (tones,
 names, keysplit tables, sub-banks, decoded sample bytes). Set
@@ -332,24 +350,24 @@ outputs, `free`, POSIX syscalls) are exempt and marked in code.
 
 1. Idle machine. Builds and benchmarks taken during or right after another build are
    30–80 % slower and not comparable.
-2. Fresh-tree time: `deno task worktree:create -- <name> --base <branch>` from the main
-   checkout, then `time deno task build:app` inside it, then
+2. Fresh-tree time: `uv run --no-sync dev worktree:create <name> --base <branch>` from the main
+   checkout, then `uv sync --locked` and `time uv run --no-sync dev build:app` inside it, then
    `git worktree remove --force .worktrees/<name> && git branch -D feature/<name>`.
    Check `build/debug/build.log` for the cache-hit lines above.
-3. Incremental time: append `// bench` to a file, `time deno task build:app`, revert,
+3. Incremental time: append `// bench` to a file, `time uv run --no-sync dev build:app`, restore,
    build again. Compare against the table.
-4. Rank edges when something is slow:
-   `awk 'NR>1 && NF>=4 {print $2-$1"\t"$1"\t"$2"\t"$4}' build/debug/.ninja_log | sort -rn | head`
-   (the log spans several builds; the start/end columns disambiguate).
-5. Gates: `deno task checks`, `deno task checks:shell`, `deno task checks:qml-aot`
+4. Rank commands with the runner's slowest-new-commands line and compare its phase
+   wall times. Do not sum overlapping Ninja durations or rank the entire historical log.
+5. Gates: `uv run --no-sync dev checks`, `uv run --no-sync dev checks:shell`,
+   `uv run --no-sync dev checks:qml-aot`
    all green before merging anything in `cmake/`, `tools/`, or the QtBridge patch.
 
 ## Startup benchmarking
 
-`deno task build:app --release && deno task bench:startup --until editor-frame` measures
+`uv run --no-sync dev build:app --release && uv run --no-sync dev bench:startup --until editor-frame` measures
 spawn → native frame on the saved-session path. Serial runs of two binaries are not
 comparable (see point 1 above): copy the baseline bundle outside `build/` before
-rebuilding and use `deno task bench:startup:ab --until editor-frame --stages
+rebuilding and use `uv run --no-sync dev bench:startup:ab --until editor-frame --stages
 old=<baseline exe> new=<exe>`, which alternates launches and prints per-stage
 medians. Known reference points (idle machine, warm, Release, restore path):
 first-frame ≈ 250 ms, workspace-frame ≈ 440 ms, editor-frame ≈ 560 ms; under a

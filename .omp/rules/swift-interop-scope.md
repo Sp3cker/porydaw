@@ -11,4 +11,4 @@ Module structure, not expression shape, dominated this repo's Swift compile time
 - Core checks: a check needing no app/QtBridge type goes in `swift_core_check_logic` (interop-free, builds beside the app); shared fixtures go in `swift_core_check_support`; only app-facing checks go in `swift_core_check`.
 - No chains of `@_exported` modules: six chained check lanes built serially (12 s); flat interop-free modules cut a PorydawCore API edit's check build 27.9 → 19 s. Use `@_exported` only as a module-wide import of a stable lower module.
 - Never copy a large imported C struct by value (`let bank = pointer.pointee`): one `LoadedVoiceGroup` copy cost 57 s in the SendNonSendable SIL pass. Read fields through the pointer.
-- Judge a structure change by `deno task build:checks` wall time for a declaration edit, not by per-file attribution.
+- Judge a structure change by `uv run --no-sync dev build:checks` wall time for a declaration edit, not by per-file attribution.

@@ -15,9 +15,9 @@ Pick a surface, not a ledger. Examples: Event List page, Songs dock,
 timeline scrollbar, pitch bend popup, automation node drag. One task, one
 branch, and one commit series close one surface.
 
-1. **Read the spec.** Run
-   `deno task proof sites --area <area> --status GAP` (also run it with
-   `PARTIAL`). Sort each row into one of three buckets:
+1. **Read the spec.** Read the affected surface's ledger directly and inspect
+   its `GAP` and `PARTIAL` rows. The proof-reader/anchor tools are retired.
+   Sort each row into one of three buckets:
    - **Behavior**: an observable outcome that users or callers depend on.
      Port it as a Swift or QML check.
    - **Representation**: the row pins C++/Qt-widget internals, such as
@@ -32,11 +32,11 @@ branch, and one commit series close one surface.
    `VoiceListController`, and others). Adapt the original QML instead of
    duplicating it.
 3. **Prove it.** Write the behavior checks in the same branch. Run the
-   covering lane (`deno task checks --filter <lane>`, `checks:shell`,
-   `checks:qml`, or `checks:qml-roll`), then run
-   `deno task proof check --executed`.
+   covering lane (`uv run --no-sync dev checks --filter <lane>`, `checks:shell`,
+   `checks:qml`, or `checks:qml-roll`), then inspect the ledger correspondence
+   against the exact executing predicates and observed result.
 4. **Update rows only in the same commit** as the code and checks that
-   prove them. Use `deno task proof:edit` for each row. A row becomes
+   prove them. Make targeted direct edits; there is no proof editor command. A row becomes
    `MATCHED` only when executed evidence supports it. A mapping that is
    only structurally equivalent stays `PARTIAL`.
 
@@ -57,8 +57,8 @@ Closed rows (`MATCHED`, `RETIRED-*`, `NATIVE-*`) carry header +
 `Anchor:` only. `GAP`/`PARTIAL`/`DEFERRED` rows keep the full spec form.
 Never paste C++ or Swift code back into closed rows; cite the pinned
 revision instead (`git show <Reference revision>:<Original path>`).
-`proof:compact` is the only bulk rewriter and runs post-merge, never
-inside a feature lane.
+There is no bulk proof rewriter. Preserve provenance and unresolved rows;
+make only task-scoped edits to the surface whose behavior is being proved.
 
 ## Forbidden
 
