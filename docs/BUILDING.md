@@ -19,6 +19,10 @@ deno task checks:backups                 # Foundation-only Swift package tests; 
 AGENTS.md § Build & checks is the task index; this file is the pipeline
 reference. For `checks:bridge`, `format`, and `setup` see that table.
 
+On macOS, native targets use the selected Qt framework's non-system search
+path. This keeps an older `/usr/local/include/Qt*` installation from
+shadowing Homebrew or checkout-local Qt headers during QML AOT compilation.
+
 Never call `cmake` or `ninja` directly; `tools/cli.ts` → `tools/build.ts:runBuild` does
 things a bare `cmake --build` does not:
 

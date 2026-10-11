@@ -3,6 +3,9 @@ build-*/
 .cache/
 .build/
 .swiftpm/
+.venv/
+.ruff_cache/
+__pycache__/
 compile_commands.json
 CMakeUserPresets.json
 *.user
