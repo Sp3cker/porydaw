@@ -41,12 +41,6 @@ jobs:
       - name: Cache C/C++ objects
         uses: mozilla-actions/sccache-action@v0.0.9
 
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: "6.11.*"
-          cache: true
-
       - name: Configure
         run: >-
           cmake -S . -B build -G Ninja
