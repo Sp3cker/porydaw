@@ -106,19 +106,20 @@ jobs:
             --plugin qt \
             --output appimage
 
-      - name: Set up Deno
-        uses: denoland/setup-deno@v2
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          deno-version: v2.x
+          version: "0.13.0"
+      - run: uv sync --locked --no-dev
 
       # Proves the bundle is self-contained: the first QML frame on Xvfb with no Qt paths set.
       - name: Launch packaged porydaw
         run: |
           command -v xvfb-run || sudo apt-get install -y --no-install-recommends xvfb
-          deno_bin="$(command -v deno)"
+          dev_bin="$PWD/.venv/bin/dev"
           env -u QT_PLUGIN_PATH -u QML2_IMPORT_PATH -u LD_LIBRARY_PATH PATH=/usr/bin:/bin \
-            xvfb-run -a "$deno_bin" run --allow-read --allow-run tools/startup_bench.ts \
-            --runs 1 --timeout-ms 60000 --budget-ms 60000 --binary AppDir/usr/bin/porydaw
+            xvfb-run -a "$dev_bin" bench:startup \
+            --runs 1 --timeout-ms 60000 --binary AppDir/usr/bin/porydaw
 
       - name: Prep Release Directory
         run: |
@@ -258,13 +259,14 @@ jobs:
           aqtsource: git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7
           arch: win64_msvc2022_64
 
-      - name: Set up Deno
-        uses: denoland/setup-deno@v2
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          deno-version: v2.x
+          version: "0.13.0"
+      - run: uv sync --locked --no-dev
 
       - name: Patch Qt for Swift's Clang importer
-        run: deno run --allow-read --allow-write tools/qt_version_number_patch.ts "$env:QT_ROOT_DIR"
+        run: uv run --no-sync dev qt:patch "$env:QT_ROOT_DIR"
 
       - name: Set up MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
@@ -291,10 +293,10 @@ jobs:
       - name: Launch staged porydaw.exe
         shell: pwsh
         run: |
-          $deno = (Get-Command deno).Source
+          $dev = (Resolve-Path .venv\Scripts\dev.exe).Path
           $env:Path = "$env:SystemRoot\System32;$env:SystemRoot"
           Remove-Item Env:QT_PLUGIN_PATH, Env:QML2_IMPORT_PATH -ErrorAction SilentlyContinue
-          & $deno run --allow-read --allow-run tools/startup_bench.ts --runs 1 --timeout-ms 60000 --budget-ms 60000 --binary "$env:BUILD_NAME\porydaw.exe"
+          & $dev bench:startup --runs 1 --timeout-ms 60000 --binary "$env:BUILD_NAME\porydaw.exe"
           if ($LASTEXITCODE -ne 0) { throw "porydaw.exe did not reach its first frame" }
 
       - name: Zip Release Directory

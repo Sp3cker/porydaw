@@ -14,14 +14,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  setup-linux:
+  tools-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: denoland/setup-deno@v2
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          deno-version: v2.x
-      - run: deno task setup:check
+          version: "0.13.0"
+      - run: uv sync --locked
+      - run: uv run --no-sync dev tools:check
 
   checks-macos:
     runs-on: xcode-27
@@ -31,11 +32,12 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-      - uses: denoland/setup-deno@v2
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          deno-version: v2.x
+          version: "0.13.0"
+      - run: uv sync --locked
       - name: Standalone backup tests
-        run: deno task checks:backups
+        run: uv run --no-sync dev checks:backups
       - uses: jurplel/install-qt-action@v4
         with:
           version: "6.11.*"
@@ -48,35 +50,33 @@ jobs:
           "$HOME/.swiftly/bin/swiftly" init --skip-install --assume-yes --no-modify-profile --quiet-shell-followup
           "$HOME/.swiftly/bin/swiftly" install --use --assume-yes "$(cat .swift-version)"
           "$HOME/.swiftly/bin/swiftc" --version
-      - name: Setup tests
-        run: deno task setup:check
+      - name: Harness tests
+        run: uv run --no-sync dev tools:check
       - name: Formatting
         if: ${{ !cancelled() }}
-        run: deno task format --check
+        run: uv run --no-sync dev format --check
       - name: Build checks
         id: build
         if: ${{ !cancelled() }}
-        run: deno task build:checks
+        run: uv run --no-sync dev build:checks
       - name: Native checks including opt-in checks
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: deno task checks --all --verbose --pool=1
+        run: uv run --no-sync dev checks --all --verbose --pool=1
       - name: Shell QML checks
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: deno task checks:shell --all --verbose --pool=1
+        run: uv run --no-sync dev checks:shell --all --verbose --pool=1
       - name: Drawer QML checks
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: deno task checks:qml --all --verbose --pool=1
+        run: uv run --no-sync dev checks:qml --all --verbose --pool=1
       - name: Roll QML checks
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: deno task checks:qml-roll --all --verbose --pool=1
+        run: uv run --no-sync dev checks:qml-roll --all --verbose --pool=1
       - name: Bridge surface
         if: ${{ !cancelled() }}
-        run: deno task checks:bridge
-      - name: Retain check logs and scratch
+        run: uv run --no-sync dev checks:bridge
+      - name: Retain native build log
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: all-checks-macos
-          path: |
-            build/debug/build.log
-            build/debug/checks-scratch/
+          path: build/debug/build.log

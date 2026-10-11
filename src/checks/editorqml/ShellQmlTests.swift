@@ -53,7 +53,7 @@ enum ShellQmlLane {
         if let separator = payload.firstIndex(of: "--qt") {
             payload = Array(payload[(separator + 1)...])
         }
-        // run_checks always forwards Qt options (-maxwarnings); an entry's own
+        // The Python check runner always forwards Qt options (-maxwarnings); an entry's own
         // selectors apply unless the caller named test functions itself.
         if !payload.contains(where: { $0.contains("::") }) {
             payload += entry.testFunctions

@@ -27,5 +27,5 @@ Known-type `==`/`&&` chains, `optional.map { … } == true`, short `Data`/`Strin
 
 ## Guard and constraints
 
-- Debug builds warn past 50 ms per expression in interop-free modules; `porydaw_swift_qt_interop` raises interop modules and their importers to 1000 ms. `deno task build:*` prints `warning: expression took Nms to type-check`; fix the shape with the table above.
+- Debug builds warn past 50 ms per expression in interop-free modules; `porydaw_swift_qt_interop` raises interop modules and their importers to 1000 ms. `uv run --no-sync dev build:app` and `build:checks` print `warning: expression took Nms to type-check`; fix the shape with the table above.
 - Preserve ordering, short-circuiting, optional semantics and numeric bounds. Never trade runtime allocation or copies for compile time.

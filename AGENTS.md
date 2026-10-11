@@ -28,8 +28,8 @@ src/
   app/             — native host C ABI: clipboard, QML engine, item cursor, Qt main executor
   render/          — display-list boundary (see below)
   audio/           — C: miniaudio device, sample codec, swift_playback.h playback ABI
-  checks/          — harnesses: swift_core_check (interop-free SwiftCoreCheckSupport/SwiftCoreCheckLogic modules + interop SwiftCoreCheck), QML lanes (editorqml/, rollqml/), proof ledgers
-tools/             — Deno build/check/format/proof runners
+  checks/          — harnesses: swift_core_check (interop-free SwiftCoreCheckSupport/SwiftCoreCheckLogic modules + interop SwiftCoreCheck), QML lanes (editorqml/, rollqml/)
+tools/             — uv/Python build/check/format/profile runners, Swift generators
 external/          — poryaaaa (submodule), dr_libs, stb
 docs/plans/        — implementation plans; one directory per plan
 ```
@@ -69,7 +69,7 @@ window command. No second dispatcher, synthetic forwarding, or focus memory.
 3. `lsp definition/references` for symbols — follows re-exports text search misses.
 4. Range reads, never whole files.
 
-Swift LSP (sourcekit-lsp) has no background indexing: run `deno task lsp:swift`
+Swift LSP (sourcekit-lsp) has no background indexing: run `uv run --no-sync dev lsp:swift`
 after CMake reconfigures or Swift edits — stale references/rename lie silently;
 rename needs `timeout >= 120` cold. References empty while hover works means the
 server predates the index: kill `sourcekit-lsp`; the next query cold-starts.
@@ -95,7 +95,7 @@ tidy a folder.
 
 ## Worktrees and Git
 
-Separate worktree on request: `deno task worktree:create -- <name> [--base fork-main]`
+Separate worktree on request: `uv run --no-sync dev worktree:create <name> [--base fork-main]`
 (initializes the main checkout's shared `poryaaaa`; the linked worktree has no
 nested submodule checkout).
 
@@ -104,39 +104,39 @@ handing off.
 
 ## Build & checks
 
-Agents use `deno task` only; never `cmake`/`ninja` directly. `.github/workflows/build.yml` and `release.yml` are the only permitted direct `cmake` callers (sccache, `cmake --install`).
+Agents use `uv run --no-sync dev` only; never `cmake`/`ninja` directly. Run `uv sync --locked` once per checkout/worktree and after `pyproject.toml`/`uv.lock` changes; warm commands never implicitly sync. `.github/workflows/build.yml` and `release.yml` are the only permitted direct `cmake` callers (sccache, `cmake --install`).
 
 | Task + flags | What it builds / runs | When an agent needs it |
 |---|---|---|
-| `build` | prints task help | discovering task names |
+| `--help` | prints command help without loading implementations | discovering commands |
 | `build:app [--release\|--asan]` | app only (`build/debug\|release\|asan`) | before running the app or a QML lane after Swift edits |
 | `build:checks [--release\|--asan]` | app + `porydaw_checks` + mid2agb | after `src/checks/**` or CMake edits |
-| `checks [--asan] [--filter <name>] [--exclude <name>] [--all] [--no-windowing-checks] [--verbose] [--pool=<n>] [--qt ...]` | builds checks, runs native harnesses; `--filter swiftcore` runs the `swift_core_check` suites | Swift logic verification; `--filter <suite>` for one slice |
+| `checks [--release\|--asan] [--filter <name>] [--exclude <name>] [--all] [--no-windowing-checks] [--verbose] [--pool=<n>] [--qt ...]` | builds checks, runs native harnesses; `--filter swiftcore` runs the `swift_core_check` suites | Swift logic verification; `--filter <suite>` for one slice |
 | `checks:qml` (same options) | editor drawer QML lane | drawer QML surface edits |
 | `checks:qml-roll` (same options) | Swift roll window QML lane | roll QML edits |
 | `checks:shell` (same options) | production `ShellWindow` QML lanes | shell QML edits |
+| `checks:run <binary>` (same selection flags, no build flags) | run a prebuilt manifest producer | prebuilt CI binaries or runner-only verification |
+| `checks:backups` | standalone Swift backup package tests | backup storage changes without an app/Qt build |
 | `checks:bridge` | QtBridge surface guard | after any `@QtBridgeable`/QML surface change |
 | `bridge:baseline` | rewrites the bridge baseline | only when a surface change is intended |
 | `checks:qml-aot` | builds app + `all_aotstats`, runs the AOT ratchet | after `src/ui/**` or exposed-type edits |
 | `qml-aot:baseline` | rewrites the AOT baseline | only when a surface change is intended |
-| `format [--check] [--base <ref>] [files...]` | swift-format on changed lines, `deno fmt` on `tools/` | before handoff; `--check` for the CI shape |
-| `proof check [--executed]` | ledger structure / health / execution evidence | after check or assertion edits |
-| `proof:edit` | ledger row editor | renaming or moving proof rows |
-| `proof:compact` | ledger compactor | trimming resolved ledger bulk |
-| `setup` | fresh-machine setup | fresh machines / CI |
-| `setup:check` | setup tests (`setup_test.ts`, `setup_swift_test.ts`) | after `tools/**` edits, with `format --check` |
+| `format [--check] [--base <ref>] [--whole] [files...]` | Swift driver formatting on changed lines; Ruff on Python; whole Swift formatting requires named files | before handoff; `--check` for CI |
+| `setup [--qt-version 6.11.<patch>]` | validates host tools, provisions local Qt, builds Release | fresh checkouts; host prerequisites must already exist |
+| `qt:patch <prefix>` | patches a Windows Qt kit for Swift's importer | Windows CI's externally installed Qt |
+| `tools:check` | Ruff lint/format check and Python behavioral tests | after `tools/**` edits |
 | `lsp:swift` | rebuilds the sourcekit index | after CMake reconfigure / Swift edits |
-| `worktree:create -- <name> [--base fork-main]` | creates a linked worktree | separate worktree on request |
+| `worktree:create <name> [--base fork-main]` | creates a linked worktree using shared poryaaaa | separate worktree on request; sync inside it afterward |
 | `bench:startup` | startup benchmark to a frame marker | startup-performance questions |
 | `bench:startup:ab` | alternating A/B startup comparison | comparing two builds |
 | `xctrace` | Instruments traces via the skill | trace-driven profiling |
 
 Which build for which slice:
 
-- Edit in `src/swift/{core,project,playback,sample,document}` or `src/swift/app/**` → `deno task build:app`, then the matching lane: `checks --filter <suite>` for Swift logic, `checks:shell` / `checks:qml` / `checks:qml-roll` for QML surfaces, `checks:bridge` for bridged declarations.
+- Edit in `src/swift/{core,project,playback,sample,document}` or `src/swift/app/**` → `uv run --no-sync dev build:app`, then the matching lane: `checks --filter <suite>` for Swift logic, `checks:shell` / `checks:qml` / `checks:qml-roll` for QML surfaces, `checks:bridge` for bridged declarations.
 - Edit in `src/checks/**` → `build:checks` + the lane.
 - Edit in `src/ui/**` → `checks:shell|qml|qml-roll` + `checks:qml-aot`.
-- Edit in `tools/**` → `setup:check` + `format --check`.
+- Edit in `tools/**` → `tools:check` + `format --check`.
 - CMake edit → `build:checks` (reconfigure is automatic; flag edits drop stale Swift objects).
 
 A failed build prints its errors and `build/<config>/build.log`; read the log,
@@ -145,7 +145,7 @@ rebuilding prints nothing new.
 Plans put the exact covering verification commands in each task brief;
 implementers reuse them unless scope changes or a command proves stale.
 
-Project-backed harnesses use checked-in fixtures; `tools/run_checks.ts` stages
+Project-backed harnesses use checked-in fixtures; `tools/porydaw_dev/checks.py` stages
 what each check binary declares in `--manifest` into a private scratch path.
 Checks testing human input can fail while the user is using the desktop; do not
 stress-test them repeatedly as troubleshooting.
@@ -158,11 +158,12 @@ Proof ledgers (`src/checks/**/proof.*.txt`) are per-surface specs, not a work
 stream. Follow `.omp/rules/proof-ledger-workflow.md`: build one Swift/QML
 surface at a time; edit only its rows, in the commit whose code and checks
 prove them. No standalone reconciliation, re-pinning, or gap-closing passes.
+The proof reader/editor/compactor and executed-evidence artifact are retired. Inspect and edit any affected ledger directly; there is no automated proof command.
 
 ### Windows
 
 MSVC build: `msvc2022_64` Qt kit from an "x64 Native Tools" / Developer
-PowerShell. Before launching `build\debug\Release\porydaw.exe`, in the same
+PowerShell. Before launching `build\release\porydaw.exe`, in the same
 process set `$env:Path = "$qt\bin;" + $env:Path`, `$env:QT_PLUGIN_PATH =
 "$qt\plugins"`, `$env:QML2_IMPORT_PATH = "$qt\qml"`, then `Start-Process` it
 from that directory. A `Qt6*.dll`/`vcruntime140*.dll` popup or an immediate

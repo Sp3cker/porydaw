@@ -97,7 +97,7 @@ else()
 endif()
 
 # AddressSanitizer instruments both Swift and native code in an isolated tree.
-# Configure and build with: deno task build:checks --asan
+# Configure and build with: uv run --no-sync dev build:checks --asan
 option(PORYDAW_ASAN "Build with AddressSanitizer" OFF)
 option(PORYDAW_BUILD_CHECKS "Build the porydaw check executable" ON)
 if(PORYDAW_ASAN)

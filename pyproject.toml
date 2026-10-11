@@ -11,6 +11,9 @@ dev = "porydaw_dev.cli:main"
 dev = ["ruff==0.17.0"]
 qt = ["aqtinstall"]
 
+[tool.uv]
+required-version = ">=0.13.0"
+
 [tool.uv.sources]
 aqtinstall = { git = "https://github.com/miurahr/aqtinstall.git", rev = "076e1659807d0b362a3ed684d54c2e9c775eb9c7" }
 
@@ -24,7 +27,7 @@ module-name = "porydaw_dev"
 
 [tool.ruff]
 target-version = "py313"
-include = ["tools/porydaw_dev/**/*.py", "tools/tests/**/*.py", "pyproject.toml"]
+include = ["tools/porydaw_dev/**/*.py", "tools/tests/**/*.py", "tools/gen_swift_compdb.py", "pyproject.toml"]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I", "UP", "B"]

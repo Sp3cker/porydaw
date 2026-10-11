@@ -112,8 +112,8 @@ separate batch boundaries, not a condition of task completion.
   `deepseek/deepseek-flash:max` and owns only assigned proof files.
 - If the brief requires proof edits but the controller delegates them, treat
   the implementer's proof-pending result as a handoff, not a completed task.
-  Accept DONE only after the ledger agent finishes, `deno task proof check`
-  passes, all exact `A###`/`S###` links and hashes have been reviewed, and
+  Accept DONE only after the ledger agent finishes, ledger structure and
+  all exact `A###`/`S###` links and hashes have been reviewed, and
   the focused check evidence covers the settled sources. Include both
   writers' files and results in the same task review package; do not
   silently drop a `GAP`/`PARTIAL` or infer parity from proof parsing.

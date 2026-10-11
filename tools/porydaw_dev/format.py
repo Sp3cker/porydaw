@@ -78,7 +78,10 @@ def run(check: bool, base: str, files: list[Path], whole: bool) -> int:
                 "ruff",
                 "format",
                 *(["--check"] if check else ["--quiet"]),
-                *(python_files or ["tools/porydaw_dev", "tools/tests"]),
+                *(
+                    python_files
+                    or ["tools/porydaw_dev", "tools/tests", "tools/gen_swift_compdb.py"]
+                ),
             ],
             check=False,
         )

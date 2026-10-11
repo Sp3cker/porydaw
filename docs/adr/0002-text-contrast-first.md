@@ -64,7 +64,7 @@ text with `opacity`; use `secondaryText`.
 - Rendered audit `shell-text-contrast`: `src/checks/editorqml/
   tst_TextContrast.qml` plus `TextContrastAudit.js` grabs real frames and
   measures each visible text item against the dominant surface pixels behind
-  it. Run `deno task verify:shell --filter shell-text-contrast --verbose`.
+  it. Run `uv run --no-sync dev checks:shell --filter shell-text-contrast --verbose`.
   New surfaces and popups must be reachable by that audit.
 
 ## Consequences

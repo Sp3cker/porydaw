@@ -390,8 +390,21 @@ def main() -> int:
                 ).returncode
             case "tools:check":
                 for args in (
-                    ["ruff", "check", "tools/porydaw_dev", "tools/tests"],
-                    ["ruff", "format", "--check", "tools/porydaw_dev", "tools/tests"],
+                    [
+                        "ruff",
+                        "check",
+                        "tools/porydaw_dev",
+                        "tools/tests",
+                        "tools/gen_swift_compdb.py",
+                    ],
+                    [
+                        "ruff",
+                        "format",
+                        "--check",
+                        "tools/porydaw_dev",
+                        "tools/tests",
+                        "tools/gen_swift_compdb.py",
+                    ],
                     [sys.executable, "-m", "unittest", "discover", "-s", "tools/tests"],
                 ):
                     result = subprocess.run(args, check=False)

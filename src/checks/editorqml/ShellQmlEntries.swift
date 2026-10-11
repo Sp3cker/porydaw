@@ -5,7 +5,7 @@ enum ShellQmlRegistry {
         let name: String
         let inputFileName: String
         let fixtureFiles: [String]
-        /// run_checks.ts windowing: "offscreen", or "window-system" for real
+        /// Python check-runner windowing: "offscreen", or "window-system" for real
         /// focus/activation delivery (run serially, never beside other windows).
         var windowing = "offscreen"
         /// Qt Quick Test selectors run when the caller passes none, so one

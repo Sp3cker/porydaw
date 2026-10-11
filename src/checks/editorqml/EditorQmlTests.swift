@@ -12,8 +12,7 @@ import QtBridgeCpp
 /// with separate manifest entries and the same Qt Quick Test executable.
 @main
 enum EditorQmlLane {
-    /// The manifest entry `tools/run_checks.ts --filter editorqml-drawer`
-    /// selects.
+    /// Manifest entry selected with `uv run --no-sync dev checks:qml --filter editorqml-drawer`.
     static let entryName = "editorqml-drawer"
 
     /// The drawer entry's primary suite inside `EditorQmlPaths.testDirectory`.
@@ -39,7 +38,7 @@ enum EditorQmlLane {
             return fail("usage: \(entryName) <scratch> [--qt <qt quick test arguments>…]")
         }
         // The same terminal separator `porydaw_checks` uses: everything after
-        // `--qt` is the Qt Quick Test payload the Deno runner forwarded.
+        // `--qt` is the Qt Quick Test payload the Python runner forwarded.
         var payload = Array(laneArguments.dropFirst())
         if let separator = payload.firstIndex(of: "--qt") {
             payload = Array(payload[(separator + 1)...])
@@ -281,7 +280,7 @@ enum EditorQmlLane {
     }()
 
     /// Entries use the route101 fixture set from `src/checks/checkcatalog.cpp`
-    /// and the same `run_checks.ts` manifest shape as the native checks.
+    /// and the same Python check-runner manifest shape as the native checks.
     private static var manifestLine: String {
         let files = fixtureFiles.map { "\"" + $0 + "\"" }.joined(separator: ",")
         let entry =
