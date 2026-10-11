@@ -183,10 +183,30 @@ extension PianoGrid {
 
     @QtIgnored
     func stopAudition() {
+        velocityAuditionTask?.cancel()
+        velocityAuditionTask = nil
         guard let key = keyboardAuditionKey, let track = keyboardAuditionTrack else { return }
         onAudition?(track, key, 0)
         keyboardAuditionKey = nil
         keyboardAuditionTrack = nil
         keyboardTransposeAuditionActive = false
+    }
+
+    /// Intentional user-requested feature: velocity drags replay the held note at most once per 120 ms
+    /// (per-step replays stutter; the engine fixes velocity at note-on). Release cancels a pending replay.
+    @QtIgnored
+    func scheduleVelocityAudition() {
+        guard velocityAuditionTask == nil else { return }
+        velocityAuditionTask = Task { @MainActor [weak self] in
+            do { try await Task.sleep(for: .milliseconds(120)) } catch { return }  // Cancelled by stopAudition.
+            guard let self, !Task.isCancelled else { return }
+            self.velocityAuditionTask = nil
+            guard case .velocity(let state) = self.gesture, let velocity = state.preview,
+                velocity != self.velocityAuditionHeard,
+                let key = self.keyboardAuditionKey, let track = self.keyboardAuditionTrack
+            else { return }
+            self.velocityAuditionHeard = velocity
+            self.onAudition?(track, key, velocity)
+        }
     }
 }

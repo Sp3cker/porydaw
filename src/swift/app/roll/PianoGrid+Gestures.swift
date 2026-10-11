@@ -506,6 +506,7 @@ extension PianoGrid {
                 lastVelocity = note.velocity
                 keyboardAuditionKey = note.pitch
                 keyboardAuditionTrack = trackIndex
+                velocityAuditionHeard = note.velocity
                 onAudition?(trackIndex, note.pitch, note.velocity)
                 if control && hit.zone != .leftEdge && hit.zone != .rightEdge {
                     gesture = .velocity(
@@ -628,6 +629,8 @@ extension PianoGrid {
             onAudition?(audition.track, audition.pitch, audition.velocity)
         }
         if case .velocity(let state) = self.gesture {
+            // Keep: auditions the dragged velocity, throttled (see scheduleVelocityAudition).
+            if state.preview != nil { scheduleVelocityAudition() }
             if let reanchor = pendingVelocityReanchor {
                 pendingVelocityReanchor = nil
                 session.setSelectedNotes([reanchor])

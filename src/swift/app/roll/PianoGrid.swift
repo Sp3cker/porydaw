@@ -87,6 +87,9 @@ public final class PianoGrid: QmlUncreatable {
     var keyboardTransposeAuditionActive = false
     /// Receives roll auditions as (track, pitch, velocity), including band entrants.
     @QtIgnored public var onAudition: ((Int, Int, Int) -> Void)?
+    /// Pending replay of a velocity drag's held audition, and the velocity last heard.
+    @QtIgnored var velocityAuditionTask: Task<Void, Never>?
+    @QtIgnored var velocityAuditionHeard = 0
     /// Fork commitEditCursor egress: a commit seeks the selected transport
     /// while paused/playing; the owner guards selection, stopped only moves.
     @QtIgnored public var onCommitCursor: ((Tick) -> Void)?
