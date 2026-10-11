@@ -1,6 +1,7 @@
 """One discoverable entry point; command implementations load only when used."""
 
 import argparse
+import math
 import os
 import re
 import subprocess
@@ -49,6 +50,27 @@ def _pool(value: str) -> int:
     if not 1 <= number <= 64:
         raise argparse.ArgumentTypeError("pool must be an integer from 1 to 64")
     return number
+
+
+def _positive_int(value: str) -> int:
+    number = int(value)
+    if number <= 0:
+        raise argparse.ArgumentTypeError("requires a positive integer")
+    return number
+
+
+def _positive_float(value: str) -> float:
+    number = float(value)
+    if not math.isfinite(number) or number <= 0:
+        raise argparse.ArgumentTypeError("requires a positive finite number")
+    return number
+
+
+def _binary_pair(value: str):
+    label, separator, binary = value.partition("=")
+    if not separator or not label or label.startswith("-") or not binary:
+        raise argparse.ArgumentTypeError("binary must be label=executable")
+    return label, Path(binary).resolve()
 
 
 def _format_file(value: str) -> Path:
@@ -205,6 +227,36 @@ def parser() -> argparse.ArgumentParser:
         help="lint, format-check and test the Python harness",
         allow_abbrev=False,
     )
+    for name in ("bench:startup", "bench:startup:ab"):
+        command = commands.add_parser(
+            name, help="measure native submitted-frame receipts", allow_abbrev=False
+        )
+        command.add_argument("--runs", type=_positive_int, default=11)
+        command.add_argument(
+            "--until",
+            choices=("first-frame", "chrome-frame", "workspace-frame", "editor-frame"),
+            default="first-frame",
+        )
+        command.add_argument("--project", type=lambda value: Path(value).resolve())
+        command.add_argument("--song", type=_nonempty)
+        command.add_argument("--timeout-ms", type=_positive_float, default=10000)
+        if name == "bench:startup":
+            command.add_argument("--binary", type=lambda value: Path(value).resolve())
+            command.add_argument("--budget-ms", type=_positive_float)
+            command.add_argument("--check", action="store_true")
+        else:
+            command.add_argument("--stages", action="store_true")
+            command.add_argument("binaries", nargs="+", type=_binary_pair)
+        command.epilog = "Requires an existing Release executable. Stops only its spawned apps. Frame receipts do not prove physical display or audio readiness."
+    command = commands.add_parser(
+        "xctrace",
+        help="Instruments record / summarize / compare / inline",
+        allow_abbrev=False,
+    )
+    command.add_argument(
+        "mode", nargs="?", choices=("record", "summarize", "compare", "inline")
+    )
+    command.add_argument("args", nargs=argparse.REMAINDER)
     return root
 
 
@@ -222,28 +274,49 @@ def main() -> int:
         root_parser.error("--asan is not supported on Windows")
     if options.command == "format" and options.whole and not options.files:
         root_parser.error("--whole requires named files")
+    if (
+        options.command == "bench:startup"
+        and options.check
+        and options.budget_ms is None
+    ):
+        root_parser.error("--check requires an explicit positive --budget-ms")
+    if options.command == "bench:startup:ab":
+        labels = [label for label, _ in options.binaries]
+        if len(labels) < 2 or len(set(labels)) != len(labels):
+            root_parser.error("A/B requires at least two binaries with distinct labels")
     if options.command is None:
         root_parser.print_help()
         return 0
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(errors="replace")
+    caller = Path.cwd()
     repo = Path(__file__).resolve().parents[2]
     try:
-        actual = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            check=True,
-        ).stdout.strip()
-        if Path(actual).resolve() != repo:
-            raise RuntimeError(
-                f"harness belongs to {repo}, not cwd's repository {actual}; sync and run the owning worktree's environment"
-            )
+        if options.command not in {"bench:startup", "bench:startup:ab", "xctrace"}:
+            actual = subprocess.run(
+                ["git", "rev-parse", "--show-toplevel"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=True,
+            ).stdout.strip()
+            if Path(actual).resolve() != repo:
+                raise RuntimeError(
+                    f"harness belongs to {repo}, not cwd's repository {actual}; sync and run the owning worktree's environment"
+                )
         os.chdir(repo)
         if options.command in (*CHECK_LANES, "checks:run"):
             return _run_checks(options, qt)
         match options.command:
+            case "bench:startup" | "bench:startup:ab":
+                from .bench import run
+
+                return run(options)
+            case "xctrace":
+                from .xctrace.cli import run
+
+                os.chdir(caller)
+                return run([options.mode, *options.args] if options.mode else [])
             case "build:app" | "build:checks":
                 from .build import run_build
 
@@ -326,7 +399,7 @@ def main() -> int:
                         return result.returncode
     except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError) as error:
         print(f"{options.command}: {error}", file=sys.stderr)
-        return 1
+        return 2 if options.command in ("bench:startup", "bench:startup:ab") else 1
     except KeyboardInterrupt:
         print(f"{options.command}: interrupted", file=sys.stderr)
         return 130

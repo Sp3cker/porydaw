@@ -11,34 +11,14 @@ import tempfile
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
+
+from .process import cancel_on_signals
 
 DIAGNOSTIC = re.compile(
     r"^(?:QWARN|QCRITICAL|QFATAL)\s*:|^(?:file:|qrc:)|\b(?:Reference|Type)Error:",
 )
-
-
-@contextmanager
-def _interrupt_handlers():
-    previous = {}
-    interrupted = False
-
-    def interrupt(_signal, _frame):
-        nonlocal interrupted
-        if not interrupted:
-            interrupted = True
-            raise KeyboardInterrupt
-
-    try:
-        if os.name == "posix":
-            for number in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
-                previous[number] = signal.signal(number, interrupt)
-        yield
-    finally:
-        for number, handler in previous.items():
-            signal.signal(number, handler)
 
 
 class UsageError(ValueError):
@@ -383,7 +363,7 @@ def _beside(directory: Path, candidates: tuple[str, ...], description: str) -> P
     raise UsageError(f"missing {description} beside the build: {directory}")
 
 
-@_interrupt_handlers()
+@cancel_on_signals()
 def run(binary: Path, options: Options) -> int:
     build_root = binary.absolute().parent.resolve()
     qml = binary.name.endswith("_qml_tests") or binary.name.endswith("_qml_tests.exe")
