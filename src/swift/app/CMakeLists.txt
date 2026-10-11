@@ -235,6 +235,7 @@ add_library(PorydawAppAudio STATIC
     audio/AudioAudition.swift
     audio/AudioSampleAudition.swift
     audio/ResonanceSuppression.swift
+    audio/Metronome.swift
     export/WavExport.swift
 )
 porydaw_swift_module(PorydawAppAudio PorydawAppAudio)

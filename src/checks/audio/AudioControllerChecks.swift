@@ -22,6 +22,7 @@ public func runAudioControllerChecks(_ report: CheckReport) {
         try checkControllerSettingsAndBank(report)
         try checkControllerPreviewIsolation(report)
         try checkControllerPitchBendAudio(report)
+        try checkMetronomeBeatGrid(report)
         try checkNativeAudioLifetime(report)
     } catch { report.fail("swiftcore/AudioController", "controller initialization failed: \(error)") }
 }

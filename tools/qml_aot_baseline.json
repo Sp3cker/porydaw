@@ -1,6 +1,6 @@
 {
-  "rejected": 145,
-  "total": 6443,
+  "rejected": 144,
+  "total": 6545,
   "files": {
     "src/ui/icons/AppIcon.qml": 2,
     "src/ui/icons/Icons.qml": 0,
@@ -35,6 +35,7 @@
     "src/ui/shell/TransportBar.qml": 0,
     "src/ui/shell/TransportButton.qml": 0,
     "src/ui/shell/TransportOutputDial.qml": 0,
+    "src/ui/shell/UndoHistoryDock.qml": 0,
     "src/ui/shell/WavExportSurface.qml": 9,
     "src/ui/shell/WizardChrome.qml": 0,
     "src/ui/songview/quick/AutomationTabs.qml": 0,
@@ -59,7 +60,7 @@
     "src/ui/songview/quick/drawer/VoicePicker.qml": 2,
     "src/ui/songview/quick/EventListCell.qml": 3,
     "src/ui/songview/quick/EventListMenu.qml": 2,
-    "src/ui/songview/quick/EventListPage.qml": 8,
+    "src/ui/songview/quick/EventListPage.qml": 7,
     "src/ui/songview/quick/EventListTable.qml": 3,
     "src/ui/songview/quick/EventListToolbar.qml": 1,
     "src/ui/songview/quick/HintProfiles.qml": 0,
@@ -99,7 +100,7 @@
     "src/ui/style/ProgressBar.qml": 4,
     "src/ui/style/SpinBox.qml": 2
   },
-  "propertyVarCount": 56,
+  "propertyVarCount": 57,
   "revisionDependencyReads": 0,
   "pragmaAllowlist": [
     "src/ui/icons/Icons.qml",

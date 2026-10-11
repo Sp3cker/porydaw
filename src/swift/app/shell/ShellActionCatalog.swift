@@ -71,6 +71,7 @@ enum ShellActionCatalog {
         Action("transport.loop"),
         Action("transport.follow_playhead"),
         Action("transport.resonance"),
+        Action("transport.metronome"),
         Action("view.event_list"),
         Action("view.automation_drawer"),
         Action("view.velocity_drawer"),

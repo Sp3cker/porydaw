@@ -422,7 +422,7 @@ ShellTransportSupport {
                 "toolbar height follows the base icon and Two token")
         var actionRegions = ["transport.go-to-start", "transport.play", "transport.pause",
                              "transport.stop", "transport.loop", "transport.follow-playhead",
-                             "transport.resonance", "transportScaleRoot", "transportScaleType",
+                             "transport.resonance", "transport.metronome", "transportScaleRoot", "transportScaleType",
                              "transportScaleHighlight", "transportScaleFold"]
         wait(50)
         // References drop the two 6px separators: expanded bars grow the fill spacer by 2*(6 + spacing);

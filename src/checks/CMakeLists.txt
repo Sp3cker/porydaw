@@ -140,6 +140,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         lanes/SwiftCoreCheckLogicLane.swift
         audio/AudioAuditionChecks.swift
         audio/controllerfixture.swift
+        audio/tst_metronome.swift
         audio/resonancefixture.swift
         audio/tst_audiotelemetry.swift
         audio/tst_clicktransport.swift

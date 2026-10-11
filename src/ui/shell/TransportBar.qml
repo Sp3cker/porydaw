@@ -27,14 +27,8 @@ Rectangle {
         + layoutSpaces.two + layoutSpaces.one
     readonly property real outputCaptionWidth: Math.ceil(outputCaptionMetrics.boundingRect.width)
         + layoutSpaces.two + layoutSpaces.one
-    // Gap term: 14 visible controls contribute 13 inter-item gaps when Output fits.
-    readonly property bool outputFits: width >= 2 * edgeMargin + 13 * controls.spacing + 7 * toolExtent
-        + Math.ceil(clockHintWidth) + 6 * inset
-        + transportScaleSlot.Layout.preferredWidth + Math.round(baseFontPx * 2.25) + 2
-        + masterCaptionWidth
-        + Math.round(baseFontPx * 6 + 18)
-        + outputCaptionWidth
-        + Math.round(baseFontPx * 5 / 3) + 2 * Math.round(baseFontPx / 4)
+    readonly property bool outputFits: width >= 2 * edgeMargin
+        + controls.implicitWidth + controls.spacing + outputControls.implicitWidth
 
     TextMetrics {
         id: clockMetrics
@@ -79,9 +73,11 @@ Rectangle {
     RowLayout {
         id: controls
         spacing: Math.max(1, Math.round(bar.baseFontPx / 12))
-        anchors.fill: parent
+        anchors.left: parent.left
         anchors.leftMargin: bar.edgeMargin
-        anchors.rightMargin: bar.edgeMargin
+        height: parent.height
+        width: bar.outputFits ? bar.width - 2 * bar.edgeMargin - outputControls.implicitWidth - spacing
+                             : implicitWidth
 
         TransportButton {
             objectName: "transport.go-to-start"
@@ -162,6 +158,18 @@ Rectangle {
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
             onActivated: bar.shell.activate("transport.resonance")
+        }
+        TransportButton {
+            objectName: "transport.metronome"
+            colors: bar.colors; baseFontPx: bar.baseFontPx
+            typography: bar.typography
+            label: qsTr("Metronome"); icon: Icons.metronome
+            final readonly property ShellActionState actionState: bar.shell.action("transport.metronome")
+            checked: actionState.checked
+            actionable: actionState.enabled
+            Layout.preferredWidth: bar.toolExtent
+            Layout.preferredHeight: bar.toolExtent
+            onActivated: bar.shell.activate("transport.metronome")
         }
         Text {
             objectName: "transportTimeLabel"
@@ -286,10 +294,8 @@ Rectangle {
             objectName: "transportVolumeSpacer"
             Layout.fillWidth: bar.outputFits
             Layout.minimumWidth: Math.round(bar.baseFontPx * 2.25)
-            Layout.maximumWidth: bar.outputFits ? bar.width
-                                                : Math.round(bar.baseFontPx * 2.25)
             Layout.preferredHeight: bar.toolExtent
-            Layout.preferredWidth: bar.outputFits ? -1 : Layout.minimumWidth
+            Layout.preferredWidth: Layout.minimumWidth
         }
         Text {
             objectName: "transportMasterVolumeCaption"
@@ -317,6 +323,14 @@ Rectangle {
             Layout.preferredHeight: Math.round(bar.baseFontPx * 2.1)
             onValueCommitted: function(committed) { bar.presenter.setMasterVolume(committed) }
         }
+    }
+    RowLayout {
+        id: outputControls
+        spacing: controls.spacing
+        anchors.right: parent.right
+        anchors.rightMargin: bar.edgeMargin
+        anchors.verticalCenter: parent.verticalCenter
+        visible: bar.outputFits
         Text {
             objectName: "transportOutputVolumeCaption"
             Layout.preferredWidth: bar.outputCaptionWidth
@@ -324,7 +338,6 @@ Rectangle {
             verticalAlignment: Text.AlignVCenter
             leftPadding: bar.layoutSpaces.two
             rightPadding: bar.layoutSpaces.one
-            visible: bar.outputFits
             font: bar.typography.body
             color: bar.colors.windowText
             text: qsTr("Output")
@@ -334,16 +347,10 @@ Rectangle {
             baseFontPx: bar.baseFontPx
             value: bar.presenter.outputVolume
             hintService: bar.shell.mouseHints
-            visible: bar.outputFits
             Accessible.description: qsTr("Does not change the song volume")
             Layout.preferredWidth: implicitWidth
             Layout.preferredHeight: implicitHeight
             onValueCommitted: function(percent) { bar.presenter.commitOutputVolume(percent) }
-        }
-        Item {
-            visible: !bar.outputFits
-            Layout.fillWidth: true
-            Layout.minimumWidth: 0
         }
     }
 }

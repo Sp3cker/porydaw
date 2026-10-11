@@ -190,6 +190,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "transport.resonance":
             let transport = session.transportBarPresenter()
             transport.setResonanceSuppression(enabled: !transport.resonanceSuppression)
+        case "transport.metronome":
+            let metronomeTransport = session.transportBarPresenter()
+            metronomeTransport.setMetronome(enabled: !metronomeTransport.metronome)
         case "view.event_list":
             session.songTabs.setSelectedTabEventsVisible(
                 visible:

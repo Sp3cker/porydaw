@@ -137,6 +137,7 @@ public final class NativeAudio {
     public func setResonanceSuppression(_ enabled: Bool) {
         device.renderer.setResonanceSuppression(enabled)
     }
+    public func setMetronomeEnabled(_ enabled: Bool) { device.renderer.setMetronomeEnabled(enabled) }
     public func setPolyDebugInvert(_ enabled: Bool) { device.renderer.setPolyDebugInvert(enabled) }
     public func resetPolyStats() { device.renderer.resetPolyStats() }
     public func polySnapshot() -> AudioPolySnapshot { device.renderer.polySnapshot() }

@@ -43,42 +43,42 @@
             "h": 23,
             "name": "transportScaleFold",
             "w": 44,
-            "x": 678,
+            "x": 713,
             "y": 7
         },
         {
             "h": 33,
             "name": "transportScaleHighlight",
             "w": 33,
-            "x": 644,
+            "x": 679,
             "y": 2
         },
         {
             "h": 22,
             "name": "transportScaleRoot",
             "w": 55,
-            "x": 409,
+            "x": 444,
             "y": 7
         },
         {
             "h": 22,
             "name": "transportScaleType",
             "w": 178,
-            "x": 465,
+            "x": 500,
             "y": 7
         },
         {
             "h": 33,
             "name": "transportTimeLabel",
             "w": 168,
-            "x": 240,
+            "x": 275,
             "y": 2
         },
         {
             "h": 33,
             "name": "transportVolumeSpacer",
-            "w": 132,
-            "x": 723,
+            "w": 97,
+            "x": 758,
             "y": 2
         },
         {
@@ -132,37 +132,44 @@
         },
         {
             "h": 33,
+            "name": "transport.metronome",
+            "w": 33,
+            "x": 240,
+            "y": 2
+        },
+        {
+            "h": 33,
             "name": "transport.time",
             "w": 168,
-            "x": 240,
+            "x": 275,
             "y": 2
         },
         {
             "h": 22,
             "name": "transport.scale-root",
             "w": 55,
-            "x": 409,
+            "x": 444,
             "y": 7
         },
         {
             "h": 22,
             "name": "transport.scale-type",
             "w": 178,
-            "x": 465,
+            "x": 500,
             "y": 7
         },
         {
             "h": 33,
             "name": "transport.scale-highlight",
             "w": 33,
-            "x": 644,
+            "x": 679,
             "y": 2
         },
         {
             "h": 23,
             "name": "transport.scale-fold",
             "w": 44,
-            "x": 678,
+            "x": 713,
             "y": 7
         },
         {

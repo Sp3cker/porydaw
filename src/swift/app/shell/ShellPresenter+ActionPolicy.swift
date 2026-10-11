@@ -32,7 +32,7 @@ extension ShellPresenter {
         case "edit.undo": return session.songOpen && session.canUndo
         case "edit.redo": return session.songOpen && session.canRedo
         case "edit.song_settings": return session.songOpen
-        case "transport.follow_playhead", "transport.resonance":
+        case "transport.follow_playhead", "transport.resonance", "transport.metronome":
             return true
         case "transport.go_to_start", "transport.play_pause":
             return session.songOpen && session.transportBarPresenter().state != 0
@@ -60,7 +60,7 @@ extension ShellPresenter {
         case "view.event_list", "view.automation_drawer", "view.velocity_drawer",
             "view.voice_changes_drawer", "view.polyphony_debugger", "view.undo_history",
             "view.note_names", "transport.loop",
-            "transport.follow_playhead", "transport.resonance":
+            "transport.follow_playhead", "transport.resonance", "transport.metronome":
             return true
         default: return false
         }
@@ -81,6 +81,7 @@ extension ShellPresenter {
         case "transport.loop": return session.transportBarPresenter().loopEnabled
         case "transport.follow_playhead": return session.transportBarPresenter().followPlayhead
         case "transport.resonance": return session.transportBarPresenter().resonanceSuppression
+        case "transport.metronome": return session.transportBarPresenter().metronome
         default: return false
         }
     }

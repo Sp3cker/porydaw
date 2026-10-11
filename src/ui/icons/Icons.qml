@@ -17,6 +17,7 @@ QtObject {
     readonly property var goToStart: ({ glyph: "\ue006", fit: 1.0000 })
     readonly property var keysplit: ({ glyph: "\ue007", fit: 0.8889 })
     readonly property var loop: ({ glyph: "\ue008", fit: 1.0000 })
+    readonly property var metronome: ({ glyph: "\ue01d", fit: 1.0000 })
     readonly property var noise: ({ glyph: "\ue009", fit: 0.8000 })
     readonly property var pause: ({ glyph: "\ue00a", fit: 1.0000 })
     readonly property var play: ({ glyph: "\ue00b", fit: 1.0000 })
