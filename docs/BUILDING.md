@@ -137,6 +137,12 @@ it, so a Logic declaration edit recompiles those files, not the module. A check 
 needs no `PorydawApp`/QtBridge type belongs in Logic: interop costs ~0.4–0.6 s per
 module compile plus lazy C++ lookups (`PorydawAppAudio` 760 → 360 ms when dropped).
 
+Linux ASAN CI compiles `SwiftCoreCheckLogic` with optimized incremental batches,
+preserving `-O`, debug information, and the Swift/C parity timing gate. Product
+modules remain whole-module optimized. `CMAKE_Swift_NUM_THREADS` limits Swift
+driver parallelism; Ninja's `-j` does not limit frontends within a Swift build
+edge. Configure both limits explicitly to avoid nested oversubscription.
+
 `deno task build:checks` wall time, Debug, before (six chained interop lanes,
 support → media → edit → roll → pages → project → dispatcher) and after:
 

@@ -190,7 +190,7 @@ jobs:
         run: |
           pulseaudio -D --exit-idle-time=-1 || true
           pactl load-module module-null-sink sink_name=ci || true
-      # Six concurrent build jobs fit the guest's tested RAM budget.
+      # Cap Swift driver fan-out and backend threads independently of Ninja jobs.
       # LLD avoids GNU ld's >16 GB peak when linking the ASAN check binary.
       - name: Configure
         run: >-
@@ -199,10 +199,11 @@ jobs:
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DCMAKE_LINKER_TYPE=LLD
+          -DCMAKE_Swift_NUM_THREADS=6
           -DCMAKE_Swift_FLAGS_RELWITHDEBINFO="-O -g -num-threads 6"
 
       - name: Build
-        run: cmake --build /mnt/ci/build-asan -j6
+        run: cmake --build /mnt/ci/build-asan -j12
 
       - name: Run harnesses
         run: |
