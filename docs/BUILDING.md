@@ -51,6 +51,8 @@ The `Build` workflow runs its ASAN job on the self-hosted Linux x64
 It runs the Python harness tests before the native ASAN sweep; artifact and
 format jobs remain limited to `fork-main`. The Linux sweep excludes windowing
 checks and QML lanes; those remain in the macOS `All checks` workflow.
+Startup benchmark commands remain available, but their synthetic process and
+statistics tests are excluded from the harness suite.
 
 ## Standalone backup module
 
