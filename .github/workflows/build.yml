@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [fork-main]
+    branches: [fork-main, feature/uv-python-harness]
 
 concurrency:
   group: build-${{ github.workflow }}-${{ github.ref }}
@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   format:
+    if: github.ref == 'refs/heads/fork-main'
     runs-on: ubuntu-latest
     steps:
       # Full history: changed lines are measured from the previous fork-main push.
@@ -31,6 +32,7 @@ jobs:
         run: uv run --no-sync dev format --check --base "$BASE"
 
   build-linux:
+    if: github.ref == 'refs/heads/fork-main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -64,6 +66,7 @@ jobs:
           name: porydaw-linux
           path: build/porydaw
   build-native:
+    if: github.ref == 'refs/heads/fork-main'
     strategy:
       fail-fast: false
       matrix:
@@ -183,7 +186,7 @@ jobs:
   # AddressSanitizer sweep of the porydaw_checks catalog with the software Qt Quick
   # backend; windowing checks and the QML lanes are not run here.
   asan-checks:
-    runs-on: [self-hosted, porydaw-ci]
+    runs-on: [self-hosted, Linux, X64, porydaw-ci]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -193,7 +196,9 @@ jobs:
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.13.0"
-      - run: uv sync --locked --no-dev
+      - run: uv sync --locked
+      - name: Python harness tests
+        run: uv run --no-sync dev tools:check
 
       - name: Start a dummy audio server
         run: |

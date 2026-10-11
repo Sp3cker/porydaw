@@ -46,6 +46,12 @@ Migration smoke on Apple Silicon, Qt 6.11.2, shared QtBridge macro cache: fresh 
 
 Bootstrap observation: uv 0.13.0 ARM64 archive 14,692,549 bytes in 0.778 s; managed Python 3.13.16 download 24.1 MiB; Ruff wheel 8.8 MiB. Default sync installs the project, Ninja and Ruff; the optional Qt group is absent until provisioning needs it. Cached locked offline sync completed in 0.15 s. Qt and the host compiler/SDK remain the larger environment costs; no claim that the complete environment is only the uv archive.
 
+The `Build` workflow runs its ASAN job on the self-hosted Linux x64
+`porydaw-ci` runner for pushes to `fork-main` and `feature/uv-python-harness`.
+It runs the Python harness tests before the native ASAN sweep; artifact and
+format jobs remain limited to `fork-main`. The Linux sweep excludes windowing
+checks and QML lanes; those remain in the macOS `All checks` workflow.
+
 ## Standalone backup module
 
 `src/swift/backups` is the `PorydawBackups` Swift 6 package. It depends only on
