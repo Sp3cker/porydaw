@@ -72,8 +72,9 @@ Hidden windows do not start that work. Explicit project opens still prepare thei
 dependencies on demand. Closing before the frame or during content creation keeps
 the saved-session recipe and waits for scene/audio ownership to settle.
 
-Builds run through Deno tasks against a checkout-local Qt 6.11. On macOS the
-Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.
+Builds use Ninja through Deno tasks against a checkout-local Qt 6.11. Existing
+build directories configured with another generator must be removed and recreated.
+On macOS the Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.
 The Swift app builds on macOS, Linux, and Windows x86_64. Linux ARM64 and Windows
 x86_64 have been validated with Swift 6.4.0 and Qt 6.11.2.
 
@@ -113,6 +114,10 @@ rejections and preserved state over diagnostic wording. Remove assertions implie
 stronger checks in the same state, but retain fixture guards and lifecycle scenarios.
 Rendering checks observe painted output rather than pinning renderer-specific primitives.
 Update affected proof ledgers with their check changes; compile only referenced support.
+
+The Deno proof reader, editor, compactor, and check-runner proof-evidence
+artifact have been retired. Existing proof ledgers under `src/checks/` remain
+historical data; native application checks and their runners still run.
 
 ### Shell and workspace
 

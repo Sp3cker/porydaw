@@ -182,22 +182,6 @@ export async function swiftToolchainArgument(
   return `-DCMAKE_Swift_COMPILER=${compiler}`;
 }
 
-function defaultGeneratorArguments(): string[] {
-  return ["-G", "Ninja"];
-}
-
-export async function cmakeBuildUsesNinja(
-  buildDirectory: string,
-): Promise<boolean> {
-  const cache = join(buildDirectory, "CMakeCache.txt");
-  if (!(await exists(cache))) {
-    return true;
-  }
-  const content = await Deno.readTextFile(cache);
-  const generator = /^CMAKE_GENERATOR:INTERNAL=(.+)$/m.exec(content)?.[1];
-  return generator?.startsWith("Ninja") ?? false;
-}
-
 export async function cmakeConfigureArgs({
   buildDirectory,
   poryaaaaArgument,
@@ -206,10 +190,6 @@ export async function cmakeConfigureArgs({
   asan,
   buildType = "Debug",
 }: CmakeConfigureOptions): Promise<string[]> {
-  const generatorArguments =
-    await exists(join(buildDirectory, "CMakeCache.txt"))
-      ? []
-      : defaultGeneratorArguments();
   const swiftToolchain = await swiftToolchainArgument();
   // Apple's Clang and downloaded Swift toolchains have different ASAN ABIs.
   const nativeBin = asan && Deno.build.os === "darwin" && swiftToolchain
@@ -220,7 +200,8 @@ export async function cmakeConfigureArgs({
     ".",
     "-B",
     buildDirectory,
-    ...generatorArguments,
+    "-G",
+    "Ninja",
     `-DCMAKE_BUILD_TYPE=${buildType}`,
     ...(buildChecks === undefined
       ? []

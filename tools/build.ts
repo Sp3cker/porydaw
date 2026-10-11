@@ -106,39 +106,23 @@ async function readCache(directory: string): Promise<string | undefined> {
   }
 }
 
-export async function usesMultiConfigBuild(
-  directory: string,
-): Promise<boolean> {
-  const cache = await readCache(directory);
-  return cache !== undefined &&
-    /^CMAKE_CONFIGURATION_TYPES:[^=]*=.+$/m.test(cache);
-}
-
-async function hasBuildSystem(directory: string): Promise<boolean> {
-  if (
-    (await exists(join(directory, "build.ninja"))) ||
-    (await exists(join(directory, "Makefile")))
-  ) return true;
-  try {
-    for await (const entry of Deno.readDir(directory)) {
-      if (entry.isFile && entry.name.endsWith(".sln")) return true;
-    }
-  } catch (error) {
-    if (error instanceof Deno.errors.NotFound) return false;
-    throw error;
-  }
-  return false;
-}
-
 // Returns the configure output, or undefined when the tree is already current.
 async function configure(
   directory: string,
   config: BuildConfig,
   buildChecks: boolean | undefined,
 ): Promise<ExecResult | undefined> {
-  const poryaaaa = await poryaaaaConfiguration(directory);
   const buildType = config === "release" ? "Release" : "Debug";
   const cache = await readCache(directory);
+  const generator = /^CMAKE_GENERATOR:INTERNAL=(.*)$/m.exec(cache ?? "")?.[1];
+  if (cache !== undefined && generator !== "Ninja") {
+    throw new Error(
+      `${directory} uses ${
+        generator ?? "an unknown generator"
+      }; only Ninja is supported. Remove ${directory} and rerun the build.`,
+    );
+  }
+  const poryaaaa = await poryaaaaConfiguration(directory);
   const args = await cmakeConfigureArgs({
     buildDirectory: directory,
     poryaaaaArgument: poryaaaa.cmakeArgument,
@@ -155,7 +139,7 @@ async function configure(
       line.startsWith(`${key}:`) && line.endsWith(`=${value}`)
     );
   });
-  const typeMatches = (await usesMultiConfigBuild(directory)) ||
+  const typeMatches =
     /^CMAKE_BUILD_TYPE:STRING=(.*)$/m.exec(cache ?? "")?.[1] === buildType;
   const cachedChecks = /^PORYDAW_BUILD_CHECKS:BOOL=(.*)$/m.exec(cache ?? "")
     ?.[1];
@@ -164,14 +148,12 @@ async function configure(
   const asanMatches = /^PORYDAW_ASAN:BOOL=(.*)$/m.exec(cache ?? "")?.[1] ===
     (config === "asan" ? "ON" : "OFF");
   if (
-    (await hasBuildSystem(directory)) && poryaaaa.cacheMatches &&
+    (await exists(join(directory, "build.ninja"))) && poryaaaa.cacheMatches &&
     typeMatches && checksMatch && asanMatches && compilersMatch
   ) return undefined;
   if (cache !== undefined && !compilersMatch) {
     // Replacing compilers resets CMake's cache; retain all requested options.
-    const generator = /^CMAKE_GENERATOR:INTERNAL=(.*)$/m.exec(cache)?.[1];
     args.push("--fresh");
-    if (generator) args.push("-G", generator);
   }
   return await run("cmake", args);
 }
@@ -271,13 +253,12 @@ async function reconcileSwiftObjects(directory: string): Promise<boolean> {
   return dropped;
 }
 
-function artifactPath(directory: string, target: string, multi: boolean) {
-  const root = multi ? join(directory, "Release") : directory;
-  if (Deno.build.os === "windows") return join(root, `${target}.exe`);
+function artifactPath(directory: string, target: string) {
+  if (Deno.build.os === "windows") return join(directory, `${target}.exe`);
   if (Deno.build.os === "darwin" && target === "porydaw") {
-    return join(root, "porydaw.app", "Contents", "MacOS", "porydaw");
+    return join(directory, "porydaw.app", "Contents", "MacOS", "porydaw");
   }
-  return join(root, target);
+  return join(directory, target);
 }
 
 function printCapped(lines: string[], log: string): void {
@@ -327,13 +308,11 @@ export async function runBuild(
     outputs.push(configured.text() + configured.text("stderr"));
     if (!configured.success) await fail("configure ", configured.code);
   }
-  const multi = await usesMultiConfigBuild(directory);
   const buildArgs = [
     "--build",
     directory,
     "-j",
     String(navigator.hardwareConcurrency),
-    ...(config === "release" || multi ? ["--config", "Release"] : []),
     ...(targets.length > 0 ? ["--target", ...targets] : []),
   ];
   await reconcileSwiftObjects(directory);
@@ -351,7 +330,7 @@ export async function runBuild(
   await Deno.writeTextFile(log, output);
   const summary = summarizeBuild(output, roots);
   const artifact = targets.length > 0
-    ? ` ${artifactPath(directory, targets[0], multi)}`
+    ? ` ${artifactPath(directory, targets[0])}`
     : "";
   console.log(
     summary.steps === 0

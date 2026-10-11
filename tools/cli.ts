@@ -12,7 +12,7 @@
 
 import { join } from "node:path";
 import type { BuildConfig } from "./local_build_environment.ts";
-import { runBuild, usesMultiConfigBuild } from "./build.ts";
+import { runBuild } from "./build.ts";
 import { formatSources } from "./format.ts";
 import {
   type CheckOptions,
@@ -82,9 +82,8 @@ Examples:
   }
 }
 
-// One line per deno.json task, in deno.json order. tools/cli_test.ts asserts
-// this stays in sync with the task table.
-export const ROOT_HELP = `usage: deno task <command> [options]
+// Keep this index in deno.json task order for agents finding their lane.
+const ROOT_HELP = `usage: deno task <command> [options]
   checks           build and run checks
   checks:backups   test the standalone backup package without Qt or the app
   build            this help (deno task build, not a real build)
@@ -102,9 +101,6 @@ export const ROOT_HELP = `usage: deno task <command> [options]
   checks:qml-roll  build and run the QML roll window lane
   checks:shell     build and run the production QML shell lane
   format           format changed Swift and TypeScript (or --check)
-  proof            read proof-ledger status
-  proof:edit       edit proof ledgers
-  proof:compact    compact proof ledgers
   lsp:swift        regenerate the Swift compile database
   worktree:create  create a linked worktree
   xctrace          profile with xctrace
@@ -336,9 +332,6 @@ async function runChecks(rawArgs: string[], command: Lane): Promise<void> {
     : lane.binary;
   const binary = join(
     directory,
-    ...((Deno.build.os === "windows" && await usesMultiConfigBuild(directory))
-      ? ["Release"]
-      : []),
     executable,
   );
   const status = await new Deno.Command("deno", {
@@ -389,7 +382,7 @@ async function runFormat(args: string[]): Promise<void> {
   }
 }
 
-// Side-effect-free at import time so tools/cli_test.ts can import ROOT_HELP.
+// Run only when invoked as a CLI; imports do not start builds.
 if (import.meta.main) {
   const [command, ...rest] = Deno.args;
   if (command === undefined) usage();

@@ -72,15 +72,11 @@ jobs:
       - name: Bridge surface
         if: ${{ !cancelled() }}
         run: deno task checks:bridge
-      - name: Proof evidence
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: deno task proof check --executed
-      - name: Retain check logs and evidence
+      - name: Retain check logs and scratch
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: all-checks-macos
           path: |
             build/debug/build.log
-            build/debug/proof-evidence/
             build/debug/checks-scratch/

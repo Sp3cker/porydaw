@@ -1,6 +1,5 @@
 // B0 roots are module registration, Swift resource URLs, and transitive component
 // references from those roots. Check-fixture paths are metadata, not reachability.
-import { skipElement } from "./proof_anchor.ts";
 
 const BASELINE = "tools/qtbridge_surface_baseline.json";
 const PIN_FILE = "cmake/QtBridge.cmake";
@@ -43,6 +42,201 @@ type BridgeClass = {
   signals: Map<string, Signal>;
 };
 type Source = { path: string; text: string; code: string };
+interface BraceState {
+  count: number;
+}
+
+function skipLineEnd(source: string, i: number): number {
+  const newline = source.indexOf("\n", i);
+  return newline < 0 ? source.length : newline;
+}
+
+function skipNestedComment(source: string, i: number): number {
+  let depth = 1;
+  let j = i;
+  while (j < source.length) {
+    if (source[j] === "/" && source[j + 1] === "*") {
+      depth++;
+      j += 2;
+    } else if (source[j] === "*" && source[j + 1] === "/") {
+      depth--;
+      j += 2;
+      if (depth === 0) return j;
+    } else {
+      j++;
+    }
+  }
+  return source.length;
+}
+
+function skipParenCode(
+  source: string,
+  openParen: number,
+  brace: BraceState,
+): number {
+  let parens = 1;
+  let k = openParen + 1;
+  while (k < source.length) {
+    const skipped = skipElement(source, k, brace);
+    if (skipped >= 0) {
+      k = skipped;
+      continue;
+    }
+    const c = source[k];
+    if (c === "(") parens++;
+    else if (c === ")") {
+      parens--;
+      if (parens === 0) return k + 1;
+    } else if (c === "{") brace.count++;
+    else if (c === "}") brace.count--;
+    k++;
+  }
+  return source.length;
+}
+
+function skipDoubleQuoted(
+  source: string,
+  i: number,
+  brace: BraceState,
+): number {
+  let j = i + 1;
+  while (j < source.length) {
+    const c = source[j];
+    if (c === "\\") {
+      if (source[j + 1] === "(") j = skipParenCode(source, j + 1, brace);
+      else j += 2;
+      continue;
+    }
+    if (c === '"') return j + 1;
+    if (c === "\n") return j;
+    j++;
+  }
+  return source.length;
+}
+
+function skipSingleQuoted(source: string, i: number): number {
+  let j = i + 1;
+  while (j < source.length) {
+    const c = source[j];
+    if (c === "\\") {
+      j += 2;
+      continue;
+    }
+    if (c === "'") return j + 1;
+    if (c === "\n") return j;
+    j++;
+  }
+  return source.length;
+}
+
+function skipTemplateExpression(
+  source: string,
+  j: number,
+  brace: BraceState,
+): number {
+  let depth = 1;
+  let k = j;
+  while (k < source.length) {
+    const skipped = skipElement(source, k, brace);
+    if (skipped >= 0) {
+      k = skipped;
+      continue;
+    }
+    if (source[k] === "{") depth++;
+    else if (source[k] === "}") {
+      depth--;
+      if (depth === 0) return k + 1;
+    }
+    k++;
+  }
+  return source.length;
+}
+
+function skipTemplate(source: string, i: number, brace: BraceState): number {
+  let j = i + 1;
+  while (j < source.length) {
+    const c = source[j];
+    if (c === "\\") {
+      j += 2;
+      continue;
+    }
+    if (c === "`") return j + 1;
+    if (c === "$" && source[j + 1] === "{") {
+      j = skipTemplateExpression(source, j + 2, brace);
+      continue;
+    }
+    j++;
+  }
+  return source.length;
+}
+
+function skipTripleQuoted(
+  source: string,
+  i: number,
+  brace: BraceState,
+): number {
+  let j = i + 3;
+  while (j < source.length) {
+    if (source[j] === "\\") {
+      if (source[j + 1] === "(") j = skipParenCode(source, j + 1, brace);
+      else j += 2;
+      continue;
+    }
+    if (source.startsWith('"""', j)) return j + 3;
+    j++;
+  }
+  return source.length;
+}
+
+function skipRawString(source: string, i: number, brace: BraceState): number {
+  let j = i;
+  while (source[j] === "#") j++;
+  if (j === i) return -1;
+  const hashes = source.slice(i, j);
+  const triple = source.startsWith('"""', j);
+  let closer: string;
+  if (triple) {
+    closer = `"""${hashes}`;
+    j += 3;
+  } else if (source[j] === '"') {
+    closer = `"${hashes}`;
+    j += 1;
+  } else {
+    return -1;
+  }
+  while (j < source.length) {
+    if (
+      source[j] === "\\" && source.startsWith(hashes, j + 1) &&
+      source[j + 1 + hashes.length] === "("
+    ) {
+      j = skipParenCode(source, j + 1 + hashes.length, brace);
+      continue;
+    }
+    if (source.startsWith(closer, j)) return j + closer.length;
+    j++;
+  }
+  return source.length;
+}
+
+function skipElement(
+  source: string,
+  j: number,
+  brace: BraceState,
+): number {
+  const c = source[j];
+  if (c === "/" && source[j + 1] === "/") return skipLineEnd(source, j + 2);
+  if (c === "/" && source[j + 1] === "*") {
+    return skipNestedComment(source, j + 2);
+  }
+  if (c === "#") return skipRawString(source, j, brace);
+  if (c === '"' && source.startsWith('"""', j)) {
+    return skipTripleQuoted(source, j, brace);
+  }
+  if (c === '"') return skipDoubleQuoted(source, j, brace);
+  if (c === "'") return skipSingleQuoted(source, j);
+  if (c === "`") return skipTemplate(source, j, brace);
+  return -1;
+}
 
 function codeOnly(text: string): string {
   const brace = { count: 0 };

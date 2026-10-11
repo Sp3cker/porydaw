@@ -1,5 +1,4 @@
 import { join } from "node:path";
-import { cmakeBuildUsesNinja } from "./local_build_environment.ts";
 import {
   checkSwiftCompiler,
   checkSwiftFormat,
@@ -384,10 +383,7 @@ export async function inspectNativeBuildTools(
   }
   if (python.incompatibility) incompatibilities.push(python.incompatibility);
 
-  if (
-    await cmakeBuildUsesNinja(buildDirectory) &&
-    !(await commandAvailable("ninja"))
-  ) {
+  if (!(await commandAvailable("ninja"))) {
     missing.add("ninja");
   }
 

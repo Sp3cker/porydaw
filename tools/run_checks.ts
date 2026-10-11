@@ -14,7 +14,6 @@ import { createReporter } from "./checks_reporter.ts";
 import type { Reporter } from "./checks_reporter.ts";
 import { wallEstimate } from "./checks_walls.ts";
 import { CHECKS_HELP, parseCheckOptions } from "./checks_options.ts";
-import { enclosingFunction } from "./proof_anchor.ts";
 import { run } from "./lib/exec.ts";
 
 type ScratchKind = "existing-directory" | "must-not-exist-path" | "unused";
@@ -377,107 +376,6 @@ async function runProcess(
 function lastNonemptyLine(output: string): string | undefined {
   return output.trimEnd().split(/\r?\n/).findLast((line) => line.length > 0);
 }
-interface ProofEvidencePass {
-  readonly cppId: string;
-  readonly row: string;
-}
-
-interface QmlAssertion {
-  readonly path: string;
-  readonly line: number;
-  readonly function: string;
-  readonly message: string;
-}
-
-interface ProofEvidence {
-  readonly check: string;
-  readonly passes: readonly ProofEvidencePass[];
-  readonly functions: readonly string[];
-  readonly qmlAssertions: readonly QmlAssertion[];
-}
-
-async function collectProofEvidence(
-  check: string,
-  output: string,
-): Promise<ProofEvidence> {
-  const passes: ProofEvidencePass[] = [];
-  const functions: string[] = [];
-  const qmlAssertions: QmlAssertion[] = [];
-  const sourceCache = new Map<string, string>();
-  const lines = output.split(/\r?\n/);
-  for (let index = 0; index < lines.length; ++index) {
-    const line = lines[index];
-    const marker = "swiftcore PASS cppId=";
-    const markerIndex = line.indexOf(marker);
-    if (markerIndex >= 0) {
-      const rest = line.slice(markerIndex + marker.length);
-      const separator = rest.indexOf(": ");
-      if (separator >= 0) {
-        let row = rest.slice(separator + 2);
-        if (row.endsWith(": passed")) {
-          row = row.slice(0, row.length - ": passed".length);
-        }
-        passes.push({ cppId: rest.slice(0, separator), row });
-      }
-      continue;
-    }
-    const pass = /^\s*PASS\s+:\s*(\S+?)::([A-Za-z_]\w*)\s*\(/.exec(line);
-    if (pass !== null) {
-      const name = pass[2];
-      if (
-        name === "initTestCase" || name === "cleanupTestCase" ||
-        name === "init" || name === "cleanup"
-      ) {
-        continue;
-      }
-      functions.push(`${pass[1]}::${name}`);
-      continue;
-    }
-    const assertion = /^\s*INFO\s+:.+?\b(QVERIFY|QCOMPARE)\((.*)\)\s*$/.exec(
-      line,
-    );
-    const location =
-      /^\s*Loc: \[.*?(src\/checks\/[^()]+?\.(?:js|qml))\((\d+)\)\]\s*$/
-        .exec(lines[index + 1] ?? "");
-    if (assertion === null || location === null) continue;
-    const path = location[1];
-    let source = sourceCache.get(path);
-    if (source === undefined) {
-      source = await Deno.readTextFile(join(repoRoot, path));
-      sourceCache.set(path, source);
-    }
-    const sourceLine = Number(location[2]);
-    const body = enclosingFunction(source, sourceLine);
-    if (body !== undefined) {
-      qmlAssertions.push({
-        path,
-        line: sourceLine,
-        function: body.name,
-        message: assertion[1] === "QVERIFY" ? assertion[2] : "",
-      });
-    }
-  }
-  return { check, passes, functions, qmlAssertions };
-}
-
-async function writeProofEvidence(
-  check: string,
-  output: string,
-): Promise<void> {
-  try {
-    await Deno.mkdir(join(buildRoot, "proof-evidence"), { recursive: true });
-    await Deno.writeTextFile(
-      join(buildRoot, "proof-evidence", `${check}.json`),
-      `${JSON.stringify(await collectProofEvidence(check, output))}\n`,
-    );
-  } catch (error) {
-    console.error(
-      `run_checks: could not write proof evidence for ${check}: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    );
-  }
-}
 
 if (Deno.args.length < 1) usage("missing checks binary");
 let options;
@@ -574,7 +472,6 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
       durationMs: 0,
     };
   }
-  await writeProofEvidence(check.name, result.output);
   if (result.code !== 0 || result.signal !== null || result.timedOut) {
     failures.push(check.name);
     reporter.onCheckFail(check.name, result);

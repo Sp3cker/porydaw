@@ -1,6 +1,5 @@
 // Measures a fresh Release process through a selected native submitted-frame marker.
 import { join, resolve } from "node:path";
-import { usesMultiConfigBuild } from "./build.ts";
 
 const HELP = `usage: deno task bench:startup [options]
   --runs <count>       fresh process launches (default 11)
@@ -313,7 +312,6 @@ async function main(): Promise<number> {
   const directory = join(root, "build", "release");
   const binary = options.binary ?? join(
     directory,
-    ...(await usesMultiConfigBuild(directory) ? ["Release"] : []),
     ...(Deno.build.os === "darwin"
       ? ["porydaw.app", "Contents", "MacOS", "porydaw"]
       : [Deno.build.os === "windows" ? "porydaw.exe" : "porydaw"]),
