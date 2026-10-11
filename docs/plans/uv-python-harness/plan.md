@@ -32,7 +32,7 @@ All source paths below are relative to `tools/`; Python owners are relative to `
 | build.ts | Agree on merged configuration and streamed log; fix attribution grouping and include Windows .obj outputs | build.py |
 | build_output.ts | Agree; preserve actionable compiler/linker/CMake diagnostics and project-warning filtering | build_output.py |
 | checks_options.ts | Agree; argparse and terminal Qt split; remove redundant flags | checks.py + cli.py |
-| checks_reporter.ts | Agree; fold reporter into runner, remove obsolete CI-grep line | checks.py |
+| checks_reporter.ts | Agree on folding/deletion; default shows failure blocks, severity-classified diagnostics and summary; passing detail requires --verbose or terminal --qt | checks.py |
 | checks_walls.ts | Agree on deletion; disagree on introducing a persistent duration cache | Delete; manifest order within scheduling classes |
 | run_checks.ts | Agree on merged runner and threads; disagree on removing classification validation that can lead to false success; ensure child cleanup on interruption | checks.py |
 | format.ts | Agree; changed Swift hunks, whole-file opt-in, Ruff for Python; no compiler-command quoting machinery | format.py |
@@ -40,9 +40,9 @@ All source paths below are relative to `tools/`; Python owners are relative to `
 | native_build_tool_installers.ts | Agree; privileged/interactive installs become explicit host-prerequisite instructions | Delete |
 | native_build_tools.ts | Agree; uv owns Python/Ninja, configure owns compile/link probes | setup.py |
 | poryaaaa_source.ts | Agree; shared canonical checkout validation remains, simplify redundant wrapping | poryaaaa.py |
-| qml_aot.ts | Agree; retain ratchet semantics and separate baseline command | qml_aot.py |
+| qml_aot.ts | Agree on ratchet semantics and separate baseline command; default output is one summary plus failures, per-file details require --verbose | qml_aot.py |
 | qt_version_number_patch.ts | Agree; retain narrowly scoped idempotent Windows importer patch | qt.py |
-| qtbridge_surface.ts | Agree; faithful lexer/model and finding-key semantics; no proof tooling | bridge_surface.py |
+| qtbridge_surface.ts | Agree on lexer/model and finding keys; fix the inherited key-path emission bug (`\.signal` / `\Owner.signal`); no proof tooling | bridge_surface.py |
 | setup.ts | Agree on shared build path and four high-level stages; disagree on nested implicitly syncing uv run; explicitly time Qt environment sync | setup.py |
 | setup_reporter.ts | Agree; fold stage reporting into setup, remove heartbeat machinery | setup.py |
 | setup_swift_test.ts | Agree; removed quoting/installer behavior needs no re-pinned tests | Delete |
@@ -84,3 +84,15 @@ Measured uv bootstrap on this host: verified 0.13.0 ARM64 archive, 14,692,549 do
 m1 accepted all 17 foundation files and all 14 foundation TS dispositions after one fix round. Ruff lint/format and 13 behavioral tests passed. Actual Debug build completed, native Swift flag edit/restore rebuilt selectively, and Release setup reused Qt 6.11.2 without a root installer log. A real `Qt6_DIR-NOTFOUND` cache recovered its prior kit; the next build spent 0 s in explicit configure and 0.040 s in Ninja with no compilation. Console smoke distinguished argument failure (2) from corrupt runtime configuration (1); Qt patch smoke preserved CRLF/UTF-8 and was byte-stable on repeat/unrelated headers.
 
 Locked optional-Qt sync completed in 0.15 s from cache. Cold Qt installation was observed separately; its first post-download lookup failed because aqt now uses the `macos` kit directory, then the corrected setup built Release successfully. Windows environment quoting/encoding is source-reviewed only, not executed on this Mac. Keep strict UTF-16LE environment decoding: malformed environment data should fail rather than inject replacement characters into paths.
+
+## Process and baseline limits
+
+POSIX SIGINT/SIGTERM/SIGHUP take the owned cancellation path; SIGKILL cannot run cleanup. Windows terminates direct children; descendant containment is not guaranteed without a Job Object, and is source-reviewed only here. POSIX post-reap group cleanup retains the theoretical PID-reuse window noted by m1. Baseline values remain unchanged; a future explicit Python AOT baseline update uses codepoint key ordering rather than TS locale ordering.
+
+## Checks checkpoint evidence
+
+Ruff and all 32 behavioral tests passed. Real Release native checks passed 58/58, production shell 91/91, drawer 2/2 and roll 1/1. Native and QML harness baselines/predicates were not edited. Original TS and Python guards both reported bridge 0 findings and AOT 6393/6534 compiled with 141 rejections. These harness counts are not assertion counts; production-startup is an application `--version` smoke, not submitted-frame proof.
+
+m1's first review rejected four details: signal cleanup, noisy default output, standalone formatter discovery and missing qualified-key-path coverage. All four were repaired. Before SIGTERM handling, an owned native check remained alive and its scratch remained after runner exit -15. Afterward, the same scenario exited 130, reaped the child and removed scratch; a permanent isolated process regression also passes. Default native output is now selection plus summary, and a real QML check still prints its severity-classified QWARN without a PASS line.
+
+Actual Swift driver check/edit/check succeeded for a task-owned untracked file; disposable Git smoke proved quoted paths, tracked changed-hunk formatting, preserved unrelated spacing and nonmutating checks. No temporary Swift file remains. Windows formatter discovery is source-reviewed only. Existing/uncertain QML font aliases, null font access, delayed focusInput and DelegateModel cancellation warnings remain visible and outside this harness migration.

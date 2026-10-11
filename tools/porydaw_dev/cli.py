@@ -7,6 +7,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+CHECK_LANES = {
+    "checks": ("porydaw_checks", "native logic and production startup"),
+    "checks:qml": ("editor_qml_tests", "QML drawer"),
+    "checks:qml-roll": ("roll_qml_tests", "production Swift roll"),
+    "checks:shell": ("shell_qml_tests", "production shell"),
+}
+
 
 def _config(parser: argparse.ArgumentParser) -> None:
     choice = parser.add_mutually_exclusive_group()
@@ -26,47 +33,195 @@ def _worktree_name(value: str) -> str:
     return value
 
 
+def _nonempty(value: str) -> str:
+    if not value:
+        raise argparse.ArgumentTypeError("requires a nonempty value")
+    return value
+
+
+def _pool(value: str) -> int:
+    try:
+        number = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(
+            "pool must be an integer from 1 to 64"
+        ) from error
+    if not 1 <= number <= 64:
+        raise argparse.ArgumentTypeError("pool must be an integer from 1 to 64")
+    return number
+
+
+def _format_file(value: str) -> Path:
+    path = Path(value).resolve()
+    if path.suffix not in (".swift", ".py"):
+        raise argparse.ArgumentTypeError("format accepts only .swift and .py files")
+    return path
+
+
+def _run_checks(options: argparse.Namespace, qt: tuple[str, ...] | None) -> int:
+    from . import bridge_surface, checks, qml_aot
+    from .build import artifact, run_build
+
+    selection = checks.Options(
+        tuple(options.filter),
+        tuple(options.exclude),
+        options.all,
+        options.no_windowing_checks,
+        options.verbose,
+        options.pool,
+        qt,
+    )
+    try:
+        if options.command == "checks:run":
+            return checks.run(options.binary, selection)
+        if bridge_surface.run(quiet=True):
+            return 1
+        config = (
+            "asan"
+            if options.asan
+            else "release"
+            if options.release or sys.platform == "win32"
+            else "debug"
+        )
+        binary = CHECK_LANES[options.command][0]
+        targets = [binary, "mid2agb"]
+        if options.command == "checks":
+            targets.append("all_aotstats")
+            if "production-startup" not in selection.exclusions and (
+                not selection.filters
+                or any(value in "production-startup" for value in selection.filters)
+            ):
+                targets.insert(0, "porydaw")
+        directory = run_build(targets, config, checks=True)
+        if options.command == "checks" and qml_aot.run(config, options.verbose):
+            return 1
+        return checks.run(artifact(directory, binary), selection)
+    except checks.UsageError as error:
+        print(f"{options.command}: {error}", file=sys.stderr)
+        return 2
+
+
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         prog="uv run --no-sync dev",
         description="Porydaw development harness. Provision with uv sync --locked before first use, in each new worktree, and after project/lockfile changes.",
+        allow_abbrev=False,
     )
     commands = root.add_subparsers(dest="command")
     for name, description in (
         ("build:app", "build application"),
         ("build:checks", "build application, checks and mid2agb"),
     ):
-        command = commands.add_parser(name, help=description)
+        command = commands.add_parser(name, help=description, allow_abbrev=False)
         _config(command)
+    for name, (_, description) in {
+        **CHECK_LANES,
+        "checks:run": ("", "prebuilt checks binary without building"),
+    }.items():
+        command = commands.add_parser(
+            name, help="run " + description, allow_abbrev=False
+        )
+        if name == "checks:run":
+            command.add_argument("binary", type=lambda value: Path(value).absolute())
+        else:
+            _config(command)
+        command.add_argument(
+            "--filter",
+            action="append",
+            type=_nonempty,
+            default=[],
+            help="repeatable substring; includes opt-in checks",
+        )
+        command.add_argument(
+            "--exclude",
+            action="append",
+            type=_nonempty,
+            default=[],
+            help="repeatable exact harness name",
+        )
+        selection = command.add_mutually_exclusive_group()
+        selection.add_argument(
+            "--all", action="store_true", help="include opt-in checks"
+        )
+        selection.add_argument("--no-windowing-checks", action="store_true")
+        command.add_argument(
+            "--verbose",
+            "-v",
+            action="store_true",
+            help="print passing checks' raw output",
+        )
+        command.add_argument("--pool", type=_pool, default=min(12, os.cpu_count() or 1))
+        command.epilog = "Terminal --qt <args...> forwards opaque Qt arguments to exactly one selected qt-test harness."
+    for name, description in (
+        ("checks:bridge", "check Swift/QML bridge surface (read-only)"),
+        ("bridge:baseline", "record current bridge findings"),
+        ("checks:qml-aot", "build and ratchet production QML AOT"),
+        ("qml-aot:baseline", "build and record current AOT baseline"),
+    ):
+        command = commands.add_parser(name, help=description, allow_abbrev=False)
+        if name in ("checks:qml-aot", "qml-aot:baseline"):
+            _config(command)
+            command.add_argument("--verbose", "-v", action="store_true")
+    command = commands.add_parser(
+        "format",
+        help="format changed Swift hunks and Python; --whole requires named files",
+        allow_abbrev=False,
+    )
+    command.add_argument("--check", action="store_true")
+    command.add_argument("--base", type=_nonempty, default="HEAD")
+    command.add_argument("--whole", action="store_true")
+    command.add_argument("files", nargs="*", type=_format_file)
     command = commands.add_parser(
         "setup",
         help="provision checkout-local Qt and build Release; never run host package managers",
+        allow_abbrev=False,
     )
     command.add_argument("--qt-version", type=_qt_version)
     command = commands.add_parser(
-        "worktree:create", help="create a linked worktree using shared poryaaaa"
+        "worktree:create",
+        help="create a linked worktree using shared poryaaaa",
+        allow_abbrev=False,
     )
     command.add_argument("name", type=_worktree_name)
     command.add_argument("--base", default="fork-main")
     command = commands.add_parser(
-        "qt:patch", help="patch a Windows Qt kit for the Swift importer"
+        "qt:patch",
+        help="patch a Windows Qt kit for the Swift importer",
+        allow_abbrev=False,
     )
     command.add_argument("prefix", type=lambda value: Path(value).resolve())
     commands.add_parser(
-        "checks:backups", help="run standalone Swift backup package tests without Qt"
+        "checks:backups",
+        help="run standalone Swift backup package tests without Qt",
+        allow_abbrev=False,
     )
     commands.add_parser(
-        "lsp:swift", help="refresh the Swift compile database and index"
+        "lsp:swift",
+        help="refresh the Swift compile database and index",
+        allow_abbrev=False,
     )
     commands.add_parser(
-        "tools:check", help="lint, format-check and test the Python harness"
+        "tools:check",
+        help="lint, format-check and test the Python harness",
+        allow_abbrev=False,
     )
     return root
 
 
 def main() -> int:
     root_parser = parser()
-    options = root_parser.parse_args()
+    raw = sys.argv[1:]
+    qt = None
+    if raw and raw[0] in (*CHECK_LANES, "checks:run") and "--qt" in raw:
+        separator = raw.index("--qt")
+        qt, raw = tuple(raw[separator + 1 :]), raw[:separator]
+        if not qt:
+            root_parser.error("--qt requires a nonempty terminal payload")
+    options = root_parser.parse_args(raw)
+    if getattr(options, "asan", False) and sys.platform == "win32":
+        root_parser.error("--asan is not supported on Windows")
+    if options.command == "format" and options.whole and not options.files:
+        root_parser.error("--whole requires named files")
     if options.command is None:
         root_parser.print_help()
         return 0
@@ -86,6 +241,8 @@ def main() -> int:
                 f"harness belongs to {repo}, not cwd's repository {actual}; sync and run the owning worktree's environment"
             )
         os.chdir(repo)
+        if options.command in (*CHECK_LANES, "checks:run"):
+            return _run_checks(options, qt)
         match options.command:
             case "build:app" | "build:checks":
                 from .build import run_build
@@ -104,6 +261,31 @@ def main() -> int:
                     else "debug",
                     checks=True if options.command == "build:checks" else None,
                 )
+            case "checks:bridge" | "bridge:baseline":
+                from .bridge_surface import run
+
+                return run(update=options.command == "bridge:baseline")
+            case "checks:qml-aot" | "qml-aot:baseline":
+                from .build import run_build
+                from .qml_aot import run
+
+                config = (
+                    "asan"
+                    if options.asan
+                    else "release"
+                    if options.release
+                    else "debug"
+                )
+                run_build(["porydaw", "all_aotstats"], config)
+                return run(
+                    config,
+                    options.verbose,
+                    update=options.command == "qml-aot:baseline",
+                )
+            case "format":
+                from .format import run
+
+                return run(options.check, options.base, options.files, options.whole)
             case "setup":
                 from .setup import run
 
