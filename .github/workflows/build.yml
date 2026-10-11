@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [fork-main, feature/uv-python-harness]
+    branches: [fork-main]
 
 concurrency:
   group: build-${{ github.workflow }}-${{ github.ref }}
@@ -183,30 +183,12 @@ jobs:
   # AddressSanitizer sweep of the porydaw_checks catalog with the software Qt Quick
   # backend; windowing checks and the QML lanes are not run here.
   asan-checks:
-    runs-on: ${{ github.ref == 'refs/heads/feature/uv-python-harness' && 'ubuntu-latest' || fromJSON('["self-hosted", "Linux", "X64", "porydaw-ci"]') }}
-    env:
-      ASAN_BUILD_DIR: ${{ github.ref == 'refs/heads/feature/uv-python-harness' && format('{0}/build/ci-asan', github.workspace) || '/mnt/ci/build-asan' }}
-      BUILD_JOBS: ${{ github.ref == 'refs/heads/feature/uv-python-harness' && '2' || '12' }}
-      SWIFT_THREADS: ${{ github.ref == 'refs/heads/feature/uv-python-harness' && '2' || '6' }}
-      CHECK_POOL: ${{ github.ref == 'refs/heads/feature/uv-python-harness' && '1' || '4' }}
+    runs-on: [self-hosted, Linux, X64, porydaw-ci]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 1
-
-      - name: Install hosted ASAN dependencies
-        if: github.ref == 'refs/heads/feature/uv-python-harness'
-        run: sudo apt-get update && sudo apt-get install -y lld pulseaudio
-      - name: Cache hosted C/C++ objects
-        if: github.ref == 'refs/heads/feature/uv-python-harness'
-        uses: mozilla-actions/sccache-action@v0.0.9
-      - name: Install hosted Qt
-        if: github.ref == 'refs/heads/feature/uv-python-harness'
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: "6.11.*"
-          cache: true
 
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
@@ -223,25 +205,25 @@ jobs:
       # LLD avoids GNU ld's >16 GB peak when linking the ASAN check binary.
       - name: Configure
         run: >-
-          cmake -S . -B "$ASAN_BUILD_DIR" -G Ninja -DPORYDAW_ASAN=ON
+          cmake -S . -B /mnt/ci/build-asan -G Ninja -DPORYDAW_ASAN=ON
           -DCMAKE_BUILD_TYPE=RelWithDebInfo
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DCMAKE_LINKER_TYPE=LLD
-          -DCMAKE_Swift_NUM_THREADS="$SWIFT_THREADS"
-          -DCMAKE_Swift_FLAGS_RELWITHDEBINFO="-O -g -num-threads $SWIFT_THREADS"
+          -DCMAKE_Swift_NUM_THREADS=6
+          -DCMAKE_Swift_FLAGS_RELWITHDEBINFO="-O -g -num-threads 6"
 
       - name: Build
-        run: cmake --build "$ASAN_BUILD_DIR" -j"$BUILD_JOBS"
+        run: cmake --build /mnt/ci/build-asan -j12
 
       - name: Run harnesses
         run: |
           checks=(uv run --no-sync dev checks:run
-            "$ASAN_BUILD_DIR/porydaw_checks" --no-windowing-checks)
+            /mnt/ci/build-asan/porydaw_checks --no-windowing-checks)
           set +e
           QT_QUICK_BACKEND=software "${checks[@]}" --filter=projectstore-parity --pool=1
           parity_status=$?
-          QT_QUICK_BACKEND=software "${checks[@]}" --exclude=projectstore-parity --pool="$CHECK_POOL"
+          QT_QUICK_BACKEND=software "${checks[@]}" --exclude=projectstore-parity --pool=4
           remaining_status=$?
           (( parity_status == 0 && remaining_status == 0 ))
 

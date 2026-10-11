@@ -3,8 +3,6 @@ name: All checks
 on:
   push:
     branches: [fork-main]
-  pull_request:
-  workflow_dispatch:
 
 permissions:
   contents: read
