@@ -25,6 +25,15 @@
 - Right-click an insertion ghost between nodes to enter the value to insert
   at that position.
 
+### Note pitch bend and modulation
+
+Select a note and press **G** to open its pitch-bend and modulation graphs.
+Clicking an existing node selects it without changing its tick or value.
+Dragging vertically changes its value without snapping its time to the grid.
+Dragging an interior node horizontally snaps its time; hold **Alt** for fine snapping.
+If the destination tick already has a node, the dragged node keeps its original
+tick rather than overwriting that node or jumping to a distant empty tick.
+
 ## The value axis and zooming
 
 Pinned reference curves draw behind the active curve in half-opacity automation

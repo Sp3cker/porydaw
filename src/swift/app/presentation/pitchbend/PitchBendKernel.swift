@@ -19,6 +19,9 @@ public struct PitchBendKernel {
     private struct VertexDrag {
         var original: [Int: Int]
         var originalTick: Int
+        var originalValue: Int
+        var pressX: Double
+        var pressY: Double
     }
     private enum Gesture { case stroke(Stroke), vertex(VertexDrag) }
 
@@ -218,7 +221,10 @@ public struct PitchBendKernel {
     public mutating func begin(x: Double, y: Double, line: Bool) {
         if let hit = hitTest(x: x, y: y) {
             selectedTick = hit.tick
-            gesture = .vertex(VertexDrag(original: points, originalTick: hit.tick))
+            gesture = .vertex(
+                VertexDrag(
+                    original: points, originalTick: hit.tick, originalValue: hit.value,
+                    pressX: x, pressY: y))
             keyboardTick = hit.tick
             liveValue = hit.value
             return
@@ -249,22 +255,28 @@ public struct PitchBendKernel {
             liveValue = point.value
         case .vertex(let drag):
             points = drag.original
+            let dx = x - drag.pressX
+            let dy = y - drag.pressY
+            let originalValue = drag.originalValue
             let endpoint = drag.originalTick == startTick || drag.originalTick == endTick
             var tick =
-                endpoint
+                endpoint || abs(dx) <= geometry.scrubThreshold
                 ? drag.originalTick
                 : min(
                     endTick - 1,
                     max(
                         startTick + 1,
-                        tick(atX: x, fine: fine)))
+                        self.tick(atX: self.x(at: drag.originalTick) + dx, fine: fine)))
             if tick != drag.originalTick && points[tick] != nil {
-                let delta = tick > drag.originalTick ? 1 : -1
-                while tick > startTick && tick < endTick && points[tick] != nil { tick += delta }
-                if tick <= startTick || tick >= endTick { tick = drag.originalTick }
+                tick = drag.originalTick
             }
             if tick != drag.originalTick { points.removeValue(forKey: drag.originalTick) }
-            let value = drag.originalTick == endTick ? endValue : value(atY: y)
+            let value =
+                drag.originalTick == endTick
+                ? endValue
+                : abs(dy) <= geometry.scrubThreshold
+                    ? originalValue
+                    : value(atY: self.y(at: originalValue) + dy)
             points[tick] = value
             points[endTick] = endValue
             selectedTick = tick
