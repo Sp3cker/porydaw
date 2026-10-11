@@ -31,7 +31,7 @@ jobs:
         run: uv run --no-sync dev format --check --base "$BASE"
 
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, porydaw-ci]
     steps:
       - uses: actions/checkout@v4
         with:

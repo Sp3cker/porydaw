@@ -50,8 +50,9 @@ The `Build` and `All checks` workflows run only on pushes to `fork-main`.
 Linux ASAN runs on the self-hosted Linux x64 `porydaw-ci` runner, retaining its
 `/mnt/ci/build-asan` tree with 12 build jobs, six Swift threads and check pool four.
 It runs Python harness tests before the native sweep, excluding windowing checks
-and QML lanes; those run in the GitHub-hosted macOS `All checks` job. Artifact
-builds and the standalone Linux harness-test job also remain GitHub-hosted.
+and QML lanes; those run in the GitHub-hosted macOS `All checks` job. The Linux
+release build also uses `porydaw-ci`; macOS/Windows artifact builds and the
+standalone Linux harness-test job remain GitHub-hosted.
 Startup benchmark commands remain available, but their synthetic process and
 statistics tests are excluded from the harness suite.
 
