@@ -109,26 +109,12 @@ if(PORYDAW_ASAN)
         "$<$<LINK_LANGUAGE:Swift>:-sanitize=address>")
 endif()
 
+if(APPLE)
+    set(CMAKE_NO_SYSTEM_FROM_IMPORTED ON)
+endif()
 find_package(Qt6 6.11 REQUIRED COMPONENTS Qml Quick QuickControls2 Widgets)
 qt_standard_project_setup()
 qt_policy(SET QTP0004 NEW)
-
-function(porydaw_mark_interface_includes_system dependency)
-    get_target_property(dependency_include_dirs ${dependency} INTERFACE_INCLUDE_DIRECTORIES)
-    if(dependency_include_dirs)
-        set_property(TARGET ${dependency} APPEND PROPERTY
-            INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${dependency_include_dirs}")
-    endif()
-endfunction()
-
-if(APPLE)
-    # NO_SYSTEM_FROM_IMPORTED keeps Qt's exact framework-header paths ahead of
-    # unrelated non-framework Qt installs. Also classify those same paths as
-    # system headers so project warning flags do not diagnose Qt internals.
-    foreach(qt_target IN ITEMS Core Gui Qml Quick QuickControls2 Widgets)
-        porydaw_mark_interface_includes_system(Qt6::${qt_target})
-    endforeach()
-endif()
 
 # ---- poryaaaa engine core (MIT, statically linked) ----
 set(PORYAAAA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/poryaaaa"
@@ -406,9 +392,6 @@ foreach(native_target IN ITEMS porydaw_app porydaw_native_host)
     target_link_libraries(${native_target} PUBLIC Qt6::Gui poryaaaa_engine)
     target_link_libraries(${native_target} PRIVATE Qt6::Qml Qt6::Quick QtBridge)
     set_target_properties(${native_target} PROPERTIES LINKER_LANGUAGE CXX)
-    if(APPLE)
-        set_target_properties(${native_target} PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
-    endif()
     target_precompile_headers(${native_target} PRIVATE
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
     if(UNIX AND NOT APPLE)
@@ -448,9 +431,6 @@ target_compile_options(porydaw_qmltypes PRIVATE
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${porydaw_qmltypes_modulemap}>"
 )
 target_link_libraries(porydaw_qmltypes PRIVATE PorydawApp QtBridge)
-if(APPLE)
-    set_target_properties(porydaw_qmltypes PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
-endif()
 if(WIN32)
     target_sources(porydaw_qmltypes PRIVATE
         "$ENV{SDKROOT}/usr/lib/swift/windows/x86_64/swiftrt.obj")

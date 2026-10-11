@@ -25,9 +25,6 @@ set_target_properties(mid2agb PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BIN
 # ---- Rewrite check executable ----
 # QuickTest serves the Swift-hosted editor-QML lane at the end of this file.
 find_package(Qt6 REQUIRED COMPONENTS Test QuickTest)
-if(APPLE)
-    porydaw_mark_interface_includes_system(Qt6::Test)
-endif()
 
 # Swift check sources need their own archive for CMake to emit compile rules.
 function(add_porydaw_check_lane name)
@@ -140,10 +137,10 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         lanes/SwiftCoreCheckLogicLane.swift
         audio/AudioAuditionChecks.swift
         audio/controllerfixture.swift
-        audio/tst_metronome.swift
         audio/resonancefixture.swift
         audio/tst_audiotelemetry.swift
         audio/tst_clicktransport.swift
+        audio/tst_metronome.swift
         audio/tst_resonancelaw.swift
         audio/tst_resonancetiming.swift
         automation/domain/stagedSnapshot.swift
