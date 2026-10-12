@@ -3,6 +3,7 @@
 #include "core_check.h"
 #include "native_check.h"
 
+#include <QByteArray>
 #include <QDebug>
 #include <QFile>
 #include <QtTest/QTest>

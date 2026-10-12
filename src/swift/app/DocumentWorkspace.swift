@@ -218,6 +218,9 @@ public final class DocumentWorkspace {
         audio.bind(
             timeline: session.timeline, bank: session.bankLease,
             config: session.document.state.config)
+        grid.onBandAudition = { [weak audio] notes in
+            audio?.updateBandAudition(notes)
+        }
         audio.setMix(muted: session.mutedTracks, soloed: session.soloedTracks)
         appliedSongConfig = session.document.state.config
         // The engine is bound before the publication is reinstalled, so no
@@ -318,6 +321,7 @@ public final class DocumentWorkspace {
         rulerMenu.cancelInsertTimePrompt()
         pitchBend.cancelAndClose()
         cancel(reason: GridCancelReason.hidden.rawValue)
+        grid.onBandAudition = nil
         playhead.detach()
         lastPlayheadPresentation = nil
         playheadGuides.detach()

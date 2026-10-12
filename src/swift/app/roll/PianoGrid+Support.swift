@@ -53,6 +53,7 @@ extension PianoGrid {
     func detach() {
         inputCancelled(reason: GridCancelReason.hidden.rawValue)
         onAudition = nil
+        onBandAudition = nil
     }
 
     @QtIgnored

@@ -27,11 +27,13 @@ public final class AudioAudition {
     private var voiceGeneration: UInt8 = 0
     private var appliedNote: UInt32 = 0
     private var appliedVoice: UInt64 = 0
-    private var heldTrack: Int32 = -1
-    private var heldKey: Int32 = -1
+    private var heldSerial: UInt64 = 0
+    private var heldOccurrence: UInt64 = 0
     private var voiceKey: Int32 = -1
     private let samples = AudioSampleAudition()
+    private let band = AudioBandAudition()
     let timed = TimedAuditions()
+    let voices = AudioAuditionVoices()
 
     public init() {}
 
@@ -40,6 +42,11 @@ public final class AudioAudition {
         noteCommand.store(
             UInt32(noteGeneration) << 24 | UInt32(track & 15) << 16 | UInt32(key & 127) << 8 | UInt32(velocity),
             ordering: .releasing)
+    }
+
+    /// Publish identity-based entrances and departures from the single UI producer.
+    public func updateBandAudition(_ notes: [BandAuditionNote]) {
+        band.update(notes)
     }
 
     public func previewVoice(program: UInt8, key: UInt8, velocity: UInt8) {
@@ -80,21 +87,27 @@ public final class AudioAudition {
         let note = noteCommand.load(ordering: .acquiring)
         if note != appliedNote {
             appliedNote = note
-            if heldKey >= 0 { m4a_engine_note_off(main, heldTrack, UInt8(heldKey)) }
-            heldTrack = -1
-            heldKey = -1
+            if heldOccurrence != 0 {
+                voices.release(engine: main, source: .held, serial: heldOccurrence)
+            }
+            heldOccurrence = 0
             let velocity = UInt8(truncatingIfNeeded: note)
             if velocity > 0 {
                 let track = Int32((note >> 16) & 15)
                 let key = UInt8((note >> 8) & 127)
                 main.pointee.polyEventClock = UInt32.max
                 main.pointee.auditionNote = true
-                m4a_engine_note_on(main, track, key, velocity)
-                heldTrack = track
-                heldKey = Int32(key)
+                heldSerial += 1
+                heldOccurrence = heldSerial
+                voices.start(
+                    engine: main, track: track, key: key, velocity: velocity,
+                    source: .held, serial: heldOccurrence)
             }
         }
-        if !deferTimed { timed.apply(main, frames: frames) }
+        if !deferTimed {
+            timed.apply(main, voices: voices, frames: frames)
+            band.apply(main, voices: voices)
+        }
         let voice = voiceCommand.load(ordering: .acquiring)
         if voice != appliedVoice {
             appliedVoice = voice
@@ -111,14 +124,30 @@ public final class AudioAudition {
         samples.apply(preview)
     }
 
+    /// Render the original engine, releasing band occurrences only after their
+    /// captured number of samples has actually passed through native DSP.
+    ///
+    /// - Parameters:
+    ///   - main: The initialized main engine shared with interactive sequencing.
+    ///   - left: Planar left output storage for at least `frames` samples.
+    ///   - right: Planar right output storage for at least `frames` samples.
+    ///   - frames: Nonnegative output sample count.
+    public func render(
+        main: UnsafeMutablePointer<M4AEngine>, left: UnsafeMutablePointer<Float>,
+        right: UnsafeMutablePointer<Float>, frames: Int
+    ) {
+        voices.render(engine: main, left: left, right: right, frames: frames)
+    }
+
     /// At fade start, discard old countdowns before sequenced notes can reuse keys.
     public func beginCut() { clearMainPreviews() }
 
     /// Caller already released main-engine voices (seek/timeline replacement).
     public func clearMainPreviews() {
         timed.clear(dropQueued: true)
-        heldTrack = -1
-        heldKey = -1
+        band.discardPending()
+        heldOccurrence = 0
+        voices.clear()
     }
 
     /// Audio callback at zero output gain; commands queued during the fade survive.
@@ -129,8 +158,8 @@ public final class AudioAudition {
         m4a_engine_all_sound_off(main)
         m4a_engine_all_sound_off(preview)
         timed.clear(dropQueued: false)
-        heldTrack = -1
-        heldKey = -1
+        heldOccurrence = 0
+        voices.clear()
         voiceKey = -1
         samples.reset()
     }
@@ -162,12 +191,14 @@ final class TimedAuditions {
         var track: UInt8 = 0
         var key: UInt8 = 0
         var remaining: Int64 = 0
+        var serial: UInt64 = 0
     }
     private let ring = UnsafeMutablePointer<Command>.allocate(capacity: 64)
     private let active = UnsafeMutablePointer<Active>.allocate(capacity: 24)
     let write = Atomic<UInt32>(0)
     let read = Atomic<UInt32>(0)
     private(set) var count = 0
+    private var serial: UInt64 = 0
 
     init() {
         ring.initialize(repeating: Command(), count: 64)
@@ -196,7 +227,7 @@ final class TimedAuditions {
         if dropQueued { read.store(write.load(ordering: .acquiring), ordering: .releasing) }
     }
 
-    func apply(_ engine: UnsafeMutablePointer<M4AEngine>, frames: UInt32) {
+    func apply(_ engine: UnsafeMutablePointer<M4AEngine>, voices: AudioAuditionVoices, frames: UInt32) {
         let end = write.load(ordering: .acquiring)
         var position = read.load(ordering: .relaxed)
         if position != end {
@@ -215,7 +246,7 @@ final class TimedAuditions {
             }
             if command.velocity == 0 {
                 if slot >= 0 {
-                    m4a_engine_note_off(engine, Int32(command.track), command.key)
+                    voices.release(engine: engine, source: .timed, serial: active[slot].serial)
                     count -= 1
                     active[slot] = active[count]
                 }
@@ -231,19 +262,22 @@ final class TimedAuditions {
                         slot = index
                     }
                 }
-                m4a_engine_note_off(engine, Int32(active[slot].track), active[slot].key)
+                voices.release(engine: engine, source: .timed, serial: active[slot].serial)
             }
-            m4a_engine_note_on(engine, Int32(command.track), command.key, command.velocity)
+            serial += 1
+            voices.start(
+                engine: engine, track: Int32(command.track), key: command.key, velocity: command.velocity,
+                source: .timed, serial: serial)
             active[slot] = Active(
                 track: command.track, key: command.key,
-                remaining: Int64(command.duration))
+                remaining: Int64(command.duration), serial: serial)
         }
         read.store(position, ordering: .releasing)
         var index = 0
         while index < count {
             active[index].remaining -= Int64(frames)
             if active[index].remaining <= 0 {
-                m4a_engine_note_off(engine, Int32(active[index].track), active[index].key)
+                voices.release(engine: engine, source: .timed, serial: active[index].serial)
                 count -= 1
                 active[index] = active[count]
             } else {

@@ -3,6 +3,7 @@ import Foundation
 @testable import PorydawAppPresentation
 import PorydawCore
 @testable import PorydawDocument
+import PorydawPlayback
 
 @MainActor
 internal func runTransportBarChecks(_ report: CheckReport) {
@@ -359,6 +360,29 @@ private func checkSelectedWorkspaceAudio(_ report: CheckReport, fixtureRoot: Str
         return
     }
     checkTwoTabAudioIsolation(app: app, audio: audio, report: report, id: id, firstID: first.tabId)
+    guard let survivor = app.songTabs.selectedPage, survivor !== first else {
+        report.fail(id, "two-tab audition isolation needs a different active workspace")
+        return
+    }
+    let bandID = "swiftcore/DocumentWorkspace::retiredBandIsolation"
+    let chord = [
+        BandAuditionNote(
+            noteID: 1, track: 0, key: 60, velocity: 93,
+            durationSamples: UInt64(audio.sampleRate) * 30)
+    ]
+    survivor.workspace.grid.onBandAudition?(chord)
+    guard pollCheckUntil({ workspaceAudioSounding(audio) }) else {
+        report.fail(bandID, "active workspace band did not reach the native voice")
+        return
+    }
+    first.workspace.teardown()
+    report.expect(
+        !pollCheckUntil({ !workspaceAudioSounding(audio) }, seconds: 0.25), cppID: bandID,
+        message: "retiring an inactive workspace preserves the active band's native voice")
+    survivor.workspace.cancel(reason: GridCancelReason.hidden.rawValue)
+    report.expect(
+        pollCheckUntil({ !workspaceAudioSounding(audio) }), cppID: bandID,
+        message: "the active workspace still releases its own band on cancellation")
     checkEngineStopResyncsTransportState(app: app, audio: audio, report: report)
     checkCursorCommitSeeksPausedAndPlayingTransport(app: app, audio: audio, report: report)
 }
