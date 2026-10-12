@@ -81,10 +81,10 @@ internal func runStudioLifecycleChecks(_ report: CheckReport) {
         defer { renderer.unload() }
         let lane = SampleAuditionArbiter(output: renderer)
         let first = SampleStudioAudition(
-            presenter: SampleStudioPresenter(source: source, validateName: { _ in nil }),
+            presenter: SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil }),
             lane: lane, destinationAdsr: nil)
         let second = SampleStudioAudition(
-            presenter: SampleStudioPresenter(source: source, validateName: { _ in nil }),
+            presenter: SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil }),
             lane: lane, destinationAdsr: nil)
         var samples = [Float](repeating: 0, count: 48_000 * 2)
         func renderIsAudible() -> Bool {
@@ -114,7 +114,8 @@ internal func runStudioLifecycleChecks(_ report: CheckReport) {
             samples.allSatisfy { abs($0) <= 1e-7 },
             message: "Closing active editor silences the lane")
 
-        let rendered = SampleStudioPresenter(source: source, validateName: { _ in nil }).processed
+        let rendered = SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil })
+            .processed
         weak var expired: AuditionOwner?
         do {
             let temporary = AuditionOwner()

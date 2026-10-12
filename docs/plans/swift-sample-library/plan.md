@@ -70,6 +70,8 @@ and audio-output machinery are reused as-is.
 | 1 | Swift library pane model + preferences widening + `PorydawQmlTypes` registration + `LibraryModelChecks` | SDD-track · `sdd-implementer` | New bridged model with a state machine and persistence contract; judgment work, several edge cases |
 | 2 | Studio lifecycle: presenter `replaceSource`/`hasSource`/`sourceRevision`, waveform + loop-tools invalidation, audition arbiter, workflow transaction + preview wiring + unit checks | SDD-track · `sdd-implementer` | Ownership/lifecycle surgery across six Swift files; correctness-critical arbitration; not mechanical |
 | 3 | QML pane + dialog layout + `SampleStudioHost` parenting (only if required) + shell probe/entries/new lane + user docs | SDD-track · `sdd-implementer` | New QML surface with pointer/keyboard contracts, new lane entry, fixture probes; judgment work |
+| 4 | Bounded background preview/load preparation, cancellation, prepared-document installation and constructor migration | SDD-track · `sdd-implementer` | One source transaction across DSP/document/workflow/presenter; over-cap write set is cohesive, check migrations mechanical |
+| 5 | Background pitch lifecycle, reusable Double YIN windows and deterministic existing-check waits | SDD-track · `sdd-implementer` | Independent analysis owner, numerical invariants and cancellation/source-revision races |
 
 Disjoint ownership: task 1 owns the model, preferences widening, `PorydawQmlTypes`
 registration and `LibraryModelChecks`; task 2 owns the six lifecycle Swift files and
@@ -225,3 +227,79 @@ capture recorded 2,988 ms weighted main-thread CPU, including 1,531 ms in YIN
 pitch detection and 1,321 ms in sinc resampling. The allocator binary accounted
 for 2 ms. The remaining delay in this run is numeric-loop cost, not allocation
 time; Debug bounds checks and conversions are prominent in the stacks.
+
+## Asynchronous preparation milestone
+
+Tasks 4–5 execute from checkpoint `0aff945ace0cdb659dd8379095c78cd9b3d29535`.
+Their write sets are disjoint and their shared presenter/cancel interfaces are
+frozen in the briefs. Controller owns temporary CPU/race instrumentation,
+registration if a new owned Swift file needs enrollment, documentation, shared
+verification, and review packages. Commit the accepted union after both tasks
+and the final thermo-nuclear audit pass.
+
+The approved latency contract supplements the existing spec: UI selection
+returns without waiting for render or pitch DSP; at most one preparation worker
+and one pitch worker run, each with only its newest pending request. Superseded
+work cooperatively stops. Stop, close and source/session replacement invalidate
+late results. Source/provenance/history install atomically after successful
+current preparation; failed or stale jobs leave the prior editor intact.
+Pitch suggestions arrive asynchronously and never automatically change the key.
+Pitch-dependent explicit actions defer against the same source/parameter state.
+Prepared source installation retains its render cache. Preview remains the
+historical default GBA render with looping disabled; reuse requires matching
+immutable source identity and exact parameters, never path alone.
+
+Numerical coverage, thresholds, arithmetic order and filter quality stay
+unchanged. All QObject/QML/audio publication stays on the main actor; worker
+inputs/results are immutable Sendable values. No new permanent integration
+suite. The original three added local checks must remain below three seconds
+combined. The controller repeats the temporary real-input CPU harness, exercises
+latest-request-wins/stop/close behavior, then removes the harness before handoff.
+
+### Measured outcome
+
+Temporary production-slice harness: the same local mono WAV, 366,932 frames at
+44.1 kHz. CPU figures below are medians of three stage calls; replacement
+measures main-actor installation plus live waveform/loop-tools observers, not
+the separately scheduled worker DSP. Source preparation still costs real CPU.
+
+| CPU stage | Checkpoint Debug ms | Current Debug ms | Checkpoint Release ms | Current Release ms |
+|---|---:|---:|---:|---:|
+| Render preparation | 1365.871 | 1325.601 | 108.235 | 109.108 |
+| YIN detection | 1548.480 | 1413.497 | 131.549 | 103.234 |
+| Source installation and observers | 2931.694 | 6.708 | 239.917 | 0.258 |
+
+The actual workflow's first load dispatch returned in 0.043 ms Debug /
+0.025 ms Release. The main actor processed a turn before the source installed.
+These are dispatch timings, not whole-click completion times. Render quality,
+windows and pitch arithmetic are unchanged; exact checkpoint comparisons passed
+on the real input, eight rate/frequency tone cases and five noise/boundary lengths.
+
+The temporary real-session/native-audio smoke passed latest-only load/preview,
+failed-load preservation, Stop during preparation and Close without late
+mutation. Pitch smoke passed immediate old-hint invalidation, no automatic key
+adoption, explicit deferred adoption against latest C, and terminal cancellation.
+The original three added local checks totaled 1.365 s Debug / 0.177 s Release.
+No permanent integration checks were added.
+
+Time Profiler capture `/tmp/porydaw-sample-async-release.trace` observed YIN
+and sinc resampling on worker threads (639 ms / 113 ms inclusive across the
+whole harness). Deliberate direct DSP benchmark calls also run on its main
+thread; those samples are not production UI blocking.
+
+Thermo review prompted a completion-reentrancy repro: A's callback submits B
+then C, and stale B must not clear C's task ownership. The temporary repro
+failed before and passed after requiring an idle worker in `startPending`.
+Canonical reopen policy remains in `SampleReopen`; returned source bytes avoid
+duplicating policy or rereading provenance data. The temporary harness,
+dispatcher hook, fixture enrollment, trace wrapper and copied binary were removed.
+
+Final clean-tree gates after removing instrumentation and its observation-only
+hooks: Task 4 spec/standards PASS, Task 5 spec/standards PASS, final independent
+thermo-nuclear PASS. Debug covering lanes (processing, storage, render, editor,
+analysis): 5/5 passed in 8.52 s. Release adds the six original pitch rows:
+11/11 passed in 3.06 s. `checks:bridge`: zero baselined findings.
+`format --check`: passed; refreshed Swift index: 23/23 targets.
+The first cleanup index refresh referenced the deleted temporary source through
+stale CMake metadata; the normal Debug build regenerated it before the successful
+refresh. No temporary source or benchmark branch remains.

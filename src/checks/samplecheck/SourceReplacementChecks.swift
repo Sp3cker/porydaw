@@ -3,6 +3,7 @@ import NativeDisplayList
 import PorydawApp
 import PorydawAppPresentation
 import PorydawSample
+import SwiftCoreCheckSupport
 
 @testable import SwiftCoreCheckLogic
 
@@ -42,13 +43,13 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
         }
     }
 
-    let blank = SampleStudioPresenter(source: ImportedSample(), validateName: validator)
+    let blank = SampleStudioPresenter(document: SampleDocument(source: ImportedSample()), validateName: validator)
     let blankWave = SampleWaveformModel(presenter: blank, palette: palette)
     blankWave.setViewport(width: 120, height: 120)
     replacement.expect(
         !blank.hasSource && !blank.canCommit && blank.nameReadOnly,
         message: "empty studio cannot commit or edit an unloaded sample name")
-    blank.replaceSource(next)
+    blank.replaceSource(SampleDocument(source: next))
     replacement.expect(
         blank.hasSource && blank.canCommit && !blank.nameReadOnly && blank.sampleName == "new_tone",
         message: "loading a source enables the prefilled valid name and commit")
@@ -56,13 +57,13 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
         abs(blankWave.xForSample(6_000) - 60) <= 2
             && (waveformHeight(blankWave, atX: 30) ?? 0) > 10,
         message: "blank studio draws and fits newly loaded audio without a stale empty pyramid")
-    blank.replaceSource(ImportedSample(suggestedName: "empty_tone"))
+    blank.replaceSource(SampleDocument(source: ImportedSample(suggestedName: "empty_tone")))
     replacement.expect(
         !blank.hasSource && !blank.canCommit && blank.nameReadOnly
             && waveformHeight(blankWave, atX: 30) == nil,
         message: "zero-frame replacement cannot commit or retain the previous waveform")
 
-    let locked = SampleStudioPresenter(source: original, validateName: validator)
+    let locked = SampleStudioPresenter(document: SampleDocument(source: original), validateName: validator)
     locked.setEditTarget(name: "registered_tone")
     locked.setCropStart(value: 100)
     locked.beginMarkerGesture()
@@ -71,7 +72,9 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
     restored.cropStart = 256
     restored.baseKey = 57
     restored.targetRate = 13_379
-    locked.replaceSource(changedRate, restoredParams: restored)
+    var restoredDocument = SampleDocument(source: changedRate)
+    restoredDocument.setParams(restored)
+    locked.replaceSource(restoredDocument)
     locked.endMarkerGesture()
     replacement.expect(
         locked.nameReadOnly && locked.sampleName == "registered_tone" && locked.canCommit
@@ -86,25 +89,29 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
         message: "source readouts and rate choices reflect the replacement and restored rate")
     locked.setCropStart(value: 320)
     replacement.expect(locked.canUndo, message: "post-replacement edits start new history")
-    locked.replaceSource(original)
+    locked.replaceSource(SampleDocument(source: original))
     replacement.expect(
         !locked.canUndo && !locked.canRedo && locked.params == SampleDocument.defaultParams(for: original)
             && locked.sampleName == "registered_tone",
         message: "another source change clears new history without unlocking the edit name")
-    let unlocked = SampleStudioPresenter(source: original, validateName: validator)
+    let unlocked = SampleStudioPresenter(document: SampleDocument(source: original), validateName: validator)
     unlocked.setSampleName(name: "custom_name")
-    unlocked.replaceSource(next)
+    unlocked.replaceSource(SampleDocument(source: next))
     replacement.expect(
         unlocked.sampleName == "new_tone" && unlocked.canCommit && !unlocked.nameReadOnly,
         message: "unlocked replacement uses the new source suggested name")
 
     let sourceState = report.scoped(cppID: "swiftcore/SampleWaveformModel::sourceRevision")
-    let presenter = SampleStudioPresenter(source: original, validateName: validator)
+    let presenter = SampleStudioPresenter(document: SampleDocument(source: original), validateName: validator)
     let wave = SampleWaveformModel(presenter: presenter, palette: palette)
     wave.setViewport(width: 600, height: 120)
     wave.setSeamViewport(width: 228, height: 56)
     let tools = SampleLoopTools(presenter: presenter)
     tools.tryAnotherLoop()
+    do { try runBlocking { await tools.waitForPitchAnalysis() } } catch {
+        sourceState.expect(false, message: "original pitch analysis did not settle: \(error)")
+        return
+    }
     sourceState.expect(tools.canTryAnother, message: "original source exposes loop candidates before replacement")
     let oldPitchHint = tools.pitchApplyToolTip
     wave.zoom(atX: 300, steps: 3)
@@ -127,7 +134,7 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
     sourceState.expect(
         wave.xForSample(6_000) == zoomX,
         message: "parameter edit retains waveform zoom and pan")
-    presenter.replaceSource(next)
+    presenter.replaceSource(SampleDocument(source: next))
     sourceState.expect(
         abs(wave.xForSample(6_000) - 300) <= 2
             && abs(wave.sampleForX(600) - next.frameCount + 1) <= 100,
@@ -146,7 +153,7 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
         return (0..<Int(header.pointee.rectCount)).contains { rects[$0].argb == playheadInk }
     }
     sourceState.expect(!hasPlayhead, message: "replacement clears the previous source playhead")
-    let fresh = SampleStudioPresenter(source: next, validateName: validator)
+    let fresh = SampleStudioPresenter(document: SampleDocument(source: next), validateName: validator)
     let freshWave = SampleWaveformModel(presenter: fresh, palette: palette)
     wave.setViewport(width: 120, height: 120)
     freshWave.setViewport(width: 120, height: 120)
@@ -159,6 +166,10 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
         message: "downsampled replacement waveform matches fresh geometry across loud and quiet regions")
 
     let analysis = report.scoped(cppID: "swiftcore/SampleLoopTools::sourceRevision")
+    do { try runBlocking { await tools.waitForPitchAnalysis() } } catch {
+        analysis.expect(false, message: "replacement pitch analysis did not settle: \(error)")
+        return
+    }
     analysis.expect(
         tools.pitchApplyVisible && tools.pitchApplyToolTip != oldPitchHint
             && !tools.canTryAnother && tools.suggestStatus.isEmpty,
@@ -170,6 +181,10 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
     let freshTools = SampleLoopTools(presenter: fresh)
     tools.tryAnotherLoop()
     freshTools.tryAnotherLoop()
+    do { try runBlocking { await freshTools.waitForPitchAnalysis() } } catch {
+        analysis.expect(false, message: "fresh pitch analysis did not settle: \(error)")
+        return
+    }
     analysis.expect(
         presenter.loopOn && fresh.loopOn && presenter.loopStart == fresh.loopStart
             && presenter.loopEnd == fresh.loopEnd && presenter.loopEnd < next.frameCount

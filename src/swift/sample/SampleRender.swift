@@ -2,6 +2,14 @@ import Foundation
 
 public enum SampleRender {
     public static func render(source: ImportedSample, params p: SampleEditParams) -> ProcessedSample {
+        render(source: source, params: p, checkpoint: {})
+    }
+
+    /// Renders with cancellation checkpoints without changing the numerical pipeline.
+    public static func render(
+        source: ImportedSample, params p: SampleEditParams, checkpoint: () throws -> Void
+    ) rethrows -> ProcessedSample {
+        try checkpoint()
         var result = ProcessedSample()
         let start = min(max(0, p.cropStart), source.frameCount)
         let end = min(max(start, p.cropEnd), source.frameCount)
@@ -30,6 +38,7 @@ public enum SampleRender {
                 for index in 0..<samples.count { samples[index] = Float(Double(samples[index]) - mean) }
             }
         }
+        try checkpoint()
         let sourceRate = source.sampleRate
         let targetRate = p.targetRate > 0 ? p.targetRate : sourceRate
         let initialRatio = sourceRate > 0 ? targetRate / sourceRate : 1.0
@@ -42,16 +51,17 @@ public enum SampleRender {
             let ratio = Double(outputLoopLength) / Double(sourceLoopLength)
             outputRate = sourceRate * ratio
             let outputStart = Int((Double(loopStart) * ratio).rounded())
-            grid = SampleDsp.resampleSinc(
+            grid = try SampleDsp.resampleSinc(
                 grid, ratio: ratio, outCount: outputStart + outputLoopLength,
-                loopWrapStart: loopStart, loopWrapExclusive: loopEnd + 1)
+                loopWrapStart: loopStart, loopWrapExclusive: loopEnd + 1, checkpoint: checkpoint)
             loopStart = outputStart
         } else {
             outputRate = targetRate
-            grid = SampleDsp.resampleSinc(
+            grid = try SampleDsp.resampleSinc(
                 grid, ratio: initialRatio,
-                outCount: max(1, Int((Double(length) * initialRatio).rounded())))
+                outCount: max(1, Int((Double(length) * initialRatio).rounded())), checkpoint: checkpoint)
         }
+        try checkpoint()
         let count = grid.count
         if p.normalizeMode != .off {
             let (gain, warning) = SampleDsp.normalizeGain(
@@ -64,6 +74,7 @@ public enum SampleRender {
                 for index in 0..<samples.count { samples[index] = Float(Double(samples[index]) * gain) }
             }
         }
+        try checkpoint()
         let exactKey = Double(p.baseKey) + p.fineTuneCents / 100
         if p.crossfadeOn && loopOn {
             let fundamental = 440 * pow(2, (exactKey - 69) / 12)
@@ -98,6 +109,7 @@ public enum SampleRender {
                 result.warnings.append("loop start too close to the sample start for a crossfade bake — skipped.")
             }
         }
+        try checkpoint()
         if p.fadeIn {
             let fade = min(Int((0.0015 * outputRate).rounded()), loopOn ? loopStart : count)
             if fade > 0 {
@@ -115,7 +127,9 @@ public enum SampleRender {
                 }
             }
         }
+        try checkpoint()
         result.s8 = SampleDsp.quantizeBuffer(grid, dither: p.ditherOn)
+        try checkpoint()
         result.size = UInt32(count)
         result.looped = loopOn
         result.loopStart = loopOn ? UInt32(loopStart) : 0
@@ -126,6 +140,7 @@ public enum SampleRender {
         result.unityNote = p.baseKey
         result.pitchFraction = UInt32(min((p.fineTuneCents / 100 * 4_294_967_296).rounded(), 4_294_967_295))
         if loopOn { result.seam = SampleDsp.seamMetrics(result.s8, loopStart: loopStart, loopEnd: count - 1) }
+        try checkpoint()
         result.preview = grid
         return result
     }

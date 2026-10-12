@@ -24,7 +24,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
     do {
         let source = try SampleImport.decode(hiResSampleWav(), sourcePath: "fix/hires_tone.wav")
         scope.expect(source.frameCount == 12_000, message: "A116 high resolution source decodes")
-        let presenter = SampleStudioPresenter(source: source, validateName: { _ in nil })
+        let presenter = SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil })
         let unavailable = SampleStudioAudition(presenter: presenter, lane: nil, destinationAdsr: nil)
         let strip = report.scoped(cppID: "samplecheck/SampleProcessingTest::editorAuditionStrip")
         strip.expect(
@@ -97,7 +97,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         scope.expect(
             !audition.available && !audition.playing && playhead == nil,
             message: "close releases the audition owner and playhead")
-        let oneShot = SampleStudioPresenter(source: source, validateName: { _ in nil })
+        let oneShot = SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil })
         oneShot.setLoopOn(enabled: false)
         let repeating = SampleStudioAudition(presenter: oneShot, lane: lane, destinationAdsr: nil)
         repeating.toggle()

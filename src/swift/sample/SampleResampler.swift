@@ -49,6 +49,17 @@ extension SampleDsp {
     public static func resampleSinc(
         _ x: [Float], ratio: Double, outCount: Int, loopWrapStart: Int = 0, loopWrapExclusive: Int = 0
     ) -> [Float] {
+        resampleSinc(
+            x, ratio: ratio, outCount: outCount, loopWrapStart: loopWrapStart,
+            loopWrapExclusive: loopWrapExclusive, checkpoint: {})
+    }
+
+    /// Resamples with cooperative cancellation during output and long tap loops.
+    public static func resampleSinc(
+        _ x: [Float], ratio: Double, outCount: Int, loopWrapStart: Int = 0,
+        loopWrapExclusive: Int = 0, checkpoint: () throws -> Void
+    ) rethrows -> [Float] {
+        try checkpoint()
         var result = [Float](repeating: 0, count: max(0, outCount))
         let source = x.span
         guard !source.isEmpty, outCount > 0, ratio > 0 else { return result }
@@ -61,6 +72,7 @@ extension SampleDsp {
             do {
                 var output = result.mutableSpan
                 for index in 0..<outCount {
+                    if index % 256 == 0 { try checkpoint() }
                     var sourceIndex = index
                     if loopLength > 0 && index >= loopWrapExclusive {
                         sourceIndex = loopWrapStart + (index - loopWrapStart) % loopLength
@@ -81,6 +93,7 @@ extension SampleDsp {
         do {
             var output = result.mutableSpan
             for frame in 0..<outCount {
+                if frame % 256 == 0 { try checkpoint() }
                 let position = Double(frame) / ratio
                 let first = Int(ceil(position - width))
                 let last = Int(floor(position + width))
@@ -90,6 +103,7 @@ extension SampleDsp {
                 var numerator = 0.0
                 var denominator = 0.0
                 for tap in first...last {
+                    if (tap - first) % 256 == 0 { try checkpoint() }
                     let normalized = distance / width
                     let argument = 1.0 - normalized * normalized
                     if argument >= 0 {

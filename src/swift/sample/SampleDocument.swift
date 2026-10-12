@@ -36,6 +36,12 @@ public struct SampleDocument: Sendable {
         cached = nil
     }
 
+    /// Warms the canonical render cache, propagating cooperative cancellation.
+    public mutating func prepare(checkpoint: () throws -> Void) rethrows {
+        guard cached == nil else { return }
+        cached = try SampleRender.render(source: source, params: params, checkpoint: checkpoint)
+    }
+
     public var processed: ProcessedSample {
         mutating get {
             if let cached { return cached }

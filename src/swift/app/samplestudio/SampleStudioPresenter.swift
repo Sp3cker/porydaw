@@ -52,27 +52,26 @@ public final class SampleStudioPresenter: QmlUncreatable {
     private(set) var sourceRevision = 0
 
     @QtIgnored
-    public init(source: ImportedSample, validateName: @escaping (String) -> String?) {
-        sampleDocument = SampleDocument(source: source)
+    public init(document: SampleDocument, validateName: @escaping (String) -> String?) {
+        sampleDocument = document
         validateNewName = validateName
         sourceCents = (sampleDocument.params.fineTuneCents * 100).rounded() / 100
-        sampleName = source.suggestedName
+        sampleName = document.source.suggestedName
         resetSourceReadouts()
         sync()
         refreshName()
     }
 
     @QtIgnored
-    public func replaceSource(_ sample: ImportedSample, restoredParams: SampleEditParams? = nil) {
-        sampleDocument = SampleDocument(source: sample)
-        if let restoredParams { sampleDocument.setParams(restoredParams) }
+    public func replaceSource(_ document: SampleDocument) {
+        sampleDocument = document
         history = SampleStudioHistory()
         gestureBase = nil
         sourceCents = (sampleDocument.params.fineTuneCents * 100).rounded() / 100
         if let editName {
             sampleName = editName
         } else {
-            sampleName = sample.suggestedName
+            sampleName = document.source.suggestedName
         }
         resetSourceReadouts()
         sourceRevision += 1

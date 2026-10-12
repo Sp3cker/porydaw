@@ -13,7 +13,7 @@ internal func runWaveformChecks(_ report: CheckReport) {
         return
     }
     scoped.expect(source.frameCount == 12_000, message: "A080 crossfade source imports")
-    let presenter = SampleStudioPresenter(source: source, validateName: { _ in nil })
+    let presenter = SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil })
     let palette = GridPalette()
     ShellAppearance.apply(to: palette, mode: "vanilla", contrast: 50)
     let model = SampleWaveformModel(presenter: presenter, palette: palette)

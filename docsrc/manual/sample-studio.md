@@ -32,6 +32,10 @@ current editor source. **Open File…** opens the file picker, including for
 SoundFont zones. If a file cannot be loaded, the current edit, name, and undo
 history stay intact; the library shows the error without replacing the source.
 
+Source preparation runs in the background. The current waveform stays visible
+until a replacement is ready. Rapid selections keep only the latest request;
+stopping a pending preview or closing the studio prevents it from starting later.
+
 ## Editing your sample
 
 <!-- TODO: Tour of the editor, one subsection per control group. All edits
@@ -46,8 +50,9 @@ auto-suggestion; the seam-click meter for finding a clean loop. -->
 
 ### Tuning
 
-<!-- TODO: Pitch-detect prefill; retune without resampling (no quality
-loss); why tuning matters (middle C should be middle C). -->
+Pitch analysis also runs in the background and does not change the base key
+automatically. If it finds a stable pitch that differs from the current tuning,
+choose **Use detected pitch** to apply the suggestion.
 
 ### Resampling & normalizing
 

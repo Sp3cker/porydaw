@@ -3,6 +3,8 @@ import Foundation
 public enum SampleReopen {
     public struct Result: Sendable {
         public let sample: ImportedSample
+        /// The exact bytes decoded for this result, including the committed WAV fallback.
+        public let sourceBytes: Data
         public let restoredParams: SampleEditParams?
         public let fromSource: Bool
         public let provenance: SampleProvenance?
@@ -28,12 +30,12 @@ public enum SampleReopen {
             }
             if let sample {
                 return Result(
-                    sample: sample, restoredParams: provenance.params,
+                    sample: sample, sourceBytes: bytes, restoredParams: provenance.params,
                     fromSource: true, provenance: provenance)
             }
         }
         return Result(
-            sample: try SampleImport.decode(wav, sourcePath: wavPath),
+            sample: try SampleImport.decode(wav, sourcePath: wavPath), sourceBytes: wav,
             restoredParams: nil, fromSource: false, provenance: nil)
     }
 }
