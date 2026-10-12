@@ -59,6 +59,7 @@ public func runEditorGridCameraChecks(_ report: CheckReport, viewport: DocumentV
     checkContentWindowBoundaryReversal(report)
     checkScratchDoubleDraw(report, viewport: viewport, grid: grid)
     checkHeldDrawResnapsAnchor(report, viewport: viewport, grid: grid)
+    checkOffGridMoveSnapsToLattice(report, viewport: viewport, grid: grid)
 }
 
 @MainActor

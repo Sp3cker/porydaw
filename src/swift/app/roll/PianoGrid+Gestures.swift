@@ -43,11 +43,15 @@ enum GridGesture {
         var pointerY: Double
     }
 
+    /// The grabbed note's start follows the pointer and snaps to the lattice absolutely,
+    /// so an off-grid note lands on the grid once it moves; a bare click leaves it put.
     struct Move {
         var pressTick: Double
         var pressKey: Int
+        var grabbedStart: Int
         var pointerX: Double
         var pointerY: Double
+        var moved = false
         var dTick: Int = 0
         var dKey: Int = 0
     }
@@ -90,8 +94,15 @@ enum GridGesture {
         var deltaY: Double = 0
     }
 
-    static func move(pressTick: Double, pressKey: Int, x: Double, y: Double) -> GridGesture {
-        .move(Move(pressTick: pressTick, pressKey: pressKey, pointerX: x, pointerY: y))
+    static func move(
+        pressTick: Double, pressKey: Int, grabbedStart: Int, x: Double, y: Double
+    )
+        -> GridGesture
+    {
+        .move(
+            Move(
+                pressTick: pressTick, pressKey: pressKey, grabbedStart: grabbedStart,
+                pointerX: x, pointerY: y))
     }
 
     static func resize(
@@ -154,14 +165,14 @@ enum GridGesture {
             if key >= 0 && (!scale.fold || scale.contains(key)) { state.key = key }
             return .draw(state)
         case .move(var state):
+            if x != state.pointerX || y != state.pointerY { state.moved = true }
             state.pointerX = x
             state.pointerY = y
-            let tick = camera.tickAtContentX(x)
-            let gridTicks = Int(
-                grid.snapTicksAt(
-                    TimeDefaults.tick(from: max(0, state.pressTick)),
-                    camera: camera))
-            state.dTick = Int(((tick - state.pressTick) / Double(gridTicks)).rounded()) * gridTicks
+            if state.moved {
+                let tick = camera.tickAtContentX(x)
+                let desired = Double(state.grabbedStart) + (tick - state.pressTick)
+                state.dTick = Int(grid.snapTick(desired, camera: camera)) - state.grabbedStart
+            }
             if scale.fold {
                 let projection = camera.projection
                 let currentRow = projection.row(
@@ -528,7 +539,9 @@ extension PianoGrid {
                             pressTick: pressTick, gripTick: note.tick + note.duration,
                             oppositeTick: note.tick, leading: false, x: x, y: y)
                     default:
-                        gesture = .move(pressTick: pressTick, pressKey: pressKey, x: x, y: y)
+                        gesture = .move(
+                            pressTick: pressTick, pressKey: pressKey, grabbedStart: note.tick,
+                            x: x, y: y)
                     }
                 }
                 if case .band(let band) = rightGesture, !control {
