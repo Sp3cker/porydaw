@@ -100,9 +100,12 @@ ColumnLayout {
                    || editor.draft.isSynth ? typePicker.choices : typePicker.choices.slice(0, 8)
             textRole: "name"
             valueRole: "macro"
-            currentIndex: indexOfValue(editor.draft.isSynth ? -1
-                                                              : editor.draft.macro === 11 ? 0
-                                                                                          : editor.draft.macro)
+            // Alternate hardware macros use the same displayed type as their base macro.
+            currentValue: editor.draft.isSynth ? -1
+                          : editor.draft.macro === 11 ? 0
+                          : editor.draft.macro >= 3 && editor.draft.macro <= 10
+                            ? editor.draft.macro - (editor.draft.macro % 2 === 0 ? 1 : 0)
+                            : editor.draft.macro
             onActivated: index => editor.draft.changeType(valueAt(index), editor.draft.symbol)
         }
     }
