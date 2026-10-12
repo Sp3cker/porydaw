@@ -43,15 +43,14 @@ enum GridGesture {
         var pointerY: Double
     }
 
-    /// The grabbed note's start follows the pointer and snaps to the lattice absolutely,
-    /// so an off-grid note lands on the grid once it moves; a bare click leaves it put.
+    /// Under half a stride of pointer travel the note stays put; past it the grabbed start
+    /// snaps to the lattice absolutely, so an off-grid note lands on the grid once dragged.
     struct Move {
         var pressTick: Double
         var pressKey: Int
         var grabbedStart: Int
         var pointerX: Double
         var pointerY: Double
-        var moved = false
         var dTick: Int = 0
         var dKey: Int = 0
     }
@@ -165,14 +164,15 @@ enum GridGesture {
             if key >= 0 && (!scale.fold || scale.contains(key)) { state.key = key }
             return .draw(state)
         case .move(var state):
-            if x != state.pointerX || y != state.pointerY { state.moved = true }
             state.pointerX = x
             state.pointerY = y
-            if state.moved {
-                let tick = camera.tickAtContentX(x)
-                let desired = Double(state.grabbedStart) + (tick - state.pressTick)
-                state.dTick = Int(grid.snapTick(desired, camera: camera)) - state.grabbedStart
-            }
+            let delta = camera.tickAtContentX(x) - state.pressTick
+            let halfStride =
+                Double(grid.snapTicksAt(TimeDefaults.tick(from: max(0, state.pressTick)), camera: camera)) / 2
+            state.dTick =
+                abs(delta) < halfStride
+                ? 0
+                : Int(grid.snapTick(Double(state.grabbedStart) + delta, camera: camera)) - state.grabbedStart
             if scale.fold {
                 let projection = camera.projection
                 let currentRow = projection.row(

@@ -103,8 +103,8 @@ func checkHeldDrawResnapsAnchor(
     if document.history.undoIndex == history + 1 { _ = document.history.undoDocument() }
 }
 
-/// A note planted finer than the current grid lands on the grid once dragged; a click
-/// leaves it put.
+/// A note planted finer than the current grid stays put under half a stride of travel and
+/// lands on the grid past it.
 @MainActor
 func checkOffGridMoveSnapsToLattice(
     _ report: CheckReport, viewport: DocumentViewport, grid: PianoGrid
@@ -149,19 +149,21 @@ func checkOffGridMoveSnapsToLattice(
     let x = rect.x + rect.width / 2
     let y = rect.y + rect.height / 2
     let afterPlant = document.history.undoIndex
+    let stridePx = Double(eighth) * viewport.camera.snapshot.pixelsPerTick
     grid.beginPointer(x: x, y: y, modifiers: 0)
-    grid.endPointer(x: x, y: y)
+    grid.updatePointer(x: x + 0.3 * stridePx, y: y)
+    grid.endPointer(x: x + 0.3 * stridePx, y: y)
     report.expect(
         document.note(id)?.tick == Tick(planted) && document.history.undoIndex == afterPlant,
-        cppID: checkID, message: "a bare click leaves the off-grid note where it is")
+        cppID: checkID, message: "under half a stride of travel the off-grid note stays put")
     grid.beginPointer(x: x, y: y, modifiers: 0)
-    grid.updatePointer(x: x + 2, y: y)
-    grid.endPointer(x: x + 2, y: y)
+    grid.updatePointer(x: x + 0.6 * stridePx, y: y)
+    grid.endPointer(x: x + 0.6 * stridePx, y: y)
     let tick = document.note(id).map { Int($0.tick) } ?? planted
     report.expect(
         tick != planted && abs(tick - planted) <= eighth
             && Int(viewport.grid.snapTick(Double(tick), camera: viewport.camera)) == tick,
-        cppID: checkID, message: "dragging the off-grid note lands its start on the 1/8 lattice")
+        cppID: checkID, message: "past half a stride the off-grid note lands on the 1/8 lattice")
 }
 
 @MainActor

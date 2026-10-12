@@ -17,8 +17,9 @@ absolute (`snapTick(gripTick + pointerDelta)`), so only move misbehaved.
   in force: `projected = snapTick(grabbedStart + (pointerTick − pressTick))`,
   `dTick = projected − grabbedStart`. For a note already on the lattice this is bit-identical
   to the old relative math.
-- **A bare click never moves a note.** `dTick` stays 0 until the pointer has actually moved
-  (`Move.moved`); the first motion event lands an off-grid note on its nearest line.
+- **Same sensitivity as any note.** Under half a stride of pointer travel `dTick` is 0 (a click
+  or a nudge never moves a note); past it the projection above applies, so an off-grid note
+  lands on its nearest line at the same travel that steps an on-grid note.
 - **Multi-selection keeps spacing.** Other selected notes shift by the same `dTick`; only the
   grabbed note is snapped. Fine rhythms inside a selection survive.
 - **Grid changes mid-drag** need no special path: `resnapHeldGesture()` re-runs `updated` at
@@ -29,7 +30,7 @@ absolute (`snapTick(gripTick + pointerDelta)`), so only move misbehaved.
 ## 3. Proof
 
 `checkOffGridMoveSnapsToLattice` (`src/checks/rollcheck/EditorGridProjectionChecks.swift`,
-`swiftcore-projectsession`): plants two notes a quarter-1/8 off the 1/8 lattice, asserts a
-click leaves the first in place with no history entry, a 2 px drag lands it on a 1/8 line, and
-the second note moves by the identical delta. Fails against the previous relative math.
+`swiftcore-projectsession`): plants a note a quarter-1/8 off the 1/8 lattice, asserts a 0.3-stride
+drag leaves it in place with no history entry and a 0.6-stride drag lands it on a 1/8 line.
+The landing assertion fails against the previous relative math.
 No proof-ledger rows: this is new Swift-owned behavior with no C++ counterpart.
