@@ -96,7 +96,6 @@ public final class AudioAudition {
                 let track = Int32((note >> 16) & 15)
                 let key = UInt8((note >> 8) & 127)
                 main.pointee.polyEventClock = UInt32.max
-                main.pointee.auditionNote = true
                 heldSerial += 1
                 heldOccurrence = heldSerial
                 voices.start(

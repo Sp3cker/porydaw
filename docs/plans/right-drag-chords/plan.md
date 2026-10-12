@@ -20,9 +20,9 @@ Preserve selection, MIDI bytes, revision/history, combined-button gestures, nati
 
 The native extension was withdrawn. `external/poryaaaa` remains pinned to the unchanged `c504afebe5c56cf9393e6ae632b9cef632480ab6`; no native source patches or replacement owned-note APIs are required.
 
-The read-only ownership projection is coupled to this allocator, including its distinct wrapper track-priority and driver player-plus-track-priority decisions. It observes rather than selects allocation and does not mutate emulated fields as tags. Dependency updates require rechecking accepted/rejected slots, identical pre-DSP starts, portamento and shadow-copy ownership.
+The read-only projection follows the pinned allocator's distinct wrapper track-priority and driver player-plus-track-priority rules. An accepted primary slot is reused: the higher driver priority cannot change that accepted winner. Shadow/audition decisions and post-call drift assertions remain separate. Dependency updates require rechecking allocation, identical pre-DSP starts, portamento and shadow-copy ownership.
 
-Ordinary interactive sequencer ingress/off and idle DSP share the host ledger. Without an interactive context, offline sequencing retains the original native path. Debug configuration applies before queued audition commands: the native invert setter resets sidecars and would otherwise silence a new entrance in the same callback.
+Ordinary interactive sequencing and idle DSP share the host ledger; `AudioAuditionVoices.start` derives held/band ingress flags. Offline sequencing retains the original native path. Debug configuration applies before queued audition commands because the native invert setter resets sidecars.
 
 `Sequencer.releaseSequencedNote` owns the interactive-ledger/native note-off choice for pending releases, loop wraps and MIDI note-off events. The producer command builder is local to each coverage update, not persistent state. Live rendering retains metronome mixing after the main engine and preserves mono velocity-drag replay independently of band membership.
 

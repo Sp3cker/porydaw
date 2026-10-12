@@ -171,7 +171,6 @@ final class AudioBandAudition {
             case .start(let serial, let track, let key, let velocity, let durationSamples):
                 guard durationSamples > 0 else { continue }
                 engine.pointee.polyEventClock = UInt32.max
-                engine.pointee.auditionNote = true
                 voices.start(
                     engine: engine, track: Int32(track), key: key, velocity: velocity,
                     source: .band, serial: serial, durationSamples: durationSamples)

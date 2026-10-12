@@ -177,15 +177,12 @@ final class AudioAuditionVoices {
         var cloneVelocity: UInt8 = 0
         var cloneWave: UnsafeMutablePointer<WaveData>?
         let priority = configuration.priority
-        let actualPriority = Self.combinedPriority(primary, priority)
         if isCgb {
             let slot = type - 1
             let victim = Self.cgb(primary, slot)
             let accepted = Self.cgbAccepts(primary, index: slot, priority: priority, track: track)
             if accepted {
-                if Self.cgbAccepts(primary, index: slot, priority: actualPriority, track: track) {
-                    starts[0] = Self.pcmCount + slot
-                }
+                starts[0] = Self.pcmCount + slot
                 if engine.pointee.polyDebugInvert {
                     if victim.pointee.status & Self.activeMask != 0 && victim.pointee.trackIndex != track {
                         cloneSlot = Self.pcmCount + slot
@@ -212,7 +209,7 @@ final class AudioAuditionVoices {
         } else {
             let wrapperSlot = Self.pcmCandidate(primary, count: count, priority: priority, track: track)
             if let wrapperSlot {
-                starts[0] = Self.pcmCandidate(primary, count: count, priority: actualPriority, track: track)
+                starts[0] = wrapperSlot
                 let victim = Self.pcm(primary, wrapperSlot)
                 if engine.pointee.polyDebugInvert {
                     if victim.pointee.status & Self.activeMask != 0, let shadow = engine.pointee.shadowDriver,
