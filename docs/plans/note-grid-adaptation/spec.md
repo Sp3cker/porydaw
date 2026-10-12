@@ -17,6 +17,9 @@ absolute (`snapTick(gripTick + pointerDelta)`), so only move misbehaved.
   in force: `projected = snapTick(grabbedStart + (pointerTick − pressTick))`,
   `dTick = projected − grabbedStart`. For a note already on the lattice this is bit-identical
   to the old relative math.
+- **Bar-anchored lattices apply.** Because the projection snaps absolutely, a drag across a
+  time-signature seam lands on that segment's drawn lines (e.g. 12 + 24k after a restated 4/4
+  at tick 12), where the relative math could stop between two lines.
 - **Same sensitivity as any note.** Under half a stride of pointer travel `dTick` is 0 (a click
   or a nudge never moves a note); past it the projection above applies, so an off-grid note
   lands on its nearest line at the same travel that steps an on-grid note.

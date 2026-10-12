@@ -245,6 +245,8 @@ ShellVoicegroupSupport {
         verify(shellPresenter.statusText.indexOf("vgsave_created") >= 0
                && shellPresenter.statusText.indexOf("mus_route101") >= 0,
                "the status line names the created file and song: " + shellPresenter.statusText)
+        // The choices model updates after the bind; the editable combo must still show it.
+        tryCompare(findChild(panel, "vgArgCombo"), "editText", "vgsave_created")
         app.requestUndo()
         verify(waitForNative(function() {
             return controller.bankLoadName === "fixture_rich"

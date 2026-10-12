@@ -48,11 +48,25 @@ ColumnLayout {
             model: panel.controller.argChoices
             textRole: "name"
             editText: panel.controller.selectorText
+            // An editable ComboBox rewrites editText from currentText on every model
+            // update; re-apply the controller's text once the synchronous update is over.
+            Timer {
+                id: resync
+                interval: 0
+                onTriggered: selector.editText = panel.controller.selectorText
+            }
             Connections {
                 target: panel.controller
                 function onSelectorTextChanged(): void {
                     selector.editText = panel.controller.selectorText
                 }
+            }
+            Connections {
+                target: panel.controller.argChoices
+                function onModelReset(): void { resync.restart() }
+                function onDataChanged(): void { resync.restart() }
+                function onRowsInserted(): void { resync.restart() }
+                function onRowsRemoved(): void { resync.restart() }
             }
             onActivated: {
                 panel.controller.selectorText = editText
