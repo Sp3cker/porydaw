@@ -136,9 +136,9 @@ public final class PreferencesStore: QmlInstantiableStatus {
 
     public func synchronize() { _ = Self.stagedFile?.synchronize() ?? Self.defaults.synchronize() }
 
-    func strings(_ key: String) -> [String]? { value(key) as? [String] }
+    @QtIgnored public func strings(_ key: String) -> [String]? { value(key) as? [String] }
 
-    func setStrings(_ key: String, _ strings: [String]?) {
+    @QtIgnored public func setStrings(_ key: String, _ strings: [String]?) {
         guard let strings else {
             remove(key: key)
             return

@@ -32,6 +32,8 @@ add_library(PorydawApp STATIC
     samplestudio/Sf2ZonePickerPresenter.swift
     samplestudio/SampleStudioHistory.swift
     samplestudio/SampleStudioReadouts.swift
+    samplestudio/SampleLibraryModel.swift
+    samplestudio/SampleAuditionArbiter.swift
     samplestudio/SampleStudioPresenter.swift
     samplestudio/SampleLoopTools.swift
     samplestudio/SampleStudioAudition.swift

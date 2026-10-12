@@ -260,12 +260,15 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         polyphony/PolyphonyPanelChecks.swift
         samplecheck/AuditionStripChecks.swift
         samplecheck/EditorPresenterChecks.swift
+        samplecheck/LibraryModelChecks.swift
         samplecheck/LoopToolsChecks.swift
         samplecheck/ProvenanceChecks.swift
         samplecheck/RegistrationChecks.swift
         samplecheck/RenderPipelineChecks.swift
         samplecheck/SampleChecks.swift
         samplecheck/SoundFontChecks.swift
+        samplecheck/SourceReplacementChecks.swift
+        samplecheck/StudioLifecycleChecks.swift
         samplecheck/WaveformChecks.swift
         themecolor/ThemeColorChecks.swift
         themecolor/ThemeColorPresets.swift

@@ -246,7 +246,7 @@ stop paths (`workflow.close()`, `player.close()`), so no destroy-callback is add
 
 ```swift
 @QtTracked public var hasSource: Bool          // source.frameCount > 0
-@QtIgnored public var sourceRevision = 0      // Swift-only; NOT a QML baseline addition
+private(set) var sourceRevision = 0            // Swift-only, internal; NOT a QML baseline addition
 @QtIgnored public func replaceSource(_ sample: ImportedSample,
                                      restoredParams: SampleEditParams? = nil)
 ```
@@ -275,6 +275,7 @@ public func requestOpenFile()                           // pane "Open File…": 
 public func loadLibrarySample(path: String)             // pane Load (transactional)
 public func previewLibrarySample(path: String)          // pane preview (§28 semantics)
 public func stopLibraryPreview()
+public func cancelStereoPrompt()                       // rejection, distinct from No = mono mix
 private struct PendingSource { var path: String; var bytes: Data; var leftOnly: Bool; var zone: Int }
 ```
 
@@ -311,6 +312,9 @@ private struct PendingSource { var path: String; var bytes: Data; var leftOnly: 
   pending replacement and leaves the existing editor, document, provenance and
   undo history untouched; canceling the blank-studio chooser (menu route) leaves
   the browsable blank studio open.
+- The stereo prompt retains Yes = left channel and No = mono mix. Native dialog
+  rejection calls `cancelStereoPrompt()` instead; it never re-decodes or commits.
+  Cancellation after an already-processed button is inert when no source is pending.
 
 ### QML (task 3; `src/ui/shell/samplestudio/SampleLibraryPane.qml`)
 

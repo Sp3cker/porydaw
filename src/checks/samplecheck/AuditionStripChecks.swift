@@ -25,7 +25,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         let source = try SampleImport.decode(hiResSampleWav(), sourcePath: "fix/hires_tone.wav")
         scope.expect(source.frameCount == 12_000, message: "A116 high resolution source decodes")
         let presenter = SampleStudioPresenter(source: source, validateName: { _ in nil })
-        let unavailable = SampleStudioAudition(presenter: presenter, output: nil, destinationAdsr: nil)
+        let unavailable = SampleStudioAudition(presenter: presenter, lane: nil, destinationAdsr: nil)
         let strip = report.scoped(cppID: "samplecheck/SampleProcessingTest::editorAuditionStrip")
         strip.expect(
             source.sourcePath == "fix/hires_tone.wav" && source.sampleRate == 44_100,
@@ -41,7 +41,8 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
             message: "A117 audition engine initializes")
         guard case .success(let renderer) = engineResult else { return }
         defer { renderer.unload() }
-        let audition = SampleStudioAudition(presenter: presenter, output: renderer, destinationAdsr: nil)
+        let lane = SampleAuditionArbiter(output: renderer)
+        let audition = SampleStudioAudition(presenter: presenter, lane: lane, destinationAdsr: nil)
         scope.expect(
             audition.available && !audition.playing && audition.playText == "Play",
             message: "A121 idle audition is stopped")
@@ -98,7 +99,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
             message: "close releases the audition owner and playhead")
         let oneShot = SampleStudioPresenter(source: source, validateName: { _ in nil })
         oneShot.setLoopOn(enabled: false)
-        let repeating = SampleStudioAudition(presenter: oneShot, output: renderer, destinationAdsr: nil)
+        let repeating = SampleStudioAudition(presenter: oneShot, lane: lane, destinationAdsr: nil)
         repeating.toggle()
         repeating.advance(bySeconds: 10)
         repeating.advance(bySeconds: 0.51)

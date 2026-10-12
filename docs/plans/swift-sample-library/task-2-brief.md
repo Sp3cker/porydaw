@@ -42,8 +42,8 @@ SampleStudioWorkflow`.
 Controller-owned mechanical additions (NOT in any sub-unit): the
 `src/swift/app/CMakeLists.txt` source lines, the `src/checks/CMakeLists.txt`
 lane lines, the `SampleChecks.swift` runner calls, and all baseline files.
-`sourceRevision` is a Swift-only `@QtIgnored` property — never a QML baseline
-addition.
+`sourceRevision` is a Swift-only internal `private(set)` property — never a QML
+baseline addition.
 
 ## Prerequisites
 
@@ -68,8 +68,8 @@ pending-transaction staging internally while their QML-facing behavior is
 unchanged. `editorRevision`, `pickerRequested`, `pickerFolder`, alert/stereo/zone
 published state, `editor()/loopTools()/waveform()/audition()/zonePicker()/
 editorReleased()/zonePickerReleased()` slots: unchanged names and semantics.
-`sourceRevision` is `@QtIgnored` (Swift-only, task 2b) — never a QML baseline
-addition.
+`sourceRevision` is internal `private(set)` (Swift-only, task 2b) — never a QML
+baseline addition.
 
 Pinned behaviors:
 
@@ -204,10 +204,10 @@ as fake coverage.
 - `uv run --no-sync dev checks:bridge`
   — no new bridged types in this task (task 1 owns the pane types); new members on
   existing types must stay legal: `hasSource` is a supported-type tracked member,
-  `sourceRevision` and `onStarted` are `@QtIgnored`, and the
-  `SampleStudioAudition` init change does not register. Guard must pass against
-  the global baseline encompassing all intended Task 1+2 public members — never
-  claim a Task-2-unchanged baseline.
+  `sourceRevision` is internal and Swift-only, `onStarted` is `@QtIgnored`, and
+  the `SampleStudioAudition` init change does not register. Guard must pass;
+  update the baseline only for reviewed, intentional findings. The settled
+  Task 1+2 gate passed against the unchanged baseline with zero findings.
 
 Permanent checks assert consumer-visible behavior (rendered PCM, ownership
 transitions, replacement outcomes); no duplicate exact-string implementation

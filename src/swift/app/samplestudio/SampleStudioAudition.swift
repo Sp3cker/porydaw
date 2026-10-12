@@ -21,7 +21,7 @@ extension NativeAudio: SampleAuditionOutput {}
 @QtBridgeable
 public final class SampleStudioAudition: QmlUncreatable {
     private let presenter: SampleStudioPresenter
-    private weak var output: (any SampleAuditionOutput)?
+    private var lane: SampleAuditionArbiter?
     private let destinationAdsr: VoiceListAdsr?
     private var looped = false
     private var size = 0
@@ -35,6 +35,7 @@ public final class SampleStudioAudition: QmlUncreatable {
     private var lastTick: ContinuousClock.Instant?
 
     @QtIgnored public var onPlayhead: ((Int?) -> Void)?
+    @QtIgnored public var onStarted: (() -> Void)?
     public var available: Bool
     @QtTracked public var playing = false
     @QtTracked public var playText = "Play"
@@ -45,15 +46,15 @@ public final class SampleStudioAudition: QmlUncreatable {
     public var useDestinationAdsr: Bool
 
     @QtIgnored
-    public init(presenter: SampleStudioPresenter, output: SampleAuditionOutput?, destinationAdsr: VoiceListAdsr?) {
+    public init(presenter: SampleStudioPresenter, lane: SampleAuditionArbiter?, destinationAdsr: VoiceListAdsr?) {
         self.presenter = presenter
-        self.output = output
+        self.lane = lane
         self.destinationAdsr = destinationAdsr
-        available = output != nil
+        available = lane?.isAvailable ?? false
         hasDestinationAdsr = destinationAdsr != nil
         useDestinationAdsr = destinationAdsr != nil
         playToolTip =
-            output == nil
+            !available
             ? "Audio is unavailable."
             : "Audition the render — looped when the loop is enabled; one-shots repeat with a short gap until stopped. Space toggles this from anywhere in the dialog."
         presenter.addRenderObserver { [weak self] in
@@ -68,7 +69,7 @@ public final class SampleStudioAudition: QmlUncreatable {
     }
 
     public func stop() {
-        output?.auditionSampleOff()
+        lane?.stop(owner: self)
         playing = false
         playText = "Play"
         republishPending = false
@@ -125,12 +126,12 @@ public final class SampleStudioAudition: QmlUncreatable {
 
     @QtIgnored public func close() {
         stop()
-        output = nil
+        lane = nil
         available = false
     }
 
     private func start(looped requestedLoop: Bool) {
-        guard let output, !presenter.processed.s8.isEmpty else { stop(); return }
+        guard let lane, !presenter.processed.s8.isEmpty else { stop(); return }
         let rendered = presenter.processed
         looped = requestedLoop && rendered.looped
         let envelope: AudioADSR
@@ -143,8 +144,8 @@ public final class SampleStudioAudition: QmlUncreatable {
         } else {
             envelope = AudioADSR()
         }
-        republishPending = !output.auditionSample(
-            samples: rendered.s8, frequency: rendered.freq,
+        republishPending = !lane.publish(
+            owner: self, samples: rendered.s8, frequency: rendered.freq,
             loopStart: rendered.loopStart, looped: looped, key: UInt8(auditionKey),
             adsr: envelope, toneKey: 60)
         size = rendered.s8.count
@@ -160,5 +161,6 @@ public final class SampleStudioAudition: QmlUncreatable {
         playing = true
         playText = "Stop"
         onPlayhead?(crop)
+        if !republishPending { onStarted?() }
     }
 }

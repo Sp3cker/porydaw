@@ -20,6 +20,7 @@ public final class SampleStudioPresenter: QmlUncreatable {
     @QtTracked public var nameReadOnly = false
     @QtTracked public var nameStatus = ""
     @QtTracked public var canCommit = false
+    @QtTracked public var hasSource = false
     @QtTracked public var commitLabel = "Add to Project"
     @QtTracked public var sourceLine = ""
     @QtTracked public var sourceFrameCount = 0
@@ -48,6 +49,7 @@ public final class SampleStudioPresenter: QmlUncreatable {
     @QtIgnored public var params: SampleEditParams { sampleDocument.params }
     @QtIgnored public var processed: ProcessedSample { sampleDocument.processed }
     @QtIgnored public var source: ImportedSample { sampleDocument.source }
+    private(set) var sourceRevision = 0
 
     @QtIgnored
     public init(source: ImportedSample, validateName: @escaping (String) -> String?) {
@@ -55,14 +57,38 @@ public final class SampleStudioPresenter: QmlUncreatable {
         validateNewName = validateName
         sourceCents = (sampleDocument.params.fineTuneCents * 100).rounded() / 100
         sampleName = source.suggestedName
+        resetSourceReadouts()
+        sync()
+        refreshName()
+    }
+
+    @QtIgnored
+    public func replaceSource(_ sample: ImportedSample, restoredParams: SampleEditParams? = nil) {
+        sampleDocument = SampleDocument(source: sample)
+        if let restoredParams { sampleDocument.setParams(restoredParams) }
+        history = SampleStudioHistory()
+        gestureBase = nil
+        sourceCents = (sampleDocument.params.fineTuneCents * 100).rounded() / 100
+        if let editName {
+            sampleName = editName
+        } else {
+            sampleName = sample.suggestedName
+        }
+        resetSourceReadouts()
+        sourceRevision += 1
+        sync()
+        refreshName()
+    }
+
+    private func resetSourceReadouts() {
+        hasSource = source.frameCount > 0
+        nameReadOnly = editName != nil || !hasSource
         sourceFrameCount = source.frameCount
         sourceLine = SampleStudioReadouts.sourceLine(source)
         rateChoices =
             [
                 "Keep source (\(SampleStudioReadouts.decimal(source.sampleRate, places: source.sampleRate == floor(source.sampleRate) ? 0 : 2)) Hz)"
             ] + Self.rates.map(String.init)
-        sync()
-        refreshName()
     }
 
     public func setSampleName(name: String) {
@@ -74,7 +100,7 @@ public final class SampleStudioPresenter: QmlUncreatable {
     private func refreshName() {
         if let editName {
             let valid = sampleName == editName
-            canCommit = valid
+            canCommit = hasSource && valid
             nameStatus =
                 valid
                 ? "Saves over DirectSoundWaveData_\(editName)'s sample data"
@@ -83,7 +109,7 @@ public final class SampleStudioPresenter: QmlUncreatable {
             canCommit = false
             nameStatus = error
         } else {
-            canCommit = true
+            canCommit = hasSource
             nameStatus = "Registers as DirectSoundWaveData_\(sampleName)"
         }
     }

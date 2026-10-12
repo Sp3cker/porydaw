@@ -24,4 +24,7 @@ public func runSampleEditorChecks(_ report: CheckReport) {
     runLoopToolsChecks(report)
     runAuditionStripChecks(report)
     runWaveformChecks(report)
+    runLibraryModelChecks(report)
+    runStudioLifecycleChecks(report)
+    runSourceReplacementChecks(report)
 }

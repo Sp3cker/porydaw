@@ -38,8 +38,8 @@ buttons, readouts, objectNames) and the sizing decision in plan.md (pane left,
     (never blanket expectation rewrites; behavior assertions stay actual)
 
 Controller-only companion edits (NOT in any sub-unit): the root `CMakeLists.txt`
-QML module line, the `src/checks/CMakeLists.txt` lane line, regenerate
-`tools/qml_aot_baseline.json` (`qml-aot:baseline`) — see Controller verification.
+QML module line, the `src/checks/CMakeLists.txt` lane line, and any justified
+`tools/qml_aot_baseline.json` update — see Controller verification.
 
 ## Prerequisites
 
@@ -208,9 +208,9 @@ as fake coverage.
   theme roles (not just the empty pane).
 - `uv run --no-sync dev checks:bridge` — pane wiring adds no new bridged types;
   guard confirms the dialog's new required property and pane bindings stay legal.
-- `uv run --no-sync dev checks:qml-aot` — after the controller rewrites the
-  baseline with `uv run --no-sync dev qml-aot:baseline` (new QML file = intended
-  surface change); ratchet must pass with the pane compiled.
+- `uv run --no-sync dev checks:qml-aot` — inspect the actual ratchet first.
+  Update its baseline only for reviewed, intentional pane additions; fix
+  avoidable compilation regressions rather than pinning them.
 
 Runtime prerequisites: the shell lane runs offscreen with
 `PORYDAW_AUDIO_BACKEND=null` (runner-set); no window-system requirement. Native
@@ -243,8 +243,9 @@ After the writer settles (controller-owned, in order):
 
 1. Wire the controller-owned registration: root `CMakeLists.txt` QML line,
    `src/checks/CMakeLists.txt` lane line.
-2. `uv run --no-sync dev qml-aot:baseline` (rewrites `tools/qml_aot_baseline.json`
-   — controller-only edit) then `uv run --no-sync dev checks:qml-aot`
+2. `uv run --no-sync dev checks:qml-aot`; inspect new-file statistics and
+   regressions. Only if warranted, update `tools/qml_aot_baseline.json` using
+   `uv run --no-sync dev qml-aot:baseline`, then rerun the gate.
 3. `uv run --no-sync dev checks:bridge`
 4. `uv run --no-sync dev checks:shell --filter shell-sample-studio`
 5. `uv run --no-sync dev checks:shell --filter shell-text-contrast`

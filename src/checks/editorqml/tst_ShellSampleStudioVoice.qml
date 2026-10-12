@@ -71,7 +71,9 @@ ShellLaneSupport {
                "the selected voice editor submits its layout before clicking voice +")
         mouseClick(add)
         selectSource(rootPath + "/samplesources/hires_tone.wav")
-        verify(waitForNative(function() { return !!child("sampleStudioDialog") }, 15000), "editor opens")
+        verify(waitForNative(function() {
+            return !!child("sampleStudioDialog") && app.sampleStudio().editor().hasSource
+        }, 15000), "editor opens with the chosen source")
         const workflow = app.sampleStudio()
         verify(workflow.audition().hasDestinationAdsr && workflow.audition().useDestinationAdsr,
                "destination voice ADSR selected")
@@ -80,6 +82,7 @@ ShellLaneSupport {
         workflow.editor().setSampleName("voice_hires")
         verify(workflow.editor().canCommit, "voice import name passes validation: "
                + workflow.editor().nameStatus)
+        tryCompare(child("sampleStudioCommit"), "enabled", true, 5000, "commit follows source and name validation")
         mouseClick(child("sampleStudioCommit"))
         verify(waitForNative(function() { return controller.editorModel().symbol === "DirectSoundWaveData_voice_hires" }, 30000),
                "new sample assigned: " + workflow.alertText + " / " + app.lastSaveError
@@ -145,9 +148,12 @@ ShellLaneSupport {
         child("shellSampleStudioAlert").close()
         app.sampleStudio().requestImport(4)
         selectSource(rootPath + "/samplesources/hires_tone.wav")
-        verify(waitForNative(function() { return !!child("sampleStudioDialog") }, 15000), "CGB import opens")
+        verify(waitForNative(function() {
+            return !!child("sampleStudioDialog") && app.sampleStudio().editor().hasSource
+        }, 15000), "CGB import source reaches the editor")
         verify(!app.sampleStudio().audition().hasDestinationAdsr, "CGB envelope is not previewed")
         app.sampleStudio().editor().setSampleName("cgb_hires")
+        tryCompare(child("sampleStudioCommit"), "enabled", true, 5000, "CGB commit follows source and name validation")
         mouseClick(child("sampleStudioCommit"))
         verify(waitForNative(function() { return controller.editorModel().symbol === "DirectSoundWaveData_cgb_hires" }, 30000),
                "CGB slot becomes DirectSound sample voice")
@@ -172,9 +178,10 @@ ShellLaneSupport {
         verify(model.canAccept, "zone row is accepted by model")
         tryCompare(child("sf2ZoneAccept"), "enabled", true, 3000, "zone accept button follows selection")
         mouseClick(child("sf2ZoneAccept"))
-        verify(waitForNative(function() { return !!child("sampleStudioDialog") }, 15000),
-               "A034 OK opens the selected SoundFont zone")
-        verify(child("sampleStudioSource").text.indexOf("16-bit SoundFont zone") >= 0,
-               "A034 selected SoundFont zone reaches editor")
+        verify(waitForNative(function() {
+            const source = child("sampleStudioSource")
+            return app.sampleStudio().editor().hasSource && source
+                    && source.text.indexOf("16-bit SoundFont zone") >= 0
+        }, 15000), "A034 selected SoundFont zone reaches editor")
     }
 }

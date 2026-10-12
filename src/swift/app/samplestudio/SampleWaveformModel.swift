@@ -10,7 +10,8 @@ import QtBridge
 public final class SampleWaveformModel: QmlUncreatable {
     private let presenter: SampleStudioPresenter
     private let palette: GridPalette
-    private let pyramid: SamplePeakPyramid
+    private var pyramid: SamplePeakPyramid
+    private var sourceRevision: Int
     private var scene = SampleWaveformScene()
     private var lists = [Data(), Data()]
     private var width = 0.0
@@ -37,6 +38,7 @@ public final class SampleWaveformModel: QmlUncreatable {
     public init(presenter: SampleStudioPresenter, palette: GridPalette) {
         self.presenter = presenter
         self.palette = palette
+        sourceRevision = presenter.sourceRevision
         pyramid = SamplePeakPyramid(samples: presenter.source.buffer)
         presenter.addRenderObserver { [weak self] in self?.refresh() }
         refresh()
@@ -162,7 +164,7 @@ public final class SampleWaveformModel: QmlUncreatable {
     public func fit() {
         userZoomed = false
         let n = presenter.sourceFrameCount
-        if n > 0 { spp = Double(n) / max(1, width - baseFontPx * 2 / 12) }
+        spp = n > 0 ? Double(n) / max(1, width - baseFontPx * 2 / 12) : 1
         scroll = 0
         rebuild()
     }
@@ -183,6 +185,21 @@ public final class SampleWaveformModel: QmlUncreatable {
     }
 
     private func refresh() {
+        if sourceRevision != presenter.sourceRevision {
+            sourceRevision = presenter.sourceRevision
+            pyramid = SamplePeakPyramid(samples: presenter.source.buffer)
+            dragging = 0
+            panX = nil
+            panScroll = 0
+            playheadFrame = nil
+            endWindow.removeAll(keepingCapacity: true)
+            startWindow.removeAll(keepingCapacity: true)
+            userZoomed = false
+            spp =
+                presenter.sourceFrameCount > 0
+                ? Double(presenter.sourceFrameCount) / max(1, width - baseFontPx * 2 / 12) : 1
+            scroll = 0
+        }
         let output = presenter.processed
         let samples = output.preview
         endWindow.removeAll(keepingCapacity: true)

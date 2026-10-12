@@ -7,6 +7,7 @@ import QtBridge
 @QtBridgeable
 public final class SampleLoopTools: QmlUncreatable {
     private let presenter: SampleStudioPresenter
+    private var sourceRevision: Int
     private var pitchTried = false
     private var pitch = SampleDsp.PitchResult()
     private var candidates: [SampleDsp.LoopCandidate] = []
@@ -29,6 +30,7 @@ public final class SampleLoopTools: QmlUncreatable {
 
     @QtIgnored
     public init(presenter: SampleStudioPresenter) {
+        sourceRevision = presenter.sourceRevision
         self.presenter = presenter
         presenter.addRenderObserver { [weak self] in self?.refresh() }
         refresh()
@@ -59,6 +61,25 @@ public final class SampleLoopTools: QmlUncreatable {
     }
 
     private func refresh() {
+        if sourceRevision != presenter.sourceRevision {
+            sourceRevision = presenter.sourceRevision
+            pitchTried = false
+            pitch = SampleDsp.PitchResult()
+            candidates.removeAll()
+            candidateIndex = -1
+            candidateCropStart = -1
+            candidateCropEnd = -1
+            candidateRate = 0
+            candidatesValid = false
+            suggestStatus = ""
+            canTryAnother = false
+            pitchApplyVisible = false
+            pitchApplyText = ""
+            pitchApplyToolTip = ""
+            seamBadgeVisible = false
+            seamBadgeText = ""
+            seamBadgeSeverity = 0
+        }
         let p = presenter.params
         loopBodyVisible = p.loopOn
         crossfadeOn = p.crossfadeOn
