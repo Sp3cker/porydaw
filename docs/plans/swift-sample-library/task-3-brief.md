@@ -1,13 +1,13 @@
-# Task 3 — QML library pane, dialog docking, shell lane coverage, user docs
+# Task 3 — QML library pane, dialog docking, existing checks, user docs
 
 ## Context
 
 Final task of the sample-library port: mounts the pane model (task 1) and the
 workflow slots (task 2) as the production QML surface inside `SampleStudioDialog`,
-adds the shell QML lane that pins the pane's pointer/keyboard/status contract
-plus transaction/cancellation coverage through the production lanes, extends the
-checks probe for file fixtures, audits populated rows for text contrast, and
-updates the user doc. Historical QML-side contract: spec.md §12–§19 (keys,
+retains the existing studio and populated-row contrast checks, and updates the
+user doc. The dedicated library UI integration lane was later retired at the
+user's request; added checks must stay below three seconds of execution.
+Historical QML-side contract: spec.md §12–§19 (keys,
 buttons, readouts, objectNames) and the sizing decision in plan.md (pane left,
 `minimumWidth: 0`, `preferredWidth: 22 * unit`).
 
@@ -27,11 +27,9 @@ buttons, readouts, objectNames) and the sizing decision in plan.md (pane left,
     browse, preview (click / Enter / Space), load (double-click / Load), the
     guarantee that a failed load never damages the current edit, and folder
     persistence (controller-trivial inline alternative allowed)
-- **Task 3b — lanes and probes** (5 paths):
-  - Edit `src/checks/editorqml/ImportWizardProbe.swift` — add the four probe
-    methods below; no registration change (already registered in the shell lane)
-  - Edit `src/checks/editorqml/ShellQmlEntries.swift` — new entry below
-  - Create `src/checks/editorqml/tst_ShellSampleStudioLibrary.qml`
+- **Task 3b — existing checks and probe**:
+  - Edit `src/checks/editorqml/ImportWizardProbe.swift` — retain `makeDirectory`
+    for the populated-library contrast fixture; no registration change
   - Edit `src/checks/editorqml/tst_TextContrast.qml` — populated-library row
     audit across theme roles (not just the empty pane)
   - Edit `src/checks/editorqml/tst_ShellSampleStudioVoice.qml` — only if
@@ -39,8 +37,8 @@ buttons, readouts, objectNames) and the sizing decision in plan.md (pane left,
     (never blanket expectation rewrites; behavior assertions stay actual)
 
 Controller-only companion edits (NOT in any sub-unit): the root `CMakeLists.txt`
-QML module line, the `src/checks/CMakeLists.txt` lane line, and any justified
-`tools/qml_aot_baseline.json` update — see Controller verification.
+QML module line and any justified `tools/qml_aot_baseline.json` update — see
+Controller verification. No dedicated library test lane is registered.
 
 ## Prerequisites
 
@@ -56,30 +54,16 @@ previewLibrarySample()` as reachable through the workflow object the dialog alre
 holds (`SampleStudioHost` passes `workflow`; the pane gets
 `library: workflow.library() as SampleLibraryModel` as a dialog required property —
 mirror how `Sf2ZonePickerDialog` receives `picker`). Produced: the QML surface with
-objectNames of spec §19 and the lane entry name `shell-sample-studio-library`.
+objectNames of spec §19.
 
-New `ImportWizardProbe` methods (exact):
+Retained `ImportWizardProbe` method for the existing contrast fixture:
 
 ```swift
-public func writeTextFile(path: String, text: String) -> Bool
 public func makeDirectory(path: String) -> Bool
-public func makeSymbolicLink(linkPath: String, targetPath: String) -> Bool
-public func writePhaseCancellingWav(path: String) -> Bool
 ```
 
-New `ShellQmlRegistry.Entry` (exact):
-
-```swift
-Entry(
-    name: "shell-sample-studio-library", inputFileName: "tst_ShellSampleStudioLibrary.qml",
-    fixtureFiles: songs("mus_route101") + [
-        "Makefile", "audio_rules.mk", "samplesources/hires_tone.wav",
-        "samplesources/tone.flac", "samplesources/zones.sf2",
-    ]),
-```
-
-`windowing` stays the default `offscreen`; no `testFunctions` filter (the file has
-one test function per journey, sized like the existing studio lanes).
+The original dedicated lane, registry entry, build-list entry, and exclusive
+text/symlink/stereo fixture helpers were removed to meet the runtime budget.
 
 ## Implementation steps
 
@@ -128,61 +112,12 @@ one test function per journey, sized like the existing studio lanes).
    crop/rate/normalize/advanced body (`enabled` bindings), commit button
    (`enabled: editor.canCommit` already carries the gate from task 2 — leave the
    single binding). Do not reorder or restyle existing controls.
-4. (3b) Extend `ImportWizardProbe` with the four methods (`FileManager` writes;
-   use the existing decoder-check PCM fixture pattern for phase cancellation;
-   `makeSymbolicLink` returns success so tests can skip on denial). Wire the lane
-   entry in `ShellQmlEntries.swift`. (Controller adds the root `CMakeLists.txt`
-   QML line and the `src/checks/CMakeLists.txt` lane line.)
-5. `tst_ShellSampleStudioLibrary.qml` (`ShellLaneSupport` + `ShellQmlBootstrap` +
-   `ImportWizardProbe`, modeled on `tst_ShellSampleStudio.qml`'s
-   `openProject`/`child`/`waitForNative` helpers). Journey (single
-   `function test_libraryBrowsePreviewAndLoad()` or split if the harness timeout
-   demands — keep every assertion below):
-   - Menu `tools.import_sample` opens the blank studio (`sampleStudioDialog`
-     visible) AND the picker (`shellImportSamplePicker` visible) over it; blank
-     state: `sampleStudioName` read-only, `sampleStudioPlay` disabled,
-     `sampleStudioCommit` disabled, `sampleLibraryLoaded` text `Loaded: none`,
-     `sampleLibraryStatus` `No library folders. Add a folder or open a file.`.
-   - Cancel the picker; the blank studio stays and browses: inject the
-     `sampleLibraryFolderPicker` (`selectedFolder = "file://" + projectRoot +
-     "/samplesources"` — the `file://` scheme is required, cf. the voice lane's
-     `selectSource` — then `accept()`) → tree lists `samplesources`; audio list
-     eventually shows `hires_tone.wav` and `tone.flac` (tryCompare on the ListView
-     `count`/rows), `sampleLibraryRemove` enabled, `sampleLibraryLoad`/
-     `sampleLibraryPreview` disabled (nothing selected).
-   - Keyboard selection is silent: key-click Down arrows on the files list change
-     selection (`Selected:` status flips) without `sampleLibraryPreviewing`
-     changing from `Preview source: none`.
-   - Pointer click on `hires_tone.wav` previews: `sampleLibraryPreviewing`
-     tooltip = the file URL path; `sampleLibraryPreview` label `Stop Preview`;
-     editor Play stays `Play` (mutual exclusion of state); Space in the list stops
-     (label back to `Preview`, tooltip empty). Audibility under the null backend
-     is unproven statically — assert the label state machine only (audibility is
-     pinned deterministically by task 2a's real-engine checks and covered finally
-     by native smoke).
-   - Double-click loads: name prefills `hires_tone`, source label contains
-     `PCM WAV`, `sampleLibraryLoaded` tooltip = path, commit enabled, undo reset
-     (`workflow.editor().canUndo === false`). Edit something (`setLoopStart`),
-     then Load a corrupt file (`disk.writeTextFile(rootPath + "/bad.wav", "not
-     audio bytes")` after adding its directory as a folder): pane status shows the
-     decode message, the document keeps its params/name/undo count, loaded tooltip
-     unchanged (spec §20).
-   - Case-insensitive listing + exclusions: write `tone.MP3` (valid WAV bytes are
-     not required for listing — name-driven), `notes.txt`, `font.sf2` into a probe
-     `makeDirectory` folder, add it, assert the exact row set (uppercase listed;
-     txt/sf2 absent). If `makeSymbolicLink` succeeds, link a directory under the
-     root and assert it never appears (skipped when denied — named gap).
-   - Remove bookmark: click `sampleLibraryRemove` → tree empty, status back to the
-     no-folders text, fixture files still on disk (`disk.exists`), audio list
-     hidden.
-   - Transaction + cancellation through the production lane (task 2c coverage):
-     replacing-SF2-zone cancel and stereo-prompt cancel leave the existing
-     editor, document, provenance and undo history untouched; blank-chooser
-     cancel leaves the browsable blank studio; locked-edit loads keep the name
-     and read-only field; a no-source-open asserts the `hasSource` gating.
-   - Exercise the real stereo phase-cancellation prompt through pane Load using
-     `writePhaseCancellingWav`; cancel preserves the old edit, while accepting
-     commits the left-only source. Stage `zones.sf2` for replacement cancellation.
+4. (3b) Extend `ImportWizardProbe` only with `makeDirectory` for the existing
+   populated-library contrast fixture. Do not add a separate pane integration lane.
+5. Preserve the existing studio journeys while adapting picker-first mechanics
+   to the blank-studio-first contract. Swift component checks cover model state,
+   source replacement and audition ownership; QML pane transaction routing needs
+   targeted smoke rather than a new required integration journey.
 6. (3a) Docs: fill the two `docsrc/manual/sample-studio.md` sections listed in the
    write set; keep the existing comment style; no new pages.
 
@@ -192,17 +127,13 @@ NAMED CHECKS (controller-run; implementers reuse as recorded). Baseline: exact
 `samplecheck-editor` passes (1/58 selected). No broad `swiftcore` regex is used
 as fake coverage.
 
-- `uv run --no-sync dev checks:shell --filter shell-sample-studio-library`
-  — the new lane: blank-open + browse + silent selection + preview toggle +
-  transactional load + corrupt-preserve + listing filter + bookmark removal +
-  transaction/cancellation coverage.
 - `uv run --no-sync dev checks:shell --filter shell-sample-studio`
-  — substring filter; runs the new lane AND the four existing studio lanes
+  — substring filter; runs the four existing studio lanes
   (`shell-sample-studio`, `-commit`, `-voice`, `-refusal`): proves the dialog
   changes and blank-open sequence preserved every existing journey (menu route,
   cancel teardown, splitter drag, Space handling, commit/collision, voice
   import/edit/undo/fallback, SF2 zone picker, refusal). Do NOT combine this broad
-  filter with `--qt <fn>` (it matches five entries; the runner takes one harness —
+  filter with `--qt <fn>` (it matches four entries; the runner takes one harness —
   controller-verified constraint).
 - `uv run --no-sync dev checks:shell --filter shell-text-contrast`
   — exact text-contrast gate, including the populated-library row audit across
@@ -212,6 +143,10 @@ as fake coverage.
 - `uv run --no-sync dev checks:qml-aot` — inspect the actual ratchet first.
   Update its baseline only for reviewed, intentional pane additions; fix
   avoidable compilation regressions rather than pinning them.
+
+Added-check budget: below three seconds, excluding compilation. The retained
+Swift runners measured 1.44 seconds total in the development Mac's debug build.
+Do not reintroduce the removed dedicated UI lane or its exclusive fixture helpers.
 
 Runtime prerequisites: the shell lane runs offscreen with
 `PORYDAW_AUDIO_BACKEND=null` (runner-set); no window-system requirement. Native
@@ -242,8 +177,8 @@ desktop is NOT required for these commands.
 
 After the writer settles (controller-owned, in order):
 
-1. Wire the controller-owned registration: root `CMakeLists.txt` QML line,
-   `src/checks/CMakeLists.txt` lane line.
+1. Wire the controller-owned root `CMakeLists.txt` production QML line.
+   No dedicated library integration lane or check build-list entry is added.
 2. `uv run --no-sync dev checks:qml-aot`; inspect new-file statistics and
    regressions. Only if warranted, update `tools/qml_aot_baseline.json` using
    `uv run --no-sync dev qml-aot:baseline`, then rerun the gate.

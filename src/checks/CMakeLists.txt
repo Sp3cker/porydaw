@@ -690,7 +690,6 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editorqml/tst_ShellDrawerParityVoiceVelocity.qml
         editorqml/ShellVoicegroupSupport.qml
         editorqml/tst_ShellSettings.qml
-        editorqml/tst_ShellSampleStudioLibrary.qml
         editorqml/tst_ShellVoicegroupEditing.qml
         editorqml/tst_ShellVoicegroupPicker.qml
         editorqml/tst_ShellVoicegroupSave.qml

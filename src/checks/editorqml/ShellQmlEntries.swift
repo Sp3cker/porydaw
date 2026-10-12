@@ -359,12 +359,6 @@ enum ShellQmlRegistry {
                     "ShellSampleStudio::test_menuRouteAndCancel",
                 ]),
             Entry(
-                name: "shell-sample-studio-library", inputFileName: "tst_ShellSampleStudioLibrary.qml",
-                fixtureFiles: songs("mus_route101") + [
-                    "Makefile", "audio_rules.mk", "samplesources/hires_tone.wav",
-                    "samplesources/tone.flac", "samplesources/zones.sf2",
-                ]),
-            Entry(
                 name: "shell-sample-studio-commit", inputFileName: "tst_ShellSampleStudio.qml",
                 fixtureFiles: songs("mus_route101") + [
                     "Makefile", "audio_rules.mk", "samplesources/hires_tone.wav",

@@ -67,65 +67,9 @@ public final class ImportWizardProbe: QmlInstantiableStatus {
         }
         return contents.contains(text)
     }
-    public func writeTextFile(path: String, text: String) -> Bool {
-        do {
-            try text.write(to: URL(fileURLWithPath: path), atomically: true, encoding: .utf8)
-            return true
-        } catch { return false }
-    }
-
     public func makeDirectory(path: String) -> Bool {
         do {
             try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
-            return true
-        } catch { return false }
-    }
-
-    public func makeSymbolicLink(linkPath: String, targetPath: String) -> Bool {
-        do {
-            try FileManager.default.createSymbolicLink(atPath: linkPath, withDestinationPath: targetPath)
-            return true
-        } catch { return false }
-    }
-
-    public func writePhaseCancellingWav(path: String) -> Bool {
-        // Stereo 16-bit PCM, 200 frames: the right channel negates the left.
-        // Keep the sample pattern aligned with decoderStereo's anti-phase fixture.
-        var samples: [UInt8] = []
-        samples.reserveCapacity(200 * 4)
-        for index in 0..<200 {
-            let value = Int16((16_000 * sin(2 * Double.pi * Double(index) / 50)).rounded())
-            for channel in [value, -value] {
-                let bits = UInt16(bitPattern: channel)
-                samples.append(UInt8(truncatingIfNeeded: bits))
-                samples.append(UInt8(truncatingIfNeeded: bits >> 8))
-            }
-        }
-        var bytes = Array("RIFF".utf8) + [UInt8](repeating: 0, count: 4) + Array("WAVEfmt ".utf8)
-        func append16(_ value: UInt16) {
-            bytes.append(UInt8(truncatingIfNeeded: value))
-            bytes.append(UInt8(truncatingIfNeeded: value >> 8))
-        }
-        func append32(_ value: UInt32) {
-            append16(UInt16(truncatingIfNeeded: value))
-            append16(UInt16(truncatingIfNeeded: value >> 16))
-        }
-        append32(16)
-        append16(1)
-        append16(2)
-        append32(22_050)
-        append32(88_200)
-        append16(4)
-        append16(16)
-        bytes += Array("data".utf8)
-        append32(UInt32(samples.count))
-        bytes += samples
-        let size = UInt32(bytes.count - 8)
-        for index in 0..<4 {
-            bytes[4 + index] = UInt8(truncatingIfNeeded: size >> (index * 8))
-        }
-        do {
-            try Data(bytes).write(to: URL(fileURLWithPath: path))
             return true
         } catch { return false }
     }

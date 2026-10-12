@@ -144,9 +144,9 @@ concurrently; gates run against the settled union.
   Busy semantics with a spy output; real 4-slot exhaustion/retry timing is not
   reachable in the null-backend lane. Native smoke only. Busy retry stays editor
   only; the pane surfaces the message with no retry.
-3. **Stereo phase-cancellation through pane Load** — task 3 creates a real
-  phase-cancelling PCM fixture and asserts both cancellation preserving the old
-  edit and left-channel acceptance committing the replacement.
+3. **Pane transaction and cancellation UI** — the dedicated pane journey was
+  removed at the user's request to keep added test execution below three seconds.
+  Retained Swift checks do not prove QML prompt routing; use targeted smoke.
 4. **Symlink-directory exclusion** — the unit check creates a real symlink when
   the host permits and asserts exclusion; on hosts where symlink creation is
   denied the row is skipped (named platform limitation).
@@ -166,11 +166,13 @@ concurrently; gates run against the settled union.
   is not a proven selector for these suites and is not used.
 - Bridge: `uv run --no-sync dev checks:bridge` checks all new legal surface
   declarations. Observed zero baselined findings; retain the existing baseline.
-- Shell: `uv run --no-sync dev checks:shell --filter shell-sample-studio-library`
-  (new lane), the `shell-sample-studio` substring group (all five studio lanes),
-  and the exact text-contrast gate
-  `uv run --no-sync dev checks:shell --filter shell-text-contrast`, plus a
-  populated-library row audit across theme roles (not just the empty pane).
+- Shell: `uv run --no-sync dev checks:shell --filter shell-sample-studio` runs
+  the four existing studio lanes. The populated-library row audit across theme
+  roles remains in `uv run --no-sync dev checks:shell --filter shell-text-contrast`.
+- Added-check runtime budget: below three seconds, excluding compilation. The
+  three retained Swift runners measured 1.44 seconds total in the debug build on
+  the development Mac. The dedicated library UI lane and its exclusive fixture
+  helpers are retired; do not recreate them as required checks.
 - Native smoke is controller-run against the real app with live audio and
   screenshot capture where available — mandatory, not optional. Honest blockers
   are reported; no keyboard observation is claimed without tooling.
