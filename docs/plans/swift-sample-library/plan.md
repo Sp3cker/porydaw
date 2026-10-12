@@ -186,3 +186,42 @@ Behavioral parity was audited against `git show 897afc77:` of
 `src/checks/samplecheck/library.cpp` (`libraryFolders`, `librarySourceLoad`,
 `libraryPreviewIsolation`, `librarySaveAsNew` — the last is adjacent and excluded,
 see spec.md Non-goals). Spec.md carries the full contract.
+
+## Allocation and numeric-loop repair
+
+`SampleImport` scans clipping through a borrowed `Span<Float>`. `SampleRender`
+uses borrowed spans for DC mean and mutable spans for full-buffer DC and gain
+updates. These retain the original iteration, conversion, threshold and
+arithmetic order. The sinc resampler hoists identical-order phase constants and
+uses `Double.magnitude` rather than generic `abs` in its tap loop.
+
+The whole Debug sample-editor harness's millionth intercepted allocation was
+`malloc(40)` from the generic Array collection read witness through
+`IndexingIterator.next` into `SampleRender.render`. Main-thread allocator-call
+counts for the same harness, including initialization and existing assertions:
+
+| Measurement | Before span scans | After span scans |
+|---|---:|---:|
+| Successful intercepted allocation calls | 5,570,154 | 3,816,395 |
+| Requested bytes | 304,633,220 | 266,047,984 |
+
+The remaining millionth call belongs to an existing audition-check
+`allSatisfy` assertion, not the production sample scan. Counts are requested
+allocations, not rounded heap sizes, and are not per-click measurements.
+
+CLI `xctrace` Time Profiler captures of the same Debug harness observed 4,517 ms
+weighted CPU before and 4,129 ms after all three source changes; the sinc
+resampler's inclusive weight was 2,726 ms and 2,454 ms respectively. These are
+single-run sampled observations, not a latency guarantee or Release comparison.
+
+`samplecheck-processing`, `samplecheck-render`, and `samplecheck-editor` passed
+together after the changes. No checks were added. The scoped
+`thermo-nuclear-reviewer` audit passed with no blockers; it verified unchanged
+arithmetic ordering, Float clipping thresholds and borrow scopes.
+
+A native AX-observed editor load of a local 8.32-second mono WAV (366,932 frames,
+44.1 kHz) installed the source in the rebuilt Debug app. Its CLI Time Profiler
+capture recorded 2,988 ms weighted main-thread CPU, including 1,531 ms in YIN
+pitch detection and 1,321 ms in sinc resampling. The allocator binary accounted
+for 2 ms. The remaining delay in this run is numeric-loop cost, not allocation
+time; Debug bounds checks and conversions are prominent in the stacks.

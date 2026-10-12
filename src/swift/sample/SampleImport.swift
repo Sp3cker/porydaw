@@ -42,7 +42,13 @@ public enum SampleImport {
             }
             sample.sourcePath = sourcePath
             sample.suggestedName = name
-            let clipped = sample.buffer.reduce(0) { $0 + (abs($1) >= 0.9999 ? 1 : 0) }
+            var clipped = 0
+            do {
+                let frames = sample.buffer.span
+                for index in 0..<frames.count {
+                    if abs(frames[index]) >= 0.9999 { clipped += 1 }
+                }
+            }
             if sample.frameCount > 0 && Double(clipped) / Double(sample.frameCount) > 0.001 {
                 sample.warnings.append("source is already clipped (\(clipped) samples at full scale).")
             }

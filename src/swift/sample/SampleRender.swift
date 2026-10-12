@@ -20,10 +20,14 @@ public enum SampleRender {
         }
         if p.dcRemove == .on || (p.dcRemove == .auto && loopOn) {
             var mean = 0.0
-            for value in grid { mean += Double(value) }
+            do {
+                let samples = grid.span
+                for index in 0..<samples.count { mean += Double(samples[index]) }
+            }
             mean /= Double(length)
             if abs(mean) > 1.0 / 256.0 {
-                for index in grid.indices { grid[index] = Float(Double(grid[index]) - mean) }
+                var samples = grid.mutableSpan
+                for index in 0..<samples.count { samples[index] = Float(Double(samples[index]) - mean) }
             }
         }
         let sourceRate = source.sampleRate
@@ -55,7 +59,10 @@ public enum SampleRender {
                 loopStart: loopStart)
             result.normalizeGain = gain
             if let warning { result.warnings.append(warning) }
-            if gain != 1 { for index in grid.indices { grid[index] = Float(Double(grid[index]) * gain) } }
+            if gain != 1 {
+                var samples = grid.mutableSpan
+                for index in 0..<samples.count { samples[index] = Float(Double(samples[index]) * gain) }
+            }
         }
         let exactKey = Double(p.baseKey) + p.fineTuneCents / 100
         if p.crossfadeOn && loopOn {

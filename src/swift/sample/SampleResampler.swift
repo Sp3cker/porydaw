@@ -72,9 +72,12 @@ extension SampleDsp {
         }
 
         let cutoff = 0.5 * min(1.0, ratio) * SincWindow.rolloff
-        let width = SincWindow.lobesPerSide / (2.0 * cutoff)
-        let phaseStepSin = sin(2.0 * SincWindow.pi * cutoff)
-        let phaseStepCos = cos(2.0 * SincWindow.pi * cutoff)
+        let twiceCutoff = 2.0 * cutoff
+        let width = SincWindow.lobesPerSide / twiceCutoff
+        let pi = SincWindow.pi
+        let phaseStep = 2.0 * pi * cutoff
+        let phaseStepSin = sin(phaseStep)
+        let phaseStepCos = cos(phaseStep)
         do {
             var output = result.mutableSpan
             for frame in 0..<outCount {
@@ -82,8 +85,8 @@ extension SampleDsp {
                 let first = Int(ceil(position - width))
                 let last = Int(floor(position + width))
                 var distance = Double(first) - position
-                var sine = sin(2.0 * SincWindow.pi * cutoff * distance)
-                var cosine = cos(2.0 * SincWindow.pi * cutoff * distance)
+                var sine = sin(phaseStep * distance)
+                var cosine = cos(phaseStep * distance)
                 var numerator = 0.0
                 var denominator = 0.0
                 for tap in first...last {
@@ -91,7 +94,7 @@ extension SampleDsp {
                     let argument = 1.0 - normalized * normalized
                     if argument >= 0 {
                         let kernel =
-                            (abs(distance) < 1e-9 ? 2.0 * cutoff : sine / (SincWindow.pi * distance))
+                            (distance.magnitude < 1e-9 ? twiceCutoff : sine / (pi * distance))
                             * SincWindow.window(at: argument)
                         if tap >= 0 {
                             var sourceIndex = tap
