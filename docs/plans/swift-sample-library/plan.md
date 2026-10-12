@@ -29,11 +29,12 @@ and audio-output machinery are reused as-is.
    peak pyramid / resets fit, drag, playhead and seam state once; `SampleLoopTools`
    detects the revision and clears pitch/candidates/status, then reanalyzes. Parameter
    edits keep the existing `renderRevision` path and never rebuild the pyramid.
-2. **One pending-source transaction.** Both the existing file-picker route and the new
-   pane Load route stage bytes in a `PendingSource`; `sourcePath`/`sourceBytes`/
-   `leftOnly`/`selectedZone` are committed only after decode (and, where applicable,
-   stereo/zone acceptance). A rejected or corrupt load leaves the prior document,
-   provenance inputs, name and undo history untouched.
+2. **One source record, explicit transactions.** The picker and pane Load routes
+   carry a `SourceRequest` containing the `SourceRecord` and its error destination.
+   Only stereo/zone questions retain a pending request; successful decode passes
+   the record explicitly to `applySource`. Initial construction uses `createEditor`.
+   A rejected or corrupt load leaves the document, committed source record, name
+   and undo history untouched.
 3. **Audition arbitration, not guards.** A small `SampleAuditionArbiter`
    (historical `SoundBrowser` single-active-owner semantics: publish displaces,
    `stop(owner:)` no-ops for a displaced owner, failed publish leaves the lane
@@ -154,8 +155,8 @@ concurrently; gates run against the settled union.
 6. **Cancellation semantics** (contracts, not gaps): canceling a replacement
   (SF2 zone picker, stereo prompt) leaves the existing editor, document,
   provenance and undo history untouched; canceling the blank-studio chooser (menu
-  route) leaves the browsable blank studio open. Source provenance commits only
-  at the single `open(_:)` commit point.
+  route) leaves the browsable blank studio open. Replacement provenance commits
+  only when `applySource` installs the complete source record.
 
 ## Verification gates (exact; controller-run)
 

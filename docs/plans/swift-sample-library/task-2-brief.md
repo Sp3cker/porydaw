@@ -80,17 +80,15 @@ Pinned behaviors:
   then the existing `pickerFolder`/`pickerRequested` lines run unchanged so the
   picker still appears over the blank studio (existing lane tests' observable
   sequence is preserved).
-- **Pending transaction** (task 2c): `chooseSource` (and pane `loadLibrarySample`)
-  stage `PendingSource`; SF2 branch reads staged bytes; stereo answers update the
-  staged `leftOnly` and re-decode; `acceptZone` sets the staged zone before
-  opening; `open(_:)` is the single commit point (writes `sourcePath`,
-  `sourceBytes`, `leftOnly`, `selectedZone`, provenance, then presenter refresh).
-  On `editorOpen` with an existing presenter, `open` calls
-  `presenter.replaceSource(sample, restoredParams:)`, keeps wave/tools/player
-  instances, and bumps `editorRevision`; it does NOT rebuild the player
-  (destination ADSR stays bound to the studio session, as historical
-  dialog-constructor behavior did). On a closed studio, `open` builds everything
-  as today and sets `editorOpen`.
+- **Source transaction** (task 2c): picker/pane requests carry a `SourceRecord`
+  and error destination together in `SourceRequest`. Only stereo/zone acceptance
+  retains a pending request. Stereo answers update the record's `leftOnly` before
+  re-decode; `acceptZone` sets its zone after extraction succeeds.
+  `applySource(sample, source:)` installs the complete committed record, calls
+  `presenter.replaceSource`, keeps wave/tools/player instances, and bumps
+  `editorRevision`; destination ADSR stays bound to the studio session.
+  Initial blank/reopened studios use `createEditor`, with a `nil`/resolved record
+  respectively. Neither constructor nor replacement consumes ambient pending state.
 - **Async session guard** (task 2c): async source/probe continuations validate
   task identity (session/generation) at each await; results racing `close()` are
   dropped and never reopen the studio.
@@ -148,11 +146,12 @@ Pinned behaviors:
    seam state once. Parameter edits keep the `renderRevision` scene path and
    never rebuild the pyramid. `SampleLoopTools`: detect `sourceRevision`, clear
    pitch/candidates/status, then reanalyze.
-5. (2c) `SampleStudioWorkflow`: introduce `PendingSource`, `pendingSource`,
-   `libraryPane`, `auditionLane`; migrate `chooseSource`/`answerStereoPrompt`/
-   `acceptZone`/`requestEdit` onto staged state (plus the plain-path fallback in
-   `chooseSource`); add the blank-open branch to `requestImport`; implement
-   `open`'s commit + replace-or-build split; add
+5. (2c) `SampleStudioWorkflow`: introduce `SourceRecord`, `SourceRequest`,
+   `pendingSource`, `committedSource`, `libraryPane`, `auditionLane`; migrate
+   picker/pane loading and stereo/zone acceptance onto explicit requests.
+   `requestEdit` passes its resolved record directly to `createEditor`;
+   `requestImport` creates a blank editor; `applySource` owns replacement.
+   Centralize source-staging eligibility in `canStageSource`; add
    `library()/requestOpenFile()/loadLibrarySample()/previewLibrarySample()/
    stopLibraryPreview()` and the `close()` additions; wire the four pane
    callbacks and `player.onStarted` at pane/player creation.
@@ -230,7 +229,7 @@ offscreen.
   - No QML edits (task 3), no `SampleLibraryModel` edits (task 1); a needed fix in
     either is a report, not an edit.
   - `SampleStudioHistory` needs no edit: a fresh instance is the reset.
-- Concurrency hazard owned here: `open()`'s replace-branch must not recreate the
+- Concurrency hazard owned here: `applySource` must not recreate the
   `SampleWaveformModel`/`SampleLoopTools` (QML holds them; they observe
   `sourceRevision` and invalidate once per revision).
 - Keep the audition key shared: pane preview reads `player.auditionKey` (live field,

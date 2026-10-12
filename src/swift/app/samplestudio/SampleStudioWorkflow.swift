@@ -10,9 +10,9 @@ import QtBridge
 @MainActor
 @QtBridgeable
 public final class SampleStudioWorkflow: QmlUncreatable {
-    private struct PendingSource {
-        var path: String
-        var bytes: Data
+    private struct SourceRecord {
+        let path: String
+        let bytes: Data
         var leftOnly: Bool
         var zone: Int
     }
@@ -22,6 +22,11 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         case library
     }
 
+    private struct SourceRequest {
+        var source: SourceRecord
+        let errorSurface: SourceErrorSurface
+    }
+
     private weak var session: ApplicationSession?
     private var presenter: SampleStudioPresenter?
     private var tools: SampleLoopTools?
@@ -29,11 +34,8 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     private var player: SampleStudioAudition?
     private var libraryPane: SampleLibraryModel?
     private var auditionLane: SampleAuditionArbiter?
-    private var pendingSource: PendingSource?
-    private var pendingErrorSurface: SourceErrorSurface = .alert
-    private var sourceBytes = Data()
-    private var sourcePath = ""
-    private var leftOnly = false
+    private var pendingSource: SourceRequest?
+    private var committedSource: SourceRecord?
     private var committing = false
     private var pendingTask: Task<Void, Never>?
     private var sessionGeneration = 0
@@ -42,7 +44,9 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     private var reopenFromSource = false
     private var sf2File: Sf2File?
     private var zonePresenter: Sf2ZonePickerPresenter?
-    private var selectedZone = -1
+    private var canStageSource: Bool {
+        editorOpen && !committing && !stereoPromptOpen && !zonePickerOpen
+    }
 
     @QtTracked public var editorOpen = false
     @QtIgnored var onEditorOpenChanged: (() -> Void)?
@@ -73,9 +77,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
 
     /// Opens the existing audio/SF2 picker over the studio without replacing its document.
     public func requestOpenFile() {
-        guard editorOpen, !committing, !stereoPromptOpen, !zonePickerOpen, !pickerRequested,
-            let session
-        else { return }
+        guard canStageSource, !pickerRequested, let session else { return }
         let directory = session.preferences.string(key: "lastSampleDir", fallback: "")
         pickerFolder =
             URL(
@@ -87,7 +89,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
 
     /// Loads a selected library file transactionally into the existing editor.
     public func loadLibrarySample(path: String) {
-        guard editorOpen, !committing, !stereoPromptOpen, !zonePickerOpen else { return }
+        guard canStageSource else { return }
         chooseSource(path: path, errorSurface: .library)
     }
 
@@ -189,7 +191,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                 return
             }
             guard let self, self.sessionGeneration == generation else { return }
-            self.open(ImportedSample())
+            self.createEditor(ImportedSample(), source: nil)
             let directory = session.preferences.string(key: "lastSampleDir", fallback: "")
             self.pickerFolder =
                 URL(
@@ -233,22 +235,21 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                     wav: committed.wav,
                     wavPath: committed.wavPath,
                     provenance: provenance)
-                let staged: PendingSource
+                let staged: SourceRecord
                 if let source = result.provenance {
-                    staged = PendingSource(
+                    staged = SourceRecord(
                         path: source.sourcePath,
                         bytes: try Data(contentsOf: URL(fileURLWithPath: source.sourcePath)),
                         leftOnly: source.leftOnly, zone: source.sf2Zone)
                 } else {
-                    staged = PendingSource(
+                    staged = SourceRecord(
                         path: committed.wavPath, bytes: committed.wav,
                         leftOnly: false, zone: -1)
                 }
                 guard !Task.isCancelled, self.sessionGeneration == generation else { return }
-                self.pendingSource = staged
                 self.editName = name
                 self.reopenFromSource = result.fromSource
-                self.open(result.sample, restoredParams: result.restoredParams)
+                self.createEditor(result.sample, source: staged, restoredParams: result.restoredParams)
             } catch {
                 guard let self, !Task.isCancelled, self.sessionGeneration == generation else { return }
                 self.showAlert(title: "Edit Sample", text: String(describing: error))
@@ -257,7 +258,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     }
 
     public func chooseSource(fileURL: String) {
-        guard editorOpen, !committing, !zonePickerOpen, !stereoPromptOpen else { return }
+        guard canStageSource else { return }
         pickerRequested = false
         chooseSource(path: fileURL, errorSurface: .alert)
     }
@@ -272,12 +273,13 @@ public final class SampleStudioWorkflow: QmlUncreatable {
             sourceError("Cannot read \(sourcePath).", surface: errorSurface)
             return
         }
-        let staged = PendingSource(path: sourcePath, bytes: bytes, leftOnly: false, zone: -1)
+        let request = SourceRequest(
+            source: SourceRecord(path: sourcePath, bytes: bytes, leftOnly: false, zone: -1),
+            errorSurface: errorSurface)
         if Sf2Reader.isSoundFont(bytes) {
             do {
                 let file = try Sf2Reader.read(bytes, sourcePath: sourcePath)
-                pendingSource = staged
-                pendingErrorSurface = errorSurface
+                pendingSource = request
                 sf2File = file
                 zonePresenter = Sf2ZonePickerPresenter(file: file)
                 zonePickerOpen = true
@@ -285,9 +287,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                 sourceError("\(url.lastPathComponent): \(error.message)", surface: errorSurface)
             }
         } else {
-            pendingSource = staged
-            pendingErrorSurface = errorSurface
-            decodeSource()
+            decodeSource(request)
         }
         if case .alert = errorSurface {
             session?.preferences.setString(key: "lastSampleDir", value: url.deletingLastPathComponent().path)
@@ -297,10 +297,11 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     public func cancelSource() { pickerRequested = false }
 
     public func answerStereoPrompt(leftOnly: Bool) {
-        guard stereoPromptOpen, pendingSource != nil else { return }
+        guard stereoPromptOpen, var request = pendingSource else { return }
         stereoPromptOpen = false
-        pendingSource?.leftOnly = leftOnly
-        decodeSource(promptForPhaseCancellation: false)
+        pendingSource = nil
+        request.source.leftOnly = leftOnly
+        decodeSource(request, promptForPhaseCancellation: false)
     }
 
     /// Dismisses the stereo question without replacing the current editor source.
@@ -308,24 +309,24 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         guard stereoPromptOpen, pendingSource != nil else { return }
         stereoPromptOpen = false
         pendingSource = nil
-        pendingErrorSurface = .alert
     }
 
     public func zonePicker() -> Optional<Sf2ZonePickerPresenter> { zonePresenter }
 
     public func acceptZone() {
         guard zonePickerOpen, let sf2File, let zonePresenter,
-            zonePresenter.canAccept, pendingSource != nil
+            zonePresenter.canAccept, var request = pendingSource
         else { return }
         do {
             let zone = zonePresenter.selectedZone
             let sample = try Sf2Reader.extractZone(sf2File, index: zone)
-            pendingSource?.zone = zone
+            request.source.zone = zone
             zonePickerOpen = false
             self.sf2File = nil
-            open(sample)
+            pendingSource = nil
+            applySource(sample, source: request.source)
         } catch {
-            sourceError(error.message, surface: pendingErrorSurface)
+            sourceError(error.message, surface: request.errorSurface)
         }
     }
 
@@ -334,20 +335,22 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         zonePickerOpen = false
         sf2File = nil
         pendingSource = nil
-        pendingErrorSurface = .alert
     }
 
     public func accept() {
         guard !committing, let session, let service = session.catalogService,
             let presenter, presenter.canCommit
         else { return }
+        guard let source = committedSource else {
+            preconditionFailure("A committable editor must have a source record.")
+        }
         committing = true
         player?.close()
         var provenance = SampleProvenance()
-        provenance.sourcePath = sourcePath
-        provenance.sourceSha256 = SampleSourceHash.sha256Hex(sourceBytes)
-        provenance.leftOnly = leftOnly
-        provenance.sf2Zone = selectedZone
+        provenance.sourcePath = source.path
+        provenance.sourceSha256 = SampleSourceHash.sha256Hex(source.bytes)
+        provenance.leftOnly = source.leftOnly
+        provenance.sf2Zone = source.zone
         provenance.params = presenter.params
         let name = presenter.sampleName
         let editing = editName != nil
@@ -423,13 +426,9 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         zonePickerOpen = false
         sf2File = nil
         pendingSource = nil
-        pendingErrorSurface = .alert
-        sourceBytes = Data()
-        sourcePath = ""
-        leftOnly = false
+        committedSource = nil
         destinationSlot = -1
         editName = nil
-        selectedZone = -1
         reopenFromSource = false
         setEditorOpen(false)
     }
@@ -453,24 +452,24 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         zonePresenter = nil
     }
 
-    private func decodeSource(promptForPhaseCancellation: Bool = true) {
-        guard let pendingSource else { return }
+    private func decodeSource(_ request: SourceRequest, promptForPhaseCancellation: Bool = true) {
+        let source = request.source
         do {
             let sample = try SampleImport.decode(
-                pendingSource.bytes, sourcePath: pendingSource.path,
-                leftChannelOnly: pendingSource.leftOnly)
-            if sample.phaseCancelStereo && !pendingSource.leftOnly && promptForPhaseCancellation {
+                source.bytes, sourcePath: source.path,
+                leftChannelOnly: source.leftOnly)
+            if sample.phaseCancelStereo && !source.leftOnly && promptForPhaseCancellation {
+                pendingSource = request
                 stereoPromptText =
-                    "The left and right channels of \(URL(fileURLWithPath: pendingSource.path).lastPathComponent) are phase-cancelling — the mono mix may sound hollow.\n\nImport the left channel only instead?"
+                    "The left and right channels of \(URL(fileURLWithPath: source.path).lastPathComponent) are phase-cancelling — the mono mix may sound hollow.\n\nImport the left channel only instead?"
                 stereoPromptOpen = true
             } else {
-                open(sample)
+                applySource(sample, source: source)
             }
         } catch {
             sourceError(
-                "\(URL(fileURLWithPath: pendingSource.path).lastPathComponent): \(error.message)",
-                surface: pendingErrorSurface)
-            self.pendingSource = nil
+                "\(URL(fileURLWithPath: source.path).lastPathComponent): \(error.message)",
+                surface: request.errorSurface)
         }
     }
 
@@ -481,25 +480,26 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         }
     }
 
-    private func open(_ sample: ImportedSample, restoredParams: SampleEditParams? = nil) {
+    private func applySource(_ sample: ImportedSample, source: SourceRecord) {
+        precondition(editorOpen, "Source replacement requires an open editor.")
+        guard let presenter else {
+            preconditionFailure("An open editor must have a presenter.")
+        }
+        player?.stop()
+        stopLibraryPreview()
+        committedSource = source
+        if editName != nil { reopenFromSource = true }
+        library()?.setLoadedPath(path: source.path)
+        presenter.replaceSource(sample)
+        editorRevision += 1
+    }
+
+    private func createEditor(
+        _ sample: ImportedSample, source: SourceRecord?, restoredParams: SampleEditParams? = nil
+    ) {
         guard let session else { return }
-        if let pendingSource {
-            player?.stop()
-            stopLibraryPreview()
-            sourcePath = pendingSource.path
-            sourceBytes = pendingSource.bytes
-            leftOnly = pendingSource.leftOnly
-            selectedZone = pendingSource.zone
-            self.pendingSource = nil
-            pendingErrorSurface = .alert
-            if editorOpen, editName != nil { reopenFromSource = true }
-            library()?.setLoadedPath(path: sourcePath)
-        }
-        if editorOpen, let presenter {
-            presenter.replaceSource(sample, restoredParams: restoredParams)
-            editorRevision += 1
-            return
-        }
+        committedSource = source
+        if let source { library()?.setLoadedPath(path: source.path) }
         let root = session.projectRoot
         let presenter = SampleStudioPresenter(source: sample) { name in
             SampleRegistrar.validate(

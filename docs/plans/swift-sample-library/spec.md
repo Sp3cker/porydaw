@@ -278,18 +278,21 @@ public func loadLibrarySample(path: String)             // pane Load (transactio
 public func previewLibrarySample(path: String)          // pane preview (§28 semantics)
 public func stopLibraryPreview()
 public func cancelStereoPrompt()                       // rejection, distinct from No = mono mix
-private struct PendingSource { var path: String; var bytes: Data; var leftOnly: Bool; var zone: Int }
+private struct SourceRecord { let path: String; let bytes: Data; var leftOnly: Bool; var zone: Int }
+private struct SourceRequest { var source: SourceRecord; let errorSurface: SourceErrorSurface }
 ```
 
-- **Transaction**: `chooseSource`, `loadLibrarySample` and `requestEdit`'s resolved
-  source stage into `pendingSource`; the `sourcePath`/`sourceBytes`/`leftOnly`/
-  `selectedZone` fields are written only when `open(_:)` accepts (decode done;
-  stereo/zone resolved). `open` on an already-open studio calls
-  `presenter.replaceSource`; on a closed studio it builds presenter/wave/tools/
-  player as today. Decode/stereo errors surface to the pane message when the
-  request came from the pane, else to the existing alert. Provenance
-  (`sourcePath`, committed inputs) commits at this same single point — no
-  earlier write.
+- **Transaction**: `chooseSource` and `loadLibrarySample` pass a `SourceRequest`
+  into decode; `pendingSource` retains it only while stereo/zone acceptance is
+  outstanding. A successful decode passes its `SourceRecord` explicitly into
+  `applySource`, which installs `committedSource` as one value and calls
+  `presenter.replaceSource` without rebuilding wave/tools/player.
+  `createEditor` handles initial construction only, taking the resolved record
+  from `requestEdit` or `nil` for a blank import. Decode/stereo errors use the
+  request's error destination: pane message for a library request, otherwise alert.
+  Cancellation or failure never changes the committed record. Source-staging
+  eligibility has one `canStageSource` predicate; opening a chooser additionally
+  requires that no chooser is already requested.
 - **Async session guard**: any async source/probe continuation validates its task
   identity (session/generation) at each await before touching the studio: a
   result racing `close()` is dropped and never reopens the studio.
