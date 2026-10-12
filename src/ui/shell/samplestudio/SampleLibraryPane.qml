@@ -1,0 +1,300 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Dialogs
+import QtQuick.Layouts
+import PorydawStyle
+import PorydawApp
+
+ColumnLayout {
+    id: pane
+    objectName: "sampleLibraryPanel"
+    required property SampleLibraryModel library
+    required property GridPalette colors
+    required property Window studioWindow
+    required property real unit
+    required property real paneSpacing
+    spacing: pane.paneSpacing
+    function navigateFolder(row: int): void {
+        if (row < 0 || row >= folders.count)
+            return
+        files.currentIndex = -1
+        pane.library.selectFolder(row)
+        pane.alignFolderCursor()
+    }
+
+    function navigateToParent(row: int): void {
+        const parent = pane.library.parentFolderRow(row)
+        if (parent >= 0 && parent !== row)
+            pane.navigateFolder(parent)
+    }
+
+    function alignFolderCursor(): void {
+        folders.forceLayout()
+        const row = pane.library.selectedFolderRow()
+        if (row >= 0)
+            folders.positionViewAtIndex(row, ListView.Contain)
+        folders.currentIndex = row
+    }
+
+    function toggleFolder(row: int): void {
+        pane.library.toggleFolder(row)
+        pane.alignFolderCursor()
+    }
+
+    function folderRowAt(row: int): FolderRow {
+        folders.forceLayout()
+        if (row < 0 || row >= folders.count)
+            return null
+        folders.positionViewAtIndex(row, ListView.Contain)
+        folders.forceLayout()
+        return folders.itemAtIndex(row) as FolderRow
+    }
+
+    FolderDialog {
+        id: folderPicker
+        objectName: "sampleLibraryFolderPicker"
+        title: qsTr("Add Folder to Library")
+        parentWindow: pane.studioWindow
+        onAccepted: {
+            files.currentIndex = -1
+            pane.library.addFolder(selectedFolder)
+            pane.alignFolderCursor()
+        }
+    }
+
+    Label { text: qsTr("Library"); color: pane.colors.windowText }
+    RowLayout {
+        Layout.fillWidth: true
+        Button {
+            objectName: "sampleLibraryAdd"
+            text: qsTr("Add Folder…")
+            onClicked: folderPicker.open()
+        }
+        Button {
+            objectName: "sampleLibraryOpen"
+            text: qsTr("Open File…")
+            onClicked: pane.library.requestOpenFile()
+        }
+    }
+    ListView {
+        id: folders
+        objectName: "sampleLibraryFolders"
+        Accessible.role: Accessible.List
+        Accessible.name: qsTr("Library folders")
+        Accessible.focusable: true
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        activeFocusOnTab: true
+        onActiveFocusChanged: {
+            if (activeFocus)
+                pane.alignFolderCursor()
+        }
+        currentIndex: -1
+        Keys.priority: Keys.BeforeItem
+        Keys.onPressed: event => {
+            if (event.modifiers !== Qt.NoModifier)
+                return
+            if (event.key === Qt.Key_Down || event.key === Qt.Key_Up) {
+                const row = folders.currentIndex < 0 ? 0
+                    : Math.max(0, Math.min(folders.count - 1,
+                                            folders.currentIndex + (event.key === Qt.Key_Down ? 1 : -1)))
+                pane.navigateFolder(row)
+                event.accepted = true
+                return
+            }
+            if (event.key !== Qt.Key_Left && event.key !== Qt.Key_Right)
+                return
+            const row = pane.folderRowAt(folders.currentIndex)
+            if (!row)
+                return
+            if (event.key === Qt.Key_Right && row.hasChildren && !row.expanded) {
+                pane.toggleFolder(row.index)
+            } else if (event.key === Qt.Key_Left && row.hasChildren && row.expanded) {
+                pane.toggleFolder(row.index)
+            } else if (event.key === Qt.Key_Left) {
+                pane.navigateToParent(row.index)
+            }
+            event.accepted = true
+        }
+        clip: true
+        model: pane.library.folders
+        delegate: FolderRow {}
+        component FolderRow: Rectangle {
+            id: folderRow
+            objectName: "sampleLibraryFolderRow"
+            required property int index
+            required property string path
+            required property string title
+            required property int depth
+            required property bool expanded
+            required property bool hasChildren
+            required property bool selected
+            width: folders.width
+            height: 2 * pane.unit
+            color: folderRow.selected ? pane.colors.tabSelectedBackground : pane.colors.windowBackground
+            ToolTip.text: folderRow.path
+            ToolTip.visible: folderHover.hovered
+            HoverHandler { id: folderHover }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    const row = folderRow.index
+                    folders.forceActiveFocus()
+                    pane.navigateFolder(row)
+                }
+            }
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: folderRow.depth * pane.unit
+                spacing: pane.paneSpacing
+                Item {
+                    Layout.preferredWidth: pane.unit
+                    Layout.fillHeight: true
+                    Label {
+                        anchors.centerIn: parent
+                        visible: folderRow.hasChildren
+                        text: folderRow.expanded ? "▾" : "▸"
+                        color: folderRow.selected ? pane.colors.selectionText : pane.colors.windowText
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: folderRow.hasChildren
+                        onClicked: pane.toggleFolder(folderRow.index)
+                    }
+                }
+                Label {
+                    objectName: "sampleLibraryFolderName"
+                    Layout.fillWidth: true
+                    text: folderRow.title
+                    elide: Text.ElideRight
+                    color: folderRow.selected ? pane.colors.selectionText : pane.colors.windowText
+                }
+            }
+        }
+    }
+    Button {
+        objectName: "sampleLibraryRemove"
+        text: qsTr("Remove from Library")
+        enabled: pane.library.canRemove
+        ToolTip.text: qsTr("Remove the selected saved root from the library. No files are deleted.")
+        ToolTip.visible: hovered
+        onClicked: {
+            files.currentIndex = -1
+            pane.library.removeSelectedRoot()
+            pane.alignFolderCursor()
+        }
+    }
+    Label { text: qsTr("Audio files"); color: pane.colors.windowText }
+    ListView {
+        id: files
+        objectName: "sampleLibraryFiles"
+        Accessible.role: Accessible.List
+        Accessible.name: qsTr("Library audio files")
+        Accessible.focusable: true
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        visible: pane.library.filesVisible
+        clip: true
+        activeFocusOnTab: true
+        currentIndex: -1
+        model: pane.library.files
+        onCurrentIndexChanged: {
+            if (currentIndex < 0)
+                pane.library.clearFileSelection()
+            else
+                pane.library.selectFile(currentIndex)
+        }
+        Keys.priority: Keys.BeforeItem
+        Keys.onPressed: event => {
+            if ((event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+                    && event.modifiers === Qt.NoModifier) {
+                if (!event.isAutoRepeat)
+                    pane.library.togglePreview()
+                event.accepted = true
+            }
+        }
+        delegate: Rectangle {
+            id: fileRow
+            objectName: "sampleLibraryFileRow"
+            required property int index
+            required property string path
+            required property string name
+            required property bool selected
+            width: files.width
+            height: 2 * pane.unit
+            color: fileRow.selected ? pane.colors.tabSelectedBackground : pane.colors.windowBackground
+            ToolTip.text: fileRow.path
+            ToolTip.visible: fileHover.hovered
+            HoverHandler { id: fileHover }
+            Label {
+                objectName: "sampleLibraryFileName"
+                anchors.fill: parent
+                anchors.leftMargin: pane.paneSpacing
+                verticalAlignment: Text.AlignVCenter
+                text: fileRow.name
+                elide: Text.ElideRight
+                color: fileRow.selected ? pane.colors.selectionText : pane.colors.windowText
+            }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    const row = fileRow.index
+                    files.currentIndex = row
+                    files.forceActiveFocus()
+                    pane.library.clickFile(row)
+                }
+                onDoubleClicked: pane.library.activateFile(fileRow.index)
+            }
+        }
+    }
+    RowLayout {
+        Layout.fillWidth: true
+        Button {
+            objectName: "sampleLibraryPreview"
+            text: pane.library.previewButtonLabel
+            enabled: pane.library.canPreview
+            ToolTip.text: qsTr("Preview the selected source file (Enter or Space in the file list).")
+            ToolTip.visible: hovered
+            onClicked: pane.library.togglePreview()
+        }
+        Button {
+            objectName: "sampleLibraryLoad"
+            text: qsTr("Load")
+            enabled: pane.library.canLoad
+            ToolTip.text: qsTr("Replace the editor document with the selected file.")
+            ToolTip.visible: hovered
+            onClicked: pane.library.loadSelected()
+        }
+    }
+    Label {
+        objectName: "sampleLibraryStatus"
+        Layout.fillWidth: true
+        text: pane.library.statusText
+        wrapMode: Text.Wrap
+        color: pane.colors.secondaryText
+        ToolTip.text: pane.library.statusToolTip
+        ToolTip.visible: statusHover.hovered && ToolTip.text.length > 0
+        HoverHandler { id: statusHover }
+    }
+    Label {
+        objectName: "sampleLibraryLoaded"
+        Layout.fillWidth: true
+        text: pane.library.loadedText
+        elide: Text.ElideRight
+        color: pane.colors.secondaryText
+        ToolTip.text: pane.library.loadedToolTip
+        ToolTip.visible: loadedHover.hovered && ToolTip.text.length > 0
+        HoverHandler { id: loadedHover }
+    }
+    Label {
+        objectName: "sampleLibraryPreviewing"
+        Layout.fillWidth: true
+        text: pane.library.previewText
+        elide: Text.ElideRight
+        color: pane.colors.secondaryText
+        ToolTip.text: pane.library.previewToolTip
+        ToolTip.visible: previewHover.hovered && ToolTip.text.length > 0
+        HoverHandler { id: previewHover }
+    }
+}

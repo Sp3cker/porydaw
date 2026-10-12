@@ -151,10 +151,10 @@ public final class SampleStudioWorkflow: QmlUncreatable {
 
     private func localSourceURL(for path: String) -> URL? {
         if let parsed = URL(string: path), parsed.isFileURL {
-            return parsed.standardizedFileURL
+            return parsed.standardized
         }
         guard !path.contains("://") else { return nil }
-        return URL(fileURLWithPath: path).standardizedFileURL
+        return URL(filePath: path, directoryHint: .notDirectory).standardized
     }
 
     public func requestImport(slot: Int) {

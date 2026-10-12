@@ -10,9 +10,27 @@ SoundFonts. Where to legally find sounds could be a nice tip box. -->
 
 ## Opening the sample editor
 
-<!-- TODO: Tools → Import Sample, or "New… / Edit…" next to the sample
-picker in the voicegroup dock (the latter auto-assigns the result to the
-voice you started from). -->
+Choose **Tools → Import Sample** to open Sample Studio with its sample library
+and a file picker. Canceling the picker leaves the studio open so you can
+browse the library instead. You can also use **New…** or **Edit…** beside the
+sample picker in the voicegroup dock; a sample committed from there is
+assigned to that voice.
+
+## Sample library
+
+Choose **Add Folder…** to bookmark a folder. The library remembers saved
+folders between sessions and lists supported audio files in the selected
+folder. In the folder list, use Up and Down to navigate, Right to expand a
+folder, and Left to collapse it or move to its parent. You can also use the
+disclosure arrows to expand folders and click a folder to browse it.
+**Remove from Library** removes the selected bookmark, not any files on disk.
+
+Click an audio file to preview it; pressing Enter or Space while the file list
+has focus toggles the preview. Moving through the list with arrow keys only
+changes the selection. Double-click a file or choose **Load** to replace the
+current editor source. **Open File…** opens the file picker, including for
+SoundFont zones. If a file cannot be loaded, the current edit, name, and undo
+history stay intact; the library shows the error without replacing the source.
 
 ## Editing your sample
 

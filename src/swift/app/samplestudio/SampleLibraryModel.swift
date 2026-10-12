@@ -27,7 +27,7 @@ public final class SampleLibraryFolderRow: QmlUncreatable {
 public final class SampleLibraryFileRow: QmlUncreatable {
     public let path: String
     public let name: String
-    public let selected: Bool
+    public var selected: Bool
 
     init(path: String, selected: Bool) {
         self.path = path
@@ -54,7 +54,7 @@ public final class SampleLibraryModel: QmlUncreatable {
             self.depth = depth
             self.rootPath = rootPath
             childPaths = SampleLibraryModel.directoryEntries(at: path, folders: true)
-                .map { $0.standardizedFileURL.path }
+                .map { (url: URL) -> String in url.standardized.path }
         }
 
         func populate() {
@@ -66,15 +66,17 @@ public final class SampleLibraryModel: QmlUncreatable {
 
     private static let foldersKey = "sampleLibraryFolders"
     private static let audioExtensions: Set<String> = ["wav", "aif", "aiff", "mp3", "flac", "ogg"]
-    private static let resourceKeyList: [URLResourceKey] = [
+    private static let resourceKeys: Set<URLResourceKey> = [
         .isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey, .isHiddenKey,
     ]
-    private static let resourceKeys = Set(resourceKeyList)
     private let preferences: PreferencesStore
     private var roots: [FolderNode] = []
     private var visibleFolders: [FolderNode] = []
     private var selectedFolder: FolderNode?
-    private var selectedFilePath: String?
+    private var selectedFileRow: Int?
+    private var selectedFilePath: String? {
+        selectedFileRow.map { (row: Int) -> String in currentFiles[row] }
+    }
     private var currentFiles: [String] = []
     private var message = ""
     private var loadedPath = ""
@@ -139,6 +141,16 @@ public final class SampleLibraryModel: QmlUncreatable {
         navigate(to: visibleFolders[row])
     }
 
+    public func selectedFolderRow() -> Int {
+        visibleFolders.firstIndex { (node: FolderNode) -> Bool in node === selectedFolder } ?? -1
+    }
+
+    public func parentFolderRow(row: Int) -> Int {
+        guard visibleFolders.indices.contains(row) else { return -1 }
+        let depth = visibleFolders[row].depth
+        return visibleFolders[..<row].lastIndex { (node: FolderNode) -> Bool in node.depth < depth } ?? row
+    }
+
     public func toggleFolder(row: Int) {
         guard visibleFolders.indices.contains(row) else { return }
         let node = visibleFolders[row]
@@ -150,9 +162,8 @@ public final class SampleLibraryModel: QmlUncreatable {
 
     public func selectFile(row: Int) {
         guard currentFiles.indices.contains(row) else { return }
-        selectedFilePath = currentFiles[row]
+        setFileSelection(row)
         message = ""
-        refreshFiles()
         updateState()
     }
 
@@ -208,8 +219,7 @@ public final class SampleLibraryModel: QmlUncreatable {
     }
 
     public func clearFileSelection() {
-        selectedFilePath = nil
-        refreshFiles()
+        setFileSelection(nil)
         updateState()
     }
 
@@ -218,7 +228,7 @@ public final class SampleLibraryModel: QmlUncreatable {
         node?.populate()
         node?.expanded = true
         message = ""
-        selectedFilePath = nil
+        setFileSelection(nil)
         currentFiles = node.map { Self.directoryEntries(at: $0.path, folders: false).map(\.path) } ?? []
         refreshFolders()
         refreshFiles()
@@ -244,6 +254,24 @@ public final class SampleLibraryModel: QmlUncreatable {
 
     private func refreshFiles() {
         files.reset(to: currentFiles.map { SampleLibraryFileRow(path: $0, selected: $0 == selectedFilePath) })
+    }
+
+    private func setFileSelection(_ row: Int?) {
+        guard selectedFileRow != row else { return }
+        let previous = selectedFileRow
+        selectedFileRow = row
+        files.update {
+            if let previous {
+                let item = files[previous]
+                item.selected = false
+                files[previous] = item
+            }
+            if let row {
+                let item = files[row]
+                item.selected = true
+                files[row] = item
+            }
+        }
     }
 
     private func updateState() {
@@ -289,29 +317,35 @@ public final class SampleLibraryModel: QmlUncreatable {
         var seen: Set<String> = []
         var result: [String] = []
         for path in paths where !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            let clean = URL(fileURLWithPath: path).standardizedFileURL.path
+            let clean = URL(filePath: path, directoryHint: .isDirectory).standardized.path
             if seen.insert(clean).inserted { result.append(clean) }
         }
         return result
     }
 
     private static func directoryEntries(at path: String, folders: Bool) -> [URL] {
-        let keys = resourceKeys
-        guard
-            let entries = try? FileManager.default.contentsOfDirectory(
-                at: URL(fileURLWithPath: path), includingPropertiesForKeys: resourceKeyList,
-                options: [.skipsHiddenFiles])
-        else { return [] }
-        return entries.filter { entry in
-            guard !entry.lastPathComponent.hasPrefix("."),
-                let values = try? entry.resourceValues(forKeys: keys), values.isHidden != true
-            else { return false }
-            if folders { return values.isDirectory == true && values.isSymbolicLink != true }
-            return values.isRegularFile == true && audioExtensions.contains(entry.pathExtension.lowercased())
-        }.sorted { left, right in
+        let directory = URL(filePath: path, directoryHint: .isDirectory)
+        // Path enumeration follows an explicit root symlink without canonicalizing its bookmark.
+        guard let names = try? FileManager.default.contentsOfDirectory(atPath: path) else { return [] }
+        var result: [URL] = []
+        for name in names {
+            let entry = directory.appendingPathComponent(name, isDirectory: false)
+            guard !name.hasPrefix("."),
+                let values = try? entry.resourceValues(forKeys: resourceKeys), values.isHidden != true
+            else { continue }
+            let included =
+                folders
+                ? values.isDirectory == true && values.isSymbolicLink != true
+                : values.isRegularFile == true && audioExtensions.contains(entry.pathExtension.lowercased())
+            if included {
+                result.append(entry)
+            }
+        }
+        result.sort { (left: URL, right: URL) -> Bool in
             let order = left.lastPathComponent.compare(right.lastPathComponent, options: .caseInsensitive)
             return order == .orderedSame
                 ? left.lastPathComponent < right.lastPathComponent : order == .orderedAscending
         }
+        return result
     }
 }

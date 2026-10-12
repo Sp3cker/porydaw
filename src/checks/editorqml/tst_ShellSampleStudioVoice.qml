@@ -49,10 +49,17 @@ ShellLaneSupport {
         wait(0)
     }
     function selectSource(path) {
+        verify(waitForNative(function() {
+            const picker = child("shellImportSamplePicker")
+            return picker && picker.visible
+        }, 5000), "studio-owned source picker opens")
         const picker = child("shellImportSamplePicker")
+        picker.reject()
+        tryCompare(picker, "visible", false, 5000)
+        picker.currentFolder = shell.shellPresenter.session.sampleStudio().pickerFolder
         picker.selectedFile = "file://" + path
-        verify(waitForNative(function() { return picker.visible }, 5000), "source picker opens")
-        picker.selectedFile = "file://" + path
+        mouseClick(child("sampleLibraryOpen"))
+        tryCompare(picker, "visible", true, 5000)
         compare(picker.selectedFile.toString(), "file://" + path, "requested source selected")
         picker.accept()
     }

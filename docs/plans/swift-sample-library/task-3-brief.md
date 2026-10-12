@@ -13,13 +13,14 @@ buttons, readouts, objectNames) and the sizing decision in plan.md (pane left,
 
 ## Exact write set — bounded parallel sub-units (≤5 explicit paths each)
 
-- **Task 3a — production surface** (5 paths):
+- **Task 3a — production surface** (4 paths):
   - Create `src/ui/shell/samplestudio/SampleLibraryPane.qml`
   - Edit `src/ui/shell/samplestudio/SampleStudioDialog.qml` — dock the pane
     (horizontal `SplitView`, objectName `sampleBrowserSplitter`) and gate
     source-dependent controls on `editor.hasSource`
-  - Edit `src/ui/shell/samplestudio/SampleStudioHost.qml` — only if dialog
-    parenting genuinely requires it (otherwise untouched)
+  - Edit `src/ui/shell/samplestudio/SampleStudioHost.qml` — keep pre-editor errors
+    shell-owned; the dialog owns its picker, stereo question, and editor alert.
+    Stereo rejection calls `cancelStereoPrompt()` (No still means mono mix).
   - Edit `docsrc/manual/sample-studio.md` — fill the "Opening the sample editor"
     TODO section (menu route now lands in the studio with the library pane) and
     add a "Sample library" section: bookmark add/remove (no files deleted),
@@ -27,7 +28,7 @@ buttons, readouts, objectNames) and the sizing decision in plan.md (pane left,
     guarantee that a failed load never damages the current edit, and folder
     persistence (controller-trivial inline alternative allowed)
 - **Task 3b — lanes and probes** (5 paths):
-  - Edit `src/checks/editorqml/ImportWizardProbe.swift` — add the three probe
+  - Edit `src/checks/editorqml/ImportWizardProbe.swift` — add the four probe
     methods below; no registration change (already registered in the shell lane)
   - Edit `src/checks/editorqml/ShellQmlEntries.swift` — new entry below
   - Create `src/checks/editorqml/tst_ShellSampleStudioLibrary.qml`
@@ -84,8 +85,8 @@ one test function per journey, sized like the existing studio lanes).
 
 1. `SampleLibraryPane.qml` (task 3a): a `ColumnLayout` pane per spec §18 — header `Library`;
    `Add Folder…` (`sampleLibraryAdd`, opens the pane's `FolderDialog`
-   `sampleLibraryFolderPicker`; `onAccepted: library.addFolder(selectedFolder.toString())` —
-   QML passes a `String`, never a `QUrl`) and
+   `sampleLibraryFolderPicker`; `onAccepted: library.addFolder(selectedFolder)` —
+   the bridged `QString` parameter converts the URL without a JS `toString()` fallback) and
    `Open File…` (`sampleLibraryOpen` → `library.requestOpenFile()`) row; folders
    `ListView` (`sampleLibraryFolders`, accessible name `Library folders`) with a
    delegate binding `required property` row fields, left indent `depth * unit`,

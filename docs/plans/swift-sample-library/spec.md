@@ -154,7 +154,7 @@ callable is needed). Bodies unchanged.
     public let expanded: Bool; public let hasChildren: Bool; public let selected: Bool
 }
 @MainActor @QtBridgeable public final class SampleLibraryFileRow: QmlUncreatable {
-    public let path: String; public let name: String; public let selected: Bool
+    public let path: String; public let name: String; public var selected: Bool
 }
 
 @MainActor @QtBridgeable public final class SampleLibraryModel: QmlUncreatable {
@@ -179,6 +179,8 @@ callable is needed). Bodies unchanged.
     public func addFolder(path: String)          // dialog accepted path
     public func removeSelectedRoot()
     public func selectFolder(row: Int)           // navigate (clears message + file selection)
+    public func selectedFolderRow() -> Int       // derived visible-row cursor; -1 without selection
+    public func parentFolderRow(row: Int) -> Int // parent row, or same row for a root
     public func toggleFolder(row: Int)           // expand/collapse lazily
     public func selectFile(row: Int)             // silent selection (keyboard/current-index)
     public func clickFile(row: Int)              // pointer: select + onPreviewRequested
@@ -295,6 +297,13 @@ private struct PendingSource { var path: String; var bytes: Data; var leftOnly: 
   probe it first opens the studio blank (§23) when closed, then sets
   `pickerFolder`/`pickerRequested` exactly as today. Blank open wires
   `player.onStarted` to clear the pane preview label.
+- The source picker, stereo prompt, and editor error alert share the studio
+  Window's lifetime and parent; they are recreated when the studio reopens.
+  Errors outside an editor session use a separate shell-owned, shell-parented
+  alert. Picker visibility reads the current request state when the studio
+  appears, independent of queued QtBridge notification order.
+  The picker assigns its initial folder before `open()`, not through a live
+  binding that can overwrite the user's selection after a queued flush.
 - `previewLibrarySample`: `player?.stop()` first; guard audio; read + decode +
   render per §28; publish through the lane with `owner: self` (workflow); success →
   `library.setPreviewingPath(path)`, else pane message per §27/§28.

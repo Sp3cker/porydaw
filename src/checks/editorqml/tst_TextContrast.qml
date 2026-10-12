@@ -24,6 +24,7 @@ ShellLaneSupport {
     property int measured: 0
 
     ShellQmlBootstrap { id: bootstrap }
+    ImportWizardProbe { id: disk }
     Component { id: shellComponent; ShellWindow { typographyCaptureFont: Qt.font({ pixelSize: 12 }); width: 1280; height: 800; visible: true } }
 
     readonly property var themes: [
@@ -223,22 +224,77 @@ ShellLaneSupport {
         verify(waitForNative(function() { return !dialog.visible }, 5000), "new song wizard closes")
     }
     function auditSampleStudio(context) {
-        const picker = findChild(shell, "shellImportSamplePicker")
-        verify(picker !== null, "sample picker is mounted")
-        // The native dialog may reset selectedFile on open; seed it and reapply once visible.
-        picker.selectedFile = "file://" + bootstrap.projectRoot + "/samplesources/hires_tone.wav"
         shell.shellPresenter.activate("tools.import_sample")
-        verify(waitForNative(function() { return picker.visible }, 5000), "sample picker opens")
+        verify(waitForNative(function() {
+            const picker = findChild(shell, "shellImportSamplePicker")
+            return picker && picker.visible
+        }, 5000), "studio-owned sample picker opens")
+        const picker = findChild(shell, "shellImportSamplePicker")
+        picker.reject()
+        tryCompare(picker, "visible", false, 5000)
+        picker.currentFolder = shell.shellPresenter.session.sampleStudio().pickerFolder
         picker.selectedFile = "file://" + bootstrap.projectRoot + "/samplesources/hires_tone.wav"
+        mouseClick(findChild(shell, "sampleLibraryOpen"))
+        tryCompare(picker, "visible", true, 5000)
         picker.accept()
         verify(waitForNative(function() {
             const opened = findChild(shell, "sampleStudioDialog")
-            return opened && opened.visible
-        }, 15000), "sample editor opens")
+            return opened && opened.visible && shell.shellPresenter.session.sampleStudio().editor().hasSource
+        }, 15000), "sample editor decodes and displays the chosen source")
         const dialog = findChild(shell, "sampleStudioDialog")
         const result = Audit.audit(dialog.contentItem, grab)
         record(context + " sample editor", result)
         auditPopups(context + " sample editor", result.popups)
+        const sources = bootstrap.projectRoot + "/samplesources"
+        verify(disk.copyFile(sources + "/hires_tone.wav", sources + "/contrast_row.wav"),
+               "second real WAV creates an unselected file row")
+        verify(disk.makeDirectory(sources + "/contrast_child"), "nested row is available")
+        mouseClick(findChild(dialog, "sampleLibraryAdd"))
+        const folderPicker = findChild(dialog, "sampleLibraryFolderPicker")
+        verify(waitForNative(function() { return folderPicker && folderPicker.visible }, 5000),
+               "library folder chooser opens")
+        folderPicker.selectedFolder = "file://" + sources
+        folderPicker.accept()
+        const folders = findChild(dialog, "sampleLibraryFolders")
+        const files = findChild(dialog, "sampleLibraryFiles")
+        verify(waitForNative(function() {
+            return folders && folders.count === 2 && files && files.count === 2
+                && folders.itemAtIndex(0) && folders.itemAtIndex(1)
+                && files.itemAtIndex(0) && files.itemAtIndex(1)
+        }, 5000), "both folder and file delegate rows are painted")
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, dialog, 5000),
+               "populated pane submits its rows before audit")
+        record(context + " library folder and file rows",
+               Audit.audit(dialog.contentItem, grab, [
+                   folders.itemAtIndex(0), folders.itemAtIndex(1),
+                   files.itemAtIndex(0), files.itemAtIndex(1)
+               ]))
+        const first = files.itemAtIndex(0)
+        mouseClick(first)
+        verify(waitForNative(function() {
+            return findChild(dialog, "sampleLibraryPreviewing").ToolTip.text === first.path
+                && findChild(dialog, "sampleLibraryStatus").ToolTip.text === first.path
+        }, 10000), "selected file paints its preview and selection path readouts")
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, dialog, 5000),
+               "selected preview row and readouts submit before audit")
+        record(context + " library preview and loaded readouts",
+               Audit.audit(dialog.contentItem, grab, [
+                   folders.itemAtIndex(0), folders.itemAtIndex(1),
+                   files.itemAtIndex(0), files.itemAtIndex(1)
+               ]))
+        mouseClick(findChild(dialog, "sampleLibraryPreview"))
+        verify(waitForNative(function() {
+            return findChild(dialog, "sampleLibraryPreviewing").ToolTip.text === ""
+        }, 5000), "preview stops before auditing loaded source")
+        mouseClick(findChild(dialog, "sampleLibraryLoad"))
+        verify(waitForNative(function() {
+            return findChild(dialog, "sampleLibraryLoaded").ToolTip.text === first.path
+        }, 5000), "selected row loads and refreshes its source path readout")
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, dialog, 5000),
+               "loaded source readout submits before audit")
+        record(context + " library loaded", Audit.audit(dialog.contentItem, grab,
+               [folders.itemAtIndex(0), folders.itemAtIndex(1),
+                files.itemAtIndex(0), files.itemAtIndex(1)]))
         const advanced = findChild(dialog, "sampleStudioAdvanced")
         if (advanced) {
             mouseClick(advanced)
@@ -246,8 +302,24 @@ ShellLaneSupport {
         }
         dialog.close()
         verify(waitForNative(function() { return !dialog.visible }, 5000), "editor closes")
-        shell.shellPresenter.session.sampleStudio().chooseSource(
-                    "file://" + bootstrap.projectRoot + "/samplesources/zones.sf2")
+        const workflow = shell.shellPresenter.session.sampleStudio()
+        const sf2Path = bootstrap.projectRoot + "/samplesources/zones.sf2"
+        workflow.requestImport(-1)
+        verify(waitForNative(function() {
+            const opened = findChild(shell, "sampleStudioDialog")
+            const chooser = findChild(shell, "shellImportSamplePicker")
+            return opened && opened.visible && chooser && chooser.visible
+        }, 15000), "SoundFont audit opens a new studio and its native chooser")
+        const sf2Picker = findChild(shell, "shellImportSamplePicker")
+        sf2Picker.reject()
+        tryCompare(sf2Picker, "visible", false, 5000)
+        sf2Picker.currentFolder = shell.shellPresenter.session.sampleStudio().pickerFolder
+        sf2Picker.selectedFile = "file://" + sf2Path
+        mouseClick(findChild(shell, "sampleLibraryOpen"))
+        tryCompare(sf2Picker, "visible", true, 5000)
+        compare(sf2Picker.selectedFile.toString(), "file://" + sf2Path)
+        sf2Picker.accept()
+        tryCompare(sf2Picker, "visible", false, 5000)
         verify(waitForNative(function() {
             const opened = findChild(shell, "sf2ZonePickerDialog")
             return opened && opened.visible
@@ -256,6 +328,10 @@ ShellLaneSupport {
         record(context + " SoundFont zones", Audit.audit(zones.contentItem, grab))
         zones.close()
         verify(waitForNative(function() { return !zones.visible }, 5000), "zone picker closes")
+        const reopenedStudio = findChild(shell, "sampleStudioDialog")
+        reopenedStudio.close()
+        verify(waitForNative(function() { return !reopenedStudio.visible }, 5000),
+               "blank SoundFont audit editor closes")
     }
 
     function auditClippedKeyboardLabel(context) {

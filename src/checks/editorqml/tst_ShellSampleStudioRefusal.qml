@@ -23,7 +23,6 @@ ShellLaneSupport {
         const session = shell.shellPresenter.session
         session.openProject(bootstrap.projectRoot)
         verify(waitForNative(function() { return session.projectOpen }, 30000), "project opens")
-        const picker = child("shellImportSamplePicker")
         const action = child("shellAction_tools.import_sample")
         verify(action && action.enabled, "Tools action enabled")
         const menu = child("shellToolsMenu")
@@ -31,7 +30,7 @@ ShellLaneSupport {
         mouseClick(action, action.width / 2, action.height / 2)
         const alert = child("shellSampleStudioAlert")
         verify(waitForNative(function() { return alert.visible }, 5000), "missing rule warns")
-        verify(!picker.visible && !child("sampleStudioDialog"), "no editor or picker")
+        verify(!child("shellImportSamplePicker") && !child("sampleStudioDialog"), "no editor or picker")
         verify(!disk.exists(bootstrap.projectRoot + "/sound/direct_sound_samples/hires_tone.wav"),
                "refusal writes no sample")
         alert.close()

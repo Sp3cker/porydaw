@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Dialogs
 import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
@@ -10,6 +11,7 @@ DialogWindow {
     id: dialog
     objectName: "sampleStudioDialog"
     required property SampleStudioWorkflow workflow
+    required property SampleLibraryModel library
     required property ApplicationSession applicationSession
     required property SampleStudioPresenter editor
     required property SampleLoopTools tools
@@ -25,6 +27,56 @@ DialogWindow {
     title: editor.windowTitle
     font: applicationSession.typographyFonts.body
     onClosing: workflow.cancel()
+    onVisibleChanged: if (visible) openSourcePicker()
+
+    function openSourcePicker(): void {
+        if (!dialog.visible || !dialog.workflow.pickerRequested || picker.visible) return
+        picker.currentFolder = dialog.workflow.pickerFolder
+        picker.open()
+    }
+
+    FileDialog {
+        id: picker
+        objectName: "shellImportSamplePicker"
+        title: qsTr("Import Sample")
+        nameFilters: [qsTr("Audio files (*.wav *.aif *.aiff *.mp3 *.flac *.ogg *.sf2)"),
+                      qsTr("All files (*)")]
+        fileMode: FileDialog.OpenFile
+        parentWindow: dialog
+        onAccepted: dialog.workflow.chooseSource(selectedFile)
+        onRejected: dialog.workflow.cancelSource()
+    }
+    MessageDialog {
+        id: alert
+        objectName: "shellSampleStudioAlert"
+        buttons: MessageDialog.Ok
+        parentWindow: dialog
+    }
+    MessageDialog {
+        objectName: "shellSampleStudioStereoPrompt"
+        title: qsTr("Import Sample")
+        text: dialog.workflow.stereoPromptText
+        buttons: MessageDialog.Yes | MessageDialog.No
+        parentWindow: dialog
+        visible: dialog.visible && dialog.workflow.stereoPromptOpen
+        onButtonClicked: (button) => dialog.workflow.answerStereoPrompt(button === MessageDialog.Yes)
+        onRejected: dialog.workflow.cancelStereoPrompt()
+    }
+    Connections {
+        target: dialog.workflow
+        function onPickerRequestedChanged(): void {
+            if (dialog.workflow.pickerRequested)
+                dialog.openSourcePicker()
+            else
+                picker.close()
+        }
+        function onAlertRevisionChanged(): void {
+            if (!dialog.workflow.editorOpen) return
+            alert.title = dialog.workflow.alertTitle
+            alert.text = dialog.workflow.alertText
+            alert.open()
+        }
+    }
 
     Shortcut { sequences: [StandardKey.Undo]; context: Qt.WindowShortcut; onActivated: dialog.editor.undo() }
     Shortcut { sequences: [StandardKey.Redo]; context: Qt.WindowShortcut; onActivated: dialog.editor.redo() }
@@ -67,12 +119,26 @@ DialogWindow {
         anchors.margins: dialog.spacing
         spacing: dialog.spacing
         SplitView {
-            id: split
-            objectName: "sampleStudioSplitter"
+            objectName: "sampleBrowserSplitter"
             Layout.fillWidth: true
             Layout.fillHeight: true
-            orientation: Qt.Vertical
-            SampleWaveform {
+            orientation: Qt.Horizontal
+            SampleLibraryPane {
+                library: dialog.library
+                colors: dialog.colors
+                studioWindow: dialog
+                unit: dialog.unit
+                paneSpacing: dialog.spacing
+                SplitView.minimumWidth: 0
+                SplitView.preferredWidth: 22 * dialog.unit
+            }
+            SplitView {
+                id: split
+                objectName: "sampleStudioSplitter"
+                SplitView.fillWidth: true
+                SplitView.minimumWidth: 32 * dialog.unit
+                orientation: Qt.Vertical
+                SampleWaveform {
                 id: waveform
                 objectName: "sampleStudioWaveform"
                 SplitView.fillWidth: true
@@ -100,19 +166,21 @@ DialogWindow {
                             objectName: "sampleStudioName"
                             Layout.fillWidth: true
                             text: dialog.editor.sampleName
-                            readOnly: dialog.editor.nameReadOnly
+                            readOnly: dialog.editor.nameReadOnly || !dialog.editor.hasSource
                             onTextEdited: dialog.editor.setSampleName(text)
                         }
                         Label { text: dialog.editor.nameStatus; color: dialog.colors.windowText }
                     }
                     AuditionCheckBox {
                         objectName: "sampleStudioLoop"
+                        enabled: dialog.editor.hasSource
                         text: qsTr("Loop")
                         checked: dialog.editor.loopOn
                         onToggled: dialog.tools.setLoopEnabled(checked)
                     }
                     ColumnLayout {
                         visible: dialog.tools.loopBodyVisible
+                        enabled: dialog.editor.hasSource
                         RowLayout {
                             Label {
                                 visible: dialog.tools.seamBadgeVisible
@@ -135,6 +203,7 @@ DialogWindow {
                     }
                     Label { objectName: "sampleStudioSource"; text: dialog.editor.sourceLine; color: dialog.colors.windowText }
                     RowLayout {
+                        enabled: dialog.editor.hasSource
                         Label { text: qsTr("Base key:"); color: dialog.colors.windowText }
                         AuditionTextField {
                             id: baseKeyField
@@ -150,6 +219,7 @@ DialogWindow {
                     }
                     RowLayout {
                         Label { text: qsTr("Target rate:"); color: dialog.colors.windowText }
+                        enabled: dialog.editor.hasSource
                         AuditionComboBox {
                             id: rate
                             objectName: "sampleStudioRate"
@@ -168,10 +238,11 @@ DialogWindow {
                         AuditionButton {
                             objectName: "sampleStudioPlay"
                             text: dialog.audition.playText
-                            enabled: dialog.audition.available
+                            enabled: dialog.audition.available && dialog.editor.hasSource
                             onClicked: dialog.audition.toggle()
                         }
                         Label { text: qsTr("Key:"); color: dialog.colors.windowText }
+                        enabled: dialog.editor.hasSource
                         AuditionTextField {
                             id: auditionKey
                             objectName: "sampleStudioAuditionKey"
@@ -188,6 +259,7 @@ DialogWindow {
                     Label { text: dialog.editor.outputSummary; color: dialog.colors.windowText }
                     AuditionButton {
                         id: advanced
+                        enabled: dialog.editor.hasSource
                         objectName: "sampleStudioAdvanced"
                         checkable: true
                         text: qsTr("Advanced")
@@ -195,6 +267,7 @@ DialogWindow {
                     }
                     ColumnLayout {
                         visible: advanced.checked
+                        enabled: dialog.editor.hasSource
                         RowLayout {
                             Label { text: qsTr("Format:"); color: dialog.colors.windowText }
                             Label { text: dialog.editor.techDetail; color: dialog.colors.windowText }
@@ -219,6 +292,7 @@ DialogWindow {
                     }
                 }
             }
+        }
         }
         RowLayout {
             Layout.alignment: Qt.AlignRight

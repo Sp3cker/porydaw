@@ -34,21 +34,39 @@ ShellLaneSupport {
         return presenter
     }
     function pickerFor(path) {
-        const picker = child("shellImportSamplePicker")
-        picker.selectedFile = "file://" + path
         const menu = child("shellToolsMenu")
         const action = child("shellAction_tools.import_sample")
         menu.open()
         mouseClick(action, action.width / 2, action.height / 2)
-        verify(waitForNative(function() { return picker.visible }, 5000), "Tools opens picker")
+        verify(waitForNative(function() {
+            const picker = child("shellImportSamplePicker")
+            return picker && picker.visible
+        }, 5000), "Tools opens the studio-owned picker")
+        const picker = child("shellImportSamplePicker")
+        picker.reject()
+        tryCompare(picker, "visible", false, 5000)
+        picker.currentFolder = shell.shellPresenter.session.sampleStudio().pickerFolder
+        picker.selectedFile = "file://" + path
+        mouseClick(child("sampleLibraryOpen"))
+        tryCompare(picker, "visible", true, 5000)
+        verify(waitForNative(function() {
+            return picker.selectedFile.toString() === "file://" + path
+        }, 5000), "visible picker selects the requested source")
         return picker
     }
     function editorFor(path) {
-        pickerFor(path).accept()
+        const picker = pickerFor(path)
+        picker.accept()
+        verify(waitForNative(function() { return !picker.visible }, 5000), "source chooser closes")
         verify(waitForNative(function() {
-            return child("sampleStudioDialog") && child("sampleStudioDialog").visible
-        }, 15000), "source opens mounted editor")
-        return child("sampleStudioDialog")
+            const dialog = child("sampleStudioDialog")
+            const play = child("sampleStudioPlay")
+            return dialog && dialog.visible && dialog.editor.hasSource && play && play.enabled
+        }, 15000), "decoded source and editor controls are ready")
+        const dialog = child("sampleStudioDialog")
+        dialog.requestActivate()
+        verify(waitForNative(function() { return dialog.active }, 5000), "decoded editor owns keyboard focus")
+        return dialog
     }
     function cleanup() {
         if (!shell) return

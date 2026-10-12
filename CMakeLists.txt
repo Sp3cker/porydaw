@@ -345,6 +345,7 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/WizardChrome.qml
         src/ui/shell/samplestudio/SampleStudioHost.qml
         src/ui/shell/samplestudio/SampleStudioDialog.qml
+        src/ui/shell/samplestudio/SampleLibraryPane.qml
         src/ui/shell/samplestudio/Sf2ZonePickerDialog.qml
         src/ui/shell/samplestudio/SampleWaveform.qml
 )

@@ -130,8 +130,8 @@ concurrently; gates run against the settled union.
 - Task 3 consumes task 1's model contract and task 2's workflow contract; it starts
   after both interfaces land (implementations may still be in review).
 - Checkpoint milestones: (M1) after tasks 1–2 are accepted; (M2) final handoff
-  after task 3 review plus controller baselines (`bridge:baseline`,
-  `qml-aot:baseline`) and native smoke. No per-task commit requirements.
+  after task 3 review, any justified baseline changes and native smoke.
+  No per-task commit requirements.
 
 ## Coverage gaps (named; no silent narrowing)
 
@@ -161,11 +161,10 @@ concurrently; gates run against the settled union.
 
 - Swift suites: `uv run --no-sync dev checks --filter samplecheck-editor` (tasks
   1+2 checks live in `runSampleEditorChecks`) plus `samplecheck-storage` for the
-  preferences-widening regression sweep. `checks --filter swiftcore` is not a
-  proven selector for these suites and is not used.
-- Bridge: `uv run --no-sync dev checks:bridge`; the baseline rewrite must include
-  all intended changes — `hasSource`, new `SampleStudioWorkflow` slots and task
-  1's three new types. Never claim a Task-2-unchanged baseline.
+  project sample/provenance storage regression sweep. `checks --filter swiftcore`
+  is not a proven selector for these suites and is not used.
+- Bridge: `uv run --no-sync dev checks:bridge` checks all new legal surface
+  declarations. Observed zero baselined findings; retain the existing baseline.
 - Shell: `uv run --no-sync dev checks:shell --filter shell-sample-studio-library`
   (new lane), the `shell-sample-studio` substring group (all five studio lanes),
   and the exact text-contrast gate

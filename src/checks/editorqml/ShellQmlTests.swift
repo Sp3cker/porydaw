@@ -89,8 +89,9 @@ enum ShellQmlLane {
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .appendingPathComponent(entry.inputFileName).path
         let arguments = [CommandLine.arguments.first ?? "shell_qml_tests", "-input", inputFile] + payload
-        var argv: [UnsafeMutablePointer<Int8>?] = arguments.map { strdup($0) }
-        defer { argv.forEach { free($0) } }
+        let ownedArguments: [UnsafeMutablePointer<Int8>?] = arguments.map { (argument: String) in strdup(argument) }
+        var argv = ownedArguments
+        defer { ownedArguments.forEach { free($0) } }
         let status = app.runQtQuickTests(Int32(arguments.count), &argv)
         if status == 0, entry.name == "shell-note-visuals",
             ProcessInfo.processInfo.environment["PORYDAW_NOTE_VISUAL_DPR2"] == nil

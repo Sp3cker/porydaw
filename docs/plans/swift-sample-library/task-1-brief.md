@@ -109,13 +109,10 @@ as fake coverage.
   audition-strip/waveform suites.
   Covers: every §1–§19 behavior listed in step 6; preferences widening compiles.
 - `uv run --no-sync dev checks --filter samplecheck-storage`
-  — regression sweep over the preferences/store suites sharing the widened API.
-- `uv run --no-sync dev checks:bridge` — controller first rewrites the baseline with
-  `uv run --no-sync dev bridge:baseline` (three new bridged types are an intended
-  surface change; the global baseline also encompasses task 2's new actual public
-  members), then the guard passes: supported-type rows, `@QtTracked`
-  published state, `@QtIgnored` closures and `@QtIgnored public` preferences
-  methods, no unregistered non-private members.
+  — regression sweep over project sample registration and provenance storage.
+- `uv run --no-sync dev checks:bridge` — validate rows, tracked published state,
+  ignored Swift-only callbacks/preferences methods and supported QML slots.
+  Controller observation: zero baselined findings; no rewrite is required.
 
 Permanent checks assert consumer-visible behavior (state machine, callbacks,
 strings); no duplicate exact-string implementation tests beyond the spec'd
@@ -142,8 +139,7 @@ After the writer settles (controller-owned, in order):
 
 1. Wire the controller-owned registration: `src/swift/app/CMakeLists.txt` source
    line, `src/checks/CMakeLists.txt` lane line, `SampleChecks.swift` runner call.
-2. `uv run --no-sync dev bridge:baseline` then
-   `uv run --no-sync dev checks:bridge`
+2. `uv run --no-sync dev checks:bridge` (rewrite only a justified intended delta)
 3. `uv run --no-sync dev checks --filter samplecheck-editor`
 4. `uv run --no-sync dev checks --filter samplecheck-storage`
 5. `uv run --no-sync dev format --check --base 834642b5` (changed-lines scope)
