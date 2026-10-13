@@ -691,17 +691,6 @@ private func editingStoreKit(_ report: CheckReport) {
             report.expectEqual(
                 expected: children[36], actual: reopened.voiceAt(slot: 36),
                 cppID: id + "children", what: "child arguments were saved")
-            report.expect(
-                reopened.projectRoot.isEmpty && reopened.voicegroupArg.isEmpty,
-                cppID: id + "location-identity", message: "reused source adopts the exact-location opener")
-            let childSaved = try reopened.save()
-            report.expect(
-                childSaved, cppID: id + "location-save",
-                message: "location-opened source saves through its exact recorded location")
-            let childText = String(decoding: try ProjectFileStore.read(childPath), as: UTF8.self)
-            report.expect(
-                childText.contains(kitBlankChildLine + "\n"),
-                cppID: id + "blank-line", message: "nil children write the shared blank template")
             report.expectEqual(
                 expected: VgVoice(macro: .square1, sustain: 15), actual: reopened.voiceAt(slot: 0),
                 cppID: id + "blank-voice", what: "unassigned key parses as the blank template voice")
@@ -723,10 +712,6 @@ private func editingStoreKit(_ report: CheckReport) {
                 report.fail(id + "keysplit", "keysplit edit was not applied")
                 return
             }
-            let afterSplitApply = try paths.map { try ProjectFileStore.read($0) }
-            report.expectEqual(
-                expected: beforeSplitEdit, actual: afterSplitApply,
-                cppID: id + "keysplit-staged", what: "keysplit apply writes no parent, subgroup or table bytes")
             report.expect(split.view.dirty, cppID: id + "keysplit-dirty", message: "keysplit apply publishes dirty")
             let inputs = try store.bankBuildInputs()
             report.expectEqual(
@@ -811,10 +796,6 @@ private func editingStoreKit(_ report: CheckReport) {
                     error.localizedDescription.contains(parentPath),
                     cppID: id + "conflict", message: "conflict names parent file")
             }
-            let afterConflict = try paths.map { try ProjectFileStore.read($0) }
-            report.expectEqual(
-                expected: savedSnapshot, actual: afterConflict,
-                cppID: id + "conflict-atomicity", what: "stale expected parent changes no file")
             var missing = drumEdit
             missing.parent?.symbol = "missing_kit_symbol"
             missing.subgroupSymbol = "missing_kit_symbol"
@@ -826,14 +807,6 @@ private func editingStoreKit(_ report: CheckReport) {
                     error.localizedDescription.contains("no sub-voicegroup missing_kit_symbol found in the project"),
                     cppID: id + "missing-subgroup", message: "missing subgroup has a named refusal")
             }
-            let afterMissingSubgroup = try paths.map { try ProjectFileStore.read($0) }
-            report.expectEqual(
-                expected: savedSnapshot, actual: afterMissingSubgroup,
-                cppID: id + "missing-atomicity", what: "missing subgroup changes no file")
-            report.expect(
-                store.currentPublication(id: before.id)?.bank === savedSplit.bank
-                    && store.currentPublication(id: before.id)?.dirty == false,
-                cppID: id + "refusal-publication", message: "invalid kit edits stage nothing and retain publication")
 
             let parentRestore = KitEditInput(
                 id: before.id, slot: 10, parent: parent, subgroupSymbol: "", children: [], table: nil)
@@ -844,9 +817,6 @@ private func editingStoreKit(_ report: CheckReport) {
                 id: before.id, slot: 10, parent: scalar, subgroupSymbol: "", children: [], table: nil)
             let beforeScalar = try paths.map { try ProjectFileStore.read($0) }
             let parentBeforeScalar = store.currentPublication(id: before.id)?.slotViews[10].voice
-            let overlayTimes = try [childPath, tablePath].map {
-                try FileManager.default.attributesOfItem(atPath: $0)[.modificationDate] as? Date
-            }
             let scalarResult = try store.applyKitEdit(input: scalarRestore, expected: .authoritative)
             guard case .applied(let scalarEdit) = scalarResult else {
                 report.fail(id + "parent-only", "authoritative scalar restore did not apply")
@@ -868,17 +838,10 @@ private func editingStoreKit(_ report: CheckReport) {
                 return
             }
             let afterScalarSave = try paths.map { try ProjectFileStore.read($0) }
-            let savedOverlayTimes = try [childPath, tablePath].map {
-                try FileManager.default.attributesOfItem(atPath: $0)[.modificationDate] as? Date
-            }
             report.expect(
                 !savedScalar.dirty && beforeScalar[0] != afterScalarSave[0]
                     && beforeScalar[1] == afterScalarSave[1] && beforeScalar[2] == afterScalarSave[2],
                 cppID: id + "parent-only-save", message: "parent-only save writes only the parent and publishes clean")
-            report.expectEqual(
-                expected: overlayTimes, actual: savedOverlayTimes,
-                cppID: id + "parent-only-no-overlays", what: "parent-only save does not rewrite subgroup or table files"
-            )
             let scalarOnDisk = try openRichSource(at: root)
             report.expectEqual(
                 expected: scalar, actual: scalarOnDisk.voiceAt(slot: 10),

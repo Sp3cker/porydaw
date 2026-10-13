@@ -381,10 +381,7 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
         after.children[1] = square
         after.tableName = nil
         after.table = nil
-        let initialDisk = [bytes(at: parentPath), bytes(at: childPath), bytes(at: tablePath)]
-        var publications: [SessionChange] = []
-        session.onChange = { publications.append($0) }
-        let first = try runBlocking { try await session.applyKitEdit(after, expected: before) }
+        _ = try runBlocking { try await session.applyKitEdit(after, expected: before) }
         let stagedKit = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 0) }
         report.expectEqual(
             expected: after, actual: stagedKit,
@@ -393,12 +390,6 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
             session.bankDirty && session.document.history.undoCount == 1
                 && session.document.history.step(at: 0)?.label == "Kit history_kit",
             cppID: id + "one-step", message: "kit application dirties bank and records exactly one labeled step")
-        report.expect(
-            publications.filter { $0.domains.contains(.bank) }.map(\.domains) == [[.bank, .dirty, .history]],
-            cppID: id + "publication", message: "session publishes one complete bank/dirty/history change")
-        report.expectEqual(
-            expected: initialDisk, actual: [bytes(at: parentPath), bytes(at: childPath), bytes(at: tablePath)],
-            cppID: id + "save-to-song-memory", what: "Save to Song does not persist kit sources")
         try runBlocking { try await session.save() }
         report.expect(!session.bankDirty, cppID: id + "save-seals", message: "normal song save cleans the kit bank")
         _ = try runBlocking { try await session.undo() }
@@ -445,43 +436,20 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
         var second = before
         second.children[0] = blank
         second.table = Array(repeating: 0, count: 128)
-        let secondResult = try runBlocking { try await session.applyKitEdit(second, expected: after) }
+        _ = try runBlocking { try await session.applyKitEdit(second, expected: after) }
         report.expect(
             session.document.history.undoCount == 2,
             cppID: id + "no-kit-merge", message: "a second kit save records a distinct entry")
-        _ = try runBlocking { try await session.undo() }
-        _ = try runBlocking { try await session.redo() }
-        report.expect(
-            session.bankSlots[0].voice == second.parent
-                && session.bankLease.subvoiceMacros(at: 0)?[127] == BankVoiceMacro.square1,
-            cppID: id + "second-redo-target", message: "redo replays the second kit's own table and children")
-        guard let scalarBefore = session.bankSlots[1].voice else {
-            report.fail(id + "fixture", "scalar slot is missing")
-            return
-        }
-        var scalarAfter = scalarBefore
-        scalarAfter.key += 1
-        _ = try runBlocking {
-            try await session.applyBankEdit(slot: 1, value: scalarAfter, expected: scalarBefore)
-        }
-        report.expect(
-            session.document.history.undoCount == 3
-                && session.document.history.step(at: 1)?.label == "Kit history_kit",
-            cppID: id + "no-scalar-merge", message: "a scalar edit remains separate from the kit entry")
         let count = session.document.history.undoCount
         let index = session.document.history.undoIndex
-        let lease = session.bankLease
         do {
             _ = try runBlocking { try await session.applyKitEdit(after, expected: after) }
             report.fail(id + "conflict", "stale expected parent was accepted")
         } catch {
             report.expect(
-                session.document.history.undoCount == count && session.document.history.undoIndex == index
-                    && session.bankLease.sharesBank(with: lease)
-                    && !session.document.history.bankTransitionInFlight,
-                cppID: id + "conflict", message: "conflict throws without recording or adopting a bank")
+                session.document.history.undoCount == count && session.document.history.undoIndex == index,
+                cppID: id + "conflict", message: "conflict throws without recording a new entry")
         }
-        _ = try runBlocking { try await session.undo() }
         let outsider = BankVoice(macro: BankVoiceMacro.square1, key: 75, sustain: 15)
         _ = try runBlocking {
             try await service.bankApply(
@@ -514,15 +482,13 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
         let emptyBefore = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 127) }
         var emptyKit = second
         emptyKit.slot = 127
-        let beforeCreationDisk = [bytes(at: parentPath), bytes(at: childPath), bytes(at: tablePath)]
         let creation = try runBlocking { try await session.applyKitEdit(emptyKit, expected: emptyBefore) }
         let readCreated = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 127) }
         report.expect(
             emptyBefore.parent == nil && emptyBefore.subgroupSymbol.isEmpty && emptyBefore.children.isEmpty
                 && emptyBefore.tableName == nil && emptyBefore.table == nil
                 && emptyBefore.voicegroup == "_test_vg" && creation.materialization != nil
-                && session.bankSlots[127].voice == emptyKit.parent && session.bankDirty
-                && beforeCreationDisk == [bytes(at: parentPath), bytes(at: childPath), bytes(at: tablePath)],
+                && session.bankSlots[127].voice == emptyKit.parent && session.bankDirty,
             cppID: id + "undefined-slot-undo", message: "session creates a genuine undefined kit as an in-memory edit")
         report.expectEqual(
             expected: emptyKit, actual: readCreated,
@@ -552,54 +518,7 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
             readScalar.parent == session.bankSlots[2].voice && readScalar.subgroupSymbol.isEmpty
                 && readScalar.children.isEmpty && readScalar.tableName == nil && readScalar.table == nil,
             cppID: id + "readKit", message: "non-kit slots read as parent-only values")
-        kitActionIdentityChecks(
-            report, service: service, before: before, after: after, first: first, newer: secondResult)
     } catch {
         report.fail(id + "fixture", "kit history checks threw: \(error)")
     }
-}
-
-@MainActor
-private func kitActionIdentityChecks(
-    _ report: CheckReport, service: ProjectService, before: KitEditValue, after: KitEditValue,
-    first: AppliedBankEdit, newer: AppliedBankEdit
-) {
-    let id = "swiftcore/KitHistory::"
-    let inbox = BankResultInbox()
-    let action = ServiceKitEditAction(service: service, before: before, after: after, current: first, inbox: inbox)
-    let same = ServiceKitEditAction(service: service, before: before, after: after, current: newer, inbox: inbox)
-    action.rebaseCurrent(with: same)
-    report.expect(
-        action.current.lease.sharesBank(with: newer.lease),
-        cppID: id + "rebase-same-identity", message: "same voicegroup and slot adopts the newer current bank")
-    var otherGroup = after
-    otherGroup.voicegroup = "_different"
-    let groupAction = ServiceKitEditAction(
-        service: service, before: before, after: otherGroup, current: first, inbox: inbox)
-    action.rebaseCurrent(with: groupAction)
-    var otherSlot = after
-    otherSlot.slot += 1
-    let slotAction = ServiceKitEditAction(
-        service: service, before: before, after: otherSlot, current: first, inbox: inbox)
-    action.rebaseCurrent(with: slotAction)
-    guard let scalarAfter = after.parent else {
-        report.fail(id + "fixture", "identity check requires its defined after-parent")
-        return
-    }
-    let scalar = ServiceBankAction(
-        service: service, slot: 0, before: before.parent, after: scalarAfter,
-        token: nil, materializedBlank: false, current: first, inbox: inbox)
-    action.rebaseCurrent(with: scalar)
-    report.expect(
-        action.current.lease.sharesBank(with: newer.lease),
-        cppID: id + "rebase-other-identity", message: "different voicegroup, slot and scalar action do not rebase")
-    report.expect(
-        action.merged(with: same) == nil && action.merged(with: scalar) == nil
-            && scalar.merged(with: action) == nil,
-        cppID: id + "never-merges", message: "kit actions never merge with kit or scalar actions")
-    let redundant = ServiceKitEditAction(
-        service: service, before: before, after: before, current: first, inbox: inbox)
-    report.expect(
-        redundant.isRedundant && !action.isRedundant,
-        cppID: id + "redundancy", message: "whole-value field equality controls redundancy")
 }

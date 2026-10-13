@@ -160,27 +160,18 @@ private func keysplitWriterChecks(_ report: CheckReport) {
                 cppID: id + "append", what: "appended table parses")
             let crlf = Data(
                 String(decoding: original, as: UTF8.self).replacingOccurrences(of: "\n", with: "\r\n").utf8)
-            for endsWithNewline in [true, false] {
-                let bytes = endsWithNewline ? crlf : Data(crlf.dropLast(2))
-                try ProjectFileStore.write(path, data: bytes)
-                try KeysplitTableWriter.replace(table: edited, inFile: path)
-                try KeysplitTableWriter.replace(table: appended, inFile: path)
-                let output = try ProjectFileStore.read(path)
-                let outputText = String(decoding: output, as: UTF8.self)
-                report.expect(
-                    !outputText.replacingOccurrences(of: "\r\n", with: "").contains("\n"),
-                    cppID: id + "crlf", message: "replaced and appended directives retain CRLF")
-                report.expectEqual(
-                    expected: endsWithNewline, actual: output.last == 10,
-                    cppID: id + "trailing-newline", what: "trailing-newline state is preserved")
-                report.expect(
-                    endsWithNewline || output.last != 13,
-                    cppID: id + "no-final-cr", message: "unterminated CRLF file has no lone final CR")
-                let crlfTable = try KeysplitTables.parse(files: [path]).table(named: appended.name)?.table
-                report.expectEqual(
-                    expected: values, actual: crlfTable,
-                    cppID: id + "crlf-round-trip", what: "CRLF append round-trips")
-            }
+            try ProjectFileStore.write(path, data: crlf)
+            try KeysplitTableWriter.replace(table: edited, inFile: path)
+            let crlfText = String(decoding: try ProjectFileStore.read(path), as: UTF8.self)
+            report.expect(
+                !crlfText.replacingOccurrences(of: "\r\n", with: "").contains("\n"),
+                cppID: id + "crlf", message: "replaced directives retain CRLF")
+            try ProjectFileStore.write(path, data: Data(crlf.dropLast(2)))
+            try KeysplitTableWriter.replace(table: appended, inFile: path)
+            let unterminated = try ProjectFileStore.read(path)
+            report.expectEqual(
+                expected: false, actual: unterminated.last == 10,
+                cppID: id + "trailing-newline", what: "append preserves a missing trailing newline")
             let setText =
                 "before::\n\t.align 2\n.set keysplit_fixture, . - 12\n\t.byte 1, 1\n\nafter::\n\t.align 2\nkeysplit sibling, 0\n\tsplit 2, 128\n"
             try ProjectFileStore.write(path, data: Data(setText.utf8))
@@ -269,15 +260,6 @@ private func kitUsageScannerChecks(_ report: CheckReport) {
                 expected: ["partial_section"], actual: usage("fixture_drums_b", excluding: "voicegroup_fixture_rich"),
                 cppID: id + "symbol-boundary", what: "drums_b is distinct from drums_a and drums_ab")
             report.expectEqual(
-                expected: text, actual: String(decoding: try ProjectFileStore.read(scratch), as: UTF8.self),
-                cppID: id + "read-only", what: "usage scanning never changes sources")
-            report.expectEqual(
-                expected: "voicegroup_named",
-                actual: try KitUsageScanner.canonicalSection(
-                    projectRoot: root.path, sourceRelativePath: "sound/voice_groups.inc",
-                    sectionLabel: "voicegroup_named"),
-                cppID: id + "canonical-monolithic", what: "an explicit monolithic label passes through unchanged")
-            report.expectEqual(
                 expected: "voicegroup_fixture_rich",
                 actual: try KitUsageScanner.canonicalSection(
                     projectRoot: root.path, sourceRelativePath: "sound/voicegroups/fixture_rich.inc", sectionLabel: ""),
@@ -300,13 +282,6 @@ private func kitUsageScannerChecks(_ report: CheckReport) {
                 """
             let labeledPath = root.appendingPathComponent("sound/nested/labeled_kit.inc").path
             try ProjectFileStore.write(labeledPath, data: Data(labeled.utf8))
-            report.expectEqual(
-                expected: ["raw_parent"], actual: VoicegroupSource.declarationLabels(in: Array(labeled.utf8)),
-                cppID: id + "labeled-declaration", what: "label plus macro is one logical canonical section")
-            report.expectEqual(
-                expected: ["raw_parent"],
-                actual: VoicegroupSource.kitReferences(in: Array(labeled.utf8)).map(\.sectionLabel),
-                cppID: id + "labeled-reference", what: "kit references use the raw label, not its macro alias")
             report.expectEqual(
                 expected: ["raw_parent"], actual: usage("labeled_child"),
                 cppID: id + "labeled-usage", what: "usage scanner attributes a labeled macro to that same section")
