@@ -9,6 +9,13 @@ public func runKitDraftSuite(_ report: CheckReport) {
     checkKitDrumkitCodec(report)
     checkKitKeysplitCodec(report)
     checkKitToneCodec(report)
+    runKitSourceSessionChecks(report)
+    checkKitPresenterPicker(report)
+    checkKitPresenterZones(report)
+    checkKitPresenterPrompts(report)
+    checkKitPresenterDirty(report)
+    checkKitPresenterSlices(report)
+    checkKitPresenterLoadAndAudition(report)
 }
 
 private func sampleZone(
@@ -317,4 +324,352 @@ private func checkKitToneCodec(_ report: CheckReport) {
     } else {
         r.fail("missing programmable descriptor not preserved")
     }
+}
+
+@MainActor
+private func presenterVoices() -> [VgVoice?] {
+    var voices = [VgVoice?](repeating: nil, count: 128)
+    voices[0] = VgVoice(macro: .directSound, symbol: "ordinary")
+    voices[2] = VgVoice(macro: .keysplitAll, symbol: "voicegroup_kit")
+    voices[4] = VgVoice(macro: .keysplit, symbol: "voicegroup_keys", keysplitTable: "keys")
+    return voices
+}
+
+@MainActor
+private func checkKitPresenterPicker(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::pickerAndUsage")
+    let p = KitStudioPresenter()
+    let voices = presenterVoices()
+    var loaded: [Int] = []
+    var scanned: [String] = []
+    p.onLoadKit = { (slot: Int) -> KitLoadResult? in
+        loaded.append(slot)
+        return KitLoadResult(
+            kind: .drumkit, parent: voices[slot],
+            children: KitDraftCodec.children(from: [sampleZone(10, 12)], mode: .drumkit))
+    }
+    p.usageScan = { (subgroup: String, table: String?, section: String) -> [String] in
+        scanned = [subgroup, table ?? "", section]
+        return ["voicegroup_fixture_rich", "voicegroup_other", "voicegroup_other", "voicegroup_third"]
+    }
+    p.bind(song: "Song", section: "voicegroup_fixture_rich", voices: voices, slot: 2)
+    r.expectEqual(expected: 127, actual: p.slotRows.count, what: "picker excludes scalar voices")
+    let emptyCount = (0..<p.slotRows.count).filter { (index: Int) -> Bool in p.slotRows[index].isNew }.count
+    r.expectEqual(expected: 125, actual: emptyCount, what: "every undefined slot offered")
+    r.expectEqual(expected: "New kit in empty slot 1…", actual: p.slotRows[0].title, what: "new kit label")
+    r.expectEqual(expected: [2], actual: loaded, what: "clean target loads silently")
+    r.expectEqual(
+        expected: ["voicegroup_kit", "", "voicegroup_fixture_rich"], actual: scanned,
+        what: "canonical section feeds scanner")
+    r.expectEqual(expected: "used by 2", actual: p.usedByText, what: "usage excludes bound section and duplicates")
+    r.expectEqual(expected: "Split Studio — Song · voice 2", actual: p.titleText, what: "clean title")
+    let existing = p.slotRows[1]
+    p.refresh()
+    r.expect(p.slotRows[1] === existing, message: "unchanged rows retain identity")
+    p.selectSlot(row: 0)
+    r.expectEqual(expected: 1, actual: p.selectedSlot, what: "new empty target selected")
+    r.expect(p.draft.drumkitZones.isEmpty && !p.dirty && !p.canSave, message: "new kit starts clean and empty")
+    r.expectEqual(expected: [2], actual: loaded, what: "new kit does not request project creation or load")
+}
+
+@MainActor
+private func checkKitPresenterZones(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::zonesAndViews")
+    let p = KitStudioPresenter()
+    p.bind(song: "Song", section: "voicegroup_song", voices: presenterVoices(), slot: 1)
+    p.dropSample(name: "a", onKey: 10)
+    p.dropSample(name: "b", onKey: 20)
+    r.expectEqual(
+        expected: [10, 20], actual: p.draft.drumkitZones.map(\.endKey), what: "drumkit drops are one-key zones")
+    let twoZones = p.draft.snapshot()
+    p.dropSample(name: "occupied", onKey: 10)
+    r.expectEqual(expected: twoZones, actual: p.draft.snapshot(), what: "occupied drop never merges")
+    r.expect(!p.statusText.isEmpty, message: "occupied drop reports rejection")
+    p.resizeZone(row: 0, startKey: 10, endKey: 19)
+    let resized = p.draft.snapshot()
+    p.resizeZone(row: 0, startKey: 10, endKey: 20)
+    r.expectEqual(expected: resized, actual: p.draft.snapshot(), what: "resize overlap rejected by draft")
+    p.moveZone(row: 0, toKey: 20)
+    r.expectEqual(expected: resized, actual: p.draft.snapshot(), what: "move overlap rejected by draft")
+    r.expectEqual(expected: 19, actual: p.zoneRows[0].endKey, what: "rejected resize republishes authoritative rows")
+    p.moveZone(row: 0, toKey: 126)
+    r.expectEqual(
+        expected: [20, 118], actual: p.draft.drumkitZones.map(\.startKey),
+        what: "move sorts and visibly clamps to keyboard")
+    p.undo()
+    r.expectEqual(expected: resized, actual: p.draft.snapshot(), what: "one undo restores accepted resize state")
+    p.selectZone(row: 0)
+    p.setZonePan(pan: -32)
+    let drumkit = p.draft.drumkitZones
+    p.setMode(index: 1)
+    p.dropSample(name: "right", onKey: 30)
+    p.dropSample(name: "left", onKey: 10)
+    r.expectEqual(
+        expected: [29, 127], actual: p.draft.keysplitZones.map(\.endKey), what: "keysplit extends to next zone or 127")
+    let split = p.draft.keysplitZones
+    p.dropSample(name: "occupied", onKey: 20)
+    r.expectEqual(expected: split, actual: p.draft.keysplitZones, what: "keysplit occupied range rejects drop")
+    p.selectZone(row: 0)
+    p.setZonePan(pan: 63)
+    p.setZonePitched(on: false)
+    r.expectEqual(expected: split, actual: p.draft.keysplitZones, what: "unstoreable pan and pitch flag stay disabled")
+    r.expect(
+        p.zoneRows[0].pitched && !p.zoneRows[0].pitchedEnabled && !p.zoneRows[0].panEnabled,
+        message: "keysplit shows inherently pitched and disables rhythm controls")
+    p.setZoneRootKey(key: 48)
+    r.expectEqual(expected: 48, actual: p.draft.keysplitZones[0].rootKey, what: "keysplit root remains editable")
+    p.setMode(index: 0)
+    r.expectEqual(expected: drumkit, actual: p.draft.drumkitZones, what: "drumkit edits survive mode switches")
+    r.expectEqual(expected: -32, actual: p.zoneRows[0].pan, what: "drumkit pan restored")
+    p.setMode(index: 1)
+    r.expectEqual(expected: 48, actual: p.zoneRows[0].rootKey, what: "keysplit edits survive mode switches")
+}
+
+@MainActor
+private func checkKitPresenterPrompts(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::conflictAndRetarget")
+    let p = KitStudioPresenter()
+    let voices = presenterVoices()
+    var loads: [Int] = []
+    var answers: [Int] = []
+    var conflicts: [Bool] = []
+    p.onLoadKit = { (slot: Int) -> KitLoadResult? in
+        loads.append(slot)
+        return KitLoadResult(
+            kind: .drumkit, parent: voices[slot],
+            children: KitDraftCodec.children(from: [sampleZone(10, 10)], mode: .drumkit))
+    }
+    p.onRetargetPrompt = { answers.append($0) }
+    p.onConflictAnswer = { conflicts.append($0) }
+    p.bind(song: "Song", section: "voicegroup_song", voices: voices, slot: 2)
+    p.songKitChanged()
+    r.expectEqual(expected: [2, 2], actual: loads, what: "clean song-side change reloads")
+    p.dropSample(name: "mine", onKey: 20)
+    let mine = p.draft.snapshot()
+    p.songKitChanged()
+    r.expect(
+        p.conflictVisible && p.conflictText == "Changed in the song",
+        message: "dirty song change shows exact conflict bar")
+    p.answerConflict(keepMine: true)
+    r.expect(
+        !p.conflictVisible && p.dirty && p.draft.snapshot() == mine, message: "Keep mine hides bar and preserves draft")
+    p.songKitChanged()
+    p.answerConflict(keepMine: false)
+    r.expect(
+        !p.conflictVisible && !p.dirty && p.zoneRows.count == 1, message: "Reload replaces draft and clears conflict")
+    r.expectEqual(expected: [true, false], actual: conflicts, what: "workflow receives both conflict answers")
+    p.dropSample(name: "dirty", onKey: 20)
+    let targetRow = (0..<p.slotRows.count).first { (index: Int) -> Bool in p.slotRows[index].slot == 4 } ?? -1
+    p.selectSlot(row: targetRow)
+    r.expect(
+        p.retargetVisible && p.retargetSlot == 4 && p.selectedSlot == 2,
+        message: "dirty picker change emits revision-backed prompt")
+    p.answerRetarget(answer: 2)
+    r.expect(!p.retargetVisible && p.selectedSlot == 2 && p.dirty, message: "Cancel keeps current target")
+    p.selectSlot(row: targetRow)
+    p.answerRetarget(answer: 0)
+    r.expect(p.retargetVisible && p.selectedSlot == 2, message: "Save waits for workflow completion")
+    p.markClean()
+    p.completeRetarget()
+    r.expect(!p.retargetVisible && p.selectedSlot == 4 && !p.dirty, message: "successful save continuation retargets")
+    p.dropSample(name: "dirtyAgain", onKey: 20)
+    p.selectSlot(row: 1)
+    p.answerRetarget(answer: 1)
+    r.expect(p.selectedSlot == 2 && !p.dirty && !p.retargetVisible, message: "Discard loads the pending target")
+    r.expectEqual(
+        expected: [2, 0, 1], actual: answers, what: "prompt answers use exact 0 save 1 discard 2 cancel values")
+}
+
+@MainActor
+private func checkKitPresenterDirty(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::dirtyTitleAndSave")
+    let p = KitStudioPresenter()
+    p.bind(song: "Song", section: "voicegroup_song", voices: presenterVoices(), slot: 1)
+    p.setMode(index: 1)
+    r.expect(p.dirty && p.canSave && !p.canUndo, message: "mode-only conversion is saveable but not a history entry")
+    p.setMode(index: 0)
+    r.expect(!p.dirty && !p.canSave, message: "original clean mode clears dirty")
+    var saves = 0
+    p.onSaveRequested = { saves += 1 }
+    p.requestSave()
+    p.dropSample(name: "sample", onKey: 60)
+    p.requestSave()
+    r.expectEqual(expected: 1, actual: saves, what: "Save callback gated by selected dirty target")
+    r.expectEqual(expected: "Split Studio — Song · voice 1 •", actual: p.titleText, what: "dirty title suffix")
+    p.markClean()
+    r.expect(!p.dirty && !p.canSave && p.canUndo, message: "save marks clean and keeps history")
+    r.expect(!p.slotRows[0].isNew, message: "saved empty slot becomes existing kit offer")
+    p.undo()
+    r.expect(p.dirty && p.canSave && p.canRedo, message: "undo away from save is dirty")
+    p.redo()
+    r.expect(!p.dirty && !p.canSave && !p.canRedo, message: "redo to saved values restores clean")
+    p.bind(song: "Song", section: "voicegroup_song", voices: presenterVoices(), slot: 0)
+    p.dropSample(name: "notAkit", onKey: 60)
+    r.expect(
+        p.selectedSlot == -1 && !p.canSave && p.draft.drumkitZones.isEmpty,
+        message: "non-kit target cannot be edited or saved")
+}
+
+@MainActor
+private func checkKitPresenterSlices(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::sliceMappingValidationAndHistory")
+    let p = KitStudioPresenter()
+    p.bind(song: "Song", section: "voicegroup_song", voices: presenterVoices(), slot: 1)
+    r.expect(p.snap, message: "zero-crossing snap starts enabled")
+    p.toggleSnap()
+    p.addSource(ImportedSample(buffer: [Float](repeating: 0.5, count: 128), sampleRate: 13379, suggestedName: "source"))
+    p.selectionStartFrame = 10
+    p.selectionEndFrame = 100
+    p.sliceSelection()
+    p.cursorFrame = 50
+    p.addMarkerAtCursor()
+    let id = p.sliceId(row: 0)
+    let secondId = p.sliceId(row: 1)
+    let middleMarker = p.markerId(row: 1)
+    p.moveMarker(id: middleMarker, toFrame: 60)
+    r.expect(
+        p.markerId(row: 1) == middleMarker && p.sliceStartFrame(id: secondId) == 60,
+        message: "moving marker keeps presenter ids and updates index mapping")
+    p.undo()
+    r.expect(
+        p.markerId(row: 1) == middleMarker && p.sliceStartFrame(id: secondId) == 50,
+        message: "marker undo restores mapped frames and ids")
+    p.redo()
+    p.undo()
+    let oldName = p.sliceName(id: id)
+    r.expect(id > 0 && secondId > 0 && id != secondId, message: "presenter owns unique QML slice ids")
+    r.expect(
+        p.sliceAddress(id)?.index == 0 && p.sliceAddress(secondId)?.index == 1, message: "ids map to session indices")
+    var validated: [String] = []
+    p.validateName = { (name: String) -> String? in
+        validated.append(name)
+        return name == "taken" ? "Already registered" : nil
+    }
+    p.renameSlice(id: id, name: "taken")
+    r.expectEqual(expected: oldName, actual: p.sliceName(id: id), what: "adapter refusal preserves name")
+    r.expectEqual(expected: "Already registered", actual: p.statusText, what: "adapter refusal is visible")
+    p.dropSample(name: oldName, onKey: 10)
+    p.setMode(index: 1)
+    p.dropSample(name: oldName, onKey: 10)
+    p.markClean()
+    p.renameSlice(id: id, name: "renamed slice")
+    let renamed = SampleNames.sanitize("renamed slice")
+    r.expect(validated.contains(renamed), message: "rename uses sanitized validation adapter")
+    r.expectEqual(expected: renamed, actual: p.sliceName(id: id), what: "validated rename applied")
+    r.expect(
+        p.draft.drumkitZones[0].sampleName == renamed && p.draft.keysplitZones[0].sampleName == renamed,
+        message: "rename updates mapped zones in both views")
+    p.undo()
+    r.expect(
+        p.sliceName(id: id) == oldName && p.draft.drumkitZones[0].sampleName == oldName
+            && p.draft.keysplitZones[0].sampleName == oldName && !p.dirty,
+        message: "one undo restores slice plus both views and clean state")
+    p.redo()
+    r.expect(
+        p.sliceName(id: id) == renamed && p.draft.drumkitZones[0].sampleName == renamed
+            && p.draft.keysplitZones[0].sampleName == renamed, message: "one redo reapplies compound rename")
+    p.undo()
+    p.setMode(index: 0)
+    p.dropSample(name: p.sliceName(id: secondId), onKey: 20)
+    let beforeMerge = p.session.snapshot()
+    let beforeDraft = p.draft.snapshot()
+    p.removeMarker(id: p.markerId(row: 1))
+    r.expectEqual(
+        expected: beforeMerge, actual: p.session.snapshot(), what: "in-use merged slice refuses before live mutation")
+    r.expectEqual(expected: beforeDraft, actual: p.draft.snapshot(), what: "merge refusal preserves both views")
+    r.expectEqual(
+        expected: "\(p.sliceName(id: secondId)) is used by a zone; remove those zones first.",
+        actual: p.statusText, what: "merge refusal names the slice")
+    p.undo()
+    r.expectEqual(expected: 1, actual: p.draft.drumkitZones.count, what: "refused merge added no history entry")
+    var played = 0
+    p.playPcm = { played = $0 }
+    p.playSlice(id: id)
+    r.expectEqual(expected: id, actual: played, what: "slice audition routes through injected player closure")
+    p.setSourceRate(rate: 26758)
+    r.expectEqual(expected: 26758, actual: p.sourceRate, what: "source rate chooses Hz value")
+    r.expectEqual(
+        expected: 20, actual: p.sourceFrame(sliceId: id, renderedPosition: 20),
+        what: "rendered playhead maps ratio and slice start")
+    r.expectEqual(
+        expected: SampleRatePolicy.rateOptions(sourceRate: 13379).map(String.init),
+        actual: p.rateChoices, what: "options come only from shared rate policy")
+    p.setSourceRate(rate: 12345)
+    r.expectEqual(expected: 26758, actual: p.sourceRate, what: "unsupported rate rejected")
+    p.setMode(index: 0)
+    p.deleteZone(row: 0)
+    p.setMode(index: 1)
+    p.deleteZone(row: 0)
+    p.setMode(index: 0)
+    p.mapAllSlices(fromKey: 60, whiteKeysOnly: true)
+    r.expectEqual(expected: [60, 62], actual: p.draft.drumkitZones.map(\.startKey), what: "map-all skips black keys")
+    let mapped = p.draft.snapshot()
+    p.mapAllSlices(fromKey: 60, whiteKeysOnly: true)
+    r.expectEqual(expected: mapped, actual: p.draft.snapshot(), what: "map-all occupied keys rejects atomically")
+    p.closeSource(row: 0)
+    r.expectEqual(expected: 1, actual: p.session.sources.count, what: "source with slices in either view cannot close")
+}
+
+@MainActor
+private func checkKitPresenterLoadAndAudition(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::loadRangesAndLockedAudition")
+    let p = KitStudioPresenter()
+    p.bind(song: "Song", section: "voicegroup_song", voices: presenterVoices(), slot: 1)
+    let splitZones = [sampleZone(40, 70)]
+    let children = KitDraftCodec.children(from: splitZones, mode: .keysplit)
+    let table = KitDraftCodec.table(from: splitZones, name: "keys")
+    p.install(KitLoadResult(kind: .keysplit, parent: presenterVoices()[4], children: children, table: table), slot: 4)
+    r.expect(
+        p.mode == 1 && p.draft.drumkitZones == p.draft.keysplitZones,
+        message: "actual loaded mode initializes both views with keyboard ranges, not child ordinals")
+    r.expectEqual(expected: 40, actual: p.zoneRows[0].startKey, what: "table range start")
+    p.setMode(index: 0)
+    r.expectEqual(expected: 40, actual: p.zoneRows[0].startKey, what: "first mode switch carries ranges across")
+    r.expect(p.dirty && !p.canUndo, message: "mode toggle has no history")
+    let noise = VgVoice(macro: .noise, key: 45, period: 1, attack: 2, decay: 3, sustain: 12, release: 0)
+    let zones = [sampleZone(10, 10), lockedZone(45, 45, voice: noise)]
+    p.install(
+        KitLoadResult(
+            kind: .drumkit,
+            children: KitDraftCodec.children(from: zones, mode: .drumkit)), slot: 2)
+    p.selectZone(row: 1)
+    let locked = p.draft.snapshot()
+    p.setZoneRootKey(key: 90)
+    p.setZonePan(pan: 40)
+    p.setZonePitched(on: true)
+    p.setZoneAdsr(a: 1, d: 2, s: 3, r: 4)
+    r.expectEqual(expected: locked, actual: p.draft.snapshot(), what: "locked strip edits preserve original voice")
+    r.expect(
+        p.selectedZoneRow()?.locked == true && p.selectedZoneRow()?.voiceType == "noise",
+        message: "locked selected strip exposes voice type")
+    var sample = ProcessedSample()
+    sample.s8 = [1, 2, 3]
+    sample.freq = 13_700_096
+    p.samples = ["slice": sample]
+    var samplePlayed = false
+    var lockedPlayed = false
+    var publishes = 0
+    p.publishKitTone = { (tone: KitAuditionTone, key: UInt8) -> Bool in
+        publishes += 1
+        if key == 10, case .sample(let pcm, _, _, _, _, _, _, _) = tone.children[10] {
+            samplePlayed = pcm == sample.s8
+        }
+        if key == 45, case .psg(let voice) = tone.children[45] {
+            lockedPlayed =
+                voice.kind == Int(noise.macro.rawValue) && voice.key == noise.key && voice.period == noise.period
+        }
+        return true
+    }
+    p.playKey(key: 10)
+    p.playKey(key: 45)
+    p.playKey(key: 99)
+    r.expect(
+        samplePlayed && lockedPlayed && publishes == 2,
+        message: "key audition publishes draft samples and preserved locked tone only")
+    p.moveZone(row: 1, toKey: 46)
+    r.expectEqual(
+        expected: noise, actual: p.draft.drumkitZones[1].lockedVoice,
+        what: "locked zone can move without rewriting voice")
+    p.deleteZone(row: 1)
+    r.expectEqual(expected: 1, actual: p.draft.drumkitZones.count, what: "locked zone can be deleted")
 }

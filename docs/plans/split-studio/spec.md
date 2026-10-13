@@ -113,8 +113,9 @@ facts were re-verified in the poryaaaa checkout shared by this worktree
     Delete affordance instead of the strip editors.
 11. Pitched toggle per zone in both modes. Drumkit default off: every key's
     child voice keeps `key` = the zone's root key. Pitched on: child keys rise
-    by +1 semitone per key. Keysplit mode: the engine already pitches from
-    the incoming key; Pitched only changes the child root key written.
+    by +1 semitone per key. Keysplit mode: the engine always pitches from the
+    incoming key relative to the child root (= zone root), so the Pitched
+    control is shown on and disabled; the stored flag survives for Drumkit (R-T9-4).
 12. Opening an existing kit builds zones by collapsing adjacent identical
     sub-slots (same sample symbol and params, with child key equal or rising
     by +1 per slot; rising ⇒ Pitched on). Slots whose voice is not a

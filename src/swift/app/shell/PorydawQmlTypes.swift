@@ -1,6 +1,7 @@
 import PorydawAppHistory
 import PorydawAppPresentation
 import PorydawDocument
+import PorydawKitStudio
 import PorydawSampleUI
 import QtBridge
 
@@ -13,6 +14,7 @@ public enum PorydawQmlTypes {
         QMetaObjectBuilder.qmlModuleAliases["PorydawAppPresentation"] = "PorydawApp"
         QMetaObjectBuilder.qmlModuleAliases["PorydawAppHistory"] = "PorydawApp"
         QMetaObjectBuilder.qmlModuleAliases["PorydawSampleUI"] = "PorydawApp"
+        QMetaObjectBuilder.qmlModuleAliases["PorydawKitStudio"] = "PorydawApp"
     }()
 
     /// Types that QML may construct, in application registration order.
@@ -60,6 +62,10 @@ public enum PorydawQmlTypes {
         GridSubdivisionMenuItem.self,
         HeaderVoicePicker.self,
         ImportControllerRow.self,
+        KitSlotRow.self,
+        KitSourceRow.self,
+        KitStudioPresenter.self,
+        KitZoneRow.self,
         LayoutSpaces.self,
         MouseHints.self,
         OtherEventsBandPresenter.self,

@@ -435,6 +435,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/startup_checks.swift
         workspace/transport_checks.swift
         kitstudio/KitDraftChecks.swift
+        kitstudio/KitSourceSessionChecks.swift
         support/corecheck/CoreCheckDispatch.swift
         lanes/SwiftCoreCheckLane.swift
         LINK_LIBRARIES swift_core_check_logic swift_core_check_support ${core_check_libraries} PorydawApp PorydawKitStudio

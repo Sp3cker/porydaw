@@ -2,6 +2,9 @@ add_library(PorydawKitStudio STATIC
     KitZone.swift
     KitDraft.swift
     KitDraftCodec.swift
+    KitSourceSession.swift
+    KitSlotPicker.swift
+    KitStudioPresenter.swift
 )
 porydaw_swift_module(PorydawKitStudio PorydawKitStudio)
 set_target_properties(PorydawKitStudio PROPERTIES
@@ -9,6 +12,6 @@ set_target_properties(PorydawKitStudio PROPERTIES
 )
 porydaw_swift_qt_interop(PorydawKitStudio)
 target_link_libraries(PorydawKitStudio PUBLIC
-    PorydawSample PorydawSampleUI PorydawVoicegroup PorydawAppAudio QtBridge
+    PorydawSample PorydawSampleUI PorydawVoicegroup PorydawAppAudio PorydawAppPresentation QtBridge
 )
 add_dependencies(PorydawKitStudio QtBridgeMacros)
