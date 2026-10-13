@@ -77,18 +77,18 @@ text/symlink/stereo fixture helpers were removed to meet the runtime budget.
    disclosure indicator shown when `hasChildren` (rotate on `expanded`), row click →
    `selectFolder(index)`, indicator click → `toggleFolder(index)`, selected
    highlight from `selected`; `Remove from Library` (`sampleLibraryRemove`, enabled
-   `canRemove`, tooltip per §18); header `Audio files`; files `ListView`
+   `canRemove`); header `Audio files`; files `ListView`
    (`sampleLibraryFiles`, accessible name `Library audio files`, `visible:
    library.filesVisible`) with delegate highlighting `selected`, pointer
    `MouseArea` `onClicked: library.clickFile(index)` /
    `onDoubleClicked: library.activateFile(index)`, and view-level
    `onCurrentIndexChanged` → `library.selectFile(currentIndex)` (silent);
    Preview (`sampleLibraryPreview`, text `previewButtonLabel`, enabled `canPreview`,
-   tooltip §18, `onClicked: library.togglePreview()`) and Load (`sampleLibraryLoad`,
-   enabled `canLoad`, tooltip §18, `onClicked: library.loadSelected()`) row; status
-   labels `sampleLibraryStatus` (text `statusText`, wrap, tooltip `statusToolTip`),
-   `sampleLibraryLoaded` (`loadedText`/`loadedToolTip`),
-   `sampleLibraryPreviewing` (`previewText`/`previewToolTip`). Root `objectName:
+   `onClicked: library.togglePreview()`) and Load (`sampleLibraryLoad`,
+   enabled `canLoad`, `onClicked: library.loadSelected()`) row; status
+   labels `sampleLibraryStatus` (text `statusText`, wrap),
+   `sampleLibraryLoaded` (`loadedText`),
+   `sampleLibraryPreviewing` (`previewText`). No browser hover tooltips. Root `objectName:
    "sampleLibraryPanel"`.
 2. Keyboard contract in the files list: the `ListView` (focusable) installs
    `Keys.priority: Keys.BeforeItem` and handles plain (no-modifier, non-autorepeat)

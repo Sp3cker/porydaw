@@ -24,6 +24,7 @@ folder. In the folder list, use Up and Down to navigate, Right to expand a
 folder, and Left to collapse it or move to its parent. You can also use the
 disclosure arrows to expand folders and click a folder to browse it.
 **Remove from Library** removes the selected bookmark, not any files on disk.
+The library browser does not show hover tooltips.
 
 Click an audio file to preview it; pressing Enter or Space while the file list
 has focus toggles the preview. Moving through the list with arrow keys only

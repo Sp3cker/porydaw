@@ -94,7 +94,7 @@ strings originate here). Additional pinned details:
    removes only the bookmark (fixture files still exist afterwards), resets to the
    first remaining root, and the empty case yields the no-folders status; status
    precedence chain of §15 including the message override; loaded/preview readout
-   strings and tooltips; symlink directory exclusion when
+   strings; symlink directory exclusion when
    `FileManager.createSymbolicLink` succeeds (skip the row when creation is denied
    — named platform gap).
 ## Acceptance predicate

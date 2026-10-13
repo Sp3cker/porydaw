@@ -85,11 +85,8 @@ public final class SampleLibraryModel: QmlUncreatable {
     public var folders: QListModel<SampleLibraryFolderRow> = QListModel()
     public var files: QListModel<SampleLibraryFileRow> = QListModel()
     @QtTracked public var statusText = ""
-    @QtTracked public var statusToolTip = ""
     @QtTracked public var loadedText = "Loaded: none"
-    @QtTracked public var loadedToolTip = ""
     @QtTracked public var previewText = "Preview source: none"
-    @QtTracked public var previewToolTip = ""
     @QtTracked public var previewButtonLabel = "Preview"
     @QtTracked public var canLoad = false
     @QtTracked public var canPreview = false
@@ -284,11 +281,8 @@ public final class SampleLibraryModel: QmlUncreatable {
         canLoad = selectedFilePath != nil
         canPreview = canLoad || !previewingPath.isEmpty
         previewButtonLabel = previewingPath.isEmpty ? "Preview" : "Stop Preview"
-        statusToolTip = selectedFilePath ?? ""
-        loadedToolTip = loadedPath
         loadedText =
             loadedPath.isEmpty ? "Loaded: none" : "Loaded: \(URL(fileURLWithPath: loadedPath).lastPathComponent)"
-        previewToolTip = previewingPath
         previewText =
             previewingPath.isEmpty
             ? "Preview source: none" : "Preview source: \(URL(fileURLWithPath: previewingPath).lastPathComponent)"

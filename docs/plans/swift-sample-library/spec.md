@@ -28,8 +28,8 @@ briefs link here and carry only deltas.
    `QDir::cleanPath(QDir(dir).absolutePath())`-normalize (resolve `.`/`..`,
    absolute, **no** symlink resolution), dedupe preserving first occurrence.
 3. Tree rows show the directory's display name (`fileName`; for roots ending in a
-   separator — the volume root case — the native full path). Tooltips carry the full
-   normalized path. Only top-level rows are bookmarks.
+   separator — the volume root case — the native full path). Only top-level rows
+   are bookmarks. The browser shows no hover tooltips (delta 8).
 4. Expanding a row reveals subdirectories exactly once: directories only, no
    `.`/`..`, **no symlinked directories**, no hidden entries, sorted
    name-ascending case-insensitive. Rows with no children show no disclosure
@@ -82,14 +82,10 @@ briefs link here and carry only deltas.
     - empty after listing: `No supported audio files in this folder.`
     - nothing selected: `No file selected.`
     - else `Selected: <fileName>`
-    Status tooltip = selected file path (empty when none).
-16. `Loaded: none` / `Loaded: <fileName>`; tooltip = loaded path.
-17. `Preview source: none` / `Preview source: <fileName>`; tooltip = previewing path.
+16. `Loaded: none` / `Loaded: <fileName>`.
+17. `Preview source: none` / `Preview source: <fileName>`.
 18. Labels/labels: pane header `Library`, list header `Audio files`; buttons
-    `Add Folder…`, `Open File…`, `Remove from Library` (tooltip: `Remove the
-    selected saved root from the library. No files are deleted.`), `Preview`
-    (tooltip: `Preview the selected source file (Enter or Space in the file list).`),
-    `Load` (tooltip: `Replace the editor document with the selected file.`).
+    `Add Folder…`, `Open File…`, `Remove from Library`, `Preview`, `Load`.
     Accessible names: `Library folders`, `Library audio files`.
 19. objectNames (checks target them): `sampleLibraryPanel`, `sampleLibraryAdd`,
     `sampleLibraryOpen`, `sampleLibraryFolders`, `sampleLibraryRemove`,
@@ -161,11 +157,8 @@ callable is needed). Bodies unchanged.
     public var folders: QListModel<SampleLibraryFolderRow>   // supported type, no @QtTracked
     public var files: QListModel<SampleLibraryFileRow>
     @QtTracked public var statusText = ""
-    @QtTracked public var statusToolTip = ""
     @QtTracked public var loadedText = "Loaded: none"
-    @QtTracked public var loadedToolTip = ""
     @QtTracked public var previewText = "Preview source: none"
-    @QtTracked public var previewToolTip = ""
     @QtTracked public var previewButtonLabel = "Preview"
     @QtTracked public var canLoad = false
     @QtTracked public var canPreview = false
@@ -368,6 +361,10 @@ untouched.
    before the picker; historical had no menu route into the pane at all.
 7. Flat `QListModel` rows with depth indentation replace `QTreeWidget`;
    `QFileSystemModel` is replaced by direct listing (filter/sort parity above).
+8. User-requested removal of every library-browser hover tooltip: folder and
+   sample rows, action buttons, and status/loaded/preview labels. Tooltip-only
+   model properties and hover handlers are removed; path ownership and actions
+   remain unchanged.
 
 ## Non-goals (do not add)
 

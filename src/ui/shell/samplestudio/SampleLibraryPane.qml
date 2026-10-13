@@ -124,7 +124,6 @@ ColumnLayout {
             id: folderRow
             objectName: "sampleLibraryFolderRow"
             required property int index
-            required property string path
             required property string title
             required property int depth
             required property bool expanded
@@ -133,9 +132,6 @@ ColumnLayout {
             width: folders.width
             height: 2 * pane.unit
             color: folderRow.selected ? pane.colors.tabSelectedBackground : pane.colors.windowBackground
-            ToolTip.text: folderRow.path
-            ToolTip.visible: folderHover.hovered
-            HoverHandler { id: folderHover }
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
@@ -177,8 +173,6 @@ ColumnLayout {
         objectName: "sampleLibraryRemove"
         text: qsTr("Remove from Library")
         enabled: pane.library.canRemove
-        ToolTip.text: qsTr("Remove the selected saved root from the library. No files are deleted.")
-        ToolTip.visible: hovered
         onClicked: {
             files.currentIndex = -1
             pane.library.removeSelectedRoot()
@@ -218,15 +212,11 @@ ColumnLayout {
             id: fileRow
             objectName: "sampleLibraryFileRow"
             required property int index
-            required property string path
             required property string name
             required property bool selected
             width: files.width
             height: 2 * pane.unit
             color: fileRow.selected ? pane.colors.tabSelectedBackground : pane.colors.windowBackground
-            ToolTip.text: fileRow.path
-            ToolTip.visible: fileHover.hovered
-            HoverHandler { id: fileHover }
             Label {
                 objectName: "sampleLibraryFileName"
                 anchors.fill: parent
@@ -254,16 +244,12 @@ ColumnLayout {
             objectName: "sampleLibraryPreview"
             text: pane.library.previewButtonLabel
             enabled: pane.library.canPreview
-            ToolTip.text: qsTr("Preview the selected source file (Enter or Space in the file list).")
-            ToolTip.visible: hovered
             onClicked: pane.library.togglePreview()
         }
         Button {
             objectName: "sampleLibraryLoad"
             text: qsTr("Load")
             enabled: pane.library.canLoad
-            ToolTip.text: qsTr("Replace the editor document with the selected file.")
-            ToolTip.visible: hovered
             onClicked: pane.library.loadSelected()
         }
     }
@@ -273,9 +259,6 @@ ColumnLayout {
         text: pane.library.statusText
         wrapMode: Text.Wrap
         color: pane.colors.secondaryText
-        ToolTip.text: pane.library.statusToolTip
-        ToolTip.visible: statusHover.hovered && ToolTip.text.length > 0
-        HoverHandler { id: statusHover }
     }
     Label {
         objectName: "sampleLibraryLoaded"
@@ -283,9 +266,6 @@ ColumnLayout {
         text: pane.library.loadedText
         elide: Text.ElideRight
         color: pane.colors.secondaryText
-        ToolTip.text: pane.library.loadedToolTip
-        ToolTip.visible: loadedHover.hovered && ToolTip.text.length > 0
-        HoverHandler { id: loadedHover }
     }
     Label {
         objectName: "sampleLibraryPreviewing"
@@ -293,8 +273,5 @@ ColumnLayout {
         text: pane.library.previewText
         elide: Text.ElideRight
         color: pane.colors.secondaryText
-        ToolTip.text: pane.library.previewToolTip
-        ToolTip.visible: previewHover.hovered && ToolTip.text.length > 0
-        HoverHandler { id: previewHover }
     }
 }

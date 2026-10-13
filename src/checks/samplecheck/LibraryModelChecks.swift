@@ -60,7 +60,7 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
                 && model.folders[0].title == "Library Ω" && model.folders[0].depth == 0
                 && model.folders[0].selected && model.folders[0].expanded
                 && model.folders[0].hasChildren,
-            message: "first saved root is selected, expanded and has an absolute-path tooltip")
+            message: "first saved root is selected and expanded")
         let initialRows = (0..<model.folders.count).map { (index: Int) in
             let row = model.folders[index]
             return "\(index):\(row.path) depth=\(row.depth) selected=\(row.selected) children=\(row.hasChildren)"
@@ -97,8 +97,7 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
                 },
             message: "audio names appear in case-insensitive name order")
         listing.expect(
-            model.filesVisible && !model.canLoad && !model.canPreview && model.canRemove
-                && model.statusToolTip.isEmpty,
+            model.filesVisible && !model.canLoad && !model.canPreview && model.canRemove,
             message: "populated folder starts with silent, unselected audio list")
         guard model.files.count >= 2 else {
             listing.expect(false, message: "the audio list needs two selectable sources")
@@ -110,26 +109,20 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
         let first = model.files[0].path
         actions.expect(
             model.files[0].selected && !model.files[1].selected
-                && model.statusToolTip == first && model.canLoad && model.canPreview,
+                && model.canLoad && model.canPreview,
             message: "file selection highlights exactly its row and enables source actions")
         model.setPreviewingPath(path: first)
         model.selectFile(row: 1)
         let second = model.files[1].path
         model.setLoadedPath(path: second)
-        actions.expect(
-            !model.files[0].selected && model.files[1].selected
-                && model.statusToolTip == second && model.previewToolTip == first
-                && model.loadedToolTip == second,
-            message: "selection, active preview and loaded document retain independent paths")
         model.clearFileSelection()
         actions.expect(
-            !model.files[1].selected && model.statusToolTip.isEmpty && !model.canLoad
-                && model.canPreview && model.previewToolTip == first && model.loadedToolTip == second,
+            !model.files[1].selected && !model.canLoad && model.canPreview,
             message: "clearing selection keeps the sounding and loaded sources without enabling Load")
         model.setPreviewingPath(path: "")
         actions.expect(
-            !model.canPreview && model.loadedToolTip == second,
-            message: "stopping preview disables Preview without a selection and preserves the loaded document")
+            !model.canPreview,
+            message: "stopping preview disables Preview without a selection")
 
         let navigation = report.scoped(cppID: "swiftcore/SampleLibraryModel::navigation")
         model.selectFolder(row: 1)
