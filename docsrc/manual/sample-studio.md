@@ -23,6 +23,8 @@ folders between sessions and lists supported audio files in the selected
 folder. In the folder list, use Up and Down to navigate, Right to expand a
 folder, and Left to collapse it or move to its parent. You can also use the
 disclosure arrows to expand folders and click a folder to browse it.
+Opening a branch reveals its children below the parent without jumping the tree
+back to the selected folder.
 **Remove from Library** removes the selected bookmark, not any files on disk.
 The library browser does not show hover tooltips.
 

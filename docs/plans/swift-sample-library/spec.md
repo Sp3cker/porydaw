@@ -34,6 +34,9 @@ briefs link here and carry only deltas.
    `.`/`..`, **no symlinked directories**, no hidden entries, sorted
    name-ascending case-insensitive. Rows with no children show no disclosure
    control. There is **no parent-directory entry** anywhere.
+   Expanding a branch keeps its parent and ancestors stationary on screen.
+   Publish changed rows and inserted descendants without resetting the folder
+   model or scrolling back to an unrelated selected folder.
 5. Selecting a tree row navigates: it becomes the audio-list directory, the row's
    children are populated, and the row expands. Navigating clears the message and
    the audio-list selection. Selection — tree or file-list, pointer or keyboard —

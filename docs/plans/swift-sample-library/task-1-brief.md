@@ -67,6 +67,9 @@ strings originate here). Additional pinned details:
    children-loaded) flattened into `folders` on publish; `selected` compares the
    current node identity. `files` republishes on navigation. Selection state lives
    in the model; QML renders it.
+   Each node retains its unchanged immutable row snapshot; recreate it only when
+   expansion or selection changes. Use the existing `syncModel` helper for
+   incremental publication, not a whole-model reset.
 4. Callbacks: the four `@QtIgnored` closures are Optional and unwrapped with
    `guard` at emission points (a `nil` callback is a no-op, not an error) — task 2
    wires them.

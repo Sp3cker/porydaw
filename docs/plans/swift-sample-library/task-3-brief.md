@@ -90,6 +90,9 @@ text/symlink/stereo fixture helpers were removed to meet the runtime budget.
    `sampleLibraryLoaded` (`loadedText`),
    `sampleLibraryPreviewing` (`previewText`). No browser hover tooltips. Root `objectName:
    "sampleLibraryPanel"`.
+   The folder view disables automatic current-item scrolling. Disclosure toggles
+   call the model directly without repositioning the view. Pointer navigation
+   selects before taking focus; explicit keyboard navigation reveals its destination.
 2. Keyboard contract in the files list: the `ListView` (focusable) installs
    `Keys.priority: Keys.BeforeItem` and handles plain (no-modifier, non-autorepeat)
    `Key_Space`/`Key_Return`/`Key_Enter` → `library.togglePreview()` with

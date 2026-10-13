@@ -37,11 +37,6 @@ ColumnLayout {
         folders.currentIndex = row
     }
 
-    function toggleFolder(row: int): void {
-        pane.library.toggleFolder(row)
-        pane.alignFolderCursor()
-    }
-
     function folderRowAt(row: int): FolderRow {
         folders.forceLayout()
         if (row < 0 || row >= folders.count)
@@ -91,6 +86,7 @@ ColumnLayout {
                 pane.alignFolderCursor()
         }
         currentIndex: -1
+        highlightFollowsCurrentItem: false
         Keys.priority: Keys.BeforeItem
         Keys.onPressed: event => {
             if (event.modifiers !== Qt.NoModifier)
@@ -109,9 +105,9 @@ ColumnLayout {
             if (!row)
                 return
             if (event.key === Qt.Key_Right && row.hasChildren && !row.expanded) {
-                pane.toggleFolder(row.index)
+                pane.library.toggleFolder(row.index)
             } else if (event.key === Qt.Key_Left && row.hasChildren && row.expanded) {
-                pane.toggleFolder(row.index)
+                pane.library.toggleFolder(row.index)
             } else if (event.key === Qt.Key_Left) {
                 pane.navigateToParent(row.index)
             }
@@ -136,8 +132,8 @@ ColumnLayout {
                 anchors.fill: parent
                 onClicked: {
                     const row = folderRow.index
-                    folders.forceActiveFocus()
                     pane.navigateFolder(row)
+                    folders.forceActiveFocus()
                 }
             }
             RowLayout {
@@ -156,7 +152,7 @@ ColumnLayout {
                     MouseArea {
                         anchors.fill: parent
                         enabled: folderRow.hasChildren
-                        onClicked: pane.toggleFolder(folderRow.index)
+                        onClicked: pane.library.toggleFolder(folderRow.index)
                     }
                 }
                 Label {

@@ -48,6 +48,7 @@ public final class SampleLibraryModel: QmlUncreatable {
         var children: [FolderNode] = []
         var childrenLoaded = false
         var expanded = false
+        private var cachedRow: SampleLibraryFolderRow?
 
         init(path: String, depth: Int, rootPath: String) {
             self.path = path
@@ -61,6 +62,17 @@ public final class SampleLibraryModel: QmlUncreatable {
             guard !childrenLoaded else { return }
             children = childPaths.map { FolderNode(path: $0, depth: depth + 1, rootPath: rootPath) }
             childrenLoaded = true
+        }
+
+        func row(selected: Bool) -> SampleLibraryFolderRow {
+            if let cachedRow, cachedRow.expanded == expanded, cachedRow.selected == selected {
+                return cachedRow
+            }
+            let row = SampleLibraryFolderRow(
+                path: path, depth: depth, expanded: expanded,
+                hasChildren: !childPaths.isEmpty, selected: selected)
+            cachedRow = row
+            return row
         }
     }
 
@@ -241,12 +253,12 @@ public final class SampleLibraryModel: QmlUncreatable {
             }
         }
         for root in roots { append(root) }
-        folders.reset(
-            to: visibleFolders.map { node in
-                SampleLibraryFolderRow(
-                    path: node.path, depth: node.depth, expanded: node.expanded,
-                    hasChildren: !node.childPaths.isEmpty, selected: node === selectedFolder)
-            })
+        let rows = visibleFolders.map { (node: FolderNode) -> SampleLibraryFolderRow in
+            node.row(selected: node === selectedFolder)
+        }
+        syncModel(
+            folders, rows,
+            matches: { (lhs: SampleLibraryFolderRow, rhs: SampleLibraryFolderRow) -> Bool in lhs === rhs })
     }
 
     private func refreshFiles() {
