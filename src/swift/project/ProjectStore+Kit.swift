@@ -14,7 +14,7 @@ extension ProjectStore {
     }
 
     /// Reads the lease's current raw kit state, including staged edits.
-    public func kitSnapshot(lease: ProjectBankLease, slot: Int) async throws -> KitSnapshot? {
+    public func kitSnapshot(lease: ProjectBankLease, slot: Int) async throws -> KitSnapshot {
         try editingStore().kitSnapshot(id: lease.id, slot: slot)
     }
 

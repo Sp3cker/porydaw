@@ -52,6 +52,7 @@ public final class SampleStudioAudition: QmlUncreatable {
         }
         player.onStarted = { [weak self] in self?.onStarted?() }
         player.onWillRestart = { [weak self] in
+            // Gap restarts occur only for one-shots; retries preserve the current loop mode.
             guard let self else { return }
             self.start(looped: self.looped)
         }

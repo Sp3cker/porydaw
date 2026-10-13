@@ -21,6 +21,7 @@ public final class KitDraft {
 
     /// Replaces both views and starts a clean history.
     public func load(_ snapshot: Snapshot) {
+        // Invalid bind-time state is a programmer error; user-editable zone setters return false.
         precondition(Self.valid(snapshot.drumkitZones) && Self.valid(snapshot.keysplitZones))
         restore(snapshot)
         clean = snapshot

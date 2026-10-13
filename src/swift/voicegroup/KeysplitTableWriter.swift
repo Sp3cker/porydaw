@@ -31,7 +31,7 @@ public enum KeysplitTableWriter {
     private static func rendered(table: KeysplitTable, bytes: Data, path: String) throws(KeysplitWriteError) -> Data {
         guard table.table.count == 128, (0..<128).contains(table.startingNote),
             (0...128).contains(table.maxNote),
-            table.table.allSatisfy({ (value: UInt8) in value < 128 })
+            table.table.allSatisfy({ $0 < 128 })
         else {
             throw KeysplitWriteError(message: "Invalid keysplit table for \(path)")
         }

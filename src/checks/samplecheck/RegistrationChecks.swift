@@ -225,7 +225,7 @@ private func registrationBatchChecks(_ report: CheckReport, root: String) {
                 projectRoot: root,
                 samples: [("duplicate_a", wav), ("duplicate_b", wav), ("duplicate_a", wav), ("duplicate_b", wav)])
             check.expect(false, message: "duplicate names in one batch are refused")
-        } catch let error as SampleRegistrationError {
+        } catch {
             check.expect(
                 error.message.contains("duplicate_a") && error.message.contains("duplicate_b"),
                 message: "one refusal lists both offending batch names")
@@ -233,7 +233,7 @@ private func registrationBatchChecks(_ report: CheckReport, root: String) {
         do {
             try SampleRegistrar.registerBatch(projectRoot: root, samples: [("existing", wav), ("fresh_refused", wav)])
             check.expect(false, message: "pre-existing registration symbol is refused")
-        } catch let error as SampleRegistrationError {
+        } catch {
             check.expect(
                 error.message.contains("DirectSoundWaveData_existing"), message: "refusal names existing symbol")
         }

@@ -683,19 +683,18 @@ private func editingStoreKit(_ report: CheckReport) {
             report.expectEqual(
                 expected: parent, actual: reopened.voiceAt(slot: 10),
                 cppID: id + "parent", what: "saved parent line matches drumkit input")
-            let childSource = reopened
             var error: String?
-            let childOpened = childSource.open(
+            let childOpened = reopened.open(
                 location: VoicegroupLocation(filePath: childPath, sectionLabel: "fixture_drums_a"), error: &error)
             report.expect(childOpened, cppID: id + "child-open", message: error ?? "saved subgroup opens")
             guard childOpened else { return }
             report.expectEqual(
-                expected: children[36], actual: childSource.voiceAt(slot: 36),
+                expected: children[36], actual: reopened.voiceAt(slot: 36),
                 cppID: id + "children", what: "child arguments were saved")
             report.expect(
-                childSource.projectRoot.isEmpty && childSource.voicegroupArg.isEmpty,
+                reopened.projectRoot.isEmpty && reopened.voicegroupArg.isEmpty,
                 cppID: id + "location-identity", message: "reused source adopts the exact-location opener")
-            let childSaved = try childSource.save()
+            let childSaved = try reopened.save()
             report.expect(
                 childSaved, cppID: id + "location-save",
                 message: "location-opened source saves through its exact recorded location")
@@ -704,7 +703,7 @@ private func editingStoreKit(_ report: CheckReport) {
                 childText.contains(kitBlankChildLine + "\n"),
                 cppID: id + "blank-line", message: "nil children write the shared blank template")
             report.expectEqual(
-                expected: VgVoice(macro: .square1, sustain: 15), actual: childSource.voiceAt(slot: 0),
+                expected: VgVoice(macro: .square1, sustain: 15), actual: reopened.voiceAt(slot: 0),
                 cppID: id + "blank-voice", what: "unassigned key parses as the blank template voice")
             let tableAfterDrumEdit = try ProjectFileStore.read(tablePath)
             report.expectEqual(
@@ -735,9 +734,9 @@ private func editingStoreKit(_ report: CheckReport) {
                 cppID: id + "picker-table-overlay", what: "shared build inputs prefer the staged table")
             let stagedKit = try store.kitSnapshot(id: before.id, slot: 10)
             report.expect(
-                stagedKit?.parent == splitParent && stagedKit?.subgroupSymbol == "fixture_drums_a"
-                    && stagedKit?.children.count == 128 && stagedKit?.children[36] == children[36]
-                    && stagedKit?.children[37] == children[37] && stagedKit?.table == table,
+                stagedKit.parent == splitParent && stagedKit.subgroupSymbol == "fixture_drums_a"
+                    && stagedKit.children.count == 128 && stagedKit.children[36] == children[36]
+                    && stagedKit.children[37] == children[37] && stagedKit.table == table,
                 cppID: id + "kitSnapshot-staged", message: "kit reader sees raw staged children and table before save")
             let splitLease = ProjectBankLease(
                 bank: split.view.bank, view: split.view, publicationOwner: UUID(), publicationRevision: 2)
@@ -934,7 +933,7 @@ private func editingUndefinedKit(_ report: CheckReport, root: URL) throws {
     let unchanged = try paths.map { try ProjectFileStore.read($0) }
     report.expect(
         before.slotViews[127].kind == .none && applied.view.slotViews[127].voice == parent
-            && applied.view.dirty && unchanged == diskBefore && staged?.children[0] == child,
+            && applied.view.dirty && unchanged == diskBefore && staged.children[0] == child,
         cppID: id + "undefined-slot", message: "undefined kit materializes dirty in memory with exact raw children")
     let sibling = VgVoice(macro: .square2, key: 70)
     _ = try store.applyVoicegroupEdit(
@@ -952,7 +951,7 @@ private func editingUndefinedKit(_ report: CheckReport, root: URL) throws {
             && reverted.view.slotViews[slot].voice == before.slotViews[slot].voice
     }
     report.expect(
-        restoredSlots && restored?.parent == nil && restored?.voicegroup == "_fixture_rich",
+        restoredSlots && restored.parent == nil && restored.voicegroup == "_fixture_rich",
         cppID: id + "undefined-slot", message: "kit undo removes the complete insertion despite a later scalar edit")
     _ = try store.applyKitEdit(input: edit, expected: .parent(nil))
     guard let saved = try store.saveVoicegroup(id: before.id) else {

@@ -136,6 +136,7 @@ public enum KitDraftCodec {
     }
 
     private static func zone(_ voice: VgVoice, start: Int, end: Int, pitched: Bool, mode: KitMode) -> KitZone {
+        // Raw drumkit pan 0 cannot distinguish unset from center, so both decode to center.
         let pan = mode == .drumkit && voice.pan != 0 ? ((0x80 | voice.pan) - 0xC0) * 2 : 0
         return KitZone(
             startKey: start, endKey: end, sampleName: voice.symbol, rootKey: voice.key,

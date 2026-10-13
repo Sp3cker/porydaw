@@ -302,7 +302,8 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 do {
                     let asset = try await service.sampleAsset(lease: song.bankLease, symbol: symbol)
                     guard let self, self.windowOpen, self.sessionGeneration == generation,
-                        self.boundSong === song, state.selectedSlot == slot, state.mode == mode
+                        self.boundSong === song, self.session?.catalogService === service,
+                        state.selectedSlot == slot, state.mode == mode
                     else { return }
                     if let asset { state.samples[symbol] = Self.processed(asset) }
                     state.dropSample(name: symbol, onKey: onKey)
@@ -534,6 +535,8 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 state.markClean()
                 self.cleanSourceSnapshot = state.session.snapshot()
                 if state.retargetVisible { state.completeRetarget() }
+                self.savedWavs = self.savedWavs.filter { renderKeys[$0.key] != nil }
+                self.savedRenderKeys = renderKeys
                 saveSucceeded = true
             } catch {
                 guard self.sessionGeneration == generation else { return }
@@ -683,7 +686,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
         }
         promptForVoicegroup = true
         closeGuard.request(
-            source: .retarget, dirty: true,
+            source: .retarget, dirty: state?.dirty ?? true,
             proceed: { [weak self] in
                 guard let self else { return }
                 self.promptForVoicegroup = false

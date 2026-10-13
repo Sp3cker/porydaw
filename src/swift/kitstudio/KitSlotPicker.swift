@@ -79,6 +79,7 @@ public final class KitSlotPicker {
         }
     }
 
+    // Existing rows must be ordered by ascending slot, like slots.
     func rows(existing: QListModel<KitSlotRow>) -> [KitSlotRow] {
         var existingIndex = 0
         return slots.map { (entry: (slot: Int, kind: KitSlotKind)) -> KitSlotRow in

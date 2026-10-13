@@ -411,9 +411,7 @@ public actor ProjectService {
             throw ProjectServiceError.serviceClosed
         }
         do {
-            guard let snapshot = try await store.kitSnapshot(lease: lease, slot: slot) else {
-                throw ProjectServiceError.operationFailed("Cannot read kit slot \(slot).")
-            }
+            let snapshot = try await store.kitSnapshot(lease: lease, slot: slot)
             return KitEditValue(
                 voicegroup: snapshot.voicegroup, slot: slot,
                 parent: snapshot.parent.map(copyVoice),

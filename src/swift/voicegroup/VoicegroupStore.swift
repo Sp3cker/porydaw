@@ -244,15 +244,9 @@ public final class VoicegroupStore {
             precondition(restored, "Previously parsed voicegroup bytes must restore")
             throw VoicegroupStoreError.operationFailed("Edited voicegroup failed to load.")
         }
-        record.current = bank
-        record.published = Self.publish(
-            id: record.id, source: source, bank: bank, staged: !record.kitKeys.isEmpty)
-        records[input.id] = record
+        republish(&record, bank: bank)
         let token = materialization.map { tokens.mint(id: input.id, materialization: $0) }
-        return .applied(
-            .init(
-                view: record.published, materialization: materialization,
-                materializationToken: token))
+        return .applied(.init(view: record.published, materialization: materialization, materializationToken: token))
     }
 
     /// Stages a kit edit and republishes only the requested voicegroup's bank.
@@ -291,10 +285,10 @@ public final class VoicegroupStore {
                 subgroup = try detachedSource(staged)
             } else {
                 subgroup = VoicegroupSource()
-                var error: String?
-                guard subgroup.open(location: location, error: &error) else {
+                var openError: String?
+                guard subgroup.open(location: location, error: &openError) else {
                     throw VoicegroupStoreError.operationFailed(
-                        "Cannot open \(location.filePath): \(error ?? "invalid source")")
+                        "Cannot open \(location.filePath): \(openError ?? "invalid source")")
                 }
             }
             if let table = input.table {
@@ -346,17 +340,15 @@ public final class VoicegroupStore {
         }
         record.source = parent
         record.kitKeys = keys
-        record.current = bank
-        record.published = Self.publish(id: input.id, source: parent, bank: bank, staged: !keys.isEmpty)
         kitStaging = staging
-        records[input.id] = record
+        republish(&record, bank: bank)
         return .applied(.init(view: record.published, materialization: materialization, materializationToken: nil))
     }
 
     /// Reads raw parent and child voices through the current kit staging overlays.
     /// - Returns: A parent-only value for a non-kit or undefined slot.
     /// - Throws: `VoicegroupStoreError` for an unloaded bank or invalid source.
-    public func kitSnapshot(id: VoicegroupId, slot: Int) throws -> KitSnapshot? {
+    public func kitSnapshot(id: VoicegroupId, slot: Int) throws -> KitSnapshot {
         guard try refreshIfStale(id: id), let source = records[id]?.source else {
             throw VoicegroupStoreError.operationFailed("Voicegroup is not loaded: \(id.sourceRelativePath)")
         }
@@ -475,6 +467,13 @@ public final class VoicegroupStore {
         return record.published
     }
 
+    private func republish(_ record: inout BankRecord, bank: Bank) {
+        record.current = bank
+        record.published = Self.publish(
+            id: record.id, source: record.source, bank: bank, staged: !record.kitKeys.isEmpty)
+        records[record.id] = record
+    }
+
     private func detachedSource(_ source: VoicegroupSource) throws -> VoicegroupSource {
         let copy = VoicegroupSource()
         var error: String?
@@ -521,7 +520,7 @@ public final class VoicegroupStore {
                 ($0.filePath, $0.sectionLabel) < ($1.filePath, $1.sectionLabel)
             }) {
                 guard let staged = kitStaging.subgroups[location] else {
-                    preconditionFailure("Tracked kit subgroup has no staged source")
+                    throw VoicegroupStoreError.operationFailed("Tracked kit subgroup has no staged source")
                 }
                 subgroups.append(try detachedSource(staged))
                 originals[location.filePath] = try ProjectFileStore.read(location.filePath)
@@ -529,7 +528,7 @@ public final class VoicegroupStore {
             let files = layout.ensuringDeepScan().keysplitTableFiles
             for name in keys.tables.sorted() {
                 guard let table = kitStaging.tables[name] else {
-                    preconditionFailure("Tracked kit table has no staged value")
+                    throw VoicegroupStoreError.operationFailed("Tracked kit table has no staged value")
                 }
                 var path = files.first ?? projectRoot + "/sound/keysplit_tables.inc"
                 for candidate in files {
@@ -573,7 +572,9 @@ public final class VoicegroupStore {
             keysplits = priorTables
             textCache.removeAll()
             for path in written {
-                guard let bytes = originals[path] else { preconditionFailure("Written kit source has no snapshot") }
+                guard let bytes = originals[path] else {
+                    throw VoicegroupStoreError.operationFailed("Written kit source has no snapshot: \(path)")
+                }
                 do {
                     try ProjectFileStore.writeAtomic(path, data: bytes)
                 } catch {
@@ -586,7 +587,7 @@ public final class VoicegroupStore {
         record.current = bank
         record.sourceFileTime = time
         record.kitKeys = KitStaging.Keys()
-        for (id, var other) in records where id != record.id {
+        for (otherId, var other) in records where otherId != record.id {
             guard
                 !other.kitKeys.subgroups.isDisjoint(with: keys.subgroups)
                     || !other.kitKeys.tables.isDisjoint(with: keys.tables)
@@ -594,8 +595,8 @@ public final class VoicegroupStore {
             other.kitKeys.subgroups.subtract(keys.subgroups)
             other.kitKeys.tables.subtract(keys.tables)
             other.published = Self.publish(
-                id: id, source: other.source, bank: other.current, staged: !other.kitKeys.isEmpty)
-            records[id] = other
+                id: otherId, source: other.source, bank: other.current, staged: !other.kitKeys.isEmpty)
+            records[otherId] = other
         }
         kitStaging = savedStaging
         textCache.removeAll()

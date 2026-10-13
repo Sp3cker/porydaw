@@ -134,14 +134,13 @@ extension SongTabsController {
             app?.reloadApproved(label: replacement, replacing: PendingReload(tab))
             return
         }
-        app?.offerSplitStudioOrphans(
-            proceed: { [weak self, weak tab] in
-                guard let self, let tab, self.tab(id: tabId) === tab,
-                    let currentIndex = self.tabIndex(of: tabId)
-                else { return }
-                self.removeClosedTab(index: currentIndex)
-            },
-            cancel: {})
+        let removeTab = { [weak self, weak tab] in
+            guard let self, let tab, self.tab(id: tabId) === tab,
+                let currentIndex = self.tabIndex(of: tabId)
+            else { return }
+            self.removeClosedTab(index: currentIndex)
+        }
+        app?.offerSplitStudioOrphans(proceed: removeTab, cancel: removeTab)
     }
 
     private func removeClosedTab(index: Int) {

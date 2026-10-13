@@ -153,7 +153,8 @@ public enum SampleRegistrar {
     public static func deleteRegistration(
         projectRoot: String, name: String
     ) throws(SampleRegistrationError) -> Bool {
-        let path = projectRoot + "/sound/direct_sound_data.inc"
+        let layout = probe(projectRoot: projectRoot)
+        let path = layout.incPath
         let content: Data
         do { content = try ProjectFileStore.read(path) } catch {
             throw SampleRegistrationError(message: "cannot read \(path).")
@@ -166,7 +167,8 @@ public enum SampleRegistrar {
         guard let index = lines.indices.first(where: { AsmLine.equals(statement($0), label) }) else {
             return false
         }
-        let incbin = Array((".incbin \"sound/direct_sound_samples/" + name + ".bin\"").utf8)
+        let samplesPath = String(layout.samplesDir.dropFirst(projectRoot.count + 1))
+        let incbin = Array((".incbin \"" + samplesPath + "/" + name + ".bin\"").utf8)
         guard index > 0, index + 1 < lines.count,
             AsmLine.equals(statement(index - 1), Array(".align 2".utf8)),
             AsmLine.equals(statement(index + 1), incbin),
@@ -182,7 +184,7 @@ public enum SampleRegistrar {
         for raw in lines[first...(index + 1)] { end = min(content.endIndex, end + raw.count + 1) }
         var updated = content
         updated.removeSubrange(start..<end)
-        let wavPath = projectRoot + "/sound/direct_sound_samples/" + name + ".wav"
+        let wavPath = layout.samplesDir + "/" + name + ".wav"
         var isDirectory: ObjCBool = false
         if FileManager.default.fileExists(atPath: wavPath, isDirectory: &isDirectory), isDirectory.boolValue {
             throw SampleRegistrationError(message: "cannot remove \(wavPath): not a sample file.")

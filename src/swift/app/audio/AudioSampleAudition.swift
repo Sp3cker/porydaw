@@ -160,10 +160,13 @@ final class AudioSampleAudition {
         let table = bytes.advanced(by: tableOffset).bindMemory(to: UInt8.self, capacity: 128)
         table.initialize(repeating: 0, count: 128)
         if kit.mode == .keysplit, let split = kit.splitTable {
-            split.withUnsafeBufferPointer { source in
-                guard let base = source.baseAddress else { preconditionFailure("validated split table is nonempty") }
+            guard
+                split.withUnsafeBufferPointer({ source in
+                    guard let base = source.baseAddress else { return false }
                 table.update(from: base, count: 128)
-            }
+                    return true
+                })
+            else { return false }
         }
         var offset = assetOffset
         for (ordinal, child) in kit.children.enumerated() {
@@ -173,10 +176,13 @@ final class AudioSampleAudition {
                 let pcm, let frequency, let childKey, let panSweep, let adsr, let kind, let looped, let loopStart):
                 guard !pcm.isEmpty else { continue }
                 let data = bytes.advanced(by: offset).bindMemory(to: Int8.self, capacity: pcm.count + 1)
-                pcm.withUnsafeBufferPointer { source in
-                    guard let base = source.baseAddress else { preconditionFailure("validated PCM is nonempty") }
+                guard
+                    pcm.withUnsafeBufferPointer({ source in
+                        guard let base = source.baseAddress else { return false }
                     data.initialize(from: base, count: source.count)
-                }
+                        return true
+                    })
+                else { return false }
                 data.advanced(by: pcm.count).initialize(to: pcm[pcm.count - 1])
                 offset += pcm.count + 1
                 configureWave(
@@ -203,12 +209,13 @@ final class AudioSampleAudition {
                     guard let wave = voice.progWave else { continue }
                     offset = (offset + 15) & ~15
                     let words = bytes.advanced(by: offset).bindMemory(to: UInt32.self, capacity: 4)
-                    wave.withUnsafeBufferPointer { source in
-                        guard let base = source.baseAddress else {
-                            preconditionFailure("validated wave has four words")
-                        }
+                    guard
+                        wave.withUnsafeBufferPointer({ source in
+                            guard let base = source.baseAddress else { return false }
                         words.initialize(from: base, count: 4)
-                    }
+                            return true
+                        })
+                    else { return false }
                     offset += 16
                     tone.type = UInt8(voice.kind == 7 ? VOICE_PROGRAMMABLE_WAVE : VOICE_PROGRAMMABLE_WAVE_ALT)
                     tone.wavePointer = words
