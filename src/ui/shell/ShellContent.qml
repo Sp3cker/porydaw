@@ -78,7 +78,8 @@ Item {
                 objectName: "shellShortcut_" + shortcutDelegate.modelData
                 sequences: content.shell.actionSequences(shortcutDelegate.modelData)
                 context: Qt.WindowShortcut
-                enabled: shortcutDelegate.actionState.enabled
+                // Qt also considers transient-dialog parents active; require focus in this window.
+                enabled: shortcutDelegate.actionState.enabled && content.root.activeFocusItem !== null
                 onActivated: content.shell.activate(shortcutDelegate.modelData)
             }
         }

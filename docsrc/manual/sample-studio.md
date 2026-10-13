@@ -16,6 +16,9 @@ browse the library instead. You can also use **New…** or **Edit…** beside th
 sample picker in the voicegroup dock; a sample committed from there is
 assigned to that voice.
 
+Press **Cmd+W** on macOS or **Ctrl+W** on Windows/Linux to close Sample Studio
+without committing its edits. The song tab stays open.
+
 ## Sample library
 
 Choose **Add Folder…** to bookmark a folder. The library remembers saved

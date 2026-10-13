@@ -78,6 +78,12 @@ DialogWindow {
         }
     }
 
+    Shortcut {
+        objectName: "sampleStudioCloseShortcut"
+        sequences: [StandardKey.Close]
+        context: Qt.WindowShortcut
+        onActivated: dialog.close()
+    }
     Shortcut { sequences: [StandardKey.Undo]; context: Qt.WindowShortcut; onActivated: dialog.editor.undo() }
     Shortcut { sequences: [StandardKey.Redo]; context: Qt.WindowShortcut; onActivated: dialog.editor.redo() }
     Timer { interval: 33; repeat: true; running: dialog.audition.playing; onTriggered: dialog.audition.tick() }
