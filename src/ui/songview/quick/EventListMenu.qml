@@ -23,7 +23,7 @@ Loader {
                     const count = menuPanel.rowCount
                     for (let offset = 1; offset <= count; ++offset) {
                         const index = (menuPanel.highlightedRow + offset + count) % count
-                        const row = menuLoader.controller.menuItem(index) as EventListMenuItem
+                        const row = menuLoader.controller.menuItem(index) as MenuRow
                         if (row && row.enabled && !row.separator
                             && row.text.toLowerCase().startsWith(prefix.toLowerCase()))
                             return index
@@ -41,7 +41,7 @@ Loader {
                                     ? menuPanel.highlightedRow : (direction > 0 ? -1 : 0)
                             for (let offset = 1; offset <= count; ++offset) {
                                 const row = (start + direction * offset + count * 2) % count
-                                const item = menuLoader.controller.menuItem(row) as EventListMenuItem
+                                const item = menuLoader.controller.menuItem(row) as MenuRow
                                 if (item && item.enabled && !item.separator) {
                                     menuLoader.page.hoverRow(menuPanel, row)
                                     break

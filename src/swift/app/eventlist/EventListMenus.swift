@@ -4,31 +4,6 @@ import QtBridge
 import PorydawAppEventList
 import PorydawAppCommands
 
-@MainActor
-@QtBridgeable
-public final class EventListMenuItem {
-    public let actionId: Int
-    public let text: String
-    public let enabled: Bool
-    public let checkable: Bool
-    public let checked: Bool
-    public let separator: Bool
-    public let shortcutText: String
-
-    init(
-        _ id: Int, _ text: String, enabled: Bool = true,
-        checkable: Bool = false, checked: Bool = false,
-        separator: Bool = false, shortcutText: String = ""
-    ) {
-        actionId = id
-        self.text = text
-        self.enabled = enabled
-        self.checkable = checkable
-        self.checked = checked
-        self.separator = separator
-        self.shortcutText = shortcutText
-    }
-}
 
 enum EventListMenuKind {
     case chunk, filter, row, type
@@ -46,10 +21,10 @@ extension EventListPresenter {
         menuKind = .chunk
         openMenu(
             x: x, y: y,
-            items: chunkLabels.enumerated().map {
-                EventListMenuItem(
-                    $0.offset, $0.element, checkable: true,
-                    checked: $0.offset == chunkIndex)
+            items: chunkLabels.enumerated().map { (entry: (offset: Int, element: String)) -> MenuRow in
+                MenuRow(
+                    actionId: entry.offset, text: entry.element, checkable: true,
+                    checked: entry.offset == chunkIndex)
             })
     }
 
@@ -58,10 +33,10 @@ extension EventListPresenter {
         menuKind = .filter
         openMenu(
             x: x, y: y,
-            items: EventListMenuKind.categories.map {
-                EventListMenuItem(
-                    $0.bit, $0.label, checkable: true,
-                    checked: filterMask & $0.bit != 0)
+            items: EventListMenuKind.categories.map { (category: (bit: Int, label: String)) -> MenuRow in
+                MenuRow(
+                    actionId: category.bit, text: category.label, checkable: true,
+                    checked: filterMask & category.bit != 0)
             })
     }
 
@@ -75,29 +50,29 @@ extension EventListPresenter {
             guard let selected = model.row(at: $0) else { return false }
             return selected.eventIndex != nil || selected.tempo != nil
         }.count
-        var items = [EventListMenuItem(1, "Insert event")]
+        var items = [MenuRow(actionId: 1, text: "Insert event")]
         if row?.kind == .program, row?.eventIndex != nil {
-            items.append(EventListMenuItem(2, "Show voice in voicegroup"))
+            items.append(MenuRow(actionId: 2, text: "Show voice in voicegroup"))
         }
         if row?.eventIndex != nil {
-            items.append(EventListMenuItem(0, "", enabled: false, separator: true))
+            items.append(MenuRow(actionId: 0, enabled: false, separator: true))
             items.append(
-                EventListMenuItem(
-                    3, "Move Event Up (Same Tick)",
+                MenuRow(
+                    actionId: 3, text: "Move Event Up (Same Tick)",
                     enabled: moveDestination(delta: -1) != nil,
                     shortcutText: keybindings.sequences("eventlist.move_up")
                         .first?.nativeText ?? ""))
             items.append(
-                EventListMenuItem(
-                    4, "Move Event Down (Same Tick)",
+                MenuRow(
+                    actionId: 4, text: "Move Event Down (Same Tick)",
                     enabled: moveDestination(delta: 1) != nil,
                     shortcutText: keybindings.sequences("eventlist.move_down")
                         .first?.nativeText ?? ""))
         }
-        items.append(EventListMenuItem(0, "", enabled: false, separator: true))
+        items.append(MenuRow(actionId: 0, enabled: false, separator: true))
         items.append(
-            EventListMenuItem(
-                5, deletable > 0 ? "Delete \(deletable) event(s)" : "Delete",
+            MenuRow(
+                actionId: 5, text: deletable > 0 ? "Delete \(deletable) event(s)" : "Delete",
                 enabled: deletable > 0))
         openMenu(x: x, y: y, items: items)
     }
@@ -113,20 +88,20 @@ extension EventListPresenter {
         ]
         openMenu(
             x: x, y: y,
-            items: names.enumerated().map {
-                EventListMenuItem(
-                    $0.offset, $0.element,
-                    enabled: $0.offset != 9 || chunkIndex == 0,
-                    checkable: true, checked: $0.offset == model.rowType(row: menuRow))
+            items: names.enumerated().map { (entry: (offset: Int, element: String)) -> MenuRow in
+                MenuRow(
+                    actionId: entry.offset, text: entry.element,
+                    enabled: entry.offset != 9 || chunkIndex == 0,
+                    checkable: true, checked: entry.offset == model.rowType(row: menuRow))
             })
     }
 
-    private func openMenu(x: Double, y: Double, items: [EventListMenuItem]) {
+    private func openMenu(x: Double, y: Double, items: [MenuRow]) {
         menuX = x
         menuY = y
         menuShortcutText =
-            items.max(by: {
-                $0.shortcutText.count < $1.shortcutText.count
+            items.max(by: { (lhs: MenuRow, rhs: MenuRow) -> Bool in
+                lhs.shortcutText.count < rhs.shortcutText.count
             })?.shortcutText ?? ""
         menuSeparatorCount = items.filter(\.separator).count
         menuItems.reset(to: items)

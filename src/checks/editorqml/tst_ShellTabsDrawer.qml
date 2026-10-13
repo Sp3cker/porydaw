@@ -76,7 +76,7 @@ ShellTabsSupport {
             if (!menu || !menu.visible) return false
             for (var index = 0; index < menu.rowCount; ++index) {
                 var row = menu.rowItem(index)
-                if (row && row.model.actionId === 12) rangeRow = row
+                if (row && row.itemData.actionId === 12) rangeRow = row
             }
             return rangeRow && rangeRow.visible
         }, 3000, "the second tab opens the real Volume range menu")
@@ -87,7 +87,7 @@ ShellTabsSupport {
             if (!submenu || !submenu.visible) return false
             for (var index = 0; index < submenu.rowCount; ++index) {
                 var row = submenu.rowItem(index)
-                if (row && row.model.actionId === 16) halfRange = row
+                if (row && row.itemData.actionId === 16) halfRange = row
             }
             return halfRange && halfRange.visible
         }, 3000, "hover exposes a real 0–64 Volume range choice")
@@ -484,7 +484,7 @@ ShellTabsSupport {
         tryVerify(function() {
             for (var index = 0; index < menu.rowCount; ++index) {
                 var row = menu.rowItem(index)
-                if (row && row.model.actionId === 12) rangeRow = row
+                if (row && row.itemData.actionId === 12) rangeRow = row
             }
             return rangeRow !== null
         }, 3000, "the real Volume menu contains a Range action")
@@ -500,7 +500,7 @@ ShellTabsSupport {
         tryVerify(function() {
             for (var index = 0; index < submenu.rowCount; ++index) {
                 var row = submenu.rowItem(index)
-                if (row && row.model.actionId === 16) halfRange = row
+                if (row && row.itemData.actionId === 16) halfRange = row
             }
             return halfRange !== null
         }, 3000, "the Range submenu contains a 0–64 action")

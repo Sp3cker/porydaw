@@ -142,20 +142,20 @@ extension PianoGrid {
         gridFeelControlText = tripletGrid ? "Triplet" : "Straight"
         if gridMenuKind == 1 {
             gridMenuRows.reset(
-                to: viewport.grid.selections.map { item in
+                to: viewport.grid.selections.map { (item: GridSelection) -> MenuRow in
                     let text = gridDivisionText(item)
-                    return GridSubdivisionMenuItem(
+                    return MenuRow(
                         actionId: item.toMenuId(), text: text,
-                        checked: item == selection)
+                        checkable: true, checked: item == selection)
                 })
         } else if gridMenuKind == 2 {
             gridMenuRows.reset(to: [
-                GridSubdivisionMenuItem(
+                MenuRow(
                     actionId: 0, text: "Straight",
-                    checked: !tripletGrid),
-                GridSubdivisionMenuItem(
+                    checkable: true, checked: !tripletGrid),
+                MenuRow(
                     actionId: 1, text: "Triplet",
-                    checked: tripletGrid),
+                    checkable: true, checked: tripletGrid),
             ])
         }
     }

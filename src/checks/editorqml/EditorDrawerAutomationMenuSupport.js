@@ -2,13 +2,22 @@
 .import "EditorDrawerAutomationTabsSupport.js" as AutomationTabsSupport
 .import "EditorDrawerAutomationGestureSupport.js" as AutomationGestureSupport
 
-    function automationMenuRowItems(testCase) {
+    function automationMenuItems(testCase, separators) {
         var root = testCase.findChild(testCase.surface, "automationMenu")
-        if (!root || root.visible !== true)
+        var panel = root ? testCase.findChild(root, "automationMenuPanel") : null
+        if (!root || !root.visible || !panel)
             return []
-        return PageSupport.collectByPrefix(testCase, root, "automationMenuRow_", []).filter(function(row) {
-            return !row.model.separator
-        })
+        var rows = []
+        for (var i = 0; i < panel.rowCount; ++i) {
+            var row = panel.rowItem(i)
+            if (row && row.separator === separators)
+                rows.push(row)
+        }
+        return rows
+    }
+
+    function automationMenuRowItems(testCase) {
+        return automationMenuItems(testCase, false)
     }
 
     // Like the original quick_popup driver: resolve the current typed row in
@@ -17,18 +26,13 @@
         if (!panel) return null
         for (var i = 0; i < panel.rowCount; ++i) {
             var row = panel.rowItem(i)
-            if (row && row.model.actionId === actionId) return row
+            if (row && row.actionId === actionId) return row
         }
         return null
     }
 
     function automationMenuSeparatorItems(testCase) {
-        var root = testCase.findChild(testCase.surface, "automationMenu")
-        if (!root || root.visible !== true)
-            return []
-        return PageSupport.collectByPrefix(testCase, root, "automationMenuRow_", []).filter(function(row) {
-            return row.model.separator
-        })
+        return automationMenuItems(testCase, true)
     }
 
     function clearAutomationLane(testCase, tabIndex) {
@@ -149,7 +153,7 @@
         var published = testCase.bootstrap.automationMenuActions().split(",")
         var rows = automationMenuRowItems(testCase)
         for (var i = 0; i < rows.length; ++i) {
-            if (rows[i].model.actionId === actionId && published.indexOf(String(actionId)) >= 0) {
+            if (rows[i].actionId === actionId && published.indexOf(String(actionId)) >= 0) {
                 testCase.mouseClick(rows[i], rows[i].width / 2, rows[i].height / 2, Qt.LeftButton)
                 return true
             }

@@ -19,6 +19,10 @@ uv run --no-sync dev checks:backups                 # Foundation-only Swift pack
 AGENTS.md § Build & checks is the task index; this file is the pipeline
 reference. For `checks:bridge`, `format`, and `setup` see that table.
 
+Popup-menu presenters publish `QListModel<MenuRow>` in `PorydawApp`.
+`QuickMenuPanel` consumes typed required scalar roles and a `MenuRow` display handle.
+Hosts retain action dispatch and any action-ID-to-object-name mappings.
+
 Provision once with `uv sync --locked`, including each new worktree and after lock/project changes. Warm commands use `--no-sync`; no implicit Python dependency resolution. `--help` loads only the command front end. See [INSTALL.md](../INSTALL.md) for native host prerequisites and optional checkout-local Qt provisioning.
 
 On macOS, native targets use the selected Qt framework's non-system search

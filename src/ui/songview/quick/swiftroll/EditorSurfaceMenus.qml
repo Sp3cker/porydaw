@@ -28,7 +28,7 @@ Item {
         required property int index
         required property int menuKind
         required property string text
-        final readonly property App.RulerMenuRow rulerRow: menuKind === 3 && menuHost.root.rulerMenu
+        final readonly property App.MenuRow rulerRow: menuKind === 3 && menuHost.root.rulerMenu
             ? menuHost.root.rulerMenu.menuRow(index) : null
         readonly property bool separator: rulerRow ? rulerRow.separator : false
         readonly property string shortcutText: rulerRow ? rulerRow.shortcutText : ""
@@ -101,15 +101,15 @@ Item {
     }
     function activateRow(panel: QuickMenuPanel, row: int): void {
         if (panel.rowObjectNamePrefix === "headerMenuRow_") {
-            const item = menuHost.root.headersModel.menuItem(row) as App.TrackHeaderMenuItem
+            const item = menuHost.root.headersModel.menuItem(row) as App.MenuRow
             if (item && item.enabled)
                 menuHost.root.headersModel.activateHeaderMenuAction(item.actionId)
         } else if (panel.rowObjectNamePrefix === "gridMenuRow_") {
-            const item = menuHost.root.gridModel.gridMenuRow(row) as App.GridSubdivisionMenuItem
+            const item = menuHost.root.gridModel.gridMenuRow(row) as App.MenuRow
             if (item && item.enabled)
                 menuHost.root.gridModel.activateGridMenuRow(item.actionId)
         } else if (panel.rowObjectNamePrefix === "rulerMenuRow_") {
-            const item = menuHost.root.rulerMenu.menuRow(row) as App.RulerMenuRow
+            const item = menuHost.root.rulerMenu.menuRow(row) as App.MenuRow
             if (!item || !item.enabled || item.separator)
                 return
             const targetTick = menuHost.root.rulerMenu.targetTick()

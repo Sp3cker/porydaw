@@ -101,7 +101,7 @@ public final class EventListPresenter: QmlUncreatable {
     @QtIgnored public var selectedRows: [Int] = [] {
         didSet { publishSelection(previous: oldValue) }
     }
-    public var menuItems: QListModel<EventListMenuItem> = QListModel()
+    public var menuItems: QListModel<MenuRow> = QListModel()
     @QtTracked public var menuShortcutText = ""
     @QtTracked public var menuSeparatorCount = 0
     @QtTracked public var menuX = 0.0
@@ -419,7 +419,7 @@ public final class EventListPresenter: QmlUncreatable {
         tableRows.value(row: row, column: 0) as? EventListRowHandle
     }
 
-    public func menuItem(row: Int) -> Optional<EventListMenuItem> {
+    public func menuItem(row: Int) -> Optional<MenuRow> {
         menuItems.indices.contains(row) ? menuItems[row] : nil
     }
 

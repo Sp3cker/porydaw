@@ -26,7 +26,7 @@ public struct HeaderScrollPosition {
 @QtBridgeable
 public final class TrackHeadersPresenter {
     public var rows: QListModel<TrackHeaderRowHandle> = QListModel()
-    public var menuItems: QListModel<TrackHeaderMenuItem> = QListModel()
+    public var menuItems: QListModel<MenuRow> = QListModel()
     public var trackHeaderWidth: Double = 0
     public var rowHeight: Int = 0
     public var activityWidth: Int = 0
@@ -312,7 +312,7 @@ public final class TrackHeadersPresenter {
         return rows[index]
     }
 
-    public func menuItem(index: Int) -> Optional<TrackHeaderMenuItem> {
+    public func menuItem(index: Int) -> Optional<MenuRow> {
         guard index >= 0, index < menuItems.count else { return nil }
         return menuItems[index]
     }
@@ -528,8 +528,8 @@ public final class TrackHeadersPresenter {
             "Duplicate track", "Delete track",
         ]
         menuItems.reset(
-            to: labels.enumerated().map { index, text in
-                TrackHeaderMenuItem(
+            to: labels.enumerated().map { (index: Int, text: String) -> MenuRow in
+                MenuRow(
                     actionId: index + 1, text: text,
                     enabled: index != 3 || session.document.canAddTrack)
             })
@@ -624,17 +624,6 @@ public final class TrackHeaderRowHandle {
     }
 }
 
-@MainActor
-@QtBridgeable
-public final class TrackHeaderMenuItem {
-    public var actionId: Int
-    public var text: String
-    public var enabled: Bool
-
-    init(actionId: Int, text: String, enabled: Bool) {
-        self.actionId = actionId; self.text = text; self.enabled = enabled
-    }
-}
 
 @MainActor
 struct PendingHeaderMenu {

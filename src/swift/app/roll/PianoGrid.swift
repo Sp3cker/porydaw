@@ -145,7 +145,7 @@ public final class PianoGrid: QmlUncreatable {
     @QtTracked public var visibleRowCount = 128
     @QtTracked public var tripletGrid = false
     @QtTracked public var gridSelectionMenuId = -1
-    public var gridMenuRows: QListModel<GridSubdivisionMenuItem> = QListModel()
+    public var gridMenuRows: QListModel<MenuRow> = QListModel()
     @QtTracked public var gridMenuKind = 0
     @QtTracked public var gridDivisionControlText = "Auto"
     @QtTracked public var gridFeelControlText = "Straight"
@@ -307,7 +307,7 @@ public final class PianoGrid: QmlUncreatable {
 
     public func dismissGridMenu() { dismissGridMenuImpl() }
 
-    public func gridMenuRow(index: Int) -> Optional<GridSubdivisionMenuItem> {
+    public func gridMenuRow(index: Int) -> Optional<MenuRow> {
         guard index >= 0, index < gridMenuRows.count else { return nil }
         return gridMenuRows[index]
     }
@@ -413,18 +413,3 @@ public final class PianoGrid: QmlUncreatable {
 
 }
 
-@MainActor
-@QtBridgeable
-public final class GridSubdivisionMenuItem {
-    public let actionId: Int
-    public let text: String
-    public var enabled: Bool = true
-    public var checkable: Bool = true
-    public let checked: Bool
-
-    init(actionId: Int, text: String, checked: Bool) {
-        self.actionId = actionId
-        self.text = text
-        self.checked = checked
-    }
-}

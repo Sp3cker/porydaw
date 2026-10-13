@@ -264,10 +264,10 @@ extension AutomationPage {
     func publishMenuRows() {
         let values = menu?.rows ?? []
         menuRowSnapshots = values
-        syncModel(menuRows, values, matches: { $0.matches($1) })
+        syncModel(menuRows, values, matches: { (lhs: MenuRow, rhs: MenuRow) -> Bool in lhs.matches(rhs) })
         menuRowCount = values.count
-        let children: [AutomationMenuRowHandle] =
-            menu.flatMap { state in
+        let children: [MenuRow] =
+            menu.flatMap { (state: AutomationMenuState) -> [MenuRow]? in
                 if case .lane = state.target { return rangeMenuRows(facts: state.facts) }
                 return nil
             } ?? []

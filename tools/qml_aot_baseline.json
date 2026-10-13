@@ -1,6 +1,6 @@
 {
-  "rejected": 113,
-  "total": 7117,
+  "rejected": 104,
+  "total": 7116,
   "files": {
     "src/ui/icons/AppIcon.qml": 0,
     "src/ui/icons/IconSpec.qml": 0,
@@ -65,7 +65,7 @@
     "src/ui/songview/quick/PromptButton.qml": 0,
     "src/ui/songview/quick/PromptCard.qml": 0,
     "src/ui/songview/quick/PromptOverlay.qml": 4,
-    "src/ui/songview/quick/QuickMenuPanel.qml": 13,
+    "src/ui/songview/quick/QuickMenuPanel.qml": 4,
     "src/ui/songview/quick/RulerToolTip.qml": 0,
     "src/ui/songview/quick/TimeSignaturePrompt.qml": 1,
     "src/ui/songview/quick/TimelineScrollbar.qml": 3,
@@ -109,7 +109,7 @@
     "src/ui/style/ProgressBar.qml": 4,
     "src/ui/style/SpinBox.qml": 2
   },
-  "propertyVarCount": 22,
+  "propertyVarCount": 20,
   "revisionDependencyReads": 0,
   "pragmaAllowlist": [
     "src/ui/icons/Icons.qml",

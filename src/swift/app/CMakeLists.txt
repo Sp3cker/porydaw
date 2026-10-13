@@ -73,6 +73,7 @@ add_library(PorydawApp STATIC
     voicelist/SamplePickerRows.swift
     voicelist/VoiceEditorController.swift
     MouseHints.swift
+    MenuRow.swift
     QmlEngineAccess.swift
     roll/PianoGrid.swift
     roll/PianoGrid+Support.swift

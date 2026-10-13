@@ -286,7 +286,7 @@ EditorDrawerTestSupport {
         mouseMove(row, row.width / 2, row.height / 2)
         tryVerify(function() {
             var choice = AutomationMenuSupport.menuRowByAction(testCase, child, 16)
-            return choice && choice.model.checked
+            return choice && choice.itemData.checked
         }, 1000, "a drawer page switch preserves the automation view state")
         keyClick(Qt.Key_Escape)
         keyClick(Qt.Key_Escape)

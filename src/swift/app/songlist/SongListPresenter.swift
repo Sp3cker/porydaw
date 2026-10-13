@@ -71,6 +71,7 @@ public final class SongListPresenter {
 
     public var rows: QListModel<SongListRow> = QListModel()
     public var categories: QListModel<SongListCategory> = QListModel()
+    public var menuRows: QListModel<MenuRow> = QListModel()
     @QtTracked public var rowCount = 0
     @QtTracked public var totalCount = 0
     /// "%1 songs" or "%1 of %2 songs" while filtered.
@@ -280,6 +281,21 @@ public final class SongListPresenter {
     /// Register Song enablement: any song with missing registration entries.
     public func canRegister(songId: Int) -> Bool {
         songs.first { $0.id == songId }?.registrationIncomplete ?? false
+    }
+
+    public func prepareMenu(songId: Int) {
+        menuRows.reset(to: [
+            MenuRow(actionId: 0, text: "Open"),
+            MenuRow(actionId: 1, text: "Open in New Tab"),
+            MenuRow(actionId: 2, enabled: false, separator: true),
+            MenuRow(actionId: 3, text: "Register Song", enabled: canRegister(songId: songId)),
+            MenuRow(actionId: 4, text: "Delete Song…"),
+        ])
+    }
+
+    public func menuRow(index: Int) -> Optional<MenuRow> {
+        guard menuRows.indices.contains(index) else { return nil }
+        return menuRows[index]
     }
 
     // MARK: - New Song name laws (fork newsongwizard identity field)
