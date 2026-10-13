@@ -21,6 +21,8 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         Label { text: qsTr("Zones"); color: view.colors.windowText }
+        Button { objectName: "splitStudioModeDrumkit"; text: qsTr("Drumkit"); checked: view.editor.mode === 0; onClicked: view.editor.setMode(0) }
+        Button { objectName: "splitStudioModeKeysplit"; text: qsTr("Keysplit"); checked: view.editor.mode === 1; onClicked: view.editor.setMode(1) }
         Button { text: "−"; Accessible.name: qsTr("Zoom keyboard out"); onClicked: view.keyboardZoom = Math.max(0.5, view.keyboardZoom / 1.25) }
         Button { text: "+"; Accessible.name: qsTr("Zoom keyboard in"); onClicked: view.keyboardZoom = Math.min(4, view.keyboardZoom * 1.25) }
         SpinBox { id: firstKey; from: 0; to: 127; value: 60; editable: true }
