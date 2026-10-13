@@ -488,8 +488,8 @@ private func renderRatePolicy(_ report: CheckReport) {
             SampleRatePolicy.targetRate(gbaReady: true, sourceRate: sourceRate) == sourceRate,
             message: "a GBA-ready source keeps its \(sourceRate) Hz rate")
         check.expect(
-            SampleRatePolicy.targetRate(gbaReady: false, sourceRate: sourceRate) == 13379,
-            message: "a non-GBA-ready source selects 13379 Hz regardless of its source rate")
+            SampleRatePolicy.targetRate(gbaReady: false, sourceRate: sourceRate) == min(sourceRate, 13379),
+            message: "a non-GBA-ready source caps at 13379 Hz without upsampling")
     }
     check.expect(
         SampleRatePolicy.rateOptions(sourceRate: 44100) == [44100] + fixed

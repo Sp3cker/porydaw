@@ -1,7 +1,7 @@
 import PorydawPlaybackNative
 import Synchronization
 
-public struct AudioADSR {
+public struct AudioADSR: Sendable {
     public var attack: UInt8
     public var decay: UInt8
     public var sustain: UInt8
@@ -68,6 +68,11 @@ public final class AudioAudition {
 
     public func publishWave(wave16: [UInt8], key: UInt8, adsr: AudioADSR) -> Bool {
         samples.publish(wave16: wave16, key: key, adsr: adsr)
+    }
+
+    /// Publishes an in-memory kit through the shared four-slot retirement pool.
+    public func publishKitTone(_ tone: KitAuditionTone, key: UInt8) -> Bool {
+        samples.publishKitTone(tone, key: key)
     }
 
     public func sampleOff() { samples.off() }

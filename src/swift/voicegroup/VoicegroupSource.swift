@@ -240,6 +240,28 @@ public final class VoicegroupSource {
         return found
     }
 
+    /// Parses kit voice lines with their canonical enclosing declaration symbols.
+    public static func kitReferences(in text: [UInt8]) -> [(sectionLabel: String, voice: VgVoice)] {
+        var result: [(sectionLabel: String, voice: VgVoice)] = []
+        var sectionLabel: String?
+        let specs = [VoiceMacroSpec.forMacro(.keysplitAll), VoiceMacroSpec.forMacro(.keysplit)]
+        for raw in splitLines(text).lines {
+            let content = raw[contentBounds(raw)]
+            if content.starts(with: headerPrefix.dropLast()) || hasSectionLabelSeparator(content),
+                let declaration = declarations(in: Array(raw)).first
+            {
+                sectionLabel = declaration.symbol
+                continue
+            }
+            guard let sectionLabel else { continue }
+            guard let spec = specs.first(where: { content.starts(with: $0.prefix) }),
+                let voice = try? decode(spec, arguments: content.dropFirst(spec.prefix.count))
+            else { continue }
+            result.append((sectionLabel: sectionLabel, voice: voice))
+        }
+        return result
+    }
+
     func parse(_ content: [UInt8], error: inout String?) -> Bool {
         guard let parsed = parsedSource(content) else {
             error = "Label \(sectionLabel):: not found in \(filePath)"

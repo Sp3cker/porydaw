@@ -38,7 +38,7 @@ public enum PorydawQmlTypes {
         SampleStudioAudition.self,
         SampleStudioPresenter.self,
         SampleStudioWorkflow.self,
-        SampleWaveformModel.self,
+        MarkerWaveformModel.self,
         Sf2ZonePickerPresenter.self,
         SongDockController.self,
         TransportBarPresenter.self,
@@ -103,6 +103,7 @@ public enum PorydawQmlTypes {
         VoiceMarkerHandle.self,
         VoiceMenuRowHandle.self,
         VoicePickerRowHandle.self,
+        WaveformMarkerRow.self,
     ]
 }
 

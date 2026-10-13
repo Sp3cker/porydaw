@@ -1,8 +1,9 @@
 import Foundation
 import NativeDisplayList
-import PorydawApp
+@testable import PorydawApp
 import PorydawAppPresentation
 import PorydawSample
+import PorydawSampleUI
 import SwiftCoreCheckSupport
 
 @testable import SwiftCoreCheckLogic
@@ -27,24 +28,39 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
     let validator: (String) -> String? = { name in name.isEmpty ? "Name required" : nil }
     let palette = GridPalette()
     ShellAppearance.apply(to: palette, mode: "vanilla", contrast: 50)
-    func waveformHeight(_ wave: SampleWaveformModel, atX x: Int) -> Double? {
-        wave.displayList(list: 0).withUnsafeBytes { raw in
+    func waveformHeight(_ wave: MarkerWaveformModel, atX x: Int) -> Double? {
+        wave.displayList(list: 0).withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> Double? in
             var view = PdDlView()
             guard pd_dl_decode(raw.baseAddress, raw.count, &view),
                 let rects = view.rects, let header = view.header
             else { return nil }
             let ink = PaletteMath.argb(palette.sampleWaveformInk)
             guard
-                let index = (0..<Int(header.pointee.rectCount)).first(where: {
-                    rects[$0].argb == ink && Int(rects[$0].x) == x && rects[$0].w == 1
+                let index = (0..<Int(header.pointee.rectCount)).first(where: { (index: Int) -> Bool in
+                    rects[index].argb == ink && Int(rects[index].x) == x && rects[index].w == 1
                 })
             else { return nil }
             return rects[index].h
         }
     }
 
+    func makeWaveform(presenter: SampleStudioPresenter, tools: SampleLoopTools) -> MarkerWaveformModel {
+        let wave = MarkerWaveformModel(palette: palette)
+        tools.bindWaveform(wave)
+        tools.publishWaveform(wave, sourceChanged: true)
+        var sourceRevision = presenter.sourceRevision
+        presenter.addRenderObserver { [weak presenter, weak wave, weak tools] in
+            guard let presenter, let wave, let tools else { return }
+            let sourceChanged = sourceRevision != presenter.sourceRevision
+            sourceRevision = presenter.sourceRevision
+            tools.publishWaveform(wave, sourceChanged: sourceChanged)
+        }
+        return wave
+    }
+
     let blank = SampleStudioPresenter(document: SampleDocument(source: ImportedSample()), validateName: validator)
-    let blankWave = SampleWaveformModel(presenter: blank, palette: palette)
+    let blankTools = SampleLoopTools(presenter: blank)
+    let blankWave = makeWaveform(presenter: blank, tools: blankTools)
     blankWave.setViewport(width: 120, height: 120)
     replacement.expect(
         !blank.hasSource && !blank.canCommit && blank.nameReadOnly,
@@ -54,7 +70,7 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
         blank.hasSource && blank.canCommit && !blank.nameReadOnly && blank.sampleName == "new_tone",
         message: "loading a source enables the prefilled valid name and commit")
     replacement.expect(
-        abs(blankWave.xForSample(6_000) - 60) <= 2
+        abs(blankWave.xForFrame(6_000) - 60) <= 2
             && (waveformHeight(blankWave, atX: 30) ?? 0) > 10,
         message: "blank studio draws and fits newly loaded audio without a stale empty pyramid")
     blank.replaceSource(SampleDocument(source: ImportedSample(suggestedName: "empty_tone")))
@@ -101,12 +117,12 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
         unlocked.sampleName == "new_tone" && unlocked.canCommit && !unlocked.nameReadOnly,
         message: "unlocked replacement uses the new source suggested name")
 
-    let sourceState = report.scoped(cppID: "swiftcore/SampleWaveformModel::sourceRevision")
+    let sourceState = report.scoped(cppID: "swiftcore/MarkerWaveformModel::sourceRevision")
     let presenter = SampleStudioPresenter(document: SampleDocument(source: original), validateName: validator)
-    let wave = SampleWaveformModel(presenter: presenter, palette: palette)
+    let tools = SampleLoopTools(presenter: presenter)
+    let wave = makeWaveform(presenter: presenter, tools: tools)
     wave.setViewport(width: 600, height: 120)
     wave.setSeamViewport(width: 228, height: 56)
-    let tools = SampleLoopTools(presenter: presenter)
     tools.tryAnotherLoop()
     do { try runBlocking { await tools.waitForPitchAnalysis() } } catch {
         sourceState.expect(false, message: "original pitch analysis did not settle: \(error)")
@@ -115,7 +131,7 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
     sourceState.expect(tools.canTryAnother, message: "original source exposes loop candidates before replacement")
     let oldPitchHint = tools.pitchApplyToolTip
     wave.zoom(atX: 300, steps: 3)
-    wave.setPlayhead(sourceFrame: 5_000)
+    wave.setPlayhead(frame: 5_000)
     guard
         let panStart = (100...500).first(where: { (x: Int) in
             wave.handleAt(x: Double(x), y: 60) == 0
@@ -126,43 +142,46 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
     }
     let panX = Double(panStart)
     sourceState.expect(!wave.press(x: panX, y: 60), message: "waveform body begins a pan, not a marker drag")
-    let beforePan = wave.xForSample(6_000)
+    let beforePan = wave.xForFrame(6_000)
     wave.drag(x: panX + 24)
-    sourceState.expect(wave.xForSample(6_000) != beforePan, message: "active pan changes the zoomed viewport")
-    let zoomX = wave.xForSample(6_000)
+    sourceState.expect(wave.xForFrame(6_000) != beforePan, message: "active pan changes the zoomed viewport")
+    let zoomX = wave.xForFrame(6_000)
     presenter.setFineTuneCents(value: 12)
     sourceState.expect(
-        wave.xForSample(6_000) == zoomX,
+        wave.xForFrame(6_000) == zoomX,
         message: "parameter edit retains waveform zoom and pan")
     presenter.replaceSource(SampleDocument(source: next))
     sourceState.expect(
-        abs(wave.xForSample(6_000) - 300) <= 2
-            && abs(wave.sampleForX(600) - next.frameCount + 1) <= 100,
+        abs(wave.xForFrame(6_000) - 300) <= 2
+            && abs(wave.frameAt(600) - next.frameCount + 1) <= 100,
         message: "replacement fits the full source and discards zoom")
-    let fittedX = wave.xForSample(6_000)
+    let fittedX = wave.xForFrame(6_000)
     wave.drag(x: 400)
     sourceState.expect(
-        wave.xForSample(6_000) == fittedX,
+        wave.xForFrame(6_000) == fittedX,
         message: "replacement discards an unfinished pan")
     let playheadInk = PaletteMath.argb(palette.playhead)
-    let hasPlayhead = wave.displayList(list: 0).withUnsafeBytes { raw in
+    let hasPlayhead = wave.displayList(list: 0).withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> Bool in
         var view = PdDlView()
         guard pd_dl_decode(raw.baseAddress, raw.count, &view),
             let rects = view.rects, let header = view.header
         else { return false }
-        return (0..<Int(header.pointee.rectCount)).contains { rects[$0].argb == playheadInk }
+        return (0..<Int(header.pointee.rectCount)).contains { (index: Int) -> Bool in rects[index].argb == playheadInk }
     }
     sourceState.expect(!hasPlayhead, message: "replacement clears the previous source playhead")
     let fresh = SampleStudioPresenter(document: SampleDocument(source: next), validateName: validator)
-    let freshWave = SampleWaveformModel(presenter: fresh, palette: palette)
+    let freshTools = SampleLoopTools(presenter: fresh)
+    let freshWave = makeWaveform(presenter: fresh, tools: freshTools)
     wave.setViewport(width: 120, height: 120)
     freshWave.setViewport(width: 120, height: 120)
-    let loud = waveformHeight(wave, atX: 30)
-    let quiet = waveformHeight(wave, atX: 90)
+    let loud: Double? = waveformHeight(wave, atX: 30)
+    let quiet: Double? = waveformHeight(wave, atX: 90)
+    let freshLoud: Double? = waveformHeight(freshWave, atX: 30)
+    let freshQuiet: Double? = waveformHeight(freshWave, atX: 90)
+    let hasAmplitudeContrast: Bool = loud != nil && quiet != nil && (loud ?? 0) > (quiet ?? 0) * 4
+    let matchesFreshGeometry: Bool = loud == freshLoud && quiet == freshQuiet
     sourceState.expect(
-        loud != nil && quiet != nil && (loud ?? 0) > (quiet ?? 0) * 4
-            && loud == waveformHeight(freshWave, atX: 30)
-            && quiet == waveformHeight(freshWave, atX: 90),
+        hasAmplitudeContrast && matchesFreshGeometry,
         message: "downsampled replacement waveform matches fresh geometry across loud and quiet regions")
 
     let analysis = report.scoped(cppID: "swiftcore/SampleLoopTools::sourceRevision")
@@ -178,7 +197,6 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
     analysis.expect(
         presenter.baseKey == 69 && abs(presenter.fineTuneCents) < 5,
         message: "detected replacement pitch changes the editor key to A4")
-    let freshTools = SampleLoopTools(presenter: fresh)
     tools.tryAnotherLoop()
     freshTools.tryAnotherLoop()
     do { try runBlocking { await freshTools.waitForPitchAnalysis() } } catch {

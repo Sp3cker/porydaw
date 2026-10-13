@@ -73,6 +73,8 @@ public func runAudioAuditionChecks(_ report: CheckReport) {
     checkHeldAndTimedAuditions(report)
     checkSampleAuditionSlots(report)
     checkWaveAuditionSlots(report)
+    checkKitAuditionSlots(report)
+    checkKitKeysplitAndPsg(report)
 }
 
 private func checkHeldAndTimedAuditions(_ report: CheckReport) {
@@ -293,4 +295,165 @@ private func checkWaveAuditionSlots(_ report: CheckReport) {
         if audition.publishWave(wave16: wave, key: 65, adsr: adsr) { accepted += 1 }
     }
     report.expectEqual(expected: 4, actual: accepted, cppID: id, what: "released wave slots all reusable")
+}
+
+private func checkKitAuditionSlots(_ report: CheckReport) {
+    let id = "swiftcore/KitAudition::slotLifecycle"
+    guard let engine = AuditionCheckEngines() else {
+        report.fail(id, "fixture engine initialization failed")
+        return
+    }
+    let adsr = AudioADSR(attack: 255, decay: 0, sustain: 255, release: 0)
+    let silent = KitAuditionTone.Child.sample(
+        pcm: [], frequency: 0, key: 60, panSweep: 0, adsr: adsr,
+        kind: Int(VOICE_DIRECTSOUND), looped: false, loopStart: 0)
+    func tone(_ value: Int8) -> KitAuditionTone {
+        var children = [KitAuditionTone.Child](repeating: silent, count: 128)
+        children[62] = .sample(
+            pcm: [Int8](repeating: value, count: 600), frequency: 13_700_096,
+            key: 55, panSweep: 0xC8, adsr: adsr, kind: Int(VOICE_DIRECTSOUND),
+            looped: true, loopStart: 100)
+        return KitAuditionTone(mode: .drumkit, children: children)
+    }
+    let audition = engine.audition
+    report.expect(audition.publishKitTone(tone(20), key: 62), cppID: id, message: "free slot accepts kit")
+    engine.apply()
+    let wrapper = engine.preview.pointee.tracks.1.currentVoice
+    report.expectEqual(
+        expected: UInt8(VOICE_KEYSPLIT_ALL), actual: wrapper.type, cppID: id,
+        what: "installed voice is a drumkit wrapper")
+    guard let group = wrapper.subGroup else {
+        report.fail(id, "wrapper has no owned subgroup")
+        return
+    }
+    let children = group.assumingMemoryBound(to: ToneData.self)
+    let first = engine.pcm(engine.preview).first
+    report.expect(first?.wav == children[62].wav, cppID: id, message: "resolved child has slot wave pointer identity")
+    report.expectEqual(expected: UInt8(55), actual: children[62].key, cppID: id, what: "fixed child key preserved")
+    report.expectEqual(expected: UInt8(0xC8), actual: children[62].panSweep, cppID: id, what: "rhythm pan preserved")
+    report.expect(
+        children[62].wav?.pointee.data?[0] == 20 && children[62].wav?.pointee.data?[600] == 20,
+        cppID: id, message: "owned PCM includes interpolation lookahead")
+    report.expect(
+        children[62].wav?.pointee.status == 0x4000 && children[62].wav?.pointee.loopStart == 100,
+        cppID: id, message: "rendered loop metadata reaches the published child wave")
+    for _ in 0..<3 {
+        report.expect(audition.publishKitTone(tone(-20), key: 62), cppID: id, message: "pending kit takes one slot")
+    }
+    report.expect(!audition.publishKitTone(tone(30), key: 62), cppID: id, message: "four live slots refuse fifth kit")
+    report.expect(
+        !audition.publishSample(
+            samples: [1], frequency: 13_700_096, loopStart: 0, looped: false,
+            key: 60, adsr: adsr, toneKey: 60),
+        cppID: id, message: "kits and samples share the same four-slot budget")
+    report.expect(
+        children[62].wav?.pointee.data?[0] == 20, cppID: id, message: "publication storm preserves live child")
+    engine.apply()
+    // Match sample audition's four-block window through DirectSound mixer/FIFO startup.
+    report.expect(engine.pump(engine.preview) > 0, cppID: id, message: "kit produces real preview audio")
+    report.expectEqual(
+        expected: Float(0), actual: engine.pump(engine.main, blocks: 1), cppID: id,
+        what: "kit leaves song engine silent")
+    engine.apply()
+    var accepted = 0
+    for _ in 0..<5 { if audition.publishKitTone(tone(30), key: 62) { accepted += 1 } }
+    report.expectEqual(
+        expected: 3, actual: accepted, cppID: id,
+        what: "live child wave protects its whole kit slot after acknowledgement")
+    audition.sampleOff()
+    engine.apply()
+    engine.pump(engine.preview)
+    engine.apply()
+    report.expectEqual(
+        expected: 0, actual: engine.pcm(engine.preview).count, cppID: id, what: "off releases kit channels")
+    accepted = 0
+    for _ in 0..<5 { if audition.publishKitTone(tone(30), key: 62) { accepted += 1 } }
+    report.expectEqual(
+        expected: 4, actual: accepted, cppID: id, what: "acknowledged retirement reclaims every kit slot")
+}
+
+private func checkKitKeysplitAndPsg(_ report: CheckReport) {
+    let id = "swiftcore/KitAudition::keysplitAndLockedWave"
+    guard let engine = AuditionCheckEngines() else {
+        report.fail(id, "fixture engine initialization failed")
+        return
+    }
+    let adsr = AudioADSR(attack: 255, decay: 0, sustain: 255, release: 0)
+    let sample = KitAuditionTone.Child.sample(
+        pcm: [Int8](repeating: 24, count: 600), frequency: 13_700_096, key: 60, panSweep: 0, adsr: adsr,
+        kind: Int(VOICE_DIRECTSOUND_NO_RESAMPLE), looped: false, loopStart: 0)
+    let square = KitAuditionPsg(
+        kind: 4, key: 60, pan: 0, sweep: 3, duty: 2, period: 0,
+        attack: 1, decay: 2, sustain: 15, release: 0)
+    let wave = KitAuditionPsg(
+        kind: 7, key: 60, pan: 0, sweep: 0, duty: 0, period: 0,
+        attack: 0, decay: 0, sustain: 15, release: 0,
+        progWave: [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476])
+    var table = [UInt8](repeating: 0, count: 128)
+    table[64] = 2
+    let kit = KitAuditionTone(mode: .keysplit, children: [sample, .psg(square), .psg(wave)], splitTable: table)
+    report.expect(
+        engine.audition.publishKitTone(kit, key: 60), cppID: id, message: "keysplit accepts subgroup and table")
+    engine.apply()
+    let wrapper = engine.preview.pointee.tracks.1.currentVoice
+    report.expectEqual(expected: UInt8(VOICE_KEYSPLIT), actual: wrapper.type, cppID: id, what: "keysplit wrapper type")
+    guard let group = wrapper.subGroup, let split = wrapper.keySplitTable else {
+        report.fail(id, "keysplit wrapper has no owned group/table")
+        return
+    }
+    let children = group.assumingMemoryBound(to: ToneData.self)
+    report.expectEqual(
+        expected: UInt8(VOICE_DIRECTSOUND_NO_RESAMPLE), actual: children[0].type,
+        cppID: id, what: "sample descriptor engine type reaches child tone")
+    report.expect(
+        engine.pcm(engine.preview).first?.wav == children[Int(split[60])].wav, cppID: id,
+        message: "table resolves exact owned child wave")
+    report.expectEqual(
+        expected: UInt8(VOICE_SQUARE_1_ALT), actual: children[1].type, cppID: id, what: "PSG macro ordinal packed")
+    report.expectEqual(expected: UInt8(3), actual: children[1].panSweep, cppID: id, what: "PSG sweep retained")
+    report.expectEqual(
+        expected: 2, actual: Int(bitPattern: children[1].wavePointer), cppID: id, what: "PSG duty retained")
+    report.expectEqual(expected: UInt8(1), actual: children[1].attack, cppID: id, what: "PSG envelope retained")
+    report.expect(children[2].wavePointer?[0] == 0x67452301, cppID: id, message: "programmable words copied into slot")
+    report.expect(
+        Int(bitPattern: children[2].wavePointer) % 16 == 0, cppID: id, message: "programmable storage aligned")
+    engine.audition.sampleOff()
+    engine.apply()
+    engine.pump(engine.preview)
+    engine.apply()
+    report.expect(
+        engine.audition.publishKitTone(kit, key: 64), cppID: id, message: "programmable child accepts audition")
+    engine.apply()
+    let waveWrapper = engine.preview.pointee.tracks.1.currentVoice
+    guard let waveGroup = waveWrapper.subGroup else { report.fail(id, "wave subgroup absent"); return }
+    let waveChildren = waveGroup.assumingMemoryBound(to: ToneData.self)
+    report.expect(
+        engine.cgb().first?.wavePointer == waveChildren[2].wavePointer, cppID: id,
+        message: "CGB channel borrows the slot's programmable words")
+    report.expect(
+        engine.pump(engine.preview, blocks: 1) > 0, cppID: id, message: "locked programmable wave produces audio")
+    engine.apply()
+    var accepted = 0
+    for _ in 0..<5 { if engine.audition.publishKitTone(kit, key: 64) { accepted += 1 } }
+    report.expectEqual(
+        expected: 3, actual: accepted, cppID: id, what: "live programmable child protects its whole kit slot")
+    engine.audition.sampleOff()
+    engine.apply()
+    engine.pump(engine.preview, blocks: 16)
+    engine.apply()
+    accepted = 0
+    for _ in 0..<5 { if engine.audition.publishKitTone(kit, key: 64) { accepted += 1 } }
+    report.expectEqual(expected: 4, actual: accepted, cppID: id, what: "programmable retirement frees all kit slots")
+    engine.audition.cut(main: engine.main, preview: engine.preview)
+    var missing = wave
+    missing.progWave = nil
+    let silentKit = KitAuditionTone(
+        mode: .keysplit, children: [.psg(missing)], splitTable: [UInt8](repeating: 0, count: 128))
+    report.expect(
+        engine.audition.publishKitTone(silentKit, key: 64), cppID: id, message: "missing wave remains a silent child")
+    engine.apply()
+    report.expectEqual(expected: 0, actual: engine.cgb().count, cppID: id, what: "missing wave creates no channel")
+    report.expectEqual(
+        expected: Float(0), actual: engine.pump(engine.preview, blocks: 1), cppID: id,
+        what: "missing wave never fabricates audio")
 }

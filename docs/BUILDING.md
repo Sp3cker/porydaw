@@ -330,6 +330,11 @@ on Sample, AppAudio, AppPresentation and QtBridge; `PorydawApp` links it.
 Measured 2026-10-13, Debug, `touch` then `uv run --no-sync dev build:app`. A
 one-file `PorydawApp` edit (`SampleStudioPresenter.swift`) measured 7.00/6.91 s afterward.
 
+`PorydawKitStudio` (`src/swift/kitstudio/`) owns Split Studio's kit draft, codec,
+source session and presenter on Sample, SampleUI, Voicegroup, AppAudio and QtBridge.
+A `KitDraft.swift` edit measured 0.42/0.42 s, against 6.52 s for the same-day
+one-file `PorydawApp` edit it would otherwise cost.
+
 Swift incremental state is mtime-based: `touch`, `git checkout` across branches, or
 `git stash pop` recompile whole modules even when content is identical. Changing a
 module's compile flags (including via `-D` defines) drops its objects (see

@@ -106,6 +106,97 @@ public enum SampleRegistrar {
         do { content = try ProjectFileStore.read(layout.incPath) } catch {
             throw SampleRegistrationError(message: "cannot write \(layout.incPath).")
         }
+        let updated = appendingRegistrations([name], to: content)
+        do { try ProjectFileStore.writeAtomic(layout.incPath, data: updated) } catch {
+            throw SampleRegistrationError(message: "cannot write \(layout.incPath).")
+        }
+    }
+
+    /// Validates all names before writing WAVs, then appends their blocks in one atomic write.
+    public static func registerBatch(
+        projectRoot: String, samples: [(name: String, wav: Data)]
+    ) throws(SampleRegistrationError) {
+        guard !samples.isEmpty else { return }
+        let layout = probe(projectRoot: projectRoot)
+        guard layout.ok else { throw SampleRegistrationError(message: layout.refusal) }
+        var symbols = VoicegroupSource.directSoundSymbols(projectRoot)
+        var refusals: [String] = []
+        for sample in samples {
+            if let refusal = validate(projectRoot: projectRoot, name: sample.name, existingSymbols: symbols) {
+                refusals.append("\(sample.name): \(refusal)")
+            }
+            symbols.append("DirectSoundWaveData_" + sample.name)
+        }
+        guard refusals.isEmpty else {
+            throw SampleRegistrationError(message: refusals.joined(separator: "\n"))
+        }
+        do { try ProjectFileStore.mkpath(layout.samplesDir) } catch {
+            throw SampleRegistrationError(message: "cannot create \(layout.samplesDir).")
+        }
+        for sample in samples {
+            let path = layout.samplesDir + "/" + sample.name + ".wav"
+            do { try ProjectFileStore.writeAtomic(path, data: sample.wav) } catch {
+                throw SampleRegistrationError(message: "cannot write \(path).")
+            }
+        }
+        let content: Data
+        do { content = try ProjectFileStore.read(layout.incPath) } catch {
+            throw SampleRegistrationError(message: "cannot write \(layout.incPath).")
+        }
+        let updated = appendingRegistrations(samples.map(\.name), to: content)
+        do { try ProjectFileStore.writeAtomic(layout.incPath, data: updated) } catch {
+            throw SampleRegistrationError(message: "cannot write \(layout.incPath).")
+        }
+    }
+
+    /// Removes only the named registration block and WAV; an unknown label is a no-op.
+    public static func deleteRegistration(
+        projectRoot: String, name: String
+    ) throws(SampleRegistrationError) -> Bool {
+        let path = projectRoot + "/sound/direct_sound_data.inc"
+        let content: Data
+        do { content = try ProjectFileStore.read(path) } catch {
+            throw SampleRegistrationError(message: "cannot read \(path).")
+        }
+        let lines = ProjectFileStore.splitLines(content).lines
+        let label = Array(("DirectSoundWaveData_" + name + "::").utf8)
+        func statement(_ index: Int) -> AsmLine.Bytes {
+            AsmLine.content(Array(lines[index])[...])
+        }
+        guard let index = lines.indices.first(where: { AsmLine.equals(statement($0), label) }) else {
+            return false
+        }
+        let incbin = Array((".incbin \"sound/direct_sound_samples/" + name + ".bin\"").utf8)
+        guard index > 0, index + 1 < lines.count,
+            AsmLine.equals(statement(index - 1), Array(".align 2".utf8)),
+            AsmLine.equals(statement(index + 1), incbin),
+            !name.isEmpty, name.utf8.allSatisfy({ AsmLine.isWord($0) })
+        else {
+            throw SampleRegistrationError(message: "cannot remove registration for \(name) in \(path).")
+        }
+        var first = index - 1
+        if first > 0, AsmLine.trimmed(Array(lines[first - 1])[...]).isEmpty { first -= 1 }
+        var start = content.startIndex
+        for raw in lines.prefix(first) { start += raw.count + 1 }
+        var end = start
+        for raw in lines[first...(index + 1)] { end = min(content.endIndex, end + raw.count + 1) }
+        var updated = content
+        updated.removeSubrange(start..<end)
+        let wavPath = projectRoot + "/sound/direct_sound_samples/" + name + ".wav"
+        var isDirectory: ObjCBool = false
+        if FileManager.default.fileExists(atPath: wavPath, isDirectory: &isDirectory), isDirectory.boolValue {
+            throw SampleRegistrationError(message: "cannot remove \(wavPath): not a sample file.")
+        }
+        do { try ProjectFileStore.remove(wavPath) } catch {
+            throw SampleRegistrationError(message: "cannot remove \(wavPath).")
+        }
+        do { try ProjectFileStore.writeAtomic(path, data: updated) } catch {
+            throw SampleRegistrationError(message: "cannot write \(path).")
+        }
+        return true
+    }
+
+    private static func appendingRegistrations(_ names: [String], to content: Data) -> Data {
         let lines = ProjectFileStore.splitLines(content)
         let eol = lines.crlf ? "\r\n" : "\n"
         var alignIndent = "\t"
@@ -123,16 +214,16 @@ public enum SampleRegistrar {
                 incbinIndent = indent
             }
         }
-        var block = ""
-        if !content.isEmpty && !lines.endsWithNewline { block += eol }
-        if !content.isEmpty { block += eol }
-        block += alignIndent + ".align 2" + eol
-        block += "DirectSoundWaveData_" + name + "::" + eol
-        block += incbinIndent + ".incbin \"sound/direct_sound_samples/" + name + ".bin\"" + eol
         var updated = content
-        updated.append(contentsOf: block.utf8)
-        do { try ProjectFileStore.writeAtomic(layout.incPath, data: updated) } catch {
-            throw SampleRegistrationError(message: "cannot write \(layout.incPath).")
+        for name in names {
+            var block = ""
+            if !updated.isEmpty && updated.last != 10 { block += eol }
+            if !updated.isEmpty { block += eol }
+            block += alignIndent + ".align 2" + eol
+            block += "DirectSoundWaveData_" + name + "::" + eol
+            block += incbinIndent + ".incbin \"sound/direct_sound_samples/" + name + ".bin\"" + eol
+            updated.append(contentsOf: block.utf8)
         }
+        return updated
     }
 }

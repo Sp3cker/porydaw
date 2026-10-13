@@ -26,7 +26,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     private weak var session: ApplicationSession?
     private var presenter: SampleStudioPresenter?
     private var tools: SampleLoopTools?
-    private var wave: SampleWaveformModel?
+    private var wave: MarkerWaveformModel?
     private var player: SampleStudioAudition?
     private var libraryPane: SampleLibraryModel?
     private var auditionLane: SampleAuditionArbiter?
@@ -349,7 +349,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     public func cancel() { close() }
     public func editor() -> Optional<SampleStudioPresenter> { presenter }
     public func loopTools() -> Optional<SampleLoopTools> { tools }
-    public func waveform() -> Optional<SampleWaveformModel> { wave }
+    public func waveform() -> Optional<MarkerWaveformModel> { wave }
     public func audition() -> Optional<SampleStudioAudition> { player }
 
     @QtIgnored public func close() {
@@ -535,7 +535,17 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                 existingSymbols: VoicegroupSource.directSoundSymbols(root))
         }
         if let editName { presenter.setEditTarget(name: editName) }
-        let wave = SampleWaveformModel(presenter: presenter, palette: session.palette)
+        let wave = MarkerWaveformModel(palette: session.palette)
+        let tools = SampleLoopTools(presenter: presenter)
+        tools.bindWaveform(wave)
+        tools.publishWaveform(wave, sourceChanged: true)
+        var waveformSourceRevision = presenter.sourceRevision
+        presenter.addRenderObserver { [weak presenter, weak wave, weak tools] in
+            guard let presenter, let wave, let tools else { return }
+            let sourceChanged = waveformSourceRevision != presenter.sourceRevision
+            waveformSourceRevision = presenter.sourceRevision
+            tools.publishWaveform(wave, sourceChanged: sourceChanged)
+        }
         let voice =
             session.voiceList.slots.indices.contains(destinationSlot)
             ? session.voiceList.slots[destinationSlot].voice : nil
@@ -549,10 +559,10 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         let player = SampleStudioAudition(
             presenter: presenter, lane: sampleLane(),
             destinationAdsr: destinationAdsr)
-        player.onPlayhead = { [weak wave] frame in wave?.setPlayhead(sourceFrame: frame) }
+        player.onPlayhead = { [weak wave] frame in wave?.setPlayhead(frame: frame) }
         player.onStarted = { [weak self] in self?.stopLibraryPreview() }
         self.presenter = presenter
-        tools = SampleLoopTools(presenter: presenter)
+        self.tools = tools
         self.wave = wave
         self.player = player
         editorRevision += 1

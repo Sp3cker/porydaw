@@ -434,9 +434,10 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/session_view_state_fanout.swift
         workspace/startup_checks.swift
         workspace/transport_checks.swift
+        kitstudio/KitDraftChecks.swift
         support/corecheck/CoreCheckDispatch.swift
         lanes/SwiftCoreCheckLane.swift
-        LINK_LIBRARIES swift_core_check_logic swift_core_check_support ${core_check_libraries} PorydawApp
+        LINK_LIBRARIES swift_core_check_logic swift_core_check_support ${core_check_libraries} PorydawApp PorydawKitStudio
     )
     if(PORYDAW_ASAN AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
         # Keep Logic optimized for parity timing while batches reuse unchanged files.

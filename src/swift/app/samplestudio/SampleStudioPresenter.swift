@@ -6,8 +6,6 @@ import QtBridge
 @MainActor
 @QtBridgeable
 public final class SampleStudioPresenter: QmlUncreatable {
-    // fceecd88:src/ui/enginesettingsdialog.cpp:16–17, kGbaMixRates.
-    private static let rates = [5734, 7884, 10512, 13379, 15768, 18157, 21024, 26758, 31536, 36314, 40137, 42048]
     private let validateNewName: (String) -> String?
     private var editName: String?
     private var history = SampleStudioHistory()
@@ -87,7 +85,7 @@ public final class SampleStudioPresenter: QmlUncreatable {
         rateChoices =
             [
                 "Keep source (\(SampleStudioReadouts.decimal(source.sampleRate, places: source.sampleRate == floor(source.sampleRate) ? 0 : 2)) Hz)"
-            ] + Self.rates.map(String.init)
+            ] + SampleRatePolicy.rates.map(String.init)
     }
 
     public func setSampleName(name: String) {
@@ -150,8 +148,8 @@ public final class SampleStudioPresenter: QmlUncreatable {
     }
 
     public func chooseRate(index: Int) {
-        guard index >= 0, index <= Self.rates.count else { return }
-        update(-1) { $0.targetRate = index == 0 ? source.sampleRate : Double(Self.rates[index - 1]) }
+        guard index >= 0, index <= SampleRatePolicy.rates.count else { return }
+        update(-1) { $0.targetRate = index == 0 ? source.sampleRate : Double(SampleRatePolicy.rates[index - 1]) }
     }
 
     public func commitRateText(text: String) {
@@ -218,7 +216,7 @@ public final class SampleStudioPresenter: QmlUncreatable {
         normalizeMode = p.normalizeMode.rawValue
         rateIndex =
             p.targetRate == source.sampleRate
-            ? 0 : Self.rates.firstIndex(where: { Double($0) == p.targetRate }).map { $0 + 1 } ?? -1
+            ? 0 : SampleRatePolicy.rates.firstIndex(where: { Double($0) == p.targetRate }).map { $0 + 1 } ?? -1
         rateText =
             rateIndex == 0
             ? rateChoices[0]

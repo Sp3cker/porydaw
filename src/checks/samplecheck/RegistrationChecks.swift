@@ -43,6 +43,7 @@ internal func runRegistrationChecks(_ report: CheckReport) {
             message: "A011 missing registration anchor is refused")
         registrationNames(report, root: wavRoot)
         registrationWrites(report, root: wavRoot)
+        registrationBatchChecks(report, root: root + "/batchproj")
     } catch {
         report.scoped(cppID: "swiftcore/SampleRegistrar::fixture").expect(
             false,
@@ -195,6 +196,120 @@ private func registrationWrites(_ report: CheckReport, root: String) {
             message: "CRLF fixture failed: \(error)")
     }
 }
+
+private func registrationBatchChecks(_ report: CheckReport, root: String) {
+    let check = report.scoped(cppID: "swiftcore/SampleRegistrarBatch::")
+    do {
+        try writeWav2AgbProject(root: root)
+        let inc = root + "/sound/direct_sound_data.inc"
+        let samplesDir = root + "/sound/direct_sound_samples"
+        let seed = try ProjectFileStore.read(inc)
+        let wav = preparedSampleWav()
+        let names = ["batch_a", "batch_b", "batch_c"]
+        func block(_ name: String, eol: String = "\n") -> Data {
+            Data(
+                (eol + "\t.align 2" + eol + "DirectSoundWaveData_" + name + "::" + eol
+                    + "\t.incbin \"sound/direct_sound_samples/" + name + ".bin\"" + eol).utf8)
+        }
+        try SampleRegistrar.registerBatch(projectRoot: root, samples: names.map { (name: String) in (name, wav) })
+        let registered = try ProjectFileStore.read(inc)
+        check.expect(
+            registered == seed + block(names[0]) + block(names[1]) + block(names[2]),
+            message: "batch appends every block in argument order without altering existing bytes")
+        for name in names {
+            let bytes = try ProjectFileStore.read(samplesDir + "/" + name + ".wav")
+            check.expect(bytes == wav, message: "batch writes exact WAV bytes for \(name)")
+        }
+        do {
+            try SampleRegistrar.registerBatch(
+                projectRoot: root,
+                samples: [("duplicate_a", wav), ("duplicate_b", wav), ("duplicate_a", wav), ("duplicate_b", wav)])
+            check.expect(false, message: "duplicate names in one batch are refused")
+        } catch let error as SampleRegistrationError {
+            check.expect(
+                error.message.contains("duplicate_a") && error.message.contains("duplicate_b"),
+                message: "one refusal lists both offending batch names")
+        }
+        do {
+            try SampleRegistrar.registerBatch(projectRoot: root, samples: [("existing", wav), ("fresh_refused", wav)])
+            check.expect(false, message: "pre-existing registration symbol is refused")
+        } catch let error as SampleRegistrationError {
+            check.expect(
+                error.message.contains("DirectSoundWaveData_existing"), message: "refusal names existing symbol")
+        }
+        check.expect(
+            !ProjectFileStore.exists(samplesDir + "/fresh_refused.wav")
+                && !ProjectFileStore.exists(samplesDir + "/duplicate_a.wav")
+                && !ProjectFileStore.exists(samplesDir + "/duplicate_b.wav"),
+            message: "all validation completes before any WAV is written")
+        let afterRefusal = try ProjectFileStore.read(inc)
+        check.expect(afterRefusal == registered, message: "refusals leave registration bytes unchanged")
+
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: samplesDir)
+        let unwritable = Result {
+            try SampleRegistrar.registerBatch(
+                projectRoot: root, samples: [("unwritable_a", wav), ("unwritable_b", wav)])
+        }
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: samplesDir)
+        check.expect(!succeeded(unwritable), message: "unwritable sample directory stops the batch")
+        let afterUnwritable = try ProjectFileStore.read(inc)
+        check.expect(afterUnwritable == registered, message: "WAV write failure leaves the inc unchanged")
+        let partial = Result {
+            try SampleRegistrar.registerBatch(
+                projectRoot: root, samples: [("partial_written", wav), (String(repeating: "x", count: 300), wav)])
+        }
+        check.expect(!succeeded(partial), message: "later WAV failure stops registration")
+        let partialWav = try ProjectFileStore.read(samplesDir + "/partial_written.wav")
+        check.expect(partialWav == wav, message: "already-written WAV remains for orphan cleanup")
+        let afterPartial = try ProjectFileStore.read(inc)
+        check.expect(afterPartial == registered, message: "partial batch never writes registration blocks")
+
+        let deleted = try SampleRegistrar.deleteRegistration(projectRoot: root, name: "batch_b")
+        check.expect(deleted, message: "known registration is removed")
+        check.expect(!ProjectFileStore.exists(samplesDir + "/batch_b.wav"), message: "delete removes the named WAV")
+        let afterDelete = try ProjectFileStore.read(inc)
+        check.expect(
+            afterDelete == seed + block("batch_a") + block("batch_c"),
+            message: "middle deletion removes exactly one block and preserves sibling bytes")
+        let siblingA = try ProjectFileStore.read(samplesDir + "/batch_a.wav")
+        let siblingC = try ProjectFileStore.read(samplesDir + "/batch_c.wav")
+        check.expect(siblingA == wav && siblingC == wav, message: "delete leaves sibling WAVs unchanged")
+        try ProjectFileStore.remove(samplesDir + "/batch_c.wav")
+        let missingWavDeleted = try SampleRegistrar.deleteRegistration(projectRoot: root, name: "batch_c")
+        check.expect(missingWavDeleted, message: "delete tolerates a missing WAV")
+        let afterMissingWav = try ProjectFileStore.read(inc)
+        check.expect(
+            afterMissingWav == seed + block("batch_a"), message: "missing-WAV deletion still removes its block")
+        try ProjectFileStore.write(samplesDir + "/unknown.wav", data: wav)
+        let unknownDeleted = try SampleRegistrar.deleteRegistration(projectRoot: root, name: "unknown")
+        check.expect(!unknownDeleted, message: "unknown registration returns false")
+        let afterUnknown = try ProjectFileStore.read(inc)
+        let unknownWav = try ProjectFileStore.read(samplesDir + "/unknown.wav")
+        check.expect(
+            afterUnknown == seed + block("batch_a") && unknownWav == wav,
+            message: "unknown registration does not write or delete")
+        for eol in ["\n", "\r\n"] {
+            let unterminated = Data(("existing_prefix" + eol + "\t.align 2").utf8)
+            try ProjectFileStore.write(inc, data: unterminated)
+            try SampleRegistrar.registerBatch(projectRoot: root, samples: [("edge_a", wav), ("edge_b", wav)])
+            let edgeRegistered = try ProjectFileStore.read(inc)
+            check.expect(
+                edgeRegistered == unterminated + Data(eol.utf8) + block("edge_a", eol: eol)
+                    + block("edge_b", eol: eol),
+                message: "batch shares single-register EOL and unterminated-prefix behavior")
+            let edgeDeleted = try SampleRegistrar.deleteRegistration(projectRoot: root, name: "edge_a")
+            check.expect(edgeDeleted, message: "first appended block deletes with \(eol == "\n" ? "LF" : "CRLF")")
+            let afterEdgeDelete = try ProjectFileStore.read(inc)
+            check.expect(
+                afterEdgeDelete == unterminated + Data(eol.utf8) + block("edge_b", eol: eol),
+                message: "delete preserves prefix and remaining block EOL bytes")
+            _ = try SampleRegistrar.deleteRegistration(projectRoot: root, name: "edge_b")
+        }
+    } catch {
+        check.expect(false, message: "batch/delete fixture failed: \(error)")
+    }
+}
+
 func runRegistrationParityChecks(_ report: CheckReport) {
     let check = report.scoped(cppID: "samplecheck/SampleProcessingTest::parityCases")
     let imported = Result { try importedHiRes() }

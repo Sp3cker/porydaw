@@ -62,6 +62,7 @@ enum PdcSuite {
     PDC_SUITE_KEYSPLIT_TABLES = 54,
     PDC_SUITE_BANK_OWNERSHIP = 55,
     PDC_SUITE_VOICE_LOCATOR = 56,
+    PDC_SUITE_KIT_DRAFT = 57,
 };
 
 typedef void (*PdcCheckReport)(void *context, int failed, const char *cppId, const char *message);

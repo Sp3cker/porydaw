@@ -131,6 +131,7 @@ const std::vector<CheckDefinition> &catalog()
         swiftSuite("swiftcore-timeedits", "timeEdits");
         swiftSuite("swiftcore-projectsession", "projectSession");
         swiftSuite("swiftcore-bankhistory", "bankHistory");
+        swiftSuite("kitstudio-draft", "kitDraft");
         swiftSuite("swiftcore-themecolor", "themeColor");
         swiftSuite("swiftcore-displaylist", "displayList");
         const auto sampleSuite = [&](const char *name, const char *suite) {

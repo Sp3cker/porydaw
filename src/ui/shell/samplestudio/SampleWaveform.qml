@@ -6,7 +6,7 @@ import PorydawApp
 
 Item {
     id: surface
-    required property SampleWaveformModel model
+    required property MarkerWaveformModel model
     required property GridPalette colors
     required property real baseFontPx
     property bool dragging: false

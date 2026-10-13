@@ -7,11 +7,16 @@ final class AudioSampleAudition {
     private struct Slot {
         var tone = ToneData()
         var bytes: UnsafeMutableRawPointer?
+        var childWaves: UnsafeMutablePointer<WaveData>?
+        var byteCount: Int = 0
         var generation: UInt64 = 0
     }
     private let slots = UnsafeMutablePointer<Slot>.allocate(capacity: 4)
     private let waves = UnsafeMutablePointer<WaveData>.allocate(capacity: 4)
     private let adoptedWaves = UnsafeMutablePointer<UnsafeMutablePointer<UInt32>?>.allocate(capacity: 4)
+    private var adoptedChildren = InlineArray<4, UnsafeMutablePointer<WaveData>?>(repeating: nil)
+    private var adoptedKitStart = InlineArray<4, UInt>(repeating: 0)
+    private var adoptedKitEnd = InlineArray<4, UInt>(repeating: 0)
     private let publication = Atomic<UInt64>(0)
     private let acknowledgement = Atomic<UInt64>(0)
     private var generation: UInt64 = 0
@@ -49,6 +54,8 @@ final class AudioSampleAudition {
         slots[index].bytes?.deallocate()
         let bytes = UnsafeMutableRawPointer.allocate(byteCount: count, alignment: 16)
         slots[index].bytes = bytes
+        slots[index].byteCount = count
+        slots[index].childWaves = nil
         return bytes
     }
 
@@ -58,6 +65,18 @@ final class AudioSampleAudition {
         publication.store(
             generation << 16 | UInt64(index) << 8 | UInt64(key & 127),
             ordering: .releasing)
+    }
+
+    private func configureWave(
+        _ wave: UnsafeMutablePointer<WaveData>, data: UnsafeMutablePointer<Int8>,
+        count: Int, frequency: UInt32, loopStart: UInt32, looped: Bool
+    ) {
+        wave.pointee = WaveData()
+        wave.pointee.status = looped ? 0x4000 : 0
+        wave.pointee.freq = frequency
+        wave.pointee.loopStart = looped ? loopStart : 0
+        wave.pointee.size = UInt32(count)
+        wave.pointee.data = data
     }
 
     func publish(
@@ -71,12 +90,9 @@ final class AudioSampleAudition {
             bytes.initialize(from: source.baseAddress!, count: source.count)
         }
         bytes.advanced(by: samples.count).initialize(to: samples[samples.count - 1])
-        waves[index] = WaveData()
-        waves[index].status = looped ? 0x4000 : 0
-        waves[index].freq = frequency
-        waves[index].loopStart = looped ? loopStart : 0
-        waves[index].size = UInt32(samples.count)
-        waves[index].data = bytes
+        configureWave(
+            waves.advanced(by: index), data: bytes, count: samples.count,
+            frequency: frequency, loopStart: loopStart, looped: looped)
         slots[index].tone = ToneData()
         slots[index].tone.type = 0  // VOICE_DIRECTSOUND
         slots[index].tone.key = toneKey
@@ -110,6 +126,114 @@ final class AudioSampleAudition {
         return true
     }
 
+    func publishKitTone(_ kit: KitAuditionTone, key: UInt8) -> Bool {
+        guard kit.children.count <= 128 else { return false }
+        if kit.mode == .drumkit {
+            guard kit.children.count == 128 else { return false }
+        } else {
+            guard let table = kit.splitTable, table.count == 128,
+                table.allSatisfy({ Int($0) < kit.children.count })
+            else { return false }
+        }
+        guard let index = retiredSlot() else { return false }
+        let waveOffset = MemoryLayout<ToneData>.stride * 128
+        let tableOffset = waveOffset + MemoryLayout<WaveData>.stride * 128
+        let assetOffset = (tableOffset + 128 + 15) & ~15
+        var count = assetOffset
+        for child in kit.children {
+            switch child {
+            case .sample(let pcm, _, _, _, _, _, _, _):
+                if !pcm.isEmpty { count += pcm.count + 1 }
+            case .psg(let voice):
+                if voice.kind == 7 || voice.kind == 8, let wave = voice.progWave {
+                    guard wave.count == 4 else { return false }
+                    count = ((count + 15) & ~15) + 16
+                }
+            }
+        }
+        let bytes = replaceBytes(index, count: count)
+        let children = bytes.bindMemory(to: ToneData.self, capacity: 128)
+        children.initialize(repeating: ToneData(), count: 128)
+        let childWaves = bytes.advanced(by: waveOffset).bindMemory(to: WaveData.self, capacity: 128)
+        childWaves.initialize(repeating: WaveData(), count: 128)
+        slots[index].childWaves = childWaves
+        let table = bytes.advanced(by: tableOffset).bindMemory(to: UInt8.self, capacity: 128)
+        table.initialize(repeating: 0, count: 128)
+        if kit.mode == .keysplit, let split = kit.splitTable {
+            split.withUnsafeBufferPointer { source in
+                guard let base = source.baseAddress else { preconditionFailure("validated split table is nonempty") }
+                table.update(from: base, count: 128)
+            }
+        }
+        var offset = assetOffset
+        for (ordinal, child) in kit.children.enumerated() {
+            var tone = ToneData()
+            switch child {
+            case .sample(
+                let pcm, let frequency, let childKey, let panSweep, let adsr, let kind, let looped, let loopStart):
+                guard !pcm.isEmpty else { continue }
+                let data = bytes.advanced(by: offset).bindMemory(to: Int8.self, capacity: pcm.count + 1)
+                pcm.withUnsafeBufferPointer { source in
+                    guard let base = source.baseAddress else { preconditionFailure("validated PCM is nonempty") }
+                    data.initialize(from: base, count: source.count)
+                }
+                data.advanced(by: pcm.count).initialize(to: pcm[pcm.count - 1])
+                offset += pcm.count + 1
+                configureWave(
+                    childWaves.advanced(by: ordinal), data: data, count: pcm.count,
+                    frequency: frequency, loopStart: UInt32(loopStart), looped: looped)
+                tone.wav = childWaves.advanced(by: ordinal)
+                tone.type = UInt8(kind)
+                tone.key = childKey
+                tone.panSweep = panSweep
+                tone.attack = adsr.attack
+                tone.decay = adsr.decay
+                tone.sustain = adsr.sustain
+                tone.release = adsr.release
+            case .psg(let voice):
+                switch voice.kind {
+                case 3, 4:
+                    tone.type = UInt8(voice.kind == 3 ? VOICE_SQUARE_1 : VOICE_SQUARE_1_ALT)
+                    tone.panSweep = UInt8(voice.sweep)
+                    tone.wavePointer = UnsafeMutablePointer<UInt32>(bitPattern: voice.duty & 3)
+                case 5, 6:
+                    tone.type = UInt8(voice.kind == 5 ? VOICE_SQUARE_2 : VOICE_SQUARE_2_ALT)
+                    tone.wavePointer = UnsafeMutablePointer<UInt32>(bitPattern: voice.duty & 3)
+                case 7, 8:
+                    guard let wave = voice.progWave else { continue }
+                    offset = (offset + 15) & ~15
+                    let words = bytes.advanced(by: offset).bindMemory(to: UInt32.self, capacity: 4)
+                    wave.withUnsafeBufferPointer { source in
+                        guard let base = source.baseAddress else {
+                            preconditionFailure("validated wave has four words")
+                        }
+                        words.initialize(from: base, count: 4)
+                    }
+                    offset += 16
+                    tone.type = UInt8(voice.kind == 7 ? VOICE_PROGRAMMABLE_WAVE : VOICE_PROGRAMMABLE_WAVE_ALT)
+                    tone.wavePointer = words
+                case 9, 10:
+                    tone.type = UInt8(voice.kind == 9 ? VOICE_NOISE : VOICE_NOISE_ALT)
+                    tone.wavePointer = UnsafeMutablePointer<UInt32>(bitPattern: voice.period & 1)
+                default:
+                    continue
+                }
+                tone.key = UInt8(voice.key)
+                tone.attack = UInt8(voice.attack & 7)
+                tone.decay = UInt8(voice.decay & 7)
+                tone.sustain = UInt8(voice.sustain & 15)
+                tone.release = UInt8(voice.release & 7)
+            }
+            children[ordinal] = tone
+        }
+        slots[index].tone = ToneData()
+        slots[index].tone.type = UInt8(kit.mode == .drumkit ? VOICE_KEYSPLIT_ALL : VOICE_KEYSPLIT)
+        slots[index].tone.subGroup = UnsafeMutableRawPointer(children)
+        if kit.mode == .keysplit { slots[index].tone.keySplitTable = table }
+        publish(index, key: key)
+        return true
+    }
+
     func off() {
         guard generation != 0 else { return }
         generation &+= 1
@@ -133,6 +257,14 @@ final class AudioSampleAudition {
                 m4a_engine_note_on(engine, 1, key, 127)
                 soundingKey = Int(key)
                 adoptedWaves[index] = slots[index].tone.type == 3 ? slots[index].tone.wavePointer : nil
+                adoptedChildren[index] = slots[index].childWaves
+                if slots[index].childWaves != nil, let bytes = slots[index].bytes {
+                    adoptedKitStart[index] = UInt(bitPattern: bytes)
+                    adoptedKitEnd[index] = UInt(bitPattern: bytes) + UInt(slots[index].byteCount)
+                } else {
+                    adoptedKitStart[index] = 0
+                    adoptedKitEnd[index] = 0
+                }
             }
             adopted = gen
         }
@@ -145,6 +277,13 @@ final class AudioSampleAudition {
                     guard channel.status & 0xC7 != 0, let wave = channel.wav else { continue }
                     for slot in 0..<4 {
                         if wave == waves.advanced(by: slot) { mask |= 1 << slot }
+                        if let children = adoptedChildren[slot] {
+                            let address = UInt(bitPattern: wave)
+                            let start = UInt(bitPattern: children)
+                            if address >= start && address < start + UInt(MemoryLayout<WaveData>.stride * 128) {
+                                mask |= 1 << slot
+                            }
+                        }
                     }
                 }
             }
@@ -157,11 +296,20 @@ final class AudioSampleAudition {
                     guard channel.status & 0xC7 != 0, let wave = channel.wavePointer else { continue }
                     for slot in 0..<4 {
                         if wave == adoptedWaves[slot] { mask |= 1 << slot }
+                        let address = UInt(bitPattern: wave)
+                        if address >= adoptedKitStart[slot] && address < adoptedKitEnd[slot] {
+                            mask |= 1 << slot
+                        }
                     }
                 }
             }
         }
-        for slot in 0..<4 where mask & (1 << slot) == 0 { adoptedWaves[slot] = nil }
+        for slot in 0..<4 where mask & (1 << slot) == 0 {
+            adoptedWaves[slot] = nil
+            adoptedChildren[slot] = nil
+            adoptedKitStart[slot] = 0
+            adoptedKitEnd[slot] = 0
+        }
         acknowledgement.store(adopted << 8 | mask, ordering: .releasing)
     }
 
@@ -169,7 +317,12 @@ final class AudioSampleAudition {
     func reset() {
         adopted = publication.load(ordering: .acquiring) >> 16
         soundingKey = -1
-        for slot in 0..<4 { adoptedWaves[slot] = nil }
+        for slot in 0..<4 {
+            adoptedWaves[slot] = nil
+            adoptedChildren[slot] = nil
+            adoptedKitStart[slot] = 0
+            adoptedKitEnd[slot] = 0
+        }
         acknowledgement.store(adopted << 8, ordering: .releasing)
     }
 }

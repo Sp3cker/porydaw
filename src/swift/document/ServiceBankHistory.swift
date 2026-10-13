@@ -125,6 +125,49 @@ final class ServiceBankAction: BankHistoryAction {
     }
 }
 
+/// Whole-kit replay is authoritative and never participates in bank edit merging.
+@MainActor
+final class ServiceKitEditAction: BankHistoryAction {
+    let historyLabel: String
+    private let service: ProjectService
+    private let before: KitEditValue
+    private let after: KitEditValue
+    private let inbox: BankResultInbox
+    private(set) var current: AppliedBankEdit
+
+    init(
+        service: ProjectService, before: KitEditValue, after: KitEditValue,
+        current: AppliedBankEdit, inbox: BankResultInbox
+    ) {
+        self.service = service
+        self.before = before
+        self.after = after
+        self.current = current
+        self.inbox = inbox
+        historyLabel = "Kit \(after.subgroupSymbol)"
+    }
+
+    func apply(direction: BankHistoryDirection) async throws {
+        let result = try await service.applyKitEdit(
+            lease: current.lease, input: direction == .undo ? before : after,
+            expected: nil, publishResult: false)
+        current = result
+        inbox.deliver(result)
+    }
+
+    var isRedundant: Bool { before == after }
+
+    func merged(with _: any BankHistoryAction) -> (any BankHistoryAction)? { nil }
+
+    func rebaseCurrent(with newer: any BankHistoryAction) {
+        guard let other = newer as? ServiceKitEditAction,
+            other.after.voicegroup == after.voicegroup,
+            other.after.slot == after.slot
+        else { return }
+        current = other.current
+    }
+}
+
 /// Scalar merge boundary: which of the twelve voice fields an edit changes.
 /// Internal to the Swift merge policy; the mask never crosses the C boundary.
 private func bankChangedFieldMask(_ before: BankVoice, _ after: BankVoice) -> UInt32 {

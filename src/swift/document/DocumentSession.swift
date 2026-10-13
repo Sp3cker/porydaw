@@ -415,6 +415,47 @@ public final class DocumentSession {
         return result
     }
 
+    /// Applies one complete kit and records its captured prior state as one song undo step.
+    /// - Returns: The refreshed bound bank.
+    /// - Throws: A bank conflict or project failure, without recording an action.
+    @discardableResult
+    public func applyKitEdit(
+        _ edit: KitEditValue, expected: KitEditValue
+    ) async throws -> AppliedBankEdit {
+        try requireOpen()
+        guard !bankPersistenceInFlight else {
+            throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
+        }
+        if !bankDirty { document.history.sealBankMerge() }
+        guard let transition = document.history.beginBankTransition() else {
+            throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
+        }
+        publishChange([.history])
+        var ownsTransition = true
+        defer {
+            if ownsTransition {
+                document.history.endBankTransition(transition)
+                publishChange([.history])
+            }
+            flushPendingBankNotification()
+        }
+        let result = try await service.applyKitEdit(
+            lease: bankLease, input: edit, expected: expected,
+            publishResult: false)
+        withStateChanges {
+            document.history.finishBankTransition(
+                transition,
+                recording: ServiceKitEditAction(
+                    service: service, before: expected, after: edit,
+                    current: result, inbox: inbox))
+            ownsTransition = false
+            adoptBank(result)
+            pendingBankNotification = false
+            publishChange([.bank, .dirty, .history])
+        }
+        return result
+    }
+
     /// Reserves a synth symbol in the project without changing this document.
     /// - Parameter descriptor: The desired waveform and pulse parameters.
     /// - Returns: The reusable assembler symbol.

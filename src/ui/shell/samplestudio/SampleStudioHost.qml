@@ -29,7 +29,7 @@ Item {
             colors: host.colors
             editor: host.workflow.editor() as SampleStudioPresenter
             tools: host.workflow.loopTools() as SampleLoopTools
-            waveformModel: host.workflow.waveform() as SampleWaveformModel
+            waveformModel: host.workflow.waveform() as MarkerWaveformModel
             audition: host.workflow.audition() as SampleStudioAudition
             transientParent: host.hostWindow
         }

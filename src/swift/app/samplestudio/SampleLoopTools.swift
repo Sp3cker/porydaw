@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import PorydawSample
+import PorydawSampleUI
 import QtBridge
 
 @MainActor
@@ -247,6 +248,69 @@ public final class SampleLoopTools: QmlUncreatable {
             suggestStatus = ""
         }
         canTryAnother = candidatesValid && !candidates.isEmpty
+    }
+
+    /// Installs the Sample Studio marker adapter without coupling the shared model to a presenter.
+    @QtIgnored
+    public func bindWaveform(_ wave: MarkerWaveformModel) {
+        wave.onMarkerPressed = { [weak presenter] _ in presenter?.beginMarkerGesture() }
+        wave.onMarkerDragged = { [weak self, weak wave] id, frame in
+            guard let self, let wave else { return }
+            let before = self.presenter.params
+            self.dragMarker(id: id, frame: frame)
+            if self.presenter.params == before { self.publishWaveform(wave, sourceChanged: false) }
+        }
+        wave.onMarkerReleased = { [weak presenter] in presenter?.endMarkerGesture() }
+    }
+
+    @QtIgnored
+    public func publishWaveform(_ wave: MarkerWaveformModel, sourceChanged: Bool) {
+        if sourceChanged {
+            wave.setSamples(
+                presenter.source.buffer, sampleRate: presenter.source.sampleRate,
+                gain: presenter.processed.normalizeGain)
+        } else {
+            wave.setGain(presenter.processed.normalizeGain)
+        }
+        let p = presenter.params
+        var markers: [(id: Int, frame: Int, kind: String, label: String)] = [
+            (1, p.cropStart, "crop", "Crop start"), (2, p.cropEnd, "crop", "Crop end"),
+        ]
+        if p.loopOn {
+            markers.append((3, p.loopStart, "loop", "Loop start"))
+            markers.append((4, p.loopEnd, "loop", "Loop end"))
+        }
+        wave.setMarkers(markers)
+        let output = presenter.processed
+        var end: [Float] = [], start: [Float] = []
+        if output.looped {
+            let loopStart = Int(output.loopStart)
+            let samples = output.preview
+            let length = min(256, samples.count - loopStart - 1, loopStart + 1, samples.count)
+            if length >= 8 {
+                end.append(contentsOf: samples[(samples.count - length)..<samples.count])
+                start.append(contentsOf: samples[(loopStart - length + 1)...loopStart])
+            }
+        }
+        wave.setSeamWindows(end: end, start: start)
+    }
+
+    private func dragMarker(id: Int, frame: Int) {
+        let p = presenter.params
+        var cropStart = p.cropStart, cropEnd = p.cropEnd
+        var loopStart = p.loopStart, loopEnd = p.loopEnd
+        switch id {
+        case 1: cropStart = min(max(0, frame), cropEnd - (p.loopOn ? 2 : 1))
+        case 2: cropEnd = min(max(cropStart + (p.loopOn ? 2 : 1), frame), presenter.sourceFrameCount)
+        case 3: loopStart = min(max(cropStart, frame), min(loopEnd - 1, cropEnd - 2))
+        case 4: loopEnd = min(max(loopStart + 1, frame), min(cropEnd - 1, presenter.sourceFrameCount - 1))
+        default: return
+        }
+        if p.loopOn {
+            loopEnd = min(max(loopEnd, cropStart + 1), cropEnd - 1)
+            loopStart = min(max(loopStart, cropStart), loopEnd - 1)
+        }
+        presenter.dragMarkers(cropStart: cropStart, cropEnd: cropEnd, loopStart: loopStart, loopEnd: loopEnd)
     }
 
     private func analysisParams() -> SampleEditParams {

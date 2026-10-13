@@ -35,8 +35,6 @@ add_library(PorydawApp STATIC
     samplestudio/SampleStudioPresenter.swift
     samplestudio/SampleLoopTools.swift
     samplestudio/SampleStudioAudition.swift
-    samplestudio/SampleWaveformModel.swift
-    samplestudio/SampleWaveformScene.swift
     samplestudio/SampleProvenanceStore.swift
     samplestudio/SampleSourcePreparation.swift
     samplestudio/SampleStudioWorkflow.swift
@@ -235,6 +233,7 @@ add_library(PorydawAppAudio STATIC
     audio/AudioTelemetry.swift
     audio/AudioAudition.swift
     audio/AudioSampleAudition.swift
+    audio/KitAuditionTone.swift
     audio/ResonanceSuppression.swift
     audio/Metronome.swift
     export/WavExport.swift
@@ -320,13 +319,14 @@ target_link_libraries(PorydawAppHistory PUBLIC PorydawCore PorydawDocument Poryd
 add_dependencies(PorydawAppHistory QtBridgeMacros)
 
 add_subdirectory("${CMAKE_SOURCE_DIR}/src/swift/sampleui" "${CMAKE_BINARY_DIR}/src/swift/sampleui")
+add_subdirectory("${CMAKE_SOURCE_DIR}/src/swift/kitstudio" "${CMAKE_BINARY_DIR}/src/swift/kitstudio")
 
 target_link_libraries(PorydawApp PUBLIC
-    PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppHistory PorydawAppPresentation PorydawSampleUI
+    PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppHistory PorydawAppPresentation PorydawSampleUI PorydawKitStudio
 )
 
 if(PORYDAW_BUILD_CHECKS)
-    foreach(leaf PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppHistory PorydawAppPresentation PorydawSampleUI)
+    foreach(leaf PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppHistory PorydawAppPresentation PorydawSampleUI PorydawKitStudio)
         target_compile_options(${leaf} PRIVATE
             "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>")
     endforeach()

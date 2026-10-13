@@ -19,7 +19,7 @@ public struct SampleDocument: Sendable {
         params.loopEnd = source.loopEndInclusive
         params.baseKey = source.baseKey
         params.fineTuneCents = min(max(0, source.fracSemitone * 100), 99.9999999999)
-        params.targetRate = source.gbaReady ? source.sampleRate : min(source.sampleRate, ImportedSample.gbaDefaultRate)
+        params.targetRate = SampleRatePolicy.targetRate(gbaReady: source.gbaReady, sourceRate: source.sampleRate)
         if source.gbaReady {
             params.normalizeMode = .off
             params.dcRemove = .off

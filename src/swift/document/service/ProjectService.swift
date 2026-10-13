@@ -92,6 +92,30 @@ public struct BankVoice: Equatable, Sendable {
     }
 }
 
+/// Document-value form of one complete kit edit.
+public struct KitEditValue: Equatable, Sendable {
+    public var voicegroup: String
+    public var slot: Int
+    public var parent: BankVoice
+    public var subgroupSymbol: String
+    public var children: [BankVoice?]
+    public var tableName: String?
+    public var table: [UInt8]?
+
+    public init(
+        voicegroup: String, slot: Int, parent: BankVoice, subgroupSymbol: String,
+        children: [BankVoice?], tableName: String?, table: [UInt8]?
+    ) {
+        self.voicegroup = voicegroup
+        self.slot = slot
+        self.parent = parent
+        self.subgroupSymbol = subgroupSymbol
+        self.children = children
+        self.tableName = tableName
+        self.table = table
+    }
+}
+
 /// The scalar envelope of a loaded tone; keysplit/drumkit tones carry none.
 public struct BankToneAdsr: Equatable, Sendable {
     public var attack: Int32
@@ -332,6 +356,43 @@ public actor ProjectService {
     internal func publish(_ value: AppliedBankEdit, from source: ProjectStore) async {
         guard !closed, store === source else { return }
         await bankViews.publish(value)
+    }
+
+    /// Applies the complete kit through the store; the session owns publication.
+    /// - Returns: The refreshed bound bank.
+    /// - Throws: A bank conflict or wrapped project failure.
+    public func applyKitEdit(
+        lease: ProjectBankLease, input: KitEditValue, expected: KitEditValue?,
+        publishResult: Bool = true
+    ) async throws -> AppliedBankEdit {
+        let store = try requireStore()
+        guard lease.publicationOwner == store.publicationOwner else {
+            throw ProjectServiceError.serviceClosed
+        }
+        do {
+            let table: KeysplitTable?
+            switch (input.tableName, input.table) {
+            case let (.some(name), .some(bytes)) where bytes.count == 128:
+                table = KeysplitTable(name: name, startingNote: 0, maxNote: 128, table: bytes)
+            case (.none, .none):
+                table = nil
+            default:
+                throw ProjectServiceError.operationFailed("A keysplit table requires a name and 128 bytes.")
+            }
+            let converted = try KitEditInput(
+                id: lease.id, slot: input.slot, parent: projectVoice(input.parent),
+                subgroupSymbol: input.subgroupSymbol,
+                children: input.children.map { (voice: BankVoice?) in try voice.map(projectVoice) },
+                table: table)
+            let old = try expected.map { (value: KitEditValue) in try projectVoice(value.parent) }
+            let result = try await store.applyKitEdit(
+                lease: lease, input: converted, expectedParent: old)
+            let applied = try bankEditResult(result)
+            if publishResult { await publish(applied, from: store) }
+            return applied
+        } catch {
+            throw projectFailure(error)
+        }
     }
 
     /// Captures dirty document bytes without saving the source or its flags.

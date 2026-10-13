@@ -15,7 +15,7 @@ DialogWindow {
     required property ApplicationSession applicationSession
     required property SampleStudioPresenter editor
     required property SampleLoopTools tools
-    required property SampleWaveformModel waveformModel
+    required property MarkerWaveformModel waveformModel
     required property SampleStudioAudition audition
     readonly property real unit: applicationSession.baseFontPx
     readonly property real spacing: applicationSession.layoutSpaces.one

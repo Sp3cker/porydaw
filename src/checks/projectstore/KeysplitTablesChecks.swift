@@ -1,5 +1,6 @@
 import Foundation
 import PorydawVoicegroup
+import PorydawProject
 
 public func runKeysplitTablesSuite(_ report: CheckReport) {
     let id = "projectstore-keysplits"
@@ -109,6 +110,7 @@ public func runKeysplitTablesSuite(_ report: CheckReport) {
         report.fail(id, "keysplit checks: \(error)")
     }
     keysplitWriterChecks(report)
+    kitUsageScannerChecks(report)
 }
 
 private func keysplitWriterChecks(_ report: CheckReport) {
@@ -207,5 +209,69 @@ private func keysplitWriterChecks(_ report: CheckReport) {
         }
     } catch {
         report.fail(id + "fixture", "writer checks: \(error)")
+    }
+}
+
+private func kitUsageScannerChecks(_ report: CheckReport) {
+    let id = "swiftcore/KitUsageScanner::"
+    do {
+        try withTempProjectCopy(prefix: "kit-usage") { root in
+            func usage(_ symbol: String, table: String? = nil, excluding: String = "") -> [String] {
+                KitUsageScanner.usage(
+                    projectRoot: root.path, subgroupSymbol: symbol, tableName: table, excludingSection: excluding)
+            }
+            report.expectEqual(
+                expected: ["voicegroup_fixture_rich"], actual: usage("fixture_drums_a"),
+                cppID: id + "subgroup", what: "fixture parent references drumkit")
+            report.expectEqual(
+                expected: [], actual: usage("fixture_drums_a", excluding: "voicegroup_fixture_rich"),
+                cppID: id + "exclude", what: "scanner excludes own canonical parent section")
+            report.expectEqual(
+                expected: ["voicegroup_fixture_rich"], actual: usage("not_a_subgroup", table: "keysplit_fixture"),
+                cppID: id + "table", what: "keysplit table argument matches independently of subgroup")
+            report.expectEqual(
+                expected: ["voicegroup_fixture_rich"], actual: usage("fixture_keys"),
+                cppID: id + "keysplit-symbol", what: "keysplit subgroup argument is detected")
+            let scratch = root.appendingPathComponent("sound/nested/kit_usage.inc").path
+            try ProjectFileStore.mkpath(root.appendingPathComponent("sound/nested").path)
+            let text = """
+                @ voice_keysplit_all fixture_drums_a
+                // voice_keysplit fixture_keys, keysplit_fixture
+                alpha_section::
+                    voice_keysplit_all fixture_drums_a @ real reference
+                    voice_keysplit_all fixture_drums_a
+                partial_section::
+                    voice_keysplit_all fixture_drums_ab
+                    voice_keysplit_all fixture_drums_b
+                    voice_keysplit fixture_keys_extra, keysplit_fixture_extra
+                    @ voice_keysplit_all comment_only
+                    // voice_keysplit_all comment_only
+                zeta_section::
+                    voice_keysplit unrelated_subgroup, keysplit_fixture // real table reference
+                """
+            try ProjectFileStore.write(scratch, data: Data(text.utf8))
+            report.expectEqual(
+                expected: ["alpha_section"], actual: usage("fixture_drums_a", excluding: "voicegroup_fixture_rich"),
+                cppID: id + "second-section", what: "deep scan finds scratch section and deduplicates its lines")
+            report.expectEqual(
+                expected: ["alpha_section", "voicegroup_fixture_rich", "zeta_section"],
+                actual: usage("fixture_drums_a", table: "keysplit_fixture"),
+                cppID: id + "sorted-union", what: "symbol and table references form a sorted section union")
+            report.expectEqual(
+                expected: ["zeta_section"],
+                actual: usage("not_a_subgroup", table: "keysplit_fixture", excluding: "voicegroup_fixture_rich"),
+                cppID: id + "table-boundary", what: "partial table names do not match")
+            report.expectEqual(
+                expected: [], actual: usage("comment_only"),
+                cppID: id + "comments", what: "commented macros never reference a kit")
+            report.expectEqual(
+                expected: ["partial_section"], actual: usage("fixture_drums_b", excluding: "voicegroup_fixture_rich"),
+                cppID: id + "symbol-boundary", what: "drums_b is distinct from drums_a and drums_ab")
+            report.expectEqual(
+                expected: text, actual: String(decoding: try ProjectFileStore.read(scratch), as: UTF8.self),
+                cppID: id + "read-only", what: "usage scanning never changes sources")
+        }
+    } catch {
+        report.fail(id + "fixture", "usage scanner checks: \(error)")
     }
 }

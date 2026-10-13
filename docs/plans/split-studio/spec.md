@@ -326,7 +326,7 @@ extension ProjectStore {
     /// .applyKitEdit) adopting the refreshed lease, mirroring
     /// applyVoicegroupEdit's outcome shape.
     public func applyKitEdit(lease: ProjectBankLease, input: KitEditInput,
-                             expectedParent: VgVoice) async throws -> ProjectBankEditOutcome
+                             expectedParent: VgVoice?) async throws -> ProjectBankEditOutcome  // nil = authoritative replay (R-T3-1)
 }
 
 /// Usage scan: which voicegroup sections reference a sub-group symbol and/or
@@ -373,9 +373,12 @@ extension DocumentSession {
     /// Confirmed Save to Song: applies through the service and records ONE
     /// replayable ServiceKitEditAction. Same transition/in-flight guards and
     /// publish domains as applyBankEdit (DocumentSession.swift:376-415);
-    /// conflicts throw and record nothing.
+    /// conflicts throw and record nothing. `expected` is the whole replaced
+    /// state (conflict precondition AND undo target); "Keep mine" passes the
+    /// re-read current kit. A before value with subgroupSymbol "" (new kit in
+    /// a non-kit slot) replays as a parent-only scalar restore (R-T4-1).
     @discardableResult
-    public func applyKitEdit(_ edit: KitEditValue, expected: KitEditValue?) async throws -> AppliedBankEdit
+    public func applyKitEdit(_ edit: KitEditValue, expected: KitEditValue) async throws -> AppliedBankEdit
 }
 ```
 
@@ -601,20 +604,22 @@ public enum KitDraftCodec {
     /// voice).
     public static func children(from zones: [KitZone], mode: KitMode) -> [VgVoice?]
     /// Full-range table: startingNote 0, maxNote 128, every key 0...127
-    /// mapped to its zone's ordinal; a key inside no zone maps to the
-    /// ordinal of the last zone starting before it (0 when none). The
-    /// writer's truncation rule is therefore "never": Split Studio tables
-    /// always cover 0...127, so gaps above the last zone survive the
-    /// round-trip (R14).
+    /// mapped to its zone's ordinal; when any key lies in no zone, ONE gap
+    /// sentinel ordinal == zones.count (nil child ⇒ kitBlankChildLine) is
+    /// appended and every gap key maps to it (R-T7-1). Tables always cover
+    /// 0...127, so gaps survive the round-trip (R14).
     public static func table(from zones: [KitZone], name: String) -> KeysplitTable
-    /// Builds the engine-true audition description for one key.
-    public static func auditionTone(draft: KitDraft.Snapshot, key: Int) -> KitAuditionTone
+    /// Engine-true audition description for one key of the given mode view;
+    /// nil when the key is in no zone; a missing symbol yields a silent child.
+    public static func auditionTone(draft: KitDraft.Snapshot, mode: KitMode, key: Int,
+                                    samples: [String: ProcessedSample],
+                                    progWaves: [String: [UInt32]]) -> KitAuditionTone?
 }
 ```
 
-Load-time zone building (§12) and the gap rule above agree: on load, a
-table run whose ordinal has no defined child slot renders as unassigned
-keys (no zone).
+Load-time zone building (§12) and the gap rule above agree: on load, a child
+slot whose voice equals the decoded `kitBlankChildLine` voice is unassigned
+(no zone) in both modes (R-T7-1).
 
 Task 8 — source session (Swift; slices, markers, minting):
 
