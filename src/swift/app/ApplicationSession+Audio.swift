@@ -93,19 +93,40 @@ extension ApplicationSession {
                 velocity: UInt8(velocity))
         }
         voiceList.onVoicegroupChangeRequested = { [weak self] arg in
-            guard let self, let session = self.selectedDocument else { return }
-            Task { [weak self, weak session] in
-                guard let session else { return }
-                do {
-                    try await session.selectVoicegroup(arg)
-                } catch ProjectServiceError.operationFailed(let message) {
-                    self?.publishLastSaveError(message)
-                } catch {
-                    self?.publishLastSaveError(String(describing: error))
+            guard let self, let tab = self.songTabs.selectedPage else { return }
+            let song = tab.workspace.session
+            let previousArg = song.document.state.config.voicegroupArgument
+            let switchVoicegroup = { [weak self, weak song] () -> Void in
+                Task { [weak self, weak song] in
+                    guard let song else { return }
+                    do {
+                        if let workflow = self?.kitStudioWorkflow {
+                            try await workflow.selectVoicegroup(song: song, arg: arg)
+                        } else {
+                            try await song.selectVoicegroup(arg)
+                        }
+                    } catch ProjectServiceError.operationFailed(let message) {
+                        self?.publishLastSaveError(message)
+                    } catch {
+                        self?.publishLastSaveError(String(describing: error))
+                    }
+                    if self?.selectedDocument === song {
+                        self?.voiceList.refresh(from: song)
+                    }
                 }
-                if self?.selectedDocument === session {
-                    self?.voiceList.refresh(from: session)
-                }
+            }
+            let restoreSelection = { [weak self, weak song] in
+                guard let self, let song, self.selectedDocument === song else { return }
+                self.voiceList.setCurrentVoicegroupArg(previousArg)
+            }
+            if let workflow = self.kitStudioWorkflow, workflow.boundSong === song,
+                workflow.switchingVoicegroup || workflow.saving
+            {
+                restoreSelection()
+            } else if self.hasUnsavedChanges(song: tab), let workflow = self.kitStudioWorkflow {
+                workflow.guardVoicegroupSwitch(proceed: switchVoicegroup, cancel: restoreSelection)
+            } else {
+                switchVoicegroup()
             }
         }
         voiceList.onNewVoicegroupRequested = { [weak self] in

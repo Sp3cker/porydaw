@@ -325,6 +325,13 @@ public final class ApplicationSession: QmlInstantiableStatus {
         return workflow
     }
 
+    /// True iff the Split Studio window holds unapplied changes for `song`.
+    @QtIgnored public func hasUnsavedChanges(song: SongTabSession) -> Bool {
+        guard let workflow = kitStudioWorkflow else { return false }
+        return workflow.windowOpen && workflow.boundSong === song.workspace.session
+            && (workflow.presenter()?.dirty ?? false)
+    }
+
     /// Records only assets created by Split Studio in this application session.
     public func recordCreatedSample(name: String) {
         splitStudioCreatedSamples[projectRoot, default: []].insert(name)

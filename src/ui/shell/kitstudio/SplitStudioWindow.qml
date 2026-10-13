@@ -52,10 +52,10 @@ ThemedWindow {
         geometryReady = true
     }
 
-    Shortcut { sequences: [StandardKey.Save]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving; onActivated: studio.workflow.saveToSong() }
-    Shortcut { sequences: [StandardKey.Undo]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving; onActivated: studio.workflow.undo() }
-    Shortcut { sequences: [StandardKey.Redo]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving; onActivated: studio.workflow.redo() }
-    Shortcut { sequences: [StandardKey.Close]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving; onActivated: studio.close() }
+    Shortcut { sequences: [StandardKey.Save]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving && !studio.workflow.switchingVoicegroup; onActivated: studio.workflow.saveToSong() }
+    Shortcut { sequences: [StandardKey.Undo]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving && !studio.workflow.switchingVoicegroup; onActivated: studio.workflow.undo() }
+    Shortcut { sequences: [StandardKey.Redo]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving && !studio.workflow.switchingVoicegroup; onActivated: studio.workflow.redo() }
+    Shortcut { sequences: [StandardKey.Close]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving && !studio.workflow.switchingVoicegroup; onActivated: studio.close() }
     Timer { interval: 1000 / 30; repeat: true; running: studio.workflow.auditionPlaying; onTriggered: studio.workflow.tickAudition() }
 
     NativeDialogs.FileDialog {
@@ -82,7 +82,7 @@ ThemedWindow {
         anchors.fill: parent
         anchors.margins: studio.spacing
         spacing: studio.spacing
-        enabled: !studio.workflow.saving
+        enabled: !studio.workflow.saving && !studio.workflow.switchingVoicegroup
         KitSlotPicker {
             Layout.fillWidth: true
             editor: studio.editor
@@ -97,6 +97,13 @@ ThemedWindow {
             Label { Layout.fillWidth: true; text: studio.editor.conflictText; color: studio.colors.windowText; wrapMode: Text.WordWrap }
             Button { text: qsTr("Reload"); onClicked: studio.editor.answerConflict(false) }
             Button { text: qsTr("Keep mine"); onClicked: studio.editor.answerConflict(true) }
+        }
+        RowLayout {
+            objectName: "splitStudioSwitchBar"
+            Layout.fillWidth: true
+            visible: studio.editor.switchBarVisible
+            Label { Layout.fillWidth: true; text: studio.workflow.switchBarText; color: studio.colors.windowText; wrapMode: Text.WordWrap }
+            Button { objectName: "splitStudioSwitchBack"; text: studio.workflow.switchBackText; onClicked: studio.editor.switchBack() }
         }
         RowLayout {
             Layout.fillWidth: true
@@ -199,6 +206,14 @@ ThemedWindow {
                 }
             }
         }
+        Label {
+            objectName: "splitStudioStatus"
+            Layout.fillWidth: true
+            visible: text.length > 0
+            text: studio.editor.statusText
+            color: studio.colors.windowText
+            wrapMode: Text.WordWrap
+        }
         RowLayout {
             Layout.fillWidth: true
             Button { text: qsTr("Undo"); enabled: studio.editor.canUndo; onClicked: studio.workflow.undo() }
@@ -216,18 +231,19 @@ ThemedWindow {
     Dialog {
         id: closePrompt
         objectName: "splitStudioClosePrompt"
-        parent: studio.contentItem
+        parent: studio.workflow.promptForVoicegroup ? (studio.transientParent as Window).contentItem : studio.contentItem
         anchors.centerIn: parent
         width: 35 * studio.unit
         title: qsTr("Save Split Studio changes?")
         modal: true
+        focus: true
         closePolicy: Popup.NoAutoClose
         visible: studio.workflow.promptOpen
         contentItem: ColumnLayout {
             spacing: studio.spacing
-            Label { Layout.fillWidth: true; text: qsTr("Save to Song before closing or changing the bound song?"); wrapMode: Text.WordWrap; color: studio.colors.windowText }
+            Label { Layout.fillWidth: true; text: studio.workflow.promptForVoicegroup ? qsTr("Save to Song before changing the voicegroup?") : qsTr("Save to Song before closing or changing the bound song?"); wrapMode: Text.WordWrap; color: studio.colors.windowText }
             RowLayout {
-                Button { text: qsTr("Save"); onClicked: studio.workflow.answerPrompt(0) }
+                Button { text: qsTr("Save to Song"); onClicked: studio.workflow.answerPrompt(0) }
                 Button { text: qsTr("Discard"); onClicked: studio.workflow.answerPrompt(1) }
                 Button { text: qsTr("Cancel"); onClicked: studio.workflow.answerPrompt(2) }
             }

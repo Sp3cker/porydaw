@@ -17,6 +17,10 @@ public final class KitStudioWorkflow: QmlUncreatable {
     public var presenterRevision: Int = 0
     public var saving: Bool = false
     public var promptOpen: Bool = false
+    public var promptForVoicegroup: Bool = false
+    public var switchingVoicegroup: Bool = false
+    public var switchBarText: String = ""
+    public var switchBackText: String = ""
     public var alertText: String = ""
     public var alertRevision: Int = 0
     public var pickerRequested: Bool = false
@@ -37,8 +41,14 @@ public final class KitStudioWorkflow: QmlUncreatable {
     private var sessionGeneration = 0
     private var pendingTask: Task<Void, Never>?
     private var observerTask: Task<Void, Never>?
+    private var switchBackTask: Task<Void, Never>?
+    private var previousVoicegroupArg: String?
+    private var followedSlot: Int = -1
+    private var cleanSourceSnapshot: KitSourceSession.Snapshot?
     private var snapshots: [Int: KitEditValue] = [:]
     private var observedRevision: UInt64 = 0
+    private var deferredBankRevision: UInt64?
+    private var switchFailureText: String?
     private var ownSave: (generation: Int, after: KitEditValue)?
     private var savedWavs: [String: Data] = [:]
     private struct SliceRenderKey: Equatable {
@@ -73,7 +83,9 @@ public final class KitStudioWorkflow: QmlUncreatable {
     }
 
     public func requestOpen() {
-        guard let session, session.projectOpen, let song = session.selectedDocument, !saving else { return }
+        guard let session, session.projectOpen, let song = session.selectedDocument,
+            !saving, !switchingVoicegroup
+        else { return }
         if windowOpen, boundSong === song {
             presenterRevision += 1
             return
@@ -122,6 +134,11 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 self.wire(presenter)
                 let selected = session.voiceList.currentSlot
                 let slot = values[selected] != nil ? selected : values.keys.sorted().first ?? -1
+                self.followedSlot = slot
+                self.previousVoicegroupArg = nil
+                self.switchBarText = ""
+                self.switchBackText = ""
+                self.cleanSourceSnapshot = presenter.session.snapshot()
                 presenter.bind(
                     song: song.document.source.label,
                     section: try KitUsageScanner.canonicalSection(
@@ -161,8 +178,10 @@ public final class KitStudioWorkflow: QmlUncreatable {
         }
         presenter.onRetargetPrompt = { [weak self] (answer: Int) in
             if answer == 0 { self?.saveToSong() }
+            if answer == 1 { self?.cleanSourceSnapshot = self?.state?.session.snapshot() }
         }
         presenter.onConflictAnswer = { [weak self] (keepMine: Bool) in self?.resolveConflict(keepMine: keepMine) }
+        presenter.onSwitchBack = { [weak self] in self?.switchBack() }
         presenter.publishKitTone = { [weak self] (tone: KitAuditionTone, key: UInt8) -> Bool in
             guard let self else { return false }
             self.stopAudition()
@@ -501,6 +520,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 else { return }
                 if create { state.usedByText = "" }
                 state.markClean()
+                self.cleanSourceSnapshot = state.session.snapshot()
                 if state.retargetVisible { state.completeRetarget() }
                 self.closeGuard.saveSettled(success: true)
             } catch {
@@ -514,11 +534,15 @@ public final class KitStudioWorkflow: QmlUncreatable {
 
     /// Called by the existing workspace publication callback; non-bank publications are cheap no-ops.
     @QtIgnored public func bankDidChange(song: DocumentSession) {
-        guard windowOpen, boundSong === song, let state, let session, let service = session.catalogService,
-            observedRevision != song.bankLease.publicationRevision
-        else { return }
+        guard windowOpen, boundSong === song, let state, let session, let service = session.catalogService else {
+            return
+        }
+        if switchingVoicegroup {
+            deferredBankRevision = song.bankLease.publicationRevision
+            return
+        }
+        guard observedRevision != song.bankLease.publicationRevision else { return }
         let lease = song.bankLease
-        observedRevision = lease.publicationRevision
         let generation = sessionGeneration
         let slot = state.selectedSlot
         let undefined = Self.undefinedSlots(lease)
@@ -533,6 +557,13 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 guard let self, !Task.isCancelled, self.sessionGeneration == generation,
                     self.boundSong === song, song.bankLease.publicationRevision == lease.publicationRevision
                 else { return }
+                self.observedRevision = lease.publicationRevision
+                defer {
+                    if let failure = self.switchFailureText {
+                        state.statusText = failure
+                        self.switchFailureText = nil
+                    }
+                }
                 let old = self.snapshots[slot]
                 self.snapshots = values
                 state.samples = assets.samples
@@ -582,7 +613,10 @@ public final class KitStudioWorkflow: QmlUncreatable {
                     self.session?.catalogService === service
                 else { return }
                 self.snapshots[slot] = value
-                if !keepMine, let result = self.loadResult(slot: slot) { state.install(result, slot: slot) }
+                if !keepMine, let result = self.loadResult(slot: slot) {
+                    state.install(result, slot: slot)
+                    self.cleanSourceSnapshot = state.session.snapshot()
+                }
                 self.saving = false
                 self.pendingTask = nil
             } catch {
@@ -630,8 +664,134 @@ public final class KitStudioWorkflow: QmlUncreatable {
         return sample
     }
 
+    /// The dropdown owns the dirty decision; this reuses the window's one close guard.
+    @QtIgnored public func guardVoicegroupSwitch(proceed: @escaping () -> Void, cancel: @escaping () -> Void) {
+        guard !promptOpen, !closeGuard.saving else {
+            cancel()
+            return
+        }
+        promptForVoicegroup = true
+        closeGuard.request(
+            source: .retarget, dirty: true,
+            proceed: { [weak self] in
+                guard let self else { return }
+                self.promptForVoicegroup = false
+                if let state = self.state, state.dirty {
+                    self.stopAudition()
+                    if let clean = self.cleanSourceSnapshot { state.session.restore(clean) }
+                    if let result = self.loadResult(slot: state.selectedSlot) {
+                        state.install(result, slot: state.selectedSlot)
+                    }
+                }
+                proceed()
+            },
+            cancel: { [weak self] in
+                self?.promptForVoicegroup = false
+                cancel()
+            })
+    }
+
+    /// Selects directly, then follows the same slot through the newly bound lease.
+    @QtIgnored public func selectVoicegroup(song: DocumentSession, arg: String) async throws {
+        guard windowOpen, boundSong === song, let state, let session, let service = session.catalogService else {
+            try await song.selectVoicegroup(arg)
+            return
+        }
+        guard !saving, !switchingVoicegroup else {
+            throw ProjectServiceError.operationFailed(
+                "Split Studio: a voicegroup switch or save is already in progress.")
+        }
+        let previousArg = song.document.state.config.voicegroupArgument
+        guard arg != previousArg else { return }
+        let generation = sessionGeneration
+        let slot = state.selectedSlot >= 0 ? state.selectedSlot : followedSlot
+        switchingVoicegroup = true
+        switchFailureText = nil
+        stopAudition()
+        observerTask?.cancel()
+        defer {
+            if sessionGeneration == generation {
+                switchingVoicegroup = false
+                let latestRevision = deferredBankRevision ?? song.bankLease.publicationRevision
+                deferredBankRevision = nil
+                if latestRevision != observedRevision || song.bankLease.publicationRevision != observedRevision {
+                    bankDidChange(song: song)
+                } else {
+                    switchFailureText = nil
+                }
+            }
+        }
+        do {
+            let oldLease = song.bankLease
+            try await song.selectVoicegroup(arg)
+            guard !Task.isCancelled, windowOpen, sessionGeneration == generation,
+                boundSong === song, session.catalogService === service, !song.isClosed,
+                song.bankLease.id != oldLease.id || song.bankLease.publicationRevision != oldLease.publicationRevision
+            else {
+                throw ProjectServiceError.operationFailed(
+                    "Split Studio: the song changed during the voicegroup switch.")
+            }
+            let lease = song.bankLease
+            let section = try KitUsageScanner.canonicalSection(
+                projectRoot: session.projectRoot, sourceRelativePath: lease.id.sourceRelativePath,
+                sectionLabel: lease.sectionLabel)
+            let values = try await Self.readKits(lease: lease, service: service, selectedSlot: slot)
+            let assets = try await Self.readAssets(values: values, lease: lease, service: service)
+            guard !Task.isCancelled, windowOpen, sessionGeneration == generation,
+                boundSong === song, session.catalogService === service, !song.isClosed,
+                song.bankLease.id == lease.id, song.bankLease.publicationOwner == lease.publicationOwner,
+                song.bankLease.publicationRevision == lease.publicationRevision
+            else {
+                throw ProjectServiceError.operationFailed(
+                    "Split Studio: the song changed during the voicegroup switch.")
+            }
+            followedSlot = slot
+            ownSave = nil
+            savedWavs.removeAll()
+            savedRenderKeys.removeAll()
+            selectedMarker = nil
+            copySharedKit = true
+            state.session.restore(KitSourceSession().snapshot())
+            cleanSourceSnapshot = state.session.snapshot()
+            snapshots = values
+            observedRevision = lease.publicationRevision
+            state.samples = assets.samples
+            state.progWaves = assets.waves
+            state.bind(
+                song: song.document.source.label, section: section,
+                voices: lease.slotViews.map(\.voice), undefinedSlots: Self.undefinedSlots(lease), slot: slot)
+            previousVoicegroupArg = previousArg
+            switchBarText = "Voicegroup changed to \(VoiceListSemantics.voicegroupDisplayName(arg))"
+            switchBackText = "Switch back to \(VoiceListSemantics.voicegroupDisplayName(previousArg))"
+            state.switchBarVisible = true
+            presenterRevision += 1
+        } catch {
+            guard sessionGeneration == generation, boundSong === song else { throw error }
+            state.switchBarVisible = previousVoicegroupArg != nil
+            state.statusText = String(describing: error)
+            switchFailureText = state.statusText
+            throw error
+        }
+    }
+
+    private func switchBack() {
+        guard let song = boundSong, let arg = previousVoicegroupArg else { return }
+        switchBackTask = Task { [weak self, weak song] in
+            guard let self, let song else { return }
+            defer { self.switchBackTask = nil }
+            do {
+                try await self.selectVoicegroup(song: song, arg: arg)
+            } catch {
+                self.state?.statusText = String(describing: error)
+            }
+            if self.session?.selectedDocument === song {
+                self.session?.voiceList.refresh(from: song)
+            }
+        }
+    }
+
     public func closeRequested() {
-        guard !saving else { return }
+        guard !saving, !switchingVoicegroup else { return }
         closeGuard.request(source: .window, dirty: state?.dirty ?? false) { [weak self] in self?.close() }
     }
     public func answerPrompt(answer: Int) { closeGuard.answer(answer) }
@@ -647,6 +807,17 @@ public final class KitStudioWorkflow: QmlUncreatable {
         observerTask?.cancel()
         pendingTask = nil
         observerTask = nil
+        switchBackTask?.cancel()
+        switchBackTask = nil
+        switchingVoicegroup = false
+        deferredBankRevision = nil
+        switchFailureText = nil
+        promptForVoicegroup = false
+        previousVoicegroupArg = nil
+        followedSlot = -1
+        cleanSourceSnapshot = nil
+        switchBarText = ""
+        switchBackText = ""
         saving = false
         pcm?.close()
         pcm = nil
