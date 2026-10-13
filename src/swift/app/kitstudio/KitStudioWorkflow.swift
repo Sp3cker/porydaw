@@ -58,9 +58,9 @@ public final class KitStudioWorkflow: QmlUncreatable {
         closeGuard.onSave = { [weak self] in self?.saveToSong() }
     }
 
-    public func presenter() -> KitStudioPresenter? { state }
+    public func presenter() -> Optional<KitStudioPresenter> { state }
 
-    public func library() -> SampleLibraryModel? {
+    public func library() -> Optional<SampleLibraryModel> {
         if let libraryPane { return libraryPane }
         guard let session else { return nil }
         let library = SampleLibraryModel(preferences: session.preferences)
