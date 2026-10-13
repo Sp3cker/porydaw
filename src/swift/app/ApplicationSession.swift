@@ -349,7 +349,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     /// Returns session-created samples with no current voicegroup references.
-    @QtIgnored public func orphanSplitStudioSamples() async throws -> [String] {
+    @QtIgnored func orphanSplitStudioSamples() async throws -> [String] {
         let root = projectRoot
         guard let created = splitStudioCreatedSamples[root], !created.isEmpty else { return [] }
         guard let service = catalogService, kitStudioWorkflow?.saving != true else {

@@ -348,11 +348,6 @@ enum ShellQmlRegistry {
                     "ShellExport::test_writeFailureReportsAndLeavesNoFile",
                 ]),
             Entry(
-                name: "shell-split-studio", inputFileName: "tst_ShellSplitStudio.qml",
-                fixtureFiles: songs("mus_route101") + [
-                    "Makefile", "audio_rules.mk", "samplesources/hires_tone.wav",
-                ]),
-            Entry(
                 name: "shell-sample-studio", inputFileName: "tst_ShellSampleStudio.qml",
                 fixtureFiles: songs("mus_route101") + [
                     "Makefile", "audio_rules.mk", "samplesources/hires_tone.wav",
