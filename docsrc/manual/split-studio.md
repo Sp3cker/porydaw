@@ -17,20 +17,22 @@ The sample library sits on the left, the waveform slicer on the top right, and
 the key-range editor on the bottom right. Both dividers drag, and Split Studio
 remembers the window size and divider positions between sessions.
 
-## Choosing a slot
+## Choosing a line
 
-The slot picker lists the song voicegroup's drumkit and keysplit slots. Empty
-slots offer **New kit in empty slot N…**, which creates the kit's voicegroup
-file (and its keysplit table, if you save the Keysplit view) when you save.
+**Line in Voicegroup** lists the song voicegroup's drumkit and keysplit lines.
+Empty lines offer **Line N · empty — new kit…**, which creates the kit's
+voicegroup file (and its keysplit table, if you save the Keysplit layout) when
+you save.
 Converting a non-kit voice into a kit is not offered here; do that in the
 voicegroup dock instead.
 
 ## Drumkit or keysplit
 
-The **Drumkit ⇄ Keysplit** toggle switches only the bottom editor. Both views
-keep their edits while the window is open, so you can sketch in one mode and
-finish in the other. The view showing when you save decides what is written to
-the song.
+The **Zone layout** buttons, at the top of the zone editor, switch only that
+editor; a caption under them explains the selected layout. Both layouts keep
+their edits while the window is open, so you can sketch in one and finish in
+the other. The layout selected when you save decides what is written to the
+song.
 
 Settings the other mode cannot store stay in the zone but their editors show
 disabled: pan can only be stored in Drumkit mode. Keysplit mode is always
@@ -67,14 +69,17 @@ zone, or key 127. Zones never overlap: dropping onto an occupied range is
 rejected with a status message. Drag a zone's edges to resize it and its body
 to move it.
 
-**Map all slices from key** fills consecutive keys with the source's slices in
-order — one key per slice in Drumkit, one run per slice in Keysplit — with a
-white-keys-only option that skips black keys.
+**Place all slices on the keyboard, starting at key** fills consecutive keys
+with the source's slices in order — one key per slice in Drumkit, one run per
+slice in Keysplit — with a white-keys-only option that skips black keys. The
+note name of the start key shows beside it. **Keyboard zoom** widens or narrows
+the keys.
 
-The selected zone's strip shows the sample name, root key, Pitched toggle, pan
-(in Drumkit mode), and ADSR. Zones read from the project whose voices are not
-samples (for example PSG voices) are locked: they show their voice type and
-can be moved or deleted, but not edited.
+The selected zone's strip shows the sample name, the note it plays at, the
+pitch toggle, pan (Drumkit only), and attack, decay, sustain and release, each
+with a small caption. Zones read from the project whose voices are synth
+voices rather than samples (for example Square 1 or Noise) show their voice
+type and can only be deleted here.
 
 ## Auditioning
 

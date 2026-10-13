@@ -38,7 +38,7 @@ public final class KitSlotRow: QmlUncreatable {
         self.kind = kind.rawValue
         isNew = kind == .empty
         title =
-            isNew ? "New kit in empty slot \(slot)…" : "Voice \(slot) · \(kind == .drumkit ? "Drumkit" : "Keysplit")"
+            isNew ? "Line \(slot) · empty — new kit…" : "Line \(slot) · \(kind == .drumkit ? "Drumkit" : "Keysplit")"
         self.selected = selected
     }
 

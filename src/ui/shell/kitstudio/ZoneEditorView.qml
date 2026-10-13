@@ -14,32 +14,80 @@ ColumnLayout {
     required property GridPalette colors
     required property real unit
     required property real paneSpacing
+    required property font captionFont
     property real keyboardZoom: 1
     readonly property real keyWidth: 2.25 * unit * keyboardZoom
     spacing: paneSpacing
 
-    RowLayout {
+    component Field: ColumnLayout {
+        id: field
+        required property string caption
+        required property GridPalette colors
+        required property font captionFont
+        required property real paneSpacing
+        default property alias content: fieldRow.data
+        spacing: 0
+        Label {
+            text: field.caption
+            font: field.captionFont
+            color: field.enabled ? field.colors.secondaryText : field.colors.disabledText
+        }
+        RowLayout { id: fieldRow; spacing: field.paneSpacing }
+    }
+
+    Flow {
         Layout.fillWidth: true
-        Label { text: qsTr("Zones"); color: view.colors.windowText }
-        Button { objectName: "splitStudioModeDrumkit"; text: qsTr("Drumkit"); checked: view.editor.mode === 0; onClicked: view.editor.setMode(0) }
-        Button { objectName: "splitStudioModeKeysplit"; text: qsTr("Keysplit"); checked: view.editor.mode === 1; onClicked: view.editor.setMode(1) }
-        Button { text: "−"; Accessible.name: qsTr("Zoom keyboard out"); onClicked: view.keyboardZoom = Math.max(0.5, view.keyboardZoom / 1.25) }
-        Button { text: "+"; Accessible.name: qsTr("Zoom keyboard in"); onClicked: view.keyboardZoom = Math.min(4, view.keyboardZoom * 1.25) }
-        SpinBox { id: firstKey; from: 0; to: 127; value: 60; editable: true }
-        CheckBox { id: whiteKeys; text: qsTr("White keys only") }
-        Button { text: qsTr("Map all slices"); enabled: view.editor.sliceCount > 0; onClicked: view.editor.mapAllSlices(firstKey.value, whiteKeys.checked) }
-        Item { Layout.fillWidth: true }
+        spacing: 2 * view.paneSpacing
+        Field {
+            caption: qsTr("Zone layout"); colors: view.colors; captionFont: view.captionFont; paneSpacing: 0
+            Button { objectName: "splitStudioModeDrumkit"; text: qsTr("Drumkit"); checked: view.editor.mode === 0; onClicked: view.editor.setMode(0) }
+            Button { objectName: "splitStudioModeKeysplit"; text: qsTr("Keysplit"); checked: view.editor.mode === 1; onClicked: view.editor.setMode(1) }
+        }
+        Field {
+            caption: qsTr("Keyboard zoom"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
+            Button { Layout.preferredWidth: 2.5 * view.unit; text: "−"; Accessible.name: qsTr("Zoom keyboard out"); onClicked: view.keyboardZoom = Math.max(0.5, view.keyboardZoom / 1.25) }
+            Button { Layout.preferredWidth: 2.5 * view.unit; text: "+"; Accessible.name: qsTr("Zoom keyboard in"); onClicked: view.keyboardZoom = Math.min(4, view.keyboardZoom * 1.25) }
+        }
+        Field {
+            caption: qsTr("Place all slices on the keyboard, starting at key"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
+            SpinBox { id: firstKey; Layout.preferredWidth: 5 * view.unit; from: 0; to: 127; value: 60; editable: true; Accessible.name: qsTr("First key") }
+            Label { text: view.workflow.keyName(firstKey.value); color: view.colors.windowText }
+            CheckBox { id: whiteKeys; text: qsTr("White keys only") }
+            Button { text: qsTr("Map Slices"); enabled: view.editor.sliceCount > 0; onClicked: view.editor.mapAllSlices(firstKey.value, whiteKeys.checked) }
+        }
+    }
+    Label {
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        font: view.captionFont
+        color: view.colors.secondaryText
+        text: (view.editor.mode === 0
+            ? qsTr("Drumkit: each key plays its own sample, with its own pitch, pan and envelope.")
+            : qsTr("Keysplit: each sample covers a range of keys and plays at the pitch of the key pressed."))
+            + qsTr(" Switching layouts is safe: both keep your edits, and Save to Song saves the one selected.")
+    }
+    function revealKeys(first: int, last: int): void {
+        const flick = keyboardScroll.contentItem as Flickable
+        const visibleWidth = keyboardScroll.width
+        if (!flick || visibleWidth <= 0)
+            return
+        const left = first * view.keyWidth
+        const right = (last + 1) * view.keyWidth
+        if (left >= flick.contentX && right <= flick.contentX + visibleWidth)
+            return
+        flick.contentX = Math.max(0, Math.min(keyboardScroll.contentWidth - visibleWidth, (left + right - visibleWidth) / 2))
     }
     ScrollView {
         id: keyboardScroll
         objectName: "splitStudioKeyboardScroll"
         Layout.fillWidth: true
-        Layout.fillHeight: true
-        Layout.minimumHeight: 8 * view.unit
+        Layout.preferredHeight: keyboardBoard.height + keyboardScroll.ScrollBar.horizontal.height
         contentWidth: 128 * view.keyWidth
         contentHeight: keyboardBoard.height
         ScrollBar.horizontal.policy: ScrollBar.AlwaysOn
         ScrollBar.vertical.policy: ScrollBar.AlwaysOff
+        onWidthChanged: if (width > 0 && !revealed) { revealed = true; view.revealKeys(36, 72) }
+        property bool revealed: false
         Item {
             id: keyboardBoard
             width: 128 * view.keyWidth
@@ -90,7 +138,7 @@ ColumnLayout {
                     Label {
                         anchors.fill: parent
                         anchors.margins: view.paneSpacing
-                        text: zone.locked ? qsTr("Locked: ") + zone.voiceType : zone.sampleName
+                        text: zone.locked ? zone.voiceType + qsTr(" (synth)") : zone.sampleName
                         color: zone.selected ? view.colors.selectionText : view.colors.windowText
                         elide: Text.ElideRight
                         verticalAlignment: Text.AlignVCenter
@@ -186,10 +234,14 @@ ColumnLayout {
     }
     Repeater {
         model: view.editor.zoneRows
-        ScrollView {
+        Flow {
             id: strip
             objectName: "splitStudioZoneStrip"
             required property int index
+            required property int startKey
+            required property int endKey
+            required property string sampleName
+            required property string voiceType
             required property int rootKey
             required property bool pitched
             required property int pan
@@ -203,30 +255,67 @@ ColumnLayout {
             required property bool pitchedEnabled
             required property bool rootKeyEnabled
             visible: selected
+            onVisibleChanged: if (visible) view.revealKeys(startKey, endKey)
+            Component.onCompleted: if (selected) view.revealKeys(startKey, endKey)
             Layout.fillWidth: true
-            Layout.preferredHeight: 4 * view.unit
-            contentWidth: fields.implicitWidth
-            contentHeight: fields.implicitHeight
-            ScrollBar.horizontal.policy: ScrollBar.AsNeeded
-            ScrollBar.vertical.policy: ScrollBar.AlwaysOff
-            RowLayout {
-                id: fields
-                spacing: view.paneSpacing
-                Label { text: strip.locked ? qsTr("Locked zone") : qsTr("Root key"); enabled: strip.rootKeyEnabled || strip.locked; color: view.colors.windowText }
-                SpinBox { from: 0; to: 127; value: strip.rootKey; enabled: strip.rootKeyEnabled; editable: true; onValueModified: view.editor.setZoneRootKey(value) }
-                CheckBox { text: qsTr("Pitched"); checked: strip.pitched; enabled: strip.pitchedEnabled; onClicked: view.editor.setZonePitched(checked) }
-                Label { text: qsTr("Pan"); enabled: strip.panEnabled; color: view.colors.windowText }
-                SpinBox { from: -128; to: 126; stepSize: 2; value: strip.pan; enabled: strip.panEnabled; editable: true; onValueModified: view.editor.setZonePan(value) }
-                Label { text: qsTr("A"); enabled: !strip.locked; color: view.colors.windowText }
-                SpinBox { from: 0; to: 255; value: strip.attack; enabled: !strip.locked; editable: true; onValueModified: view.editor.setZoneAdsr(value, strip.decay, strip.sustain, strip.release) }
-                Label { text: qsTr("D"); enabled: !strip.locked; color: view.colors.windowText }
-                SpinBox { from: 0; to: 255; value: strip.decay; enabled: !strip.locked; editable: true; onValueModified: view.editor.setZoneAdsr(strip.attack, value, strip.sustain, strip.release) }
-                Label { text: qsTr("S"); enabled: !strip.locked; color: view.colors.windowText }
-                SpinBox { from: 0; to: 255; value: strip.sustain; enabled: !strip.locked; editable: true; onValueModified: view.editor.setZoneAdsr(strip.attack, strip.decay, value, strip.release) }
-                Label { text: qsTr("R"); enabled: !strip.locked; color: view.colors.windowText }
-                SpinBox { from: 0; to: 255; value: strip.release; enabled: !strip.locked; editable: true; onValueModified: view.editor.setZoneAdsr(strip.attack, strip.decay, strip.sustain, value) }
-                Button { text: qsTr("Delete zone"); onClicked: view.editor.deleteZone(strip.index) }
+            spacing: 2 * view.paneSpacing
+            Field {
+                visible: !strip.locked
+                caption: qsTr("Sample"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
+                Label { text: strip.sampleName; color: view.colors.windowText }
+            }
+            Field {
+                visible: strip.locked
+                caption: qsTr("Synth voice"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
+                Label {
+                    text: qsTr("%1 is a synth voice, not a sample. Split Studio keeps it as it is; you can only delete it here.").arg(strip.voiceType)
+                    color: view.colors.windowText
+                }
+            }
+            Field {
+                visible: !strip.locked
+                enabled: strip.rootKeyEnabled
+                caption: qsTr("Plays at note (C4 = original pitch)"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
+                SpinBox { Layout.preferredWidth: 5 * view.unit; from: 0; to: 127; value: strip.rootKey; editable: true; Accessible.name: qsTr("Root key"); onValueModified: view.editor.setZoneRootKey(value) }
+                Label { text: view.workflow.keyName(strip.rootKey); color: view.colors.windowText }
+            }
+            Field {
+                visible: !strip.locked
+                enabled: strip.pitchedEnabled
+                caption: qsTr("Pitch"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
+                CheckBox { text: qsTr("Rises with each key"); checked: strip.pitched; onClicked: view.editor.setZonePitched(checked) }
+            }
+            Field {
+                visible: !strip.locked
+                enabled: strip.panEnabled
+                caption: qsTr("Pan (Drumkit only)"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
+                SpinBox { Layout.preferredWidth: 6 * view.unit; from: -128; to: 126; stepSize: 2; value: strip.pan; editable: true; Accessible.name: qsTr("Pan"); onValueModified: view.editor.setZonePan(value) }
+            }
+            Field {
+                visible: !strip.locked
+                caption: qsTr("Attack"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
+                SpinBox { Layout.preferredWidth: 5 * view.unit; from: 0; to: 255; value: strip.attack; editable: true; Accessible.name: qsTr("Attack"); onValueModified: view.editor.setZoneAdsr(value, strip.decay, strip.sustain, strip.release) }
+            }
+            Field {
+                visible: !strip.locked
+                caption: qsTr("Decay"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
+                SpinBox { Layout.preferredWidth: 5 * view.unit; from: 0; to: 255; value: strip.decay; editable: true; Accessible.name: qsTr("Decay"); onValueModified: view.editor.setZoneAdsr(strip.attack, value, strip.sustain, strip.release) }
+            }
+            Field {
+                visible: !strip.locked
+                caption: qsTr("Sustain"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
+                SpinBox { Layout.preferredWidth: 5 * view.unit; from: 0; to: 255; value: strip.sustain; editable: true; Accessible.name: qsTr("Sustain"); onValueModified: view.editor.setZoneAdsr(strip.attack, strip.decay, value, strip.release) }
+            }
+            Field {
+                visible: !strip.locked
+                caption: qsTr("Release"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
+                SpinBox { Layout.preferredWidth: 5 * view.unit; from: 0; to: 255; value: strip.release; editable: true; Accessible.name: qsTr("Release"); onValueModified: view.editor.setZoneAdsr(strip.attack, strip.decay, strip.sustain, value) }
+            }
+            Field {
+                caption: " "; colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
+                Button { text: qsTr("Delete Zone"); onClicked: view.editor.deleteZone(strip.index) }
             }
         }
     }
+    Item { Layout.fillHeight: true }
 }

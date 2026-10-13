@@ -14,7 +14,7 @@ RowLayout {
     required property real unit
     required property real paneSpacing
     spacing: paneSpacing
-    Label { text: qsTr("Kit slot"); color: picker.colors.windowText }
+    Label { text: qsTr("Line in Voicegroup"); color: picker.colors.windowText }
     ComboBox {
         id: slots
         objectName: "splitStudioSlotChoice"

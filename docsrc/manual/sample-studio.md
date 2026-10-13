@@ -28,7 +28,7 @@ folder, and Left to collapse it or move to its parent. You can also use the
 disclosure arrows to expand folders and click a folder to browse it.
 Opening a branch reveals its children below the parent without jumping the tree
 back to the selected folder.
-**Remove from Library** removes the selected bookmark, not any files on disk.
+**Remove Folder from List** removes the highlighted bookmark, not any files on disk.
 The library browser does not show hover tooltips.
 
 Click an audio file to preview it; pressing Enter or Space while the file list

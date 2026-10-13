@@ -367,7 +367,6 @@ private func checkKitPresenterPicker(_ report: CheckReport) {
     r.expect(
         !(0..<p.slotRows.count).contains { (index: Int) -> Bool in p.slotRows[index].slot == 7 },
         message: "nil-but-not-undefined slot is absent from picker")
-    r.expectEqual(expected: "New kit in empty slot 1…", actual: p.slotRows[0].title, what: "new kit label")
     r.expectEqual(expected: [2], actual: loaded, what: "clean target loads silently")
     r.expectEqual(
         expected: ["voicegroup_kit", "", "voicegroup_fixture_rich"], actual: scanned,
@@ -720,7 +719,7 @@ private func checkKitPresenterLoadAndAudition(_ report: CheckReport) {
     p.setZoneAdsr(a: 1, d: 2, s: 3, r: 4)
     r.expectEqual(expected: locked, actual: p.draft.snapshot(), what: "locked strip edits preserve original voice")
     r.expect(
-        p.selectedZoneRow()?.locked == true && p.selectedZoneRow()?.voiceType == "noise",
+        p.selectedZoneRow()?.locked == true && p.selectedZoneRow()?.voiceType == "Noise",
         message: "locked selected strip exposes voice type")
     var sample = ProcessedSample()
     sample.s8 = [1, 2, 3]

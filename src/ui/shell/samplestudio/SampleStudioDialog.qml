@@ -135,6 +135,7 @@ DialogWindow {
                 studioWindow: dialog
                 unit: dialog.unit
                 paneSpacing: dialog.spacing
+                captionFont: dialog.applicationSession.typographyFonts.captionMinimum
                 SplitView.minimumWidth: 0
                 SplitView.preferredWidth: 22 * dialog.unit
             }

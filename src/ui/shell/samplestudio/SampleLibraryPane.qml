@@ -14,6 +14,7 @@ ColumnLayout {
     required property Window studioWindow
     required property real unit
     required property real paneSpacing
+    required property font captionFont
     spacing: pane.paneSpacing
     function navigateFolder(row: int): void {
         if (row < 0 || row >= folders.count)
@@ -167,13 +168,21 @@ ColumnLayout {
     }
     Button {
         objectName: "sampleLibraryRemove"
-        text: qsTr("Remove from Library")
+        text: qsTr("Remove Folder from List")
         enabled: pane.library.canRemove
         onClicked: {
             files.currentIndex = -1
             pane.library.removeSelectedRoot()
             pane.alignFolderCursor()
         }
+    }
+    Label {
+        Layout.fillWidth: true
+        visible: pane.library.canRemove
+        wrapMode: Text.WordWrap
+        font: pane.captionFont
+        color: pane.colors.secondaryText
+        text: qsTr("Removes the highlighted folder from this list. Its files stay on disk.")
     }
     Label { text: qsTr("Audio files"); color: pane.colors.windowText }
     ListView {

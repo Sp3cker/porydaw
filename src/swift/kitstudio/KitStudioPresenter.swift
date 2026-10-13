@@ -43,7 +43,7 @@ public final class KitZoneRow: QmlUncreatable {
         sustain = zone.adsr.sustain
         release = zone.adsr.release
         locked = zone.locked
-        voiceType = zone.lockedVoice.map { String(describing: $0.macro) } ?? ""
+        voiceType = zone.lockedVoice.map { vgMacroDisplayName($0.macro) } ?? ""
         self.selected = selected
         panEnabled = !zone.locked && mode == .drumkit
         pitchedEnabled = !zone.locked && mode == .drumkit

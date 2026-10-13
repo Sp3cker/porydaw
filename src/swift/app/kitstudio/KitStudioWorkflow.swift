@@ -1,6 +1,7 @@
 import Foundation
 import PorydawAppAudio
 import PorydawAppPresentation
+import PorydawCore
 import PorydawDocument
 import PorydawKitStudio
 import PorydawProject
@@ -341,6 +342,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
     }
 
     public func frameAt(x: Double) -> Int { state?.waveform?.frameAt(x) ?? 0 }
+    public func keyName(key: Int) -> String { midiKeyName(key) }
     public func removeSelectedMarker() {
         guard let id = selectedMarker else { return }
         state?.removeMarker(id: id)

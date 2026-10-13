@@ -132,6 +132,7 @@ ThemedWindow {
                     studioWindow: studio
                     unit: studio.unit
                     paneSpacing: studio.spacing
+                    captionFont: studio.applicationSession.typographyFonts.captionMinimum
                 }
                 Repeater {
                     model: studio.library.files
@@ -203,6 +204,7 @@ ThemedWindow {
                     colors: studio.colors
                     unit: studio.unit
                     paneSpacing: studio.spacing
+                    captionFont: studio.applicationSession.typographyFonts.captionMinimum
                 }
             }
         }
