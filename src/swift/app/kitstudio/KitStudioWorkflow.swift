@@ -76,7 +76,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
         self.session = session
         let preparation = SampleSourcePreparation()
         previewPreparation = preparation
-        libraryHost = StudioLibraryHost(session: session, style: .kit, preparation: preparation)
+        libraryHost = StudioLibraryHost(session: session, preparation: preparation)
         libraryHost.onLoad = { [weak self] (path: String) in self?.loadSource(path: path) }
         libraryHost.onOpenFile = { [weak self] in self?.requestOpenFile() }
         libraryHost.onPreview = { [weak self] (path: String) in self?.previewLibrary(path: path) }
@@ -273,7 +273,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
         guard windowOpen, !saving, let state else { return }
         stopAudition()
         do {
-            let url = Self.sourceURL(path)
+            guard let url = libraryHost.sourceURL(path) else { return }
             let sample = try SampleImport.decodeFile(path: url.path)
             state.addSource(sample)
             libraryHost.pane?.setLoadedPath(path: url.path)
@@ -283,7 +283,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
 
     public func dropLibrarySample(path: String, onKey: Int) {
         guard windowOpen, !saving, let state, let session else { return }
-        let url = Self.sourceURL(path)
+        guard let url = libraryHost.sourceURL(path) else { return }
         let name = url.deletingPathExtension().lastPathComponent
         let symbol = "DirectSoundWaveData_" + name
         if url.deletingLastPathComponent().path == session.projectRoot + "/sound/direct_sound_samples",
@@ -984,10 +984,6 @@ public final class KitStudioWorkflow: QmlUncreatable {
     private func showAlert(_ error: any Error) {
         alertText = String(describing: error)
         alertRevision += 1
-    }
-    private static func sourceURL(_ path: String) -> URL {
-        if let url = URL(string: path), url.isFileURL { return url.standardizedFileURL }
-        return URL(filePath: path).standardizedFileURL
     }
     private static func bankVoice(_ voice: VgVoice) -> BankVoice {
         BankVoice(

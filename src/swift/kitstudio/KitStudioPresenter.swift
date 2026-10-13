@@ -140,7 +140,6 @@ public final class KitStudioPresenter: QmlUncreatable {
     private var activeMode: KitMode = .drumkit
     private var cleanMode: KitMode = .drumkit
     private var cleanSessionSnapshot: KitSourceSession.Snapshot
-    private var nextId = 1
 
     @QtIgnored public init(draft: KitDraft = KitDraft(), session: KitSourceSession = KitSourceSession()) {
         self.draft = draft
@@ -483,18 +482,10 @@ public final class KitStudioPresenter: QmlUncreatable {
     }
 
     public func moveMarker(id: Int, toFrame: Int) {
-        guard let key = markerKey(id),
-            let oldSource = session.sources.first(where: { $0.id == key.source })
-        else { return }
-        changeSession { (target: KitSourceSession) in
-            target.moveMarker(source: key.source, from: key.frame, to: toFrame, snap: snap)
-            if let source = target.sources.first(where: { $0.id == key.source }), !source.markers.contains(key.frame),
-                let frame = source.markers.first(where: { !oldSource.markers.contains($0) })
-            {
-                draft.markerIds.removeValue(forKey: key)
-                draft.markerIds[KitDraft.MarkerKey(source: key.source, frame: frame)] = id
-            }
-        }
+        guard let key = markerKey(id) else { return }
+        statusText = ""
+        draft.moveMarker(key, toFrame: toFrame, snap: snap)
+        refresh()
     }
 
     public func sliceSelection() {
@@ -659,35 +650,6 @@ public final class KitStudioPresenter: QmlUncreatable {
         return source.slices[address.index]
     }
 
-    private func syncIds() {
-        let liveMarkers = Set(
-            session.sources.flatMap { (source: KitSourceSession.Source) in
-                source.markers.map { KitDraft.MarkerKey(source: source.id, frame: $0) }
-            })
-        let liveSlices = Set(
-            session.sources.flatMap { (source: KitSourceSession.Source) in
-                source.slices.map { KitDraft.SliceKey(source: source.id, identity: $0.id) }
-            })
-        draft.markerIds = draft.markerIds.filter { liveMarkers.contains($0.key) }
-        draft.sliceIds = draft.sliceIds.filter { liveSlices.contains($0.key) }
-        for source in session.sources {
-            for frame in source.markers {
-                let key = KitDraft.MarkerKey(source: source.id, frame: frame)
-                if draft.markerIds[key] == nil {
-                    draft.markerIds[key] = nextId
-                    nextId += 1
-                }
-            }
-            for slice in source.slices {
-                let key = KitDraft.SliceKey(source: source.id, identity: slice.id)
-                if draft.sliceIds[key] == nil {
-                    draft.sliceIds[key] = nextId
-                    nextId += 1
-                }
-            }
-        }
-    }
-
     /// Re-publishes values after the workflow injects a waveform or value-only facts.
     @QtIgnored public func refresh() {
         mode = activeMode == .drumkit ? 0 : 1
@@ -725,7 +687,6 @@ public final class KitStudioPresenter: QmlUncreatable {
             return KitSourceRow(source: entry.element, active: active, closable: closable)
         }
         syncModel(sourceRows, sourceValues, matches: { (lhs: KitSourceRow, rhs: KitSourceRow) -> Bool in lhs === rhs })
-        syncIds()
         sliceCount = currentSource?.slices.count ?? 0
         sourceRate = currentSource.flatMap { Int(exactly: $0.targetRate.rounded()) } ?? 0
         rateChoices =

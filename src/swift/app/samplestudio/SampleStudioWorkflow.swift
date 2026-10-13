@@ -61,7 +61,14 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         self.session = session
         let preparation = SampleSourcePreparation()
         sourcePreparation = preparation
-        libraryHost = StudioLibraryHost(session: session, style: .sample, preparation: preparation)
+        libraryHost = StudioLibraryHost(
+            session: session, preparation: preparation,
+            pickerURL: { (directory: String) -> URL in
+                URL(fileURLWithPath: directory.isEmpty ? NSHomeDirectory() : directory, isDirectory: true)
+            }, rejectNonFileScheme: true,
+            previewAllowed: { (host: StudioLibraryHost) -> Bool in host.lane()?.isAvailable == true },
+            previewLabel: { (path: String, _: URL) -> String in path },
+            onPreviewFailure: { (host: StudioLibraryHost) in host.clearPreview() })
         libraryHost.onLoad = { [weak self] (path: String) in self?.loadLibrarySample(path: path) }
         libraryHost.onOpenFile = { [weak self] in self?.requestOpenFile() }
         libraryHost.onPreview = { [weak self] (path: String) in self?.previewLibrarySample(path: path) }
@@ -89,21 +96,8 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         invalidateSourcePreparation()
         player?.stop()
         libraryHost.clearPreview()
-        let generation = sessionGeneration
-        let requestGeneration = sourceGeneration
-        let editorIdentity = presenter.map(ObjectIdentifier.init)
-        let sourceRevision = presenter?.sourceRevision
-        let root = session.projectRoot
-        let service = session.catalogService
         libraryHost.preview(
-            path: path,
-            accept: { [weak self, weak session] () -> Bool in
-                guard let self, let session else { return false }
-                return self.session === session && session.projectRoot == root && session.catalogService === service
-                    && self.sessionGeneration == generation && self.sourceGeneration == requestGeneration
-                    && self.editorOpen && self.presenter.map(ObjectIdentifier.init) == editorIdentity
-                    && self.presenter?.sourceRevision == sourceRevision && !self.committing
-            },
+            path: path, accept: sourceAcceptance(session: session),
             play: { [weak self] (rendered: ProcessedSample, path: String) in
                 guard let self else { return }
                 self.libraryHost.publishPreview(rendered, path: path, key: self.player?.auditionKey ?? 60)
@@ -379,26 +373,32 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         sf2File = nil
     }
 
+    private func sourceAcceptance(session: ApplicationSession) -> () -> Bool {
+        let generation = sessionGeneration
+        let requestGeneration = sourceGeneration
+        let editorIdentity = presenter.map(ObjectIdentifier.init)
+        let sourceRevision = presenter?.sourceRevision
+        let wasOpen = editorOpen
+        let root = session.projectRoot
+        let service = session.catalogService
+        return { [weak self, weak session] () -> Bool in
+            guard let self, let session else { return false }
+            return self.session === session && session.projectRoot == root && session.catalogService === service
+                && self.sessionGeneration == generation && self.sourceGeneration == requestGeneration
+                && self.editorOpen == wasOpen && self.presenter.map(ObjectIdentifier.init) == editorIdentity
+                && self.presenter?.sourceRevision == sourceRevision && !self.committing
+        }
+    }
+
     private func prepareSource(
         _ input: SampleSourcePreparation.Input, surface: SourceErrorSurface,
         editName: String? = nil
     ) {
         sourceGeneration += 1
-        let requestGeneration = sourceGeneration
-        let generation = sessionGeneration
-        let editorIdentity = presenter.map(ObjectIdentifier.init)
-        let sourceRevision = presenter?.sourceRevision
-        let wasOpen = editorOpen
         guard let session else { return }
-        let service = session.catalogService
-        let root = session.projectRoot
+        let accept = sourceAcceptance(session: session)
         sourcePreparation.submit(input) { [weak self, weak session] result in
-            guard let self, let session, self.session === session,
-                session.projectRoot == root, session.catalogService === service,
-                self.sessionGeneration == generation, self.sourceGeneration == requestGeneration,
-                self.editorOpen == wasOpen, self.presenter.map(ObjectIdentifier.init) == editorIdentity,
-                self.presenter?.sourceRevision == sourceRevision, !self.committing
-            else { return }
+            guard let self, let session, accept() else { return }
             if case .file(let path, false) = input, case .alert = surface {
                 let readFailed: Bool
                 if case .failure(let error) = result {

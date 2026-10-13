@@ -179,6 +179,7 @@ public enum SampleRegistrar {
         }
         var first = index - 1
         if first > 0, AsmLine.trimmed(Array(lines[first - 1])[...]).isEmpty { first -= 1 }
+        // Removing through the last line must still terminate the file.
         let removedTail = index + 2 == lines.count
         lines.removeSubrange(first...(index + 1))
         let updated = ProjectFileStore.joinLines(

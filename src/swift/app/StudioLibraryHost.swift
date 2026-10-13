@@ -5,10 +5,12 @@ import PorydawSampleUI
 
 @MainActor
 final class StudioLibraryHost {
-    enum Style { case sample, kit }
-
     private weak var session: ApplicationSession?
-    private let style: Style
+    private let pickerURL: (String) -> URL
+    private let rejectNonFileScheme: Bool
+    private let previewAllowed: (StudioLibraryHost) -> Bool
+    private let previewLabel: (String, URL) -> String
+    private let onPreviewFailure: (StudioLibraryHost) -> Void
     private let preparation: SampleSourcePreparation
     private(set) var pane: SampleLibraryModel?
     private var auditionLane: SampleAuditionArbiter?
@@ -17,9 +19,20 @@ final class StudioLibraryHost {
     var onPreview: ((String) -> Void)?
     var onStop: (() -> Void)?
 
-    init(session: ApplicationSession, style: Style, preparation: SampleSourcePreparation) {
+    init(
+        session: ApplicationSession, preparation: SampleSourcePreparation,
+        pickerURL: @escaping (String) -> URL = { (path: String) -> URL in URL(filePath: path) },
+        rejectNonFileScheme: Bool = false,
+        previewAllowed: @escaping (StudioLibraryHost) -> Bool = { (_: StudioLibraryHost) -> Bool in true },
+        previewLabel: @escaping (String, URL) -> String = { (_: String, url: URL) -> String in url.path },
+        onPreviewFailure: @escaping (StudioLibraryHost) -> Void = { (host: StudioLibraryHost) in host.onStop?() }
+    ) {
         self.session = session
-        self.style = style
+        self.pickerURL = pickerURL
+        self.rejectNonFileScheme = rejectNonFileScheme
+        self.previewAllowed = previewAllowed
+        self.previewLabel = previewLabel
+        self.onPreviewFailure = onPreviewFailure
         self.preparation = preparation
     }
 
@@ -37,15 +50,12 @@ final class StudioLibraryHost {
 
     func pickerFolder() -> String {
         guard let session else { return "" }
-        let directory = session.preferences.string(
-            key: "lastSampleDir", fallback: style == .kit ? NSHomeDirectory() : "")
-        if style == .kit { return URL(filePath: directory).absoluteString }
-        return URL(fileURLWithPath: directory.isEmpty ? NSHomeDirectory() : directory, isDirectory: true).absoluteString
+        return pickerURL(session.preferences.string(key: "lastSampleDir", fallback: NSHomeDirectory())).absoluteString
     }
 
     func sourceURL(_ path: String) -> URL? {
         if let parsed = URL(string: path), parsed.isFileURL { return parsed.standardizedFileURL }
-        if style == .sample, path.contains("://") { return nil }
+        if rejectNonFileScheme, path.contains("://") { return nil }
         return URL(filePath: path, directoryHint: .notDirectory).standardizedFileURL
     }
 
@@ -59,7 +69,7 @@ final class StudioLibraryHost {
 
     func preview(path: String, accept: @escaping () -> Bool, play: @escaping (ProcessedSample, String) -> Void) {
         guard let pane else { return }
-        if style == .sample, lane()?.isAvailable != true {
+        guard previewAllowed(self) else {
             pane.showMessage(text: "Audio is unavailable.")
             return
         }
@@ -67,19 +77,18 @@ final class StudioLibraryHost {
             pane.showMessage(text: "Cannot read \(path).")
             return
         }
-        pane.setPreviewingPath(path: style == .sample ? path : url.path)
+        pane.setPreviewingPath(path: previewLabel(path, url))
         preparation.submit(.file(path: url.path, preview: true)) {
             [weak self] (result: Result<SampleSourcePreparation.Output, Error>) in
             guard let self, accept() else { return }
-            switch result {
-            case .success(.prepared(var document, let source, _)):
-                play(document.processed, source.path)
-            case .failure(let error):
-                if self.style == .kit { self.onStop?() } else { self.clearPreview() }
-                self.pane?.showMessage(text: SampleSourcePreparation.message(for: error))
-            case .success:
-                if self.style == .kit { self.onStop?() } else { self.clearPreview() }
+            guard case .success(.prepared(var document, let source, _)) = result else {
+                self.onPreviewFailure(self)
+                if case .failure(let error) = result {
+                    self.pane?.showMessage(text: SampleSourcePreparation.message(for: error))
+                }
+                return
             }
+            play(document.processed, source.path)
         }
     }
 

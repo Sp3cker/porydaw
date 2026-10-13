@@ -26,10 +26,11 @@ public final class KitDraft {
         var slices: [SliceKey: Int]
     }
 
-    var markerIds: [MarkerKey: Int] = [:]
-    var sliceIds: [SliceKey: Int] = [:]
+    private(set) var markerIds: [MarkerKey: Int] = [:]
+    private(set) var sliceIds: [SliceKey: Int] = [:]
     private var session: KitSourceSession?
     private var editing = false
+    private var nextId = 1
     public private(set) var drumkitZones: [KitZone] = []
     public private(set) var keysplitZones: [KitZone] = []
     private var clean = Snapshot()
@@ -41,6 +42,7 @@ public final class KitDraft {
     func attachSession(_ session: KitSourceSession) {
         precondition(self.session == nil, "A draft belongs to one window session")
         self.session = session
+        syncIds()
     }
 
     /// Groups source and zone mutations into one window-local undo step.
@@ -49,10 +51,29 @@ public final class KitDraft {
         let before = historyState()
         editing = true
         change()
+        syncIds()
         editing = false
         if before.zones != snapshot() || before.session != session?.snapshot() {
             undoEntries.append(before)
             redoEntries.removeAll()
+        }
+    }
+
+    func moveMarker(_ key: MarkerKey, toFrame: Int, snap: Bool) {
+        guard let session,
+            let oldSource = session.sources.first(where: { (source: KitSourceSession.Source) in
+                source.id == key.source
+            })
+        else { return }
+        edit {
+            session.moveMarker(source: key.source, from: key.frame, to: toFrame, snap: snap)
+            if let source = session.sources.first(where: { (source: KitSourceSession.Source) in source.id == key.source
+            }),
+                !source.markers.contains(key.frame),
+                let frame = source.markers.first(where: { (frame: Int) in !oldSource.markers.contains(frame) })
+            {
+                markerIds[MarkerKey(source: key.source, frame: frame)] = markerIds.removeValue(forKey: key)
+            }
         }
     }
 
@@ -64,6 +85,7 @@ public final class KitDraft {
         clean = snapshot
         undoEntries.removeAll()
         redoEntries.removeAll()
+        syncIds()
     }
 
     /// Keeps history while marking the current values as applied.
@@ -125,6 +147,36 @@ public final class KitDraft {
         if let snapshot = state.session { session?.restore(snapshot) }
         markerIds = state.markers
         sliceIds = state.slices
+    }
+
+    private func syncIds() {
+        guard let session else { return }
+        let liveMarkers = Set(
+            session.sources.flatMap { (source: KitSourceSession.Source) in
+                source.markers.map { (frame: Int) in MarkerKey(source: source.id, frame: frame) }
+            })
+        let liveSlices = Set(
+            session.sources.flatMap { (source: KitSourceSession.Source) in
+                source.slices.map { (slice: KitSourceSession.Slice) in SliceKey(source: source.id, identity: slice.id) }
+            })
+        markerIds = markerIds.filter { liveMarkers.contains($0.key) }
+        sliceIds = sliceIds.filter { liveSlices.contains($0.key) }
+        for source in session.sources {
+            for frame in source.markers {
+                let key = MarkerKey(source: source.id, frame: frame)
+                if markerIds[key] == nil {
+                    markerIds[key] = nextId
+                    nextId += 1
+                }
+            }
+            for slice in source.slices {
+                let key = SliceKey(source: source.id, identity: slice.id)
+                if sliceIds[key] == nil {
+                    sliceIds[key] = nextId
+                    nextId += 1
+                }
+            }
+        }
     }
 
     private static func valid(_ zones: [KitZone]) -> Bool {

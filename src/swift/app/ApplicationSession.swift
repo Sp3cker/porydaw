@@ -105,6 +105,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         var groups: Set<String> = []
     }
     private var splitStudioCreatedAssets: [String: SplitStudioCreatedAssets] = [:]
+    // Only created samples can become orphan candidates; created subgroups alone cannot.
     @QtIgnored
     var hasSplitStudioCreatedSamples: Bool {
         !(splitStudioCreatedAssets[projectRoot]?.samples.isEmpty ?? true)
@@ -368,11 +369,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
             let section = try KitUsageScanner.canonicalSection(
                 projectRoot: root, sourceRelativePath: lease.id.sourceRelativePath, sectionLabel: lease.sectionLabel)
             overlay[section] = lease.slotViews.map(\.voice)
-            _ = try await KitLeaseReader.readKits(
-                lease: lease, service: service, includeEmpty: false, excludingSubgroups: visited
-            ) { (slot: Int, kit: KitEditValue) in
-                if let symbol = lease.slotViews[slot].voice?.symbol { visited.insert(symbol) }
-                try Task.checkCancellation()
+            try await KitLeaseReader.visitKits(lease: lease, service: service, excluding: &visited) {
+                (kit: KitEditValue) in
                 guard !kit.subgroupSymbol.isEmpty else { return }
                 guard let location = locator.locateSubgroup(symbol: Array(kit.subgroupSymbol.utf8)[...]),
                     location.filePath.hasPrefix(root + "/")

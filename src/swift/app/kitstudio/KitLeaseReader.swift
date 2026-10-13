@@ -5,48 +5,46 @@ import PorydawVoicegroup
 @MainActor
 enum KitLeaseReader {
     static func readKits(
-        lease: ProjectBankLease, service: ProjectService, selectedSlot: Int? = nil,
-        includeEmpty: Bool = true, excludingSubgroups: Set<String> = [],
-        consume: ((Int, KitEditValue) throws -> Void)? = nil
+        lease: ProjectBankLease, service: ProjectService, selectedSlot: Int? = nil
     ) async throws -> [Int: KitEditValue] {
-        let seedSlot: Int?
-        if includeEmpty, let selectedSlot, (0..<128).contains(selectedSlot) {
-            seedSlot = selectedSlot
-        } else {
-            seedSlot = (0..<128).first { (slot: Int) -> Bool in
-                let view = lease.slotViews[slot]
-                return (includeEmpty && view.kind == .none)
-                    || ((view.voice?.macro == .keysplitAll || view.voice?.macro == .keysplit)
-                        && !excludingSubgroups.contains(view.voice?.symbol ?? ""))
+        let seedSlot =
+            selectedSlot.flatMap { (slot: Int) -> Int? in
+                (0..<128).contains(slot) ? slot : nil
             }
+            ?? lease.slotViews.indices.first { (slot: Int) -> Bool in
+                let view = lease.slotViews[slot]
+                return view.kind == .none || view.voice?.macro == .keysplitAll || view.voice?.macro == .keysplit
         }
         guard let seedSlot else { return [:] }
+        // The reader owns the -G identity, which is not the lease's display name.
         let seed = try await service.readKit(lease: lease, slot: seedSlot)
         var values: [Int: KitEditValue] = [:]
-        if let consume {
-            try consume(seedSlot, seed)
-        } else {
-            values.reserveCapacity(128)
-            values[seedSlot] = seed
-        }
-        var visited = excludingSubgroups
-        if !includeEmpty { visited.insert(lease.slotViews[seedSlot].voice?.symbol ?? "") }
-        for slot in 0..<128 where slot != seedSlot {
-            if Task.isCancelled {
-                if consume != nil { try Task.checkCancellation() }
-                return values
-            }
+        values.reserveCapacity(128)
+        values[seedSlot] = seed
+        for slot in lease.slotViews.indices where slot != seedSlot {
+            if Task.isCancelled { return values }
             let view = lease.slotViews[slot]
-            if includeEmpty, view.kind == .none {
+            if view.kind == .none {
                 values[slot] = KitEditValue(
                     voicegroup: seed.voicegroup, slot: slot, parent: nil, subgroupSymbol: "",
                     children: [], tableName: nil, table: nil)
             } else if view.voice?.macro == .keysplitAll || view.voice?.macro == .keysplit {
-                if !includeEmpty, !visited.insert(view.voice?.symbol ?? "").inserted { continue }
-                let value = try await service.readKit(lease: lease, slot: slot)
-                if let consume { try consume(slot, value) } else { values[slot] = value }
+                values[slot] = try await service.readKit(lease: lease, slot: slot)
             }
         }
         return values
+    }
+
+    static func visitKits(
+        lease: ProjectBankLease, service: ProjectService, excluding: inout Set<String>,
+        consume: (KitEditValue) throws -> Void
+    ) async throws {
+        for (slot, view) in lease.slotViews.enumerated()
+        where view.voice?.macro == .keysplitAll || view.voice?.macro == .keysplit {
+            guard let symbol = view.voice?.symbol, excluding.insert(symbol).inserted else { continue }
+            let kit = try await service.readKit(lease: lease, slot: slot)
+            try Task.checkCancellation()
+            try consume(kit)
+        }
     }
 }
