@@ -105,9 +105,7 @@ If the song edits your kit while your draft is clean, Split Studio reloads
 silently. If your draft has unsaved changes, a **Changed in the song** bar
 offers **Reload** (take the song's version) or **Keep mine** (keep drafting).
 
-Switching the song's voicegroup prompts to Save, Discard, or Cancel first when
-Split Studio has unsaved changes. After switching, Split Studio follows the same
-slot number in the new voicegroup and offers **Switch back** to return. A
+Switching the song's voicegroup prompts **Save to Song** / **Discard** / **Cancel** first, but only while Split Studio holds unsaved changes for that song. After switching, Split Studio follows the same slot number in the new voicegroup and shows a `Voicegroup changed to …` bar with a **Switch back to …** button. Switching back never prompts. If a switch fails, the current kit stays and a status line reports the failure. A
 non-kit slot in the new voicegroup shows the empty-slot picker state.
 
 ## Closing
@@ -132,4 +130,5 @@ Only files Split Studio made during this app session, which no voicegroup
 references, are ever offered for cleanup. Closing the Split Studio window
 never offers it. Closing the song tab, closing the project, or quitting offers
 a checklist — everything checked — with **Delete** / **Keep**. Delete removes
-the `.wav` files and their registrations.
+the `.wav` files and their registrations. A file that gained a reference since
+the list was built is kept instead, and a status line names the skipped files.
