@@ -40,6 +40,7 @@ public enum PorydawQmlTypes {
         SampleStudioAudition.self,
         SampleStudioPresenter.self,
         SampleStudioWorkflow.self,
+        KitStudioWorkflow.self,
         MarkerWaveformModel.self,
         Sf2ZonePickerPresenter.self,
         SongDockController.self,

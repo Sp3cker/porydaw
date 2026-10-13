@@ -111,6 +111,7 @@ public func runKeysplitTablesSuite(_ report: CheckReport) {
     }
     keysplitWriterChecks(report)
     kitUsageScannerChecks(report)
+    sampleUsageScannerChecks(report)
 }
 
 private func keysplitWriterChecks(_ report: CheckReport) {
@@ -270,8 +271,78 @@ private func kitUsageScannerChecks(_ report: CheckReport) {
             report.expectEqual(
                 expected: text, actual: String(decoding: try ProjectFileStore.read(scratch), as: UTF8.self),
                 cppID: id + "read-only", what: "usage scanning never changes sources")
+            report.expectEqual(
+                expected: "voicegroup_named",
+                actual: try KitUsageScanner.canonicalSection(
+                    projectRoot: root.path, sourceRelativePath: "sound/voice_groups.inc",
+                    sectionLabel: "voicegroup_named"),
+                cppID: id + "canonical-monolithic", what: "an explicit monolithic label passes through unchanged")
+            report.expectEqual(
+                expected: "voicegroup_fixture_rich",
+                actual: try KitUsageScanner.canonicalSection(
+                    projectRoot: root.path, sourceRelativePath: "sound/voicegroups/fixture_rich.inc", sectionLabel: ""),
+                cppID: id + "canonical-per-file",
+                what: "per-file identity resolves its sole declaration, not a filename alias")
+            var ambiguousRefused = false
+            do {
+                _ = try KitUsageScanner.canonicalSection(
+                    projectRoot: root.path, sourceRelativePath: "sound/nested/kit_usage.inc", sectionLabel: "")
+            } catch let error as KitUsageScanError {
+                ambiguousRefused = error.file == scratch
+            }
+            report.expectEqual(
+                expected: true, actual: ambiguousRefused, cppID: id + "canonical-ambiguous",
+                what: "a multi-declaration source refuses ambiguous parent identity and names the file")
+            let labeled = """
+                raw_parent::
+                    voice_group raw_parent
+                    voice_keysplit_all labeled_child
+                """
+            let labeledPath = root.appendingPathComponent("sound/nested/labeled_kit.inc").path
+            try ProjectFileStore.write(labeledPath, data: Data(labeled.utf8))
+            report.expectEqual(
+                expected: ["raw_parent"], actual: VoicegroupSource.declarationLabels(in: Array(labeled.utf8)),
+                cppID: id + "labeled-declaration", what: "label plus macro is one logical canonical section")
+            report.expectEqual(
+                expected: ["raw_parent"],
+                actual: VoicegroupSource.kitReferences(in: Array(labeled.utf8)).map(\.sectionLabel),
+                cppID: id + "labeled-reference", what: "kit references use the raw label, not its macro alias")
+            report.expectEqual(
+                expected: ["raw_parent"], actual: usage("labeled_child"),
+                cppID: id + "labeled-usage", what: "usage scanner attributes a labeled macro to that same section")
         }
     } catch {
         report.fail(id + "fixture", "usage scanner checks: \(error)")
+    }
+}
+
+private func sampleUsageScannerChecks(_ report: CheckReport) {
+    let id = "swiftcore/SampleUsageScanner::staged-references"
+    do {
+        try withTempProjectCopy(prefix: "sample-usage") { root in
+            try VoicegroupSource.createVoicegroup(
+                projectRoot: root.path, name: "usage_created", copyFromFile: "", copySectionLabel: "")
+            let subgroup = "voicegroup_usage_created"
+            let candidates: Set<String> = ["usage_kept", "usage_free"]
+            let child = VgVoice(macro: .directSound, symbol: "DirectSoundWaveData_usage_kept")
+            let parent = VgVoice(macro: .keysplitAll, symbol: subgroup)
+            var overlay: [String: [VgVoice?]] = [
+                "voicegroup_usage_parent": [parent], subgroup: [child],
+            ]
+            let referenced = try SampleUsageScanner.referenced(
+                projectRoot: root.path, candidates: candidates, overlay: overlay, createdSubgroups: [subgroup])
+            overlay["voicegroup_usage_parent"] = [nil]
+            let undone = try SampleUsageScanner.referenced(
+                projectRoot: root.path, candidates: candidates, overlay: overlay, createdSubgroups: [subgroup])
+            overlay.removeValue(forKey: "voicegroup_usage_parent")
+            let noRoot = try SampleUsageScanner.referenced(
+                projectRoot: root.path, candidates: candidates, overlay: overlay, createdSubgroups: [subgroup])
+            report.expectEqual(
+                expected: [["usage_kept"], [], []],
+                actual: [referenced.sorted(), undone.sorted(), noRoot.sorted()], cppID: id,
+                what: "staged references count; undo and an unreachable created subgroup do not")
+        }
+    } catch {
+        report.fail(id, "sample reference scan: \(error)")
     }
 }

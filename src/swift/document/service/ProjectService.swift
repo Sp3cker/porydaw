@@ -96,14 +96,14 @@ public struct BankVoice: Equatable, Sendable {
 public struct KitEditValue: Equatable, Sendable {
     public var voicegroup: String
     public var slot: Int
-    public var parent: BankVoice
+    public var parent: BankVoice?
     public var subgroupSymbol: String
     public var children: [BankVoice?]
     public var tableName: String?
     public var table: [UInt8]?
 
     public init(
-        voicegroup: String, slot: Int, parent: BankVoice, subgroupSymbol: String,
+        voicegroup: String, slot: Int, parent: BankVoice?, subgroupSymbol: String,
         children: [BankVoice?], tableName: String?, table: [UInt8]?
     ) {
         self.voicegroup = voicegroup
@@ -262,6 +262,8 @@ public struct AppliedBankEdit: Sendable {
     /// Live blank-materialization token, nil unless this edit materialized a
     /// blank slot. Single-shot: consumed by the matching revert.
     public var materializationToken: UInt64?
+    /// Raw insertion delta retained by whole-kit history; scalar edits use tokens.
+    public var materialization: BlankSlotMaterialization? = nil
 }
 
 /// An ordered save receipt. The bank stage, when run, refreshes the lease.
@@ -363,7 +365,7 @@ public actor ProjectService {
     /// - Throws: A bank conflict or wrapped project failure.
     public func applyKitEdit(
         lease: ProjectBankLease, input: KitEditValue, expected: KitEditValue?,
-        publishResult: Bool = true
+        publishResult: Bool = true, materialization: BlankSlotMaterialization? = nil
     ) async throws -> AppliedBankEdit {
         let store = try requireStore()
         guard lease.publicationOwner == store.publicationOwner else {
@@ -380,16 +382,70 @@ public actor ProjectService {
                 throw ProjectServiceError.operationFailed("A keysplit table requires a name and 128 bytes.")
             }
             let converted = try KitEditInput(
-                id: lease.id, slot: input.slot, parent: projectVoice(input.parent),
+                id: lease.id, slot: input.slot, parent: input.parent.map(projectVoice),
                 subgroupSymbol: input.subgroupSymbol,
                 children: input.children.map { (voice: BankVoice?) in try voice.map(projectVoice) },
-                table: table)
-            let old = try expected.map { (value: KitEditValue) in try projectVoice(value.parent) }
+                table: table, materialization: materialization)
+            let expectation: KitParentExpectation
+            if let expected {
+                expectation = .parent(try expected.parent.map(projectVoice))
+            } else {
+                expectation = .authoritative
+            }
             let result = try await store.applyKitEdit(
-                lease: lease, input: converted, expectedParent: old)
+                lease: lease, input: converted, expected: expectation)
             let applied = try bankEditResult(result)
             if publishResult { await publish(applied, from: store) }
             return applied
+        } catch {
+            throw projectFailure(error)
+        }
+    }
+
+    /// Reads the bound slot's staged state without publishing a bank transition.
+    /// - Returns: A complete kit, or the parent-only form for a non-kit or undefined slot.
+    /// - Throws: A wrapped project failure if the lease or source is unavailable.
+    public func readKit(lease: ProjectBankLease, slot: Int) async throws -> KitEditValue {
+        let store = try requireStore()
+        guard lease.publicationOwner == store.publicationOwner else {
+            throw ProjectServiceError.serviceClosed
+        }
+        do {
+            guard let snapshot = try await store.kitSnapshot(lease: lease, slot: slot) else {
+                throw ProjectServiceError.operationFailed("Cannot read kit slot \(slot).")
+            }
+            return KitEditValue(
+                voicegroup: snapshot.voicegroup, slot: slot,
+                parent: snapshot.parent.map(copyVoice),
+                subgroupSymbol: snapshot.subgroupSymbol,
+                children: snapshot.children.map { (voice: VgVoice?) in voice.map(copyVoice) },
+                tableName: snapshot.table?.name, table: snapshot.table?.table)
+        } catch {
+            throw projectFailure(error)
+        }
+    }
+
+    /// Resolves owned sample PCM through the bank's normal project asset path.
+    public func sampleAsset(lease: ProjectBankLease, symbol: String) async throws -> KitSampleAsset? {
+        let store = try requireStore()
+        guard lease.publicationOwner == store.publicationOwner else {
+            throw ProjectServiceError.serviceClosed
+        }
+        do {
+            return try await store.sampleAsset(lease: lease, symbol: symbol)
+        } catch {
+            throw projectFailure(error)
+        }
+    }
+
+    /// Resolves owned programmable-wave words through the bank's normal asset path.
+    public func progWaveWords(lease: ProjectBankLease, symbol: String) async throws -> [UInt32]? {
+        let store = try requireStore()
+        guard lease.publicationOwner == store.publicationOwner else {
+            throw ProjectServiceError.serviceClosed
+        }
+        do {
+            return try await store.progWaveWords(lease: lease, symbol: symbol)
         } catch {
             throw projectFailure(error)
         }
@@ -505,7 +561,10 @@ internal func appliedBank(_ lease: ProjectBankLease, token: UInt64?) -> AppliedB
 
 internal func bankEditResult(_ result: ProjectBankEditOutcome) throws -> AppliedBankEdit {
     switch result {
-    case let .applied(lease, _, token): appliedBank(lease, token: token)
+    case let .applied(lease, materialization, token):
+        var applied = appliedBank(lease, token: token)
+        applied.materialization = materialization
+        return applied
     case .conflict: throw ProjectServiceError.bankConflict
     }
 }

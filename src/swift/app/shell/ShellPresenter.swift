@@ -165,6 +165,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "file.new_song": session.songDockController().newSongController().requestNewSong()
         case "file.import_midi": session.songDockController().midiImportController().requestImport()
         case "tools.import_sample": session.sampleStudio().requestImport(slot: -1)
+        case "tools.split_studio": session.kitStudio().requestOpen()
         case "file.save_song": session.requestSave()
         case "file.register_song": session.songDockController().requestRegisterSelectedTab()
         case "file.close_tab":

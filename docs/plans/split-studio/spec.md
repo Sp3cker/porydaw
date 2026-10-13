@@ -690,7 +690,7 @@ as `kitStudio()` beside `sampleStudio()`), the current target
 observer with the R5 suppression tag, and the close/retarget guard
 (`KitStudioCloseGuard`). The **session-created sample registry** lives on
 `ApplicationSession` (R6): `recordCreatedSample(name:)` /
-`orphanSplitStudioSamples() -> [String]` / `deleteOrphanSamples(_:)`, so
+`orphanSplitStudioSamples() async throws -> [String]` / `deleteOrphanSamples(_:) async throws` (R-T10-15; scan built at call time, R-T10-14), so
 closing the window never drops it. Save pipeline (single async task,
 generation-guarded like `SampleStudioWorkflow.accept`
 (`SampleStudioWorkflow.swift:278-346`)): render pending slices →

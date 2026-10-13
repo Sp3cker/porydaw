@@ -11,6 +11,7 @@ public func runKitDraftSuite(_ report: CheckReport) {
     checkKitToneCodec(report)
     runKitSourceSessionChecks(report)
     checkKitPresenterPicker(report)
+    checkKitPresenterSlotRefresh(report)
     checkKitPresenterZones(report)
     checkKitPresenterPrompts(report)
     checkKitPresenterDirty(report)
@@ -335,6 +336,11 @@ private func presenterVoices() -> [VgVoice?] {
     return voices
 }
 
+private func presenterUndefinedSlots() -> Set<Int> {
+    // Slot 7 is a read-only/broken row with no parsed voice, not an undefined slot.
+    Set(0..<128).subtracting([0, 2, 4, 7])
+}
+
 @MainActor
 private func checkKitPresenterPicker(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::pickerAndUsage")
@@ -352,10 +358,15 @@ private func checkKitPresenterPicker(_ report: CheckReport) {
         scanned = [subgroup, table ?? "", section]
         return ["voicegroup_fixture_rich", "voicegroup_other", "voicegroup_other", "voicegroup_third"]
     }
-    p.bind(song: "Song", section: "voicegroup_fixture_rich", voices: voices, slot: 2)
-    r.expectEqual(expected: 127, actual: p.slotRows.count, what: "picker excludes scalar voices")
+    p.bind(
+        song: "Song", section: "voicegroup_fixture_rich", voices: voices,
+        undefinedSlots: presenterUndefinedSlots(), slot: 2)
+    r.expectEqual(expected: 126, actual: p.slotRows.count, what: "picker excludes scalar and non-undefined nil voices")
     let emptyCount = (0..<p.slotRows.count).filter { (index: Int) -> Bool in p.slotRows[index].isNew }.count
-    r.expectEqual(expected: 125, actual: emptyCount, what: "every undefined slot offered")
+    r.expectEqual(expected: 124, actual: emptyCount, what: "only explicitly undefined slots offered")
+    r.expect(
+        !(0..<p.slotRows.count).contains { (index: Int) -> Bool in p.slotRows[index].slot == 7 },
+        message: "nil-but-not-undefined slot is absent from picker")
     r.expectEqual(expected: "New kit in empty slot 1…", actual: p.slotRows[0].title, what: "new kit label")
     r.expectEqual(expected: [2], actual: loaded, what: "clean target loads silently")
     r.expectEqual(
@@ -373,10 +384,69 @@ private func checkKitPresenterPicker(_ report: CheckReport) {
 }
 
 @MainActor
+private func checkKitPresenterSlotRefresh(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::slotRefreshKeepsWindowState")
+    let p = KitStudioPresenter()
+    p.bind(
+        song: "Song", section: "voicegroup_song", voices: presenterVoices(),
+        undefinedSlots: presenterUndefinedSlots(), slot: 1)
+    p.dropSample(name: "a", onKey: 10)
+    p.dropSample(name: "b", onKey: 20)
+    p.undo()
+    p.selectZone(row: 0)
+    p.selectSlot(row: 2)
+    let draftBefore = p.draft.snapshot()
+    let sessionBefore = p.session.snapshot()
+    let titleBefore = p.titleText
+    let zoneBefore = p.selectedZoneRow()
+    let rowBefore = p.slotRows[p.slotRows.count - 1]
+    var voices = presenterVoices()
+    voices[2] = VgVoice(macro: .keysplit, symbol: "changed_keys", keysplitTable: "changed_table")
+    voices[7] = VgVoice(macro: .keysplitAll, symbol: "new_kit")
+    p.refreshSlots(voices: voices, undefinedSlots: presenterUndefinedSlots())
+    r.expectEqual(expected: 127, actual: p.slotRows.count, what: "bank refresh adds newly eligible kit")
+    r.expectEqual(expected: "keysplit", actual: p.slotRows[1].kind, what: "bank refresh updates kit kind")
+    r.expect(
+        p.slotRows[p.slotRows.count - 1] === rowBefore,
+        message: "unchanged slot retains identity across insertion")
+    var undefinedSlots = presenterUndefinedSlots()
+    undefinedSlots.remove(6)
+    p.refreshSlots(voices: voices, undefinedSlots: undefinedSlots)
+    r.expect(
+        !(0..<p.slotRows.count).contains { (index: Int) -> Bool in p.slotRows[index].slot == 6 },
+        message: "bank refresh removes newly ineligible nil slot")
+    r.expect(
+        p.slotRows[p.slotRows.count - 1] === rowBefore,
+        message: "unchanged slot retains identity across removal")
+    r.expect(
+        p.draft.snapshot() == draftBefore && p.session.snapshot() == sessionBefore
+            && p.dirty && p.canSave && p.canUndo && p.canRedo && p.titleText == titleBefore,
+        message: "slot refresh preserves draft, session, cleanliness and history")
+    r.expect(
+        p.selectedSlot == 1 && p.selectedZone == 0 && p.selectedZoneRow() === zoneBefore
+            && p.retargetVisible && p.retargetSlot == 3,
+        message: "slot refresh preserves selections and pending retarget")
+    p.redo()
+    r.expectEqual(expected: 2, actual: p.draft.drumkitZones.count, what: "redo history survives slot refresh")
+    p.undo()
+    r.expect(p.draft.snapshot() == draftBefore, message: "redo can be undone after slot refresh")
+    p.undo()
+    r.expect(p.draft.drumkitZones.isEmpty, message: "earlier undo history survives slot refresh")
+    p.redo()
+    r.expect(p.draft.snapshot() == draftBefore, message: "earlier edit can be redone after slot refresh")
+    p.answerRetarget(answer: 1)
+    r.expect(
+        p.selectedSlot == 3 && !p.retargetVisible && !p.dirty,
+        message: "original pending retarget completes after slot refresh")
+}
+
+@MainActor
 private func checkKitPresenterZones(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::zonesAndViews")
     let p = KitStudioPresenter()
-    p.bind(song: "Song", section: "voicegroup_song", voices: presenterVoices(), slot: 1)
+    p.bind(
+        song: "Song", section: "voicegroup_song", voices: presenterVoices(),
+        undefinedSlots: presenterUndefinedSlots(), slot: 1)
     p.dropSample(name: "a", onKey: 10)
     p.dropSample(name: "b", onKey: 20)
     r.expectEqual(
@@ -441,7 +511,9 @@ private func checkKitPresenterPrompts(_ report: CheckReport) {
     }
     p.onRetargetPrompt = { answers.append($0) }
     p.onConflictAnswer = { conflicts.append($0) }
-    p.bind(song: "Song", section: "voicegroup_song", voices: voices, slot: 2)
+    p.bind(
+        song: "Song", section: "voicegroup_song", voices: voices,
+        undefinedSlots: presenterUndefinedSlots(), slot: 2)
     p.songKitChanged()
     r.expectEqual(expected: [2, 2], actual: loads, what: "clean song-side change reloads")
     p.dropSample(name: "mine", onKey: 20)
@@ -484,7 +556,9 @@ private func checkKitPresenterPrompts(_ report: CheckReport) {
 private func checkKitPresenterDirty(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::dirtyTitleAndSave")
     let p = KitStudioPresenter()
-    p.bind(song: "Song", section: "voicegroup_song", voices: presenterVoices(), slot: 1)
+    p.bind(
+        song: "Song", section: "voicegroup_song", voices: presenterVoices(),
+        undefinedSlots: presenterUndefinedSlots(), slot: 1)
     p.setMode(index: 1)
     r.expect(p.dirty && p.canSave && !p.canUndo, message: "mode-only conversion is saveable but not a history entry")
     p.setMode(index: 0)
@@ -503,7 +577,9 @@ private func checkKitPresenterDirty(_ report: CheckReport) {
     r.expect(p.dirty && p.canSave && p.canRedo, message: "undo away from save is dirty")
     p.redo()
     r.expect(!p.dirty && !p.canSave && !p.canRedo, message: "redo to saved values restores clean")
-    p.bind(song: "Song", section: "voicegroup_song", voices: presenterVoices(), slot: 0)
+    p.bind(
+        song: "Song", section: "voicegroup_song", voices: presenterVoices(),
+        undefinedSlots: presenterUndefinedSlots(), slot: 0)
     p.dropSample(name: "notAkit", onKey: 60)
     r.expect(
         p.selectedSlot == -1 && !p.canSave && p.draft.drumkitZones.isEmpty,
@@ -514,7 +590,9 @@ private func checkKitPresenterDirty(_ report: CheckReport) {
 private func checkKitPresenterSlices(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::sliceMappingValidationAndHistory")
     let p = KitStudioPresenter()
-    p.bind(song: "Song", section: "voicegroup_song", voices: presenterVoices(), slot: 1)
+    p.bind(
+        song: "Song", section: "voicegroup_song", voices: presenterVoices(),
+        undefinedSlots: presenterUndefinedSlots(), slot: 1)
     r.expect(p.snap, message: "zero-crossing snap starts enabled")
     p.toggleSnap()
     p.addSource(ImportedSample(buffer: [Float](repeating: 0.5, count: 128), sampleRate: 13379, suggestedName: "source"))
@@ -614,7 +692,9 @@ private func checkKitPresenterSlices(_ report: CheckReport) {
 private func checkKitPresenterLoadAndAudition(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::loadRangesAndLockedAudition")
     let p = KitStudioPresenter()
-    p.bind(song: "Song", section: "voicegroup_song", voices: presenterVoices(), slot: 1)
+    p.bind(
+        song: "Song", section: "voicegroup_song", voices: presenterVoices(),
+        undefinedSlots: presenterUndefinedSlots(), slot: 1)
     let splitZones = [sampleZone(40, 70)]
     let children = KitDraftCodec.children(from: splitZones, mode: .keysplit)
     let table = KitDraftCodec.table(from: splitZones, name: "keys")

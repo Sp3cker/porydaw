@@ -80,6 +80,7 @@ enum ShellActionCatalog {
         Action("view.undo_history"),
         Action("view.note_names"),
         Action("tools.import_sample"),
+        Action("tools.split_studio"),
         Action("help.about"),
     ]
     static let byId = Dictionary(uniqueKeysWithValues: actions.map { ($0.id, $0) })
@@ -119,7 +120,7 @@ enum ShellActionCatalog {
     static let viewIds =
         allActionIds.filter { $0.hasPrefix("view.") }
         + ["transport.follow_playhead"]
-    static let toolsIds = ["tools.import_sample"]
+    static let toolsIds = ["tools.import_sample", "tools.split_studio"]
     static let contextHeadIds = ["edit.set_velocity"]
     static let contextBodyIds = [
         "roll.copy", "roll.cut", "roll.duplicate_time", "roll.split", "roll.join", "roll.delete",
@@ -130,6 +131,7 @@ enum ShellActionCatalog {
         "file.import_midi": "Import MIDI...",
         "file.export_wav": "Export WAV...",
         "tools.import_sample": "Import Sample...",
+        "tools.split_studio": "Split Studio...",
         "edit.preferences": "Preferences...",
         "edit.song_settings": "Song Settings...",
         "edit.engine_settings": "Engine Settings...",

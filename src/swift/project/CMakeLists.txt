@@ -22,6 +22,7 @@ add_library(PorydawProject STATIC
     SampleRegistrar.swift
     SampleRegistrar+Committed.swift
     KitUsageScanner.swift
+    SampleUsageScanner.swift
 )
 
 set_target_properties(PorydawProject PROPERTIES

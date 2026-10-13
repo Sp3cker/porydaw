@@ -95,7 +95,11 @@ ShellMenusSupport {
         verify(importSample.text.indexOf("Import Sample...") === 0,
                "Tools displays the fork's Import Sample... label")
         compare(importSample.enabled, false, "no project disables sample import")
-        menuOrder(toolsMenu, ["tools.import_sample"])
+        var splitStudio = checkMenuItem(toolsMenu, "tools.split_studio", "Split Studio")
+        verify(splitStudio.text.indexOf("Split Studio...") === 0,
+               "Tools displays the Split Studio... label")
+        compare(splitStudio.enabled, false, "no project disables Split Studio")
+        menuOrder(toolsMenu, ["tools.import_sample", "tools.split_studio"])
         var about = checkMenuItem(helpMenu, "help.about", "About porydaw")
         compare(about.enabled, true, "About stays available with no song")
     }

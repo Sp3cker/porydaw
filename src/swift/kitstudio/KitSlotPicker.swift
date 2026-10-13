@@ -58,31 +58,41 @@ public final class KitSlotPicker {
 
     public init() {}
 
-    /// Undefined slots become new-kit offers; non-kit voices are never offered.
-    public func bind(voices: [VgVoice?], slot: Int) {
+    /// Only explicitly undefined slots become new-kit offers; non-kit voices are never offered.
+    public func bind(voices: [VgVoice?], undefinedSlots: Set<Int>, slot: Int) {
+        refresh(voices: voices, undefinedSlots: undefinedSlots)
+        selectedSlot = slots.contains(where: { $0.slot == slot }) ? slot : nil
+        pendingSlot = nil
+    }
+
+    /// Replaces bank facts without changing the current or pending target.
+    func refresh(voices: [VgVoice?], undefinedSlots: Set<Int>) {
         slots = (0..<128).compactMap { (index: Int) -> (slot: Int, kind: KitSlotKind)? in
-            guard index < voices.count, let voice = voices[index] else { return (index, .empty) }
+            guard index < voices.count, let voice = voices[index] else {
+                return undefinedSlots.contains(index) ? (index, .empty) : nil
+            }
             switch voice.macro {
             case .keysplitAll: return (index, .drumkit)
             case .keysplit: return (index, .keysplit)
             default: return nil
             }
         }
-        selectedSlot = slots.contains(where: { $0.slot == slot }) ? slot : nil
-        pendingSlot = nil
     }
 
     func rows(existing: QListModel<KitSlotRow>) -> [KitSlotRow] {
-        slots.enumerated().map { (entry: (offset: Int, element: (slot: Int, kind: KitSlotKind))) -> KitSlotRow in
-            let selected = entry.element.slot == selectedSlot
-            if entry.offset < existing.count {
-                let row = existing[entry.offset]
-                if row.slot == entry.element.slot && row.kind == entry.element.kind.rawValue && row.selected == selected
-                {
+        var existingIndex = 0
+        return slots.map { (entry: (slot: Int, kind: KitSlotKind)) -> KitSlotRow in
+            while existingIndex < existing.count && existing[existingIndex].slot < entry.slot {
+                existingIndex += 1
+            }
+            let selected = entry.slot == selectedSlot
+            if existingIndex < existing.count {
+                let row = existing[existingIndex]
+                if row.slot == entry.slot && row.kind == entry.kind.rawValue && row.selected == selected {
                     return row
                 }
             }
-            return KitSlotRow(slot: entry.element.slot, kind: entry.element.kind, selected: selected)
+            return KitSlotRow(slot: entry.slot, kind: entry.kind, selected: selected)
         }
     }
 

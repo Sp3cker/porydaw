@@ -642,7 +642,7 @@ private func editingStoreKit(_ report: CheckReport) {
             let tableBefore = try ProjectFileStore.read(tablePath)
             let paths = [parentPath, childPath, tablePath]
             let beforeDrumEdit = try paths.map { try ProjectFileStore.read($0) }
-            let drumResult = try store.applyKitEdit(input: drumEdit, expectedParent: expected)
+            let drumResult = try store.applyKitEdit(input: drumEdit, expected: .parent(expected))
             guard case .applied(let drum) = drumResult else {
                 report.fail(id + "drumkit", "drumkit edit was not applied")
                 return
@@ -719,7 +719,7 @@ private func editingStoreKit(_ report: CheckReport) {
                 id: before.id, slot: 10, parent: splitParent, subgroupSymbol: "fixture_drums_a",
                 children: children, table: table)
             let beforeSplitEdit = try paths.map { try ProjectFileStore.read($0) }
-            let splitResult = try store.applyKitEdit(input: splitEdit, expectedParent: parent)
+            let splitResult = try store.applyKitEdit(input: splitEdit, expected: .parent(parent))
             guard case .applied(let split) = splitResult else {
                 report.fail(id + "keysplit", "keysplit edit was not applied")
                 return
@@ -733,6 +733,12 @@ private func editingStoreKit(_ report: CheckReport) {
             report.expectEqual(
                 expected: table, actual: inputs.keysplits.table(named: table.name),
                 cppID: id + "picker-table-overlay", what: "shared build inputs prefer the staged table")
+            let stagedKit = try store.kitSnapshot(id: before.id, slot: 10)
+            report.expect(
+                stagedKit?.parent == splitParent && stagedKit?.subgroupSymbol == "fixture_drums_a"
+                    && stagedKit?.children.count == 128 && stagedKit?.children[36] == children[36]
+                    && stagedKit?.children[37] == children[37] && stagedKit?.table == table,
+                cppID: id + "kitSnapshot-staged", message: "kit reader sees raw staged children and table before save")
             let splitLease = ProjectBankLease(
                 bank: split.view.bank, view: split.view, publicationOwner: UUID(), publicationRevision: 2)
             report.expectEqual(
@@ -799,7 +805,7 @@ private func editingStoreKit(_ report: CheckReport) {
                 zip(beforeSplitEdit, savedSnapshot).allSatisfy { $0.0 != $0.1 },
                 cppID: id + "keysplit-files", message: "normal save writes the parent, subgroup and table edits")
             do {
-                _ = try store.applyKitEdit(input: drumEdit, expectedParent: expected)
+                _ = try store.applyKitEdit(input: drumEdit, expected: .parent(expected))
                 report.fail(id + "conflict", "stale parent was accepted")
             } catch let error as VoicegroupStoreError {
                 report.expect(
@@ -811,10 +817,10 @@ private func editingStoreKit(_ report: CheckReport) {
                 expected: savedSnapshot, actual: afterConflict,
                 cppID: id + "conflict-atomicity", what: "stale expected parent changes no file")
             var missing = drumEdit
-            missing.parent.symbol = "missing_kit_symbol"
-            missing.subgroupSymbol = missing.parent.symbol
+            missing.parent?.symbol = "missing_kit_symbol"
+            missing.subgroupSymbol = "missing_kit_symbol"
             do {
-                _ = try store.applyKitEdit(input: missing, expectedParent: splitParent)
+                _ = try store.applyKitEdit(input: missing, expected: .parent(splitParent))
                 report.fail(id + "missing-subgroup", "missing subgroup was accepted")
             } catch let error as VoicegroupStoreError {
                 report.expect(
@@ -825,20 +831,6 @@ private func editingStoreKit(_ report: CheckReport) {
             report.expectEqual(
                 expected: savedSnapshot, actual: afterMissingSubgroup,
                 cppID: id + "missing-atomicity", what: "missing subgroup changes no file")
-            var blankParent = drumEdit
-            blankParent.slot = 127
-            do {
-                _ = try store.applyKitEdit(input: blankParent, expectedParent: nil)
-                report.fail(id + "undefined-parent", "undefined parent was materialized")
-            } catch let error as VoicegroupStoreError {
-                report.expect(
-                    error.localizedDescription.contains("127") && error.localizedDescription.contains(parentPath),
-                    cppID: id + "undefined-parent", message: "undefined parent refusal names slot and file")
-            }
-            let afterUndefinedParent = try paths.map { try ProjectFileStore.read($0) }
-            report.expectEqual(
-                expected: savedSnapshot, actual: afterUndefinedParent,
-                cppID: id + "undefined-atomicity", what: "undefined parent refusal changes no file")
             report.expect(
                 store.currentPublication(id: before.id)?.bank === savedSplit.bank
                     && store.currentPublication(id: before.id)?.dirty == false,
@@ -846,7 +838,7 @@ private func editingStoreKit(_ report: CheckReport) {
 
             let parentRestore = KitEditInput(
                 id: before.id, slot: 10, parent: parent, subgroupSymbol: "", children: [], table: nil)
-            _ = try store.applyKitEdit(input: parentRestore, expectedParent: splitParent)
+            _ = try store.applyKitEdit(input: parentRestore, expected: .parent(splitParent))
             _ = try store.saveVoicegroup(id: before.id)
             let scalar = VgVoice(macro: .square2, key: 67, attack: 2, decay: 2, sustain: 9, release: 3)
             let scalarRestore = KitEditInput(
@@ -856,7 +848,7 @@ private func editingStoreKit(_ report: CheckReport) {
             let overlayTimes = try [childPath, tablePath].map {
                 try FileManager.default.attributesOfItem(atPath: $0)[.modificationDate] as? Date
             }
-            let scalarResult = try store.applyKitEdit(input: scalarRestore, expectedParent: nil)
+            let scalarResult = try store.applyKitEdit(input: scalarRestore, expected: .authoritative)
             guard case .applied(let scalarEdit) = scalarResult else {
                 report.fail(id + "parent-only", "authoritative scalar restore did not apply")
                 return
@@ -892,8 +884,107 @@ private func editingStoreKit(_ report: CheckReport) {
             report.expectEqual(
                 expected: scalar, actual: scalarOnDisk.voiceAt(slot: 10),
                 cppID: id + "parent-only-reparse", what: "saved scalar parent reparses exactly")
+            try editingUndefinedKit(report, root: root)
         }
     } catch {
         report.fail(id + "fixture", "kit-edit checks: \(error)")
     }
+}
+
+private func editingUndefinedKit(_ report: CheckReport, root: URL) throws {
+    let id = "swiftcore/VoicegroupStoreKitEdit::"
+    let parentPath = root.appendingPathComponent("sound/voicegroups/fixture_rich.inc").path
+    let childPath = root.appendingPathComponent("sound/voicegroups/fixture_drums_a.inc").path
+    let paths = [parentPath, childPath]
+    let diskBefore = try paths.map { try ProjectFileStore.read($0) }
+    let store = try VoicegroupStore(projectRoot: root.path)
+    let before = try store.loadBank(voicegroupArg: "_fixture_rich")
+    let parent = VgVoice(macro: .keysplitAll, symbol: "fixture_drums_a")
+    let child = VgVoice(macro: .square2, key: 67, pan: 17, duty: 9, attack: 9, sustain: 15)
+    var children = [VgVoice?](repeating: nil, count: 128)
+    children[0] = child
+    let edit = KitEditInput(
+        id: before.id, slot: 127, parent: parent, subgroupSymbol: parent.symbol,
+        children: children, table: nil)
+    var staleEmpty = edit
+    staleEmpty.slot = 10
+    let priorKit = try store.kitSnapshot(id: before.id, slot: 10)
+    do {
+        _ = try store.applyKitEdit(input: staleEmpty, expected: .parent(nil))
+        report.fail(id + "undefined-slot-conflict", "undefined precondition overwrote a defined slot")
+    } catch let error as VoicegroupStoreError {
+        report.expect(
+            error.localizedDescription.contains("parent changed"),
+            cppID: id + "undefined-slot-conflict", message: "undefined precondition refuses a defined slot")
+    }
+    let unchangedKit = try store.kitSnapshot(id: before.id, slot: 10)
+    let conflictDisk = try paths.map { try ProjectFileStore.read($0) }
+    report.expect(
+        store.currentPublication(id: before.id)?.bank === before.bank
+            && store.currentPublication(id: before.id)?.dirty == before.dirty
+            && unchangedKit == priorKit && conflictDisk == diskBefore,
+        cppID: id + "undefined-slot-conflict", message: "undefined precondition conflict stages and publishes nothing")
+    guard case .applied(let applied) = try store.applyKitEdit(input: edit, expected: .parent(nil)),
+        let materialization = applied.materialization
+    else {
+        report.fail(id + "undefined-slot", "undefined slot did not return its materialization")
+        return
+    }
+    let staged = try store.kitSnapshot(id: before.id, slot: 127)
+    let unchanged = try paths.map { try ProjectFileStore.read($0) }
+    report.expect(
+        before.slotViews[127].kind == .none && applied.view.slotViews[127].voice == parent
+            && applied.view.dirty && unchanged == diskBefore && staged?.children[0] == child,
+        cppID: id + "undefined-slot", message: "undefined kit materializes dirty in memory with exact raw children")
+    let sibling = VgVoice(macro: .square2, key: 70)
+    _ = try store.applyVoicegroupEdit(
+        input: .init(id: before.id, operation: .set(.init(slot: 127, value: sibling, expected: parent))))
+    let undo = KitEditInput(
+        id: before.id, slot: 127, parent: nil, subgroupSymbol: "", children: [], table: nil,
+        materialization: materialization)
+    guard case .applied(let reverted) = try store.applyKitEdit(input: undo, expected: .authoritative) else {
+        report.fail(id + "undefined-slot", "authoritative undo did not restore undefined")
+        return
+    }
+    let restored = try store.kitSnapshot(id: before.id, slot: 127)
+    let restoredSlots = (0..<128).allSatisfy { (slot: Int) -> Bool in
+        reverted.view.slotViews[slot].kind == before.slotViews[slot].kind
+            && reverted.view.slotViews[slot].voice == before.slotViews[slot].voice
+    }
+    report.expect(
+        restoredSlots && restored?.parent == nil && restored?.voicegroup == "_fixture_rich",
+        cppID: id + "undefined-slot", message: "kit undo removes the complete insertion despite a later scalar edit")
+    _ = try store.applyKitEdit(input: edit, expected: .parent(nil))
+    guard let saved = try store.saveVoicegroup(id: before.id) else {
+        report.fail(id + "undefined-slot", "materialized kit save was superseded")
+        return
+    }
+    let reopened = try openRichSource(at: root)
+    let savedParentBytes = try ProjectFileStore.read(parentPath)
+    report.expect(
+        !saved.dirty && reopened.voiceAt(slot: 127) == parent
+            && savedParentBytes != diskBefore[0],
+        cppID: id + "undefined-slot", message: "normal song save writes the re-materialized parent line")
+    let sample = try store.sampleAsset(symbol: "DirectSoundWaveData_fixture_loop")
+    let inputs = try store.bankBuildInputs()
+    let resolved = try BankBuilder(inputs: inputs).resolveSample(
+        symbol: Array("DirectSoundWaveData_fixture_loop".utf8)[...])
+    if let wave = resolved {
+        let header = Span(_unsafeStart: wave, count: 1)[0]
+        if let data = header.data {
+            let pcm = Span(_unsafeStart: data, count: Int(header.size))
+            report.expect(
+                sample?.pcm == (0..<pcm.count).map { (index: Int) -> Int8 in pcm[index] }
+                    && sample?.frequency == header.freq && sample?.looped == (header.status & 0x4000 != 0)
+                    && sample?.loopStart == Int(header.loopStart),
+                cppID: id + "sampleAsset-bin", message: "bin sample copy preserves cached PCM and playback metadata")
+        } else {
+            report.fail(id + "sampleAsset-bin", "fixture bin sample has no PCM")
+        }
+    } else {
+        report.fail(id + "sampleAsset-bin", "fixture bin sample did not resolve")
+    }
+    let missingSample = try store.sampleAsset(symbol: "missing_kit_sample")
+    report.expect(
+        missingSample == nil, cppID: id + "sampleAsset-missing", message: "an unknown project sample is a soft miss")
 }

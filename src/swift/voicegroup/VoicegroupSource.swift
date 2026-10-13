@@ -240,17 +240,49 @@ public final class VoicegroupSource {
         return found
     }
 
+    /// Canonical declaration labels, using the source grammar's macro and label rules.
+    public static func declarationLabels(in content: [UInt8]) -> [String] {
+        canonicalDeclarations(in: splitLines(content).lines).labels
+    }
+
+    /// A label followed by its voice_group header denotes one section, not two roots.
+    private static func canonicalDeclarations(in lines: [[UInt8]]) -> (labels: [String], atLine: [Int: String]) {
+        var labels: [String] = []
+        var atLine: [Int: String] = [:]
+        var pendingLabel: String?
+        for (index, raw) in lines.enumerated() {
+            let text = raw[contentBounds(raw)]
+            if text.starts(with: headerPrefix.dropLast()) || hasSectionLabelSeparator(text),
+                let declaration = declarations(in: raw).first
+            {
+                if !declaration.isLabel, let label = pendingLabel {
+                    atLine[index] = label
+                } else {
+                    labels.append(declaration.symbol)
+                    atLine[index] = declaration.symbol
+                }
+                pendingLabel = declaration.isLabel ? declaration.symbol : nil
+            } else if pendingLabel != nil,
+                VoiceMacroSpec.all.contains(where: { text.starts(with: $0.prefix) })
+                    || text.starts(with: cryPrefix) || text.starts(with: cryReversePrefix)
+            {
+                pendingLabel = nil
+            }
+        }
+        return (labels, atLine)
+    }
+
     /// Parses kit voice lines with their canonical enclosing declaration symbols.
     public static func kitReferences(in text: [UInt8]) -> [(sectionLabel: String, voice: VgVoice)] {
         var result: [(sectionLabel: String, voice: VgVoice)] = []
         var sectionLabel: String?
         let specs = [VoiceMacroSpec.forMacro(.keysplitAll), VoiceMacroSpec.forMacro(.keysplit)]
-        for raw in splitLines(text).lines {
+        let lines = splitLines(text).lines
+        let canonical = canonicalDeclarations(in: lines)
+        for (index, raw) in lines.enumerated() {
             let content = raw[contentBounds(raw)]
-            if content.starts(with: headerPrefix.dropLast()) || hasSectionLabelSeparator(content),
-                let declaration = declarations(in: Array(raw)).first
-            {
-                sectionLabel = declaration.symbol
+            if let label = canonical.atLine[index] {
+                sectionLabel = label
                 continue
             }
             guard let sectionLabel else { continue }

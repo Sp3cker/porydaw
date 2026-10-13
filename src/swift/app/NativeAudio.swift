@@ -178,6 +178,10 @@ public final class NativeAudio {
         device.renderer.audition.publishWave(wave16: wave16, key: key, adsr: adsr)
     }
 
+    public func auditionKit(_ tone: KitAuditionTone, key: UInt8) -> Bool {
+        device.renderer.audition.publishKitTone(tone, key: key)
+    }
+
     public func auditionSampleOff() { device.renderer.audition.sampleOff() }
 
     public func songSettings(for config: SongConfig) -> AudioSettings {

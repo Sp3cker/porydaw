@@ -2,6 +2,7 @@ import Foundation
 import PorydawCore
 import PorydawDocument
 import PorydawProject
+import PorydawVoicegroup
 import QtBridge
 import PorydawAppAudio
 import PorydawAppCommands
@@ -98,6 +99,13 @@ public final class ApplicationSession: QmlInstantiableStatus {
     let transportBar: TransportBarPresenter
     @QtIgnored let wavExport = WavExportPresenter()
     @QtIgnored var sampleStudioWorkflow: SampleStudioWorkflow?
+    @QtIgnored var kitStudioWorkflow: KitStudioWorkflow?
+    private var splitStudioCreatedSamples: [String: Set<String>] = [:]
+    private var splitStudioCreatedGroups: [String: Set<String>] = [:]
+    private struct OrphanScanFailure: LocalizedError {
+        let reason: String
+        var errorDescription: String? { reason }
+    }
     @QtIgnored
     let voiceList = VoiceListController()
     @QtIgnored
@@ -309,6 +317,83 @@ public final class ApplicationSession: QmlInstantiableStatus {
         return workflow
     }
 
+    /// The one app-wide modeless Split Studio workflow.
+    public func kitStudio() -> KitStudioWorkflow {
+        if let kitStudioWorkflow { return kitStudioWorkflow }
+        let workflow = KitStudioWorkflow(session: self)
+        kitStudioWorkflow = workflow
+        return workflow
+    }
+
+    /// Records only assets created by Split Studio in this application session.
+    public func recordCreatedSample(name: String) {
+        splitStudioCreatedSamples[projectRoot, default: []].insert(name)
+    }
+
+    @QtIgnored
+    func recordCreatedSubgroup(symbol: String) {
+        splitStudioCreatedGroups[projectRoot, default: []].insert(symbol)
+    }
+
+    /// Returns session-created samples with no current voicegroup references.
+    @QtIgnored public func orphanSplitStudioSamples() async throws -> [String] {
+        let root = projectRoot
+        guard let created = splitStudioCreatedSamples[root], !created.isEmpty else { return [] }
+        guard let service = catalogService, kitStudioWorkflow?.saving != true else {
+            throw OrphanScanFailure(reason: "Split Studio: cannot scan while a project edit is in progress.")
+        }
+        let groups = splitStudioCreatedGroups[root] ?? []
+        let observed = songTabs.allTabs.map { (song: $0.workspace.session, lease: $0.workspace.session.bankLease) }
+        let locator = VoicegroupLocator(layout: ProjectLayout(projectRoot: root).ensuringDeepScan())
+        var overlay: [String: [VgVoice?]] = [:]
+        var visited: Set<String> = []
+        for entry in observed {
+            let lease = entry.lease
+            let section = try KitUsageScanner.canonicalSection(
+                projectRoot: root, sourceRelativePath: lease.id.sourceRelativePath, sectionLabel: lease.sectionLabel)
+            overlay[section] = lease.slotViews.map(\.voice)
+            for (slot, view) in lease.slotViews.enumerated()
+            where view.voice?.macro == .keysplitAll || view.voice?.macro == .keysplit {
+                guard let symbol = view.voice?.symbol, visited.insert(symbol).inserted else { continue }
+                let kit = try await service.readKit(lease: lease, slot: slot)
+                try Task.checkCancellation()
+                guard !kit.subgroupSymbol.isEmpty else { continue }
+                guard let location = locator.locateSubgroup(symbol: Array(kit.subgroupSymbol.utf8)[...]),
+                    location.filePath.hasPrefix(root + "/")
+                else { throw OrphanScanFailure(reason: "Split Studio: cannot resolve subgroup \(kit.subgroupSymbol).") }
+                let childSection = try KitUsageScanner.canonicalSection(
+                    projectRoot: root, sourceRelativePath: String(location.filePath.dropFirst(root.count + 1)),
+                    sectionLabel: location.sectionLabel)
+                overlay[childSection] = try kit.children.map { try $0.map(KitStudioWorkflow.projectVoice) }
+            }
+        }
+        guard projectRoot == root, catalogService === service, kitStudioWorkflow?.saving != true,
+            splitStudioCreatedSamples[root] == created, (splitStudioCreatedGroups[root] ?? []) == groups,
+            observed.allSatisfy({
+                !$0.song.isClosed && $0.song.bankLease.publicationOwner == $0.lease.publicationOwner
+                    && $0.song.bankLease.publicationRevision == $0.lease.publicationRevision
+            })
+        else { throw OrphanScanFailure(reason: "Split Studio: the project changed during the orphan scan.") }
+        let used = try SampleUsageScanner.referenced(
+            projectRoot: root, candidates: created, overlay: overlay, createdSubgroups: groups)
+        return created.subtracting(used).sorted()
+    }
+
+    /// Rechecks references before deleting checked session-created orphan assets.
+    @QtIgnored public func deleteOrphanSamples(_ names: [String]) async throws {
+        let root = projectRoot
+        let eligible = Set(try await orphanSplitStudioSamples())
+        for name in names where eligible.contains(name) {
+            let removed = try SampleRegistrar.deleteRegistration(projectRoot: root, name: name)
+            if !removed {
+                // A failed batch can leave an owned WAV before its registration is written.
+                let path = root + "/sound/direct_sound_samples/" + name + ".wav"
+                if ProjectFileStore.exists(path) { try ProjectFileStore.remove(path) }
+            }
+            splitStudioCreatedSamples[root]?.remove(name)
+        }
+    }
+
     public func closeSampleStudio() {
         sampleStudioWorkflow?.close()
     }
@@ -472,6 +557,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// through `acknowledgeGridDetached()`, which is where the release happens.
     public func hostClosing() {
         hostClosingImpl()
+        kitStudioWorkflow?.dispose()
     }
 
     // MARK: - Project and song opens

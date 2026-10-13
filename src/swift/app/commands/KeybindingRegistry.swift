@@ -139,6 +139,7 @@ public struct KeybindingRegistry {
         .init("view.polyphony_debugger", .window, "Polyphony Debugger", keys: "Ctrl+Shift+P"),
         .init("view.undo_history", .window, "Undo History"),
         .init("tools.import_sample", .window, "Import Sample"),
+        .init("tools.split_studio", .window, "Split Studio"),
         .init("transport.go_to_start", .window, "Go to Start", keys: "Home"),
         .init("transport.play", .window, "Play"),
         .init("transport.play_pause", .window, "Play/Pause", keys: "Space"),

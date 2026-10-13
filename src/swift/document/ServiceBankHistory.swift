@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawVoicegroup
 
 // MARK: - Confirmed bank history action
 
@@ -133,6 +134,7 @@ final class ServiceKitEditAction: BankHistoryAction {
     private let before: KitEditValue
     private let after: KitEditValue
     private let inbox: BankResultInbox
+    private var materialization: BlankSlotMaterialization?
     private(set) var current: AppliedBankEdit
 
     init(
@@ -143,6 +145,7 @@ final class ServiceKitEditAction: BankHistoryAction {
         self.before = before
         self.after = after
         self.current = current
+        materialization = current.materialization
         self.inbox = inbox
         historyLabel = "Kit \(after.subgroupSymbol)"
     }
@@ -150,7 +153,9 @@ final class ServiceKitEditAction: BankHistoryAction {
     func apply(direction: BankHistoryDirection) async throws {
         let result = try await service.applyKitEdit(
             lease: current.lease, input: direction == .undo ? before : after,
-            expected: nil, publishResult: false)
+            expected: nil, publishResult: false,
+            materialization: direction == .undo && before.parent == nil ? materialization : nil)
+        if direction == .redo { materialization = result.materialization }
         current = result
         inbox.deliver(result)
     }

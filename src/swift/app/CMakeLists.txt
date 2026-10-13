@@ -38,6 +38,8 @@ add_library(PorydawApp STATIC
     samplestudio/SampleProvenanceStore.swift
     samplestudio/SampleSourcePreparation.swift
     samplestudio/SampleStudioWorkflow.swift
+    kitstudio/KitStudioCloseGuard.swift
+    kitstudio/KitStudioWorkflow.swift
     audio/PolyphonyPanelPresenter.swift
     ApplicationSession.swift
     ApplicationSession+Tabs.swift

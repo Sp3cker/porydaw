@@ -385,6 +385,10 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
         var publications: [SessionChange] = []
         session.onChange = { publications.append($0) }
         let first = try runBlocking { try await session.applyKitEdit(after, expected: before) }
+        let stagedKit = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 0) }
+        report.expectEqual(
+            expected: after, actual: stagedKit,
+            cppID: id + "readKit", what: "service reader round-trips staged parent and all raw children")
         report.expect(
             session.bankDirty && session.document.history.undoCount == 1
                 && session.document.history.step(at: 0)?.label == "Kit history_kit",
@@ -507,6 +511,47 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
         report.expect(
             session.bankSlots[1].voice == newKit.parent,
             cppID: id + "new-kit-redo", message: "redo of a new kit restores its full parent")
+        let emptyBefore = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 127) }
+        var emptyKit = second
+        emptyKit.slot = 127
+        let beforeCreationDisk = [bytes(at: parentPath), bytes(at: childPath), bytes(at: tablePath)]
+        let creation = try runBlocking { try await session.applyKitEdit(emptyKit, expected: emptyBefore) }
+        let readCreated = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 127) }
+        report.expect(
+            emptyBefore.parent == nil && emptyBefore.subgroupSymbol.isEmpty && emptyBefore.children.isEmpty
+                && emptyBefore.tableName == nil && emptyBefore.table == nil
+                && emptyBefore.voicegroup == "_test_vg" && creation.materialization != nil
+                && session.bankSlots[127].voice == emptyKit.parent && session.bankDirty
+                && beforeCreationDisk == [bytes(at: parentPath), bytes(at: childPath), bytes(at: tablePath)],
+            cppID: id + "undefined-slot-undo", message: "session creates a genuine undefined kit as an in-memory edit")
+        report.expectEqual(
+            expected: emptyKit, actual: readCreated,
+            cppID: id + "readKit", what: "new staged keysplit reads back its children and table")
+        _ = try runBlocking {
+            try await service.bankApply(
+                lease: session.bankLease, slot: 127, value: outsider, expected: emptyKit.parent)
+        }
+        _ = try runBlocking { try await session.undo() }
+        let readUndone = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 127) }
+        report.expect(
+            session.bankSlots[127].kind == BankSlotKind.none && session.bankSlots[127].voice == nil
+                && readUndone == emptyBefore,
+            cppID: id + "undefined-slot-undo",
+            message: "authoritative undo restores undefined, not a silent placeholder")
+        _ = try runBlocking { try await session.redo() }
+        let readRedone = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 127) }
+        report.expectEqual(
+            expected: emptyKit, actual: readRedone,
+            cppID: id + "undefined-slot-undo", what: "redo re-materializes the entire staged keysplit")
+        _ = try runBlocking { try await session.undo() }
+        report.expect(
+            session.bankSlots[127].kind == BankSlotKind.none,
+            cppID: id + "undefined-slot-undo", message: "second undo uses redo's refreshed materialization")
+        let readScalar = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 2) }
+        report.expect(
+            readScalar.parent == session.bankSlots[2].voice && readScalar.subgroupSymbol.isEmpty
+                && readScalar.children.isEmpty && readScalar.tableName == nil && readScalar.table == nil,
+            cppID: id + "readKit", message: "non-kit slots read as parent-only values")
         kitActionIdentityChecks(
             report, service: service, before: before, after: after, first: first, newer: secondResult)
     } catch {
@@ -537,8 +582,12 @@ private func kitActionIdentityChecks(
     let slotAction = ServiceKitEditAction(
         service: service, before: before, after: otherSlot, current: first, inbox: inbox)
     action.rebaseCurrent(with: slotAction)
+    guard let scalarAfter = after.parent else {
+        report.fail(id + "fixture", "identity check requires its defined after-parent")
+        return
+    }
     let scalar = ServiceBankAction(
-        service: service, slot: 0, before: before.parent, after: after.parent,
+        service: service, slot: 0, before: before.parent, after: scalarAfter,
         token: nil, materializedBlank: false, current: first, inbox: inbox)
     action.rebaseCurrent(with: scalar)
     report.expect(

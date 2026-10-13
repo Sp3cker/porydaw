@@ -169,7 +169,9 @@ public final class KitStudioPresenter: QmlUncreatable {
     }
 
     /// Binds a clean target; callers guard dirty retargets before supplying new facts.
-    @QtIgnored public func bind(song: String, section: String, voices: [VgVoice?], slot: Int) {
+    @QtIgnored public func bind(
+        song: String, section: String, voices: [VgVoice?], undefinedSlots: Set<Int>, slot: Int
+    ) {
         self.song = song
         self.section = section
         boundSlot = slot
@@ -178,7 +180,7 @@ public final class KitStudioPresenter: QmlUncreatable {
         selectedZone = -1
         usedByText = ""
         resetCleanState()
-        picker.bind(voices: voices, slot: slot)
+        picker.bind(voices: voices, undefinedSlots: undefinedSlots, slot: slot)
         retargetVisible = false
         retargetSlot = -1
         switchBarVisible = false
@@ -187,6 +189,15 @@ public final class KitStudioPresenter: QmlUncreatable {
         } else {
             refresh()
         }
+    }
+
+    /// Re-publishes bank facts without rebinding the working kit or its pending target.
+    @QtIgnored public func refreshSlots(voices: [VgVoice?], undefinedSlots: Set<Int>) {
+        picker.refresh(voices: voices, undefinedSlots: undefinedSlots)
+        syncModel(
+            slotRows, picker.rows(existing: slotRows),
+            matches: { (lhs: KitSlotRow, rhs: KitSlotRow) -> Bool in lhs === rhs })
+        stateRevision += 1
     }
 
     public func selectSlot(row: Int) {
@@ -315,7 +326,7 @@ public final class KitStudioPresenter: QmlUncreatable {
         refresh()
     }
 
-    public func selectedZoneRow() -> KitZoneRow? {
+    public func selectedZoneRow() -> Optional<KitZoneRow> {
         guard (0..<zoneRows.count).contains(selectedZone) else { return nil }
         return zoneRows[selectedZone]
     }
@@ -597,13 +608,13 @@ public final class KitStudioPresenter: QmlUncreatable {
         _ = publishKitTone(tone, UInt8(key))
     }
 
-    @QtIgnored public func renderedSlice(id: Int) -> ProcessedSample? {
+    @QtIgnored public func renderedSlice(id: Int) -> Optional<ProcessedSample> {
         guard let address = sliceAddress(id) else { return nil }
         return session.renderSlice(source: address.source, slice: address.index)
     }
 
     /// Converts the audition player's rendered-grid position back to a source frame.
-    @QtIgnored public func sourceFrame(sliceId: Int, renderedPosition: Double) -> Int? {
+    @QtIgnored public func sourceFrame(sliceId: Int, renderedPosition: Double) -> Optional<Int> {
         guard renderedPosition.isFinite, let address = sliceAddress(sliceId),
             let source = session.sources.first(where: { $0.id == address.source }),
             source.sample.sampleRate.isFinite, source.targetRate.isFinite,

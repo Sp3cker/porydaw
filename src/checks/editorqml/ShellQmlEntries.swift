@@ -13,7 +13,7 @@ enum ShellQmlRegistry {
         var testFunctions: [String] = []
     }
 
-    /// The rendered text-contrast audit: one entry per shell state and theme.
+    /// One rendered audit per state/theme; song rows share the Split Studio opening audit.
     private static let textContrastEntries: [Entry] = ["empty", "song"].flatMap { state in
         ["vanilla", "dark-neutral-high", "immaterial"].map { mode in
             Entry(
@@ -346,6 +346,11 @@ enum ShellQmlRegistry {
                     "ShellExport::test_exportRendersLiveSessionAndStopsPlayback",
                     "ShellExport::test_modalRenderBlocksInputAndCancels",
                     "ShellExport::test_writeFailureReportsAndLeavesNoFile",
+                ]),
+            Entry(
+                name: "shell-split-studio", inputFileName: "tst_ShellSplitStudio.qml",
+                fixtureFiles: songs("mus_route101") + [
+                    "Makefile", "audio_rules.mk", "samplesources/hires_tone.wav",
                 ]),
             Entry(
                 name: "shell-sample-studio", inputFileName: "tst_ShellSampleStudio.qml",

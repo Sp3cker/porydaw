@@ -5,7 +5,7 @@ import PorydawVoicegroup
 /// Pure conversion between editor ranges, store values and audition descriptions.
 public enum KitDraftCodec {
     // The decoded value of kitBlankChildLine; identical in both mode views.
-    private static let blank = VgVoice(macro: .square1, sustain: 15)
+    private static let blank = kitBlankChildVoice
 
     public static func drumkitZones(children: [VgVoice?]) -> [KitZone] {
         var zones: [KitZone] = []

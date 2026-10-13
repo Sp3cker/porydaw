@@ -272,8 +272,8 @@ ShellLaneSupport {
         const first = files.itemAtIndex(0)
         mouseClick(first)
         verify(waitForNative(function() {
-            return findChild(dialog, "sampleLibraryPreviewing").ToolTip.text === first.path
-                && findChild(dialog, "sampleLibraryStatus").ToolTip.text === first.path
+            return findChild(dialog, "sampleLibraryPreviewing").text === "Preview source: " + first.name
+                && findChild(dialog, "sampleLibraryStatus").text === "Selected: " + first.name
         }, 10000), "selected file paints its preview and selection path readouts")
         verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, dialog, 5000),
                "selected preview row and readouts submit before audit")
@@ -284,11 +284,11 @@ ShellLaneSupport {
                ]))
         mouseClick(findChild(dialog, "sampleLibraryPreview"))
         verify(waitForNative(function() {
-            return findChild(dialog, "sampleLibraryPreviewing").ToolTip.text === ""
+            return findChild(dialog, "sampleLibraryPreviewing").text === "Preview source: none"
         }, 5000), "preview stops before auditing loaded source")
         mouseClick(findChild(dialog, "sampleLibraryLoad"))
         verify(waitForNative(function() {
-            return findChild(dialog, "sampleLibraryLoaded").ToolTip.text === first.path
+            return findChild(dialog, "sampleLibraryLoaded").text === "Loaded: " + first.name
         }, 5000), "selected row loads and refreshes its source path readout")
         verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, dialog, 5000),
                "loaded source readout submits before audit")
@@ -480,6 +480,22 @@ ShellLaneSupport {
         report(data.tag + " empty shell")
     }
 
+    function auditSplitStudio(context) {
+        const session = shell.shellPresenter.session
+        session.voiceListController().selectSlot(10)
+        shell.shellPresenter.activate("tools.split_studio")
+        verify(waitForNative(function() {
+            const studio = child("splitStudioWindow")
+            return studio !== null && studio.visible
+        }, 10000), "Split Studio opening state mounts")
+        const studio = child("splitStudioWindow")
+        const result = Audit.audit(studio.contentItem, grab)
+        verify(result.measured > 0, context + ": Split Studio text items were measured")
+        record(context + " split studio", result)
+        studio.close()
+        tryCompare(session.kitStudio(), "windowOpen", false, 5000)
+    }
+
     function test_songShellText_data() { return themeRows() }
 
     function test_songShellText(data) {
@@ -502,6 +518,8 @@ ShellLaneSupport {
         applyTheme(data.theme)
         const presenter = shell.shellPresenter
         const mode = data.tag
+        if (mode === "vanilla" || mode === "dark-neutral-high")
+            auditSplitStudio(mode)
         session.voiceListController().selectSlot(0)
         auditPopups(mode + " song", auditWindow(mode + " song"))
         auditClippedKeyboardLabel(mode)

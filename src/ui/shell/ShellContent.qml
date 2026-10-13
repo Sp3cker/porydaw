@@ -78,8 +78,8 @@ Item {
                 objectName: "shellShortcut_" + shortcutDelegate.modelData
                 sequences: content.shell.actionSequences(shortcutDelegate.modelData)
                 context: Qt.WindowShortcut
-                // Qt also considers transient-dialog parents active; require focus in this window.
-                enabled: shortcutDelegate.actionState.enabled && content.root.activeFocusItem !== null
+                // A modeless studio owns its own window shortcuts while active.
+                enabled: shortcutDelegate.actionState.enabled && content.root.active && content.root.activeFocusItem !== null
                 onActivated: content.shell.activate(shortcutDelegate.modelData)
             }
         }
@@ -145,6 +145,12 @@ Item {
     }
     SampleStudioHost {
         workflow: content.shell.session.sampleStudio()
+        hostWindow: content.root
+        applicationSession: content.shell.session
+        colors: content.root.colors
+    }
+    KitStudioHost {
+        workflow: content.shell.session.kitStudio()
         hostWindow: content.root
         applicationSession: content.shell.session
         colors: content.root.colors

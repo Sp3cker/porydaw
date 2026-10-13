@@ -257,28 +257,28 @@ public final class VoicegroupStore {
 
     /// Stages a kit edit and republishes only the requested voicegroup's bank.
     /// - Throws: `VoicegroupStoreError` naming the source on conflict or build failure.
-    public func applyKitEdit(input: KitEditInput, expectedParent: VgVoice?) throws -> VoicegroupEditResult {
+    public func applyKitEdit(input: KitEditInput, expected: KitParentExpectation) throws -> VoicegroupEditResult {
         guard try refreshIfStale(id: input.id), var record = records[input.id] else {
             throw VoicegroupStoreError.operationFailed("Voicegroup is not loaded: \(input.id.sourceRelativePath)")
         }
         let source = record.source
-        guard (0..<128).contains(input.slot),
-            expectedParent == nil || source.voiceAt(slot: input.slot) == expectedParent
-        else {
+        guard (0..<128).contains(input.slot) else {
+            throw VoicegroupStoreError.operationFailed("Cannot edit slot \(input.slot) in \(source.filePath).")
+        }
+        if case .parent(let voice) = expected,
+            voice == nil ? source.kindAt(slot: input.slot) != .none : source.voiceAt(slot: input.slot) != voice
+        {
             throw VoicegroupStoreError.operationFailed(
                 "Cannot edit slot \(input.slot) in \(source.filePath): parent changed.")
-        }
-        guard source.kindAt(slot: input.slot) == .editable else {
-            throw VoicegroupStoreError.operationFailed(
-                "Cannot edit undefined parent slot \(input.slot) in \(source.filePath).")
         }
         let parentOnly = input.subgroupSymbol.isEmpty && input.children.isEmpty && input.table == nil
         let parent = try detachedSource(source)
         var staging = kitStaging
         var keys = record.kitKeys
         if !parentOnly {
-            guard input.parent.macro == .keysplitAll || input.parent.macro == .keysplit,
-                input.parent.symbol == input.subgroupSymbol, input.children.count <= 128
+            guard let targetParent = input.parent,
+                targetParent.macro == .keysplitAll || targetParent.macro == .keysplit,
+                targetParent.symbol == input.subgroupSymbol, input.children.count <= 128
             else {
                 throw VoicegroupStoreError.operationFailed("Invalid kit edit in \(source.filePath).")
             }
@@ -298,7 +298,7 @@ public final class VoicegroupStore {
                 }
             }
             if let table = input.table {
-                guard input.parent.macro == .keysplit, input.parent.keysplitTable == table.name,
+                guard targetParent.macro == .keysplit, targetParent.keysplitTable == table.name,
                     table.table.count == 128, (0..<128).contains(table.startingNote),
                     (0...128).contains(table.maxNote),
                     table.table.allSatisfy({ (value: UInt8) in value < 128 })
@@ -316,8 +316,26 @@ public final class VoicegroupStore {
             staging.subgroups[location] = subgroup
             keys.subgroups.insert(location)
         }
-        guard parent.setVoice(slot: input.slot, voice: input.parent) else {
-            throw VoicegroupStoreError.operationFailed("Cannot edit slot \(input.slot) in \(parent.filePath).")
+        var materialization: BlankSlotMaterialization?
+        if let targetParent = input.parent {
+            if parent.kindAt(slot: input.slot) == .none {
+                guard let inserted = parent.materializeBlankSlot(slot: input.slot, voice: targetParent) else {
+                    throw VoicegroupStoreError.operationFailed(
+                        "Cannot materialize slot \(input.slot) in \(parent.filePath).")
+                }
+                materialization = inserted
+            } else if !parent.setVoice(slot: input.slot, voice: targetParent) {
+                throw VoicegroupStoreError.operationFailed("Cannot edit slot \(input.slot) in \(parent.filePath).")
+            }
+        } else {
+            guard parentOnly, let inserted = input.materialization,
+                inserted.firstAddedSlot <= input.slot,
+                input.slot < inserted.firstAddedSlot + inserted.addedLines.count,
+                parent.revertBlankSlotMaterialization(inserted, authoritative: expected == .authoritative)
+            else {
+                throw VoicegroupStoreError.operationFailed(
+                    "Cannot restore undefined slot \(input.slot) in \(parent.filePath).")
+            }
         }
         let bank: Bank
         do {
@@ -332,7 +350,76 @@ public final class VoicegroupStore {
         record.published = Self.publish(id: input.id, source: parent, bank: bank, staged: !keys.isEmpty)
         kitStaging = staging
         records[input.id] = record
-        return .applied(.init(view: record.published, materialization: nil, materializationToken: nil))
+        return .applied(.init(view: record.published, materialization: materialization, materializationToken: nil))
+    }
+
+    /// Reads raw parent and child voices through the current kit staging overlays.
+    /// - Returns: A parent-only value for a non-kit or undefined slot.
+    /// - Throws: `VoicegroupStoreError` for an unloaded bank or invalid source.
+    public func kitSnapshot(id: VoicegroupId, slot: Int) throws -> KitSnapshot? {
+        guard try refreshIfStale(id: id), let source = records[id]?.source else {
+            throw VoicegroupStoreError.operationFailed("Voicegroup is not loaded: \(id.sourceRelativePath)")
+        }
+        guard (0..<128).contains(slot) else {
+            throw VoicegroupStoreError.operationFailed("Cannot read slot \(slot) in \(source.filePath).")
+        }
+        let parent = source.voiceAt(slot: slot)
+        guard let parent, parent.macro == .keysplitAll || parent.macro == .keysplit else {
+            return KitSnapshot(
+                voicegroup: source.voicegroupArg, parent: parent, subgroupSymbol: "", children: [], table: nil)
+        }
+        let inputs = try bankBuildInputs()
+        guard let location = inputs.locator.locateSubgroup(symbol: Array(parent.symbol.utf8)[...]) else {
+            throw VoicegroupStoreError.operationFailed(
+                "no sub-voicegroup \(parent.symbol) found in the project (\(source.filePath))")
+        }
+        let subgroup: VoicegroupSource
+        if let staged = kitStaging.subgroups[location] {
+            subgroup = staged
+        } else if let loaded = records.values.first(where: {
+            $0.source.filePath == location.filePath && $0.source.sectionLabel == location.sectionLabel
+        }) {
+            subgroup = loaded.source
+        } else {
+            subgroup = VoicegroupSource()
+            var error: String?
+            guard subgroup.open(location: location, error: &error) else {
+                throw VoicegroupStoreError.operationFailed(
+                    "Cannot open \(location.filePath): \(error ?? "invalid source")")
+            }
+        }
+        let children = (0..<128).map { (childSlot: Int) -> VgVoice? in subgroup.voiceAt(slot: childSlot) }
+        let table = parent.macro == .keysplit ? inputs.keysplits.table(named: parent.keysplitTable) : nil
+        return KitSnapshot(
+            voicegroup: source.voicegroupArg, parent: parent,
+            subgroupSymbol: parent.symbol, children: children, table: table)
+    }
+
+    /// Copies a project sample from the bank resolver without exposing cached pointers.
+    public func sampleAsset(symbol: String) throws -> KitSampleAsset? {
+        let builder = BankBuilder(inputs: try bankBuildInputs())
+        guard let wave = try builder.resolveSample(symbol: Array(symbol.utf8)[...]) else { return nil }
+        let header = Span(_unsafeStart: wave, count: 1)[0]
+        let pcm: [Int8]
+        if let data = header.data {
+            let samples = Span(_unsafeStart: data, count: Int(header.size))
+            pcm = (0..<samples.count).map { (index: Int) -> Int8 in samples[index] }
+        } else {
+            precondition(header.size == 0, "A decoded sample must have PCM storage")
+            pcm = []
+        }
+        return KitSampleAsset(
+            pcm: pcm,
+            frequency: header.freq, looped: header.status & 0x4000 != 0, loopStart: Int(header.loopStart))
+    }
+
+    /// Copies one programmable wave and releases the resolver's fresh allocation.
+    public func progWaveWords(symbol: String) throws -> [UInt32]? {
+        let builder = BankBuilder(inputs: try bankBuildInputs())
+        guard let wave = try builder.resolveProgWave(symbol: Array(symbol.utf8)[...]) else { return nil }
+        defer { free(wave) }
+        let words = Span(_unsafeStart: wave, count: 4)
+        return (0..<4).map { (index: Int) -> UInt32 in words[index] }
     }
 
     /// Consumes a materialization token, then attempts its narrow-delta undo.

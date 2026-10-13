@@ -348,6 +348,12 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/samplestudio/SampleLibraryPane.qml
         src/ui/shell/samplestudio/Sf2ZonePickerDialog.qml
         src/ui/shell/samplestudio/SampleWaveform.qml
+        src/ui/shell/kitstudio/KitStudioHost.qml
+        src/ui/shell/kitstudio/SplitStudioWindow.qml
+        src/ui/shell/kitstudio/SliceEditorView.qml
+        src/ui/shell/kitstudio/ZoneEditorView.qml
+        src/ui/shell/kitstudio/KitSlotPicker.qml
+        src/ui/shell/kitstudio/KitDragSource.qml
 )
 
 qt_add_resources(porydaw_app "cursor_images"
