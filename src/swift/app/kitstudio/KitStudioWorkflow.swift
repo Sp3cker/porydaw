@@ -71,6 +71,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
     private var pendingNames: Set<String> = []
     private var playingSlice: Int?
     private var tickTime: TimeInterval?
+    private let previewPreparation = SampleSourcePreparation()
 
     @QtIgnored public init(session: ApplicationSession) {
         self.session = session
@@ -328,17 +329,27 @@ public final class KitStudioWorkflow: QmlUncreatable {
     }
 
     private func previewLibrary(path: String) {
-        guard windowOpen, !saving else { return }
-        do {
-            let url = Self.sourceURL(path)
-            let sample = try SampleImport.decodeFile(path: url.path)
-            let rendered = SampleRender.render(source: sample, params: SampleDocument.defaultParams(for: sample))
-            playingSlice = nil
-            pcm?.play(owner: self, rendered: rendered, looped: rendered.looped, key: 60, adsr: AudioADSR(), toneKey: 60)
-            auditionPlaying = pcm?.playing ?? false
-            tickTime = Date.timeIntervalSinceReferenceDate
-            libraryPane?.setPreviewingPath(path: url.path)
-        } catch { libraryPane?.showMessage(text: String(describing: error)) }
+        guard windowOpen, !saving, let library = libraryPane else { return }
+        stopAudition()
+        let url = Self.sourceURL(path)
+        // The pane offers Stop while the newest request prepares; older requests never complete.
+        library.setPreviewingPath(path: url.path)
+        previewPreparation.submit(.file(path: url.path, preview: true)) {
+            [weak self] (result: Result<SampleSourcePreparation.Output, Error>) in
+            guard let self, self.windowOpen, !self.saving else { return }
+            guard case .success(.prepared(var document, _, _)) = result else {
+                self.stopAudition()
+                if case .failure(let error) = result {
+                    library.showMessage(text: SampleSourcePreparation.message(for: error))
+                }
+                return
+            }
+            let rendered = document.processed
+            self.pcm?.play(
+                owner: self, rendered: rendered, looped: rendered.looped, key: 60, adsr: AudioADSR(), toneKey: 60)
+            self.auditionPlaying = self.pcm?.playing ?? false
+            self.tickTime = Date.timeIntervalSinceReferenceDate
+        }
     }
 
     public func frameAt(x: Double) -> Int { state?.waveform?.frameAt(x) ?? 0 }
@@ -400,6 +411,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
         auditionPlaying = pcm?.playing ?? false
     }
     public func stopAudition() {
+        previewPreparation.cancel()
         pcm?.stop(owner: self)
         session?.audio?.auditionSampleOff()
         state?.waveform?.setPlayhead(frame: nil)

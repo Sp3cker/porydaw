@@ -29,6 +29,10 @@ final class SampleSourcePreparation {
         var message: String { "Cannot read \(path)." }
     }
 
+    static func message(for error: Error) -> String {
+        (error as? SampleImportFailure)?.message ?? (error as? ReadFailure)?.message ?? String(describing: error)
+    }
+
     private struct Request {
         let input: Input
         let completion: @MainActor (Result<Output, Error>) -> Void

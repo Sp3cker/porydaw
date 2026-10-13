@@ -443,11 +443,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                 if editName != nil {
                     self.showAlert(title: "Edit Sample", text: String(describing: error))
                 } else {
-                    let message =
-                        (error as? SampleImportFailure)?.message
-                        ?? (error as? SampleSourcePreparation.ReadFailure)?.message
-                        ?? String(describing: error)
-                    self.sourceError(message, surface: surface)
+                    self.sourceError(SampleSourcePreparation.message(for: error), surface: surface)
                 }
             case .success(.stereo(let source)):
                 self.pendingSource = SourceRequest(source: source, errorSurface: surface)
