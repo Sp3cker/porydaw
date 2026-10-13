@@ -2,7 +2,10 @@
 
 import json
 import re
+import shlex
+import subprocess
 import sys
+import tempfile
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -253,3 +256,61 @@ def run(config: str, verbose: bool, update: bool = False) -> int:
         )
         print(f"updated {BASELINE}")
     return 0
+
+
+def qmlcachegen_commands(ninja: Path) -> dict[Path, list[str]]:
+    """Maps each QML source to the build's exact qmlcachegen argv."""
+    commands = {}
+    for line in ninja.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("  COMMAND = ") or "qmlcachegen --bare " not in line:
+            continue
+        argv = shlex.split(line.removeprefix("  COMMAND = ").split(" && ")[-1])
+        commands[Path(argv[-1]).resolve()] = argv
+    return commands
+
+
+def check_files(config: str, files: list[str]) -> int:
+    """Compiles each file with its build command into a scratch directory and lists AOT rejections."""
+    build = Path("build") / config
+    ninja = build / "build.ninja"
+    if not ninja.is_file():
+        raise RuntimeError(f"missing {ninja}; run uv run --no-sync dev build:app first")
+    commands = qmlcachegen_commands(ninja)
+    failed = False
+    with tempfile.TemporaryDirectory() as scratch:
+        for name in files:
+            argv = commands.get(Path(name).resolve())
+            if argv is None:
+                print(f"{name}: not a production QML file in {ninja}", file=sys.stderr)
+                failed = True
+                continue
+            output = Path(scratch) / "file_qml.cpp"
+            argv = list(argv)
+            argv[argv.index("-o") + 1] = str(output)
+            result = subprocess.run(
+                argv, cwd=build, capture_output=True, text=True, check=False
+            )
+            if result.returncode != 0:
+                print(
+                    f"{name}: qmlcachegen failed\n{result.stdout}{result.stderr}",
+                    file=sys.stderr,
+                )
+                failed = True
+                continue
+            stats = json.loads(Path(f"{output}.aotstats").read_text(encoding="utf-8"))
+            rejected = sorted(
+                (
+                    entry["line"],
+                    entry["column"],
+                    entry["functionName"],
+                    entry["message"],
+                )
+                for module in stats["modules"]
+                for file in module["moduleFiles"]
+                for entry in file["entries"]
+                if entry["codegenResult"] != 0
+            )
+            print(f"{name}: {len(rejected)} rejected")
+            for line, column, function, message in rejected:
+                print(f"  {line}:{column} {function}: {message}")
+    return 1 if failed else 0

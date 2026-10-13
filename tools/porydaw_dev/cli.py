@@ -185,6 +185,13 @@ def parser() -> argparse.ArgumentParser:
             _config(command)
             command.add_argument("--verbose", "-v", action="store_true")
     command = commands.add_parser(
+        "qml-aot:file",
+        help="list one QML file's AOT rejections with the build's qmlcachegen (no build)",
+        allow_abbrev=False,
+    )
+    _config(command)
+    command.add_argument("files", nargs="+")
+    command = commands.add_parser(
         "format",
         help="format changed Swift hunks and Python; --whole requires named files",
         allow_abbrev=False,
@@ -354,6 +361,17 @@ def main() -> int:
                     config,
                     options.verbose,
                     update=options.command == "qml-aot:baseline",
+                )
+            case "qml-aot:file":
+                from .qml_aot import check_files
+
+                return check_files(
+                    "asan"
+                    if options.asan
+                    else "release"
+                    if options.release
+                    else "debug",
+                    options.files,
                 )
             case "format":
                 from .format import run

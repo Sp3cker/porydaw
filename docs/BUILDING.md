@@ -278,6 +278,12 @@ be explainable. Keep component references and QObject return values explicitly
 typed where qmlsc needs them: `EventListPage` casts its child `page` bindings and
 row handles, compiling 116/123 entries on Qt 6.11 without a baseline update.
 
+To see one file's rejections without a build, run
+`uv run --no-sync dev qml-aot:file <src/ui/...qml>`: it reruns the build's own qmlcachegen
+command for that file into a scratch directory. qmllint's compiler warnings are a separate
+analysis and disagree with qmlcachegen; never use them as the AOT measure. Cross-file QML
+type changes show only after the next build refreshes the type registry.
+
 AOT statistics do not validate runtime component loading or behavior. After AOT
 edits, run `checks`, `checks:shell`, `checks:qml`, `checks:qml-roll`, and
 `checks:bridge`, then record `checks:qml-aot`. Keep `Qt.callLater`, parsing,
