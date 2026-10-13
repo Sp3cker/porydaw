@@ -4,10 +4,21 @@ pragma ValueTypeBehavior: Addressable, Assertable
 import QtQuick
 import QtQuick.Controls.Fusion as Fusion
 import Porydaw.Icons
+import PorydawApp
 
 // Fusion's SpinBox with glyph step arrows.
 Fusion.SpinBox {
     id: control
+
+    property NumberFieldFormat numberFormat: null
+    textFromValue: function(value: int, locale: var): string {
+        return control.numberFormat ? control.numberFormat.text(value)
+                                    : Number(value).toLocaleString(locale, "f", 0)
+    }
+    valueFromText: function(text: string, locale: var): real {
+        return control.numberFormat ? control.numberFormat.value(text)
+                                    : Number.fromLocaleString(locale, text)
+    }
 
     up.indicator: Rectangle {
         x: control.mirrored ? 1 : control.width - width - 1

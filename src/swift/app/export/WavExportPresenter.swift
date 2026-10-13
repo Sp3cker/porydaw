@@ -11,6 +11,7 @@ public final class WavExportPresenter: QmlUncreatable {
     private var job: Task<Void, Never>?
     private var progressJob: Task<Void, Never>?
 
+    @QtTracked public var secondsFormat = NumberFieldFormat(kind: .seconds)
     public var active: Bool = false
     public var optionsVisible: Bool = false
     public var choosingFile: Bool = false

@@ -42,6 +42,12 @@ Item {
         analog.checked = page.store.analogFilter
     }
 
+    Binding {
+        target: page.store.channelsFormat
+        property: "textPattern"
+        value: qsTr("%1 channels")
+    }
+
     Column {
         y: 11 * page.unit
         width: page.width
@@ -58,8 +64,7 @@ Item {
                 from: 1; to: page.store.maximumPcmChannels; value: page.store.maxPcmChannels
                 font: page.typography.body
                 editable: true
-                textFromValue: function(value: int): string { return qsTr("%1 channels").arg(value) }
-                valueFromText: function(text: string): real { return parseInt(text, 10) }
+                numberFormat: page.store.channelsFormat
                 onValueModified: page.store.changeMaxPcmChannels(value)
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("Maximum simultaneous PCM (DirectSound) notes. The engine supports up to %1.").arg(page.store.maximumPcmChannels)

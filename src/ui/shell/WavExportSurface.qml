@@ -131,8 +131,7 @@ Item {
                         to: 600
                         stepSize: 10
                         value: surface.presenter.fadeTenths
-                        textFromValue: function(value: int): string { return (value / 10).toFixed(1) + " s" }
-                        valueFromText: function(text: string): real { return Math.round(parseFloat(text) * 10) }
+                        numberFormat: surface.presenter.secondsFormat
                         onValueModified: surface.presenter.setFadeTenths(value)
                     }
                     Label {
@@ -149,8 +148,7 @@ Item {
                         to: 600
                         stepSize: 10
                         value: surface.presenter.tailTenths
-                        textFromValue: function(value: int): string { return (value / 10).toFixed(1) + " s" }
-                        valueFromText: function(text: string): real { return Math.round(parseFloat(text) * 10) }
+                        numberFormat: surface.presenter.secondsFormat
                         onValueModified: surface.presenter.setTailTenths(value)
                     }
                     Label {

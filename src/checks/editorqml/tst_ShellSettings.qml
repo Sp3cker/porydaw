@@ -43,6 +43,8 @@ ShellLaneSupport {
         const song = songGeometryComponent.createObject(testCase, properties)
         verify(engine !== null && song !== null, "production settings pages load")
         try {
+            const channels = findChild(engine, "engine.polyphony")
+            compare(channels.displayText, channels.numberFormat.text(channels.value))
             const engineX = 105 + 84 * delta
             checkPinnedRect(engine, "engine.polyphony", engineX, 11 * unit,
                             520 - engineX, 25 + 15 * delta)

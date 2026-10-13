@@ -10,6 +10,7 @@ Item {
 
     required final property PromptStyle appearance
     final property MouseHints hintService: null
+    readonly property IntegerInputPolicy integerInput: appearance.integerInput
     property bool hintScopeAllowed: true
 
     property int value: 0
@@ -43,11 +44,11 @@ Item {
     function commitDisplayed(): var {
         if (!state.finishEditing())
             return null
-        return Number.parseInt(input.text, 10)
+        return control.integerInput.displayedValue(input.text)
     }
 
-    implicitWidth: Math.max(fontMetrics.advanceWidth("" + control.minimumValue),
-                            fontMetrics.advanceWidth("" + control.maximumValue))
+    implicitWidth: Math.max(fontMetrics.advanceWidth(control.integerInput.displayText(control.minimumValue)),
+                            fontMetrics.advanceWidth(control.integerInput.displayText(control.maximumValue)))
                    + 2 * (control.appearance.horizontalPadding + control.appearance.borderWidth)
     implicitHeight: fontMetrics.height + 2 * (control.appearance.verticalPadding + control.appearance.borderWidth)
 
@@ -69,7 +70,7 @@ Item {
         function syncText(): void {
             // External value changes always refresh the draft text, even
             // while the input has focus.
-            input.text = "" + control.value
+            input.text = control.integerInput.displayText(control.value)
         }
 
         function clampValue(candidate: real): real {
@@ -113,12 +114,11 @@ Item {
         // QAbstractSpinBox correction parity: empty/intermediate drafts revert
         // to the current value; acceptable digit text commits.
         function finishEditing(): bool {
-            const trimmed = input.text.trim()
-            const parsed = Number.parseInt(trimmed, 10)
-            const acceptable = trimmed !== "" && parsed === parsed
-                && parsed >= control.minimumValue && parsed <= control.maximumValue
-            const fixed = acceptable ? parsed : control.value
-            input.text = "" + fixed
+            const result = control.integerInput.commit(
+                input.text, control.value, control.minimumValue, control.maximumValue)
+            const acceptable = result.accepted
+            const fixed = result.value
+            input.text = result.text
             if (fixed !== control.value)
                 control.valueCommitted(fixed)
             return acceptable
@@ -352,18 +352,7 @@ Item {
                 const priorStart = input.selectionStart
                 const priorEnd = input.selectionEnd
                 input.paste()
-                const pasted = input.text
-                let inDomain = true
-                for (let i = 0; i < pasted.length; ++i) {
-                    const ch = pasted.charAt(i)
-                    if (ch >= "0" && ch <= "9")
-                        continue
-                    if (ch === "-" && i === 0 && control.minimumValue < 0)
-                        continue
-                    inDomain = false
-                    break
-                }
-                if (!inDomain) {
+                if (!control.integerInput.acceptsPaste(input.text, control.minimumValue)) {
                     input.text = priorText
                     if (priorStart !== priorEnd) {
                         input.select(priorStart, priorEnd)
@@ -420,15 +409,9 @@ Item {
                 else
                     input.cursorPosition = input.text.length
                 event.accepted = true
-            } else if (event.text.length === 1
-                       && ((event.text >= "0" && event.text <= "9")
-                           || (event.text === "-" && control.minimumValue < 0
-                               && (input.cursorPosition === 0
-                                   || (input.selectionStart === 0
-                                       && input.selectedText.length > 0))
-                               && (input.text.indexOf("-") < 0
-                                   || (input.selectionStart === 0
-                                       && input.selectedText.indexOf("-") >= 0))))) {
+            } else if (control.integerInput.acceptsCharacter(
+                           event.text, input.text, input.selectedText,
+                           input.cursorPosition, input.selectionStart, control.minimumValue)) {
                 // Insert the validator's digit/minus domain without delivering
                 // the key to TextInput, which would claim unhandled shortcuts.
                 if (input.selectedText.length > 0)

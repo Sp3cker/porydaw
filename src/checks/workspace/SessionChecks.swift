@@ -29,6 +29,16 @@ public func runProjectSessionSuite(_ report: CheckReport) {
     runEditorViewStateChecks(report, store: store)
     runTypographyLayoutChecks(report)
     mouseHintOwnershipChecks(report)
+    let channels = NumberFieldFormat(kind: .channels)
+    let reverb = NumberFieldFormat(kind: .reverb)
+    report.expect(
+        channels.text(value: 12) == "12 channels" && channels.value(text: "+12") == 12
+            && channels.value(text: "0,012") == 0 && channels.value(text: "١٢").isNaN
+            && reverb.text(value: -1) == "Default (50)" && reverb.value(text: "Default (50)") == -1
+            && reverb.text(value: 127) == "127" && reverb.value(text: "-1") == -1
+            && reverb.value(text: "127") == 127,
+        cppID: "swiftcore/Settings::numberFormats",
+        message: "settings suffix, admitted decimal prefixes and Default sentinel")
 
     runWorkspaceStartupChecks(report)
     runTransportBarChecks(report)

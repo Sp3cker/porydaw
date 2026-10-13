@@ -273,6 +273,8 @@ target_link_libraries(PorydawAppEventList PUBLIC PorydawCore)
 
 add_library(PorydawAppPresentation STATIC
     presentation/QListModelSync.swift
+    presentation/IntegerInputPolicy.swift
+    presentation/NumberFieldFormat.swift
     presentation/drawer/DrawerPan.swift
     presentation/drawer/DrawerStaticsContent.swift
     presentation/drawer/LaneCaptionMetrics.swift

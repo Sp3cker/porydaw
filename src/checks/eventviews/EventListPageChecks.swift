@@ -40,6 +40,20 @@ internal func runEventListPageChecks(
     session.onChange = { [weak presenter] change in presenter?.documentDidChange(change) }
     presenter.attach(session: session)
     presenter.setVisible(visible: true)
+    let menuSearch = EventListPresenter()
+    menuSearch.menuItems = QListModel([
+        MenuRow(text: "Alpha", enabled: false),
+        MenuRow(text: "Alpha separator", separator: true),
+        MenuRow(text: "Alpine"), MenuRow(text: "ALPHA"),
+    ])
+    report.expect(
+        menuSearch.matchingMenuRow(prefix: "al", highlightedRow: -1) == 2
+            && menuSearch.matchingMenuRow(prefix: "Al", highlightedRow: 2) == 3
+            && menuSearch.matchingMenuRow(prefix: "AL", highlightedRow: 3) == 2
+            && menuSearch.matchingMenuRow(prefix: "alpha", highlightedRow: 3) == 3
+            && menuSearch.matchingMenuRow(prefix: "missing", highlightedRow: 2) == -1
+            && EventListPresenter().matchingMenuRow(prefix: "", highlightedRow: -1) == -1,
+        cppID: pageID, message: "type-ahead starts after highlight, wraps and skips disabled/separator rows")
 
     let firstCC = presenter.model.rows.firstIndex { $0.eventIndex == 1 }
     let secondCC = presenter.model.rows.firstIndex { $0.eventIndex == 2 }

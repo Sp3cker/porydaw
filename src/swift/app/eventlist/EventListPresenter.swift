@@ -423,6 +423,18 @@ public final class EventListPresenter: QmlUncreatable {
         menuItems.indices.contains(row) ? menuItems[row] : nil
     }
 
+    public func matchingMenuRow(prefix: String, highlightedRow: Int) -> Int {
+        let count = menuItems.count
+        guard count > 0 else { return -1 }
+        let foldedPrefix = prefix.lowercased()
+        for offset in 1...count {
+            let index = (highlightedRow + offset + count) % count
+            guard let row = menuItem(row: index), row.enabled, !row.separator else { continue }
+            if row.text.lowercased().utf16.starts(with: foldedPrefix.utf16) { return index }
+        }
+        return -1
+    }
+
     func publishColumnWidths() {
         publish(\.tickColumnWidth, savedColumnWidth(column: 0))
         publish(\.typeColumnWidth, savedColumnWidth(column: 1))

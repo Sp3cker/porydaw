@@ -28,6 +28,17 @@ Item {
         compression.checked = page.store.noCompression
     }
 
+    Binding {
+        target: page.store.reverbFormat
+        property: "defaultText"
+        value: qsTr("Default (50)")
+    }
+    Binding {
+        target: page.store.reverbFormat
+        property: "defaultPrefix"
+        value: qsTr("Default")
+    }
+
     Column {
         y: 11 * page.unit
         width: page.width
@@ -88,8 +99,7 @@ Item {
                 from: -1; to: 127; value: page.store.reverb
                 font: page.typography.body
                 editable: true
-                textFromValue: function(value: int): string { return value === -1 ? qsTr("Default (50)") : String(value) }
-                valueFromText: function(text: string): real { return text.startsWith(qsTr("Default")) ? -1 : parseInt(text, 10) }
+                numberFormat: page.store.reverbFormat
                 onValueModified: page.store.changeReverb(value)
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("mid2agb -R: song reverb level. Default leaves -R unspecified (50).")

@@ -61,12 +61,14 @@ public enum PorydawQmlTypes {
         GridScene.self,
         HeaderVoicePicker.self,
         ImportControllerRow.self,
+        IntegerInputPolicy.self,
         KitSlotRow.self,
         KitSourceRow.self,
         KitStudioPresenter.self,
         KitZoneRow.self,
         LayoutSpaces.self,
         MouseHints.self,
+        NumberFieldFormat.self,
         OtherEventsBandPresenter.self,
         OtherEventsMarkerHandle.self,
         PitchBendLane.self,
@@ -121,8 +123,10 @@ extension GridPalette: QmlUncreatable {}
 extension GridScene: QmlUncreatable {}
 extension HeaderVoicePicker: QmlUncreatable {}
 extension ImportControllerRow: QmlUncreatable {}
+extension IntegerInputPolicy: QmlUncreatable {}
 extension LayoutSpaces: QmlUncreatable {}
 extension MouseHints: QmlUncreatable {}
+extension NumberFieldFormat: QmlUncreatable {}
 extension OtherEventsBandPresenter: QmlUncreatable {}
 extension OtherEventsMarkerHandle: QmlUncreatable {}
 extension PitchBendLane: QmlUncreatable {}

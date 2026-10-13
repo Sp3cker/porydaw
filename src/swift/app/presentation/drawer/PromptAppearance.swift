@@ -41,6 +41,7 @@ public enum PromptAppearance {
 @MainActor
 @QtBridgeable
 public final class PromptStyle {
+    @QtTracked public var integerInput = IntegerInputPolicy()
     public var dialogPadding: Double = 0
     public var spacing: Double = 0
     public var horizontalPadding: Double = 0
