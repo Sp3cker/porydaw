@@ -17,6 +17,7 @@ public final class PcmAuditionPlayer {
     private var position = 0.0
     private var gap = 0.0
     private var republishPending = false
+    private var lastTick: ContinuousClock.Instant?
 
     public var playing = false
     public var onPlayhead: ((Int?) -> Void)?
@@ -53,6 +54,7 @@ public final class PcmAuditionPlayer {
         rate = Double(rendered.freq) / 1024 * pow(2, Double(Int(key) - Int(toneKey)) / 12)
         position = 0
         gap = 0
+        lastTick = ContinuousClock.now
         playing = true
         onPlayhead?(0)
         if !republishPending { onStarted?() }
@@ -72,6 +74,14 @@ public final class PcmAuditionPlayer {
         if let owner { lane?.stop(owner: owner) }
         clearPlayback()
         lane = nil
+    }
+
+    public func tick() {
+        let now = ContinuousClock.now
+        defer { lastTick = now }
+        guard let lastTick else { return }
+        let duration = lastTick.duration(to: now)
+        advance(bySeconds: Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18)
     }
 
     public func advance(bySeconds dt: Double) {
@@ -106,6 +116,7 @@ public final class PcmAuditionPlayer {
 
     private func clearPlayback() {
         playing = false
+        lastTick = nil
         republishPending = false
         owner = nil
         rendered = nil

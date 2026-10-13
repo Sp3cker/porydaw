@@ -43,7 +43,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
     public private(set) weak var boundSong: DocumentSession?
     private weak var session: ApplicationSession?
     private var state: KitStudioPresenter?
-    private var libraryPane: SampleLibraryModel?
+    private let libraryHost: StudioLibraryHost
     private var pcm: PcmAuditionPlayer?
     private var sessionGeneration = 0
     private var pendingTask: Task<Void, Never>?
@@ -70,28 +70,24 @@ public final class KitStudioWorkflow: QmlUncreatable {
     private var selectedMarker: Int?
     private var pendingNames: Set<String> = []
     private var playingSlice: Int?
-    private var tickTime: TimeInterval?
-    private let previewPreparation = SampleSourcePreparation()
+    private let previewPreparation: SampleSourcePreparation
 
     @QtIgnored public init(session: ApplicationSession) {
         self.session = session
+        let preparation = SampleSourcePreparation()
+        previewPreparation = preparation
+        libraryHost = StudioLibraryHost(session: session, style: .kit, preparation: preparation)
+        libraryHost.onLoad = { [weak self] (path: String) in self?.loadSource(path: path) }
+        libraryHost.onOpenFile = { [weak self] in self?.requestOpenFile() }
+        libraryHost.onPreview = { [weak self] (path: String) in self?.previewLibrary(path: path) }
+        libraryHost.onStop = { [weak self] in self?.stopAudition() }
         closeGuard.onChanged = { [weak self] in self?.promptOpen = self?.closeGuard.promptOpen ?? false }
         closeGuard.onSave = { [weak self] in self?.saveToSong() }
     }
 
     public func presenter() -> Optional<KitStudioPresenter> { state }
 
-    public func library() -> Optional<SampleLibraryModel> {
-        if let libraryPane { return libraryPane }
-        guard let session else { return nil }
-        let library = SampleLibraryModel(preferences: session.preferences)
-        library.onLoadRequested = { [weak self] (path: String) in self?.loadSource(path: path) }
-        library.onOpenFileRequested = { [weak self] in self?.requestOpenFile() }
-        library.onPreviewRequested = { [weak self] (path: String) in self?.previewLibrary(path: path) }
-        library.onPreviewStopRequested = { [weak self] in self?.stopAudition() }
-        libraryPane = library
-        return library
-    }
+    public func library() -> Optional<SampleLibraryModel> { libraryHost.library() }
 
     public func requestOpen() {
         guard let session, session.projectOpen, let song = session.selectedDocument,
@@ -120,55 +116,26 @@ public final class KitStudioWorkflow: QmlUncreatable {
             guard let song else { return }
             do {
                 let lease = song.bankLease
-                let values = try await Self.readKits(lease: lease, service: service)
-                guard !Task.isCancelled else { return }
-                let assets = try await Self.readAssets(values: values, lease: lease, service: service)
-                guard let self, !Task.isCancelled, self.sessionGeneration == generation,
-                    self.session?.catalogService === service, !song.isClosed,
-                    song.bankLease.publicationRevision == lease.publicationRevision
+                guard let self else { return }
+                guard
+                    try await self.loadLease(
+                        song: song, lease: lease, service: service, generation: generation,
+                        slot: nil, opening: true)
                 else { return }
-                let presenter = self.state ?? KitStudioPresenter()
-                presenter.session.restore(KitSourceSession().snapshot())
-                presenter.samples = assets.samples
-                presenter.progWaves = assets.waves
-                self.state = presenter
-                self.boundSong = song
-                self.snapshots = values
-                self.observedRevision = lease.publicationRevision
-                self.savedWavs.removeAll()
-                self.savedRenderKeys.removeAll()
-                self.selectedMarker = nil
-                self.copySharedKit = true
-                presenter.waveform = MarkerWaveformModel(palette: session.palette)
-                presenter.waveform?.setBaseFontPx(value: Double(session.baseFontPx))
-                presenter.waveform?.onMarkerPressed = { [weak self] (id: Int) in self?.selectedMarker = id }
-                self.wire(presenter)
-                let selected = session.voiceList.currentSlot
-                let slot = values[selected] != nil ? selected : values.keys.sorted().first ?? -1
-                self.followedSlot = slot
                 self.previousVoicegroupArg = nil
                 self.switchBarText = ""
                 self.switchBackText = ""
-                self.cleanSourceSnapshot = presenter.session.snapshot()
-                presenter.bind(
-                    song: song.document.source.label,
-                    section: try KitUsageScanner.canonicalSection(
-                        projectRoot: session.projectRoot, sourceRelativePath: lease.id.sourceRelativePath,
-                        sectionLabel: lease.sectionLabel),
-                    voices: lease.slotViews.map(\.voice),
-                    undefinedSlots: Self.undefinedSlots(lease), slot: slot)
                 self.restoreGeometry()
                 self.pcm = PcmAuditionPlayer(lane: SampleAuditionArbiter(output: session.audio))
                 self.pcm?.onPlayhead = { [weak self] (frame: Int?) in
                     guard let self, let id = self.playingSlice else { return }
-                    let sourceFrame = frame.flatMap { _ in
+                    let sourceFrame = frame.flatMap { (_: Int) -> Int? in
                         self.state?.sourceFrame(sliceId: id, renderedPosition: self.pcm?.playheadPosition ?? 0)
                     }
                     self.state?.waveform?.setPlayhead(frame: sourceFrame)
                     self.auditionPlaying = self.pcm?.playing ?? false
                 }
                 self.windowOpen = true
-                self.presenterRevision += 1
                 self.pendingTask = nil
             } catch {
                 guard let self, self.sessionGeneration == generation else { return }
@@ -201,36 +168,67 @@ public final class KitStudioWorkflow: QmlUncreatable {
         presenter.playPcm = { [weak self] (id: Int) in self?.playSlice(id: id) }
     }
 
-    private static func readKits(
-        lease: ProjectBankLease, service: ProjectService, selectedSlot: Int? = nil
-    ) async throws -> [Int: KitEditValue] {
-        let seedSlot: Int?
-        if let selectedSlot, (0..<128).contains(selectedSlot) {
-            seedSlot = selectedSlot
+    private func current(
+        generation: Int, service: ProjectService? = nil, song: DocumentSession? = nil,
+        lease: ProjectBankLease? = nil, requireBinding: Bool = true, checkCancellation: Bool = true
+    ) -> Bool {
+        (!checkCancellation || !Task.isCancelled) && sessionGeneration == generation
+            && (service == nil || session?.catalogService === service)
+            && (song == nil || !requireBinding || boundSong === song)
+            && (lease == nil || song?.bankLease.publicationRevision == lease?.publicationRevision)
+    }
+
+    private func loadLease(
+        song: DocumentSession, lease: ProjectBankLease, service: ProjectService,
+        generation: Int, slot requestedSlot: Int?, opening: Bool, section knownSection: String? = nil
+    ) async throws -> Bool {
+        let values = try await KitLeaseReader.readKits(lease: lease, service: service, selectedSlot: requestedSlot)
+        if opening, Task.isCancelled { return false }
+        let assets = try await Self.readAssets(values: values, lease: lease, service: service)
+        guard current(generation: generation, service: service, song: song, lease: lease, requireBinding: !opening),
+            !song.isClosed,
+            opening
+                || (windowOpen && song.bankLease.id == lease.id
+                    && song.bankLease.publicationOwner == lease.publicationOwner)
+        else {
+            if opening { return false }
+            throw ProjectServiceError.operationFailed("Split Studio: the song changed during the voicegroup switch.")
+        }
+        guard let session else { return false }
+        let presenter = state ?? KitStudioPresenter()
+        presenter.session.restore(KitSourceSession().snapshot())
+        presenter.samples = assets.samples
+        presenter.progWaves = assets.waves
+        state = presenter
+        boundSong = song
+        snapshots = values
+        observedRevision = lease.publicationRevision
+        savedWavs.removeAll()
+        savedRenderKeys.removeAll()
+        selectedMarker = nil
+        copySharedKit = true
+        if opening {
+            presenter.waveform = MarkerWaveformModel(palette: session.palette)
+            presenter.waveform?.setBaseFontPx(value: Double(session.baseFontPx))
+            presenter.waveform?.onMarkerPressed = { [weak self] (id: Int) in self?.selectedMarker = id }
+            wire(presenter)
         } else {
-            seedSlot = (0..<128).first { (slot: Int) -> Bool in
-                let view = lease.slotViews[slot]
-                return view.kind == .none || view.voice?.macro == .keysplitAll || view.voice?.macro == .keysplit
-            }
+            ownSave = nil
         }
-        guard let seedSlot else { return [:] }
-        // The reader owns the -G identity, which is not the lease's display name.
-        let seed = try await service.readKit(lease: lease, slot: seedSlot)
-        var values: [Int: KitEditValue] = [:]
-        values.reserveCapacity(128)
-        values[seedSlot] = seed
-        for slot in 0..<128 where slot != seedSlot {
-            if Task.isCancelled { return values }
-            let view = lease.slotViews[slot]
-            if view.kind == .none {
-                values[slot] = KitEditValue(
-                    voicegroup: seed.voicegroup, slot: slot, parent: nil, subgroupSymbol: "",
-                    children: [], tableName: nil, table: nil)
-            } else if view.voice?.macro == .keysplitAll || view.voice?.macro == .keysplit {
-                values[slot] = try await service.readKit(lease: lease, slot: slot)
-            }
-        }
-        return values
+        let selected = session.voiceList.currentSlot
+        let slot = requestedSlot ?? (values[selected] != nil ? selected : values.keys.sorted().first ?? -1)
+        followedSlot = slot
+        cleanSourceSnapshot = presenter.session.snapshot()
+        let section =
+            try knownSection
+            ?? KitUsageScanner.canonicalSection(
+                projectRoot: session.projectRoot, sourceRelativePath: lease.id.sourceRelativePath,
+                sectionLabel: lease.sectionLabel)
+        presenter.bind(
+            song: song.document.source.label, section: section, voices: lease.slotViews.map(\.voice),
+            undefinedSlots: Self.undefinedSlots(lease), slot: slot)
+        presenterRevision += 1
+        return true
     }
 
     private func loadResult(slot: Int) -> KitLoadResult? {
@@ -261,9 +259,8 @@ public final class KitStudioWorkflow: QmlUncreatable {
     }
 
     public func requestOpenFile() {
-        guard windowOpen, !saving, let session else { return }
-        let directory = session.preferences.string(key: "lastSampleDir", fallback: NSHomeDirectory())
-        pickerFolder = URL(filePath: directory).absoluteString
+        guard windowOpen, !saving, session != nil else { return }
+        pickerFolder = libraryHost.pickerFolder()
         pickerRequested = true
     }
     public func cancelSource() { pickerRequested = false }
@@ -279,7 +276,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
             let url = Self.sourceURL(path)
             let sample = try SampleImport.decodeFile(path: url.path)
             state.addSource(sample)
-            libraryPane?.setLoadedPath(path: url.path)
+            libraryHost.pane?.setLoadedPath(path: url.path)
             session?.preferences.setString(key: "lastSampleDir", value: url.deletingLastPathComponent().path)
         } catch { showAlert(error) }
     }
@@ -303,8 +300,8 @@ public final class KitStudioWorkflow: QmlUncreatable {
             Task { [weak self] in
                 do {
                     let asset = try await service.sampleAsset(lease: song.bankLease, symbol: symbol)
-                    guard let self, self.windowOpen, self.sessionGeneration == generation,
-                        self.boundSong === song, self.session?.catalogService === service,
+                    guard let self, self.windowOpen,
+                        self.current(generation: generation, service: service, song: song, checkCancellation: false),
                         state.selectedSlot == slot, state.mode == mode
                     else { return }
                     if let asset { state.samples[symbol] = Self.processed(asset) }
@@ -329,27 +326,17 @@ public final class KitStudioWorkflow: QmlUncreatable {
     }
 
     private func previewLibrary(path: String) {
-        guard windowOpen, !saving, let library = libraryPane else { return }
+        guard windowOpen, !saving, libraryHost.pane != nil else { return }
         stopAudition()
-        let url = Self.sourceURL(path)
-        // The pane offers Stop while the newest request prepares; older requests never complete.
-        library.setPreviewingPath(path: url.path)
-        previewPreparation.submit(.file(path: url.path, preview: true)) {
-            [weak self] (result: Result<SampleSourcePreparation.Output, Error>) in
-            guard let self, self.windowOpen, !self.saving else { return }
-            guard case .success(.prepared(var document, _, _)) = result else {
-                self.stopAudition()
-                if case .failure(let error) = result {
-                    library.showMessage(text: SampleSourcePreparation.message(for: error))
-                }
-                return
-            }
-            let rendered = document.processed
-            self.pcm?.play(
-                owner: self, rendered: rendered, looped: rendered.looped, key: 60, adsr: AudioADSR(), toneKey: 60)
-            self.auditionPlaying = self.pcm?.playing ?? false
-            self.tickTime = Date.timeIntervalSinceReferenceDate
-        }
+        libraryHost.preview(
+            path: path,
+            accept: { [weak self] () -> Bool in self?.windowOpen == true && self?.saving == false },
+            play: { [weak self] (rendered: ProcessedSample, _: String) in
+                guard let self else { return }
+                self.pcm?.play(
+                    owner: self, rendered: rendered, looped: rendered.looped, key: 60, adsr: AudioADSR(), toneKey: 60)
+                self.auditionPlaying = self.pcm?.playing ?? false
+            })
     }
 
     public func frameAt(x: Double) -> Int { state?.waveform?.frameAt(x) ?? 0 }
@@ -402,12 +389,9 @@ public final class KitStudioWorkflow: QmlUncreatable {
         playingSlice = id
         pcm?.play(owner: self, rendered: rendered, looped: rendered.looped, key: 60, adsr: AudioADSR(), toneKey: 60)
         auditionPlaying = pcm?.playing ?? false
-        tickTime = Date.timeIntervalSinceReferenceDate
     }
     public func tickAudition() {
-        let now = Date.timeIntervalSinceReferenceDate
-        if let previous = tickTime { pcm?.advance(bySeconds: max(0, now - previous)) }
-        tickTime = now
+        pcm?.tick()
         auditionPlaying = pcm?.playing ?? false
     }
     public func stopAudition() {
@@ -416,9 +400,8 @@ public final class KitStudioWorkflow: QmlUncreatable {
         session?.audio?.auditionSampleOff()
         state?.waveform?.setPlayhead(frame: nil)
         playingSlice = nil
-        tickTime = nil
         auditionPlaying = false
-        libraryPane?.setPreviewingPath(path: "")
+        libraryHost.clearPreview()
     }
 
     public func saveToSong() {
@@ -466,8 +449,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 }
             }
             do {
-                guard !Task.isCancelled, self.sessionGeneration == generation, self.session?.catalogService === service
-                else { return }
+                guard self.current(generation: generation, service: service) else { return }
                 let before = expected
                 let new = rendered.filter { self.savedWavs[$0.name] == nil }
                 let absentBefore = new.filter {
@@ -490,9 +472,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
                     state.samples.removeValue(forKey: "DirectSoundWaveData_" + sample.name)
                     try await service.commitSample(
                         SampleCommitRequest(name: sample.name, wav: sample.wav, update: true))
-                    guard !Task.isCancelled, self.sessionGeneration == generation,
-                        self.session?.catalogService === service
-                    else { return }
+                    guard self.current(generation: generation, service: service) else { return }
                     self.savedWavs[sample.name] = sample.wav
                 }
                 var symbol = before.subgroupSymbol
@@ -537,14 +517,12 @@ public final class KitStudioWorkflow: QmlUncreatable {
                     self.ownSave = nil
                     throw error
                 }
-                guard !Task.isCancelled, self.sessionGeneration == generation, self.session?.catalogService === service
-                else { return }
+                guard self.current(generation: generation, service: service) else { return }
                 self.savedRenderKeys.merge(renderKeys) { _, current in current }
                 self.snapshots[slot] = try await service.readKit(lease: song.bankLease, slot: slot)
-                guard !Task.isCancelled, self.sessionGeneration == generation else { return }
+                guard self.current(generation: generation) else { return }
                 _ = await session.refreshVoicegroupCatalog()
-                guard !Task.isCancelled, self.sessionGeneration == generation, self.session?.catalogService === service
-                else { return }
+                guard self.current(generation: generation, service: service) else { return }
                 if create { state.usedByText = "" }
                 state.markClean()
                 self.cleanSourceSnapshot = state.session.snapshot()
@@ -577,14 +555,12 @@ public final class KitStudioWorkflow: QmlUncreatable {
         observerTask?.cancel()
         observerTask = Task { [weak self] in
             do {
-                let values = try await Self.readKits(lease: lease, service: service, selectedSlot: slot)
+                let values = try await KitLeaseReader.readKits(lease: lease, service: service, selectedSlot: slot)
                 guard !Task.isCancelled else { return }
                 let assets = try await Self.readAssets(
                     values: values, lease: lease, service: service,
                     samples: state.samples, waves: state.progWaves)
-                guard let self, !Task.isCancelled, self.sessionGeneration == generation,
-                    self.boundSong === song, song.bankLease.publicationRevision == lease.publicationRevision
-                else { return }
+                guard let self, self.current(generation: generation, song: song, lease: lease) else { return }
                 self.observedRevision = lease.publicationRevision
                 defer {
                     if let failure = self.switchFailureText {
@@ -606,7 +582,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 guard value != old else { return }
                 state.songKitChanged()
             } catch {
-                guard let self, !Task.isCancelled, self.sessionGeneration == generation else { return }
+                guard let self, self.current(generation: generation) else { return }
                 self.showAlert(error)
             }
         }
@@ -637,9 +613,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
         pendingTask = Task { [weak self] in
             do {
                 let value = try await service.readKit(lease: song.bankLease, slot: slot)
-                guard let self, !Task.isCancelled, self.sessionGeneration == generation,
-                    self.session?.catalogService === service
-                else { return }
+                guard let self, self.current(generation: generation, service: service) else { return }
                 self.snapshots[slot] = value
                 if !keepMine, let result = self.loadResult(slot: slot) {
                     state.install(result, slot: slot)
@@ -648,7 +622,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 self.saving = false
                 self.pendingTask = nil
             } catch {
-                guard let self, !Task.isCancelled, self.sessionGeneration == generation else { return }
+                guard let self, self.current(generation: generation) else { return }
                 self.saving = false
                 self.pendingTask = nil
                 state.songKitChanged()
@@ -752,8 +726,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
         do {
             let oldLease = song.bankLease
             try await song.selectVoicegroup(arg)
-            guard !Task.isCancelled, windowOpen, sessionGeneration == generation,
-                boundSong === song, session.catalogService === service, !song.isClosed,
+            guard current(generation: generation, service: service, song: song), windowOpen, !song.isClosed,
                 song.bankLease.id != oldLease.id || song.bankLease.publicationRevision != oldLease.publicationRevision
             else {
                 throw ProjectServiceError.operationFailed(
@@ -763,36 +736,13 @@ public final class KitStudioWorkflow: QmlUncreatable {
             let section = try KitUsageScanner.canonicalSection(
                 projectRoot: session.projectRoot, sourceRelativePath: lease.id.sourceRelativePath,
                 sectionLabel: lease.sectionLabel)
-            let values = try await Self.readKits(lease: lease, service: service, selectedSlot: slot)
-            let assets = try await Self.readAssets(values: values, lease: lease, service: service)
-            guard !Task.isCancelled, windowOpen, sessionGeneration == generation,
-                boundSong === song, session.catalogService === service, !song.isClosed,
-                song.bankLease.id == lease.id, song.bankLease.publicationOwner == lease.publicationOwner,
-                song.bankLease.publicationRevision == lease.publicationRevision
-            else {
-                throw ProjectServiceError.operationFailed(
-                    "Split Studio: the song changed during the voicegroup switch.")
-            }
-            followedSlot = slot
-            ownSave = nil
-            savedWavs.removeAll()
-            savedRenderKeys.removeAll()
-            selectedMarker = nil
-            copySharedKit = true
-            state.session.restore(KitSourceSession().snapshot())
-            cleanSourceSnapshot = state.session.snapshot()
-            snapshots = values
-            observedRevision = lease.publicationRevision
-            state.samples = assets.samples
-            state.progWaves = assets.waves
-            state.bind(
-                song: song.document.source.label, section: section,
-                voices: lease.slotViews.map(\.voice), undefinedSlots: Self.undefinedSlots(lease), slot: slot)
+            _ = try await loadLease(
+                song: song, lease: lease, service: service, generation: generation,
+                slot: slot, opening: false, section: section)
             previousVoicegroupArg = previousArg
             switchBarText = "Voicegroup changed to \(VoiceListSemantics.voicegroupDisplayName(arg))"
             switchBackText = "Switch back to \(VoiceListSemantics.voicegroupDisplayName(previousArg))"
             state.switchBarVisible = true
-            presenterRevision += 1
         } catch {
             guard sessionGeneration == generation, boundSong === song else { throw error }
             state.switchBarVisible = previousVoicegroupArg != nil

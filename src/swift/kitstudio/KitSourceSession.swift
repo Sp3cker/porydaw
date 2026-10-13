@@ -22,7 +22,7 @@ public final class KitSourceSession {
         public fileprivate(set) var targetRate: Double
     }
 
-    /// The complete value state for presenter-owned undo, including identity counters.
+    /// The complete value state for draft-owned undo, including identity counters.
     public struct Snapshot: Equatable {
         public let sources: [Source]
         fileprivate let nextSourceId: Int
@@ -70,10 +70,16 @@ public final class KitSourceSession {
         nextSliceId = nextId
     }
 
-    /// Removes a boundary and merges its surviving neighbors, retaining the left slice.
-    public func removeMarker(source: Int, frame: Int) {
-        guard let index = sourceIndex(source), let marker = sources[index].markers.firstIndex(of: frame) else { return }
-        removeMarker(at: marker, from: &sources[index])
+    /// Removes a boundary, retaining the left slice; returns any used name the merge would remove.
+    @discardableResult
+    public func removeMarker(source: Int, frame: Int, usedNames: Set<String> = []) -> String? {
+        guard let index = sourceIndex(source), let marker = sources[index].markers.firstIndex(of: frame)
+        else { return nil }
+        var staged = sources[index]
+        removeMarker(at: marker, from: &staged)
+        if let removed = removedUsedSlice(from: sources[index], after: staged, usedNames: usedNames) { return removed }
+        sources[index] = staged
+        return nil
     }
 
     /// Moves a boundary with optional snap; existing slices follow their old pair ordinals.
@@ -96,27 +102,32 @@ public final class KitSourceSession {
         sources[index] = staged
     }
 
-    /// Creates one selection slice, merging interior boundaries; a full-buffer end is exclusive.
-    public func sliceSelection(source: Int, startFrame: Int, endFrame: Int, snap: Bool) {
-        guard let index = sourceIndex(source) else { return }
+    /// Creates one selection slice; returns any used name that merging its interior would remove.
+    @discardableResult
+    public func sliceSelection(
+        source: Int, startFrame: Int, endFrame: Int, snap: Bool, usedNames: Set<String> = []
+    ) -> String? {
+        guard let index = sourceIndex(source) else { return nil }
         var staged = sources[index]
         let start = markerFrame(startFrame, source: staged, snap: snap)
         let end = markerFrame(endFrame, source: staged, snap: snap)
-        guard start < end else { return }
+        guard start < end else { return nil }
         while let interior = staged.markers.firstIndex(where: { (frame: Int) in frame > start && frame < end }) {
             removeMarker(at: interior, from: &staged)
         }
         var nextId = nextSliceId
         guard insertMarker(start, into: &staged, nextId: &nextId),
             insertMarker(end, into: &staged, nextId: &nextId)
-        else { return }
+        else { return nil }
         if !staged.slices.contains(where: { (slice: Slice) in slice.startFrame == start && slice.endFrame == end }) {
-            guard let slice = newSlice(start: start, end: end, source: staged, nextId: &nextId) else { return }
+            guard let slice = newSlice(start: start, end: end, source: staged, nextId: &nextId) else { return nil }
             staged.slices.append(slice)
             staged.slices.sort { (left: Slice, right: Slice) in left.startFrame < right.startFrame }
         }
+        if let removed = removedUsedSlice(from: sources[index], after: staged, usedNames: usedNames) { return removed }
         sources[index] = staged
         nextSliceId = nextId
+        return nil
     }
 
     /// Deletes only the indexed slice; retained marker pairs are not implicitly resurrected.
@@ -187,6 +198,14 @@ public final class KitSourceSession {
         guard canClose(source: source, usedNames: usedNames), let index = sourceIndex(source) else { return false }
         sources.remove(at: index)
         return true
+    }
+
+    private func removedUsedSlice(from original: Source, after staged: Source, usedNames: Set<String>) -> String? {
+        guard !usedNames.isEmpty else { return nil }
+        let remaining = Set(staged.slices.map(\.name))
+        return original.slices.first { (slice: Slice) -> Bool in
+            usedNames.contains(slice.name) && !remaining.contains(slice.name)
+        }?.name
     }
 
     private func sourceIndex(_ id: Int) -> Int? {

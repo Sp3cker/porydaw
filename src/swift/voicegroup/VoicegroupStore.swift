@@ -152,7 +152,10 @@ public final class VoicegroupStore {
         let bytes = try VoicegroupText.read(location.filePath)
         let source = VoicegroupSource()
         var error: String?
-        guard source.open(location: location, bytes: bytes, projectRoot: projectRoot, voicegroupArg: arg, error: &error)
+        guard
+            source.open(
+                location: location, bytes: bytes, projectRoot: projectRoot, voicegroupArg: arg,
+                openMode: .projectArgument, error: &error)
         else {
             throw VoicegroupStoreError.operationFailed(error ?? "Could not open the voicegroup source.")
         }
@@ -280,22 +283,10 @@ public final class VoicegroupStore {
                 throw VoicegroupStoreError.operationFailed(
                     "no sub-voicegroup \(input.subgroupSymbol) found in the project (\(source.filePath))")
             }
-            let subgroup: VoicegroupSource
-            if let staged = staging.subgroups[location] {
-                subgroup = try detachedSource(staged)
-            } else {
-                subgroup = VoicegroupSource()
-                var openError: String?
-                guard subgroup.open(location: location, error: &openError) else {
-                    throw VoicegroupStoreError.operationFailed(
-                        "Cannot open \(location.filePath): \(openError ?? "invalid source")")
-                }
-            }
+            let subgroup = try resolveStagedSubgroup(location: location, forEditing: true)
             if let table = input.table {
                 guard targetParent.macro == .keysplit, targetParent.keysplitTable == table.name,
-                    table.table.count == 128, (0..<128).contains(table.startingNote),
-                    (0...128).contains(table.maxNote),
-                    table.table.allSatisfy({ (value: UInt8) in value < 128 })
+                    KeysplitTableWriter.isValid(table)
                 else {
                     throw VoicegroupStoreError.operationFailed("Invalid keysplit table in \(parent.filePath).")
                 }
@@ -365,21 +356,7 @@ public final class VoicegroupStore {
             throw VoicegroupStoreError.operationFailed(
                 "no sub-voicegroup \(parent.symbol) found in the project (\(source.filePath))")
         }
-        let subgroup: VoicegroupSource
-        if let staged = kitStaging.subgroups[location] {
-            subgroup = staged
-        } else if let loaded = records.values.first(where: {
-            $0.source.filePath == location.filePath && $0.source.sectionLabel == location.sectionLabel
-        }) {
-            subgroup = loaded.source
-        } else {
-            subgroup = VoicegroupSource()
-            var error: String?
-            guard subgroup.open(location: location, error: &error) else {
-                throw VoicegroupStoreError.operationFailed(
-                    "Cannot open \(location.filePath): \(error ?? "invalid source")")
-            }
-        }
+        let subgroup = try resolveStagedSubgroup(location: location, forEditing: false)
         let children = (0..<128).map { (childSlot: Int) -> VgVoice? in subgroup.voiceAt(slot: childSlot) }
         let table = parent.macro == .keysplit ? inputs.keysplits.table(named: parent.keysplitTable) : nil
         return KitSnapshot(
@@ -474,6 +451,26 @@ public final class VoicegroupStore {
         records[record.id] = record
     }
 
+    private func resolveStagedSubgroup(location: VoicegroupLocation, forEditing: Bool) throws -> VoicegroupSource {
+        if let staged = kitStaging.subgroups[location] {
+            return forEditing ? try detachedSource(staged) : staged
+        }
+        if !forEditing,
+            let loaded = records.values.first(where: { (record: BankRecord) in
+                record.source.filePath == location.filePath && record.source.sectionLabel == location.sectionLabel
+            })
+        {
+            return loaded.source
+        }
+        let subgroup = VoicegroupSource()
+        var error: String?
+        guard subgroup.open(location: location, error: &error) else {
+            throw VoicegroupStoreError.operationFailed(
+                "Cannot open \(location.filePath): \(error ?? "invalid source")")
+        }
+        return subgroup
+    }
+
     private func detachedSource(_ source: VoicegroupSource) throws -> VoicegroupSource {
         let copy = VoicegroupSource()
         var error: String?
@@ -481,7 +478,7 @@ public final class VoicegroupStore {
             copy.open(
                 location: VoicegroupLocation(filePath: source.filePath, sectionLabel: source.sectionLabel),
                 bytes: source.pristineSource, projectRoot: source.projectRoot,
-                voicegroupArg: source.voicegroupArg, error: &error),
+                voicegroupArg: source.voicegroupArg, openMode: source.openMode, error: &error),
             copy.restoreSourceBytes(source.sourceBytes())
         else {
             throw VoicegroupStoreError.operationFailed("Cannot open \(source.filePath): \(error ?? "invalid source")")

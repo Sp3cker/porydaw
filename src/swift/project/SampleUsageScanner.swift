@@ -10,19 +10,14 @@ public enum SampleUsageScanner {
         projectRoot: String, candidates: Set<String>, overlay: [String: [VgVoice?]],
         createdSubgroups: Set<String>
     ) throws -> Set<String> {
-        let layout = ProjectLayout(projectRoot: projectRoot).ensuringDeepScan()
-        var paths = Set(layout.monolithicFiles)
-        for directory in layout.voicegroupDirectories {
-            paths.formUnion(try ProjectFileStore.listRecursive(url: URL(filePath: directory), ext: ".inc"))
-            paths.formUnion(try ProjectFileStore.listRecursive(url: URL(filePath: directory), ext: ".s"))
-        }
+        let paths = try ProjectFileStore.voicegroupFiles(projectRoot: projectRoot, recursive: true)
         var groups: [String: [VgVoice?]] = [:]
         for path in paths {
-            let labels = VoicegroupSource.declarationLabels(in: Array(try ProjectFileStore.read(path)))
+            let bytes = Array(try ProjectFileStore.read(path))
+            let labels = VoicegroupSource.declarationLabels(in: bytes)
             for label in labels {
                 let canonical = try KitUsageScanner.canonicalSection(
-                    projectRoot: projectRoot, sourceRelativePath: String(path.dropFirst(projectRoot.count + 1)),
-                    sectionLabel: label)
+                    bytes: bytes, path: path, sectionLabel: label)
                 if let voices = overlay[canonical] {
                     groups[canonical] = voices
                     continue

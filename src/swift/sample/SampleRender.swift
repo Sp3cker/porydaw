@@ -110,23 +110,10 @@ public enum SampleRender {
             }
         }
         try checkpoint()
-        if p.fadeIn {
-            let fade = min(Int((0.0015 * outputRate).rounded()), loopOn ? loopStart : count)
-            if fade > 0 {
-                for index in 0..<fade {
-                    grid[index] = Float(Double(grid[index]) * 0.5 * (1 - cos(.pi * Double(index) / Double(fade))))
-                }
-            }
-        }
-        if p.fadeOut && !loopOn {
-            let fade = min(Int((0.005 * outputRate).rounded()), count)
-            if fade > 0 {
-                for index in 0..<fade {
-                    let position = count - 1 - index
-                    grid[position] = Float(Double(grid[position]) * 0.5 * (1 - cos(.pi * Double(index) / Double(fade))))
-                }
-            }
-        }
+        SampleDsp.fadeEdges(
+            &grid,
+            fadeIn: p.fadeIn ? min(Int((0.0015 * outputRate).rounded()), loopOn ? loopStart : count) : 0,
+            fadeOut: p.fadeOut && !loopOn ? min(Int((0.005 * outputRate).rounded()), count) : 0)
         try checkpoint()
         result.s8 = SampleDsp.quantizeBuffer(grid, dither: p.ditherOn)
         try checkpoint()

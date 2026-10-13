@@ -100,12 +100,14 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored let wavExport = WavExportPresenter()
     @QtIgnored var sampleStudioWorkflow: SampleStudioWorkflow?
     @QtIgnored var kitStudioWorkflow: KitStudioWorkflow?
-    private var splitStudioCreatedSamples: [String: Set<String>] = [:]
-    private var splitStudioCreatedGroups: [String: Set<String>] = [:]
-    // Only created samples can become orphan candidates; created subgroups alone cannot.
+    private struct SplitStudioCreatedAssets: Equatable {
+        var samples: Set<String> = []
+        var groups: Set<String> = []
+    }
+    private var splitStudioCreatedAssets: [String: SplitStudioCreatedAssets] = [:]
     @QtIgnored
     var hasSplitStudioCreatedSamples: Bool {
-        !(splitStudioCreatedSamples[projectRoot]?.isEmpty ?? true)
+        !(splitStudioCreatedAssets[projectRoot]?.samples.isEmpty ?? true)
     }
 
     private struct OrphanScanFailure: LocalizedError {
@@ -340,22 +342,23 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     /// Records only assets created by Split Studio in this application session.
     public func recordCreatedSample(name: String) {
-        splitStudioCreatedSamples[projectRoot, default: []].insert(name)
+        splitStudioCreatedAssets[projectRoot, default: SplitStudioCreatedAssets()].samples.insert(name)
     }
 
     @QtIgnored
     func recordCreatedSubgroup(symbol: String) {
-        splitStudioCreatedGroups[projectRoot, default: []].insert(symbol)
+        splitStudioCreatedAssets[projectRoot, default: SplitStudioCreatedAssets()].groups.insert(symbol)
     }
 
     /// Returns session-created samples with no current voicegroup references.
     @QtIgnored func orphanSplitStudioSamples() async throws -> [String] {
         let root = projectRoot
-        guard let created = splitStudioCreatedSamples[root], !created.isEmpty else { return [] }
+        guard let assets = splitStudioCreatedAssets[root], !assets.samples.isEmpty else { return [] }
+        let created = assets.samples
         guard let service = catalogService, kitStudioWorkflow?.saving != true else {
             throw OrphanScanFailure(reason: "Split Studio: cannot scan while a project edit is in progress.")
         }
-        let groups = splitStudioCreatedGroups[root] ?? []
+        let groups = assets.groups
         let observed = songTabs.allTabs.map { (song: $0.workspace.session, lease: $0.workspace.session.bankLease) }
         let locator = VoicegroupLocator(layout: ProjectLayout(projectRoot: root).ensuringDeepScan())
         var overlay: [String: [VgVoice?]] = [:]
@@ -365,12 +368,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
             let section = try KitUsageScanner.canonicalSection(
                 projectRoot: root, sourceRelativePath: lease.id.sourceRelativePath, sectionLabel: lease.sectionLabel)
             overlay[section] = lease.slotViews.map(\.voice)
-            for (slot, view) in lease.slotViews.enumerated()
-            where view.voice?.macro == .keysplitAll || view.voice?.macro == .keysplit {
-                guard let symbol = view.voice?.symbol, visited.insert(symbol).inserted else { continue }
-                let kit = try await service.readKit(lease: lease, slot: slot)
+            _ = try await KitLeaseReader.readKits(
+                lease: lease, service: service, includeEmpty: false, excludingSubgroups: visited
+            ) { (slot: Int, kit: KitEditValue) in
+                if let symbol = lease.slotViews[slot].voice?.symbol { visited.insert(symbol) }
                 try Task.checkCancellation()
-                guard !kit.subgroupSymbol.isEmpty else { continue }
+                guard !kit.subgroupSymbol.isEmpty else { return }
                 guard let location = locator.locateSubgroup(symbol: Array(kit.subgroupSymbol.utf8)[...]),
                     location.filePath.hasPrefix(root + "/")
                 else { throw OrphanScanFailure(reason: "Split Studio: cannot resolve subgroup \(kit.subgroupSymbol).") }
@@ -381,7 +384,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
             }
         }
         guard projectRoot == root, catalogService === service, kitStudioWorkflow?.saving != true,
-            splitStudioCreatedSamples[root] == created, (splitStudioCreatedGroups[root] ?? []) == groups,
+            splitStudioCreatedAssets[root] == assets,
             observed.allSatisfy({
                 !$0.song.isClosed && $0.song.bankLease.publicationOwner == $0.lease.publicationOwner
                     && $0.song.bankLease.publicationRevision == $0.lease.publicationRevision
@@ -396,7 +399,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored public func deleteOrphanSamples(_ names: [String]) async throws {
         let root = projectRoot
         let eligible = Set(try await orphanSplitStudioSamples())
-        let owned = splitStudioCreatedSamples[root] ?? []
+        let owned = splitStudioCreatedAssets[root]?.samples ?? []
         let skipped = Set(names).intersection(owned).subtracting(eligible).sorted()
         if !skipped.isEmpty {
             let message = "Kept samples that gained a reference: " + skipped.joined(separator: ", ") + "."
@@ -410,7 +413,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 let path = root + "/sound/direct_sound_samples/" + name + ".wav"
                 if ProjectFileStore.exists(path) { try ProjectFileStore.remove(path) }
             }
-            splitStudioCreatedSamples[root]?.remove(name)
+            splitStudioCreatedAssets[root]?.samples.remove(name)
         }
     }
 

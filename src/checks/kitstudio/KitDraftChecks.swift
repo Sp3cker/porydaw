@@ -619,6 +619,13 @@ private func checkKitPresenterSlices(_ report: CheckReport) {
     r.expectEqual(expected: 1, actual: p.draft.drumkitZones.count, what: "refused merge added no history entry")
     p.setSourceRate(rate: 26758)
     r.expectEqual(expected: 26758, actual: p.sourceRate, what: "source rate chooses Hz value")
+    r.expect(!p.canRedo, message: "source edit after zone undo discards the redo branch")
+    p.undo()
+    r.expect(
+        p.sourceRate == 13379 && p.draft.drumkitZones.count == 1,
+        message: "source edit undo leaves the preceding zone edit intact")
+    p.redo()
+    r.expectEqual(expected: 26758, actual: p.sourceRate, what: "source edit redo follows the zone edit")
     p.setSourceRate(rate: 12345)
     r.expectEqual(expected: 26758, actual: p.sourceRate, what: "unsupported rate rejected")
     p.setMode(index: 0)

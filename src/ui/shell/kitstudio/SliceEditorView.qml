@@ -190,39 +190,17 @@ ColumnLayout {
                 anchors.fill: parent
                 spacing: view.paneSpacing
                 Item {
-                    id: chipHome
                     Layout.preferredWidth: 4 * view.unit
                     Layout.fillHeight: true
                     KitDragSource {
-                        id: chip
                         sliceName: sliceRow.sampleName
+                        dragLayer: view.dragLayer
                         width: 4 * view.unit
                         height: 2.5 * view.unit
                         color: view.colors.buttonBackground
                         z: 1
-                        Drag.active: chipDrag.drag.active
-                        Drag.hotSpot.x: chipDrag.mouseX
-                        Drag.hotSpot.y: chipDrag.mouseY
                         Drag.keys: ["porydaw-sample"]
-                        Drag.source: chip
-                        Drag.supportedActions: Qt.CopyAction
                         Label { anchors.centerIn: parent; text: qsTr("Drag"); color: view.colors.windowText }
-                        MouseArea {
-                            id: chipDrag
-                            anchors.fill: parent
-                            drag.target: chip
-                            onPressed: {
-                                const target = view.dragLayer
-                                const point = chip.mapToItem(target, 0, 0)
-                                const x = point.x
-                                const y = point.y
-                                chip.parent = target
-                                chip.x = x
-                                chip.y = y
-                            }
-                            onReleased: { chip.Drag.drop(); chip.parent = chipHome; chip.x = 0; chip.y = 0 }
-                            onCanceled: { chip.parent = chipHome; chip.x = 0; chip.y = 0 }
-                        }
                     }
                 }
                 TextField {

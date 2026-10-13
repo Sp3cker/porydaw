@@ -360,6 +360,21 @@ public actor ProjectService {
         await bankViews.publish(value)
     }
 
+    private func withStore<Value: Sendable>(
+        lease: ProjectBankLease,
+        operation: (isolated ProjectService, ProjectStore) async throws -> Value
+    ) async throws -> Value {
+        let store = try requireStore()
+        guard lease.publicationOwner == store.publicationOwner else {
+            throw ProjectServiceError.serviceClosed
+        }
+        do {
+            return try await operation(self, store)
+        } catch {
+            throw projectFailure(error)
+        }
+    }
+
     /// Applies the complete kit through the store; the session owns publication.
     /// - Returns: The refreshed bound bank.
     /// - Throws: A bank conflict or wrapped project failure.
@@ -367,11 +382,7 @@ public actor ProjectService {
         lease: ProjectBankLease, input: KitEditValue, expected: KitEditValue?,
         publishResult: Bool = true, materialization: BlankSlotMaterialization? = nil
     ) async throws -> AppliedBankEdit {
-        let store = try requireStore()
-        guard lease.publicationOwner == store.publicationOwner else {
-            throw ProjectServiceError.serviceClosed
-        }
-        do {
+        try await withStore(lease: lease) { (service: isolated ProjectService, store: ProjectStore) in
             let table: KeysplitTable?
             switch (input.tableName, input.table) {
             case let (.some(name), .some(bytes)) where bytes.count == 128:
@@ -395,10 +406,8 @@ public actor ProjectService {
             let result = try await store.applyKitEdit(
                 lease: lease, input: converted, expected: expectation)
             let applied = try bankEditResult(result)
-            if publishResult { await publish(applied, from: store) }
+            if publishResult { await service.publish(applied, from: store) }
             return applied
-        } catch {
-            throw projectFailure(error)
         }
     }
 
@@ -406,11 +415,7 @@ public actor ProjectService {
     /// - Returns: A complete kit, or the parent-only form for a non-kit or undefined slot.
     /// - Throws: A wrapped project failure if the lease or source is unavailable.
     public func readKit(lease: ProjectBankLease, slot: Int) async throws -> KitEditValue {
-        let store = try requireStore()
-        guard lease.publicationOwner == store.publicationOwner else {
-            throw ProjectServiceError.serviceClosed
-        }
-        do {
+        try await withStore(lease: lease) { (_: isolated ProjectService, store: ProjectStore) in
             let snapshot = try await store.kitSnapshot(lease: lease, slot: slot)
             return KitEditValue(
                 voicegroup: snapshot.voicegroup, slot: slot,
@@ -418,34 +423,20 @@ public actor ProjectService {
                 subgroupSymbol: snapshot.subgroupSymbol,
                 children: snapshot.children.map { (voice: VgVoice?) in voice.map(copyVoice) },
                 tableName: snapshot.table?.name, table: snapshot.table?.table)
-        } catch {
-            throw projectFailure(error)
         }
     }
 
     /// Resolves owned sample PCM through the bank's normal project asset path.
     public func sampleAsset(lease: ProjectBankLease, symbol: String) async throws -> KitSampleAsset? {
-        let store = try requireStore()
-        guard lease.publicationOwner == store.publicationOwner else {
-            throw ProjectServiceError.serviceClosed
-        }
-        do {
-            return try await store.sampleAsset(lease: lease, symbol: symbol)
-        } catch {
-            throw projectFailure(error)
+        try await withStore(lease: lease) { (_: isolated ProjectService, store: ProjectStore) in
+            try await store.sampleAsset(lease: lease, symbol: symbol)
         }
     }
 
     /// Resolves owned programmable-wave words through the bank's normal asset path.
     public func progWaveWords(lease: ProjectBankLease, symbol: String) async throws -> [UInt32]? {
-        let store = try requireStore()
-        guard lease.publicationOwner == store.publicationOwner else {
-            throw ProjectServiceError.serviceClosed
-        }
-        do {
-            return try await store.progWaveWords(lease: lease, symbol: symbol)
-        } catch {
-            throw projectFailure(error)
+        try await withStore(lease: lease) { (_: isolated ProjectService, store: ProjectStore) in
+            try await store.progWaveWords(lease: lease, symbol: symbol)
         }
     }
 

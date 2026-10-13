@@ -130,21 +130,6 @@ public final class KitStudioPresenter: QmlUncreatable {
     @QtIgnored public let draft: KitDraft
     @QtIgnored public let session: KitSourceSession
 
-    private struct MarkerKey: Hashable {
-        var source: Int
-        var frame: Int
-    }
-    private struct SliceKey: Hashable {
-        var source: Int
-        var identity: Int
-    }
-    private enum HistoryEntry {
-        case draft
-        case session(
-            before: KitSourceSession.Snapshot, after: KitSourceSession.Snapshot, draftEdits: Int,
-            beforeMarkers: [MarkerKey: Int], afterMarkers: [MarkerKey: Int],
-            beforeSlices: [SliceKey: Int], afterSlices: [SliceKey: Int])
-    }
     private let picker = KitSlotPicker()
     private var song = ""
     private var section = ""
@@ -155,15 +140,12 @@ public final class KitStudioPresenter: QmlUncreatable {
     private var activeMode: KitMode = .drumkit
     private var cleanMode: KitMode = .drumkit
     private var cleanSessionSnapshot: KitSourceSession.Snapshot
-    private var undoEntries: [HistoryEntry] = []
-    private var redoEntries: [HistoryEntry] = []
-    private var markerIds: [MarkerKey: Int] = [:]
-    private var sliceIds: [SliceKey: Int] = [:]
     private var nextId = 1
 
     @QtIgnored public init(draft: KitDraft = KitDraft(), session: KitSourceSession = KitSourceSession()) {
         self.draft = draft
         self.session = session
+        draft.attachSession(session)
         cleanSessionSnapshot = session.snapshot()
         session.validateName = { [weak self] (name: String) -> String? in self?.validateName?(name) }
     }
@@ -288,8 +270,6 @@ public final class KitStudioPresenter: QmlUncreatable {
     private func resetCleanState() {
         cleanMode = activeMode
         cleanSessionSnapshot = session.snapshot()
-        undoEntries.removeAll()
-        redoEntries.removeAll()
         conflictVisible = false
         conflictText = ""
     }
@@ -450,8 +430,6 @@ public final class KitStudioPresenter: QmlUncreatable {
         guard next != zones else { return true }
         let accepted = activeMode == .drumkit ? draft.setDrumkitZones(next) : draft.setKeysplitZones(next)
         if accepted {
-            undoEntries.append(.draft)
-            redoEntries.removeAll()
             statusText = ""
         } else {
             statusText = "Zones must stay within 0–127 and cannot overlap"
@@ -492,33 +470,42 @@ public final class KitStudioPresenter: QmlUncreatable {
 
     public func markerId(row: Int) -> Int {
         guard let source = currentSource, source.markers.indices.contains(row) else { return 0 }
-        return markerIds[MarkerKey(source: source.id, frame: source.markers[row])] ?? 0
+        return draft.markerIds[KitDraft.MarkerKey(source: source.id, frame: source.markers[row])] ?? 0
     }
 
     public func removeMarker(id: Int) {
         guard let key = markerKey(id) else { return }
-        changeSession(protectUsedSlices: true) { $0.removeMarker(source: key.source, frame: key.frame) }
+        changeSession { (target: KitSourceSession) in
+            if let removed = target.removeMarker(source: key.source, frame: key.frame, usedNames: usedNames) {
+                statusText = "\(removed) is used by a zone; remove those zones first."
+            }
+        }
     }
 
     public func moveMarker(id: Int, toFrame: Int) {
         guard let key = markerKey(id),
             let oldSource = session.sources.first(where: { $0.id == key.source })
         else { return }
-        changeSession(protectUsedSlices: true) { (target: KitSourceSession) in
+        changeSession { (target: KitSourceSession) in
             target.moveMarker(source: key.source, from: key.frame, to: toFrame, snap: snap)
             if let source = target.sources.first(where: { $0.id == key.source }), !source.markers.contains(key.frame),
                 let frame = source.markers.first(where: { !oldSource.markers.contains($0) })
             {
-                markerIds.removeValue(forKey: key)
-                markerIds[MarkerKey(source: key.source, frame: frame)] = id
+                draft.markerIds.removeValue(forKey: key)
+                draft.markerIds[KitDraft.MarkerKey(source: key.source, frame: frame)] = id
             }
         }
     }
 
     public func sliceSelection() {
         guard let id = activeSource else { return }
-        changeSession(protectUsedSlices: true) { (target: KitSourceSession) in
-            target.sliceSelection(source: id, startFrame: selectionStartFrame, endFrame: selectionEndFrame, snap: snap)
+        changeSession { (target: KitSourceSession) in
+            if let removed = target.sliceSelection(
+                source: id, startFrame: selectionStartFrame, endFrame: selectionEndFrame, snap: snap,
+                usedNames: usedNames
+            ) {
+                statusText = "\(removed) is used by a zone; remove those zones first."
+            }
         }
     }
 
@@ -528,29 +515,29 @@ public final class KitStudioPresenter: QmlUncreatable {
         guard let address = sliceAddress(id), let source = session.sources.first(where: { $0.id == address.source })
         else { return }
         let oldName = source.slices[address.index].name
-        let before = session.snapshot()
-        let beforeMarkers = markerIds
-        guard session.renameSlice(source: address.source, slice: address.index, to: name) else {
-            statusText = validateName?(SampleNames.sanitize(name)) ?? "Slice name is unavailable"
-            return
+        var renamed = false
+        draft.edit {
+            guard session.renameSlice(source: address.source, slice: address.index, to: name) else {
+                statusText = validateName?(SampleNames.sanitize(name)) ?? "Slice name is unavailable"
+                return
+            }
+            guard let updated = session.sources.first(where: { $0.id == address.source }) else { return }
+            let newName = updated.slices[address.index].name
+            guard oldName != newName else { return }
+            var drumkit = draft.drumkitZones
+            var keysplit = draft.keysplitZones
+            for index in drumkit.indices where !drumkit[index].locked && drumkit[index].sampleName == oldName {
+                drumkit[index].sampleName = newName
+            }
+            for index in keysplit.indices where !keysplit[index].locked && keysplit[index].sampleName == oldName {
+                keysplit[index].sampleName = newName
+            }
+            if drumkit != draft.drumkitZones { _ = draft.setDrumkitZones(drumkit) }
+            if keysplit != draft.keysplitZones { _ = draft.setKeysplitZones(keysplit) }
+            statusText = ""
+            renamed = true
         }
-        guard let updated = session.sources.first(where: { $0.id == address.source }) else { return }
-        let newName = updated.slices[address.index].name
-        guard oldName != newName else { return }
-        var edits = 0
-        var drumkit = draft.drumkitZones
-        var keysplit = draft.keysplitZones
-        for index in drumkit.indices where !drumkit[index].locked && drumkit[index].sampleName == oldName {
-            drumkit[index].sampleName = newName
-        }
-        for index in keysplit.indices where !keysplit[index].locked && keysplit[index].sampleName == oldName {
-            keysplit[index].sampleName = newName
-        }
-        if drumkit != draft.drumkitZones, draft.setDrumkitZones(drumkit) { edits += 1 }
-        if keysplit != draft.keysplitZones, draft.setKeysplitZones(keysplit) { edits += 1 }
-        recordSession(before: before, beforeMarkers: beforeMarkers, draftEdits: edits)
-        statusText = ""
-        refresh()
+        if renamed { refresh() }
     }
 
     public func removeSlice(id: Int) {
@@ -579,7 +566,7 @@ public final class KitStudioPresenter: QmlUncreatable {
 
     public func sliceId(row: Int) -> Int {
         guard let source = currentSource, source.slices.indices.contains(row) else { return 0 }
-        return sliceIds[SliceKey(source: source.id, identity: source.slices[row].id)] ?? 0
+        return draft.sliceIds[KitDraft.SliceKey(source: source.id, identity: source.slices[row].id)] ?? 0
     }
 
     public func sliceName(id: Int) -> String { sliceValue(id)?.name ?? "" }
@@ -628,84 +615,38 @@ public final class KitStudioPresenter: QmlUncreatable {
     }
 
     public func undo() {
-        guard let entry = undoEntries.popLast() else { return }
-        switch entry {
-        case .draft: draft.undo()
-        case .session(let before, _, let edits, let markers, _, let slices, _):
-            for _ in 0..<edits { draft.undo() }
-            session.restore(before)
-            markerIds = markers
-            sliceIds = slices
-            displayedSource = nil
-        }
-        redoEntries.append(entry)
+        guard draft.canUndo else { return }
+        let before = session.snapshot()
+        draft.undo()
+        if session.snapshot() != before { displayedSource = nil }
         refresh()
     }
 
     public func redo() {
-        guard let entry = redoEntries.popLast() else { return }
-        switch entry {
-        case .draft: draft.redo()
-        case .session(_, let after, let edits, _, let markers, _, let slices):
-            session.restore(after)
-            for _ in 0..<edits { draft.redo() }
-            markerIds = markers
-            sliceIds = slices
-            displayedSource = nil
-        }
-        undoEntries.append(entry)
-        refresh()
-    }
-
-    private func changeSession(protectUsedSlices: Bool = false, _ change: (KitSourceSession) -> Void) {
+        guard draft.canRedo else { return }
         let before = session.snapshot()
-        let beforeMarkers = markerIds
-        let target = protectUsedSlices ? KitSourceSession() : session
-        statusText = ""
-        if protectUsedSlices {
-            target.restore(before)
-            target.validateName = session.validateName
-        }
-        change(target)
-        if protectUsedSlices {
-            let remaining = Set(target.sources.flatMap { $0.slices.map(\.name) })
-            let names = usedNames
-            if let removed = before.sources.flatMap({ $0.slices }).first(where: {
-                names.contains($0.name) && !remaining.contains($0.name)
-            }) {
-                markerIds = beforeMarkers
-                statusText = "\(removed.name) is used by a zone; remove those zones first."
-                refresh()
-                return
-            }
-            session.restore(target.snapshot())
-        }
-        recordSession(before: before, beforeMarkers: beforeMarkers, draftEdits: 0)
+        draft.redo()
+        if session.snapshot() != before { displayedSource = nil }
         refresh()
     }
 
-    private func recordSession(before: KitSourceSession.Snapshot, beforeMarkers: [MarkerKey: Int], draftEdits: Int) {
-        let after = session.snapshot()
-        guard before != after || draftEdits > 0 else { return }
-        let beforeSlices = sliceIds
-        syncIds()
-        undoEntries.append(
-            .session(
-                before: before, after: after, draftEdits: draftEdits, beforeMarkers: beforeMarkers,
-                afterMarkers: markerIds,
-                beforeSlices: beforeSlices, afterSlices: sliceIds))
-        redoEntries.removeAll()
+    private func changeSession(_ change: (KitSourceSession) -> Void) {
+        statusText = ""
+        draft.edit {
+            change(session)
+        }
+        refresh()
     }
 
-    private func markerKey(_ id: Int) -> MarkerKey? {
-        guard let key = markerIds.first(where: { $0.value == id })?.key,
+    private func markerKey(_ id: Int) -> KitDraft.MarkerKey? {
+        guard let key = draft.markerIds.first(where: { $0.value == id })?.key,
             session.sources.contains(where: { $0.id == key.source && $0.markers.contains(key.frame) })
         else { return nil }
         return key
     }
 
     @QtIgnored public func sliceAddress(_ id: Int) -> (source: Int, index: Int)? {
-        guard let key = sliceIds.first(where: { $0.value == id })?.key,
+        guard let key = draft.sliceIds.first(where: { $0.value == id })?.key,
             let source = session.sources.first(where: { $0.id == key.source }),
             let index = source.slices.firstIndex(where: { $0.id == key.identity })
         else { return nil }
@@ -721,26 +662,26 @@ public final class KitStudioPresenter: QmlUncreatable {
     private func syncIds() {
         let liveMarkers = Set(
             session.sources.flatMap { (source: KitSourceSession.Source) in
-                source.markers.map { MarkerKey(source: source.id, frame: $0) }
+                source.markers.map { KitDraft.MarkerKey(source: source.id, frame: $0) }
             })
         let liveSlices = Set(
             session.sources.flatMap { (source: KitSourceSession.Source) in
-                source.slices.map { SliceKey(source: source.id, identity: $0.id) }
+                source.slices.map { KitDraft.SliceKey(source: source.id, identity: $0.id) }
             })
-        markerIds = markerIds.filter { liveMarkers.contains($0.key) }
-        sliceIds = sliceIds.filter { liveSlices.contains($0.key) }
+        draft.markerIds = draft.markerIds.filter { liveMarkers.contains($0.key) }
+        draft.sliceIds = draft.sliceIds.filter { liveSlices.contains($0.key) }
         for source in session.sources {
             for frame in source.markers {
-                let key = MarkerKey(source: source.id, frame: frame)
-                if markerIds[key] == nil {
-                    markerIds[key] = nextId
+                let key = KitDraft.MarkerKey(source: source.id, frame: frame)
+                if draft.markerIds[key] == nil {
+                    draft.markerIds[key] = nextId
                     nextId += 1
                 }
             }
             for slice in source.slices {
-                let key = SliceKey(source: source.id, identity: slice.id)
-                if sliceIds[key] == nil {
-                    sliceIds[key] = nextId
+                let key = KitDraft.SliceKey(source: source.id, identity: slice.id)
+                if draft.sliceIds[key] == nil {
+                    draft.sliceIds[key] = nextId
                     nextId += 1
                 }
             }
@@ -752,8 +693,8 @@ public final class KitStudioPresenter: QmlUncreatable {
         mode = activeMode == .drumkit ? 0 : 1
         dirty = draft.dirty || activeMode != cleanMode || session.snapshot() != cleanSessionSnapshot
         canSave = picker.selectedSlot != nil && dirty
-        canUndo = !undoEntries.isEmpty
-        canRedo = !redoEntries.isEmpty
+        canUndo = draft.canUndo
+        canRedo = draft.canRedo
         selectedSlot = picker.selectedSlot ?? -1
         titleText = "Split Studio — \(song) · voice \(boundSlot)" + (dirty ? " •" : "")
         if !zones.indices.contains(selectedZone) { selectedZone = -1 }
@@ -804,7 +745,7 @@ public final class KitStudioPresenter: QmlUncreatable {
             if let source = currentSource {
                 waveform.setMarkers(
                     source.markers.map { (frame: Int) in
-                        guard let id = markerIds[MarkerKey(source: source.id, frame: frame)] else {
+                        guard let id = draft.markerIds[KitDraft.MarkerKey(source: source.id, frame: frame)] else {
                             preconditionFailure("Published source markers must have presenter-owned ids")
                         }
                         return (id: id, frame: frame, kind: "slice", label: "")

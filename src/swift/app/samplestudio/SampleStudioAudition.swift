@@ -17,7 +17,6 @@ public final class SampleStudioAudition: QmlUncreatable {
     private var looped = false
     private var crop = 0
     private var ratio = 1.0
-    private var lastTick: ContinuousClock.Instant?
 
     @QtIgnored public var onPlayhead: ((Int?) -> Void)?
     @QtIgnored public var onStarted: (() -> Void)?
@@ -43,9 +42,9 @@ public final class SampleStudioAudition: QmlUncreatable {
             !available
             ? "Audio is unavailable."
             : "Audition the render — looped when the loop is enabled; one-shots repeat with a short gap until stopped. Space toggles this from anywhere in the dialog."
-        player.onPlayhead = { [weak self] frame in
+        player.onPlayhead = { [weak self] (frame: Int?) in
             guard let self else { return }
-            let sourceFrame = frame.map { _ in
+            let sourceFrame = frame.map { (_: Int) -> Int in
                 self.crop + Int((self.player.playheadPosition / self.ratio).rounded())
             }
             self.onPlayhead?(sourceFrame)
@@ -70,7 +69,6 @@ public final class SampleStudioAudition: QmlUncreatable {
     public func stop() {
         playing = false
         playText = "Play"
-        lastTick = nil
         player.stop(owner: self)
     }
 
@@ -87,13 +85,7 @@ public final class SampleStudioAudition: QmlUncreatable {
         if playing { start(looped: looped) }
     }
 
-    public func tick() {
-        let now = ContinuousClock.now
-        defer { lastTick = now }
-        guard let lastTick else { return }
-        let duration = lastTick.duration(to: now)
-        advance(bySeconds: Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18)
-    }
+    public func tick() { player.tick() }
 
     @QtIgnored public func advance(bySeconds dt: Double) {
         guard playing else { return }
@@ -103,7 +95,6 @@ public final class SampleStudioAudition: QmlUncreatable {
     @QtIgnored public func close() {
         playing = false
         playText = "Play"
-        lastTick = nil
         player.close()
         lane = nil
         available = false
@@ -127,7 +118,6 @@ public final class SampleStudioAudition: QmlUncreatable {
             rendered.outputRate > 0 && presenter.source.sampleRate > 0
             ? rendered.outputRate / presenter.source.sampleRate : 1
         crop = presenter.params.cropStart
-        lastTick = ContinuousClock.now
         playing = true
         playText = "Stop"
         player.play(

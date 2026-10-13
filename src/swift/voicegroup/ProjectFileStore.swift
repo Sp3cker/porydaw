@@ -216,6 +216,38 @@ public enum ProjectFileStore {
         }
         return (lines, data.isEmpty || data.last == 10, crlf)
     }
+
+    /// Joins split raw lines, preserving their CR markers and the selected final LF.
+    public static func joinLines(_ lines: [Data], endsWithNewline: Bool) -> Data {
+        var output = Data()
+        for (index, line) in lines.enumerated() {
+            if index > 0 { output.append(10) }
+            output.append(line)
+        }
+        if endsWithNewline, !lines.isEmpty { output.append(10) }
+        return output
+    }
+
+    /// Enumerates scanner inputs, retaining each scanner's depth and failure policy.
+    public static func voicegroupFiles(projectRoot: String, recursive: Bool) throws -> Set<String> {
+        let layout = ProjectLayout(projectRoot: projectRoot).ensuringDeepScan()
+        var paths = Set(layout.monolithicFiles)
+        for directory in layout.voicegroupDirectories {
+            if recursive {
+                paths.formUnion(try listRecursive(url: URL(filePath: directory), ext: ".inc"))
+                paths.formUnion(try listRecursive(url: URL(filePath: directory), ext: ".s"))
+            } else {
+                guard let entries = try? FileManager.default.contentsOfDirectory(atPath: directory) else { continue }
+                for name in entries {
+                    let lower = name.lowercased()
+                    if lower.hasSuffix(".inc") || lower.hasSuffix(".s") {
+                        paths.insert(directory + "/" + name)
+                    }
+                }
+            }
+        }
+        return paths
+    }
 }
 
 /// A load-scoped listing with positive existence evidence; misses still use filesystem lookup.

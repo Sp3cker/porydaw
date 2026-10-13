@@ -159,7 +159,8 @@ public enum SampleRegistrar {
         do { content = try ProjectFileStore.read(path) } catch {
             throw SampleRegistrationError(message: "cannot read \(path).")
         }
-        let lines = ProjectFileStore.splitLines(content).lines
+        let split = ProjectFileStore.splitLines(content)
+        var lines = split.lines
         let label = Array(("DirectSoundWaveData_" + name + "::").utf8)
         func statement(_ index: Int) -> AsmLine.Bytes {
             AsmLine.content(Array(lines[index])[...])
@@ -178,12 +179,10 @@ public enum SampleRegistrar {
         }
         var first = index - 1
         if first > 0, AsmLine.trimmed(Array(lines[first - 1])[...]).isEmpty { first -= 1 }
-        var start = content.startIndex
-        for raw in lines.prefix(first) { start += raw.count + 1 }
-        var end = start
-        for raw in lines[first...(index + 1)] { end = min(content.endIndex, end + raw.count + 1) }
-        var updated = content
-        updated.removeSubrange(start..<end)
+        let removedTail = index + 2 == lines.count
+        lines.removeSubrange(first...(index + 1))
+        let updated = ProjectFileStore.joinLines(
+            lines, endsWithNewline: split.endsWithNewline || removedTail)
         let wavPath = layout.samplesDir + "/" + name + ".wav"
         var isDirectory: ObjCBool = false
         if FileManager.default.fileExists(atPath: wavPath, isDirectory: &isDirectory), isDirectory.boolValue {

@@ -14,7 +14,14 @@ public enum KitUsageScanner {
     ) throws -> String {
         if !sectionLabel.isEmpty { return sectionLabel }
         let path = projectRoot + "/" + sourceRelativePath
-        let labels = VoicegroupSource.declarationLabels(in: Array(try ProjectFileStore.read(path)))
+        return try canonicalSection(
+            bytes: Array(try ProjectFileStore.read(path)), path: path, sectionLabel: sectionLabel)
+    }
+
+    /// Resolves a canonical declaration from bytes already read by a scanner.
+    public static func canonicalSection(bytes: [UInt8], path: String, sectionLabel: String) throws -> String {
+        if !sectionLabel.isEmpty { return sectionLabel }
+        let labels = VoicegroupSource.declarationLabels(in: bytes)
         guard labels.count == 1, let label = labels.first else {
             throw KitUsageScanError(file: path, reason: "Expected one voicegroup declaration; found \(labels.count).")
         }
@@ -26,24 +33,16 @@ public enum KitUsageScanner {
     public static func usage(
         projectRoot: String, subgroupSymbol: String, tableName: String?, excludingSection: String
     ) -> [String] {
-        let layout = ProjectLayout(projectRoot: projectRoot).ensuringDeepScan()
-        var paths = Set(layout.monolithicFiles)
-        for directory in layout.voicegroupDirectories {
-            guard let entries = try? FileManager.default.contentsOfDirectory(atPath: directory) else { continue }
-            for name in entries {
-                let lower = name.lowercased()
-                guard lower.hasSuffix(".inc") || lower.hasSuffix(".s") else { continue }
-                paths.insert(directory + "/" + name)
-            }
-        }
+        let paths = (try? ProjectFileStore.voicegroupFiles(projectRoot: projectRoot, recursive: false)) ?? []
         var sections: Set<String> = []
         for path in paths {
             guard let bytes = try? ProjectFileStore.read(path) else { continue }
-            for reference in VoicegroupSource.kitReferences(in: Array(bytes)) {
+            let content = Array(bytes)
+            for reference in VoicegroupSource.kitReferences(in: content) {
                 guard
                     let section = try? canonicalSection(
-                        projectRoot: projectRoot, sourceRelativePath: String(path.dropFirst(projectRoot.count + 1)),
-                        sectionLabel: reference.sectionLabel), section != excludingSection
+                        bytes: content, path: path, sectionLabel: reference.sectionLabel),
+                    section != excludingSection
                 else { continue }
                 let voice = reference.voice
                 if voice.symbol == subgroupSymbol

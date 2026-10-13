@@ -6,6 +6,22 @@ public enum SampleDsp {
     public static let peakCeiling = 125.0 / 128.0
     public static let maxAutoGain = 15.848931924611133
 
+    /// Bakes head then tail half-cosine fades; callers own the lengths and edge policy.
+    static func fadeEdges(_ buffer: inout [Float], fadeIn: Int, fadeOut: Int) {
+        var grid = buffer.mutableSpan
+        if fadeIn > 0 {
+            for index in 0..<fadeIn {
+                grid[index] = Float(Double(grid[index]) * 0.5 * (1 - cos(.pi * Double(index) / Double(fadeIn))))
+            }
+        }
+        if fadeOut > 0 {
+            for index in 0..<fadeOut {
+                let position = grid.count - 1 - index
+                grid[position] = Float(Double(grid[position]) * 0.5 * (1 - cos(.pi * Double(index) / Double(fadeOut))))
+            }
+        }
+    }
+
     /// Quantize with the wav2agb signed-eight floor and saturation rule.
     public static func quantizeToAgb8(_ x: Double) -> Int8 {
         let scaled = floor(x * 128.0)

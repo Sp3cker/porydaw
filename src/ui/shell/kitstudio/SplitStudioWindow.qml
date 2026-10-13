@@ -145,35 +145,14 @@ ThemedWindow {
                         Layout.preferredHeight: 2.5 * studio.unit
                         visible: selected
                         KitDragSource {
-                            id: libraryChip
                             libraryPath: libraryDragRow.path
+                            dragLayer: studio.contentItem
                             width: libraryDragRow.width
                             height: libraryDragRow.height
                             color: studio.colors.buttonBackground
                             z: 1
-                            Drag.active: libraryDrag.drag.active
                             Drag.keys: ["porydaw-library"]
-                            Drag.hotSpot.x: libraryDrag.mouseX
-                            Drag.hotSpot.y: libraryDrag.mouseY
-                            Drag.source: libraryChip
-                            Drag.supportedActions: Qt.CopyAction
                             Label { anchors.fill: parent; anchors.margins: studio.spacing; text: qsTr("Drag to a key: ") + libraryDragRow.name; color: studio.colors.windowText; elide: Text.ElideRight }
-                            MouseArea {
-                                id: libraryDrag
-                                anchors.fill: parent
-                                drag.target: libraryChip
-                                onPressed: {
-                                    const target = studio.contentItem
-                                    const point = libraryChip.mapToItem(target, 0, 0)
-                                    const x = point.x
-                                    const y = point.y
-                                    libraryChip.parent = target
-                                    libraryChip.x = x
-                                    libraryChip.y = y
-                                }
-                                onReleased: { libraryChip.Drag.drop(); libraryChip.parent = libraryDragRow; libraryChip.x = 0; libraryChip.y = 0 }
-                                onCanceled: { libraryChip.parent = libraryDragRow; libraryChip.x = 0; libraryChip.y = 0 }
-                            }
                         }
                     }
                 }

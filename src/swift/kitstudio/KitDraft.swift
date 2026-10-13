@@ -11,13 +11,50 @@ public final class KitDraft {
         }
     }
 
+    struct MarkerKey: Hashable {
+        var source: Int
+        var frame: Int
+    }
+    struct SliceKey: Hashable {
+        var source: Int
+        var identity: Int
+    }
+    private struct HistoryState {
+        var zones: Snapshot
+        var session: KitSourceSession.Snapshot?
+        var markers: [MarkerKey: Int]
+        var slices: [SliceKey: Int]
+    }
+
+    var markerIds: [MarkerKey: Int] = [:]
+    var sliceIds: [SliceKey: Int] = [:]
+    private var session: KitSourceSession?
+    private var editing = false
     public private(set) var drumkitZones: [KitZone] = []
     public private(set) var keysplitZones: [KitZone] = []
     private var clean = Snapshot()
-    private var undoEntries: [Snapshot] = []
-    private var redoEntries: [Snapshot] = []
+    private var undoEntries: [HistoryState] = []
+    private var redoEntries: [HistoryState] = []
 
     public init() {}
+
+    func attachSession(_ session: KitSourceSession) {
+        precondition(self.session == nil, "A draft belongs to one window session")
+        self.session = session
+    }
+
+    /// Groups source and zone mutations into one window-local undo step.
+    func edit(_ change: () -> Void) {
+        precondition(!editing, "Draft edits cannot nest")
+        let before = historyState()
+        editing = true
+        change()
+        editing = false
+        if before.zones != snapshot() || before.session != session?.snapshot() {
+            undoEntries.append(before)
+            redoEntries.removeAll()
+        }
+    }
 
     /// Replaces both views and starts a clean history.
     public func load(_ snapshot: Snapshot) {
@@ -39,8 +76,10 @@ public final class KitDraft {
     @discardableResult
     public func setDrumkitZones(_ zones: [KitZone]) -> Bool {
         guard Self.valid(zones) else { return false }
-        undoEntries.append(snapshot())
-        redoEntries.removeAll()
+        if !editing {
+            undoEntries.append(historyState())
+            redoEntries.removeAll()
+        }
         drumkitZones = zones
         return true
     }
@@ -48,22 +87,24 @@ public final class KitDraft {
     @discardableResult
     public func setKeysplitZones(_ zones: [KitZone]) -> Bool {
         guard Self.valid(zones) else { return false }
-        undoEntries.append(snapshot())
-        redoEntries.removeAll()
+        if !editing {
+            undoEntries.append(historyState())
+            redoEntries.removeAll()
+        }
         keysplitZones = zones
         return true
     }
 
     public func undo() {
         guard let previous = undoEntries.popLast() else { return }
-        redoEntries.append(snapshot())
-        restore(previous)
+        redoEntries.append(historyState())
+        restoreHistory(previous)
     }
 
     public func redo() {
         guard let next = redoEntries.popLast() else { return }
-        undoEntries.append(snapshot())
-        restore(next)
+        undoEntries.append(historyState())
+        restoreHistory(next)
     }
 
     public var canUndo: Bool { !undoEntries.isEmpty }
@@ -73,6 +114,17 @@ public final class KitDraft {
     private func restore(_ snapshot: Snapshot) {
         drumkitZones = snapshot.drumkitZones
         keysplitZones = snapshot.keysplitZones
+    }
+
+    private func historyState() -> HistoryState {
+        HistoryState(zones: snapshot(), session: session?.snapshot(), markers: markerIds, slices: sliceIds)
+    }
+
+    private func restoreHistory(_ state: HistoryState) {
+        restore(state.zones)
+        if let snapshot = state.session { session?.restore(snapshot) }
+        markerIds = state.markers
+        sliceIds = state.slices
     }
 
     private static func valid(_ zones: [KitZone]) -> Bool {

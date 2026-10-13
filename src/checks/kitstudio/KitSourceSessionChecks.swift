@@ -63,7 +63,16 @@ private func checkSourceMarkers(_ report: CheckReport) {
     let beforeCollision = session.sources
     session.moveMarker(source: id, from: 300, to: 400, snap: false)
     r.expectEqual(expected: beforeCollision, actual: session.sources, what: "move collision leaves state unchanged")
-    session.removeMarker(source: id, frame: 300)
+    let protected = session.snapshot()
+    for frame in [100, 300, 400] {
+        session.removeMarker(source: id, frame: frame, usedNames: ["src_00", "src_01"])
+        r.expectEqual(
+            expected: protected, actual: session.snapshot(), what: "used slice protects boundary \(frame)")
+    }
+    session.sliceSelection(source: id, startFrame: 100, endFrame: 400, snap: false, usedNames: ["src_01"])
+    r.expectEqual(
+        expected: protected, actual: session.snapshot(), what: "used slice protects selection merge and counters")
+    session.removeMarker(source: id, frame: 300, usedNames: ["src_00"])
     r.expectEqual(expected: [100, 400], actual: session.sources[0].markers, what: "interior boundary removed")
     r.expectEqual(expected: "src_00", actual: session.sources[0].slices[0].name, what: "merge keeps left name")
     r.expect(

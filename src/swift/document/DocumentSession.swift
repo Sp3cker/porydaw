@@ -377,42 +377,15 @@ public final class DocumentSession {
         slot: Int, value: BankVoice,
         expected: BankVoice?
     ) async throws -> AppliedBankEdit {
-        try requireOpen()
-        guard !bankPersistenceInFlight else {
-            throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
+        try await withBankTransition {
+            try await service.bankApply(
+                lease: bankLease, slot: slot, value: value, expected: expected, publishResult: false)
+        } recording: { (result: AppliedBankEdit) in
+            let token = expected == nil ? result.materializationToken : nil
+            return ServiceBankAction(
+                service: service, slot: slot, before: expected, after: value,
+                token: token, materializedBlank: token != nil, current: result, inbox: inbox)
         }
-        if !bankDirty { document.history.sealBankMerge() }
-        guard let transition = document.history.beginBankTransition() else {
-            throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
-        }
-        publishChange([.history])
-        var ownsTransition = true
-        defer {
-            if ownsTransition {
-                document.history.endBankTransition(transition)
-                publishChange([.history])
-            }
-            flushPendingBankNotification()
-        }
-        let result = try await service.bankApply(
-            lease: bankLease, slot: slot,
-            value: value, expected: expected,
-            publishResult: false)
-        let materializationToken = expected == nil ? result.materializationToken : nil
-        withStateChanges {
-            document.history.finishBankTransition(
-                transition,
-                recording: ServiceBankAction(
-                    service: service, slot: slot, before: expected, after: value,
-                    token: materializationToken,
-                    materializedBlank: materializationToken != nil,
-                    current: result, inbox: inbox))
-            ownsTransition = false
-            adoptBank(result)
-            pendingBankNotification = false
-            publishChange([.bank, .dirty, .history])
-        }
-        return result
     }
 
     /// Applies one complete kit and records its captured prior state as one song undo step.
@@ -421,6 +394,19 @@ public final class DocumentSession {
     @discardableResult
     public func applyKitEdit(
         _ edit: KitEditValue, expected: KitEditValue
+    ) async throws -> AppliedBankEdit {
+        try await withBankTransition {
+            try await service.applyKitEdit(
+                lease: bankLease, input: edit, expected: expected, publishResult: false)
+        } recording: { (result: AppliedBankEdit) in
+            ServiceKitEditAction(
+                service: service, before: expected, after: edit, current: result, inbox: inbox)
+        }
+    }
+
+    private func withBankTransition(
+        _ operation: @MainActor () async throws -> AppliedBankEdit,
+        recording action: @MainActor (AppliedBankEdit) -> any BankHistoryAction
     ) async throws -> AppliedBankEdit {
         try requireOpen()
         guard !bankPersistenceInFlight else {
@@ -439,15 +425,9 @@ public final class DocumentSession {
             }
             flushPendingBankNotification()
         }
-        let result = try await service.applyKitEdit(
-            lease: bankLease, input: edit, expected: expected,
-            publishResult: false)
+        let result = try await operation()
         withStateChanges {
-            document.history.finishBankTransition(
-                transition,
-                recording: ServiceKitEditAction(
-                    service: service, before: expected, after: edit,
-                    current: result, inbox: inbox))
+            document.history.finishBankTransition(transition, recording: action(result))
             ownsTransition = false
             adoptBank(result)
             pendingBankNotification = false

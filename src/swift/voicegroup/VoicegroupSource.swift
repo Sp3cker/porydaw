@@ -43,6 +43,13 @@ public final class VoicegroupSource {
     public internal(set) var pristineSource: [UInt8] = []
     public internal(set) var dirty = false
 
+    enum OpenMode {
+        case projectArgument
+        case exactLocation
+    }
+
+    private(set) var openMode: OpenMode = .exactLocation
+
     public init() {}
 
     /// Locates the declaration and parses its source. Empty `voicegroupArg` means `_dummy`.
@@ -54,6 +61,7 @@ public final class VoicegroupSource {
     public func open(projectRoot: String, voicegroupArg: String, error: inout String?) -> Bool {
         self.projectRoot = projectRoot
         self.voicegroupArg = voicegroupArg.isEmpty ? "_dummy" : voicegroupArg
+        openMode = .projectArgument
         filePath = ""
         loadName = ""
         sectionLabel = ""
@@ -100,6 +108,7 @@ public final class VoicegroupSource {
     public func open(location: VoicegroupLocation, error: inout String?) -> Bool {
         projectRoot = ""
         voicegroupArg = ""
+        openMode = .exactLocation
         filePath = location.filePath
         sectionLabel = location.sectionLabel
         loadName = sectionLabel.isEmpty ? ProjectFileStore.completeBaseName(filePath) : sectionLabel
@@ -108,10 +117,11 @@ public final class VoicegroupSource {
 
     func open(
         location: VoicegroupLocation, bytes: [UInt8], projectRoot: String,
-        voicegroupArg: String, error: inout String?
+        voicegroupArg: String, openMode: OpenMode, error: inout String?
     ) -> Bool {
         self.projectRoot = projectRoot
         self.voicegroupArg = voicegroupArg
+        self.openMode = openMode
         filePath = location.filePath
         sectionLabel = location.sectionLabel
         loadName = sectionLabel.isEmpty ? ProjectFileStore.completeBaseName(filePath) : sectionLabel
@@ -346,17 +356,20 @@ public final class VoicegroupSource {
         return true
     }
 
-    /// Opens the current on-disk snapshot of this source's voicegroup argument.
+    /// Opens the current on-disk snapshot using this source's original open mode.
     /// - Returns: A clean source parsed from the bytes currently on disk.
     /// - Throws: `VoicegroupSourceConflict` when the declaration is missing, invalid, or unreadable.
     func diskSnapshot() throws -> VoicegroupSource {
         let disk = VoicegroupSource()
         var error: String?
-        // Re-run the opener that established this source's identity.
-        let opened =
-            projectRoot.isEmpty
-            ? disk.open(location: VoicegroupLocation(filePath: filePath, sectionLabel: sectionLabel), error: &error)
-            : disk.open(projectRoot: projectRoot, voicegroupArg: voicegroupArg, error: &error)
+        let opened: Bool
+        switch openMode {
+        case .exactLocation:
+            opened = disk.open(
+                location: VoicegroupLocation(filePath: filePath, sectionLabel: sectionLabel), error: &error)
+        case .projectArgument:
+            opened = disk.open(projectRoot: projectRoot, voicegroupArg: voicegroupArg, error: &error)
+        }
         guard opened else {
             throw VoicegroupSourceConflict(message: error ?? "Cannot read \(filePath)")
         }

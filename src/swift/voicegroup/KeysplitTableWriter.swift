@@ -11,6 +11,12 @@ public enum KeysplitTableWriter {
     private static let bytesPrefix = Array(".byte ".utf8)
     private static let alignPrefix = Array(".align ".utf8)
 
+    static func isValid(_ table: KeysplitTable) -> Bool {
+        table.table.count == 128 && (0..<128).contains(table.startingNote)
+            && (0...128).contains(table.maxNote)
+            && table.table.allSatisfy { (value: UInt8) in value < 128 }
+    }
+
     /// Replaces a run-form definition in place, or appends one, preserving file style.
     /// - Throws: `KeysplitWriteError` naming an unreadable, invalid, or unwritable file.
     public static func replace(table: KeysplitTable, inFile path: String) throws(KeysplitWriteError) {
@@ -29,10 +35,7 @@ public enum KeysplitTableWriter {
     }
 
     private static func rendered(table: KeysplitTable, bytes: Data, path: String) throws(KeysplitWriteError) -> Data {
-        guard table.table.count == 128, (0..<128).contains(table.startingNote),
-            (0...128).contains(table.maxNote),
-            table.table.allSatisfy({ $0 < 128 })
-        else {
+        guard isValid(table) else {
             throw KeysplitWriteError(message: "Invalid keysplit table for \(path)")
         }
         let split = ProjectFileStore.splitLines(bytes)
@@ -87,13 +90,7 @@ public enum KeysplitTableWriter {
         if !split.endsWithNewline, split.crlf, lines.last?.last == 13 {
             lines[lines.count - 1].removeLast()
         }
-        var output = Data()
-        for (index, line) in lines.enumerated() {
-            if index > 0 { output.append(10) }
-            output.append(line)
-        }
-        if split.endsWithNewline, !lines.isEmpty { output.append(10) }
-        return output
+        return ProjectFileStore.joinLines(lines, endsWithNewline: split.endsWithNewline)
     }
 
     private static func isRun(_ content: AsmLine.Bytes) -> Bool {

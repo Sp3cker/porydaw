@@ -12,20 +12,7 @@ public enum SampleSlice {
         let count = result.preview.count
         let fade = min(Int((0.004 * result.outputRate).rounded()), count / 2)
         guard fade > 0 else { return result }
-        do {
-            var grid = result.preview.mutableSpan
-            if fadeIn {
-                for index in 0..<fade {
-                    grid[index] = Float(Double(grid[index]) * 0.5 * (1 - cos(.pi * Double(index) / Double(fade))))
-                }
-            }
-            if fadeOut {
-                for index in 0..<fade {
-                    let position = count - 1 - index
-                    grid[position] = Float(Double(grid[position]) * 0.5 * (1 - cos(.pi * Double(index) / Double(fade))))
-                }
-            }
-        }
+        SampleDsp.fadeEdges(&result.preview, fadeIn: fadeIn ? fade : 0, fadeOut: fadeOut ? fade : 0)
         result.s8 = SampleDsp.quantizeBuffer(result.preview, dither: params.ditherOn)
         if result.looped {
             result.seam = SampleDsp.seamMetrics(result.s8, loopStart: Int(result.loopStart), loopEnd: count - 1)
