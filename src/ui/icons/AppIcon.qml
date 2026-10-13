@@ -1,20 +1,21 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Porydaw.Icons
 
 // One Icons glyph fitted to this box and tinted. Icons are font glyphs, so no
-// image element (and no Qt image plugin) is involved; ({}) draws nothing.
+// image element (and no Qt image plugin) is involved; an empty glyph draws nothing.
 Item {
     id: root
-    required property var icon
+    required property IconSpec icon
     property color color: "black"
 
     Text {
         anchors.centerIn: parent
-        text: root.icon.glyph ?? ""
+        text: root.icon.glyph
         font.family: Icons.family
         font.pixelSize: Math.max(1, Math.round(Math.min(root.width, root.height)
-                                               * (root.icon.fit ?? 1)))
+                                               * root.icon.fit))
         font.hintingPreference: Font.PreferNoHinting
         color: root.color
         renderType: Text.NativeRendering

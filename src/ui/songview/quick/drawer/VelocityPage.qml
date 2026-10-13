@@ -191,7 +191,7 @@ DrawerLanePage {
                 function dispatchMove(x: real, y: real, buttons: int, modifiers: int): bool {
                     return page.pageModel ? page.pageModel.pointerMove(x, y, buttons) : false
                 }
-                dispatch: rulerMoves.dispatchMove
+                onDispatch: (x, y, buttons, modifiers) => rulerMoves.dispatchMove(x, y, buttons, modifiers)
             }
         }
 
@@ -419,7 +419,7 @@ DrawerLanePage {
                 function dispatchMove(x: real, y: real, buttons: int, modifiers: int): bool {
                     return page.pageModel ? page.pageModel.pointerMove(x, y, buttons) : false
                 }
-                dispatch: plotMoves.dispatchMove
+                onDispatch: (x, y, buttons, modifiers) => plotMoves.dispatchMove(x, y, buttons, modifiers)
             }
         }
 

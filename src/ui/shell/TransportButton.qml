@@ -10,7 +10,7 @@ Rectangle {
     id: control
     required property GridPalette colors
     required property string label
-    required property var icon
+    required property IconSpec icon
     required property int baseFontPx
     required property TypographyFonts typography
     property bool checked: false

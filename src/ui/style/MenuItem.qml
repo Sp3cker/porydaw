@@ -26,5 +26,8 @@ Fusion.MenuItem {
         y: control.topPadding + (control.availableHeight - height) / 2
         control: control
         visible: control.checkable
+        baseColor: control.palette.base
+        windowTextColor: control.palette.windowText
+        textColor: control.palette.text
     }
 }

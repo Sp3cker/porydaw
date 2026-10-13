@@ -102,7 +102,7 @@ Item {
                         }
                         MoveCoalescer {
                             id: rulerMoves
-                            dispatch: rulerMoves.dispatchMove
+                            onDispatch: (x, y, buttons, modifiers) => rulerMoves.dispatchMove(x, y, buttons, modifiers)
                             function dispatchMove(x: real, y: real, buttons: int, modifiers: int): void {
                                 if (buttons & Qt.LeftButton)
                                     rulerModule.root.rulerMenu.updateSweep(x, y)

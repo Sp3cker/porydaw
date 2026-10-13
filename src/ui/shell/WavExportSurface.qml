@@ -191,7 +191,7 @@ Item {
         currentFolder: surface.presenter.startFolder
         selectedFile: surface.presenter.suggestedFile
         modality: Qt.WindowModal
-        onAccepted: surface.presenter.choosePath(selectedFile.toString())
+        onAccepted: surface.presenter.choosePath("" + selectedFile)
         onRejected: surface.presenter.rejectPath()
     }
 

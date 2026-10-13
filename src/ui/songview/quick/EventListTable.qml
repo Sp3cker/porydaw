@@ -282,7 +282,7 @@ Item {
             delegate: EventListCell {
                 id: eventCellDelegate
                 page: table.page
-                tableOwner: table
+                tableOwner: table as EventListTable
                 controller: table.controller
                 cellFont: column === 0 || (column >= 2 && column <= 4)
                           ? eventCellDelegate.page.tableFont : eventCellDelegate.page.bodyFont

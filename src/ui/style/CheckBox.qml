@@ -13,5 +13,8 @@ Fusion.CheckBox {
         y: control.topPadding + (control.availableHeight - height) / 2
         baseLightness: control.enabled ? 1.25 : 1.0
         control: control
+        baseColor: control.palette.base
+        windowTextColor: control.palette.windowText
+        textColor: control.palette.text
     }
 }

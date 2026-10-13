@@ -53,7 +53,7 @@ FocusScope {
         const window = root.Window.window
         if (!window)
             return false
-        const focused = window.activeFocusItem
+        const focused = window.activeFocusItem as Item
         if (!focused || !focused.visible || !focused.enabled)
             return true
         let host = root.eventListHost
@@ -120,6 +120,7 @@ FocusScope {
     final property alias trackHeaders: rollBandContent.trackHeaders
     final property alias rulerInput: rollBandContent.rulerInput
     final property alias menus: surfaceMenus
+    final property alias gridMenuLoader: surfaceMenus.gridMenuLoader
     final property alias drawerItem: editorDrawer
     final property alias eventBand: otherEventsBand
     final property alias fontMetrics: bodyFontMetrics
@@ -266,7 +267,7 @@ FocusScope {
         onWheelRequested: (pixelX, pixelY, angleX, angleY, inverted) =>
                               root.gridModel.scrollHorizontalByWheel(
                                   pixelX, pixelY, angleX, angleY,
-                                  Qt.styleHints.wheelScrollLines)
+                                  Application.styleHints.wheelScrollLines)
     }
 
     TimelineScrollbar {
@@ -303,7 +304,7 @@ FocusScope {
         onWheelRequested: (pixelX, pixelY, angleX, angleY, inverted) =>
                               root.gridModel.scrollVerticalByWheel(
                                   pixelX, pixelY, angleX, angleY,
-                                  Qt.styleHints.wheelScrollLines)
+                                  Application.styleHints.wheelScrollLines)
     }
 
     EditorSurfaceMenus {

@@ -413,7 +413,7 @@ Item {
         }
         MoveCoalescer {
             id: plotMoves
-            dispatch: function(x: real, y: real, buttons: int, modifiers: int): bool {
+            onDispatch: (x, y, buttons, modifiers) => {
                 return plot.pageModel !== null && plot.pageModel.pointerMove(x, y, buttons, modifiers)
             }
         }

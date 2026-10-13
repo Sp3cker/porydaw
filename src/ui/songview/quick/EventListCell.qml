@@ -235,11 +235,11 @@ Item {
                     const dx = mouse.x - cell.pressX
                     const dy = mouse.y - cell.pressY
                     const distance = Math.sqrt(dx * dx + dy * dy)
-                    if (distance < Qt.styleHints.startDragDistance)
+                    if (distance < Application.styleHints.startDragDistance)
                         return
                     cell.page.draggingRows = true
                 }
-                cell.page.updateDragGap(cell, mouse)
+                cell.page.updateDragGap(cell as EventListCell, mouse)
             }
 
             onReleased: (mouse) => {
@@ -258,7 +258,7 @@ Item {
                     cell.page.navigationFocusRequested()
                 } else {
                     if (cell.pressWasCurrent && mouse.modifiers === Qt.NoModifier)
-                        cell.page.beginCellEdit(cell)
+                        cell.page.beginCellEdit(cell as EventListCell)
                     cell.page.navigationFocusRequested()
                 }
                 cellHint.settleRelease(cellMouse.mapToItem(null, mouse.x, mouse.y))
@@ -271,7 +271,7 @@ Item {
             }
             onDoubleClicked: (mouse) => {
                 if (mouse.button === Qt.LeftButton)
-                    cell.page.beginCellEdit(cell)
+                    cell.page.beginCellEdit(cell as EventListCell)
             }
         }
 

@@ -254,8 +254,8 @@ def qml_singleton(glyphs, codepoints):
     for key in sorted(glyphs):
         # Wide glyphs shrink to fit a square box, exactly as their SVG viewBox did.
         fit = min(1.0, EM / glyphs[key][1])
-        lines.append(f'    readonly property var {key}: ({{ glyph: "\\u{codepoints[key]:04x}", '
-                     f"fit: {fit:.4f} }})")
+        lines.append(f'    readonly property IconSpec {key}: IconSpec {{ glyph: "\\u{codepoints[key]:04x}"; '
+                     f"fit: {fit:.4f} }}")
     lines.append("}")
     return "\n".join(lines) + "\n"
 

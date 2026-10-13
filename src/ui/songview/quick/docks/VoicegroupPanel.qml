@@ -19,12 +19,9 @@ ColumnLayout {
     readonly property int typeWidth: Math.round(baseFontPx * 3.75)
     readonly property int adsrWidth: Math.round(baseFontPx * 8.33)
     // Indexed by VoiceListGlyph; the reverse sample reuses the sample glyph rotated.
-    readonly property list<var> typeIcons: [Icons.sample, Icons.sample, Icons.square1, Icons.square2,
-                                          Icons.wave, Icons.noise, Icons.keysplit, Icons.drumkit]
-    readonly property QtObject emptyIcon: QtObject {
-        readonly property string glyph: ""
-        readonly property real fit: 1
-    }
+    readonly property list<IconSpec> typeIcons: [Icons.sample, Icons.sample, Icons.square1, Icons.square2,
+                                                Icons.wave, Icons.noise, Icons.keysplit, Icons.drumkit]
+    readonly property IconSpec emptyIcon: IconSpec { glyph: ""; fit: 1 }
     spacing: 0
 
     RowLayout {

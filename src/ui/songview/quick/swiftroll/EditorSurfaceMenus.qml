@@ -85,7 +85,7 @@ Item {
         const window = menuHost.Window.window
         if (!window)
             return false
-        const focused = window.activeFocusItem
+        const focused = window.activeFocusItem as Item
         if (!focused || !focused.visible || !focused.enabled)
             return true
         if ((focused === gridMenuLoader || focused === headerMenuLoader
@@ -101,15 +101,15 @@ Item {
     }
     function activateRow(panel: QuickMenuPanel, row: int): void {
         if (panel.rowObjectNamePrefix === "headerMenuRow_") {
-            const item = menuHost.root.headersModel.menuItem(row)
+            const item = menuHost.root.headersModel.menuItem(row) as App.TrackHeaderMenuItem
             if (item && item.enabled)
                 menuHost.root.headersModel.activateHeaderMenuAction(item.actionId)
         } else if (panel.rowObjectNamePrefix === "gridMenuRow_") {
-            const item = menuHost.root.gridModel.gridMenuRow(row)
+            const item = menuHost.root.gridModel.gridMenuRow(row) as App.GridSubdivisionMenuItem
             if (item && item.enabled)
                 menuHost.root.gridModel.activateGridMenuRow(item.actionId)
         } else if (panel.rowObjectNamePrefix === "rulerMenuRow_") {
-            const item = menuHost.root.rulerMenu.menuRow(row)
+            const item = menuHost.root.rulerMenu.menuRow(row) as App.RulerMenuRow
             if (!item || !item.enabled || item.separator)
                 return
             const targetTick = menuHost.root.rulerMenu.targetTick()

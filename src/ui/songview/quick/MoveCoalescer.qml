@@ -9,7 +9,7 @@ Timer {
     interval: 0
     repeat: false
 
-    property var dispatch: null
+    signal dispatch(real x, real y, int buttons, int modifiers)
     property bool armed: false
     property bool pending: false
     property real pendingX: 0
@@ -21,8 +21,7 @@ Timer {
         if (!armed) {
             armed = true
             start()
-            if (dispatch)
-                dispatch(x, y, buttons, modifiers)
+            dispatch(x, y, buttons, modifiers)
             return
         }
         pendingX = x
@@ -38,8 +37,7 @@ Timer {
         if (!pending)
             return
         pending = false
-        if (dispatch)
-            dispatch(pendingX, pendingY, pendingButtons, pendingModifiers)
+        dispatch(pendingX, pendingY, pendingButtons, pendingModifiers)
     }
 
     onTriggered: flush()

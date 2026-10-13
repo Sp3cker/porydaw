@@ -218,6 +218,7 @@ qt_add_qml_module(porydaw_icons
     NO_PLUGIN
     QML_FILES
         src/ui/icons/Icons.qml
+        src/ui/icons/IconSpec.qml
         src/ui/icons/AppIcon.qml
 )
 target_link_libraries(porydaw_icons PRIVATE Qt6::Quick)

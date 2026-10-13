@@ -9,21 +9,22 @@ import QtBridge
 @QtBridgeable
 public final class ImportControllerRow {
     public var controller: String
-    public var function: String
+    public var functionName: String
     public var events: String
     public var inGame: String
     public var needsAttention: Bool
 
     init(_ value: ImportControllerRowValue) {
         controller = value.controller
-        function = value.function
+        functionName = value.function
         events = value.events
         inGame = value.inGame
         needsAttention = value.needsAttention
     }
 
     func matches(_ other: ImportControllerRow) -> Bool {
-        controller == other.controller && function == other.function && events == other.events && inGame == other.inGame
+        controller == other.controller && functionName == other.functionName && events == other.events
+            && inGame == other.inGame
             && needsAttention == other.needsAttention
     }
 }

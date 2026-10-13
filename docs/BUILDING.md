@@ -278,6 +278,14 @@ be explainable. Keep component references and QObject return values explicitly
 typed where qmlsc needs them: `EventListPage` casts its child `page` bindings and
 row handles, compiling 116/123 entries on Qt 6.11 without a baseline update.
 
+AOT statistics do not validate runtime component loading or behavior. After AOT
+edits, run `checks`, `checks:shell`, `checks:qml`, `checks:qml-roll`, and
+`checks:bridge`, then record `checks:qml-aot`. Keep `Qt.callLater`, parsing,
+TableView positioning, and Fusion color semantics intact; a lower rejection count
+does not justify replacing them with approximate implementations. Delegate `model`
+is a role wrapper, not the typed QObject exposed by its `display` role, and role
+properties must not override inherited final control properties.
+
 ## Swift incremental floor
 
 `PorydawApp` is 118 files plus `PorydawAppPresentation` at 21 files, with C++
