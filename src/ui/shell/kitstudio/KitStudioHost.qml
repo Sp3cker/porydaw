@@ -19,6 +19,13 @@ Item {
         title: qsTr("Split Studio")
         buttons: NativeDialogs.MessageDialog.Ok
     }
+    OrphanCleanupDialog {
+        parent: host.hostWindow.contentItem
+        workflow: host.workflow
+        colors: host.colors
+        baseFontPx: host.applicationSession.baseFontPx
+        layoutSpaces: host.applicationSession.layoutSpaces
+    }
     Loader {
         id: windowLoader
         active: host.workflow.windowOpen

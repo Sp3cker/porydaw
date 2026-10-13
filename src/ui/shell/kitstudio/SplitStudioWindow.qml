@@ -231,7 +231,7 @@ ThemedWindow {
     Dialog {
         id: closePrompt
         objectName: "splitStudioClosePrompt"
-        parent: studio.workflow.promptForVoicegroup ? (studio.transientParent as Window).contentItem : studio.contentItem
+        parent: studio.workflow.promptForVoicegroup || studio.workflow.promptForClose ? (studio.transientParent as Window).contentItem : studio.contentItem
         anchors.centerIn: parent
         width: 35 * studio.unit
         title: qsTr("Save Split Studio changes?")
@@ -243,6 +243,7 @@ ThemedWindow {
             spacing: studio.spacing
             Label { Layout.fillWidth: true; text: studio.workflow.promptForVoicegroup ? qsTr("Save to Song before changing the voicegroup?") : qsTr("Save to Song before closing or changing the bound song?"); wrapMode: Text.WordWrap; color: studio.colors.windowText }
             RowLayout {
+                enabled: !studio.workflow.saving && !studio.workflow.switchingVoicegroup
                 Button { text: qsTr("Save to Song"); onClicked: studio.workflow.answerPrompt(0) }
                 Button { text: qsTr("Discard"); onClicked: studio.workflow.answerPrompt(1) }
                 Button { text: qsTr("Cancel"); onClicked: studio.workflow.answerPrompt(2) }

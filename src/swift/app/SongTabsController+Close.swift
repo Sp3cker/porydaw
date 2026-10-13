@@ -72,6 +72,11 @@ extension SongTabsController {
         replacementLabel = nil
         answeredCloseBanks = []
         isClosingAll = true
+        if app?.kitStudioWorkflow != nil, app?.hasSplitStudioCreatedSamples == true {
+            projectSwitchApprovalIndex = tabIndex(of: pendingCloseId) ?? 0
+        } else {
+            projectSwitchApprovalIndex = nil
+        }
         if pendingCloseId == -1 { advanceCloseAll() }
     }
 
@@ -129,6 +134,19 @@ extension SongTabsController {
             app?.reloadApproved(label: replacement, replacing: PendingReload(tab))
             return
         }
+        app?.offerSplitStudioOrphans(
+            proceed: { [weak self, weak tab] in
+                guard let self, let tab, self.tab(id: tabId) === tab,
+                    let currentIndex = self.tabIndex(of: tabId)
+                else { return }
+                self.removeClosedTab(index: currentIndex)
+            },
+            cancel: {})
+    }
+
+    private func removeClosedTab(index: Int) {
+        let tab = tabs[index]
+        let tabId = tab.tabId
         reloadsInFlight.remove(tabId)
         let closingSelected = tabId == selectedId
         app?.tabWillLeave(tab)
@@ -207,9 +225,12 @@ extension SongTabsController {
     private func settleCloseAll() {
         guard isClosingAll else { return }
         let projectSwitch = projectSwitchApprovalIndex != nil
+        let retainTabs = app?.kitStudioWorkflow != nil && app?.hasSplitStudioCreatedSamples == true
+        // Only a possible orphan offer needs every lease kept loaded through final resolution.
         if let approvalIndex = projectSwitchApprovalIndex {
             for index in approvalIndex..<tabs.count {
                 let tab = tabs[index]
+                tab.refreshDirty()
                 guard tab.dirty else { continue }
                 projectSwitchApprovalIndex = index
                 if tab.tabId != selectedId { select(tabId: tab.tabId) }
@@ -218,14 +239,16 @@ extension SongTabsController {
             }
             projectSwitchApprovalIndex = nil
         }
-        while let tab = tabs.first {
-            guard tab.dirty && !projectSwitch else {
-                closeTab(index: 0)
-                continue
+        if !retainTabs {
+            while let tab = tabs.first {
+                guard tab.dirty && !projectSwitch else {
+                    closeTab(index: 0)
+                    continue
+                }
+                if tab.tabId != selectedId { select(tabId: tab.tabId) }
+                if pendingCloseId != tab.tabId { pendingCloseId = tab.tabId }
+                return
             }
-            if tab.tabId != selectedId { select(tabId: tab.tabId) }
-            if pendingCloseId != tab.tabId { pendingCloseId = tab.tabId }
-            return
         }
         if let bank = app?.dirtyBanksForClose().first(where: {
             !answeredCloseBanks.contains(BankBindingIdentity($0.lease))
@@ -235,7 +258,6 @@ extension SongTabsController {
             if pendingCloseBankTitle != target.title { pendingCloseBankTitle = target.title }
             return
         }
-        isClosingAll = false
         app?.closeAllResolved(closed: true)
     }
 

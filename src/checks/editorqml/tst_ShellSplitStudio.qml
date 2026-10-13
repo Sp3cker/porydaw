@@ -121,5 +121,22 @@ ShellLaneSupport {
         verify(orphans.names.indexOf(name) >= 0, "the app-session registry survives window close")
         shell.shellPresenter.activate("view.event_list")
         tryCompare(app.songTabs, "selectedTabShowsEvents", true, 5000)
+        shell.close()
+        for (let step = 0; step < closeAllSteps && !workflow.orphanCleanupOpen; ++step) {
+            verify(waitForNative(function() {
+                return workflow.orphanCleanupOpen || app.songTabs.pendingCloseId >= 0
+                    || app.songTabs.pendingCloseBankTitle.length > 0
+            }, 5000), "the close reaches its next prompt")
+            if (!workflow.orphanCleanupOpen)
+                app.songTabs.confirmDiscard()
+        }
+        tryCompare(workflow, "orphanCleanupOpen", true, 5000)
+        compare(workflow.orphanCleanupNames.length, 1, "only the saved, undo-orphaned slice is offered")
+        compare(workflow.orphanCleanupNames[0], name)
+        compare(workflow.orphanCleanupSelectedNames.length, 1, "the orphan checklist starts fully checked")
+        compare(workflow.orphanCleanupSelectedNames[0], name)
+        workflow.answerOrphanCleanup(false)
+        verify(waitForNative(function() { return shell.shellPresenter.closeReady }, 5000), "Keep completes the close")
+        verify(disk.exists(wav), "Keep leaves the slice WAV on disk")
     }
 }

@@ -102,6 +102,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored var kitStudioWorkflow: KitStudioWorkflow?
     private var splitStudioCreatedSamples: [String: Set<String>] = [:]
     private var splitStudioCreatedGroups: [String: Set<String>] = [:]
+    // Only created samples can become orphan candidates; created subgroups alone cannot.
+    @QtIgnored
+    var hasSplitStudioCreatedSamples: Bool {
+        !(splitStudioCreatedSamples[projectRoot]?.isEmpty ?? true)
+    }
+
     private struct OrphanScanFailure: LocalizedError {
         let reason: String
         var errorDescription: String? { reason }
@@ -390,6 +396,13 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored public func deleteOrphanSamples(_ names: [String]) async throws {
         let root = projectRoot
         let eligible = Set(try await orphanSplitStudioSamples())
+        let owned = splitStudioCreatedSamples[root] ?? []
+        let skipped = Set(names).intersection(owned).subtracting(eligible).sorted()
+        if !skipped.isEmpty {
+            let message = "Kept samples that gained a reference: " + skipped.joined(separator: ", ") + "."
+            kitStudioWorkflow?.orphanCleanupStatus = message
+            publishStatusMessage(message: message)
+        }
         for name in names where eligible.contains(name) {
             let removed = try SampleRegistrar.deleteRegistration(projectRoot: root, name: name)
             if !removed {
@@ -564,7 +577,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// through `acknowledgeGridDetached()`, which is where the release happens.
     public func hostClosing() {
         hostClosingImpl()
-        kitStudioWorkflow?.dispose()
     }
 
     // MARK: - Project and song opens

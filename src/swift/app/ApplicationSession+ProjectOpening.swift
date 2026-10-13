@@ -140,7 +140,9 @@ extension ApplicationSession {
                 path: path, label: label, restore: restore, service: loaded.service,
                 labels: loaded.labels, song: loaded.song)
             self.pendingProjectSwitch = candidate
-            self.songTabs.startProjectSwitchCloseAll()
+            self.guardSplitStudioClose(
+                proceed: { [weak self] in self?.songTabs.startProjectSwitchCloseAll() },
+                cancel: { [weak self] in self?.closeAllResolved(closed: false) })
         }
         activeReplacementTask = replacement
         if restore != nil { startupRestoreTask = replacement }

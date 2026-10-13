@@ -350,6 +350,7 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/samplestudio/SampleWaveform.qml
         src/ui/shell/kitstudio/KitStudioHost.qml
         src/ui/shell/kitstudio/SplitStudioWindow.qml
+        src/ui/shell/kitstudio/OrphanCleanupDialog.qml
         src/ui/shell/kitstudio/SliceEditorView.qml
         src/ui/shell/kitstudio/ZoneEditorView.qml
         src/ui/shell/kitstudio/KitSlotPicker.qml

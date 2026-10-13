@@ -386,17 +386,22 @@ public final class SongTabsController {
     /// owning an in-flight bank transition is refused while it stays pending:
     /// closing it would drop the transition's origin from under the commit.
     public func requestClose(tabId: Int) {
-        guard pendingCloseBank == nil, let index = tabIndex(of: tabId),
-            savingCloseId != tabId, !tabs[index].bankTransitionPending
+        guard !isClosingAll, pendingCloseId == -1, pendingCloseBank == nil,
+            let tab = tab(id: tabId), savingCloseId != tabId, !tab.bankTransitionPending
         else { return }
-        guard tabs[index].dirty else {
-            closeTab(index: index)
-            return
-        }
-        // Show the tab being asked about first: a Save/Discard answer for changes
-        // the user cannot see is a data-loss trap.
-        if tabId != selectedId { select(tabId: tabId) }
-        if pendingCloseId != tabId { pendingCloseId = tabId }
+        app?.guardSplitStudioClose(
+            tab: tab,
+            proceed: { [weak self, weak tab] in
+                guard let self, let tab, self.tab(id: tabId) === tab else { return }
+                tab.refreshDirty()
+                guard tab.dirty else {
+                    if let index = self.tabIndex(of: tabId) { self.closeTab(index: index) }
+                    return
+                }
+                if tabId != self.selectedId { self.select(tabId: tabId) }
+                self.pendingCloseId = tabId
+            },
+            cancel: {})
     }
 
     public func confirmDiscard() {

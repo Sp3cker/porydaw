@@ -37,6 +37,34 @@ extension ApplicationSession {
         }
     }
 
+    @QtIgnored
+    func guardSplitStudioClose(
+        tab: SongTabSession? = nil, proceed: @escaping () -> Void, cancel: @escaping () -> Void
+    ) {
+        guard let workflow = kitStudioWorkflow else {
+            proceed()
+            return
+        }
+        let source: KitStudioCloseGuard.Source
+        if tab != nil {
+            source = .tab
+        } else if pendingProjectSwitch != nil {
+            source = .project
+        } else {
+            source = .quit
+        }
+        workflow.guardClose(source: source, song: tab?.workspace.session, proceed: proceed, cancel: cancel)
+    }
+
+    @QtIgnored
+    func offerSplitStudioOrphans(proceed: @escaping () -> Void, cancel: @escaping () -> Void) {
+        guard hasSplitStudioCreatedSamples, let workflow = kitStudioWorkflow else {
+            proceed()
+            return
+        }
+        workflow.offerOrphanCleanup(proceed: proceed, cancel: cancel)
+    }
+
     /// The gate's Save answer for one tab, reported back through
     /// `closeAfterSave(tabId:saved:)`: the strip closes the tab on success and
     /// leaves the question up on a refusal.
@@ -116,6 +144,19 @@ extension ApplicationSession {
 
     @QtIgnored
     func closeAllResolved(closed: Bool) {
+        guard closed else {
+            finishCloseAllResolved(closed: false)
+            return
+        }
+        offerSplitStudioOrphans(
+            proceed: { [weak self] in self?.finishCloseAllResolved(closed: true) },
+            cancel: { [weak self] in self?.finishCloseAllResolved(closed: false) })
+    }
+
+    private func finishCloseAllResolved(closed: Bool) {
+        // Song-gate cancellations own their reset; successful and orphan-failure paths finish here.
+        if songTabs.isClosingAll { songTabs.isClosingAll = false }
+        songTabs.projectSwitchApprovalIndex = nil
         if let pending = pendingProjectSwitch {
             pendingProjectSwitch = nil
             guard closed else {
@@ -138,6 +179,7 @@ extension ApplicationSession {
             persistTabRecipe()
             closeCancelled()
         } else {
+            songTabs.releaseAll()
             allTabsClosed()
         }
     }
@@ -149,6 +191,7 @@ extension ApplicationSession {
     }
 
     func hostClosingImpl() {
+        kitStudioWorkflow?.dispose()
         closeSampleStudio()
         isDisposed = true
         if case .preparing(let task) = audioReadiness { task.cancel() }
@@ -183,7 +226,12 @@ extension ApplicationSession {
     func requestCloseAllImpl() {
         persistTabRecipe()
         isHostCloseWalk = true
-        songTabs.startCloseAll()
+        guardSplitStudioClose(
+            proceed: { [weak self] in self?.songTabs.startCloseAll() },
+            cancel: { [weak self] in
+                self?.isHostCloseWalk = false
+                self?.closeCancelled()
+            })
     }
 
     // MARK: - Save conflict

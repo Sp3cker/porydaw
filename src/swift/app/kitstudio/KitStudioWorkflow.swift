@@ -18,6 +18,12 @@ public final class KitStudioWorkflow: QmlUncreatable {
     public var saving: Bool = false
     public var promptOpen: Bool = false
     public var promptForVoicegroup: Bool = false
+    public var promptForClose: Bool = false
+    public var orphanCleanupOpen: Bool = false
+    public var orphanCleanupNames: [String] = []
+    public var orphanCleanupSelectedNames: [String] = []
+    public var orphanCleanupBusy: Bool = false
+    public var orphanCleanupStatus: String = ""
     public var switchingVoicegroup: Bool = false
     public var switchBarText: String = ""
     public var switchBackText: String = ""
@@ -41,6 +47,9 @@ public final class KitStudioWorkflow: QmlUncreatable {
     private var sessionGeneration = 0
     private var pendingTask: Task<Void, Never>?
     private var observerTask: Task<Void, Never>?
+    private var closeWaitTask: Task<Void, Never>?
+    private var orphanCleanupTask: Task<Void, Never>?
+    private var orphanCleanupCompletion: (() -> Void)?
     private var switchBackTask: Task<Void, Never>?
     private var previousVoicegroupArg: String?
     private var followedSlot: Int = -1
@@ -398,7 +407,8 @@ public final class KitStudioWorkflow: QmlUncreatable {
     }
 
     public func saveToSong() {
-        guard !saving, let session, let service = session.catalogService, let song = boundSong,
+        if saving { return }
+        guard let session, let service = session.catalogService, let song = boundSong,
             !song.isClosed, let state, state.canSave, !state.conflictVisible,
             let expected = snapshots[state.selectedSlot]
         else {
@@ -431,11 +441,13 @@ public final class KitStudioWorkflow: QmlUncreatable {
         pendingNames = Set(rendered.map(\.name))
         pendingTask = Task { [weak self] in
             guard let self else { return }
+            var saveSucceeded = false
             defer {
                 if self.sessionGeneration == generation {
                     self.pendingTask = nil
                     self.saving = false
                     self.pendingNames.removeAll()
+                    self.closeGuard.saveSettled(success: saveSucceeded)
                 }
             }
             do {
@@ -522,12 +534,11 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 state.markClean()
                 self.cleanSourceSnapshot = state.session.snapshot()
                 if state.retargetVisible { state.completeRetarget() }
-                self.closeGuard.saveSettled(success: true)
+                saveSucceeded = true
             } catch {
                 guard self.sessionGeneration == generation else { return }
                 self.ownSave = nil
                 self.showAlert(error)
-                self.closeGuard.saveSettled(success: false)
             }
         }
     }
@@ -790,6 +801,128 @@ public final class KitStudioWorkflow: QmlUncreatable {
         }
     }
 
+    @QtIgnored
+    func guardClose(
+        source: KitStudioCloseGuard.Source, song: DocumentSession? = nil,
+        proceed: @escaping () -> Void, cancel: @escaping () -> Void
+    ) {
+        guard !orphanCleanupBusy, !orphanCleanupOpen, closeWaitTask == nil, !switchingVoicegroup else {
+            cancel()
+            return
+        }
+        guard windowOpen, song == nil || boundSong === song else {
+            proceed()
+            return
+        }
+        if saving {
+            let task = pendingTask
+            closeWaitTask = Task { [weak self] in
+                await task?.value
+                guard let self else { return }
+                self.closeWaitTask = nil
+                self.guardClose(source: source, song: song, proceed: proceed, cancel: cancel)
+            }
+            return
+        }
+        guard !promptOpen, !closeGuard.saving else {
+            cancel()
+            return
+        }
+        promptForClose = true
+        closeGuard.request(
+            source: source, dirty: state?.dirty ?? false,
+            proceed: { [weak self] in
+                self?.promptForClose = false
+                self?.close()
+                proceed()
+            },
+            cancel: { [weak self] in
+                self?.promptForClose = false
+                cancel()
+            })
+    }
+
+    @QtIgnored
+    func offerOrphanCleanup(proceed: @escaping () -> Void, cancel: @escaping () -> Void) {
+        guard let session, orphanCleanupCompletion == nil, !orphanCleanupBusy else {
+            cancel()
+            return
+        }
+        orphanCleanupBusy = true
+        orphanCleanupStatus = ""
+        orphanCleanupCompletion = proceed
+        orphanCleanupTask = Task { [weak self] in
+            do {
+                let names = try await session.orphanSplitStudioSamples()
+                guard let self else { return }
+                self.orphanCleanupTask = nil
+                self.orphanCleanupBusy = false
+                if names.isEmpty {
+                    self.finishOrphanCleanup()
+                } else {
+                    self.orphanCleanupNames = names
+                    self.orphanCleanupSelectedNames = names
+                    self.orphanCleanupOpen = true
+                }
+            } catch {
+                guard let self else { return }
+                self.orphanCleanupTask = nil
+                self.orphanCleanupBusy = false
+                self.orphanCleanupCompletion = nil
+                session.publishOperationFailure(message: String(describing: error))
+                cancel()
+            }
+        }
+    }
+
+    public func setOrphanCleanupSelected(name: String, selected: Bool) {
+        guard orphanCleanupOpen, !orphanCleanupBusy, orphanCleanupNames.contains(name) else { return }
+        if selected {
+            if !orphanCleanupSelectedNames.contains(name) { orphanCleanupSelectedNames.append(name) }
+        } else {
+            orphanCleanupSelectedNames.removeAll { $0 == name }
+        }
+    }
+
+    public func answerOrphanCleanup(delete: Bool) {
+        guard orphanCleanupOpen, !orphanCleanupBusy, let session else { return }
+        guard delete else {
+            finishOrphanCleanup()
+            return
+        }
+        let selected = orphanCleanupSelectedNames
+        orphanCleanupBusy = true
+        orphanCleanupStatus = ""
+        orphanCleanupTask = Task { [weak self] in
+            do {
+                try await session.deleteOrphanSamples(selected)
+                guard let self else { return }
+                self.orphanCleanupTask = nil
+                self.orphanCleanupBusy = false
+                if self.orphanCleanupStatus.isEmpty {
+                    self.finishOrphanCleanup()
+                } else {
+                    self.orphanCleanupNames = []
+                    self.orphanCleanupSelectedNames = []
+                }
+            } catch {
+                guard let self else { return }
+                self.orphanCleanupTask = nil
+                self.orphanCleanupBusy = false
+                self.orphanCleanupStatus = String(describing: error)
+            }
+        }
+    }
+
+    private func finishOrphanCleanup() {
+        let completion = orphanCleanupCompletion
+        orphanCleanupCompletion = nil
+        orphanCleanupOpen = false
+        orphanCleanupNames = []
+        orphanCleanupSelectedNames = []
+        completion?()
+    }
+
     public func closeRequested() {
         guard !saving, !switchingVoicegroup else { return }
         closeGuard.request(source: .window, dirty: state?.dirty ?? false) { [weak self] in self?.close() }
@@ -813,6 +946,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
         deferredBankRevision = nil
         switchFailureText = nil
         promptForVoicegroup = false
+        promptForClose = false
         previousVoicegroupArg = nil
         followedSlot = -1
         cleanSourceSnapshot = nil
@@ -827,6 +961,13 @@ public final class KitStudioWorkflow: QmlUncreatable {
         ownSave = nil
     }
     @QtIgnored public func dispose() {
+        closeWaitTask?.cancel()
+        closeWaitTask = nil
+        orphanCleanupTask?.cancel()
+        orphanCleanupTask = nil
+        orphanCleanupCompletion = nil
+        orphanCleanupOpen = false
+        orphanCleanupBusy = false
         closeGuard.reset()
         close()
         windowReleased()
