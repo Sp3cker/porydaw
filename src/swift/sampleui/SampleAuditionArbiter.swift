@@ -1,5 +1,14 @@
 import PorydawAppAudio
 
+@MainActor
+public protocol SampleAuditionOutput: AnyObject {
+    func auditionSample(
+        samples: [Int8], frequency: UInt32, loopStart: UInt32,
+        looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
+    ) -> Bool
+    func auditionSampleOff()
+}
+
 /// Coordinates ownership of the shared sample audition output.
 @MainActor
 public final class SampleAuditionArbiter {

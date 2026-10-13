@@ -424,8 +424,16 @@ public final class PcmAuditionPlayer {           // Swift-only, not bridged
     public func stop(owner: AnyObject)
     public func close()
     public var playing: Bool
-    /// Frame-tick playhead callback (source frames), nil at end.
+    /// Frame-tick playhead callback in rendered-frame indices of the played
+    /// grid, nil at end; callers map to source frames (R-T5-1).
     public var onPlayhead: ((Int?) -> Void)?
+    /// Fires on every successful publish, including retry/gap repeats.
+    public var onStarted: (() -> Void)?
+    /// Automatic restart (retry/gap): when set, called INSTEAD of a cached
+    /// restart so the holder replays fresh content; nil = cached restart (R-T5-2).
+    public var onWillRestart: (() -> Void)?
+    /// Raw fractional rendered-grid position for exact source mapping (R-T5-3).
+    public var playheadPosition: Double { get }
     /// Position advance driven by the holder's tick timer; the loop/gap
     /// arithmetic is the existing SampleStudioAudition.advance(bySeconds:)
     /// behavior moved (SampleStudioAudition.swift:101-125).

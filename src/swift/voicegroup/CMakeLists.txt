@@ -3,6 +3,8 @@ add_library(PorydawVoicegroup STATIC
     Bank.swift
     BankBuilder.swift
     KeysplitTables.swift
+    KeysplitTableWriter.swift
+    KitEditInput.swift
     NativeFileSystem.swift
     ProjectLayout.swift
     SoundDataMap.swift

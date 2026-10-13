@@ -5,6 +5,7 @@ import PorydawCore
 import PorydawDocument
 import PorydawProject
 import PorydawSample
+import PorydawSampleUI
 import QtBridge
 
 @MainActor

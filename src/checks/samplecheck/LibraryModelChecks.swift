@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawSampleUI
 import PorydawAppPresentation
 
 @testable import SwiftCoreCheckLogic

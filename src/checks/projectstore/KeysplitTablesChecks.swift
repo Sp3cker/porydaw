@@ -108,4 +108,104 @@ public func runKeysplitTablesSuite(_ report: CheckReport) {
     } catch {
         report.fail(id, "keysplit checks: \(error)")
     }
+    keysplitWriterChecks(report)
+}
+
+private func keysplitWriterChecks(_ report: CheckReport) {
+    let id = "swiftcore/KeysplitTableWriter::"
+    do {
+        try withTempProjectCopy(prefix: "keysplits-writer", stagedFile: "sound/keysplit_tables.inc") { root in
+            let path = root.appendingPathComponent("sound/keysplit_tables.inc").path
+            let original = try ProjectFileStore.read(path)
+            let fixture = try KeysplitTables.parse(files: [path])
+            guard let table = fixture.table(named: "keysplit_fixture") else {
+                report.fail(id + "fixture", "fixture table is missing")
+                return
+            }
+            try KeysplitTableWriter.replace(table: table, inFile: path)
+            let roundTrip = try KeysplitTables.parse(files: [path]).table(named: table.name)?.table
+            report.expectEqual(
+                expected: table.table, actual: roundTrip,
+                cppID: id + "round-trip", what: "fixture round-trips all 128 bytes")
+            let prefix = Data("\t.align 2\n".utf8)
+            let siblingMarker = Data("\n\t.align 2\nkeysplit fixture_bass".utf8)
+            guard let siblingStart = original.range(of: siblingMarker)?.lowerBound else {
+                report.fail(id + "fixture", "sibling block is missing")
+                return
+            }
+            let sibling = Data(original[siblingStart...])
+            let values = (0..<128).map { (note: Int) -> UInt8 in UInt8((note / 16) % 3) }
+            let edited = KeysplitTable(name: table.name, startingNote: 0, maxNote: 128, table: values)
+            try KeysplitTableWriter.replace(table: edited, inFile: path)
+            let replaced = try ProjectFileStore.read(path)
+            report.expect(
+                replaced.starts(with: prefix) && replaced.suffix(sibling.count) == sibling,
+                cppID: id + "siblings", message: "replacement preserves prefix alignment and sibling bytes")
+            let replacementTable = try KeysplitTables.parse(files: [path]).table(named: table.name)?.table
+            report.expectEqual(
+                expected: values, actual: replacementTable,
+                cppID: id + "replace", what: "edited maximal runs round-trip")
+            let appended = KeysplitTable(name: "keysplit_writer_new", startingNote: 0, maxNote: 128, table: values)
+            try KeysplitTableWriter.replace(table: appended, inFile: path)
+            let appendedBytes = try ProjectFileStore.read(path)
+            report.expect(
+                appendedBytes.starts(with: replaced), cppID: id + "append-preserves",
+                message: "append preserves every existing byte")
+            let appendedTable = try KeysplitTables.parse(files: [path]).table(named: appended.name)?.table
+            report.expectEqual(
+                expected: values, actual: appendedTable,
+                cppID: id + "append", what: "appended table parses")
+            let crlf = Data(
+                String(decoding: original, as: UTF8.self).replacingOccurrences(of: "\n", with: "\r\n").utf8)
+            for endsWithNewline in [true, false] {
+                let bytes = endsWithNewline ? crlf : Data(crlf.dropLast(2))
+                try ProjectFileStore.write(path, data: bytes)
+                try KeysplitTableWriter.replace(table: edited, inFile: path)
+                try KeysplitTableWriter.replace(table: appended, inFile: path)
+                let output = try ProjectFileStore.read(path)
+                let outputText = String(decoding: output, as: UTF8.self)
+                report.expect(
+                    !outputText.replacingOccurrences(of: "\r\n", with: "").contains("\n"),
+                    cppID: id + "crlf", message: "replaced and appended directives retain CRLF")
+                report.expectEqual(
+                    expected: endsWithNewline, actual: output.last == 10,
+                    cppID: id + "trailing-newline", what: "trailing-newline state is preserved")
+                report.expect(
+                    endsWithNewline || output.last != 13,
+                    cppID: id + "no-final-cr", message: "unterminated CRLF file has no lone final CR")
+                let crlfTable = try KeysplitTables.parse(files: [path]).table(named: appended.name)?.table
+                report.expectEqual(
+                    expected: values, actual: crlfTable,
+                    cppID: id + "crlf-round-trip", what: "CRLF append round-trips")
+            }
+            let setText =
+                "before::\n\t.align 2\n.set keysplit_fixture, . - 12\n\t.byte 1, 1\n\nafter::\n\t.align 2\nkeysplit sibling, 0\n\tsplit 2, 128\n"
+            try ProjectFileStore.write(path, data: Data(setText.utf8))
+            var truncated = [UInt8](repeating: 0, count: 128)
+            for note in 12..<32 { truncated[note] = 4 }
+            let short = KeysplitTable(name: table.name, startingNote: 12, maxNote: 32, table: truncated)
+            try KeysplitTableWriter.replace(table: short, inFile: path)
+            let shortBytes = try ProjectFileStore.read(path)
+            let shortTable = try KeysplitTables.parse(files: [path]).table(named: short.name)?.table
+            report.expectEqual(
+                expected: truncated, actual: shortTable,
+                cppID: id + "truncation", what: "notes above maxNote remain zero")
+            let shortText = String(decoding: shortBytes, as: UTF8.self)
+            report.expect(
+                shortText.hasPrefix("before::\n\t.align 2\nkeysplit fixture, 12\n\tsplit 4, 32\n")
+                    && shortText.hasSuffix("\nafter::\n\t.align 2\nkeysplit sibling, 0\n\tsplit 2, 128\n")
+                    && !shortText.contains(".byte"),
+                cppID: id + "set-replace",
+                message: "set definition becomes run form without altering labels or siblings")
+            do {
+                try KeysplitTableWriter.replace(table: table, inFile: path + ".missing")
+                report.fail(id + "missing", "missing file was accepted")
+            } catch let error as KeysplitWriteError {
+                report.expect(
+                    error.message.contains(path + ".missing"), cppID: id + "missing", message: "refusal names file")
+            }
+        }
+    } catch {
+        report.fail(id + "fixture", "writer checks: \(error)")
+    }
 }

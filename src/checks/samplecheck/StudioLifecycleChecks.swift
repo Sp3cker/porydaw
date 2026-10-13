@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppAudio
 import PorydawSample
+@testable import PorydawSampleUI
 
 @testable import SwiftCoreCheckLogic
 

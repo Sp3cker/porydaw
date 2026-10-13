@@ -24,6 +24,7 @@ public func runVoicegroupEditingSuite(_ report: CheckReport) {
     }
     editingDisplayNames(report)
     editingConfiguredBaselineAndSynth(report)
+    editingStoreKit(report)
 }
 
 private func editingExpect(_ row: String, _ result: Bool, _ report: CheckReport, _ message: String) {
@@ -611,4 +612,155 @@ private func editingDisplayNames(_ report: CheckReport) {
     editingEqual(
         "A098", "Sample", m4aVoiceTypeName(UInt8(VOICE_KEYSPLIT)),
         report, "A098: native keysplit voice type name")
+}
+
+private func editingStoreKit(_ report: CheckReport) {
+    let id = "swiftcore/VoicegroupStoreKitEdit::"
+    do {
+        try withTempProjectCopy(prefix: "voicegroup-kit-editing") { root in
+            let parentPath = root.appendingPathComponent("sound/voicegroups/fixture_rich.inc").path
+            let childPath = root.appendingPathComponent("sound/voicegroups/fixture_drums_a.inc").path
+            let tablePath = root.appendingPathComponent("sound/keysplit_tables.inc").path
+            let otherPath = root.appendingPathComponent("sound/voicegroups/fixture_other.inc").path
+            try ProjectFileStore.write(
+                otherPath, data: Data("voice_group fixture_other\n\tvoice_keysplit_all fixture_drums_a\n".utf8))
+            try VoicegroupSource.appendIncludeLine(projectRoot: root.path, name: "fixture_other")
+            let store = try VoicegroupStore(projectRoot: root.path)
+            let before = try store.loadBank(voicegroupArg: "_fixture_rich")
+            let other = try store.loadBank(voicegroupArg: "_fixture_other")
+            guard let expected = before.slotViews[10].voice else {
+                report.fail(id + "fixture", "fixture slot 10 has no parent")
+                return
+            }
+            var children = [VgVoice?](repeating: nil, count: 128)
+            children[36] = VgVoice(macro: .square2, key: 62, attack: 3, decay: 2, sustain: 11, release: 4)
+            children[37] = VgVoice(macro: .noise, key: 63, period: 1, attack: 2, decay: 2, sustain: 10, release: 3)
+            let parent = VgVoice(macro: .keysplitAll, symbol: "fixture_drums_a")
+            let drumEdit = KitEditInput(
+                id: before.id, slot: 10, parent: parent, subgroupSymbol: "fixture_drums_a",
+                children: children, table: nil)
+            let tableBefore = try ProjectFileStore.read(tablePath)
+            let drumResult = try store.applyKitEdit(input: drumEdit, expectedParent: expected)
+            guard case .applied(let drum) = drumResult else {
+                report.fail(id + "drumkit", "drumkit edit was not applied")
+                return
+            }
+            let reopened = try openRichSource(at: root)
+            report.expectEqual(
+                expected: parent, actual: reopened.voiceAt(slot: 10),
+                cppID: id + "parent", what: "saved parent line matches drumkit input")
+            let childSource = reopened
+            var error: String?
+            let childOpened = childSource.open(
+                location: VoicegroupLocation(filePath: childPath, sectionLabel: "fixture_drums_a"), error: &error)
+            report.expect(childOpened, cppID: id + "child-open", message: error ?? "saved subgroup opens")
+            guard childOpened else { return }
+            report.expectEqual(
+                expected: children[36], actual: childSource.voiceAt(slot: 36),
+                cppID: id + "children", what: "child arguments were saved")
+            report.expect(
+                childSource.projectRoot.isEmpty && childSource.voicegroupArg.isEmpty,
+                cppID: id + "location-identity", message: "reused source adopts the exact-location opener")
+            let childSaved = try childSource.save()
+            report.expect(
+                childSaved, cppID: id + "location-save",
+                message: "location-opened source saves through its exact recorded location")
+            let childText = String(decoding: try ProjectFileStore.read(childPath), as: UTF8.self)
+            report.expect(
+                childText.contains(kitBlankChildLine + "\n"),
+                cppID: id + "blank-line", message: "nil children write the shared blank template")
+            report.expectEqual(
+                expected: VgVoice(macro: .square1, sustain: 15), actual: childSource.voiceAt(slot: 0),
+                cppID: id + "blank-voice", what: "unassigned key parses as the blank template voice")
+            let tableAfterDrumEdit = try ProjectFileStore.read(tablePath)
+            report.expectEqual(
+                expected: tableBefore, actual: tableAfterDrumEdit,
+                cppID: id + "drumkit-table", what: "drumkit edit does not touch keysplit table")
+            report.expect(
+                drum.view.bank !== before.bank && !drum.view.dirty
+                    && drum.materialization == nil && drum.materializationToken == nil,
+                cppID: id + "republish", message: "kit publishes a new clean bank without materialization")
+            report.expect(
+                store.currentPublication(id: other.id)?.bank === other.bank,
+                cppID: id + "bound-only", message: "other referencing voicegroup keeps its prior publication")
+            let drumLease = ProjectBankLease(
+                bank: drum.view.bank, view: drum.view, publicationOwner: UUID(), publicationRevision: 1)
+            report.expectEqual(
+                expected: VgMacro.square2.rawValue, actual: drumLease.subvoiceMacros(at: 10)?[36],
+                cppID: id + "drumkit-bank", what: "republished bank resolves the new drum child")
+
+            let values = (0..<128).map { (note: Int) -> UInt8 in note < 64 ? 36 : 37 }
+            let table = KeysplitTable(name: "keysplit_fixture", startingNote: 0, maxNote: 128, table: values)
+            let splitParent = VgVoice(macro: .keysplit, symbol: "fixture_drums_a", keysplitTable: table.name)
+            let splitEdit = KitEditInput(
+                id: before.id, slot: 10, parent: splitParent, subgroupSymbol: "fixture_drums_a",
+                children: children, table: table)
+            let splitResult = try store.applyKitEdit(input: splitEdit, expectedParent: parent)
+            guard case .applied(let split) = splitResult else {
+                report.fail(id + "keysplit", "keysplit edit was not applied")
+                return
+            }
+            let savedTable = try KeysplitTables.parse(files: [tablePath]).table(named: table.name)?.table
+            report.expectEqual(
+                expected: values, actual: savedTable,
+                cppID: id + "keysplit-table", what: "kit edit rewrites table")
+            let savedParent = try openRichSource(at: root)
+            report.expectEqual(
+                expected: splitParent, actual: savedParent.voiceAt(slot: 10),
+                cppID: id + "keysplit-parent", what: "keysplit parent line is saved")
+            let splitLease = ProjectBankLease(
+                bank: split.view.bank, view: split.view, publicationOwner: UUID(), publicationRevision: 2)
+            report.expectEqual(
+                expected: VgMacro.square2.rawValue, actual: splitLease.subvoiceMacros(at: 10)?[0],
+                cppID: id + "keysplit-bank-low", what: "republished table routes lower keys to child 36")
+            report.expectEqual(
+                expected: VgMacro.noise.rawValue, actual: splitLease.subvoiceMacros(at: 10)?[127],
+                cppID: id + "keysplit-bank-high", what: "republished table routes upper keys to child 37")
+            let paths = [parentPath, childPath, tablePath]
+            let snapshot = try paths.map { try ProjectFileStore.read($0) }
+            do {
+                _ = try store.applyKitEdit(input: drumEdit, expectedParent: expected)
+                report.fail(id + "conflict", "stale parent was accepted")
+            } catch let error as VoicegroupStoreError {
+                report.expect(
+                    error.localizedDescription.contains(parentPath),
+                    cppID: id + "conflict", message: "conflict names parent file")
+            }
+            let afterConflict = try paths.map { try ProjectFileStore.read($0) }
+            report.expectEqual(
+                expected: snapshot, actual: afterConflict,
+                cppID: id + "conflict-atomicity", what: "stale expected parent changes no file")
+            var missing = drumEdit
+            missing.parent.symbol = "missing_kit_symbol"
+            missing.subgroupSymbol = missing.parent.symbol
+            do {
+                _ = try store.applyKitEdit(input: missing, expectedParent: splitParent)
+                report.fail(id + "missing-subgroup", "missing subgroup was accepted")
+            } catch let error as VoicegroupStoreError {
+                report.expect(
+                    error.localizedDescription.contains("no sub-voicegroup missing_kit_symbol found in the project"),
+                    cppID: id + "missing-subgroup", message: "missing subgroup has a named refusal")
+            }
+            let afterMissingSubgroup = try paths.map { try ProjectFileStore.read($0) }
+            report.expectEqual(
+                expected: snapshot, actual: afterMissingSubgroup,
+                cppID: id + "missing-atomicity", what: "missing subgroup changes no file")
+            var blankParent = drumEdit
+            blankParent.slot = 127
+            do {
+                _ = try store.applyKitEdit(input: blankParent, expectedParent: nil)
+                report.fail(id + "undefined-parent", "undefined parent was materialized")
+            } catch let error as VoicegroupStoreError {
+                report.expect(
+                    error.localizedDescription.contains("127") && error.localizedDescription.contains(parentPath),
+                    cppID: id + "undefined-parent", message: "undefined parent refusal names slot and file")
+            }
+            let afterUndefinedParent = try paths.map { try ProjectFileStore.read($0) }
+            report.expectEqual(
+                expected: snapshot, actual: afterUndefinedParent,
+                cppID: id + "undefined-atomicity", what: "undefined parent refusal changes no file")
+        }
+    } catch {
+        report.fail(id + "fixture", "kit-edit checks: \(error)")
+    }
 }

@@ -98,6 +98,8 @@ public final class VoicegroupSource {
 
     /// Opens an exact loader location without changing editor section-boundary semantics.
     public func open(location: VoicegroupLocation, error: inout String?) -> Bool {
+        projectRoot = ""
+        voicegroupArg = ""
         filePath = location.filePath
         sectionLabel = location.sectionLabel
         loadName = sectionLabel.isEmpty ? ProjectFileStore.completeBaseName(filePath) : sectionLabel
@@ -296,7 +298,12 @@ public final class VoicegroupSource {
     func diskSnapshot() throws -> VoicegroupSource {
         let disk = VoicegroupSource()
         var error: String?
-        guard disk.open(projectRoot: projectRoot, voicegroupArg: voicegroupArg, error: &error) else {
+        // Re-run the opener that established this source's identity.
+        let opened =
+            projectRoot.isEmpty
+            ? disk.open(location: VoicegroupLocation(filePath: filePath, sectionLabel: sectionLabel), error: &error)
+            : disk.open(projectRoot: projectRoot, voicegroupArg: voicegroupArg, error: &error)
+        guard opened else {
             throw VoicegroupSourceConflict(message: error ?? "Cannot read \(filePath)")
         }
         return disk
@@ -397,7 +404,7 @@ public final class VoicegroupSource {
 
     private enum ArgumentError: Error { case overlongSymbol }
 
-    private static func decode(_ spec: VoiceMacroSpec, arguments: ArraySlice<UInt8>) throws -> VgVoice? {
+    static func decode(_ spec: VoiceMacroSpec, arguments: ArraySlice<UInt8>) throws -> VgVoice? {
         var rest = arguments
         var voice = VgVoice(macro: spec.macro)
         if spec.category == .keysplitAll {

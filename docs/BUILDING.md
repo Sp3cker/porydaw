@@ -318,6 +318,18 @@ dependencies, C interop only via `voicegroup_asset_batch.h`) was split out of
 AppPresentation → App still recompile). The split pays for itself through
 isolation and the benchmark below, not the floor.
 
+`PorydawSampleUI` (`src/swift/sampleui/`) holds the sample library model, audition
+arbiter and PCM audition player shared by Sample Studio and Split Studio. It sits
+on Sample, AppAudio, AppPresentation and QtBridge; `PorydawApp` links it.
+
+| `SampleLibraryModel.swift` placement | Warm build samples (s) | Median (s) |
+|---|---|---:|
+| `PorydawApp` | 7.77, 7.72 | 7.75 |
+| `PorydawSampleUI` | 1.54, 1.52 | 1.53 |
+
+Measured 2026-10-13, Debug, `touch` then `uv run --no-sync dev build:app`. A
+one-file `PorydawApp` edit (`SampleStudioPresenter.swift`) measured 7.00/6.91 s afterward.
+
 Swift incremental state is mtime-based: `touch`, `git checkout` across branches, or
 `git stash pop` recompile whole modules even when content is identical. Changing a
 module's compile flags (including via `-D` defines) drops its objects (see

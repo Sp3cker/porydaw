@@ -7,6 +7,7 @@ import PorydawVoicegroup
 import PorydawPlaybackNative
 import PorydawAudioDeviceNative
 import PorydawAppAudio
+import PorydawSampleUI
 
 public enum NativeAudioError: Error, Equatable, Sendable {
     case initializationFailed(String)
@@ -183,6 +184,8 @@ public final class NativeAudio {
         engineSettings.applyingSong(config)
     }
 }
+
+extension NativeAudio: SampleAuditionOutput {}
 
 extension AudioSettings {
     public func applyingSong(_ config: SongConfig) -> AudioSettings {

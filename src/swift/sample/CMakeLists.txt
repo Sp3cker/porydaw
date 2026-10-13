@@ -18,6 +18,9 @@ add_library(PorydawSample STATIC
     SampleProvenance.swift
     SampleReopen.swift
     SamplePeakPyramid.swift
+    SampleZeroCrossing.swift
+    SampleSlice.swift
+    SampleRatePolicy.swift
 )
 set_target_properties(PorydawSample PROPERTIES
     Swift_MODULE_NAME PorydawSample

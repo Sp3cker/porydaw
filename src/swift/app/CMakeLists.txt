@@ -32,8 +32,6 @@ add_library(PorydawApp STATIC
     samplestudio/Sf2ZonePickerPresenter.swift
     samplestudio/SampleStudioHistory.swift
     samplestudio/SampleStudioReadouts.swift
-    samplestudio/SampleLibraryModel.swift
-    samplestudio/SampleAuditionArbiter.swift
     samplestudio/SampleStudioPresenter.swift
     samplestudio/SampleLoopTools.swift
     samplestudio/SampleStudioAudition.swift
@@ -321,12 +319,14 @@ target_link_libraries(PorydawAppHistory PUBLIC PorydawCore PorydawDocument Poryd
 
 add_dependencies(PorydawAppHistory QtBridgeMacros)
 
+add_subdirectory("${CMAKE_SOURCE_DIR}/src/swift/sampleui" "${CMAKE_BINARY_DIR}/src/swift/sampleui")
+
 target_link_libraries(PorydawApp PUBLIC
-    PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppHistory PorydawAppPresentation
+    PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppHistory PorydawAppPresentation PorydawSampleUI
 )
 
 if(PORYDAW_BUILD_CHECKS)
-    foreach(leaf PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppHistory PorydawAppPresentation)
+    foreach(leaf PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppHistory PorydawAppPresentation PorydawSampleUI)
         target_compile_options(${leaf} PRIVATE
             "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>")
     endforeach()
