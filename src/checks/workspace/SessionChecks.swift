@@ -32,13 +32,13 @@ public func runProjectSessionSuite(_ report: CheckReport) {
     let channels = NumberFieldFormat(kind: .channels)
     let reverb = NumberFieldFormat(kind: .reverb)
     report.expect(
-        channels.text(value: 12) == "12 channels" && channels.value(text: "+12") == 12
-            && channels.value(text: "0,012") == 0 && channels.value(text: "١٢").isNaN
-            && reverb.text(value: -1) == "Default (50)" && reverb.value(text: "Default (50)") == -1
-            && reverb.text(value: 127) == "127" && reverb.value(text: "-1") == -1
-            && reverb.value(text: "127") == 127,
+        channels.text(value: 12) == "12 channels" && channels.value(text: "8", current: 12) == 8
+            && channels.value(text: "12 channels", current: 12) == 12
+            && channels.value(text: "1,000", current: 12) == 12 && channels.value(text: "", current: 12) == 12
+            && reverb.text(value: -1) == "Default (50)" && reverb.value(text: "Default (50)", current: -1) == -1
+            && reverb.text(value: 127) == "127" && reverb.value(text: "-1", current: 64) == -1,
         cppID: "swiftcore/Settings::numberFormats",
-        message: "settings suffix, admitted decimal prefixes and Default sentinel")
+        message: "formatted fields commit whole integers; any other text keeps the current value")
 
     runWorkspaceStartupChecks(report)
     runTransportBarChecks(report)

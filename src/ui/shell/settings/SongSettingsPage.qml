@@ -33,11 +33,6 @@ Item {
         property: "defaultText"
         value: qsTr("Default (50)")
     }
-    Binding {
-        target: page.store.reverbFormat
-        property: "defaultPrefix"
-        value: qsTr("Default")
-    }
 
     Column {
         y: 11 * page.unit

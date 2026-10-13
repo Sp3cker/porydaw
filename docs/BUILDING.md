@@ -25,6 +25,7 @@ Hosts retain action dispatch and any action-ID-to-object-name mappings.
 
 Numeric prompt editing uses `PromptStyle.integerInput`; custom shell SpinBoxes
 set a presenter-owned `NumberFieldFormat` on the shared style's `numberFormat`.
+Both commit only a whole integer; any other text keeps the current value.
 
 Provision once with `uv sync --locked`, including each new worktree and after lock/project changes. Warm commands use `--no-sync`; no implicit Python dependency resolution. `--help` loads only the command front end. See [INSTALL.md](../INSTALL.md) for native host prerequisites and optional checkout-local Qt provisioning.
 

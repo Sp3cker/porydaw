@@ -16,7 +16,7 @@ Fusion.SpinBox {
                                     : Number(value).toLocaleString(locale, "f", 0)
     }
     valueFromText: function(text: string, locale: var): real {
-        return control.numberFormat ? control.numberFormat.value(text)
+        return control.numberFormat ? control.numberFormat.value(text, control.value)
                                     : Number.fromLocaleString(locale, text)
     }
 

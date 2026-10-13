@@ -9,7 +9,6 @@ public final class NumberFieldFormat {
     private let kind: Kind
     public var textPattern: String = "%1 channels"
     public var defaultText: String = "Default (50)"
-    public var defaultPrefix: String = "Default"
 
     public init(kind: Kind) { self.kind = kind }
 
@@ -24,22 +23,8 @@ public final class NumberFieldFormat {
         }
     }
 
-    public func value(text: String) -> Double {
-        switch kind {
-        case .seconds:
-            (Double(text.hasSuffix(" s") ? text.dropLast(2) : text[...]).map { (value: Double) in value * 10 } ?? .nan)
-                .rounded()
-        case .channels:
-            decimalPrefix(text)
-        case .reverb:
-            text.hasPrefix(defaultPrefix) ? -1 : decimalPrefix(text)
-        }
-    }
-
-    private func decimalPrefix(_ text: String) -> Double {
-        let digits = text.first == "+" || text.first == "-" ? text.index(after: text.startIndex) : text.startIndex
-        let end =
-            text[digits...].firstIndex { (character: Character) in character < "0" || character > "9" } ?? text.endIndex
-        return Int(text[..<end]).map { (value: Int) in Double(value) } ?? .nan
+    /// Commits a whole integer; any other text, including this field's own display text, keeps the current value.
+    public func value(text: String, current: Int) -> Int {
+        Int(text) ?? current
     }
 }
