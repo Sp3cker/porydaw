@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawAppPresentation
 import PorydawDocument
 import QtBridge
 
@@ -53,46 +54,6 @@ public struct SharedPlayheadInteractions: Equatable, Sendable {
 
     /// Any of the three suspends follow; the aggregate never has tiers.
     public var suspendsFollow: Bool { gridActive || drawerActive || explicitSuspension }
-}
-// MARK: - Appearance policy
-
-/// Pure font-relative metrics for the shared playhead visual.
-public enum SharedPlayheadAppearance {
-    public static let seedBaseFontPx: Double = GridCameraPolicy.seedBaseFontPx
-    /// The platform compositor's logical one-pixel hairline.
-    public static let lineWidth: Double = 1.0
-    /// The roll always supplies the ruler band, so its triangle points down.
-    public static let trianglePointsUp: Bool = false
-
-    public static func glowRadius(baseFontPx: Double) -> Double {
-        fontPx(normalizedBaseFontPx(baseFontPx), 0.625)
-    }
-
-    public static func triangleHalfWidth(baseFontPx: Double) -> Double {
-        fontPx(normalizedBaseFontPx(baseFontPx), 0.25)
-    }
-
-    public static func triangleHeight(baseFontPx: Double) -> Double {
-        fontPx(normalizedBaseFontPx(baseFontPx), 0.5)
-    }
-
-    public static func glowLeftExtent(baseFontPx: Double, playing: Bool) -> Double {
-        let radius = glowRadius(baseFontPx: baseFontPx)
-        return playing ? radius - lineWidth : radius
-    }
-
-    public static func glowRightExtent(baseFontPx: Double, playing: Bool) -> Double {
-        playing ? lineWidth / 2.0 : glowRadius(baseFontPx: baseFontPx)
-    }
-
-    public static func peakAlpha(playing: Bool) -> Double {
-        playing ? 0.13 : 0.06
-    }
-
-    private static func normalizedBaseFontPx(_ baseFontPx: Double) -> Double {
-        baseFontPx.isFinite && baseFontPx > 0
-            ? baseFontPx : GridCameraPolicy.seedBaseFontPx
-    }
 }
 
 // MARK: - Published presentation

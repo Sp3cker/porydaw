@@ -149,7 +149,8 @@ You can audition sounds directly inside Split Studio:
   that slice. A mapped slice plays at its key's pitch with that key's envelope
   (pan is not applied); an unmapped slice plays as recorded. With the waveform
   focused, **Space** starts or stops the selected slice, or the first slice when
-  none is selected.
+  none is selected. While a slice plays, a playhead like the main window's moves
+  across the waveform.
 - Click any key on the keyboard to audition it through the game audio engine
   with its pitch, pan, and envelope applied. Press an empty key and drag across
   the keyboard to audition each key you pass; dragging a mapped key moves it

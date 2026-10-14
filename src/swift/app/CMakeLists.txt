@@ -291,6 +291,7 @@ add_library(PorydawAppPresentation STATIC
     presentation/theme/ThemeColorTables.swift
     presentation/timeline/DisplayListWriter.swift
     presentation/timeline/PlayheadGuides.swift
+    presentation/timeline/SharedPlayheadAppearance.swift
     presentation/timeline/TimelineScrollbar.swift
     presentation/typography/LayoutSpaces.swift
     presentation/typography/Typography.swift

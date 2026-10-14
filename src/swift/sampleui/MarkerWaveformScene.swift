@@ -174,7 +174,7 @@ struct MarkerWaveformScene {
                 text: badge.text)
         }
         if let playheadFrame {
-            rect(position(playheadFrame), waveTop, fontPx / 12, waveHeight, playhead, width: width, height: height)
+            drawPlayhead(at: position(playheadFrame), fontPx: fontPx, width: width, height: height)
         }
         return writer.finish()
     }
@@ -187,6 +187,57 @@ struct MarkerWaveformScene {
         let label = String(format: "%.\(decimals)fs", Double(index) * step)
         rulerLabels[key] = label
         return label
+    }
+
+    /// The song editor's playing playhead: a left-trailing quadratic glow, a hairline
+    /// core and a down-pointing triangle on the ruler, painted above every label.
+    private mutating func drawPlayhead(at x: Double, fontPx: Double, width: Double, height: Double) {
+        let peak = SharedPlayheadAppearance.peakAlpha(playing: true)
+        let left = SharedPlayheadAppearance.glowLeftExtent(baseFontPx: fontPx, playing: true)
+        let right = SharedPlayheadAppearance.glowRightExtent(baseFontPx: fontPx, playing: true)
+        let segments = 8
+        for segment in 0..<segments {
+            let from = Double(segment) / Double(segments)
+            let to = Double(segment + 1) / Double(segments)
+            overRect(
+                x - left * (1 - from), 0, left / Double(segments), height,
+                SharedPlayheadAppearance.glowAlpha(peak: peak, at: from),
+                SharedPlayheadAppearance.glowAlpha(peak: peak, at: to), width: width, height: height)
+        }
+        overRect(x, 0, right, height, peak, 0, width: width, height: height)
+        let line = SharedPlayheadAppearance.lineWidth
+        overRect(x - line / 2, 0, line, height, 1, 1, width: width, height: height)
+        let half = SharedPlayheadAppearance.triangleHalfWidth(baseFontPx: fontPx)
+        let tall = SharedPlayheadAppearance.triangleHeight(baseFontPx: fontPx)
+        let rows = max(1, Int((tall * 2).rounded()))
+        let rowHeight = tall / Double(rows)
+        for row in 0..<rows {
+            let rowWidth = 2 * half * (1 - (Double(row) + 0.5) / Double(rows))
+            overRect(
+                x - rowWidth / 2, Double(row) * rowHeight, rowWidth, rowHeight, 1, 1, width: width, height: height)
+        }
+    }
+
+    /// A playhead-ink rect above labels whose alpha runs from `alphaLeft` to `alphaRight`,
+    /// clipped to the viewport with the gradient re-sampled at the clipped edges.
+    private mutating func overRect(
+        _ x: Double, _ y: Double, _ w: Double, _ h: Double,
+        _ alphaLeft: Double, _ alphaRight: Double, width: Double, height: Double
+    ) {
+        let x0 = max(0, x)
+        let y0 = max(0, y)
+        let x1 = min(width, x + w)
+        let y1 = min(height, y + h)
+        guard x1 > x0, y1 > y0, w > 0 else { return }
+        func ink(at edge: Double) -> UInt32 {
+            let alpha = alphaLeft + (alphaRight - alphaLeft) * (edge - x) / w
+            let scaled = Double(playhead >> 24) * min(1, max(0, alpha))
+            return (playhead & 0x00FF_FFFF) | UInt32(scaled.rounded()) << 24
+        }
+        writer.rect(
+            PdDlRect(
+                x: x0, y: y0, w: x1 - x0, h: y1 - y0, id: UInt64(PD_DL_ID_NONE),
+                argb: ink(at: x0), argbRight: ink(at: x1), flags: UInt32(PD_DL_RECT_OVER)))
     }
 
     private mutating func rect(
