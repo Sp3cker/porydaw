@@ -36,7 +36,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
     public var savedWindowWidth: Double = 0
     public var savedWindowHeight: Double = 0
     public var savedLibraryWidth: Double = 0
-    public var savedSliceHeight: Double = 0
+    public var savedKeyboardHeight: Double = 0
     @QtIgnored public let closeGuard = KitStudioCloseGuard()
     private weak var session: ApplicationSession?
     private var state: KitStudioPresenter?
@@ -241,8 +241,10 @@ public final class KitStudioWorkflow: QmlUncreatable {
             if let id = state.session.sources.last?.id {
                 state.session.createFirstSlice(source: id)
             }
-            let id = state.sliceId(row: 0)
-            state.dropSample(name: state.sliceName(id: id), onKey: onKey)
+            let newest = state.newestSliceId()
+            if newest != 0 {
+                state.dropSample(name: state.sliceName(id: newest), onKey: onKey)
+            }
         } catch { showAlert(error) }
     }
 
@@ -722,31 +724,32 @@ public final class KitStudioWorkflow: QmlUncreatable {
             savedWindowWidth = 0
             savedWindowHeight = 0
         }
-        let splits = session?.preferences.strings("splitStudioSplitters") ?? []
+        let splits = session?.preferences.strings("splitStudioPanes") ?? []
         let library = splits.count == 2 ? Double(splits[0]) : nil
-        let slices = splits.count == 2 ? Double(splits[1]) : nil
+        let keyboard = splits.count == 2 ? Double(splits[1]) : nil
         savedLibraryWidth =
             library.flatMap { (value: Double) -> Double? in value.isFinite && value > 0 ? value : nil } ?? 0
-        savedSliceHeight =
-            slices.flatMap { (value: Double) -> Double? in value.isFinite && value > 0 ? value : nil } ?? 0
+        savedKeyboardHeight =
+            keyboard.flatMap { (value: Double) -> Double? in value.isFinite && value > 0 ? value : nil } ?? 0
     }
-    public func persistGeometry(width: Int, height: Int, libraryWidth: Int, sliceHeight: Int) {
-        guard let preferences = session?.preferences, width > 0, height > 0, libraryWidth > 0, sliceHeight > 0 else {
+    public func persistGeometry(width: Int, height: Int, libraryWidth: Int, keyboardHeight: Int) {
+        guard let preferences = session?.preferences, width > 0, height > 0, libraryWidth > 0, keyboardHeight > 0
+        else {
             return
         }
         let size = "\(width)x\(height)"
-        let splits = [String(libraryWidth), String(sliceHeight)]
+        let splits = [String(libraryWidth), String(keyboardHeight)]
         if preferences.string(key: "splitStudioWindowSize", fallback: "") != size {
             preferences.setString(key: "splitStudioWindowSize", value: size)
         }
-        if preferences.strings("splitStudioSplitters") != splits {
-            preferences.setStrings("splitStudioSplitters", splits)
+        if preferences.strings("splitStudioPanes") != splits {
+            preferences.setStrings("splitStudioPanes", splits)
         }
         hasSavedWindowSize = true
         savedWindowWidth = Double(width)
         savedWindowHeight = Double(height)
         savedLibraryWidth = Double(libraryWidth)
-        savedSliceHeight = Double(sliceHeight)
+        savedKeyboardHeight = Double(keyboardHeight)
     }
 
     private func showAlert(_ error: any Error) {

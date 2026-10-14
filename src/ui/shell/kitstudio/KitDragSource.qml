@@ -8,7 +8,6 @@ Rectangle {
     required property Item dragLayer
     property Item home
     final property string sliceName: ""
-    final property string libraryPath: ""
     Drag.active: chipDrag.drag.active
     Drag.hotSpot.x: chipDrag.mouseX
     Drag.hotSpot.y: chipDrag.mouseY

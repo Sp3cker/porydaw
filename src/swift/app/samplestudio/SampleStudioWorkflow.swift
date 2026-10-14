@@ -1,5 +1,6 @@
 import Foundation
 import PorydawAppAudio
+import PorydawAppPresentation
 import PorydawVoicegroup
 import PorydawCore
 import PorydawDocument
@@ -45,6 +46,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         editorOpen && !committing && !stereoPromptOpen && !zonePickerOpen
     }
 
+    @QtTracked public var noteFormat = NumberFieldFormat(kind: .note)
     @QtTracked public var editorOpen = false
     @QtIgnored var onEditorOpenChanged: (() -> Void)?
     @QtTracked public var editorRevision = 0

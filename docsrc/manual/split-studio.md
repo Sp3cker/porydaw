@@ -25,8 +25,8 @@ a bottom footer:
   - Toolbar with zoom controls (**−**, **+**, **Fit**).
   - Waveform display showing slices and draggable slice markers.
   - **Snap to zero** toggle.
-  - Slice table listing each slice with its grip handle, number, name, Play
-    button, and Remove button.
+  - Slice table listing every slice in the kit, across all loaded files, with its
+    grip handle, number, name, Play button, and Remove button.
   - Keyboard zone editor with an audition stop button (**■ Stop**), zoom
     buttons (**−**, **+**), and 128 keys showing assigned slice badges and zone
     boundaries.
@@ -38,7 +38,9 @@ a bottom footer:
   readout (`<n> slices · <size> ROM`), the **Voicegroup** name field, **Close**,
   and **Save Voicegroup** (**Cmd/Ctrl+S**).
 
-Split Studio remembers its window size and divider positions between sessions.
+Split Studio remembers its window size, library width, and keyboard height
+between sessions. Drag the divider beside the library or above the keyboard to
+resize them.
 
 ## Drumkit and Keysplit layouts
 
@@ -62,6 +64,11 @@ and tracks its own markers, slices, and sample rate:
   Double-click a file or click **Open File…** to load it into a new file tab. To
   close a file tab, click its **×** button; closing a tab automatically clears any
   keyboard keys mapped to its slices.
+- **Adding one-shots**: Drag audio files from the sample library or from Finder
+  onto the slice table. Each file loads in a new tab as a single slice and goes
+  on the next free key from C2.
+- **Selecting slices**: Click a row to select its slice; the waveform switches to
+  that slice's file.
 - **Adding markers**: Click anywhere on the waveform to add a slice marker.
 - **Moving markers**: Drag a marker along the waveform to reposition the slice
   boundary.
@@ -102,8 +109,8 @@ Slices can be mapped across the 128-key keyboard (keys 0–127):
 - **Moving keys**: Drag a mapped key on the keyboard to move its slice to another
   key.
 - **Drag-and-drop mapping**: Drag the grip handle (`⋮⋮`) of any row in the slice
-  table onto a key, or drag an audio file directly from the sample library onto a
-  key to load and map it there.
+  table onto a key, or drag an audio file from the sample library or Finder onto
+  a key to load and map it there.
 - **Resizing key ranges** (Keysplit only): Drag the left or right edge handles of
   a selected key zone to adjust the key range that triggers that slice. Zones
   never overlap.

@@ -76,9 +76,14 @@ public final class SampleStudioAudition: QmlUncreatable {
     public func setAuditionKeyText(text: String) {
         guard let key = midiKey(from: text) else { auditionKeyInvalid = true; return }
         auditionKeyInvalid = false
-        guard key != auditionKey else { return }
-        auditionKey = key
-        auditionKeyText = "\(midiKeyName(key)) (\(key))"
+        setAuditionKey(key: key)
+    }
+    public func setAuditionKey(key: Int) {
+        let clamped = min(max(0, key), 127)
+        auditionKeyInvalid = false
+        guard clamped != auditionKey else { return }
+        auditionKey = clamped
+        auditionKeyText = "\(midiKeyName(clamped)) (\(clamped))"
         if playing { start(looped: looped) }
     }
 

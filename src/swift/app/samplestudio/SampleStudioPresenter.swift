@@ -152,6 +152,10 @@ public final class SampleStudioPresenter: QmlUncreatable {
         baseKeyInvalid = false
         update(5) { $0.baseKey = key }
     }
+    public func setBaseKey(key: Int) {
+        baseKeyInvalid = false
+        update(5) { $0.baseKey = min(max(0, key), 127) }
+    }
 
     public func chooseRate(index: Int) {
         guard index >= 0, index <= SampleRatePolicy.rates.count else { return }

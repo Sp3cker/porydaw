@@ -298,7 +298,7 @@ public final class MarkerWaveformModel: QmlUncreatable {
             samples: samples, pyramid: pyramid, width: width, height: height,
             scroll: scroll, spp: spp, gain: gain, markers: rows,
             badges: sliceBadges, highlight: highlight,
-            playheadFrame: playheadFrame, fontPx: baseFontPx)
+            playheadFrame: playheadFrame, fontPx: baseFontPx, sampleRate: sampleRate)
         let secondsPerPixel = spp / sampleRate
         if zoomSecondsPerPixel != secondsPerPixel {
             zoomSecondsPerPixel = secondsPerPixel

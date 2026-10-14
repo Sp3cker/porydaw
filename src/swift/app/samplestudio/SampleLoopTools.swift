@@ -260,14 +260,21 @@ public final class SampleLoopTools: QmlUncreatable {
         wave.onMarkerReleased = { [weak presenter] in presenter?.endMarkerGesture() }
     }
 
+    private var lastPeakFit = 1.0
     @QtIgnored
     public func publishWaveform(_ wave: MarkerWaveformModel, sourceChanged: Bool) {
         if sourceChanged {
+            // Peak-fit quiet samples the way Split Studio does; an explicit
+            // normalize gain already at or above the peak fit is preserved.
+            let peak = presenter.source.buffer.reduce(0.0) { (best: Float, sample: Float) -> Float in
+                max(best, abs(sample))
+            }
+            lastPeakFit = peak > 0.001 ? 1.0 / Double(peak) : 1.0
             wave.setSamples(
                 presenter.source.buffer, sampleRate: presenter.source.sampleRate,
-                gain: presenter.processed.normalizeGain)
+                gain: max(presenter.processed.normalizeGain, lastPeakFit))
         } else {
-            wave.setGain(presenter.processed.normalizeGain)
+            wave.setGain(max(presenter.processed.normalizeGain, lastPeakFit))
         }
         let p = presenter.params
         var markers: [(id: Int, frame: Int, kind: String, label: String)] = [

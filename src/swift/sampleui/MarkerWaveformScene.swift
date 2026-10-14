@@ -12,27 +12,39 @@ struct MarkerWaveformScene {
     private var waveform: UInt32 = 0
     private var crop: UInt32 = 0
     private var loop: UInt32 = 0
+    private var chipCrop: UInt32 = 0
+    private var chipLoop: UInt32 = 0
     private var playhead: UInt32 = 0
     private var text: UInt32 = 0
     private var sliceDim: UInt32 = 0
     private var sliceWash: UInt32 = 0
+    // Tick labels keyed by step and tick index, so steady-state frames format nothing.
+    private var rulerLabels: [Int: String] = [:]
+    private static let rulerSteps: [Double] = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 30, 60]
 
     mutating func setPalette(_ palette: GridPalette) {
         if paletteKey.count == 6,
-            paletteKey[0] == palette.menuBackground, paletteKey[1] == palette.sampleWaveformInk,
+            paletteKey[0] == palette.windowBackground, paletteKey[1] == palette.sampleWaveformInk,
             paletteKey[2] == palette.sampleCropHandle, paletteKey[3] == palette.sampleLoopHandle,
             paletteKey[4] == palette.playhead, paletteKey[5] == palette.windowText
         {
             return
         }
         paletteKey = [
-            palette.menuBackground, palette.sampleWaveformInk, palette.sampleCropHandle,
+            palette.windowBackground, palette.sampleWaveformInk, palette.sampleCropHandle,
             palette.sampleLoopHandle, palette.playhead, palette.windowText,
         ]
-        background = PaletteMath.argb(palette.menuBackground)
+        background = PaletteMath.argb(palette.windowBackground)
         waveform = PaletteMath.argb(palette.sampleWaveformInk)
         crop = PaletteMath.argb(palette.sampleCropHandle)
         loop = PaletteMath.argb(palette.sampleLoopHandle)
+        // Chip label ink contrasts against the filled marker colour.
+        chipCrop = PaletteMath.aaContrastInk(
+            fill: crop, light: 0xFFFF_FFFF, dark: 0xFF00_0000,
+            fallbackLight: 0xFFFF_FFFF, fallbackDark: 0xFF00_0000)
+        chipLoop = PaletteMath.aaContrastInk(
+            fill: loop, light: 0xFFFF_FFFF, dark: 0xFF00_0000,
+            fallbackLight: 0xFFFF_FFFF, fallbackDark: 0xFF00_0000)
         playhead = PaletteMath.argb(palette.playhead)
         text = PaletteMath.argb(palette.windowText)
         // Slice overlay inks derive from the keyed entries above: the single
@@ -46,28 +58,51 @@ struct MarkerWaveformScene {
         samples: [Float], pyramid: SamplePeakPyramid, width: Double, height: Double,
         scroll: Double, spp: Double, gain: Double, markers: [WaveformMarkerRow],
         badges: [(frame: Int, text: String)], highlight: (start: Int, end: Int)?,
-        playheadFrame: Int?, fontPx: Double
+        playheadFrame: Int?, fontPx: Double, sampleRate: Double = 1
     ) -> Data {
         guard width > 0, height > 0 else { return writer.finish() }
         rect(0, 0, width, height, background, width: width, height: height)
         guard !samples.isEmpty else { return writer.finish() }
         func position(_ frame: Int) -> Double { ((Double(frame) - scroll) / spp).rounded() }
-        let tabHeight = min(height / 3, fontPx * 3)
-        let waveHeight = height - tabHeight
+        // Time ruler above the marker tabs, sized from the base font.
+        let rulerHeight = fontPx * 1.3
+        let tabHeight = min((height - rulerHeight) / 3, fontPx * 3)
+        let waveTop = rulerHeight + tabHeight
+        let waveHeight = height - waveTop
+        writer.font(
+            PdDlFont(id: 0, weight: 400, letterSpacing: 0, familyOffset: 0, familyLength: 0), family: gridMonoFamily)
+        let rate = sampleRate.isFinite && sampleRate > 0 ? sampleRate : 1
+        let stepIndex =
+            Self.rulerSteps.firstIndex { (candidate: Double) -> Bool in candidate / (spp / rate) >= 72 }
+            ?? Self.rulerSteps.count - 1
+        let step = Self.rulerSteps[stepIndex]
+        var index = Int(ceil(scroll / rate / step))
+        while true {
+            let x = ((Double(index) * step * rate - scroll) / spp).rounded()
+            guard x < width else { break }
+            writer.label(
+                PdDlLabel(
+                    x: x + 2, y: 0, w: max(0, width - x - 2), h: rulerHeight,
+                    id: UInt64(PD_DL_ID_NONE), textOffset: 0, textLength: 0, argb: text,
+                    flags: UInt32(PD_DL_LABEL_CLIP),
+                    fontId: 0, pixelSize: UInt32(max(1, (fontPx * 0.85).rounded()))),
+                text: rulerLabel(index: index, stepIndex: stepIndex))
+            index += 1
+        }
         let loopStart = markers.first(where: { $0.kind == "loop" })
         let loopEnd = markers.last(where: { $0.kind == "loop" })
         if let loopStart, let loopEnd, loopStart.id != loopEnd.id {
             rect(
-                position(loopStart.frame), tabHeight, position(loopEnd.frame) - position(loopStart.frame), waveHeight,
-                (loop & 0x00FF_FFFF) | 0x1C00_0000, width: width, height: height)
+                position(loopStart.frame), waveTop, position(loopEnd.frame) - position(loopStart.frame), waveHeight,
+                (loop & 0x00FF_FFFF) | 0x2100_0000, width: width, height: height)
         }
         if let highlight {
             rect(
-                position(highlight.start), tabHeight, position(highlight.end) - position(highlight.start),
+                position(highlight.start), waveTop, position(highlight.end) - position(highlight.start),
                 waveHeight, sliceWash, width: width, height: height)
         }
-        let middle = tabHeight + waveHeight / 2
-        let scale = waveHeight * 0.48
+        let middle = waveTop + waveHeight / 2
+        let scale = waveHeight * 0.45
         // Without a highlight every column keeps the single accent; otherwise
         // columns outside the selected slice step down to the dim ink.
         let highlightStart = highlight?.start ?? Int.min
@@ -86,36 +121,43 @@ struct MarkerWaveformScene {
         if let first = markers.first(where: { $0.kind == "crop" }),
             let last = markers.last(where: { $0.kind == "crop" }), first.id != last.id
         {
-            rect(0, tabHeight, position(first.frame), waveHeight, 0x4600_0000, width: width, height: height)
+            rect(0, waveTop, position(first.frame), waveHeight, 0x4600_0000, width: width, height: height)
             rect(
-                position(last.frame), tabHeight, width - position(last.frame), waveHeight, 0x4600_0000, width: width,
+                position(last.frame), waveTop, width - position(last.frame), waveHeight, 0x4600_0000, width: width,
                 height: height)
         }
-        writer.font(PdDlFont(id: 0, weight: 400, letterSpacing: 0, familyOffset: 0, familyLength: 0), family: "")
         for marker in markers {
             let x = position(marker.frame)
             guard x >= 0, x <= width else { continue }
             if marker.kind == "slice" {
-                rect(x, 0, fontPx / 12, height, text, width: width, height: height)
+                rect(x, waveTop, max(2, (fontPx / 8).rounded()), height - waveTop, text, width: width, height: height)
+                // Filled triangle head widening downward across the tab band.
+                let headRows = 6
+                let headH = max(1, (fontPx * 0.16).rounded())
+                for row in 0..<headRows {
+                    let half = fontPx * 0.12 * Double(row + 1)
+                    rect(x - half, waveTop + Double(row) * headH, half * 2, headH, text, width: width, height: height)
+                }
                 continue
             }
             let color = marker.kind == "loop" ? loop : crop
-            rect(x, tabHeight, fontPx / 12, waveHeight, color, width: width, height: height)
+            let lineW = max(2, (fontPx / 8).rounded())
+            rect(x, waveTop, lineW, waveHeight, color, width: width, height: height)
+            // Filled chip header in the marker ink, label in the contrasting ink.
             let tabWidth = max(fontPx * 1.5, Double(marker.label.utf8.count + 2) * fontPx * 0.6)
             let tabX = min(max(0, x - tabWidth / 2), max(0, width - tabWidth))
-            let tabY = marker.kind == "loop" ? tabHeight / 2 : 0
-            let h = tabHeight / 2
-            rect(tabX, tabY, tabWidth, h, background, width: width, height: height)
-            rect(tabX, tabY + h - fontPx / 12, tabWidth, fontPx / 12, color, width: width, height: height)
-            if marker.selected {
-                rect(tabX, tabY, tabWidth, fontPx / 12, color, width: width, height: height)
-            }
+            let ink = marker.kind == "loop" ? chipLoop : chipCrop
+            // Crop chips ride the top half of the tab band, loop chips the
+            // bottom half, so neighbours stay readable when frames are close.
+            let chipH = tabHeight / 2
+            let chipY = marker.kind == "loop" ? rulerHeight + chipH : rulerHeight
+            rect(tabX, chipY, tabWidth, chipH, color, width: width, height: height)
             writer.label(
                 PdDlLabel(
-                    x: tabX, y: tabY, w: min(tabWidth, width), h: h,
-                    id: UInt64(marker.id), textOffset: 0, textLength: 0, argb: text,
+                    x: tabX, y: chipY, w: min(tabWidth, width), h: chipH,
+                    id: UInt64(marker.id), textOffset: 0, textLength: 0, argb: ink,
                     flags: UInt32(PD_DL_LABEL_CLIP | PD_DL_LABEL_ALIGN_CENTER),
-                    fontId: 0, pixelSize: UInt32(max(1, fontPx.rounded()))),
+                    fontId: 0, pixelSize: UInt32(max(1, (fontPx * 0.8).rounded()))),
                 text: marker.label)
         }
         for badge in badges {
@@ -125,16 +167,26 @@ struct MarkerWaveformScene {
             guard bx < width else { continue }
             writer.label(
                 PdDlLabel(
-                    x: bx, y: 0, w: width - bx, h: tabHeight,
+                    x: bx, y: rulerHeight, w: width - bx, h: tabHeight,
                     id: UInt64(PD_DL_ID_NONE), textOffset: 0, textLength: 0, argb: text,
                     flags: UInt32(PD_DL_LABEL_CLIP),
                     fontId: 0, pixelSize: UInt32(max(1, fontPx.rounded()))),
                 text: badge.text)
         }
         if let playheadFrame {
-            rect(position(playheadFrame), tabHeight, fontPx / 12, waveHeight, playhead, width: width, height: height)
+            rect(position(playheadFrame), waveTop, fontPx / 12, waveHeight, playhead, width: width, height: height)
         }
         return writer.finish()
+    }
+
+    private mutating func rulerLabel(index: Int, stepIndex: Int) -> String {
+        let key = index &* Self.rulerSteps.count &+ stepIndex
+        if let cached = rulerLabels[key] { return cached }
+        let step = Self.rulerSteps[stepIndex]
+        let decimals = step < 0.1 ? 2 : step < 10 ? 1 : 0
+        let label = String(format: "%.\(decimals)fs", Double(index) * step)
+        rulerLabels[key] = label
+        return label
     }
 
     private mutating func rect(

@@ -99,10 +99,11 @@ internal func runWaveformChecks(_ report: CheckReport) {
             guard pd_dl_decode(raw.baseAddress, raw.count, &view),
                 let header = view.header, let labels = view.labels
             else { return false }
-            return Int(header.pointee.labelCount) == model.markers.count
-                && (0..<Int(header.pointee.labelCount)).allSatisfy { (index: Int) -> Bool in
-                    labels[index].textLength > 0
-                }
+            let tabs = (0..<Int(header.pointee.labelCount)).filter { (index: Int) -> Bool in
+                labels[index].id != UInt64(PD_DL_ID_NONE)
+            }
+            return tabs.count == model.markers.count
+                && tabs.allSatisfy { (index: Int) -> Bool in labels[index].textLength > 0 }
         },
         message: "marker tabs draw one nonempty label per published marker")
     params.cropStart = params.loopStart
@@ -164,7 +165,8 @@ internal func runWaveformChecks(_ report: CheckReport) {
             var badges: [(x: Double, text: String)] = []
             for index in 0..<Int(header.pointee.labelCount) {
                 let label = labels[index]
-                guard label.id == UInt64(PD_DL_ID_NONE) else { continue }
+                // Ruler ticks share the id-less label kind but sit in the top band.
+                guard label.id == UInt64(PD_DL_ID_NONE), label.y > 0 else { continue }
                 let base = UnsafeRawPointer(text.advanced(by: Int(label.textOffset)))
                 let bytes = Data(bytes: base, count: Int(label.textLength))
                 guard let string = String(data: bytes, encoding: .utf8) else { return nil }

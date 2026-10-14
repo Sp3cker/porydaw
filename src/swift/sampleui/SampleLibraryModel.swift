@@ -27,11 +27,14 @@ public final class SampleLibraryFolderRow: QmlUncreatable {
 public final class SampleLibraryFileRow: QmlUncreatable {
     public let path: String
     public let name: String
+    public let fileURL: String
     public var selected: Bool
 
     init(path: String, selected: Bool) {
         self.path = path
-        name = URL(fileURLWithPath: path).lastPathComponent
+        let url = URL(fileURLWithPath: path)
+        name = url.lastPathComponent
+        fileURL = url.absoluteString
         self.selected = selected
     }
 }

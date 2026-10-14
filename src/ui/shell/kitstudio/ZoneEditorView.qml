@@ -63,6 +63,10 @@ ColumnLayout {
             if (view.editor.selectedZone >= 0)
                 view.revealKeys(view.editor.selectedZoneFirstKey, view.editor.selectedZoneLastKey)
         }
+        function onSelectedSliceChanged(): void {
+            if (view.editor.selectedZone >= 0)
+                view.revealKeys(view.editor.selectedZoneFirstKey, view.editor.selectedZoneLastKey)
+        }
     }
     function pressKey(key: int): void {
         view.dragZone = view.editor.zoneIndexAtKey(key)
@@ -94,9 +98,8 @@ ColumnLayout {
         view.edgeKey = start ? view.editor.zoneStartKey(zone) : view.editor.zoneEndKey(zone)
     }
     function dragEdge(x: real): void {
-        if (view.edgeZone < 0)
-            return
-        view.edgeKey = view.keyAt(x)
+        if (view.edgeZone >= 0)
+            view.edgeKey = view.keyAt(x)
     }
     function releaseEdge(): void {
         if (view.edgeZone >= 0)
@@ -106,35 +109,36 @@ ColumnLayout {
         view.edgeKey = 0
     }
     function revealKeys(first: int, last: int): void {
-        const flick = keyboardScroll.contentItem as Flickable
         const visibleWidth = keyboardScroll.width
-        if (!flick || visibleWidth <= 0)
+        if (!keyboardScroll || visibleWidth <= 0)
             return
         const left = view.xOf(Math.max(0, first))
         const right = view.endXOf(Math.min(127, last))
-        if (left >= flick.contentX && right <= flick.contentX + visibleWidth)
+        if (left >= keyboardScroll.contentX && right <= keyboardScroll.contentX + visibleWidth)
             return
-        flick.contentX = Math.max(0, Math.min(keyboardScroll.contentWidth - visibleWidth, (left + right - visibleWidth) / 2))
+        keyboardScroll.contentX = Math.max(0, Math.min(keyboardScroll.contentWidth - visibleWidth, (left + right - visibleWidth) / 2))
     }
 
     RowLayout {
         Layout.fillWidth: true
         spacing: view.paneSpacing
-        Label { text: qsTr("Keyboard"); color: view.colors.windowText }
+        Label { text: qsTr("Keyboard"); font.bold: true; color: view.colors.windowText }
         Button { text: qsTr("■ Stop"); onClicked: view.workflow.stopAudition() }
         Item { Layout.fillWidth: true }
-        Button { Layout.preferredWidth: 2.5 * view.unit; text: "−"; Accessible.name: qsTr("Zoom keyboard out"); onClicked: view.keyboardZoom = Math.max(0.5, view.keyboardZoom / 1.25) }
-        Button { Layout.preferredWidth: 2.5 * view.unit; text: "+"; Accessible.name: qsTr("Zoom keyboard in"); onClicked: view.keyboardZoom = Math.min(4, view.keyboardZoom * 1.25) }
+        ToolButton { text: "−"; Accessible.name: qsTr("Zoom keyboard out"); onClicked: view.keyboardZoom = Math.max(0.5, view.keyboardZoom / 1.25) }
+        ToolButton { text: "+"; Accessible.name: qsTr("Zoom keyboard in"); onClicked: view.keyboardZoom = Math.min(4, view.keyboardZoom * 1.25) }
     }
-    ScrollView {
+    Flickable {
         id: keyboardScroll
         objectName: "splitStudioKeyboardScroll"
         Layout.fillWidth: true
-        Layout.preferredHeight: keyboardBoard.height + keyboardScroll.ScrollBar.horizontal.height
+        Layout.preferredHeight: keyboardBoard.height
         contentWidth: view.whitesBefore(128) * view.whiteWidth
         contentHeight: keyboardBoard.height
-        ScrollBar.horizontal.policy: ScrollBar.AlwaysOn
-        ScrollBar.vertical.policy: ScrollBar.AlwaysOff
+        flickableDirection: Flickable.HorizontalFlick
+        clip: true
+        ScrollBar.horizontal: ScrollBar { policy: ScrollBar.AlwaysOff }
+        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AlwaysOff }
         onWidthChanged: if (width > 0 && !revealed) { revealed = true; view.revealKeys(36, 72) }
         property bool revealed: false
         Item {
@@ -153,9 +157,9 @@ ColumnLayout {
                     height: view.keysHeight
                     Rectangle {
                         anchors.fill: parent
-                        color: view.colors.windowBackground
-                        border.color: view.colors.windowText
-                        border.width: view.unit / 13
+                        color: view.colors.keyboardNatural
+                        border.color: view.colors.keyboardSeparator
+                        border.width: Math.max(1, Math.round(view.unit / 13))
                     }
                     Label {
                         visible: whiteCell.index % 12 === 0
@@ -191,9 +195,9 @@ ColumnLayout {
                     z: 1
                     Rectangle {
                         anchors.fill: parent
-                        color: view.colors.chromeBackground
-                        border.color: view.colors.windowText
-                        border.width: view.unit / 13
+                        color: view.colors.keyboardBlack
+                        border.color: view.colors.keyboardSeparator
+                        border.width: Math.max(1, Math.round(view.unit / 13))
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -210,40 +214,86 @@ ColumnLayout {
             Repeater {
                 model: view.editor.zoneRows
                 Item {
-                    id: zoneFill
+                    id: zoneWhites
                     required property int startKey
                     required property int endKey
-                    required property int sliceBadge
                     required property bool selected
                     z: 2
                     Repeater {
-                        model: zoneFill.endKey - zoneFill.startKey + 1
+                        model: zoneWhites.endKey - zoneWhites.startKey + 1
                         Rectangle {
                             required property int index
-                            readonly property int key: zoneFill.startKey + index
-                            readonly property bool black: view.isBlack(key)
+                            readonly property int key: zoneWhites.startKey + index
+                            visible: !view.isBlack(key)
                             x: view.xOf(key)
                             y: 0
-                            width: black ? view.blackWidth : view.whiteWidth
-                            height: black ? view.blackHeight : view.keysHeight
-                            color: view.colors.tabSelectedBackground
-                            border.color: view.colors.windowText
-                            border.width: zoneFill.selected ? view.unit / 6 : view.unit / 13
+                            width: view.whiteWidth
+                            height: view.keysHeight
+                            color: view.colors.keyboardActiveKey
+                            border.color: zoneWhites.selected ? view.colors.selectionEdge : view.colors.keyboardSeparator
+                            border.width: zoneWhites.selected ? Math.max(2, Math.round(view.unit / 6)) : Math.max(1, Math.round(view.unit / 13))
+                        }
+                    }
+                }
+            }
+            Repeater {
+                model: view.editor.zoneRows
+                Item {
+                    id: zoneBlacks
+                    required property int startKey
+                    required property int endKey
+                    required property bool selected
+                    z: 3
+                    Repeater {
+                        model: zoneBlacks.endKey - zoneBlacks.startKey + 1
+                        Rectangle {
+                            id: blackFill
+                            required property int index
+                            readonly property int key: zoneBlacks.startKey + index
+                            visible: view.isBlack(key)
+                            x: view.xOf(key)
+                            y: 0
+                            width: view.blackWidth
+                            height: view.blackHeight
+                            color: view.colors.keyboardBlack
+                            border.color: zoneBlacks.selected ? view.colors.selectionEdge : view.colors.keyboardSeparator
+                            border.width: zoneBlacks.selected ? Math.max(2, Math.round(view.unit / 6)) : Math.max(1, Math.round(view.unit / 13))
                             Rectangle {
-                                visible: zoneFill.sliceBadge > 0
-                                width: 1.5 * view.unit
-                                height: 1.5 * view.unit
-                                radius: 0.75 * view.unit
-                                color: view.colors.windowText
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                anchors.bottom: parent.bottom
-                                anchors.bottomMargin: view.paneSpacing
-                                Label {
-                                    anchors.centerIn: parent
-                                    text: zoneFill.sliceBadge
-                                    font: view.captionFont
-                                    color: view.colors.windowBackground
-                                }
+                                anchors.fill: parent
+                                anchors.margins: blackFill.border.width
+                                color: view.colors.keyboardActiveKey
+                                opacity: 0.55
+                            }
+                        }
+                    }
+                }
+            }
+            Repeater {
+                model: view.editor.zoneRows
+                Item {
+                    id: zoneBadges
+                    required property int startKey
+                    required property int endKey
+                    required property int sliceBadge
+                    z: 4
+                    Repeater {
+                        model: zoneBadges.endKey - zoneBadges.startKey + 1
+                        Rectangle {
+                            required property int index
+                            readonly property int key: zoneBadges.startKey + index
+                            readonly property bool black: view.isBlack(key)
+                            visible: zoneBadges.sliceBadge > 0
+                            width: (black ? 1.0 : 1.35) * view.unit
+                            height: (black ? 1.0 : 1.35) * view.unit
+                            radius: width / 2
+                            color: view.colors.keyboardBlack
+                            x: view.xOf(key) + ((black ? view.blackWidth : view.whiteWidth) - width) / 2
+                            y: (black ? view.blackHeight : view.keysHeight) - height - view.unit * 0.5
+                            Label {
+                                anchors.centerIn: parent
+                                text: zoneBadges.sliceBadge
+                                font: view.captionFont
+                                color: view.colors.keyboardNatural
                             }
                         }
                     }
@@ -257,20 +307,22 @@ ColumnLayout {
                     required property int startKey
                     required property int endKey
                     required property bool selected
-                    visible: edge.selected
+                    z: 5
+                    visible: edge.selected && view.editor.mode === 1
                     Rectangle {
-                        z: 3
-                        x: view.xOf(edge.startKey) - view.unit / 3
+                        x: view.xOf(edge.startKey) - width / 2
                         y: 0
-                        width: 2 * view.unit / 3
-                        height: 2 * view.unit
-                        color: view.colors.windowText
+                        width: view.unit / 3
+                        height: view.keysHeight
+                        color: view.colors.selectionEdge
                         MouseArea {
-                            anchors.fill: parent
+                            x: -view.unit / 3
+                            width: parent.width + 2 * view.unit / 3
+                            height: parent.height
                             cursorShape: Qt.SizeHorCursor
                             Accessible.name: qsTr("Resize zone start")
                             onPressed: view.pressEdge(edge.index, true)
-                            onPositionChanged: mouse => {
+                            onPositionChanged: function(mouse) {
                                 if (pressed)
                                     view.dragEdge(mapToItem(keyboardBoard, mouse.x, mouse.y).x)
                             }
@@ -279,18 +331,19 @@ ColumnLayout {
                         }
                     }
                     Rectangle {
-                        z: 3
-                        x: view.endXOf(edge.endKey) - view.unit / 3
+                        x: view.endXOf(edge.endKey) - width / 2
                         y: 0
-                        width: 2 * view.unit / 3
-                        height: 2 * view.unit
-                        color: view.colors.windowText
+                        width: view.unit / 3
+                        height: view.keysHeight
+                        color: view.colors.selectionEdge
                         MouseArea {
-                            anchors.fill: parent
+                            x: -view.unit / 3
+                            width: parent.width + 2 * view.unit / 3
+                            height: parent.height
                             cursorShape: Qt.SizeHorCursor
                             Accessible.name: qsTr("Resize zone end")
                             onPressed: view.pressEdge(edge.index, false)
-                            onPositionChanged: mouse => {
+                            onPositionChanged: function(mouse) {
                                 if (pressed)
                                     view.dragEdge(mapToItem(keyboardBoard, mouse.x, mouse.y).x)
                             }
@@ -302,21 +355,22 @@ ColumnLayout {
             }
             DropArea {
                 anchors.fill: parent
-                keys: ["porydaw-sample", "porydaw-library"]
                 onDropped: drop => {
                     const event = drop as DragEvent
                     if (!event)
                         return
                     const key = view.keyAt(event.x)
-                    const source = event.source as KitDragSource
-                    if (!source)
+                    if (event.hasUrls && event.urls.length > 0) {
+                        view.workflow.dropLibrarySample("%1".arg(event.urls[0]), key)
+                        for (let i = 1; i < event.urls.length; ++i)
+                            view.workflow.loadSource("%1".arg(event.urls[i]))
+                        event.acceptProposedAction()
                         return
-                    if (source.sliceName.length > 0)
-                        view.editor.dropSample(source.sliceName, key)
-                    else if (source.libraryPath.length > 0)
-                        view.workflow.dropLibrarySample(source.libraryPath, key)
-                    else
+                    }
+                    const chip = event.source as KitDragSource
+                    if (!chip || chip.sliceName.length === 0)
                         return
+                    view.editor.dropSample(chip.sliceName, key)
                     event.acceptProposedAction()
                 }
             }

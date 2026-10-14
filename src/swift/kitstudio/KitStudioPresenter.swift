@@ -411,6 +411,11 @@ public final class KitStudioPresenter: QmlUncreatable {
                 target.createFirstSlice(source: id)
             }
         }
+        // Slices exist but nothing is selected (fresh file load): show slice 1
+        // in the inspector instead of an empty panel.
+        if selectedZone < 0, !zones.isEmpty {
+            selectZone(row: 0)
+        }
     }
 
     public func selectSource(row: Int) {
@@ -520,9 +525,25 @@ public final class KitStudioPresenter: QmlUncreatable {
         changeSession { _ = $0.setSourceRate(source: id, rate: rate) }
     }
 
+    /// Kit-wide table order: every slice across all loaded files, in kit
+    /// number order, so added one-shots stay visible. Selecting a row
+    /// switches to its file's tab through selectSlice.
     public func sliceId(row: Int) -> Int {
-        guard let source = currentSource, source.slices.indices.contains(row) else { return 0 }
-        return draft.sliceIds[KitDraft.SliceKey(source: source.id, identity: source.slices[row].id)] ?? 0
+        guard row >= 0 else { return 0 }
+        var count = 0
+        for source in session.sources {
+            if row - count < source.slices.count {
+                let identity = source.slices[row - count].id
+                return draft.sliceIds[KitDraft.SliceKey(source: source.id, identity: identity)] ?? 0
+            }
+            count += source.slices.count
+        }
+        return 0
+    }
+
+    /// Newest slice id for scroll-to-row after a table drop add; 0 when empty.
+    public func newestSliceId() -> Int {
+        draft.sliceIds.values.max() ?? 0
     }
 
     public func sliceName(id: Int) -> String { sliceValue(id)?.name ?? "" }
@@ -693,7 +714,9 @@ public final class KitStudioPresenter: QmlUncreatable {
             return KitSourceRow(source: entry.element, active: active)
         }
         syncModel(sourceRows, sourceValues, matches: { (lhs: KitSourceRow, rhs: KitSourceRow) -> Bool in lhs === rhs })
-        sliceCount = currentSource?.slices.count ?? 0
+        sliceCount = session.sources.reduce(0) { (total: Int, source: KitSourceSession.Source) -> Int in
+            total + source.slices.count
+        }
         sourceRate = currentSource.flatMap { Int(exactly: $0.targetRate.rounded()) } ?? 0
         if let currentSource {
             let rate = currentSource.sample.sampleRate
@@ -710,8 +733,16 @@ public final class KitStudioPresenter: QmlUncreatable {
                 }
             }
             if displayedSource != activeSource || displayedWaveform !== waveform {
+                let buffer = currentSource?.sample.buffer ?? []
+                // Amplitude fit: quiet one-shots fill the height like the mockup.
+                var peak: Float = 0
+                for value in buffer {
+                    let magnitude = value >= 0 ? value : -value
+                    if magnitude > peak { peak = magnitude }
+                }
+                let fit = peak > 0.01 ? min(8, 0.9 / Double(peak)) : 1
                 waveform.setSamples(
-                    currentSource?.sample.buffer ?? [], sampleRate: currentSource?.sample.sampleRate ?? 1, gain: 1)
+                    buffer, sampleRate: currentSource?.sample.sampleRate ?? 1, gain: fit)
                 displayedSource = activeSource
                 displayedWaveform = waveform
             }

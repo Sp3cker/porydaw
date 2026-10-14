@@ -325,6 +325,8 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/DialogWindow.qml
         src/ui/shell/DisclosureLabel.qml
         src/ui/shell/ValidatedTextField.qml
+        src/ui/shell/StudioToggle.qml
+        src/ui/shell/NoteStepper.qml
         src/ui/shell/AboutDialog.qml
         src/ui/shell/TransportBar.qml
         src/ui/shell/TransportButton.qml

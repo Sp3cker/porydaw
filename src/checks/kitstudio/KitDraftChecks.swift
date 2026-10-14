@@ -13,8 +13,45 @@ public func runKitDraftSuite(_ report: CheckReport) {
     checkKitPresenterZones(report)
     checkKitPresenterDirty(report)
     checkKitPresenterSlices(report)
+    checkKitWholeFileAdd(report)
     checkKitPresenterVoicegroupName(report)
     checkKitPresenterAudition(report)
+}
+
+@MainActor
+private func checkKitWholeFileAdd(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::wholeFileAdd")
+    let p = KitStudioPresenter()
+    p.open()
+    p.addSource(
+        ImportedSample(buffer: [Float](repeating: 0.5, count: 256), sampleRate: 44100, suggestedName: "kick"),
+        autoPlaceFirstSlice: true)
+    r.expectEqual(expected: 1, actual: p.sliceCount, what: "whole-file add lists one kit slice")
+    let firstId = p.sliceId(row: 0)
+    r.expect(firstId != 0, message: "kit row zero resolves a slice id")
+    r.expectEqual(expected: 1, actual: p.sliceOrdinal(id: firstId), what: "first slice is kit number one")
+    let firstName = p.sliceName(id: firstId)
+    r.expect(
+        p.draft.drumkitZones.contains { (zone: KitZone) -> Bool in zone.sampleName == firstName && zone.startKey == 36
+        },
+        message: "first one-shot auto-places on C2")
+    p.addSource(
+        ImportedSample(buffer: [Float](repeating: 0.25, count: 256), sampleRate: 44100, suggestedName: "snare"),
+        autoPlaceFirstSlice: true)
+    r.expectEqual(expected: 2, actual: p.sliceCount, what: "second file appends to the kit-wide table")
+    let secondId = p.sliceId(row: 1)
+    r.expect(secondId != 0 && secondId != firstId, message: "kit row one is the new slice")
+    r.expectEqual(expected: 2, actual: p.sliceOrdinal(id: secondId), what: "new slice takes kit number two")
+    let secondName = p.sliceName(id: secondId)
+    r.expect(
+        p.draft.drumkitZones.contains { (zone: KitZone) -> Bool in zone.sampleName == secondName && zone.startKey == 37
+        },
+        message: "second one-shot takes the next free key")
+    p.selectSlice(id: secondId)
+    r.expectEqual(expected: secondId, actual: p.selectedSlice, what: "row click selects the new slice")
+    r.expect(
+        p.sliceAddress(secondId)?.source == p.session.sources.last?.id,
+        message: "selecting the new row resolves its file tab")
 }
 
 private func sampleZone(

@@ -13,7 +13,7 @@ TextField {
     Rectangle {
         anchors.fill: parent
         color: "transparent"
-        radius: 2
+        radius: Math.max(4, Math.round(field.font.pixelSize * 0.46))
         border.color: field.colors.errorText
         border.width: Math.max(1, Math.round(field.font.pixelSize / 7))
         visible: field.invalid
