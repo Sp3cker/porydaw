@@ -27,9 +27,9 @@ a bottom footer:
   - **Snap to zero** toggle.
   - Slice table listing every slice in the kit, across all loaded files, with its
     grip handle, number, name, Play button, and Remove button.
-  - Keyboard zone editor with an audition stop button (**■ Stop**), zoom
-    buttons (**−**, **+**), and 128 keys showing assigned slice badges and zone
-    boundaries.
+  - Keyboard zone editor with an audition stop button (**■ Stop**), zoom out and
+    zoom in buttons (magnifier icons), and 128 keys showing assigned slice badges
+    and zone boundaries.
 - **Inspector** (right): Parameters for the selected key, including **Sample
   rate** (**File**, **Saved at**), **Selected key** (note name, MIDI number,
   **Slice**), **Pitch** (**Plays at**), **Pan** (Drumkit only), **Envelope**

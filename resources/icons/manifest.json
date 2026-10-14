@@ -19,6 +19,10 @@
       "disclosureClosed": "caret-right",
       "disclosureOpen": "caret-down"
     },
+    "regular": {
+      "zoomIn": "search-plus",
+      "zoomOut": "search-minus"
+    },
     "light": {
       "editSample": "pencil-alt",
       "sample": "waveform",
@@ -67,6 +71,8 @@
     "submenuArrow": "E01A",
     "disclosureClosed": "E01B",
     "disclosureOpen": "E01C",
-    "metronome": "E01D"
+    "metronome": "E01D",
+    "zoomIn": "E01E",
+    "zoomOut": "E01F"
   }
 }

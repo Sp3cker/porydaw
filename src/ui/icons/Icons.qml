@@ -34,4 +34,6 @@ QtObject {
     readonly property IconSpec velocity: IconSpec { glyph: "\ue013"; fit: 1.0000 }
     readonly property IconSpec velocityLabels: IconSpec { glyph: "\ue014"; fit: 1.0000 }
     readonly property IconSpec wave: IconSpec { glyph: "\ue015"; fit: 0.8000 }
+    readonly property IconSpec zoomIn: IconSpec { glyph: "\ue01e"; fit: 1.0000 }
+    readonly property IconSpec zoomOut: IconSpec { glyph: "\ue01f"; fit: 1.0000 }
 }

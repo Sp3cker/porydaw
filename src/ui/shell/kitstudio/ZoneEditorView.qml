@@ -4,6 +4,7 @@ import QtQuick
 import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
+import Porydaw.Icons
 import PorydawApp
 
 ColumnLayout {
@@ -119,14 +120,31 @@ ColumnLayout {
         keyboardScroll.contentX = Math.max(0, Math.min(keyboardScroll.contentWidth - visibleWidth, (left + right - visibleWidth) / 2))
     }
 
+    component ZoomButton: ToolButton {
+        id: zoomButton
+        required property IconSpec glyph
+        contentItem: Item {
+            implicitWidth: zoomIcon.width
+            implicitHeight: zoomIcon.height
+            AppIcon {
+                id: zoomIcon
+                anchors.centerIn: parent
+                width: Math.round(view.unit)
+                height: width
+                icon: zoomButton.glyph
+                color: zoomButton.enabled ? view.colors.windowText : view.colors.disabledText
+            }
+        }
+    }
+
     RowLayout {
         Layout.fillWidth: true
         spacing: view.paneSpacing
         Label { text: qsTr("Keyboard"); font.bold: true; color: view.colors.windowText }
         Button { text: qsTr("■ Stop"); onClicked: view.workflow.stopAudition() }
         Item { Layout.fillWidth: true }
-        ToolButton { text: "−"; Accessible.name: qsTr("Zoom keyboard out"); onClicked: view.keyboardZoom = Math.max(0.5, view.keyboardZoom / 1.25) }
-        ToolButton { text: "+"; Accessible.name: qsTr("Zoom keyboard in"); onClicked: view.keyboardZoom = Math.min(4, view.keyboardZoom * 1.25) }
+        ZoomButton { glyph: Icons.zoomOut; Accessible.name: qsTr("Zoom keyboard out"); onClicked: view.keyboardZoom = Math.max(0.5, view.keyboardZoom / 1.25) }
+        ZoomButton { glyph: Icons.zoomIn; Accessible.name: qsTr("Zoom keyboard in"); onClicked: view.keyboardZoom = Math.min(4, view.keyboardZoom * 1.25) }
     }
     Flickable {
         id: keyboardScroll
