@@ -48,6 +48,25 @@ ShellLaneSupport {
         shell = null
         wait(0)
     }
+    function test_quitAsksInFrontOfSplitStudio() {
+        const session = openShell().session
+        session.openProject(rootPath)
+        verify(waitForNative(function() { return session.projectOpen }, 30000), "sample fixture opens")
+        const studio = session.kitStudio()
+        studio.requestOpen()
+        verify(waitForNative(function() { const w = child("splitStudioWindow"); return w !== null && w.visible }, 10000))
+        const window = child("splitStudioWindow")
+        studio.loadSource(rootPath + "/samplesources/hires_tone.wav")
+        verify(waitForNative(function() { return studio.windowOpen && window.editor.dirty }, 10000), "kit has unsaved work")
+        shell.close()
+        verify(waitForNative(function() { return studio.promptOpen }, 5000), "quitting asks about the unsaved kit")
+        const prompt = findChild(window, "splitStudioClosePrompt")
+        verify(prompt !== null, "the save prompt exists")
+        verify(waitForNative(function() { return prompt.visible }, 5000), "the save prompt shows")
+        const parentIsStudio = prompt.parent === window.contentItem
+        studio.answerPrompt(1)
+        verify(parentIsStudio, "the save prompt shows in Split Studio, which stays above the shell")
+    }
     function test_keyboardDragsAuditionOrMoveWithoutScrolling() {
         const session = openShell().session
         session.openProject(rootPath)

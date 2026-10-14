@@ -347,7 +347,7 @@ ThemedWindow {
     Dialog {
         id: closePrompt
         objectName: "splitStudioClosePrompt"
-        parent: studio.workflow.promptForClose ? (studio.transientParent as Window).contentItem : studio.contentItem
+        parent: studio.contentItem
         anchors.centerIn: parent
         width: 35 * studio.unit
         title: qsTr("Save Split Studio changes?")
@@ -355,6 +355,8 @@ ThemedWindow {
         focus: true
         closePolicy: Popup.NoAutoClose
         visible: studio.workflow.promptOpen
+        // Quit and project-close asks come from the shell; bring the studio forward to answer.
+        onAboutToShow: studio.present()
         contentItem: ColumnLayout {
             spacing: studio.spacing
             Label { Layout.fillWidth: true; text: qsTr("Save the voicegroup before closing?"); wrapMode: Text.WordWrap; color: studio.colors.windowText }

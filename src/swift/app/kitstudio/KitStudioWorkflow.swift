@@ -19,7 +19,6 @@ public final class KitStudioWorkflow: QmlUncreatable {
     public var presenterRevision: Int = 0
     public var saving: Bool = false
     public var promptOpen: Bool = false
-    public var promptForClose: Bool = false
     public var overwritePromptOpen: Bool = false
     public var overwritePromptText: String = ""
     public var orphanCleanupOpen: Bool = false
@@ -590,18 +589,13 @@ public final class KitStudioWorkflow: QmlUncreatable {
             proceed()
             return
         }
-        promptForClose = true
         closeGuard.request(
             source: source, dirty: state?.dirty ?? false,
             proceed: { [weak self] in
-                self?.promptForClose = false
                 self?.close()
                 proceed()
             },
-            cancel: { [weak self] in
-                self?.promptForClose = false
-                cancel()
-            })
+            cancel: cancel)
     }
 
 
@@ -703,7 +697,6 @@ public final class KitStudioWorkflow: QmlUncreatable {
         closeWaitTask?.cancel()
         pendingTask = nil
         closeWaitTask = nil
-        promptForClose = false
         overwritePromptOpen = false
         overwritePromptText = ""
         overwriteArmed = false
