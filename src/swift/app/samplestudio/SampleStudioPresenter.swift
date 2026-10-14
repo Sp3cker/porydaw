@@ -30,6 +30,7 @@ public final class SampleStudioPresenter: QmlUncreatable {
     @QtTracked public var baseKey = 60
     @QtTracked public var baseKeyText = "C4 (60)"
     @QtTracked public var fineTuneCents = 0.0
+    @QtTracked public var fineTuneText = "0.00"
     public var rateChoices: [String] = []
     @QtTracked public var rateIndex = -1
     @QtTracked public var rateText = ""
@@ -88,6 +89,9 @@ public final class SampleStudioPresenter: QmlUncreatable {
             ] + SampleRatePolicy.rates.map(String.init)
     }
 
+    /// The symbol suffix the sample registers under; the field keeps the typed text.
+    @QtIgnored public var registeredName: String { editName ?? SampleNames.sanitize(sampleName) }
+
     public func setSampleName(name: String) {
         guard !nameReadOnly else { return }
         sampleName = name
@@ -102,12 +106,12 @@ public final class SampleStudioPresenter: QmlUncreatable {
                 valid
                 ? "Saves over DirectSoundWaveData_\(editName)'s sample data"
                 : "the sample keeps its registered name (\(editName))."
-        } else if let error = validateNewName(sampleName) {
+        } else if let error = validateNewName(registeredName) {
             canCommit = false
             nameStatus = error
         } else {
             canCommit = hasSource
-            nameStatus = "Registers as DirectSoundWaveData_\(sampleName)"
+            nameStatus = "Registers as DirectSoundWaveData_\(registeredName)"
         }
     }
 
@@ -136,6 +140,10 @@ public final class SampleStudioPresenter: QmlUncreatable {
     public func setLoopStart(value: Int) { update(3) { $0.loopStart = value } }
     public func setLoopEnd(value: Int) { update(4) { $0.loopEnd = value } }
     public func setFineTuneCents(value: Double) { update(6) { $0.fineTuneCents = value } }
+    public func commitFineTuneCentsText(text: String) {
+        guard let parsed = SampleStudioReadouts.decimalValue(from: text) else { return }
+        update(6) { $0.fineTuneCents = (parsed * 100).rounded() / 100 }
+    }
     public func setNormalizeMode(index: Int) {
         guard let mode = SampleEditParams.NormalizeMode(rawValue: index) else { return }
         update(-1) { $0.normalizeMode = mode }
@@ -143,7 +151,7 @@ public final class SampleStudioPresenter: QmlUncreatable {
     public func setLoopOn(enabled: Bool) { update(-1) { $0.loopOn = enabled } }
 
     public func setBaseKeyText(text: String) {
-        guard let key = SampleStudioReadouts.midiKey(from: text) else { return }
+        guard let key = midiKey(from: text) else { return }
         update(5) { $0.baseKey = key }
     }
 
@@ -153,8 +161,8 @@ public final class SampleStudioPresenter: QmlUncreatable {
     }
 
     public func commitRateText(text: String) {
-        let parsed = Double(text.trimmingCharacters(in: .whitespacesAndNewlines))
-        update(-1) { $0.targetRate = parsed.flatMap { $0.isFinite && $0 > 0 ? $0 : nil } ?? source.sampleRate }
+        guard let parsed = SampleStudioReadouts.decimalValue(from: text), parsed > 0 else { return }
+        update(-1) { $0.targetRate = parsed }
     }
 
     @QtIgnored public func commitParams(_ newParams: SampleEditParams, mergeKey: Int) {
@@ -213,6 +221,7 @@ public final class SampleStudioPresenter: QmlUncreatable {
         baseKey = p.baseKey
         baseKeyText = "\(midiKeyName(p.baseKey)) (\(p.baseKey))"
         fineTuneCents = p.fineTuneCents
+        fineTuneText = SampleStudioReadouts.decimal(p.fineTuneCents, places: 2)
         normalizeMode = p.normalizeMode.rawValue
         rateIndex =
             p.targetRate == source.sampleRate

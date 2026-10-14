@@ -53,7 +53,7 @@ DialogWindow {
                 identityPlayers: wizard.controller.identityPlayers
                 playerIndex: wizard.controller.playerIndex
                 onLabelEdited: function(text): void { identityPage.acceptLabel(wizard.controller.editLabel(text)) }
-                onConstantEdited: function(text): void { wizard.controller.editConstant(text) }
+                onConstantEdited: function(text): void { identityPage.acceptConstant(wizard.controller.editConstant(text)) }
                 onPlayerSelected: function(index): void { wizard.controller.selectPlayer(index) }
             }
             ImportSoundPage {

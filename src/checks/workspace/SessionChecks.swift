@@ -33,6 +33,7 @@ public func runProjectSessionSuite(_ report: CheckReport) {
     let reverb = NumberFieldFormat(kind: .reverb)
     report.expect(
         channels.text(value: 12) == "12 channels" && channels.value(text: "8", current: 12) == 8
+            && channels.value(text: " 8 ", current: 12) == 8
             && channels.value(text: "12 channels", current: 12) == 12
             && channels.value(text: "1,000", current: 12) == 12 && channels.value(text: "", current: 12) == 12
             && reverb.text(value: -1) == "Default (50)" && reverb.value(text: "Default (50)", current: -1) == -1

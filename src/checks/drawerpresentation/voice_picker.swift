@@ -471,8 +471,12 @@ func drawerVoicePickerKeyboardPolicy(
         page.pickerRowPrograms.contains(namedSlot), cppID: drawerVoiceKeyboardID,
         message: "a name filter keeps the slot that carries it")
     report.expect(
-        page.pickerRowValues.allSatisfy {
-            $0.label.lowercased().contains(name.lowercased())
+        page.pickerRowValues.allSatisfy { (row: VoicePickerRowHandle) -> Bool in
+            name.split(whereSeparator: { (element: Character) -> Bool in element.isWhitespace })
+                .allSatisfy { (word: Substring) -> Bool in
+                    row.label.range(
+                        of: String(word), options: [.caseInsensitive, .diacriticInsensitive]) != nil
+                }
         }, cppID: drawerVoiceKeyboardID, message: "every row matched by name really carries the name")
     page.cancelPicker()
     report.expect(!page.hasPicker, cppID: drawerVoiceKeyboardID, message: "the picker closes")

@@ -23,9 +23,15 @@ Popup-menu presenters publish `QListModel<MenuRow>` in `PorydawApp`.
 `QuickMenuPanel` consumes typed required scalar roles and a `MenuRow` display handle.
 Hosts retain action dispatch and any action-ID-to-object-name mappings.
 
-Numeric prompt editing uses `PromptStyle.integerInput`; custom shell SpinBoxes
-set a presenter-owned `NumberFieldFormat` on the shared style's `numberFormat`.
-Both commit only a whole integer; any other text keeps the current value.
+Text inputs forward raw text to Swift; QML never parses, folds or filters it.
+Numeric prompt editing uses `PromptStyle.integerInput`; every style SpinBox
+goes through `NumberFieldFormat` (QML's default `NumberFieldFormat {}` shows plain
+digits). Integer fields commit only a whole integer after trimming spaces; decimal
+fields (Sample Studio rate, cents) accept `[+-]?digits[.digits]`; key fields
+accept a MIDI number 0...127 or a note name such as `C#4` (`midiKey(from:)`).
+Any other text keeps the current value. Search boxes share `SearchQuery`: every
+whitespace-separated word must appear, case- and diacritic-insensitively, in
+some searchable field. Menu type-ahead stays prefix-based.
 
 Provision once with `uv sync --locked`, including each new worktree and after lock/project changes. Warm commands use `--no-sync`; no implicit Python dependency resolution. `--help` loads only the command front end. See [INSTALL.md](../INSTALL.md) for native host prerequisites and optional checkout-local Qt provisioning.
 

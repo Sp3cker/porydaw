@@ -261,7 +261,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         provenance.leftOnly = source.leftOnly
         provenance.sf2Zone = source.zone
         provenance.params = presenter.params
-        let name = presenter.sampleName
+        let name = presenter.registeredName
         let editing = editName != nil
         let keepsProvenance = !editing || reopenFromSource
         let destination = destinationSlot

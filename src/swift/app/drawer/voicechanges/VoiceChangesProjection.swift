@@ -86,7 +86,7 @@ final class VoicePickerProjectionCache {
     }
 
     func filteredProgram(_ text: String) -> Int {
-        resolve(filter: String(text.prefix(64)))
+        resolve(filter: text)
         return programs.first ?? -1
     }
 
@@ -130,8 +130,9 @@ final class VoicePickerProjectionCache {
     func resolve(filter: String) {
         guard self.filter != filter else { return }
         self.filter = filter
-        filtered = rows.filter {
-            filter.isEmpty || $0.label.range(of: filter, options: .caseInsensitive) != nil
+        let query = SearchQuery(filter)
+        filtered = rows.filter { (row: VoicePickerRowHandle) -> Bool in
+            query.isEmpty || query.matches(row.label)
         }
         programs = filtered.map(\.program)
         indices = Dictionary(uniqueKeysWithValues: programs.enumerated().map { ($1, $0) })

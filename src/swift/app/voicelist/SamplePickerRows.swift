@@ -1,6 +1,7 @@
 import Foundation
 import QtBridge
 import PorydawAppPresentation
+import PorydawProject
 
 @MainActor
 @QtBridgeable
@@ -46,8 +47,8 @@ extension VoiceListController {
     }
 
     func refreshSamplePickerRows() {
-        let query = samplePickerFilter.trimmingCharacters(in: .whitespacesAndNewlines)
-        let filter = query.lowercased()
+        let typed = samplePickerFilter.trimmingCharacters(in: .whitespacesAndNewlines)
+        let query = SearchQuery(samplePickerFilter)
         let sections: [(title: String, symbols: [String], split: Bool)]
         if samplePickerWaveMode {
             sections = [("Waves", waveSymbols, false)]
@@ -65,15 +66,12 @@ extension VoiceListController {
             var headingAdded = false
             for symbol in section.symbols {
                 let displayName = Self.sampleDisplayName(symbol)
-                guard
-                    filter.isEmpty || symbol.lowercased().contains(filter)
-                        || displayName.lowercased().contains(filter)
-                else { continue }
+                guard query.isEmpty || query.matches(symbol, displayName) else { continue }
                 if !headingAdded && sectionCount > 1 {
                     entries.append(SamplePickerEntry(label: section.title))
                     headingAdded = true
                 }
-                exact = exact || symbol == query
+                exact = exact || symbol == typed
                 entries.append(
                     SamplePickerEntry(
                         symbol: symbol, label: samplePickerWaveMode ? symbol : displayName,
@@ -82,10 +80,10 @@ extension VoiceListController {
                         detail: section.split ? "Keysplit instrument" : samplePickerDetails[symbol] ?? ""))
             }
         }
-        if !filter.isEmpty && !exact {
+        if !exact && SongName.isSymbol(label: typed) {
             entries.append(
                 SamplePickerEntry(
-                    symbol: query, label: "Use \"\(query)\"", typed: true, detail: "Unlisted symbol"))
+                    symbol: typed, label: "Use \"\(typed)\"", typed: true, detail: "Unlisted symbol"))
         }
         syncRetained(
             samplePickerRows, entries,

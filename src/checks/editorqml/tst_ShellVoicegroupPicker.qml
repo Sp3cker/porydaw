@@ -138,7 +138,7 @@ ShellVoicegroupSupport {
         verify(waitForNative(function() { return draft.macro === 12 }, 15000),
                "choosing the Drumkit type converts the voice")
         tryCompare(combo, "visible", true, 5000, "a drumkit voice shows the drumkit selector")
-        compare(combo.editText, "fixture_drums_a", "the converted voice names the first drumkit")
+        compare(combo.displayText, "fixture_drums_a", "the converted voice names the first drumkit")
         findChild(panel, "voiceEditorScrollView").contentY = 0
         waitForRendering(combo)
         mouseClick(combo.indicator, combo.indicator.width / 2, combo.indicator.height / 2)

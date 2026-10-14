@@ -150,11 +150,10 @@ ColumnLayout {
             visible: editor.draft.macro === 12
             Layout.fillWidth: true
             Layout.preferredHeight: editor.baseFontPx * 1.5
-            editable: true
             model: editor.controller.drumkitSymbols
-            editText: editor.draft.symbol
+            currentIndex: editor.controller.drumkitSymbols.indexOf(editor.draft.symbol)
+            displayText: editor.draft.symbol
             onActivated: editor.draft.changeType(editor.draft.macro, currentText)
-            onAccepted: editor.draft.changeType(editor.draft.macro, editText)
         }
         ToolButton {
             objectName: "vgNewSampleButton"

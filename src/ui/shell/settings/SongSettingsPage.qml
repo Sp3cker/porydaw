@@ -61,7 +61,6 @@ Item {
                     if (activeFocus && editText !== page.store.voicegroup)
                         page.store.changeVoicegroup(editText)
                 }
-                onAccepted: page.finishVoicegroupEdit()
                 onActivated: page.store.changeVoicegroup(currentText)
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("The symbol is voicegroup_ + this name (mid2agb -G).")

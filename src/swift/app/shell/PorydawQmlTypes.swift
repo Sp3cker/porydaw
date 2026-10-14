@@ -20,7 +20,7 @@ public enum PorydawQmlTypes {
     /// Types that QML may construct, in application registration order.
     public static var instantiable: [QmlInstantiable.Type] {
         _ = aliasedModules
-        return [ShellPresenter.self, ApplicationSession.self]
+        return [ShellPresenter.self, ApplicationSession.self, NumberFieldFormat.self]
     }
 
     /// Swift-owned types that QML may name: existing registrations, then alphabetical additions.
@@ -68,7 +68,6 @@ public enum PorydawQmlTypes {
         KitZoneRow.self,
         LayoutSpaces.self,
         MouseHints.self,
-        NumberFieldFormat.self,
         OtherEventsBandPresenter.self,
         OtherEventsMarkerHandle.self,
         PitchBendLane.self,
@@ -126,7 +125,6 @@ extension ImportControllerRow: QmlUncreatable {}
 extension IntegerInputPolicy: QmlUncreatable {}
 extension LayoutSpaces: QmlUncreatable {}
 extension MouseHints: QmlUncreatable {}
-extension NumberFieldFormat: QmlUncreatable {}
 extension OtherEventsBandPresenter: QmlUncreatable {}
 extension OtherEventsMarkerHandle: QmlUncreatable {}
 extension PitchBendLane: QmlUncreatable {}

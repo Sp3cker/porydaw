@@ -1,3 +1,4 @@
+import Foundation
 import QtBridge
 
 /// Integer editing decisions for the prompt's validated digit/minus drafts.
@@ -7,11 +8,11 @@ public final class IntegerInputPolicy {
     public init() {}
 
     public func displayedValue(text: String) -> Double {
-        Int(text).map { (value: Int) in Double(value) } ?? .nan
+        Int(text.trimmingCharacters(in: .whitespaces)).map { (value: Int) in Double(value) } ?? .nan
     }
 
     public func commit(text: String, current: Int, minimum: Int, maximum: Int) -> [String: QVariantSettable] {
-        let parsed = Int(text)
+        let parsed = Int(text.trimmingCharacters(in: .whitespaces))
         let accepted = parsed.map { (value: Int) in value >= minimum && value <= maximum } ?? false
         let value = accepted ? (parsed ?? current) : current
         return ["accepted": accepted, "value": value, "text": String(value)]

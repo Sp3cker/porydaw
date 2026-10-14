@@ -85,7 +85,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         }
         scope.expect(pcm.allSatisfy { abs($0) <= 1e-7 }, message: "A124 stopped audition reaches digital silence")
         audition.toggle()
-        audition.setAuditionKeyText(text: "A3 (57)")
+        audition.setAuditionKeyText(text: "A3")
         scope.expect(audition.auditionKey == 57 && audition.playing, message: "key choice restarts sounding audition")
         audition.advance(bySeconds: 0.05)
         let expectedAdvance =

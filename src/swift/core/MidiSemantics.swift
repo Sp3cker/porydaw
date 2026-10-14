@@ -334,6 +334,26 @@ public func midiKeyName(_ key: Int) -> String {
     return "\(midiNoteNames[pitchClass])\(octave - 1)"
 }
 
+/// Inverts midiKeyName for editor key fields: a whole MIDI integer 0...127,
+/// or a note name `[A-G][#b]?-?[0-9]+` with C4 = 60. Anything else is nil.
+public func midiKey(from text: String) -> Int? {
+    let trimmed = text.trimmingCharacters(in: .whitespaces)
+    if let number = Int(trimmed) { return (0...127).contains(number) ? number : nil }
+    let semitones: [Character: Int] = ["C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11]
+    guard let letter = trimmed.first, letter.isASCII, let semitone = semitones[Character(letter.uppercased())]
+    else { return nil }
+    var octaveText = trimmed.dropFirst()
+    let accidental = octaveText.first == "#" ? 1 : octaveText.first == "b" ? -1 : 0
+    if accidental != 0 { octaveText = octaveText.dropFirst() }
+    let digits = octaveText.hasPrefix("-") ? octaveText.dropFirst() : octaveText
+    guard !digits.isEmpty,
+        digits.allSatisfy({ (character: Character) -> Bool in character.isASCII && character.isNumber }),
+        let octave = Int(octaveText), (-1...9).contains(octave)
+    else { return nil }
+    let key = (octave + 1) * 12 + semitone + accidental
+    return (0...127).contains(key) ? key : nil
+}
+
 public func midiTimeSignatureLabel(numerator: Int, denominatorPowerOfTwo: Int) -> String {
     "\(numerator)/\(1 << min(denominatorPowerOfTwo, 6))"
 }

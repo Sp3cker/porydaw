@@ -45,6 +45,15 @@ internal func runNewSongWizardChecks(_ report: CheckReport, fixtureRoot: String)
     report.expectEqual(
         expected: "MY_MANUAL_CONSTANT", actual: state.constant,
         cppID: id, what: "manual constant survives name change")
+    state.editConstant("MUS_FOO")
+    report.expectEqual(
+        expected: "MUS_FOO", actual: state.constant,
+        cppID: id, what: "valid constant edit is accepted")
+    state.editConstant("MUS FOO")
+    report.expectEqual(
+        expected: "MUS_FOO", actual: state.constant,
+        cppID: id, what: "invalid constant edit keeps the previous constant")
+    state.editConstant("MY_MANUAL_CONSTANT")
     report.expect(
         state.next() && state.page == 1 && !state.next(),
         cppID: id, message: "complete identity advances once to Sound")

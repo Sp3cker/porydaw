@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawCore
 import PorydawProject
 import PorydawVoicegroup
 import PorydawVoicegroupNative
@@ -50,8 +51,10 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
             presenter.nameStatus == "Registers as DirectSoundWaveData_fresh_tone",
             message: "A010 valid name displays registration status")
         prefill.expect(presenter.sampleName == "fresh_tone", message: "A011 sampleName returns the edited name")
-        presenter.setSampleName(name: "Bad Name")
-        prefill.expect(!presenter.canCommit, message: "A012 bad grammar disables the commit")
+        presenter.setSampleName(name: "Fresh Tone!")
+        prefill.expect(
+            presenter.sampleName == "Fresh Tone!" && presenter.registeredName == "fresh_tone" && presenter.canCommit,
+            message: "A012 typed name stays raw and registers under its sanitized symbol")
 
         let defaults = report.scoped(cppID: "samplecheck/SampleProcessingTest::pipelinePreparedDefaults")
         let defaultSource = try SampleImport.decode(preparedWav, sourcePath: "fix/prepared_tone.wav")
@@ -108,7 +111,11 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         ratePresenter.chooseRate(index: 0)
         rate.expect(
             ratePresenter.params.targetRate == rateSource.sampleRate, message: "A032 preset pick restores source rate")
-
+        ratePresenter.commitRateText(text: "6689.5")
+        ratePresenter.commitRateText(text: "1e3")
+        rate.expect(
+            ratePresenter.params.targetRate == 6689.5,
+            message: "exponent rate text keeps the current target rate")
         let crop = report.scoped(cppID: "samplecheck/SampleProcessingTest::pipelineCropNormalize")
         let cropSource = try SampleImport.decode(preparedWav, sourcePath: "fix/prepared_tone.wav")
         crop.expect(cropSource.frameCount == 64 && cropSource.hasLoop, message: "A033 crop source imports")
@@ -290,12 +297,24 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
                 && SampleStudioReadouts.gain(formatted, mode: .off) == "gain 0.0 dB",
             message: "gain readout formats enabled and disabled modes")
         let parsed = SampleStudioPresenter(document: SampleDocument(source: hiRes), validateName: validator)
+        parsed.setBaseKeyText(text: "A3")
+        state.expect(parsed.baseKey == 57, message: "note name commits its MIDI key")
         parsed.setBaseKeyText(text: "A3 (57)")
-        state.expect(parsed.baseKey == 57, message: "display-form note parses back to its MIDI key")
+        state.expect(parsed.baseKey == 57, message: "display-form note keeps the current key")
         parsed.setBaseKeyText(text: "C9999")
-        state.expect(parsed.baseKey == 127, message: "out-of-range note clamps to MIDI high end")
         parsed.setBaseKeyText(text: "C-9999")
-        state.expect(parsed.baseKey == 0, message: "out-of-range negative octave clamps to MIDI low end")
+        state.expect(parsed.baseKey == 57, message: "out-of-range note keeps the current key")
+        state.expect(
+            midiKey(from: "C4") == 60 && midiKey(from: "c#-1") == 1 && midiKey(from: "G9") == 127
+                && midiKey(from: "G#9") == nil && midiKey(from: "128") == nil
+                && midiKey(from: "C4 (60)") == nil && midiKey(from: "C4x") == nil,
+            message: "note grammar accepts full names and in-range integers only")
+        let tuned = SampleStudioPresenter(document: SampleDocument(source: hiRes), validateName: validator)
+        tuned.commitFineTuneCentsText(text: "12.50")
+        tuned.commitFineTuneCentsText(text: "1e3")
+        state.expect(
+            tuned.fineTuneCents == 12.5 && tuned.fineTuneText == "12.50",
+            message: "cents text commits decimals and keeps current on exponent text")
         let returning = SampleStudioPresenter(document: SampleDocument(source: hiRes), validateName: validator)
         let baselineBytes = returning.wavBytes()
         returning.setFineTuneCents(value: 10)

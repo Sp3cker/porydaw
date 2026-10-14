@@ -10,14 +10,12 @@ import PorydawApp
 Fusion.SpinBox {
     id: control
 
-    property NumberFieldFormat numberFormat: null
+    property NumberFieldFormat numberFormat: NumberFieldFormat {}
     textFromValue: function(value: int, locale: var): string {
-        return control.numberFormat ? control.numberFormat.text(value)
-                                    : Number(value).toLocaleString(locale, "f", 0)
+        return control.numberFormat.text(value)
     }
     valueFromText: function(text: string, locale: var): real {
-        return control.numberFormat ? control.numberFormat.value(text, control.value)
-                                    : Number.fromLocaleString(locale, text)
+        return control.numberFormat.value(text, control.value)
     }
 
     up.indicator: Rectangle {

@@ -73,7 +73,7 @@ public final class SampleStudioAudition: QmlUncreatable {
     }
 
     public func setAuditionKeyText(text: String) {
-        guard let key = SampleStudioReadouts.midiKey(from: text), key != auditionKey else { return }
+        guard let key = midiKey(from: text), key != auditionKey else { return }
         auditionKey = key
         auditionKeyText = "\(midiKeyName(key)) (\(key))"
         if playing { start(looped: looped) }

@@ -1,6 +1,6 @@
 {
-  "rejected": 90,
-  "total": 7112,
+  "rejected": 88,
+  "total": 7111,
   "files": {
     "src/ui/icons/AppIcon.qml": 0,
     "src/ui/icons/IconSpec.qml": 0,
@@ -107,7 +107,7 @@
     "src/ui/style/Menu.qml": 0,
     "src/ui/style/MenuItem.qml": 1,
     "src/ui/style/ProgressBar.qml": 4,
-    "src/ui/style/SpinBox.qml": 6
+    "src/ui/style/SpinBox.qml": 4
   },
   "propertyVarCount": 20,
   "revisionDependencyReads": 0,

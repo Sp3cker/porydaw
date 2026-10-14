@@ -287,8 +287,8 @@ DialogWindow {
                         RowLayout {
                             Label { text: qsTr("Fine tune (cents):"); color: dialog.colors.windowText }
                             AuditionTextField {
-                                text: "" + dialog.editor.fineTuneCents
-                                onEditingFinished: dialog.editor.setFineTuneCents(+text)
+                                text: dialog.editor.fineTuneText
+                                onEditingFinished: dialog.editor.commitFineTuneCentsText(text)
                             }
                         }
                         RowLayout {

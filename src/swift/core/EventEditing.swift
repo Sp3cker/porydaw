@@ -171,7 +171,9 @@ extension SongDocument {
     public func renameTrack(_ track: Int, to proposedName: String) {
         guard history.acceptsDocumentMutation else { return }
         guard let mapping = mapping(for: track) else { return }
-        let name = String(proposedName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(64))
+        let singleLine = String(
+            proposedName.map { (character: Character) -> Character in character.isNewline ? " " : character })
+        let name = String(singleLine.trimmingCharacters(in: .whitespaces).prefix(64))
         guard !MidiFile.textIsMarker(name) else { return }
         var mutation = DocumentMutation(state)
         let locations = classifyEvents(in: state.file).chunks[mapping.chunk].trackNames
