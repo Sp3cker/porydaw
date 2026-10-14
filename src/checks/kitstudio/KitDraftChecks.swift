@@ -472,6 +472,38 @@ private func checkKitPresenterAudition(_ report: CheckReport) {
     p.playKey(key: 10)
     p.playKey(key: 99)
     r.expect(samplePlayed && publishes == 1, message: "key audition publishes mapped sample tone only")
+
+    let kit = KitStudioPresenter()
+    kit.open()
+    kit.addSource(ImportedSample(buffer: [Float](repeating: 0.5, count: 128), sampleRate: 13379, suggestedName: "src"))
+    kit.insertMarker(frame: 10)
+    kit.insertMarker(frame: 100)
+    kit.insertMarker(frame: 50)
+    var played: [Int] = []
+    kit.playPcm = { (id: Int) in played.append(id) }
+    let second = kit.sliceId(row: 1)
+    kit.selectSlice(id: second)
+    kit.playSelectedSlice()
+    kit.selectSlice(id: -1)
+    kit.playSelectedSlice()
+    r.expect(
+        played == [second, kit.sliceId(row: 0)], message: "space audition plays the selection, else the first slice")
+    kit.selectSlice(id: second)
+    kit.setZoneRootKey(key: 72)
+    kit.setZoneAdsr(a: 10, d: 20, s: 30, r: 40)
+    let drum = kit.sliceVoice(id: second)
+    r.expect(
+        drum?.note == 72 && drum?.adsr.attack == 10 && drum?.adsr.decay == 20 && drum?.adsr.sustain == 30
+            && drum?.adsr.release == 40,
+        message: "drumkit slice audition sounds the zone root key with its envelope")
+    kit.setMode(index: 1)
+    kit.selectSlice(id: second)
+    kit.setZoneRootKey(key: 100)
+    r.expect(
+        kit.sliceVoice(id: second)?.note == UInt8(kit.selectedZoneLastKey),
+        message: "keysplit slice audition clamps the root key into the zone")
+    kit.deleteZone(row: kit.selectedZone)
+    r.expect(kit.sliceVoice(id: second) == nil, message: "unmapped slice audition has no voice")
 }
 
 @MainActor

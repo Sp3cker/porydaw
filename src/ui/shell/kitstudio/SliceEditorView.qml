@@ -198,7 +198,7 @@ Item {
                 event.accepted = true
             } else if (event.key === Qt.Key_Space && event.modifiers === Qt.NoModifier) {
                 if (view.workflow.auditionPlaying) view.workflow.stopAudition()
-                else if (view.editor.sliceCount > 0) view.editor.playSlice(view.editor.sliceId(0))
+                else view.editor.playSelectedSlice()
                 event.accepted = true
             }
         }

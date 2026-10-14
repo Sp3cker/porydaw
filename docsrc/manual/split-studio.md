@@ -146,9 +146,14 @@ right:
 You can audition sounds directly inside Split Studio:
 
 - Click the play button (**▶**) beside any slice in the slice table to audition
-  that slice. Pressing **Space** also starts or stops slice audition.
-- Click any key on the keyboard (or drag across keys) to audition it through the
-  game audio engine with its pitch, pan, and envelope applied.
+  that slice. A mapped slice plays at its key's pitch with that key's envelope
+  (pan is not applied); an unmapped slice plays as recorded. With the waveform
+  focused, **Space** starts or stops the selected slice, or the first slice when
+  none is selected.
+- Click any key on the keyboard to audition it through the game audio engine
+  with its pitch, pan, and envelope applied. Press an empty key and drag across
+  the keyboard to audition each key you pass; dragging a mapped key moves it
+  instead. Scroll sideways over the keyboard to pan it.
 - Click **■ Stop** above the keyboard or press **Space** to stop playback.
 
 Split Studio does not take live MIDI input.

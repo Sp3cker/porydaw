@@ -589,6 +589,23 @@ public final class KitStudioPresenter: QmlUncreatable {
     }
 
     public func playSlice(id: Int) { if sliceAddress(id) != nil { playPcm?(id) } }
+    public func playSelectedSlice() {
+        playSlice(id: sliceAddress(selectedSlice) != nil ? selectedSlice : sliceId(row: 0))
+    }
+
+    /// Engine note and envelope for the slice's lowest mapped zone: drumkits sound the zone's
+    /// root key, keysplits the zone key nearest it. Nil while the slice is unmapped.
+    @QtIgnored public func sliceVoice(id: Int) -> Optional<(note: UInt8, adsr: AudioADSR)> {
+        guard let name = sliceValue(id)?.name,
+            let zone = zones.filter({ (zone: KitZone) -> Bool in zone.sampleName == name })
+                .min(by: { (a: KitZone, b: KitZone) -> Bool in a.startKey < b.startKey })
+        else { return nil }
+        let note = activeMode == .drumkit ? zone.rootKey : min(max(zone.rootKey, zone.startKey), zone.endKey)
+        let adsr = AudioADSR(
+            attack: UInt8(clamping: zone.adsr.attack), decay: UInt8(clamping: zone.adsr.decay),
+            sustain: UInt8(clamping: zone.adsr.sustain), release: UInt8(clamping: zone.adsr.release))
+        return (UInt8(clamping: note), adsr)
+    }
 
     public func playKey(key: Int) {
         guard (0...127).contains(key), let publishKitTone,

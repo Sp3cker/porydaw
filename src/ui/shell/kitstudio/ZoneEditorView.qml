@@ -26,6 +26,7 @@ ColumnLayout {
     property int dragZone: -1
     property int dragPressKey: 0
     property int dragDelta: 0
+    property int glissKey: -1
     property int edgeZone: -1
     property bool edgeStart: true
     property int edgeKey: 0
@@ -49,9 +50,9 @@ ColumnLayout {
     function endXOf(key: int): real {
         return xOf(key) + (isBlack(key) ? view.blackWidth : view.whiteWidth)
     }
-    function keyAt(x: real): int {
+    function keyAt(x: real, y: real): int {
         for (let n = 0; n < 128; ++n) {
-            if (isBlack(n) && x >= xOf(n) && x < xOf(n) + view.blackWidth)
+            if (y < view.blackHeight && isBlack(n) && x >= xOf(n) && x < xOf(n) + view.blackWidth)
                 return n
         }
         for (let n = 0; n < 128; ++n) {
@@ -75,13 +76,23 @@ ColumnLayout {
         view.dragZone = view.editor.zoneIndexAtKey(key)
         view.dragPressKey = key
         view.dragDelta = 0
+        view.glissKey = key
         view.editor.playKey(key)
     }
-    function dragKey(x: real): void {
-        if (view.dragZone < 0 || view.dragZone >= view.editor.zoneCount())
+    function dragKey(x: real, y: real): void {
+        if (view.dragZone < 0) {
+            const key = view.keyAt(x, y)
+            if (key !== view.glissKey) {
+                view.glissKey = key
+                view.workflow.stopAudition()
+                view.editor.playKey(key)
+            }
+            return
+        }
+        if (view.dragZone >= view.editor.zoneCount())
             return
         const width = view.editor.zoneEndKey(view.dragZone) - view.editor.zoneStartKey(view.dragZone)
-        const start = Math.max(0, Math.min(127 - width, view.editor.zoneStartKey(view.dragZone) + (view.keyAt(x) - view.dragPressKey)))
+        const start = Math.max(0, Math.min(127 - width, view.editor.zoneStartKey(view.dragZone) + (view.keyAt(x, y) - view.dragPressKey)))
         view.dragDelta = start - view.editor.zoneStartKey(view.dragZone)
     }
     function releaseKey(): void {
@@ -94,6 +105,7 @@ ColumnLayout {
         view.dragZone = -1
         view.dragPressKey = 0
         view.dragDelta = 0
+        view.glissKey = -1
     }
     function pressEdge(zone: int, start: bool): void {
         view.edgeZone = zone
@@ -102,7 +114,7 @@ ColumnLayout {
     }
     function dragEdge(x: real): void {
         if (view.edgeZone >= 0)
-            view.edgeKey = view.keyAt(x)
+            view.edgeKey = view.keyAt(x, 0)
     }
     function releaseEdge(): void {
         if (view.edgeZone >= 0)
@@ -175,10 +187,12 @@ ColumnLayout {
                     }
                     MouseArea {
                         anchors.fill: parent
+                        preventStealing: true
                         onPressed: view.pressKey(whiteCell.index)
                         onPositionChanged: mouse => {
+                            const point = mapToItem(keyboardBoard, mouse.x, mouse.y)
                             if (pressed)
-                                view.dragKey(mapToItem(keyboardBoard, mouse.x, mouse.y).x)
+                                view.dragKey(point.x, point.y)
                         }
                         onReleased: view.releaseKey()
                         onCanceled: view.releaseKey()
@@ -204,10 +218,12 @@ ColumnLayout {
                     }
                     MouseArea {
                         anchors.fill: parent
+                        preventStealing: true
                         onPressed: view.pressKey(blackCell.index)
                         onPositionChanged: mouse => {
+                            const point = mapToItem(keyboardBoard, mouse.x, mouse.y)
                             if (pressed)
-                                view.dragKey(mapToItem(keyboardBoard, mouse.x, mouse.y).x)
+                                view.dragKey(point.x, point.y)
                         }
                         onReleased: view.releaseKey()
                         onCanceled: view.releaseKey()
@@ -319,6 +335,7 @@ ColumnLayout {
                         height: view.keysHeight
                         color: view.colors.selectionEdge
                         MouseArea {
+                            preventStealing: true
                             x: -view.unit / 3
                             width: parent.width + 2 * view.unit / 3
                             height: parent.height
@@ -340,6 +357,7 @@ ColumnLayout {
                         height: view.keysHeight
                         color: view.colors.selectionEdge
                         MouseArea {
+                            preventStealing: true
                             x: -view.unit / 3
                             width: parent.width + 2 * view.unit / 3
                             height: parent.height
@@ -390,11 +408,11 @@ ColumnLayout {
                 onEntered: drag => {
                     const chip = drag.source as KitDragSource
                     view.dropInvalid = drag.hasUrls && !view.workflow.areLoadableSources(drag.getDataAsString("text/uri-list"))
-                    view.dropKey = drag.hasUrls || chip !== null ? view.keyAt(drag.x) : -1
+                    view.dropKey = drag.hasUrls || chip !== null ? view.keyAt(drag.x, drag.y) : -1
                 }
                 onPositionChanged: drag => {
                     if (view.dropKey >= 0)
-                        view.dropKey = view.keyAt(drag.x)
+                        view.dropKey = view.keyAt(drag.x, drag.y)
                 }
                 onExited: {
                     view.dropKey = -1
@@ -407,7 +425,7 @@ ColumnLayout {
                     const event = drop as DragEvent
                     if (!event || invalid)
                         return
-                    const key = view.keyAt(event.x)
+                    const key = view.keyAt(event.x, event.y)
                     if (event.hasUrls && event.urls.length > 0) {
                         view.workflow.dropLibrarySample("%1".arg(event.urls[0]), key)
                         for (let i = 1; i < event.urls.length; ++i)

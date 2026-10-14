@@ -322,7 +322,10 @@ public final class KitStudioWorkflow: QmlUncreatable {
         guard let rendered = state?.renderedSlice(id: id) else { return }
         stopAudition()
         playingSlice = id
-        pcm?.play(owner: self, rendered: rendered, looped: rendered.looped, key: 60, adsr: AudioADSR(), toneKey: 60)
+        let voice = state?.sliceVoice(id: id)
+        pcm?.play(
+            owner: self, rendered: rendered, looped: rendered.looped, key: voice?.note ?? 60,
+            adsr: voice?.adsr ?? AudioADSR(), toneKey: 60)
         auditionPlaying = pcm?.playing ?? false
     }
     public func tickAudition() {

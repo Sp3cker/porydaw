@@ -48,6 +48,46 @@ ShellLaneSupport {
         shell = null
         wait(0)
     }
+    function test_keyboardDragsAuditionOrMoveWithoutScrolling() {
+        const session = openShell().session
+        session.openProject(rootPath)
+        verify(waitForNative(function() { return session.projectOpen }, 30000), "sample fixture opens")
+        const studio = session.kitStudio()
+        studio.requestOpen()
+        verify(waitForNative(function() { const w = child("splitStudioWindow"); return w !== null && w.visible }, 10000))
+        const window = child("splitStudioWindow")
+        window.width = 1180; window.height = 820
+        studio.loadSource(rootPath + "/samplesources/hires_tone.wav")
+        const editor = findChild(window.contentItem, "splitStudioSliceEditor").editor
+        verify(waitForNative(function() { return editor.zoneCount() === 1 }, 10000), "one-shot lands on C2")
+        compare(editor.zoneStartKey(0), 36)
+        const zone = findChild(window.contentItem, "splitStudioZoneEditor")
+        const board = findChild(window.contentItem, "splitStudioDropTarget").parent
+        const scroll = findChild(window.contentItem, "splitStudioKeyboardScroll")
+        const y = zone.keysHeight - zone.unit
+        waitForRendering(window.contentItem)
+        verify(waitForNative(function() { return !scroll.moving }, 5000), "keyboard settles before pointer input")
+        const contentX = scroll.contentX
+        function drag(from, to) {
+            mousePress(board, zone.xOf(from) + 4, y)
+            const crossed = [zone.glissKey]
+            for (let x = zone.xOf(from) + 4; x <= zone.xOf(to) + 4; x += 4) {
+                mouseMove(board, x, y)
+                if (crossed[crossed.length - 1] !== zone.glissKey) crossed.push(zone.glissKey)
+            }
+            mouseRelease(board, zone.xOf(to) + 4, y)
+            return crossed
+        }
+        compare(drag(31, 38), [31, 33, 35, 36, 38], "a drag from an empty key auditions each white key it crosses")
+        compare(editor.zoneStartKey(0), 36, "auditioning across a mapped key leaves it in place")
+        drag(36, 43)
+        compare(editor.zoneStartKey(0), 43, "dragging a mapped key moves it to the white key under the pointer")
+        compare(scroll.contentX, contentX, "key drags never scroll the keyboard")
+        window.close()
+        verify(waitForNative(function() { return studio.promptOpen }, 5000), "unsaved kit asks before closing")
+        studio.answerPrompt(1)
+        verify(waitForNative(function() { return !window.visible }, 5000), "discard closes Split Studio")
+    }
     function test_saveVoicegroupWritesNewFile() {
         const presenter = openShell()
         const session = presenter.session
