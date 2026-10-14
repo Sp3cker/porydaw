@@ -1,5 +1,6 @@
 import Foundation
 import PorydawAppPresentation
+import PorydawSample
 import QtBridge
 
 @MainActor
@@ -80,7 +81,6 @@ public final class SampleLibraryModel: QmlUncreatable {
     }
 
     private static let foldersKey = "sampleLibraryFolders"
-    private static let audioExtensions: Set<String> = ["wav", "aif", "aiff", "mp3", "flac", "ogg"]
     private static let resourceKeys: Set<URLResourceKey> = [
         .isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey, .isHiddenKey,
     ]
@@ -118,13 +118,7 @@ public final class SampleLibraryModel: QmlUncreatable {
 
     public func addFolder(path: String) {
         guard !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        let directory: String
-        if path.hasPrefix("file://"), let url = URL(string: path), url.isFileURL {
-            directory = url.path
-        } else {
-            directory = path
-        }
-        let normalized = Self.normalized([directory])
+        let normalized = Self.normalized([Self.directoryPath(path)])
         guard let chosen = normalized.first else { return }
         if let existing = roots.first(where: { $0.path == chosen }) {
             navigate(to: existing)
@@ -134,6 +128,23 @@ public final class SampleLibraryModel: QmlUncreatable {
         roots.append(node)
         persistRoots()
         navigate(to: node)
+    }
+
+    /// Whether every entry of a dragged `text/uri-list` names an existing folder the library may add.
+    public func areFolders(uriList: String) -> Bool {
+        let entries = DroppedURIList.entries(uriList)
+        return !entries.isEmpty && entries.allSatisfy { (path: String) -> Bool in Self.isFolder(path) }
+    }
+
+    private static func isFolder(_ path: String) -> Bool {
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: Self.directoryPath(path), isDirectory: &isDirectory)
+            && isDirectory.boolValue
+    }
+
+    private static func directoryPath(_ path: String) -> String {
+        if path.hasPrefix("file://"), let url = URL(string: path), url.isFileURL { return url.path }
+        return path
     }
 
     public func removeSelectedRoot() {
@@ -314,7 +325,7 @@ public final class SampleLibraryModel: QmlUncreatable {
             let included =
                 folders
                 ? values.isDirectory == true && values.isSymbolicLink != true
-                : values.isRegularFile == true && audioExtensions.contains(entry.pathExtension.lowercased())
+                : values.isRegularFile == true && SampleImport.fileExtensions.contains(entry.pathExtension.lowercased())
             if included {
                 result.append(entry)
             }

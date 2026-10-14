@@ -29,6 +29,8 @@ ColumnLayout {
     property int edgeZone: -1
     property bool edgeStart: true
     property int edgeKey: 0
+    property int dropKey: -1
+    property bool dropInvalid: false
 
     function isBlack(key: int): bool {
         return [1, 3, 6, 8, 10].indexOf(key % 12) !== -1
@@ -120,31 +122,14 @@ ColumnLayout {
         keyboardScroll.contentX = Math.max(0, Math.min(keyboardScroll.contentWidth - visibleWidth, (left + right - visibleWidth) / 2))
     }
 
-    component ZoomButton: ToolButton {
-        id: zoomButton
-        required property IconSpec glyph
-        contentItem: Item {
-            implicitWidth: zoomIcon.width
-            implicitHeight: zoomIcon.height
-            AppIcon {
-                id: zoomIcon
-                anchors.centerIn: parent
-                width: Math.round(view.unit)
-                height: width
-                icon: zoomButton.glyph
-                color: zoomButton.enabled ? view.colors.windowText : view.colors.disabledText
-            }
-        }
-    }
-
     RowLayout {
         Layout.fillWidth: true
         spacing: view.paneSpacing
         Label { text: qsTr("Keyboard"); font.bold: true; color: view.colors.windowText }
         Button { text: qsTr("■ Stop"); onClicked: view.workflow.stopAudition() }
         Item { Layout.fillWidth: true }
-        ZoomButton { glyph: Icons.zoomOut; Accessible.name: qsTr("Zoom keyboard out"); onClicked: view.keyboardZoom = Math.max(0.5, view.keyboardZoom / 1.25) }
-        ZoomButton { glyph: Icons.zoomIn; Accessible.name: qsTr("Zoom keyboard in"); onClicked: view.keyboardZoom = Math.min(4, view.keyboardZoom * 1.25) }
+        IconToolButton { glyph: Icons.zoomOut; colors: view.colors; unit: view.unit; Accessible.name: qsTr("Zoom keyboard out"); onClicked: view.keyboardZoom = Math.max(0.5, view.keyboardZoom / 1.25) }
+        IconToolButton { glyph: Icons.zoomIn; colors: view.colors; unit: view.unit; Accessible.name: qsTr("Zoom keyboard in"); onClicked: view.keyboardZoom = Math.min(4, view.keyboardZoom * 1.25) }
     }
     Flickable {
         id: keyboardScroll
@@ -371,11 +356,56 @@ ColumnLayout {
                     }
                 }
             }
+            Rectangle {
+                id: dropTarget
+                objectName: "splitStudioDropTarget"
+                readonly property bool black: view.isBlack(view.dropKey)
+                z: 6
+                visible: view.dropKey >= 0
+                x: view.xOf(view.dropKey)
+                width: dropTarget.black ? view.blackWidth : view.whiteWidth
+                height: dropTarget.black ? view.blackHeight : view.keysHeight
+                color: "transparent"
+                border.color: view.dropInvalid ? view.colors.errorText : view.colors.selectionEdge
+                border.width: Math.max(2, Math.round(view.unit / 6))
+                Rectangle {
+                    visible: !view.dropInvalid
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: (dropTarget.black ? 0 : view.blackHeight) + view.unit * 0.4
+                    width: dropKeyName.implicitWidth + view.unit * 0.6
+                    height: view.unit * 1.35
+                    radius: height / 2
+                    color: view.colors.keyboardBlack
+                    Label {
+                        id: dropKeyName
+                        anchors.centerIn: parent
+                        text: view.dropKey >= 0 ? view.workflow.keyName(view.dropKey) : ""
+                        font: view.captionFont
+                        color: view.colors.keyboardNatural
+                    }
+                }
+            }
             DropArea {
                 anchors.fill: parent
+                onEntered: drag => {
+                    const chip = drag.source as KitDragSource
+                    view.dropInvalid = drag.hasUrls && !view.workflow.areLoadableSources(drag.getDataAsString("text/uri-list"))
+                    view.dropKey = drag.hasUrls || chip !== null ? view.keyAt(drag.x) : -1
+                }
+                onPositionChanged: drag => {
+                    if (view.dropKey >= 0)
+                        view.dropKey = view.keyAt(drag.x)
+                }
+                onExited: {
+                    view.dropKey = -1
+                    view.dropInvalid = false
+                }
                 onDropped: drop => {
+                    const invalid = view.dropInvalid
+                    view.dropKey = -1
+                    view.dropInvalid = false
                     const event = drop as DragEvent
-                    if (!event)
+                    if (!event || invalid)
                         return
                     const key = view.keyAt(event.x)
                     if (event.hasUrls && event.urls.length > 0) {

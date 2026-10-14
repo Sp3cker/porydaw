@@ -5,6 +5,7 @@ import QtQuick.Dialogs as NativeDialogs
 import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
+import Porydaw.Icons
 import PorydawApp
 
 ThemedWindow {
@@ -265,14 +266,18 @@ ThemedWindow {
                 anchors.leftMargin: 1.25 * studio.unit
                 anchors.rightMargin: 1.25 * studio.unit
                 spacing: studio.spacing
-                ToolButton {
-                    text: "↶"
+                IconToolButton {
+                    glyph: Icons.undo
+                    colors: studio.colors
+                    unit: studio.unit
                     Accessible.name: qsTr("Undo")
                     enabled: studio.editor.canUndo
                     onClicked: studio.workflow.undo()
                 }
-                ToolButton {
-                    text: "↷"
+                IconToolButton {
+                    glyph: Icons.redo
+                    colors: studio.colors
+                    unit: studio.unit
                     Accessible.name: qsTr("Redo")
                     enabled: studio.editor.canRedo
                     onClicked: studio.workflow.redo()

@@ -788,7 +788,7 @@ public final class KitStudioPresenter: QmlUncreatable {
                 bytes += 16 + ((UInt64(rendered.size) + 3) & ~UInt64(3))
             }
         }
-        metaText = "\(slices) slices · \(Self.formatRomBytes(bytes)) ROM"
+        metaText = "\(slices) \(slices == 1 ? "slice" : "slices") · \(Self.formatRomBytes(bytes)) ROM"
     }
 
     private static func formatRomBytes(_ bytes: UInt64) -> String {

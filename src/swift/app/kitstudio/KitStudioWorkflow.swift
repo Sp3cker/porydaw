@@ -248,6 +248,19 @@ public final class KitStudioWorkflow: QmlUncreatable {
         } catch { showAlert(error) }
     }
 
+    /// Whether every entry of a dragged `text/uri-list` names an audio file drop targets may accept.
+    public func areLoadableSources(uriList: String) -> Bool {
+        let entries = DroppedURIList.entries(uriList)
+        return !entries.isEmpty && entries.allSatisfy { (path: String) -> Bool in isLoadableSource(path) }
+    }
+
+    private func isLoadableSource(_ path: String) -> Bool {
+        guard let url = libraryHost.sourceURL(path), url.isFileURL,
+            SampleImport.fileExtensions.contains(url.pathExtension.lowercased())
+        else { return false }
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) && !isDirectory.boolValue
+    }
 
     private func previewLibrary(path: String) {
         guard windowOpen, !saving, libraryHost.pane != nil else { return }

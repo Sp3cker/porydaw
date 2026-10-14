@@ -4,6 +4,7 @@ import QtQuick
 import PorydawStyle
 import QtQuick.Layouts
 import Porydaw.Ui
+import Porydaw.Icons
 import PorydawApp
 
 Item {
@@ -90,15 +91,19 @@ Item {
                 }
             }
         }
-        ToolButton {
+        IconToolButton {
             Layout.preferredHeight: 2.15 * view.unit
-            text: "−"
+            glyph: Icons.zoomOut
+            colors: view.colors
+            unit: view.unit
             Accessible.name: qsTr("Zoom waveform out")
             onClicked: if (view.editor.waveform) view.editor.waveform.zoom(wave.width / 2, -1)
         }
-        ToolButton {
+        IconToolButton {
             Layout.preferredHeight: 2.15 * view.unit
-            text: "+"
+            glyph: Icons.zoomIn
+            colors: view.colors
+            unit: view.unit
             Accessible.name: qsTr("Zoom waveform in")
             onClicked: if (view.editor.waveform) view.editor.waveform.zoom(wave.width / 2, 1)
         }
@@ -216,6 +221,7 @@ Item {
         Layout.minimumHeight: 7 * view.unit
         color: view.colors.menuBackground
         property bool dropHover: false
+        property bool dropInvalid: false
         Rectangle {
             anchors.top: parent.top
             anchors.left: parent.left
@@ -412,22 +418,42 @@ Item {
                 }
             }
         }
+        DropZone {
+            objectName: "splitStudioSliceDropZone"
+            anchors.fill: parent
+            anchors.topMargin: tableHeader.height + view.paneSpacing / 2
+            anchors.margins: view.paneSpacing
+            visible: view.editor.sliceCount === 0
+            colors: view.colors
+            unit: view.unit
+            glyph: Icons.dropFiles
+            dropHover: tableBox.dropHover
+            dropInvalid: tableBox.dropInvalid
+            Accessible.name: qsTr("Open File…")
+            onActivated: view.workflow.requestOpenFile()
+        }
         Rectangle {
             anchors.fill: parent
             color: "transparent"
-            border.color: view.colors.selectionEdge
+            border.color: tableBox.dropInvalid ? view.colors.errorText : view.colors.selectionEdge
             border.width: Math.max(2, Math.round(view.unit / 6))
-            visible: tableBox.dropHover
+            visible: (tableBox.dropHover || tableBox.dropInvalid) && view.editor.sliceCount > 0
         }
         DropArea {
             anchors.fill: parent
-            onEntered: drop => {
-                tableBox.dropHover = drop.hasUrls
+            onEntered: drag => {
+                tableBox.dropHover = drag.hasUrls && view.workflow.areLoadableSources(drag.getDataAsString("text/uri-list"))
+                tableBox.dropInvalid = drag.hasUrls && !tableBox.dropHover
             }
-            onExited: tableBox.dropHover = false
-            onDropped: drop => {
+            onExited: {
                 tableBox.dropHover = false
-                if (!drop.hasUrls || drop.urls.length === 0)
+                tableBox.dropInvalid = false
+            }
+            onDropped: drop => {
+                const loadable = tableBox.dropHover
+                tableBox.dropHover = false
+                tableBox.dropInvalid = false
+                if (!loadable)
                     return
                 for (let i = 0; i < drop.urls.length; ++i)
                     view.workflow.loadSource("%1".arg(drop.urls[i]))

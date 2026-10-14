@@ -500,12 +500,12 @@ private func checkKitPresenterVoicegroupName(_ report: CheckReport) {
     let slice = p.sliceName(id: p.sliceId(row: 0))
     let autoMapped = p.metaText
     r.expect(
-        autoMapped.hasPrefix("1 slices · ") && autoMapped.hasSuffix(" ROM") && autoMapped != "1 slices · 0 bytes ROM",
+        autoMapped.hasPrefix("1 slice · ") && autoMapped.hasSuffix(" ROM") && autoMapped != "1 slice · 0 bytes ROM",
         message: "auto-placed slice contributes saved-at-rate ROM")
     p.dropSample(name: slice, onKey: 60)
     let mapped = p.metaText
     r.expect(
-        mapped.hasPrefix("1 slices · ") && mapped.hasSuffix(" ROM") && mapped != "1 slices · 0 bytes ROM",
+        mapped.hasPrefix("1 slice · ") && mapped.hasSuffix(" ROM") && mapped != "1 slice · 0 bytes ROM",
         message: "mapped slice contributes saved-at-rate ROM")
     p.dropSample(name: slice, onKey: 61)
     r.expectEqual(expected: mapped, actual: p.metaText, what: "one sample counts once across keys")

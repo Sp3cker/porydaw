@@ -4,12 +4,14 @@ import QtQuick
 
 QtObject {
     readonly property string family: "Porydaw Icons"
+    readonly property IconSpec addFolder: IconSpec { glyph: "\ue020"; fit: 1.0000 }
     readonly property IconSpec automation: IconSpec { glyph: "\ue000"; fit: 1.0000 }
     readonly property IconSpec check: IconSpec { glyph: "\ue016"; fit: 1.0000 }
     readonly property IconSpec closeTab: IconSpec { glyph: "\ue001"; fit: 1.0000 }
     readonly property IconSpec comboArrow: IconSpec { glyph: "\ue017"; fit: 1.0000 }
     readonly property IconSpec disclosureClosed: IconSpec { glyph: "\ue01b"; fit: 1.0000 }
     readonly property IconSpec disclosureOpen: IconSpec { glyph: "\ue01c"; fit: 1.0000 }
+    readonly property IconSpec dropFiles: IconSpec { glyph: "\ue021"; fit: 1.0000 }
     readonly property IconSpec drumkit: IconSpec { glyph: "\ue002"; fit: 1.0000 }
     readonly property IconSpec editSample: IconSpec { glyph: "\ue003"; fit: 1.0000 }
     readonly property IconSpec flat: IconSpec { glyph: "\ue004"; fit: 1.0000 }
@@ -21,6 +23,7 @@ QtObject {
     readonly property IconSpec noise: IconSpec { glyph: "\ue009"; fit: 0.8000 }
     readonly property IconSpec pause: IconSpec { glyph: "\ue00a"; fit: 1.0000 }
     readonly property IconSpec play: IconSpec { glyph: "\ue00b"; fit: 1.0000 }
+    readonly property IconSpec redo: IconSpec { glyph: "\ue022"; fit: 1.0000 }
     readonly property IconSpec resonance: IconSpec { glyph: "\ue00c"; fit: 1.0000 }
     readonly property IconSpec sample: IconSpec { glyph: "\ue00d"; fit: 0.8000 }
     readonly property IconSpec scrollTabsLeft: IconSpec { glyph: "\ue00e"; fit: 1.0000 }
@@ -31,6 +34,7 @@ QtObject {
     readonly property IconSpec square2: IconSpec { glyph: "\ue011"; fit: 0.8000 }
     readonly property IconSpec stop: IconSpec { glyph: "\ue012"; fit: 1.0000 }
     readonly property IconSpec submenuArrow: IconSpec { glyph: "\ue01a"; fit: 1.0000 }
+    readonly property IconSpec undo: IconSpec { glyph: "\ue023"; fit: 1.0000 }
     readonly property IconSpec velocity: IconSpec { glyph: "\ue013"; fit: 1.0000 }
     readonly property IconSpec velocityLabels: IconSpec { glyph: "\ue014"; fit: 1.0000 }
     readonly property IconSpec wave: IconSpec { glyph: "\ue015"; fit: 0.8000 }

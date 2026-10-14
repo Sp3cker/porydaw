@@ -18,11 +18,12 @@ a bottom footer:
 
 - **Context bar**: Switches the layout between **Drumkit** and **Keysplit**.
 - **Sample library** (left): Browse bookmarked folders and audio files to preview
-  or load them. Click **+** to add a folder; click **Open File…** to pick a file
-  directly; expand **Advanced** to access **Remove Folder from List**.
+  or load them. Click **+** (or the dashed folder box shown while the library is
+  empty) to add a folder, or drag folders in from Finder; click **Open File…** to
+  pick a file directly; expand **Advanced** to access **Remove Folder from List**.
 - **Centre editor**:
   - File tabs along the top for loaded audio sources.
-  - Toolbar with zoom controls (**−**, **+**, **Fit**).
+  - Toolbar with zoom out and zoom in buttons (magnifier icons) and **Fit**.
   - Waveform display showing slices and draggable slice markers.
   - **Snap to zero** toggle.
   - Slice table listing every slice in the kit, across all loaded files, with its
@@ -35,7 +36,7 @@ a bottom footer:
   **Slice**), **Pitch** (**Plays at**), **Pan** (Drumkit only), **Envelope**
   (**Attack**, **Decay**, **Sustain**, **Release**), and **Remove from Key**.
 - **Footer**: Window **Undo** and **Redo** buttons, a slice count and ROM size
-  readout (`<n> slices · <size> ROM`), the **Voicegroup** name field, **Close**,
+  readout (for example `1 slice · 3.6 KB ROM`), the **Voicegroup** name field, **Close**,
   and **Save Voicegroup** (**Cmd/Ctrl+S**).
 
 Split Studio remembers its window size, library width, and keyboard height
@@ -66,7 +67,11 @@ and tracks its own markers, slices, and sample rate:
   keyboard keys mapped to its slices.
 - **Adding one-shots**: Drag audio files from the sample library or from Finder
   onto the slice table. Each file loads in a new tab as a single slice and goes
-  on the next free key from C2.
+  on the next free key from C2. While the table is empty it shows a dashed drop
+  box; click it to pick a file instead. The table outlines in the accent colour
+  while a drop would be accepted, and in red when the drag holds anything other
+  than supported audio files (WAV, AIFF, MP3, FLAC, Ogg Vorbis); a red drop does
+  nothing.
 - **Selecting slices**: Click a row to select its slice; the waveform switches to
   that slice's file.
 - **Adding markers**: Click anywhere on the waveform to add a slice marker.
@@ -76,7 +81,7 @@ and tracks its own markers, slices, and sample rate:
   press **Delete** or **Backspace**. Removing a marker merges the two neighboring
   slices.
 - **Waveform navigation**: Turn the mouse wheel to zoom the waveform, or click the
-  **−** and **+** buttons. Click **Fit** to view the entire audio file. Middle-click
+  zoom buttons. Click **Fit** to view the entire audio file. Middle-click
   and drag on the waveform to pan horizontally.
 
 When **Snap to zero** is checked, adding or dragging markers automatically snaps
@@ -110,7 +115,9 @@ Slices can be mapped across the 128-key keyboard (keys 0–127):
   key.
 - **Drag-and-drop mapping**: Drag the grip handle (`⋮⋮`) of any row in the slice
   table onto a key, or drag an audio file from the sample library or Finder onto
-  a key to load and map it there.
+  a key to load and map it there. The key under the pointer is outlined and
+  labelled with its note name; it turns red, and the drop does nothing, if the
+  drag holds unsupported files.
 - **Resizing key ranges** (Keysplit only): Drag the left or right edge handles of
   a selected key zone to adjust the key range that triggers that slice. Zones
   never overlap.

@@ -21,7 +21,11 @@
     },
     "regular": {
       "zoomIn": "search-plus",
-      "zoomOut": "search-minus"
+      "zoomOut": "search-minus",
+      "undo": "undo",
+      "redo": "redo",
+      "addFolder": "folder-plus",
+      "dropFiles": "file-import"
     },
     "light": {
       "editSample": "pencil-alt",
@@ -73,6 +77,10 @@
     "disclosureOpen": "E01C",
     "metronome": "E01D",
     "zoomIn": "E01E",
-    "zoomOut": "E01F"
+    "zoomOut": "E01F",
+    "addFolder": "E020",
+    "dropFiles": "E021",
+    "redo": "E022",
+    "undo": "E023"
   }
 }

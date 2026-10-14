@@ -2,6 +2,9 @@ import BinaryParsing
 import Foundation
 
 public enum SampleImport {
+    /// File extensions offered as audio sources by libraries and drop targets.
+    public static let fileExtensions: Set<String> = ["wav", "aif", "aiff", "mp3", "flac", "ogg"]
+
     public static func decode(
         _ bytes: Data, sourcePath: String,
         leftChannelOnly: Bool = false

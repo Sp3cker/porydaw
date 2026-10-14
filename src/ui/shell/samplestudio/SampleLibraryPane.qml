@@ -5,6 +5,7 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 import PorydawStyle
 import Porydaw.Ui
+import Porydaw.Icons
 import PorydawApp
 Item {
     id: pane
@@ -44,6 +45,7 @@ Item {
         folders.forceLayout()
         return folders.itemAtIndex(row) as FolderRow
     }
+    property bool folderDropHover: false
 
     FolderDialog {
         id: folderPicker
@@ -194,8 +196,23 @@ Item {
             color: pane.colors.outline
         }
         Item {
+            Layout.fillWidth: true
             Layout.fillHeight: true
             visible: !files.visible
+            DropZone {
+                objectName: "sampleLibraryDropZone"
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                height: Math.min(parent.height, 10 * pane.unit)
+                visible: folders.count === 0
+                colors: pane.colors
+                unit: pane.unit
+                glyph: Icons.addFolder
+                dropHover: pane.folderDropHover
+                Accessible.name: qsTr("Add Folder")
+                onActivated: folderPicker.open()
+            }
         }
         ListView {
             id: files
@@ -309,6 +326,33 @@ Item {
                     pane.alignFolderCursor()
                 }
             }
+        }
+    }
+    Rectangle {
+        anchors.fill: parent
+        color: "transparent"
+        border.color: pane.colors.selectionEdge
+        border.width: Math.max(2, Math.round(pane.unit / 6))
+        visible: pane.folderDropHover && folders.count > 0
+    }
+    // Only folder drags respond; file rows dragged out of the pane pass over it silently.
+    DropArea {
+        anchors.fill: parent
+        onEntered: drag => {
+            pane.folderDropHover = drag.hasUrls && pane.library.areFolders(drag.getDataAsString("text/uri-list"))
+            drag.accepted = pane.folderDropHover
+        }
+        onExited: pane.folderDropHover = false
+        onDropped: drop => {
+            const accepted = pane.folderDropHover
+            pane.folderDropHover = false
+            if (!accepted)
+                return
+            files.currentIndex = -1
+            for (let i = 0; i < drop.urls.length; ++i)
+                pane.library.addFolder("%1".arg(drop.urls[i]))
+            pane.alignFolderCursor()
+            drop.acceptProposedAction()
         }
     }
 }

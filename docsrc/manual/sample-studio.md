@@ -27,7 +27,9 @@ stays open.
 
 ## Sample library
 
-Click the **+** button in the Library header to bookmark a folder. The library
+Click the **+** button in the Library header (or the dashed folder box shown
+while the library is empty) to bookmark a folder, or drag folders onto the
+library from Finder. The library
 remembers saved folders between sessions and lists supported audio files in the
 selected folder. In the folder list, use Up and Down to navigate, Right to
 expand a folder, and Left to collapse it or move to its parent. You can also use
