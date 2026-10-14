@@ -23,7 +23,7 @@ extension ShellPresenter {
         case "file.new_song": return session.projectOpen
         case "file.import_midi": return session.projectOpen
         case "tools.import_sample": return session.projectOpen && !session.sampleStudio().editorOpen
-        case "tools.split_studio": return session.projectOpen && session.songOpen
+        case "tools.split_studio": return session.projectOpen
         case "file.save_song": return session.songOpen && !session.saveInProgress
         case "file.register_song":
             return session.songOpen

@@ -22,10 +22,11 @@ public final class SampleStudioAudition: QmlUncreatable {
     @QtIgnored public var onStarted: (() -> Void)?
     public var available: Bool
     @QtTracked public var playing = false
-    @QtTracked public var playText = "Play"
+    @QtTracked public var playText = "Listen"
     public var playToolTip: String
     @QtTracked public var auditionKey = 60
     @QtTracked public var auditionKeyText = "C4 (60)"
+    @QtTracked public var auditionKeyInvalid = false
     public var hasDestinationAdsr: Bool
     public var useDestinationAdsr: Bool
 
@@ -68,12 +69,14 @@ public final class SampleStudioAudition: QmlUncreatable {
 
     public func stop() {
         playing = false
-        playText = "Play"
+        playText = "Listen"
         player.stop(owner: self)
     }
 
     public func setAuditionKeyText(text: String) {
-        guard let key = midiKey(from: text), key != auditionKey else { return }
+        guard let key = midiKey(from: text) else { auditionKeyInvalid = true; return }
+        auditionKeyInvalid = false
+        guard key != auditionKey else { return }
         auditionKey = key
         auditionKeyText = "\(midiKeyName(key)) (\(key))"
         if playing { start(looped: looped) }
@@ -94,7 +97,7 @@ public final class SampleStudioAudition: QmlUncreatable {
 
     @QtIgnored public func close() {
         playing = false
-        playText = "Play"
+        playText = "Listen"
         player.close()
         lane = nil
         available = false

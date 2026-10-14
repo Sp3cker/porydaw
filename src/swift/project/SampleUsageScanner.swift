@@ -3,7 +3,9 @@ import PorydawVoicegroup
 
 /// Resolves sample references through current parsed voicegroup texts, including staged overlays.
 public enum SampleUsageScanner {
-    /// Created subgroups count only when reachable from another voicegroup.
+    /// A created subgroup already written to disk is saved work: its references
+    /// protect samples even though no song reaches it yet. Staged overlay edits
+    /// to a created subgroup are still uncommitted, so they root nothing.
     /// Parsed overlay values, keyed by canonical declaration, override that section's disk text.
     /// - Throws: A source read failure; callers must not offer deletion on an incomplete scan.
     public static func referenced(
@@ -35,6 +37,9 @@ public enum SampleUsageScanner {
         }
         groups.merge(overlay) { _, current in current }
         var pending = groups.keys.filter { !createdSubgroups.contains($0) }
+        for symbol in groups.keys where createdSubgroups.contains(symbol) && overlay[symbol] == nil {
+            pending.append(symbol)
+        }
         var visited: Set<String> = []
         var used: Set<String> = []
         while let symbol = pending.popLast() {

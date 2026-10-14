@@ -316,7 +316,6 @@ extension ApplicationSession {
             sessionStateChanged: { [weak self, weak session] in
                 guard let session else { return }
                 self?.tabStateChanged(for: session)
-                self?.kitStudioWorkflow?.bankDidChange(song: session)
             },
             publicationFailed: { [weak self] message in
                 self?.publishLastSaveError(message)

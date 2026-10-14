@@ -16,73 +16,122 @@ ColumnLayout {
     required property real paneSpacing
     required property font captionFont
     property real keyboardZoom: 1
-    readonly property real keyWidth: 2.25 * unit * keyboardZoom
+    readonly property real whiteWidth: 2.25 * unit * keyboardZoom
+    readonly property real blackWidth: 1.35 * unit * keyboardZoom
+    readonly property real keysHeight: 8 * unit
+    readonly property real blackHeight: 5 * unit
+    readonly property real labelHeight: 1.75 * unit
     spacing: paneSpacing
+    property int dragZone: -1
+    property int dragPressKey: 0
+    property int dragDelta: 0
+    property int edgeZone: -1
+    property bool edgeStart: true
+    property int edgeKey: 0
 
-    component Field: ColumnLayout {
-        id: field
-        required property string caption
-        required property GridPalette colors
-        required property font captionFont
-        required property real paneSpacing
-        default property alias content: fieldRow.data
-        spacing: 0
-        Label {
-            text: field.caption
-            font: field.captionFont
-            color: field.enabled ? field.colors.secondaryText : field.colors.disabledText
-        }
-        RowLayout { id: fieldRow; spacing: field.paneSpacing }
+    function isBlack(key: int): bool {
+        return [1, 3, 6, 8, 10].indexOf(key % 12) !== -1
     }
-
-    Flow {
-        Layout.fillWidth: true
-        spacing: 2 * view.paneSpacing
-        Field {
-            caption: qsTr("Zone layout"); colors: view.colors; captionFont: view.captionFont; paneSpacing: 0
-            Button { objectName: "splitStudioModeDrumkit"; text: qsTr("Drumkit"); checked: view.editor.mode === 0; onClicked: view.editor.setMode(0) }
-            Button { objectName: "splitStudioModeKeysplit"; text: qsTr("Keysplit"); checked: view.editor.mode === 1; onClicked: view.editor.setMode(1) }
+    function whitesBefore(key: int): int {
+        let count = 0
+        for (let n = 0; n < key; ++n)
+            if (!isBlack(n))
+                ++count
+        return count
+    }
+    function xOf(key: int): real {
+        const before = whitesBefore(key)
+        return isBlack(key) ? before * view.whiteWidth - view.blackWidth / 2 : before * view.whiteWidth
+    }
+    function endXOf(key: int): real {
+        return xOf(key) + (isBlack(key) ? view.blackWidth : view.whiteWidth)
+    }
+    function keyAt(x: real): int {
+        for (let n = 0; n < 128; ++n) {
+            if (isBlack(n) && x >= xOf(n) && x < xOf(n) + view.blackWidth)
+                return n
         }
-        Field {
-            caption: qsTr("Keyboard zoom"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
-            Button { Layout.preferredWidth: 2.5 * view.unit; text: "−"; Accessible.name: qsTr("Zoom keyboard out"); onClicked: view.keyboardZoom = Math.max(0.5, view.keyboardZoom / 1.25) }
-            Button { Layout.preferredWidth: 2.5 * view.unit; text: "+"; Accessible.name: qsTr("Zoom keyboard in"); onClicked: view.keyboardZoom = Math.min(4, view.keyboardZoom * 1.25) }
+        for (let n = 0; n < 128; ++n) {
+            if (!isBlack(n) && x >= xOf(n) && x < xOf(n) + view.whiteWidth)
+                return n
         }
-        Field {
-            caption: qsTr("Place all slices on the keyboard, starting at key"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
-            SpinBox { id: firstKey; Layout.preferredWidth: 5 * view.unit; from: 0; to: 127; value: 60; editable: true; Accessible.name: qsTr("First key") }
-            Label { text: view.workflow.keyName(firstKey.value); color: view.colors.windowText }
-            CheckBox { id: whiteKeys; text: qsTr("White keys only") }
-            Button { text: qsTr("Map Slices"); enabled: view.editor.sliceCount > 0; onClicked: view.editor.mapAllSlices(firstKey.value, whiteKeys.checked) }
+        return x < 0 ? 0 : 127
+    }
+    Connections {
+        target: view.editor
+        function onSelectedZoneChanged(): void {
+            if (view.editor.selectedZone >= 0)
+                view.revealKeys(view.editor.selectedZoneFirstKey, view.editor.selectedZoneLastKey)
         }
     }
-    Label {
-        Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-        font: view.captionFont
-        color: view.colors.secondaryText
-        text: (view.editor.mode === 0
-            ? qsTr("Drumkit: each key plays its own sample, with its own pitch, pan and envelope.")
-            : qsTr("Keysplit: each sample covers a range of keys and plays at the pitch of the key pressed."))
-            + qsTr(" Switching layouts is safe: both keep your edits, and Save to Song saves the one selected.")
+    function pressKey(key: int): void {
+        view.dragZone = view.editor.zoneIndexAtKey(key)
+        view.dragPressKey = key
+        view.dragDelta = 0
+        view.editor.playKey(key)
+    }
+    function dragKey(x: real): void {
+        if (view.dragZone < 0 || view.dragZone >= view.editor.zoneCount())
+            return
+        const width = view.editor.zoneEndKey(view.dragZone) - view.editor.zoneStartKey(view.dragZone)
+        const start = Math.max(0, Math.min(127 - width, view.editor.zoneStartKey(view.dragZone) + (view.keyAt(x) - view.dragPressKey)))
+        view.dragDelta = start - view.editor.zoneStartKey(view.dragZone)
+    }
+    function releaseKey(): void {
+        view.workflow.stopAudition()
+        if (view.dragZone >= 0 && view.dragZone < view.editor.zoneCount()) {
+            view.editor.selectZone(view.dragZone)
+            if (view.dragDelta !== 0)
+                view.editor.moveZone(view.dragZone, view.editor.zoneStartKey(view.dragZone) + view.dragDelta)
+        }
+        view.dragZone = -1
+        view.dragPressKey = 0
+        view.dragDelta = 0
+    }
+    function pressEdge(zone: int, start: bool): void {
+        view.edgeZone = zone
+        view.edgeStart = start
+        view.edgeKey = start ? view.editor.zoneStartKey(zone) : view.editor.zoneEndKey(zone)
+    }
+    function dragEdge(x: real): void {
+        if (view.edgeZone < 0)
+            return
+        view.edgeKey = view.keyAt(x)
+    }
+    function releaseEdge(): void {
+        if (view.edgeZone >= 0)
+            view.editor.dragZoneEdge(view.edgeZone, view.edgeStart, view.edgeKey)
+        view.edgeZone = -1
+        view.edgeStart = true
+        view.edgeKey = 0
     }
     function revealKeys(first: int, last: int): void {
         const flick = keyboardScroll.contentItem as Flickable
         const visibleWidth = keyboardScroll.width
         if (!flick || visibleWidth <= 0)
             return
-        const left = first * view.keyWidth
-        const right = (last + 1) * view.keyWidth
+        const left = view.xOf(Math.max(0, first))
+        const right = view.endXOf(Math.min(127, last))
         if (left >= flick.contentX && right <= flick.contentX + visibleWidth)
             return
         flick.contentX = Math.max(0, Math.min(keyboardScroll.contentWidth - visibleWidth, (left + right - visibleWidth) / 2))
+    }
+
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: view.paneSpacing
+        Label { text: qsTr("Keyboard"); color: view.colors.windowText }
+        Button { text: qsTr("■ Stop"); onClicked: view.workflow.stopAudition() }
+        Item { Layout.fillWidth: true }
+        Button { Layout.preferredWidth: 2.5 * view.unit; text: "−"; Accessible.name: qsTr("Zoom keyboard out"); onClicked: view.keyboardZoom = Math.max(0.5, view.keyboardZoom / 1.25) }
+        Button { Layout.preferredWidth: 2.5 * view.unit; text: "+"; Accessible.name: qsTr("Zoom keyboard in"); onClicked: view.keyboardZoom = Math.min(4, view.keyboardZoom * 1.25) }
     }
     ScrollView {
         id: keyboardScroll
         objectName: "splitStudioKeyboardScroll"
         Layout.fillWidth: true
         Layout.preferredHeight: keyboardBoard.height + keyboardScroll.ScrollBar.horizontal.height
-        contentWidth: 128 * view.keyWidth
+        contentWidth: view.whitesBefore(128) * view.whiteWidth
         contentHeight: keyboardBoard.height
         ScrollBar.horizontal.policy: ScrollBar.AlwaysOn
         ScrollBar.vertical.policy: ScrollBar.AlwaysOff
@@ -90,128 +139,164 @@ ColumnLayout {
         property bool revealed: false
         Item {
             id: keyboardBoard
-            width: 128 * view.keyWidth
-            height: 8 * view.unit
-            function keyAt(x: real): int { return Math.max(0, Math.min(127, Math.floor(x / view.keyWidth))) }
+            width: view.whitesBefore(128) * view.whiteWidth
+            height: view.keysHeight + view.labelHeight
             Repeater {
                 model: 128
-                Rectangle {
-                    id: keyCell
+                Item {
+                    id: whiteCell
                     required property int index
-                    readonly property bool blackKey: [1, 3, 6, 8, 10].indexOf(index % 12) !== -1
-                    x: index * view.keyWidth
-                    y: 3 * view.unit
-                    width: view.keyWidth
-                    height: 5 * view.unit
-                    color: blackKey ? view.colors.chromeBackground : view.colors.windowBackground
-                    border.color: view.colors.windowText
-                    border.width: view.unit / 13
-                    Label { anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter; text: keyCell.index; color: view.colors.windowText }
+                    visible: !view.isBlack(index)
+                    x: view.xOf(index)
+                    y: 0
+                    width: view.whiteWidth
+                    height: view.keysHeight
+                    Rectangle {
+                        anchors.fill: parent
+                        color: view.colors.windowBackground
+                        border.color: view.colors.windowText
+                        border.width: view.unit / 13
+                    }
+                    Label {
+                        visible: whiteCell.index % 12 === 0
+                        y: view.keysHeight
+                        width: parent.width
+                        height: view.labelHeight
+                        text: view.workflow.keyName(whiteCell.index)
+                        font: view.captionFont
+                        color: view.colors.windowText
+                    }
                     MouseArea {
                         anchors.fill: parent
-                        onPressed: view.editor.playKey(keyCell.index)
-                        onReleased: view.workflow.stopAudition()
-                        onCanceled: view.workflow.stopAudition()
+                        onPressed: view.pressKey(whiteCell.index)
+                        onPositionChanged: mouse => {
+                            if (pressed)
+                                view.dragKey(mapToItem(keyboardBoard, mouse.x, mouse.y).x)
+                        }
+                        onReleased: view.releaseKey()
+                        onCanceled: view.releaseKey()
+                    }
+                }
+            }
+            Repeater {
+                model: 128
+                Item {
+                    id: blackCell
+                    required property int index
+                    visible: view.isBlack(index)
+                    x: view.xOf(index)
+                    y: 0
+                    width: view.blackWidth
+                    height: view.blackHeight
+                    z: 1
+                    Rectangle {
+                        anchors.fill: parent
+                        color: view.colors.chromeBackground
+                        border.color: view.colors.windowText
+                        border.width: view.unit / 13
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onPressed: view.pressKey(blackCell.index)
+                        onPositionChanged: mouse => {
+                            if (pressed)
+                                view.dragKey(mapToItem(keyboardBoard, mouse.x, mouse.y).x)
+                        }
+                        onReleased: view.releaseKey()
+                        onCanceled: view.releaseKey()
                     }
                 }
             }
             Repeater {
                 model: view.editor.zoneRows
-                Rectangle {
-                    id: zone
+                Item {
+                    id: zoneFill
+                    required property int startKey
+                    required property int endKey
+                    required property int sliceBadge
+                    required property bool selected
+                    z: 2
+                    Repeater {
+                        model: zoneFill.endKey - zoneFill.startKey + 1
+                        Rectangle {
+                            required property int index
+                            readonly property int key: zoneFill.startKey + index
+                            readonly property bool black: view.isBlack(key)
+                            x: view.xOf(key)
+                            y: 0
+                            width: black ? view.blackWidth : view.whiteWidth
+                            height: black ? view.blackHeight : view.keysHeight
+                            color: view.colors.tabSelectedBackground
+                            border.color: view.colors.windowText
+                            border.width: zoneFill.selected ? view.unit / 6 : view.unit / 13
+                            Rectangle {
+                                visible: zoneFill.sliceBadge > 0
+                                width: 1.5 * view.unit
+                                height: 1.5 * view.unit
+                                radius: 0.75 * view.unit
+                                color: view.colors.windowText
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.bottom: parent.bottom
+                                anchors.bottomMargin: view.paneSpacing
+                                Label {
+                                    anchors.centerIn: parent
+                                    text: zoneFill.sliceBadge
+                                    font: view.captionFont
+                                    color: view.colors.windowBackground
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Repeater {
+                model: view.editor.zoneRows
+                Item {
+                    id: edge
                     required property int index
                     required property int startKey
                     required property int endKey
-                    required property string sampleName
                     required property bool selected
-                    required property bool locked
-                    required property string voiceType
-                    property int moveDelta: 0
-                    property int startDelta: 0
-                    property int endDelta: 0
-                    x: (startKey + moveDelta + startDelta) * view.keyWidth
-                    width: (endKey - startKey + 1 + endDelta - startDelta) * view.keyWidth
-                    height: 3 * view.unit
-                    color: selected ? view.colors.tabSelectedBackground : view.colors.buttonBackground
-                    border.color: view.colors.windowText
-                    border.width: view.unit / 13
-                    Label {
-                        anchors.fill: parent
-                        anchors.margins: view.paneSpacing
-                        text: zone.locked ? zone.voiceType + qsTr(" (synth)") : zone.sampleName
-                        color: zone.selected ? view.colors.selectionText : view.colors.windowText
-                        elide: Text.ElideRight
-                        verticalAlignment: Text.AlignVCenter
+                    visible: edge.selected
+                    Rectangle {
+                        z: 3
+                        x: view.xOf(edge.startKey) - view.unit / 3
+                        y: 0
+                        width: 2 * view.unit / 3
+                        height: 2 * view.unit
+                        color: view.colors.windowText
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.SizeHorCursor
+                            Accessible.name: qsTr("Resize zone start")
+                            onPressed: view.pressEdge(edge.index, true)
+                            onPositionChanged: mouse => {
+                                if (pressed)
+                                    view.dragEdge(mapToItem(keyboardBoard, mouse.x, mouse.y).x)
+                            }
+                            onReleased: view.releaseEdge()
+                            onCanceled: view.releaseEdge()
+                        }
                     }
-                    MouseArea {
-                        id: bodyDrag
-                        anchors.fill: parent
-                        enabled: !zone.locked
-                        property int pressKey: 0
-                        onPressed: mouse => {
-                            pressKey = keyboardBoard.keyAt(mapToItem(keyboardBoard, mouse.x, mouse.y).x)
+                    Rectangle {
+                        z: 3
+                        x: view.endXOf(edge.endKey) - view.unit / 3
+                        y: 0
+                        width: 2 * view.unit / 3
+                        height: 2 * view.unit
+                        color: view.colors.windowText
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.SizeHorCursor
+                            Accessible.name: qsTr("Resize zone end")
+                            onPressed: view.pressEdge(edge.index, false)
+                            onPositionChanged: mouse => {
+                                if (pressed)
+                                    view.dragEdge(mapToItem(keyboardBoard, mouse.x, mouse.y).x)
+                            }
+                            onReleased: view.releaseEdge()
+                            onCanceled: view.releaseEdge()
                         }
-                        onPositionChanged: mouse => {
-                            if (!pressed) return
-                            const key = keyboardBoard.keyAt(mapToItem(keyboardBoard, mouse.x, mouse.y).x)
-                            zone.moveDelta = Math.max(-zone.startKey, Math.min(127 - zone.endKey, key - pressKey))
-                        }
-                        onReleased: {
-                            const key = zone.startKey + zone.moveDelta
-                            zone.moveDelta = 0
-                            const index = zone.index
-                            const editor = view.editor
-                            editor.selectZone(index)
-                            editor.moveZone(index, key)
-                        }
-                        onCanceled: zone.moveDelta = 0
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: zone.locked
-                        onClicked: view.editor.selectZone(zone.index)
-                    }
-                    MouseArea {
-                        anchors.left: parent.left
-                        anchors.top: parent.top
-                        anchors.bottom: parent.bottom
-                        width: view.unit / 2
-                        enabled: !zone.locked
-                        cursorShape: Qt.SizeHorCursor
-                        onPositionChanged: mouse => {
-                            if (pressed) zone.startDelta = Math.min(zone.endKey, keyboardBoard.keyAt(mapToItem(keyboardBoard, mouse.x, mouse.y).x)) - zone.startKey
-                        }
-                        onReleased: {
-                            const start = zone.startKey + zone.startDelta
-                            zone.startDelta = 0
-                            const index = zone.index
-                            const end = zone.endKey
-                            const editor = view.editor
-                            editor.selectZone(index)
-                            editor.resizeZone(index, start, end)
-                        }
-                        onCanceled: zone.startDelta = 0
-                    }
-                    MouseArea {
-                        anchors.right: parent.right
-                        anchors.top: parent.top
-                        anchors.bottom: parent.bottom
-                        width: view.unit / 2
-                        enabled: !zone.locked
-                        cursorShape: Qt.SizeHorCursor
-                        onPositionChanged: mouse => {
-                            if (pressed) zone.endDelta = Math.max(zone.startKey, keyboardBoard.keyAt(mapToItem(keyboardBoard, mouse.x, mouse.y).x)) - zone.endKey
-                        }
-                        onReleased: {
-                            const end = zone.endKey + zone.endDelta
-                            zone.endDelta = 0
-                            const index = zone.index
-                            const start = zone.startKey
-                            const editor = view.editor
-                            editor.selectZone(index)
-                            editor.resizeZone(index, start, end)
-                        }
-                        onCanceled: zone.endDelta = 0
                     }
                 }
             }
@@ -220,100 +305,20 @@ ColumnLayout {
                 keys: ["porydaw-sample", "porydaw-library"]
                 onDropped: drop => {
                     const event = drop as DragEvent
-                    if (!event) return
-                    const key = keyboardBoard.keyAt(event.x)
+                    if (!event)
+                        return
+                    const key = view.keyAt(event.x)
                     const source = event.source as KitDragSource
-                    if (!source) return
-                    if (source.sliceName.length > 0) view.editor.dropSample(source.sliceName, key)
-                    else if (source.libraryPath.length > 0) view.workflow.dropLibrarySample(source.libraryPath, key)
-                    else return
+                    if (!source)
+                        return
+                    if (source.sliceName.length > 0)
+                        view.editor.dropSample(source.sliceName, key)
+                    else if (source.libraryPath.length > 0)
+                        view.workflow.dropLibrarySample(source.libraryPath, key)
+                    else
+                        return
                     event.acceptProposedAction()
                 }
-            }
-        }
-    }
-    Repeater {
-        model: view.editor.zoneRows
-        Flow {
-            id: strip
-            objectName: "splitStudioZoneStrip"
-            required property int index
-            required property int startKey
-            required property int endKey
-            required property string sampleName
-            required property string voiceType
-            required property int rootKey
-            required property bool pitched
-            required property int pan
-            required property int attack
-            required property int decay
-            required property int sustain
-            required property int release
-            required property bool locked
-            required property bool selected
-            required property bool panEnabled
-            required property bool pitchedEnabled
-            required property bool rootKeyEnabled
-            visible: selected
-            onVisibleChanged: if (visible) view.revealKeys(startKey, endKey)
-            Component.onCompleted: if (selected) view.revealKeys(startKey, endKey)
-            Layout.fillWidth: true
-            spacing: 2 * view.paneSpacing
-            Field {
-                visible: !strip.locked
-                caption: qsTr("Sample"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
-                Label { text: strip.sampleName; color: view.colors.windowText }
-            }
-            Field {
-                visible: strip.locked
-                caption: qsTr("Synth voice"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
-                Label {
-                    text: qsTr("%1 is a synth voice, not a sample. Split Studio keeps it as it is; you can only delete it here.").arg(strip.voiceType)
-                    color: view.colors.windowText
-                }
-            }
-            Field {
-                visible: !strip.locked
-                enabled: strip.rootKeyEnabled
-                caption: qsTr("Plays at note (C4 = original pitch)"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
-                SpinBox { Layout.preferredWidth: 5 * view.unit; from: 0; to: 127; value: strip.rootKey; editable: true; Accessible.name: qsTr("Root key"); onValueModified: view.editor.setZoneRootKey(value) }
-                Label { text: view.workflow.keyName(strip.rootKey); color: view.colors.windowText }
-            }
-            Field {
-                visible: !strip.locked
-                enabled: strip.pitchedEnabled
-                caption: qsTr("Pitch"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
-                CheckBox { text: qsTr("Rises with each key"); checked: strip.pitched; onClicked: view.editor.setZonePitched(checked) }
-            }
-            Field {
-                visible: !strip.locked
-                enabled: strip.panEnabled
-                caption: qsTr("Pan (Drumkit only)"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
-                SpinBox { Layout.preferredWidth: 6 * view.unit; from: -128; to: 126; stepSize: 2; value: strip.pan; editable: true; Accessible.name: qsTr("Pan"); onValueModified: view.editor.setZonePan(value) }
-            }
-            Field {
-                visible: !strip.locked
-                caption: qsTr("Attack"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
-                SpinBox { Layout.preferredWidth: 5 * view.unit; from: 0; to: 255; value: strip.attack; editable: true; Accessible.name: qsTr("Attack"); onValueModified: view.editor.setZoneAdsr(value, strip.decay, strip.sustain, strip.release) }
-            }
-            Field {
-                visible: !strip.locked
-                caption: qsTr("Decay"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
-                SpinBox { Layout.preferredWidth: 5 * view.unit; from: 0; to: 255; value: strip.decay; editable: true; Accessible.name: qsTr("Decay"); onValueModified: view.editor.setZoneAdsr(strip.attack, value, strip.sustain, strip.release) }
-            }
-            Field {
-                visible: !strip.locked
-                caption: qsTr("Sustain"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
-                SpinBox { Layout.preferredWidth: 5 * view.unit; from: 0; to: 255; value: strip.sustain; editable: true; Accessible.name: qsTr("Sustain"); onValueModified: view.editor.setZoneAdsr(strip.attack, strip.decay, value, strip.release) }
-            }
-            Field {
-                visible: !strip.locked
-                caption: qsTr("Release"); colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
-                SpinBox { Layout.preferredWidth: 5 * view.unit; from: 0; to: 255; value: strip.release; editable: true; Accessible.name: qsTr("Release"); onValueModified: view.editor.setZoneAdsr(strip.attack, strip.decay, strip.sustain, value) }
-            }
-            Field {
-                caption: " "; colors: view.colors; captionFont: view.captionFont; paneSpacing: view.paneSpacing
-                Button { text: qsTr("Delete Zone"); onClicked: view.editor.deleteZone(strip.index) }
             }
         }
     }

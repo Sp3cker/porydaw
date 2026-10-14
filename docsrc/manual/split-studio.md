@@ -1,139 +1,200 @@
 # Splitting Drumkits and Key Splits
 
 Choose **Tools → Split Studio…** to open Split Studio. It needs an open project
-with a song. There is one Split Studio window for the whole app, and it is
-bound to the song and voice slot it opened from. The title shows the song and
-voice number, with a `•` while the window has changes that have not been saved
-to the song.
+(no song required). There is one Split Studio window for the whole app. It
+always starts from an empty kit and never reads or changes any song. The title
+bar shows **Split Studio**, with a `•` while the window has unsaved changes.
 
-Press **Cmd+S** on macOS or **Ctrl+S** on Windows/Linux while Split Studio has
-focus to save to the song. Press **Cmd+Z** on macOS or **Ctrl+Z** on
-Windows/Linux to undo a window edit, and the matching redo shortcut to redo it.
-Window undo dies with the window.
+Press **Cmd+S** on macOS or **Ctrl+S** on Windows/Linux to save the voicegroup.
+Press **Cmd+Z** on macOS or **Ctrl+Z** on Windows/Linux to undo an edit, and
+**Cmd+Shift+Z** on macOS or **Ctrl+Shift+Z** / **Ctrl+Y** on Windows/Linux to redo
+it. Window undo stays within the window. Press **Cmd+W** on macOS or **Ctrl+W**
+on Windows/Linux or click **Close** in the footer to close the window.
 
 ## Layout
 
-The sample library sits on the left, the waveform slicer on the top right, and
-the key-range editor on the bottom right. Both dividers drag, and Split Studio
-remembers the window size and divider positions between sessions.
+Split Studio is organized into three resizable panels, plus a top context bar and
+a bottom footer:
 
-## Choosing a line
+- **Context bar**: Switches the layout between **Drumkit** and **Keysplit**.
+- **Sample library** (left): Browse bookmarked folders and audio files to preview
+  or load them. Click **+** to add a folder; click **Open File…** to pick a file
+  directly; expand **Advanced** to access **Remove Folder from List**.
+- **Centre editor**:
+  - File tabs along the top for loaded audio sources.
+  - Toolbar with zoom controls (**−**, **+**, **Fit**).
+  - Waveform display showing slices and draggable slice markers.
+  - **Snap to zero** toggle.
+  - Slice table listing each slice with its grip handle, number, name, Play
+    button, and Remove button.
+  - Keyboard zone editor with an audition stop button (**■ Stop**), zoom
+    buttons (**−**, **+**), and 128 keys showing assigned slice badges and zone
+    boundaries.
+- **Inspector** (right): Parameters for the selected key, including **Sample
+  rate** (**File**, **Saved at**), **Selected key** (note name, MIDI number,
+  **Slice**), **Pitch** (**Plays at**), **Pan** (Drumkit only), **Envelope**
+  (**Attack**, **Decay**, **Sustain**, **Release**), and **Remove from Key**.
+- **Footer**: Window **Undo** and **Redo** buttons, a slice count and ROM size
+  readout (`<n> slices · <size> ROM`), the **Voicegroup** name field, **Close**,
+  and **Save Voicegroup** (**Cmd/Ctrl+S**).
 
-**Line in Voicegroup** lists the song voicegroup's drumkit and keysplit lines.
-Empty lines offer **Line N · empty — new kit…**, which creates the kit's
-voicegroup file (and its keysplit table, if you save the Keysplit layout) when
-you save.
-Converting a non-kit voice into a kit is not offered here; do that in the
-voicegroup dock instead.
+Split Studio remembers its window size and divider positions between sessions.
 
-## Drumkit or keysplit
+## Drumkit and Keysplit layouts
 
-The **Zone layout** buttons, at the top of the zone editor, switch only that
-editor; a caption under them explains the selected layout. Both layouts keep
-their edits while the window is open, so you can sketch in one and finish in
-the other. The layout selected when you save decides what is written to the
-song.
+The buttons in the context bar switch between the two kit layouts:
 
-Settings the other mode cannot store stay in the zone but their editors show
-disabled: pan can only be stored in Drumkit mode. Keysplit mode is always
-pitched — the engine pitches each child from the incoming key — so the Pitched
-control shows on and disabled there, while your stored per-zone settings are
-kept for Drumkit.
+- **Drumkit**: Each mapped slice occupies a single key. Stereo **Pan** can be
+  adjusted per key from -64 (hard left) to +63 (hard right).
+- **Keysplit**: Slices can span multi-key ranges (zones). Keysplit voices are
+  always pitched by the sound engine from the incoming key, so pan is disabled.
 
-## Slicing samples
+Both layouts maintain their edits while the window is open, so you can switch
+between them as you work. The layout active when you click **Save Voicegroup**
+determines what is written to the project.
 
-Each imported source gets its own tab above the waveform and keeps its own
-markers, slices, and sample rate. Double-click the waveform or press **M** to
-add a marker at the cursor, drag a marker tab to move it, and press **Delete**
-or use the tab's context menu to remove it; removing a boundary merges the two
-neighboring slices. Drag-select a region and choose **Slice selection** to make
-one slice exactly that region. Marker placement is free: there is no beat grid.
+## Slicing audio files
 
-Snap to zero crossing is on by default and pulls added or dragged markers to
-the nearest sign change within about 3 ms. Each rendered slice also gets a
-declick fade baked in: fade-out is on by default and never longer than 4 ms or
-half the slice, fade-in is off by default to preserve attacks, and each slice
-can override both. Slices are named `<source>_NN` from the first free number
-and can be renamed under Sample Studio's naming rules. Each source has its own
-target sample rate: the source rate when it is GBA-ready, otherwise the usual
-GBA default.
+Each audio source loaded into Split Studio gets its own tab above the waveform
+and tracks its own markers, slices, and sample rate:
 
-A slice that a key range uses cannot be removed, and a source with a slice in
-use cannot be closed. Remove those zones first.
+- **Loading files**: Click an audio file in the sample library to preview it.
+  Double-click a file or click **Open File…** to load it into a new file tab. To
+  close a file tab, click its **×** button; closing a tab automatically clears any
+  keyboard keys mapped to its slices.
+- **Adding markers**: Click anywhere on the waveform to add a slice marker.
+- **Moving markers**: Drag a marker along the waveform to reposition the slice
+  boundary.
+- **Deleting markers**: Double-click a marker to delete it, or click a marker and
+  press **Delete** or **Backspace**. Removing a marker merges the two neighboring
+  slices.
+- **Waveform navigation**: Turn the mouse wheel to zoom the waveform, or click the
+  **−** and **+** buttons. Click **Fit** to view the entire audio file. Middle-click
+  and drag on the waveform to pan horizontally.
+
+When **Snap to zero** is checked, adding or dragging markers automatically snaps
+to the nearest zero-crossing point in the audio within about 3 ms.
+
+Every slice keeps a short fade-out baked into its end to prevent clicks. There
+are no per-slice fade controls.
+
+### Slice names and numbers
+
+Each slice is numbered consecutively. The slice number appears in the slice table,
+on its waveform region, and as a badge on any keyboard key mapped to it.
+
+Each slice receives a default name (`<source>_NN`), automatically skipping names
+already taken in the project. To rename a slice, click its name in the slice
+table. Press **Enter** to apply the new name or **Escape** to cancel. If a name is
+not a valid symbol, duplicates another slice in the kit, or belongs to a project
+sample that this Split Studio window did not save, the text box shows a red outline
+and the rename is not applied.
 
 ## Mapping keys
 
-Drop a slice (or a library sample) onto a key to create a zone. In Drumkit
-mode the zone is one key; in Keysplit mode it extends to the start of the next
-zone, or key 127. Zones never overlap: dropping onto an occupied range is
-rejected with a status message. Drag a zone's edges to resize it and its body
-to move it.
+Slices can be mapped across the 128-key keyboard (keys 0–127):
 
-**Place all slices on the keyboard, starting at key** fills consecutive keys
-with the source's slices in order — one key per slice in Drumkit, one run per
-slice in Keysplit — with a white-keys-only option that skips black keys. The
-note name of the start key shows beside it. **Keyboard zoom** widens or narrows
-the keys.
+- **Automatic placement**: Every new slice is placed automatically on the next
+  free key from C2 upward in both layouts.
+- **Clearing keys**: When a slice disappears (by deleting a marker to merge
+  slices, clicking the slice row's **✕** button, or closing its file tab), its
+  assigned keys are automatically cleared.
+- **Moving keys**: Drag a mapped key on the keyboard to move its slice to another
+  key.
+- **Drag-and-drop mapping**: Drag the grip handle (`⋮⋮`) of any row in the slice
+  table onto a key, or drag an audio file directly from the sample library onto a
+  key to load and map it there.
+- **Resizing key ranges** (Keysplit only): Drag the left or right edge handles of
+  a selected key zone to adjust the key range that triggers that slice. Zones
+  never overlap.
+- **Removing a mapping**: Click a mapped key to select it, then click **Remove from Key**
+  in the inspector.
 
-The selected zone's strip shows the sample name, the note it plays at, the
-pitch toggle, pan (Drumkit only), and attack, decay, sustain and release, each
-with a small caption. Zones read from the project whose voices are synth
-voices rather than samples (for example Square 1 or Noise) show their voice
-type and can only be deleted here.
+## Key parameters
+
+Selecting a key on the keyboard displays its settings in the inspector on the
+right:
+
+- **Sample rate**: Shows the source file's original rate under **File**, and the
+  downsampled export rate under **Saved at**. Choose from standard GBA rates in
+  the dropdown.
+- **Selected key**: Displays the note name, MIDI key number, and the mapped
+  **Slice** name.
+- **Pitch**: In the **Plays at** field, enter the root key where the sample plays
+  at its original pitch (accepts note names like `C4` or MIDI numbers like `60`).
+- **Pan** (Drumkit only): Adjusts stereo position from -64 (hard left) to +63
+  (hard right), centered at 0.
+- **Envelope**: Sliders for **Attack**, **Decay**, **Sustain**, and **Release**
+  (each 0–255) control the sound envelope applied by the GBA sound hardware.
 
 ## Auditioning
 
-Click a slice to hear the rendered slice. Click a key in the zone editor to
-hear the unsaved draft through the game audio engine, with the zone's
-pitch, pan, and envelope applied. There is no live MIDI input.
+You can audition sounds directly inside Split Studio:
 
-## Saving to the song
+- Click the play button (**▶**) beside any slice in the slice table to audition
+  that slice. Pressing **Space** also starts or stops slice audition.
+- Click any key on the keyboard (or drag across keys) to audition it through the
+  game audio engine with its pitch, pan, and envelope applied.
+- Click **■ Stop** above the keyboard or press **Space** to stop playback.
 
-**Save to Song** writes the kit as one song undo step: the slice `.wav` files
-plus their registrations are written immediately, then the kit itself (parent
-slot, sub-voices, and the keysplit table in Keysplit mode) is applied. The
-song becomes unsaved; write it to disk with the normal song save. Slice files
-and registrations stay on disk even if you later undo the song step. A
-re-saved slice whose audio changed overwrites its file; slices you renamed
-leave the old name behind as an unused file that cleanup can offer to delete.
+Split Studio does not take live MIDI input.
 
-Kits created in previously empty slots also get their new voicegroup file
-skeleton (and new keysplit table, in Keysplit mode) written at save time.
+## Saving voicegroups
 
-Window edits have their own undo stack, separate from the song's undo history.
-**Cmd+Z** on macOS or **Ctrl+Z** on Windows/Linux inside Split Studio undoes a
-window edit, never a song edit.
+The **Voicegroup** name field in the footer suggests `<first file>_kit` using the
+next free name in the project. If the name is not a valid identifier or names a
+voicegroup that this Split Studio window did not create, the field shows a red
+outline. **Save Voicegroup** is disabled until at least one key is mapped and the
+name is valid.
 
-## When the song changes underneath
+Click **Save Voicegroup** or press **Cmd+S** on macOS / **Ctrl+S** on
+Windows/Linux to save the kit:
 
-If the song edits your kit while your draft is clean, Split Studio reloads
-silently. If your draft has unsaved changes, a **Changed in the song** bar
-offers **Reload** (take the song's version) or **Keep mine** (keep drafting).
+- Writes the slice samples (new 8-bit `.wav` files in `sound/direct_sound_samples/`
+  and their registrations in `sound/direct_sound_data.inc`).
+- Creates a new voicegroup file at `sound/voicegroups/<name>.inc` containing the
+  drumkit or keysplit definition.
+- Adds an `#include` line for the voicegroup in `sound/voice_groups.inc`.
+- In Keysplit layout, writes the keysplit routing table into the voicegroup file.
 
-Switching the song's voicegroup prompts **Save to Song** / **Discard** / **Cancel** first, but only while Split Studio holds unsaved changes for that song. After switching, Split Studio follows the same slot number in the new voicegroup and shows a `Voicegroup changed to …` bar with a **Switch back to …** button. Switching back never prompts. If a switch fails, the current kit stays and a status line reports the failure. A
-non-kit slot in the new voicegroup shows the empty-slot picker state.
+Split Studio never changes any song or song voicegroup. To use your new
+voicegroup in a song, assign it to a voice on a track in the main window.
 
-## Closing
+### Overwriting saved samples
 
-Closing with unsaved changes — the window close button, **Cmd+W** on macOS or
-**Ctrl+W** on Windows/Linux, the song tab close, project close, or quitting
-the app — asks **Save to Song** / **Discard** / **Cancel**. Saving suspends the
-close until the save settles; Cancel aborts it; Discard proceeds. On quit there
-is no abandon path: the app waits for the save. The Split Studio prompt runs
-before the song's own save prompt.
+Saving again in the same Split Studio window rewrites that voicegroup and the
+samples it created. Unchanged slice audio is not rewritten.
 
-## Shared kits
+If a saved sample's audio changed (for example, if you moved slice markers or
+changed its **Saved at** rate) and you click **Save Voicegroup**, Split Studio
+prompts: `Overwrite N saved samples?` listing the modified files. Confirming
+proceeds with the save; canceling aborts it. Samples created elsewhere are never
+overwritten.
 
-When the kit's voices or table are also used by other voicegroups, Split
-Studio shows **used by N**. Copy is the default: saving snapshots the voices
-(and table) under fresh names and repoints only your slot. Editing everywhere
-instead changes every voicegroup that shares them.
+## Closing and unsaved changes
+
+If you close Split Studio with unsaved changes — via the window close button,
+**Cmd+W** on macOS / **Ctrl+W** on Windows/Linux, closing the project, or
+quitting the app — a dialog asks **Save Voicegroup** / **Discard** / **Cancel**.
+Saving completes the write before closing; Discard closes without saving; Cancel
+aborts the close.
+
+Closing a song tab never prompts or waits on Split Studio, because Split Studio
+is independent of any song.
 
 ## Cleaning up unused slices
 
-Only files Split Studio made during this app session, which no voicegroup
-references, are ever offered for cleanup. Closing the Split Studio window
-never offers it. Closing the song tab, closing the project, or quitting offers
-a checklist — everything checked — with **Delete** / **Keep**. Delete removes
-the `.wav` files and their registrations. A file that gained a reference since
-the list was built is kept instead, and a status line names the skipped files.
+If you create slice files in Split Studio during an app session that end up not
+referenced by any voicegroup (for example, if you slice samples and discard the
+window, or rename slices after saving), Porydaw offers an orphan cleanup dialog
+when you close a song tab, close the project, or quit the app.
+
+A saved Split Studio voicegroup counts as an active reference, so its samples are
+not treated as orphans. For unreferenced files created during the session, the
+cleanup dialog presents a checklist with all items selected:
+
+- **Delete**: Removes the `.wav` files and their registrations from the project.
+- **Keep**: Retains the files on disk.
+
+A file that gained a reference since the list was built is kept automatically, and
+a status message names the preserved files.

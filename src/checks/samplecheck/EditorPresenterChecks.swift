@@ -44,12 +44,14 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         let presenter = SampleStudioPresenter(document: SampleDocument(source: imported), validateName: validator)
         prefill.expect(presenter.sampleName == "samplecheck_tone", message: "A006 name prefilled from source file")
         prefill.expect(!presenter.canCommit, message: "A007 collision disables the commit")
-        prefill.expect(!presenter.nameStatus.isEmpty, message: "A008 collision displays validation status")
+        prefill.expect(presenter.nameInvalid, message: "A008 collision marks the name invalid")
+        presenter.setSampleName(name: "samplecheck_tone")
+        prefill.expect(
+            presenter.nameInvalid && !presenter.canCommit,
+            message: "invalid name sets the flag and blocks the commit")
         presenter.setSampleName(name: "fresh_tone")
         prefill.expect(presenter.canCommit, message: "A009 valid name enables the commit")
-        prefill.expect(
-            presenter.nameStatus == "Registers as DirectSoundWaveData_fresh_tone",
-            message: "A010 valid name displays registration status")
+        prefill.expect(!presenter.nameInvalid, message: "A010 valid name clears the invalid flag")
         prefill.expect(presenter.sampleName == "fresh_tone", message: "A011 sampleName returns the edited name")
         presenter.setSampleName(name: "Fresh Tone!")
         prefill.expect(
@@ -107,7 +109,14 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         rate.expect(
             ratePresenter.processed.declaredRate == 6690, message: "A030 fractional rate rounds declared WAV rate")
         rate.expect(ratePresenter.params.exactPitchOverride == 0, message: "A031 rate edit drops verbatim agbp")
+        let romBefore = ratePresenter.romText
         ratePresenter.chooseRate(index: 1)
+        rate.expect(
+            ratePresenter.romText != romBefore
+                && ratePresenter.romText
+                    == SampleStudioReadouts.romSize(
+                        SampleRender.render(source: rateSource, params: ratePresenter.params)),
+            message: "ROM text changes when the target rate changes")
         ratePresenter.chooseRate(index: 0)
         rate.expect(
             ratePresenter.params.targetRate == rateSource.sampleRate, message: "A032 preset pick restores source rate")
@@ -244,21 +253,14 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         gesture.undo()
         state.expect(gesture.cropStart == 200, message: "marker drag reverts to pre-gesture render")
         state.expect(
-            gesture.outputSummary.contains("ROM") && gesture.techDetail.contains("agbp"),
-            message: "editor readouts report ROM and rendered pitch")
+            defaultPresenter.fileRateText == "13240.09 Hz"
+                && defaultPresenter.rateChoices[0] == "File rate (13240.09 Hz)"
+                && defaultPresenter.loadedFileName == "prepared_tone.wav",
+            message: "file-rate text equals the decoded file's rate")
         state.expect(
-            defaultPresenter.sourceLine == "8-bit PCM WAV, 1 channel, 13240.09 Hz, 64 samples (0.00 s)"
-                && defaultPresenter.rateChoices[0] == "Keep source (13240.09 Hz)",
-            message: "source and keep-rate labels reproduce fork PCM text")
-        var floatStereo = hiRes
-        floatStereo.sourceChannels = 2
-        floatStereo.sourceBits = 32
-        floatStereo.sourceFloat = true
-        floatStereo.sampleRate = 44100.25
-        state.expect(
-            SampleStudioReadouts.sourceLine(floatStereo)
-                == "32-bit float WAV, 2 channels, 44100.25 Hz, 12000 samples (0.27 s)",
-            message: "floating stereo source uses fractional rate and plural channels")
+            SampleStudioReadouts.fileRate(44100.25) == "44100.25 Hz"
+                && SampleStudioReadouts.fileRate(32000) == "32000 Hz",
+            message: "file rate uses fractional decimals only when needed")
         state.expect(
             gesture.normalizeChoices == ["Auto", "Looped (−9 dBFS loop RMS)", "One-shot (peak)", "Off"],
             message: "normalize choices reproduce fork labels")
@@ -272,26 +274,10 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
             message: "rate presets reproduce fork kGbaMixRates ordering")
         var formatted = ProcessedSample()
         formatted.size = 1520
-        formatted.outputRate = 1000
-        formatted.declaredRate = 1000
-        formatted.freq = 225_280
         formatted.normalizeGain = 2
-        formatted.seam.valid = true
-        formatted.seam.ampLsb = 2
-        formatted.seam.derivLsb = 3
-        formatted.seam.nccValid = true
-        formatted.seam.ncc = 0.987
-        formatted.warnings = ["render notice"]
-        var warned = defaultSource
-        warned.warnings = ["decode notice"]
         state.expect(
-            SampleStudioReadouts.summary(source: warned, output: formatted)
-                == "1.52 s · 1.5 KB ROM\nWarning: decode notice\nWarning: render notice",
-            message: "ROM summary rounds KB to one decimal and retains warning order")
-        state.expect(
-            SampleStudioReadouts.technical(formatted)
-                == "Output: 1520 samples @ 1000 Hz — one-shot\nPitch: 220.00 Hz at C4 (60) — agbp 225280, unity 60 (C4)\nROM cost: 1536 bytes — seam amp 2 LSB, slope 3, match 98%",
-            message: "technical readout truncates seam match to integer percent")
+            SampleStudioReadouts.romSize(formatted) == "1.5 KB",
+            message: "ROM size rounds KB to one decimal")
         state.expect(
             SampleStudioReadouts.gain(formatted, mode: .oneShot) == "gain 6.0 dB"
                 && SampleStudioReadouts.gain(formatted, mode: .off) == "gain 0.0 dB",

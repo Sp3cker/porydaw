@@ -55,7 +55,6 @@ public final class SampleLoopTools: QmlUncreatable {
     @QtTracked public var pitchApplyVisible = false
     @QtTracked public var pitchApplyText = ""
     @QtTracked public var pitchApplyToolTip = ""
-    @QtTracked public var suggestStatus = ""
     @QtTracked public var canTryAnother = false
     @QtTracked public var seamBadgeVisible = false
     @QtTracked public var seamBadgeText = ""
@@ -197,7 +196,6 @@ public final class SampleLoopTools: QmlUncreatable {
         candidateCropEnd = -1
         candidateRate = 0
         candidatesValid = false
-        suggestStatus = ""
         canTryAnother = false
         pitchApplyVisible = false
         pitchApplyText = ""
@@ -238,14 +236,13 @@ public final class SampleLoopTools: QmlUncreatable {
                 seam.ampLsb <= 2 && seam.derivLsb <= 3
                 ? 0
                 : seam.ampLsb <= 4 && seam.derivLsb <= 6 ? 1 : 2
-            seamBadgeText = ["seam: clean", "seam: fair", "seam: click"][seamBadgeSeverity]
+            seamBadgeText = ["Clean", "Fair", "Clicks"][seamBadgeSeverity]
         }
         if candidatesValid
             && (candidateCropStart != p.cropStart || candidateCropEnd != p.cropEnd || candidateRate != p.targetRate)
         {
             candidatesValid = false
             candidateIndex = -1
-            suggestStatus = ""
         }
         canTryAnother = candidatesValid && !candidates.isEmpty
     }
@@ -281,18 +278,6 @@ public final class SampleLoopTools: QmlUncreatable {
             markers.append((4, p.loopEnd, "loop", "Loop end"))
         }
         wave.setMarkers(markers)
-        let output = presenter.processed
-        var end: [Float] = [], start: [Float] = []
-        if output.looped {
-            let loopStart = Int(output.loopStart)
-            let samples = output.preview
-            let length = min(256, samples.count - loopStart - 1, loopStart + 1, samples.count)
-            if length >= 8 {
-                end.append(contentsOf: samples[(samples.count - length)..<samples.count])
-                start.append(contentsOf: samples[(loopStart - length + 1)...loopStart])
-            }
-        }
-        wave.setSeamWindows(end: end, start: start)
     }
 
     private func dragMarker(id: Int, frame: Int) {
@@ -338,11 +323,9 @@ public final class SampleLoopTools: QmlUncreatable {
         candidateRate = p.targetRate
         candidates.removeAll()
         candidateIndex = -1
-        suggestStatus = ""
         let analysis = SampleRender.render(source: presenter.source, params: analysisParams())
         let count = analysis.preview.count
         guard count >= 256 else {
-            suggestStatus = "sample too short for a loop search — drag the markers."
             canTryAnother = false
             return false
         }
@@ -361,7 +344,6 @@ public final class SampleLoopTools: QmlUncreatable {
                 candidates.append(mapped)
             }
         }
-        if candidates.isEmpty { suggestStatus = "no loop candidates found — drag the markers." }
         canTryAnother = !candidates.isEmpty
         return !candidates.isEmpty
     }
@@ -369,7 +351,6 @@ public final class SampleLoopTools: QmlUncreatable {
     private func applyCandidate(_ index: Int) {
         guard candidates.indices.contains(index) else { return }
         candidateIndex = index
-        suggestStatus = "loop \(index + 1) of \(candidates.count)"
         let candidate = candidates[index]
         var p = presenter.params
         p.loopOn = true
@@ -391,7 +372,6 @@ public final class SampleLoopTools: QmlUncreatable {
                 p.loopEnd = best.loopEnd
                 p.crossfadeOn = false
                 candidateIndex = 0
-                suggestStatus = "loop 1 of \(candidates.count)"
             } else {
                 p.loopStart = p.cropStart
                 p.loopEnd = max(p.cropStart, p.cropEnd - 1)

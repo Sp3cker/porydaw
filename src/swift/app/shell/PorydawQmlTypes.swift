@@ -62,7 +62,6 @@ public enum PorydawQmlTypes {
         HeaderVoicePicker.self,
         ImportControllerRow.self,
         IntegerInputPolicy.self,
-        KitSlotRow.self,
         KitSourceRow.self,
         KitStudioPresenter.self,
         KitZoneRow.self,

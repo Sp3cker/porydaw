@@ -3,7 +3,6 @@ add_library(PorydawKitStudio STATIC
     KitDraft.swift
     KitDraftCodec.swift
     KitSourceSession.swift
-    KitSlotPicker.swift
     KitStudioPresenter.swift
 )
 porydaw_swift_module(PorydawKitStudio PorydawKitStudio)

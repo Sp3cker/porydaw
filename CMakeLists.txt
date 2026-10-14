@@ -324,6 +324,7 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/ThemedWindow.qml
         src/ui/shell/DialogWindow.qml
         src/ui/shell/DisclosureLabel.qml
+        src/ui/shell/ValidatedTextField.qml
         src/ui/shell/AboutDialog.qml
         src/ui/shell/TransportBar.qml
         src/ui/shell/TransportButton.qml
@@ -354,7 +355,7 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/kitstudio/OrphanCleanupDialog.qml
         src/ui/shell/kitstudio/SliceEditorView.qml
         src/ui/shell/kitstudio/ZoneEditorView.qml
-        src/ui/shell/kitstudio/KitSlotPicker.qml
+        src/ui/shell/kitstudio/KitInspector.qml
         src/ui/shell/kitstudio/KitDragSource.qml
 )
 

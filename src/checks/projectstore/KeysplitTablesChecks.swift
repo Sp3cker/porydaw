@@ -316,6 +316,22 @@ private func sampleUsageScannerChecks(_ report: CheckReport) {
                 expected: [["usage_kept"], [], []],
                 actual: [referenced.sorted(), undone.sorted(), noRoot.sorted()], cppID: id,
                 what: "staged references count; undo and an unreachable created subgroup do not")
+            let diskPath = root.appendingPathComponent("sound/voicegroups/usage_created.inc").path
+            let diskSource = VoicegroupSource()
+            var diskError: String?
+            guard
+                diskSource.open(location: VoicegroupLocation(filePath: diskPath, sectionLabel: ""), error: &diskError),
+                diskSource.setVoice(slot: 0, voice: child),
+                try diskSource.save()
+            else {
+                report.fail(id, "sample reference scan: cannot write the disk child (\(diskError ?? "unknown"))")
+                return
+            }
+            let diskRooted = try SampleUsageScanner.referenced(
+                projectRoot: root.path, candidates: candidates, overlay: [:], createdSubgroups: [subgroup])
+            report.expectEqual(
+                expected: ["usage_kept"], actual: diskRooted.sorted(), cppID: id + "-disk-root",
+                what: "a created subgroup written to disk roots its own samples")
         }
     } catch {
         report.fail(id, "sample reference scan: \(error)")

@@ -12,50 +12,37 @@ public final class KitZoneRow: QmlUncreatable {
     public let endKey: Int
     public let sampleName: String
     public let rootKey: Int
-    public let pitched: Bool
     public let pan: Int
     public let attack: Int
     public let decay: Int
     public let sustain: Int
     public let release: Int
-    public let locked: Bool
-    public let voiceType: String
     public let selected: Bool
     public let panEnabled: Bool
-    public let pitchedEnabled: Bool
-    public let rootKeyEnabled: Bool
-    private let storedPitched: Bool
+    public let sliceBadge: Int
     private let modeIndex: Int
-    private let lockedMacro: Int
 
-    init(zone: KitZone, selected: Bool, mode: KitMode) {
-        storedPitched = zone.pitched
+    init(zone: KitZone, selected: Bool, mode: KitMode, badge: Int) {
         modeIndex = mode == .drumkit ? 0 : 1
-        lockedMacro = Int(zone.lockedVoice?.macro.rawValue ?? -1)
         startKey = zone.startKey
         endKey = zone.endKey
         sampleName = zone.sampleName
         rootKey = zone.rootKey
-        pitched = mode == .keysplit || zone.pitched
         pan = zone.pan
         attack = zone.adsr.attack
         decay = zone.adsr.decay
         sustain = zone.adsr.sustain
         release = zone.adsr.release
-        locked = zone.locked
-        voiceType = zone.lockedVoice.map { vgMacroDisplayName($0.macro) } ?? ""
         self.selected = selected
-        panEnabled = !zone.locked && mode == .drumkit
-        pitchedEnabled = !zone.locked && mode == .drumkit
-        rootKeyEnabled = !zone.locked
+        panEnabled = mode == .drumkit
+        sliceBadge = badge
     }
 
-    func matches(zone: KitZone, selected: Bool, mode: KitMode) -> Bool {
+    func matches(zone: KitZone, selected: Bool, mode: KitMode, badge: Int) -> Bool {
         startKey == zone.startKey && endKey == zone.endKey && sampleName == zone.sampleName
-            && rootKey == zone.rootKey && storedPitched == zone.pitched && pan == zone.pan
+            && rootKey == zone.rootKey && pan == zone.pan
             && attack == zone.adsr.attack && decay == zone.adsr.decay && sustain == zone.adsr.sustain
-            && release == zone.adsr.release && locked == zone.locked
-            && lockedMacro == Int(zone.lockedVoice?.macro.rawValue ?? -1)
+            && release == zone.adsr.release && sliceBadge == badge
             && self.selected == selected && modeIndex == (mode == .drumkit ? 0 : 1)
     }
 }
@@ -67,19 +54,17 @@ public final class KitSourceRow: QmlUncreatable {
     public let name: String
     public let sliceCount: Int
     public let active: Bool
-    public let closable: Bool
 
-    init(source: KitSourceSession.Source, active: Bool, closable: Bool) {
+    init(source: KitSourceSession.Source, active: Bool) {
         id = source.id
         name = source.sample.suggestedName
         sliceCount = source.slices.count
         self.active = active
-        self.closable = closable
     }
 
-    func matches(source: KitSourceSession.Source, active: Bool, closable: Bool) -> Bool {
+    func matches(source: KitSourceSession.Source, active: Bool) -> Bool {
         id == source.id && name == source.sample.suggestedName && sliceCount == source.slices.count
-            && self.active == active && self.closable == closable
+            && self.active == active
     }
 }
 
@@ -90,50 +75,48 @@ public final class KitStudioPresenter: QmlUncreatable {
     public var titleText: String = ""
     public var dirty: Bool = false
     public var mode: Int = 0
-    public var conflictVisible: Bool = false
-    public var conflictText: String = ""
-    public var switchBarVisible: Bool = false
-    public var statusText: String = ""
-    public var usedByText: String = ""
+    public var saving: Bool = false
+    public var metaText: String = ""
+    public var voicegroupName: String = ""
+    public var voicegroupNameInvalid: Bool = false
     public var canSave: Bool = false
     public var canUndo: Bool = false
     public var canRedo: Bool = false
     public var zoneRows: QListModel<KitZoneRow> = QListModel()
-    public var slotRows: QListModel<KitSlotRow> = QListModel()
     public var sourceRows: QListModel<KitSourceRow> = QListModel()
     @QtTracked public var waveform: MarkerWaveformModel? = nil
     public var selectedZone: Int = -1
-    public var selectedSlot: Int = -1
-    public var retargetVisible: Bool = false
-    public var retargetSlot: Int = -1
+    public var selectedZoneFirstKey: Int = 0
+    public var selectedZoneLastKey: Int = 0
+    public var selectedZoneSampleName: String = ""
+    public var selectedZoneRootKey: Int = 60
+    public var selectedZonePan: Int = 0
+    public var selectedZoneAttack: Int = 0
+    public var selectedZoneDecay: Int = 0
+    public var selectedZoneSustain: Int = 0
+    public var selectedZoneRelease: Int = 0
+    public var selectedZonePanEnabled: Bool = false
+    public var selectedSlice: Int = -1
     public var snap: Bool = true
-    public var cursorFrame: Int = 0
-    public var selectionStartFrame: Int = 0
-    public var selectionEndFrame: Int = 0
     public var sliceCount: Int = 0
+    public var fileRateText: String = ""
     public var sourceRate: Int = 0
     public var rateChoices: [String] = []
     public var stateRevision: Int = 0
     public var slicesRevision: Int = 0
-
+    private var lastAddedMarkerId: Int?
     @QtIgnored public var onSaveRequested: (() -> Void)?
-    @QtIgnored public var onRetargetPrompt: ((_ answer: Int) -> Void)?
-    @QtIgnored public var onConflictAnswer: ((_ keepMine: Bool) -> Void)?
-    @QtIgnored public var onSwitchBack: (() -> Void)?
+    @QtIgnored public var onAlert: ((String) -> Void)?
     @QtIgnored public var validateName: ((String) -> String?)?
-    @QtIgnored public var onLoadKit: ((_ slot: Int) -> KitLoadResult?)?
-    @QtIgnored public var usageScan: ((_ subgroup: String, _ table: String?, _ excludingSection: String) -> [String])?
+    @QtIgnored public var validateVoicegroupName: ((String) -> String?)?
     @QtIgnored public var publishKitTone: ((KitAuditionTone, UInt8) -> Bool)?
     @QtIgnored public var playPcm: ((Int) -> Void)?
     @QtIgnored public var samples: [String: ProcessedSample] = [:]
     @QtIgnored public var progWaves: [String: [UInt32]] = [:]
     @QtIgnored public let draft: KitDraft
     @QtIgnored public let session: KitSourceSession
+    public private(set) var voicegroupNameEdited = false
 
-    private let picker = KitSlotPicker()
-    private var song = ""
-    private var section = ""
-    private var boundSlot = -1
     private var activeSource: Int?
     private var displayedSource: Int?
     private weak var displayedWaveform: MarkerWaveformModel?
@@ -149,165 +132,103 @@ public final class KitStudioPresenter: QmlUncreatable {
         session.validateName = { [weak self] (name: String) -> String? in self?.validateName?(name) }
     }
 
-    /// Binds a clean target; callers guard dirty retargets before supplying new facts.
-    @QtIgnored public func bind(
-        song: String, section: String, voices: [VgVoice?], undefinedSlots: Set<Int>, slot: Int
-    ) {
-        self.song = song
-        self.section = section
-        boundSlot = slot
+    /// Opens an empty kit; the window never reads a song kit.
+    @QtIgnored public func open() {
         draft.load(KitDraft.Snapshot())
+        session.restore(KitSourceSession().snapshot())
         activeMode = .drumkit
         selectedZone = -1
-        usedByText = ""
-        resetCleanState()
-        picker.bind(voices: voices, undefinedSlots: undefinedSlots, slot: slot)
-        retargetVisible = false
-        retargetSlot = -1
-        switchBarVisible = false
-        if let kind = picker.selectedKind() {
-            load(slot: slot, kind: kind)
-        } else {
-            refresh()
-        }
-    }
-
-    /// Re-publishes bank facts without rebinding the working kit or its pending target.
-    @QtIgnored public func refreshSlots(voices: [VgVoice?], undefinedSlots: Set<Int>) {
-        picker.refresh(voices: voices, undefinedSlots: undefinedSlots)
-        syncModel(
-            slotRows, picker.rows(existing: slotRows),
-            matches: { (lhs: KitSlotRow, rhs: KitSlotRow) -> Bool in lhs === rhs })
-        stateRevision += 1
-    }
-
-    public func selectSlot(row: Int) {
-        switch picker.select(row: row, dirty: dirty) {
-        case .unchanged: break
-        case .prompt:
-            retargetSlot = picker.pendingSlot ?? -1
-            retargetVisible = true
-            stateRevision += 1
-        case .load(let slot, let kind): load(slot: slot, kind: kind)
-        }
-    }
-
-    public func answerRetarget(answer: Int) {
-        guard retargetVisible, (0...2).contains(answer) else { return }
-        if answer == 2 {
-            picker.cancel()
-            retargetVisible = false
-            retargetSlot = -1
-        }
-        onRetargetPrompt?(answer)
-        if answer == 1 { completeRetarget() }
-    }
-
-    /// The workflow calls this only after a successful save when answering Save.
-    @QtIgnored public func completeRetarget() {
-        guard let target = picker.pendingTarget() else { return }
-        load(slot: target.slot, kind: target.kind)
-    }
-
-    private func load(slot: Int, kind: KitSlotKind) {
-        if kind == .empty {
-            install(KitLoadResult(kind: .empty), slot: slot)
-        } else if let result = onLoadKit?(slot) {
-            install(result, slot: slot)
-        } else {
-            statusText = "Could not load voice \(slot)"
-            refresh()
-        }
-    }
-
-    /// Installs a workflow-loaded kit after reload, conflict resolution or voicegroup switch.
-    @QtIgnored public func install(_ result: KitLoadResult, slot: Int) {
-        let loadedZones: [KitZone]
-        switch result.kind {
-        case .drumkit:
-            loadedZones = KitDraftCodec.drumkitZones(children: result.children)
-        case .keysplit:
-            guard let table = result.table else {
-                statusText = "Could not load keysplit table"
-                refresh()
-                return
-            }
-            loadedZones = KitDraftCodec.keysplitZones(children: result.children, table: table)
-        case .empty:
-            loadedZones = []
-        }
-        draft.load(KitDraft.Snapshot(drumkitZones: loadedZones, keysplitZones: loadedZones))
-        boundSlot = slot
-        activeMode = result.kind == .keysplit ? .keysplit : .drumkit
-        picker.commit(slot: slot, kind: result.kind)
-        selectedZone = -1
-        retargetVisible = false
-        retargetSlot = -1
-        conflictVisible = false
-        conflictText = ""
-        statusText = ""
-        var usage = result.usageSections
-        if let parent = result.parent, let usageScan {
-            usage = usageScan(parent.symbol, result.table?.name, section)
-        }
-        let count = Set(usage.filter { $0 != section }).count
-        usedByText = count == 0 ? "" : "used by \(count)"
+        activeSource = nil
+        displayedSource = nil
+        voicegroupName = ""
+        voicegroupNameInvalid = true
+        voicegroupNameEdited = false
+        saving = false
         resetCleanState()
         refresh()
+    }
+
+    /// Applies the workflow's suggested name unless the user already chose one.
+    @QtIgnored public func applySuggestedVoicegroupName(_ name: String) {
+        guard !voicegroupNameEdited else { return }
+        voicegroupName = name
+        voicegroupNameInvalid = Self.invalidVoicegroupName(name, validate: validateVoicegroupName)
+        refresh()
+    }
+
+    public func setVoicegroupName(name: String) {
+        voicegroupName = name
+        voicegroupNameEdited = true
+        voicegroupNameInvalid = Self.invalidVoicegroupName(name, validate: validateVoicegroupName)
+        refresh()
+    }
+
+    private static func invalidVoicegroupName(
+        _ name: String, validate: ((String) -> String?)?
+    ) -> Bool {
+        name.isEmpty || validate?(name) != nil
     }
 
     @QtIgnored public func markClean() {
         draft.markClean()
         cleanMode = activeMode
         cleanSessionSnapshot = session.snapshot()
-        picker.markSaved(kind: activeMode == .drumkit ? .drumkit : .keysplit)
-        conflictVisible = false
-        conflictText = ""
         refresh()
     }
 
     private func resetCleanState() {
         cleanMode = activeMode
         cleanSessionSnapshot = session.snapshot()
-        conflictVisible = false
-        conflictText = ""
-    }
-
-    /// Dirty targets wait for an answer; clean targets reload through the workflow adapter.
-    @QtIgnored public func songKitChanged() {
-        guard let slot = picker.selectedSlot else { return }
-        if dirty {
-            conflictVisible = true
-            conflictText = "Changed in the song"
-        } else if let result = onLoadKit?(slot) {
-            install(result, slot: slot)
-        }
-        stateRevision += 1
-    }
-
-    public func answerConflict(keepMine: Bool) {
-        guard conflictVisible else { return }
-        onConflictAnswer?(keepMine)
-        if keepMine {
-            conflictVisible = false
-            conflictText = ""
-        } else if let slot = picker.selectedSlot, let result = onLoadKit?(slot) {
-            install(result, slot: slot)
-        }
-        stateRevision += 1
     }
 
     public func requestSave() { if canSave { onSaveRequested?() } }
-    public func switchBack() { onSwitchBack?() }
 
     public func selectZone(row: Int) {
         selectedZone = zones.indices.contains(row) ? row : -1
+        if selectedZone != -1 {
+            let sampleName = zones[selectedZone].sampleName
+            if let found = session.sources.first(where: { $0.slices.contains { $0.name == sampleName } }) {
+                if activeSource != found.id { activeSource = found.id }
+                if let slice = found.slices.first(where: { $0.name == sampleName }) {
+                    selectedSlice = draft.sliceIds[KitDraft.SliceKey(source: found.id, identity: slice.id)] ?? -1
+                }
+            }
+        } else {
+            selectedSlice = -1
+        }
         refresh()
     }
 
-    public func selectedZoneRow() -> Optional<KitZoneRow> {
-        guard (0..<zoneRows.count).contains(selectedZone) else { return nil }
-        return zoneRows[selectedZone]
+    public func selectSlice(id: Int) {
+        selectedSlice = id
+        guard let address = sliceAddress(id),
+            let source = session.sources.first(where: { $0.id == address.source })
+        else {
+            refresh()
+            return
+        }
+        let slice = source.slices[address.index]
+        if activeSource != source.id {
+            activeSource = source.id
+        }
+        if let zoneRow = zones.firstIndex(where: { $0.sampleName == slice.name }) {
+            selectZone(row: zoneRow)
+        } else {
+            refresh()
+        }
+    }
+
+    /// Typed per-key reads for the AOT-compiled keyboard: QML never indexes zoneRows.
+    public func zoneCount() -> Int { zones.count }
+    public func zoneIndexAtKey(key: Int) -> Int {
+        zones.firstIndex { $0.startKey <= key && key <= $0.endKey } ?? -1
+    }
+    public func zoneSelected(row: Int) -> Bool { row == selectedZone }
+    public func zoneStartKey(row: Int) -> Int { zones.indices.contains(row) ? zones[row].startKey : 0 }
+    public func zoneEndKey(row: Int) -> Int { zones.indices.contains(row) ? zones[row].endKey : 0 }
+    public func zoneBadge(row: Int) -> Int {
+        guard zones.indices.contains(row) else { return 0 }
+        return sliceNumber(name: zones[row].sampleName)
     }
 
     public func setMode(index: Int) {
@@ -318,9 +239,9 @@ public final class KitStudioPresenter: QmlUncreatable {
     }
 
     public func dropSample(name: String, onKey: Int) {
-        guard picker.selectedSlot != nil, (0...127).contains(onKey), !name.isEmpty else { return }
+        guard (0...127).contains(onKey), !name.isEmpty else { return }
         guard !zones.contains(where: { $0.startKey <= onKey && onKey <= $0.endKey }) else {
-            statusText = "That key is already occupied"
+            onAlert?("That key is already occupied")
             refresh()
             return
         }
@@ -355,6 +276,18 @@ public final class KitStudioPresenter: QmlUncreatable {
         refresh()
     }
 
+    /// Moves one edge of a range to `key`, never past the opposite edge.
+    public func dragZoneEdge(row: Int, fromStart: Bool, key: Int) {
+        guard zones.indices.contains(row) else { return }
+        let zone = zones[row]
+        selectZone(row: row)
+        if fromStart {
+            resizeZone(row: row, startKey: min(key, zone.endKey), endKey: zone.endKey)
+        } else {
+            resizeZone(row: row, startKey: zone.startKey, endKey: max(key, zone.startKey))
+        }
+    }
+
     public func deleteZone(row: Int) {
         guard zones.indices.contains(row) else { return }
         var next = zones
@@ -363,39 +296,8 @@ public final class KitStudioPresenter: QmlUncreatable {
         refresh()
     }
 
-    public func mapAllSlices(fromKey: Int, whiteKeysOnly: Bool) {
-        guard let source = currentSource, (0...127).contains(fromKey), !source.slices.isEmpty else { return }
-        let keys = (fromKey...127).filter { (key: Int) -> Bool in
-            !whiteKeysOnly || ![1, 3, 6, 8, 10].contains(key % 12)
-        }
-        guard keys.count >= source.slices.count else {
-            statusText = "Not enough keys for all slices"
-            return
-        }
-        var next = zones
-        for (index, slice) in source.slices.enumerated() {
-            let start = keys[index]
-            let end: Int
-            if activeMode == .drumkit || whiteKeysOnly {
-                end = start
-            } else if index + 1 < source.slices.count {
-                end = keys[index + 1] - 1
-            } else {
-                end = (zones.first { $0.startKey > start }?.startKey ?? 128) - 1
-            }
-            next.append(newZone(name: slice.name, start: start, end: end))
-        }
-        next.sort { $0.startKey < $1.startKey }
-        _ = commitZones(next)
-        refresh()
-    }
-
     public func setZoneRootKey(key: Int) {
         editSelected { $0.rootKey = min(max(0, key), 127) }
-    }
-    public func setZonePitched(on: Bool) {
-        guard activeMode == .drumkit else { return }
-        editSelected { $0.pitched = on }
     }
     public func setZonePan(pan: Int) {
         guard activeMode == .drumkit else { return }
@@ -408,17 +310,29 @@ public final class KitStudioPresenter: QmlUncreatable {
     }
 
     private var zones: [KitZone] { activeMode == .drumkit ? draft.drumkitZones : draft.keysplitZones }
-    private var currentSource: KitSourceSession.Source? { session.sources.first { $0.id == activeSource } }
-    private var usedNames: Set<String> { Set((draft.drumkitZones + draft.keysplitZones).map(\.sampleName)) }
+    var currentSource: KitSourceSession.Source? { session.sources.first { $0.id == activeSource } }
+
+    /// `rateChoices` row for a saved-at rate; row 0 is the file's own rate.
+    public func rateChoiceIndex(rate: Double) -> Int {
+        guard let source = currentSource else { return -1 }
+        if rate.rounded() == source.sample.sampleRate.rounded() { return 0 }
+        return SampleRatePolicy.rates.firstIndex(of: Int(rate.rounded())).map { (index: Int) -> Int in index + 1 } ?? -1
+    }
+
+    @QtIgnored public func rate(forChoice index: Int) -> Optional<Int> {
+        guard let source = currentSource else { return nil }
+        if index == 0 { return Int(source.sample.sampleRate.rounded()) }
+        return SampleRatePolicy.rates.indices.contains(index - 1) ? SampleRatePolicy.rates[index - 1] : nil
+    }
 
     private func newZone(name: String, start: Int, end: Int) -> KitZone {
         KitZone(
-            startKey: start, endKey: end, sampleName: name, rootKey: 60, pitched: false, pan: 0,
+            startKey: start, endKey: end, sampleName: name, rootKey: 60, pan: 0,
             adsr: (255, 0, 255, 0))
     }
 
     private func editSelected(_ edit: (inout KitZone) -> Void) {
-        guard zones.indices.contains(selectedZone), !zones[selectedZone].locked else { return }
+        guard zones.indices.contains(selectedZone) else { return }
         var next = zones
         edit(&next[selectedZone])
         _ = commitZones(next)
@@ -429,42 +343,113 @@ public final class KitStudioPresenter: QmlUncreatable {
         guard next != zones else { return true }
         let accepted = activeMode == .drumkit ? draft.setDrumkitZones(next) : draft.setKeysplitZones(next)
         if accepted {
-            statusText = ""
+            return true
         } else {
-            statusText = "Zones must stay within 0–127 and cannot overlap"
+            onAlert?("Zones must stay within 0–127 and cannot overlap")
+            return false
         }
-        return accepted
     }
 
-    @QtIgnored public func addSource(_ sample: ImportedSample) {
-        changeSession { (target: KitSourceSession) in
+    private func autoPlaceSlice(_ sliceName: String) {
+        guard let key = nextFreeKey(from: 36) else { return }
+        var drumkit = draft.drumkitZones
+        var keysplit = draft.keysplitZones
+        drumkit.append(newZone(name: sliceName, start: key, end: key))
+        keysplit.append(newZone(name: sliceName, start: key, end: key))
+        drumkit.sort { $0.startKey < $1.startKey }
+        keysplit.sort { $0.startKey < $1.startKey }
+        _ = draft.setDrumkitZones(drumkit)
+        _ = draft.setKeysplitZones(keysplit)
+    }
+
+    private func removeSliceZones(_ sliceNames: Set<String>) {
+        guard !sliceNames.isEmpty else { return }
+        var drumkit = draft.drumkitZones
+        var keysplit = draft.keysplitZones
+        let drumBefore = drumkit.count
+        let keyBefore = keysplit.count
+        drumkit.removeAll { sliceNames.contains($0.sampleName) }
+        keysplit.removeAll { sliceNames.contains($0.sampleName) }
+        if drumkit.count != drumBefore { _ = draft.setDrumkitZones(drumkit) }
+        if keysplit.count != keyBefore { _ = draft.setKeysplitZones(keysplit) }
+        if selectedZone >= zones.count { selectedZone = -1 }
+    }
+
+    @QtIgnored public func nextFreeKey(from startKey: Int = 36) -> Optional<Int> {
+        for key in startKey...127 {
+            let inDrum = draft.drumkitZones.contains { $0.startKey <= key && key <= $0.endKey }
+            let inKey = draft.keysplitZones.contains { $0.startKey <= key && key <= $0.endKey }
+            if !inDrum && !inKey { return key }
+        }
+        return nil
+    }
+
+    private func changeSessionWithAutoPlace(_ change: (KitSourceSession) -> Void) {
+        draft.edit {
+            let slicesBefore = Set(session.sources.flatMap { $0.slices.map(\.name) })
+            change(session)
+            let slicesAfter = Set(session.sources.flatMap { $0.slices.map(\.name) })
+            let removed = slicesBefore.subtracting(slicesAfter)
+            let added = slicesAfter.subtracting(slicesBefore)
+            if !removed.isEmpty {
+                removeSliceZones(removed)
+            }
+            if !added.isEmpty {
+                for name in session.sources.flatMap(\.slices).map(\.name) where added.contains(name) {
+                    autoPlaceSlice(name)
+                }
+            }
+        }
+        refresh()
+    }
+
+    @QtIgnored public func addSource(_ sample: ImportedSample, autoPlaceFirstSlice: Bool = false) {
+        changeSessionWithAutoPlace { (target: KitSourceSession) in
             target.addSource(sample)
             activeSource = target.sources.last?.id
+            if autoPlaceFirstSlice, let id = activeSource {
+                target.createFirstSlice(source: id)
+            }
         }
     }
 
     public func selectSource(row: Int) {
         guard session.sources.indices.contains(row) else { return }
         activeSource = session.sources[row].id
-        cursorFrame = 0
-        selectionStartFrame = 0
-        selectionEndFrame = 0
         refresh()
     }
 
     public func closeSource(row: Int) {
         guard session.sources.indices.contains(row) else { return }
         let id = session.sources[row].id
-        guard session.canClose(source: id, usedNames: usedNames) else {
-            statusText = "This source has slices in use"
-            return
-        }
-        changeSession { _ = $0.removeSource(source: id, usedNames: usedNames) }
+        changeSessionWithAutoPlace { _ = $0.removeSource(source: id) }
     }
 
-    public func addMarkerAtCursor() {
+    public func addMarker(atX x: Double) {
+        guard let waveform else { return }
+        placeMarker(frame: waveform.frameAt(x), ensureFirstSlice: true)
+    }
+
+    public func insertMarker(frame: Int) {
+        placeMarker(frame: frame, ensureFirstSlice: false)
+    }
+
+    private func placeMarker(frame: Int, ensureFirstSlice: Bool) {
         guard let id = activeSource else { return }
-        changeSession { $0.setMarker(source: id, frame: cursorFrame, snap: snap) }
+        let beforeMarkers = currentSource?.markers ?? []
+        changeSessionWithAutoPlace {
+            if ensureFirstSlice, $0.sources.first(where: { $0.id == id })?.slices.isEmpty == true {
+                $0.createFirstSlice(source: id)
+            }
+            $0.setMarker(source: id, frame: frame, snap: snap)
+        }
+        let afterMarkers = currentSource?.markers ?? []
+        let added = Set(afterMarkers).subtracting(beforeMarkers)
+        if let newFrame = added.first,
+            let newId = draft.markerIds[KitDraft.MarkerKey(source: id, frame: newFrame)]
+        {
+            lastAddedMarkerId = newId
+        }
     }
 
     public func markerId(row: Int) -> Int {
@@ -472,32 +457,28 @@ public final class KitStudioPresenter: QmlUncreatable {
         return draft.markerIds[KitDraft.MarkerKey(source: source.id, frame: source.markers[row])] ?? 0
     }
 
+    public func removeMarkerAt(x: Double, y: Double) {
+        guard let waveform else { return }
+        let handle = waveform.handleAt(x: x, y: y)
+        guard handle != 0 else { return }
+        if handle == lastAddedMarkerId { return }
+        removeMarker(id: handle)
+    }
+
     public func removeMarker(id: Int) {
         guard let key = markerKey(id) else { return }
-        changeSession { (target: KitSourceSession) in
-            if let removed = target.removeMarker(source: key.source, frame: key.frame, usedNames: usedNames) {
-                statusText = "\(removed) is used by a zone; remove those zones first."
-            }
-        }
+        changeSessionWithAutoPlace { $0.removeMarker(source: key.source, frame: key.frame) }
+        if lastAddedMarkerId == id { lastAddedMarkerId = nil }
+    }
+
+    public func clearLastAddedMarker() {
+        lastAddedMarkerId = nil
     }
 
     public func moveMarker(id: Int, toFrame: Int) {
         guard let key = markerKey(id) else { return }
-        statusText = ""
         draft.moveMarker(key, toFrame: toFrame, snap: snap)
         refresh()
-    }
-
-    public func sliceSelection() {
-        guard let id = activeSource else { return }
-        changeSession { (target: KitSourceSession) in
-            if let removed = target.sliceSelection(
-                source: id, startFrame: selectionStartFrame, endFrame: selectionEndFrame, snap: snap,
-                usedNames: usedNames
-            ) {
-                statusText = "\(removed) is used by a zone; remove those zones first."
-            }
-        }
     }
 
     public func toggleSnap() { snap.toggle() }
@@ -509,7 +490,6 @@ public final class KitStudioPresenter: QmlUncreatable {
         var renamed = false
         draft.edit {
             guard session.renameSlice(source: address.source, slice: address.index, to: name) else {
-                statusText = validateName?(SampleNames.sanitize(name)) ?? "Slice name is unavailable"
                 return
             }
             guard let updated = session.sources.first(where: { $0.id == address.source }) else { return }
@@ -517,42 +497,27 @@ public final class KitStudioPresenter: QmlUncreatable {
             guard oldName != newName else { return }
             var drumkit = draft.drumkitZones
             var keysplit = draft.keysplitZones
-            for index in drumkit.indices where !drumkit[index].locked && drumkit[index].sampleName == oldName {
+            for index in drumkit.indices where drumkit[index].sampleName == oldName {
                 drumkit[index].sampleName = newName
             }
-            for index in keysplit.indices where !keysplit[index].locked && keysplit[index].sampleName == oldName {
+            for index in keysplit.indices where keysplit[index].sampleName == oldName {
                 keysplit[index].sampleName = newName
             }
             if drumkit != draft.drumkitZones { _ = draft.setDrumkitZones(drumkit) }
             if keysplit != draft.keysplitZones { _ = draft.setKeysplitZones(keysplit) }
-            statusText = ""
             renamed = true
         }
         if renamed { refresh() }
     }
 
     public func removeSlice(id: Int) {
-        guard let address = sliceAddress(id), let source = session.sources.first(where: { $0.id == address.source })
-        else { return }
-        guard !usedNames.contains(source.slices[address.index].name) else {
-            statusText = "\(source.slices[address.index].name) is used by a zone; remove those zones first."
-            return
-        }
-        changeSession { $0.removeSlice(source: address.source, slice: address.index) }
-    }
-
-    public func setSliceFades(id: Int, fadeIn: Bool, fadeOut: Bool) {
         guard let address = sliceAddress(id) else { return }
-        changeSession {
-            $0.setSliceFades(source: address.source, slice: address.index, fadeIn: fadeIn, fadeOut: fadeOut)
-        }
+        changeSessionWithAutoPlace { $0.removeSlice(source: address.source, slice: address.index) }
     }
 
     public func setSourceRate(rate: Int) {
         guard let id = activeSource else { return }
-        changeSession { (target: KitSourceSession) in
-            if !target.setSourceRate(source: id, rate: rate) { statusText = "Unsupported source rate" }
-        }
+        changeSession { _ = $0.setSourceRate(source: id, rate: rate) }
     }
 
     public func sliceId(row: Int) -> Int {
@@ -563,8 +528,44 @@ public final class KitStudioPresenter: QmlUncreatable {
     public func sliceName(id: Int) -> String { sliceValue(id)?.name ?? "" }
     public func sliceStartFrame(id: Int) -> Int { sliceValue(id)?.startFrame ?? 0 }
     public func sliceEndFrame(id: Int) -> Int { sliceValue(id)?.endFrame ?? 0 }
-    public func sliceFadeIn(id: Int) -> Bool { sliceValue(id)?.fadeIn ?? false }
-    public func sliceFadeOut(id: Int) -> Bool { sliceValue(id)?.fadeOut ?? true }
+    public func sliceNumber(name: String) -> Int {
+        var count = 0
+        for source in session.sources {
+            for slice in source.slices {
+                count += 1
+                if slice.name == name { return count }
+            }
+        }
+        return 0
+    }
+
+    public func sliceOrdinal(id: Int) -> Int {
+        guard let address = sliceAddress(id) else { return 0 }
+        var count = 0
+        for source in session.sources {
+            if source.id == address.source { return count + address.index + 1 }
+            count += source.slices.count
+        }
+        return 0
+    }
+
+    public func isSliceNameInvalid(sliceId: Int, name: String) -> Bool {
+        guard !name.isEmpty else { return true }
+        let sanitized = SampleNames.sanitize(name)
+        guard sanitized == name else { return true }
+        guard let address = sliceAddress(sliceId),
+            let currentSource = session.sources.first(where: { $0.id == address.source })
+        else { return true }
+        let currentSlice = currentSource.slices[address.index]
+        for source in session.sources {
+            for slice in source.slices {
+                if (source.id != address.source || slice.id != currentSlice.id) && slice.name == name {
+                    return true
+                }
+            }
+        }
+        return validateName?(name) != nil
+    }
 
     public func playSlice(id: Int) { if sliceAddress(id) != nil { playPcm?(id) } }
 
@@ -622,7 +623,6 @@ public final class KitStudioPresenter: QmlUncreatable {
     }
 
     private func changeSession(_ change: (KitSourceSession) -> Void) {
-        statusText = ""
         draft.edit {
             change(session)
         }
@@ -654,43 +654,55 @@ public final class KitStudioPresenter: QmlUncreatable {
     @QtIgnored public func refresh() {
         mode = activeMode == .drumkit ? 0 : 1
         dirty = draft.dirty || activeMode != cleanMode || session.snapshot() != cleanSessionSnapshot
-        canSave = picker.selectedSlot != nil && dirty
+        canSave = !zones.isEmpty && !saving && !voicegroupNameInvalid && !voicegroupName.isEmpty
         canUndo = draft.canUndo
         canRedo = draft.canRedo
-        selectedSlot = picker.selectedSlot ?? -1
-        titleText = "Split Studio — \(song) · voice \(boundSlot)" + (dirty ? " •" : "")
+        titleText = "Split Studio" + (dirty ? " •" : "")
+        updateMeta()
         if !zones.indices.contains(selectedZone) { selectedZone = -1 }
+        selectedZoneFirstKey = zones.indices.contains(selectedZone) ? zones[selectedZone].startKey : 0
+        selectedZoneLastKey = zones.indices.contains(selectedZone) ? zones[selectedZone].endKey : 0
+        selectedZoneSampleName = zones.indices.contains(selectedZone) ? zones[selectedZone].sampleName : ""
+        selectedZoneRootKey = zones.indices.contains(selectedZone) ? zones[selectedZone].rootKey : 60
+        selectedZonePan = zones.indices.contains(selectedZone) ? zones[selectedZone].pan : 0
+        selectedZoneAttack = zones.indices.contains(selectedZone) ? zones[selectedZone].adsr.attack : 0
+        selectedZoneDecay = zones.indices.contains(selectedZone) ? zones[selectedZone].adsr.decay : 0
+        selectedZoneSustain = zones.indices.contains(selectedZone) ? zones[selectedZone].adsr.sustain : 0
+        selectedZoneRelease = zones.indices.contains(selectedZone) ? zones[selectedZone].adsr.release : 0
+        selectedZonePanEnabled = zones.indices.contains(selectedZone) && activeMode == .drumkit
         let zoneValues = zones.enumerated().map { (entry: (offset: Int, element: KitZone)) -> KitZoneRow in
             let selected = entry.offset == selectedZone
+            let badge = sliceNumber(name: entry.element.sampleName)
             if entry.offset < zoneRows.count,
-                zoneRows[entry.offset].matches(zone: entry.element, selected: selected, mode: activeMode)
+                zoneRows[entry.offset].matches(
+                    zone: entry.element, selected: selected, mode: activeMode, badge: badge)
             {
                 return zoneRows[entry.offset]
             }
-            return KitZoneRow(zone: entry.element, selected: selected, mode: activeMode)
+            return KitZoneRow(zone: entry.element, selected: selected, mode: activeMode, badge: badge)
         }
         syncModel(zoneRows, zoneValues, matches: { (lhs: KitZoneRow, rhs: KitZoneRow) -> Bool in lhs === rhs })
-        syncModel(
-            slotRows, picker.rows(existing: slotRows),
-            matches: { (lhs: KitSlotRow, rhs: KitSlotRow) -> Bool in lhs === rhs })
         if !session.sources.contains(where: { $0.id == activeSource }) { activeSource = session.sources.first?.id }
-        let names = usedNames
         let sourceValues = session.sources.enumerated().map {
             (entry: (offset: Int, element: KitSourceSession.Source)) -> KitSourceRow in
             let active = entry.element.id == activeSource
-            let closable = session.canClose(source: entry.element.id, usedNames: names)
-            if entry.offset < sourceRows.count,
-                sourceRows[entry.offset].matches(source: entry.element, active: active, closable: closable)
+            if entry.offset < sourceRows.count, sourceRows[entry.offset].matches(source: entry.element, active: active)
             {
                 return sourceRows[entry.offset]
             }
-            return KitSourceRow(source: entry.element, active: active, closable: closable)
+            return KitSourceRow(source: entry.element, active: active)
         }
         syncModel(sourceRows, sourceValues, matches: { (lhs: KitSourceRow, rhs: KitSourceRow) -> Bool in lhs === rhs })
         sliceCount = currentSource?.slices.count ?? 0
         sourceRate = currentSource.flatMap { Int(exactly: $0.targetRate.rounded()) } ?? 0
-        rateChoices =
-            currentSource.map { SampleRatePolicy.rateOptions(sourceRate: $0.sample.sampleRate).map(String.init) } ?? []
+        if let currentSource {
+            let rate = currentSource.sample.sampleRate
+            fileRateText = rate == rate.rounded() ? "\(Int(rate)) Hz" : String(format: "%.2f Hz", rate)
+            rateChoices = ["File rate (\(fileRateText))"] + SampleRatePolicy.rates.map(String.init)
+        } else {
+            fileRateText = ""
+            rateChoices = []
+        }
         if let waveform {
             if displayedWaveform !== waveform {
                 waveform.onMarkerDragged = { [weak self] (id: Int, frame: Int) in
@@ -711,11 +723,46 @@ public final class KitStudioPresenter: QmlUncreatable {
                         }
                         return (id: id, frame: frame, kind: "slice", label: "")
                     })
+                let frames = source.slices.map(\.startFrame)
+                let numbers = source.slices.map { sliceNumber(name: $0.name) }
+                waveform.setRegionBadges(frames: frames, numbers: numbers)
+                if let address = sliceAddress(selectedSlice), address.source == source.id {
+                    let slice = source.slices[address.index]
+                    waveform.setHighlight(startFrame: slice.startFrame, endFrame: slice.endFrame)
+                } else {
+                    waveform.setHighlight(startFrame: 0, endFrame: 0)
+                }
             } else {
                 waveform.setMarkers([])
+                waveform.setRegionBadges(frames: [], numbers: [])
+                waveform.setHighlight(startFrame: 0, endFrame: 0)
             }
         }
         slicesRevision += 1
         stateRevision += 1
+    }
+
+    /// Footer readout: slice count across sources and ROM bytes of the unique
+    /// samples the active layout maps, each counted once at its saved-at rate.
+    private func updateMeta() {
+        var slices = 0
+        for source in session.sources { slices += source.slices.count }
+        let mapped = Set(zones.map(\.sampleName))
+        var seen = Set<String>()
+        var bytes: UInt64 = 0
+        for source in session.sources {
+            for (index, slice) in source.slices.enumerated()
+            where mapped.contains(slice.name) && seen.insert(slice.name).inserted {
+                let rendered = session.renderSlice(source: source.id, slice: index)
+                bytes += 16 + ((UInt64(rendered.size) + 3) & ~UInt64(3))
+            }
+        }
+        metaText = "\(slices) slices · \(Self.formatRomBytes(bytes)) ROM"
+    }
+
+    private static func formatRomBytes(_ bytes: UInt64) -> String {
+        guard bytes >= 1024 else { return "\(bytes) bytes" }
+        let tenths = (bytes * 10 + 512) / 1024
+        return "\(tenths / 10).\(tenths % 10) KB"
     }
 }

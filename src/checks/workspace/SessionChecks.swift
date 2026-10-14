@@ -40,6 +40,13 @@ public func runProjectSessionSuite(_ report: CheckReport) {
             && reverb.text(value: 127) == "127" && reverb.value(text: "-1", current: 64) == -1,
         cppID: "swiftcore/Settings::numberFormats",
         message: "formatted fields commit whole integers; any other text keeps the current value")
+    let note = NumberFieldFormat(kind: .note)
+    report.expect(
+        note.text(value: 38) == "D2" && note.value(text: "D2", current: 60) == 38
+            && note.value(text: " 38 ", current: 60) == 38 && note.value(text: "C4", current: 12) == 60
+            && note.value(text: "H9", current: 60) == 60 && note.value(text: "200", current: 60) == 60,
+        cppID: "swiftcore/Settings::numberFormats",
+        message: "note fields show note names and commit a note name or MIDI number 0...127")
 
     runWorkspaceStartupChecks(report)
     runTransportBarChecks(report)

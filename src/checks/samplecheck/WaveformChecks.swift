@@ -26,7 +26,6 @@ internal func runWaveformChecks(_ report: CheckReport) {
         tools.publishWaveform(model, sourceChanged: false)
     }
     model.setViewport(width: 600, height: 120)
-    model.setSeamViewport(width: 228, height: 56)
     let geometry = report.scoped(cppID: "swiftcore/MarkerWaveformModel::geometry")
     for frame in [0, 1_000, 5_000, 10_000] {
         geometry.expect(
@@ -60,10 +59,6 @@ internal func runWaveformChecks(_ report: CheckReport) {
     presenter.commitParams(params, mergeKey: -1)
     let startX = Double(model.xForFrame(presenter.loopStart))
     geometry.expect(model.handleAt(x: startX, y: 110) == 3, message: "loop markers own the bottom band")
-    scoped.expect(
-        !model.seamEndWindow.isEmpty && model.seamEndWindow.count == model.seamStartWindow.count,
-        message: "A082 looped render feeds the seam overlay")
-    let prior = model.seamEndWindow
     let pyramidRevision = model.pyramidRevision
     tools.setCrossfade(on: true)
     presenter.undo()
@@ -72,9 +67,6 @@ internal func runWaveformChecks(_ report: CheckReport) {
     scoped.expect(
         togglesAsOneEntry && presenter.params.crossfadeOn,
         message: "A083 crossfade toggle creates an undo entry")
-    scoped.expect(
-        model.seamEndWindow != prior && model.seamEndWindow.count == model.seamStartWindow.count,
-        message: "A084 crossfade bake reshapes the seam overlay")
     let dragX = Double(model.xForFrame(presenter.loopEnd))
     geometry.expect(model.press(x: dragX, y: 110), message: "loop end is draggable")
     model.drag(x: Double(model.xForFrame(presenter.cropEnd + 100)))
@@ -85,7 +77,6 @@ internal func runWaveformChecks(_ report: CheckReport) {
     presenter.undo()
     geometry.expect(presenter.loopEnd == 2_137, message: "drag undoes as one entry")
     let main = model.displayList(list: 0)
-    let seam = model.displayList(list: 1)
     let display = report.scoped(cppID: "swiftcore/MarkerWaveformModel::displayLists")
     func colors(_ data: Data) -> Set<UInt32>? {
         data.withUnsafeBytes { raw in
@@ -97,16 +88,11 @@ internal func runWaveformChecks(_ report: CheckReport) {
         }
     }
     let mainColors = colors(main)
-    let seamColors = colors(seam)
     display.expect(
         mainColors?.contains(PaletteMath.argb(palette.sampleWaveformInk)) == true
             && mainColors?.contains(PaletteMath.argb(palette.sampleCropHandle)) == true
             && mainColors?.contains(PaletteMath.argb(palette.sampleLoopHandle)) == true,
         message: "decoded main list draws ink and both marker colors")
-    display.expect(
-        seamColors?.contains(PaletteMath.argb(palette.sampleSeamEndInk)) == true
-            && seamColors?.contains(PaletteMath.argb(palette.sampleLoopHandle)) == true,
-        message: "decoded seam list draws processed end and start colors")
     display.expect(
         main.withUnsafeBytes { raw -> Bool in
             var view = PdDlView()
@@ -167,4 +153,86 @@ internal func runWaveformChecks(_ report: CheckReport) {
     geometry.expect(model.pyramidRevision == pyramidRevision, message: "marker replacement and gestures reuse peaks")
     model.setSamples(source.buffer, sampleRate: source.sampleRate, gain: 1)
     geometry.expect(model.pyramidRevision == pyramidRevision + 1, message: "setSamples rebuilds peaks exactly once")
+
+    let slices = report.scoped(cppID: "swiftcore/MarkerWaveformModel::sliceOverlay")
+    func sliceBadges(_ data: Data) -> [(x: Double, text: String)]? {
+        data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> [(x: Double, text: String)]? in
+            var view = PdDlView()
+            guard pd_dl_decode(raw.baseAddress, raw.count, &view),
+                let header = view.header, let labels = view.labels, let text = view.text
+            else { return nil }
+            var badges: [(x: Double, text: String)] = []
+            for index in 0..<Int(header.pointee.labelCount) {
+                let label = labels[index]
+                guard label.id == UInt64(PD_DL_ID_NONE) else { continue }
+                let base = UnsafeRawPointer(text.advanced(by: Int(label.textOffset)))
+                let bytes = Data(bytes: base, count: Int(label.textLength))
+                guard let string = String(data: bytes, encoding: .utf8) else { return nil }
+                badges.append((label.x, string))
+            }
+            return badges.sorted { (lhs: (x: Double, text: String), rhs: (x: Double, text: String)) -> Bool in
+                lhs.x < rhs.x
+            }
+        }
+    }
+    func washRects(_ data: Data, color: UInt32) -> [PdDlRect] {
+        data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> [PdDlRect] in
+            var view = PdDlView()
+            guard pd_dl_decode(raw.baseAddress, raw.count, &view),
+                let header = view.header, let rects = view.rects
+            else { return [] }
+            return (0..<Int(header.pointee.rectCount))
+                .map { (index: Int) -> PdDlRect in rects[index] }
+                .filter { (rect: PdDlRect) -> Bool in rect.argb == color }
+        }
+    }
+    let accent = PaletteMath.argb(palette.sampleWaveformInk)
+    let dimInk = (accent & 0x00FF_FFFF) | 0xB800_0000
+    let washInk = (accent & 0x00FF_FFFF) | 0x1C00_0000
+    model.setRegionBadges(frames: [8_000, 0, 4_000], numbers: [3, 1, 2])
+    model.setHighlight(startFrame: 4_000, endFrame: 8_000)
+    let numbered = sliceBadges(model.displayList(list: 0)) ?? []
+    slices.expect(
+        numbered.map { (badge: (x: Double, text: String)) -> String in badge.text } == ["1", "2", "3"],
+        message: "slice badges number every region in frame order")
+    slices.expect(
+        numbered.count == 3 && numbered[0].x >= Double(model.xForFrame(0))
+            && numbered[0].x <= Double(model.xForFrame(0)) + 16
+            && numbered[1].x >= Double(model.xForFrame(4_000))
+            && numbered[2].x >= Double(model.xForFrame(8_000)) && numbered[0].x < numbered[1].x
+            && numbered[1].x < numbered[2].x,
+        message: "badges sit at the top-left of their own region")
+    let washes = washRects(model.displayList(list: 0), color: washInk)
+    slices.expect(
+        washes.count == 1 && abs(washes[0].x - Double(model.xForFrame(4_000))) <= 1
+            && abs(washes[0].x + washes[0].w - Double(model.xForFrame(8_000))) <= 1,
+        message: "highlight washes the selected slice range")
+    slices.expect(
+        colors(model.displayList(list: 0))?.contains(accent) == true
+            && colors(model.displayList(list: 0))?.contains(dimInk) == true
+            && colors(model.displayList(list: 0))?.contains(washInk) == true,
+        message: "selected slice keeps full accent while other slices dim")
+    model.setHighlight(startFrame: -1_000, endFrame: 1_000_000)
+    let clamped = washRects(model.displayList(list: 0), color: washInk)
+    slices.expect(
+        clamped.count == 1 && clamped[0].x == 0 && clamped[0].x + clamped[0].w >= 590
+            && colors(model.displayList(list: 0))?.contains(dimInk) == false,
+        message: "out-of-range highlight clamps to the loaded source")
+    model.setHighlight(startFrame: 8_000, endFrame: 4_000)
+    slices.expect(
+        colors(model.displayList(list: 0))?.contains(washInk) == false
+            && colors(model.displayList(list: 0))?.contains(dimInk) == false,
+        message: "reversed highlight draws no wash and dims nothing")
+    model.setRegionBadges(frames: [0], numbers: [1, 2])
+    slices.expect(
+        sliceBadges(model.displayList(list: 0))?.map { (badge: (x: Double, text: String)) -> String in
+            badge.text
+        } == ["1"],
+        message: "badge pairs truncate to the shorter array")
+    model.setRegionBadges(frames: [], numbers: [])
+    model.setHighlight(startFrame: 0, endFrame: 0)
+    slices.expect(
+        sliceBadges(model.displayList(list: 0))?.isEmpty == true
+            && colors(model.displayList(list: 0))?.contains(washInk) == false,
+        message: "clearing badges and highlight removes the overlay")
 }

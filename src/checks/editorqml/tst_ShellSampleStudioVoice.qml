@@ -87,8 +87,7 @@ ShellLaneSupport {
         compare(workflow.editor().sampleName, "hires_tone", "voice source filename")
         workflow.editor().setLoopStart(1000)
         workflow.editor().setSampleName("voice_hires")
-        verify(workflow.editor().canCommit, "voice import name passes validation: "
-               + workflow.editor().nameStatus)
+        verify(workflow.editor().canCommit, "voice import name passes validation")
         tryCompare(child("sampleStudioCommit"), "enabled", true, 5000, "commit follows source and name validation")
         mouseClick(child("sampleStudioCommit"))
         verify(waitForNative(function() { return controller.editorModel().symbol === "DirectSoundWaveData_voice_hires" }, 30000),
@@ -128,7 +127,7 @@ ShellLaneSupport {
                "source changes")
         mouseClick(edit)
         verify(waitForNative(function() { return !!child("sampleStudioDialog") }, 15000), "fallback editor opens")
-        verify(child("sampleStudioSource").text.indexOf("PCM WAV") >= 0,
+        verify(child("sampleStudioFileName").text.indexOf("voice_hires") !== -1,
                "changed source falls back to committed WAV")
         mouseClick(child("sampleStudioCommit"))
         verify(waitForNative(function() { return !child("sampleStudioDialog") }, 30000), "fallback saves")
@@ -136,8 +135,9 @@ ShellLaneSupport {
                "source restored to its imported bytes")
         mouseClick(edit)
         verify(waitForNative(function() { return !!child("sampleStudioDialog") }, 15000), "edit reopens after fallback")
-        verify(child("sampleStudioSource").text.indexOf("8-bit PCM WAV") === 0,
-               "committed-WAV fallback forgets the stale provenance: " + child("sampleStudioSource").text)
+        verify(child("sampleStudioFileName").text.indexOf("hires_tone") === -1
+               && child("sampleStudioFileName").text.indexOf("voice_hires") !== -1,
+               "committed-WAV fallback forgets the stale provenance: " + child("sampleStudioFileName").text)
     }
     function test_cgbDestinationAndSoundFontZone() {
         const app = start()
@@ -186,9 +186,9 @@ ShellLaneSupport {
         tryCompare(child("sf2ZoneAccept"), "enabled", true, 3000, "zone accept button follows selection")
         mouseClick(child("sf2ZoneAccept"))
         verify(waitForNative(function() {
-            const source = child("sampleStudioSource")
-            return app.sampleStudio().editor().hasSource && source
-                    && source.text.indexOf("16-bit SoundFont zone") >= 0
+            const name = child("sampleStudioFileName")
+            return app.sampleStudio().editor().hasSource && name
+                    && name.text.indexOf("zones") >= 0
         }, 15000), "A034 selected SoundFont zone reaches editor")
     }
 }

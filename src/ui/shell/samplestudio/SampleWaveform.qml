@@ -12,8 +12,7 @@ Item {
     property bool dragging: false
 
     function resizeModel(): void {
-        surface.model.setViewport(surface.width, surface.height - seam.height)
-        surface.model.setSeamViewport(seam.width, seam.height)
+        surface.model.setViewport(surface.width, surface.height)
         surface.model.setBaseFontPx(surface.baseFontPx)
     }
     onWidthChanged: resizeModel()
@@ -27,25 +26,10 @@ Item {
     DisplayList {
         id: waveformList
         objectName: "sampleWaveformDisplay"
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.bottom: seam.top
+        anchors.fill: parent
         clip: true
         source: surface.model
         list: 0
-        revision: surface.model.displayRevision
-    }
-    DisplayList {
-        id: seam
-        objectName: "sampleSeamDisplay"
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        height: 8 * surface.baseFontPx
-        clip: true
-        source: surface.model
-        list: 1
         revision: surface.model.displayRevision
     }
     MouseArea {

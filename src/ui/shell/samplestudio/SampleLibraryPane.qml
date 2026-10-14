@@ -4,8 +4,8 @@ import QtQuick
 import QtQuick.Dialogs
 import QtQuick.Layouts
 import PorydawStyle
+import Porydaw.Ui
 import PorydawApp
-
 ColumnLayout {
     id: pane
     objectName: "sampleLibraryPanel"
@@ -14,7 +14,6 @@ ColumnLayout {
     required property Window studioWindow
     required property real unit
     required property real paneSpacing
-    required property font captionFont
     spacing: pane.paneSpacing
     function navigateFolder(row: int): void {
         if (row < 0 || row >= folders.count)
@@ -59,18 +58,18 @@ ColumnLayout {
         }
     }
 
-    Label { text: qsTr("Library"); color: pane.colors.windowText }
     RowLayout {
         Layout.fillWidth: true
-        Button {
-            objectName: "sampleLibraryAdd"
-            text: qsTr("Add Folder…")
-            onClicked: folderPicker.open()
+        Label {
+            Layout.fillWidth: true
+            text: qsTr("Library")
+            color: pane.colors.windowText
         }
-        Button {
-            objectName: "sampleLibraryOpen"
-            text: qsTr("Open File…")
-            onClicked: pane.library.requestOpenFile()
+        ToolButton {
+            objectName: "sampleLibraryAdd"
+            text: "+"
+            Accessible.name: qsTr("Add Folder")
+            onClicked: folderPicker.open()
         }
     }
     ListView {
@@ -166,24 +165,6 @@ ColumnLayout {
             }
         }
     }
-    Button {
-        objectName: "sampleLibraryRemove"
-        text: qsTr("Remove Folder from List")
-        enabled: pane.library.canRemove
-        onClicked: {
-            files.currentIndex = -1
-            pane.library.removeSelectedRoot()
-            pane.alignFolderCursor()
-        }
-    }
-    Label {
-        Layout.fillWidth: true
-        visible: pane.library.canRemove
-        wrapMode: Text.WordWrap
-        font: pane.captionFont
-        color: pane.colors.secondaryText
-        text: qsTr("Removes the highlighted folder from this list. Its files stay on disk.")
-    }
     Label { text: qsTr("Audio files"); color: pane.colors.windowText }
     ListView {
         id: files
@@ -243,40 +224,39 @@ ColumnLayout {
             }
         }
     }
-    RowLayout {
-        Layout.fillWidth: true
-        Button {
-            objectName: "sampleLibraryPreview"
-            text: pane.library.previewButtonLabel
-            enabled: pane.library.canPreview
-            onClicked: pane.library.togglePreview()
-        }
-        Button {
-            objectName: "sampleLibraryLoad"
-            text: qsTr("Load")
-            enabled: pane.library.canLoad
-            onClicked: pane.library.loadSelected()
-        }
-    }
     Label {
-        objectName: "sampleLibraryStatus"
+        objectName: "sampleLibraryError"
         Layout.fillWidth: true
+        visible: text.length > 0
         text: pane.library.statusText
         wrapMode: Text.Wrap
-        color: pane.colors.secondaryText
+        color: pane.colors.errorText
     }
-    Label {
-        objectName: "sampleLibraryLoaded"
+    Button {
+        objectName: "sampleLibraryOpen"
         Layout.fillWidth: true
-        text: pane.library.loadedText
-        elide: Text.ElideRight
-        color: pane.colors.secondaryText
+        text: qsTr("Open File…")
+        onClicked: pane.library.requestOpenFile()
     }
-    Label {
-        objectName: "sampleLibraryPreviewing"
+    Button {
+        id: libraryAdvanced
+        objectName: "sampleLibraryAdvanced"
+        checkable: true
+        text: qsTr("Advanced")
+        contentItem: DisclosureLabel { control: libraryAdvanced; expanded: libraryAdvanced.checked }
+    }
+    ColumnLayout {
         Layout.fillWidth: true
-        text: pane.library.previewText
-        elide: Text.ElideRight
-        color: pane.colors.secondaryText
+        visible: libraryAdvanced.checked
+        Button {
+            objectName: "sampleLibraryRemove"
+            text: qsTr("Remove Folder from List")
+            enabled: pane.library.canRemove
+            onClicked: {
+                files.currentIndex = -1
+                pane.library.removeSelectedRoot()
+                pane.alignFolderCursor()
+            }
+        }
     }
 }

@@ -376,6 +376,12 @@ enum ShellQmlRegistry {
                 inputFileName: "tst_ShellSampleStudioRefusal.qml",
                 fixtureFiles: songs("mus_route101")),
             Entry(
+                name: "shell-split-studio-save", inputFileName: "tst_ShellSplitStudioSave.qml",
+                fixtureFiles: songs("mus_route101") + [
+                    "Makefile", "audio_rules.mk", "samplesources/hires_tone.wav",
+                    "sound/voice_groups.inc",
+                ]),
+            Entry(
                 name: "shell-settings", inputFileName: "tst_ShellSettings.qml",
                 fixtureFiles: songs("mus_route101"),
                 testFunctions: [

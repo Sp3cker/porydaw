@@ -45,7 +45,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         let lane = SampleAuditionArbiter(output: renderer)
         let audition = SampleStudioAudition(presenter: presenter, lane: lane, destinationAdsr: nil)
         scope.expect(
-            audition.available && !audition.playing && audition.playText == "Play",
+            audition.available && !audition.playing && audition.playText == "Listen",
             message: "A121 idle audition is stopped")
         var pcm = [Float](repeating: 0, count: 48_000 * 2)
         pcm.withUnsafeMutableBufferPointer { buffer in
@@ -55,7 +55,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         var playhead: Int?
         audition.onPlayhead = { playhead = $0 }
         audition.toggle()
-        scope.expect(audition.playing && audition.playText == "Stop", message: "A123 Play changes to Stop")
+        scope.expect(audition.playing && audition.playText == "Stop", message: "A123 Listen changes to Stop")
         pcm.withUnsafeMutableBufferPointer { buffer in
             renderer.render(buffer.baseAddress!, frames: 48_000)
         }
@@ -78,7 +78,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
             playhead.map { $0 >= presenter.cropStart && $0 < presenter.loopEnd } == true,
             message: "looped playhead wraps inside source loop")
         audition.stop()
-        scope.expect(!audition.playing && audition.playText == "Play", message: "A125 Stop restores Play text")
+        scope.expect(!audition.playing && audition.playText == "Listen", message: "A125 Stop restores Listen text")
         pcm.withUnsafeMutableBufferPointer { buffer in
             renderer.render(buffer.baseAddress!, frames: 48_000)
             renderer.render(buffer.baseAddress!, frames: 48_000)

@@ -16,11 +16,13 @@ public final class SampleStudioPresenter: QmlUncreatable {
     @QtTracked public var windowTitle = "Sample Editor"
     @QtTracked public var sampleName = ""
     @QtTracked public var nameReadOnly = false
-    @QtTracked public var nameStatus = ""
+    @QtTracked public var nameInvalid = false
     @QtTracked public var canCommit = false
     @QtTracked public var hasSource = false
     @QtTracked public var commitLabel = "Add to Project"
-    @QtTracked public var sourceLine = ""
+    @QtTracked public var loadedFileName = ""
+    @QtTracked public var fileRateText = ""
+    @QtTracked public var romText = ""
     @QtTracked public var sourceFrameCount = 0
     @QtTracked public var cropStart = 0
     @QtTracked public var cropEnd = 0
@@ -29,16 +31,16 @@ public final class SampleStudioPresenter: QmlUncreatable {
     @QtTracked public var loopEnd = 0
     @QtTracked public var baseKey = 60
     @QtTracked public var baseKeyText = "C4 (60)"
+    @QtTracked public var baseKeyInvalid = false
     @QtTracked public var fineTuneCents = 0.0
     @QtTracked public var fineTuneText = "0.00"
+    @QtTracked public var fineTuneInvalid = false
     public var rateChoices: [String] = []
     @QtTracked public var rateIndex = -1
     @QtTracked public var rateText = ""
     @QtTracked public var normalizeMode = 0
     @QtTracked public var normalizeChoices = ["Auto", "Looped (−9 dBFS loop RMS)", "One-shot (peak)", "Off"]
     @QtTracked public var gainReadout = ""
-    @QtTracked public var outputSummary = ""
-    @QtTracked public var techDetail = ""
     @QtTracked public var canUndo = false
     @QtTracked public var canRedo = false
     @QtTracked public var renderRevision = 0
@@ -82,11 +84,11 @@ public final class SampleStudioPresenter: QmlUncreatable {
         hasSource = source.frameCount > 0
         nameReadOnly = editName != nil || !hasSource
         sourceFrameCount = source.frameCount
-        sourceLine = SampleStudioReadouts.sourceLine(source)
-        rateChoices =
-            [
-                "Keep source (\(SampleStudioReadouts.decimal(source.sampleRate, places: source.sampleRate == floor(source.sampleRate) ? 0 : 2)) Hz)"
-            ] + SampleRatePolicy.rates.map(String.init)
+        fileRateText = SampleStudioReadouts.fileRate(source.sampleRate)
+        loadedFileName =
+            source.sourcePath.isEmpty
+            ? source.suggestedName : URL(fileURLWithPath: source.sourcePath).lastPathComponent
+        rateChoices = ["File rate (\(fileRateText))"] + SampleRatePolicy.rates.map(String.init)
     }
 
     /// The symbol suffix the sample registers under; the field keeps the typed text.
@@ -99,20 +101,14 @@ public final class SampleStudioPresenter: QmlUncreatable {
     }
 
     private func refreshName() {
+        let valid: Bool
         if let editName {
-            let valid = sampleName == editName
-            canCommit = hasSource && valid
-            nameStatus =
-                valid
-                ? "Saves over DirectSoundWaveData_\(editName)'s sample data"
-                : "the sample keeps its registered name (\(editName))."
-        } else if let error = validateNewName(registeredName) {
-            canCommit = false
-            nameStatus = error
+            valid = sampleName == editName
         } else {
-            canCommit = hasSource
-            nameStatus = "Registers as DirectSoundWaveData_\(registeredName)"
+            valid = validateNewName(registeredName) == nil
         }
+        nameInvalid = !valid
+        canCommit = hasSource && valid
     }
 
     @QtIgnored public func setEditTarget(name: String) {
@@ -141,7 +137,8 @@ public final class SampleStudioPresenter: QmlUncreatable {
     public func setLoopEnd(value: Int) { update(4) { $0.loopEnd = value } }
     public func setFineTuneCents(value: Double) { update(6) { $0.fineTuneCents = value } }
     public func commitFineTuneCentsText(text: String) {
-        guard let parsed = SampleStudioReadouts.decimalValue(from: text) else { return }
+        guard let parsed = SampleStudioReadouts.decimalValue(from: text) else { fineTuneInvalid = true; return }
+        fineTuneInvalid = false
         update(6) { $0.fineTuneCents = (parsed * 100).rounded() / 100 }
     }
     public func setNormalizeMode(index: Int) {
@@ -151,7 +148,8 @@ public final class SampleStudioPresenter: QmlUncreatable {
     public func setLoopOn(enabled: Bool) { update(-1) { $0.loopOn = enabled } }
 
     public func setBaseKeyText(text: String) {
-        guard let key = midiKey(from: text) else { return }
+        guard let key = midiKey(from: text) else { baseKeyInvalid = true; return }
+        baseKeyInvalid = false
         update(5) { $0.baseKey = key }
     }
 
@@ -233,8 +231,7 @@ public final class SampleStudioPresenter: QmlUncreatable {
                 ? SampleStudioReadouts.decimal(p.targetRate, places: 0) : String(p.targetRate))
         let result = processed
         gainReadout = SampleStudioReadouts.gain(result, mode: p.normalizeMode)
-        outputSummary = SampleStudioReadouts.summary(source: source, output: result)
-        techDetail = SampleStudioReadouts.technical(result)
+        romText = SampleStudioReadouts.romSize(result)
         syncHistory()
         renderRevision += 1
         for observer in observers { observer() }

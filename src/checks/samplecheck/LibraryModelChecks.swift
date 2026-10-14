@@ -97,8 +97,9 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
                 },
             message: "audio names appear in case-insensitive name order")
         listing.expect(
-            model.filesVisible && !model.canLoad && !model.canPreview && model.canRemove,
-            message: "populated folder starts with silent, unselected audio list")
+            model.filesVisible && model.canRemove && model.statusText.isEmpty
+                && (0..<model.files.count).allSatisfy { (row: Int) -> Bool in !model.files[row].selected },
+            message: "populated folder starts with a silent, unselected audio list")
         guard model.files.count >= 2 else {
             listing.expect(false, message: "the audio list needs two selectable sources")
             return
@@ -108,21 +109,47 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
         model.selectFile(row: 0)
         let first = model.files[0].path
         actions.expect(
-            model.files[0].selected && !model.files[1].selected
-                && model.canLoad && model.canPreview,
-            message: "file selection highlights exactly its row and enables source actions")
-        model.setPreviewingPath(path: first)
-        model.selectFile(row: 1)
+            model.files[0].selected && !model.files[1].selected && model.statusText.isEmpty,
+            message: "file selection highlights exactly its row without a failure readout")
+        var previewed: [String] = []
+        model.onPreviewRequested = { (path: String) in previewed.append(path) }
+        model.clickFile(row: 1)
         let second = model.files[1].path
-        model.setLoadedPath(path: second)
+        actions.expect(
+            !model.files[0].selected && model.files[1].selected && previewed == [second],
+            message: "clicking a file selects its row and requests its preview")
+        var loaded: [String] = []
+        model.onLoadRequested = { (path: String) in loaded.append(path) }
+        model.activateFile(row: 0)
+        actions.expect(
+            model.files[0].selected && loaded == [first],
+            message: "double-click loads the activated file")
+        var stopped = 0
+        model.onPreviewStopRequested = { stopped += 1 }
+        model.setPreviewingPath(path: first)
+        model.togglePreview()
+        actions.expect(
+            stopped == 1 && previewed == [second],
+            message: "toggling while previewing stops it instead of starting another")
+        model.setPreviewingPath(path: "")
+        model.togglePreview()
+        actions.expect(
+            previewed == [second, first],
+            message: "toggling with a selection and no active preview requests it")
         model.clearFileSelection()
         actions.expect(
-            !model.files[1].selected && !model.canLoad && model.canPreview,
-            message: "clearing selection keeps the sounding and loaded sources without enabling Load")
-        model.setPreviewingPath(path: "")
-        actions.expect(
-            !model.canPreview,
-            message: "stopping preview disables Preview without a selection")
+            !model.files[0].selected && !model.files[1].selected,
+            message: "clearing selection unhighlights every row")
+
+        let failures = report.scoped(cppID: "swiftcore/SampleLibraryModel::failureStatus")
+        model.showMessage(text: "Cannot read tone.wav.")
+        failures.expect(
+            model.statusText == "Cannot read tone.wav.",
+            message: "a load failure reaches the failure readout")
+        model.selectFile(row: 0)
+        failures.expect(
+            model.statusText.isEmpty,
+            message: "selecting a file clears the failure readout")
 
         let navigation = report.scoped(cppID: "swiftcore/SampleLibraryModel::navigation")
         model.selectFolder(row: 1)
@@ -132,7 +159,7 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
         }
         navigation.expect(
             model.folders[1].selected && model.folders[1].expanded && model.folders[2].depth == 2
-                && model.files.count == 0 && !model.canLoad,
+                && model.files.count == 0,
             message: "selecting a child expands its lazy descendants and navigates to an empty audio list")
         model.toggleFolder(row: 1)
         navigation.expect(
@@ -152,7 +179,7 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
                 + "expected \(expectedPaths), actual \(expandedPaths), first depth \(model.folders[2].depth)")
         model.selectFolder(row: 5)
         navigation.expect(
-            model.folders[5].selected && !model.canLoad && model.files.count == 0,
+            model.folders[5].selected && model.files.count == 0,
             message: "selecting an empty folder leaves no source load target")
         model.selectFolder(row: 6)
         navigation.expect(
@@ -193,7 +220,7 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
         }
         removal.expect(
             model.folders[2].path == empty.path && model.folders[2].selected
-                && model.files.count == 0 && !model.canLoad,
+                && model.files.count == 0,
             message: "plain paths append and select the chosen root; expected \(empty.path), "
                 + "actual \(model.folders[2].path), selected \(model.folders[2].selected), "
                 + "status \(model.statusText)")

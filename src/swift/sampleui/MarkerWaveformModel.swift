@@ -32,11 +32,9 @@ public final class MarkerWaveformModel: QmlUncreatable {
     private var pyramid = SamplePeakPyramid(samples: [])
     private var rows: [WaveformMarkerRow] = []
     private var scene = MarkerWaveformScene()
-    private var lists = [Data(), Data()]
+    private var lists = [Data()]
     private var width = 0.0
     private var height = 0.0
-    private var seamWidth = 0.0
-    private var seamHeight = 0.0
     private var spp = 1.0
     private var scroll = 0.0
     private var userZoomed = false
@@ -48,8 +46,9 @@ public final class MarkerWaveformModel: QmlUncreatable {
     private var sampleRate = 1.0
     private var gain = 1.0
     private var zoomSecondsPerPixel = 0.0
-    private var endWindow: [Float] = []
-    private var startWindow: [Float] = []
+    private var sliceBadges: [(frame: Int, text: String)] = []
+    private var highlightStart = 0
+    private var highlightEnd = 0
 
     public var markers: QListModel<WaveformMarkerRow> = QListModel()
     public var displayRevision: Int = 0
@@ -58,8 +57,6 @@ public final class MarkerWaveformModel: QmlUncreatable {
     @QtIgnored public var onMarkerDragged: ((Int, Int) -> Void)?
     @QtIgnored public var onMarkerReleased: (() -> Void)?
     @QtIgnored public var pyramidRevision: Int { sampleRevision }
-    @QtIgnored public var seamEndWindow: [Float] { endWindow }
-    @QtIgnored public var seamStartWindow: [Float] { startWindow }
     private var sampleRevision = 0
 
     @QtIgnored public init(palette: GridPalette) { self.palette = palette }
@@ -81,13 +78,6 @@ public final class MarkerWaveformModel: QmlUncreatable {
         }
     }
 
-    public func setSeamViewport(width: Double, height: Double) {
-        guard width.isFinite, height.isFinite else { return }
-        seamWidth = max(0, width)
-        seamHeight = max(0, height)
-        rebuild()
-    }
-
     public func setBaseFontPx(value: Double) {
         guard value.isFinite, value > 0 else { return }
         baseFontPx = value
@@ -103,8 +93,6 @@ public final class MarkerWaveformModel: QmlUncreatable {
         pyramid = SamplePeakPyramid(samples: samples)
         sampleRevision += 1
         playheadFrame = nil
-        endWindow.removeAll(keepingCapacity: true)
-        startWindow.removeAll(keepingCapacity: true)
         fit()
     }
 
@@ -139,9 +127,29 @@ public final class MarkerWaveformModel: QmlUncreatable {
         rebuild()
     }
 
-    @QtIgnored public func setSeamWindows(end: [Float], start: [Float]) {
-        endWindow = end
-        startWindow = start
+    /// Slice-region numbers for Split Studio; each badge draws at its region
+    /// start in frame order. Pairs truncate to the shorter array; pass empty
+    /// arrays to clear. Number strings build here so rebuilds stay allocation-free.
+    @QtIgnored public func setRegionBadges(frames: [Int], numbers: [Int]) {
+        let paired = zip(frames, numbers).map { (pair: (Int, Int)) -> (frame: Int, text: String) in
+            (frame: pair.0, text: String(pair.1))
+        }.sorted { (lhs: (frame: Int, text: String), rhs: (frame: Int, text: String)) -> Bool in
+            lhs.frame < rhs.frame
+        }
+        guard
+            !paired.elementsEqual(
+                sliceBadges,
+                by: { (lhs: (frame: Int, text: String), rhs: (frame: Int, text: String)) -> Bool in lhs == rhs })
+        else { return }
+        sliceBadges = paired
+        rebuild()
+    }
+
+    /// Selected-slice wash for Split Studio; empty when start >= end.
+    public func setHighlight(startFrame: Int, endFrame: Int) {
+        guard highlightStart != startFrame || highlightEnd != endFrame else { return }
+        highlightStart = startFrame
+        highlightEnd = endFrame
         rebuild()
     }
 
@@ -279,11 +287,18 @@ public final class MarkerWaveformModel: QmlUncreatable {
 
     private func rebuild() {
         scene.setPalette(palette)
+        // The highlight clamps to the loaded source; an empty range draws no
+        // wash and dims nothing, so Edit Sample (which never sets one) is unchanged.
+        let upper = max(0, samples.count)
+        let highlightLo = min(max(0, highlightStart), upper)
+        let highlightHi = min(max(0, highlightEnd), upper)
+        let highlight: (start: Int, end: Int)? =
+            highlightLo < highlightHi ? (highlightLo, highlightHi) : nil
         lists[0] = scene.buildMain(
             samples: samples, pyramid: pyramid, width: width, height: height,
             scroll: scroll, spp: spp, gain: gain, markers: rows,
+            badges: sliceBadges, highlight: highlight,
             playheadFrame: playheadFrame, fontPx: baseFontPx)
-        lists[1] = scene.buildSeam(end: endWindow, start: startWindow, width: seamWidth, height: seamHeight)
         let secondsPerPixel = spp / sampleRate
         if zoomSecondsPerPixel != secondsPerPixel {
             zoomSecondsPerPixel = secondsPerPixel

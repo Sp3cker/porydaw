@@ -100,8 +100,8 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
         !locked.canUndo && !locked.canRedo && locked.cropStart == 256,
         message: "source change discards both undo history and unfinished marker gesture")
     replacement.expect(
-        locked.sourceFrameCount == next.frameCount && locked.sourceLine.contains("32000 Hz")
-            && locked.rateChoices[0] == "Keep source (32000 Hz)" && locked.rateIndex > 0,
+        locked.sourceFrameCount == next.frameCount && locked.fileRateText == "32000 Hz"
+            && locked.rateChoices[0] == "File rate (32000 Hz)" && locked.rateIndex > 0,
         message: "source readouts and rate choices reflect the replacement and restored rate")
     locked.setCropStart(value: 320)
     replacement.expect(locked.canUndo, message: "post-replacement edits start new history")
@@ -122,7 +122,6 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
     let tools = SampleLoopTools(presenter: presenter)
     let wave = makeWaveform(presenter: presenter, tools: tools)
     wave.setViewport(width: 600, height: 120)
-    wave.setSeamViewport(width: 228, height: 56)
     tools.tryAnotherLoop()
     do { try runBlocking { await tools.waitForPitchAnalysis() } } catch {
         sourceState.expect(false, message: "original pitch analysis did not settle: \(error)")
@@ -190,8 +189,7 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
         return
     }
     analysis.expect(
-        tools.pitchApplyVisible && tools.pitchApplyToolTip != oldPitchHint
-            && !tools.canTryAnother && tools.suggestStatus.isEmpty,
+        tools.pitchApplyVisible && tools.pitchApplyToolTip != oldPitchHint && !tools.canTryAnother,
         message: "replacement reanalyzes the new pitch and drops old loop suggestions")
     tools.applyDetectedPitch()
     analysis.expect(

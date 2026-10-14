@@ -58,6 +58,24 @@ public final class KitSourceSession {
                 targetRate: SampleRatePolicy.targetRate(gbaReady: sample.gbaReady, sourceRate: sample.sampleRate)))
         nextSourceId += 1
     }
+    /// Creates the initial whole-buffer slice for a fresh source.
+    @discardableResult
+    public func createFirstSlice(source: Int) -> Bool {
+        guard let index = sourceIndex(source), sources[index].slices.isEmpty, sources[index].sample.frameCount > 0
+        else {
+            return false
+        }
+        var nextId = nextSliceId
+        guard
+            let slice = newSlice(
+                start: 0, end: sources[index].sample.frameCount, source: sources[index], nextId: &nextId)
+        else {
+            return false
+        }
+        sources[index].slices.append(slice)
+        nextSliceId = nextId
+        return true
+    }
 
     /// Inserts a boundary, optionally snapping within 3 ms; splits retain the left slice.
     public func setMarker(source: Int, frame: Int, snap: Bool) {
@@ -70,16 +88,13 @@ public final class KitSourceSession {
         nextSliceId = nextId
     }
 
-    /// Removes a boundary, retaining the left slice; returns any used name the merge would remove.
-    @discardableResult
-    public func removeMarker(source: Int, frame: Int, usedNames: Set<String> = []) -> String? {
+    /// Removes a boundary, merging its adjacent slices and keeping the left name.
+    public func removeMarker(source: Int, frame: Int) {
         guard let index = sourceIndex(source), let marker = sources[index].markers.firstIndex(of: frame)
-        else { return nil }
+        else { return }
         var staged = sources[index]
         removeMarker(at: marker, from: &staged)
-        if let removed = removedUsedSlice(from: sources[index], after: staged, usedNames: usedNames) { return removed }
         sources[index] = staged
-        return nil
     }
 
     /// Moves a boundary with optional snap; existing slices follow their old pair ordinals.
@@ -88,46 +103,30 @@ public final class KitSourceSession {
         let boundary = markerFrame(to, source: sources[index], snap: snap)
         guard boundary != from, !sources[index].markers.contains(boundary) else { return }
         var staged = sources[index]
+        let left = staged.slices.firstIndex { (slice: Slice) in slice.endFrame == from }
+        let right = staged.slices.firstIndex { (slice: Slice) in slice.startFrame == from }
+        if let left, let right {
+            guard boundary > staged.slices[left].startFrame, boundary < staged.slices[right].endFrame else { return }
+            staged.slices[left].endFrame = boundary
+            staged.slices[right].startFrame = boundary
+            staged.markers.remove(at: marker)
+            staged.markers.append(boundary)
+            staged.markers.sort()
+            sources[index] = staged
+            return
+        }
         let oldMarkers = staged.markers
         staged.markers.remove(at: marker)
         staged.markers.append(boundary)
         staged.markers.sort()
         for slice in staged.slices.indices {
             guard let ordinal = oldMarkers.firstIndex(of: staged.slices[slice].startFrame) else {
-                preconditionFailure("Every slice must begin at a source marker")
+                continue
             }
             staged.slices[slice].startFrame = staged.markers[ordinal]
             staged.slices[slice].endFrame = staged.markers[ordinal + 1]
         }
         sources[index] = staged
-    }
-
-    /// Creates one selection slice; returns any used name that merging its interior would remove.
-    @discardableResult
-    public func sliceSelection(
-        source: Int, startFrame: Int, endFrame: Int, snap: Bool, usedNames: Set<String> = []
-    ) -> String? {
-        guard let index = sourceIndex(source) else { return nil }
-        var staged = sources[index]
-        let start = markerFrame(startFrame, source: staged, snap: snap)
-        let end = markerFrame(endFrame, source: staged, snap: snap)
-        guard start < end else { return nil }
-        while let interior = staged.markers.firstIndex(where: { (frame: Int) in frame > start && frame < end }) {
-            removeMarker(at: interior, from: &staged)
-        }
-        var nextId = nextSliceId
-        guard insertMarker(start, into: &staged, nextId: &nextId),
-            insertMarker(end, into: &staged, nextId: &nextId)
-        else { return nil }
-        if !staged.slices.contains(where: { (slice: Slice) in slice.startFrame == start && slice.endFrame == end }) {
-            guard let slice = newSlice(start: start, end: end, source: staged, nextId: &nextId) else { return nil }
-            staged.slices.append(slice)
-            staged.slices.sort { (left: Slice, right: Slice) in left.startFrame < right.startFrame }
-        }
-        if let removed = removedUsedSlice(from: sources[index], after: staged, usedNames: usedNames) { return removed }
-        sources[index] = staged
-        nextSliceId = nextId
-        return nil
     }
 
     /// Deletes only the indexed slice; retained marker pairs are not implicitly resurrected.
@@ -187,25 +186,12 @@ public final class KitSourceSession {
         return true
     }
 
-    /// A source can close only when no zone names one of its current slices.
-    public func canClose(source: Int, usedNames: Set<String>) -> Bool {
+    /// Removes a source without reusing its identity.
+    @discardableResult
+    public func removeSource(source: Int) -> Bool {
         guard let index = sourceIndex(source) else { return false }
-        return !sources[index].slices.contains { (slice: Slice) in usedNames.contains(slice.name) }
-    }
-
-    /// Removes a source without reusing its identity; refuses while any slice is used.
-    public func removeSource(source: Int, usedNames: Set<String>) -> Bool {
-        guard canClose(source: source, usedNames: usedNames), let index = sourceIndex(source) else { return false }
         sources.remove(at: index)
         return true
-    }
-
-    private func removedUsedSlice(from original: Source, after staged: Source, usedNames: Set<String>) -> String? {
-        guard !usedNames.isEmpty else { return nil }
-        let remaining = Set(staged.slices.map(\.name))
-        return original.slices.first { (slice: Slice) -> Bool in
-            usedNames.contains(slice.name) && !remaining.contains(slice.name)
-        }?.name
     }
 
     private func sourceIndex(_ id: Int) -> Int? {
@@ -230,9 +216,10 @@ public final class KitSourceSession {
 
     private func mintName(for source: Source) -> String {
         let prefix = SampleNames.sanitize(source.sample.suggestedName)
+        let base = prefix.isEmpty ? "slice" : prefix
         for number in 0...99 {
             let suffix = number < 10 ? "0\(number)" : "\(number)"
-            let name = "\(prefix)_\(suffix)"
+            let name = "\(base)_\(suffix)"
             if nameAvailable(name, source: source) { return name }
         }
         return ""
@@ -248,25 +235,39 @@ public final class KitSourceSession {
 
     private func insertMarker(_ frame: Int, into source: inout Source, nextId: inout Int) -> Bool {
         guard !source.markers.contains(frame) else { return true }
-        let ordinal = source.markers.firstIndex { (marker: Int) in marker > frame } ?? source.markers.count
-        if ordinal > 0 && ordinal < source.markers.count {
-            let start = source.markers[ordinal - 1]
-            let end = source.markers[ordinal]
-            if let left = source.slices.firstIndex(where: { (slice: Slice) in
-                slice.startFrame == start && slice.endFrame == end
-            }) {
-                source.slices[left].endFrame = frame
-                guard let right = newSlice(start: frame, end: end, source: source, nextId: &nextId) else {
+        if let sliceIndex = source.slices.firstIndex(where: { (slice: Slice) in
+            slice.startFrame < frame && frame < slice.endFrame
+        }) {
+            let oldEnd = source.slices[sliceIndex].endFrame
+            guard let right = newSlice(start: frame, end: oldEnd, source: source, nextId: &nextId) else {
+                return false
+            }
+            source.slices[sliceIndex].endFrame = frame
+            source.slices.insert(right, at: sliceIndex + 1)
+        } else {
+            let ordinal = source.markers.firstIndex { (marker: Int) in marker > frame } ?? source.markers.count
+            if ordinal > 0 && ordinal < source.markers.count {
+                let start = source.markers[ordinal - 1]
+                let end = source.markers[ordinal]
+                if let left = source.slices.firstIndex(where: { (slice: Slice) in
+                    slice.startFrame == start && slice.endFrame == end
+                }) {
+                    source.slices[left].endFrame = frame
+                    guard let right = newSlice(start: frame, end: end, source: source, nextId: &nextId) else {
+                        return false
+                    }
+                    source.slices.insert(right, at: left + 1)
+                }
+            } else if !source.markers.isEmpty {
+                let start = ordinal == 0 ? frame : source.markers[ordinal - 1]
+                let end = ordinal == 0 ? source.markers[0] : frame
+                guard let slice = newSlice(start: start, end: end, source: source, nextId: &nextId) else {
                     return false
                 }
-                source.slices.insert(right, at: left + 1)
+                source.slices.insert(slice, at: ordinal == 0 ? 0 : source.slices.count)
             }
-        } else if !source.markers.isEmpty {
-            let start = ordinal == 0 ? frame : source.markers[ordinal - 1]
-            let end = ordinal == 0 ? source.markers[0] : frame
-            guard let slice = newSlice(start: start, end: end, source: source, nextId: &nextId) else { return false }
-            source.slices.insert(slice, at: ordinal == 0 ? 0 : source.slices.count)
         }
+        let ordinal = source.markers.firstIndex { (marker: Int) in marker > frame } ?? source.markers.count
         source.markers.insert(frame, at: ordinal)
         return true
     }
@@ -275,10 +276,12 @@ public final class KitSourceSession {
         let frame = source.markers[ordinal]
         let left = source.slices.firstIndex { (slice: Slice) in slice.endFrame == frame }
         let right = source.slices.firstIndex { (slice: Slice) in slice.startFrame == frame }
-        if ordinal > 0 && ordinal + 1 < source.markers.count {
+        if let left, let right {
+            source.slices[left].endFrame = source.slices[right].endFrame
+            source.slices.remove(at: right)
+        } else if ordinal > 0 && ordinal + 1 < source.markers.count {
             if let left {
                 source.slices[left].endFrame = source.markers[ordinal + 1]
-                if let right { source.slices.remove(at: right) }
             } else if let right {
                 source.slices[right].startFrame = source.markers[ordinal - 1]
             }

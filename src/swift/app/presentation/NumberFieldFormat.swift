@@ -1,4 +1,5 @@
 import Foundation
+import PorydawCore
 import QtBridge
 
 /// Presenter-owned formats for the shell's integer SpinBox fields.
@@ -6,7 +7,7 @@ import QtBridge
 @MainActor
 @QtBridgeable
 public final class NumberFieldFormat: QmlInstantiable {
-    public enum Kind { case integer, seconds, channels, reverb }
+    public enum Kind { case integer, seconds, channels, reverb, note }
     private let kind: Kind
     public var textPattern: String = "%1 channels"
     public var defaultText: String = "Default (50)"
@@ -25,12 +26,15 @@ public final class NumberFieldFormat: QmlInstantiable {
             textPattern.replacingOccurrences(of: "%1", with: String(value))
         case .reverb:
             value == -1 ? defaultText : String(value)
+        case .note:
+            midiKeyName(value)
         }
     }
 
-    /// Commits a whole integer; surrounding whitespace is ignored and any
-    /// other text, including this field's own display text, keeps the value.
+    /// Commits a whole integer (a note name too for `.note`); surrounding whitespace
+    /// is ignored and any other text, including this field's own display text, keeps the value.
     public func value(text: String, current: Int) -> Int {
-        Int(text.trimmingCharacters(in: .whitespaces)) ?? current
+        if kind == .note { return midiKey(from: text) ?? current }
+        return Int(text.trimmingCharacters(in: .whitespaces)) ?? current
     }
 }

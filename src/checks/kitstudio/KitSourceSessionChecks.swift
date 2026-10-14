@@ -1,5 +1,6 @@
 import PorydawKitStudio
 import PorydawSample
+import PorydawVoicegroup
 
 @MainActor
 func runKitSourceSessionChecks(_ report: CheckReport) {
@@ -11,6 +12,7 @@ func runKitSourceSessionChecks(_ report: CheckReport) {
     checkSourceRenderAndRates(report)
     checkSourceClose(report)
     checkSourceSnapshot(report)
+    checkSourceAutoPlaceAndZoneRemoval(report)
 }
 
 private func sessionSample(
@@ -51,37 +53,28 @@ private func checkSourceMarkers(_ report: CheckReport) {
     session.setMarker(source: id, frame: 200, snap: false)
     r.expectEqual(expected: beforeDuplicate, actual: session.sources, what: "duplicate boundary is a no-op")
     let beforeMove = session.sources[0].slices
-    session.moveMarker(source: id, from: 200, to: 400, snap: false)
+    session.moveMarker(source: id, from: 200, to: 250, snap: false)
     r.expectEqual(
-        expected: [100, 300, 400], actual: session.sources[0].markers,
-        what: "moving across a neighbor keeps ordered markers")
+        expected: [100, 250, 300], actual: session.sources[0].markers,
+        what: "move keeps ordered markers")
     r.expectEqual(
         expected: beforeMove.map(\.name), actual: session.sources[0].slices.map(\.name),
-        what: "move retains pair-ordinal names")
+        what: "move retains adjacent names")
     r.expectEqual(
-        expected: [300, 400], actual: session.sources[0].slices.map(\.endFrame), what: "move updates ordinal bounds")
+        expected: [250, 300], actual: session.sources[0].slices.map(\.endFrame), what: "move updates adjacent bounds")
     let beforeCollision = session.sources
-    session.moveMarker(source: id, from: 300, to: 400, snap: false)
+    session.moveMarker(source: id, from: 250, to: 300, snap: false)
     r.expectEqual(expected: beforeCollision, actual: session.sources, what: "move collision leaves state unchanged")
-    let protected = session.snapshot()
-    for frame in [100, 300, 400] {
-        session.removeMarker(source: id, frame: frame, usedNames: ["src_00", "src_01"])
-        r.expectEqual(
-            expected: protected, actual: session.snapshot(), what: "used slice protects boundary \(frame)")
-    }
-    session.sliceSelection(source: id, startFrame: 100, endFrame: 400, snap: false, usedNames: ["src_01"])
-    r.expectEqual(
-        expected: protected, actual: session.snapshot(), what: "used slice protects selection merge and counters")
-    session.removeMarker(source: id, frame: 300, usedNames: ["src_00"])
-    r.expectEqual(expected: [100, 400], actual: session.sources[0].markers, what: "interior boundary removed")
+    session.removeMarker(source: id, frame: 250)
+    r.expectEqual(expected: [100, 300], actual: session.sources[0].markers, what: "interior boundary removed")
     r.expectEqual(expected: "src_00", actual: session.sources[0].slices[0].name, what: "merge keeps left name")
     r.expect(
         session.sources[0].slices[0].fadeIn && !session.sources[0].slices[0].fadeOut,
         message: "merge keeps left fade overrides")
     session.removeMarker(source: id, frame: 100)
-    r.expectEqual(expected: [400], actual: session.sources[0].markers, what: "endpoint removal leaves neighbor")
+    r.expectEqual(expected: [300], actual: session.sources[0].markers, what: "endpoint removal leaves neighbor")
     r.expect(session.sources[0].slices.isEmpty, message: "endpoint removal deletes its adjacent slice")
-    session.removeMarker(source: id, frame: 400)
+    session.removeMarker(source: id, frame: 300)
     r.expect(session.sources[0].markers.isEmpty, message: "last marker can be removed")
 }
 
@@ -91,47 +84,32 @@ private func checkSourceSelection(_ report: CheckReport) {
     let session = KitSourceSession()
     session.addSource(sessionSample(count: 400))
     let id = session.sources[0].id
-    session.sliceSelection(source: id, startFrame: 100, endFrame: 300, snap: false)
-    r.expectEqual(expected: [100, 300], actual: session.sources[0].markers, what: "selection installs two bounds")
-    r.expectEqual(expected: 1, actual: session.sources[0].slices.count, what: "selection creates one slice")
-    session.setMarker(source: id, frame: 200, snap: false)
-    session.sliceSelection(source: id, startFrame: -100, endFrame: 900, snap: true)
-    r.expectEqual(
-        expected: [0, 400], actual: session.sources[0].markers, what: "selection clamps and merges all interior markers"
-    )
-    r.expectEqual(
-        expected: [400], actual: session.sources[0].slices.map(\.endFrame),
-        what: "exclusive full-buffer end survives snap")
-    let beforeInvalid = session.sources
-    session.sliceSelection(source: id, startFrame: 300, endFrame: 100, snap: false)
-    session.sliceSelection(source: id, startFrame: 200, endFrame: 200, snap: false)
-    r.expectEqual(
-        expected: beforeInvalid, actual: session.sources, what: "reversed and empty selections preserve state")
+    session.createFirstSlice(source: id)
+    r.expectEqual(expected: 1, actual: session.sources[0].slices.count, what: "first slice spans the full buffer")
     session.setMarker(source: id, frame: 100, snap: false)
-    session.setMarker(source: id, frame: 200, snap: false)
+    session.setMarker(source: id, frame: 300, snap: false)
+    r.expectEqual(expected: [100, 300], actual: session.sources[0].markers, what: "markers bound each split")
+    r.expectEqual(expected: 3, actual: session.sources[0].slices.count, what: "each split adds one slice")
     session.removeSlice(source: id, slice: 0)
     r.expectEqual(
-        expected: [0, 100, 200, 400], actual: session.sources[0].markers, what: "delete keeps marker boundaries")
+        expected: [100, 300], actual: session.sources[0].markers, what: "delete keeps marker boundaries")
     session.setMarker(source: id, frame: 50, snap: false)
     r.expectEqual(
-        expected: [100, 200], actual: session.sources[0].slices.map(\.startFrame),
-        what: "splitting deleted pair never resurrects it")
-    session.moveMarker(source: id, from: 200, to: 250, snap: false)
+        expected: ["src_00", "src_01", "src_02"], actual: session.sources[0].slices.map(\.name),
+        what: "gap slice reuses the freed suffix")
+    session.moveMarker(source: id, from: 300, to: 250, snap: false)
     r.expectEqual(
-        expected: [100, 250], actual: session.sources[0].slices.map(\.startFrame),
-        what: "move preserves missing pair ordinals")
+        expected: [100, 250, 400], actual: session.sources[0].slices.map(\.endFrame),
+        what: "move updates adjacent bounds")
     session.removeMarker(source: id, frame: 50)
     r.expectEqual(
         expected: [100, 250], actual: session.sources[0].slices.map(\.startFrame),
-        what: "merging deleted pairs does not resurrect them")
-    session.sliceSelection(source: id, startFrame: 0, endFrame: 100, snap: false)
+        what: "endpoint marker removal deletes only its adjacent slice")
+    session.setMarker(source: id, frame: 50, snap: false)
     r.expectEqual(
-        expected: 3, actual: session.sources[0].slices.count, what: "explicit selection can recreate a deleted slice")
+        expected: 3, actual: session.sources[0].slices.count, what: "marker recreates a deleted gap slice")
     let beforeRefusal = session.sources
     session.validateName = { (_: String) in "reserved" }
-    session.sliceSelection(source: id, startFrame: 125, endFrame: 175, snap: false)
-    r.expectEqual(
-        expected: beforeRefusal, actual: session.sources, what: "selection refusal rolls back both boundary operations")
     session.setMarker(source: id, frame: 150, snap: false)
     r.expectEqual(
         expected: beforeRefusal, actual: session.sources, what: "split refusal preserves markers and slices atomically")
@@ -162,12 +140,6 @@ private func checkSourceSnap(_ report: CheckReport) {
             r.expectEqual(
                 expected: [200 + distance], actual: session.sources[0].markers,
                 what: "move uses the shared crossing search")
-            let selection = KitSourceSession()
-            selection.addSource(sample)
-            selection.sliceSelection(source: selection.sources[0].id, startFrame: 201, endFrame: 512, snap: true)
-            r.expectEqual(
-                expected: [200 + distance, 512], actual: selection.sources[0].markers,
-                what: "selection snaps start but preserves exclusive end")
         }
     }
 }
@@ -189,7 +161,7 @@ private func checkSourceNames(_ report: CheckReport) {
     r.expectEqual(expected: "src_00", actual: session.mintSliceName(source: id), what: "delete frees first suffix")
     session.addSource(sessionSample(name: "SRC"))
     let other = session.sources[1].id
-    session.sliceSelection(source: other, startFrame: 0, endFrame: 100, snap: false)
+    session.createFirstSlice(source: other)
     r.expectEqual(
         expected: "src_00", actual: session.sources[1].slices[0].name, what: "second source reuses globally free suffix"
     )
@@ -229,8 +201,6 @@ private func checkSourceExhaustion(_ report: CheckReport) {
     let full = session.sources
     session.setMarker(source: id, frame: 101, snap: false)
     r.expectEqual(expected: full, actual: session.sources, what: "exhausted append is atomic")
-    session.sliceSelection(source: id, startFrame: 100, endFrame: 102, snap: false)
-    r.expectEqual(expected: full, actual: session.sources, what: "exhausted selection is atomic")
     session.removeSlice(source: id, slice: 0)
     session.setMarker(source: id, frame: 101, snap: false)
     r.expectEqual(
@@ -254,7 +224,8 @@ private func checkSourceRenderAndRates(_ report: CheckReport) {
         session.addSource(sample)
         let index = session.sources.count - 1
         let id = session.sources[index].id
-        session.sliceSelection(source: id, startFrame: 12, endFrame: 84, snap: false)
+        session.setMarker(source: id, frame: 12, snap: false)
+        session.setMarker(source: id, frame: 84, snap: false)
         for (fadeIn, fadeOut) in [(false, true), (true, false), (false, false), (true, true)] {
             session.setSliceFades(source: id, slice: 0, fadeIn: fadeIn, fadeOut: fadeOut)
             var params = SampleDocument.defaultParams(for: sample)
@@ -310,13 +281,9 @@ private func checkSourceClose(_ report: CheckReport) {
     session.addSource(sessionSample(name: "other"))
     let first = session.sources[0].id
     let second = session.sources[1].id
-    session.sliceSelection(source: first, startFrame: 0, endFrame: 100, snap: false)
-    r.expect(session.canClose(source: first, usedNames: ["unrelated"]), message: "unreferenced source is closable")
-    r.expect(!session.canClose(source: first, usedNames: ["src_00"]), message: "zone union gates close")
-    let before = session.sources
-    r.expect(!session.removeSource(source: first, usedNames: ["src_00"]), message: "remove refuses a used slice")
-    r.expectEqual(expected: before, actual: session.sources, what: "refused source close preserves state")
-    r.expect(session.removeSource(source: first, usedNames: []), message: "unused source removed")
+    session.setMarker(source: first, frame: 0, snap: false)
+    session.setMarker(source: first, frame: 100, snap: false)
+    r.expect(session.removeSource(source: first), message: "sliced source closes without zone gating")
     r.expectEqual(
         expected: [second], actual: session.sources.map(\.id), what: "closing another source retains identity")
     session.setMarker(source: second, frame: 10, snap: false)
@@ -324,10 +291,8 @@ private func checkSourceClose(_ report: CheckReport) {
         expected: [10], actual: session.sources[0].markers, what: "source arguments are ids, not current array indices")
     session.addSource(sessionSample())
     r.expect(session.sources[1].id > second, message: "closed source identity is never reused")
-    r.expect(
-        !session.canClose(source: first, usedNames: []) && !session.removeSource(source: first, usedNames: []),
-        message: "closed id is absent")
-    r.expect(session.removeSource(source: second, usedNames: ["src_00"]), message: "marker-only source is closable")
+    r.expect(!session.removeSource(source: first), message: "closed id is absent")
+    r.expect(session.removeSource(source: second), message: "marker-only source is closable")
 }
 
 @MainActor
@@ -336,7 +301,8 @@ private func checkSourceSnapshot(_ report: CheckReport) {
     let session = KitSourceSession()
     session.addSource(sessionSample())
     let id = session.sources[0].id
-    session.sliceSelection(source: id, startFrame: 0, endFrame: 100, snap: false)
+    session.setMarker(source: id, frame: 0, snap: false)
+    session.setMarker(source: id, frame: 100, snap: false)
     let prior = session.snapshot()
     session.setMarker(source: id, frame: 50, snap: false)
     let afterSplit = session.snapshot()
@@ -352,4 +318,69 @@ private func checkSourceSnapshot(_ report: CheckReport) {
     r.expectEqual(expected: afterSplit, actual: session.snapshot(), what: "restore includes slice identity counter")
     session.addSource(sessionSample(name: "second"))
     r.expectEqual(expected: nextSource, actual: session.sources[1].id, what: "restore includes source identity counter")
+}
+
+@MainActor
+private func checkSourceAutoPlaceAndZoneRemoval(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitSourceSession::autoPlaceAndZoneVanishing")
+    let p = KitStudioPresenter()
+    p.open()
+    p.dropSample(name: "occupied", onKey: 36)
+    p.setMode(index: 1)
+    // A keysplit drop at 36 would extend to 127 and cover every key, so the one-key blocker goes in directly.
+    _ = p.draft.setKeysplitZones([
+        KitZone(startKey: 36, endKey: 36, sampleName: "occupied", rootKey: 60, pan: 0, adsr: (255, 0, 255, 0))
+    ])
+    p.setMode(index: 0)
+
+    let sample = sessionSample(name: "sample", count: 200)
+    p.addSource(sample, autoPlaceFirstSlice: true)
+    let slice1 = p.sliceName(id: p.sliceId(row: 0))
+    r.expectEqual(
+        expected: 37,
+        actual: p.draft.drumkitZones.first(where: { $0.sampleName == slice1 })?.startKey,
+        what: "auto-place picks next free key 37 in drumkit skipping occupied 36")
+    r.expectEqual(
+        expected: 37,
+        actual: p.draft.keysplitZones.first(where: { $0.sampleName == slice1 })?.startKey,
+        what: "auto-place picks next free key 37 in keysplit skipping occupied 36")
+
+    p.insertMarker(frame: 100)
+    let slice2 = p.sliceName(id: p.sliceId(row: 1))
+    r.expectEqual(
+        expected: 38,
+        actual: p.draft.drumkitZones.first(where: { $0.sampleName == slice2 })?.startKey,
+        what: "marker add auto-places new slice onto next free key 38")
+    r.expectEqual(
+        expected: 38,
+        actual: p.draft.keysplitZones.first(where: { $0.sampleName == slice2 })?.startKey,
+        what: "marker add auto-places new slice onto next free key 38 in keysplit")
+
+    let marker = p.markerId(row: 0)
+    p.removeMarker(id: marker)
+    r.expect(
+        p.draft.drumkitZones.first(where: { $0.sampleName == slice2 }) == nil,
+        message: "drumkit zone vanishes when slice is merged away")
+    r.expect(
+        p.draft.keysplitZones.first(where: { $0.sampleName == slice2 }) == nil,
+        message: "keysplit zone vanishes when slice is merged away")
+    r.expectEqual(
+        expected: 37,
+        actual: p.draft.drumkitZones.first(where: { $0.sampleName == slice1 })?.startKey,
+        what: "surviving slice keeps its zone")
+
+    p.validateName = { $0 == "sample_02" ? "taken in project" : nil }
+    p.insertMarker(frame: 120)
+    p.insertMarker(frame: 150)
+    let slice3 = p.sliceName(id: p.sliceId(row: 2))
+    r.expectEqual(expected: "sample_03", actual: slice3, what: "minted name skips validator-rejected sample_02")
+
+    let beforeRename = slice3
+    r.expect(
+        p.isSliceNameInvalid(sliceId: p.sliceId(row: 2), name: "sample_02"),
+        message: "rejected name is reported invalid")
+    p.renameSlice(id: p.sliceId(row: 2), name: "sample_02")
+    r.expectEqual(
+        expected: beforeRename, actual: p.sliceName(id: p.sliceId(row: 2)), what: "invalid rename leaves name unchanged"
+    )
 }

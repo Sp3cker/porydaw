@@ -4,56 +4,6 @@ import PorydawVoicegroup
 
 /// Pure conversion between editor ranges, store values and audition descriptions.
 public enum KitDraftCodec {
-    // The decoded value of kitBlankChildLine; identical in both mode views.
-    private static let blank = kitBlankChildVoice
-
-    public static func drumkitZones(children: [VgVoice?]) -> [KitZone] {
-        var zones: [KitZone] = []
-        var index = 0
-        let count = min(children.count, 128)
-        while index < count {
-            guard let voice = assigned(children[index]) else {
-                index += 1
-                continue
-            }
-            let start = index
-            var pitched = false
-            index += 1
-            if isSample(voice) {
-                var step: Int?
-                while index < count, let next = assigned(children[index]), sameParams(voice, next) {
-                    let previousKey = children[index - 1]?.key ?? voice.key
-                    let difference = next.key - previousKey
-                    guard difference == 0 || difference == 1,
-                        step == nil || step == difference
-                    else { break }
-                    step = difference
-                    index += 1
-                }
-                pitched = step == 1
-            } else {
-                while index < count, assigned(children[index]) == voice { index += 1 }
-            }
-            zones.append(zone(voice, start: start, end: index - 1, pitched: pitched, mode: .drumkit))
-        }
-        return zones
-    }
-
-    public static func keysplitZones(children: [VgVoice?], table: KeysplitTable) -> [KitZone] {
-        var zones: [KitZone] = []
-        var key = 0
-        let end = min(128, table.table.count)
-        while key < end {
-            let start = key
-            let ordinal = Int(table.table[key])
-            key += 1
-            while key < end, Int(table.table[key]) == ordinal { key += 1 }
-            guard ordinal < children.count, let voice = assigned(children[ordinal]) else { continue }
-            zones.append(zone(voice, start: start, end: key - 1, pitched: false, mode: .keysplit))
-        }
-        return zones
-    }
-
     public static func children(from zones: [KitZone], mode: KitMode) -> [VgVoice?] {
         let sorted = ordered(zones)
         switch mode {
@@ -120,37 +70,14 @@ public enum KitDraftCodec {
             kind: 0, looped: false, loopStart: 0)
     }
 
-    private static func assigned(_ voice: VgVoice?) -> VgVoice? {
-        voice == blank ? nil : voice
-    }
-
     private static func isSample(_ voice: VgVoice) -> Bool {
         voice.macro == .directSound || voice.macro == .directSoundNoResample || voice.macro == .directSoundAlt
     }
 
-    private static func sameParams(_ lhs: VgVoice, _ rhs: VgVoice) -> Bool {
-        guard isSample(rhs) else { return false }
-        var adjusted = rhs
-        adjusted.key = lhs.key
-        return adjusted == lhs
-    }
-
-    private static func zone(_ voice: VgVoice, start: Int, end: Int, pitched: Bool, mode: KitMode) -> KitZone {
-        // Raw drumkit pan 0 cannot distinguish unset from center, so both decode to center.
-        let pan = mode == .drumkit && voice.pan != 0 ? ((0x80 | voice.pan) - 0xC0) * 2 : 0
-        return KitZone(
-            startKey: start, endKey: end, sampleName: voice.symbol, rootKey: voice.key,
-            pitched: pitched, pan: pan,
-            adsr: (voice.attack, voice.decay, voice.sustain, voice.release),
-            locked: !isSample(voice), lockedVoice: isSample(voice) ? nil : voice,
-            sampleMacro: isSample(voice) ? voice.macro : .directSound)
-    }
-
-    private static func voice(_ zone: KitZone, key: Int, mode: KitMode) -> VgVoice? {
-        if zone.locked { return zone.lockedVoice }
-        let childKey = zone.rootKey + (mode == .drumkit && zone.pitched ? key - zone.startKey : 0)
+    private static func voice(_ zone: KitZone, key _: Int, mode: KitMode) -> VgVoice? {
+        // Every key in a zone plays at the root key; one slice maps to one key.
         return VgVoice(
-            macro: zone.sampleMacro, key: childKey, pan: mode == .drumkit ? 0x40 + zone.pan / 2 : 0,
+            macro: zone.sampleMacro, key: zone.rootKey, pan: mode == .drumkit ? 0x40 + zone.pan / 2 : 0,
             symbol: zone.sampleName, attack: zone.adsr.attack, decay: zone.adsr.decay,
             sustain: zone.adsr.sustain, release: zone.adsr.release)
     }

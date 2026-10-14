@@ -306,7 +306,6 @@ public final class GridPalette {
     public var sampleWaveformInk: QmlColor = PaletteMath.qmlColor(argb: 0xFF005B63)
     public var sampleCropHandle: QmlColor = PaletteMath.qmlColor(argb: 0xFF92681F)
     public var sampleLoopHandle: QmlColor = PaletteMath.qmlColor(argb: 0xFF2A7292)
-    public var sampleSeamEndInk: QmlColor = PaletteMath.qmlColor(argb: 0xFFC54444)
     /// Placeholder ink in empty fields; legible text, never the disabled ink.
     public var placeholderText: QmlColor = PaletteMath.qmlColor(argb: 0xFF4D4742)
     /// Severity inks on window, chrome, item, control, and input surfaces.

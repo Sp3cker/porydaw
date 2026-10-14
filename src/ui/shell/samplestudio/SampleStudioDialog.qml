@@ -22,7 +22,7 @@ DialogWindow {
     modality: Qt.ApplicationModal
     width: 75 * unit
     height: 53.33 * unit
-    minimumWidth: 40 * unit
+    minimumWidth: 58 * unit
     minimumHeight: 23.33 * unit
     title: editor.windowTitle
     font: applicationSession.typographyFonts.body
@@ -98,6 +98,10 @@ DialogWindow {
         Keys.priority: Keys.BeforeItem
         Keys.onPressed: event => dialog.handleSpace(event)
     }
+    component AuditionValidatedField: ValidatedTextField {
+        Keys.priority: Keys.BeforeItem
+        Keys.onPressed: event => dialog.handleSpace(event)
+    }
     component AuditionSpinBox: SpinBox {
         Keys.priority: Keys.BeforeItem
         Keys.onPressed: event => dialog.handleSpace(event)
@@ -114,6 +118,15 @@ DialogWindow {
         Keys.priority: Keys.BeforeItem
         Keys.onPressed: event => dialog.handleSpace(event)
     }
+    component SectionHeader: Label {
+        color: dialog.colors.secondaryText
+        font: dialog.applicationSession.typographyFonts.caption
+    }
+    component FieldLabel: Label {
+        color: dialog.colors.windowText
+        Layout.preferredWidth: 7 * dialog.unit
+        elide: Text.ElideRight
+    }
 
     Item {
         anchors.fill: parent
@@ -124,99 +137,265 @@ DialogWindow {
         anchors.fill: parent
         anchors.margins: dialog.spacing
         spacing: dialog.spacing
-        SplitView {
+        RowLayout {
             objectName: "sampleBrowserSplitter"
             Layout.fillWidth: true
             Layout.fillHeight: true
-            orientation: Qt.Horizontal
+            spacing: dialog.spacing
             SampleLibraryPane {
                 library: dialog.library
                 colors: dialog.colors
                 studioWindow: dialog
                 unit: dialog.unit
                 paneSpacing: dialog.spacing
-                captionFont: dialog.applicationSession.typographyFonts.captionMinimum
-                SplitView.minimumWidth: 0
-                SplitView.preferredWidth: 22 * dialog.unit
+                Layout.preferredWidth: 22 * dialog.unit
+                Layout.minimumWidth: 14 * dialog.unit
+                Layout.fillHeight: true
             }
-            SplitView {
-                id: split
-                objectName: "sampleStudioSplitter"
-                SplitView.fillWidth: true
-                SplitView.minimumWidth: 32 * dialog.unit
-                orientation: Qt.Vertical
-                SampleWaveform {
-                id: waveform
-                objectName: "sampleStudioWaveform"
-                SplitView.fillWidth: true
-                SplitView.fillHeight: true
-                SplitView.minimumHeight: 6 * dialog.unit
-                model: dialog.waveformModel
-                colors: dialog.colors
-                baseFontPx: dialog.unit
-            }
-            ScrollView {
-                id: controlScroll
-                objectName: "sampleStudioControlsScroll"
-                SplitView.fillWidth: true
-                SplitView.preferredHeight: 26 * dialog.unit
-                SplitView.minimumHeight: 6 * dialog.unit
-                clip: true
-                contentWidth: availableWidth
-                ColumnLayout {
-                    width: controlScroll.availableWidth
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.minimumWidth: 20 * dialog.unit
+                spacing: dialog.spacing
+                RowLayout {
+                    Layout.fillWidth: true
                     spacing: dialog.spacing
-                    RowLayout {
-                        Label { text: qsTr("Name:"); color: dialog.colors.windowText }
-                        AuditionTextField {
-                            id: nameField
-                            objectName: "sampleStudioName"
-                            Layout.fillWidth: true
-                            text: dialog.editor.sampleName
-                            readOnly: dialog.editor.nameReadOnly || !dialog.editor.hasSource
-                            onTextEdited: dialog.editor.setSampleName(text)
-                        }
-                        Label { text: dialog.editor.nameStatus; color: dialog.colors.windowText }
+                    Item { Layout.fillWidth: true }
+                    AuditionButton {
+                        Layout.preferredWidth: 2.5 * dialog.unit
+                        text: "↶"
+                        Accessible.name: qsTr("Undo")
+                        enabled: dialog.editor.canUndo
+                        onClicked: dialog.editor.undo()
+                    }
+                    AuditionButton {
+                        Layout.preferredWidth: 2.5 * dialog.unit
+                        text: "↷"
+                        Accessible.name: qsTr("Redo")
+                        enabled: dialog.editor.canRedo
+                        onClicked: dialog.editor.redo()
+                    }
+                    Rectangle {
+                        Layout.preferredWidth: 1
+                        Layout.preferredHeight: 1.5 * dialog.unit
+                        Layout.alignment: Qt.AlignVCenter
+                        color: dialog.colors.outline
+                    }
+                    AuditionButton {
+                        Layout.preferredWidth: 2.5 * dialog.unit
+                        text: "−"
+                        Accessible.name: qsTr("Zoom out")
+                        enabled: dialog.editor.hasSource
+                        onClicked: dialog.waveformModel.zoom(waveform.width / 2, -1)
+                    }
+                    AuditionButton {
+                        Layout.preferredWidth: 2.5 * dialog.unit
+                        text: "+"
+                        Accessible.name: qsTr("Zoom in")
+                        enabled: dialog.editor.hasSource
+                        onClicked: dialog.waveformModel.zoom(waveform.width / 2, 1)
+                    }
+                    AuditionButton {
+                        text: qsTr("Fit")
+                        enabled: dialog.editor.hasSource
+                        onClicked: dialog.waveformModel.fit()
+                    }
+                }
+                SampleWaveform {
+                    id: waveform
+                    objectName: "sampleStudioWaveform"
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.minimumHeight: 6 * dialog.unit
+                    model: dialog.waveformModel
+                    colors: dialog.colors
+                    baseFontPx: dialog.unit
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: dialog.spacing
+                    enabled: dialog.editor.hasSource
+                    AuditionButton {
+                        objectName: "sampleStudioPlay"
+                        text: dialog.audition.playText
+                        enabled: dialog.audition.available && dialog.editor.hasSource
+                        onClicked: dialog.audition.toggle()
+                    }
+                    Label { text: qsTr("Audition key"); color: dialog.colors.windowText }
+                    AuditionValidatedField {
+                        id: auditionKey
+                        objectName: "sampleStudioAuditionKey"
+                        colors: dialog.colors
+                        Layout.preferredWidth: 8 * dialog.unit
+                        text: dialog.audition.auditionKeyText
+                        invalid: dialog.audition.auditionKeyInvalid
+                        onEditingFinished: dialog.audition.setAuditionKeyText(text)
                     }
                     AuditionCheckBox {
-                        objectName: "sampleStudioLoop"
-                        enabled: dialog.editor.hasSource
-                        text: qsTr("Loop")
-                        checked: dialog.editor.loopOn
-                        onToggled: dialog.tools.setLoopEnabled(checked)
+                        text: qsTr("Use voice ADSR")
+                        visible: dialog.audition.hasDestinationAdsr
+                        checked: dialog.audition.useDestinationAdsr
+                        onToggled: dialog.audition.setUseDestinationAdsr(checked)
+                    }
+                    Item { Layout.fillWidth: true }
+                }
+            }
+            ScrollView {
+                id: inspectorScroll
+                objectName: "sampleStudioControlsScroll"
+                Layout.preferredWidth: 28 * dialog.unit
+                Layout.minimumWidth: 20 * dialog.unit
+                Layout.fillHeight: true
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                clip: true
+                ColumnLayout {
+                    width: inspectorScroll.availableWidth
+                    spacing: 2 * dialog.spacing
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: dialog.spacing
+                        SectionHeader { text: qsTr("Sample") }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: dialog.spacing
+                            FieldLabel { text: qsTr("Name") }
+                            AuditionValidatedField {
+                                id: nameField
+                                objectName: "sampleStudioName"
+                                colors: dialog.colors
+                                Layout.fillWidth: true
+                                text: dialog.editor.sampleName
+                                readOnly: dialog.editor.nameReadOnly || !dialog.editor.hasSource
+                                invalid: dialog.editor.nameInvalid
+                                onTextEdited: dialog.editor.setSampleName(text)
+                            }
+                        }
                     }
                     ColumnLayout {
-                        visible: dialog.tools.loopBodyVisible
+                        Layout.fillWidth: true
+                        spacing: dialog.spacing
                         enabled: dialog.editor.hasSource
+                        SectionHeader { text: qsTr("Trim") }
                         RowLayout {
-                            Label {
-                                visible: dialog.tools.seamBadgeVisible
-                                text: dialog.tools.seamBadgeText
-                                color: dialog.tools.seamBadgeSeverity === 0 ? dialog.colors.windowText
-                                    : dialog.tools.seamBadgeSeverity === 1 ? dialog.colors.warningText
-                                    : dialog.colors.errorText
+                            Layout.fillWidth: true
+                            spacing: dialog.spacing
+                            FieldLabel { text: qsTr("Crop range") }
+                            AuditionSpinBox {
+                                Layout.fillWidth: true
+                                from: 0
+                                to: dialog.editor.sourceFrameCount
+                                value: dialog.editor.cropStart
+                                onValueModified: dialog.editor.setCropStart(value)
                             }
-                            AuditionButton { text: qsTr("Try another loop"); enabled: dialog.tools.canTryAnother; onClicked: dialog.tools.tryAnotherLoop() }
-                            AuditionButton { text: qsTr("Refine"); onClicked: dialog.tools.refineLoop() }
-                            Label { text: dialog.tools.suggestStatus; color: dialog.colors.windowText }
+                            AuditionSpinBox {
+                                Layout.fillWidth: true
+                                from: 0
+                                to: dialog.editor.sourceFrameCount
+                                value: dialog.editor.cropEnd
+                                onValueModified: dialog.editor.setCropEnd(value)
+                            }
                         }
-                        RowLayout {
-                            Label { text: qsTr("Loop range:"); color: dialog.colors.windowText }
-                            AuditionSpinBox { from: 0; to: dialog.editor.sourceFrameCount; value: dialog.editor.loopStart; onValueModified: dialog.editor.setLoopStart(value) }
-                            Label { text: qsTr("to"); color: dialog.colors.windowText }
-                            AuditionSpinBox { from: 0; to: dialog.editor.sourceFrameCount; value: dialog.editor.loopEnd; onValueModified: dialog.editor.setLoopEnd(value) }
-                        }
-                        AuditionCheckBox { text: qsTr("Smooth seam"); checked: dialog.tools.crossfadeOn; onToggled: dialog.tools.setCrossfade(checked) }
                     }
-                    Label { objectName: "sampleStudioSource"; text: dialog.editor.sourceLine; color: dialog.colors.windowText }
-                    RowLayout {
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: dialog.spacing
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: dialog.spacing
+                            SectionHeader {
+                                Layout.fillWidth: true
+                                text: qsTr("Loop")
+                            }
+                            AuditionCheckBox {
+                                objectName: "sampleStudioLoop"
+                                enabled: dialog.editor.hasSource
+                                text: qsTr("On")
+                                checked: dialog.editor.loopOn
+                                onToggled: dialog.tools.setLoopEnabled(checked)
+                            }
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: dialog.spacing
+                            visible: dialog.tools.loopBodyVisible
+                            enabled: dialog.editor.hasSource
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: dialog.spacing
+                                FieldLabel { text: qsTr("Start") }
+                                AuditionSpinBox {
+                                    Layout.fillWidth: true
+                                    from: 0
+                                    to: dialog.editor.sourceFrameCount
+                                    value: dialog.editor.loopStart
+                                    onValueModified: dialog.editor.setLoopStart(value)
+                                }
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: dialog.spacing
+                                FieldLabel { text: qsTr("End") }
+                                AuditionSpinBox {
+                                    Layout.fillWidth: true
+                                    from: 0
+                                    to: dialog.editor.sourceFrameCount
+                                    value: dialog.editor.loopEnd
+                                    onValueModified: dialog.editor.setLoopEnd(value)
+                                }
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: dialog.spacing
+                                FieldLabel { text: qsTr("Seam") }
+                                Label {
+                                    visible: dialog.tools.seamBadgeVisible
+                                    text: dialog.tools.seamBadgeText
+                                    color: dialog.tools.seamBadgeSeverity === 0 ? dialog.colors.windowText
+                                        : dialog.tools.seamBadgeSeverity === 1 ? dialog.colors.warningText
+                                        : dialog.colors.errorText
+                                }
+                                Item { Layout.fillWidth: true }
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: dialog.spacing
+                                AuditionButton {
+                                    text: qsTr("Try Another Loop")
+                                    enabled: dialog.tools.canTryAnother
+                                    onClicked: dialog.tools.tryAnotherLoop()
+                                }
+                                AuditionButton {
+                                    text: qsTr("Refine")
+                                    onClicked: dialog.tools.refineLoop()
+                                }
+                                Item { Layout.fillWidth: true }
+                            }
+                            AuditionCheckBox {
+                                text: qsTr("Smooth seam")
+                                checked: dialog.tools.crossfadeOn
+                                onToggled: dialog.tools.setCrossfade(checked)
+                            }
+                        }
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: dialog.spacing
                         enabled: dialog.editor.hasSource
-                        Label { text: qsTr("Base key:"); color: dialog.colors.windowText }
-                        AuditionTextField {
-                            id: baseKeyField
-                            objectName: "sampleStudioBaseKey"
-                            text: dialog.editor.baseKeyText
-                            onEditingFinished: dialog.editor.setBaseKeyText(text)
+                        SectionHeader { text: qsTr("Pitch") }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: dialog.spacing
+                            FieldLabel { text: qsTr("Base key") }
+                            AuditionValidatedField {
+                                id: baseKeyField
+                                objectName: "sampleStudioBaseKey"
+                                colors: dialog.colors
+                                Layout.fillWidth: true
+                                text: dialog.editor.baseKeyText
+                                invalid: dialog.editor.baseKeyInvalid
+                                onEditingFinished: dialog.editor.setBaseKeyText(text)
+                            }
                         }
                         AuditionButton {
                             text: dialog.tools.pitchApplyText
@@ -224,48 +403,56 @@ DialogWindow {
                             onClicked: dialog.tools.applyDetectedPitch()
                         }
                     }
-                    RowLayout {
-                        Label { text: qsTr("Target rate:"); color: dialog.colors.windowText }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: dialog.spacing
                         enabled: dialog.editor.hasSource
-                        AuditionComboBox {
-                            id: rate
-                            objectName: "sampleStudioRate"
-                            editable: true
-                            model: dialog.editor.rateChoices
-                            currentIndex: dialog.editor.rateIndex
-                            onActivated: index => dialog.editor.chooseRate(index)
-                            onAccepted: dialog.editor.commitRateText(editText)
-                            onActiveFocusChanged: {
-                                if (!activeFocus && editText !== dialog.editor.rateText)
-                                    dialog.editor.commitRateText(editText)
+                        SectionHeader { text: qsTr("Sample rate") }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: dialog.spacing
+                            FieldLabel { text: qsTr("File") }
+                            Label {
+                                objectName: "sampleStudioFileRate"
+                                Layout.fillWidth: true
+                                text: dialog.editor.fileRateText
+                                color: dialog.colors.windowText
+                            }
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: dialog.spacing
+                            FieldLabel { text: qsTr("Saved at") }
+                            AuditionComboBox {
+                                id: rate
+                                objectName: "sampleStudioRate"
+                                Layout.fillWidth: true
+                                editable: true
+                                model: dialog.editor.rateChoices
+                                currentIndex: dialog.editor.rateIndex
+                                onActivated: index => dialog.editor.chooseRate(index)
+                                onAccepted: dialog.editor.commitRateText(editText)
+                                onActiveFocusChanged: {
+                                    if (!activeFocus && editText !== dialog.editor.rateText)
+                                        dialog.editor.commitRateText(editText)
+                                }
+                            }
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: dialog.spacing
+                            FieldLabel { text: qsTr("ROM") }
+                            Label {
+                                objectName: "sampleStudioRom"
+                                Layout.fillWidth: true
+                                text: dialog.editor.romText
+                                color: dialog.colors.windowText
                             }
                         }
                     }
-                    RowLayout {
-                        AuditionButton {
-                            objectName: "sampleStudioPlay"
-                            text: dialog.audition.playText
-                            enabled: dialog.audition.available && dialog.editor.hasSource
-                            onClicked: dialog.audition.toggle()
-                        }
-                        Label { text: qsTr("Key:"); color: dialog.colors.windowText }
-                        enabled: dialog.editor.hasSource
-                        AuditionTextField {
-                            id: auditionKey
-                            objectName: "sampleStudioAuditionKey"
-                            text: dialog.audition.auditionKeyText
-                            onEditingFinished: dialog.audition.setAuditionKeyText(text)
-                        }
-                        AuditionCheckBox {
-                            text: qsTr("Use destination voice ADSR")
-                            visible: dialog.audition.hasDestinationAdsr
-                            checked: dialog.audition.useDestinationAdsr
-                            onToggled: dialog.audition.setUseDestinationAdsr(checked)
-                        }
-                    }
-                    Label { text: dialog.editor.outputSummary; color: dialog.colors.windowText }
                     AuditionButton {
                         id: advanced
+                        Layout.fillWidth: true
                         enabled: dialog.editor.hasSource
                         objectName: "sampleStudioAdvanced"
                         checkable: true
@@ -273,36 +460,59 @@ DialogWindow {
                         contentItem: DisclosureLabel { control: advanced; expanded: advanced.checked }
                     }
                     ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: dialog.spacing
                         visible: advanced.checked
                         enabled: dialog.editor.hasSource
                         RowLayout {
-                            Label { text: qsTr("Format:"); color: dialog.colors.windowText }
-                            Label { text: dialog.editor.techDetail; color: dialog.colors.windowText }
-                        }
-                        RowLayout {
-                            Label { text: qsTr("Crop range:"); color: dialog.colors.windowText }
-                            AuditionSpinBox { from: 0; to: dialog.editor.sourceFrameCount; value: dialog.editor.cropStart; onValueModified: dialog.editor.setCropStart(value) }
-                            AuditionSpinBox { from: 0; to: dialog.editor.sourceFrameCount; value: dialog.editor.cropEnd; onValueModified: dialog.editor.setCropEnd(value) }
-                        }
-                        RowLayout {
-                            Label { text: qsTr("Fine tune (cents):"); color: dialog.colors.windowText }
-                            AuditionTextField {
+                            Layout.fillWidth: true
+                            spacing: dialog.spacing
+                            FieldLabel { text: qsTr("Fine tune") }
+                            AuditionValidatedField {
+                                Layout.fillWidth: true
+                                colors: dialog.colors
                                 text: dialog.editor.fineTuneText
+                                invalid: dialog.editor.fineTuneInvalid
                                 onEditingFinished: dialog.editor.commitFineTuneCentsText(text)
+                            }
+                            Label { text: qsTr("cents"); color: dialog.colors.windowText }
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: dialog.spacing
+                            FieldLabel { text: qsTr("Normalize") }
+                            AuditionComboBox {
+                                Layout.fillWidth: true
+                                model: dialog.editor.normalizeChoices
+                                currentIndex: dialog.editor.normalizeMode
+                                onActivated: index => dialog.editor.setNormalizeMode(index)
                             }
                         }
                         RowLayout {
-                            Label { text: qsTr("Normalize:"); color: dialog.colors.windowText }
-                            AuditionComboBox { model: dialog.editor.normalizeChoices; currentIndex: dialog.editor.normalizeMode; onActivated: index => dialog.editor.setNormalizeMode(index) }
-                            Label { text: dialog.editor.gainReadout; color: dialog.colors.windowText }
+                            Layout.fillWidth: true
+                            spacing: dialog.spacing
+                            FieldLabel { text: qsTr("Applied gain") }
+                            Label {
+                                Layout.fillWidth: true
+                                text: dialog.editor.gainReadout
+                                color: dialog.colors.windowText
+                            }
                         }
                     }
+                    Item { Layout.fillHeight: true }
                 }
             }
         }
-        }
         RowLayout {
-            Layout.alignment: Qt.AlignRight
+            Layout.fillWidth: true
+            spacing: dialog.spacing
+            Label {
+                objectName: "sampleStudioFileName"
+                Layout.fillWidth: true
+                text: dialog.editor.loadedFileName
+                elide: Text.ElideRight
+                color: dialog.colors.secondaryText
+            }
             AuditionButton { text: qsTr("Cancel"); onClicked: dialog.close() }
             AuditionButton {
                 objectName: "sampleStudioCommit"

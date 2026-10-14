@@ -330,7 +330,6 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         player?.close()
         stopLibraryPreview()
         libraryHost.pane?.showMessage(text: "")
-        libraryHost.pane?.setLoadedPath(path: "")
         libraryHost.pane?.clearFileSelection()
         stereoPromptOpen = false
         pickerRequested = false
@@ -459,7 +458,6 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         libraryHost.clearPreview()
         committedSource = source
         if editName != nil { reopenFromSource = true }
-        library()?.setLoadedPath(path: source.path)
         presenter.replaceSource(document)
         editorRevision += 1
     }
@@ -469,7 +467,6 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     ) {
         guard let session else { return }
         committedSource = source
-        if let source { library()?.setLoadedPath(path: source.path) }
         let root = session.projectRoot
         let presenter = SampleStudioPresenter(document: document) { name in
             SampleRegistrar.validate(

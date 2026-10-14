@@ -91,17 +91,12 @@ public final class SampleLibraryModel: QmlUncreatable {
     }
     private var currentFiles: [String] = []
     private var message = ""
-    private var loadedPath = ""
     private var previewingPath = ""
 
     public var folders: QListModel<SampleLibraryFolderRow> = QListModel()
     public var files: QListModel<SampleLibraryFileRow> = QListModel()
+    // Failure-only readout: empty unless the last preview/load attempt failed.
     @QtTracked public var statusText = ""
-    @QtTracked public var loadedText = "Loaded: none"
-    @QtTracked public var previewText = "Preview source: none"
-    @QtTracked public var previewButtonLabel = "Preview"
-    @QtTracked public var canLoad = false
-    @QtTracked public var canPreview = false
     @QtTracked public var canRemove = false
     @QtTracked public var filesVisible = false
     @QtIgnored public var onPreviewRequested: ((String) -> Void)?
@@ -217,11 +212,6 @@ public final class SampleLibraryModel: QmlUncreatable {
         updateState()
     }
 
-    public func setLoadedPath(path: String) {
-        loadedPath = path
-        showMessage(text: "")
-    }
-
     public func setPreviewingPath(path: String) {
         previewingPath = path
         updateState()
@@ -290,28 +280,7 @@ public final class SampleLibraryModel: QmlUncreatable {
                 FileManager.default.fileExists(atPath: $0.path, isDirectory: &isDirectory) && isDirectory.boolValue
             } ?? false
         canRemove = selectedFolder != nil
-        canLoad = selectedFilePath != nil
-        canPreview = canLoad || !previewingPath.isEmpty
-        previewButtonLabel = previewingPath.isEmpty ? "Preview" : "Stop Preview"
-        loadedText =
-            loadedPath.isEmpty ? "Loaded: none" : "Loaded: \(URL(fileURLWithPath: loadedPath).lastPathComponent)"
-        previewText =
-            previewingPath.isEmpty
-            ? "Preview source: none" : "Preview source: \(URL(fileURLWithPath: previewingPath).lastPathComponent)"
-
-        if !message.isEmpty {
-            statusText = message
-        } else if roots.isEmpty {
-            statusText = "No library folders. Add a folder or open a file."
-        } else if !filesVisible {
-            statusText = "Library folder is missing: \(selectedFolder?.path ?? "")"
-        } else if currentFiles.isEmpty {
-            statusText = "No supported audio files in this folder."
-        } else if let selectedFilePath {
-            statusText = "Selected: \(URL(fileURLWithPath: selectedFilePath).lastPathComponent)"
-        } else {
-            statusText = "No file selected."
-        }
+        statusText = message
     }
 
     private func persistRoots() {

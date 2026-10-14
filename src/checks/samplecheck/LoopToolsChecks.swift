@@ -113,11 +113,9 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
             && (!seam.nccValid || seam.ncc >= 0.95),
         message: "A064 auto-populated loop is clean")
     populate.expect(
-        tools.seamBadgeVisible && tools.seamBadgeSeverity == 0 && tools.seamBadgeText == "seam: clean",
+        tools.seamBadgeVisible && tools.seamBadgeSeverity == 0 && tools.seamBadgeText == "Clean",
         message: "A065 clean loop displays clean badge")
-    populate.expect(
-        tools.suggestStatus.hasPrefix("loop 1 of ") && tools.canTryAnother,
-        message: "A066 first suggested loop is available")
+    populate.expect(tools.canTryAnother, message: "A066 first suggested loop is available")
     let lateSearch = report.scoped(cppID: "swiftcore/SampleLoopTools::lateLoopEnd")
     var lateSource = highResolution
     lateSource.buffer = (0..<16_000).map { frame in

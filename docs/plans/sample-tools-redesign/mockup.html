@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Porydaw — Edit Sample &amp; Split Studio redesign mockup</title>
+<style>
+  :root {
+    --page: #1d1f23;
+    --win: #2e3138;
+    --surface: #353941;
+    --surface-2: #3d414a;
+    --field: #25272b;
+    --border: #474b54;
+    --border-soft: #3c4048;
+    --text: #e7e8eb;
+    --muted: #a4a8b1;
+    --faint: #7c818b;
+    --accent: #abcad2;
+    --accent-ink: #1f2a2e;
+    --accent-dim: rgba(171, 202, 210, 0.16);
+    --loop: #e98aa3;
+    --loop-dim: rgba(233, 138, 163, 0.13);
+    --warn: #e7bd63;
+    --ok: #8fd19e;
+    --error: #ec8a7d;
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px;
+    --r: 6px;
+    --fs-cap: 12px; --fs-body: 13px; --fs-head: 15px;
+    font-family: "Atkinson Hyperlegible Next", -apple-system, system-ui, sans-serif;
+    font-size: var(--fs-body);
+    color: var(--text);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); padding: 32px; }
+  .mono { font-family: "Atkinson Hyperlegible Mono", ui-monospace, monospace; }
+  h1.page { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+  p.lede { color: var(--muted); margin: 0 0 24px; max-width: 900px; line-height: 1.5; }
+  .shot { margin-bottom: 48px; }
+  .shot > h2 { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
+  .notes { color: var(--muted); margin: 0 0 14px; padding-left: 18px; line-height: 1.55; max-width: 1180px; }
+  .notes b { color: var(--text); font-weight: 600; }
+
+  /* ---------- window chrome ---------- */
+  .window {
+    width: 1180px; background: var(--win); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.06);
+    display: flex; flex-direction: column;
+  }
+  .titlebar {
+    height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 14px;
+    background: #26282e; border-bottom: 1px solid #1f2126;
+  }
+  .lights { display: flex; gap: 8px; margin-right: 10px; }
+  .lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+  .lights i:nth-child(1) { background: #ff5f57; } .lights i:nth-child(2) { background: #febc2e; } .lights i:nth-child(3) { background: #28c840; }
+  .titlebar .title { flex: 1; text-align: center; color: var(--muted); font-weight: 600; margin-right: 70px; }
+  .titlebar .title b { color: var(--text); font-weight: 600; }
+  .dirty { color: var(--loop); }
+
+  .body { display: grid; flex: 1; min-height: 0; }
+  .footer {
+    display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s4);
+    border-top: 1px solid var(--border-soft); background: var(--win);
+  }
+  .footer .spacer { flex: 1; }
+  .footer .meta { color: var(--muted); }
+
+  /* ---------- controls ---------- */
+  .btn {
+    height: 28px; padding: 0 12px; border-radius: var(--r); border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text); font: inherit; display: inline-flex;
+    align-items: center; gap: 6px; white-space: nowrap; cursor: default;
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+  .btn.icon { width: 28px; padding: 0; justify-content: center; }
+  .btn.small { height: 24px; padding: 0 8px; font-size: var(--fs-cap); }
+  .btn[disabled] { opacity: .45; }
+  .kbd { font-size: 11px; color: var(--faint); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; line-height: 16px; }
+  .btn.primary .kbd { color: var(--accent-ink); border-color: rgba(0,0,0,.25); }
+  .field {
+    height: 28px; border-radius: var(--r); border: 1px solid var(--border); background: var(--field);
+    color: var(--text); padding: 0 8px; display: flex; align-items: center; gap: 6px; min-width: 0;
+  }
+  .field .unit { color: var(--faint); margin-left: auto; }
+  .field.select::after { content: ""; margin-left: auto; border: 4px solid transparent; border-top: 5px solid var(--muted); transform: translateY(3px); }
+  .stepper { display: flex; }
+  .stepper .field { border-radius: var(--r) 0 0 var(--r); flex: 1; }
+  .stepper .arrows { display: flex; flex-direction: column; border: 1px solid var(--border); border-left: 0; border-radius: 0 var(--r) var(--r) 0; width: 20px; background: var(--surface-2); }
+  .stepper .arrows span { flex: 1; display: grid; place-items: center; color: var(--muted); font-size: 8px; }
+  .stepper .arrows span + span { border-top: 1px solid var(--border); }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+  .seg span { padding: 0 12px; height: 26px; display: flex; align-items: center; color: var(--muted); background: var(--surface); }
+  .seg span + span { border-left: 1px solid var(--border); }
+  .seg span.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; color: var(--text); white-space: nowrap; }
+  .toggle i { width: 28px; height: 16px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border); position: relative; }
+  .toggle i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+  .toggle.on i { background: var(--accent); border-color: var(--accent); }
+  .toggle.on i::after { left: 14px; background: var(--accent-ink); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 11px; font-size: var(--fs-cap); }
+  .chip.warn { background: rgba(231,189,99,.14); color: var(--warn); }
+  .chip.ok { background: rgba(143,209,158,.14); color: var(--ok); }
+  .chip.info { background: var(--accent-dim); color: var(--accent); }
+  .chip.neutral { background: var(--surface-2); color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+
+  /* ---------- library sidebar (shared) ---------- */
+  .library { background: var(--surface); border-right: 1px solid var(--border-soft); display: flex; flex-direction: column; min-height: 0; }
+  .pane-head { display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s3) var(--s2); }
+  .pane-head h3 { margin: 0; font-size: var(--fs-head); font-weight: 600; flex: 1; }
+  .search { margin: 0 var(--s3) var(--s2); }
+  .search .field { color: var(--faint); }
+  .tree { padding: 0 var(--s2); }
+  .row { height: 28px; display: flex; align-items: center; gap: 6px; padding: 0 8px; border-radius: 5px; color: var(--text); }
+  .row .tw { width: 10px; color: var(--faint); font-size: 9px; }
+  .row .ic { color: var(--faint); width: 14px; text-align: center; }
+  .row.sel { background: var(--accent-dim); }
+  .row.on { background: var(--accent); color: var(--accent-ink); }
+  .row.on .ic, .row.on .meta { color: var(--accent-ink); }
+  .row .meta { margin-left: auto; color: var(--faint); font-size: var(--fs-cap); }
+  .row .play { margin-left: auto; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: rgba(0,0,0,.18); font-size: 9px; }
+  .indent1 { padding-left: 24px; } .indent2 { padding-left: 40px; }
+  .divider { height: 1px; background: var(--border-soft); margin: var(--s2) var(--s3); }
+  .lib-foot { margin-top: auto; padding: var(--s3); display: flex; gap: var(--s2); border-top: 1px solid var(--border-soft); }
+  .hint { color: var(--faint); font-size: var(--fs-cap); line-height: 1.4; }
+
+  /* ---------- inspector (shared) ---------- */
+  .inspector { background: var(--surface); border-left: 1px solid var(--border-soft); overflow: auto; display: flex; flex-direction: column; }
+  .section { padding: var(--s3) var(--s4) var(--s4); border-bottom: 1px solid var(--border-soft); }
+  .section h4 { margin: 0 0 var(--s3); font-size: var(--fs-cap); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .section h4 .toggle { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .form { display: grid; grid-template-columns: 84px 1fr; gap: var(--s2) var(--s3); align-items: center; }
+  .form label { color: var(--muted); }
+  .form .full { grid-column: 1 / -1; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+  .sub { color: var(--faint); font-size: var(--fs-cap); margin-top: 4px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); }
+  .stat { background: var(--field); border: 1px solid var(--border-soft); border-radius: var(--r); padding: 8px 10px; }
+  .stat .k { color: var(--faint); font-size: var(--fs-cap); }
+  .stat .v { font-size: 15px; font-weight: 600; margin-top: 2px; }
+  .disclosure { padding: var(--s3) var(--s4); color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  details.disclosure { display: block; }
+  details.disclosure summary { cursor: pointer; }
+  details.disclosure .form { margin-top: var(--s3); }
+  .section { flex-shrink: 0; }
+
+  /* ---------- editor canvas ---------- */
+  .center { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .toolbar { display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s3); border-bottom: 1px solid var(--border-soft); }
+  .toolbar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+  .toolbar .label { color: var(--muted); }
+  .toolbar .spacer { flex: 1; }
+  .wave-wrap { position: relative; flex: 1; min-height: 0; background: #33363d; }
+  svg { display: block; }
+  .ruler text { fill: var(--faint); font-size: 11px; font-family: "Atkinson Hyperlegible Mono", monospace; }
+
+  /* ---------- edit sample layout ---------- */
+  #edit .body { grid-template-columns: 236px 1fr 300px; height: 700px; }
+
+  /* ---------- split studio layout ---------- */
+  #split .body { grid-template-columns: 236px 1fr 280px; height: 760px; }
+  .context-bar { display: flex; align-items: center; gap: var(--s3); padding: var(--s2) var(--s4); background: var(--surface); border-bottom: 1px solid var(--border-soft); }
+  .context-bar .label { color: var(--muted); }
+  .tabs { display: flex; align-items: flex-end; gap: 2px; padding: var(--s2) var(--s3) 0; border-bottom: 1px solid var(--border-soft); }
+  .tab { height: 30px; padding: 0 10px 0 12px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-soft); border-bottom: 0; border-radius: 6px 6px 0 0; color: var(--muted); background: var(--surface); }
+  .tab.on { background: #33363d; color: var(--text); border-color: var(--border); }
+  .tab .x { color: var(--faint); font-size: 12px; }
+  .tab.add { border: 0; background: transparent; color: var(--faint); }
+  .slices { border-top: 1px solid var(--border-soft); background: var(--surface); max-height: 190px; overflow: auto; }
+  .slices table { width: 100%; border-collapse: collapse; }
+  .slices th { text-align: left; color: var(--faint); font-weight: 400; font-size: var(--fs-cap); padding: 6px 8px; border-bottom: 1px solid var(--border-soft); }
+  .slices td { padding: 0 8px; height: 30px; border-bottom: 1px solid var(--border-soft); }
+  .slices tr.sel td { background: var(--accent-dim); }
+  .slices .grip { color: var(--faint); letter-spacing: -2px; }
+  .slices .num { color: var(--faint); width: 22px; }
+  .slices .namecell { display: flex; align-items: center; gap: 8px; }
+  .slices .mini { color: var(--muted); }
+  .keyboard-panel { border-top: 1px solid var(--border-soft); background: var(--surface); padding: var(--s2) var(--s3) var(--s3); }
+  .keyboard-panel .head { display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s2); }
+  .keyboard-panel .head h3 { margin: 0; font-size: var(--fs-head); font-weight: 600; margin-right: var(--s2); }
+  .keyboard-panel .head .label { color: var(--muted); }
+  .keyboard-panel .head .spacer { flex: 1; }
+  .env { display: grid; grid-template-columns: auto 1fr 4ch; gap: 12px var(--s2); align-items: center; }
+  .env .slider { margin: 0; }
+  .env .v { text-align: right; }
+  .name-edit { padding: 2px 6px; min-height: 0; }
+  .slider { height: 4px; background: var(--surface-2); border-radius: 2px; position: relative; margin: 10px 0 6px; }
+  .slider i { position: absolute; top: -5px; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: 2px solid var(--win); }
+  .slider b { position: absolute; top: 0; height: 4px; background: var(--accent); border-radius: 2px; }
+  .ticks { display: flex; justify-content: space-between; color: var(--faint); font-size: 11px; }
+  .zone-head { display: flex; align-items: center; gap: var(--s2); }
+  .zone-head .key { font-size: 22px; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1 class="page">Edit Sample &amp; Split Studio — redesign mockup</h1>
+<p class="lede">Control-set proposal. The windows show only controls and their labels: no explanatory text, no colour coding.
+Project: <span class="mono">hearth-test</span> · <span class="mono">mus_twitter_rock</span>.</p>
+
+<!-- ======================================================= EDIT SAMPLE -->
+<section class="shot" id="edit">
+  <h2>1 · Edit Sample</h2>
+  <ul class="notes">
+    <li><b>Load → trim → loop → pitch → listen → save.</b> In the library, click a file to preview it and double-click to load it; Listen plays the rendered sample.</li>
+    <li><b>Loop:</b> start/end, seam verdict, Try Another Loop, Refine, Smooth seam.</li>
+    <li><b>Sample rate:</b> the file's rate and the rate it is saved at, plus ROM size. Length, format and the technical readout are gone.</li>
+    <li>Fine tune, normalize and applied gain stay in collapsed Advanced.</li>
+  </ul>
+  <div class="window">
+    <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="title">Edit Sample — <b>sc88pro_flute</b></div></div>
+    <div class="body">
+      <!-- library -->
+      <aside class="library">
+        <div class="pane-head"><h3>Library</h3><button class="btn icon ghost" title="Add folder">＋</button></div>
+        <div class="tree">
+          <div class="row sel"><span class="tw">▼</span><span class="ic">▤</span>samplepacks</div>
+          <div class="row indent1"><span class="tw"></span><span class="ic">▤</span>FINALIZER</div>
+          <div class="row indent1"><span class="tw">▶</span><span class="ic">▤</span>packs</div>
+          <div class="row indent1"><span class="tw"></span><span class="ic">▤</span>sp</div>
+          <div class="row indent1"><span class="tw">▶</span><span class="ic">▤</span>vsts</div>
+        </div>
+        <div class="divider"></div>
+        <div class="tree">
+          <div class="row"><span class="ic">♪</span>Casio HH.wav</div>
+          <div class="row on"><span class="ic">♪</span>Casio Snare.wav</div>
+          <div class="row"><span class="ic">♪</span>Flute C5.wav</div>
+          <div class="row"><span class="ic">♪</span>Flute G4 soft.wav</div>
+        </div>
+        <div class="lib-foot" style="flex-direction:column;align-items:stretch">
+          <button class="btn" style="justify-content:center">Open File…</button>
+          <details class="disclosure" style="padding:4px 0"><summary>Advanced</summary><button class="btn small" style="margin-top:8px" title="Remove the folder from the library list; keep its files">Remove Folder from List</button></details>
+        </div>
+      </aside>
+
+      <!-- editor -->
+      <main class="center">
+        <div class="toolbar">
+          <div class="spacer"></div>
+          <button class="btn icon ghost" title="Undo">↶</button>
+          <button class="btn icon ghost" title="Redo" disabled>↷</button>
+          <div class="sep"></div>
+          <button class="btn icon ghost" title="Zoom out">−</button>
+          <button class="btn icon ghost" title="Zoom in">＋</button>
+          <button class="btn small">Fit</button>
+        </div>
+        <div class="wave-wrap" id="editWave"></div>
+        <div class="toolbar" style="border-top:1px solid var(--border-soft);border-bottom:0">
+          <button class="btn primary" title="Play / Stop (Space)">▶ Listen</button>
+          <span class="label">Audition key</span>
+          <div class="stepper" style="width:90px"><div class="field mono">C4 <span class="unit">60</span></div><div class="arrows"><span>▲</span><span>▼</span></div></div>
+          <span class="toggle on" title="Shown only when a destination voice is available"><i></i>Use voice ADSR</span>
+        </div>
+      </main>
+
+      <!-- inspector -->
+      <aside class="inspector">
+        <div class="section">
+          <h4>Sample</h4>
+          <div class="form">
+            <label>Name</label><div class="field mono" title="Registered name is read-only when editing">sc88pro_flute</div>
+          </div>
+        </div>
+        <div class="section">
+          <h4>Trim</h4>
+          <div class="form">
+            <label>Crop range</label><div class="pair"><div class="field mono" title="Crop start, source frames">40</div><div class="field mono" title="Crop end, source frames">1875</div></div>
+          </div>
+        </div>
+        <div class="section">
+          <h4>Loop <span class="toggle on"><i></i>On</span></h4>
+          <div class="form">
+            <label>Start</label><div class="field mono">1312</div>
+            <label>End</label><div class="field mono">1873</div>
+            <label>Seam</label><span class="chip warn" style="justify-self:start"><span class="dot" style="background:var(--warn)"></span>Clicks</span>
+            <div class="full" style="display:flex;gap:8px"><button class="btn small">Try Another Loop</button><button class="btn small">Refine</button></div>
+            <div class="full"><span class="toggle"><i></i>Smooth seam</span></div>
+          </div>
+        </div>
+        <div class="section">
+          <h4>Pitch</h4>
+          <div class="form">
+            <label>Base key</label><div class="stepper"><div class="field mono">C4 <span class="unit">60</span></div><div class="arrows"><span>▲</span><span>▼</span></div></div>
+            <div class="full"><button class="btn small" title="Applies detected base key and cents; hidden when detection is unreliable">Use detected D#5 −12¢</button></div>
+          </div>
+        </div>
+        <div class="section">
+          <h4>Sample rate</h4>
+          <div class="form">
+            <label>File</label><span class="mono">3344.75 Hz</span>
+            <label>Saved at</label><div class="field select mono">3344.75 Hz</div>
+            <label>ROM</label><span class="mono">1.8 KB</span>
+          </div>
+        </div>
+        <details class="disclosure">
+          <summary>Advanced</summary>
+          <div class="form">
+            <label>Fine tune</label><div class="field mono">+0.00 <span class="unit">cents</span></div>
+            <label>Normalize</label><div class="field select" title="Auto / Looped / One-shot / Off; preserve existing GBA samples by default">Off</div>
+            <label>Applied gain</label><span class="mono">+0.0 dB</span>
+          </div>
+        </details>
+      </aside>
+    </div>
+    <div class="footer">
+      <span class="meta">sc88pro_flute.wav</span>
+      <div class="spacer"></div>
+      <button class="btn">Cancel</button>
+      <button class="btn primary">Save Sample</button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================= SPLIT STUDIO -->
+<section class="shot" id="split">
+  <h2>2 · Split Studio</h2>
+  <ul class="notes">
+    <li><b>No colours:</b> slices and mapped keys use the one accent colour; numbers tie a slice row to its marker and its key.</li>
+    <li><b>Markers on the waveform:</b> click to add a marker, double-click a marker to delete it. The Add/Remove Marker and Slice Selection buttons are gone.</li>
+    <li><b>Slices land on keys automatically:</b> each new slice takes the next free key from C2 (confirmed); drag a key's slice to another key to move it. “Place slices from…” and “White keys only” are gone. <b>NEW</b> behaviour.</li>
+    <li><b>Slice table:</b> number, name, play, remove. Click a name to rename the slice in place. A name that is not a valid symbol, or that a project sample this window did not save already uses, gets a red outline and is not applied (row 3 shows it); Save Voicegroup stays disabled until every slice name is usable. Length and the fade toggles are gone. <b>Open:</b> slice-end declick, pending the user's design.</li>
+    <li><b>Default slice names</b> skip names already in the project (<span class="mono">breakbeat_92_snare_2</span>, …), so a fresh split can always be saved without renaming.</li>
+    <li><b>Envelope:</b> four standard sliders (the Qt Quick Controls <span class="mono">Slider</span> the settings page already uses), each with its value. No custom dial.</li>
+    <li><b>“Rises with each key” is gone.</b> It only matters when one drumkit zone covers several keys: on, each key up plays the sample a semitone higher; off, every key plays it at the same pitch. Each slice gets one key, so the option does nothing here and the Advanced section goes with it.</li>
+    <li><b>Library:</b> click a file to preview it, double-click to load it. No Preview or Load buttons (same in Edit Sample).</li>
+    <li><b>Saves to a new voicegroup file, never the song.</b> Save Voicegroup writes the slice samples and a new <span class="mono">sound/voicegroups/&lt;name&gt;.inc</span> (plus its include line, and a keysplit table in Keysplit layout). The song, its voicegroup and other songs are untouched, so the “Used by 20 songs” chip and “Save as a copy” toggle are gone. The name defaults to the next free <span class="mono">breakbeat_92_kit</span> and gets the same red outline when it is not a valid symbol or names a voicegroup this window did not create. <b>Deferred:</b> saving into the song.</li>
+    <li><b>Saving again</b> updates the voicegroup and samples this window created. Slice audio unchanged since the last save (only envelope, pan or pitch edited) is not rewritten. If a saved slice's audio changed (markers moved, rate changed), Save asks “Overwrite 2 saved samples?” with the names before writing.</li>
+    <li><b>Always starts from an empty kit.</b> The Voicegroup line picker is gone; the window no longer reads a kit from the song.</li>
+  </ul>
+  <div class="window">
+    <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="title">Split Studio <span class="dirty">●</span></div></div>
+    <div class="context-bar">
+      <div style="flex:1"></div>
+      <span class="label">Layout</span>
+      <div class="seg"><span class="on">Drumkit</span><span>Keysplit</span></div>
+    </div>
+    <div class="body">
+      <aside class="library">
+        <div class="pane-head"><h3>Library</h3><button class="btn icon ghost" title="Add folder">＋</button></div>
+        <div class="tree">
+          <div class="row sel"><span class="tw">▼</span><span class="ic">▤</span>samplepacks</div>
+          <div class="row indent1"><span class="tw"></span><span class="ic">▤</span>FINALIZER</div>
+          <div class="row indent1"><span class="tw">▶</span><span class="ic">▤</span>packs</div>
+          <div class="row indent1"><span class="tw"></span><span class="ic">▤</span>sp</div>
+          <div class="row indent1"><span class="tw">▶</span><span class="ic">▤</span>vsts</div>
+        </div>
+        <div class="divider"></div>
+        <div class="tree">
+          <div class="row on"><span class="ic">♪</span>Casio HH.wav</div>
+          <div class="row"><span class="ic">♪</span>Casio Snare.wav</div>
+          <div class="row"><span class="ic">♪</span>Casio Kick.wav</div>
+          <div class="row"><span class="ic">♪</span>Breakbeat 92.wav</div>
+        </div>
+        <div class="lib-foot" style="flex-direction:column;align-items:stretch">
+          <button class="btn" style="justify-content:center">Open File…</button>
+          <details class="disclosure" style="padding:4px 0"><summary>Advanced</summary><button class="btn small" style="margin-top:8px" title="Remove the folder from the library list; keep its files">Remove Folder from List</button></details>
+        </div>
+      </aside>
+
+      <main class="center">
+        <div class="tabs">
+          <div class="tab on">Breakbeat 92 <span class="x">✕</span></div>
+          <div class="tab">casio_hh <span class="x">✕</span></div>
+        </div>
+        <div class="toolbar">
+          <div class="spacer"></div>
+          <button class="btn icon ghost" title="Zoom waveform out">−</button>
+          <button class="btn icon ghost" title="Zoom waveform in">＋</button>
+          <button class="btn small" title="Fit waveform">Fit</button>
+        </div>
+        <div class="wave-wrap" id="splitWave" style="flex:0 0 190px"></div>
+        <div class="toolbar" style="border-top:1px solid var(--border-soft);border-bottom:0">
+          <span class="toggle on"><i></i>Snap to zero</span>
+        </div>
+        <div class="slices">
+          <table>
+            <thead><tr><th></th><th>#</th><th>Name</th><th></th></tr></thead>
+            <tbody id="sliceRows"></tbody>
+          </table>
+        </div>
+        <div class="keyboard-panel">
+          <div class="head">
+            <h3>Keyboard</h3>
+            <button class="btn small" title="Stop">■ Stop</button>
+            <div class="spacer"></div>
+            <button class="btn icon ghost" title="Zoom keyboard out">−</button>
+            <button class="btn icon ghost" title="Zoom keyboard in">＋</button>
+          </div>
+          <div id="keyboard"></div>
+        </div>
+      </main>
+
+      <aside class="inspector">
+        <div class="section">
+          <h4>Sample rate</h4>
+          <div class="form">
+            <label>File</label><span class="mono">44100 Hz</span>
+            <label>Saved at</label><div class="field select mono">13379 Hz</div>
+          </div>
+        </div>
+        <div class="section">
+          <h4>Selected key</h4>
+          <div class="zone-head"><span class="key mono">D2</span><span class="chip neutral mono">38</span></div>
+          <div class="form" style="margin-top:10px">
+            <label>Slice</label><span class="mono" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">breakbeat_92_snare</span>
+          </div>
+        </div>
+        <div class="section">
+          <h4>Pitch</h4>
+          <div class="form">
+            <label>Plays at</label><div class="stepper"><div class="field mono">C4 <span class="unit">60</span></div><div class="arrows"><span>▲</span><span>▼</span></div></div>
+          </div>
+        </div>
+        <div class="section">
+          <h4>Pan</h4>
+          <div class="slider"><b style="left:50%;width:14%"></b><i style="left:calc(64% - 7px)"></i></div>
+          <div class="ticks"><span>L</span><span class="mono" style="color:var(--text)">+18</span><span>R</span></div>
+        </div>
+        <div class="section">
+          <h4>Envelope</h4>
+          <div class="env">
+            <span class="label">Attack</span><div class="slider"><b style="left:0;width:100%"></b><i style="left:calc(100% - 7px)"></i></div><span class="v mono">255</span>
+            <span class="label">Decay</span><div class="slider"><i style="left:-7px"></i></div><span class="v mono">0</span>
+            <span class="label">Sustain</span><div class="slider"><b style="left:0;width:100%"></b><i style="left:calc(100% - 7px)"></i></div><span class="v mono">255</span>
+            <span class="label">Release</span><div class="slider"><b style="left:0;width:65%"></b><i style="left:calc(65% - 7px)"></i></div><span class="v mono">165</span>
+          </div>
+        </div>
+        <div class="section" style="border-bottom:0">
+          <button class="btn" style="width:100%;justify-content:center;color:var(--error)">Remove from Key</button>
+        </div>
+      </aside>
+    </div>
+    <div class="footer">
+      <button class="btn icon ghost" title="Undo">↶</button>
+      <button class="btn icon ghost" title="Redo" disabled>↷</button>
+      <span class="meta">5 slices · 34.2 KB ROM</span>
+      <div class="spacer"></div>
+      <span class="label">Voicegroup</span>
+      <div class="field mono" style="width:200px">breakbeat_92_kit</div>
+      <button class="btn">Close</button>
+      <button class="btn primary">Save Voicegroup <span class="kbd">⌘S</span></button>
+    </div>
+  </div>
+</section>
+
+<script>
+const NS = "http://www.w3.org/2000/svg";
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function el(tag, attrs, parent) {
+  const node = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (parent) parent.appendChild(node);
+  return node;
+}
+function rng(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+
+// Draws a min/max envelope waveform for `columns` columns from amp(t) and an oscillator.
+function envelopePath(width, top, height, amp) {
+  const mid = top + height / 2, up = [], down = [];
+  for (let x = 0; x <= width; x += 2) {
+    const a = Math.max(0.01, amp(x / width)) * height / 2;
+    up.push(`${x},${(mid - a).toFixed(1)}`);
+    down.unshift(`${x},${(mid + a * 0.94).toFixed(1)}`);
+  }
+  return `M${up.join("L")}L${down.join("L")}Z`;
+}
+
+// ---------- Edit Sample waveform ----------
+(function () {
+  const host = document.getElementById("editWave");
+  const W = 644, H = host.clientHeight || 430, rulerH = 26, top = rulerH + 30, waveH = H - top - 16;
+  const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}` }, host);
+  const frames = 1875, x = f => f / frames * W;
+  const cropS = 40, cropE = 1875, loopS = 1312, loopE = 1873;
+  // ruler
+  const ruler = el("g", { class: "ruler" }, svg);
+  el("rect", { x: 0, y: 0, width: W, height: rulerH, fill: "#2c2f35" }, ruler);
+  for (let t = 0; t <= 0.56; t += 0.05) {
+    const px = t * 3344.75 / frames * W;
+    el("line", { x1: px, x2: px, y1: rulerH - (Math.round(t * 100) % 10 === 0 ? 10 : 5), y2: rulerH, stroke: css("--border") }, ruler);
+    if (Math.round(t * 100) % 10 === 0) el("text", { x: px + 3, y: 13 }, ruler).textContent = `${t.toFixed(1)}s`;
+  }
+  // crop shade
+  el("rect", { x: 0, y: rulerH, width: x(cropS), height: H - rulerH, fill: "rgba(0,0,0,.28)" }, svg);
+  // loop region
+  el("rect", { x: x(loopS), y: rulerH, width: x(loopE) - x(loopS), height: H - rulerH, fill: css("--loop-dim") }, svg);
+  // waveform
+  const r = rng(7);
+  const amp = t => (t < 0.32 ? Math.pow(t / 0.32, 1.6) : 1) * (0.78 + 0.08 * Math.sin(t * 60) + 0.05 * r());
+  el("line", { x1: 0, x2: W, y1: top + waveH / 2, y2: top + waveH / 2, stroke: "#454951" }, svg);
+  el("path", { d: envelopePath(W, top, waveH, amp), fill: css("--accent"), opacity: 0.9 }, svg);
+  // handles
+  function handle(f, label, color, row) {
+    const px = x(f);
+    el("line", { x1: px, x2: px, y1: rulerH, y2: H, stroke: color, "stroke-width": 1.5 }, svg);
+    const tw = label.length * 6.6 + 14, tx = Math.min(px, W - tw);
+    el("rect", { x: tx, y: rulerH + 4 + row * 0, width: tw, height: 18, rx: 4, fill: color }, svg);
+    el("text", { x: tx + 7, y: rulerH + 17, fill: "#1f2126", "font-size": 11, "font-weight": 600 }, svg).textContent = label;
+  }
+  handle(cropS, "Crop", css("--warn"), 0);
+  handle(loopS, "Loop start", css("--loop"), 0);
+  handle(loopE, "Loop end", css("--loop"), 0);
+  // playhead
+  el("line", { x1: x(620), x2: x(620), y1: rulerH, y2: H, stroke: "#fff", "stroke-width": 1, opacity: .7 }, svg);
+})();
+
+// ---------- Split Studio ----------
+const slices = [
+  { name: "breakbeat_92_kick", from: 0, to: 0.17 },
+  { name: "breakbeat_92_hat", from: 0.17, to: 0.29 },
+  { name: "breakbeat_92_snare", from: 0.29, to: 0.52 },
+  { name: "breakbeat_92_hat_2", from: 0.52, to: 0.66 },
+  { name: "breakbeat_92_kick_2", from: 0.66, to: 1.0 },
+];
+const selectedSlice = 2;
+(function () {
+  const host = document.getElementById("splitWave");
+  const W = 664, H = 190, rulerH = 22, top = rulerH + 8, waveH = H - top - 8;
+  const svg = el("svg", { width: W, height: H }, host);
+  const ruler = el("g", { class: "ruler" }, svg);
+  el("rect", { x: 0, y: 0, width: W, height: rulerH, fill: "#2c2f35" }, ruler);
+  for (let i = 0; i <= 26; i++) {
+    const px = i / 26 * W;
+    el("line", { x1: px, x2: px, y1: rulerH - (i % 5 ? 4 : 9), y2: rulerH, stroke: css("--border") }, ruler);
+    if (i % 5 === 0) el("text", { x: px + 3, y: 12 }, ruler).textContent = `${(i / 10).toFixed(1)}s`;
+  }
+  const r = rng(11), accent = css("--accent");
+  slices.forEach((s, i) => {
+    const x0 = s.from * W, x1 = s.to * W;
+    if (i === selectedSlice) el("rect", { x: x0, y: rulerH, width: x1 - x0, height: H - rulerH, fill: css("--accent-dim") }, svg);
+    const len = x1 - x0, hit = [1, 0.55, 0.9, 0.5, 0.95][i], decay = [5, 9, 4, 10, 3][i];
+    const amp = t => hit * Math.exp(-decay * t) * (0.75 + 0.25 * r()) + 0.02;
+    const g = el("g", { transform: `translate(${x0},0)` }, svg);
+    el("path", { d: envelopePath(len, top, waveH, amp), fill: accent, opacity: i === selectedSlice ? 1 : 0.72 }, g);
+    if (i) {
+      el("line", { x1: x0, x2: x0, y1: rulerH, y2: H, stroke: "#e7e8eb", "stroke-width": 1.5 }, svg);
+      el("path", { d: `M${x0 - 5},${rulerH}L${x0 + 5},${rulerH}L${x0},${rulerH + 7}Z`, fill: "#e7e8eb" }, svg);
+    }
+    el("text", { x: x0 + 8, y: rulerH + 18, "font-size": 11, "font-weight": 700, fill: css("--text"), "font-family": "Atkinson Hyperlegible Mono" }, svg).textContent = i + 1;
+  });
+  // pointer hover: where a click would add a marker
+  const hx = 0.43 * W;
+  el("line", { x1: hx, x2: hx, y1: rulerH, y2: H, stroke: "#e7e8eb", "stroke-dasharray": "3 3", opacity: 0.55 }, svg);
+  const body = document.getElementById("sliceRows");
+  slices.forEach((s, i) => {
+    const tr = document.createElement("tr");
+    if (i === selectedSlice) tr.className = "sel";
+    tr.innerHTML = `<td class="grip">⋮⋮</td><td class="num mono">${i + 1}</td>
+      <td>${i === selectedSlice ? `<div class="field mono name-edit" style="border-color:var(--error);box-shadow:0 0 0 1px var(--error)">snare hit<span style="border-left:1.5px solid var(--text);margin-left:1px"></span></div>` : `<span class="mono" style="cursor:text">${s.name}</span>`}</td>
+      <td style="text-align:right;white-space:nowrap"><button class="btn icon ghost" title="Play">▶</button><button class="btn icon ghost" title="Remove">✕</button></td>`;
+    body.appendChild(tr);
+  });
+})();
+
+// keyboard: C1..B3 (36 keys), zones on C2..E2
+(function () {
+  const host = document.getElementById("keyboard");
+  const first = 24, count = 36, whiteW = 30, H = 120;
+  const isBlack = n => [1, 3, 6, 8, 10].includes(n % 12);
+  const whites = [...Array(count).keys()].map(i => i + first).filter(n => !isBlack(n));
+  const W = whites.length * whiteW;
+  const svg = el("svg", { width: W, height: H + 20 }, host);
+  const zoneByKey = { 36: 0, 37: 1, 38: 2, 39: 3, 40: 4 };
+  const xOf = n => {
+    const wi = whites.filter(w => w < n).length;
+    return isBlack(n) ? wi * whiteW - 9 : wi * whiteW;
+  };
+  const kTop = 2, blackH = H * 0.62, selected = 2;
+  const badge = (cx, cy, z) => {
+    el("circle", { cx, cy, r: 8, fill: "#1f2126", opacity: 0.85 }, svg);
+    el("text", { x: cx, y: cy + 4, "text-anchor": "middle", "font-size": 10, "font-weight": 700, fill: "#fff" }, svg).textContent = z + 1;
+  };
+  whites.forEach(n => {
+    const x = xOf(n), z = zoneByKey[n];
+    el("rect", { x: x + 0.5, y: kTop, width: whiteW - 1, height: H, rx: 3, fill: z !== undefined ? css("--accent") : "#d6d8db", stroke: "#2a2c31" }, svg);
+    if (z !== undefined) badge(x + whiteW / 2, kTop + H - 14, z);
+    if (n % 12 === 0) el("text", { x: x + 3, y: kTop + H + 14, "font-size": 11, fill: css("--faint"), "font-family": "Atkinson Hyperlegible Mono" }, svg).textContent = "C" + (n / 12 - 1);
+  });
+  const sx = xOf(36 + selected);
+  el("rect", { x: sx + 2, y: kTop + 1.5, width: whiteW - 4, height: H - 3, rx: 3, fill: "none", stroke: "#ffffff", "stroke-width": 2.5 }, svg);
+  [...Array(count).keys()].map(i => i + first).filter(isBlack).forEach(n => {
+    const x = xOf(n), z = zoneByKey[n];
+    el("rect", { x, y: kTop, width: 18, height: blackH, rx: 2, fill: z !== undefined ? "#5f8792" : "#24262b", stroke: "#15161a", "stroke-width": 1.5 }, svg);
+    if (z !== undefined) badge(x + 9, kTop + blackH - 13, z);
+  });
+})();
+
+// envelope: static slider markup above
+</script>
+</body>
+</html>

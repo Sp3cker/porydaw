@@ -272,29 +272,15 @@ ShellLaneSupport {
         const first = files.itemAtIndex(0)
         mouseClick(first)
         verify(waitForNative(function() {
-            return findChild(dialog, "sampleLibraryPreviewing").text === "Preview source: " + first.name
-                && findChild(dialog, "sampleLibraryStatus").text === "Selected: " + first.name
-        }, 10000), "selected file paints its preview and selection path readouts")
+            return files.itemAtIndex(0).selected
+        }, 10000), "selected file highlights its row")
         verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, dialog, 5000),
-               "selected preview row and readouts submit before audit")
-        record(context + " library preview and loaded readouts",
+               "selected row submits before audit")
+        record(context + " library selection",
                Audit.audit(dialog.contentItem, grab, [
                    folders.itemAtIndex(0), folders.itemAtIndex(1),
                    files.itemAtIndex(0), files.itemAtIndex(1)
                ]))
-        mouseClick(findChild(dialog, "sampleLibraryPreview"))
-        verify(waitForNative(function() {
-            return findChild(dialog, "sampleLibraryPreviewing").text === "Preview source: none"
-        }, 5000), "preview stops before auditing loaded source")
-        mouseClick(findChild(dialog, "sampleLibraryLoad"))
-        verify(waitForNative(function() {
-            return findChild(dialog, "sampleLibraryLoaded").text === "Loaded: " + first.name
-        }, 5000), "selected row loads and refreshes its source path readout")
-        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, dialog, 5000),
-               "loaded source readout submits before audit")
-        record(context + " library loaded", Audit.audit(dialog.contentItem, grab,
-               [folders.itemAtIndex(0), folders.itemAtIndex(1),
-                files.itemAtIndex(0), files.itemAtIndex(1)]))
         const advanced = findChild(dialog, "sampleStudioAdvanced")
         if (advanced) {
             mouseClick(advanced)
@@ -482,8 +468,7 @@ ShellLaneSupport {
 
     function auditSplitStudio(context) {
         const session = shell.shellPresenter.session
-        session.voiceListController().selectSlot(10)
-        shell.shellPresenter.activate("tools.split_studio")
+        session.kitStudio().requestOpen()
         verify(waitForNative(function() {
             const studio = child("splitStudioWindow")
             return studio !== null && studio.visible

@@ -53,7 +53,7 @@ extension ApplicationSession {
         } else {
             source = .quit
         }
-        workflow.guardClose(source: source, song: tab?.workspace.session, proceed: proceed, cancel: cancel)
+        workflow.guardClose(source: source, proceed: proceed, cancel: cancel)
     }
 
     @QtIgnored

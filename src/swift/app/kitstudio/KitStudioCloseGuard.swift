@@ -1,6 +1,6 @@
 @MainActor
 public final class KitStudioCloseGuard {
-    public enum Source { case window, tab, project, quit, retarget }
+    public enum Source { case window, tab, project, quit }
     private struct Request {
         let source: Source
         let proceed: () -> Void

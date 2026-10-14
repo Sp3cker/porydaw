@@ -278,11 +278,5 @@ func themePresetValueChecks(_ report: CheckReport) {
         report.expect(
             themeRefContrast(palette.sampleLoopHandle, palette.menuBackground) >= 3.0,
             cppID: themeLegibilityID, message: "\(tag): sample loop grip floor")
-        report.expect(
-            themeRefContrast(palette.sampleLoopHandle, palette.alternateBackground) >= 3.0,
-            cppID: themeLegibilityID, message: "\(tag): sample seam start floor")
-        report.expect(
-            themeRefContrast(palette.sampleSeamEndInk, palette.alternateBackground) >= 3.0,
-            cppID: themeLegibilityID, message: "\(tag): sample seam end floor")
     }
 }

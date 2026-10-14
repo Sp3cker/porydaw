@@ -52,16 +52,16 @@ ThemedWindow {
         geometryReady = true
     }
 
-    Shortcut { sequences: [StandardKey.Save]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving && !studio.workflow.switchingVoicegroup; onActivated: studio.workflow.saveToSong() }
-    Shortcut { sequences: [StandardKey.Undo]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving && !studio.workflow.switchingVoicegroup; onActivated: studio.workflow.undo() }
-    Shortcut { sequences: [StandardKey.Redo]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving && !studio.workflow.switchingVoicegroup; onActivated: studio.workflow.redo() }
-    Shortcut { sequences: [StandardKey.Close]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving && !studio.workflow.switchingVoicegroup; onActivated: studio.close() }
+    Shortcut { sequences: [StandardKey.Save]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving; onActivated: studio.workflow.saveVoicegroup() }
+    Shortcut { sequences: [StandardKey.Undo]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving; onActivated: studio.workflow.undo() }
+    Shortcut { sequences: [StandardKey.Redo]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving; onActivated: studio.workflow.redo() }
+    Shortcut { sequences: [StandardKey.Close]; context: Qt.WindowShortcut; enabled: !studio.workflow.saving; onActivated: studio.close() }
     Timer { interval: 1000 / 30; repeat: true; running: studio.workflow.auditionPlaying; onTriggered: studio.workflow.tickAudition() }
 
     NativeDialogs.FileDialog {
         id: sourcePicker
         objectName: "splitStudioSourcePicker"
-        title: qsTr("Open Split Studio Source")
+        title: qsTr("Open File")
         parentWindow: studio
         fileMode: NativeDialogs.FileDialog.OpenFile
         nameFilters: [qsTr("Audio files (*.wav *.aif *.aiff *.mp3 *.flac *.ogg)"), qsTr("All files (*)")]
@@ -82,34 +82,14 @@ ThemedWindow {
         anchors.fill: parent
         anchors.margins: studio.spacing
         spacing: studio.spacing
-        enabled: !studio.workflow.saving && !studio.workflow.switchingVoicegroup
-        KitSlotPicker {
-            Layout.fillWidth: true
-            editor: studio.editor
-            colors: studio.colors
-            unit: studio.unit
-            paneSpacing: studio.spacing
-        }
+        enabled: !studio.workflow.saving
         RowLayout {
-            objectName: "splitStudioConflictBar"
+            objectName: "splitStudioContextBar"
             Layout.fillWidth: true
-            visible: studio.editor.conflictVisible
-            Label { Layout.fillWidth: true; text: studio.editor.conflictText; color: studio.colors.windowText; wrapMode: Text.WordWrap }
-            Button { text: qsTr("Reload"); onClicked: studio.editor.answerConflict(false) }
-            Button { text: qsTr("Keep mine"); onClicked: studio.editor.answerConflict(true) }
-        }
-        RowLayout {
-            objectName: "splitStudioSwitchBar"
-            Layout.fillWidth: true
-            visible: studio.editor.switchBarVisible
-            Label { Layout.fillWidth: true; text: studio.workflow.switchBarText; color: studio.colors.windowText; wrapMode: Text.WordWrap }
-            Button { objectName: "splitStudioSwitchBack"; text: studio.workflow.switchBackText; onClicked: studio.editor.switchBack() }
-        }
-        RowLayout {
-            Layout.fillWidth: true
-            visible: studio.editor.usedByText.length > 0
-            Label { Layout.fillWidth: true; text: studio.editor.usedByText; color: studio.colors.windowText; wrapMode: Text.WordWrap }
-            CheckBox { text: qsTr("Save a copy"); checked: studio.workflow.copySharedKit; onClicked: studio.workflow.copySharedKit = checked }
+            Item { Layout.fillWidth: true }
+            Label { text: qsTr("Layout"); color: studio.colors.windowText }
+            Button { objectName: "splitStudioModeDrumkit"; text: qsTr("Drumkit"); checked: studio.editor.mode === 0; onClicked: studio.editor.setMode(0) }
+            Button { objectName: "splitStudioModeKeysplit"; text: qsTr("Keysplit"); checked: studio.editor.mode === 1; onClicked: studio.editor.setMode(1) }
         }
         SplitView {
             id: horizontalSplit
@@ -132,7 +112,6 @@ ThemedWindow {
                     studioWindow: studio
                     unit: studio.unit
                     paneSpacing: studio.spacing
-                    captionFont: studio.applicationSession.typographyFonts.captionMinimum
                 }
                 Repeater {
                     model: studio.library.files
@@ -152,7 +131,7 @@ ThemedWindow {
                             color: studio.colors.buttonBackground
                             z: 1
                             Drag.keys: ["porydaw-library"]
-                            Label { anchors.fill: parent; anchors.margins: studio.spacing; text: qsTr("Drag to a key: ") + libraryDragRow.name; color: studio.colors.windowText; elide: Text.ElideRight }
+                            Label { anchors.fill: parent; anchors.margins: studio.spacing; text: libraryDragRow.name; color: studio.colors.windowText; elide: Text.ElideRight }
                         }
                     }
                 }
@@ -166,7 +145,7 @@ ThemedWindow {
                 handle: Rectangle { implicitHeight: studio.spacing; color: studio.colors.chromeBackground }
                 SliceEditorView {
                     id: sliceEditor
-                    SplitView.preferredHeight: 25 * studio.unit
+                    SplitView.fillHeight: true
                     SplitView.minimumHeight: 18 * studio.unit
                     workflow: studio.workflow
                     editor: studio.editor
@@ -176,8 +155,8 @@ ThemedWindow {
                     dragLayer: studio.contentItem
                 }
                 ZoneEditorView {
-                    SplitView.fillHeight: true
-                    SplitView.minimumHeight: 15 * studio.unit
+                    SplitView.preferredHeight: 13 * studio.unit
+                    SplitView.minimumHeight: 11 * studio.unit
                     workflow: studio.workflow
                     editor: studio.editor
                     colors: studio.colors
@@ -186,33 +165,51 @@ ThemedWindow {
                     captionFont: studio.applicationSession.typographyFonts.captionMinimum
                 }
             }
-        }
-        Label {
-            objectName: "splitStudioStatus"
-            Layout.fillWidth: true
-            visible: text.length > 0
-            text: studio.editor.statusText
-            color: studio.colors.windowText
-            wrapMode: Text.WordWrap
+            KitInspector {
+                SplitView.preferredWidth: 24 * studio.unit
+                SplitView.minimumWidth: 19 * studio.unit
+                workflow: studio.workflow
+                editor: studio.editor
+                colors: studio.colors
+                unit: studio.unit
+                paneSpacing: studio.spacing
+                captionFont: studio.applicationSession.typographyFonts.caption
+            }
         }
         RowLayout {
             Layout.fillWidth: true
             Button { text: qsTr("Undo"); enabled: studio.editor.canUndo; onClicked: studio.workflow.undo() }
             Button { text: qsTr("Redo"); enabled: studio.editor.canRedo; onClicked: studio.workflow.redo() }
+            Label { objectName: "splitStudioMeta"; text: studio.editor.metaText; color: studio.colors.windowText }
             Item { Layout.fillWidth: true }
-            Button {
-                objectName: "splitStudioSave"
-                text: qsTr("Save to Song")
-                enabled: studio.editor.canSave && !studio.editor.conflictVisible
-                onClicked: studio.workflow.saveToSong()
+            Label { text: qsTr("Voicegroup"); color: studio.colors.windowText }
+            ValidatedTextField {
+                id: voicegroupField
+                objectName: "splitStudioVoicegroupName"
+                colors: studio.colors
+                invalid: studio.editor.voicegroupNameInvalid
+                text: studio.editor.voicegroupName
+                onEditingFinished: studio.editor.setVoicegroupName(text)
+                Connections {
+                    target: studio.editor
+                    function onVoicegroupNameChanged(): void {
+                        if (!voicegroupField.activeFocus) voicegroupField.text = studio.editor.voicegroupName
+                    }
+                }
             }
             Button { objectName: "splitStudioClose"; text: qsTr("Close"); onClicked: studio.close() }
+            Button {
+                objectName: "splitStudioSave"
+                text: qsTr("Save Voicegroup")
+                enabled: studio.editor.canSave
+                onClicked: studio.workflow.saveVoicegroup()
+            }
         }
     }
     Dialog {
         id: closePrompt
         objectName: "splitStudioClosePrompt"
-        parent: studio.workflow.promptForVoicegroup || studio.workflow.promptForClose ? (studio.transientParent as Window).contentItem : studio.contentItem
+        parent: studio.workflow.promptForClose ? (studio.transientParent as Window).contentItem : studio.contentItem
         anchors.centerIn: parent
         width: 35 * studio.unit
         title: qsTr("Save Split Studio changes?")
@@ -222,29 +219,24 @@ ThemedWindow {
         visible: studio.workflow.promptOpen
         contentItem: ColumnLayout {
             spacing: studio.spacing
-            Label { Layout.fillWidth: true; text: studio.workflow.promptForVoicegroup ? qsTr("Save to Song before changing the voicegroup?") : qsTr("Save to Song before closing or changing the bound song?"); wrapMode: Text.WordWrap; color: studio.colors.windowText }
+            Label { Layout.fillWidth: true; text: qsTr("Save the voicegroup before closing?"); wrapMode: Text.WordWrap; color: studio.colors.windowText }
             RowLayout {
-                enabled: !studio.workflow.saving && !studio.workflow.switchingVoicegroup
-                Button { text: qsTr("Save to Song"); onClicked: studio.workflow.answerPrompt(0) }
+                enabled: !studio.workflow.saving
+                Button { text: qsTr("Save Voicegroup"); onClicked: studio.workflow.answerPrompt(0) }
                 Button { text: qsTr("Discard"); onClicked: studio.workflow.answerPrompt(1) }
                 Button { text: qsTr("Cancel"); onClicked: studio.workflow.answerPrompt(2) }
             }
         }
     }
-    Dialog {
-        objectName: "splitStudioRetargetPrompt"
-        parent: studio.contentItem
-        anchors.centerIn: parent
-        width: 35 * studio.unit
-        title: qsTr("Save changes before choosing another kit?")
-        modal: true
-        closePolicy: Popup.NoAutoClose
-        visible: studio.editor.retargetVisible && !studio.workflow.saving
-        contentItem: RowLayout {
-            spacing: studio.spacing
-            Button { text: qsTr("Save"); onClicked: studio.editor.answerRetarget(0) }
-            Button { text: qsTr("Discard"); onClicked: studio.editor.answerRetarget(1) }
-            Button { text: qsTr("Cancel"); onClicked: studio.editor.answerRetarget(2) }
-        }
+    NativeDialogs.MessageDialog {
+        id: overwritePrompt
+        objectName: "splitStudioOverwritePrompt"
+        parentWindow: studio
+        title: qsTr("Split Studio")
+        text: studio.workflow.overwritePromptText
+        buttons: NativeDialogs.MessageDialog.Yes | NativeDialogs.MessageDialog.No
+        visible: studio.workflow.overwritePromptOpen
+        onAccepted: studio.workflow.answerOverwrite(true)
+        onRejected: studio.workflow.answerOverwrite(false)
     }
 }
