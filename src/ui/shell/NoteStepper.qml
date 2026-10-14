@@ -14,6 +14,7 @@ Rectangle {
     property int keyValue: 60
     // Readout for tests and labels; Swift owns parsing and clamping.
     readonly property string text: stepper.format.text(stepper.keyValue)
+    readonly property real hairline: Math.max(1, Math.round(stepper.unit / 13))
     signal stepped(int value)
     signal spacePressed()
     implicitHeight: 2.15 * stepper.unit
@@ -28,7 +29,7 @@ Rectangle {
     radius: 0.46 * stepper.unit
     color: stepper.colors.inputBackground
     border.color: stepper.colors.outline
-    border.width: 1
+    border.width: stepper.hairline
     Accessible.role: Accessible.SpinBox
     Accessible.name: stepper.format.text(stepper.keyValue)
     RowLayout {
@@ -53,7 +54,7 @@ Rectangle {
             Layout.preferredWidth: 1.5 * stepper.unit
             color: stepper.colors.buttonBackground
             border.color: stepper.colors.outline
-            border.width: 1
+            border.width: stepper.hairline
             ColumnLayout {
                 anchors.fill: parent
                 spacing: 0
@@ -70,7 +71,7 @@ Rectangle {
                 }
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 1
+                    Layout.preferredHeight: stepper.hairline
                     color: stepper.colors.outline
                 }
                 MouseArea {

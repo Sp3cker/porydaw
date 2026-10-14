@@ -6,7 +6,7 @@ import PorydawStyle
 import Porydaw.Icons
 import PorydawApp
 
-// Empty-state target: dashed outline and one glyph; clicking activates, hover/invalid recolour.
+// Empty-state target: dashed outline and one glyph; click or Enter activates, hover/focus/invalid recolour.
 Item {
     id: zone
     required property GridPalette colors
@@ -16,7 +16,14 @@ Item {
     property bool dropInvalid: false
     signal activated()
     readonly property color ink: zone.dropInvalid ? zone.colors.errorText
-        : (zone.dropHover || pointer.containsMouse) ? zone.colors.selectionEdge : zone.colors.secondaryText
+        : (zone.dropHover || pointer.containsMouse || zone.activeFocus) ? zone.colors.selectionEdge : zone.colors.secondaryText
+    activeFocusOnTab: true
+    Keys.onPressed: event => {
+        if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && !event.isAutoRepeat) {
+            zone.activated()
+            event.accepted = true
+        }
+    }
     Accessible.role: Accessible.Button
     Accessible.onPressAction: zone.activated()
 

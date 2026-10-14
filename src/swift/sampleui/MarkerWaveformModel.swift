@@ -84,6 +84,14 @@ public final class MarkerWaveformModel: QmlUncreatable {
         rebuild()
     }
 
+    /// Display gain that lets a quiet source fill 90% of the height, capped at 8x
+    /// so a near-silent file does not magnify its noise floor.
+    public nonisolated static func peakFitGain(_ samples: [Float]) -> Double {
+        var peak: Float = 0
+        for value in samples { peak = max(peak, abs(value)) }
+        return peak > 0.01 ? min(8, 0.9 / Double(peak)) : 1
+    }
+
     /// Rebuilds the peak pyramid only when the holder publishes a new source revision.
     @QtIgnored public func setSamples(_ samples: [Float], sampleRate: Double, gain: Double) {
         release()

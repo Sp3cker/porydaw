@@ -208,35 +208,16 @@ public final class KitStudioWorkflow: QmlUncreatable {
     }
 
     public func loadSource(path: String) {
-        guard windowOpen, !saving, let state else { return }
+        guard windowOpen, !saving, let state, let url = libraryHost.sourceURL(path) else { return }
         stopAudition()
-        do {
-            guard let url = libraryHost.sourceURL(path) else { return }
-            let wasEmpty = state.session.sources.isEmpty
-            let sample = try SampleImport.decodeFile(path: url.path)
-            state.addSource(sample, autoPlaceFirstSlice: true)
-            if wasEmpty, !state.voicegroupNameEdited {
-                let stem = SampleNames.sanitize(url.deletingPathExtension().lastPathComponent)
-                state.applySuggestedVoicegroupName(
-                    nextFreeVoicegroupName(stem: stem.isEmpty ? "new_kit" : stem + "_kit"))
-            }
-            session?.preferences.setString(key: "lastSampleDir", value: url.deletingLastPathComponent().path)
-        } catch { showAlert(error) }
+        do { try addSource(url, to: state, autoPlaceFirstSlice: true) } catch { showAlert(error) }
     }
 
     public func dropLibrarySample(path: String, onKey: Int) {
-        guard windowOpen, !saving, let state else { return }
-        guard let url = libraryHost.sourceURL(path) else { return }
+        guard windowOpen, !saving, let state, let url = libraryHost.sourceURL(path) else { return }
         stopAudition()
         do {
-            let sample = try SampleImport.decodeFile(path: url.path)
-            let wasEmpty = state.session.sources.isEmpty
-            state.addSource(sample, autoPlaceFirstSlice: false)
-            if wasEmpty, !state.voicegroupNameEdited {
-                let stem = SampleNames.sanitize(url.deletingPathExtension().lastPathComponent)
-                state.applySuggestedVoicegroupName(
-                    nextFreeVoicegroupName(stem: stem.isEmpty ? "new_kit" : stem + "_kit"))
-            }
+            try addSource(url, to: state, autoPlaceFirstSlice: false)
             if let id = state.session.sources.last?.id {
                 state.session.createFirstSlice(source: id)
             }
@@ -245,6 +226,18 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 state.dropSample(name: state.sliceName(id: newest), onKey: onKey)
             }
         } catch { showAlert(error) }
+    }
+
+    /// Decodes and adds one file; the first file of an empty kit suggests the voicegroup name.
+    private func addSource(_ url: URL, to state: KitStudioPresenter, autoPlaceFirstSlice: Bool) throws {
+        let wasEmpty = state.session.sources.isEmpty
+        let sample = try SampleImport.decodeFile(path: url.path)
+        state.addSource(sample, autoPlaceFirstSlice: autoPlaceFirstSlice)
+        if wasEmpty, !state.voicegroupNameEdited {
+            let stem = SampleNames.sanitize(url.deletingPathExtension().lastPathComponent)
+            state.applySuggestedVoicegroupName(nextFreeVoicegroupName(stem: stem.isEmpty ? "new_kit" : stem + "_kit"))
+        }
+        session?.preferences.setString(key: "lastSampleDir", value: url.deletingLastPathComponent().path)
     }
 
     /// Whether every entry of a dragged `text/uri-list` names an audio file drop targets may accept.

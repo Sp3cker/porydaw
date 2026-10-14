@@ -17,11 +17,6 @@ Item {
     required property real paneSpacing
     required property Item dragLayer
     required property font monoFont
-    function selectNewest(): void {
-        const newest = view.editor.newestSliceId()
-        if (newest !== 0)
-            view.editor.selectSlice(newest)
-    }
     Rectangle {
         anchors.fill: parent
         color: view.colors.windowBackground
@@ -457,7 +452,7 @@ Item {
                     return
                 for (let i = 0; i < drop.urls.length; ++i)
                     view.workflow.loadSource("%1".arg(drop.urls[i]))
-                view.selectNewest()
+                view.editor.selectNewestSlice()
                 drop.acceptProposedAction()
             }
         }

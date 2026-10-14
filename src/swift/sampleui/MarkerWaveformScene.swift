@@ -18,8 +18,9 @@ struct MarkerWaveformScene {
     private var text: UInt32 = 0
     private var sliceDim: UInt32 = 0
     private var sliceWash: UInt32 = 0
-    // Tick labels keyed by step and tick index, so steady-state frames format nothing.
+    // Tick labels of the current ruler step by tick index, so steady-state frames format nothing.
     private var rulerLabels: [Int: String] = [:]
+    private var rulerStepIndex = -1
     private static let rulerSteps: [Double] = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 30, 60]
 
     mutating func setPalette(_ palette: GridPalette) {
@@ -180,12 +181,15 @@ struct MarkerWaveformScene {
     }
 
     private mutating func rulerLabel(index: Int, stepIndex: Int) -> String {
-        let key = index &* Self.rulerSteps.count &+ stepIndex
-        if let cached = rulerLabels[key] { return cached }
+        if stepIndex != rulerStepIndex {
+            rulerLabels.removeAll(keepingCapacity: true)
+            rulerStepIndex = stepIndex
+        }
+        if let cached = rulerLabels[index] { return cached }
         let step = Self.rulerSteps[stepIndex]
         let decimals = step < 0.1 ? 2 : step < 10 ? 1 : 0
         let label = String(format: "%.\(decimals)fs", Double(index) * step)
-        rulerLabels[key] = label
+        rulerLabels[index] = label
         return label
     }
 

@@ -117,7 +117,10 @@ DialogWindow {
     component SectionHeader: Label {
         color: dialog.colors.secondaryText
         font: dialog.applicationSession.typographyFonts.caption
-        Component.onCompleted: font.letterSpacing = dialog.unit / 13
+        Component.onCompleted: {
+            font.letterSpacing = dialog.unit / 13
+            font.capitalization = Font.AllUppercase
+        }
     }
     component FieldLabel: Label {
         color: dialog.colors.secondaryText
@@ -188,7 +191,7 @@ DialogWindow {
                         onClicked: dialog.editor.redo()
                     }
                     Rectangle {
-                        Layout.preferredWidth: 1
+                        Layout.preferredWidth: Math.max(1, Math.round(dialog.unit / 13))
                         Layout.preferredHeight: 1.5 * dialog.unit
                         Layout.alignment: Qt.AlignVCenter
                         color: dialog.colors.outline
@@ -281,7 +284,7 @@ DialogWindow {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     anchors.left: parent.left
-                    width: 1
+                    width: Math.max(1, Math.round(dialog.unit / 13))
                     color: dialog.colors.outline
                 }
             ScrollView {
@@ -298,7 +301,7 @@ DialogWindow {
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: dialog.spacing
-                        SectionHeader { text: qsTr("SAMPLE") }
+                        SectionHeader { text: qsTr("Sample") }
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: dialog.spacing
@@ -319,7 +322,7 @@ DialogWindow {
                         Layout.fillWidth: true
                         spacing: dialog.spacing
                         enabled: dialog.editor.hasSource
-                        SectionHeader { text: qsTr("TRIM") }
+                        SectionHeader { text: qsTr("Trim") }
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: dialog.spacing
@@ -352,7 +355,7 @@ DialogWindow {
                             spacing: dialog.spacing
                             SectionHeader {
                                 Layout.fillWidth: true
-                                text: qsTr("LOOP")
+                                text: qsTr("Loop")
                             }
                             StudioToggle {
                                 objectName: "sampleStudioLoop"
@@ -404,7 +407,7 @@ DialogWindow {
                                     radius: 0.85 * dialog.unit
                                     color: dialog.tools.seamBadgeSeverity === 0 ? dialog.colors.polyphonyActiveFill : "transparent"
                                     border.color: dialog.tools.seamBadgeSeverity === 0 ? dialog.colors.polyphonyActiveFill : dialog.tools.seamBadgeSeverity === 1 ? dialog.colors.warningText : dialog.colors.errorText
-                                    border.width: 1
+                                    border.width: Math.max(1, Math.round(dialog.unit / 13))
                                     Label {
                                         id: seamLabel
                                         anchors.centerIn: parent
@@ -445,7 +448,7 @@ DialogWindow {
                         Layout.fillWidth: true
                         spacing: dialog.spacing
                         enabled: dialog.editor.hasSource
-                        SectionHeader { text: qsTr("PITCH") }
+                        SectionHeader { text: qsTr("Pitch") }
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: dialog.spacing
@@ -471,7 +474,7 @@ DialogWindow {
                         Layout.fillWidth: true
                         spacing: dialog.spacing
                         enabled: dialog.editor.hasSource
-                        SectionHeader { text: qsTr("SAMPLE RATE") }
+                        SectionHeader { text: qsTr("Sample rate") }
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: dialog.spacing

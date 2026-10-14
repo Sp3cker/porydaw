@@ -48,6 +48,34 @@ ShellLaneSupport {
         shell = null
         wait(0)
     }
+    function test_aaProbe() {
+        const session = openShell().session
+        session.openProject(rootPath)
+        verify(waitForNative(function() { return session.projectOpen }, 30000))
+        const studio = session.kitStudio()
+        studio.requestOpen()
+        verify(waitForNative(function() { const w = child("splitStudioWindow"); return w !== null && w.visible }, 10000))
+        const window = child("splitStudioWindow")
+        window.width = 1180; window.height = 820
+        const view = findChild(window.contentItem, "splitStudioSliceEditor")
+        let toggle = null
+        const stack = [view]
+        while (stack.length > 0 && toggle === null) {
+            const item = stack.pop()
+            if (item.text === "Snap to zero" && item.toggled !== undefined) toggle = item
+            for (let i = 0; i < item.children.length; ++i) stack.push(item.children[i])
+        }
+        verify(toggle !== null)
+        const before = view.editor.snap
+        toggle.forceActiveFocus()
+        keyClick(Qt.Key_Return)
+        wait(100)
+        console.log("PROBE snap", before, "->", view.editor.snap, "focus", toggle.activeFocus)
+        grabImage(window.contentItem).save("/tmp/probe_toggle.png")
+        keyClick(Qt.Key_Return)
+        wait(50)
+        console.log("PROBE snap back", view.editor.snap)
+    }
     function test_quitAsksInFrontOfSplitStudio() {
         const session = openShell().session
         session.openProject(rootPath)

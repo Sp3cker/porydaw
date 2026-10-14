@@ -264,12 +264,8 @@ public final class SampleLoopTools: QmlUncreatable {
     @QtIgnored
     public func publishWaveform(_ wave: MarkerWaveformModel, sourceChanged: Bool) {
         if sourceChanged {
-            // Peak-fit quiet samples the way Split Studio does; an explicit
-            // normalize gain already at or above the peak fit is preserved.
-            let peak = presenter.source.buffer.reduce(0.0) { (best: Float, sample: Float) -> Float in
-                max(best, abs(sample))
-            }
-            lastPeakFit = peak > 0.001 ? 1.0 / Double(peak) : 1.0
+            // Peak-fit like Split Studio; a normalize gain at or above the fit is preserved.
+            lastPeakFit = MarkerWaveformModel.peakFitGain(presenter.source.buffer)
             wave.setSamples(
                 presenter.source.buffer, sampleRate: presenter.source.sampleRate,
                 gain: max(presenter.processed.normalizeGain, lastPeakFit))

@@ -525,9 +525,8 @@ public final class KitStudioPresenter: QmlUncreatable {
         changeSession { _ = $0.setSourceRate(source: id, rate: rate) }
     }
 
-    /// Kit-wide table order: every slice across all loaded files, in kit
-    /// number order, so added one-shots stay visible. Selecting a row
-    /// switches to its file's tab through selectSlice.
+    /// Kit-wide table order: every slice across all loaded files in kit number order;
+    /// selecting a row switches to its file's tab through selectSlice.
     public func sliceId(row: Int) -> Int {
         guard row >= 0 else { return 0 }
         var count = 0
@@ -541,9 +540,15 @@ public final class KitStudioPresenter: QmlUncreatable {
         return 0
     }
 
-    /// Newest slice id for scroll-to-row after a table drop add; 0 when empty.
+    /// Newest slice id; 0 when empty.
     public func newestSliceId() -> Int {
         draft.sliceIds.values.max() ?? 0
+    }
+
+    /// Selects the newest slice after a table drop add, so its row scrolls into view.
+    public func selectNewestSlice() {
+        let newest = newestSliceId()
+        if newest != 0 { selectSlice(id: newest) }
     }
 
     public func sliceName(id: Int) -> String { sliceValue(id)?.name ?? "" }
@@ -751,15 +756,9 @@ public final class KitStudioPresenter: QmlUncreatable {
             }
             if displayedSource != activeSource || displayedWaveform !== waveform {
                 let buffer = currentSource?.sample.buffer ?? []
-                // Amplitude fit: quiet one-shots fill the height like the mockup.
-                var peak: Float = 0
-                for value in buffer {
-                    let magnitude = value >= 0 ? value : -value
-                    if magnitude > peak { peak = magnitude }
-                }
-                let fit = peak > 0.01 ? min(8, 0.9 / Double(peak)) : 1
                 waveform.setSamples(
-                    buffer, sampleRate: currentSource?.sample.sampleRate ?? 1, gain: fit)
+                    buffer, sampleRate: currentSource?.sample.sampleRate ?? 1,
+                    gain: MarkerWaveformModel.peakFitGain(buffer))
                 displayedSource = activeSource
                 displayedWaveform = waveform
             }
