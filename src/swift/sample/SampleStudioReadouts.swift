@@ -1,17 +1,15 @@
 import Foundation
-import PorydawCore
-import PorydawSample
 
 public enum SampleStudioReadouts {
     private static let posixLocale = Locale(identifier: "en_US_POSIX")
 
-    static func decimal(_ value: Double, places: Int) -> String {
+    public static func decimal(_ value: Double, places: Int) -> String {
         String(format: "%.*f", locale: posixLocale, places, value)
     }
 
     /// Strict decimal grammar for the editor's fractional fields: `[+-]?[0-9]+(\.[0-9]+)?`
     /// after trimming spaces; no exponent, hex or grouping.
-    static func decimalValue(from text: String) -> Double? {
+    public static func decimalValue(from text: String) -> Double? {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         let unsigned = trimmed.first == "-" || trimmed.first == "+" ? trimmed.dropFirst() : trimmed[...]
         let parts = unsigned.split(separator: ".", omittingEmptySubsequences: false)
@@ -28,9 +26,18 @@ public enum SampleStudioReadouts {
         "\(decimal(rate, places: rate == floor(rate) ? 0 : 2)) Hz"
     }
 
-    public static func romSize(_ output: ProcessedSample) -> String {
-        let romBytes = 16 + ((UInt64(output.size) + 3) & ~UInt64(3))
-        return romBytes >= 1024 ? "\(decimal(Double(romBytes) / 1024, places: 1)) KB" : "\(romBytes) bytes"
+    /// Rate menu rows: the file's own rate first, then the fixed GBA table.
+    public static func rateChoices(fileRate rate: Double) -> [String] {
+        ["File rate (\(fileRate(rate)))"] + SampleRatePolicy.rates.map(String.init)
+    }
+
+    /// ROM cost of one sample: 16-byte header plus 4-byte-aligned PCM.
+    public static func romBytes(_ output: ProcessedSample) -> UInt64 {
+        16 + ((UInt64(output.size) + 3) & ~UInt64(3))
+    }
+
+    public static func romSize(bytes: UInt64) -> String {
+        bytes >= 1024 ? "\(decimal(Double(bytes) / 1024, places: 1)) KB" : "\(bytes) bytes"
     }
 
     public static func gain(_ output: ProcessedSample, mode: SampleEditParams.NormalizeMode) -> String {

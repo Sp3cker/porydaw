@@ -81,8 +81,8 @@ and tracks its own markers, slices, and sample rate:
   press **Delete** or **Backspace**. Removing a marker merges the two neighboring
   slices.
 - **Waveform navigation**: Turn the mouse wheel to zoom the waveform, or click the
-  zoom buttons. Click **Fit** to view the entire audio file. Middle-click
-  and drag on the waveform to pan horizontally.
+  zoom buttons. Click **Fit** to view the entire audio file. Drag an empty part
+  of the waveform (or middle-drag anywhere) to pan horizontally.
 
 When **Snap to zero** is checked, adding or dragging markers automatically snaps
 to the nearest zero-crossing point in the audio within about 3 ms.

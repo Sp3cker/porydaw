@@ -268,7 +268,6 @@ public final class KitStudioWorkflow: QmlUncreatable {
             })
     }
 
-    public func frameAt(x: Double) -> Int { state?.waveform?.frameAt(x) ?? 0 }
     public func keyName(key: Int) -> String { midiKeyName(key) }
     public func removeSelectedMarker() {
         guard let id = selectedMarker else { return }
@@ -334,11 +333,8 @@ public final class KitStudioWorkflow: QmlUncreatable {
         libraryHost.clearPreview()
     }
 
-    /// Writes slice samples and a new `sound/voicegroups/<name>.inc` (plus its
-    /// include line, and a keysplit table in Keysplit layout). No song, bank
-    /// lease or document is ever touched. Saving again with the same name
-    /// rewrites this window's voicegroup in place; unchanged slice audio is
-    /// not rewritten, and changed audio of previously saved samples asks first.
+    /// Writes slice samples and `sound/voicegroups/<name>.inc` (plus keysplit table); never songs or banks.
+    /// Re-saving rewrites in place, skipping unchanged audio and asking before overwriting saved audio.
     public func saveVoicegroup() {
         if saving { return }
         guard let session, let service = session.catalogService, let state, windowOpen, state.canSave else {
@@ -347,13 +343,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
         }
         let mode: KitMode = state.mode == 0 ? .drumkit : .keysplit
         let zones = mode == .drumkit ? state.draft.drumkitZones : state.draft.keysplitZones
-        guard !zones.isEmpty, !state.voicegroupNameInvalid, !state.voicegroupName.isEmpty else {
-            closeGuard.saveSettled(success: false)
-            return
-        }
         saving = true
-        state.saving = true
-        state.refresh()
         alertText = ""
         stopAudition()
         let generation = sessionGeneration
@@ -381,8 +371,6 @@ public final class KitStudioWorkflow: QmlUncreatable {
             let symbol = "DirectSoundWaveData_" + sample.name
             if symbols.contains(symbol) || Self.sampleFileExists(projectRoot: root, name: sample.name) {
                 saving = false
-                state.saving = false
-                state.refresh()
                 showAlert(
                     ProjectServiceError.operationFailed(
                         "Split Studio: \(sample.name) already exists in this project."))
@@ -398,8 +386,6 @@ public final class KitStudioWorkflow: QmlUncreatable {
             overwritePromptText = "Overwrite \(names.count) saved samples?\n" + names.joined(separator: "\n")
             overwritePromptOpen = true
             saving = false
-            state.saving = false
-            state.refresh()
             return
         }
         overwriteArmed = false
@@ -411,8 +397,6 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 if self.sessionGeneration == generation {
                     self.pendingTask = nil
                     self.saving = false
-                    self.state?.saving = false
-                    self.state?.refresh()
                     self.pendingNames.removeAll()
                     self.closeGuard.saveSettled(success: saveSucceeded)
                 }
@@ -498,9 +482,8 @@ public final class KitStudioWorkflow: QmlUncreatable {
         return false
     }
 
-    /// Writes the kit children into the voicegroup file with the existing
-    /// voice-line serializer. Fresh files declare exactly one group, so the
-    /// whole-file section opens in both header styles.
+    /// Writes kit children with the voice-line serializer; fresh files declare one group,
+    /// so the whole-file section opens in both header styles.
     private static func writeKitChildren(
         projectRoot: String, name: String, zones: [KitZone], mode: KitMode, sliceNames: Set<String>
     ) throws {

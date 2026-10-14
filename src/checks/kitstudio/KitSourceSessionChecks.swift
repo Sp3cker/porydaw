@@ -328,9 +328,10 @@ private func checkSourceAutoPlaceAndZoneRemoval(_ report: CheckReport) {
     p.dropSample(name: "occupied", onKey: 36)
     p.setMode(index: 1)
     // A keysplit drop at 36 would extend to 127 and cover every key, so the one-key blocker goes in directly.
-    _ = p.draft.setKeysplitZones([
+    p.draft.setZones(
+        [
         KitZone(startKey: 36, endKey: 36, sampleName: "occupied", rootKey: 60, pan: 0, adsr: (255, 0, 255, 0))
-    ])
+        ], mode: .keysplit)
     p.setMode(index: 0)
 
     let sample = sessionSample(name: "sample", count: 200)

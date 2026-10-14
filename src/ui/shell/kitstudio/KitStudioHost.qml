@@ -32,10 +32,7 @@ Item {
         sourceComponent: SplitStudioWindow {
             workflow: host.workflow
             applicationSession: host.applicationSession
-            editor: {
-                void host.workflow.presenterRevision
-                return host.workflow.presenter()
-            }
+            editor: host.workflow.presenterRevision >= 0 ? host.workflow.presenter() : null
             library: host.workflow.library()
             colors: host.colors
             transientParent: host.hostWindow

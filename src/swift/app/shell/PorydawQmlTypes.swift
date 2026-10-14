@@ -64,7 +64,6 @@ public enum PorydawQmlTypes {
         IntegerInputPolicy.self,
         KitSourceRow.self,
         KitStudioPresenter.self,
-        KitZoneRow.self,
         LayoutSpaces.self,
         MouseHints.self,
         OtherEventsBandPresenter.self,

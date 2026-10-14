@@ -45,14 +45,12 @@ public final class MarkerWaveformModel: QmlUncreatable {
     private var baseFontPx = GridCameraPolicy.seedBaseFontPx
     private var sampleRate = 1.0
     private var gain = 1.0
-    private var zoomSecondsPerPixel = 0.0
     private var sliceBadges: [(frame: Int, text: String)] = []
     private var highlightStart = 0
     private var highlightEnd = 0
 
     public var markers: QListModel<WaveformMarkerRow> = QListModel()
     public var displayRevision: Int = 0
-    public var zoomLabel: String = ""
     @QtIgnored public var onMarkerPressed: ((Int) -> Void)?
     @QtIgnored public var onMarkerDragged: ((Int, Int) -> Void)?
     @QtIgnored public var onMarkerReleased: (() -> Void)?
@@ -135,9 +133,8 @@ public final class MarkerWaveformModel: QmlUncreatable {
         rebuild()
     }
 
-    /// Slice-region numbers for Split Studio; each badge draws at its region
-    /// start in frame order. Pairs truncate to the shorter array; pass empty
-    /// arrays to clear. Number strings build here so rebuilds stay allocation-free.
+    /// Slice-region numbers drawn at each region start; pairs truncate to the shorter array.
+    /// Strings build here so rebuilds stay allocation-free.
     @QtIgnored public func setRegionBadges(frames: [Int], numbers: [Int]) {
         let paired = zip(frames, numbers).map { (pair: (Int, Int)) -> (frame: Int, text: String) in
             (frame: pair.0, text: String(pair.1))
@@ -307,11 +304,6 @@ public final class MarkerWaveformModel: QmlUncreatable {
             scroll: scroll, spp: spp, gain: gain, markers: rows,
             badges: sliceBadges, highlight: highlight,
             playheadFrame: playheadFrame, fontPx: baseFontPx, sampleRate: sampleRate)
-        let secondsPerPixel = spp / sampleRate
-        if zoomSecondsPerPixel != secondsPerPixel {
-            zoomSecondsPerPixel = secondsPerPixel
-            zoomLabel = String(format: "%.2f ms/px", secondsPerPixel * 1000)
-        }
         displayRevision += 1
     }
 }

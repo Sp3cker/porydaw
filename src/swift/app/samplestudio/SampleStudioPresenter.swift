@@ -30,8 +30,6 @@ public final class SampleStudioPresenter: QmlUncreatable {
     @QtTracked public var loopStart = 0
     @QtTracked public var loopEnd = 0
     @QtTracked public var baseKey = 60
-    @QtTracked public var baseKeyText = "C4 (60)"
-    @QtTracked public var baseKeyInvalid = false
     @QtTracked public var fineTuneCents = 0.0
     @QtTracked public var fineTuneText = "0.00"
     @QtTracked public var fineTuneInvalid = false
@@ -88,7 +86,7 @@ public final class SampleStudioPresenter: QmlUncreatable {
         loadedFileName =
             source.sourcePath.isEmpty
             ? source.suggestedName : URL(fileURLWithPath: source.sourcePath).lastPathComponent
-        rateChoices = ["File rate (\(fileRateText))"] + SampleRatePolicy.rates.map(String.init)
+        rateChoices = SampleStudioReadouts.rateChoices(fileRate: source.sampleRate)
     }
 
     /// The symbol suffix the sample registers under; the field keeps the typed text.
@@ -147,13 +145,7 @@ public final class SampleStudioPresenter: QmlUncreatable {
     }
     public func setLoopOn(enabled: Bool) { update(-1) { $0.loopOn = enabled } }
 
-    public func setBaseKeyText(text: String) {
-        guard let key = midiKey(from: text) else { baseKeyInvalid = true; return }
-        baseKeyInvalid = false
-        update(5) { $0.baseKey = key }
-    }
     public func setBaseKey(key: Int) {
-        baseKeyInvalid = false
         update(5) { $0.baseKey = min(max(0, key), 127) }
     }
 
@@ -221,7 +213,6 @@ public final class SampleStudioPresenter: QmlUncreatable {
         loopStart = p.loopStart
         loopEnd = p.loopEnd
         baseKey = p.baseKey
-        baseKeyText = "\(midiKeyName(p.baseKey)) (\(p.baseKey))"
         fineTuneCents = p.fineTuneCents
         fineTuneText = SampleStudioReadouts.decimal(p.fineTuneCents, places: 2)
         normalizeMode = p.normalizeMode.rawValue
@@ -235,7 +226,7 @@ public final class SampleStudioPresenter: QmlUncreatable {
                 ? SampleStudioReadouts.decimal(p.targetRate, places: 0) : String(p.targetRate))
         let result = processed
         gainReadout = SampleStudioReadouts.gain(result, mode: p.normalizeMode)
-        romText = SampleStudioReadouts.romSize(result)
+        romText = SampleStudioReadouts.romSize(bytes: SampleStudioReadouts.romBytes(result))
         syncHistory()
         renderRevision += 1
         for observer in observers { observer() }

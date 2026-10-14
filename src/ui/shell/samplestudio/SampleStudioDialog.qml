@@ -19,6 +19,7 @@ DialogWindow {
     required property SampleStudioAudition audition
     readonly property real unit: applicationSession.baseFontPx
     readonly property real spacing: applicationSession.layoutSpaces.three
+    readonly property font captionFont: applicationSession.typographyFonts.caption
     modality: Qt.ApplicationModal
     width: 75 * unit
     height: 53.33 * unit
@@ -113,14 +114,6 @@ DialogWindow {
     component AuditionButton: Button {
         Keys.priority: Keys.BeforeItem
         Keys.onPressed: event => dialog.handleSpace(event)
-    }
-    component SectionHeader: Label {
-        color: dialog.colors.secondaryText
-        font: dialog.applicationSession.typographyFonts.caption
-        Component.onCompleted: {
-            font.letterSpacing = dialog.unit / 13
-            font.capitalization = Font.AllUppercase
-        }
     }
     component FieldLabel: Label {
         color: dialog.colors.secondaryText
@@ -228,6 +221,7 @@ DialogWindow {
                     model: dialog.waveformModel
                     colors: dialog.colors
                     baseFontPx: dialog.unit
+                    onDoubleClicked: dialog.waveformModel.fit()
                 }
                 RowLayout {
                     Layout.fillWidth: true
@@ -298,10 +292,8 @@ DialogWindow {
                 ColumnLayout {
                     width: inspectorScroll.availableWidth
                     spacing: 2 * dialog.spacing
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: dialog.spacing
-                        SectionHeader { text: qsTr("Sample") }
+                    StudioSection {
+                        title: qsTr("Sample"); colors: dialog.colors; captionFont: dialog.captionFont; unit: dialog.unit
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: dialog.spacing
@@ -318,11 +310,9 @@ DialogWindow {
                             }
                         }
                     }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: dialog.spacing
+                    StudioSection {
+                        title: qsTr("Trim"); colors: dialog.colors; captionFont: dialog.captionFont; unit: dialog.unit
                         enabled: dialog.editor.hasSource
-                        SectionHeader { text: qsTr("Trim") }
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: dialog.spacing
@@ -347,25 +337,16 @@ DialogWindow {
                             }
                         }
                     }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: dialog.spacing
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: dialog.spacing
-                            SectionHeader {
-                                Layout.fillWidth: true
-                                text: qsTr("Loop")
-                            }
-                            StudioToggle {
-                                objectName: "sampleStudioLoop"
-                                enabled: dialog.editor.hasSource
-                                colors: dialog.colors
-                                unit: dialog.unit
-                                text: qsTr("On")
-                                checked: dialog.editor.loopOn
-                                onToggled: checked => dialog.tools.setLoopEnabled(checked)
-                            }
+                    StudioSection {
+                        title: qsTr("Loop"); colors: dialog.colors; captionFont: dialog.captionFont; unit: dialog.unit
+                        headerControls: StudioToggle {
+                            objectName: "sampleStudioLoop"
+                            enabled: dialog.editor.hasSource
+                            colors: dialog.colors
+                            unit: dialog.unit
+                            text: qsTr("On")
+                            checked: dialog.editor.loopOn
+                            onToggled: checked => dialog.tools.setLoopEnabled(checked)
                         }
                         ColumnLayout {
                             Layout.fillWidth: true
@@ -444,11 +425,9 @@ DialogWindow {
                             }
                         }
                     }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: dialog.spacing
+                    StudioSection {
+                        title: qsTr("Pitch"); colors: dialog.colors; captionFont: dialog.captionFont; unit: dialog.unit
                         enabled: dialog.editor.hasSource
-                        SectionHeader { text: qsTr("Pitch") }
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: dialog.spacing
@@ -470,11 +449,9 @@ DialogWindow {
                             onClicked: dialog.tools.applyDetectedPitch()
                         }
                     }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: dialog.spacing
+                    StudioSection {
+                        title: qsTr("Sample rate"); colors: dialog.colors; captionFont: dialog.captionFont; unit: dialog.unit
                         enabled: dialog.editor.hasSource
-                        SectionHeader { text: qsTr("Sample rate") }
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: dialog.spacing

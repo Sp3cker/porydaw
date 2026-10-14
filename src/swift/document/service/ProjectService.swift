@@ -375,9 +375,8 @@ public actor ProjectService {
         }
     }
 
-    /// Applies the complete kit through the store; the session owns publication.
-    /// - Returns: The refreshed bound bank.
-    /// - Throws: A bank conflict or wrapped project failure.
+    /// Applies the complete kit through the store and returns the refreshed bound bank;
+    /// the session owns publication. Throws a bank conflict or wrapped project failure.
     public func applyKitEdit(
         lease: ProjectBankLease, input: KitEditValue, expected: KitEditValue?,
         publishResult: Bool = true, materialization: BlankSlotMaterialization? = nil
@@ -411,9 +410,8 @@ public actor ProjectService {
         }
     }
 
-    /// Reads the bound slot's staged state without publishing a bank transition.
-    /// - Returns: A complete kit, or the parent-only form for a non-kit or undefined slot.
-    /// - Throws: A wrapped project failure if the lease or source is unavailable.
+    /// Reads the bound slot's staged kit (parent-only for a non-kit or undefined slot) without
+    /// publishing a bank transition; throws if the lease or source is unavailable.
     public func readKit(lease: ProjectBankLease, slot: Int) async throws -> KitEditValue {
         try await withStore(lease: lease) { (_: isolated ProjectService, store: ProjectStore) in
             let snapshot = try await store.kitSnapshot(lease: lease, slot: slot)

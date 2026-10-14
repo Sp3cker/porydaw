@@ -48,6 +48,50 @@ ShellLaneSupport {
         shell = null
         wait(0)
     }
+    function test_waveformKeyboardAndTableFollowEdits() {
+        const session = openShell().session
+        session.openProject(rootPath)
+        verify(waitForNative(function() { return session.projectOpen }, 30000), "sample fixture opens")
+        const studio = session.kitStudio()
+        studio.requestOpen()
+        verify(waitForNative(function() { const w = child("splitStudioWindow"); return w !== null && w.visible }, 10000))
+        const window = child("splitStudioWindow")
+        window.width = 1180; window.height = 820
+        studio.loadSource(rootPath + "/samplesources/hires_tone.wav")
+        const view = findChild(window.contentItem, "splitStudioSliceEditor")
+        const editor = view.editor
+        verify(waitForNative(function() { return editor.zoneCount() === 1 }, 10000), "one-shot lands on C2")
+        const zone = findChild(window.contentItem, "splitStudioZoneEditor")
+        const board = findChild(window.contentItem, "splitStudioDropTarget").parent
+        function find(root, accept) {
+            const stack = [root]
+            while (stack.length > 0) {
+                const item = stack.pop()
+                if (accept(item)) return item
+                for (let i = 0; i < item.children.length; ++i) stack.push(item.children[i])
+            }
+            return null
+        }
+        const c2 = find(board, function(item) { return item.index === 36 && item.zone !== undefined })
+        verify(waitForNative(function() { return Qt.colorEqual(c2.color, zone.colors.keyboardActiveKey) }, 5000),
+               "the mapped key paints as mapped")
+        const wave = findChild(window.contentItem, "splitStudioWaveform")
+        waitForRendering(window.contentItem)
+        mouseClick(wave, wave.width * 0.4, wave.height / 2)
+        verify(waitForNative(function() { return editor.sliceCount === 2 }, 5000), "a waveform click splits a slice")
+        wait(400)
+        mouseDoubleClickSequence(wave, wave.width * 0.4, wave.height / 2)
+        verify(waitForNative(function() { return editor.sliceCount === 1 }, 5000), "double-clicking a marker removes it")
+        const id = editor.sliceId(0)
+        editor.renameSlice(id, "renamed_hit")
+        verify(waitForNative(function() {
+            const row = find(view, function(item) { return item.sliceId === id && item.sampleName !== undefined })
+            return row !== null && row.sampleName === "renamed_hit"
+        }, 5000), "the slice table shows the rename")
+        window.close()
+        verify(waitForNative(function() { return studio.promptOpen }, 5000), "unsaved kit asks before closing")
+        studio.answerPrompt(1)
+    }
     function test_quitAsksInFrontOfSplitStudio() {
         const session = openShell().session
         session.openProject(rootPath)

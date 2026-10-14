@@ -48,9 +48,7 @@ struct MarkerWaveformScene {
             fallbackLight: 0xFFFF_FFFF, fallbackDark: 0xFF00_0000)
         playhead = PaletteMath.argb(palette.playhead)
         text = PaletteMath.argb(palette.windowText)
-        // Slice overlay inks derive from the keyed entries above: the single
-        // waveform accent, dimmed outside the selected slice, with the same
-        // wash alpha the loop range uses.
+        // Slice inks: the waveform accent, dimmed outside the selected slice, with the loop wash alpha.
         sliceDim = (waveform & 0x00FF_FFFF) | 0xB800_0000
         sliceWash = (waveform & 0x00FF_FFFF) | 0x1C00_0000
     }

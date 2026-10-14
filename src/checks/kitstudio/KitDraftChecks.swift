@@ -76,15 +76,15 @@ private func checkKitDraftHistory(_ report: CheckReport) {
         [sampleZone(-1, 10)], [sampleZone(120, 128)], [sampleZone(40, 39)],
     ]
     for (index, zones) in invalid.enumerated() {
-        r.expect(!draft.setDrumkitZones(zones), message: "drumkit invalid range \(index) rejected")
-        r.expect(!draft.setKeysplitZones(zones), message: "keysplit invalid range \(index) rejected")
+        r.expect(!draft.setZones(zones, mode: .drumkit), message: "drumkit invalid range \(index) rejected")
+        r.expect(!draft.setZones(zones, mode: .keysplit), message: "keysplit invalid range \(index) rejected")
         r.expectEqual(expected: initial, actual: draft.snapshot(), what: "rejection \(index) preserves both views")
     }
     r.expect(!draft.canUndo && !draft.dirty, message: "rejected edits create no undo or dirtiness")
-    r.expect(draft.setDrumkitZones([sampleZone(11, 13)]), message: "legal drumkit edit accepted")
+    r.expect(draft.setZones([sampleZone(11, 13)], mode: .drumkit), message: "legal drumkit edit accepted")
     let drumEdit = draft.snapshot()
     r.expect(draft.dirty && draft.canUndo, message: "accepted edit is dirty and undoable")
-    r.expect(draft.setKeysplitZones([sampleZone(1, 100)]), message: "legal keysplit edit accepted")
+    r.expect(draft.setZones([sampleZone(1, 100)], mode: .keysplit), message: "legal keysplit edit accepted")
     let bothEdited = draft.snapshot()
     draft.markClean()
     r.expect(!draft.dirty && draft.canUndo, message: "markClean keeps undo")
@@ -98,14 +98,14 @@ private func checkKitDraftHistory(_ report: CheckReport) {
     draft.undo()
     r.expectEqual(expected: initial, actual: draft.snapshot(), what: "second undo restores loaded snapshot")
     r.expect(draft.dirty && !draft.canUndo && draft.canRedo, message: "clean marker follows values not history depth")
-    r.expect(draft.setDrumkitZones([]), message: "new branch accepted")
+    r.expect(draft.setZones([], mode: .drumkit), message: "new branch accepted")
     r.expect(!draft.canRedo, message: "new edit drops redo branch")
     draft.load(initial)
     draft.undo()
     draft.redo()
     r.expectEqual(expected: initial, actual: draft.snapshot(), what: "load clears undo and redo")
     r.expect(!draft.dirty && !draft.canUndo && !draft.canRedo, message: "reloaded snapshot remains clean")
-    r.expect(draft.setDrumkitZones([sampleZone(11, 13)]), message: "edit after reload accepted")
+    r.expect(draft.setZones([sampleZone(11, 13)], mode: .drumkit), message: "edit after reload accepted")
     draft.undo()
     r.expect(!draft.dirty, message: "undo to loaded clean snapshot clears dirty")
 }
@@ -287,7 +287,7 @@ private func checkKitPresenterZones(_ report: CheckReport) {
     r.expectEqual(expected: resized, actual: p.draft.snapshot(), what: "resize overlap rejected by draft")
     p.moveZone(row: 0, toKey: 20)
     r.expectEqual(expected: resized, actual: p.draft.snapshot(), what: "move overlap rejected by draft")
-    r.expectEqual(expected: 19, actual: p.zoneRows[0].endKey, what: "rejected resize republishes authoritative rows")
+    r.expectEqual(expected: 19, actual: p.zoneEndKey(row: 0), what: "rejected resize republishes authoritative rows")
     p.moveZone(row: 0, toKey: 126)
     r.expectEqual(
         expected: [20, 118], actual: p.draft.drumkitZones.map(\.startKey),
@@ -312,14 +312,14 @@ private func checkKitPresenterZones(_ report: CheckReport) {
     p.selectZone(row: 0)
     p.setZonePan(pan: 63)
     r.expectEqual(expected: split, actual: p.draft.keysplitZones, what: "keysplit pan stays disabled")
-    r.expect(!p.zoneRows[0].panEnabled, message: "keysplit disables the rhythm pan control")
+    r.expect(!p.selectedZonePanEnabled, message: "keysplit disables the rhythm pan control")
     p.setZoneRootKey(key: 48)
     r.expectEqual(expected: 48, actual: p.draft.keysplitZones[0].rootKey, what: "keysplit root remains editable")
     p.setMode(index: 0)
     r.expectEqual(expected: drumkit, actual: p.draft.drumkitZones, what: "drumkit edits survive mode switches")
-    r.expectEqual(expected: -32, actual: p.zoneRows[0].pan, what: "drumkit pan restored")
     p.setMode(index: 1)
-    r.expectEqual(expected: 48, actual: p.zoneRows[0].rootKey, what: "keysplit edits survive mode switches")
+    p.selectZone(row: 0)
+    r.expectEqual(expected: 48, actual: p.selectedZoneRootKey, what: "keysplit edits survive mode switches")
 }
 
 

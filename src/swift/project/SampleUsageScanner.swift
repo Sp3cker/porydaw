@@ -3,11 +3,8 @@ import PorydawVoicegroup
 
 /// Resolves sample references through current parsed voicegroup texts, including staged overlays.
 public enum SampleUsageScanner {
-    /// A created subgroup already written to disk is saved work: its references
-    /// protect samples even though no song reaches it yet. Staged overlay edits
-    /// to a created subgroup are still uncommitted, so they root nothing.
-    /// Parsed overlay values, keyed by canonical declaration, override that section's disk text.
-    /// - Throws: A source read failure; callers must not offer deletion on an incomplete scan.
+    /// Disk-written created subgroups protect their samples; overlay values override disk text, but staged
+    /// edits to a created subgroup root nothing. Throws on read failure: never offer deletion then.
     public static func referenced(
         projectRoot: String, candidates: Set<String>, overlay: [String: [VgVoice?]],
         createdSubgroups: Set<String>

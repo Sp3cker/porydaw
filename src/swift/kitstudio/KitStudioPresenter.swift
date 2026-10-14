@@ -7,64 +7,17 @@ import QtBridge
 
 @MainActor
 @QtBridgeable
-public final class KitZoneRow: QmlUncreatable {
-    public let startKey: Int
-    public let endKey: Int
-    public let sampleName: String
-    public let rootKey: Int
-    public let pan: Int
-    public let attack: Int
-    public let decay: Int
-    public let sustain: Int
-    public let release: Int
-    public let selected: Bool
-    public let panEnabled: Bool
-    public let sliceBadge: Int
-    private let modeIndex: Int
-
-    init(zone: KitZone, selected: Bool, mode: KitMode, badge: Int) {
-        modeIndex = mode == .drumkit ? 0 : 1
-        startKey = zone.startKey
-        endKey = zone.endKey
-        sampleName = zone.sampleName
-        rootKey = zone.rootKey
-        pan = zone.pan
-        attack = zone.adsr.attack
-        decay = zone.adsr.decay
-        sustain = zone.adsr.sustain
-        release = zone.adsr.release
-        self.selected = selected
-        panEnabled = mode == .drumkit
-        sliceBadge = badge
-    }
-
-    func matches(zone: KitZone, selected: Bool, mode: KitMode, badge: Int) -> Bool {
-        startKey == zone.startKey && endKey == zone.endKey && sampleName == zone.sampleName
-            && rootKey == zone.rootKey && pan == zone.pan
-            && attack == zone.adsr.attack && decay == zone.adsr.decay && sustain == zone.adsr.sustain
-            && release == zone.adsr.release && sliceBadge == badge
-            && self.selected == selected && modeIndex == (mode == .drumkit ? 0 : 1)
-    }
-}
-
-@MainActor
-@QtBridgeable
 public final class KitSourceRow: QmlUncreatable {
-    public let id: Int
     public let name: String
-    public let sliceCount: Int
     public let active: Bool
 
     init(source: KitSourceSession.Source, active: Bool) {
-        id = source.id
         name = source.sample.suggestedName
-        sliceCount = source.slices.count
         self.active = active
     }
 
     func matches(source: KitSourceSession.Source, active: Bool) -> Bool {
-        id == source.id && name == source.sample.suggestedName && sliceCount == source.slices.count
-            && self.active == active
+        name == source.sample.suggestedName && self.active == active
     }
 }
 
@@ -75,14 +28,12 @@ public final class KitStudioPresenter: QmlUncreatable {
     public var titleText: String = ""
     public var dirty: Bool = false
     public var mode: Int = 0
-    public var saving: Bool = false
     public var metaText: String = ""
     public var voicegroupName: String = ""
     public var voicegroupNameInvalid: Bool = false
     public var canSave: Bool = false
     public var canUndo: Bool = false
     public var canRedo: Bool = false
-    public var zoneRows: QListModel<KitZoneRow> = QListModel()
     public var sourceRows: QListModel<KitSourceRow> = QListModel()
     @QtTracked public var waveform: MarkerWaveformModel? = nil
     public var selectedZone: Int = -1
@@ -102,7 +53,6 @@ public final class KitStudioPresenter: QmlUncreatable {
     public var fileRateText: String = ""
     public var sourceRate: Int = 0
     public var rateChoices: [String] = []
-    public var stateRevision: Int = 0
     public var slicesRevision: Int = 0
     private var lastAddedMarkerId: Int?
     @QtIgnored public var onSaveRequested: (() -> Void)?
@@ -143,7 +93,6 @@ public final class KitStudioPresenter: QmlUncreatable {
         voicegroupName = ""
         voicegroupNameInvalid = true
         voicegroupNameEdited = false
-        saving = false
         resetCleanState()
         refresh()
     }
@@ -218,12 +167,11 @@ public final class KitStudioPresenter: QmlUncreatable {
         }
     }
 
-    /// Typed per-key reads for the AOT-compiled keyboard: QML never indexes zoneRows.
+    /// Typed per-key reads for the AOT-compiled keyboard.
     public func zoneCount() -> Int { zones.count }
     public func zoneIndexAtKey(key: Int) -> Int {
         zones.firstIndex { $0.startKey <= key && key <= $0.endKey } ?? -1
     }
-    public func zoneSelected(row: Int) -> Bool { row == selectedZone }
     public func zoneStartKey(row: Int) -> Int { zones.indices.contains(row) ? zones[row].startKey : 0 }
     public func zoneEndKey(row: Int) -> Int { zones.indices.contains(row) ? zones[row].endKey : 0 }
     public func zoneBadge(row: Int) -> Int {
@@ -341,13 +289,11 @@ public final class KitStudioPresenter: QmlUncreatable {
 
     @discardableResult private func commitZones(_ next: [KitZone]) -> Bool {
         guard next != zones else { return true }
-        let accepted = activeMode == .drumkit ? draft.setDrumkitZones(next) : draft.setKeysplitZones(next)
-        if accepted {
-            return true
-        } else {
+        guard draft.setZones(next, mode: activeMode) else {
             onAlert?("Zones must stay within 0–127 and cannot overlap")
             return false
         }
+        return true
     }
 
     private func autoPlaceSlice(_ sliceName: String) {
@@ -358,8 +304,8 @@ public final class KitStudioPresenter: QmlUncreatable {
         keysplit.append(newZone(name: sliceName, start: key, end: key))
         drumkit.sort { $0.startKey < $1.startKey }
         keysplit.sort { $0.startKey < $1.startKey }
-        _ = draft.setDrumkitZones(drumkit)
-        _ = draft.setKeysplitZones(keysplit)
+        draft.setZones(drumkit, mode: .drumkit)
+        draft.setZones(keysplit, mode: .keysplit)
     }
 
     private func removeSliceZones(_ sliceNames: Set<String>) {
@@ -370,8 +316,8 @@ public final class KitStudioPresenter: QmlUncreatable {
         let keyBefore = keysplit.count
         drumkit.removeAll { sliceNames.contains($0.sampleName) }
         keysplit.removeAll { sliceNames.contains($0.sampleName) }
-        if drumkit.count != drumBefore { _ = draft.setDrumkitZones(drumkit) }
-        if keysplit.count != keyBefore { _ = draft.setKeysplitZones(keysplit) }
+        if drumkit.count != drumBefore { draft.setZones(drumkit, mode: .drumkit) }
+        if keysplit.count != keyBefore { draft.setZones(keysplit, mode: .keysplit) }
         if selectedZone >= zones.count { selectedZone = -1 }
     }
 
@@ -508,8 +454,8 @@ public final class KitStudioPresenter: QmlUncreatable {
             for index in keysplit.indices where keysplit[index].sampleName == oldName {
                 keysplit[index].sampleName = newName
             }
-            if drumkit != draft.drumkitZones { _ = draft.setDrumkitZones(drumkit) }
-            if keysplit != draft.keysplitZones { _ = draft.setKeysplitZones(keysplit) }
+            if drumkit != draft.drumkitZones { draft.setZones(drumkit, mode: .drumkit) }
+            if keysplit != draft.keysplitZones { draft.setZones(keysplit, mode: .keysplit) }
             renamed = true
         }
         if renamed { refresh() }
@@ -553,7 +499,6 @@ public final class KitStudioPresenter: QmlUncreatable {
 
     public func sliceName(id: Int) -> String { sliceValue(id)?.name ?? "" }
     public func sliceStartFrame(id: Int) -> Int { sliceValue(id)?.startFrame ?? 0 }
-    public func sliceEndFrame(id: Int) -> Int { sliceValue(id)?.endFrame ?? 0 }
     public func sliceNumber(name: String) -> Int {
         var count = 0
         for source in session.sources {
@@ -697,7 +642,7 @@ public final class KitStudioPresenter: QmlUncreatable {
     @QtIgnored public func refresh() {
         mode = activeMode == .drumkit ? 0 : 1
         dirty = draft.dirty || activeMode != cleanMode || session.snapshot() != cleanSessionSnapshot
-        canSave = !zones.isEmpty && !saving && !voicegroupNameInvalid && !voicegroupName.isEmpty
+        canSave = !zones.isEmpty && !voicegroupNameInvalid && !voicegroupName.isEmpty
         canUndo = draft.canUndo
         canRedo = draft.canRedo
         titleText = "Split Studio" + (dirty ? " •" : "")
@@ -713,18 +658,6 @@ public final class KitStudioPresenter: QmlUncreatable {
         selectedZoneSustain = zones.indices.contains(selectedZone) ? zones[selectedZone].adsr.sustain : 0
         selectedZoneRelease = zones.indices.contains(selectedZone) ? zones[selectedZone].adsr.release : 0
         selectedZonePanEnabled = zones.indices.contains(selectedZone) && activeMode == .drumkit
-        let zoneValues = zones.enumerated().map { (entry: (offset: Int, element: KitZone)) -> KitZoneRow in
-            let selected = entry.offset == selectedZone
-            let badge = sliceNumber(name: entry.element.sampleName)
-            if entry.offset < zoneRows.count,
-                zoneRows[entry.offset].matches(
-                    zone: entry.element, selected: selected, mode: activeMode, badge: badge)
-            {
-                return zoneRows[entry.offset]
-            }
-            return KitZoneRow(zone: entry.element, selected: selected, mode: activeMode, badge: badge)
-        }
-        syncModel(zoneRows, zoneValues, matches: { (lhs: KitZoneRow, rhs: KitZoneRow) -> Bool in lhs === rhs })
         if !session.sources.contains(where: { $0.id == activeSource }) { activeSource = session.sources.first?.id }
         let sourceValues = session.sources.enumerated().map {
             (entry: (offset: Int, element: KitSourceSession.Source)) -> KitSourceRow in
@@ -736,14 +669,10 @@ public final class KitStudioPresenter: QmlUncreatable {
             return KitSourceRow(source: entry.element, active: active)
         }
         syncModel(sourceRows, sourceValues, matches: { (lhs: KitSourceRow, rhs: KitSourceRow) -> Bool in lhs === rhs })
-        sliceCount = session.sources.reduce(0) { (total: Int, source: KitSourceSession.Source) -> Int in
-            total + source.slices.count
-        }
         sourceRate = currentSource.flatMap { Int(exactly: $0.targetRate.rounded()) } ?? 0
         if let currentSource {
-            let rate = currentSource.sample.sampleRate
-            fileRateText = rate == rate.rounded() ? "\(Int(rate)) Hz" : String(format: "%.2f Hz", rate)
-            rateChoices = ["File rate (\(fileRateText))"] + SampleRatePolicy.rates.map(String.init)
+            fileRateText = SampleStudioReadouts.fileRate(currentSource.sample.sampleRate)
+            rateChoices = SampleStudioReadouts.rateChoices(fileRate: currentSource.sample.sampleRate)
         } else {
             fileRateText = ""
             rateChoices = []
@@ -786,30 +715,24 @@ public final class KitStudioPresenter: QmlUncreatable {
             }
         }
         slicesRevision += 1
-        stateRevision += 1
     }
 
-    /// Footer readout: slice count across sources and ROM bytes of the unique
-    /// samples the active layout maps, each counted once at its saved-at rate.
+    /// Footer readout: slice count and ROM bytes of the unique samples the active layout maps,
+    /// each counted once at its saved-at rate.
     private func updateMeta() {
-        var slices = 0
-        for source in session.sources { slices += source.slices.count }
+        sliceCount = session.sources.reduce(0) { (total: Int, source: KitSourceSession.Source) -> Int in
+            total + source.slices.count
+        }
         let mapped = Set(zones.map(\.sampleName))
         var seen = Set<String>()
         var bytes: UInt64 = 0
         for source in session.sources {
             for (index, slice) in source.slices.enumerated()
             where mapped.contains(slice.name) && seen.insert(slice.name).inserted {
-                let rendered = session.renderSlice(source: source.id, slice: index)
-                bytes += 16 + ((UInt64(rendered.size) + 3) & ~UInt64(3))
+                bytes += SampleStudioReadouts.romBytes(session.renderSlice(source: source.id, slice: index))
             }
         }
-        metaText = "\(slices) \(slices == 1 ? "slice" : "slices") · \(Self.formatRomBytes(bytes)) ROM"
-    }
-
-    private static func formatRomBytes(_ bytes: UInt64) -> String {
-        guard bytes >= 1024 else { return "\(bytes) bytes" }
-        let tenths = (bytes * 10 + 512) / 1024
-        return "\(tenths / 10).\(tenths % 10) KB"
+        let noun = sliceCount == 1 ? "slice" : "slices"
+        metaText = "\(sliceCount) \(noun) · \(SampleStudioReadouts.romSize(bytes: bytes)) ROM"
     }
 }

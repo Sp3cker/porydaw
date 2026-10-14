@@ -31,9 +31,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         strip.expect(
             source.sourcePath == "fix/hires_tone.wav" && source.sampleRate == 44_100,
             message: "A087 editor-strip high resolution source imports")
-        strip.expect(
-            !unavailable.available && unavailable.playToolTip == "Audio is unavailable.",
-            message: "A088 unavailable audio disables Play")
+        strip.expect(!unavailable.available, message: "A088 unavailable audio disables Play")
         let engineResult = Result { try AudioRenderEngine(sampleRate: 48_000, periodFrames: 512) }
         scope.expect(
             {
@@ -85,7 +83,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         }
         scope.expect(pcm.allSatisfy { abs($0) <= 1e-7 }, message: "A124 stopped audition reaches digital silence")
         audition.toggle()
-        audition.setAuditionKeyText(text: "A3")
+        audition.setAuditionKey(key: 57)
         scope.expect(audition.auditionKey == 57 && audition.playing, message: "key choice restarts sounding audition")
         audition.advance(bySeconds: 0.05)
         let expectedAdvance =

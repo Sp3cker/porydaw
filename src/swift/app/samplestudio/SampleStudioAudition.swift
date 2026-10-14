@@ -23,10 +23,7 @@ public final class SampleStudioAudition: QmlUncreatable {
     public var available: Bool
     @QtTracked public var playing = false
     @QtTracked public var playText = "Listen"
-    public var playToolTip: String
     @QtTracked public var auditionKey = 60
-    @QtTracked public var auditionKeyText = "C4 (60)"
-    @QtTracked public var auditionKeyInvalid = false
     public var hasDestinationAdsr: Bool
     public var useDestinationAdsr: Bool
 
@@ -39,10 +36,6 @@ public final class SampleStudioAudition: QmlUncreatable {
         available = lane?.isAvailable ?? false
         hasDestinationAdsr = destinationAdsr != nil
         useDestinationAdsr = destinationAdsr != nil
-        playToolTip =
-            !available
-            ? "Audio is unavailable."
-            : "Audition the render — looped when the loop is enabled; one-shots repeat with a short gap until stopped. Space toggles this from anywhere in the dialog."
         player.onPlayhead = { [weak self] (frame: Int?) in
             guard let self else { return }
             let sourceFrame = frame.map { (_: Int) -> Int in
@@ -73,17 +66,10 @@ public final class SampleStudioAudition: QmlUncreatable {
         player.stop(owner: self)
     }
 
-    public func setAuditionKeyText(text: String) {
-        guard let key = midiKey(from: text) else { auditionKeyInvalid = true; return }
-        auditionKeyInvalid = false
-        setAuditionKey(key: key)
-    }
     public func setAuditionKey(key: Int) {
         let clamped = min(max(0, key), 127)
-        auditionKeyInvalid = false
         guard clamped != auditionKey else { return }
         auditionKey = clamped
-        auditionKeyText = "\(midiKeyName(clamped)) (\(clamped))"
         if playing { start(looped: looped) }
     }
 

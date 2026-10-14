@@ -388,9 +388,8 @@ public final class DocumentSession {
         }
     }
 
-    /// Applies one complete kit and records its captured prior state as one song undo step.
-    /// - Returns: The refreshed bound bank.
-    /// - Throws: A bank conflict or project failure, without recording an action.
+    /// Applies one complete kit as one song undo step and returns the refreshed bound bank;
+    /// a bank conflict or project failure throws without recording an action.
     @discardableResult
     public func applyKitEdit(
         _ edit: KitEditValue, expected: KitEditValue

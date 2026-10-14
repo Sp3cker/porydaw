@@ -15,56 +15,12 @@ Item {
     required property real unit
     required property real paneSpacing
     required property font captionFont
-    function pushAttack(v: real): void {
-        view.editor.setZoneAdsr(
-            Math.round(v), view.editor.selectedZoneDecay, view.editor.selectedZoneSustain,
-            view.editor.selectedZoneRelease)
-    }
-    function pushDecay(v: real): void {
-        view.editor.setZoneAdsr(
-            view.editor.selectedZoneAttack, Math.round(v), view.editor.selectedZoneSustain,
-            view.editor.selectedZoneRelease)
-    }
-    function pushSustain(v: real): void {
-        view.editor.setZoneAdsr(
-            view.editor.selectedZoneAttack, view.editor.selectedZoneDecay, Math.round(v),
-            view.editor.selectedZoneRelease)
-    }
-    function pushRelease(v: real): void {
-        view.editor.setZoneAdsr(
-            view.editor.selectedZoneAttack, view.editor.selectedZoneDecay, view.editor.selectedZoneSustain,
-            Math.round(v))
-    }
-
-    component Section: ColumnLayout {
-        id: section
-        required property string title
-        required property GridPalette colors
-        required property font captionFont
-        required property real unit
-        default property alias content: sectionBody.data
-        Layout.fillWidth: true
-        spacing: section.unit
-        Label {
-            text: section.title
-            font: section.captionFont
-            color: section.colors.secondaryText
-            Component.onCompleted: {
-                font.letterSpacing = section.unit / 13
-                font.capitalization = Font.AllUppercase
-            }
-        }
-        ColumnLayout {
-            id: sectionBody
-            Layout.fillWidth: true
-            spacing: section.unit * 0.7
-        }
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.topMargin: section.unit
-            Layout.preferredHeight: 1
-            color: section.colors.outline
-        }
+    readonly property list<string> envelopeStages: [qsTr("Attack"), qsTr("Decay"), qsTr("Sustain"), qsTr("Release")]
+    function setEnvelopeStage(stage: int, value: real): void {
+        const v = Math.round(value)
+        const e = view.editor
+        e.setZoneAdsr(stage === 0 ? v : e.selectedZoneAttack, stage === 1 ? v : e.selectedZoneDecay,
+                      stage === 2 ? v : e.selectedZoneSustain, stage === 3 ? v : e.selectedZoneRelease)
     }
 
     Rectangle {
@@ -87,7 +43,7 @@ Item {
             x: 1.25 * view.unit
             y: 1.25 * view.unit
             spacing: view.unit * 0.9
-            Section {
+            StudioSection {
                 title: qsTr("Sample rate"); colors: view.colors; captionFont: view.captionFont; unit: view.unit
                 RowLayout {
                     Layout.fillWidth: true
@@ -108,7 +64,7 @@ Item {
                     }
                 }
             }
-            Section {
+            StudioSection {
                 title: qsTr("Selected key"); colors: view.colors; captionFont: view.captionFont; unit: view.unit
                 visible: view.editor.selectedZone >= 0
                 RowLayout {
@@ -147,7 +103,7 @@ Item {
                     }
                 }
             }
-            Section {
+            StudioSection {
                 title: qsTr("Pitch"); colors: view.colors; captionFont: view.captionFont; unit: view.unit
                 visible: view.editor.selectedZone >= 0
                 RowLayout {
@@ -164,7 +120,7 @@ Item {
                     }
                 }
             }
-            Section {
+            StudioSection {
                 title: qsTr("Pan"); colors: view.colors; captionFont: view.captionFont; unit: view.unit
                 visible: view.editor.selectedZone >= 0 && view.editor.selectedZonePanEnabled
                 Slider {
@@ -186,68 +142,32 @@ Item {
                     Label { text: qsTr("R"); color: view.colors.secondaryText }
                 }
             }
-            Section {
+            StudioSection {
                 title: qsTr("Envelope"); colors: view.colors; captionFont: view.captionFont; unit: view.unit
                 visible: view.editor.selectedZone >= 0
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: view.paneSpacing
-                    Label { Layout.preferredWidth: 6 * view.unit; text: qsTr("Attack"); color: view.colors.secondaryText }
-                    Slider {
+                Repeater {
+                    model: view.envelopeStages
+                    RowLayout {
+                        id: stage
+                        required property int index
+                        required property string modelData
+                        readonly property int level: index === 0 ? view.editor.selectedZoneAttack
+                            : index === 1 ? view.editor.selectedZoneDecay
+                            : index === 2 ? view.editor.selectedZoneSustain : view.editor.selectedZoneRelease
                         Layout.fillWidth: true
-                        from: 0
-                        to: 255
-                        stepSize: 1
-                        value: view.editor.selectedZoneAttack
-                        Accessible.name: qsTr("Attack")
-                        onMoved: view.pushAttack(value)
+                        spacing: view.paneSpacing
+                        Label { Layout.preferredWidth: 6 * view.unit; text: stage.modelData; color: view.colors.secondaryText }
+                        Slider {
+                            Layout.fillWidth: true
+                            from: 0
+                            to: 255
+                            stepSize: 1
+                            value: stage.level
+                            Accessible.name: stage.modelData
+                            onMoved: view.setEnvelopeStage(stage.index, value)
+                        }
+                        Label { Layout.preferredWidth: 3 * view.unit; horizontalAlignment: Text.AlignRight; text: "%1".arg(stage.level); color: view.colors.windowText }
                     }
-                    Label { Layout.preferredWidth: 3 * view.unit; horizontalAlignment: Text.AlignRight; text: "%1".arg(view.editor.selectedZoneAttack); color: view.colors.windowText }
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: view.paneSpacing
-                    Label { Layout.preferredWidth: 6 * view.unit; text: qsTr("Decay"); color: view.colors.secondaryText }
-                    Slider {
-                        Layout.fillWidth: true
-                        from: 0
-                        to: 255
-                        stepSize: 1
-                        value: view.editor.selectedZoneDecay
-                        Accessible.name: qsTr("Decay")
-                        onMoved: view.pushDecay(value)
-                    }
-                    Label { Layout.preferredWidth: 3 * view.unit; horizontalAlignment: Text.AlignRight; text: "%1".arg(view.editor.selectedZoneDecay); color: view.colors.windowText }
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: view.paneSpacing
-                    Label { Layout.preferredWidth: 6 * view.unit; text: qsTr("Sustain"); color: view.colors.secondaryText }
-                    Slider {
-                        Layout.fillWidth: true
-                        from: 0
-                        to: 255
-                        stepSize: 1
-                        value: view.editor.selectedZoneSustain
-                        Accessible.name: qsTr("Sustain")
-                        onMoved: view.pushSustain(value)
-                    }
-                    Label { Layout.preferredWidth: 3 * view.unit; horizontalAlignment: Text.AlignRight; text: "%1".arg(view.editor.selectedZoneSustain); color: view.colors.windowText }
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: view.paneSpacing
-                    Label { Layout.preferredWidth: 6 * view.unit; text: qsTr("Release"); color: view.colors.secondaryText }
-                    Slider {
-                        Layout.fillWidth: true
-                        from: 0
-                        to: 255
-                        stepSize: 1
-                        value: view.editor.selectedZoneRelease
-                        Accessible.name: qsTr("Release")
-                        onMoved: view.pushRelease(value)
-                    }
-                    Label { Layout.preferredWidth: 3 * view.unit; horizontalAlignment: Text.AlignRight; text: "%1".arg(view.editor.selectedZoneRelease); color: view.colors.windowText }
                 }
             }
             Button {

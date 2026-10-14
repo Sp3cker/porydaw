@@ -21,6 +21,7 @@ add_library(PorydawSample STATIC
     SampleZeroCrossing.swift
     SampleSlice.swift
     SampleRatePolicy.swift
+    SampleStudioReadouts.swift
 )
 set_target_properties(PorydawSample PROPERTIES
     Swift_MODULE_NAME PorydawSample

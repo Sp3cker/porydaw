@@ -96,24 +96,13 @@ public final class KitDraft {
     }
 
     @discardableResult
-    public func setDrumkitZones(_ zones: [KitZone]) -> Bool {
+    public func setZones(_ zones: [KitZone], mode: KitMode) -> Bool {
         guard Self.valid(zones) else { return false }
         if !editing {
             undoEntries.append(historyState())
             redoEntries.removeAll()
         }
-        drumkitZones = zones
-        return true
-    }
-
-    @discardableResult
-    public func setKeysplitZones(_ zones: [KitZone]) -> Bool {
-        guard Self.valid(zones) else { return false }
-        if !editing {
-            undoEntries.append(historyState())
-            redoEntries.removeAll()
-        }
-        keysplitZones = zones
+        if mode == .drumkit { drumkitZones = zones } else { keysplitZones = zones }
         return true
     }
 

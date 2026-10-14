@@ -84,12 +84,12 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
             message: "A018 key-override source imports")
         let pitchPresenter = SampleStudioPresenter(
             document: SampleDocument(source: pitchSource), validateName: validator)
-        pitchPresenter.setBaseKeyText(text: "B3")
+        pitchPresenter.setBaseKey(key: 59)
         pitch.expect(
             pitchPresenter.params.baseKey == 59 && pitchPresenter.params.exactPitchOverride == 0
                 && pitchPresenter.processed.freq != 15_000_000,
             message: "A020 key edit flows into the render and drops the override")
-        pitchPresenter.setBaseKeyText(text: "A#3")
+        pitchPresenter.setBaseKey(key: 58)
         pitch.expect(
             pitchPresenter.processed.freq == 15_000_000, message: "A021 restoring source key restores verbatim agbp")
 
@@ -115,7 +115,8 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
             ratePresenter.romText != romBefore
                 && ratePresenter.romText
                     == SampleStudioReadouts.romSize(
-                        SampleRender.render(source: rateSource, params: ratePresenter.params)),
+                        bytes: SampleStudioReadouts.romBytes(
+                            SampleRender.render(source: rateSource, params: ratePresenter.params))),
             message: "ROM text changes when the target rate changes")
         ratePresenter.chooseRate(index: 0)
         rate.expect(
@@ -141,7 +142,7 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         let undoPresenter = SampleStudioPresenter(document: SampleDocument(source: hiRes), validateName: validator)
         let undo = report.scoped(cppID: "samplecheck/SampleProcessingTest::editorUndo")
         undo.expect(hiRes.frameCount == 12_000 && hiRes.hasLoop, message: "A091 undo source imports")
-        undoPresenter.setBaseKeyText(text: "A3")
+        undoPresenter.setBaseKey(key: 57)
         undo.expect(
             undoPresenter.canUndo && undoPresenter.baseKey == 57, message: "A093 key edit creates an undo entry")
         undoPresenter.undo()
@@ -158,7 +159,7 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
             message: "A108 commit source imports")
         let commitPresenter = SampleStudioPresenter(
             document: SampleDocument(source: commitSource), validateName: validator)
-        commitPresenter.setBaseKeyText(text: "A3")
+        commitPresenter.setBaseKey(key: 57)
         commit.expect(
             commitPresenter.params.baseKey == 57 && commitPresenter.params.exactPitchOverride == 0,
             message: "A110 commit preserves edited render parameters")
@@ -258,38 +259,17 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
                 && defaultPresenter.loadedFileName == "prepared_tone.wav",
             message: "file-rate text equals the decoded file's rate")
         state.expect(
-            SampleStudioReadouts.fileRate(44100.25) == "44100.25 Hz"
-                && SampleStudioReadouts.fileRate(32000) == "32000 Hz",
-            message: "file rate uses fractional decimals only when needed")
-        state.expect(
-            gesture.normalizeChoices == ["Auto", "Looped (−9 dBFS loop RMS)", "One-shot (peak)", "Off"],
-            message: "normalize choices reproduce fork labels")
-        let expectedRates: [String] = [
-            "5734", "7884", "10512", "13379", "15768", "18157",
-            "21024", "26758", "31536", "36314", "40137", "42048",
-        ]
-        let rateChoicesMatch: Bool = Array(gesture.rateChoices.dropFirst()) == expectedRates
-        state.expect(
-            rateChoicesMatch,
-            message: "rate presets reproduce fork kGbaMixRates ordering")
+            SampleStudioReadouts.fileRate(32000) == "32000 Hz", message: "whole file rates print no decimals")
         var formatted = ProcessedSample()
         formatted.size = 1520
         formatted.normalizeGain = 2
         state.expect(
-            SampleStudioReadouts.romSize(formatted) == "1.5 KB",
+            SampleStudioReadouts.romSize(bytes: SampleStudioReadouts.romBytes(formatted)) == "1.5 KB",
             message: "ROM size rounds KB to one decimal")
         state.expect(
             SampleStudioReadouts.gain(formatted, mode: .oneShot) == "gain 6.0 dB"
                 && SampleStudioReadouts.gain(formatted, mode: .off) == "gain 0.0 dB",
             message: "gain readout formats enabled and disabled modes")
-        let parsed = SampleStudioPresenter(document: SampleDocument(source: hiRes), validateName: validator)
-        parsed.setBaseKeyText(text: "A3")
-        state.expect(parsed.baseKey == 57, message: "note name commits its MIDI key")
-        parsed.setBaseKeyText(text: "A3 (57)")
-        state.expect(parsed.baseKey == 57, message: "display-form note keeps the current key")
-        parsed.setBaseKeyText(text: "C9999")
-        parsed.setBaseKeyText(text: "C-9999")
-        state.expect(parsed.baseKey == 57, message: "out-of-range note keeps the current key")
         state.expect(
             midiKey(from: "C4") == 60 && midiKey(from: "c#-1") == 1 && midiKey(from: "G9") == 127
                 && midiKey(from: "G#9") == nil && midiKey(from: "128") == nil

@@ -92,7 +92,7 @@ Item {
             colors: view.colors
             unit: view.unit
             Accessible.name: qsTr("Zoom waveform out")
-            onClicked: if (view.editor.waveform) view.editor.waveform.zoom(wave.width / 2, -1)
+            onClicked: wave.model.zoom(wave.width / 2, -1)
         }
         IconToolButton {
             Layout.preferredHeight: 2.15 * view.unit
@@ -100,12 +100,12 @@ Item {
             colors: view.colors
             unit: view.unit
             Accessible.name: qsTr("Zoom waveform in")
-            onClicked: if (view.editor.waveform) view.editor.waveform.zoom(wave.width / 2, 1)
+            onClicked: wave.model.zoom(wave.width / 2, 1)
         }
         Button {
             Layout.preferredHeight: 2.15 * view.unit
             text: qsTr("Fit")
-            onClicked: if (view.editor.waveform) view.editor.waveform.fit()
+            onClicked: wave.model.fit()
         }
     }
     Rectangle {
@@ -113,7 +113,7 @@ Item {
         Layout.preferredHeight: Math.max(1, Math.round(view.unit / 13))
         color: view.colors.outline
     }
-    Item {
+    SampleWaveform {
         id: wave
         objectName: "splitStudioWaveform"
         Layout.fillWidth: true
@@ -121,72 +121,20 @@ Item {
         Layout.preferredHeight: 17 * view.unit
         Layout.minimumHeight: 10 * view.unit
         focus: true
-        function resizeModel(): void {
-            if (view.editor.waveform) {
-                view.editor.waveform.setViewport(width, height)
-                view.editor.waveform.setBaseFontPx(view.unit)
-            }
+        model: view.editor.waveform
+        colors: view.colors
+        baseFontPx: view.unit
+        onPressStarted: button => {
+            if (button === Qt.LeftButton)
+                view.workflow.stopAudition()
+            wave.forceActiveFocus()
         }
-        onWidthChanged: resizeModel()
-        onHeightChanged: resizeModel()
-        Component.onCompleted: resizeModel()
-        Connections {
-            target: view.editor
-            function onWaveformChanged(): void { wave.resizeModel() }
+        onClicked: (x, y) => {
+            view.editor.clearLastAddedMarker()
+            if (wave.model.handleAt(x, y) === 0)
+                view.editor.addMarker(x)
         }
-        Rectangle { anchors.fill: parent; color: view.colors.windowBackground }
-        DisplayList {
-            anchors.fill: parent
-            clip: true
-            source: view.editor.waveform
-            list: 0
-            revision: view.editor.waveform ? view.editor.waveform.displayRevision : 0
-        }
-        MouseArea {
-            id: waveInput
-            anchors.fill: parent
-            acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-            property bool markerDrag: false
-            property bool panning: false
-            property bool moved: false
-            onPressed: mouse => {
-                if (mouse.button === Qt.LeftButton) view.workflow.stopAudition()
-                wave.forceActiveFocus()
-                if (!view.editor.waveform) return
-                moved = false
-                panning = mouse.button === Qt.MiddleButton
-                markerDrag = !panning && view.editor.waveform.handleAt(mouse.x, mouse.y) !== 0
-                if (markerDrag || panning) {
-                    view.editor.waveform.press(mouse.x, mouse.y)
-                }
-            }
-            onPositionChanged: mouse => {
-                moved = true
-                if (!pressed || !view.editor.waveform) return
-                if (markerDrag || panning) view.editor.waveform.drag(mouse.x)
-            }
-            onReleased: {
-                if (view.editor.waveform) view.editor.waveform.release()
-            }
-            onCanceled: {
-                if (view.editor.waveform) view.editor.waveform.release()
-            }
-            onClicked: mouse => {
-                view.editor.clearLastAddedMarker()
-                if (mouse.button === Qt.LeftButton && !moved && !markerDrag && !panning) {
-                    view.editor.addMarker(mouse.x)
-                }
-            }
-            onDoubleClicked: mouse => {
-                if (mouse.button === Qt.LeftButton) {
-                    view.editor.removeMarkerAt(mouse.x, mouse.y)
-                }
-            }
-            onWheel: wheel => {
-                if (view.editor.waveform) view.editor.waveform.zoom(wheel.x, wheel.angleDelta.y / 120)
-                wheel.accepted = true
-            }
-        }
+        onDoubleClicked: (x, y) => view.editor.removeMarkerAt(x, y)
         Keys.onPressed: event => {
             if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
                 view.workflow.removeSelectedMarker()
@@ -273,18 +221,9 @@ Item {
                 delegate: Rectangle {
                     id: sliceRow
                     required property int index
-                    readonly property int sliceId: {
-                        void view.editor.slicesRevision
-                        return view.editor.sliceId(index)
-                    }
-                    readonly property string sampleName: {
-                        void view.editor.slicesRevision
-                        return view.editor.sliceName(sliceId)
-                    }
-                    readonly property int sliceNum: {
-                        void view.editor.slicesRevision
-                        return view.editor.sliceOrdinal(sliceId)
-                    }
+                    readonly property int sliceId: view.editor.slicesRevision >= 0 ? view.editor.sliceId(index) : 0
+                    readonly property string sampleName: view.editor.slicesRevision >= 0 ? view.editor.sliceName(sliceId) : ""
+                    readonly property int sliceNum: view.editor.slicesRevision >= 0 ? view.editor.sliceOrdinal(sliceId) : 0
                     readonly property bool isSelected: view.editor.selectedSlice === sliceId
                     property bool editing: false
 

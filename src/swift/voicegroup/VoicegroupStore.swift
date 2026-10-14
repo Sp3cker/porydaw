@@ -336,9 +336,8 @@ public final class VoicegroupStore {
         return .applied(.init(view: record.published, materialization: materialization, materializationToken: nil))
     }
 
-    /// Reads raw parent and child voices through the current kit staging overlays.
-    /// - Returns: A parent-only value for a non-kit or undefined slot.
-    /// - Throws: `VoicegroupStoreError` for an unloaded bank or invalid source.
+    /// Reads raw parent and child voices through the kit staging overlays (parent-only for a non-kit
+    /// or undefined slot); throws `VoicegroupStoreError` for an unloaded bank or invalid source.
     public func kitSnapshot(id: VoicegroupId, slot: Int) throws -> KitSnapshot {
         guard try refreshIfStale(id: id), let source = records[id]?.source else {
             throw VoicegroupStoreError.operationFailed("Voicegroup is not loaded: \(id.sourceRelativePath)")

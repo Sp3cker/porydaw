@@ -51,11 +51,8 @@ extension VoicegroupSource {
         )
     }
 
-    /// Removes generated lines, restoring the insertion's previous header.
-    /// - Parameters:
-    ///   - materialization: The original insertion's narrow undo delta.
-    ///   - authoritative: Ignore later byte edits during whole-kit history replay.
-    /// - Returns: False for a missing delta, or changed bytes unless authoritative.
+    /// Removes generated lines, restoring the insertion's previous header; `authoritative` ignores later
+    /// byte edits during whole-kit replay. False for a missing delta, or changed bytes unless authoritative.
     public func revertBlankSlotMaterialization(
         _ materialization: BlankSlotMaterialization, authoritative: Bool = false
     ) -> Bool {
