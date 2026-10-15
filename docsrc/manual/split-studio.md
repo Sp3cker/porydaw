@@ -120,9 +120,10 @@ Slices can be mapped across the 128-key keyboard (keys 0–127):
   a key to load and map it there. The key under the pointer is outlined and
   labelled with its note name; it turns red, and the drop does nothing, if the
   drag holds unsupported files.
-- **Resizing key ranges** (Keysplit only): Drag the left or right edge handles of
-  a selected key zone to adjust the key range that triggers that slice. Zones
-  never overlap.
+- **Resizing key ranges** (Keysplit only): Drag the left or right edge handle of
+  a selected key zone to adjust the key range that triggers that slice. The zone
+  resizes as you drag, and an edge stops at the neighbouring zone, so zones never
+  overlap.
 - **Removing a mapping**: Click a mapped key to select it, then click **Remove from Key**
   in the inspector.
 

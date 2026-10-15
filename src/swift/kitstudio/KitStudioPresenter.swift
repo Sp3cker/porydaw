@@ -224,15 +224,22 @@ public final class KitStudioPresenter: QmlUncreatable {
         refresh()
     }
 
-    /// Moves one edge of a range to `key`, never past the opposite edge.
+    /// Moves one edge of a range to `key`, stopping at the opposite edge and at neighbouring
+    /// zones, so a live drag never overlaps or reorders rows.
     public func dragZoneEdge(row: Int, fromStart: Bool, key: Int) {
         guard zones.indices.contains(row) else { return }
         let zone = zones[row]
-        selectZone(row: row)
+        if selectedZone != row { selectZone(row: row) }
         if fromStart {
-            resizeZone(row: row, startKey: min(key, zone.endKey), endKey: zone.endKey)
+            let floor =
+                zones.lazy.filter { (other: KitZone) -> Bool in other.endKey < zone.startKey }
+                .map { (other: KitZone) -> Int in other.endKey + 1 }.max() ?? 0
+            resizeZone(row: row, startKey: min(max(key, floor), zone.endKey), endKey: zone.endKey)
         } else {
-            resizeZone(row: row, startKey: zone.startKey, endKey: max(key, zone.startKey))
+            let ceiling =
+                zones.lazy.filter { (other: KitZone) -> Bool in other.startKey > zone.endKey }
+                .map { (other: KitZone) -> Int in other.startKey - 1 }.min() ?? 127
+            resizeZone(row: row, startKey: zone.startKey, endKey: max(min(key, ceiling), zone.startKey))
         }
     }
 

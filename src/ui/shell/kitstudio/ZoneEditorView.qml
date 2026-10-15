@@ -114,13 +114,29 @@ ColumnLayout {
         view.edgeStart = start
         view.edgeKey = start ? view.editor.zoneStartKey(zone) : view.editor.zoneEndKey(zone)
     }
+    // The key whose start (or end) boundary lies nearest x, so a press on an edge never shifts it.
+    function edgeKeyAt(x: real, start: bool): int {
+        let best = 0
+        let distance = Infinity
+        for (let n = 0; n < 128; ++n) {
+            const delta = Math.abs((start ? view.xOf(n) : view.endXOf(n)) - x)
+            if (delta < distance) {
+                best = n
+                distance = delta
+            }
+        }
+        return best
+    }
     function dragEdge(x: real): void {
-        if (view.edgeZone >= 0)
-            view.edgeKey = view.keyAt(x, 0)
+        if (view.edgeZone < 0)
+            return
+        const key = view.edgeKeyAt(x, view.edgeStart)
+        if (key === view.edgeKey)
+            return
+        view.edgeKey = key
+        view.editor.dragZoneEdge(view.edgeZone, view.edgeStart, key)
     }
     function releaseEdge(): void {
-        if (view.edgeZone >= 0)
-            view.editor.dragZoneEdge(view.edgeZone, view.edgeStart, view.edgeKey)
         view.edgeZone = -1
         view.edgeStart = true
         view.edgeKey = 0

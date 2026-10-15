@@ -151,6 +151,43 @@ ShellLaneSupport {
         studio.answerPrompt(1)
         verify(waitForNative(function() { return !window.visible }, 5000), "discard closes Split Studio")
     }
+    function test_keysplitEdgeDragsResizeLiveUpToNeighbours() {
+        const session = openShell().session
+        session.openProject(rootPath)
+        verify(waitForNative(function() { return session.projectOpen }, 30000), "sample fixture opens")
+        const studio = session.kitStudio()
+        studio.requestOpen()
+        verify(waitForNative(function() { const w = child("splitStudioWindow"); return w !== null && w.visible }, 10000))
+        const window = child("splitStudioWindow")
+        window.width = 1180; window.height = 820
+        studio.loadSource(rootPath + "/samplesources/hires_tone.wav")
+        const editor = findChild(window.contentItem, "splitStudioSliceEditor").editor
+        verify(waitForNative(function() { return editor.zoneCount() === 1 }, 10000), "one-shot lands on C2")
+        editor.setMode(1)
+        editor.dropSample(editor.sliceName(editor.sliceId(0)), 40)
+        compare([editor.zoneStartKey(0), editor.zoneEndKey(0), editor.zoneStartKey(1), editor.zoneEndKey(1)],
+                [36, 36, 40, 127], "a second keysplit zone sits three keys above the first")
+        editor.selectZone(0)
+        const zone = findChild(window.contentItem, "splitStudioZoneEditor")
+        const board = findChild(window.contentItem, "splitStudioDropTarget").parent
+        const scroll = findChild(window.contentItem, "splitStudioKeyboardScroll")
+        const y = zone.keysHeight - zone.unit
+        waitForRendering(window.contentItem)
+        verify(waitForNative(function() { return !scroll.moving }, 5000), "keyboard settles before pointer input")
+        mousePress(board, zone.endXOf(36), y)
+        for (let x = zone.endXOf(36); x <= zone.endXOf(45); x += 4) {
+            mouseMove(board, x, y)
+            if (x >= zone.endXOf(38) && x < zone.endXOf(38) + 4)
+                compare(editor.zoneEndKey(0), 38, "the end edge resizes the zone while the drag is still held")
+        }
+        mouseRelease(board, zone.endXOf(45), y)
+        compare(editor.zoneEndKey(0), 39, "the end edge stops at the neighbouring zone")
+        compare(studio.alertText, "", "a drag into a neighbour clamps instead of alerting")
+        window.close()
+        verify(waitForNative(function() { return studio.promptOpen }, 5000), "unsaved kit asks before closing")
+        studio.answerPrompt(1)
+        verify(waitForNative(function() { return !window.visible }, 5000), "discard closes Split Studio")
+    }
     function test_saveVoicegroupWritesNewFile() {
         const presenter = openShell()
         const session = presenter.session
