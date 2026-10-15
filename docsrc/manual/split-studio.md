@@ -200,7 +200,7 @@ overwritten.
 
 If you close Split Studio with unsaved changes — via the window close button,
 **Cmd+W** on macOS / **Ctrl+W** on Windows/Linux, closing the project, or
-quitting the app — a dialog asks **Save Voicegroup** / **Discard** / **Cancel**.
+quitting the app — a dialog asks **Discard** / **Cancel** / **Save Voicegroup**.
 Saving completes the write before closing; Discard closes without saving; Cancel
 aborts the close.
 

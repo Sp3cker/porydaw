@@ -360,11 +360,26 @@ ThemedWindow {
         contentItem: ColumnLayout {
             spacing: studio.spacing
             Label { Layout.fillWidth: true; text: qsTr("Save the voicegroup before closing?"); wrapMode: Text.WordWrap; color: studio.colors.windowText }
+            // Shell dialogs keep the committing action rightmost, after Cancel.
             RowLayout {
+                Layout.fillWidth: true
                 enabled: !studio.workflow.saving
-                Button { text: qsTr("Save Voicegroup"); onClicked: studio.workflow.answerPrompt(0) }
-                Button { text: qsTr("Discard"); onClicked: studio.workflow.answerPrompt(1) }
-                Button { text: qsTr("Cancel"); onClicked: studio.workflow.answerPrompt(2) }
+                Button {
+                    objectName: "splitStudioPromptDiscard"
+                    text: qsTr("Discard")
+                    onClicked: studio.workflow.answerPrompt(1)
+                }
+                Item { Layout.fillWidth: true }
+                Button {
+                    objectName: "splitStudioPromptCancel"
+                    text: qsTr("Cancel")
+                    onClicked: studio.workflow.answerPrompt(2)
+                }
+                Button {
+                    objectName: "splitStudioPromptSave"
+                    text: qsTr("Save Voicegroup")
+                    onClicked: studio.workflow.answerPrompt(0)
+                }
             }
         }
     }
