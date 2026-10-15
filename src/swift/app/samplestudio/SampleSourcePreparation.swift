@@ -13,6 +13,8 @@ final class SampleSourcePreparation {
 
     enum Input: Sendable {
         case file(path: String, preview: Bool)
+        /// A preview of a sample the library already decoded: render only.
+        case previewDecoded(ImportedSample, path: String)
         case decode(SourceRecord, prompt: Bool)
         case zone(Sf2File, SourceRecord)
         case reopen(wav: Data, path: String, provenance: SampleProvenance?)
@@ -107,6 +109,9 @@ final class SampleSourcePreparation {
             } catch let error as SampleImportFailure {
                 throw SampleImportFailure("\(URL(fileURLWithPath: path).lastPathComponent): \(error.message)")
             }
+        case .previewDecoded(let sample, let path):
+            let source = SourceRecord(path: path, bytes: Data(), leftOnly: false, zone: -1)
+            return try render(sample, source: source, params: nil, preview: true, fromSource: true, snapshot: snapshot)
         case .decode(let source, let prompt):
             do {
                 return try decode(source, prompt: prompt, preview: false, snapshot: snapshot)

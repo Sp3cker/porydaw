@@ -2,7 +2,9 @@ import BinaryParsing
 import Foundation
 
 enum SampleAiffReader {
-    static func decode(_ bytes: RawSpan, leftChannelOnly: Bool) throws(SampleImportFailure) -> ImportedSample {
+    static func decode(
+        _ bytes: RawSpan, leftChannelOnly: Bool, onFrames: SampleImport.FrameObserver
+    ) throws(SampleImportFailure) -> ImportedSample {
         func number(_ offset: Int, _ count: Int) -> UInt64 {
             // Call sites bound each fixed-width field within a validated chunk.
             var input = ParserSpan(bytes.extracting(offset..<(offset + count)))
@@ -86,14 +88,14 @@ enum SampleAiffReader {
         guard frames > 0 else { throw SampleImportFailure("no audio data.") }
         var sample = ImportedSample(sampleRate: rate, sourceKind: .aif, sourceChannels: channels, sourceBits: bits)
         let integerScale = pow(2, Double(-(bits - 1)))
-        SampleImport.downmix(
+        try SampleImport.downmix(
             frames, channels: channels, leftOnly: leftChannelOnly,
             read: { index in
                 let at = audioStart + index * (bits / 8)
                 var signed = Int32(Int8(bitPattern: bytes[at]))
                 if bits > 8 { for b in 1..<(bits / 8) { signed = signed << 8 | Int32(bytes[at + b]) } }
                 return (Double(signed) * integerScale, false)
-            }, into: &sample)
+            }, into: &sample, onFrames: onFrames)
         sample.playLength = frames
         let key = Double(baseNote) + Double(detune) / 100
         sample.baseKey = Int(floor(key))

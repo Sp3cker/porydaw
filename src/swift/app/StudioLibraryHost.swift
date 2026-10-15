@@ -14,6 +14,8 @@ final class StudioLibraryHost {
     private let preparation: SampleSourcePreparation
     private(set) var pane: SampleLibraryModel?
     private var auditionLane: SampleAuditionArbiter?
+    // Bumped by every preview and stop, so a preview still awaiting its decode never plays late.
+    private var previewGeneration = 0
     var onLoad: ((String) -> Void)?
     var onOpenFile: (() -> Void)?
     var onPreview: ((String) -> Void)?
@@ -79,17 +81,25 @@ final class StudioLibraryHost {
             return
         }
         pane.setPreviewingPath(path: previewLabel(path, url))
-        preparation.submit(.file(path: url.path, preview: true)) {
-            [weak self] (result: Result<SampleSourcePreparation.Output, Error>) in
-            guard let self, accept() else { return }
-            guard case .success(.prepared(var document, let source, _)) = result else {
-                self.onPreviewFailure(self)
-                if case .failure(let error) = result {
-                    self.pane?.showMessage(text: SampleSourcePreparation.message(for: error))
+        previewGeneration += 1
+        let generation = previewGeneration
+        Task { [weak self] in
+            let decoded = await pane.decodedSample(path: path)
+            guard let self, generation == self.previewGeneration else { return }
+            let input: SampleSourcePreparation.Input =
+                decoded.map { (sample: ImportedSample) in .previewDecoded(sample, path: url.path) }
+                ?? .file(path: url.path, preview: true)
+            self.preparation.submit(input) { [weak self] (result: Result<SampleSourcePreparation.Output, Error>) in
+                guard let self, accept() else { return }
+                guard case .success(.prepared(var document, _, _)) = result else {
+                    self.onPreviewFailure(self)
+                    if case .failure(let error) = result {
+                        self.pane?.showMessage(text: SampleSourcePreparation.message(for: error))
+                    }
+                    return
                 }
-                return
+                self.play(document.processed, path: path, key: key())
             }
-            self.play(document.processed, path: source.path, key: key())
         }
     }
 
@@ -110,6 +120,7 @@ final class StudioLibraryHost {
     }
 
     func clearPreview() {
+        previewGeneration += 1
         pane?.stopPreview()
     }
 }

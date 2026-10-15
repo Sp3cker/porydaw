@@ -6,6 +6,7 @@ import PorydawSample
 public func runSampleChecks(_ report: CheckReport) {
     runDecoderChecks(report)
     runCompressedDecoderChecks(report)
+    runOverviewScanChecks(report)
     runSoundFontChecks(report)
 }
 

@@ -218,6 +218,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         samplecheck/AnalysisChecks.swift
         samplecheck/CompressedDecoderChecks.swift
         samplecheck/DecoderChecks.swift
+        samplecheck/OverviewScanChecks.swift
         samplecheck/DspKernelChecks.swift
         samplecheck/SampleFixtures.swift
         songlist/SongDebugLayoutChecks.swift

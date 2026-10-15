@@ -1,24 +1,26 @@
 import Foundation
 import NativeDisplayList
 import PorydawAppPresentation
+import PorydawSample
 import QtBridge
 
-/// Fit-to-width overview of the previewed library file and its playback position.
+/// Fit-to-width overview of the selected library file and its playback position.
 @MainActor
 @QtBridgeable
 public final class LibraryPreviewStrip: QmlUncreatable {
     private let palette: GridPalette
     private var writer = DisplayListWriter()
-    private var samples: [Int8] = []
+    private var overview = SampleOverview()
     private var gain = 1.0
-    // Per-pixel extrema; rebuilt only when the samples or the width change.
-    private var columns: [(lo: Int8, hi: Int8)] = []
+    // Per-pixel extrema; rebuilt only when the overview or the width change.
+    private var columns: [SamplePeakPyramid.MinMax] = []
     private var list = Data()
     private var width = 0.0
     private var height = 0.0
-    private var playheadFrame: Int?
+    private var playhead: Double?
 
     public var displayRevision: Int = 0
+    @QtIgnored public var decodedFrames: Int { overview.decodedFrames }
 
     @QtIgnored public init(palette: GridPalette) { self.palette = palette }
 
@@ -32,36 +34,37 @@ public final class LibraryPreviewStrip: QmlUncreatable {
         rebuild()
     }
 
-    @QtIgnored public func setSamples(_ samples: [Int8]) {
-        self.samples = samples
-        var peak = 0
-        for value in samples { peak = max(peak, abs(Int(value))) }
-        gain = peak > 1 ? min(8, 0.9 * 128 / Double(peak)) : 1
-        playheadFrame = nil
+    /// Draws the decoded prefix of `overview` over the strip's full width.
+    @QtIgnored public func setOverview(_ overview: SampleOverview) {
+        self.overview = overview
         measure()
         rebuild()
     }
 
-    @QtIgnored public func setPlayhead(frame: Int?) {
-        guard playheadFrame != frame else { return }
-        playheadFrame = frame
+    /// The playback position as a fraction of the file; nil hides the playhead.
+    @QtIgnored public func setPlayhead(fraction: Double?) {
+        guard playhead != fraction else { return }
+        playhead = fraction
         rebuild()
     }
 
     private func measure() {
         columns.removeAll(keepingCapacity: true)
         let count = Int(width)
-        guard count > 0, !samples.isEmpty else { return }
+        let bins = overview.bins
+        let total = (overview.frameCount + overview.stride - 1) / overview.stride
+        guard count > 0, !bins.isEmpty else { return }
+        var peak: Float = 0
+        for bin in bins { peak = max(peak, -bin.lo, bin.hi) }
+        gain = peak > 1 / 128 ? min(8, 0.9 / Double(peak)) : 1
         for column in 0..<count {
-            let from = samples.count * column / count
-            let to = max(from + 1, samples.count * (column + 1) / count)
-            var lo = Int8.max
-            var hi = Int8.min
-            for value in samples[from..<to] {
-                lo = min(lo, value)
-                hi = max(hi, value)
+            let from = total * column / count
+            guard from < bins.count else { break }
+            var extrema = bins[from]
+            for bin in bins[(from + 1)..<min(bins.count, max(from + 1, total * (column + 1) / count))] {
+                extrema.include(bin)
             }
-            columns.append((lo: lo, hi: hi))
+            columns.append(extrema)
         }
     }
 
@@ -70,14 +73,13 @@ public final class LibraryPreviewStrip: QmlUncreatable {
         let scale = height * 0.45
         let ink = PaletteMath.argb(palette.sampleWaveformInk)
         for (pixel, column) in columns.enumerated() {
-            let top = middle - (min(1, Double(column.hi) * gain / 128) * scale).rounded()
-            let bottom = middle - (max(-1, Double(column.lo) * gain / 128) * scale).rounded()
+            let top = middle - (min(1, Double(column.hi) * gain) * scale).rounded()
+            let bottom = middle - (max(-1, Double(column.lo) * gain) * scale).rounded()
             rect(Double(pixel), top, 1, max(1, bottom - top + 1), ink)
         }
-        if let playheadFrame, !samples.isEmpty {
+        if let playhead {
             let line = SharedPlayheadAppearance.lineWidth
-            let x = (Double(playheadFrame) / Double(samples.count) * width).rounded()
-            rect(x - line / 2, 0, line, height, PaletteMath.argb(palette.playhead))
+            rect((playhead * width).rounded() - line / 2, 0, line, height, PaletteMath.argb(palette.playhead))
         }
         list = writer.finish()
         displayRevision += 1

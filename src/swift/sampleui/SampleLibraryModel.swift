@@ -96,9 +96,14 @@ public final class SampleLibraryModel: QmlUncreatable {
     private var currentFiles: [String] = []
     private var message = ""
     private var previewingPath = ""
-    // The file the strip currently draws; the strip clears once another file is selected.
-    private var stripPath = ""
+    private var previewFrames = 1
+    // The selected file's scan; its result is the decode a preview reuses.
+    private var scanPath = ""
+    private var scan: Task<ImportedSample?, Never>?
+    private var settle: Task<Void, Never>?
     @QtIgnored let previewPlayer: PcmAuditionPlayer
+    /// How long a selection rests before its scan starts; explicit previews and loads skip it.
+    @QtIgnored var settleDelay: Duration = .milliseconds(200)
 
     public var folders: QListModel<SampleLibraryFolderRow> = QListModel()
     public var files: QListModel<SampleLibraryFileRow> = QListModel()
@@ -204,6 +209,7 @@ public final class SampleLibraryModel: QmlUncreatable {
     public func activateFile(row: Int) {
         guard currentFiles.indices.contains(row) else { return }
         selectFile(row: row)
+        startScan(currentFiles[row])
         loadSelected()
     }
 
@@ -240,14 +246,21 @@ public final class SampleLibraryModel: QmlUncreatable {
         updateState()
     }
 
-    /// Sounds a prepared preview once at `key` and draws it in the strip; the end clears `previewing`.
+    /// The selected file's decode, starting its scan now if the settle has not; nil when the
+    /// decode fails or the selection moves on.
+    @QtIgnored public func decodedSample(path: String) async -> Optional<ImportedSample> {
+        guard path == selectedFilePath else { return nil }
+        startScan(path)
+        return await scan?.value
+    }
+
+    /// Sounds a prepared preview once at `key`; the end clears `previewing`.
     @QtIgnored public func playPreview(_ rendered: ProcessedSample, path: String, key: UInt8, toneKey: UInt8) {
         previewPlayer.play(
             owner: self, rendered: rendered, looped: false, key: key, adsr: AudioADSR(), toneKey: toneKey)
-        stripPath = path
-        preview.setSamples(rendered.s8)
-        preview.setPlayhead(frame: 0)
+        previewFrames = max(1, rendered.s8.count)
         setPreviewingPath(path: path)
+        previewPlayheadMoved(0)
     }
 
     public func tickPreview() { previewPlayer.tick() }
@@ -258,9 +271,52 @@ public final class SampleLibraryModel: QmlUncreatable {
     }
 
     private func previewPlayheadMoved(_ frame: Int?) {
-        preview.setPlayhead(frame: frame)
+        let drawn = previewingPath == selectedFilePath ? frame : nil
+        preview.setPlayhead(fraction: drawn.map { (frame: Int) -> Double in Double(frame) / Double(previewFrames) })
         // A nil frame while still playing is the one-shot's natural end.
         if frame == nil, previewPlayer.playing { stopPreview() }
+    }
+
+    private func scheduleScan() {
+        settle?.cancel()
+        scan?.cancel()
+        scan = nil
+        scanPath = ""
+        preview.setOverview(SampleOverview())
+        preview.setPlayhead(fraction: nil)
+        guard let path = selectedFilePath else { return }
+        let delay = settleDelay
+        settle = Task { [weak self] in
+            // A cancelled sleep is a superseded selection; the check below ends it.
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            self?.startScan(path)
+        }
+    }
+
+    private func startScan(_ path: String) {
+        settle?.cancel()
+        guard scanPath != path else { return }
+        scan?.cancel()
+        scanPath = path
+        let publish: @Sendable (SampleOverview) -> Void = { [weak self] (overview: SampleOverview) in
+            Task { @MainActor [weak self] in self?.showOverview(overview, path: path) }
+        }
+        scan = Task { () -> ImportedSample? in await Self.scanFile(path, publish: publish) }
+    }
+
+    @concurrent
+    private static func scanFile(
+        _ path: String, publish: @escaping @Sendable (SampleOverview) -> Void
+    ) async -> ImportedSample? {
+        // A failed or cancelled scan yields nil; the preview then decodes itself and reports the error.
+        try? SampleOverview.scan(path: path, publish: publish, isCancelled: { () -> Bool in Task.isCancelled })
+    }
+
+    private func showOverview(_ overview: SampleOverview, path: String) {
+        // Snapshot tasks may land out of order; a shorter prefix is stale.
+        guard path == scanPath, overview.decodedFrames >= preview.decodedFrames else { return }
+        preview.setOverview(overview)
     }
 
     public func clearFileSelection() {
@@ -317,10 +373,7 @@ public final class SampleLibraryModel: QmlUncreatable {
                 files[row] = item
             }
         }
-        if !stripPath.isEmpty, selectedFilePath != stripPath {
-            stripPath = ""
-            preview.setSamples([])
-        }
+        scheduleScan()
     }
 
     private func updateState() {

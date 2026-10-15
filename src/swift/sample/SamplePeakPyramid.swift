@@ -1,9 +1,19 @@
 import Foundation
 
 public struct SamplePeakPyramid {
-    public struct MinMax {
+    public struct MinMax: Sendable, Equatable {
         public var lo: Float
         public var hi: Float
+
+        public mutating func include(_ value: Float) {
+            lo = min(lo, value)
+            hi = max(hi, value)
+        }
+
+        public mutating func include(_ other: MinMax) {
+            lo = min(lo, other.lo)
+            hi = max(hi, other.hi)
+        }
     }
 
     private static let block = 16
@@ -12,9 +22,7 @@ public struct SamplePeakPyramid {
 
     public init(samples: [Float]) {
         frameCount = samples.count
-        guard !samples.isEmpty else { return }
-        var block = Self.block
-        while true {
+        for block in Self.levelStrides(frameCount: samples.count) {
             let count = (samples.count + block - 1) / block
             var level: [MinMax] = []
             level.reserveCapacity(count)
@@ -23,26 +31,26 @@ public struct SamplePeakPyramid {
                     let start = bucket * Self.block
                     let end = min(previous.count, start + Self.block)
                     var extrema = previous[start]
-                    for index in (start + 1)..<end {
-                        extrema.lo = min(extrema.lo, previous[index].lo)
-                        extrema.hi = max(extrema.hi, previous[index].hi)
-                    }
+                    for index in (start + 1)..<end { extrema.include(previous[index]) }
                     level.append(extrema)
                 } else {
                     let start = bucket * block
                     let end = min(samples.count, start + block)
                     var extrema = MinMax(lo: samples[start], hi: samples[start])
-                    for index in (start + 1)..<end {
-                        extrema.lo = min(extrema.lo, samples[index])
-                        extrema.hi = max(extrema.hi, samples[index])
-                    }
+                    for index in (start + 1)..<end { extrema.include(samples[index]) }
                     level.append(extrema)
                 }
             }
             levels.append(level)
-            if count <= Self.block { break }
-            block *= Self.block
         }
+    }
+
+    /// Frames per bin of each level: 16, 256, … up to the first level of 16 bins or fewer.
+    public static func levelStrides(frameCount: Int) -> [Int] {
+        guard frameCount > 0 else { return [] }
+        var strides = [block]
+        while let last = strides.last, (frameCount + last - 1) / last > block { strides.append(last * block) }
+        return strides
     }
 
     public func query(samples: [Float], from lower: Int, to upper: Int) -> MinMax {
@@ -58,28 +66,16 @@ public struct SamplePeakPyramid {
         }
         var result = MinMax(lo: samples[from], hi: samples[from])
         if selected < 0 {
-            for index in from..<to {
-                result.lo = min(result.lo, samples[index])
-                result.hi = max(result.hi, samples[index])
-            }
+            for index in from..<to { result.include(samples[index]) }
             return result
         }
         var levelBlock = Self.block
         for _ in 0..<selected { levelBlock *= Self.block }
         let first = (from + levelBlock - 1) / levelBlock
         let last = to / levelBlock
-        for index in from..<min(to, first * levelBlock) {
-            result.lo = min(result.lo, samples[index])
-            result.hi = max(result.hi, samples[index])
-        }
-        for bucket in first..<last {
-            result.lo = min(result.lo, levels[selected][bucket].lo)
-            result.hi = max(result.hi, levels[selected][bucket].hi)
-        }
-        for index in max(from, last * levelBlock)..<to {
-            result.lo = min(result.lo, samples[index])
-            result.hi = max(result.hi, samples[index])
-        }
+        for index in from..<min(to, first * levelBlock) { result.include(samples[index]) }
+        for bucket in first..<last { result.include(levels[selected][bucket]) }
+        for index in max(from, last * levelBlock)..<to { result.include(samples[index]) }
         return result
     }
 }

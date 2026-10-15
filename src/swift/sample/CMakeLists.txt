@@ -18,6 +18,7 @@ add_library(PorydawSample STATIC
     SampleProvenance.swift
     SampleReopen.swift
     SamplePeakPyramid.swift
+    SampleOverview.swift
     SampleZeroCrossing.swift
     SampleSlice.swift
     SampleRatePolicy.swift

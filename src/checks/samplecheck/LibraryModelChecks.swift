@@ -44,6 +44,8 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
             try Data([0x12]).write(to: library.appendingPathComponent(name))
         }
         try Data([0x34]).write(to: hidden.appendingPathComponent("secret.wav"))
+        let toneSamples = (0..<3000).map { (index: Int) -> UInt8 in UInt8(128 + Int(100 * sin(Double(index) / 9))) }
+        try fixtureWav(SampleFixtureSpec(samples: toneSamples)).write(to: library.appendingPathComponent("tone.wav"))
         var linkedDirectory = false
         do {
             try FileManager.default.createSymbolicLink(
@@ -157,25 +159,55 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
             !model.files[0].selected && !model.files[1].selected,
             message: "clearing selection unhighlights every row")
 
-        let strip = report.scoped(cppID: "swiftcore/SampleLibraryModel::previewStrip")
+        let strip = report.scoped(cppID: "swiftcore/SampleLibraryModel::selectionOverview")
+        func pump(seconds: Double, until done: () -> Bool) -> Bool {
+            let deadline = Date().addingTimeInterval(seconds)
+            while !done() && Date() < deadline {
+                RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+            }
+            return done()
+        }
         model.preview.setViewport(width: 40, height: 20)
         let blank = model.preview.displayList(list: 0)
-        model.selectFile(row: 0)
+        guard let toneRow = names.firstIndex(of: "tone.wav"), let otherRow = names.firstIndex(of: "tone.ogg") else {
+            strip.expect(false, message: "the listing must hold the real WAV and a second file")
+            return
+        }
+        let tonePath = model.files[toneRow].path
+        model.settleDelay = .seconds(3600)
+        model.selectFile(row: toneRow)
+        strip.expect(
+            !pump(seconds: 0.3, until: { () -> Bool in model.preview.displayList(list: 0) != blank }),
+            message: "a selection that has not settled decodes nothing")
+        let decoded = try? runBlocking { () async -> ImportedSample? in await model.decodedSample(path: tonePath) }
+        strip.expect(
+            decoded?.frameCount == 3000
+                && pump(seconds: 5, until: { () -> Bool in model.preview.displayList(list: 0) != blank })
+                && !model.previewing,
+            message: "an explicit preview decodes the selection at once and draws it without playback")
+        let otherPath = model.files[otherRow].path
+        let unselected = try? runBlocking { () async -> ImportedSample? in await model.decodedSample(path: otherPath) }
+        strip.expect(unselected == nil, message: "only the selected file is decoded for a preview")
+        model.settleDelay = .zero
+        model.selectFile(row: otherRow)
+        strip.expect(
+            model.preview.displayList(list: 0) == blank, message: "selecting another file clears the picture at once")
+        model.selectFile(row: toneRow)
+        strip.expect(
+            pump(seconds: 5, until: { () -> Bool in model.preview.displayList(list: 0) != blank }),
+            message: "a settled selection draws its waveform without playback")
+        let still = model.preview.displayList(list: 0)
         var tone = ProcessedSample()
         tone.s8 = [0, 64, -64, 32, -32, 0, 16, -16]
         tone.freq = 8 * 1024
-        model.playPreview(tone, path: model.files[0].path, key: 60, toneKey: 60)
+        model.playPreview(tone, path: tonePath, key: 60, toneKey: 60)
         strip.expect(
-            model.previewing && model.preview.displayList(list: 0) != blank,
-            message: "a sounding preview draws its waveform and reports previewing")
+            model.previewing && model.preview.displayList(list: 0) != still,
+            message: "a sounding preview of the selection draws its playhead over the waveform")
         model.previewPlayer.advance(bySeconds: 2)
         strip.expect(
-            !model.previewing && model.preview.displayList(list: 0) != blank,
-            message: "a preview sounds once; its end clears previewing but keeps the waveform")
-        model.selectFile(row: 1)
-        strip.expect(
-            model.preview.displayList(list: 0) == blank,
-            message: "selecting another file clears the previewed waveform")
+            !model.previewing && model.preview.displayList(list: 0) == still,
+            message: "a preview sounds once; its end removes the playhead and keeps the waveform")
 
         let failures = report.scoped(cppID: "swiftcore/SampleLibraryModel::failureStatus")
         model.showMessage(text: "Cannot read tone.wav.")

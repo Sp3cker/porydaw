@@ -3,7 +3,7 @@ import PorydawSampleCodec
 
 enum SampleCompressedDecode {
     static func decode(
-        _ bytes: Data, kind: SampleSourceKind, leftChannelOnly: Bool
+        _ bytes: Data, kind: SampleSourceKind, leftChannelOnly: Bool, onFrames: SampleImport.FrameObserver
     ) throws(SampleImportFailure) -> ImportedSample {
         let codec: PdSampleCodec
         let label: String
@@ -44,15 +44,15 @@ enum SampleCompressedDecode {
         if kind == .flac {
             guard let raw = pcm.s32 else { throw SampleImportFailure(corruption) }
             let values = Span(_unsafeStart: raw, count: Int(pcm.sampleCount))
-            SampleImport.downmix(
+            try SampleImport.downmix(
                 frames, channels: channels, leftOnly: leftChannelOnly,
-                read: { (Double(values[$0]) / 2_147_483_648, false) }, into: &sample)
+                read: { (Double(values[$0]) / 2_147_483_648, false) }, into: &sample, onFrames: onFrames)
         } else {
             guard let raw = pcm.f32 else { throw SampleImportFailure(corruption) }
             let values = Span(_unsafeStart: raw, count: Int(pcm.sampleCount))
-            SampleImport.downmix(
+            try SampleImport.downmix(
                 frames, channels: channels, leftOnly: leftChannelOnly,
-                read: { (min(1, max(-1, Double(values[$0]))), false) }, into: &sample)
+                read: { (min(1, max(-1, Double(values[$0]))), false) }, into: &sample, onFrames: onFrames)
         }
         return sample
     }
