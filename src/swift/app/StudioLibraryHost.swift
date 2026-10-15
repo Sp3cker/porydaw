@@ -39,7 +39,7 @@ final class StudioLibraryHost {
     func library() -> SampleLibraryModel? {
         if let pane { return pane }
         guard let session else { return nil }
-        let pane = SampleLibraryModel(preferences: session.preferences)
+        let pane = SampleLibraryModel(preferences: session.preferences, palette: session.palette, lane: lane())
         pane.onLoadRequested = { [weak self] (path: String) in self?.onLoad?(path) }
         pane.onOpenFileRequested = { [weak self] in self?.onOpenFile?() }
         pane.onPreviewRequested = { [weak self] (path: String) in self?.onPreview?(path) }
@@ -67,7 +67,8 @@ final class StudioLibraryHost {
         return lane
     }
 
-    func preview(path: String, accept: @escaping () -> Bool, play: @escaping (ProcessedSample, String) -> Void) {
+    /// Prepares and sounds `path` once; a nil `key` plays the file at its own pitch.
+    func preview(path: String, accept: @escaping () -> Bool, key: @escaping () -> Int?) {
         guard let pane else { return }
         guard previewAllowed(self) else {
             pane.showMessage(text: "Audio is unavailable.")
@@ -88,11 +89,11 @@ final class StudioLibraryHost {
                 }
                 return
             }
-            play(document.processed, source.path)
+            self.play(document.processed, path: source.path, key: key())
         }
     }
 
-    func publishPreview(_ rendered: ProcessedSample, path: String, key: Int) {
+    private func play(_ rendered: ProcessedSample, path: String, key: Int?) {
         guard let pane else { return }
         guard !rendered.s8.isEmpty else {
             clearPreview()
@@ -104,21 +105,11 @@ final class StudioLibraryHost {
             pane.showMessage(text: "Audio is unavailable.")
             return
         }
-        guard
-            lane.publish(
-                owner: self, samples: rendered.s8, frequency: rendered.freq,
-                loopStart: 0, looped: false, key: UInt8(clamping: key),
-                adsr: AudioADSR(), toneKey: UInt8(clamping: min(rendered.unityNote, 127)))
-        else {
-            clearPreview()
-            pane.showMessage(text: "The audition engine is busy.")
-            return
-        }
-        pane.setPreviewingPath(path: path)
+        let toneKey = UInt8(clamping: min(rendered.unityNote, 127))
+        pane.playPreview(rendered, path: path, key: key.map { UInt8(clamping: $0) } ?? toneKey, toneKey: toneKey)
     }
 
     func clearPreview() {
-        auditionLane?.stop(owner: self)
-        pane?.setPreviewingPath(path: "")
+        pane?.stopPreview()
     }
 }

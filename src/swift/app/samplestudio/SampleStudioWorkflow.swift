@@ -100,10 +100,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         libraryHost.clearPreview()
         libraryHost.preview(
             path: path, accept: sourceAcceptance(session: session),
-            play: { [weak self] (rendered: ProcessedSample, path: String) in
-                guard let self else { return }
-                self.libraryHost.publishPreview(rendered, path: path, key: self.player?.auditionKey ?? 60)
-            })
+            key: { [weak self] () -> Int? in self?.player?.auditionKey })
     }
 
     /// Stops only the preview owned by this studio and clears its pane label.

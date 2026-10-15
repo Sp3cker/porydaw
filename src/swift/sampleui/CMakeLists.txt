@@ -5,6 +5,7 @@ add_library(PorydawSampleUI STATIC
     PcmAuditionPlayer.swift
     MarkerWaveformModel.swift
     MarkerWaveformScene.swift
+    LibraryPreviewStrip.swift
 )
 porydaw_swift_module(PorydawSampleUI PorydawSampleUI)
 set_target_properties(PorydawSampleUI PROPERTIES

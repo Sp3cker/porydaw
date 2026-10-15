@@ -61,7 +61,8 @@ determines what is written to the project.
 Each audio source loaded into Split Studio gets its own tab above the waveform
 and tracks its own markers, slices, and sample rate:
 
-- **Loading files**: Click an audio file in the sample library to preview it.
+- **Loading files**: Click an audio file in the sample library to preview it
+  once; the strip under the file list shows its waveform and playhead.
   Double-click a file or click **Open File…** to load it into a new file tab. To
   close a file tab, click its **×** button; closing a tab automatically clears any
   keyboard keys mapped to its slices.

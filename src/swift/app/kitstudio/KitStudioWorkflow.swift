@@ -115,7 +115,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
         selectedMarker = nil
         presenter.applySuggestedVoicegroupName(nextFreeVoicegroupName(stem: "new_kit"))
         restoreGeometry()
-        pcm = PcmAuditionPlayer(lane: SampleAuditionArbiter(output: session.audio))
+        pcm = PcmAuditionPlayer(lane: libraryHost.lane())
         pcm?.onPlayhead = { [weak self] (frame: Int?) in
             guard let self, let id = self.playingSlice else { return }
             let sourceFrame = frame.flatMap { (_: Int) -> Int? in
@@ -260,12 +260,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
         libraryHost.preview(
             path: path,
             accept: { [weak self] () -> Bool in self?.windowOpen == true && self?.saving == false },
-            play: { [weak self] (rendered: ProcessedSample, _: String) in
-                guard let self else { return }
-                self.pcm?.play(
-                    owner: self, rendered: rendered, looped: rendered.looped, key: 60, adsr: AudioADSR(), toneKey: 60)
-                self.auditionPlaying = self.pcm?.playing ?? false
-            })
+            key: { () -> Int? in nil })
     }
 
     public func keyName(key: Int) -> String { midiKeyName(key) }

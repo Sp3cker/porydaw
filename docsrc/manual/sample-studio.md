@@ -42,9 +42,11 @@ highlighted bookmark, not any files on disk. The library browser does not show
 hover tooltips.
 
 Click an audio file to preview it; pressing Enter or Space while the file list
-has focus toggles the preview. Moving through the list with arrow keys only
-changes the selection. Double-click a file to load it into the editor as the
-active source (there are no separate Preview or Load buttons). Click
+has focus toggles the preview. A preview plays once. The strip under the file
+list draws the previewed file's waveform with a playhead that moves while it
+plays; it clears when another file is selected. Moving through the list with
+arrow keys only changes the selection. Double-click a file to load it into the
+editor as the active source (there are no separate Preview or Load buttons). Click
 **Open File…** to open the file picker directly, including for SoundFont `.sf2`
 files and zones. If a file cannot be loaded, the current edit, name, and undo
 history stay intact; the library shows the error without replacing the source.

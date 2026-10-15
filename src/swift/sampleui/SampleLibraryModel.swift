@@ -1,4 +1,5 @@
 import Foundation
+import PorydawAppAudio
 import PorydawAppPresentation
 import PorydawSample
 import QtBridge
@@ -95,23 +96,31 @@ public final class SampleLibraryModel: QmlUncreatable {
     private var currentFiles: [String] = []
     private var message = ""
     private var previewingPath = ""
+    // The file the strip currently draws; the strip clears once another file is selected.
+    private var stripPath = ""
+    @QtIgnored let previewPlayer: PcmAuditionPlayer
 
     public var folders: QListModel<SampleLibraryFolderRow> = QListModel()
     public var files: QListModel<SampleLibraryFileRow> = QListModel()
+    @QtTracked public let preview: LibraryPreviewStrip
     // Failure-only readout: empty unless the last preview/load attempt failed.
     @QtTracked public var statusText = ""
     @QtTracked public var canRemove = false
     @QtTracked public var filesVisible = false
+    @QtTracked public var previewing = false
     @QtIgnored public var onPreviewRequested: ((String) -> Void)?
     @QtIgnored public var onPreviewStopRequested: (() -> Void)?
     @QtIgnored public var onLoadRequested: ((String) -> Void)?
     @QtIgnored public var onOpenFileRequested: (() -> Void)?
 
     @QtIgnored
-    public init(preferences: PreferencesStore) {
+    public init(preferences: PreferencesStore, palette: GridPalette, lane: SampleAuditionArbiter?) {
         self.preferences = preferences
+        preview = LibraryPreviewStrip(palette: palette)
+        previewPlayer = PcmAuditionPlayer(lane: lane)
         let paths = Self.normalized(preferences.strings(Self.foldersKey) ?? [])
         roots = paths.map { FolderNode(path: $0, depth: 0, rootPath: $0) }
+        previewPlayer.onPlayhead = { [weak self] (frame: Int?) in self?.previewPlayheadMoved(frame) }
         persistRoots()
         navigate(to: roots.first)
     }
@@ -231,6 +240,29 @@ public final class SampleLibraryModel: QmlUncreatable {
         updateState()
     }
 
+    /// Sounds a prepared preview once at `key` and draws it in the strip; the end clears `previewing`.
+    @QtIgnored public func playPreview(_ rendered: ProcessedSample, path: String, key: UInt8, toneKey: UInt8) {
+        previewPlayer.play(
+            owner: self, rendered: rendered, looped: false, key: key, adsr: AudioADSR(), toneKey: toneKey)
+        stripPath = path
+        preview.setSamples(rendered.s8)
+        preview.setPlayhead(frame: 0)
+        setPreviewingPath(path: path)
+    }
+
+    public func tickPreview() { previewPlayer.tick() }
+
+    @QtIgnored public func stopPreview() {
+        previewPlayer.stop(owner: self)
+        setPreviewingPath(path: "")
+    }
+
+    private func previewPlayheadMoved(_ frame: Int?) {
+        preview.setPlayhead(frame: frame)
+        // A nil frame while still playing is the one-shot's natural end.
+        if frame == nil, previewPlayer.playing { stopPreview() }
+    }
+
     public func clearFileSelection() {
         setFileSelection(nil)
         updateState()
@@ -285,6 +317,10 @@ public final class SampleLibraryModel: QmlUncreatable {
                 files[row] = item
             }
         }
+        if !stripPath.isEmpty, selectedFilePath != stripPath {
+            stripPath = ""
+            preview.setSamples([])
+        }
     }
 
     private func updateState() {
@@ -295,6 +331,7 @@ public final class SampleLibraryModel: QmlUncreatable {
             } ?? false
         canRemove = selectedFolder != nil
         statusText = message
+        previewing = !previewingPath.isEmpty
     }
 
     private func persistRoots() {

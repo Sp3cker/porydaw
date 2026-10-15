@@ -291,6 +291,35 @@ Item {
                 }
             }
         }
+        Rectangle {
+            id: previewStrip
+            objectName: "sampleLibraryPreview"
+            Layout.fillWidth: true
+            Layout.preferredHeight: 2.15 * pane.unit
+            visible: files.visible
+            radius: pane.unit / 3
+            color: pane.colors.windowBackground
+            Accessible.role: Accessible.Graphic
+            Accessible.name: qsTr("Preview waveform")
+            DisplayList {
+                id: previewList
+                anchors.fill: parent
+                anchors.leftMargin: previewStrip.radius
+                anchors.rightMargin: previewStrip.radius
+                clip: true
+                source: pane.library.preview
+                list: 0
+                revision: pane.library.preview.displayRevision
+                onWidthChanged: pane.library.preview.setViewport(previewList.width, previewList.height)
+                onHeightChanged: pane.library.preview.setViewport(previewList.width, previewList.height)
+            }
+            Timer {
+                interval: 1000 / 30
+                repeat: true
+                running: pane.library.previewing
+                onTriggered: pane.library.tickPreview()
+            }
+        }
         Label {
             objectName: "sampleLibraryError"
             Layout.fillWidth: true

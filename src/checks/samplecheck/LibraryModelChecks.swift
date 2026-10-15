@@ -1,11 +1,27 @@
 import Foundation
+import PorydawAppAudio
 @testable import PorydawSampleUI
 import PorydawAppPresentation
+import PorydawSample
 
 @testable import SwiftCoreCheckLogic
 
 @MainActor
+private final class AcceptingAuditionOutput: SampleAuditionOutput {
+    func auditionSample(
+        samples: [Int8], frequency: UInt32, loopStart: UInt32,
+        looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
+    ) -> Bool { true }
+    func auditionSampleOff() {}
+}
+
+@MainActor
 internal func runLibraryModelChecks(_ report: CheckReport) {
+    let output = AcceptingAuditionOutput()
+    func makeModel(_ preferences: PreferencesStore) -> SampleLibraryModel {
+        SampleLibraryModel(
+            preferences: preferences, palette: GridPalette(), lane: SampleAuditionArbiter(output: output))
+    }
     let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     let library = base.appendingPathComponent("Library Ω", isDirectory: true)
     let empty = base.appendingPathComponent("Empty", isDirectory: true)
@@ -46,7 +62,7 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
                 child.appendingPathComponent("..").path, empty.path, missing.path,
             ])
         preferences.synchronize()
-        let model = SampleLibraryModel(preferences: preferences)
+        let model = makeModel(preferences)
         let roots = report.scoped(cppID: "swiftcore/SampleLibraryModel::roots")
         guard model.folders.count >= 4 else {
             roots.expect(false, message: "saved roots and first child must be available as tree rows")
@@ -79,7 +95,7 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
                 !paths.contains(library.appendingPathComponent("linked").path),
                 message: "directory symlinks cannot escape the bookmarked tree")
         }
-        let persisted = SampleLibraryModel(preferences: PreferencesStore())
+        let persisted = makeModel(PreferencesStore())
         roots.expect(
             persisted.folders.count == model.folders.count && persisted.folders[0].path == library.path,
             message: "a fresh model reads synchronized saved bookmarks")
@@ -140,6 +156,26 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
         actions.expect(
             !model.files[0].selected && !model.files[1].selected,
             message: "clearing selection unhighlights every row")
+
+        let strip = report.scoped(cppID: "swiftcore/SampleLibraryModel::previewStrip")
+        model.preview.setViewport(width: 40, height: 20)
+        let blank = model.preview.displayList(list: 0)
+        model.selectFile(row: 0)
+        var tone = ProcessedSample()
+        tone.s8 = [0, 64, -64, 32, -32, 0, 16, -16]
+        tone.freq = 8 * 1024
+        model.playPreview(tone, path: model.files[0].path, key: 60, toneKey: 60)
+        strip.expect(
+            model.previewing && model.preview.displayList(list: 0) != blank,
+            message: "a sounding preview draws its waveform and reports previewing")
+        model.previewPlayer.advance(bySeconds: 2)
+        strip.expect(
+            !model.previewing && model.preview.displayList(list: 0) != blank,
+            message: "a preview sounds once; its end clears previewing but keeps the waveform")
+        model.selectFile(row: 1)
+        strip.expect(
+            model.preview.displayList(list: 0) == blank,
+            message: "selecting another file clears the previewed waveform")
 
         let failures = report.scoped(cppID: "swiftcore/SampleLibraryModel::failureStatus")
         model.showMessage(text: "Cannot read tone.wav.")
@@ -230,7 +266,7 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
             model.folders.count == 3 && model.folders[0].selected
                 && preferences.strings("sampleLibraryFolders") == [library.path, empty.path],
             message: "duplicate or blank additions do not create duplicate bookmarks")
-        let fresh = SampleLibraryModel(preferences: PreferencesStore())
+        let fresh = makeModel(PreferencesStore())
         guard fresh.folders.count >= 3 else {
             removal.expect(false, message: "saved bookmarks must survive model recreation")
             return
@@ -244,7 +280,7 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
             preferences.setStrings(
                 "sampleLibraryFolders",
                 [alias.path, alias.appendingPathComponent("Subfolder/..").path, library.path])
-            let aliased = SampleLibraryModel(preferences: preferences)
+            let aliased = makeModel(preferences)
             roots.expect(
                 preferences.strings("sampleLibraryFolders") == [alias.path, library.path]
                     && aliased.folders.count == 3 && aliased.folders[0].path == alias.path
