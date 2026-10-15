@@ -224,6 +224,8 @@ Item {
             Layout.fillHeight: true
             visible: pane.library.filesVisible
             clip: true
+            // Mouse drags start a file drag-out; the wheel or touchpad scrolls.
+            acceptedButtons: Qt.NoButton
             activeFocusOnTab: true
             currentIndex: -1
             model: pane.library.files
