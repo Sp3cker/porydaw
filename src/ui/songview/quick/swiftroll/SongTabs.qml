@@ -223,6 +223,7 @@ FocusScope {
 
         Flickable {
             id: stripViewport
+            acceptedButtons: Qt.NoButton
             anchors.left: parent.left
             anchors.right: scrollControls.visible ? scrollControls.left : parent.right
             height: strip.height

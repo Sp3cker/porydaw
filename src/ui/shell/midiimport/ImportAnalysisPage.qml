@@ -15,6 +15,7 @@ Flickable {
     required property int baseFontPx
     contentHeight: body.implicitHeight + layoutSpaces.three * 2
     clip: true
+    acceptedButtons: Qt.NoButton
     property bool controllersExpanded: false
     function focusFirst(): void { player.forceActiveFocus() }
     onVisibleChanged: { if (visible) page.focusFirst() }

@@ -245,6 +245,7 @@ qt_add_qml_module(porydaw_style
         src/ui/style/Menu.qml
         src/ui/style/MenuItem.qml
         src/ui/style/ProgressBar.qml
+        src/ui/style/ScrollView.qml
         src/ui/style/SpinBox.qml
 )
 target_link_libraries(porydaw_style PRIVATE Qt6::Quick porydaw_icons)

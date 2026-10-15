@@ -198,6 +198,7 @@ ColumnLayout {
     }
     Flickable {
         id: keyboardScroll
+        acceptedButtons: Qt.NoButton
         objectName: "splitStudioKeyboardScroll"
         Layout.fillWidth: true
         Layout.preferredHeight: keyboardBoard.height

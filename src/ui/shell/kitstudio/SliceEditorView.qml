@@ -200,6 +200,7 @@ Item {
             }
             ListView {
                 id: slices
+                acceptedButtons: Qt.NoButton
                 objectName: "splitStudioSlices"
                 Layout.fillWidth: true
                 Layout.fillHeight: true

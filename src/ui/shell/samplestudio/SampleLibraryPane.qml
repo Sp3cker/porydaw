@@ -92,6 +92,7 @@ Item {
         }
         ListView {
             id: folders
+            acceptedButtons: Qt.NoButton
             objectName: "sampleLibraryFolders"
             Accessible.role: Accessible.List
             Accessible.name: qsTr("Library folders")

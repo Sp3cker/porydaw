@@ -206,6 +206,7 @@ PromptOverlay {
 
         ListView {
             id: list
+            acceptedButtons: Qt.NoButton
 
             objectName: "voicePickerList"
             width: searchFrame.implicitWidth

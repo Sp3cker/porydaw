@@ -32,6 +32,7 @@ Dialog {
         }
         ListView {
             id: checklist
+            acceptedButtons: Qt.NoButton
             objectName: "splitStudioOrphanChecklist"
             Layout.fillWidth: true
             Layout.preferredHeight: Math.min(dialog.names.length * 3 * dialog.baseFontPx, 18 * dialog.baseFontPx)

@@ -262,6 +262,7 @@ Item {
 
         TableView {
             id: eventTable
+            acceptedButtons: Qt.NoButton
 
             objectName: "eventListTable"
             anchors.left: rowHeader.right

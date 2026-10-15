@@ -117,6 +117,7 @@ ColumnLayout {
         }
         ListView {
             id: voiceList
+            acceptedButtons: Qt.NoButton
             objectName: "voicegroupRows"
             anchors.left: parent.left
             anchors.right: parent.right
@@ -218,6 +219,7 @@ ColumnLayout {
 
     Flickable {
         id: editorScroll
+        acceptedButtons: Qt.NoButton
         objectName: "voiceEditorScrollView"
         Layout.fillWidth: true
         Layout.fillHeight: true

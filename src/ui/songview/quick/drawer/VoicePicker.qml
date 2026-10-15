@@ -153,6 +153,7 @@ FocusScope {
         }
         ListView {
             id: list
+            acceptedButtons: Qt.NoButton
             objectName: "voicePickerList"
             width: searchFrame.width
             height: Math.max(pickerRoot.baseFontPx * 2, Math.min(pickerRoot.baseFontPx * 11,

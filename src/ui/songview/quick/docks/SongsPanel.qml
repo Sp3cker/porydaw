@@ -120,6 +120,7 @@ FocusScope {
 
         ListView {
             id: list
+            acceptedButtons: Qt.NoButton
             objectName: "songList"
             Layout.fillWidth: true
             Layout.fillHeight: true

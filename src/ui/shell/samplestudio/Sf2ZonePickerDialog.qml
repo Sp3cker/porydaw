@@ -47,6 +47,7 @@ DialogWindow {
         }
         ListView {
             id: list
+            acceptedButtons: Qt.NoButton
             objectName: "sf2ZoneRows"
             Layout.fillWidth: true
             Layout.fillHeight: true

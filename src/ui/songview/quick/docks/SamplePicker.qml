@@ -156,6 +156,7 @@ Item {
             }
             ListView {
                 id: list
+                acceptedButtons: Qt.NoButton
                 objectName: "vgSamplePickerList"
                 Layout.fillWidth: true
                 Layout.fillHeight: true

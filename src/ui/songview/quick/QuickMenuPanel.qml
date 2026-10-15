@@ -93,6 +93,7 @@ Item {
 
         ListView {
             id: list
+            acceptedButtons: Qt.NoButton
 
             anchors.fill: parent
             anchors.margins: frame.border.width
