@@ -114,16 +114,18 @@ Slices can be mapped across the 128-key keyboard (keys 0–127):
   slices, clicking the slice row's **✕** button, or closing its file tab), its
   assigned keys are automatically cleared.
 - **Moving keys**: Drag a mapped key on the keyboard to move its slice to another
-  key.
+  key. While you drag, the keys the zone would cover are outlined and labelled;
+  the outline turns red, and releasing does nothing, if they overlap another zone.
 - **Drag-and-drop mapping**: Drag the grip handle (`⋮⋮`) of any row in the slice
   table onto a key, or drag an audio file from the sample library or Finder onto
-  a key to load and map it there. The key under the pointer is outlined and
-  labelled with its note name; it turns red, and the drop does nothing, if the
-  drag holds unsupported files.
+  a key to load and map it there. The keys the new zone would cover are outlined
+  and labelled with their note names (in Keysplit, a drop reaches up to the next
+  zone). The outline turns red, and the drop does nothing, if the key is already
+  mapped or the drag holds unsupported files.
 - **Resizing key ranges** (Keysplit only): Drag the left or right edge handle of
-  a selected key zone to adjust the key range that triggers that slice. The zone
-  resizes as you drag, and an edge stops at the neighbouring zone, so zones never
-  overlap.
+  a selected key zone to adjust the key range that triggers that slice. The new
+  range is outlined while you drag and applied when you release; an edge stops at
+  the neighbouring zone, so zones never overlap.
 - **Removing a mapping**: Click a mapped key to select it, then click **Remove from Key**
   in the inspector.
 

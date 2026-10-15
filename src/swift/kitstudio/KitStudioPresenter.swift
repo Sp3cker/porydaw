@@ -186,14 +186,22 @@ public final class KitStudioPresenter: QmlUncreatable {
         refresh()
     }
 
+    /// Last key of the zone a drop on `key` creates, or -1 when the key is occupied. Keysplit
+    /// drops reach up to the next zone.
+    public func dropRangeEnd(key: Int) -> Int {
+        guard (0...127).contains(key), !zones.contains(where: { $0.startKey <= key && key <= $0.endKey })
+        else { return -1 }
+        return activeMode == .drumkit ? key : (zones.first { $0.startKey > key }?.startKey ?? 128) - 1
+    }
+
     public func dropSample(name: String, onKey: Int) {
         guard (0...127).contains(onKey), !name.isEmpty else { return }
-        guard !zones.contains(where: { $0.startKey <= onKey && onKey <= $0.endKey }) else {
+        let end = dropRangeEnd(key: onKey)
+        guard end >= 0 else {
             onAlert?("That key is already occupied")
             refresh()
             return
         }
-        let end = activeMode == .drumkit ? onKey : (zones.first { $0.startKey > onKey }?.startKey ?? 128) - 1
         var next = zones
         next.append(newZone(name: name, start: onKey, end: end))
         next.sort { $0.startKey < $1.startKey }
@@ -201,14 +209,30 @@ public final class KitStudioPresenter: QmlUncreatable {
         refresh()
     }
 
+    /// First key of `row` after a move to `toKey`, kept on the keyboard.
+    public func movedZoneStart(row: Int, toKey: Int) -> Int {
+        guard zones.indices.contains(row) else { return 0 }
+        return min(max(0, toKey), 127 - (zones[row].endKey - zones[row].startKey))
+    }
+
+    private func movedZones(row: Int, toKey: Int) -> [KitZone] {
+        var next = zones
+        let start = movedZoneStart(row: row, toKey: toKey)
+        next[row].endKey = start + next[row].endKey - next[row].startKey
+        next[row].startKey = start
+        next.sort { $0.startKey < $1.startKey }
+        return next
+    }
+
+    /// Whether `moveZone` would accept the move, for the drag preview.
+    public func zoneMoveFits(row: Int, toKey: Int) -> Bool {
+        zones.indices.contains(row) && KitDraft.valid(movedZones(row: row, toKey: toKey))
+    }
+
     public func moveZone(row: Int, toKey: Int) {
         guard zones.indices.contains(row) else { return }
-        var next = zones
-        let width = next[row].endKey - next[row].startKey
-        let start = min(max(0, toKey), 127 - width)
-        next[row].startKey = start
-        next[row].endKey = start + width
-        next.sort { $0.startKey < $1.startKey }
+        let start = movedZoneStart(row: row, toKey: toKey)
+        let next = movedZones(row: row, toKey: toKey)
         if commitZones(next) { selectedZone = next.firstIndex { $0.startKey == start } ?? -1 }
         refresh()
     }
@@ -224,23 +248,30 @@ public final class KitStudioPresenter: QmlUncreatable {
         refresh()
     }
 
-    /// Moves one edge of a range to `key`, stopping at the opposite edge and at neighbouring
-    /// zones, so a live drag never overlaps or reorders rows.
-    public func dragZoneEdge(row: Int, fromStart: Bool, key: Int) {
-        guard zones.indices.contains(row) else { return }
+    /// Where one edge of `row` lands when dragged to `key`: never past the opposite edge or into
+    /// a neighbouring zone.
+    public func zoneEdgeKey(row: Int, fromStart: Bool, key: Int) -> Int {
+        guard zones.indices.contains(row) else { return key }
         let zone = zones[row]
-        if selectedZone != row { selectZone(row: row) }
         if fromStart {
             let floor =
                 zones.lazy.filter { (other: KitZone) -> Bool in other.endKey < zone.startKey }
                 .map { (other: KitZone) -> Int in other.endKey + 1 }.max() ?? 0
-            resizeZone(row: row, startKey: min(max(key, floor), zone.endKey), endKey: zone.endKey)
-        } else {
-            let ceiling =
-                zones.lazy.filter { (other: KitZone) -> Bool in other.startKey > zone.endKey }
-                .map { (other: KitZone) -> Int in other.startKey - 1 }.min() ?? 127
-            resizeZone(row: row, startKey: zone.startKey, endKey: max(min(key, ceiling), zone.startKey))
+            return min(max(key, floor), zone.endKey)
         }
+        let ceiling =
+            zones.lazy.filter { (other: KitZone) -> Bool in other.startKey > zone.endKey }
+            .map { (other: KitZone) -> Int in other.startKey - 1 }.min() ?? 127
+        return max(min(key, ceiling), zone.startKey)
+    }
+
+    public func dragZoneEdge(row: Int, fromStart: Bool, key: Int) {
+        guard zones.indices.contains(row) else { return }
+        let zone = zones[row]
+        let edge = zoneEdgeKey(row: row, fromStart: fromStart, key: key)
+        selectZone(row: row)
+        resizeZone(
+            row: row, startKey: fromStart ? edge : zone.startKey, endKey: fromStart ? zone.endKey : edge)
     }
 
     public func deleteZone(row: Int) {

@@ -168,7 +168,7 @@ public final class KitDraft {
         }
     }
 
-    private static func valid(_ zones: [KitZone]) -> Bool {
+    static func valid(_ zones: [KitZone]) -> Bool {
         var previousEnd = -1
         for zone in zones {
             guard zone.startKey >= 0, zone.endKey <= 127,

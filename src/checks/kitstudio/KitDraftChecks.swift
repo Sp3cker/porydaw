@@ -288,6 +288,16 @@ private func checkKitPresenterZones(_ report: CheckReport) {
     p.moveZone(row: 0, toKey: 20)
     r.expectEqual(expected: resized, actual: p.draft.snapshot(), what: "move overlap rejected by draft")
     r.expectEqual(expected: 19, actual: p.zoneEndKey(row: 0), what: "rejected resize republishes authoritative rows")
+    r.expectEqual(
+        expected: [-1, 5], actual: [p.dropRangeEnd(key: 15), p.dropRangeEnd(key: 5)],
+        what: "drop preview marks occupied keys and sizes free drops like dropSample")
+    r.expectEqual(
+        expected: [false, true], actual: [p.zoneMoveFits(row: 0, toKey: 20), p.zoneMoveFits(row: 0, toKey: 0)],
+        what: "move preview agrees with the draft's overlap rule")
+    r.expectEqual(
+        expected: [19, 20],
+        actual: [p.zoneEdgeKey(row: 0, fromStart: false, key: 25), p.zoneEdgeKey(row: 1, fromStart: true, key: 5)],
+        what: "edge drags stop at the neighbouring zone")
     p.moveZone(row: 0, toKey: 126)
     r.expectEqual(
         expected: [20, 118], actual: p.draft.drumkitZones.map(\.startKey),

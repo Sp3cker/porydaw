@@ -62,7 +62,7 @@ ShellLaneSupport {
         const editor = view.editor
         verify(waitForNative(function() { return editor.zoneCount() === 1 }, 10000), "one-shot lands on C2")
         const zone = findChild(window.contentItem, "splitStudioZoneEditor")
-        const board = findChild(window.contentItem, "splitStudioDropTarget").parent
+        const board = findChild(window.contentItem, "splitStudioKeyPreview").parent
         function find(root, accept) {
             const stack = [root]
             while (stack.length > 0) {
@@ -125,7 +125,7 @@ ShellLaneSupport {
         verify(waitForNative(function() { return editor.zoneCount() === 1 }, 10000), "one-shot lands on C2")
         compare(editor.zoneStartKey(0), 36)
         const zone = findChild(window.contentItem, "splitStudioZoneEditor")
-        const board = findChild(window.contentItem, "splitStudioDropTarget").parent
+        const board = findChild(window.contentItem, "splitStudioKeyPreview").parent
         const scroll = findChild(window.contentItem, "splitStudioKeyboardScroll")
         const y = zone.keysHeight - zone.unit
         waitForRendering(window.contentItem)
@@ -151,7 +151,7 @@ ShellLaneSupport {
         studio.answerPrompt(1)
         verify(waitForNative(function() { return !window.visible }, 5000), "discard closes Split Studio")
     }
-    function test_keysplitEdgeDragsResizeLiveUpToNeighbours() {
+    function test_keyboardDragsPreviewTheirResultUntilRelease() {
         const session = openShell().session
         session.openProject(rootPath)
         verify(waitForNative(function() { return session.projectOpen }, 30000), "sample fixture opens")
@@ -169,20 +169,43 @@ ShellLaneSupport {
                 [36, 36, 40, 127], "a second keysplit zone sits three keys above the first")
         editor.selectZone(0)
         const zone = findChild(window.contentItem, "splitStudioZoneEditor")
-        const board = findChild(window.contentItem, "splitStudioDropTarget").parent
+        const preview = findChild(window.contentItem, "splitStudioKeyPreview")
+        const board = preview.parent
         const scroll = findChild(window.contentItem, "splitStudioKeyboardScroll")
         const y = zone.keysHeight - zone.unit
         waitForRendering(window.contentItem)
         verify(waitForNative(function() { return !scroll.moving }, 5000), "keyboard settles before pointer input")
-        mousePress(board, zone.endXOf(36), y)
-        for (let x = zone.endXOf(36); x <= zone.endXOf(45); x += 4) {
-            mouseMove(board, x, y)
-            if (x >= zone.endXOf(38) && x < zone.endXOf(38) + 4)
-                compare(editor.zoneEndKey(0), 38, "the end edge resizes the zone while the drag is still held")
+        function hold(from, to) {
+            const step = from < to ? 4 : -4
+            mousePress(board, from, y)
+            for (let x = from; step > 0 ? x <= to : x >= to; x += step)
+                mouseMove(board, x, y)
+            mouseMove(board, to, y)
         }
+
+        hold(zone.endXOf(36), zone.endXOf(38))
+        verify(preview.visible && !zone.previewInvalid, "an end-edge drag outlines the resized range")
+        compare([zone.previewFirst, zone.previewLast, editor.zoneEndKey(0)], [36, 38, 36],
+                "the edge previews its range without editing the kit mid-drag")
+        mouseMove(board, zone.endXOf(45), y)
+        compare(zone.previewLast, 39, "the previewed edge stops at the neighbouring zone")
         mouseRelease(board, zone.endXOf(45), y)
-        compare(editor.zoneEndKey(0), 39, "the end edge stops at the neighbouring zone")
-        compare(studio.alertText, "", "a drag into a neighbour clamps instead of alerting")
+        compare([editor.zoneEndKey(0), preview.visible, studio.alertText], [39, false, ""], "release applies the previewed range")
+        editor.undo()
+        compare(editor.zoneEndKey(0), 36, "one edge drag is one undo step")
+        editor.redo()
+
+        const mid = zone.whiteWidth / 2
+        hold(zone.xOf(36) + mid, zone.xOf(38) + mid)
+        compare([zone.previewFirst, zone.previewLast, zone.previewInvalid], [38, 41, true],
+                "moving onto a neighbour previews the target as invalid")
+        mouseRelease(board, zone.xOf(38) + mid, y)
+        compare([editor.zoneStartKey(0), studio.alertText], [36, ""], "an invalid move does nothing")
+        hold(zone.xOf(36) + mid, zone.xOf(31) + mid)
+        compare([zone.previewFirst, zone.previewLast, zone.previewInvalid, editor.zoneStartKey(0)], [31, 34, false, 36],
+                "a zone move previews its target range before release")
+        mouseRelease(board, zone.xOf(31) + mid, y)
+        compare([editor.zoneStartKey(0), editor.zoneEndKey(0), preview.visible], [31, 34, false], "release moves the zone")
         window.close()
         verify(waitForNative(function() { return studio.promptOpen }, 5000), "unsaved kit asks before closing")
         studio.answerPrompt(1)

@@ -27,13 +27,17 @@ ColumnLayout {
     spacing: paneSpacing
     property int dragZone: -1
     property int dragPressKey: 0
-    property int dragDelta: 0
+    property int moveStart: -1
     property int glissKey: -1
     property int edgeZone: -1
     property bool edgeStart: true
     property int edgeKey: 0
-    property int dropKey: -1
-    property bool dropInvalid: false
+    property bool dropping: false
+    property bool dropUnloadable: false
+    // The key range the held gesture would produce; previewFirst < 0 hides it.
+    property int previewFirst: -1
+    property int previewLast: -1
+    property bool previewInvalid: false
 
     function isBlack(key: int): bool {
         return [1, 3, 6, 8, 10].indexOf(key % 12) !== -1
@@ -74,10 +78,15 @@ ColumnLayout {
                 view.revealKeys(view.editor.selectedZoneFirstKey, view.editor.selectedZoneLastKey)
         }
     }
+    function clearPreview(): void {
+        view.previewFirst = -1
+        view.previewLast = -1
+        view.previewInvalid = false
+    }
     function pressKey(key: int): void {
         view.dragZone = view.editor.zoneIndexAtKey(key)
         view.dragPressKey = key
-        view.dragDelta = 0
+        view.moveStart = view.dragZone >= 0 ? view.editor.zoneStartKey(view.dragZone) : -1
         view.glissKey = key
         view.editor.playKey(key)
     }
@@ -93,26 +102,36 @@ ColumnLayout {
         }
         if (view.dragZone >= view.editor.zoneCount())
             return
-        const width = view.editor.zoneEndKey(view.dragZone) - view.editor.zoneStartKey(view.dragZone)
-        const start = Math.max(0, Math.min(127 - width, view.editor.zoneStartKey(view.dragZone) + (view.keyAt(x, y) - view.dragPressKey)))
-        view.dragDelta = start - view.editor.zoneStartKey(view.dragZone)
+        const target = view.editor.movedZoneStart(view.dragZone,
+                                                  view.editor.zoneStartKey(view.dragZone) + view.keyAt(x, y) - view.dragPressKey)
+        if (target === view.moveStart)
+            return
+        view.moveStart = target
+        const offset = view.moveStart - view.editor.zoneStartKey(view.dragZone)
+        view.previewInvalid = offset !== 0 && !view.editor.zoneMoveFits(view.dragZone, view.moveStart)
+        view.previewLast = offset !== 0 ? view.editor.zoneEndKey(view.dragZone) + offset : -1
+        view.previewFirst = offset !== 0 ? view.moveStart : -1
     }
-    function releaseKey(): void {
+    function releaseKey(commit: bool): void {
         view.workflow.stopAudition()
-        if (view.dragZone >= 0 && view.dragZone < view.editor.zoneCount()) {
+        if (commit && view.dragZone >= 0 && view.dragZone < view.editor.zoneCount()) {
             view.editor.selectZone(view.dragZone)
-            if (view.dragDelta !== 0)
-                view.editor.moveZone(view.dragZone, view.editor.zoneStartKey(view.dragZone) + view.dragDelta)
+            if (view.moveStart !== view.editor.zoneStartKey(view.dragZone) && !view.previewInvalid)
+                view.editor.moveZone(view.dragZone, view.moveStart)
         }
         view.dragZone = -1
         view.dragPressKey = 0
-        view.dragDelta = 0
+        view.moveStart = -1
         view.glissKey = -1
+        view.clearPreview()
     }
     function pressEdge(zone: int, start: bool): void {
         view.edgeZone = zone
         view.edgeStart = start
         view.edgeKey = start ? view.editor.zoneStartKey(zone) : view.editor.zoneEndKey(zone)
+        view.previewFirst = view.editor.zoneStartKey(zone)
+        view.previewLast = view.editor.zoneEndKey(zone)
+        view.previewInvalid = false
     }
     // The key whose start (or end) boundary lies nearest x, so a press on an edge never shifts it.
     function edgeKeyAt(x: real, start: bool): int {
@@ -130,16 +149,32 @@ ColumnLayout {
     function dragEdge(x: real): void {
         if (view.edgeZone < 0)
             return
-        const key = view.edgeKeyAt(x, view.edgeStart)
+        const key = view.editor.zoneEdgeKey(view.edgeZone, view.edgeStart, view.edgeKeyAt(x, view.edgeStart))
         if (key === view.edgeKey)
             return
         view.edgeKey = key
-        view.editor.dragZoneEdge(view.edgeZone, view.edgeStart, key)
+        if (view.edgeStart)
+            view.previewFirst = key
+        else
+            view.previewLast = key
     }
-    function releaseEdge(): void {
+    function releaseEdge(commit: bool): void {
+        if (commit && view.edgeZone >= 0
+                && view.edgeKey !== (view.edgeStart ? view.editor.zoneStartKey(view.edgeZone) : view.editor.zoneEndKey(view.edgeZone)))
+            view.editor.dragZoneEdge(view.edgeZone, view.edgeStart, view.edgeKey)
         view.edgeZone = -1
         view.edgeStart = true
         view.edgeKey = 0
+        view.clearPreview()
+    }
+    function updateDrop(x: real, y: real): void {
+        if (!view.dropping)
+            return
+        const key = view.keyAt(x, y)
+        const end = view.editor.dropRangeEnd(key)
+        view.previewFirst = key
+        view.previewLast = end < 0 ? key : end
+        view.previewInvalid = view.dropUnloadable || end < 0
     }
     function revealKeys(first: int, last: int): void {
         const visibleWidth = keyboardScroll.width
@@ -234,8 +269,8 @@ ColumnLayout {
                             if (pressed)
                                 view.dragKey(point.x, point.y)
                         }
-                        onReleased: view.releaseKey()
-                        onCanceled: view.releaseKey()
+                        onReleased: view.releaseKey(true)
+                        onCanceled: view.releaseKey(false)
                     }
                 }
             }
@@ -247,7 +282,9 @@ ColumnLayout {
                     readonly property bool start: index === 0
                     z: 5
                     visible: view.editor.selectedZone >= 0 && view.editor.mode === 1
-                    x: (start ? view.xOf(view.editor.selectedZoneFirstKey) : view.endXOf(view.editor.selectedZoneLastKey)) - width / 2
+                    // An edge drag moves its handle with the previewed range.
+                    x: (start ? view.xOf(view.edgeZone >= 0 ? view.previewFirst : view.editor.selectedZoneFirstKey)
+                              : view.endXOf(view.edgeZone >= 0 ? view.previewLast : view.editor.selectedZoneLastKey)) - width / 2
                     width: view.unit / 3
                     height: view.keysHeight
                     color: view.colors.selectionEdge
@@ -263,35 +300,38 @@ ColumnLayout {
                             if (pressed)
                                 view.dragEdge(mapToItem(keyboardBoard, mouse.x, mouse.y).x)
                         }
-                        onReleased: view.releaseEdge()
-                        onCanceled: view.releaseEdge()
+                        onReleased: view.releaseEdge(true)
+                        onCanceled: view.releaseEdge(false)
                     }
                 }
             }
             Rectangle {
-                id: dropTarget
-                objectName: "splitStudioDropTarget"
-                readonly property bool black: view.isBlack(view.dropKey)
+                id: keyPreview
+                objectName: "splitStudioKeyPreview"
+                readonly property bool single: view.previewFirst === view.previewLast
+                readonly property bool black: single && view.isBlack(view.previewFirst)
                 z: 6
-                visible: view.dropKey >= 0
-                x: view.xOf(view.dropKey)
-                width: dropTarget.black ? view.blackWidth : view.whiteWidth
-                height: dropTarget.black ? view.blackHeight : view.keysHeight
+                visible: view.previewFirst >= 0
+                x: view.xOf(view.previewFirst)
+                width: keyPreview.black ? view.blackWidth : view.endXOf(view.previewLast) - view.xOf(view.previewFirst)
+                height: keyPreview.black ? view.blackHeight : view.keysHeight
                 color: "transparent"
-                border.color: view.dropInvalid ? view.colors.errorText : view.colors.selectionEdge
+                border.color: view.previewInvalid ? view.colors.errorText : view.colors.selectionEdge
                 border.width: view.edgeWidth
                 Rectangle {
-                    visible: !view.dropInvalid
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    y: (dropTarget.black ? 0 : view.blackHeight) + view.unit * 0.4
-                    width: dropKeyName.implicitWidth + view.unit * 0.6
+                    visible: !view.previewInvalid
+                    x: keyPreview.single ? (keyPreview.width - width) / 2 : view.unit * 0.4
+                    y: (keyPreview.black ? 0 : view.blackHeight) + view.unit * 0.4
+                    width: previewKeyName.implicitWidth + view.unit * 0.6
                     height: view.unit * 1.35
                     radius: height / 2
                     color: view.colors.keyboardBlack
                     Label {
-                        id: dropKeyName
+                        id: previewKeyName
                         anchors.centerIn: parent
-                        text: view.dropKey >= 0 ? view.workflow.keyName(view.dropKey) : ""
+                        text: view.previewFirst < 0 ? ""
+                            : keyPreview.single ? view.workflow.keyName(view.previewFirst)
+                            : qsTr("%1–%2").arg(view.workflow.keyName(view.previewFirst)).arg(view.workflow.keyName(view.previewLast))
                         font: view.captionFont
                         color: view.colors.keyboardNatural
                     }
@@ -301,21 +341,19 @@ ColumnLayout {
                 anchors.fill: parent
                 onEntered: drag => {
                     const chip = drag.source as KitDragSource
-                    view.dropInvalid = drag.hasUrls && !view.workflow.areLoadableSources(drag.getDataAsString("text/uri-list"))
-                    view.dropKey = drag.hasUrls || chip !== null ? view.keyAt(drag.x, drag.y) : -1
+                    view.dropping = drag.hasUrls || chip !== null
+                    view.dropUnloadable = drag.hasUrls && !view.workflow.areLoadableSources(drag.getDataAsString("text/uri-list"))
+                    view.updateDrop(drag.x, drag.y)
                 }
-                onPositionChanged: drag => {
-                    if (view.dropKey >= 0)
-                        view.dropKey = view.keyAt(drag.x, drag.y)
-                }
+                onPositionChanged: drag => view.updateDrop(drag.x, drag.y)
                 onExited: {
-                    view.dropKey = -1
-                    view.dropInvalid = false
+                    view.dropping = false
+                    view.clearPreview()
                 }
                 onDropped: drop => {
-                    const invalid = view.dropInvalid
-                    view.dropKey = -1
-                    view.dropInvalid = false
+                    const invalid = !view.dropping || view.previewInvalid
+                    view.dropping = false
+                    view.clearPreview()
                     const event = drop as DragEvent
                     if (!event || invalid)
                         return
