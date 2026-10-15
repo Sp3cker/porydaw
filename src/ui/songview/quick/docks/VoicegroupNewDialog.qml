@@ -28,6 +28,10 @@ Dialog {
     width: Math.min(parent.width - 2 * baseFontPx, 30 * baseFontPx)
     title: qsTr("New Voicegroup")
     standardButtons: Dialog.Ok | Dialog.Cancel
+    footer: DialogButtonBox {
+        visible: count > 0
+        buttonLayout: DialogButtonBox.MacLayout
+    }
     onOpened: {
         dialog.createButton = dialog.buttonBox.standardButton(Dialog.Ok)
         dialog.createButton.text = qsTr("Create")

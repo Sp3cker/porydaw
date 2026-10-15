@@ -113,7 +113,7 @@ PromptCard {
             accessibleDescription: prompt.bridge.insertTimePromptTitle
             onValueCommitted: (committed) => prompt.draftBars = committed
             onEditingAccepted: (committed) => prompt.acceptFromEditing("bars", committed)
-            textInput.KeyNavigation.backtab: cancelButton
+            textInput.KeyNavigation.backtab: acceptButton
         }
     }
 
@@ -179,24 +179,24 @@ PromptCard {
         spacing: prompt.appearance.spacing
 
         PromptButton {
-            id: acceptButton
-
-            objectName: "insertTimeAccept"
-            appearance: prompt.appearance
-            text: qsTr("OK")
-            minimumWidth: barsInput.implicitWidth
-            onActivated: prompt.acceptDisplayed()
-        }
-
-        PromptButton {
             id: cancelButton
 
             objectName: "insertTimeCancel"
             appearance: prompt.appearance
             text: qsTr("Cancel")
             minimumWidth: barsInput.implicitWidth
-            KeyNavigation.tab: barsInput.textInput
             onActivated: prompt.cancelDisplayed()
+        }
+
+        PromptButton {
+            id: acceptButton
+
+            objectName: "insertTimeAccept"
+            appearance: prompt.appearance
+            text: qsTr("OK")
+            minimumWidth: barsInput.implicitWidth
+            KeyNavigation.tab: barsInput.textInput
+            onActivated: prompt.acceptDisplayed()
         }
     }
 }

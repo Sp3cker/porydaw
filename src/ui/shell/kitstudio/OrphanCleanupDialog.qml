@@ -61,16 +61,16 @@ Dialog {
             Layout.alignment: Qt.AlignRight
             spacing: dialog.layoutSpaces.one
             Button {
-                objectName: "splitStudioOrphanDelete"
-                text: qsTr("Delete")
-                enabled: !dialog.workflow.orphanCleanupBusy && dialog.names.length > 0
-                onClicked: dialog.workflow.answerOrphanCleanup(true)
-            }
-            Button {
                 objectName: "splitStudioOrphanKeep"
                 text: qsTr("Keep")
                 enabled: !dialog.workflow.orphanCleanupBusy
                 onClicked: dialog.workflow.answerOrphanCleanup(false)
+            }
+            Button {
+                objectName: "splitStudioOrphanDelete"
+                text: qsTr("Delete")
+                enabled: !dialog.workflow.orphanCleanupBusy && dialog.names.length > 0
+                onClicked: dialog.workflow.answerOrphanCleanup(true)
             }
         }
     }

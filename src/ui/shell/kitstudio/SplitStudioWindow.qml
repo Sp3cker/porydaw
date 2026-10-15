@@ -360,16 +360,15 @@ ThemedWindow {
         contentItem: ColumnLayout {
             spacing: studio.spacing
             Label { Layout.fillWidth: true; text: qsTr("Save the voicegroup before closing?"); wrapMode: Text.WordWrap; color: studio.colors.windowText }
-            // Shell dialogs keep the committing action rightmost, after Cancel.
+            // Every app dialog uses one button order: Cancel just left of the rightmost commit.
             RowLayout {
-                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignRight
                 enabled: !studio.workflow.saving
                 Button {
                     objectName: "splitStudioPromptDiscard"
                     text: qsTr("Discard")
                     onClicked: studio.workflow.answerPrompt(1)
                 }
-                Item { Layout.fillWidth: true }
                 Button {
                     objectName: "splitStudioPromptCancel"
                     text: qsTr("Cancel")

@@ -430,6 +430,7 @@ FocusScope {
         }
         footer: DialogButtonBox {
             id: closeButtons
+            buttonLayout: DialogButtonBox.MacLayout
             // Kept deliberately: stock contentItem animates ~350ms while hidden (accf62cf); silencing the residual transient costs a line for zero visible gain.
             contentItem: ListView {
                 implicitWidth: saveButton.implicitWidth + discardButton.implicitWidth

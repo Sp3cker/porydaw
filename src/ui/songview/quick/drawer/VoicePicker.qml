@@ -131,7 +131,7 @@ FocusScope {
                         pickerRoot.model.setPickerFilter(text)
                 }
                 KeyNavigation.tab: list
-                KeyNavigation.backtab: cancelButton
+                KeyNavigation.backtab: acceptButton.enabled ? acceptButton : cancelButton
                 Keys.onReturnPressed: event => { pickerRoot.model.acceptPicker(); event.accepted = true }
                 Keys.onEnterPressed: event => { pickerRoot.model.acceptPicker(); event.accepted = true }
                 Keys.onDownPressed: event => {
@@ -165,7 +165,7 @@ FocusScope {
             highlightMoveDuration: 0
             keyNavigationEnabled: false
             currentIndex: pickerRoot.model ? pickerRoot.model.pickerIndex : -1
-            KeyNavigation.tab: acceptButton.enabled ? acceptButton : cancelButton
+            KeyNavigation.tab: cancelButton
             KeyNavigation.backtab: search
             Connections {
                 target: pickerRoot.model
@@ -229,6 +229,17 @@ FocusScope {
         Row {
             spacing: pickerRoot.pickerAppearance.spacing
             PromptButton {
+                id: cancelButton
+                objectName: "voicePickerCancel"
+                claimsShortcuts: false
+                appearance: pickerRoot.pickerAppearance
+                text: qsTr("Cancel")
+                minimumWidth: acceptButton.labelWidth + 2 * pickerRoot.pickerAppearance.buttonPadding
+                KeyNavigation.tab: acceptButton.enabled ? acceptButton : search
+                KeyNavigation.backtab: list
+                onActivated: pickerRoot.model.cancelPicker()
+            }
+            PromptButton {
                 id: acceptButton
                 objectName: "voicePickerAccept"
                 claimsShortcuts: false
@@ -236,20 +247,9 @@ FocusScope {
                 text: qsTr("OK")
                 enabled: pickerRoot.model ? pickerRoot.model.pickerHasMatch : false
                 minimumWidth: cancelButton.labelWidth + 2 * pickerRoot.pickerAppearance.buttonPadding
-                KeyNavigation.tab: cancelButton
-                KeyNavigation.backtab: list
-                onActivated: pickerRoot.model.acceptPicker()
-            }
-            PromptButton {
-                id: cancelButton
-                objectName: "voicePickerCancel"
-                claimsShortcuts: false
-                appearance: pickerRoot.pickerAppearance
-                text: qsTr("Cancel")
-                minimumWidth: acceptButton.labelWidth + 2 * pickerRoot.pickerAppearance.buttonPadding
                 KeyNavigation.tab: search
-                KeyNavigation.backtab: acceptButton.enabled ? acceptButton : list
-                onActivated: pickerRoot.model.cancelPicker()
+                KeyNavigation.backtab: cancelButton
+                onActivated: pickerRoot.model.acceptPicker()
             }
         }
     }

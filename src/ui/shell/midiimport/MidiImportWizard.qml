@@ -76,6 +76,7 @@ DialogWindow {
                 onNoCompressionEdited: function(value): void { wizard.controller.changeNoCompression(value) }
             }
         footer: [
+            Button { objectName: "importWizardCancel"; text: qsTr("Cancel"); onClicked: wizard.controller.cancel() },
             Button { objectName: "importWizardBack"; text: qsTr("< Back"); visible: wizard.controller.page > 0; onClicked: wizard.controller.back() },
             Button {
                 objectName: "importWizardNext"
@@ -90,8 +91,7 @@ DialogWindow {
                 visible: wizard.controller.page === 2
                 enabled: wizard.controller.identityComplete && !wizard.controller.busy
                 onClicked: wizard.controller.finish()
-            },
-            Button { objectName: "importWizardCancel"; text: qsTr("Cancel"); onClicked: wizard.controller.cancel() }
+            }
         ]
     }
     Shortcut {

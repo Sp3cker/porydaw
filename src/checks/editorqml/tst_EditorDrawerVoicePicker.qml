@@ -52,12 +52,12 @@ EditorDrawerTestSupport {
         keyClick(Qt.Key_Up)
         tryVerify(function() { return model.pickerIndex === index }, 1000,
                   "the up arrow returned to the captured row")
-        var forward = [accept, cancel, search, list]
+        var forward = [cancel, accept, search, list]
         for (var f = 0; f < forward.length; ++f) {
             keyClick(Qt.Key_Tab)
             compare(forward[f].activeFocus, true, "Tab follows the picker cycle at " + f)
         }
-        var backward = [search, cancel, accept, list]
+        var backward = [search, accept, cancel, list]
         for (var b = 0; b < backward.length; ++b) {
             keyClick(Qt.Key_Backtab, Qt.ShiftModifier)
             compare(backward[b].activeFocus, true, "Backtab reverses the picker cycle at " + b)

@@ -107,13 +107,13 @@ EditorDrawerTestSupport {
         keyClick(Qt.Key_5)
         keyClick(Qt.Key_0)
         keyClick(Qt.Key_Tab)
-        compare(accept.activeFocus, true)
+        compare(cancel.activeFocus, true)
         compare(field.text, "50")
         keyClick(Qt.Key_Tab)
-        compare(cancel.activeFocus, true)
+        compare(accept.activeFocus, true)
         keyClick(Qt.Key_Tab)
         compare(field.activeFocus, true)
-        var reverse = [cancel, accept, field]
+        var reverse = [accept, cancel, field]
         for (var i = 0; i < reverse.length; ++i) {
             keyClick(Qt.Key_Backtab, Qt.ShiftModifier)
             compare(reverse[i].activeFocus, true)

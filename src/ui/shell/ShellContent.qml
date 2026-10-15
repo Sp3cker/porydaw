@@ -250,6 +250,7 @@ Item {
                 }
             }
             footer: DialogButtonBox {
+                buttonLayout: DialogButtonBox.MacLayout
                 Button {
                     id: saveConflictOverwriteButton
                     objectName: "saveConflictOverwrite"
