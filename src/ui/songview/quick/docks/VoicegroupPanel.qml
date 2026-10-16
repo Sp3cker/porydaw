@@ -44,6 +44,10 @@ ColumnLayout {
             enabled: panel.controller.selectorEnabled
             model: panel.controller.argChoices
             textRole: "name"
+            // Qt re-derives the current row from this value on every model update; a bare
+            // editText would be overwritten when the catalog resets the choices.
+            valueRole: "name"
+            currentValue: panel.controller.selectorText
             editText: panel.controller.selectorText
             Connections {
                 target: panel.controller

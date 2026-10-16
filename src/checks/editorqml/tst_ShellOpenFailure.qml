@@ -202,6 +202,9 @@ ShellLaneSupport {
         verify(selector !== null, "the reopened project's voicegroup selector is mounted")
         verify(waitForNative(function() { return selector.count === 5 }, 5000),
                "the reopened project's five staged fixture voicegroups reach the selector")
+        tryCompare(selector, "editText", "fixture_rich", 3000,
+                   "the selector still shows the song's voicegroup after the catalog resets its choices")
+        compare(selector.currentIndex, 4, "the popup marks the active voicegroup")
         verify(session.projectOpen && session.songOpen
                && selector.textAt(0) === "fixture_bass"
                && selector.textAt(1) === "fixture_drums_a"
