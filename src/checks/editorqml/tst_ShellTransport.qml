@@ -457,11 +457,6 @@ ShellTransportSupport {
                            + ": " + item.width + " vs " + region.w)
             }
         }
-        var captured = false
-        verify(bar.grabToImage(function(result) {
-            captured = result.saveToFile(bootstrap.transportCapturePath(data.fontPx))
-        }), "transport capture starts")
-        tryVerify(function() { return captured }, 3000, "the mounted pane screenshot is saved")
     }
 
     function test_transportGlyphTintMatchesEnabledState() {

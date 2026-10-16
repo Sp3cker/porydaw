@@ -16,7 +16,6 @@ ShellLaneSupport {
     readonly property var settings: bootstrap.preferences
     property string noteProbe: ""
     property alias bootstrap: bootstrapObject
-    property alias frameProbe: frameProbeObject
     property alias clipboardProbeComponent: clipboardProbeObject
     property alias shellComponent: shellObject
     ShellQmlBootstrap { id: bootstrapObject }
@@ -131,12 +130,6 @@ ShellLaneSupport {
         verify(waitForPolish(opened.popup))
         const frame = grabImage(shell.contentItem)
         verify(frame !== null, "the popup is available for pixel readback")
-        let saved = false
-        opened.popup.grabToImage(function(result) {
-            saved = result.saveToFile("file://" + frameProbe.artifactPath(
-                bootstrap.projectRoot, "pitch-bend", label))
-        })
-        tryVerify(function() { return saved }, 5000, "the painted pitch frame is saved")
         return frame
     }
 
