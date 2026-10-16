@@ -12,6 +12,8 @@ ShellGridInputSupport {
         if (dprProbe.expectedLaneDpr() !== 2)
             return grabImage(item)
         var capture = null
+        // Offscreen grabImage returns logical pixels at half the DPR2 size and different ink at the held sample.
+        // Keep grabToImage, saveToFile and the reader for the physical pending face and viewport comparison.
         verify(item.grabToImage(function(result) { capture = result }),
                "the pending roll accepts a physical framebuffer capture")
         tryVerify(function() { return capture !== null }, 3000)

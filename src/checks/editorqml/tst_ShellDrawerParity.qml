@@ -20,6 +20,8 @@ ShellDrawerParitySupport {
         waitForRendering(input)
         var frame = null
         var capture = page || automationPageItem()
+        // Offscreen grabImage returns logical pixels at half the DPR2 size, putting ghost/ring samples out of bounds.
+        // Keep grabToImage, saveToFile and the reader for native automation and voice-preview pixels.
         verify(capture.grabToImage(function(result) { frame = result }),
                "the DPR2 mounted drawer page accepts a physical framebuffer grab")
         tryVerify(function() { return frame !== null }, 3000)
