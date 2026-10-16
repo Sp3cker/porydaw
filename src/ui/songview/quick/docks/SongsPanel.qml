@@ -234,6 +234,7 @@ FocusScope {
         readonly property list<QtObject> menuEntries: [
             SongMenuEntry { actionId: "open"; text: qsTr("Open") },
             SongMenuEntry { actionId: "newTab"; text: qsTr("Open in New Tab") },
+            SongMenuEntry { actionId: "duplicate"; text: qsTr("Duplicate Song") },
             SongMenuEntry { separator: true },
             SongMenuEntry { actionId: "register"; text: qsTr("Register Song"); enabled: songMenu.canRegister },
             SongMenuEntry { actionId: "delete"; text: qsTr("Delete Song…") }
@@ -242,7 +243,8 @@ FocusScope {
         // Qt keeps the popup inside the window, like the style's Menu.
         margins: 0
         width: Math.ceil(root.baseFontPx * 15)
-        height: Math.ceil(root.baseFontPx * 1.7) * 4 + root.pad
+        // Five action rows plus the 1px separator: keep in step with menuEntries.
+        height: Math.ceil(root.baseFontPx * 1.7) * 5 + 1 + root.pad
         modal: false
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -271,14 +273,14 @@ FocusScope {
                 font: root.applicationSession.typographyFonts.body
             }
         }
-        function hoverRow(panel: QuickMenuPanel, index: int): void { panel.highlightedRow = index }
         function activateRow(panel: QuickMenuPanel, index: int): void {
             const chosenId = songMenu.songId
             switch (index) {
             case 0: root.songs.requestOpen(chosenId); break
             case 1: root.songs.requestOpenInNewTab(chosenId); break
-            case 3: root.songs.requestRegister(chosenId); break
-            case 4: root.songs.requestDelete(chosenId); break
+            case 2: root.songs.requestDuplicate(chosenId); break
+            case 4: root.songs.requestRegister(chosenId); break
+            case 5: root.songs.requestDelete(chosenId); break
             }
             songMenu.close()
         }

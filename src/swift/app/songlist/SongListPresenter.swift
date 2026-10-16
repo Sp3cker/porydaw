@@ -97,6 +97,7 @@ public final class SongListPresenter {
     @QtIgnored public var onSongOpenInNewTabRequested: ((Int) -> Void)?
     @QtIgnored public var onSongRegisterRequested: ((Int) -> Void)?
     @QtIgnored public var onSongDeleteRequested: ((Int) -> Void)?
+    @QtIgnored public var onSongDuplicateRequested: ((Int) -> Void)?
 
     private var songs: [SongListing] = []
     private var visible: [SongListing] = []
@@ -275,6 +276,13 @@ public final class SongListPresenter {
     public func requestDelete(songId: Int) {
         guard visible.contains(where: { $0.id == songId }) else { return }
         onSongDeleteRequested?(songId)
+    }
+
+    /// Context-menu "Duplicate Song" — instant copy through the New Song
+    /// intake. Only a visible row can be targeted.
+    public func requestDuplicate(songId: Int) {
+        guard visible.contains(where: { $0.id == songId }) else { return }
+        onSongDuplicateRequested?(songId)
     }
 
     /// Register Song enablement: any song with missing registration entries.
