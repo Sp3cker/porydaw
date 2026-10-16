@@ -228,27 +228,34 @@ EditorDrawerTestSupport {
                 "cancelling the staged band leaves no committed selection")
         selectBand()
         waitForRendering(testCase.surface)
-        var frame = null
-        verify(testCase.surface.grabToImage(function(result) { frame = result }),
-               "the mounted drawer accepts a physical framebuffer capture")
-        tryVerify(function() { return frame !== null }, 3000,
-                  "the physical framebuffer capture completes")
-        var imageFile = bootstrap.projectRoot + "/automation-band-physical.png"
-        verify(frame.saveToFile(imageFile), "the physical framebuffer is saved to the copied fixture")
-        var reader = bandImageReader.createObject(testCase.surface)
-        tryCompare(reader, "available", true, 3000)
-        var imageURL = "file://" + imageFile
-        reader.loadImage(imageURL)
-        tryVerify(function() { return reader.isImageLoaded(imageURL) }, 3000,
-                  "the physical image bytes load for independent dimensions")
-        var image = reader.getContext("2d").createImageData(imageURL)
+        var image = null
+        if (expectedDpr === 1) {
+            image = grabImage(testCase.surface)
+        } else {
+            // Offscreen grabImage returns logical pixels; grabToImage retains native DPR2 dimensions.
+            // Keep saveToFile and the reader for the physical-boundary lane's device-pixel assertions.
+            var frame = null
+            verify(testCase.surface.grabToImage(function(result) { frame = result }),
+                   "the mounted drawer accepts a physical framebuffer capture")
+            tryVerify(function() { return frame !== null }, 3000,
+                      "the physical framebuffer capture completes")
+            var imageFile = bootstrap.projectRoot + "/automation-band-physical.png"
+            verify(frame.saveToFile(imageFile), "the physical framebuffer is saved to the copied fixture")
+            var reader = bandImageReader.createObject(testCase.surface)
+            tryCompare(reader, "available", true, 3000)
+            var imageURL = "file://" + imageFile
+            reader.loadImage(imageURL)
+            tryVerify(function() { return reader.isImageLoaded(imageURL) }, 3000,
+                      "the physical image bytes load for independent dimensions")
+            image = reader.getContext("2d").createImageData(imageURL)
+            reader.destroy()
+        }
         compare(Screen.devicePixelRatio, expectedDpr,
                 "the declared physical-boundary lane observes its actual screen DPR")
         compare(image.width, Math.round(testCase.surface.width * expectedDpr),
                 "the physical framebuffer width matches the declared lane DPR")
         compare(image.height, Math.round(testCase.surface.height * expectedDpr),
                 "the physical framebuffer height matches the declared lane DPR")
-        reader.destroy()
         mousePress(input, (startX + endX) / 2, bandY, Qt.RightButton)
         compare(bootstrap.automationSelectionRange(), startTick + ":" + endTick,
                 "a real midpoint press preserves the selected Volume band")

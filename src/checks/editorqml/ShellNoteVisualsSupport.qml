@@ -76,6 +76,8 @@ ShellLaneSupport {
         var item = context.surface
         waitForRendering(item)
         var capture = null
+        // Offscreen grabImage returns logical pixels; grabToImage retains native DPR2 dimensions.
+        // Keep saveToFile and the reader so physical note-edge and ruler samples retain their coordinates.
         verify(item.grabToImage(function(result) { capture = result }),
                "the mounted note surface accepts a physical framebuffer capture")
         tryVerify(function() { return capture !== null }, 3000)
@@ -330,6 +332,8 @@ ShellLaneSupport {
             }, 3000, "the physical ruler applies the requested camera scroll before capture")
             waitForRendering(ruler, 3000)
             var capture = null
+            // Offscreen grabImage returns logical pixels; grabToImage retains native DPR2 dimensions.
+            // Keep saveToFile and the reader: physical bar-stem samples exceed the logical image bounds.
             verify(ruler.grabToImage(function(result) { capture = result }),
                    "the loaded ruler accepts a physical-pixel capture")
             tryVerify(function() { return capture !== null }, 3000)
