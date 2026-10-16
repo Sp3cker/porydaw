@@ -121,14 +121,10 @@ enum ShellQmlLane {
             }
             let capture = URL(fileURLWithPath: scratch)
                 .appendingPathComponent("notevisuals-dpr2-small-font.png")
-            let artifact = FileManager.default.temporaryDirectory
-                .appendingPathComponent("porydaw-notevisuals-\(UUID().uuidString).png")
-            do {
-                try FileManager.default.copyItem(at: capture, to: artifact)
-            } catch {
-                return fail("note visuals dpr2: missing frame: \(error)")
+            guard FileManager.default.fileExists(atPath: capture.path) else {
+                return fail("note visuals dpr2: missing frame")
             }
-            print("note visuals dpr2 artifact: \(artifact.path)")
+            print("note visuals dpr2 artifact: \(capture.path)")
             return 0
         }
         if status == 0, entry.name == "shell-drawer-parity",
