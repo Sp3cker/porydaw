@@ -371,7 +371,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 let childSection = try KitUsageScanner.canonicalSection(
                     projectRoot: root, sourceRelativePath: String(location.filePath.dropFirst(root.count + 1)),
                     sectionLabel: location.sectionLabel)
-                overlay[childSection] = try kit.children.map { try $0.map(KitStudioWorkflow.projectVoice) }
+                overlay[childSection] = try kit.children.map { try $0.map(projectVoice) }
             }
         }
         guard projectRoot == root, catalogService === service, kitStudioWorkflow?.saving != true,

@@ -382,6 +382,9 @@ enum ShellQmlRegistry {
                     "sound/voice_groups.inc",
                 ]),
             Entry(
+                name: "shell-edit-in-studio", inputFileName: "tst_ShellEditInStudio.qml",
+                fixtureFiles: songs("mus_route101") + ["sound/voice_groups.inc"]),
+            Entry(
                 name: "shell-settings", inputFileName: "tst_ShellSettings.qml",
                 fixtureFiles: songs("mus_route101"),
                 testFunctions: [

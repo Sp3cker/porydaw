@@ -1,9 +1,12 @@
 # Splitting Drumkits and Key Splits
 
 Choose **Tools → Split Studio…** to open Split Studio. It needs an open project
-(no song required). There is one Split Studio window for the whole app. It
-always starts from an empty kit and never reads or changes any song. The title
-bar shows **Split Studio**, with a `•` while the window has unsaved changes.
+(no song required). There is one Split Studio window for the whole app. The
+Tools command starts an empty kit. To edit an existing drumkit or keysplit,
+right-click its voicegroup row and choose **Edit in Studio**. The window loads
+its mappings and voicegroup name; sample rows keep their **Edit Sample** action.
+With a row focused, **Menu** or **Shift+F10** opens the same menu.
+The title bar shows **Split Studio**, with a `•` while there are unsaved changes.
 
 Press **Cmd+S** on macOS or **Ctrl+S** on Windows/Linux to save the voicegroup.
 Press **Cmd+Z** on macOS or **Ctrl+Z** on Windows/Linux to undo an edit, and
@@ -167,23 +170,27 @@ Split Studio does not take live MIDI input.
 ## Saving voicegroups
 
 The **Voicegroup** name field in the footer suggests `<first file>_kit` using the
-next free name in the project. If the name is not a valid identifier or names a
-voicegroup that this Split Studio window did not create, the field shows a red
-outline. **Save Voicegroup** is disabled until at least one key is mapped and the
-name is valid.
+next free name in the project. When editing an existing voicegroup, it starts
+with that voicegroup's name. Other existing names and invalid identifiers show
+a red outline. **Save Voicegroup** is disabled until at least one key is mapped
+and the name is valid.
 
 Click **Save Voicegroup** or press **Cmd+S** on macOS / **Ctrl+S** on
 Windows/Linux to save the kit:
 
 - Writes the slice samples (new 8-bit `.wav` files in `sound/direct_sound_samples/`
   and their registrations in `sound/direct_sound_data.inc`).
-- Creates a new voicegroup file at `sound/voicegroups/<name>.inc` containing the
-  drumkit or keysplit definition.
-- Adds an `#include` line for the voicegroup in `sound/voice_groups.inc`.
-- In Keysplit layout, writes the keysplit routing table into the voicegroup file.
+- For a new name, creates `sound/voicegroups/<name>.inc` and adds its include to
+  `sound/voice_groups.inc`.
+- With the original name from **Edit in Studio**, updates the original subgroup
+  section in place and preserves its keysplit table name. Existing sample audio
+  is not rewritten.
+- In Keysplit layout, writes the routing table to the project's keysplit tables.
+  Renaming an edited keysplit creates a new table; its old table is preserved
+  for existing references and is not automatically removed if no references remain.
 
-Split Studio never changes any song or song voicegroup. To use your new
-voicegroup in a song, assign it to a voice on a track in the main window.
+Saving does not rewrite song MIDI or reassign the song's voicegroup. Editing a
+shared subgroup changes that voicegroup for every voice that references it.
 
 ### Overwriting saved samples
 

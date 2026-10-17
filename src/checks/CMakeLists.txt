@@ -620,6 +620,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         keyboard/KeybindingRegistryChecks.swift
         editorqml/ImportWizardProbe.swift
         editorqml/SampleStudioVoiceProbe.swift
+        editorqml/KitStudioEditProbe.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
         SWIFT_COMPILE_OPTIONS
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
@@ -696,5 +697,6 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editorqml/tst_ShellVoicegroupEditing.qml
         editorqml/tst_ShellVoicegroupPicker.qml
         editorqml/tst_ShellVoicegroupSave.qml
+        editorqml/tst_ShellEditInStudio.qml
     )
 endif()

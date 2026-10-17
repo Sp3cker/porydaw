@@ -1,7 +1,7 @@
 import PorydawDocument
 import PorydawVoicegroup
 
-/// Reads live lease kits for the orphan scan; Split Studio itself starts empty.
+/// Reads live lease kits for Split Studio and the orphan scan.
 @MainActor
 enum KitLeaseReader {
     static func visitKits(

@@ -9,12 +9,14 @@ public struct KitZone: Equatable, Sendable {
     public var pan: Int
     public var adsr: (attack: Int, decay: Int, sustain: Int, release: Int)
     public var sampleMacro: VgMacro
+    /// Preserves macro-specific arguments the zone controls do not edit.
+    public var sourceVoice: VgVoice?
 
     public init(
         startKey: Int, endKey: Int, sampleName: String, rootKey: Int,
         pan: Int,
         adsr: (attack: Int, decay: Int, sustain: Int, release: Int),
-        sampleMacro: VgMacro = .directSound
+        sampleMacro: VgMacro = .directSound, sourceVoice: VgVoice? = nil
     ) {
         self.startKey = startKey
         self.endKey = endKey
@@ -23,6 +25,7 @@ public struct KitZone: Equatable, Sendable {
         self.pan = pan
         self.adsr = adsr
         self.sampleMacro = sampleMacro
+        self.sourceVoice = sourceVoice
     }
 
     public static func == (lhs: Self, rhs: Self) -> Bool {
@@ -30,6 +33,7 @@ public struct KitZone: Equatable, Sendable {
             && lhs.sampleName == rhs.sampleName && lhs.rootKey == rhs.rootKey
             && lhs.pan == rhs.pan
             && lhs.adsr == rhs.adsr && lhs.sampleMacro == rhs.sampleMacro
+            && lhs.sourceVoice == rhs.sourceVoice
     }
 }
 

@@ -483,7 +483,8 @@ internal func projectFailure(_ error: any Error) -> ProjectServiceError {
     return .operationFailed(error.localizedDescription)
 }
 
-internal func projectVoice(_ voice: BankVoice) throws -> PorydawVoicegroup.VgVoice {
+/// Converts every persisted macro argument without narrowing to editor-visible fields.
+public func projectVoice(_ voice: BankVoice) throws -> PorydawVoicegroup.VgVoice {
     guard let macro = PorydawVoicegroup.VgMacro(rawValue: voice.macro) else {
         throw ProjectServiceError.operationFailed("Voice macro ordinal is out of range.")
     }

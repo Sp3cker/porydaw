@@ -4,6 +4,35 @@ import PorydawVoicegroup
 
 /// Pure conversion between editor ranges, store values and audition descriptions.
 public enum KitDraftCodec {
+    /// Expands key routing into editable zones while retaining raw child voice arguments.
+    public static func zones(children: [VgVoice?], mode: KitMode, table: [UInt8]?) -> [KitZone] {
+        var zones: [KitZone] = []
+        for key in 0..<128 {
+            let index = mode == .drumkit ? key : table.map { Int($0[key]) } ?? children.count
+            guard children.indices.contains(index), let voice = children[index],
+                voice != kitBlankChildVoice
+            else { continue }
+            if mode == .keysplit, let last = zones.last,
+                last.endKey == key - 1, last.sourceVoice == voice
+            {
+                zones[zones.count - 1].endKey = key
+            } else {
+                zones.append(
+                    KitZone(
+                        startKey: key, endKey: key, sampleName: voice.symbol, rootKey: voice.key,
+                        pan: uiPan(raw: voice.pan),
+                        adsr: (voice.attack, voice.decay, voice.sustain, voice.release),
+                        sampleMacro: voice.macro, sourceVoice: voice))
+            }
+        }
+        return zones
+    }
+
+    private static func uiPan(raw: Int) -> Int { min(max((raw - 0x40) * 2, -64), 63) }
+
+    // Integer division truncates odd UI pans; untouched zones retain their exact original raw pan.
+    private static func rawPan(ui: Int) -> Int { 0x40 + ui / 2 }
+
     public static func children(from zones: [KitZone], mode: KitMode) -> [VgVoice?] {
         let sorted = ordered(zones)
         switch mode {
@@ -76,10 +105,22 @@ public enum KitDraftCodec {
 
     private static func voice(_ zone: KitZone, key _: Int, mode: KitMode) -> VgVoice? {
         // Every key in a zone plays at the root key; one slice maps to one key.
-        return VgVoice(
-            macro: zone.sampleMacro, key: zone.rootKey, pan: mode == .drumkit ? 0x40 + zone.pan / 2 : 0,
-            symbol: zone.sampleName, attack: zone.adsr.attack, decay: zone.adsr.decay,
-            sustain: zone.adsr.sustain, release: zone.adsr.release)
+        var voice = zone.sourceVoice ?? VgVoice(macro: zone.sampleMacro)
+        voice.macro = zone.sampleMacro
+        voice.key = zone.rootKey
+        voice.symbol = zone.sampleName
+        if let original = zone.sourceVoice,
+            zone.pan == uiPan(raw: original.pan)
+        {
+            voice.pan = original.pan
+        } else {
+            voice.pan = mode == .drumkit ? rawPan(ui: zone.pan) : 0
+        }
+        voice.attack = zone.adsr.attack
+        voice.decay = zone.adsr.decay
+        voice.sustain = zone.adsr.sustain
+        voice.release = zone.adsr.release
+        return voice
     }
 
     private static func ordered(_ zones: [KitZone]) -> [KitZone] {

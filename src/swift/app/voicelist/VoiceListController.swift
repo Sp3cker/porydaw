@@ -160,6 +160,7 @@ public final class VoiceListController: QmlUncreatable {
     @QtIgnored public var onNewSampleRequested: ((_ slot: Int) -> Void)?
     /// "Edit…" beside the same picker: reopen this voice's committed sample.
     @QtIgnored public var onEditSampleRequested: ((_ slot: Int) -> Void)?
+    @QtIgnored public var onEditKitRequested: ((_ slot: Int) -> Void)?
     /// The sample picker's browse audition: play the symbol's committed data
     /// through the selected voice's envelope.
     @QtIgnored public var onSampleAuditionRequested:
@@ -549,6 +550,18 @@ public final class VoiceListController: QmlUncreatable {
 
     public func requestEditSample(slot: Int) {
         onEditSampleRequested?(slot)
+    }
+
+    /// Whether a current slot contains an editable drumkit or keysplit.
+    public func slotIsKit(slot: Int) -> Bool {
+        guard slots.indices.contains(slot), let voice = slots[slot].voice else { return false }
+        return VoiceListSemantics.isKitMacro(voice.macro)
+    }
+
+    /// Requests Split Studio only for an existing drumkit or keysplit slot.
+    public func requestEditKit(slot: Int) {
+        guard slotIsKit(slot: slot) else { return }
+        onEditKitRequested?(slot)
     }
 
 }

@@ -82,7 +82,7 @@ public final class KitStudioPresenter: QmlUncreatable {
         session.validateName = { [weak self] (name: String) -> String? in self?.validateName?(name) }
     }
 
-    /// Opens an empty kit; the window never reads a song kit.
+    /// Opens an empty kit.
     @QtIgnored public func open() {
         draft.load(KitDraft.Snapshot())
         session.restore(KitSourceSession().snapshot())
@@ -95,6 +95,20 @@ public final class KitStudioPresenter: QmlUncreatable {
         voicegroupNameEdited = false
         resetCleanState()
         refresh()
+    }
+
+    /// Opens committed mappings with a clean window-local history.
+    @QtIgnored public func load(zones: [KitZone], mode: KitMode, name: String) {
+        open()
+        draft.load(
+            KitDraft.Snapshot(
+                drumkitZones: mode == .drumkit ? zones : [],
+                keysplitZones: mode == .keysplit ? zones : []))
+        activeMode = mode
+        voicegroupName = name
+        voicegroupNameEdited = true
+        voicegroupNameInvalid = Self.invalidVoicegroupName(name, validate: validateVoicegroupName)
+        markClean()
     }
 
     /// Applies the workflow's suggested name unless the user already chose one.

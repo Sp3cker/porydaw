@@ -86,6 +86,7 @@ enum ShellQmlLane {
         BridgeValueTypeProbe.registerQmlElement()
         ImportWizardProbe.registerQmlElement()
         SampleStudioVoiceProbe.registerQmlElement()
+        KitStudioEditProbe.registerQmlElement()
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .appendingPathComponent(entry.inputFileName).path
         let arguments = [CommandLine.arguments.first ?? "shell_qml_tests", "-input", inputFile] + payload

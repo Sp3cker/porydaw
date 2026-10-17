@@ -22,7 +22,18 @@ ColumnLayout {
     readonly property list<IconSpec> typeIcons: [Icons.sample, Icons.sample, Icons.square1, Icons.square2,
                                                 Icons.wave, Icons.noise, Icons.keysplit, Icons.drumkit]
     readonly property IconSpec emptyIcon: IconSpec { glyph: ""; fit: 1 }
+    property int contextSlot: -1
     spacing: 0
+
+    Menu {
+        id: rowMenu
+        objectName: "voicegroupRowMenu"
+        MenuItem {
+            objectName: "voicegroupEditInStudio"
+            text: qsTr("Edit in Studio")
+            onTriggered: panel.controller.requestEditKit(panel.contextSlot)
+        }
+    }
 
     RowLayout {
         Layout.fillWidth: true
@@ -148,6 +159,16 @@ ColumnLayout {
                 objectName: "voicegroupRow_" + slot
                 width: voiceList.width - Math.round(panel.baseFontPx * 0.67)
                 height: panel.rowHeight
+                activeFocusOnTab: true
+                Keys.onPressed: function(event: KeyEvent) {
+                    if ((event.key === Qt.Key_Menu
+                         || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier)))
+                            && panel.controller.slotIsKit(row.slot)) {
+                        panel.contextSlot = row.slot
+                        rowMenu.popup(row, row.width / 2, row.height / 2)
+                        event.accepted = true
+                    }
+                }
                 color: panel.controller.currentSlot === slot ? panel.colors.selectionRing
                        : used ? Qt.tint(panel.colors.windowBackground, "#22b4e4ee")
                               : panel.colors.windowBackground
@@ -203,12 +224,24 @@ ColumnLayout {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    acceptedButtons: Qt.LeftButton
-                    onPressed: {
-                        panel.controller.selectSlot(row.slot)
-                        panel.controller.pressVoice(row.slot)
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onPressed: function(mouse: MouseEvent) {
+                        row.forceActiveFocus()
+                        if (mouse.button === Qt.LeftButton) {
+                            panel.controller.selectSlot(row.slot)
+                            panel.controller.pressVoice(row.slot)
+                        }
                     }
-                    onReleased: panel.controller.releaseVoice()
+                    onClicked: function(mouse: MouseEvent) {
+                        if (mouse.button === Qt.RightButton && panel.controller.slotIsKit(row.slot)) {
+                            panel.contextSlot = row.slot
+                            rowMenu.popup(row, mouse.x, mouse.y)
+                        }
+                    }
+                    onReleased: function(mouse: MouseEvent) {
+                        if (mouse.button === Qt.LeftButton)
+                            panel.controller.releaseVoice()
+                    }
                     onCanceled: panel.controller.releaseVoice()
                 }
             }

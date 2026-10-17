@@ -108,6 +108,11 @@ public struct VoiceListAdsrDefaults: Equatable, Sendable {
 /// src/project/songregistry.cpp. These are the oracle's observable rules,
 /// re-expressed over the published BankSlotView/BankVoice values.
 public enum VoiceListSemantics {
+    /// Both macros whose child mappings are edited in Split Studio.
+    public static func isKitMacro(_ macro: Int32) -> Bool {
+        macro == BankVoiceMacro.keysplit || macro == BankVoiceMacro.keysplitAll
+    }
+
     /// VOICE_* type bytes (external/poryaaaa .../voicegroup_types.h).
     public static let voiceDirectsound: UInt8 = 0x00
     public static let voiceSquare1: UInt8 = 0x01

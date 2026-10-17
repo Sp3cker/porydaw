@@ -56,6 +56,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
     private var createdVoicegroups: Set<String> = []
     private var createdSamples: Set<String> = []
     private var overwriteArmed = false
+    private var editDestination: (name: String, location: VoicegroupLocation, tableName: String?, childCount: Int)?
     private var selectedMarker: Int?
     private var pendingNames: Set<String> = []
     private var playingSlice: Int?
@@ -89,6 +90,50 @@ public final class KitStudioWorkflow: QmlUncreatable {
         open()
     }
 
+    /// Loads a song voice's subgroup for editing and saving to its original source.
+    public func requestEdit(slot: Int) {
+        // Cleanup overlap cancels the edit; retrying regenerates mappings from the surviving project.
+        guard let session, session.projectOpen, !saving, !orphanCleanupBusy, !orphanCleanupOpen,
+            let service = session.catalogService, session.voiceList.isBound, !session.voiceList.isLoading,
+            let document = session.voiceList.session, !document.isClosed,
+            session.voiceList.slots.indices.contains(slot),
+            let parent = session.voiceList.slots[slot].voice,
+            VoiceListSemantics.isKitMacro(parent.macro)
+        else { return }
+        if windowOpen, state?.dirty == true {
+            guardClose(
+                source: .window, proceed: { [weak self] in self?.requestEdit(slot: slot) }, cancel: {})
+            return
+        }
+        sessionGeneration += 1
+        let generation = sessionGeneration
+        let lease = document.bankLease
+        pendingTask?.cancel()
+        pendingTask = Task { [weak self] in
+            defer {
+                if self?.sessionGeneration == generation { self?.pendingTask = nil }
+            }
+            do {
+                let loaded = try await KitEditLoader.load(
+                    service: service, projectRoot: session.projectRoot, lease: lease, slot: slot, parent: parent)
+                guard let self, self.current(generation: generation, service: service),
+                    !document.isClosed, session.voiceList.session === document,
+                    !self.orphanCleanupBusy, !self.orphanCleanupOpen
+                else { return }
+                self.open()
+                self.editDestination = (loaded.name, loaded.location, loaded.tableName, loaded.childCount)
+                self.createdVoicegroups.insert(loaded.name)
+                self.state?.load(zones: loaded.zones, mode: loaded.mode, name: loaded.name)
+                self.state?.samples = loaded.samples
+                self.state?.progWaves = loaded.waves
+                self.presenterRevision += 1
+            } catch {
+                guard let self, self.current(generation: generation, service: service) else { return }
+                self.showAlert(error)
+            }
+        }
+    }
+
     private func open() {
         guard let session else { return }
         sessionGeneration += 1
@@ -113,6 +158,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
         overwritePromptOpen = false
         overwritePromptText = ""
         selectedMarker = nil
+        editDestination = nil
         presenter.applySuggestedVoicegroupName(nextFreeVoicegroupName(stem: "new_kit"))
         restoreGeometry()
         pcm = PcmAuditionPlayer(lane: libraryHost.lane())
@@ -344,6 +390,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
         let generation = sessionGeneration
         let root = session.projectRoot
         let name = state.voicegroupName
+        let destination = editDestination.flatMap { $0.name == name ? $0 : nil }
         var rendered: [(name: String, wav: Data)] = []
         var renderKeys: [String: SliceRenderKey] = [:]
         for source in state.session.sources {
@@ -435,11 +482,14 @@ public final class KitStudioWorkflow: QmlUncreatable {
                     try VoicegroupSource.appendIncludeLine(projectRoot: root, name: name)
                     self.createdVoicegroups.insert(name)
                 }
-                try Self.writeKitChildren(
+                let writtenChildCount = try Self.writeKitChildren(
                     projectRoot: root, name: name, zones: zones, mode: mode,
-                    sliceNames: Set(rendered.map(\.name)))
+                    sliceNames: Set(rendered.map(\.name)), location: destination?.location,
+                    previousChildCount: destination?.childCount)
+                if destination != nil { self.editDestination?.childCount = writtenChildCount }
                 if mode == .keysplit {
-                    try Self.writeKeysplitTable(projectRoot: root, name: name, zones: zones)
+                    try Self.writeKeysplitTable(
+                        projectRoot: root, name: destination?.tableName ?? "keysplit_" + name, zones: zones)
                 }
                 guard self.current(generation: generation, service: service) else { return }
                 _ = await session.refreshVoicegroupCatalog()
@@ -477,21 +527,25 @@ public final class KitStudioWorkflow: QmlUncreatable {
         return false
     }
 
-    /// Writes kit children with the voice-line serializer; fresh files declare one group,
-    /// so the whole-file section opens in both header styles.
+    /// Writes new groups or the original subgroup section through the voice-line serializer.
     private static func writeKitChildren(
-        projectRoot: String, name: String, zones: [KitZone], mode: KitMode, sliceNames: Set<String>
-    ) throws {
+        projectRoot: String, name: String, zones: [KitZone], mode: KitMode, sliceNames: Set<String>,
+        location: VoicegroupLocation?, previousChildCount: Int?
+    ) throws -> Int {
         var children = KitDraftCodec.children(from: zones, mode: mode)
         for index in children.indices {
             if let voiceName = children[index]?.symbol, sliceNames.contains(voiceName) {
                 children[index]?.symbol = "DirectSoundWaveData_" + voiceName
             }
         }
-        let path = projectRoot + "/sound/voicegroups/" + name + ".inc"
+        let destination =
+            location
+            ?? VoicegroupLocation(
+                filePath: projectRoot + "/sound/voicegroups/" + name + ".inc", sectionLabel: "")
+        let path = destination.filePath
         let source = VoicegroupSource()
         var error: String?
-        guard source.open(location: VoicegroupLocation(filePath: path, sectionLabel: ""), error: &error) else {
+        guard source.open(location: destination, error: &error) else {
             throw VoicegroupStoreError.operationFailed(error ?? "Cannot open \(path).")
         }
         for (slot, child) in children.enumerated() {
@@ -499,13 +553,20 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 throw VoicegroupStoreError.operationFailed("Cannot edit slot \(slot) in \(path).")
             }
         }
+        let writtenChildCount = max(children.count, previousChildCount ?? 0)
+        for slot in children.count..<writtenChildCount {
+            guard source.setVoice(slot: slot, voice: kitBlankChildVoice) else {
+                throw VoicegroupStoreError.operationFailed("Cannot clear slot \(slot) in \(path).")
+            }
+        }
         guard try source.save() else {
             throw VoicegroupStoreError.operationFailed("Cannot save \(path): edit superseded.")
         }
+        return writtenChildCount
     }
 
     private static func writeKeysplitTable(projectRoot: String, name: String, zones: [KitZone]) throws {
-        let table = KitDraftCodec.table(from: zones, name: "keysplit_" + name)
+        let table = KitDraftCodec.table(from: zones, name: name)
         let layout = ProjectLayout(projectRoot: projectRoot).ensuringDeepScan()
         var path = layout.keysplitTableFiles.first ?? projectRoot + "/sound/keysplit_tables.inc"
         do {
@@ -735,16 +796,5 @@ public final class KitStudioWorkflow: QmlUncreatable {
     private func showAlert(_ error: any Error) {
         alertText = String(describing: error)
         alertRevision += 1
-    }
-    static func projectVoice(_ voice: BankVoice) throws -> VgVoice {
-        guard let macro = VgMacro(rawValue: voice.macro) else {
-            throw VoicegroupStoreError.operationFailed("Split Studio: unsupported voice macro \(voice.macro).")
-        }
-        return VgVoice(
-            macro: macro, key: Int(voice.key), pan: Int(voice.pan), symbol: voice.symbol,
-            keysplitTable: voice.keysplitTable, sweep: Int(voice.sweep), duty: Int(voice.duty),
-            period: Int(voice.period),
-            attack: Int(voice.attack), decay: Int(voice.decay), sustain: Int(voice.sustain), release: Int(voice.release)
-        )
     }
 }
