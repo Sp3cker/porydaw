@@ -229,7 +229,8 @@ FocusScope {
         // Qt keeps the popup inside the window, like the style's Menu.
         margins: 0
         width: Math.ceil(root.baseFontPx * 15)
-        height: Math.ceil(root.baseFontPx * 1.7) * 4 + root.pad
+        // Five action rows plus the 1px separator: keep in step with prepareMenu.
+        height: Math.ceil(root.baseFontPx * 1.7) * 5 + 1 + root.pad
         modal: false
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -239,7 +240,7 @@ FocusScope {
             host: songMenu
             rootLevel: true
             rowObjectNamePrefix: "songs.menu."
-            actionObjectNames: ["open", "newTab", "", "register", "delete"]
+            actionObjectNames: ["open", "newTab", "", "register", "delete", "duplicate"]
             menuModel: root.songs.menuRows
             menuWidth: songMenu.width
             menuHeight: songMenu.height
@@ -268,6 +269,7 @@ FocusScope {
             switch (row.actionId) {
             case 0: root.songs.requestOpen(chosenId); break
             case 1: root.songs.requestOpenInNewTab(chosenId); break
+            case 5: root.songs.requestDuplicate(chosenId); break
             case 3: root.songs.requestRegister(chosenId); break
             case 4: root.songs.requestDelete(chosenId); break
             }

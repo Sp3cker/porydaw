@@ -1,6 +1,7 @@
 // Pointer x/y -> hit-test -> gesture state machine -> preview -> status.
 // Hands off to refreshNotes()/sceneInput() for scene projection and publication.
 import Foundation
+import PorydawPlayback
 import PorydawAppCommands
 import PorydawAppPresentation
 import PorydawCore
@@ -43,9 +44,12 @@ enum GridGesture {
         var pointerY: Double
     }
 
+    /// Under half a stride of pointer travel the note stays put; past it the grabbed start
+    /// snaps to the lattice absolutely, so an off-grid note lands on the grid once dragged.
     struct Move {
         var pressTick: Double
         var pressKey: Int
+        var grabbedStart: Int
         var pointerX: Double
         var pointerY: Double
         var dTick: Int = 0
@@ -90,8 +94,15 @@ enum GridGesture {
         var deltaY: Double = 0
     }
 
-    static func move(pressTick: Double, pressKey: Int, x: Double, y: Double) -> GridGesture {
-        .move(Move(pressTick: pressTick, pressKey: pressKey, pointerX: x, pointerY: y))
+    static func move(
+        pressTick: Double, pressKey: Int, grabbedStart: Int, x: Double, y: Double
+    )
+        -> GridGesture
+    {
+        .move(
+            Move(
+                pressTick: pressTick, pressKey: pressKey, grabbedStart: grabbedStart,
+                pointerX: x, pointerY: y))
     }
 
     static func resize(
@@ -156,12 +167,13 @@ enum GridGesture {
         case .move(var state):
             state.pointerX = x
             state.pointerY = y
-            let tick = camera.tickAtContentX(x)
-            let gridTicks = Int(
-                grid.snapTicksAt(
-                    TimeDefaults.tick(from: max(0, state.pressTick)),
-                    camera: camera))
-            state.dTick = Int(((tick - state.pressTick) / Double(gridTicks)).rounded()) * gridTicks
+            let delta = camera.tickAtContentX(x) - state.pressTick
+            let halfStride =
+                Double(grid.snapTicksAt(TimeDefaults.tick(from: max(0, state.pressTick)), camera: camera)) / 2
+            state.dTick =
+                abs(delta) < halfStride
+                ? 0
+                : Int(grid.snapTick(Double(state.grabbedStart) + delta, camera: camera)) - state.grabbedStart
             if scale.fold {
                 let projection = camera.projection
                 let currentRow = projection.row(
@@ -436,17 +448,20 @@ extension PianoGrid {
     @QtIgnored
     func bandCoveredNotes() -> [GridNote] {
         guard let band = selectionBand else { return [] }
-        return notes.filter { note in
-            guard !note.ghost else { return false }
-            let displayed = displayedNote(note)
-            let rect = metrics.noteRect(
-                camera: viewport.camera,
-                x0: viewport.camera.viewX(tick: Double(displayed.tick), dpr: metrics.dpr),
-                x1: viewport.camera.viewX(tick: Double(displayed.end), dpr: metrics.dpr),
-                pitch: displayed.pitch)
-            return rect.x < band.x + band.w && rect.x + rect.w > band.x
-                && rect.y < band.y + band.h && rect.y + rect.h > band.y
-        }
+        return notes.filter { bandContains($0, in: band) }
+    }
+
+    @QtIgnored
+    private func bandContains(_ note: GridNote, in band: (x: Double, y: Double, w: Double, h: Double)) -> Bool {
+        guard !note.ghost else { return false }
+        let displayed = displayedNote(note)
+        let rect = metrics.noteRect(
+            camera: viewport.camera,
+            x0: viewport.camera.viewX(tick: Double(displayed.tick), dpr: metrics.dpr),
+            x1: viewport.camera.viewX(tick: Double(displayed.end), dpr: metrics.dpr),
+            pitch: displayed.pitch)
+        return rect.x < band.x + band.w && rect.x + rect.w > band.x
+            && rect.y < band.y + band.h && rect.y + rect.h > band.y
     }
 
     @QtIgnored
@@ -459,30 +474,32 @@ extension PianoGrid {
     }
 
     @QtIgnored
-    func auditionBandEntrants() {
-        guard selectionBand != nil else { return }
-        var covered: [NoteID: (track: Int, pitch: Int)] = [:]
-        for note in bandCoveredNotes() {
-            guard let source = session.document.note(note.noteId), source.duration > 0 else {
+    func publishBandAuditionCoverage() {
+        guard let onBandAudition, let band = selectionBand else { return }
+        bandAuditionScratch.removeAll(keepingCapacity: true)
+        let currentNotes = notes
+        let projected = currentNotes.span
+        for index in projected.indices {
+            let note = projected[index]
+            guard bandContains(note, in: band),
+                let source = session.document.note(note.noteId), source.duration > 0
+            else {
                 continue
             }
-            covered[note.noteId] = (note.track, note.pitch)
-            if bandAuditioned[note.noteId] == nil {
-                onAudition?(note.track, note.pitch, note.velocity)
-            }
+            let durationSamples =
+                session.timeline.sample(for: source.tick + source.duration)
+                - session.timeline.sample(for: source.tick)
+            bandAuditionScratch.append(
+                BandAuditionNote(
+                    noteID: note.noteId.rawValue, track: UInt8(source.track),
+                    key: source.pitch, velocity: source.velocity, durationSamples: durationSamples))
         }
-        for (id, entry) in bandAuditioned where covered[id] == nil {
-            onAudition?(entry.track, entry.pitch, 0)
-        }
-        bandAuditioned = covered
+        onBandAudition(bandAuditionScratch)
     }
 
     @QtIgnored
     func releaseBandAudition() {
-        for (_, entry) in bandAuditioned {
-            onAudition?(entry.track, entry.pitch, 0)
-        }
-        bandAuditioned.removeAll()
+        onBandAudition?([])
     }
 
     func beginPointerImpl(x: Double, y: Double, modifiers: Int) {
@@ -528,7 +545,9 @@ extension PianoGrid {
                             pressTick: pressTick, gripTick: note.tick + note.duration,
                             oppositeTick: note.tick, leading: false, x: x, y: y)
                     default:
-                        gesture = .move(pressTick: pressTick, pressKey: pressKey, x: x, y: y)
+                        gesture = .move(
+                            pressTick: pressTick, pressKey: pressKey, grabbedStart: note.tick,
+                            x: x, y: y)
                     }
                 }
                 if case .band(let band) = rightGesture, !control {
@@ -739,7 +758,7 @@ extension PianoGrid {
                     camera: viewport.camera, scale: viewport.scale)
             }
         }
-        if case .band = self.rightGesture { auditionBandEntrants() }
+        if case .band = self.rightGesture { publishBandAuditionCoverage() }
         refreshNotes()
     }
 

@@ -1,4 +1,5 @@
 import PorydawAppAudio
+import PorydawPlayback
 
 @MainActor
 public protocol SampleAuditionOutput: AnyObject {

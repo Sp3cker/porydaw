@@ -263,8 +263,8 @@ public final class AudioRenderEngine {
         if let timeline = handoff.acquirePending() { adopt(timeline.pointee) }
         applySeek()
         applyMute()
-        audition.apply(main: main, preview: preview, frames: frames, deferTimed: transportState.cutting)
         applyPolyDebug()
+        audition.apply(main: main, preview: preview, frames: frames, deferTimed: transportState.cutting)
         transportState.prepareVolume()
         var done = 0
         while done < Int(frames) {
@@ -276,7 +276,7 @@ public final class AudioRenderEngine {
                     engine: main, timeline: timeline.pointee,
                     left: UnsafeMutableBufferPointer(start: left, count: count),
                     right: UnsafeMutableBufferPointer(start: right, count: count),
-                    looping: looping, muteMask: appliedMute)
+                    looping: looping, muteMask: appliedMute, audition: audition)
                 metronome.mix(
                     left: left, right: right, frames: count, from: start,
                     timeline: timeline.pointee, looping: looping)
@@ -287,7 +287,7 @@ public final class AudioRenderEngine {
                     transition()
                 }
             } else {
-                m4a_engine_process(main, left, right, Int32(count))
+                audition.render(main: main, left: left, right: right, frames: count)
                 metronome.mixTail(left: left, right: right, frames: count)
             }
             m4a_engine_process(preview, previewLeft, previewRight, Int32(count))

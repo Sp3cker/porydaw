@@ -461,11 +461,6 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
         return (try? String(contentsOf: path, encoding: .utf8)) ?? ""
     }
 
-    public func transportCapturePath(fontPx: Int) -> String {
-        URL(fileURLWithPath: projectRoot, isDirectory: true)
-            .appendingPathComponent("transport-font\(fontPx).png").path
-    }
-
     public func settingsReferenceJson(profile: String, page: String) -> String {
         guard ["macos-dpr1-font12", "macos-dpr2-font16"].contains(profile),
             ["engine", "song"].contains(page)
@@ -474,10 +469,6 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
             .deletingLastPathComponent()
             .appendingPathComponent("fixtures/visual/\(profile)/settings/\(page)-vanilla.json")
         return (try? String(contentsOf: path, encoding: .utf8)) ?? ""
-    }
-    public func settingsCapturePath(page: String, fontPx: Int) -> String {
-        URL(fileURLWithPath: projectRoot, isDirectory: true)
-            .appendingPathComponent("settings-\(page)-font\(fontPx).png").path
     }
 
     public func settingsSavedFlags() -> String {

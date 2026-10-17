@@ -194,14 +194,6 @@ ShellLaneSupport {
                             findChild(panel, "vgSamplePickerButton"), 5)
             }
         }
-        let saved = false
-        const destination = bootstrap.projectRoot + "/voicegroupbrowser-"
-                            + (variant.length ? variant : "vanilla") + ".png"
-        verify(panel.grabToImage(function(image) {
-            saved = image.saveToFile(destination)
-        }), "rendered the production VoicegroupPanel")
-        tryVerify(function() { return saved }, 5000,
-                  "saved " + variant + " voicegroup reference PNG at " + destination)
     }
 
     function cleanup() {

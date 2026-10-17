@@ -237,9 +237,6 @@ add_library(PorydawAppAudio STATIC
     audio/AudioTransport.swift
     audio/AudioTimelineHandoff.swift
     audio/AudioTelemetry.swift
-    audio/AudioAudition.swift
-    audio/AudioSampleAudition.swift
-    audio/KitAuditionTone.swift
     audio/ResonanceSuppression.swift
     audio/Metronome.swift
     export/WavExport.swift

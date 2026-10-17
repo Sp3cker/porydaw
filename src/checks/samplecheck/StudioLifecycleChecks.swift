@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawAppAudio
+import PorydawPlayback
 import PorydawSample
 @testable import PorydawSampleUI
 

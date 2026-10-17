@@ -11,6 +11,6 @@ set_target_properties(PorydawKitStudio PROPERTIES
 )
 porydaw_swift_qt_interop(PorydawKitStudio)
 target_link_libraries(PorydawKitStudio PUBLIC
-    PorydawSample PorydawSampleUI PorydawVoicegroup PorydawAppAudio PorydawAppPresentation QtBridge
+    PorydawSample PorydawSampleUI PorydawVoicegroup PorydawAppAudio PorydawAppPresentation PorydawPlayback QtBridge
 )
 add_dependencies(PorydawKitStudio QtBridgeMacros)

@@ -1,4 +1,5 @@
 import Foundation
+import PorydawPlayback
 import PorydawCore
 import PorydawDocument
 import QtBridge
@@ -55,8 +56,6 @@ public final class PianoGrid: QmlUncreatable {
     @QtIgnored
     var suppressedLeftRelease = false
     @QtIgnored
-    var bandAuditioned: [NoteID: (track: Int, pitch: Int)] = [:]
-    @QtIgnored
     var pendingControlToggle: NoteID?
     @QtIgnored
     var pendingVelocityReanchor: NoteID?
@@ -85,11 +84,14 @@ public final class PianoGrid: QmlUncreatable {
     var keyboardAuditionTrack: Int?
     @QtIgnored
     var keyboardTransposeAuditionActive = false
-    /// Receives roll auditions as (track, pitch, velocity), including band entrants.
+    /// Receives mono roll auditions as (track, pitch, velocity).
     @QtIgnored public var onAudition: ((Int, Int, Int) -> Void)?
     /// Pending replay of a velocity drag's held audition, and the velocity last heard.
     @QtIgnored var velocityAuditionTask: Task<Void, Never>?
     @QtIgnored var velocityAuditionHeard = 0
+    /// Receives the ordered eligible band coverage; empty coverage releases the band.
+    @QtIgnored public var onBandAudition: (([BandAuditionNote]) -> Void)?
+    @QtIgnored var bandAuditionScratch: [BandAuditionNote] = []
     /// Fork commitEditCursor egress: a commit seeks the selected transport
     /// while paused/playing; the owner guards selection, stopped only moves.
     @QtIgnored public var onCommitCursor: ((Tick) -> Void)?

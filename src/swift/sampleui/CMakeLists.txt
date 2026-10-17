@@ -13,6 +13,6 @@ set_target_properties(PorydawSampleUI PROPERTIES
 )
 porydaw_swift_qt_interop(PorydawSampleUI)
 target_link_libraries(PorydawSampleUI PUBLIC
-    PorydawSample PorydawAppAudio PorydawAppPresentation QtBridge
+    PorydawSample PorydawAppAudio PorydawAppPresentation PorydawPlayback QtBridge
 )
 add_dependencies(PorydawSampleUI QtBridgeMacros)

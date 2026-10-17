@@ -86,7 +86,7 @@ ShellLaneSupport {
     function menuAction(id) {
         const menu = findChild(shell, "songListContextMenu")
         verify(!!menu && menu.visible, "the mounted Songs context menu is open")
-        const index = ({ open: 0, newTab: 1, register: 3, delete: 4 })[id]
+        const index = ({ open: 0, newTab: 1, duplicate: 2, register: 4, delete: 5 })[id]
         const item = menu.contentItem.rowItem(index)
         verify(!!item && item.objectName === "songs.menu." + id,
                "mounted menu has " + id)
@@ -224,7 +224,7 @@ ShellLaneSupport {
                 "A012: Register is enabled for the open song with only a charmap gap")
         mouseClick(row(id), 4, 4, Qt.RightButton)
         const menu = findChild(shell, "songListContextMenu")
-        compare(menu.contentItem.rowItem(3).enabled, true,
+        compare(menu.contentItem.rowItem(4).enabled, true,
                 "the real context menu enables Register on the charmap-only row")
         const window = menu.parent.Window.window
         menu.x = window.width
@@ -261,7 +261,7 @@ ShellLaneSupport {
         verify(waitForNative(function() { return session.songTabs.tabCount === 0 }, 5000),
                "the clean registered song tab closes before a fresh open")
         mouseClick(row(id), 4, 4, Qt.RightButton)
-        compare(menu.contentItem.rowItem(3).enabled, false,
+        compare(menu.contentItem.rowItem(4).enabled, false,
                 "the mounted Register menu is disabled after the completed repair")
         menuAction("open")
         verify(waitForNative(function() {
@@ -309,6 +309,39 @@ ShellLaneSupport {
         compare(presenter().rowCount, 7, "A047: deleting one song decreases the listed count by exactly one")
         compare(bootstrap.actionMidiExists(), false,
                 "A048: deleting the song removes its original MIDI path")
+    }
+
+    function test_duplicateSongCopiesRegistersAndOpens() {
+        verify(bootstrap.prepareSongActionFixture("open-delete"),
+               "the isolated duplicate fixture stages")
+        const root = bootstrap.projectRoot
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the mounted shell opens the duplicate fixture")
+        const session = shell.shellPresenter.session
+        session.openProject(root)
+        verify(waitForNative(function() { return session.projectOpen && presenter().rowCount === 8 }, 30000),
+               "the duplicate fixture lists all eight playable originals")
+        waitForShellScene()
+        const id = 2
+        compare(row(id).song.label, "mus_route101",
+                "id 2 is the registered mus_route101 before duplication")
+        mouseClick(row(id), 4, 4, Qt.RightButton)
+        menuAction("duplicate")
+        verify(waitForNative(function() {
+            return !controller().busy && presenter().rowCount === 9
+                && session.songTabs.tabCount === 1
+                && session.songTabs.selectedPage.title === "mus_route101_copy"
+        }, 30000), "duplicating mus_route101 copies, registers, and opens mus_route101_copy")
+        compare(fileProbe.fileBytesBase64(root + "/sound/songs/midi/mus_route101_copy.mid").length > 0, true,
+                "the duplicate writes its own playable MIDI file")
+        let copyIndex = -1
+        for (let index = 0; index < presenter().rowCount; ++index) {
+            if (presenter().songLabel(index) === "mus_route101_copy")
+                copyIndex = index
+        }
+        verify(copyIndex >= 0, "the duplicate appears in the mounted list")
+        compare(presenter().canRegister(presenter().songId(copyIndex)), false,
+                "the duplicate is fully registered")
     }
 
     function test_fallbackDeletionRefusedWithOpenTab() {

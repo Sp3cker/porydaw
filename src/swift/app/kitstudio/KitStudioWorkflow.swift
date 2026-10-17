@@ -4,6 +4,7 @@ import PorydawAppPresentation
 import PorydawCore
 import PorydawDocument
 import PorydawKitStudio
+import PorydawPlayback
 import PorydawProject
 import PorydawSample
 import PorydawSampleUI
