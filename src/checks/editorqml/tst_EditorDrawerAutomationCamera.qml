@@ -203,7 +203,7 @@ EditorDrawerTestSupport {
             return row
         }
         var before = gridRaster()
-        var background = PixelSupport.channelsOf(testCase, testCase.drawerPalette().rollBackground)
+        var background = PixelSupport.channelsOf(testCase, testCase.drawerPalette().windowBackground)
         var barColor = testCase.drawerPalette().gridLineBar
         var bar = PixelSupport.channelsOf(testCase, barColor)
         var alpha = barColor.a

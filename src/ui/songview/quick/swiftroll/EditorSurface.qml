@@ -201,7 +201,7 @@ FocusScope {
         id: rollBackground
         objectName: "swiftRollBackground"
         anchors.fill: parent
-        color: root.gridModel.palette.rollBackground
+        color: root.gridModel.palette.windowBackground
         z: -1
     }
 

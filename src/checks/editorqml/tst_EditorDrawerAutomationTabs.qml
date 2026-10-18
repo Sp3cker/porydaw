@@ -157,7 +157,7 @@ EditorDrawerTestSupport {
         waitForRendering(testCase.surface)
         var frame = grabImage(testCase.surface)
         var axis = findChild(page, "automationAxis")
-        var background = PixelSupport.channelsOf(testCase, testCase.drawerPalette().rollBackground)
+        var background = PixelSupport.channelsOf(testCase, testCase.drawerPalette().windowBackground)
         var barColor = testCase.drawerPalette().gridLineBar
         var bar = PixelSupport.channelsOf(testCase, barColor)
         var alpha = barColor.a

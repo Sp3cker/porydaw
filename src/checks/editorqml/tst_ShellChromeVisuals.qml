@@ -111,7 +111,7 @@ ShellLaneSupport {
             return { x: w.x - corg.x, y: w.y - corg.y }
         }
         var palette = grid.palette
-        var natural = Helpers.channels(palette.rollBackground)
+        var natural = Helpers.channels(palette.windowBackground)
         var accidental = Helpers.channels(palette.accidentalLane)
         var scrollX = grid.cameraScrollX
         var scrollY = grid.cameraScrollY
@@ -172,11 +172,11 @@ ShellLaneSupport {
         var beatInk = grid.visibleGridTicks === 1 ? palette.gridLineBeatFine
                                                   : palette.gridLineBeat
         var expectedBarNatural = Helpers.channels(
-                    probe.sourceOver(barInk.toString(), palette.rollBackground.toString()))
+                    probe.sourceOver(barInk.toString(), palette.windowBackground.toString()))
         var expectedBarAccidental = Helpers.channels(
                     probe.sourceOver(barInk.toString(), palette.accidentalLane.toString()))
         var expectedBeatNatural = Helpers.channels(
-                    probe.sourceOver(beatInk.toString(), palette.rollBackground.toString()))
+                    probe.sourceOver(beatInk.toString(), palette.windowBackground.toString()))
         var expectedBeatAccidental = Helpers.channels(
                     probe.sourceOver(beatInk.toString(), palette.accidentalLane.toString()))
         verify(!Helpers.colorsNear(expectedBarNatural, natural)

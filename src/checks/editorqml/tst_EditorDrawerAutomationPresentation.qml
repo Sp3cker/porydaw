@@ -281,12 +281,15 @@ EditorDrawerTestSupport {
         var point = plot.mapToItem(testCase.surface, sampleX, curveY)
         var px = Math.round(point.x * ghostImage.width / testCase.surface.width)
         var py = Math.round(point.y * ghostImage.height / testCase.surface.height)
-        var blend = [Math.round((234 * 128 + 212 * 127) / 255),
-                     Math.round((60 * 128 + 204 * 127) / 255),
-                     Math.round((60 * 128 + 199 * 127) / 255)].join(",")
+        var surface = PixelSupport.channelsOf(testCase, testCase.drawerPalette().windowBackground)
+        var blend = [Math.round((234 * 128 + surface[0] * 127) / 255),
+                     Math.round((60 * 128 + surface[1] * 127) / 255),
+                     Math.round((60 * 128 + surface[2] * 127) / 255)]
+        // GPU blending may round the half-alpha mix one step either way.
         verify(px >= 0 && px < ghostImage.width && py >= 0 && py < ghostImage.height
-               && [ghostImage.red(px, py), ghostImage.green(px, py),
-                   ghostImage.blue(px, py)].join(",") === blend,
+               && Math.abs(ghostImage.red(px, py) - blend[0]) <= 1
+               && Math.abs(ghostImage.green(px, py) - blend[1]) <= 1
+               && Math.abs(ghostImage.blue(px, py) - blend[2]) <= 1,
                "the independently projected Tempo height paints exact half-ink ghost curve")
         verify(Math.abs(ghost.y + ghost.height / 2 - curveY) <= ghost.height,
                "the pinned Tempo label tracks its own curve height")

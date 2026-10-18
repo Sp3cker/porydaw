@@ -140,7 +140,7 @@ DrawerLanePage {
 
         Rectangle {
             anchors.fill: parent
-            color: page.gridPalette.rollBackground
+            color: page.gridPalette.windowBackground
         }
         Rectangle {
             anchors.left: parent.left

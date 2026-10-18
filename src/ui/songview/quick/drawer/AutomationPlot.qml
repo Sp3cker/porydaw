@@ -42,7 +42,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: plot.gridPalette.rollBackground
+        color: plot.gridPalette.windowBackground
     }
 
     DisplayList {

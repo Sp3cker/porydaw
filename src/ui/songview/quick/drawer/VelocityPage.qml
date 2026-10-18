@@ -61,7 +61,16 @@ DrawerLanePage {
 
         Rectangle {
             anchors.fill: parent
-            color: page.gridPalette.chromeBackground
+            color: page.gridPalette.windowBackground
+        }
+        // The label strip sits under the keyboard column, set apart from the header column.
+        Rectangle {
+            readonly property real stripWidth: page.gridModel ? page.gridModel.keyboardWidth : 0
+            objectName: "velocityRulerLabelStrip"
+            x: Math.max(0, parent.width - stripWidth)
+            width: Math.min(parent.width, stripWidth)
+            height: parent.height
+            color: page.gridPalette.alternateBackground
         }
 
         Item {
@@ -246,7 +255,7 @@ DrawerLanePage {
 
         Rectangle {
             anchors.fill: parent
-            color: page.gridPalette.rollBackground
+            color: page.gridPalette.windowBackground
         }
 
         DisplayList {

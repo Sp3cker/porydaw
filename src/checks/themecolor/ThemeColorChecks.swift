@@ -312,7 +312,7 @@ private func themeTextContrastChecks(_ report: CheckReport) {
             \GridPalette.buttonPressedText, "buttonPressedText", \GridPalette.tabPressedBackground,
             "tabPressedBackground"
         ),
-        // Translucent hover chip over the roll surface it floats above.
+        // Translucent hover chip over the window-painted plot it floats above.
         (\GridPalette.hoverChipText, "hoverChipText", \GridPalette.hoverChipFill, "hoverChipFill"),
         // Fixed piano-key label and polyphony identity pairs.
         (\GridPalette.keyboardLabel, "keyboardLabel", \GridPalette.keyboardNatural, "keyboardNatural"),
@@ -331,8 +331,8 @@ private func themeTextContrastChecks(_ report: CheckReport) {
             let surface: String
             let surfaceLabel: String
             if pair.surfaceName == "hoverChipFill" {
-                surface = themeCompositeHex(palette[keyPath: pair.surface], over: palette.rollBackground)
-                surfaceLabel = "hoverChipFill over rollBackground"
+                surface = themeCompositeHex(palette[keyPath: pair.surface], over: palette.windowBackground)
+                surfaceLabel = "hoverChipFill over windowBackground"
             } else {
                 surface = PaletteMath.hex(palette[keyPath: pair.surface])
                 surfaceLabel = pair.surfaceName
